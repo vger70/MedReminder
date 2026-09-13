@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>MedReminder.Infrastructure</RootNamespace>
+    <AssemblyName>MedReminder.Infrastructure</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MedReminder.Domain\MedReminder.Domain.csproj" />
+    <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
+  </ItemGroup>
+
+</Project>
