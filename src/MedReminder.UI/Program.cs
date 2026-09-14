@@ -3,26 +3,28 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using MedReminder.Application;
+using MedReminder.Application.Abstractions;
 using MedReminder.Infrastructure;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
+using MedReminder.UI.Forms;
 using MedReminder.UI.Hosting;
+using MedReminder.UI.Notifications;
+using MedReminder.UI.Presentation;
+using MedReminder.UI.Tray;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using WinFormsApp = System.Windows.Forms.Application;
-using WinForm = System.Windows.Forms.Form;
-using WinFormStartPosition = System.Windows.Forms.FormStartPosition;
 using WinFormWindowState = System.Windows.Forms.FormWindowState;
 
 namespace MedReminder.UI;
 
 // Composition root: costruisce l'IHost, inizializza il DB, avvia lo
-// scheduler in background e passa il controllo al message loop
-// WinForms. Il tearing-down è pulito anche in caso di eccezioni
-// (StopAsync viene chiamato in finally).
+// scheduler in background e passa il controllo al message loop WinForms.
 internal static class Program
 {
     private const string MinimizedArgument = "--minimized";
@@ -64,22 +66,34 @@ internal static class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        // La factory JSON viene abilitata via Microsoft.Extensions.Configuration.Json.
+        // Il file utente smtp.settings.json (creato dal SettingsDialog)
+        // sovrascrive appsettings.json. reloadOnChange=true fa aggiornare
+        // IOptionsMonitor<SmtpSettings> senza riavvio.
+        var userSmtpSettingsFile = Path.Combine(
+            AppDataPaths.GetAppDataDirectory(), "smtp.settings.json");
+
         builder.Configuration
             .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+            .AddJsonFile(userSmtpSettingsFile, optional: true, reloadOnChange: true);
 
         builder.Services.AddSingleton(TimeProvider.System);
 
         builder.Services.AddMedReminderApplication();
         builder.Services.AddMedReminderInfrastructure(builder.Configuration);
 
-        builder.Services.AddHostedService<MedicationMonitorHostedService>();
-        builder.Services.AddTransient<BootstrapForm>();
+        // La UI riusa la NotifyIcon principale per emettere le notifiche
+        // toast/balloon: sovrascrive la registrazione default fatta da
+        // AddMedReminderInfrastructure (BalloonTipNotificationService).
+        builder.Services.RemoveAll<IWindowsNotificationService>();
+        builder.Services.AddSingleton<IWindowsNotificationService, TrayBalloonNotificationService>();
+        builder.Services.AddSingleton<ApplicationTrayIcon>();
 
-        // Routing dei log Microsoft.Extensions.Logging -> Serilog.
-        // dispose:false: la chiusura di Serilog è controllata dal Main
-        // (Log.CloseAndFlush) per garantirla anche in caso di eccezioni.
+        builder.Services.AddScoped<MedicineOverviewLoader>();
+
+        builder.Services.AddHostedService<MedicationMonitorHostedService>();
+        builder.Services.AddTransient<MainForm>();
+
         builder.Logging.ClearProviders();
         builder.Logging.AddSerilog(dispose: false);
 
@@ -95,13 +109,25 @@ internal static class Program
 
     private static void RunUi(IHost host, bool startMinimized)
     {
-        var mainForm = host.Services.GetRequiredService<BootstrapForm>();
+        var mainForm = host.Services.GetRequiredService<MainForm>();
         if (startMinimized)
         {
             mainForm.WindowState = WinFormWindowState.Minimized;
             mainForm.ShowInTaskbar = false;
         }
         WinFormsApp.Run(mainForm);
+
+        // Disponi esplicitamente la tray icon dopo la chiusura del message
+        // loop: senza dispose l'icona rimane visibile in tray fino allo
+        // shutdown del processo.
+        try
+        {
+            host.Services.GetRequiredService<ApplicationTrayIcon>().Dispose();
+        }
+        catch
+        {
+            // ignoriamo: siamo in shutdown.
+        }
     }
 
     private static void StopHost(IHost host)
@@ -113,7 +139,7 @@ internal static class Program
         }
         catch (OperationCanceledException)
         {
-            // Timeout raggiunto: lo shutdown forzato è accettabile.
+            // Timeout accettabile.
         }
     }
 
@@ -131,17 +157,5 @@ internal static class Program
                 shared: true,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
-    }
-}
-
-// Placeholder form: sostituito nell'Incremento 6 dalla MainForm reale.
-internal sealed class BootstrapForm : WinForm
-{
-    public BootstrapForm()
-    {
-        Text = "MedReminder";
-        Width = 480;
-        Height = 240;
-        StartPosition = WinFormStartPosition.CenterScreen;
     }
 }
