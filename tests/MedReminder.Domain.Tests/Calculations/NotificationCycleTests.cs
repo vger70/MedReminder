@@ -16,7 +16,7 @@ public class NotificationCycleTests
         var medicine = DomainFactory.Medicine(thresholdDays: 7, isActive: false);
 
         NotificationCycle.ShouldNotify(medicine, daysRemaining: 3, estimatedRunOutDate: Today.AddDays(3),
-            successfulNotificationForCurrentEpoch: null)
+            latestNotificationForMedicine: null)
             .Should().BeFalse();
     }
 
@@ -35,7 +35,7 @@ public class NotificationCycleTests
         var medicine = DomainFactory.Medicine(thresholdDays: 7);
 
         NotificationCycle.ShouldNotify(medicine, daysRemaining: null, estimatedRunOutDate: null,
-            successfulNotificationForCurrentEpoch: null)
+            latestNotificationForMedicine: null)
             .Should().BeFalse();
     }
 
