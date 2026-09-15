@@ -8,12 +8,18 @@ namespace MedReminder.Application.Reporting;
 // per il medico (spec Incremento 10). Nessuna informazione clinica libera
 // oltre a quanto già impostato dall'utente — MedReminder resta un
 // promemoria organizzativo.
+//
+// Uso Environment.NewLine (= "\r\n" su Windows) invece di '\n' perché
+// la TextBox multiline di WinForms rende visibile una nuova riga SOLO
+// quando incontra CRLF; con LF stampa tutto su una linea.
 public sealed record TherapyReportEntry(
     Medicine Medicine,
     IReadOnlyList<MedicationAdministrationSlot> Slots);
 
 public static class TherapyReport
 {
+    private static readonly string NL = Environment.NewLine;
+
     public static string Build(
         IReadOnlyList<TherapyReportEntry> entries,
         DateOnly reportDate,
@@ -23,13 +29,13 @@ public static class TherapyReport
         var c = culture ?? CultureInfo.CurrentCulture;
 
         var sb = new StringBuilder();
-        sb.Append("Scheda terapia — MedReminder").Append('\n');
-        sb.Append("Data: ").Append(reportDate.ToString("d", c)).Append('\n').Append('\n');
+        sb.Append("Scheda terapia — MedReminder").Append(NL);
+        sb.Append("Data: ").Append(reportDate.ToString("d", c)).Append(NL).Append(NL);
 
         var active = entries.Where(e => e.Medicine.IsActive).ToList();
         if (active.Count == 0)
         {
-            sb.Append("Nessuna medicina attiva.").Append('\n');
+            sb.Append("Nessuna medicina attiva.").Append(NL);
             return sb.ToString();
         }
 
@@ -37,7 +43,7 @@ public static class TherapyReport
         foreach (var entry in active.OrderBy(e => e.Medicine.Name, StringComparer.CurrentCultureIgnoreCase))
         {
             AppendMedicine(sb, i++, entry, c);
-            sb.Append('\n');
+            sb.Append(NL);
         }
 
         sb.Append("— MedReminder: promemoria organizzativo, non è un dispositivo medico.");
@@ -52,13 +58,13 @@ public static class TherapyReport
         {
             sb.Append(" (").Append(m.ActiveIngredient).Append(')');
         }
-        sb.Append('\n');
+        sb.Append(NL);
 
         if (entry.Slots.Count > 0)
         {
             foreach (var slot in entry.Slots.OrderBy(SortKey))
             {
-                sb.Append("   - ").Append(FormatSlot(slot, m.Unit, c)).Append('\n');
+                sb.Append("   - ").Append(FormatSlot(slot, m.Unit, c)).Append(NL);
             }
         }
         else
@@ -67,7 +73,7 @@ public static class TherapyReport
             var freq = m.AdministrationsPerDay > 0 ? m.AdministrationsPerDay : 1;
             var doseText = m.DosePerAdministration.ToString("0.##", c);
             sb.Append("   - ").Append(doseText).Append(' ').Append(m.Unit)
-              .Append(" × ").Append(freq).Append(" volte al giorno").Append('\n');
+              .Append(" × ").Append(freq).Append(" volte al giorno").Append(NL);
         }
 
         if (m.StartDate != default)
@@ -77,15 +83,15 @@ public static class TherapyReport
             {
                 sb.Append(" · Fine: ").Append(end.ToString("d", c));
             }
-            sb.Append('\n');
+            sb.Append(NL);
         }
         if (!string.IsNullOrWhiteSpace(m.DoctorName))
         {
-            sb.Append("   Medico: ").Append(m.DoctorName).Append('\n');
+            sb.Append("   Medico: ").Append(m.DoctorName).Append(NL);
         }
         if (!string.IsNullOrWhiteSpace(m.Notes))
         {
-            sb.Append("   Note: ").Append(m.Notes).Append('\n');
+            sb.Append("   Note: ").Append(m.Notes).Append(NL);
         }
     }
 
