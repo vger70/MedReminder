@@ -23,6 +23,7 @@ x86/
 *.vsp
 *.psess
 *.vspx
+*.pubxml.user
 .vs/
 .vscode/
 
