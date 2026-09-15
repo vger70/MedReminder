@@ -7,10 +7,14 @@ namespace MedReminder.Infrastructure.Persistence.Repositories;
 internal sealed class StockMovementRepository : IStockMovementRepository
 {
     private readonly MedReminderDbContext _db;
+    private readonly TimeProvider _clock;
 
-    public StockMovementRepository(MedReminderDbContext db)
+    // TimeProvider è opzionale (default TimeProvider.System) per non
+    // rompere i test integrazione che istanziano il repo senza scope DI.
+    public StockMovementRepository(MedReminderDbContext db, TimeProvider? clock = null)
     {
         _db = db;
+        _clock = clock ?? TimeProvider.System;
     }
 
     public async Task<IReadOnlyList<StockMovement>> ListForMedicineAsync(
@@ -49,6 +53,14 @@ internal sealed class StockMovementRepository : IStockMovementRepository
             .Select(m => (DateTimeOffset?)m.OccurredAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return latest.HasValue ? DateOnly.FromDateTime(latest.Value.DateTime) : null;
+        if (!latest.HasValue) return null;
+
+        // Dopo il value converter DateTimeOffset↔long il valore letto è
+        // sempre in offset zero (UTC). Riconvertiamo al fuso locale per
+        // ottenere il "giorno" nel quale il movimento è effettivamente
+        // avvenuto — coerente con come ConsumptionCatchUp scrive gli
+        // eventi (local midday nel fuso locale).
+        var local = TimeZoneInfo.ConvertTime(latest.Value, _clock.LocalTimeZone);
+        return DateOnly.FromDateTime(local.DateTime);
     }
 }

@@ -2,6 +2,7 @@ using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Persistence.Configurations;
+using MedReminder.Infrastructure.Persistence.ValueConverters;
 using Microsoft.EntityFrameworkCore;
 
 namespace MedReminder.Infrastructure.Persistence;
@@ -32,5 +33,29 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new MedicationSuspensionConfiguration());
         modelBuilder.ApplyConfiguration(new MedicationIntakeConfiguration());
         modelBuilder.ApplyConfiguration(new NotificationEventConfiguration());
+
+        ApplyDateTimeOffsetConverter(modelBuilder);
+    }
+
+    // Sostituisce di massa il mapping default DateTimeOffset(TEXT) →
+    // INTEGER(long UtcTicks) sul provider SQLite: sblocca ORDER BY e le
+    // aggregate (Max/Min) sui campi temporali. Da applicare DOPO
+    // ApplyConfiguration così l'iterazione vede il modello completo.
+    private static void ApplyDateTimeOffsetConverter(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTimeOffset))
+                {
+                    property.SetValueConverter(DateTimeOffsetConverters.ToUtcTicks);
+                }
+                else if (property.ClrType == typeof(DateTimeOffset?))
+                {
+                    property.SetValueConverter(DateTimeOffsetConverters.ToUtcTicksNullable);
+                }
+            }
+        }
     }
 }
