@@ -124,7 +124,7 @@ internal sealed class TherapyReportDialog : Form
             };
 
             g.MeasureString(remaining, font, bounds.Size, format,
-                out int charsFitted, out _);
+                out int charsFitted, out int linesFitted);
             if (charsFitted <= 0)
             {
                 // Fallback difensivo: evita loop infinito se la
