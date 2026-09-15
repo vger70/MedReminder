@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Infrastructure;
 
@@ -47,7 +48,13 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
 
-        services.AddSingleton<IEmailNotificationService, MailKitEmailNotificationService>();
+        // IEmailNotificationService è la MailKit implementation avvolta
+        // dal decoratore di retry con back-off (Incremento 7 hardening).
+        services.AddSingleton<MailKitEmailNotificationService>();
+        services.AddSingleton<IEmailNotificationService>(sp => new RetryingEmailNotificationService(
+            sp.GetRequiredService<MailKitEmailNotificationService>(),
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<ILogger<RetryingEmailNotificationService>>()));
 
         // Placeholder Windows notification service: la UI (Incremento 6)
         // sostituirà questa registrazione con quella che riusa la tray icon

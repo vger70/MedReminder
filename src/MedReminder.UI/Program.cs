@@ -28,6 +28,10 @@ namespace MedReminder.UI;
 internal static class Program
 {
     private const string MinimizedArgument = "--minimized";
+    // Local\\ prefix: mutex per-utente (sessione Terminal Server), non
+    // per-macchina. Un secondo utente Windows sulla stessa macchina può
+    // avviare la propria istanza.
+    private const string SingleInstanceMutexName = @"Local\MedReminder.SingleInstance.b0000004-4444-4444-4444-444444444444";
     private static readonly TimeSpan HostStopTimeout = TimeSpan.FromSeconds(5);
 
     [STAThread]
@@ -35,6 +39,32 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         Log.Logger = ConfigureSerilog();
+
+        using var singleInstance = new Mutex(initiallyOwned: false, SingleInstanceMutexName);
+        bool acquired = false;
+        try
+        {
+            acquired = singleInstance.WaitOne(TimeSpan.Zero, exitContext: false);
+        }
+        catch (AbandonedMutexException)
+        {
+            // Un'istanza precedente è terminata senza rilasciare il mutex:
+            // Windows ce lo restituisce ownership-migrated. Consideriamola
+            // acquisita — la vecchia istanza è morta.
+            acquired = true;
+        }
+
+        if (!acquired)
+        {
+            Log.Information("Un'altra istanza di MedReminder è già in esecuzione. Uscita.");
+            System.Windows.Forms.MessageBox.Show(
+                "MedReminder è già in esecuzione.\nUsa l'icona nell'area di notifica per aprirlo.",
+                "MedReminder",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Information);
+            Log.CloseAndFlush();
+            return;
+        }
 
         try
         {
@@ -58,6 +88,7 @@ internal static class Program
         }
         finally
         {
+            try { singleInstance.ReleaseMutex(); } catch { /* già rilasciato */ }
             Log.CloseAndFlush();
         }
     }

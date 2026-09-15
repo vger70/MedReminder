@@ -39,6 +39,8 @@ internal sealed class MainForm : Form
     private ToolStripButton _btnSettings = null!;
     private ToolStripButton _btnRefresh = null!;
     private ToolStripStatusLabel _statusLabel = null!;
+    private Panel _errorBanner = null!;
+    private Label _errorBannerLabel = null!;
 
     private bool _closeToTray = true;
     private bool _reallyExit;
@@ -68,21 +70,73 @@ internal sealed class MainForm : Form
         var toolStrip = BuildToolStrip();
         var statusStrip = BuildStatusStrip();
         _grid = BuildGrid();
+        _errorBanner = BuildErrorBanner();
 
         var container = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 3,
+            RowCount = 4,
         };
-        container.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        container.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // toolbar
+        container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // banner (Visible=false)
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));// grid
+        container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // status
         container.Controls.Add(toolStrip, 0, 0);
-        container.Controls.Add(_grid, 0, 1);
-        container.Controls.Add(statusStrip, 0, 2);
+        container.Controls.Add(_errorBanner, 0, 1);
+        container.Controls.Add(_grid, 0, 2);
+        container.Controls.Add(statusStrip, 0, 3);
 
         Controls.Add(container);
+    }
+
+    // Banner rosso che appare in cima alla griglia quando ReloadAsync
+    // fallisce. Include un pulsante "Riprova" perché lo status label a
+    // fondo pagina è troppo poco visibile per un errore che blocca la
+    // funzionalità principale (spec §19: errore non fatale, UI deve
+    // comunque comunicarlo).
+    private Panel BuildErrorBanner()
+    {
+        var banner = new Panel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            BackColor = Color.FromArgb(255, 220, 220),
+            Padding = new Padding(12, 8, 12, 8),
+            Visible = false,
+        };
+
+        _errorBannerLabel = new Label
+        {
+            AutoSize = true,
+            Dock = DockStyle.Left,
+            ForeColor = Color.FromArgb(120, 0, 0),
+            Font = new Font(Font, FontStyle.Bold),
+            Text = "Errore nel caricamento. Vedi log.",
+        };
+
+        var retryButton = new Button
+        {
+            Text = "Riprova",
+            Dock = DockStyle.Right,
+            AutoSize = true,
+        };
+        retryButton.Click += async (_, _) => await ReloadAsync();
+
+        banner.Controls.Add(retryButton);
+        banner.Controls.Add(_errorBannerLabel);
+        return banner;
+    }
+
+    private void ShowErrorBanner(string message)
+    {
+        _errorBannerLabel.Text = message;
+        _errorBanner.Visible = true;
+    }
+
+    private void HideErrorBanner()
+    {
+        _errorBanner.Visible = false;
     }
 
     private ToolStrip BuildToolStrip()
@@ -254,11 +308,13 @@ internal sealed class MainForm : Form
             _rows = new BindingList<MedicineListItem>(items.ToList());
             _grid.DataSource = _rows;
             SetStatus($"{items.Count} medicine caricate.");
+            HideErrorBanner();
         }
         catch (Exception ex)
         {
             _log.LogError(ex, "Errore caricamento medicine");
             SetStatus("Errore caricamento — vedi log.");
+            ShowErrorBanner($"Impossibile caricare le medicine: {ex.Message}");
         }
     }
 
