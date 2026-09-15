@@ -58,12 +58,17 @@ internal sealed class ChangeScheduleDialog : Form
             Dock = DockStyle.Left,
             Width = 120,
         };
+        // Se la StartDate della medicina è nel futuro, MinDate finisce
+        // sopra Today e assegnare Value = Today solleva ArgumentOutOfRangeException.
+        // Il default sensato è il primo giorno ammesso.
+        var minDate = minimumEffectiveFrom.ToDateTime(TimeOnly.MinValue);
+        var initialValue = DateTime.Today >= minDate ? DateTime.Today : minDate;
         _effectiveFromPicker = new DateTimePicker
         {
             Format = DateTimePickerFormat.Short,
             Dock = DockStyle.Fill,
-            MinDate = minimumEffectiveFrom.ToDateTime(TimeOnly.MinValue),
-            Value = DateTime.Today,
+            MinDate = minDate,
+            Value = initialValue,
         };
 
         var note = new Label
