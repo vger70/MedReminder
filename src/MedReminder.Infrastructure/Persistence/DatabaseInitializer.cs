@@ -54,6 +54,35 @@ public sealed class DatabaseInitializer
             column: "Day",
             typeSpec: "TEXT NOT NULL DEFAULT '0001-01-01'",
             cancellationToken);
+
+        // Incremento 10: nuova tabella MedicationAdministrationSlots.
+        // CREATE TABLE IF NOT EXISTS è idempotente: se il DB è nuovo,
+        // EnsureCreatedAsync l'ha già creata (via ApplyConfiguration) e
+        // questo comando è un no-op. Se il DB è pre-Incremento 10,
+        // la tabella viene creata con lo stesso schema che EF Core
+        // emetterebbe.
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""MedicationAdministrationSlots"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_MedicationAdministrationSlots"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""Dose"" TEXT NOT NULL,
+                ""Time"" TEXT NULL,
+                ""TimingLabel"" TEXT NULL,
+                ""Order"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_MedicationAdministrationSlots_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_MedicationAdministrationSlots_MedicineId""
+                ON ""MedicationAdministrationSlots"" (""MedicineId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_MedicationAdministrationSlots_MedicineId_Order""
+                ON ""MedicationAdministrationSlots"" (""MedicineId"", ""Order"");", cancellationToken);
+    }
+
+    private async Task ExecuteRawSqlAsync(string sql, CancellationToken cancellationToken)
+    {
+        await _db.Database.ExecuteSqlRawAsync(sql, cancellationToken);
     }
 
     private async Task<bool> AddColumnIfMissingAsync(

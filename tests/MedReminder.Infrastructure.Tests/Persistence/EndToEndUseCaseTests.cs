@@ -31,6 +31,7 @@ public class EndToEndUseCaseTests
             var addMedicine = new AddMedicine(
                 new MedicineRepository(ctx),
                 new MedicationScheduleHistoryRepository(ctx),
+                new MedicationAdministrationSlotRepository(ctx),
                 new StockMovementRepository(ctx),
                 new UnitOfWork(ctx),
                 FixedClock);
@@ -85,6 +86,7 @@ public class EndToEndUseCaseTests
             var addMedicine = new AddMedicine(
                 new MedicineRepository(ctx),
                 new MedicationScheduleHistoryRepository(ctx),
+                new MedicationAdministrationSlotRepository(ctx),
                 new StockMovementRepository(ctx),
                 new UnitOfWork(ctx),
                 FixedClock);
@@ -105,6 +107,7 @@ public class EndToEndUseCaseTests
                 new MedicineRepository(ctx),
                 new MedicationScheduleHistoryRepository(ctx),
                 new MedicationSuspensionRepository(ctx),
+                new MedicationAdministrationSlotRepository(ctx),
                 new StockMovementRepository(ctx),
                 new MedicationIntakeRepository(ctx),
                 new UnitOfWork(ctx),
@@ -128,6 +131,7 @@ public class EndToEndUseCaseTests
                 new StockMovementRepository(ctx),
                 new MedicationScheduleHistoryRepository(ctx),
                 new MedicationSuspensionRepository(ctx),
+                new MedicationAdministrationSlotRepository(ctx),
                 new NotificationEventRepository(ctx),
                 recordEmail,
                 recordWindows,

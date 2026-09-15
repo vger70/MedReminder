@@ -18,12 +18,14 @@ public sealed record AddMedicineCommand(
     DateOnly? EndDate = null,
     string? DoctorName = null,
     string? Notes = null,
-    decimal InitialQuantity = 0m);
+    decimal InitialQuantity = 0m,
+    IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null);
 
 public sealed class AddMedicine
 {
     private readonly IMedicineRepository _medicines;
     private readonly IMedicationScheduleHistoryRepository _schedules;
+    private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IStockMovementRepository _stock;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
@@ -31,12 +33,14 @@ public sealed class AddMedicine
     public AddMedicine(
         IMedicineRepository medicines,
         IMedicationScheduleHistoryRepository schedules,
+        IMedicationAdministrationSlotRepository slots,
         IStockMovementRepository stock,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _schedules = schedules;
+        _slots = slots;
         _stock = stock;
         _uow = uow;
         _clock = clock;
@@ -93,8 +97,33 @@ public sealed class AddMedicine
             }, cancellationToken);
         }
 
+        // Slot di somministrazione opzionali (Incremento 10). Se presenti
+        // vengono materializzati; se null/vuoto la medicina resta sul
+        // modello legacy dose × frequenza.
+        if (cmd.AdministrationSlots is { Count: > 0 } slots)
+        {
+            await _slots.AddRangeAsync(BuildSlots(medicine.Id, slots), cancellationToken);
+        }
+
         await _uow.SaveChangesAsync(cancellationToken);
         return medicine.Id;
+    }
+
+    private static IEnumerable<MedicationAdministrationSlot> BuildSlots(
+        Guid medicineId, IReadOnlyList<AdministrationSlotInput> inputs)
+    {
+        for (var i = 0; i < inputs.Count; i++)
+        {
+            var input = inputs[i];
+            yield return new MedicationAdministrationSlot
+            {
+                MedicineId = medicineId,
+                Dose = input.Dose,
+                Time = input.Time,
+                TimingLabel = string.IsNullOrWhiteSpace(input.TimingLabel) ? null : input.TimingLabel.Trim(),
+                Order = i,
+            };
+        }
     }
 
     private DateTimeOffset ToLocalMiddayOffset(DateOnly day)

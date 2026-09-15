@@ -15,6 +15,7 @@ internal sealed class ApplicationTestScope
     public InMemoryMedicationScheduleHistoryRepository Schedules { get; } = new();
     public InMemoryMedicationSuspensionRepository Suspensions { get; } = new();
     public InMemoryMedicationIntakeRepository Intakes { get; } = new();
+    public InMemoryMedicationAdministrationSlotRepository Slots { get; } = new();
     public InMemoryNotificationEventRepository Notifications { get; } = new();
     public InMemoryUnitOfWork Uow { get; } = new();
     public RecordingEmailNotificationService Email { get; } = new();
@@ -35,8 +36,8 @@ internal sealed class ApplicationTestScope
     {
         Clock = new FakeTimeProvider(now ?? new DateTimeOffset(2026, 9, 13, 12, 0, 0, TimeSpan.Zero));
 
-        AddMedicine = new AddMedicine(Medicines, Schedules, Stock, Uow, Clock);
-        UpdateMedicine = new UpdateMedicine(Medicines, Uow, Clock);
+        AddMedicine = new AddMedicine(Medicines, Schedules, Slots, Stock, Uow, Clock);
+        UpdateMedicine = new UpdateMedicine(Medicines, Slots, Uow, Clock);
         AddStock = new AddStock(Medicines, Stock, Uow, Clock);
         AdjustStockDown = new AdjustStockDown(Medicines, Stock, Uow, Clock);
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Uow, Clock);
@@ -45,10 +46,10 @@ internal sealed class ApplicationTestScope
         RegisterIntake = new RegisterIntake(Medicines, Intakes, Stock, Uow, Clock);
 
         ConsumptionCatchUp = new ConsumptionCatchUp(
-            Medicines, Schedules, Suspensions, Stock, Intakes, Uow, Clock);
+            Medicines, Schedules, Suspensions, Slots, Stock, Intakes, Uow, Clock);
 
         Monitor = new MedicationMonitor(
-            Medicines, Stock, Schedules, Suspensions, Notifications,
+            Medicines, Stock, Schedules, Suspensions, Slots, Notifications,
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance);
     }

@@ -24,6 +24,7 @@ public sealed class MedicationMonitor
     private readonly IStockMovementRepository _stock;
     private readonly IMedicationScheduleHistoryRepository _schedules;
     private readonly IMedicationSuspensionRepository _suspensions;
+    private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly INotificationEventRepository _notifications;
     private readonly IEmailNotificationService _email;
     private readonly IWindowsNotificationService _windows;
@@ -36,6 +37,7 @@ public sealed class MedicationMonitor
         IStockMovementRepository stock,
         IMedicationScheduleHistoryRepository schedules,
         IMedicationSuspensionRepository suspensions,
+        IMedicationAdministrationSlotRepository slots,
         INotificationEventRepository notifications,
         IEmailNotificationService email,
         IWindowsNotificationService windows,
@@ -47,6 +49,7 @@ public sealed class MedicationMonitor
         _stock = stock;
         _schedules = schedules;
         _suspensions = suspensions;
+        _slots = slots;
         _notifications = notifications;
         _email = email;
         _windows = windows;
@@ -69,7 +72,8 @@ public sealed class MedicationMonitor
             var currentStock = MedicineStock.Current(movements);
 
             var schedule = await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var rate = DailyConsumption.RateOn(today, schedule);
+            var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
+            var rate = DailyConsumption.RateOn(today, schedule, slots);
 
             var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
             var isSuspended = SuspensionState.IsSuspendedOn(today, suspensions);
@@ -84,7 +88,7 @@ public sealed class MedicationMonitor
 
             var daysRemaining = forecast.DaysRemaining!.Value;
             var eta = forecast.EstimatedRunOutDate;
-            var dispatch = await DispatchAsync(medicine, currentStock, daysRemaining, eta, cancellationToken);
+            var dispatch = await DispatchAsync(medicine, currentStock, daysRemaining, eta, slots, cancellationToken);
 
             var evt = new NotificationEvent
             {
@@ -110,6 +114,7 @@ public sealed class MedicationMonitor
         decimal currentStock,
         int daysRemaining,
         DateOnly? eta,
+        IReadOnlyList<MedicationAdministrationSlot> slots,
         CancellationToken cancellationToken)
     {
         var channels = medicine.NotificationChannels;
@@ -136,7 +141,9 @@ public sealed class MedicationMonitor
 
         if ((channels & NotificationChannels.Email) != 0)
         {
-            var message = NotificationTexts.BuildEmail(medicine, currentStock, daysRemaining, eta);
+            var message = NotificationTexts.BuildEmail(
+                medicine, currentStock, daysRemaining, eta,
+                administrationSlots: slots);
             try
             {
                 await _email.SendAsync(message, cancellationToken);

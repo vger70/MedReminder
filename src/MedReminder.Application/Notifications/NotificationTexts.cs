@@ -14,7 +14,8 @@ public static class NotificationTexts
         decimal currentStock,
         int daysRemaining,
         DateOnly? estimatedRunOutDate,
-        CultureInfo? culture = null)
+        CultureInfo? culture = null,
+        IReadOnlyList<MedicationAdministrationSlot>? administrationSlots = null)
     {
         ArgumentNullException.ThrowIfNull(medicine);
         var c = culture ?? CultureInfo.CurrentCulture;
@@ -34,6 +35,14 @@ public static class NotificationTexts
         {
             body.Append($"Data prevista di esaurimento: {estimatedRunOutDate.Value.ToString("d", c)}").Append('\n');
         }
+        if (administrationSlots is { Count: > 0 } slots)
+        {
+            body.Append("Posologia:").Append('\n');
+            foreach (var slot in slots.OrderBy(s => s.Time.HasValue ? 0 : 1).ThenBy(s => s.Time).ThenBy(s => s.Order))
+            {
+                body.Append("  - ").Append(FormatSlotForEmail(slot, medicine.Unit, c)).Append('\n');
+            }
+        }
         if (!string.IsNullOrWhiteSpace(medicine.DoctorName))
         {
             body.Append($"Medico di riferimento: {medicine.DoctorName}").Append('\n');
@@ -44,6 +53,21 @@ public static class NotificationTexts
         body.Append("— MedReminder (promemoria organizzativo, non è un dispositivo medico).");
 
         return new EmailMessage(subject, body.ToString());
+    }
+
+    private static string FormatSlotForEmail(MedicationAdministrationSlot slot, string unit, CultureInfo c)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(slot.Dose.ToString("0.##", c)).Append(' ').Append(unit);
+        if (!string.IsNullOrWhiteSpace(slot.TimingLabel))
+        {
+            sb.Append(' ').Append(slot.TimingLabel);
+        }
+        if (slot.Time is { } t)
+        {
+            sb.Append(" (").Append(t.ToString("HH:mm", c)).Append(')');
+        }
+        return sb.ToString();
     }
 
     public static (string Title, string Body) BuildToast(

@@ -14,6 +14,7 @@ internal sealed class MedicineOverviewLoader
     private readonly IStockMovementRepository _stock;
     private readonly IMedicationScheduleHistoryRepository _schedules;
     private readonly IMedicationSuspensionRepository _suspensions;
+    private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly TimeProvider _clock;
 
     public MedicineOverviewLoader(
@@ -21,12 +22,14 @@ internal sealed class MedicineOverviewLoader
         IStockMovementRepository stock,
         IMedicationScheduleHistoryRepository schedules,
         IMedicationSuspensionRepository suspensions,
+        IMedicationAdministrationSlotRepository slots,
         TimeProvider clock)
     {
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
         _suspensions = suspensions;
+        _slots = slots;
         _clock = clock;
     }
 
@@ -42,7 +45,8 @@ internal sealed class MedicineOverviewLoader
             var currentStock = MedicineStock.Current(movements);
 
             var schedule = await _schedules.ListForMedicineAsync(m.Id, cancellationToken);
-            var rate = DailyConsumption.RateOn(today, schedule);
+            var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);
+            var rate = DailyConsumption.RateOn(today, schedule, slots);
 
             var suspensions = await _suspensions.ListForMedicineAsync(m.Id, cancellationToken);
             var isSuspended = SuspensionState.IsSuspendedOn(today, suspensions);

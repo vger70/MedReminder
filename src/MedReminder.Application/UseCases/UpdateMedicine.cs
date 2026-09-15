@@ -1,11 +1,21 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 
 namespace MedReminder.Application.UseCases;
 
 // Aggiorna campi non-schedule e non-stock. Cambi di dose/frequenza
 // vanno canalizzati su ChangeMedicationSchedule per preservare la
-// timeline; qui si aggiornano solo i campi "amministrativi".
+// timeline; qui si aggiornano solo i campi "amministrativi" più,
+// opzionalmente, gli slot di somministrazione.
+//
+// Semantica AdministrationSlots (Incremento 10):
+//   null           → non toccare gli slot esistenti (il caller non
+//                    intende modificarli in questa richiesta).
+//   lista vuota    → azzera gli slot: la medicina torna al modello
+//                    legacy dose × frequenza.
+//   lista con item → sostituzione atomica (delete + insert) degli slot
+//                    correnti.
 public sealed record UpdateMedicineCommand(
     Guid MedicineId,
     string Name,
@@ -17,20 +27,24 @@ public sealed record UpdateMedicineCommand(
     DateOnly? EndDate,
     string? DoctorName,
     string? Notes,
-    bool IsActive);
+    bool IsActive,
+    IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null);
 
 public sealed class UpdateMedicine
 {
     private readonly IMedicineRepository _medicines;
+    private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
     public UpdateMedicine(
         IMedicineRepository medicines,
+        IMedicationAdministrationSlotRepository slots,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
+        _slots = slots;
         _uow = uow;
         _clock = clock;
     }
@@ -64,6 +78,33 @@ public sealed class UpdateMedicine
         medicine.UpdatedAt = _clock.GetUtcNow();
 
         await _medicines.UpdateAsync(medicine, cancellationToken);
+
+        if (cmd.AdministrationSlots is not null)
+        {
+            await _slots.DeleteForMedicineAsync(medicine.Id, cancellationToken);
+            if (cmd.AdministrationSlots.Count > 0)
+            {
+                await _slots.AddRangeAsync(BuildSlots(medicine.Id, cmd.AdministrationSlots), cancellationToken);
+            }
+        }
+
         await _uow.SaveChangesAsync(cancellationToken);
+    }
+
+    private static IEnumerable<MedicationAdministrationSlot> BuildSlots(
+        Guid medicineId, IReadOnlyList<AdministrationSlotInput> inputs)
+    {
+        for (var i = 0; i < inputs.Count; i++)
+        {
+            var input = inputs[i];
+            yield return new MedicationAdministrationSlot
+            {
+                MedicineId = medicineId,
+                Dose = input.Dose,
+                Time = input.Time,
+                TimingLabel = string.IsNullOrWhiteSpace(input.TimingLabel) ? null : input.TimingLabel.Trim(),
+                Order = i,
+            };
+        }
     }
 }

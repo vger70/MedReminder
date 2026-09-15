@@ -40,6 +40,7 @@ internal sealed class MainForm : Form
     private ToolStripButton _btnRefresh = null!;
     private ToolStripButton _btnChangeSchedule = null!;
     private ToolStripButton _btnRegisterIntake = null!;
+    private ToolStripButton _btnTherapyReport = null!;
     private ToolStripStatusLabel _statusLabel = null!;
     private Panel _errorBanner = null!;
     private Label _errorBannerLabel = null!;
@@ -158,6 +159,7 @@ internal sealed class MainForm : Form
         _btnRegisterIntake = MakeButton("Registra assunzione…", async () => await ShowRegisterIntakeAsync());
         _btnCheckNow = MakeButton("Controlla ora", async () => await RunMonitorAsync());
         _btnRefresh = MakeButton("Aggiorna", async () => await ReloadAsync());
+        _btnTherapyReport = MakeButton("Scheda terapia…", async () => await ShowTherapyReportAsync());
         _btnSettings = MakeButton("Impostazioni…", () => { ShowSettings(); return Task.CompletedTask; });
 
         strip.Items.Add(_btnNew);
@@ -172,8 +174,43 @@ internal sealed class MainForm : Form
         strip.Items.Add(_btnCheckNow);
         strip.Items.Add(_btnRefresh);
         strip.Items.Add(new ToolStripSeparator());
+        strip.Items.Add(_btnTherapyReport);
         strip.Items.Add(_btnSettings);
         return strip;
+    }
+
+    private async Task ShowTherapyReportAsync()
+    {
+        try
+        {
+            List<MedReminder.Application.Reporting.TherapyReportEntry> entries;
+            DateOnly today;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                var medicineRepo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
+                var slotRepo = scope.ServiceProvider.GetRequiredService<IMedicationAdministrationSlotRepository>();
+                var clock = scope.ServiceProvider.GetRequiredService<TimeProvider>();
+
+                var medicines = await medicineRepo.ListAllAsync(CancellationToken.None);
+                entries = new List<MedReminder.Application.Reporting.TherapyReportEntry>(medicines.Count);
+                foreach (var m in medicines)
+                {
+                    var slots = await slotRepo.ListForMedicineAsync(m.Id, CancellationToken.None);
+                    entries.Add(new MedReminder.Application.Reporting.TherapyReportEntry(m, slots));
+                }
+
+                today = DateOnly.FromDateTime(
+                    TimeZoneInfo.ConvertTime(clock.GetUtcNow(), clock.LocalTimeZone).DateTime);
+            }
+
+            var reportText = MedReminder.Application.Reporting.TherapyReport.Build(entries, today);
+            using var dialog = new TherapyReportDialog(reportText);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Errore generazione scheda terapia", ex);
+        }
     }
 
     private static ToolStripButton MakeButton(string text, Func<Task> action)
@@ -362,14 +399,22 @@ internal sealed class MainForm : Form
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var repo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
+            var slotRepo = scope.ServiceProvider.GetRequiredService<IMedicationAdministrationSlotRepository>();
             var medicine = await repo.GetAsync(row.Id, CancellationToken.None);
             if (medicine is null) return;
+
+            var slots = await slotRepo.ListForMedicineAsync(row.Id, CancellationToken.None);
+            IReadOnlyList<AdministrationSlotEntry> seedSlots = slots
+                .Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel))
+                .ToList();
+
             seed = new MedicineEditResult(
                 medicine.Name, medicine.ActiveIngredient, medicine.Package, medicine.Unit,
                 medicine.DosePerAdministration, medicine.AdministrationsPerDay,
                 medicine.StartDate, medicine.EndDate, medicine.ThresholdDays,
                 medicine.DoctorName, medicine.Notes,
-                InitialQuantity: 0m, medicine.NotificationChannels, medicine.IsActive);
+                InitialQuantity: 0m, medicine.NotificationChannels, medicine.IsActive,
+                Slots: seedSlots);
         }
         catch (Exception ex)
         {

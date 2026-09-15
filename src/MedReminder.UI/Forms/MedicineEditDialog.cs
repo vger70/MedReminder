@@ -30,14 +30,17 @@ internal sealed class MedicineEditDialog : Form
     private readonly CheckBox _channelWindows;
     private readonly CheckBox _channelEmail;
     private readonly CheckBox _isActiveBox;
+    private readonly ListView _slotsList;
+    private readonly Label _slotsSummary;
+    private readonly List<AdministrationSlotEntry> _slots = new();
     private readonly EditMode _mode;
 
     public MedicineEditDialog(EditMode mode, MedicineEditResult? seed = null)
     {
         _mode = mode;
         Text = mode == EditMode.Create ? "Nuova medicina" : "Modifica medicina";
-        Width = 520;
-        Height = 640;
+        Width = 620;
+        Height = 780;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -62,6 +65,26 @@ internal sealed class MedicineEditDialog : Form
         _channelWindows = new CheckBox { Text = "Notifica Windows", AutoSize = true, Checked = true };
         _channelEmail = new CheckBox { Text = "Email", AutoSize = true, Checked = false };
         _isActiveBox = new CheckBox { Text = "Attiva", AutoSize = true, Checked = true };
+
+        _slotsList = new ListView
+        {
+            Dock = DockStyle.Fill,
+            View = View.Details,
+            FullRowSelect = true,
+            HideSelection = false,
+            GridLines = true,
+            Height = 140,
+        };
+        _slotsList.Columns.Add("Ora", 80);
+        _slotsList.Columns.Add("Dose", 80);
+        _slotsList.Columns.Add("Descrizione", 300);
+        _slotsList.DoubleClick += (_, _) => EditSelectedSlot();
+        _slotsSummary = new Label
+        {
+            AutoSize = true,
+            ForeColor = System.Drawing.Color.DarkGray,
+            Text = string.Empty,
+        };
 
         var table = new TableLayoutPanel
         {
@@ -95,6 +118,10 @@ internal sealed class MedicineEditDialog : Form
         {
             AddRow(table, string.Empty, _isActiveBox);
         }
+
+        AddRow(table, "Orari (opzionale)", BuildSlotsPanel());
+        AddRow(table, string.Empty, _slotsSummary);
+        UpdateSlotsSummary();
 
         var okButton = new Button { Text = "Salva", DialogResult = DialogResult.OK, Width = 100, Height = 32 };
         var cancelButton = new Button { Text = "Annulla", DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
@@ -141,6 +168,13 @@ internal sealed class MedicineEditDialog : Form
         _channelWindows.Checked = (seed.NotificationChannels & NotificationChannels.Windows) != 0;
         _channelEmail.Checked = (seed.NotificationChannels & NotificationChannels.Email) != 0;
         _isActiveBox.Checked = seed.IsActive;
+
+        _slots.Clear();
+        if (seed.Slots is not null)
+        {
+            _slots.AddRange(seed.Slots);
+        }
+        RefreshSlotsList();
     }
 
     private void OnConfirmClick(object? sender, EventArgs e)
@@ -182,7 +216,8 @@ internal sealed class MedicineEditDialog : Form
             Notes: NullIfBlank(_notesBox.Text),
             InitialQuantity: _initialQtyBox.Value,
             NotificationChannels: channels,
-            IsActive: _isActiveBox.Checked);
+            IsActive: _isActiveBox.Checked,
+            Slots: _slots.ToList());
     }
 
     private Control BuildChannelsPanel()
@@ -191,6 +226,98 @@ internal sealed class MedicineEditDialog : Form
         panel.Controls.Add(_channelWindows);
         panel.Controls.Add(_channelEmail);
         return panel;
+    }
+
+    private Control BuildSlotsPanel()
+    {
+        var addButton = new Button { Text = "Aggiungi…", AutoSize = true, Height = 26 };
+        var editButton = new Button { Text = "Modifica…", AutoSize = true, Height = 26 };
+        var removeButton = new Button { Text = "Rimuovi", AutoSize = true, Height = 26 };
+        addButton.Click += (_, _) => AddSlot();
+        editButton.Click += (_, _) => EditSelectedSlot();
+        removeButton.Click += (_, _) => RemoveSelectedSlot();
+
+        var buttons = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            Dock = DockStyle.Bottom,
+            AutoSize = true,
+            Padding = new Padding(0, 4, 0, 0),
+        };
+        buttons.Controls.Add(addButton);
+        buttons.Controls.Add(editButton);
+        buttons.Controls.Add(removeButton);
+
+        var container = new Panel { Height = 180, Width = 400 };
+        _slotsList.Dock = DockStyle.Fill;
+        container.Controls.Add(_slotsList);
+        container.Controls.Add(buttons);
+        return container;
+    }
+
+    private void AddSlot()
+    {
+        using var dialog = new AdministrationSlotDialog(
+            unit: _unitBox.Text.Trim().Length == 0 ? "unità" : _unitBox.Text.Trim(),
+            suggestedDose: _doseBox.Value);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+        _slots.Add(dialog.Result);
+        RefreshSlotsList();
+    }
+
+    private void EditSelectedSlot()
+    {
+        var index = SelectedSlotIndex();
+        if (index < 0) return;
+        using var dialog = new AdministrationSlotDialog(
+            unit: _unitBox.Text.Trim().Length == 0 ? "unità" : _unitBox.Text.Trim(),
+            suggestedDose: _doseBox.Value,
+            seed: _slots[index]);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+        _slots[index] = dialog.Result;
+        RefreshSlotsList();
+    }
+
+    private void RemoveSelectedSlot()
+    {
+        var index = SelectedSlotIndex();
+        if (index < 0) return;
+        _slots.RemoveAt(index);
+        RefreshSlotsList();
+    }
+
+    private int SelectedSlotIndex()
+    {
+        return _slotsList.SelectedIndices.Count == 0 ? -1 : _slotsList.SelectedIndices[0];
+    }
+
+    private void RefreshSlotsList()
+    {
+        _slotsList.BeginUpdate();
+        _slotsList.Items.Clear();
+        foreach (var slot in _slots)
+        {
+            var row = new ListViewItem(slot.TimeDisplay);
+            row.SubItems.Add(slot.Dose.ToString("0.##"));
+            row.SubItems.Add(slot.LabelDisplay);
+            _slotsList.Items.Add(row);
+        }
+        _slotsList.EndUpdate();
+        UpdateSlotsSummary();
+    }
+
+    private void UpdateSlotsSummary()
+    {
+        if (_slots.Count == 0)
+        {
+            _slotsSummary.Text = "Nessuno slot configurato: la medicina userà "
+                + "\"dose × somministrazioni al giorno\" indicato sopra.";
+            return;
+        }
+        var total = _slots.Sum(s => s.Dose);
+        var unit = _unitBox.Text.Trim().Length == 0 ? "unità" : _unitBox.Text.Trim();
+        _slotsSummary.Text = $"{_slots.Count} slot definiti — totale giornaliero: "
+            + $"{total:0.##} {unit}. Il consumo giornaliero sarà calcolato da questi orari.";
     }
 
     private static NumericUpDown MakeDecimalUpDown(decimal min, decimal max, int decimals, decimal initial)
@@ -246,7 +373,8 @@ internal sealed record MedicineEditResult(
     string? Notes,
     decimal InitialQuantity,
     NotificationChannels NotificationChannels,
-    bool IsActive)
+    bool IsActive,
+    IReadOnlyList<AdministrationSlotEntry>? Slots = null)
 {
     public AddMedicineCommand ToAddCommand() => new(
         Name: Name,
@@ -261,8 +389,13 @@ internal sealed record MedicineEditResult(
         EndDate: EndDate,
         DoctorName: DoctorName,
         Notes: Notes,
-        InitialQuantity: InitialQuantity);
+        InitialQuantity: InitialQuantity,
+        AdministrationSlots: MapSlots());
 
+    // Passa sempre gli slot (anche vuoti): il use case UpdateMedicine
+    // distingue null=lascia-come-sono vs [] = azzera. Qui l'utente ha
+    // esplicitamente confermato la lista corrente, quindi vogliamo che
+    // venga applicata (sostituzione atomica).
     public UpdateMedicineCommand ToUpdateCommand(Guid id) => new(
         MedicineId: id,
         Name: Name,
@@ -274,5 +407,12 @@ internal sealed record MedicineEditResult(
         EndDate: EndDate,
         DoctorName: DoctorName,
         Notes: Notes,
-        IsActive: IsActive);
+        IsActive: IsActive,
+        AdministrationSlots: MapSlots() ?? Array.Empty<AdministrationSlotInput>());
+
+    private IReadOnlyList<AdministrationSlotInput>? MapSlots()
+    {
+        if (Slots is null || Slots.Count == 0) return null;
+        return Slots.Select(s => new AdministrationSlotInput(s.Dose, s.Time, s.TimingLabel)).ToList();
+    }
 }

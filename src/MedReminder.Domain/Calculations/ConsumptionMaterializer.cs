@@ -24,6 +24,18 @@ public static class ConsumptionMaterializer
         IEnumerable<MedicationScheduleHistory> scheduleHistory,
         IEnumerable<MedicationSuspension> suspensions)
     {
+        return Plan(medicine, rangeStartInclusive, rangeEndInclusive,
+            scheduleHistory, suspensions, administrationSlots: null);
+    }
+
+    public static IReadOnlyList<MaterializedConsumption> Plan(
+        Medicine medicine,
+        DateOnly rangeStartInclusive,
+        DateOnly rangeEndInclusive,
+        IEnumerable<MedicationScheduleHistory> scheduleHistory,
+        IEnumerable<MedicationSuspension> suspensions,
+        IEnumerable<MedicationAdministrationSlot>? administrationSlots)
+    {
         ArgumentNullException.ThrowIfNull(medicine);
         ArgumentNullException.ThrowIfNull(scheduleHistory);
         ArgumentNullException.ThrowIfNull(suspensions);
@@ -37,6 +49,7 @@ public static class ConsumptionMaterializer
         // volte all'interno del ciclo per giorno.
         var scheduleList = scheduleHistory.ToList();
         var suspensionList = suspensions.ToList();
+        var slotsList = administrationSlots?.ToList();
 
         // Non oltre la data di fine terapia.
         var upperBound = rangeEndInclusive;
@@ -56,7 +69,7 @@ public static class ConsumptionMaterializer
         {
             if (SuspensionState.IsSuspendedOn(day, suspensionList)) continue;
 
-            var rate = DailyConsumption.RateOn(day, scheduleList);
+            var rate = DailyConsumption.RateOn(day, scheduleList, slotsList);
             if (rate <= 0m) continue;
 
             result.Add(new MaterializedConsumption(day, rate));

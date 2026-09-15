@@ -22,6 +22,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<MedicationScheduleHistory> MedicationScheduleHistories => Set<MedicationScheduleHistory>();
     public DbSet<MedicationSuspension> MedicationSuspensions => Set<MedicationSuspension>();
     public DbSet<MedicationIntake> MedicationIntakes => Set<MedicationIntake>();
+    public DbSet<MedicationAdministrationSlot> MedicationAdministrationSlots => Set<MedicationAdministrationSlot>();
     public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -32,6 +33,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new MedicationScheduleHistoryConfiguration());
         modelBuilder.ApplyConfiguration(new MedicationSuspensionConfiguration());
         modelBuilder.ApplyConfiguration(new MedicationIntakeConfiguration());
+        modelBuilder.ApplyConfiguration(new MedicationAdministrationSlotConfiguration());
         modelBuilder.ApplyConfiguration(new NotificationEventConfiguration());
 
         ApplyDateTimeOffsetConverter(modelBuilder);

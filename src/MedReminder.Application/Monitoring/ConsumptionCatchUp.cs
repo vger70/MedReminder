@@ -22,6 +22,7 @@ public sealed class ConsumptionCatchUp
     private readonly IMedicineRepository _medicines;
     private readonly IMedicationScheduleHistoryRepository _schedules;
     private readonly IMedicationSuspensionRepository _suspensions;
+    private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IStockMovementRepository _stock;
     private readonly IMedicationIntakeRepository _intakes;
     private readonly IUnitOfWork _uow;
@@ -31,6 +32,7 @@ public sealed class ConsumptionCatchUp
         IMedicineRepository medicines,
         IMedicationScheduleHistoryRepository schedules,
         IMedicationSuspensionRepository suspensions,
+        IMedicationAdministrationSlotRepository slots,
         IStockMovementRepository stock,
         IMedicationIntakeRepository intakes,
         IUnitOfWork uow,
@@ -39,6 +41,7 @@ public sealed class ConsumptionCatchUp
         _medicines = medicines;
         _schedules = schedules;
         _suspensions = suspensions;
+        _slots = slots;
         _stock = stock;
         _intakes = intakes;
         _uow = uow;
@@ -68,9 +71,10 @@ public sealed class ConsumptionCatchUp
 
             var schedule = await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
             var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
+            var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
 
             var plan = ConsumptionMaterializer.Plan(
-                medicine, rangeStart, rangeEnd, schedule, suspensions);
+                medicine, rangeStart, rangeEnd, schedule, suspensions, slots);
             if (plan.Count == 0) continue;
 
             // Le giornate coperte da una registrazione manuale
