@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,6 +21,8 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using WinFormsApp = System.Windows.Forms.Application;
 using WinFormWindowState = System.Windows.Forms.FormWindowState;
+using WinFormUnhandledExceptionMode = System.Windows.Forms.UnhandledExceptionMode;
+using WinFormThreadExceptionEventArgs = System.Threading.ThreadExceptionEventArgs;
 
 namespace MedReminder.UI;
 
@@ -39,6 +42,15 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         Log.Logger = ConfigureSerilog();
+
+        // Le eccezioni nate dentro handler UI (es. click sul pulsante
+        // "Stampa" di PrintPreviewDialog che invoca la SaveAs del driver
+        // PDF virtuale — l'annullamento genera Win32Exception 87) NON
+        // risalgono ai try/catch delle nostre form: le raccoglie il
+        // message loop. Con CatchException le indirizza qui invece di
+        // uccidere il processo.
+        WinFormsApp.SetUnhandledExceptionMode(WinFormUnhandledExceptionMode.CatchException);
+        WinFormsApp.ThreadException += OnUnhandledUiException;
 
         using var singleInstance = new Mutex(initiallyOwned: false, SingleInstanceMutexName);
         bool acquired = false;
@@ -174,6 +186,85 @@ internal static class Program
         {
             // Timeout accettabile.
         }
+    }
+
+    private static void OnUnhandledUiException(object? sender, WinFormThreadExceptionEventArgs e)
+    {
+        var ex = e.Exception;
+
+        if (IsPrintingException(ex))
+        {
+            // Caso tipico: l'utente annulla la finestra "Salva PDF" del
+            // driver Microsoft Print to PDF. Il framework rilancia
+            // Win32Exception(87) dal dispositivo di stampa. Non è un
+            // errore dell'app — messaggio pulito, log a livello info.
+            Log.Information(ex, "Stampa annullata dall'utente o non completata.");
+            try
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    "Stampa annullata o non completata.\n\n" +
+                    "Se hai annullato la finestra di salvataggio PDF puoi ignorare questo messaggio.",
+                    "Stampa interrotta",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Information);
+            }
+            catch
+            {
+                // ignoriamo: siamo in un contesto di errore, la MessageBox
+                // non deve mai propagare una seconda eccezione.
+            }
+            return;
+        }
+
+        Log.Error(ex, "Eccezione non gestita nel thread UI.");
+        try
+        {
+            System.Windows.Forms.MessageBox.Show(
+                "Si è verificato un errore inatteso.\n\n" + ex.Message +
+                "\n\nL'errore è stato registrato nei log dell'applicazione.",
+                "Errore inatteso",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Error);
+        }
+        catch
+        {
+            // ignoriamo: come sopra, evitiamo cascate.
+        }
+    }
+
+    // Riconosce le eccezioni che nascono dallo stack di stampa
+    // (System.Drawing.Printing e drivers virtuali PDF/XPS). Cammina
+    // la catena InnerException perché il wrapper esterno può essere
+    // un TargetInvocationException lanciato dal message loop.
+    private static bool IsPrintingException(Exception ex)
+    {
+        for (Exception? current = ex; current is not null; current = current.InnerException)
+        {
+            if (current is Win32Exception)
+            {
+                // Se il produttore è la pipeline di stampa, lo stack lo mostra.
+                var trace = current.StackTrace ?? string.Empty;
+                if (trace.Contains("System.Drawing.Printing", StringComparison.Ordinal) ||
+                    trace.Contains("PrintDocument", StringComparison.Ordinal) ||
+                    trace.Contains("PrintController", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            var typeNs = current.GetType().Namespace ?? string.Empty;
+            if (typeNs.StartsWith("System.Drawing.Printing", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            var outerTrace = current.StackTrace ?? string.Empty;
+            if (outerTrace.Contains("System.Drawing.Printing.", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Serilog.Core.Logger ConfigureSerilog()
