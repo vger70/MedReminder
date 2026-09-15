@@ -36,19 +36,19 @@ internal sealed class StockMovementRepository : IStockMovementRepository
     public async Task<DateOnly?> GetLastConsumptionDayAsync(
         Guid medicineId, CancellationToken cancellationToken)
     {
-        // Il giorno del movimento è la .Date dell'OccurredAt salvato nel
-        // fuso locale a 12:00 (vedi Application/ConsumptionCatchUp).
-        // EF Core traduce Max su DateTimeOffset a un aggregato SQL:
-        // in-memory dopo la ToList potrebbe essere più semplice per la
-        // versione MVP, ma su volumi normali (poche migliaia di record)
-        // la Max lato DB è più efficiente.
-        var maxUtc = await _db.StockMovements
+        // Il provider SQLite di EF Core 10 non traduce Max()/Min() su
+        // DateTimeOffset (viene mappato a TEXT ISO 8601 con offset e le
+        // aggregate non hanno una traduzione sicura sulla stringa).
+        // Uso OrderByDescending + FirstOrDefault che è invece traducibile
+        // e produce un TOP 1 sull'indice (MedicineId, Kind, OccurredAt).
+        var latest = await _db.StockMovements
             .AsNoTracking()
             .Where(m => m.MedicineId == medicineId
                         && m.Kind == StockMovementKind.Consumption)
+            .OrderByDescending(m => m.OccurredAt)
             .Select(m => (DateTimeOffset?)m.OccurredAt)
-            .MaxAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken);
 
-        return maxUtc is null ? null : DateOnly.FromDateTime(maxUtc.Value.DateTime);
+        return latest.HasValue ? DateOnly.FromDateTime(latest.Value.DateTime) : null;
     }
 }
