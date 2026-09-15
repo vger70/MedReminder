@@ -106,6 +106,7 @@ public class EndToEndUseCaseTests
                 new MedicationScheduleHistoryRepository(ctx),
                 new MedicationSuspensionRepository(ctx),
                 new StockMovementRepository(ctx),
+                new MedicationIntakeRepository(ctx),
                 new UnitOfWork(ctx),
                 FixedClock);
             var created = await catchUp.RunAsync(CancellationToken.None);

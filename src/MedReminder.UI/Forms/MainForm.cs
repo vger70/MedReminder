@@ -38,6 +38,8 @@ internal sealed class MainForm : Form
     private ToolStripButton _btnCheckNow = null!;
     private ToolStripButton _btnSettings = null!;
     private ToolStripButton _btnRefresh = null!;
+    private ToolStripButton _btnChangeSchedule = null!;
+    private ToolStripButton _btnRegisterIntake = null!;
     private ToolStripStatusLabel _statusLabel = null!;
     private Panel _errorBanner = null!;
     private Label _errorBannerLabel = null!;
@@ -149,19 +151,23 @@ internal sealed class MainForm : Form
         };
         _btnNew = MakeButton("Nuova medicina", async () => await ShowNewMedicineAsync());
         _btnEdit = MakeButton("Modifica", async () => await ShowEditMedicineAsync());
+        _btnChangeSchedule = MakeButton("Cambia terapia…", async () => await ShowChangeScheduleAsync());
         _btnDeactivate = MakeButton("Disattiva", async () => await DeactivateSelectedAsync());
         _btnAddStock = MakeButton("Aggiungi scorte", async () => await ShowStockDialogAsync(StockOperationKind.NewPackage));
         _btnAdjustStock = MakeButton("Correggi scorte", async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection));
+        _btnRegisterIntake = MakeButton("Registra assunzione…", async () => await ShowRegisterIntakeAsync());
         _btnCheckNow = MakeButton("Controlla ora", async () => await RunMonitorAsync());
         _btnRefresh = MakeButton("Aggiorna", async () => await ReloadAsync());
         _btnSettings = MakeButton("Impostazioni…", () => { ShowSettings(); return Task.CompletedTask; });
 
         strip.Items.Add(_btnNew);
         strip.Items.Add(_btnEdit);
+        strip.Items.Add(_btnChangeSchedule);
         strip.Items.Add(_btnDeactivate);
         strip.Items.Add(new ToolStripSeparator());
         strip.Items.Add(_btnAddStock);
         strip.Items.Add(_btnAdjustStock);
+        strip.Items.Add(_btnRegisterIntake);
         strip.Items.Add(new ToolStripSeparator());
         strip.Items.Add(_btnCheckNow);
         strip.Items.Add(_btnRefresh);
@@ -413,6 +419,87 @@ internal sealed class MainForm : Form
         catch (Exception ex)
         {
             ShowError("Errore disattivazione", ex);
+        }
+    }
+
+    private async Task ShowChangeScheduleAsync()
+    {
+        var row = GetSelectedRow();
+        if (row is null) return;
+
+        decimal currentDose;
+        int currentFreq;
+        DateOnly startDate;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
+            var medicine = await repo.GetAsync(row.Id, CancellationToken.None);
+            if (medicine is null) return;
+            currentDose = medicine.DosePerAdministration;
+            currentFreq = medicine.AdministrationsPerDay;
+            startDate = medicine.StartDate;
+        }
+        catch (Exception ex)
+        {
+            ShowError("Errore lettura medicina", ex);
+            return;
+        }
+
+        using var dialog = new ChangeScheduleDialog(row.Name, currentDose, currentFreq, startDate);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var usecase = scope.ServiceProvider.GetRequiredService<ChangeMedicationSchedule>();
+            await usecase.ExecuteAsync(dialog.Result.ToCommand(row.Id), CancellationToken.None);
+            _log.LogInformation("Cambio schedule per medicina {MedicineId}: dose {Dose}, freq {Freq}, dal {From}",
+                row.Id, dialog.Result.NewDose, dialog.Result.NewFreq, dialog.Result.EffectiveFrom);
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError("Errore cambio schedule", ex);
+        }
+    }
+
+    private async Task ShowRegisterIntakeAsync()
+    {
+        var row = GetSelectedRow();
+        if (row is null) return;
+
+        // La dose default per il dialog è quella corrente della medicina.
+        decimal suggestedQuantity;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
+            var medicine = await repo.GetAsync(row.Id, CancellationToken.None);
+            if (medicine is null) return;
+            suggestedQuantity = medicine.DosePerAdministration;
+        }
+        catch (Exception ex)
+        {
+            ShowError("Errore lettura medicina", ex);
+            return;
+        }
+
+        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var usecase = scope.ServiceProvider.GetRequiredService<RegisterIntake>();
+            await usecase.ExecuteAsync(dialog.Result.ToCommand(row.Id), CancellationToken.None);
+            _log.LogInformation("Assunzione registrata per medicina {MedicineId}: {Status} {Quantity} il {Day}",
+                row.Id, dialog.Result.Status, dialog.Result.Quantity, dialog.Result.Day);
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError("Errore registrazione assunzione", ex);
         }
     }
 

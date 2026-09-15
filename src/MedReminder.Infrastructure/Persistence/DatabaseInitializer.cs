@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -5,10 +6,11 @@ namespace MedReminder.Infrastructure.Persistence;
 
 // Inizializzatore idempotente del database:
 //  1. crea il file DB e lo schema se assenti (EnsureCreated per MVP;
-//     Incremento 8 introdurrà le vere Migrations);
-//  2. imposta PRAGMA journal_mode = WAL per resistere a chiusure
-//     improvvise (ANALYSIS §1.1 punto 14);
-//  3. imposta foreign_keys = ON (SQLite le disabilita di default).
+//     una vera pipeline di migration verrà introdotta dopo l'MVP);
+//  2. applica patch di schema idempotenti per colonne aggiunte in
+//     incrementi successivi (evita che l'utente debba cancellare il DB
+//     ad ogni feature che aggiunge una colonna);
+//  3. imposta PRAGMA journal_mode=WAL, foreign_keys=ON, synchronous=NORMAL.
 public sealed class DatabaseInitializer
 {
     private readonly MedReminderDbContext _db;
@@ -27,9 +29,70 @@ public sealed class DatabaseInitializer
         {
             _log.LogInformation("MedReminder database created.");
         }
+        else
+        {
+            await ApplyIdempotentSchemaPatchesAsync(cancellationToken);
+        }
 
         await _db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode = WAL;", cancellationToken);
         await _db.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON;", cancellationToken);
         await _db.Database.ExecuteSqlRawAsync("PRAGMA synchronous = NORMAL;", cancellationToken);
+    }
+
+    // Patch di schema per DB esistenti creati con versioni precedenti.
+    // Ogni patch DEVE essere idempotente (safe da rieseguire su un DB
+    // già aggiornato). Elenco ordinato cronologicamente delle patch:
+    //
+    //   1) Incremento 9c: aggiunta colonna Day (TEXT NOT NULL) a
+    //      MedicationIntakes. Le righe pre-esistenti (nessuna in
+    //      circolazione dato che la tabella non era usata) ricevono
+    //      il default '0001-01-01'.
+    private async Task ApplyIdempotentSchemaPatchesAsync(CancellationToken cancellationToken)
+    {
+        await AddColumnIfMissingAsync(
+            table: "MedicationIntakes",
+            column: "Day",
+            typeSpec: "TEXT NOT NULL DEFAULT '0001-01-01'",
+            cancellationToken);
+    }
+
+    private async Task<bool> AddColumnIfMissingAsync(
+        string table, string column, string typeSpec, CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        if (await ColumnExistsAsync(connection, table, column, cancellationToken))
+        {
+            return false;
+        }
+
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {typeSpec};";
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
+        _log.LogInformation("Added missing column {Column} to {Table}.", column, table);
+        return true;
+    }
+
+    private static async Task<bool> ColumnExistsAsync(
+        DbConnection connection, string table, string column, CancellationToken cancellationToken)
+    {
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = $"PRAGMA table_info(\"{table}\");";
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            // PRAGMA table_info restituisce colonne:
+            //   0=cid  1=name  2=type  3=notnull  4=dflt_value  5=pk
+            var name = reader.GetString(1);
+            if (string.Equals(name, column, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

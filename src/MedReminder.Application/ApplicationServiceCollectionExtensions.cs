@@ -19,6 +19,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<SuspendMedication>();
         services.AddScoped<ResumeMedication>();
         services.AddScoped<ChangeMedicationSchedule>();
+        services.AddScoped<RegisterIntake>();
 
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();

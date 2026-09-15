@@ -23,6 +23,7 @@ public sealed class ConsumptionCatchUp
     private readonly IMedicationScheduleHistoryRepository _schedules;
     private readonly IMedicationSuspensionRepository _suspensions;
     private readonly IStockMovementRepository _stock;
+    private readonly IMedicationIntakeRepository _intakes;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
@@ -31,6 +32,7 @@ public sealed class ConsumptionCatchUp
         IMedicationScheduleHistoryRepository schedules,
         IMedicationSuspensionRepository suspensions,
         IStockMovementRepository stock,
+        IMedicationIntakeRepository intakes,
         IUnitOfWork uow,
         TimeProvider clock)
     {
@@ -38,6 +40,7 @@ public sealed class ConsumptionCatchUp
         _schedules = schedules;
         _suspensions = suspensions;
         _stock = stock;
+        _intakes = intakes;
         _uow = uow;
         _clock = clock;
     }
@@ -70,9 +73,24 @@ public sealed class ConsumptionCatchUp
                 medicine, rangeStart, rangeEnd, schedule, suspensions);
             if (plan.Count == 0) continue;
 
+            // Le giornate coperte da una registrazione manuale
+            // dell'assunzione (qualunque status) NON generano un consumo
+            // automatico: l'utente ha già dichiarato lo stato reale della
+            // giornata (Taken → movimento creato dal use case RegisterIntake;
+            // Skipped/Cancelled → nessun consumo). Vedi spec §6.
+            var manualDays = await _intakes.ListManualIntakeDaysAsync(
+                medicine.Id, rangeStart, rangeEnd, cancellationToken);
+            var manualDaysSet = manualDays.Count == 0
+                ? null
+                : new HashSet<DateOnly>(manualDays);
+
             var movements = new List<StockMovement>(plan.Count);
             foreach (var day in plan)
             {
+                if (manualDaysSet is not null && manualDaysSet.Contains(day.Day))
+                {
+                    continue;
+                }
                 movements.Add(new StockMovement
                 {
                     MedicineId = medicine.Id,
@@ -83,6 +101,7 @@ public sealed class ConsumptionCatchUp
                 });
             }
 
+            if (movements.Count == 0) continue;
             await _stock.AddRangeAsync(movements, cancellationToken);
             created += movements.Count;
         }

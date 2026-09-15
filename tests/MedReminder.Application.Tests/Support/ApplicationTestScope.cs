@@ -14,6 +14,7 @@ internal sealed class ApplicationTestScope
     public InMemoryStockMovementRepository Stock { get; } = new();
     public InMemoryMedicationScheduleHistoryRepository Schedules { get; } = new();
     public InMemoryMedicationSuspensionRepository Suspensions { get; } = new();
+    public InMemoryMedicationIntakeRepository Intakes { get; } = new();
     public InMemoryNotificationEventRepository Notifications { get; } = new();
     public InMemoryUnitOfWork Uow { get; } = new();
     public RecordingEmailNotificationService Email { get; } = new();
@@ -26,6 +27,7 @@ internal sealed class ApplicationTestScope
     public SuspendMedication SuspendMedication { get; }
     public ResumeMedication ResumeMedication { get; }
     public ChangeMedicationSchedule ChangeMedicationSchedule { get; }
+    public RegisterIntake RegisterIntake { get; }
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
 
@@ -40,9 +42,10 @@ internal sealed class ApplicationTestScope
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Uow, Clock);
         ResumeMedication = new ResumeMedication(Medicines, Suspensions, Uow, Clock);
         ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Uow, Clock);
+        RegisterIntake = new RegisterIntake(Medicines, Intakes, Stock, Uow, Clock);
 
         ConsumptionCatchUp = new ConsumptionCatchUp(
-            Medicines, Schedules, Suspensions, Stock, Uow, Clock);
+            Medicines, Schedules, Suspensions, Stock, Intakes, Uow, Clock);
 
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Notifications,

@@ -113,11 +113,13 @@ internal static class Program
         builder.Services.AddMedReminderApplication();
         builder.Services.AddMedReminderInfrastructure(builder.Configuration);
 
-        // La UI riusa la NotifyIcon principale per emettere le notifiche
-        // toast/balloon: sovrascrive la registrazione default fatta da
-        // AddMedReminderInfrastructure (BalloonTipNotificationService).
+        // La UI usa i Toast Windows moderni come primary, con fallback
+        // sul balloon della tray icon condivisa. Sovrascrive la
+        // registrazione default fatta da AddMedReminderInfrastructure
+        // (BalloonTipNotificationService).
         builder.Services.RemoveAll<IWindowsNotificationService>();
-        builder.Services.AddSingleton<IWindowsNotificationService, TrayBalloonNotificationService>();
+        builder.Services.AddSingleton<TrayBalloonNotificationService>();
+        builder.Services.AddSingleton<IWindowsNotificationService, ToastWindowsNotificationService>();
         builder.Services.AddSingleton<ApplicationTrayIcon>();
 
         builder.Services.AddScoped<MedicineOverviewLoader>();

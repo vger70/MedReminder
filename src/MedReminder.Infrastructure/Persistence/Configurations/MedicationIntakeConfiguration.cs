@@ -16,6 +16,7 @@ internal sealed class MedicationIntakeConfiguration : IEntityTypeConfiguration<M
         builder.Property(i => i.Notes).HasMaxLength(500);
 
         builder.HasIndex(i => i.MedicineId);
+        builder.HasIndex(i => new { i.MedicineId, i.Day });
         builder.HasIndex(i => new { i.MedicineId, i.ScheduledAt });
 
         builder.HasOne<Medicine>()
