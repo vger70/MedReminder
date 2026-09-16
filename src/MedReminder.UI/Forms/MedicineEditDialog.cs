@@ -40,7 +40,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _mode = mode;
         Text = mode == EditMode.Create ? "Nuova medicina" : "Modifica medicina";
         Width = 620;
-        Height = 780;
+        Height = 800;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
