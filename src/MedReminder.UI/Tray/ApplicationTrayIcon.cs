@@ -32,7 +32,10 @@ internal sealed class ApplicationTrayIcon : IDisposable
 
         NotifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Information,
+            // AppIcon.Default può essere null se l'embedded resource
+            // manca (build corrotta): fallback a SystemIcons.Information
+            // per non lasciare la tray senza icona.
+            Icon = AppIcon.Default ?? SystemIcons.Information,
             Text = "MedReminder",
             Visible = true,
             ContextMenuStrip = menu,

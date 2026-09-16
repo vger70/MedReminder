@@ -10,7 +10,7 @@ namespace MedReminder.UI.Forms;
 //   - Salva su file (.txt)
 //   - Stampa con anteprima (PrintPreviewDialog + PrintDocument), con
 //     paginazione automatica quando il testo eccede una pagina.
-internal sealed class TherapyReportDialog : Form
+internal sealed class TherapyReportDialog : MedReminderFormBase
 {
     private readonly TextBox _reportBox;
 

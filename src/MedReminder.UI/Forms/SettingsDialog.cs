@@ -17,7 +17,7 @@ namespace MedReminder.UI.Forms;
 // %LOCALAPPDATA%\MedReminder\smtp.settings.json (aggiunto al chain di
 // IConfiguration in Program.cs con reloadOnChange=true, così
 // IOptionsMonitor<SmtpSettings> si aggiorna senza riavvio).
-internal sealed class SettingsDialog : Form
+internal sealed class SettingsDialog : MedReminderFormBase
 {
     private readonly IOptionsMonitor<SmtpSettings> _smtpMonitor;
     private readonly IOptionsMonitor<BackupSettings> _backupMonitor;

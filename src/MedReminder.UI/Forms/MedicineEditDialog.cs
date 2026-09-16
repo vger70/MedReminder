@@ -8,7 +8,7 @@ namespace MedReminder.UI.Forms;
 // (Mode=Edit). Al termine espone Result: null se l'utente annulla,
 // altrimenti un DTO con i campi validi. La persistenza avviene nel
 // chiamante (MainForm) invocando il use case appropriato.
-internal sealed class MedicineEditDialog : Form
+internal sealed class MedicineEditDialog : MedReminderFormBase
 {
     public enum EditMode { Create, Edit }
 

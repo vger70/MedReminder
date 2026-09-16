@@ -8,7 +8,7 @@ namespace MedReminder.UI.Forms;
 // MedicationScheduleHistory con EffectiveFrom = data di decorrenza —
 // preserva la storia della schedule (i giorni prima della decorrenza
 // continuano a usare la dose precedente).
-internal sealed class ChangeScheduleDialog : Form
+internal sealed class ChangeScheduleDialog : MedReminderFormBase
 {
     public ChangeScheduleResult? Result { get; private set; }
 

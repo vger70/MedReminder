@@ -6,7 +6,7 @@ namespace MedReminder.UI.Forms;
 // Un solo dialog per: nuova confezione, aggiunta manuale, correzione
 // positiva o negativa. Il caller sceglie la StockOperationKind di default;
 // l'utente può cambiarla prima di confermare.
-internal sealed class StockAdjustmentDialog : Form
+internal sealed class StockAdjustmentDialog : MedReminderFormBase
 {
     public StockAdjustmentResult? Result { get; private set; }
 

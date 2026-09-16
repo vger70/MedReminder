@@ -12,6 +12,7 @@
     <AssemblyName>MedReminder</AssemblyName>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\medreminder.ico</ApplicationIcon>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -32,6 +33,16 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Icona embedded come resource: viene caricata a runtime da
+         AppIcon.Load() per assegnarla a ogni Form + tray NotifyIcon.
+         L'exe stesso usa la versione multi-res via ApplicationIcon. -->
+    <EmbeddedResource Include="..\..\assets\medreminder.ico">
+      <Link>Assets\medreminder.ico</Link>
+      <LogicalName>MedReminder.UI.medreminder.ico</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

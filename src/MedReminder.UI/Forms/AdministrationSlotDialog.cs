@@ -6,7 +6,7 @@ namespace MedReminder.UI.Forms;
 // Usato dal MedicineEditDialog per aggiungere/modificare una riga.
 // L'utente può indicare orario esatto opzionale + descrizione libera
 // (con dropdown di preset comuni: "al mattino", "dopo cena", ecc.).
-internal sealed class AdministrationSlotDialog : Form
+internal sealed class AdministrationSlotDialog : MedReminderFormBase
 {
     private static readonly string[] PresetLabels =
     {

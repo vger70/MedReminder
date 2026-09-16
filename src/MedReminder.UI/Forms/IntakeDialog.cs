@@ -11,7 +11,7 @@ namespace MedReminder.UI.Forms;
 //   Skipped         → no, ma la giornata è marcata come "gestita"
 //   Cancelled       → no, cancellazione di una assunzione registrata
 //                     precedentemente (uso storico/audit).
-internal sealed class IntakeDialog : Form
+internal sealed class IntakeDialog : MedReminderFormBase
 {
     public IntakeResult? Result { get; private set; }
 

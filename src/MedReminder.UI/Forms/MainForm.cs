@@ -18,7 +18,7 @@ namespace MedReminder.UI.Forms;
 // Le operazioni asincrone creano una scope DI dedicata via
 // IServiceScopeFactory — il DbContext è Scoped, non deve essere
 // condiviso tra thread o operazioni concorrenti.
-internal sealed class MainForm : Form
+internal sealed class MainForm : MedReminderFormBase
 {
     private static readonly Color WarningColor = Color.FromArgb(255, 245, 205);
     private static readonly Color EmptyColor = Color.FromArgb(255, 210, 210);
