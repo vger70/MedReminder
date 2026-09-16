@@ -53,6 +53,17 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private Label _backupStatusLabel = null!;
     private Label _backupCloudWarningLabel = null!;
 
+    // Component condiviso per i tooltip esplicativi sui campi tecnici
+    // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
+    // ToolTip per dialog è la best practice WinForms.
+    private readonly ToolTip _tooltips = new()
+    {
+        AutoPopDelay = 20_000,
+        InitialDelay = 400,
+        ReshowDelay = 200,
+        ShowAlways = true,
+    };
+
     public SettingsDialog(
         IOptionsMonitor<SmtpSettings> smtpMonitor,
         IOptionsMonitor<BackupSettings> backupMonitor,
@@ -118,6 +129,27 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _fromNameBox = new TextBox { Dock = DockStyle.Fill, Text = string.IsNullOrEmpty(current.FromDisplayName) ? "MedReminder" : current.FromDisplayName };
         _toBox = new TextBox { Dock = DockStyle.Fill, Text = current.ToAddress };
         _timeoutBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 5, Maximum = 300, Value = current.TimeoutSeconds > 0 ? current.TimeoutSeconds : 30 };
+
+        _tooltips.SetToolTip(_hostBox,
+            "Server SMTP del tuo provider email.\nEsempi: smtp.gmail.com, smtp-mail.outlook.com, smtp.mail.yahoo.com");
+        _tooltips.SetToolTip(_portBox,
+            "Porta TCP del server SMTP.\n• 587: submission con StartTLS (raccomandata)\n• 465: SMTPS legacy\n• 25: outbound relay senza TLS (sconsigliata)");
+        _tooltips.SetToolTip(_useTlsBox,
+            "Attiva la cifratura StartTLS sulla connessione SMTP.\nRichiesta praticamente da ogni provider moderno.");
+        _tooltips.SetToolTip(_usernameBox,
+            "Nome utente di login SMTP. Di solito coincide con l'indirizzo email completo.");
+        _tooltips.SetToolTip(_passwordBox,
+            "Password / App Password per l'autenticazione SMTP.\n\nAttenzione: dal 2022 Gmail e Outlook.com richiedono un 'App Password' generato dalle impostazioni di sicurezza dell'account (2FA obbligatoria) — la password normale dell'account NON funziona.\n\nLa password viene cifrata con DPAPI (per utente Windows) e non è mai memorizzata in chiaro.");
+        _tooltips.SetToolTip(_clearPasswordBox,
+            "Se selezionato al salvataggio, rimuove la password DPAPI memorizzata. Utile per disaccoppiare l'app dall'account senza reinstallare.");
+        _tooltips.SetToolTip(_fromBox,
+            "Indirizzo mittente delle notifiche. Deve essere accettato dal server SMTP (di solito == username).");
+        _tooltips.SetToolTip(_fromNameBox,
+            "Nome visualizzato del mittente nel client email del destinatario.");
+        _tooltips.SetToolTip(_toBox,
+            "Indirizzo che riceverà le email di promemoria. Può essere lo stesso del mittente o un altro (es. inbox condivisa con un familiare).");
+        _tooltips.SetToolTip(_timeoutBox,
+            "Timeout in secondi per l'apertura e invio della singola email. 30 s è un valore sensato per SMTP domestico.");
 
         _passwordStatusLabel = new Label
         {
@@ -326,6 +358,17 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Maximum = 3650,
             Value = settings.RetentionDays > 0 ? settings.RetentionDays : 30,
         };
+
+        _tooltips.SetToolTip(_backupEnabledBox,
+            "Attiva un backup automatico giornaliero del database.\nSe il PC è spento all'orario preferito, il backup viene eseguito al primo avvio successivo del giorno.");
+        _tooltips.SetToolTip(_backupDirectoryBox,
+            "Cartella in cui vengono salvati i file di backup (medreminder-YYYYMMDD-HHmmss.db).\n\nSuggerimento: evita cartelle sincronizzate su cloud (OneDrive, Dropbox) a meno che tu voglia esplicitamente che i tuoi dati medici vengano copiati online.");
+        _tooltips.SetToolTip(_backupTimePicker,
+            "Orario preferito del backup giornaliero (24h locali).\n\nÈ un 'orientamento', non un tempo esatto: se il PC non è acceso a quell'ora, il backup verrà eseguito al primo avvio successivo del giorno.");
+        _tooltips.SetToolTip(_backupRetentionBox,
+            "Numero di giorni di conservazione dei backup automatici.\nFile più vecchi vengono cancellati automaticamente dopo un backup riuscito.\n\n0 = nessuna cancellazione automatica (sconsigliato: la cartella cresce all'infinito).");
+        _tooltips.SetToolTip(browseButton,
+            "Apri Esplora file per scegliere la cartella dei backup.");
 
         var saveButton = new Button { Text = "Salva impostazioni backup", AutoSize = true, Height = 30 };
         saveButton.Click += (_, _) => SaveBackupSettings();

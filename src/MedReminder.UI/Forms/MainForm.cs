@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
@@ -190,17 +189,10 @@ internal sealed class MainForm : MedReminderFormBase
 
     private void OpenUserGuide()
     {
-        // Placeholder Incremento 14: la guida integrata non è ancora
-        // pronta. Per ora rimandiamo l'utente al README su GitHub, che
-        // contiene il link a docs/USER_GUIDE.md.
         try
         {
-            var psi = new ProcessStartInfo(
-                "https://github.com/vger70/MedReminder/blob/main/docs/USER_GUIDE.md")
-            {
-                UseShellExecute = true,
-            };
-            Process.Start(psi);
+            using var dialog = new HelpViewerForm();
+            dialog.ShowDialog(this);
         }
         catch (Exception ex)
         {
