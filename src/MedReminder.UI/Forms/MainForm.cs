@@ -150,7 +150,7 @@ internal sealed class MainForm : MedReminderFormBase
             async () => await RunMonitorAsync()));
         toolsMenu.DropDownItems.Add(new ToolStripSeparator());
         toolsMenu.DropDownItems.Add(BuildMenuItem("&Impostazioni…",
-            Mdl2Glyph.Glyphs.Settings, Keys.Control | Keys.OemComma,
+            Mdl2Glyph.Glyphs.Settings, Keys.Control | Keys.Oemcomma,
             () => { ShowSettings(); return Task.CompletedTask; }));
 
         // Aiuto (?)
