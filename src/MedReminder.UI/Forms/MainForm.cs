@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Monitoring;
@@ -8,6 +10,7 @@ using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
 using MedReminder.UI.Presentation;
 using MedReminder.UI.Tray;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,18 +33,8 @@ internal sealed class MainForm : MedReminderFormBase
 
     private DataGridView _grid = null!;
     private BindingList<MedicineListItem> _rows = new();
-    private ToolStripButton _btnNew = null!;
-    private ToolStripButton _btnEdit = null!;
-    private ToolStripButton _btnDeactivate = null!;
-    private ToolStripButton _btnAddStock = null!;
-    private ToolStripButton _btnAdjustStock = null!;
-    private ToolStripButton _btnCheckNow = null!;
-    private ToolStripButton _btnSettings = null!;
-    private ToolStripButton _btnRefresh = null!;
-    private ToolStripButton _btnChangeSchedule = null!;
-    private ToolStripButton _btnRegisterIntake = null!;
-    private ToolStripButton _btnTherapyReport = null!;
     private ToolStripStatusLabel _statusLabel = null!;
+    private ToolStripStatusLabel _lastCheckLabel = null!;
     private Panel _errorBanner = null!;
     private Label _errorBannerLabel = null!;
 
@@ -70,27 +63,161 @@ internal sealed class MainForm : MedReminderFormBase
 
     private void BuildLayout()
     {
+        var menuStrip = BuildMenuStrip();
         var toolStrip = BuildToolStrip();
         var statusStrip = BuildStatusStrip();
         _grid = BuildGrid();
         _errorBanner = BuildErrorBanner();
 
+        // TableLayout in 5 righe: menu, toolbar, banner errore, grid, status.
+        // Il MenuStrip va aggiunto a Controls e assegnato a MainMenuStrip
+        // così i keyboard shortcut (Ctrl+N, F5, Alt+F4) funzionano ovunque.
         var container = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
+            RowCount = 5,
         };
+        container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // menu
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // toolbar
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // banner (Visible=false)
         container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));// grid
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // status
-        container.Controls.Add(toolStrip, 0, 0);
-        container.Controls.Add(_errorBanner, 0, 1);
-        container.Controls.Add(_grid, 0, 2);
-        container.Controls.Add(statusStrip, 0, 3);
+        container.Controls.Add(menuStrip, 0, 0);
+        container.Controls.Add(toolStrip, 0, 1);
+        container.Controls.Add(_errorBanner, 0, 2);
+        container.Controls.Add(_grid, 0, 3);
+        container.Controls.Add(statusStrip, 0, 4);
 
         Controls.Add(container);
+        MainMenuStrip = menuStrip;
+    }
+
+    // ------------------ Menu bar ------------------
+    private MenuStrip BuildMenuStrip()
+    {
+        // File
+        // Nota: NON registro Alt+F4 come ShortcutKeys — Alt+F4 è già
+        // gestito dall'OS (chiude/nasconde la finestra) e il tray-hide
+        // di OnFormClosing è il comportamento voluto in quel caso.
+        // "Esci" (Ctrl+Q) forza invece l'uscita reale via _reallyExit.
+        var fileMenu = new ToolStripMenuItem("&File");
+        var fileExit = new ToolStripMenuItem("Esci", null,
+            (_, _) => { _reallyExit = true; Close(); })
+        { ShortcutKeys = Keys.Control | Keys.Q };
+        fileMenu.DropDownItems.Add(fileExit);
+
+        // Terapia
+        var therapyMenu = new ToolStripMenuItem("&Terapia");
+        therapyMenu.DropDownItems.Add(BuildMenuItem("&Nuova medicina…",
+            Mdl2Glyph.Glyphs.Add, Keys.Control | Keys.N,
+            async () => await ShowNewMedicineAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem("&Modifica",
+            Mdl2Glyph.Glyphs.Edit, Keys.F2,
+            async () => await ShowEditMedicineAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem("Cambia &dose/frequenza…",
+            Mdl2Glyph.Glyphs.Notebook, Keys.None,
+            async () => await ShowChangeScheduleAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem("&Disattiva",
+            Mdl2Glyph.Glyphs.Cancel, Keys.None,
+            async () => await DeactivateSelectedAsync()));
+        therapyMenu.DropDownItems.Add(new ToolStripSeparator());
+        therapyMenu.DropDownItems.Add(BuildMenuItem("&Registra assunzione…",
+            Mdl2Glyph.Glyphs.CheckMark, Keys.Control | Keys.I,
+            async () => await ShowRegisterIntakeAsync()));
+        therapyMenu.DropDownItems.Add(new ToolStripSeparator());
+        therapyMenu.DropDownItems.Add(BuildMenuItem("&Scheda terapia…",
+            Mdl2Glyph.Glyphs.Document, Keys.Control | Keys.P,
+            async () => await ShowTherapyReportAsync()));
+
+        // Scorte
+        var stockMenu = new ToolStripMenuItem("&Scorte");
+        stockMenu.DropDownItems.Add(BuildMenuItem("&Aggiungi confezione…",
+            Mdl2Glyph.Glyphs.Package, Keys.Control | Keys.Shift | Keys.A,
+            async () => await ShowStockDialogAsync(StockOperationKind.NewPackage)));
+        stockMenu.DropDownItems.Add(BuildMenuItem("&Correggi scorte…",
+            Mdl2Glyph.Glyphs.Warning, Keys.None,
+            async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
+        stockMenu.DropDownItems.Add(new ToolStripSeparator());
+        stockMenu.DropDownItems.Add(BuildMenuItem("A&ggiorna elenco",
+            Mdl2Glyph.Glyphs.Refresh, Keys.F5,
+            async () => await ReloadAsync()));
+
+        // Strumenti
+        var toolsMenu = new ToolStripMenuItem("Str&umenti");
+        toolsMenu.DropDownItems.Add(BuildMenuItem("&Controlla ora",
+            Mdl2Glyph.Glyphs.Sync, Keys.Control | Keys.R,
+            async () => await RunMonitorAsync()));
+        toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+        toolsMenu.DropDownItems.Add(BuildMenuItem("&Impostazioni…",
+            Mdl2Glyph.Glyphs.Settings, Keys.Control | Keys.OemComma,
+            () => { ShowSettings(); return Task.CompletedTask; }));
+
+        // Aiuto (?)
+        var helpMenu = new ToolStripMenuItem("&?");
+        var helpGuide = BuildMenuItem("&Guida utente",
+            Mdl2Glyph.Glyphs.Help, Keys.F1,
+            () => { OpenUserGuide(); return Task.CompletedTask; });
+        var helpAbout = BuildMenuItem("&Info su MedReminder…",
+            Mdl2Glyph.Glyphs.Info, Keys.None,
+            () => { ShowAboutDialog(); return Task.CompletedTask; });
+        helpMenu.DropDownItems.Add(helpGuide);
+        helpMenu.DropDownItems.Add(helpAbout);
+
+        var strip = new MenuStrip { Dock = DockStyle.Top };
+        strip.Items.Add(fileMenu);
+        strip.Items.Add(therapyMenu);
+        strip.Items.Add(stockMenu);
+        strip.Items.Add(toolsMenu);
+        strip.Items.Add(helpMenu);
+        return strip;
+    }
+
+    private static ToolStripMenuItem BuildMenuItem(
+        string text, string glyph, Keys shortcut, Func<Task> action)
+    {
+        var item = new ToolStripMenuItem(text)
+        {
+            Image = Mdl2Glyph.Create(glyph, size: 16),
+        };
+        if (shortcut != Keys.None)
+        {
+            item.ShortcutKeys = shortcut;
+        }
+        item.Click += async (_, _) => await action();
+        return item;
+    }
+
+    private void OpenUserGuide()
+    {
+        // Placeholder Incremento 14: la guida integrata non è ancora
+        // pronta. Per ora rimandiamo l'utente al README su GitHub, che
+        // contiene il link a docs/USER_GUIDE.md.
+        try
+        {
+            var psi = new ProcessStartInfo(
+                "https://github.com/vger70/MedReminder/blob/main/docs/USER_GUIDE.md")
+            {
+                UseShellExecute = true,
+            };
+            Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Impossibile aprire la guida", ex);
+        }
+    }
+
+    private void ShowAboutDialog()
+    {
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "dev";
+        var message =
+            $"MedReminder\nVersione {version}\n\n" +
+            "Promemoria organizzativo per scorte di medicine — non è un dispositivo medico " +
+            "e non fornisce indicazioni cliniche.\n\n" +
+            "Sorgente: https://github.com/vger70/MedReminder";
+        MessageBox.Show(this, message, "Info su MedReminder",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     // Banner rosso che appare in cima alla griglia quando ReloadAsync
@@ -142,41 +269,53 @@ internal sealed class MainForm : MedReminderFormBase
         _errorBanner.Visible = false;
     }
 
+    // Toolbar "quick access": solo 5 azioni frequenti, icone MDL2 sopra
+    // il testo. Tutti gli altri comandi sono raggiungibili dal MenuStrip
+    // + shortcut tastiera. Riduce il rumore visivo (era ~11 bottoni).
     private ToolStrip BuildToolStrip()
     {
         var strip = new ToolStrip
         {
             GripStyle = ToolStripGripStyle.Hidden,
             RenderMode = ToolStripRenderMode.System,
-            Padding = new Padding(4),
+            Padding = new Padding(6, 4, 6, 4),
+            ImageScalingSize = new Size(24, 24),
+            AutoSize = true,
         };
-        _btnNew = MakeButton("Nuova medicina", async () => await ShowNewMedicineAsync());
-        _btnEdit = MakeButton("Modifica", async () => await ShowEditMedicineAsync());
-        _btnChangeSchedule = MakeButton("Cambia terapia…", async () => await ShowChangeScheduleAsync());
-        _btnDeactivate = MakeButton("Disattiva", async () => await DeactivateSelectedAsync());
-        _btnAddStock = MakeButton("Aggiungi scorte", async () => await ShowStockDialogAsync(StockOperationKind.NewPackage));
-        _btnAdjustStock = MakeButton("Correggi scorte", async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection));
-        _btnRegisterIntake = MakeButton("Registra assunzione…", async () => await ShowRegisterIntakeAsync());
-        _btnCheckNow = MakeButton("Controlla ora", async () => await RunMonitorAsync());
-        _btnRefresh = MakeButton("Aggiorna", async () => await ReloadAsync());
-        _btnTherapyReport = MakeButton("Scheda terapia…", async () => await ShowTherapyReportAsync());
-        _btnSettings = MakeButton("Impostazioni…", () => { ShowSettings(); return Task.CompletedTask; });
-
-        strip.Items.Add(_btnNew);
-        strip.Items.Add(_btnEdit);
-        strip.Items.Add(_btnChangeSchedule);
-        strip.Items.Add(_btnDeactivate);
+        strip.Items.Add(BuildToolbarButton("Nuova\nmedicina",
+            Mdl2Glyph.Glyphs.Add,
+            async () => await ShowNewMedicineAsync()));
+        strip.Items.Add(BuildToolbarButton("Modifica",
+            Mdl2Glyph.Glyphs.Edit,
+            async () => await ShowEditMedicineAsync()));
         strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(_btnAddStock);
-        strip.Items.Add(_btnAdjustStock);
-        strip.Items.Add(_btnRegisterIntake);
+        strip.Items.Add(BuildToolbarButton("Registra\nassunzione",
+            Mdl2Glyph.Glyphs.CheckMark,
+            async () => await ShowRegisterIntakeAsync()));
+        strip.Items.Add(BuildToolbarButton("Controlla\nora",
+            Mdl2Glyph.Glyphs.Sync,
+            async () => await RunMonitorAsync()));
         strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(_btnCheckNow);
-        strip.Items.Add(_btnRefresh);
-        strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(_btnTherapyReport);
-        strip.Items.Add(_btnSettings);
+        strip.Items.Add(BuildToolbarButton("Scheda\nterapia",
+            Mdl2Glyph.Glyphs.Document,
+            async () => await ShowTherapyReportAsync()));
         return strip;
+    }
+
+    private static ToolStripButton BuildToolbarButton(
+        string text, string glyph, Func<Task> action)
+    {
+        var b = new ToolStripButton(text)
+        {
+            DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
+            TextImageRelation = TextImageRelation.ImageAboveText,
+            Image = Mdl2Glyph.Create(glyph, size: 24),
+            ImageScaling = ToolStripItemImageScaling.None,
+            AutoSize = true,
+            Padding = new Padding(4, 2, 4, 2),
+        };
+        b.Click += async (_, _) => await action();
+        return b;
     }
 
     private async Task ShowTherapyReportAsync()
@@ -213,17 +352,6 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    private static ToolStripButton MakeButton(string text, Func<Task> action)
-    {
-        var b = new ToolStripButton(text)
-        {
-            DisplayStyle = ToolStripItemDisplayStyle.Text,
-            AutoSize = true,
-        };
-        b.Click += async (_, _) => await action();
-        return b;
-    }
-
     private StatusStrip BuildStatusStrip()
     {
         _statusLabel = new ToolStripStatusLabel("Pronto.")
@@ -231,8 +359,13 @@ internal sealed class MainForm : MedReminderFormBase
             Spring = true,
             TextAlign = ContentAlignment.MiddleLeft,
         };
+        _lastCheckLabel = new ToolStripStatusLabel("Ultimo controllo: —")
+        {
+            TextAlign = ContentAlignment.MiddleRight,
+        };
         var strip = new StatusStrip { SizingGrip = false };
         strip.Items.Add(_statusLabel);
+        strip.Items.Add(_lastCheckLabel);
         return strip;
     }
 
@@ -592,6 +725,7 @@ internal sealed class MainForm : MedReminderFormBase
             await catchUp.RunAsync(CancellationToken.None);
             var result = await monitor.RunAsync(CancellationToken.None);
             SetStatus($"Controllo completato: {result.MedicinesInspected} medicine, {result.NotificationsSent} notifiche inviate.");
+            _lastCheckLabel.Text = $"Ultimo controllo: {DateTime.Now:HH:mm}";
             await ReloadAsync();
         }
         catch (Exception ex)
