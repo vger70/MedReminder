@@ -82,6 +82,14 @@
       <Link>localization\strings.it.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\localization\strings.fr.json">
+      <Link>localization\strings.fr.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.es.json">
+      <Link>localization\strings.es.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="..\..\assets\localization\strings.en.json">
       <Link>Assets\strings.en.json</Link>
       <LogicalName>strings.en.json</LogicalName>
@@ -89,6 +97,14 @@
     <EmbeddedResource Include="..\..\assets\localization\strings.it.json">
       <Link>Assets\strings.it.json</Link>
       <LogicalName>strings.it.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\localization\strings.fr.json">
+      <Link>Assets\strings.fr.json</Link>
+      <LogicalName>strings.fr.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\localization\strings.es.json">
+      <Link>Assets\strings.es.json</Link>
+      <LogicalName>strings.es.json</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

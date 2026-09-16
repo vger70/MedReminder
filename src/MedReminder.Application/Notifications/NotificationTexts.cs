@@ -151,15 +151,18 @@ public static class NotificationTexts
         return (titleIt, bodyIt);
     }
 
-    // Ritorna "en" o "it" in base a CultureInfo.CurrentUICulture (lingua
-    // Windows dell'utente); fallback "en" se la lingua non è tra quelle
-    // supportate.
+    // Ritorna il codice lingua ISO 639-1 che corrisponde alla lingua
+    // Windows dell'utente (CultureInfo.CurrentUICulture); fallback "en"
+    // se la lingua non è tra quelle supportate dall'app. Deve restare
+    // allineato con SupportedLanguages.All.
     public static string DetectSystemLanguageCode()
     {
         var twoLetter = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();
         return twoLetter switch
         {
             "it" => "it",
+            "fr" => "fr",
+            "es" => "es",
             _ => "en",
         };
     }

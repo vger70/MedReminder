@@ -14,6 +14,8 @@
 
   "Language.English": "Inglese",
   "Language.Italian": "Italiano",
+  "Language.French": "Francese",
+  "Language.Spanish": "Spagnolo",
 
   "Domain.Medicine.Status.Ok": "OK",
   "Domain.Medicine.Status.Warning": "Attenzione",

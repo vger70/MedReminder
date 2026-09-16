@@ -140,9 +140,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
         foreach (var lang in SupportedLanguages.All)
         {
-            var localizedName = lang.Code == "en"
-                ? _loc.Get("Language.English")
-                : _loc.Get("Language.Italian");
+            var localizedName = _loc.Get(LanguageDisplayKey(lang.Code));
             _languageCombo.Items.Add(new LanguageChoice(lang.Code, localizedName));
             if (string.Equals(lang.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
             {
@@ -233,6 +231,18 @@ internal sealed class SettingsDialog : MedReminderFormBase
     }
 
     private sealed record LanguageChoice(string Code, string DisplayName);
+
+    // Mappa un codice ISO 639-1 sulla chiave JSON che restituisce il
+    // nome della lingua nella lingua UI corrente. Codici sconosciuti
+    // ricadono su Language.English (fail-safe).
+    private static string LanguageDisplayKey(string code) => code switch
+    {
+        "en" => "Language.English",
+        "it" => "Language.Italian",
+        "fr" => "Language.French",
+        "es" => "Language.Spanish",
+        _ => "Language.English",
+    };
 
     // ------------------ Email tab ------------------
     private TabPage BuildEmailTab()

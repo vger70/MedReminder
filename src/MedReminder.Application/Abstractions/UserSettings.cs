@@ -30,6 +30,8 @@ public static class SupportedLanguages
     {
         new SupportedLanguage("en", "English", CultureInfo.GetCultureInfo("en")),
         new SupportedLanguage("it", "Italiano", CultureInfo.GetCultureInfo("it")),
+        new SupportedLanguage("fr", "Français", CultureInfo.GetCultureInfo("fr")),
+        new SupportedLanguage("es", "Español", CultureInfo.GetCultureInfo("es")),
     };
 
     public static SupportedLanguage Resolve(string? code)
