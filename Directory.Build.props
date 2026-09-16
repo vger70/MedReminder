@@ -14,4 +14,14 @@
     <RepositoryRoot>$(MSBuildThisFileDirectory)</RepositoryRoot>
   </PropertyGroup>
 
+  <!-- Versione centralizzata: tutti gli assembly la ereditano tramite
+       AssemblyVersion/FileVersion/InformationalVersion generati dal SDK.
+       Bumpare qui a ogni release. -->
+  <PropertyGroup Label="Versioning">
+    <VersionPrefix>1.0.1</VersionPrefix>
+    <!-- VersionSuffix opzionale: "beta", "rc1", "alpha.2" — produce
+         ad esempio 1.0.1-beta. Lascia vuoto per una release finale. -->
+    <VersionSuffix></VersionSuffix>
+  </PropertyGroup>
+
 </Project>
