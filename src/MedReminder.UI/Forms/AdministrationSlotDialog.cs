@@ -1,4 +1,5 @@
 using System.Windows.Forms;
+using MedReminder.Application.Abstractions;
 
 namespace MedReminder.UI.Forms;
 
@@ -8,33 +9,41 @@ namespace MedReminder.UI.Forms;
 // (con dropdown di preset comuni: "al mattino", "dopo cena", ecc.).
 internal sealed class AdministrationSlotDialog : MedReminderFormBase
 {
-    private static readonly string[] PresetLabels =
+    // Chiavi dei preset localizzati: la ComboBox mostra i testi tradotti
+    // per la lingua corrente.
+    private static readonly string[] PresetKeys =
     {
-        "Al mattino",
-        "Al mattino a stomaco vuoto",
-        "Prima di colazione",
-        "Dopo colazione",
-        "A metà mattina",
-        "Prima di pranzo",
-        "Dopo pranzo",
-        "Nel pomeriggio",
-        "Prima di cena",
-        "Dopo cena",
-        "Prima di dormire",
-        "Durante la notte",
-        "Al bisogno",
+        "Ui.AdministrationSlotDialog.Preset.Morning",
+        "Ui.AdministrationSlotDialog.Preset.MorningEmptyStomach",
+        "Ui.AdministrationSlotDialog.Preset.BeforeBreakfast",
+        "Ui.AdministrationSlotDialog.Preset.AfterBreakfast",
+        "Ui.AdministrationSlotDialog.Preset.MidMorning",
+        "Ui.AdministrationSlotDialog.Preset.BeforeLunch",
+        "Ui.AdministrationSlotDialog.Preset.AfterLunch",
+        "Ui.AdministrationSlotDialog.Preset.Afternoon",
+        "Ui.AdministrationSlotDialog.Preset.BeforeDinner",
+        "Ui.AdministrationSlotDialog.Preset.AfterDinner",
+        "Ui.AdministrationSlotDialog.Preset.BeforeSleep",
+        "Ui.AdministrationSlotDialog.Preset.Night",
+        "Ui.AdministrationSlotDialog.Preset.AsNeeded",
     };
 
     public AdministrationSlotEntry? Result { get; private set; }
 
+    private readonly ILocalizationService _loc;
     private readonly CheckBox _hasTime;
     private readonly DateTimePicker _timePicker;
     private readonly NumericUpDown _doseBox;
     private readonly ComboBox _labelBox;
 
-    public AdministrationSlotDialog(string unit, decimal suggestedDose, AdministrationSlotEntry? seed = null)
+    public AdministrationSlotDialog(
+        string unit, decimal suggestedDose, ILocalizationService localization,
+        AdministrationSlotEntry? seed = null)
     {
-        Text = seed is null ? "Nuovo slot di somministrazione" : "Modifica slot";
+        _loc = localization;
+        Text = _loc.Get(seed is null
+            ? "Ui.AdministrationSlotDialog.Title.New"
+            : "Ui.AdministrationSlotDialog.Title.Edit");
         Width = 500;
         Height = 340;
         StartPosition = FormStartPosition.CenterParent;
@@ -43,7 +52,12 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         MaximizeBox = false;
         Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
-        _hasTime = new CheckBox { Text = "Con orario specifico", AutoSize = true, Checked = seed?.Time is not null };
+        _hasTime = new CheckBox
+        {
+            Text = _loc.Get("Ui.AdministrationSlotDialog.HasTime"),
+            AutoSize = true,
+            Checked = seed?.Time is not null,
+        };
         _timePicker = new DateTimePicker
         {
             Format = DateTimePickerFormat.Custom,
@@ -68,7 +82,10 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         };
 
         _labelBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown };
-        _labelBox.Items.AddRange(PresetLabels);
+        foreach (var key in PresetKeys)
+        {
+            _labelBox.Items.Add(_loc.Get(key));
+        }
         _labelBox.Text = seed?.TimingLabel ?? string.Empty;
 
         var note = new Label
@@ -76,9 +93,7 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
             AutoSize = true,
             ForeColor = System.Drawing.Color.DarkGray,
             MaximumSize = new System.Drawing.Size(440, 0),
-            Text = "È sufficiente specificare orario, descrizione, oppure entrambi. " +
-                   "La descrizione può essere scelta dai preset o digitata liberamente " +
-                   "(es. \"prima di dormire\", \"a stomaco vuoto con acqua\").",
+            Text = _loc.Get("Ui.AdministrationSlotDialog.Note"),
         };
 
         var table = new TableLayoutPanel
@@ -92,13 +107,13 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        AddRow(table, "Orario", BuildTimeRow());
-        AddRow(table, "Dose", BuildDoseRow(unit));
-        AddRow(table, "Descrizione", _labelBox);
+        AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Time"), BuildTimeRow());
+        AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Dose"), BuildDoseRow(unit));
+        AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Description"), _labelBox);
         AddRow(table, string.Empty, note);
 
-        var okButton = new Button { Text = "Salva", DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = "Annulla", DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = new Button { Text = _loc.Get("Ui.AdministrationSlotDialog.Save"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
+        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
         okButton.Click += OnConfirm;
 
         var buttonPanel = new FlowLayoutPanel
@@ -140,8 +155,9 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         if (!hasTime && !hasLabel)
         {
             MessageBox.Show(this,
-                "Specifica almeno un orario o una descrizione.",
-                "Dati mancanti", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _loc.Get("Ui.AdministrationSlotDialog.Validation.NeedOne"),
+                _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.None;
             return;
         }

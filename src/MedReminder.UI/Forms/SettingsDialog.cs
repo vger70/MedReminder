@@ -27,6 +27,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private readonly IBackupService _backup;
     private readonly IBackupStateStore _backupState;
     private readonly IApplicationRestarter _restarter;
+    private readonly ILocalizationService _loc;
 
     // Email tab controls
     private TextBox _hostBox = null!;
@@ -53,6 +54,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private Label _backupStatusLabel = null!;
     private Label _backupCloudWarningLabel = null!;
 
+    // Generale (Incremento 16b) — selezione lingua UI
+    private ComboBox _languageCombo = null!;
+
     // Component condiviso per i tooltip esplicativi sui campi tecnici
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
     // ToolTip per dialog è la best practice WinForms.
@@ -72,7 +76,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
         IAutoStartService autoStart,
         IBackupService backup,
         IBackupStateStore backupState,
-        IApplicationRestarter restarter)
+        IApplicationRestarter restarter,
+        ILocalizationService localization)
     {
         _smtpMonitor = smtpMonitor;
         _backupMonitor = backupMonitor;
@@ -82,8 +87,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _backup = backup;
         _backupState = backupState;
         _restarter = restarter;
+        _loc = localization;
 
-        Text = "Impostazioni MedReminder";
+        Text = _loc.Get("Ui.SettingsDialog.Title");
         Width = 620;
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;
@@ -93,11 +99,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
         Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
         var tabs = new TabControl { Dock = DockStyle.Fill };
+        tabs.TabPages.Add(BuildGeneralTab());
         tabs.TabPages.Add(BuildEmailTab());
         tabs.TabPages.Add(BuildStartupTab());
         tabs.TabPages.Add(BuildBackupTab());
 
-        var closeButton = new Button { Text = "Chiudi", DialogResult = DialogResult.OK, Width = 100, Height = 32 };
+        var closeButton = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
         var buttonPanel = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.RightToLeft,
@@ -113,68 +120,184 @@ internal sealed class SettingsDialog : MedReminderFormBase
         CancelButton = closeButton;
     }
 
+    // ------------------ General tab (Incremento 16b) ------------------
+    private TabPage BuildGeneralTab()
+    {
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.General"));
+
+        var languageLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.Language"),
+        };
+
+        // ComboBox con Items = SupportedLanguage records. DisplayMember
+        // = DisplayName localizzato per la lingua corrente.
+        _languageCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        foreach (var lang in SupportedLanguages.All)
+        {
+            var localizedName = _loc.Get(LanguageDisplayKey(lang.Code));
+            _languageCombo.Items.Add(new LanguageChoice(lang.Code, localizedName));
+            if (string.Equals(lang.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+            {
+                _languageCombo.SelectedIndex = _languageCombo.Items.Count - 1;
+            }
+        }
+        _languageCombo.DisplayMember = nameof(LanguageChoice.DisplayName);
+
+        _tooltips.SetToolTip(_languageCombo, _loc.Get("Ui.SettingsDialog.Tooltip.Language"));
+
+        var saveButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.General.Save"),
+            AutoSize = true,
+            Height = 30,
+        };
+        saveButton.Click += (_, _) => SaveLanguage();
+
+        var note = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = System.Drawing.Color.DarkGray,
+            Text = _loc.Get("Ui.SettingsDialog.General.Note"),
+        };
+
+        var panel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16),
+        };
+        panel.Controls.Add(languageLabel);
+        panel.Controls.Add(_languageCombo);
+        panel.Controls.Add(saveButton);
+        panel.Controls.Add(note);
+        page.Controls.Add(panel);
+        return page;
+    }
+
+    private void SaveLanguage()
+    {
+        if (_languageCombo.SelectedItem is not LanguageChoice choice) return;
+
+        try
+        {
+            WriteUserSettingsToDisk(new UserSettings { Language = choice.Code });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        // Se la lingua non è cambiata, nessun restart necessario —
+        // basta un feedback breve. Diversamente chiediamo conferma
+        // e riavviamo.
+        if (string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.General.Saved"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var confirm = MessageBox.Show(this,
+            _loc.Get("Ui.SettingsDialog.General.RestartPrompt"),
+            _loc.Get("Ui.SettingsDialog.General.RestartPrompt.Title"),
+            MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (confirm == DialogResult.Yes)
+        {
+            _restarter.RestartAndExit();
+        }
+    }
+
+    private static void WriteUserSettingsToDisk(UserSettings settings)
+    {
+        var payload = new { UI = settings };
+        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "user.settings.json");
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+        });
+        File.WriteAllText(path, json);
+    }
+
+    private sealed record LanguageChoice(string Code, string DisplayName);
+
+    // Mappa un codice ISO 639-1 sulla chiave JSON che restituisce il
+    // nome della lingua nella lingua UI corrente. Codici sconosciuti
+    // ricadono su Language.English (fail-safe).
+    private static string LanguageDisplayKey(string code) => code switch
+    {
+        "en" => "Language.English",
+        "it" => "Language.Italian",
+        "fr" => "Language.French",
+        "es" => "Language.Spanish",
+        _ => "Language.English",
+    };
+
     // ------------------ Email tab ------------------
     private TabPage BuildEmailTab()
     {
-        var page = new TabPage("Email SMTP");
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Email"));
         var current = _smtpMonitor.CurrentValue;
 
         _hostBox = new TextBox { Dock = DockStyle.Fill, Text = current.Host };
         _portBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 1, Maximum = 65535, Value = current.Port > 0 ? current.Port : 587 };
-        _useTlsBox = new CheckBox { Text = "Usa StartTLS", AutoSize = true, Checked = current.UseStartTls };
+        _useTlsBox = new CheckBox { Text = _loc.Get("Ui.SettingsDialog.Email.UseTls"), AutoSize = true, Checked = current.UseStartTls };
         _usernameBox = new TextBox { Dock = DockStyle.Fill, Text = current.Username };
-        _passwordBox = new TextBox { Dock = DockStyle.Fill, UseSystemPasswordChar = true, PlaceholderText = "(lascia vuoto per non modificare)" };
-        _clearPasswordBox = new CheckBox { Text = "Rimuovi la password salvata", AutoSize = true };
+        _passwordBox = new TextBox { Dock = DockStyle.Fill, UseSystemPasswordChar = true, PlaceholderText = _loc.Get("Ui.SettingsDialog.Email.PasswordPlaceholder") };
+        _clearPasswordBox = new CheckBox { Text = _loc.Get("Ui.SettingsDialog.Email.ClearPassword"), AutoSize = true };
         _fromBox = new TextBox { Dock = DockStyle.Fill, Text = current.FromAddress };
         _fromNameBox = new TextBox { Dock = DockStyle.Fill, Text = string.IsNullOrEmpty(current.FromDisplayName) ? "MedReminder" : current.FromDisplayName };
         _toBox = new TextBox { Dock = DockStyle.Fill, Text = current.ToAddress };
         _timeoutBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 5, Maximum = 300, Value = current.TimeoutSeconds > 0 ? current.TimeoutSeconds : 30 };
 
-        _tooltips.SetToolTip(_hostBox,
-            "Server SMTP del tuo provider email.\nEsempi: smtp.gmail.com, smtp-mail.outlook.com, smtp.mail.yahoo.com");
-        _tooltips.SetToolTip(_portBox,
-            "Porta TCP del server SMTP.\n• 587: submission con StartTLS (raccomandata)\n• 465: SMTPS legacy\n• 25: outbound relay senza TLS (sconsigliata)");
-        _tooltips.SetToolTip(_useTlsBox,
-            "Attiva la cifratura StartTLS sulla connessione SMTP.\nRichiesta praticamente da ogni provider moderno.");
-        _tooltips.SetToolTip(_usernameBox,
-            "Nome utente di login SMTP. Di solito coincide con l'indirizzo email completo.");
-        _tooltips.SetToolTip(_passwordBox,
-            "Password / App Password per l'autenticazione SMTP.\n\nAttenzione: dal 2022 Gmail e Outlook.com richiedono un 'App Password' generato dalle impostazioni di sicurezza dell'account (2FA obbligatoria) — la password normale dell'account NON funziona.\n\nLa password viene cifrata con DPAPI (per utente Windows) e non è mai memorizzata in chiaro.");
-        _tooltips.SetToolTip(_clearPasswordBox,
-            "Se selezionato al salvataggio, rimuove la password DPAPI memorizzata. Utile per disaccoppiare l'app dall'account senza reinstallare.");
-        _tooltips.SetToolTip(_fromBox,
-            "Indirizzo mittente delle notifiche. Deve essere accettato dal server SMTP (di solito == username).");
-        _tooltips.SetToolTip(_fromNameBox,
-            "Nome visualizzato del mittente nel client email del destinatario.");
-        _tooltips.SetToolTip(_toBox,
-            "Indirizzo che riceverà le email di promemoria. Può essere lo stesso del mittente o un altro (es. inbox condivisa con un familiare).");
-        _tooltips.SetToolTip(_timeoutBox,
-            "Timeout in secondi per l'apertura e invio della singola email. 30 s è un valore sensato per SMTP domestico.");
+        _tooltips.SetToolTip(_hostBox, _loc.Get("Ui.SettingsDialog.Tooltip.Host"));
+        _tooltips.SetToolTip(_portBox, _loc.Get("Ui.SettingsDialog.Tooltip.Port"));
+        _tooltips.SetToolTip(_useTlsBox, _loc.Get("Ui.SettingsDialog.Tooltip.UseTls"));
+        _tooltips.SetToolTip(_usernameBox, _loc.Get("Ui.SettingsDialog.Tooltip.Username"));
+        _tooltips.SetToolTip(_passwordBox, _loc.Get("Ui.SettingsDialog.Tooltip.Password"));
+        _tooltips.SetToolTip(_clearPasswordBox, _loc.Get("Ui.SettingsDialog.Tooltip.ClearPassword"));
+        _tooltips.SetToolTip(_fromBox, _loc.Get("Ui.SettingsDialog.Tooltip.From"));
+        _tooltips.SetToolTip(_fromNameBox, _loc.Get("Ui.SettingsDialog.Tooltip.FromName"));
+        _tooltips.SetToolTip(_toBox, _loc.Get("Ui.SettingsDialog.Tooltip.To"));
+        _tooltips.SetToolTip(_timeoutBox, _loc.Get("Ui.SettingsDialog.Tooltip.Timeout"));
 
         _passwordStatusLabel = new Label
         {
             AutoSize = true,
             ForeColor = _credentialStore.HasPassword ? System.Drawing.Color.DarkGreen : System.Drawing.Color.DarkGray,
-            Text = _credentialStore.HasPassword ? "Password già memorizzata (DPAPI)." : "Nessuna password memorizzata.",
+            Text = _loc.Get(_credentialStore.HasPassword
+                ? "Ui.SettingsDialog.Email.PasswordStored"
+                : "Ui.SettingsDialog.Email.PasswordEmpty"),
         };
 
-        var testButton = new Button { Text = "Prova connessione", AutoSize = true, Height = 28 };
-        var saveButton = new Button { Text = "Salva impostazioni SMTP", AutoSize = true, Height = 28 };
+        var testButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Email.Test"), AutoSize = true, Height = 28 };
+        var saveButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Email.Save"), AutoSize = true, Height = 28 };
         testButton.Click += async (_, _) => await TestSmtpAsync(testButton);
         saveButton.Click += (_, _) => SaveSmtpSettings();
 
         var table = BuildFormTable();
-        AddRow(table, "Host", _hostBox);
-        AddRow(table, "Porta", _portBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Host"), _hostBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Port"), _portBox);
         AddRow(table, string.Empty, _useTlsBox);
-        AddRow(table, "Username", _usernameBox);
-        AddRow(table, "Nuova password", _passwordBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Username"), _usernameBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.NewPassword"), _passwordBox);
         AddRow(table, string.Empty, _passwordStatusLabel);
         AddRow(table, string.Empty, _clearPasswordBox);
-        AddRow(table, "Mittente (from)", _fromBox);
-        AddRow(table, "Nome mittente", _fromNameBox);
-        AddRow(table, "Destinatario (to)", _toBox);
-        AddRow(table, "Timeout (s)", _timeoutBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.From"), _fromBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.FromName"), _fromNameBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.To"), _toBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Timeout"), _timeoutBox);
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(12) };
         buttons.Controls.Add(saveButton);
@@ -217,17 +340,22 @@ internal sealed class SettingsDialog : MedReminderFormBase
             }
 
             WriteSmtpSettingsToDisk(settings);
-            _passwordStatusLabel.Text = _credentialStore.HasPassword
-                ? "Password già memorizzata (DPAPI)."
-                : "Nessuna password memorizzata.";
+            _passwordStatusLabel.Text = _loc.Get(_credentialStore.HasPassword
+                ? "Ui.SettingsDialog.Email.PasswordStored"
+                : "Ui.SettingsDialog.Email.PasswordEmpty");
             _passwordBox.Text = string.Empty;
             _clearPasswordBox.Checked = false;
 
-            MessageBox.Show(this, "Impostazioni SMTP salvate.", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Email.Saved"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Errore salvataggio", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Email.SaveError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -241,13 +369,19 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             var ok = await _emailService.TestConnectionAsync(cts.Token);
-            var msg = ok ? "Connessione SMTP riuscita." : "Connessione SMTP fallita. Verifica configurazione e log.";
+            var msg = _loc.Get(ok
+                ? "Ui.SettingsDialog.Email.TestOk"
+                : "Ui.SettingsDialog.Email.TestFailed");
             var icon = ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning;
-            MessageBox.Show(this, msg, "Test SMTP", MessageBoxButtons.OK, icon);
+            MessageBox.Show(this, msg,
+                _loc.Get("Ui.SettingsDialog.Email.TestTitle"),
+                MessageBoxButtons.OK, icon);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Test SMTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Email.TestTitle"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
@@ -269,11 +403,11 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // ------------------ Startup tab ------------------
     private TabPage BuildStartupTab()
     {
-        var page = new TabPage("Avvio automatico");
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Startup"));
 
         _autoStartCheck = new CheckBox
         {
-            Text = "Avvia MedReminder all'accesso a Windows (--minimized)",
+            Text = _loc.Get("Ui.SettingsDialog.Startup.AutoStart"),
             AutoSize = true,
             Checked = _autoStart.IsEnabled,
         };
@@ -286,7 +420,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, "Errore auto-start", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, ex.Message,
+                    _loc.Get("Ui.SettingsDialog.Startup.Error"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _autoStartCheck.Checked = _autoStart.IsEnabled;
             }
         };
@@ -294,7 +430,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var note = new Label
         {
             AutoSize = true,
-            Text = "L'avvio è per-utente (HKCU\\...\\Run). Non richiede privilegi amministrativi.",
+            Text = _loc.Get("Ui.SettingsDialog.Startup.Note"),
             ForeColor = System.Drawing.Color.DarkGray,
         };
 
@@ -313,20 +449,20 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // ------------------ Backup tab ------------------
     private TabPage BuildBackupTab()
     {
-        var page = new TabPage("Backup / Ripristino");
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Backup"));
         var settings = _backupMonitor.CurrentValue;
 
         _dbPathLabel = new Label
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
-            Text = $"File database corrente:\n{_backup.DatabasePath}",
+            Text = _loc.Get("Ui.SettingsDialog.Backup.DbPath", _backup.DatabasePath),
             ForeColor = System.Drawing.Color.DarkGray,
         };
 
         _backupEnabledBox = new CheckBox
         {
-            Text = "Backup automatico giornaliero",
+            Text = _loc.Get("Ui.SettingsDialog.Backup.Enable"),
             AutoSize = true,
             Checked = settings.Enabled,
         };
@@ -337,7 +473,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Text = settings.Directory,
             ReadOnly = false,
         };
-        var browseButton = new Button { Text = "Sfoglia…", AutoSize = true };
+        var browseButton = new Button { Text = _loc.Get("Common.Browse"), AutoSize = true };
         browseButton.Click += (_, _) => BrowseBackupDirectory();
 
         // DateTimePicker in modalità "Time": mostra solo HH:mm (custom
@@ -359,27 +495,22 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Value = settings.RetentionDays > 0 ? settings.RetentionDays : 30,
         };
 
-        _tooltips.SetToolTip(_backupEnabledBox,
-            "Attiva un backup automatico giornaliero del database.\nSe il PC è spento all'orario preferito, il backup viene eseguito al primo avvio successivo del giorno.");
-        _tooltips.SetToolTip(_backupDirectoryBox,
-            "Cartella in cui vengono salvati i file di backup (medreminder-YYYYMMDD-HHmmss.db).\n\nSuggerimento: evita cartelle sincronizzate su cloud (OneDrive, Dropbox) a meno che tu voglia esplicitamente che i tuoi dati medici vengano copiati online.");
-        _tooltips.SetToolTip(_backupTimePicker,
-            "Orario preferito del backup giornaliero (24h locali).\n\nÈ un 'orientamento', non un tempo esatto: se il PC non è acceso a quell'ora, il backup verrà eseguito al primo avvio successivo del giorno.");
-        _tooltips.SetToolTip(_backupRetentionBox,
-            "Numero di giorni di conservazione dei backup automatici.\nFile più vecchi vengono cancellati automaticamente dopo un backup riuscito.\n\n0 = nessuna cancellazione automatica (sconsigliato: la cartella cresce all'infinito).");
-        _tooltips.SetToolTip(browseButton,
-            "Apri Esplora file per scegliere la cartella dei backup.");
+        _tooltips.SetToolTip(_backupEnabledBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupEnabled"));
+        _tooltips.SetToolTip(_backupDirectoryBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupDirectory"));
+        _tooltips.SetToolTip(_backupTimePicker, _loc.Get("Ui.SettingsDialog.Tooltip.BackupTime"));
+        _tooltips.SetToolTip(_backupRetentionBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupRetention"));
+        _tooltips.SetToolTip(browseButton, _loc.Get("Ui.SettingsDialog.Tooltip.BackupBrowse"));
 
-        var saveButton = new Button { Text = "Salva impostazioni backup", AutoSize = true, Height = 30 };
+        var saveButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.SaveSettings"), AutoSize = true, Height = 30 };
         saveButton.Click += (_, _) => SaveBackupSettings();
 
-        var runNowButton = new Button { Text = "Esegui backup adesso", AutoSize = true, Height = 30 };
+        var runNowButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.RunNow"), AutoSize = true, Height = 30 };
         runNowButton.Click += async (_, _) => await RunBackupNowAsync(runNowButton);
 
-        var exportButton = new Button { Text = "Esporta in cartella specifica…", AutoSize = true, Height = 30 };
+        var exportButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.ExportCustom"), AutoSize = true, Height = 30 };
         exportButton.Click += async (_, _) => await ExportBackupAsync(exportButton);
 
-        var importButton = new Button { Text = "Ripristina backup…", AutoSize = true, Height = 30 };
+        var importButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.Restore"), AutoSize = true, Height = 30 };
         importButton.Click += async (_, _) => await ImportBackupAsync(importButton);
 
         _backupStatusLabel = new Label { AutoSize = true };
@@ -407,9 +538,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
         var table = BuildFormTable();
         AddRow(table, string.Empty, _backupEnabledBox);
-        AddRow(table, "Cartella backup", directoryRow);
-        AddRow(table, "Orario preferito", _backupTimePicker);
-        AddRow(table, "Retention (giorni)", _backupRetentionBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.Directory"), directoryRow);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.PreferredTime"), _backupTimePicker);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.RetentionDays"), _backupRetentionBox);
         AddRow(table, string.Empty, _backupStatusLabel);
         AddRow(table, string.Empty, _backupCloudWarningLabel);
 
@@ -429,11 +560,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
             AutoEllipsis = false,
-            Text = "Il backup automatico richiede che MedReminder sia in esecuzione all'orario " +
-                   "preferito. Se il PC è spento a quell'ora, il backup viene eseguito al primo " +
-                   "avvio successivo del giorno.\n" +
-                   "Il ripristino sovrascrive il DB corrente; una copia della versione precedente " +
-                   "viene salvata come .bak-<timestamp>.",
+            Text = _loc.Get("Ui.SettingsDialog.Backup.Note"),
             ForeColor = System.Drawing.Color.DarkGray,
         };
 
@@ -456,7 +583,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     {
         using var dialog = new FolderBrowserDialog
         {
-            Description = "Seleziona la cartella dei backup",
+            Description = _loc.Get("Ui.SettingsDialog.Backup.BrowseDialog.Title"),
             InitialDirectory = string.IsNullOrWhiteSpace(_backupDirectoryBox.Text)
                 ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
                 : _backupDirectoryBox.Text,
@@ -477,8 +604,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
             if (enabled && string.IsNullOrWhiteSpace(directory))
             {
                 MessageBox.Show(this,
-                    "Per abilitare il backup automatico devi selezionare una cartella di destinazione.",
-                    "Backup",
+                    _loc.Get("Ui.SettingsDialog.Backup.NoDirectorySelected"),
+                    _loc.Get("Ui.SettingsDialog.Backup.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -490,8 +617,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 catch (Exception ex)
                 {
                     MessageBox.Show(this,
-                        $"Impossibile creare la cartella:\n{ex.Message}",
-                        "Backup",
+                        _loc.Get("Ui.SettingsDialog.Backup.DirectoryCreateError", ex.Message),
+                        _loc.Get("Ui.SettingsDialog.Backup.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
@@ -507,13 +634,15 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
             WriteBackupSettingsToDisk(settings);
             MessageBox.Show(this,
-                "Impostazioni backup salvate.",
-                "OK",
+                _loc.Get("Ui.SettingsDialog.Backup.Saved"),
+                _loc.Get("Common.Ok"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Errore salvataggio backup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Backup.SaveError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -523,8 +652,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
         if (string.IsNullOrWhiteSpace(directory))
         {
             MessageBox.Show(this,
-                "Seleziona prima una cartella di destinazione (e salva le impostazioni).",
-                "Backup",
+                _loc.Get("Ui.SettingsDialog.Backup.RunNoDir"),
+                _loc.Get("Ui.SettingsDialog.Backup.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
@@ -545,10 +674,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 LastBackupFile: file));
             UpdateBackupStatusLabel();
 
-            var suffix = pruned > 0 ? $"\n{pruned} vecchi backup rimossi." : string.Empty;
+            var suffix = pruned > 0 ? _loc.Get("Ui.SettingsDialog.Backup.RunPruned", pruned) : string.Empty;
             MessageBox.Show(this,
-                $"Backup creato:\n{file}{suffix}",
-                "Backup",
+                _loc.Get("Ui.SettingsDialog.Backup.RunSuccess", file) + suffix,
+                _loc.Get("Ui.SettingsDialog.Backup.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
@@ -559,7 +688,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 LastError: ex.Message,
                 LastBackupFile: null));
             UpdateBackupStatusLabel();
-            MessageBox.Show(this, ex.Message, "Errore backup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Backup.RunError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
@@ -569,17 +700,25 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private async Task ExportBackupAsync(Button button)
     {
-        using var dialog = new FolderBrowserDialog { Description = "Seleziona la cartella di destinazione" };
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = _loc.Get("Ui.SettingsDialog.Backup.ExportDialog.Title"),
+        };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         button.Enabled = false;
         try
         {
             var file = await _backup.ExportAsync(dialog.SelectedPath, CancellationToken.None);
-            MessageBox.Show(this, $"Backup creato:\n{file}", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Backup.RunSuccess", file),
+                _loc.Get("Ui.SettingsDialog.Backup.ExportTitle"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Errore export", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Backup.ExportError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
@@ -591,31 +730,33 @@ internal sealed class SettingsDialog : MedReminderFormBase
     {
         using var dialog = new OpenFileDialog
         {
-            Title = "Seleziona il file di backup",
-            Filter = "Database SQLite (*.db)|*.db|Tutti i file (*.*)|*.*",
+            Title = _loc.Get("Ui.SettingsDialog.Backup.FileDialog.Title"),
+            Filter = _loc.Get("Ui.SettingsDialog.Backup.FileDialog.Filter"),
             CheckFileExists = true,
         };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
         var confirm = MessageBox.Show(this,
-            "L'operazione sovrascrive il database corrente. Al termine MedReminder verrà riavviato in automatico.\n\nProcedere?",
-            "Conferma ripristino", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirm"),
+            _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirmTitle"),
+            MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (confirm != DialogResult.Yes) return;
 
         button.Enabled = false;
         try
         {
             await _backup.ImportAsync(dialog.FileName, CancellationToken.None);
-            var restartAnswer = MessageBox.Show(this,
-                "Ripristino completato. Riavvio MedReminder ora per applicare le modifiche.",
-                "Import",
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Backup.RestoreDone"),
+                _loc.Get("Ui.SettingsDialog.Backup.ImportTitle"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
-            _ = restartAnswer;
             _restarter.RestartAndExit();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Errore import", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Backup.ImportError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
@@ -629,28 +770,29 @@ internal sealed class SettingsDialog : MedReminderFormBase
         if (state.LastSuccessfulBackupAt is null && state.LastAttemptAt is null)
         {
             _backupStatusLabel.ForeColor = System.Drawing.Color.DarkGray;
-            _backupStatusLabel.Text = "Nessun backup eseguito finora.";
+            _backupStatusLabel.Text = _loc.Get("Ui.SettingsDialog.Backup.NoBackupsYet");
             return;
         }
 
         if (state.LastSuccessfulBackupAt is { } ok)
         {
             var okLocal = ok.ToLocalTime();
+            var timestamp = okLocal.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
             var errorSuffix = state.LastError is not null
-                ? $" · ultimo tentativo fallito: {state.LastError}"
+                ? _loc.Get("Ui.SettingsDialog.Backup.LastError", state.LastError)
                 : string.Empty;
             _backupStatusLabel.ForeColor = state.LastError is null
                 ? System.Drawing.Color.DarkGreen
                 : System.Drawing.Color.DarkOrange;
             _backupStatusLabel.Text =
-                $"Ultimo backup OK: {okLocal:dd/MM/yyyy HH:mm}{errorSuffix}";
+                _loc.Get("Ui.SettingsDialog.Backup.LastOk", timestamp) + errorSuffix;
             return;
         }
 
         _backupStatusLabel.ForeColor = System.Drawing.Color.Firebrick;
         _backupStatusLabel.Text = state.LastError is not null
-            ? $"Ultimo tentativo fallito: {state.LastError}"
-            : "Ultimo tentativo fallito.";
+            ? _loc.Get("Ui.SettingsDialog.Backup.LastFailedWithMessage", state.LastError)
+            : _loc.Get("Ui.SettingsDialog.Backup.LastFailedGeneric");
     }
 
     private void UpdateCloudWarning()
@@ -663,10 +805,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             path.Contains("iCloudDrive", StringComparison.OrdinalIgnoreCase);
         if (isCloud)
         {
-            _backupCloudWarningLabel.Text =
-                "⚠ La cartella selezionata sembra un servizio cloud (OneDrive/Dropbox/Google Drive). " +
-                "Il database (contiene nomi medicine, dosaggi, medico) verrà sincronizzato online. " +
-                "Assicurati che sia quello che vuoi.";
+            _backupCloudWarningLabel.Text = _loc.Get("Ui.SettingsDialog.Backup.CloudWarning");
             _backupCloudWarningLabel.Visible = true;
         }
         else

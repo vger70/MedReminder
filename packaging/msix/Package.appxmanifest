@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifest MSIX per MedReminder.
+
+  Identity/Publisher: DEVE corrispondere ESATTAMENTE al Subject del
+  certificato usato per firmare l'.msix, altrimenti l'install fallisce
+  con SIGNATURE_INVALID / PUBLISHER_MISMATCH. Sostituire prima di
+  pubblicare:
+
+    Publisher="CN=<il tuo nome CA-verificato>, O=<org>, C=<paese>"
+
+  Per sviluppo con self-signed generato da make-selfsigned-cert.ps1
+  il default è: CN=vger70 Development, O=vger70, C=IT.
+
+  runFullTrust: WinForms + registry HKCU\Run + DPAPI + tray icon +
+  WebView2 richiedono full-trust. Senza questa capability l'app non
+  può girare come pacchetto MSIX. Non abusarne: è una capability
+  ristretta ma legittima per app desktop classiche.
+-->
+<Package
+    xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+    xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+    xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+    xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+    IgnorableNamespaces="uap uap5 rescap">
+
+  <Identity
+      Name="vger70.MedReminder"
+      Publisher="CN=vger70 Development, O=vger70, C=IT"
+      Version="1.0.1.0"
+      ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>MedReminder</DisplayName>
+    <PublisherDisplayName>vger70</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>Promemoria organizzativo di scadenza scorte farmaci. NON è un dispositivo medico.</Description>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop"
+                        MinVersion="10.0.19041.0"
+                        MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+    <Resource Language="it-it" />
+    <Resource Language="fr-fr" />
+    <Resource Language="es-es" />
+  </Resources>
+
+  <Applications>
+    <Application Id="MedReminder"
+                 Executable="MedReminder.exe"
+                 EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+          DisplayName="MedReminder"
+          Description="Promemoria organizzativo scorte farmaci"
+          BackgroundColor="transparent"
+          Square150x150Logo="Assets\Square150x150Logo.png"
+          Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile
+            Wide310x150Logo="Assets\Wide310x150Logo.png"
+            Square71x71Logo="Assets\Square71x71Logo.png"
+            Square310x310Logo="Assets\Square310x310Logo.png">
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo" />
+            <uap:ShowOn Tile="wide310x150Logo" />
+            <uap:ShowOn Tile="square310x310Logo" />
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile>
+        <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#0D47A1" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- Alias eseguibile: consente lanciare l'app anche da cmd. -->
+        <uap5:Extension Category="windows.appExecutionAlias">
+          <uap5:AppExecutionAlias>
+            <uap5:ExecutionAlias Alias="medreminder.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

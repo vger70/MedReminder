@@ -1,0 +1,36 @@
+[Files]
+; Mapping file per MakeAppx pack: sinistra = path assoluto sul disco,
+; destra = path relativo dentro il pacchetto MSIX.
+;
+; Le variabili {PUBLISH_DIR} e {ASSETS_DIR} vengono sostituite da
+; build-msix.ps1 con i percorsi assoluti effettivi prima di invocare
+; MakeAppx.exe.
+;
+; Se aggiungi contenuti alla publish folder (es. nuovi runtimes/*
+; nativi), non serve toccare questo file: la riga wildcard '"{PUBLISH_DIR}\*"'
+; li include tutti automaticamente. MakeAppx sostituisce il wildcard
+; espandendo ricorsivamente.
+
+"{PUBLISH_DIR}\MedReminder.exe"                          "MedReminder.exe"
+
+; Cartella localization/ generata da publish (contiene i JSON dei
+; dizionari e i markdown della guida). Ricorsiva.
+"{PUBLISH_DIR}\localization\strings.en.json"             "localization\strings.en.json"
+"{PUBLISH_DIR}\localization\strings.it.json"             "localization\strings.it.json"
+"{PUBLISH_DIR}\localization\strings.fr.json"             "localization\strings.fr.json"
+"{PUBLISH_DIR}\localization\strings.es.json"             "localization\strings.es.json"
+"{PUBLISH_DIR}\localization\USER_GUIDE.en.md"            "localization\USER_GUIDE.en.md"
+"{PUBLISH_DIR}\localization\USER_GUIDE.it.md"            "localization\USER_GUIDE.it.md"
+
+; Config default (se presente dopo publish).
+"{PUBLISH_DIR}\appsettings.json"                         "appsettings.json"
+
+; Manifest + assets (loghi tile/store/splash).
+"{PROJECT_DIR}\Package.appxmanifest"                     "AppxManifest.xml"
+"{ASSETS_DIR}\Square44x44Logo.png"                       "Assets\Square44x44Logo.png"
+"{ASSETS_DIR}\Square71x71Logo.png"                       "Assets\Square71x71Logo.png"
+"{ASSETS_DIR}\Square150x150Logo.png"                     "Assets\Square150x150Logo.png"
+"{ASSETS_DIR}\Square310x310Logo.png"                     "Assets\Square310x310Logo.png"
+"{ASSETS_DIR}\Wide310x150Logo.png"                       "Assets\Wide310x150Logo.png"
+"{ASSETS_DIR}\StoreLogo.png"                             "Assets\StoreLogo.png"
+"{ASSETS_DIR}\SplashScreen.png"                          "Assets\SplashScreen.png"

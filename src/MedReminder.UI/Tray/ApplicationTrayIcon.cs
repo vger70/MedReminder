@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using MedReminder.Application.Abstractions;
 
 namespace MedReminder.UI.Tray;
 
@@ -15,13 +16,13 @@ internal sealed class ApplicationTrayIcon : IDisposable
     public ToolStripMenuItem SettingsItem { get; }
     public ToolStripMenuItem ExitItem { get; }
 
-    public ApplicationTrayIcon()
+    public ApplicationTrayIcon(ILocalizationService loc)
     {
         var menu = new ContextMenuStrip();
-        OpenItem = new ToolStripMenuItem("Apri MedReminder");
-        CheckNowItem = new ToolStripMenuItem("Controlla ora");
-        SettingsItem = new ToolStripMenuItem("Impostazioni…");
-        ExitItem = new ToolStripMenuItem("Esci");
+        OpenItem = new ToolStripMenuItem(loc.Get("Ui.Tray.Open"));
+        CheckNowItem = new ToolStripMenuItem(loc.Get("Ui.Tray.CheckNow"));
+        SettingsItem = new ToolStripMenuItem(loc.Get("Ui.Tray.Settings"));
+        ExitItem = new ToolStripMenuItem(loc.Get("Ui.Tray.Exit"));
 
         menu.Items.Add(OpenItem);
         menu.Items.Add(CheckNowItem);

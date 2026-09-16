@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using Markdig;
+using MedReminder.Application.Abstractions;
 using MedReminder.UI.UiExtensions;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -23,19 +24,22 @@ namespace MedReminder.UI.Forms;
 // direttamente su GitHub nel browser predefinito.
 internal sealed class HelpViewerForm : MedReminderFormBase
 {
-    private const string GuideResourceName = "MedReminder.UI.USER_GUIDE.md";
-    private const string GithubGuideUrl =
-        "https://github.com/vger70/MedReminder/blob/main/docs/USER_GUIDE.md";
+    // Il pulsante "Apri su GitHub" punta alla versione MD della guida
+    // nella lingua UI corrente. GitHub rende automaticamente il markdown.
+    private string GithubGuideUrl =>
+        $"https://github.com/vger70/MedReminder/blob/main/docs/USER_GUIDE.{_loc.CurrentLanguage}.md";
 
+    private readonly ILocalizationService _loc;
     private readonly WebView2 _webView;
     private readonly ToolStripButton _btnBack;
     private readonly ToolStripButton _btnForward;
     private readonly ToolStripButton _btnOpenBrowser;
     private readonly Label _fallbackLabel;
 
-    public HelpViewerForm()
+    public HelpViewerForm(ILocalizationService localization)
     {
-        Text = "Guida utente — MedReminder";
+        _loc = localization;
+        Text = _loc.Get("Ui.HelpViewer.Title");
         Width = 900;
         Height = 720;
         StartPosition = FormStartPosition.CenterParent;
@@ -45,27 +49,27 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         _fallbackLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Inizializzazione del visualizzatore integrato…",
+            Text = _loc.Get("Ui.HelpViewer.Loading"),
             TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
             ForeColor = System.Drawing.Color.DarkGray,
             Visible = true,
         };
 
-        _btnBack = new ToolStripButton("Indietro")
+        _btnBack = new ToolStripButton(_loc.Get("Ui.HelpViewer.Back"))
         {
             Image = Mdl2Glyph.Create("", size: 20), // Back
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
             TextImageRelation = TextImageRelation.ImageBeforeText,
             Enabled = false,
         };
-        _btnForward = new ToolStripButton("Avanti")
+        _btnForward = new ToolStripButton(_loc.Get("Ui.HelpViewer.Forward"))
         {
             Image = Mdl2Glyph.Create("", size: 20), // Forward
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
             TextImageRelation = TextImageRelation.ImageBeforeText,
             Enabled = false,
         };
-        _btnOpenBrowser = new ToolStripButton("Apri su GitHub")
+        _btnOpenBrowser = new ToolStripButton(_loc.Get("Ui.HelpViewer.OpenGithub"))
         {
             Image = Mdl2Glyph.Create("", size: 20), // Globe
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
@@ -120,17 +124,12 @@ internal sealed class HelpViewerForm : MedReminderFormBase
                                      or COMException
                                      or FileNotFoundException)
         {
-            ShowFallback(
-                "Il visualizzatore integrato richiede Microsoft Edge WebView2 Runtime, " +
-                "che non risulta installato o non è avviabile su questo PC.\n\n" +
-                "Puoi comunque aprire la guida su GitHub cliccando \"Apri su GitHub\" " +
-                "nella barra strumenti in alto.");
+            _ = ex;
+            ShowFallback(_loc.Get("Ui.HelpViewer.RuntimeMissing"));
         }
         catch (Exception ex)
         {
-            ShowFallback(
-                "Impossibile mostrare la guida integrata: " + ex.Message +
-                "\n\nProva ad aprire la versione online cliccando \"Apri su GitHub\".");
+            ShowFallback(_loc.Get("Ui.HelpViewer.LoadError", ex.Message));
         }
     }
 
@@ -158,28 +157,27 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         catch (Exception ex)
         {
             MessageBox.Show(this,
-                "Impossibile aprire il browser: " + ex.Message,
-                "Errore", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _loc.Get("Ui.HelpViewer.BrowserError", ex.Message),
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
-    private static string BuildHtmlFromEmbeddedGuide()
+    private string BuildHtmlFromEmbeddedGuide()
     {
-        var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(GuideResourceName);
-        string markdown;
-        if (stream is null)
-        {
-            markdown =
-                "# Guida non disponibile\n\n" +
-                "La risorsa `USER_GUIDE.md` non è embedded in questa build. " +
-                "Apri la versione online cliccando \"Apri su GitHub\".";
-        }
-        else
-        {
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-            markdown = reader.ReadToEnd();
-        }
+        // Guida localizzata (Incremento 16e). Ordine di risoluzione:
+        //   1. File nella lingua utente sotto <bin>/localization/
+        //      USER_GUIDE.<lang>.md (Content copiato dal csproj).
+        //   2. File embedded nella lingua utente.
+        //   3. Come 1-2 ma sulla lingua di default ("en").
+        //   4. Se manca tutto, messaggio "Guida non disponibile".
+        var lang = _loc.CurrentLanguage;
+        var markdown =
+            TryLoadGuideFromDisk(lang) ??
+            TryLoadGuideFromEmbedded(lang) ??
+            TryLoadGuideFromDisk("en") ??
+            TryLoadGuideFromEmbedded("en") ??
+            _loc.Get("Ui.HelpViewer.NoResource");
 
         var pipeline = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions() // tabelle, task list, autolink, footnote, ecc.
@@ -263,6 +261,47 @@ internal sealed class HelpViewerForm : MedReminderFormBase
 {body}
 </body>
 </html>";
+    }
+
+    // Cerca <bin>/localization/USER_GUIDE.<lang>.md. Null se assente
+    // o illeggibile.
+    private static string? TryLoadGuideFromDisk(string languageCode)
+    {
+        try
+        {
+            var path = Path.Combine(
+                AppContext.BaseDirectory, "localization",
+                $"USER_GUIDE.{languageCode}.md");
+            if (!File.Exists(path)) return null;
+            return File.ReadAllText(path, Encoding.UTF8);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // Cerca fra le resource embedded di TUTTI gli assembly caricati
+    // una che finisce in "USER_GUIDE.<lang>.md" — stesso pattern robusto
+    // usato per i dizionari (LocalizationService).
+    private static string? TryLoadGuideFromEmbedded(string languageCode)
+    {
+        var suffix = $"USER_GUIDE.{languageCode}.md";
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            string[] resourceNames;
+            try { resourceNames = assembly.GetManifestResourceNames(); }
+            catch { continue; }
+            foreach (var name in resourceNames)
+            {
+                if (!name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) continue;
+                using var stream = assembly.GetManifestResourceStream(name);
+                if (stream is null) continue;
+                using var reader = new StreamReader(stream, Encoding.UTF8);
+                return reader.ReadToEnd();
+            }
+        }
+        return null;
     }
 }
 

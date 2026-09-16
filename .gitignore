@@ -54,6 +54,17 @@ project.fragment.lock.json
 smtp.protected
 logs/
 
+## Code signing material (never commit private keys)
+*.pfx
+*.p12
+*.snk
+*.cer
+*.crt
+packaging/**/*.wixpdb
+packaging/**/*.wixobj
+packaging/wix/bin/
+packaging/wix/obj/
+
 ## OS metadata
 .DS_Store
 Thumbs.db

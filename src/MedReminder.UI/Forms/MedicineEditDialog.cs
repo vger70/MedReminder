@@ -1,4 +1,5 @@
 using System.Windows.Forms;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Notifications;
 
@@ -14,6 +15,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     public MedicineEditResult? Result { get; private set; }
 
+    private readonly ILocalizationService _loc;
     private readonly TextBox _nameBox;
     private readonly TextBox _ingredientBox;
     private readonly TextBox _packageBox;
@@ -35,10 +37,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private readonly List<AdministrationSlotEntry> _slots = new();
     private readonly EditMode _mode;
 
-    public MedicineEditDialog(EditMode mode, MedicineEditResult? seed = null)
+    public MedicineEditDialog(EditMode mode, ILocalizationService localization, MedicineEditResult? seed = null)
     {
+        _loc = localization;
         _mode = mode;
-        Text = mode == EditMode.Create ? "Nuova medicina" : "Modifica medicina";
+        Text = _loc.Get(mode == EditMode.Create
+            ? "Ui.MedicineEditDialog.Title.New"
+            : "Ui.MedicineEditDialog.Title.Edit");
         Width = 620;
         Height = 800;
         StartPosition = FormStartPosition.CenterParent;
@@ -51,20 +56,28 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _ingredientBox = new TextBox { Dock = DockStyle.Fill, MaxLength = 200 };
         _packageBox = new TextBox { Dock = DockStyle.Fill, MaxLength = 200 };
         _unitBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown };
-        _unitBox.Items.AddRange(new object[] { "compresse", "capsule", "bustine", "ml", "dosi", "flaconi" });
+        _unitBox.Items.AddRange(new object[]
+        {
+            _loc.Get("Ui.MedicineEditDialog.Unit.Tablets"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Capsules"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Sachets"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Ml"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Doses"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Vials"),
+        });
         _doseBox = MakeDecimalUpDown(0.01m, 1000m, 2, initial: 1m);
         _adminPerDayBox = MakeIntUpDown(1, 24, initial: 2);
         _startDatePicker = new DateTimePicker { Format = DateTimePickerFormat.Short, Dock = DockStyle.Fill, Value = DateTime.Today };
-        _hasEndDate = new CheckBox { Text = "Con data di fine terapia", AutoSize = true };
+        _hasEndDate = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.HasEndDateFull"), AutoSize = true };
         _endDatePicker = new DateTimePicker { Format = DateTimePickerFormat.Short, Dock = DockStyle.Fill, Enabled = false, Value = DateTime.Today.AddMonths(1) };
         _hasEndDate.CheckedChanged += (_, _) => _endDatePicker.Enabled = _hasEndDate.Checked;
         _thresholdBox = MakeIntUpDown(0, 365, initial: 7);
         _doctorBox = new TextBox { Dock = DockStyle.Fill, MaxLength = 200 };
         _notesBox = new TextBox { Dock = DockStyle.Fill, Multiline = true, Height = 60, ScrollBars = ScrollBars.Vertical, MaxLength = 1000 };
         _initialQtyBox = MakeDecimalUpDown(0m, 100000m, 2, initial: 0m);
-        _channelWindows = new CheckBox { Text = "Notifica Windows", AutoSize = true, Checked = true };
-        _channelEmail = new CheckBox { Text = "Email", AutoSize = true, Checked = false };
-        _isActiveBox = new CheckBox { Text = "Attiva", AutoSize = true, Checked = true };
+        _channelWindows = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.NotifyWindowsShort"), AutoSize = true, Checked = true };
+        _channelEmail = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.NotifyEmailShort"), AutoSize = true, Checked = false };
+        _isActiveBox = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.IsActive"), AutoSize = true, Checked = true };
 
         _slotsList = new ListView
         {
@@ -75,9 +88,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             GridLines = true,
             Height = 140,
         };
-        _slotsList.Columns.Add("Ora", 80);
-        _slotsList.Columns.Add("Dose", 80);
-        _slotsList.Columns.Add("Descrizione", 300);
+        _slotsList.Columns.Add(_loc.Get("Ui.MedicineEditDialog.Slots.ColumnTime"), 80);
+        _slotsList.Columns.Add(_loc.Get("Ui.MedicineEditDialog.Slots.ColumnDose"), 80);
+        _slotsList.Columns.Add(_loc.Get("Ui.MedicineEditDialog.Slots.ColumnLabel"), 300);
         _slotsList.DoubleClick += (_, _) => EditSelectedSlot();
         _slotsSummary = new Label
         {
@@ -97,34 +110,34 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        AddRow(table, "Nome*", _nameBox);
-        AddRow(table, "Principio attivo", _ingredientBox);
-        AddRow(table, "Confezione", _packageBox);
-        AddRow(table, "Unità*", _unitBox);
-        AddRow(table, "Dose per somministrazione*", _doseBox);
-        AddRow(table, "Somministrazioni al giorno*", _adminPerDayBox);
-        AddRow(table, "Data inizio terapia*", _startDatePicker);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Name"), _nameBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.ActiveIngredient"), _ingredientBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Package"), _packageBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Unit"), _unitBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.DosePerAdmin"), _doseBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.AdminsPerDay"), _adminPerDayBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.StartDateFull"), _startDatePicker);
         AddRow(table, string.Empty, _hasEndDate);
-        AddRow(table, "Data fine terapia", _endDatePicker);
-        AddRow(table, "Soglia avviso (giorni)*", _thresholdBox);
-        AddRow(table, "Medico di riferimento", _doctorBox);
-        AddRow(table, "Note", _notesBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.EndDateFull"), _endDatePicker);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.WarnThreshold"), _thresholdBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.DoctorFull"), _doctorBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Notes"), _notesBox);
         if (_mode == EditMode.Create)
         {
-            AddRow(table, "Quantità iniziale in scorta", _initialQtyBox);
+            AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.InitialStock"), _initialQtyBox);
         }
-        AddRow(table, "Canali di notifica", BuildChannelsPanel());
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Channels"), BuildChannelsPanel());
         if (_mode == EditMode.Edit)
         {
             AddRow(table, string.Empty, _isActiveBox);
         }
 
-        AddRow(table, "Orari (opzionale)", BuildSlotsPanel());
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.SlotsOptional"), BuildSlotsPanel());
         AddRow(table, string.Empty, _slotsSummary);
         UpdateSlotsSummary();
 
-        var okButton = new Button { Text = "Salva", DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = "Annulla", DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = new Button { Text = _loc.Get("Ui.MedicineEditDialog.Save"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
+        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
         okButton.Click += OnConfirmClick;
 
         var buttonPanel = new FlowLayoutPanel
@@ -181,19 +194,28 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         if (string.IsNullOrWhiteSpace(_nameBox.Text))
         {
-            MessageBox.Show(this, "Il nome è obbligatorio.", "Dati mancanti", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this,
+                _loc.Get("Ui.MedicineEditDialog.Validation.NameRequired"),
+                _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.None;
             return;
         }
         if (string.IsNullOrWhiteSpace(_unitBox.Text))
         {
-            MessageBox.Show(this, "L'unità è obbligatoria.", "Dati mancanti", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this,
+                _loc.Get("Ui.MedicineEditDialog.Validation.UnitRequired"),
+                _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.None;
             return;
         }
         if (_hasEndDate.Checked && _endDatePicker.Value.Date < _startDatePicker.Value.Date)
         {
-            MessageBox.Show(this, "La data di fine non può precedere l'inizio.", "Dati incoerenti", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this,
+                _loc.Get("Ui.MedicineEditDialog.EndBeforeStart"),
+                _loc.Get("Ui.MedicineEditDialog.InconsistentData.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.None;
             return;
         }
@@ -230,9 +252,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private Control BuildSlotsPanel()
     {
-        var addButton = new Button { Text = "Aggiungi…", AutoSize = true, Height = 26 };
-        var editButton = new Button { Text = "Modifica…", AutoSize = true, Height = 26 };
-        var removeButton = new Button { Text = "Rimuovi", AutoSize = true, Height = 26 };
+        var addButton = new Button { Text = _loc.Get("Ui.MedicineEditDialog.Slots.AddButton"), AutoSize = true, Height = 26 };
+        var editButton = new Button { Text = _loc.Get("Ui.MedicineEditDialog.Slots.EditButton"), AutoSize = true, Height = 26 };
+        var removeButton = new Button { Text = _loc.Get("Ui.MedicineEditDialog.Slots.RemoveButton"), AutoSize = true, Height = 26 };
         addButton.Click += (_, _) => AddSlot();
         editButton.Click += (_, _) => EditSelectedSlot();
         removeButton.Click += (_, _) => RemoveSelectedSlot();
@@ -255,11 +277,15 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         return container;
     }
 
+    private string EffectiveUnit()
+    {
+        var t = _unitBox.Text.Trim();
+        return t.Length == 0 ? _loc.Get("Ui.MedicineEditDialog.DefaultUnit") : t;
+    }
+
     private void AddSlot()
     {
-        using var dialog = new AdministrationSlotDialog(
-            unit: _unitBox.Text.Trim().Length == 0 ? "unità" : _unitBox.Text.Trim(),
-            suggestedDose: _doseBox.Value);
+        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
         _slots.Add(dialog.Result);
         RefreshSlotsList();
@@ -269,10 +295,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         var index = SelectedSlotIndex();
         if (index < 0) return;
-        using var dialog = new AdministrationSlotDialog(
-            unit: _unitBox.Text.Trim().Length == 0 ? "unità" : _unitBox.Text.Trim(),
-            suggestedDose: _doseBox.Value,
-            seed: _slots[index]);
+        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc, _slots[index]);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
         _slots[index] = dialog.Result;
         RefreshSlotsList();
@@ -310,14 +333,12 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         if (_slots.Count == 0)
         {
-            _slotsSummary.Text = "Nessuno slot configurato: la medicina userà "
-                + "\"dose × somministrazioni al giorno\" indicato sopra.";
+            _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryNone");
             return;
         }
         var total = _slots.Sum(s => s.Dose);
-        var unit = _unitBox.Text.Trim().Length == 0 ? "unità" : _unitBox.Text.Trim();
-        _slotsSummary.Text = $"{_slots.Count} slot definiti — totale giornaliero: "
-            + $"{total:0.##} {unit}. Il consumo giornaliero sarà calcolato da questi orari.";
+        _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.Summary",
+            _slots.Count, total.ToString("0.##"), EffectiveUnit());
     }
 
     private static NumericUpDown MakeDecimalUpDown(decimal min, decimal max, int decimals, decimal initial)

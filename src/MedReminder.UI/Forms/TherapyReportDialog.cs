@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Printing;
 using System.Windows.Forms;
+using MedReminder.Application.Abstractions;
 
 namespace MedReminder.UI.Forms;
 
@@ -12,11 +13,13 @@ namespace MedReminder.UI.Forms;
 //     paginazione automatica quando il testo eccede una pagina.
 internal sealed class TherapyReportDialog : MedReminderFormBase
 {
+    private readonly ILocalizationService _loc;
     private readonly TextBox _reportBox;
 
-    public TherapyReportDialog(string reportText)
+    public TherapyReportDialog(string reportText, ILocalizationService localization)
     {
-        Text = "Scheda terapia";
+        _loc = localization;
+        Text = _loc.Get("Ui.TherapyReportDialog.Title");
         Width = 760;
         Height = 620;
         StartPosition = FormStartPosition.CenterParent;
@@ -35,10 +38,10 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
             Text = reportText,
         };
 
-        var copyButton = new Button { Text = "Copia negli appunti", AutoSize = true, Height = 32 };
-        var saveButton = new Button { Text = "Salva su file…", AutoSize = true, Height = 32 };
-        var printButton = new Button { Text = "Stampa…", AutoSize = true, Height = 32 };
-        var closeButton = new Button { Text = "Chiudi", DialogResult = DialogResult.OK, AutoSize = true, Height = 32 };
+        var copyButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.Copy"), AutoSize = true, Height = 32 };
+        var saveButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.Save"), AutoSize = true, Height = 32 };
+        var printButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.Print"), AutoSize = true, Height = 32 };
+        var closeButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.Close"), DialogResult = DialogResult.OK, AutoSize = true, Height = 32 };
 
         copyButton.Click += (_, _) => CopyToClipboard();
         saveButton.Click += (_, _) => SaveToFile();
@@ -70,7 +73,8 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Errore copia negli appunti",
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.TherapyReportDialog.CopyError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -79,10 +83,10 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
     {
         using var dialog = new SaveFileDialog
         {
-            Title = "Salva scheda terapia",
-            Filter = "File di testo (*.txt)|*.txt|Tutti i file (*.*)|*.*",
+            Title = _loc.Get("Ui.TherapyReportDialog.SaveDialog.Title"),
+            Filter = _loc.Get("Ui.TherapyReportDialog.SaveDialog.Filter"),
             DefaultExt = "txt",
-            FileName = $"MedReminder-terapia-{DateTime.Now:yyyyMMdd}.txt",
+            FileName = $"MedReminder-therapy-{DateTime.Now:yyyyMMdd}.txt",
         };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try
@@ -91,7 +95,8 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Errore salvataggio",
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.TherapyReportDialog.SaveError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -155,12 +160,14 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         catch (InvalidPrinterException ex)
         {
             MessageBox.Show(this,
-                "Nessuna stampante disponibile.\n\n" + ex.Message,
-                "Stampa non disponibile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _loc.Get("Ui.TherapyReportDialog.NoPrinter", ex.Message),
+                _loc.Get("Ui.TherapyReportDialog.NoPrinter.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Errore stampa",
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.TherapyReportDialog.PrintError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }

@@ -1,4 +1,5 @@
 using System.Windows.Forms;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
 
 namespace MedReminder.UI.Forms;
@@ -12,6 +13,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
 {
     public ChangeScheduleResult? Result { get; private set; }
 
+    private readonly ILocalizationService _loc;
     private readonly NumericUpDown _doseBox;
     private readonly NumericUpDown _freqBox;
     private readonly DateTimePicker _effectiveFromPicker;
@@ -20,9 +22,11 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         string medicineName,
         decimal currentDose,
         int currentFreq,
-        DateOnly minimumEffectiveFrom)
+        DateOnly minimumEffectiveFrom,
+        ILocalizationService localization)
     {
-        Text = "Cambio dose / frequenza";
+        _loc = localization;
+        Text = _loc.Get("Ui.ChangeScheduleDialog.Title");
         Width = 500;
         Height = 340;
         StartPosition = FormStartPosition.CenterParent;
@@ -35,7 +39,8 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         {
             AutoSize = true,
             Font = new System.Drawing.Font(Font, System.Drawing.FontStyle.Bold),
-            Text = $"{medicineName} — dose corrente: {currentDose:0.##} × {currentFreq} al giorno",
+            Text = _loc.Get("Ui.ChangeScheduleDialog.Header",
+                medicineName, currentDose.ToString("0.##"), currentFreq),
         };
 
         _doseBox = new NumericUpDown
@@ -76,9 +81,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(460, 0),
             ForeColor = System.Drawing.Color.DarkGray,
-            Text = "I giorni precedenti alla data di decorrenza continueranno " +
-                   "a usare la dose e la frequenza correnti; da quella data in " +
-                   "poi verranno usati i nuovi valori.",
+            Text = _loc.Get("Ui.ChangeScheduleDialog.Note"),
         };
 
         var table = new TableLayoutPanel
@@ -93,13 +96,13 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         AddRow(table, string.Empty, header);
-        AddRow(table, "Nuova dose", _doseBox);
-        AddRow(table, "Nuove somministrazioni/gg", _freqBox);
-        AddRow(table, "Effettiva dal", _effectiveFromPicker);
+        AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewDose"), _doseBox);
+        AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewFrequency"), _freqBox);
+        AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.EffectiveFrom"), _effectiveFromPicker);
         AddRow(table, string.Empty, note);
 
-        var okButton = new Button { Text = "Applica", DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = "Annulla", DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = new Button { Text = _loc.Get("Ui.ChangeScheduleDialog.Apply"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
+        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
         okButton.Click += OnConfirm;
 
         var buttonPanel = new FlowLayoutPanel

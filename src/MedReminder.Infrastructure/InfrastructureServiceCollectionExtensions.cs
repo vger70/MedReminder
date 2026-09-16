@@ -3,6 +3,7 @@ using MedReminder.Infrastructure.AutoStart;
 using MedReminder.Infrastructure.Backup;
 using MedReminder.Infrastructure.Credentials;
 using MedReminder.Infrastructure.Email;
+using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Notifications;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
@@ -47,6 +48,10 @@ public static class InfrastructureServiceCollectionExtensions
         // ------- Backup automatico -------
         services.Configure<BackupSettings>(configuration.GetSection(BackupSettings.SectionName));
         services.TryAddSingleton<IBackupStateStore, BackupStateStore>();
+
+        // ------- Localizzazione (Incremento 16) -------
+        services.Configure<UserSettings>(configuration.GetSection(UserSettings.SectionName));
+        services.TryAddSingleton<ILocalizationService, LocalizationService>();
 
         // ------- Notifiche + credenziali + auto-start -------
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));

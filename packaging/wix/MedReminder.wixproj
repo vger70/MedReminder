@@ -1,0 +1,52 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <!--
+    Progetto WiX v5 SDK-style: produce MedReminder-<versione>-x64.msi.
+
+    Come si builda:
+      dotnet build packaging/wix/MedReminder.wixproj -c Release ^
+        /p:PublishDir=..\..\src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\ ^
+        /p:ProductVersion=1.0.1
+
+    Prerequisiti build:
+      dotnet nuget add source https://api.nuget.org/v3/index.json
+      dotnet tool install [g]lobal wix (opzionale, solo per CLI wix)
+      Il pacchetto WixToolset.Sdk 5.x viene ripristinato automaticamente.
+
+    Prima di buildare l'MSI, PUBBLICA l'app (win-x64-sc profile):
+      dotnet publish src\MedReminder.UI -c Release
+        /p:PublishProfile=win-x64-self-contained
+
+    L'installer harvesta l'intera cartella publish e la copia sotto
+    %LOCALAPPDATA%\Programs\MedReminder\ (install per-user, no UAC).
+  -->
+
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <OutputName>MedReminder-$(ProductVersion)-x64</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+
+    <!-- Versione: default 1.0.1, override da CLI con /p:ProductVersion=... -->
+    <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.1</ProductVersion>
+
+    <!-- Cartella con l'app pubblicata (win-x64-self-contained). Deve
+         essere passata da CLI o dallo script build-installer.ps1. -->
+    <PublishDir Condition="'$(PublishDir)' == ''">..\..\src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\</PublishDir>
+
+    <!-- Manda gli errori di validazione light.exe come warning per
+         permettere ICE cookie di grandi cartelle harvestate. -->
+    <SuppressIces>ICE60;ICE64;ICE69</SuppressIces>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Passa la versione e la cartella publish a Product.wxs come
+         costanti preprocessore ($(var.NomeCostante)). -->
+    <DefineConstants>$(DefineConstants);ProductVersion=$(ProductVersion);PublishDir=$(PublishDir)</DefineConstants>
+  </PropertyGroup>
+
+</Project>

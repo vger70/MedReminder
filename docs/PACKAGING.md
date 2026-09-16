@@ -109,12 +109,148 @@ Nel frattempo, per l'utente:
    cancella `medreminder.db`, `-shm`, `-wal` e ripartite da zero
    (importando eventualmente un backup se rimasto compatibile).
 
-## Firma del codice
+## Installer MSI (WiX v5)
 
-Non prevista nell'MVP. Windows SmartScreen potrebbe segnalare l'app
-come "sconosciuta" al primo avvio: l'utente deve cliccare **Ulteriori
-informazioni → Esegui comunque**. Per una distribuzione più larga
-serve un certificato di code-signing (extended-validation o standard).
+Dalla versione 1.0.1 la distribuzione supporta un **installer MSI**
+generato con WiX Toolset v5. Il progetto vive in
+`packaging/wix/MedReminder.wixproj` — build SDK-style, versione
+letta da `Directory.Build.props`.
+
+**Caratteristiche dell'MSI**:
+
+- **Scope per-user**: install in `%LOCALAPPDATA%\Programs\MedReminder\`,
+  nessun UAC, coerente col modello dati dell'app.
+- **Upgrade automatico**: `MajorUpgrade` rimpiazza in place qualunque
+  versione precedente della stessa `UpgradeCode`.
+- **Shortcut**: Start Menu (obbligatorio) + Desktop (feature separata,
+  disattivabile in UI).
+- **Auto-start opzionale**: feature separata `AutoStart` (Level=1000,
+  disabilitata di default) che scrive `HKCU\...\Run` con
+  `--minimized`. L'utente può comunque abilitarlo da Impostazioni.
+- **ARP entries**: icona, URL repo, no repair/modify (l'MSI non è
+  configurabile a posteriori).
+- **License**: RTF minimale con disclaimer "non è un dispositivo medico".
+
+**Prerequisiti**:
+
+- .NET SDK 10 (per `dotnet build`).
+- Windows SDK 10.0.22621+ per `signtool.exe` (se firmi).
+- Il pacchetto `WixToolset.Sdk 5.x` viene ripristinato automaticamente
+  al primo `dotnet restore packaging/wix/MedReminder.wixproj`.
+
+**Build manuale (senza firma)**:
+
+```bat
+:: 1. Publish self-contained (l'MSI harvesta questa cartella)
+dotnet publish src\MedReminder.UI -c Release ^
+  /p:PublishProfile=win-x64-self-contained
+
+:: 2. Build MSI (versione da Directory.Build.props)
+dotnet build packaging\wix\MedReminder.wixproj -c Release ^
+  /p:PublishDir=..\..\src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\ ^
+  /p:ProductVersion=1.0.1
+```
+
+Output: `packaging\wix\bin\Release\MedReminder-1.0.1-x64.msi`.
+
+## Installer MSIX
+
+Anche l'MSIX è supportato da 1.0.1. Il manifest vive in
+`packaging/msix/Package.appxmanifest`. Il pacchetto viene assemblato
+con `MakeAppx.exe pack` (Windows SDK) usando `MedReminder.mapping.txt`.
+
+**Prerequisiti aggiuntivi rispetto all'MSI**:
+
+- Assets grafici multi-size in `packaging/msix/Assets/` — vedi
+  `packaging/msix/Assets/README.md` per le taglie richieste e come
+  generarli (Visual Studio Image Asset Generator o ImageMagick).
+- **Certificato di firma obbligatorio**: MSIX non installabile senza
+  firma valida (né sideloaded né dallo Store).
+
+**Publisher identity — attenzione**:
+
+Il campo `Publisher` in `Package.appxmanifest` DEVE corrispondere
+esattamente al Subject del certificato usato per firmare. Default
+manifest: `CN=vger70 Development, O=vger70, C=IT` (allineato al
+self-signed di sviluppo). Quando passi a un cert vero, cambia il
+manifest prima di ripackaging.
+
+**Build (via lo script orchestrator)**:
+
+```powershell
+# Solo MSI + MSIX firmati con self-signed di dev
+.\packaging\scripts\build-installer.ps1 `
+  -CertificateThumbprint <thumbprint del self-signed>
+
+# Solo MSIX (salta MSI)
+.\packaging\scripts\build-installer.ps1 -SkipMsi
+
+# Senza firma (test locale della pipeline)
+.\packaging\scripts\build-installer.ps1
+```
+
+## Firma del codice (code signing)
+
+**Perché firmare**:
+
+- Windows SmartScreen: senza firma segnala "editore sconosciuto" al
+  primo avvio; l'utente deve cliccare "Ulteriori informazioni → Esegui
+  comunque". Con firma OV/EV la reputazione si costruisce nel tempo
+  (EV = fiducia immediata, OV = ~qualche settimana).
+- **MSIX**: firma **obbligatoria**. Senza cert valido non installa.
+- MSI + exe: firma opzionale ma raccomandata.
+
+**Certificato self-signed (SOLO sviluppo)**:
+
+```powershell
+.\packaging\scripts\make-selfsigned-cert.ps1
+```
+
+Genera un cert code-signing valido 3 anni nello store CurrentUser\My
++ lo esporta come `.pfx` (per CI) e `.cer` (da importare nel Trusted
+Root della macchina di test). SmartScreen resta rosso: **inutilizzabile
+per distribuzione pubblica**.
+
+**Certificato di produzione**:
+
+Da CA riconosciute (Sectigo, DigiCert, GlobalSign, SSL.com...):
+
+- **OV Code Signing**: ~200-400 USD/anno. Baseline Requirements
+  CA/Browser Forum (nov 2023) impongono HSM/token USB o cloud HSM
+  per la custodia della chiave privata. La firma richiede il token
+  fisico presente (o la lib del cloud HSM configurata).
+- **EV Code Signing**: ~300-700 USD/anno. Sempre su HSM. SmartScreen
+  reputation immediata.
+
+Con un cert produttivo, tipicamente installato nello store, la firma
+avviene via **thumbprint** senza mai maneggiare la chiave privata:
+
+```powershell
+.\packaging\scripts\sign-artifact.ps1 `
+  -Files dist\1.0.1\*.msi, dist\1.0.1\*.msix `
+  -CertificateThumbprint <thumbprint>
+```
+
+**Timestamp**: sempre attivo (parametro `-TimestampUrl`, default
+`http://timestamp.digicert.com`). Senza timestamp la firma scade con
+il certificato e Windows la rigetta. Alternative gratuite:
+
+- `http://timestamp.sectigo.com`
+- `http://timestamp.globalsign.com/tsa/r6advanced1`
+- `http://tsa.starfieldtech.com`
+
+**Verifica firma**:
+
+```bat
+signtool.exe verify /pa /v MedReminder-1.0.1-x64.msi
+```
+
+Deve mostrare "Successfully verified" e una riga con il timestamp.
+
+**MAI committare** file `.pfx`, `.p12`, `.cer`, `.crt`, password.
+Il `.gitignore` esclude questi pattern. Per CI usare secrets del
+provider (GitHub Actions secrets, Azure Key Vault, ecc.) — mai
+metterli in chiaro nel workflow.
 
 ## Roadmap sviluppo — migration EF Core reali
 

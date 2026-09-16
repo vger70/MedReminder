@@ -22,13 +22,10 @@ internal sealed class MedicineListItem
     public string DailyRateDisplay => DailyRate <= 0m ? "—" : $"{DailyRate:0.##}/gg";
     public string DaysRemainingDisplay => DaysRemaining is null ? "—" : DaysRemaining.Value.ToString();
     public string EtaDisplay => EstimatedRunOutDate?.ToString("d") ?? "—";
-    public string StatusDisplay => Status switch
-    {
-        MedicineRowStatus.Suspended => "Sospesa",
-        MedicineRowStatus.Empty => "Esaurita",
-        MedicineRowStatus.Warning => "Attenzione",
-        _ => "OK",
-    };
+    // Impostato dal MedicineOverviewLoader in base alla lingua corrente
+    // dell'ILocalizationService — evita di iniettare il service in un DTO
+    // di databinding.
+    public string StatusDisplay { get; set; } = string.Empty;
 }
 
 internal enum MedicineRowStatus
