@@ -1,4 +1,5 @@
 using System.Windows.Forms;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Medicines;
 
@@ -15,14 +16,16 @@ internal sealed class IntakeDialog : MedReminderFormBase
 {
     public IntakeResult? Result { get; private set; }
 
+    private readonly ILocalizationService _loc;
     private readonly ComboBox _statusBox;
     private readonly NumericUpDown _quantityBox;
     private readonly DateTimePicker _dayPicker;
     private readonly TextBox _notesBox;
 
-    public IntakeDialog(string medicineName, string unit, decimal suggestedQuantity)
+    public IntakeDialog(string medicineName, string unit, decimal suggestedQuantity, ILocalizationService localization)
     {
-        Text = "Registra assunzione";
+        _loc = localization;
+        Text = _loc.Get("Ui.IntakeDialog.Title");
         Width = 480;
         Height = 380;
         StartPosition = FormStartPosition.CenterParent;
@@ -35,7 +38,8 @@ internal sealed class IntakeDialog : MedReminderFormBase
         {
             AutoSize = true,
             Font = new System.Drawing.Font(Font, System.Drawing.FontStyle.Bold),
-            Text = $"{medicineName} — dose suggerita: {suggestedQuantity:0.##} {unit}",
+            Text = _loc.Get("Ui.IntakeDialog.Header",
+                medicineName, suggestedQuantity.ToString("0.##"), unit),
         };
 
         _statusBox = new ComboBox
@@ -45,9 +49,9 @@ internal sealed class IntakeDialog : MedReminderFormBase
         };
         _statusBox.Items.AddRange(new object[]
         {
-            new StatusOption(IntakeStatus.Taken, "Assunta"),
-            new StatusOption(IntakeStatus.Skipped, "Saltata"),
-            new StatusOption(IntakeStatus.Cancelled, "Annullata"),
+            new StatusOption(IntakeStatus.Taken, _loc.Get("Ui.IntakeDialog.Status.Taken")),
+            new StatusOption(IntakeStatus.Skipped, _loc.Get("Ui.IntakeDialog.Status.Skipped")),
+            new StatusOption(IntakeStatus.Cancelled, _loc.Get("Ui.IntakeDialog.Status.Cancelled")),
         });
         _statusBox.SelectedIndex = 0;
 
@@ -84,9 +88,7 @@ internal sealed class IntakeDialog : MedReminderFormBase
             AutoSize = true,
             ForeColor = System.Drawing.Color.DarkGray,
             MaximumSize = new System.Drawing.Size(420, 0),
-            Text = "Assunta: la scorta scende di Quantità.\n" +
-                   "Saltata: nessuna variazione di scorta; il consumo automatico salta questa giornata.\n" +
-                   "Annullata: audit trail, nessuna variazione di scorta.",
+            Text = _loc.Get("Ui.IntakeDialog.Note"),
         };
 
         var table = new TableLayoutPanel
@@ -101,14 +103,14 @@ internal sealed class IntakeDialog : MedReminderFormBase
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         AddRow(table, string.Empty, header);
-        AddRow(table, "Stato", _statusBox);
-        AddRow(table, "Quantità", _quantityBox);
-        AddRow(table, "Giorno", _dayPicker);
-        AddRow(table, "Note", _notesBox);
+        AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Status"), _statusBox);
+        AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Amount"), _quantityBox);
+        AddRow(table, _loc.Get("Ui.IntakeDialog.Field.When"), _dayPicker);
+        AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Notes"), _notesBox);
         AddRow(table, string.Empty, note);
 
-        var okButton = new Button { Text = "Registra", DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = "Annulla", DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = new Button { Text = _loc.Get("Ui.IntakeDialog.Save"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
+        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
         okButton.Click += OnConfirm;
 
         var buttonPanel = new FlowLayoutPanel

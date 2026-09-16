@@ -1,4 +1,5 @@
 using System.Windows.Forms;
+using MedReminder.Application.Abstractions;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.UI.Forms;
@@ -10,14 +11,16 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
 {
     public StockAdjustmentResult? Result { get; private set; }
 
+    private readonly ILocalizationService _loc;
     private readonly ComboBox _kindBox;
     private readonly NumericUpDown _quantityBox;
     private readonly TextBox _notesBox;
 
     public StockAdjustmentDialog(string medicineName, decimal currentStock, string unit,
-        StockOperationKind defaultKind = StockOperationKind.NewPackage)
+        StockOperationKind defaultKind, ILocalizationService localization)
     {
-        Text = "Movimento di magazzino";
+        _loc = localization;
+        Text = _loc.Get("Ui.StockAdjustmentDialog.Title");
         Width = 480;
         Height = 320;
         StartPosition = FormStartPosition.CenterParent;
@@ -28,7 +31,8 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
 
         var currentLabel = new Label
         {
-            Text = $"{medicineName} — scorta corrente: {currentStock:0.##} {unit}",
+            Text = _loc.Get("Ui.StockAdjustmentDialog.Header",
+                medicineName, currentStock.ToString("0.##"), unit),
             AutoSize = true,
             Font = new System.Drawing.Font(Font, System.Drawing.FontStyle.Bold),
         };
@@ -36,10 +40,10 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
         _kindBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
         _kindBox.Items.AddRange(new object[]
         {
-            new KindOption(StockOperationKind.NewPackage, "Nuova confezione"),
-            new KindOption(StockOperationKind.ManualAdd, "Aggiunta manuale"),
-            new KindOption(StockOperationKind.PositiveCorrection, "Correzione in eccesso"),
-            new KindOption(StockOperationKind.NegativeCorrection, "Correzione in difetto"),
+            new KindOption(StockOperationKind.NewPackage, _loc.Get("Ui.StockAdjustmentDialog.Kind.NewPackage")),
+            new KindOption(StockOperationKind.ManualAdd, _loc.Get("Ui.StockAdjustmentDialog.Kind.ManualAdd")),
+            new KindOption(StockOperationKind.PositiveCorrection, _loc.Get("Ui.StockAdjustmentDialog.Kind.PositiveCorrection")),
+            new KindOption(StockOperationKind.NegativeCorrection, _loc.Get("Ui.StockAdjustmentDialog.Kind.NegativeCorrection")),
         });
         _kindBox.SelectedIndex = _kindBox.Items
             .Cast<KindOption>()
@@ -77,12 +81,12 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         AddRow(table, string.Empty, currentLabel);
-        AddRow(table, "Tipo movimento", _kindBox);
-        AddRow(table, "Quantità", _quantityBox);
-        AddRow(table, "Note", _notesBox);
+        AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Kind"), _kindBox);
+        AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Quantity"), _quantityBox);
+        AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Notes"), _notesBox);
 
-        var okButton = new Button { Text = "Applica", DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = "Annulla", DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = new Button { Text = _loc.Get("Ui.StockAdjustmentDialog.Apply"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
+        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
         okButton.Click += (_, _) =>
         {
             var kind = ((KindOption)_kindBox.SelectedItem!).Kind;

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using Markdig;
+using MedReminder.Application.Abstractions;
 using MedReminder.UI.UiExtensions;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -23,19 +24,20 @@ namespace MedReminder.UI.Forms;
 // direttamente su GitHub nel browser predefinito.
 internal sealed class HelpViewerForm : MedReminderFormBase
 {
-    private const string GuideResourceName = "MedReminder.UI.USER_GUIDE.md";
     private const string GithubGuideUrl =
         "https://github.com/vger70/MedReminder/blob/main/docs/USER_GUIDE.md";
 
+    private readonly ILocalizationService _loc;
     private readonly WebView2 _webView;
     private readonly ToolStripButton _btnBack;
     private readonly ToolStripButton _btnForward;
     private readonly ToolStripButton _btnOpenBrowser;
     private readonly Label _fallbackLabel;
 
-    public HelpViewerForm()
+    public HelpViewerForm(ILocalizationService localization)
     {
-        Text = "Guida utente — MedReminder";
+        _loc = localization;
+        Text = _loc.Get("Ui.HelpViewer.Title");
         Width = 900;
         Height = 720;
         StartPosition = FormStartPosition.CenterParent;
@@ -45,27 +47,27 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         _fallbackLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Inizializzazione del visualizzatore integrato…",
+            Text = _loc.Get("Ui.HelpViewer.Loading"),
             TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
             ForeColor = System.Drawing.Color.DarkGray,
             Visible = true,
         };
 
-        _btnBack = new ToolStripButton("Indietro")
+        _btnBack = new ToolStripButton(_loc.Get("Ui.HelpViewer.Back"))
         {
             Image = Mdl2Glyph.Create("", size: 20), // Back
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
             TextImageRelation = TextImageRelation.ImageBeforeText,
             Enabled = false,
         };
-        _btnForward = new ToolStripButton("Avanti")
+        _btnForward = new ToolStripButton(_loc.Get("Ui.HelpViewer.Forward"))
         {
             Image = Mdl2Glyph.Create("", size: 20), // Forward
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
             TextImageRelation = TextImageRelation.ImageBeforeText,
             Enabled = false,
         };
-        _btnOpenBrowser = new ToolStripButton("Apri su GitHub")
+        _btnOpenBrowser = new ToolStripButton(_loc.Get("Ui.HelpViewer.OpenGithub"))
         {
             Image = Mdl2Glyph.Create("", size: 20), // Globe
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
@@ -120,17 +122,12 @@ internal sealed class HelpViewerForm : MedReminderFormBase
                                      or COMException
                                      or FileNotFoundException)
         {
-            ShowFallback(
-                "Il visualizzatore integrato richiede Microsoft Edge WebView2 Runtime, " +
-                "che non risulta installato o non è avviabile su questo PC.\n\n" +
-                "Puoi comunque aprire la guida su GitHub cliccando \"Apri su GitHub\" " +
-                "nella barra strumenti in alto.");
+            _ = ex;
+            ShowFallback(_loc.Get("Ui.HelpViewer.RuntimeMissing"));
         }
         catch (Exception ex)
         {
-            ShowFallback(
-                "Impossibile mostrare la guida integrata: " + ex.Message +
-                "\n\nProva ad aprire la versione online cliccando \"Apri su GitHub\".");
+            ShowFallback(_loc.Get("Ui.HelpViewer.LoadError", ex.Message));
         }
     }
 
@@ -158,22 +155,25 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         catch (Exception ex)
         {
             MessageBox.Show(this,
-                "Impossibile aprire il browser: " + ex.Message,
-                "Errore", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _loc.Get("Ui.HelpViewer.BrowserError", ex.Message),
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
-    private static string BuildHtmlFromEmbeddedGuide()
+    private string BuildHtmlFromEmbeddedGuide()
     {
+        // Per 16c teniamo un solo resource: la guida verrà tradotta a
+        // 16e con file per lingua (USER_GUIDE.<lang>.md); qui la scelta
+        // del resource è già parametrizzata sulla lingua corrente, e
+        // ricade sull'italiano se il file per la lingua non è embedded.
+        var resourceName = $"MedReminder.UI.USER_GUIDE.md";
         var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(GuideResourceName);
+        using var stream = assembly.GetManifestResourceStream(resourceName);
         string markdown;
         if (stream is null)
         {
-            markdown =
-                "# Guida non disponibile\n\n" +
-                "La risorsa `USER_GUIDE.md` non è embedded in questa build. " +
-                "Apri la versione online cliccando \"Apri su GitHub\".";
+            markdown = _loc.Get("Ui.HelpViewer.NoResource");
         }
         else
         {

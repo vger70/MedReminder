@@ -44,6 +44,7 @@ internal sealed class MainForm : MedReminderFormBase
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ApplicationTrayIcon _tray;
     private readonly ILogger<MainForm> _log;
+    private readonly ILocalizationService _loc;
 
     private DataGridView _grid = null!;
     private BindingList<MedicineListItem> _rows = new();
@@ -62,13 +63,18 @@ internal sealed class MainForm : MedReminderFormBase
     private bool _closeToTray = true;
     private bool _reallyExit;
 
-    public MainForm(IServiceScopeFactory scopeFactory, ApplicationTrayIcon tray, ILogger<MainForm> log)
+    public MainForm(
+        IServiceScopeFactory scopeFactory,
+        ApplicationTrayIcon tray,
+        ILogger<MainForm> log,
+        ILocalizationService localization)
     {
         _scopeFactory = scopeFactory;
         _tray = tray;
         _log = log;
+        _loc = localization;
 
-        Text = "MedReminder";
+        Text = _loc.Get("Ui.MainForm.Title");
         Width = 960;
         Height = 560;
         StartPosition = FormStartPosition.CenterScreen;
@@ -122,64 +128,64 @@ internal sealed class MainForm : MedReminderFormBase
         // gestito dall'OS (chiude/nasconde la finestra) e il tray-hide
         // di OnFormClosing è il comportamento voluto in quel caso.
         // "Esci" (Ctrl+Q) forza invece l'uscita reale via _reallyExit.
-        var fileMenu = new ToolStripMenuItem("&File");
-        var fileExit = new ToolStripMenuItem("Esci", null,
+        var fileMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.File"));
+        var fileExit = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.File.Exit"), null,
             (_, _) => { _reallyExit = true; Close(); })
         { ShortcutKeys = Keys.Control | Keys.Q };
         fileMenu.DropDownItems.Add(fileExit);
 
         // Terapia
-        var therapyMenu = new ToolStripMenuItem("&Terapia");
-        therapyMenu.DropDownItems.Add(BuildMenuItem("&Nuova medicina…",
+        var therapyMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy"));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.NewMedicine"),
             Mdl2Glyph.Glyphs.Add, Keys.Control | Keys.N,
             async () => await ShowNewMedicineAsync()));
-        therapyMenu.DropDownItems.Add(BuildMenuItem("&Modifica",
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Edit"),
             Mdl2Glyph.Glyphs.Edit, Keys.F2,
             async () => await ShowEditMedicineAsync()));
-        therapyMenu.DropDownItems.Add(BuildMenuItem("Cambia &dose/frequenza…",
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.ChangeSchedule"),
             Mdl2Glyph.Glyphs.Notebook, Keys.None,
             async () => await ShowChangeScheduleAsync()));
-        therapyMenu.DropDownItems.Add(BuildMenuItem("&Disattiva",
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deactivate"),
             Mdl2Glyph.Glyphs.Cancel, Keys.None,
             async () => await DeactivateSelectedAsync()));
         therapyMenu.DropDownItems.Add(new ToolStripSeparator());
-        therapyMenu.DropDownItems.Add(BuildMenuItem("&Registra assunzione…",
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RegisterIntake"),
             Mdl2Glyph.Glyphs.CheckMark, Keys.Control | Keys.I,
             async () => await ShowRegisterIntakeAsync()));
         therapyMenu.DropDownItems.Add(new ToolStripSeparator());
-        therapyMenu.DropDownItems.Add(BuildMenuItem("&Scheda terapia…",
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Report"),
             Mdl2Glyph.Glyphs.Document, Keys.Control | Keys.P,
             async () => await ShowTherapyReportAsync()));
 
         // Scorte
-        var stockMenu = new ToolStripMenuItem("&Scorte");
-        stockMenu.DropDownItems.Add(BuildMenuItem("&Aggiungi confezione…",
+        var stockMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Stock"));
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.AddPackage"),
             Mdl2Glyph.Glyphs.Package, Keys.Control | Keys.Shift | Keys.A,
             async () => await ShowStockDialogAsync(StockOperationKind.NewPackage)));
-        stockMenu.DropDownItems.Add(BuildMenuItem("&Correggi scorte…",
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Warning, Keys.None,
             async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
         stockMenu.DropDownItems.Add(new ToolStripSeparator());
-        stockMenu.DropDownItems.Add(BuildMenuItem("A&ggiorna elenco",
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Refresh"),
             Mdl2Glyph.Glyphs.Refresh, Keys.F5,
             async () => await ReloadAsync()));
 
         // Strumenti
-        var toolsMenu = new ToolStripMenuItem("Str&umenti");
-        toolsMenu.DropDownItems.Add(BuildMenuItem("&Controlla ora",
+        var toolsMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Tools"));
+        toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.CheckNow"),
             Mdl2Glyph.Glyphs.Sync, Keys.Control | Keys.R,
             async () => await RunMonitorAsync()));
         toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-        toolsMenu.DropDownItems.Add(BuildMenuItem("&Impostazioni…",
+        toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Settings"),
             Mdl2Glyph.Glyphs.Settings, Keys.Control | Keys.Oemcomma,
             () => { ShowSettings(); return Task.CompletedTask; }));
 
         // Aiuto (?)
-        var helpMenu = new ToolStripMenuItem("&?");
-        var helpGuide = BuildMenuItem("&Guida utente",
+        var helpMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Help"));
+        var helpGuide = BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Help.Guide"),
             Mdl2Glyph.Glyphs.Help, Keys.F1,
             () => { OpenUserGuide(); return Task.CompletedTask; });
-        var helpAbout = BuildMenuItem("&Info su MedReminder…",
+        var helpAbout = BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Help.About"),
             Mdl2Glyph.Glyphs.Info, Keys.None,
             () => { ShowAboutDialog(); return Task.CompletedTask; });
         helpMenu.DropDownItems.Add(helpGuide);
@@ -213,24 +219,22 @@ internal sealed class MainForm : MedReminderFormBase
     {
         try
         {
-            using var dialog = new HelpViewerForm();
+            using var scope = _scopeFactory.CreateScope();
+            using var dialog = new HelpViewerForm(
+                scope.ServiceProvider.GetRequiredService<ILocalizationService>());
             dialog.ShowDialog(this);
         }
         catch (Exception ex)
         {
-            ShowError("Impossibile aprire la guida", ex);
+            ShowError(_loc.Get("Ui.MainForm.GuideOpenError"), ex);
         }
     }
 
     private void ShowAboutDialog()
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "dev";
-        var message =
-            $"MedReminder\nVersione {version}\n\n" +
-            "Promemoria organizzativo per scorte di medicine — non è un dispositivo medico " +
-            "e non fornisce indicazioni cliniche.\n\n" +
-            "Sorgente: https://github.com/vger70/MedReminder";
-        MessageBox.Show(this, message, "Info su MedReminder",
+        var message = _loc.Get("Ui.MainForm.About.Body", version);
+        MessageBox.Show(this, message, _loc.Get("Ui.MainForm.About.Title"),
             MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
@@ -256,12 +260,12 @@ internal sealed class MainForm : MedReminderFormBase
             Dock = DockStyle.Left,
             ForeColor = Color.FromArgb(120, 0, 0),
             Font = new Font(Font, FontStyle.Bold),
-            Text = "Errore nel caricamento. Vedi log.",
+            Text = _loc.Get("Ui.MainForm.ErrorBanner.Load"),
         };
 
         var retryButton = new Button
         {
-            Text = "Riprova",
+            Text = _loc.Get("Ui.MainForm.ErrorBanner.Retry"),
             Dock = DockStyle.Right,
             AutoSize = true,
         };
@@ -296,21 +300,21 @@ internal sealed class MainForm : MedReminderFormBase
             ImageScalingSize = new Size(24, 24),
             AutoSize = true,
         };
-        strip.Items.Add(BuildToolbarButton("Nuova\nmedicina",
+        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.NewMedicine"),
             Mdl2Glyph.Glyphs.Add,
             async () => await ShowNewMedicineAsync()));
-        strip.Items.Add(BuildToolbarButton("Modifica",
+        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.Edit"),
             Mdl2Glyph.Glyphs.Edit,
             async () => await ShowEditMedicineAsync()));
         strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(BuildToolbarButton("Registra\nassunzione",
+        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.RegisterIntake"),
             Mdl2Glyph.Glyphs.CheckMark,
             async () => await ShowRegisterIntakeAsync()));
-        strip.Items.Add(BuildToolbarButton("Controlla\nora",
+        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.CheckNow"),
             Mdl2Glyph.Glyphs.Sync,
             async () => await RunMonitorAsync()));
         strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(BuildToolbarButton("Scheda\nterapia",
+        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.TherapyReport"),
             Mdl2Glyph.Glyphs.Document,
             async () => await ShowTherapyReportAsync()));
         return strip;
@@ -356,24 +360,24 @@ internal sealed class MainForm : MedReminderFormBase
                     TimeZoneInfo.ConvertTime(clock.GetUtcNow(), clock.LocalTimeZone).DateTime);
             }
 
-            var reportText = MedReminder.Application.Reporting.TherapyReport.Build(entries, today);
-            using var dialog = new TherapyReportDialog(reportText);
+            var reportText = MedReminder.Application.Reporting.TherapyReport.Build(entries, today, _loc.CurrentCulture);
+            using var dialog = new TherapyReportDialog(reportText, _loc);
             dialog.ShowDialog(this);
         }
         catch (Exception ex)
         {
-            ShowError("Errore generazione scheda terapia", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.GenerateReport"), ex);
         }
     }
 
     private StatusStrip BuildStatusStrip()
     {
-        _statusLabel = new ToolStripStatusLabel("Pronto.")
+        _statusLabel = new ToolStripStatusLabel(_loc.Get("Ui.App.Ready"))
         {
             Spring = true,
             TextAlign = ContentAlignment.MiddleLeft,
         };
-        _lastCheckLabel = new ToolStripStatusLabel("Ultimo controllo: —")
+        _lastCheckLabel = new ToolStripStatusLabel(_loc.Get("Ui.MainForm.LastCheck.None"))
         {
             TextAlign = ContentAlignment.MiddleRight,
         };
@@ -401,39 +405,39 @@ internal sealed class MainForm : MedReminderFormBase
         };
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            HeaderText = "Medicina",
+            HeaderText = _loc.Get("Ui.MainForm.Column.Medicine"),
             DataPropertyName = nameof(MedicineListItem.Name),
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
             MinimumWidth = 160,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            HeaderText = "Scorta",
+            HeaderText = _loc.Get("Ui.MainForm.Column.Stock"),
             DataPropertyName = nameof(MedicineListItem.StockDisplay),
             Width = 120,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            HeaderText = "Consumo/gg",
+            HeaderText = _loc.Get("Ui.MainForm.Column.DailyRate"),
             DataPropertyName = nameof(MedicineListItem.DailyRateDisplay),
             Width = 100,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            HeaderText = "Giorni residui",
+            HeaderText = _loc.Get("Ui.MainForm.Column.DaysRemaining"),
             DataPropertyName = nameof(MedicineListItem.DaysRemainingDisplay),
             Width = 100,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            HeaderText = "Esaurimento",
+            HeaderText = _loc.Get("Ui.MainForm.Column.RunOut"),
             DataPropertyName = nameof(MedicineListItem.EtaDisplay),
             Width = 110,
         });
         _statusCellFont = new Font(Font, FontStyle.Bold);
         var statusColumn = new DataGridViewTextBoxColumn
         {
-            HeaderText = "Stato",
+            HeaderText = _loc.Get("Ui.MainForm.Column.Status"),
             DataPropertyName = nameof(MedicineListItem.StatusDisplay),
             Width = 110,
             DefaultCellStyle = new DataGridViewCellStyle
@@ -519,7 +523,7 @@ internal sealed class MainForm : MedReminderFormBase
     // ------------------ Data loading ------------------
     private async Task ReloadAsync()
     {
-        SetStatus("Caricamento…");
+        SetStatus(_loc.Get("Ui.MainForm.Status.Loading"));
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -528,14 +532,14 @@ internal sealed class MainForm : MedReminderFormBase
 
             _rows = new BindingList<MedicineListItem>(items.ToList());
             _grid.DataSource = _rows;
-            SetStatus($"{items.Count} medicine caricate.");
+            SetStatus(_loc.Get("Ui.MainForm.Status.MedicinesLoaded", items.Count));
             HideErrorBanner();
         }
         catch (Exception ex)
         {
             _log.LogError(ex, "Errore caricamento medicine");
-            SetStatus("Errore caricamento — vedi log.");
-            ShowErrorBanner($"Impossibile caricare le medicine: {ex.Message}");
+            SetStatus(_loc.Get("Ui.MainForm.Status.LoadError"));
+            ShowErrorBanner(_loc.Get("Ui.MainForm.LoadBanner.Failure", ex.Message));
         }
     }
 
@@ -550,7 +554,7 @@ internal sealed class MainForm : MedReminderFormBase
     // ------------------ Actions ------------------
     private async Task ShowNewMedicineAsync()
     {
-        using var dialog = new MedicineEditDialog(MedicineEditDialog.EditMode.Create);
+        using var dialog = new MedicineEditDialog(MedicineEditDialog.EditMode.Create, _loc);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -563,7 +567,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore creazione medicina", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.CreateMedicine"), ex);
         }
     }
 
@@ -596,11 +600,11 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore lettura medicina", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.ReadMedicine"), ex);
             return;
         }
 
-        using var dialog = new MedicineEditDialog(MedicineEditDialog.EditMode.Edit, seed);
+        using var dialog = new MedicineEditDialog(MedicineEditDialog.EditMode.Edit, _loc, seed);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -612,7 +616,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore aggiornamento", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.UpdateMedicine"), ex);
         }
     }
 
@@ -622,8 +626,9 @@ internal sealed class MainForm : MedReminderFormBase
         if (row is null) return;
 
         var confirm = MessageBox.Show(this,
-            $"Disattivare '{row.Name}'?\nI dati storici verranno preservati; la medicina non genererà più avvisi.",
-            "Conferma disattivazione", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            _loc.Get("Ui.MainForm.Deactivate.Confirm", row.Name),
+            _loc.Get("Ui.MainForm.Deactivate.Confirm.Title"),
+            MessageBoxButtons.YesNo, MessageBoxIcon.Question);
         if (confirm != DialogResult.Yes) return;
 
         try
@@ -641,7 +646,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore disattivazione", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.DeactivateMedicine"), ex);
         }
     }
 
@@ -665,11 +670,11 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore lettura medicina", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.ReadMedicine"), ex);
             return;
         }
 
-        using var dialog = new ChangeScheduleDialog(row.Name, currentDose, currentFreq, startDate);
+        using var dialog = new ChangeScheduleDialog(row.Name, currentDose, currentFreq, startDate, _loc);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -683,7 +688,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore cambio schedule", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.ChangeSchedule"), ex);
         }
     }
 
@@ -704,11 +709,11 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore lettura medicina", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.ReadMedicine"), ex);
             return;
         }
 
-        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity);
+        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity, _loc);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -722,7 +727,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore registrazione assunzione", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.RegisterIntake"), ex);
         }
     }
 
@@ -731,7 +736,7 @@ internal sealed class MainForm : MedReminderFormBase
         var row = GetSelectedRow();
         if (row is null) return;
 
-        using var dialog = new StockAdjustmentDialog(row.Name, row.CurrentStock, row.Unit, defaultKind);
+        using var dialog = new StockAdjustmentDialog(row.Name, row.CurrentStock, row.Unit, defaultKind, _loc);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -755,13 +760,13 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore movimento scorte", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.StockMovement"), ex);
         }
     }
 
     private async Task RunMonitorAsync()
     {
-        SetStatus("Controllo in corso…");
+        SetStatus(_loc.Get("Ui.MainForm.Status.CheckRunning"));
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -769,13 +774,14 @@ internal sealed class MainForm : MedReminderFormBase
             var monitor = scope.ServiceProvider.GetRequiredService<MedicationMonitor>();
             await catchUp.RunAsync(CancellationToken.None);
             var result = await monitor.RunAsync(CancellationToken.None);
-            SetStatus($"Controllo completato: {result.MedicinesInspected} medicine, {result.NotificationsSent} notifiche inviate.");
-            _lastCheckLabel.Text = $"Ultimo controllo: {DateTime.Now:HH:mm}";
+            SetStatus(_loc.Get("Ui.MainForm.Status.CheckCompleted",
+                result.MedicinesInspected, result.NotificationsSent));
+            _lastCheckLabel.Text = _loc.Get("Ui.MainForm.LastCheck.At", DateTime.Now.ToString("HH:mm"));
             await ReloadAsync();
         }
         catch (Exception ex)
         {
-            ShowError("Errore controllo periodico", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.MonitorCheck"), ex);
         }
     }
 
@@ -798,7 +804,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            ShowError("Errore apertura impostazioni", ex);
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenSettings"), ex);
         }
     }
 

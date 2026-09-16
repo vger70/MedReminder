@@ -16,6 +16,7 @@ internal sealed class MedicineOverviewLoader
     private readonly IMedicationSuspensionRepository _suspensions;
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly TimeProvider _clock;
+    private readonly ILocalizationService _loc;
 
     public MedicineOverviewLoader(
         IMedicineRepository medicines,
@@ -23,7 +24,8 @@ internal sealed class MedicineOverviewLoader
         IMedicationScheduleHistoryRepository schedules,
         IMedicationSuspensionRepository suspensions,
         IMedicationAdministrationSlotRepository slots,
-        TimeProvider clock)
+        TimeProvider clock,
+        ILocalizationService localization)
     {
         _medicines = medicines;
         _stock = stock;
@@ -31,6 +33,7 @@ internal sealed class MedicineOverviewLoader
         _suspensions = suspensions;
         _slots = slots;
         _clock = clock;
+        _loc = localization;
     }
 
     public async Task<IReadOnlyList<MedicineListItem>> LoadAsync(CancellationToken cancellationToken)
@@ -66,6 +69,7 @@ internal sealed class MedicineOverviewLoader
                 ThresholdDays = m.ThresholdDays,
                 IsSuspended = isSuspended,
                 Status = status,
+                StatusDisplay = LocalizeStatus(status),
             });
         }
 
@@ -82,6 +86,14 @@ internal sealed class MedicineOverviewLoader
         if (daysRemaining is int d && d <= thresholdDays) return MedicineRowStatus.Warning;
         return MedicineRowStatus.Ok;
     }
+
+    private string LocalizeStatus(MedicineRowStatus status) => status switch
+    {
+        MedicineRowStatus.Suspended => _loc.Get("Domain.Medicine.Status.Suspended"),
+        MedicineRowStatus.Empty => _loc.Get("Domain.Medicine.Status.Empty"),
+        MedicineRowStatus.Warning => _loc.Get("Domain.Medicine.Status.Warning"),
+        _ => _loc.Get("Domain.Medicine.Status.Ok"),
+    };
 
     private DateOnly LocalToday()
     {
