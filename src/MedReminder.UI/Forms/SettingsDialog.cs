@@ -27,6 +27,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private readonly IBackupService _backup;
     private readonly IBackupStateStore _backupState;
     private readonly IApplicationRestarter _restarter;
+    private readonly ILocalizationService _loc;
 
     // Email tab controls
     private TextBox _hostBox = null!;
@@ -53,6 +54,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private Label _backupStatusLabel = null!;
     private Label _backupCloudWarningLabel = null!;
 
+    // Generale (Incremento 16b) — selezione lingua UI
+    private ComboBox _languageCombo = null!;
+
     // Component condiviso per i tooltip esplicativi sui campi tecnici
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
     // ToolTip per dialog è la best practice WinForms.
@@ -72,7 +76,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
         IAutoStartService autoStart,
         IBackupService backup,
         IBackupStateStore backupState,
-        IApplicationRestarter restarter)
+        IApplicationRestarter restarter,
+        ILocalizationService localization)
     {
         _smtpMonitor = smtpMonitor;
         _backupMonitor = backupMonitor;
@@ -82,8 +87,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _backup = backup;
         _backupState = backupState;
         _restarter = restarter;
+        _loc = localization;
 
-        Text = "Impostazioni MedReminder";
+        Text = _loc.Get("Ui.SettingsDialog.Title");
         Width = 620;
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;
@@ -93,6 +99,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
         var tabs = new TabControl { Dock = DockStyle.Fill };
+        tabs.TabPages.Add(BuildGeneralTab());
         tabs.TabPages.Add(BuildEmailTab());
         tabs.TabPages.Add(BuildStartupTab());
         tabs.TabPages.Add(BuildBackupTab());
@@ -112,6 +119,120 @@ internal sealed class SettingsDialog : MedReminderFormBase
         AcceptButton = closeButton;
         CancelButton = closeButton;
     }
+
+    // ------------------ General tab (Incremento 16b) ------------------
+    private TabPage BuildGeneralTab()
+    {
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.General"));
+
+        var languageLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.Language"),
+        };
+
+        // ComboBox con Items = SupportedLanguage records. DisplayMember
+        // = DisplayName localizzato per la lingua corrente.
+        _languageCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        foreach (var lang in SupportedLanguages.All)
+        {
+            var localizedName = lang.Code == "en"
+                ? _loc.Get("Language.English")
+                : _loc.Get("Language.Italian");
+            _languageCombo.Items.Add(new LanguageChoice(lang.Code, localizedName));
+            if (string.Equals(lang.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+            {
+                _languageCombo.SelectedIndex = _languageCombo.Items.Count - 1;
+            }
+        }
+        _languageCombo.DisplayMember = nameof(LanguageChoice.DisplayName);
+
+        _tooltips.SetToolTip(_languageCombo, _loc.Get("Ui.SettingsDialog.Tooltip.Language"));
+
+        var saveButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.General.Save"),
+            AutoSize = true,
+            Height = 30,
+        };
+        saveButton.Click += (_, _) => SaveLanguage();
+
+        var note = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = System.Drawing.Color.DarkGray,
+            Text = _loc.Get("Ui.SettingsDialog.General.Note"),
+        };
+
+        var panel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16),
+        };
+        panel.Controls.Add(languageLabel);
+        panel.Controls.Add(_languageCombo);
+        panel.Controls.Add(saveButton);
+        panel.Controls.Add(note);
+        page.Controls.Add(panel);
+        return page;
+    }
+
+    private void SaveLanguage()
+    {
+        if (_languageCombo.SelectedItem is not LanguageChoice choice) return;
+
+        try
+        {
+            WriteUserSettingsToDisk(new UserSettings { Language = choice.Code });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        // Se la lingua non è cambiata, nessun restart necessario —
+        // basta un feedback breve. Diversamente chiediamo conferma
+        // e riavviamo.
+        if (string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.General.Saved"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var confirm = MessageBox.Show(this,
+            _loc.Get("Ui.SettingsDialog.General.RestartPrompt"),
+            _loc.Get("Ui.SettingsDialog.General.RestartPrompt.Title"),
+            MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (confirm == DialogResult.Yes)
+        {
+            _restarter.RestartAndExit();
+        }
+    }
+
+    private static void WriteUserSettingsToDisk(UserSettings settings)
+    {
+        var payload = new { UI = settings };
+        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "user.settings.json");
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+        });
+        File.WriteAllText(path, json);
+    }
+
+    private sealed record LanguageChoice(string Code, string DisplayName);
 
     // ------------------ Email tab ------------------
     private TabPage BuildEmailTab()
