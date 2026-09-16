@@ -796,62 +796,52 @@ suo interno resta skippabile (con avviso "raccomandato per admin").
 non tocca mai `%LOCALAPPDATA%\MedReminder\backups\pre-migration-*\`.
 Documentato nel USER_GUIDE.
 
-## 14a. Nuove decisioni aperte (introdotte dal ruolo admin)
+## 14a. Decisioni confermate (dopo revisione utente, seconda tornata)
 
-Devo chiederti conferma su questi punti prima di partire — sono
-tutti direttamente conseguenti alla scelta A.
+**G. Ruolo immutabile dopo la creazione.** Nessun flusso di
+promote/demote in Incremento 15. Se emerge la necessità pratica,
+si valuterà in un incremento successivo.
 
-**G. Immutabilità del ruolo dopo la creazione?**
-Ho proposto: **sì, immutabile** (§1.1a). Alternativa: permettere
-promote/demote da parte di un admin, con salvaguardia "l'ultimo
-admin non può auto-degradarsi".
-→ Consiglio: immutabile per Incremento 15. Se emerge la necessità,
-si aggiunge in un incremento successivo.
+**H. Il profilo attivo NON può essere eliminato.** Per eliminare
+il proprio profilo, l'admin deve prima passare a un altro profilo
+(via `File → Cambia profilo…`) e poi cancellare. La
+ProfilesManagerForm mostra il bottone Elimina disabilitato per la
+riga del profilo attivo, con tooltip esplicativo.
 
-**H. Cosa succede se il DB del profilo attivo contiene medicine ma
-il profilo viene eliminato dall'admin?**
-- **Opzione 1** (proposta): eliminazione ammessa solo per profili
-  diversi da "attualmente caricato in memoria". Se l'admin vuole
-  eliminare il proprio profilo, cambio profilo prima e poi elimino.
-- **Opzione 2**: eliminazione ammessa sempre, con restart automatico
-  post-elimina se era l'attivo.
-→ Consiglio: **Opzione 1**. Più semplice, meno magic.
+**I. Un profilo alla volta.** L'admin nel suo profilo vede solo le
+proprie medicine. Per operare sui dati di un altro profilo deve
+cambiare profilo. Nessuna vista consolidata cross-profilo.
 
-**I. L'admin può registrare l'assunzione di medicine di uno user
-non-admin dal proprio profilo?**
-Cioè: dall'interno del suo profilo, l'admin vede solo le SUE
-medicine, o può switchare vista?
-- **Opzione 1** (proposta): l'admin vede solo il suo profilo. Per
-  registrare un'assunzione su un altro utente, deve cambiare
-  profilo.
-- **Opzione 2**: l'admin ha una "vista consolidata" o può switchare
-  contesto senza restart.
-→ Consiglio: **Opzione 1**. La 2 richiederebbe di ripensare l'IHost
-per essere multi-DB, contraddice tutto il design fino a qui.
+**J. Propagazione modifiche SMTP: risolta dall'invariante
+single-instance.** Non esistono due istanze concorrenti dell'app
+nello stesso account Windows (mutex `Local\` + stessa sessione).
+Nessun conflitto di race: quando l'admin cambia SMTP e in un altro
+momento uno user avvia l'app, il file JSON aggiornato viene letto
+al boot successivo. `IOptionsMonitor` non serve neanche per questo
+caso — basta la lettura al boot. Confermato che il ragionamento
+è corretto.
 
-**J. Password DPAPI: se l'admin cambia la password SMTP, gli user
-la vedono cambiare immediatamente?**
-`smtp.protected` è globale, `SmtpCredentialStore` è singleton in
-DI. Ma `IOptionsMonitor<SmtpSettings>` legge `smtp.settings.json`
-con reloadOnChange=true — l'admin modifica il file, il monitor
-notifica, gli user (che condividono lo stesso IHost per profilo
-diverso, ma stesso appDir) ricevono l'aggiornamento.
-Attenzione: **l'IHost è per-processo**. Ogni profilo attivo ha il
-suo processo. Se l'admin cambia SMTP e uno user ha l'app aperta
-in un'altra sessione Windows... è impossibile (mutex `Local\` è
-per-session, ma stesso account Windows == stessa sessione == stesso
-mutex). Non ci sono due istanze concorrenti nello stesso account.
-Quindi non c'è conflitto reale.
-→ **Nessuna decisione richiesta**, solo verifica che il ragionamento
-sia corretto. Confermi?
+**K. Canali di notifica Windows/Email: già per-medicina.** Nessun
+gating aggiuntivo richiesto: `Medicine.NotificationChannels` è già
+un flag per-medicina, definito dal creatore del record.
 
-**K. L'user può abilitare/disabilitare i propri canali di notifica
-Windows/Email indipendentemente?**
-Oggi `Medicine.NotificationChannels` è per medicina (§Domain). Non
-per profilo. Cioè: nel profilo di Nonna, l'admin definisce che la
-medicina "Cardioaspirina" ha email + toast; Nonna user non ha
-motivo di scavalcare. È già così. Non serve gating aggiuntivo.
-→ **Nessuna decisione richiesta.**
+## 14b. Riepilogo compatto
+
+Per riferimento rapido, tutte le decisioni:
+
+| ID | Domanda | Scelta |
+|----|---------|--------|
+| A  | SMTP: per-profilo / condiviso | Condiviso + ruoli admin/user |
+| B  | Auto-start unico / multi | Unico |
+| C  | PIN in uscita dal profilo | Solo in ingresso |
+| D  | Formato "ultimo utilizzo" | `dd/MM HH:mm` |
+| E  | First-run wizard | Obbligatorio (crea admin) |
+| F  | Retention backup pre-migration | Manuale |
+| G  | Ruolo modificabile dopo creazione | Immutabile |
+| H  | Elimina profilo attivo | No, cambia prima |
+| I  | Vista admin cross-profilo | No, uno alla volta |
+| J  | Propagazione SMTP tra istanze | N/A (istanza unica) |
+| K  | Gating canali notifica per profilo | Non serve (già per-medicina) |
 
 ---
 
