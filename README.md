@@ -85,9 +85,10 @@ tests/
   MedReminder.Application.Tests/
   MedReminder.Infrastructure.Tests/
 docs/
-  ANALYSIS.md    analisi tecnica + architettura
-  USER_GUIDE.md  guida rapida per l'utente finale
-  PACKAGING.md   pubblicazione e distribuzione
+  ANALYSIS.md       analisi tecnica + architettura
+  USER_GUIDE.it.md  guida rapida per l'utente finale (italiano)
+  USER_GUIDE.en.md  user guide (English)
+  PACKAGING.md      pubblicazione e distribuzione
 ```
 
 ## Come compilare

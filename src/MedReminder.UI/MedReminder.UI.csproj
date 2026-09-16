@@ -48,13 +48,26 @@
       <Link>Assets\medreminder.ico</Link>
       <LogicalName>MedReminder.UI.medreminder.ico</LogicalName>
     </EmbeddedResource>
-    <!-- Guida utente embedded: caricata da HelpViewerForm, renderizzata
-         MD→HTML con Markdig e mostrata in WebView2. Vive nel repo sotto
-         docs/ per essere leggibile su GitHub, embedded qui per non
-         dipendere dal filesystem a runtime. -->
-    <EmbeddedResource Include="..\..\docs\USER_GUIDE.md">
-      <Link>Assets\USER_GUIDE.md</Link>
-      <LogicalName>MedReminder.UI.USER_GUIDE.md</LogicalName>
+    <!-- Guida utente localizzata (Incremento 16e): due file per lingua
+         (it, en) sotto docs/. HelpViewerForm carica quello che matcha
+         la lingua UI corrente; se manca ricade sull'inglese.
+         Copiati come Content nel bin/localization/ così sono
+         ispezionabili/editabili; ANCHE embedded per single-file publish. -->
+    <Content Include="..\..\docs\USER_GUIDE.it.md">
+      <Link>localization\USER_GUIDE.it.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\docs\USER_GUIDE.en.md">
+      <Link>localization\USER_GUIDE.en.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.it.md">
+      <Link>Assets\USER_GUIDE.it.md</Link>
+      <LogicalName>USER_GUIDE.it.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.en.md">
+      <Link>Assets\USER_GUIDE.en.md</Link>
+      <LogicalName>USER_GUIDE.en.md</LogicalName>
     </EmbeddedResource>
     <!-- Dizionari di localizzazione (Incremento 16a). Copiati come
          Content nel bin/localization/ per essere ispezionabili e

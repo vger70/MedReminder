@@ -149,6 +149,18 @@ Chiudere la finestra principale con la X minimizza in tray;
 l'app continua a girare in background. Per uscire davvero: menu
 tray → **Esci**.
 
+## Lingua interfaccia
+
+**Impostazioni → Generale**: scegli la lingua dal dropdown
+(Italiano o Inglese) e clicca **Salva lingua**. MedReminder si
+riavvia automaticamente per applicare la modifica.
+
+Note:
+- Le notifiche toast di Windows seguono sempre la lingua di
+  sistema (Windows), indipendentemente dalla lingua qui scelta.
+- Le notifiche email e la scheda terapia usano la lingua
+  selezionata qui.
+
 ## Diagnostica
 
 - **Log**: `%LOCALAPPDATA%\MedReminder\logs\medreminder-YYYYMMDD.log`.

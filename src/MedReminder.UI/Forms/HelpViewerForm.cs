@@ -24,8 +24,10 @@ namespace MedReminder.UI.Forms;
 // direttamente su GitHub nel browser predefinito.
 internal sealed class HelpViewerForm : MedReminderFormBase
 {
-    private const string GithubGuideUrl =
-        "https://github.com/vger70/MedReminder/blob/main/docs/USER_GUIDE.md";
+    // Il pulsante "Apri su GitHub" punta alla versione MD della guida
+    // nella lingua UI corrente. GitHub rende automaticamente il markdown.
+    private string GithubGuideUrl =>
+        $"https://github.com/vger70/MedReminder/blob/main/docs/USER_GUIDE.{_loc.CurrentLanguage}.md";
 
     private readonly ILocalizationService _loc;
     private readonly WebView2 _webView;
@@ -163,23 +165,19 @@ internal sealed class HelpViewerForm : MedReminderFormBase
 
     private string BuildHtmlFromEmbeddedGuide()
     {
-        // Per 16c teniamo un solo resource: la guida verrà tradotta a
-        // 16e con file per lingua (USER_GUIDE.<lang>.md); qui la scelta
-        // del resource è già parametrizzata sulla lingua corrente, e
-        // ricade sull'italiano se il file per la lingua non è embedded.
-        var resourceName = $"MedReminder.UI.USER_GUIDE.md";
-        var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(resourceName);
-        string markdown;
-        if (stream is null)
-        {
-            markdown = _loc.Get("Ui.HelpViewer.NoResource");
-        }
-        else
-        {
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-            markdown = reader.ReadToEnd();
-        }
+        // Guida localizzata (Incremento 16e). Ordine di risoluzione:
+        //   1. File nella lingua utente sotto <bin>/localization/
+        //      USER_GUIDE.<lang>.md (Content copiato dal csproj).
+        //   2. File embedded nella lingua utente.
+        //   3. Come 1-2 ma sulla lingua di default ("en").
+        //   4. Se manca tutto, messaggio "Guida non disponibile".
+        var lang = _loc.CurrentLanguage;
+        var markdown =
+            TryLoadGuideFromDisk(lang) ??
+            TryLoadGuideFromEmbedded(lang) ??
+            TryLoadGuideFromDisk("en") ??
+            TryLoadGuideFromEmbedded("en") ??
+            _loc.Get("Ui.HelpViewer.NoResource");
 
         var pipeline = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions() // tabelle, task list, autolink, footnote, ecc.
@@ -263,6 +261,47 @@ internal sealed class HelpViewerForm : MedReminderFormBase
 {body}
 </body>
 </html>";
+    }
+
+    // Cerca <bin>/localization/USER_GUIDE.<lang>.md. Null se assente
+    // o illeggibile.
+    private static string? TryLoadGuideFromDisk(string languageCode)
+    {
+        try
+        {
+            var path = Path.Combine(
+                AppContext.BaseDirectory, "localization",
+                $"USER_GUIDE.{languageCode}.md");
+            if (!File.Exists(path)) return null;
+            return File.ReadAllText(path, Encoding.UTF8);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // Cerca fra le resource embedded di TUTTI gli assembly caricati
+    // una che finisce in "USER_GUIDE.<lang>.md" — stesso pattern robusto
+    // usato per i dizionari (LocalizationService).
+    private static string? TryLoadGuideFromEmbedded(string languageCode)
+    {
+        var suffix = $"USER_GUIDE.{languageCode}.md";
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            string[] resourceNames;
+            try { resourceNames = assembly.GetManifestResourceNames(); }
+            catch { continue; }
+            foreach (var name in resourceNames)
+            {
+                if (!name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) continue;
+                using var stream = assembly.GetManifestResourceStream(name);
+                if (stream is null) continue;
+                using var reader = new StreamReader(stream, Encoding.UTF8);
+                return reader.ReadToEnd();
+            }
+        }
+        return null;
     }
 }
 
