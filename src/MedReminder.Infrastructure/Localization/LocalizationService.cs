@@ -28,7 +28,10 @@ namespace MedReminder.Infrastructure.Localization;
 internal sealed class LocalizationService : ILocalizationService
 {
     private const string OverrideSubdirectory = "localization";
-    private const string ResourceNameFormat = "MedReminder.UI.strings.{0}.json";
+    // Suffix cercato dentro i nomi delle resource embedded — evita
+    // di dipendere dal formato esatto scelto da MSBuild (RootNamespace
+    // + path vs LogicalName override).
+    private const string ResourceSuffixFormat = "strings.{0}.json";
 
     private readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> _dictionaries;
     private readonly SupportedLanguage _current;
@@ -108,30 +111,41 @@ internal sealed class LocalizationService : ILocalizationService
 
     private static IReadOnlyDictionary<string, string> LoadEmbedded(string languageCode)
     {
-        // La resource è embedded nel progetto UI con LogicalName
-        // "MedReminder.UI.strings.<lang>.json" (vedi
-        // MedReminder.UI.csproj). Il caricamento cerca l'assembly UI
-        // per name — evita accoppiamento hard tra Infrastructure e UI
-        // via ProjectReference.
-        var name = string.Format(CultureInfo.InvariantCulture, ResourceNameFormat, languageCode);
+        // Ricerca robusta: scansiona TUTTI gli assembly caricati e trova
+        // quello che embed una resource il cui nome finisce in
+        // "strings.<lang>.json". In questo modo non ci sono ipotesi sul
+        // ManifestResourceName esatto (LogicalName vs RootNamespace+path
+        // sono entrambi validi in progetti SDK-style diversi).
+        var suffix = string.Format(CultureInfo.InvariantCulture, ResourceSuffixFormat, languageCode);
 
-        var uiAssembly = FindUiAssembly();
-        if (uiAssembly is null) return EmptyDictionary;
-
-        using var stream = uiAssembly.GetManifestResourceStream(name);
-        if (stream is null) return EmptyDictionary;
-
-        try
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(stream);
-            return dict is not null
-                ? new Dictionary<string, string>(dict, StringComparer.Ordinal)
-                : EmptyDictionary;
+            string[] resourceNames;
+            try { resourceNames = assembly.GetManifestResourceNames(); }
+            catch { continue; }  // dynamic assemblies rifiutano GetManifestResourceNames
+
+            foreach (var name in resourceNames)
+            {
+                if (!name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) continue;
+
+                using var stream = assembly.GetManifestResourceStream(name);
+                if (stream is null) continue;
+                try
+                {
+                    var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(stream);
+                    if (dict is not null)
+                    {
+                        return new Dictionary<string, string>(dict, StringComparer.Ordinal);
+                    }
+                }
+                catch (JsonException)
+                {
+                    // file JSON corrotto — proviamo la prossima resource,
+                    // se ce n'è più di una.
+                }
+            }
         }
-        catch (JsonException)
-        {
-            return EmptyDictionary;
-        }
+        return EmptyDictionary;
     }
 
     private static IReadOnlyDictionary<string, string> LoadOverride(string languageCode)
@@ -154,22 +168,6 @@ internal sealed class LocalizationService : ILocalizationService
             // File utente corrotto: silenzioso, l'app usa gli embedded.
             return EmptyDictionary;
         }
-    }
-
-    // Cerca l'assembly UI per nome — evita che Infrastructure abbia
-    // una ProjectReference verso UI (che è la sua consumer).
-    private static Assembly? FindUiAssembly()
-    {
-        foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            var name = a.GetName().Name;
-            if (string.Equals(name, "MedReminder", StringComparison.Ordinal) ||
-                string.Equals(name, "MedReminder.UI", StringComparison.Ordinal))
-            {
-                return a;
-            }
-        }
-        return null;
     }
 
     private static readonly IReadOnlyDictionary<string, string> EmptyDictionary =
