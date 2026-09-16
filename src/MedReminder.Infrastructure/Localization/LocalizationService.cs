@@ -95,18 +95,47 @@ internal sealed class LocalizationService : ILocalizationService
 
         foreach (var lang in SupportedLanguages.All)
         {
-            var embedded = LoadEmbedded(lang.Code);
+            // Ordine di precedenza (dal più forte al più debole):
+            //   1. override utente in %LOCALAPPDATA%\MedReminder\
+            //      localization\strings.<lang>.json
+            //   2. file "distribuiti" copiati in <bin>\localization\
+            //      strings.<lang>.json (Content del csproj)
+            //   3. resource embedded (per single-file publish o safety)
+            //
+            // Le mappe successive vengono FUSE — le override utente
+            // vincono sui default, ma le chiavi mancanti nell'override
+            // ricadono sulle default.
             var overrides = LoadOverride(lang.Code);
-            if (overrides.Count == 0)
-            {
-                result[lang.Code] = embedded;
-                continue;
-            }
-            var merged = new Dictionary<string, string>(embedded, StringComparer.Ordinal);
+            var baseDir = LoadFromBaseDirectory(lang.Code);
+            var embedded = LoadEmbedded(lang.Code);
+
+            var merged = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var kv in embedded) merged[kv.Key] = kv.Value;
+            foreach (var kv in baseDir) merged[kv.Key] = kv.Value;
             foreach (var kv in overrides) merged[kv.Key] = kv.Value;
             result[lang.Code] = merged;
         }
         return result;
+    }
+
+    private static IReadOnlyDictionary<string, string> LoadFromBaseDirectory(string languageCode)
+    {
+        var path = Path.Combine(
+            AppContext.BaseDirectory, OverrideSubdirectory,
+            $"strings.{languageCode}.json");
+        if (!File.Exists(path)) return EmptyDictionary;
+        try
+        {
+            using var stream = File.OpenRead(path);
+            var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(stream);
+            return dict is not null
+                ? new Dictionary<string, string>(dict, StringComparer.Ordinal)
+                : EmptyDictionary;
+        }
+        catch
+        {
+            return EmptyDictionary;
+        }
     }
 
     private static IReadOnlyDictionary<string, string> LoadEmbedded(string languageCode)
