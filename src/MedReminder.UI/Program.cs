@@ -3,9 +3,11 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Text.Json;
 using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Infrastructure;
+using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.UI.Forms;
@@ -45,11 +47,20 @@ internal static class Program
     // avvii "normali" (dove il mutex è libero all'istante).
     private static readonly TimeSpan SingleInstanceAcquireTimeout = TimeSpan.FromSeconds(5);
 
+    // ILocalizationService "standalone" per i messaggi pre-IHost
+    // (mutex single-instance, ThreadException). Popolato all'inizio
+    // di Main leggendo user.settings.json a mano; l'istanza vera del
+    // servizio (Singleton via DI) è indipendente ma legge dallo
+    // stesso file, quindi il testo è sempre coerente.
+    private static ILocalizationService _bootstrapLoc = null!;
+
     [STAThread]
     private static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
         Log.Logger = ConfigureSerilog();
+
+        _bootstrapLoc = LocalizationService.CreateStandalone(ReadUserLanguage());
 
         // Le eccezioni nate dentro handler UI (es. click sul pulsante
         // "Stampa" di PrintPreviewDialog che invoca la SaveAs del driver
@@ -78,8 +89,8 @@ internal static class Program
         {
             Log.Information("Un'altra istanza di MedReminder è già in esecuzione. Uscita.");
             System.Windows.Forms.MessageBox.Show(
-                "MedReminder è già in esecuzione.\nUsa l'icona nell'area di notifica per aprirlo.",
-                "MedReminder",
+                _bootstrapLoc.Get("Ui.App.AlreadyRunning"),
+                _bootstrapLoc.Get("Ui.App.AlreadyRunning.Title"),
                 System.Windows.Forms.MessageBoxButtons.OK,
                 System.Windows.Forms.MessageBoxIcon.Information);
             Log.CloseAndFlush();
@@ -224,9 +235,8 @@ internal static class Program
             try
             {
                 System.Windows.Forms.MessageBox.Show(
-                    "Stampa annullata o non completata.\n\n" +
-                    "Se hai annullato la finestra di salvataggio PDF puoi ignorare questo messaggio.",
-                    "Stampa interrotta",
+                    _bootstrapLoc.Get("Ui.App.PrintCancelled.Body"),
+                    _bootstrapLoc.Get("Ui.App.PrintCancelled.Title"),
                     System.Windows.Forms.MessageBoxButtons.OK,
                     System.Windows.Forms.MessageBoxIcon.Information);
             }
@@ -242,9 +252,8 @@ internal static class Program
         try
         {
             System.Windows.Forms.MessageBox.Show(
-                "Si è verificato un errore inatteso.\n\n" + ex.Message +
-                "\n\nL'errore è stato registrato nei log dell'applicazione.",
-                "Errore inatteso",
+                _bootstrapLoc.Get("Ui.App.UnexpectedError.Body", ex.Message),
+                _bootstrapLoc.Get("Ui.App.UnexpectedError.Title"),
                 System.Windows.Forms.MessageBoxButtons.OK,
                 System.Windows.Forms.MessageBoxIcon.Error);
         }
@@ -252,6 +261,34 @@ internal static class Program
         {
             // ignoriamo: come sopra, evitiamo cascate.
         }
+    }
+
+    // Legge %LOCALAPPDATA%\MedReminder\user.settings.json senza
+    // dipendere dal binding IOptions/IConfiguration (che non esiste
+    // ancora al momento della chiamata). Struttura attesa:
+    //   { "UI": { "Language": "en" } }
+    // Ricade su null (→ default "en" nel service) se il file manca
+    // o è corrotto.
+    private static string? ReadUserLanguage()
+    {
+        try
+        {
+            var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "user.settings.json");
+            if (!File.Exists(path)) return null;
+            using var stream = File.OpenRead(path);
+            using var doc = JsonDocument.Parse(stream);
+            if (doc.RootElement.TryGetProperty("UI", out var ui) &&
+                ui.TryGetProperty("Language", out var lang) &&
+                lang.ValueKind == JsonValueKind.String)
+            {
+                return lang.GetString();
+            }
+        }
+        catch
+        {
+            // File corrotto o unparsable: silenzioso, ricadiamo su default.
+        }
+        return null;
     }
 
     // Riconosce le eccezioni che nascono dallo stack di stampa

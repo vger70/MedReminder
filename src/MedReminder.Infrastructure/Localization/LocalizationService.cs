@@ -25,7 +25,7 @@ namespace MedReminder.Infrastructure.Localization;
 // Le mappe sono cache-ate per l'intera vita del processo (registrato
 // Singleton). Il cambio lingua richiede restart — coerente con la
 // documentazione utente.
-internal sealed class LocalizationService : ILocalizationService
+public sealed class LocalizationService : ILocalizationService
 {
     private const string OverrideSubdirectory = "localization";
     // Suffix cercato dentro i nomi delle resource embedded — evita
@@ -37,10 +37,22 @@ internal sealed class LocalizationService : ILocalizationService
     private readonly SupportedLanguage _current;
 
     public LocalizationService(IOptions<UserSettings> settings)
+        : this(settings.Value.Language)
+    { }
+
+    private LocalizationService(string languageCode)
     {
         _dictionaries = LoadAllDictionaries();
-        _current = SupportedLanguages.Resolve(settings.Value.Language);
+        _current = SupportedLanguages.Resolve(languageCode);
     }
+
+    // Factory usata da Program.Main per creare un'istanza PRIMA che
+    // l'IHost/DI siano pronti — così i messaggi pre-boot (mutex
+    // single-instance, ThreadException) sono localizzabili anch'essi.
+    // Legge user.settings.json a mano; se il file manca o è corrotto
+    // ricade sulla lingua di default (en).
+    public static ILocalizationService CreateStandalone(string? languageCode)
+        => new LocalizationService(languageCode ?? SupportedLanguages.Default);
 
     public string CurrentLanguage => _current.Code;
 
