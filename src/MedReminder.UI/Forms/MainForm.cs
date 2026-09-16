@@ -22,9 +22,24 @@ namespace MedReminder.UI.Forms;
 // condiviso tra thread o operazioni concorrenti.
 internal sealed class MainForm : MedReminderFormBase
 {
+    // Sfondi tenui applicati a tutta la riga: layer "atmosfera" che
+    // suggerisce lo stato senza sovraccaricare la vista.
     private static readonly Color WarningColor = Color.FromArgb(255, 245, 205);
     private static readonly Color EmptyColor = Color.FromArgb(255, 210, 210);
     private static readonly Color SuspendedColor = Color.FromArgb(230, 230, 230);
+
+    // Cella "Stato": badge saturo con testo bold contrastato. Layer
+    // "segnale" — leggibile a colpo d'occhio anche se la riga non è
+    // in focus. Palette Material light 200/900 per garantire un
+    // contrasto WCAG AA sui foreground.
+    private static readonly Color StatusOkBack       = Color.FromArgb(200, 230, 201);  // #C8E6C9
+    private static readonly Color StatusOkFore       = Color.FromArgb( 27,  94,  32);  // #1B5E20
+    private static readonly Color StatusWarnBack     = Color.FromArgb(255, 236, 179);  // #FFECB3
+    private static readonly Color StatusWarnFore     = Color.FromArgb( 93,  64,  55);  // #5D4037
+    private static readonly Color StatusEmptyBack    = Color.FromArgb(239, 154, 154);  // #EF9A9A
+    private static readonly Color StatusEmptyFore    = Color.FromArgb(183,  28,  28);  // #B71C1C
+    private static readonly Color StatusSuspendBack  = Color.FromArgb(207, 207, 207);  // #CFCFCF
+    private static readonly Color StatusSuspendFore  = Color.FromArgb( 66,  66,  66);  // #424242
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ApplicationTrayIcon _tray;
@@ -36,6 +51,13 @@ internal sealed class MainForm : MedReminderFormBase
     private ToolStripStatusLabel _lastCheckLabel = null!;
     private Panel _errorBanner = null!;
     private Label _errorBannerLabel = null!;
+
+    // Indice della colonna "Stato" per applicare i colori badge nel
+    // RowPrePaint senza dover cercare la colonna per nome ogni volta.
+    private int _statusColumnIndex = -1;
+    // Font bold cache-ato per le celle dello Stato: creare un Font
+    // nuovo ad ogni prepaint sarebbe sprecato.
+    private Font? _statusCellFont;
 
     private bool _closeToTray = true;
     private bool _reallyExit;
@@ -408,12 +430,23 @@ internal sealed class MainForm : MedReminderFormBase
             DataPropertyName = nameof(MedicineListItem.EtaDisplay),
             Width = 110,
         });
-        grid.Columns.Add(new DataGridViewTextBoxColumn
+        _statusCellFont = new Font(Font, FontStyle.Bold);
+        var statusColumn = new DataGridViewTextBoxColumn
         {
             HeaderText = "Stato",
             DataPropertyName = nameof(MedicineListItem.StatusDisplay),
             Width = 110,
-        });
+            DefaultCellStyle = new DataGridViewCellStyle
+            {
+                // Alignment e font sono livello-colonna: non cambiano per
+                // riga, così li impostiamo qui una volta. I colori dello
+                // stato invece variano e vanno applicati in RowPrePaint.
+                Alignment = DataGridViewContentAlignment.MiddleCenter,
+                Font = _statusCellFont,
+            },
+        };
+        grid.Columns.Add(statusColumn);
+        _statusColumnIndex = statusColumn.Index;
         grid.DataSource = _rows;
         grid.RowPrePaint += OnRowPrePaint;
         grid.CellDoubleClick += async (_, _) => await ShowEditMedicineAsync();
@@ -425,6 +458,8 @@ internal sealed class MainForm : MedReminderFormBase
         if (e.RowIndex < 0 || e.RowIndex >= _rows.Count) return;
         var row = _grid.Rows[e.RowIndex];
         var item = _rows[e.RowIndex];
+
+        // Layer 1 — atmosfera sulla riga intera (colori tenui).
         row.DefaultCellStyle.BackColor = item.Status switch
         {
             MedicineRowStatus.Warning => WarningColor,
@@ -432,6 +467,24 @@ internal sealed class MainForm : MedReminderFormBase
             MedicineRowStatus.Suspended => SuspendedColor,
             _ => SystemColors.Window,
         };
+
+        // Layer 2 — badge sulla cella "Stato" (bg + fg saturi).
+        // SelectionBackColor/SelectionForeColor uguali al badge per
+        // preservare il segnale anche quando la riga è selezionata.
+        if (_statusColumnIndex < 0 || _statusColumnIndex >= row.Cells.Count) return;
+        var (bg, fg) = item.Status switch
+        {
+            MedicineRowStatus.Ok        => (StatusOkBack,      StatusOkFore),
+            MedicineRowStatus.Warning   => (StatusWarnBack,    StatusWarnFore),
+            MedicineRowStatus.Empty     => (StatusEmptyBack,   StatusEmptyFore),
+            MedicineRowStatus.Suspended => (StatusSuspendBack, StatusSuspendFore),
+            _                           => (SystemColors.Window, SystemColors.ControlText),
+        };
+        var cell = row.Cells[_statusColumnIndex];
+        cell.Style.BackColor = bg;
+        cell.Style.ForeColor = fg;
+        cell.Style.SelectionBackColor = bg;
+        cell.Style.SelectionForeColor = fg;
     }
 
     private void WireTrayHandlers()
