@@ -4,6 +4,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
 namespace MedReminder.Infrastructure.Backup;
 
