@@ -30,7 +30,7 @@ dotnet publish src\MedReminder.UI -c Release ^
   /p:PublishProfile=win-x64-framework-dependent
 ```
 
-Output: `src\MedReminder.UI\bin\Release\net10.0-windows\publish\win-x64-fx\`
+Output: `src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-fx\`
 
 Contenuto tipico:
 - `MedReminder.exe` — entry point WinForms.
@@ -54,7 +54,7 @@ dotnet publish src\MedReminder.UI -c Release ^
   /p:PublishProfile=win-x64-self-contained
 ```
 
-Output: `src\MedReminder.UI\bin\Release\net10.0-windows\publish\win-x64-sc\MedReminder.exe`
+Output: `src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\MedReminder.exe`
 
 `PublishReadyToRun=true` accelera lo startup a spese di dimensione.
 `PublishTrimmed=false` è **obbligatorio**: WinForms ed EF Core
