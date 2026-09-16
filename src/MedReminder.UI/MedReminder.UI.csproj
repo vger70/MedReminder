@@ -56,6 +56,17 @@
       <Link>Assets\USER_GUIDE.md</Link>
       <LogicalName>MedReminder.UI.USER_GUIDE.md</LogicalName>
     </EmbeddedResource>
+    <!-- Dizionari di localizzazione (Incremento 16a). LogicalName
+         "MedReminder.UI.strings.<lang>.json" — LocalizationService
+         li cerca in questo assembly per name. -->
+    <EmbeddedResource Include="..\..\assets\localization\strings.en.json">
+      <Link>Assets\strings.en.json</Link>
+      <LogicalName>MedReminder.UI.strings.en.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\localization\strings.it.json">
+      <Link>Assets\strings.it.json</Link>
+      <LogicalName>MedReminder.UI.strings.it.json</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

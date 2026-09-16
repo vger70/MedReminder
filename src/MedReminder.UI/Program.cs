@@ -123,12 +123,18 @@ internal static class Program
         var appDataDir = AppDataPaths.GetAppDataDirectory();
         var userSmtpSettingsFile = Path.Combine(appDataDir, "smtp.settings.json");
         var userBackupSettingsFile = Path.Combine(appDataDir, "backup.settings.json");
+        // user.settings.json (Incremento 16): al momento contiene solo
+        // la lingua dell'UI. reloadOnChange=false perché il cambio
+        // richiede comunque restart — la lettura avviene una sola volta
+        // al boot del processo.
+        var userSettingsFile = Path.Combine(appDataDir, "user.settings.json");
 
         builder.Configuration
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
             .AddJsonFile(userSmtpSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(userBackupSettingsFile, optional: true, reloadOnChange: true);
+            .AddJsonFile(userBackupSettingsFile, optional: true, reloadOnChange: true)
+            .AddJsonFile(userSettingsFile, optional: true, reloadOnChange: false);
 
         builder.Services.AddSingleton(TimeProvider.System);
 
