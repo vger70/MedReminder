@@ -607,10 +607,13 @@ internal sealed class MainForm : Form
             using var scope = _scopeFactory.CreateScope();
             using var dialog = new SettingsDialog(
                 scope.ServiceProvider.GetRequiredService<IOptionsMonitor<SmtpSettings>>(),
+                scope.ServiceProvider.GetRequiredService<IOptionsMonitor<BackupSettings>>(),
                 scope.ServiceProvider.GetRequiredService<ISmtpCredentialStore>(),
                 scope.ServiceProvider.GetRequiredService<IEmailNotificationService>(),
                 scope.ServiceProvider.GetRequiredService<IAutoStartService>(),
-                scope.ServiceProvider.GetRequiredService<IBackupService>());
+                scope.ServiceProvider.GetRequiredService<IBackupService>(),
+                scope.ServiceProvider.GetRequiredService<IBackupStateStore>(),
+                scope.ServiceProvider.GetRequiredService<IApplicationRestarter>());
             dialog.ShowDialog(this);
         }
         catch (Exception ex)

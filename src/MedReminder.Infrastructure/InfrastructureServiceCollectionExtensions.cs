@@ -44,6 +44,10 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IBackupService, BackupService>();
         services.AddScoped<DatabaseInitializer>();
 
+        // ------- Backup automatico -------
+        services.Configure<BackupSettings>(configuration.GetSection(BackupSettings.SectionName));
+        services.TryAddSingleton<IBackupStateStore, BackupStateStore>();
+
         // ------- Notifiche + credenziali + auto-start -------
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
 

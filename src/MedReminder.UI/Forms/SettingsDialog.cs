@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
@@ -19,10 +20,13 @@ namespace MedReminder.UI.Forms;
 internal sealed class SettingsDialog : Form
 {
     private readonly IOptionsMonitor<SmtpSettings> _smtpMonitor;
+    private readonly IOptionsMonitor<BackupSettings> _backupMonitor;
     private readonly ISmtpCredentialStore _credentialStore;
     private readonly IEmailNotificationService _emailService;
     private readonly IAutoStartService _autoStart;
     private readonly IBackupService _backup;
+    private readonly IBackupStateStore _backupState;
+    private readonly IApplicationRestarter _restarter;
 
     // Email tab controls
     private TextBox _hostBox = null!;
@@ -42,19 +46,31 @@ internal sealed class SettingsDialog : Form
 
     // Backup
     private Label _dbPathLabel = null!;
+    private CheckBox _backupEnabledBox = null!;
+    private TextBox _backupDirectoryBox = null!;
+    private DateTimePicker _backupTimePicker = null!;
+    private NumericUpDown _backupRetentionBox = null!;
+    private Label _backupStatusLabel = null!;
+    private Label _backupCloudWarningLabel = null!;
 
     public SettingsDialog(
         IOptionsMonitor<SmtpSettings> smtpMonitor,
+        IOptionsMonitor<BackupSettings> backupMonitor,
         ISmtpCredentialStore credentialStore,
         IEmailNotificationService emailService,
         IAutoStartService autoStart,
-        IBackupService backup)
+        IBackupService backup,
+        IBackupStateStore backupState,
+        IApplicationRestarter restarter)
     {
         _smtpMonitor = smtpMonitor;
+        _backupMonitor = backupMonitor;
         _credentialStore = credentialStore;
         _emailService = emailService;
         _autoStart = autoStart;
         _backup = backup;
+        _backupState = backupState;
+        _restarter = restarter;
 
         Text = "Impostazioni MedReminder";
         Width = 620;
@@ -266,42 +282,246 @@ internal sealed class SettingsDialog : Form
     private TabPage BuildBackupTab()
     {
         var page = new TabPage("Backup / Ripristino");
+        var settings = _backupMonitor.CurrentValue;
 
         _dbPathLabel = new Label
         {
             AutoSize = true,
-            Text = $"File database corrente: {_backup.DatabasePath}",
+            MaximumSize = new System.Drawing.Size(560, 0),
+            Text = $"File database corrente:\n{_backup.DatabasePath}",
+            ForeColor = System.Drawing.Color.DarkGray,
         };
 
-        var exportButton = new Button { Text = "Esporta backup…", AutoSize = true, Height = 32 };
+        _backupEnabledBox = new CheckBox
+        {
+            Text = "Backup automatico giornaliero",
+            AutoSize = true,
+            Checked = settings.Enabled,
+        };
+
+        _backupDirectoryBox = new TextBox
+        {
+            Width = 400,
+            Text = settings.Directory,
+            ReadOnly = false,
+        };
+        var browseButton = new Button { Text = "Sfoglia…", AutoSize = true };
+        browseButton.Click += (_, _) => BrowseBackupDirectory();
+
+        // DateTimePicker in modalità "Time": mostra solo HH:mm (custom
+        // format), evita che l'utente cambi la data.
+        _backupTimePicker = new DateTimePicker
+        {
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = "HH:mm",
+            ShowUpDown = true,
+            Width = 100,
+        };
+        _backupTimePicker.Value = ParsePreferredTimeAsDateTime(settings.PreferredTime);
+
+        _backupRetentionBox = new NumericUpDown
+        {
+            Width = 80,
+            Minimum = 0,
+            Maximum = 3650,
+            Value = settings.RetentionDays > 0 ? settings.RetentionDays : 30,
+        };
+
+        var saveButton = new Button { Text = "Salva impostazioni backup", AutoSize = true, Height = 30 };
+        saveButton.Click += (_, _) => SaveBackupSettings();
+
+        var runNowButton = new Button { Text = "Esegui backup adesso", AutoSize = true, Height = 30 };
+        runNowButton.Click += async (_, _) => await RunBackupNowAsync(runNowButton);
+
+        var exportButton = new Button { Text = "Esporta in cartella specifica…", AutoSize = true, Height = 30 };
         exportButton.Click += async (_, _) => await ExportBackupAsync(exportButton);
 
-        var importButton = new Button { Text = "Ripristina backup…", AutoSize = true, Height = 32 };
+        var importButton = new Button { Text = "Ripristina backup…", AutoSize = true, Height = 30 };
         importButton.Click += async (_, _) => await ImportBackupAsync(importButton);
+
+        _backupStatusLabel = new Label { AutoSize = true };
+        UpdateBackupStatusLabel();
+
+        _backupCloudWarningLabel = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = System.Drawing.Color.DarkOrange,
+            Text = string.Empty,
+            Visible = false,
+        };
+        UpdateCloudWarning();
+        _backupDirectoryBox.TextChanged += (_, _) => UpdateCloudWarning();
+
+        var directoryRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            WrapContents = false,
+        };
+        directoryRow.Controls.Add(_backupDirectoryBox);
+        directoryRow.Controls.Add(browseButton);
+
+        var table = BuildFormTable();
+        AddRow(table, string.Empty, _backupEnabledBox);
+        AddRow(table, "Cartella backup", directoryRow);
+        AddRow(table, "Orario preferito", _backupTimePicker);
+        AddRow(table, "Retention (giorni)", _backupRetentionBox);
+        AddRow(table, string.Empty, _backupStatusLabel);
+        AddRow(table, string.Empty, _backupCloudWarningLabel);
+
+        var actionButtons = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            Padding = new Padding(4, 8, 4, 8),
+        };
+        actionButtons.Controls.Add(saveButton);
+        actionButtons.Controls.Add(runNowButton);
+        actionButtons.Controls.Add(exportButton);
+        actionButtons.Controls.Add(importButton);
 
         var note = new Label
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
             AutoEllipsis = false,
-            Text = "Il ripristino sovrascrive il DB corrente. Un file di backup della versione " +
-                   "precedente viene creato in automatico prima della sostituzione. È consigliato " +
-                   "chiudere l'applicazione e riavviarla dopo un ripristino per evitare inconsistenze.",
+            Text = "Il backup automatico richiede che MedReminder sia in esecuzione all'orario " +
+                   "preferito. Se il PC è spento a quell'ora, il backup viene eseguito al primo " +
+                   "avvio successivo del giorno.\n" +
+                   "Il ripristino sovrascrive il DB corrente; una copia della versione precedente " +
+                   "viene salvata come .bak-<timestamp>.",
             ForeColor = System.Drawing.Color.DarkGray,
         };
 
-        var panel = new FlowLayoutPanel
+        var container = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
+            AutoScroll = true,
         };
-        panel.Controls.Add(_dbPathLabel);
-        panel.Controls.Add(exportButton);
-        panel.Controls.Add(importButton);
-        panel.Controls.Add(note);
-        page.Controls.Add(panel);
+        container.Controls.Add(_dbPathLabel);
+        container.Controls.Add(table);
+        container.Controls.Add(actionButtons);
+        container.Controls.Add(note);
+        page.Controls.Add(container);
         return page;
+    }
+
+    private void BrowseBackupDirectory()
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = "Seleziona la cartella dei backup",
+            InitialDirectory = string.IsNullOrWhiteSpace(_backupDirectoryBox.Text)
+                ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                : _backupDirectoryBox.Text,
+        };
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            _backupDirectoryBox.Text = dialog.SelectedPath;
+        }
+    }
+
+    private void SaveBackupSettings()
+    {
+        try
+        {
+            var directory = _backupDirectoryBox.Text.Trim();
+            var enabled = _backupEnabledBox.Checked;
+
+            if (enabled && string.IsNullOrWhiteSpace(directory))
+            {
+                MessageBox.Show(this,
+                    "Per abilitare il backup automatico devi selezionare una cartella di destinazione.",
+                    "Backup",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                // Crea la cartella se non esiste — feedback immediato all'utente.
+                try { Directory.CreateDirectory(directory); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this,
+                        $"Impossibile creare la cartella:\n{ex.Message}",
+                        "Backup",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+
+            var settings = new BackupSettings
+            {
+                Enabled = enabled,
+                Directory = directory,
+                PreferredTime = _backupTimePicker.Value.ToString("HH:mm", CultureInfo.InvariantCulture),
+                RetentionDays = (int)_backupRetentionBox.Value,
+            };
+
+            WriteBackupSettingsToDisk(settings);
+            MessageBox.Show(this,
+                "Impostazioni backup salvate.",
+                "OK",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Errore salvataggio backup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task RunBackupNowAsync(Button button)
+    {
+        var directory = _backupDirectoryBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            MessageBox.Show(this,
+                "Seleziona prima una cartella di destinazione (e salva le impostazioni).",
+                "Backup",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        button.Enabled = false;
+        try
+        {
+            var file = await _backup.ExportAsync(directory, CancellationToken.None);
+            var retention = (int)_backupRetentionBox.Value;
+            var pruned = retention > 0
+                ? await _backup.PruneOldBackupsAsync(directory, retention, CancellationToken.None)
+                : 0;
+
+            _backupState.Save(new BackupState(
+                LastSuccessfulBackupAt: DateTimeOffset.UtcNow,
+                LastAttemptAt: DateTimeOffset.UtcNow,
+                LastError: null,
+                LastBackupFile: file));
+            UpdateBackupStatusLabel();
+
+            var suffix = pruned > 0 ? $"\n{pruned} vecchi backup rimossi." : string.Empty;
+            MessageBox.Show(this,
+                $"Backup creato:\n{file}{suffix}",
+                "Backup",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            _backupState.Save(new BackupState(
+                LastSuccessfulBackupAt: _backupState.Load().LastSuccessfulBackupAt,
+                LastAttemptAt: DateTimeOffset.UtcNow,
+                LastError: ex.Message,
+                LastBackupFile: null));
+            UpdateBackupStatusLabel();
+            MessageBox.Show(this, ex.Message, "Errore backup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            button.Enabled = true;
+        }
     }
 
     private async Task ExportBackupAsync(Button button)
@@ -335,7 +555,7 @@ internal sealed class SettingsDialog : Form
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
         var confirm = MessageBox.Show(this,
-            "L'operazione sovrascrive il database corrente. È fortemente consigliato riavviare l'applicazione al termine.\n\nProcedere?",
+            "L'operazione sovrascrive il database corrente. Al termine MedReminder verrà riavviato in automatico.\n\nProcedere?",
             "Conferma ripristino", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (confirm != DialogResult.Yes) return;
 
@@ -343,8 +563,12 @@ internal sealed class SettingsDialog : Form
         try
         {
             await _backup.ImportAsync(dialog.FileName, CancellationToken.None);
-            MessageBox.Show(this, "Backup ripristinato. Riavvia MedReminder.", "Import",
+            var restartAnswer = MessageBox.Show(this,
+                "Ripristino completato. Riavvio MedReminder ora per applicare le modifiche.",
+                "Import",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _ = restartAnswer;
+            _restarter.RestartAndExit();
         }
         catch (Exception ex)
         {
@@ -354,6 +578,84 @@ internal sealed class SettingsDialog : Form
         {
             button.Enabled = true;
         }
+    }
+
+    private void UpdateBackupStatusLabel()
+    {
+        var state = _backupState.Load();
+        if (state.LastSuccessfulBackupAt is null && state.LastAttemptAt is null)
+        {
+            _backupStatusLabel.ForeColor = System.Drawing.Color.DarkGray;
+            _backupStatusLabel.Text = "Nessun backup eseguito finora.";
+            return;
+        }
+
+        if (state.LastSuccessfulBackupAt is { } ok)
+        {
+            var okLocal = ok.ToLocalTime();
+            var errorSuffix = state.LastError is not null
+                ? $" · ultimo tentativo fallito: {state.LastError}"
+                : string.Empty;
+            _backupStatusLabel.ForeColor = state.LastError is null
+                ? System.Drawing.Color.DarkGreen
+                : System.Drawing.Color.DarkOrange;
+            _backupStatusLabel.Text =
+                $"Ultimo backup OK: {okLocal:dd/MM/yyyy HH:mm}{errorSuffix}";
+            return;
+        }
+
+        _backupStatusLabel.ForeColor = System.Drawing.Color.Firebrick;
+        _backupStatusLabel.Text = state.LastError is not null
+            ? $"Ultimo tentativo fallito: {state.LastError}"
+            : "Ultimo tentativo fallito.";
+    }
+
+    private void UpdateCloudWarning()
+    {
+        var path = _backupDirectoryBox.Text ?? string.Empty;
+        var isCloud =
+            path.Contains("OneDrive", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains("Dropbox", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains("Google Drive", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains("iCloudDrive", StringComparison.OrdinalIgnoreCase);
+        if (isCloud)
+        {
+            _backupCloudWarningLabel.Text =
+                "⚠ La cartella selezionata sembra un servizio cloud (OneDrive/Dropbox/Google Drive). " +
+                "Il database (contiene nomi medicine, dosaggi, medico) verrà sincronizzato online. " +
+                "Assicurati che sia quello che vuoi.";
+            _backupCloudWarningLabel.Visible = true;
+        }
+        else
+        {
+            _backupCloudWarningLabel.Text = string.Empty;
+            _backupCloudWarningLabel.Visible = false;
+        }
+    }
+
+    private static void WriteBackupSettingsToDisk(BackupSettings settings)
+    {
+        var payload = new { Backup = settings };
+        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "backup.settings.json");
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+        });
+        File.WriteAllText(path, json);
+    }
+
+    private static DateTime ParsePreferredTimeAsDateTime(string raw)
+    {
+        // Il DateTimePicker richiede un DateTime completo: usiamo la data
+        // "oggi" e sovrascriviamo solo l'orario. Se il parsing fallisce
+        // (default vuoto o testo invalido) fallback a 03:00.
+        if (!string.IsNullOrWhiteSpace(raw) &&
+            (TimeOnly.TryParseExact(raw, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var t) ||
+             TimeOnly.TryParse(raw, CultureInfo.InvariantCulture, out t)))
+        {
+            return DateTime.Today.Add(t.ToTimeSpan());
+        }
+        return DateTime.Today.AddHours(3);
     }
 
     // ------------------ Layout helpers ------------------

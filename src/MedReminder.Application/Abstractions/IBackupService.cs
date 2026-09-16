@@ -1,19 +1,29 @@
 namespace MedReminder.Application.Abstractions;
 
-// Backup del database utente (spec §23). L'export copia il DB corrente
-// in una posizione scelta dall'utente; l'import lo ripristina dopo
-// conferma. L'implementazione Infrastructure gestisce il checkpoint WAL
-// per garantire la coerenza del file esportato.
+// Backup del database utente (spec §23, Incremento 11).
+// L'export copia il DB corrente in una posizione scelta dall'utente
+// usando l'API online-backup di SQLite (safe hot backup senza fermare
+// l'app); l'import lo ripristina dopo aver rilasciato i lock delle
+// connessioni pool-ate. Retention: rimozione dei file più vecchi di
+// N giorni dalla stessa cartella.
 public interface IBackupService
 {
     string DatabasePath { get; }
 
     // Copia il DB nella cartella indicata (nome file derivato da
-    // timestamp). Ritorna il path del file creato.
+    // timestamp UTC). Ritorna il path del file creato.
     Task<string> ExportAsync(string destinationDirectory, CancellationToken cancellationToken);
 
-    // Sostituisce il DB corrente con quello indicato. L'UI deve fermare
-    // il monitor + chiudere i DbContext prima di chiamare l'import
-    // (Incremento 7: hardening di shutdown pulito).
+    // Rimuove i file "medreminder-*.db" più vecchi di retentionDays
+    // dalla cartella indicata. Ritorna il numero di file cancellati.
+    // Silenzioso se la cartella non esiste o è vuota; NON tocca file
+    // che non matchano il pattern (utente potrebbe averci messo altro).
+    Task<int> PruneOldBackupsAsync(
+        string directory, int retentionDays, CancellationToken cancellationToken);
+
+    // Sostituisce il DB corrente con quello indicato. Il caller (UI)
+    // deve fermare monitor e scheduler PRIMA; l'implementazione forza
+    // ClearAllPools() su Microsoft.Data.Sqlite per rilasciare gli
+    // handle aperti dal DbContext pooling.
     Task ImportAsync(string sourceFilePath, CancellationToken cancellationToken);
 }

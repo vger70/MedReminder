@@ -12,6 +12,7 @@ using MedReminder.UI.Forms;
 using MedReminder.UI.Hosting;
 using MedReminder.UI.Notifications;
 using MedReminder.UI.Presentation;
+using MedReminder.UI.Services;
 using MedReminder.UI.Tray;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,13 @@ internal static class Program
     // avviare la propria istanza.
     private const string SingleInstanceMutexName = @"Local\MedReminder.SingleInstance.b0000004-4444-4444-4444-444444444444";
     private static readonly TimeSpan HostStopTimeout = TimeSpan.FromSeconds(5);
+    // Attesa massima sull'acquisizione del mutex all'avvio. Il caso
+    // tipico è il restart auto dopo restore backup: il nuovo processo
+    // parte mentre il vecchio si sta chiudendo (rilascia il mutex nel
+    // finally di Main). 5 secondi coprono lo shutdown pulito del monitor
+    // hosted service e del pool SQLite senza percepibile ritardo per
+    // avvii "normali" (dove il mutex è libero all'istante).
+    private static readonly TimeSpan SingleInstanceAcquireTimeout = TimeSpan.FromSeconds(5);
 
     [STAThread]
     private static void Main(string[] args)
@@ -56,7 +64,7 @@ internal static class Program
         bool acquired = false;
         try
         {
-            acquired = singleInstance.WaitOne(TimeSpan.Zero, exitContext: false);
+            acquired = singleInstance.WaitOne(SingleInstanceAcquireTimeout, exitContext: false);
         }
         catch (AbandonedMutexException)
         {
@@ -109,16 +117,18 @@ internal static class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        // Il file utente smtp.settings.json (creato dal SettingsDialog)
-        // sovrascrive appsettings.json. reloadOnChange=true fa aggiornare
-        // IOptionsMonitor<SmtpSettings> senza riavvio.
-        var userSmtpSettingsFile = Path.Combine(
-            AppDataPaths.GetAppDataDirectory(), "smtp.settings.json");
+        // File utente sovrapposti ad appsettings.json.
+        // reloadOnChange=true fa aggiornare gli IOptionsMonitor<T>
+        // senza riavvio quando l'utente cambia impostazioni dalla UI.
+        var appDataDir = AppDataPaths.GetAppDataDirectory();
+        var userSmtpSettingsFile = Path.Combine(appDataDir, "smtp.settings.json");
+        var userBackupSettingsFile = Path.Combine(appDataDir, "backup.settings.json");
 
         builder.Configuration
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-            .AddJsonFile(userSmtpSettingsFile, optional: true, reloadOnChange: true);
+            .AddJsonFile(userSmtpSettingsFile, optional: true, reloadOnChange: true)
+            .AddJsonFile(userBackupSettingsFile, optional: true, reloadOnChange: true);
 
         builder.Services.AddSingleton(TimeProvider.System);
 
@@ -137,6 +147,12 @@ internal static class Program
         builder.Services.AddScoped<MedicineOverviewLoader>();
 
         builder.Services.AddHostedService<MedicationMonitorHostedService>();
+        builder.Services.AddHostedService<AutomaticBackupHostedService>();
+
+        // Restarter usato dopo un restore del DB (richiede rilancio
+        // dell'exe corrente per riacquisire i lock SQLite in modo pulito).
+        builder.Services.AddSingleton<IApplicationRestarter, ApplicationRestarter>();
+
         builder.Services.AddTransient<MainForm>();
 
         builder.Logging.ClearProviders();
