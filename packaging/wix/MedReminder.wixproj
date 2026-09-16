@@ -35,7 +35,7 @@
 
     <!-- Manda gli errori di validazione light.exe come warning per
          permettere ICE cookie di grandi cartelle harvestate. -->
-    <SuppressIces>ICE60;ICE64;ICE69</SuppressIces>
+    <SuppressIces>ICE60;ICE64;ICE69;ICE38;ICE91</SuppressIces>
   </PropertyGroup>
 
   <ItemGroup>

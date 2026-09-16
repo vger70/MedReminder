@@ -44,7 +44,6 @@
     <Property Id="ARPPRODUCTICON" Value="MedReminder.ico" />
     <Property Id="ARPHELPLINK" Value="https://github.com/vger70/MedReminder" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/vger70/MedReminder" />
-    <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPNOREPAIR" Value="1" />
 
     <!-- Struttura directory: %LOCALAPPDATA%\Programs\MedReminder\ +
