@@ -31,6 +31,7 @@ public sealed class MedicationMonitor
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
     private readonly ILogger<MedicationMonitor> _log;
+    private readonly ILocalizationService? _localization;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -43,7 +44,8 @@ public sealed class MedicationMonitor
         IWindowsNotificationService windows,
         IUnitOfWork uow,
         TimeProvider clock,
-        ILogger<MedicationMonitor> log)
+        ILogger<MedicationMonitor> log,
+        ILocalizationService? localization = null)
     {
         _medicines = medicines;
         _stock = stock;
@@ -56,6 +58,7 @@ public sealed class MedicationMonitor
         _uow = uow;
         _clock = clock;
         _log = log;
+        _localization = localization;
     }
 
     public sealed record RunResult(int MedicinesInspected, int NotificationsSent);
@@ -125,7 +128,11 @@ public sealed class MedicationMonitor
 
         if ((channels & NotificationChannels.Windows) != 0)
         {
-            var (title, body) = NotificationTexts.BuildToast(medicine, daysRemaining);
+            // Toast: lingua di SISTEMA (Windows), non quella scelta dall'utente
+            // nell'app. NotificationTexts.BuildToast rileva la lingua sistema
+            // internamente via CultureInfo.CurrentUICulture.
+            var (title, body) = NotificationTexts.BuildToast(
+                medicine, daysRemaining, localization: _localization);
             try
             {
                 await _windows.ShowAsync(title, body, cancellationToken);
@@ -141,9 +148,12 @@ public sealed class MedicationMonitor
 
         if ((channels & NotificationChannels.Email) != 0)
         {
+            // Email: lingua UTENTE (scelta nell'app). Il service la usa
+            // come default via loc.Get(key).
             var message = NotificationTexts.BuildEmail(
                 medicine, currentStock, daysRemaining, eta,
-                administrationSlots: slots);
+                administrationSlots: slots,
+                localization: _localization);
             try
             {
                 await _email.SendAsync(message, cancellationToken);

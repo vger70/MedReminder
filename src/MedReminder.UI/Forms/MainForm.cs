@@ -360,7 +360,7 @@ internal sealed class MainForm : MedReminderFormBase
                     TimeZoneInfo.ConvertTime(clock.GetUtcNow(), clock.LocalTimeZone).DateTime);
             }
 
-            var reportText = MedReminder.Application.Reporting.TherapyReport.Build(entries, today, _loc.CurrentCulture);
+            var reportText = MedReminder.Application.Reporting.TherapyReport.Build(entries, today, _loc.CurrentCulture, _loc);
             using var dialog = new TherapyReportDialog(reportText, _loc);
             dialog.ShowDialog(this);
         }
