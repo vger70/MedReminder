@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- Il TFM include l'SDK Windows 10.0.19041 (Windows 10 2004/20H1+)
+         per accedere alle API WinRT ToastNotification via
+         Microsoft.Toolkit.Uwp.Notifications. Compatibile con tutte le
+         versioni di Windows 10/11 attualmente supportate. -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>MedReminder.UI</RootNamespace>
+    <AssemblyName>MedReminder</AssemblyName>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\medreminder.ico</ApplicationIcon>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+    <!-- Help in linea (Incremento 14): WebView2 per il rendering HTML +
+         Markdig per la conversione Markdown → HTML del USER_GUIDE.md
+         embedded come resource. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="Markdig" Version="0.42.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
+    <ProjectReference Include="..\MedReminder.Infrastructure\MedReminder.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Icona embedded come resource: viene caricata a runtime da
+         AppIcon.Load() per assegnarla a ogni Form + tray NotifyIcon.
+         L'exe stesso usa la versione multi-res via ApplicationIcon. -->
+    <EmbeddedResource Include="..\..\assets\medreminder.ico">
+      <Link>Assets\medreminder.ico</Link>
+      <LogicalName>MedReminder.UI.medreminder.ico</LogicalName>
+    </EmbeddedResource>
+    <!-- Guida utente embedded: caricata da HelpViewerForm, renderizzata
+         MD→HTML con Markdig e mostrata in WebView2. Vive nel repo sotto
+         docs/ per essere leggibile su GitHub, embedded qui per non
+         dipendere dal filesystem a runtime. -->
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.md">
+      <Link>Assets\USER_GUIDE.md</Link>
+      <LogicalName>MedReminder.UI.USER_GUIDE.md</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

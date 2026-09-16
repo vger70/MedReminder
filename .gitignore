@@ -1,0 +1,63 @@
+## .NET / Visual Studio build output
+bin/
+obj/
+out/
+publish/
+artifacts/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+*.pdb
+*.dll
+*.exe
+
+## Visual Studio user-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vsp
+*.psess
+*.vspx
+*.pubxml.user
+.vs/
+.vscode/
+
+## Rider / ReSharper
+.idea/
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+## Test / coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+## NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+.nuget/
+
+## Local application data (must never be committed)
+*.db
+*.db-shm
+*.db-wal
+smtp.protected
+logs/
+
+## OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Node/other (defensive: never expected here)
+node_modules/
