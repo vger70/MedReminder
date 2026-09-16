@@ -63,21 +63,551 @@ DataGridView, source generator del designer). Il trimming
 rimuoverebbe codice usato solo via reflection, causando crash a
 runtime.
 
-## Distribuzione manuale
+## Requisiti di build
 
-Non è previsto un installer nell'MVP. Distribuzione consigliata:
+Per compilare MedReminder sono necessari:
 
-1. Comprimi la cartella di output in un ZIP.
-2. L'utente lo scomprime in una cartella a sua scelta (tipicamente
-   `%LOCALAPPDATA%\Programs\MedReminder\` per non richiedere UAC,
-   oppure `%PROGRAMFILES%\MedReminder\` se dispone di admin).
-3. Doppio click su `MedReminder.exe` per il primo avvio.
-4. (Opzionale) Impostazioni → **Avvio automatico** per farlo partire
-   con Windows in modalità tray.
+- Windows;
+- .NET 10 SDK;
+- accesso ai package NuGet utilizzati dalla soluzione.
 
-L'app crea automaticamente `%LOCALAPPDATA%\MedReminder\` alla prima
-esecuzione — dati, log e credenziali cifrate non vanno nella
-cartella di installazione.
+Verificare la versione del SDK installato con:
+
+```powershell
+dotnet --version
+```
+
+e:
+
+```powershell
+dotnet --list-sdks
+```
+
+La compilazione della soluzione può essere eseguita con:
+
+```powershell
+dotnet build MedReminder.sln -c Release
+```
+
+---
+
+## 3. Esecuzione dei test
+
+Prima di creare un pacchetto distribuibile è consigliato eseguire tutti i test:
+
+```powershell
+dotnet test MedReminder.sln -c Release
+```
+
+La distribuzione tramite GitHub Actions viene eseguita solo se i test terminano con successo.
+
+I test attualmente presenti sono:
+
+```text
+MedReminder.Domain.Tests
+MedReminder.Application.Tests
+MedReminder.Infrastructure.Tests
+```
+
+---
+
+## 4. Pubblicazione Windows x64
+
+La versione distribuita ufficialmente è una build:
+
+- Windows x64;
+- `Release`;
+- `net10.0-windows`;
+- self-contained.
+
+Il comando di pubblicazione è:
+
+```powershell
+dotnet publish `
+    src/MedReminder.UI/MedReminder.UI.csproj `
+    -c Release `
+    -r win-x64 `
+    --self-contained true `
+    -o publish
+```
+
+Il risultato viene generato nella directory:
+
+```text
+publish/
+```
+
+### Self-contained
+
+La pubblicazione usa:
+
+```text
+--self-contained true
+```
+
+Questo significa che il runtime .NET richiesto dall'applicazione viene incluso nel pacchetto.
+
+L'utente finale non deve quindi installare separatamente il runtime .NET 10 per eseguire MedReminder.
+
+### Runtime
+
+La distribuzione corrente utilizza:
+
+```text
+win-x64
+```
+
+Questa build è destinata a Windows 64 bit su architettura x64.
+
+---
+
+## 5. Creazione del pacchetto ZIP
+
+Dopo la pubblicazione, il contenuto della directory `publish` può essere distribuito direttamente oppure compresso in un archivio ZIP.
+
+Esempio PowerShell:
+
+```powershell
+Compress-Archive `
+    -Path publish\* `
+    -DestinationPath MedReminder-win-x64.zip
+```
+
+Il pacchetto risultante è:
+
+```text
+MedReminder-win-x64.zip
+```
+
+Il nome del file è volutamente stabile e non contiene il numero di versione.
+
+Questo permette di utilizzare un URL GitHub permanente per scaricare sempre l'ultima versione:
+
+```text
+https://github.com/vger70/MedReminder/releases/latest/download/MedReminder-win-x64.zip
+```
+
+Sostituire `vger70/MedReminder` con il repository GitHub reale.
+
+---
+
+## 6. Pubblicazione locale completa
+
+Per verificare manualmente l'intero processo:
+
+```powershell
+dotnet restore MedReminder.sln
+
+dotnet test MedReminder.sln -c Release --no-restore
+
+dotnet publish `
+    src/MedReminder.UI/MedReminder.UI.csproj `
+    -c Release `
+    -r win-x64 `
+    --self-contained true `
+    -o publish
+
+Compress-Archive `
+    -Path publish\* `
+    -DestinationPath MedReminder-win-x64.zip
+```
+
+Il risultato sarà:
+
+```text
+MedReminder-win-x64.zip
+```
+
+Il contenuto dello ZIP deve essere estratto in una directory locale e verificato avviando:
+
+```text
+MedReminder.exe
+```
+
+---
+
+# 7. Versionamento
+
+Le versioni distribuite vengono identificate tramite tag Git.
+
+Il formato utilizzato è:
+
+```text
+vMAJOR.MINOR.PATCH
+```
+
+Esempi:
+
+```text
+v1.0.0
+v1.1.0
+v1.1.1
+v2.0.0
+```
+
+Il tag rappresenta la versione della release pubblicata.
+
+## Creazione di una release
+
+Dopo aver completato le modifiche:
+
+```powershell
+git status
+git add .
+git commit -m "Prepare release v1.1.0"
+git push
+```
+
+Creare quindi il tag:
+
+```powershell
+git tag v1.1.0
+```
+
+e pubblicarlo su GitHub:
+
+```powershell
+git push origin v1.1.0
+```
+
+Il push del tag avvia automaticamente la GitHub Action di release.
+
+---
+
+# 8. GitHub Actions
+
+Il workflow di distribuzione si trova in:
+
+```text
+.github/workflows/release.yml
+```
+
+Il workflow viene avviato quando viene pubblicato un tag il cui nome inizia con:
+
+```text
+v
+```
+
+Ad esempio:
+
+```text
+v1.0.0
+v1.2.3
+v2.0.0
+```
+
+Il workflow esegue i seguenti passaggi:
+
+```text
+Git tag
+   │
+   ▼
+Checkout repository
+   │
+   ▼
+Installazione .NET 10
+   │
+   ▼
+dotnet restore
+   │
+   ▼
+dotnet test
+   │
+   ├── FAIL ──► workflow terminato
+   │
+   ▼
+dotnet publish
+   │
+   ▼
+Creazione ZIP
+   │
+   ▼
+Creazione GitHub Release
+   │
+   ▼
+Upload MedReminder-win-x64.zip
+```
+
+La Release non viene creata se i test falliscono.
+
+---
+
+# 9. Workflow di release
+
+Il file `.github/workflows/release.yml` deve contenere un workflow equivalente al seguente:
+
+```yaml
+name: Build and Release MedReminder
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build Windows Release
+    runs-on: windows-latest
+
+    steps:
+      # Scarica il repository.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Installa .NET 10.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Ripristina i package NuGet.
+      - name: Restore
+        run: dotnet restore MedReminder.sln
+
+      # Esegue tutti i test.
+      # Se un test fallisce, la pipeline si interrompe.
+      - name: Test
+        run: dotnet test MedReminder.sln -c Release --no-restore
+
+      # Pubblica l'applicazione Windows x64 self-contained.
+      - name: Publish
+        run: >
+          dotnet publish
+          src/MedReminder.UI/MedReminder.UI.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -o publish
+
+      # Crea il pacchetto ZIP.
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path publish\* `
+            -DestinationPath MedReminder-win-x64.zip
+
+      # Crea la GitHub Release e carica il pacchetto.
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MedReminder-win-x64.zip
+          generate_release_notes: true
+```
+
+---
+
+# 10. GitHub Release
+
+Al termine della pipeline, GitHub crea una release associata al tag.
+
+Esempio:
+
+```text
+v1.1.0
+```
+
+Gli asset della release saranno:
+
+```text
+MedReminder-win-x64.zip
+Source code (zip)
+Source code (tar.gz)
+```
+
+La pagina delle release è disponibile all'indirizzo:
+
+```text
+https://github.com/vger70/MedReminder/releases
+```
+
+L'ultima release può essere raggiunta tramite:
+
+```text
+https://github.com/vger70/MedReminder/releases/latest
+```
+
+---
+
+# Download dal README
+
+Il `README.md` deve fornire un accesso diretto alla versione più recente.
+
+Esempio:
+
+```markdown
+## Download
+
+**Windows x64**
+
+[⬇️ Download MedReminder](https://github.com/vger70/MedReminder/releases/latest/download/MedReminder-win-x64.zip)
+
+[📦 View all releases](https://github.com/vger70/MedReminder/releases)
+```
+
+Poiché il nome dell'asset è sempre:
+
+```text
+MedReminder-win-x64.zip
+```
+
+il link non deve essere modificato ad ogni release.
+
+Per esempio, sia la release `v1.0.0` sia `v1.1.0` utilizzeranno:
+
+```text
+MedReminder-win-x64.zip
+```
+
+GitHub farà puntare automaticamente:
+
+```text
+/releases/latest/download/MedReminder-win-x64.zip
+```
+
+all'asset della release più recente.
+
+---
+
+# Procedura consigliata per una nuova release
+
+Prima di pubblicare una nuova versione:
+
+1. completare le modifiche;
+2. eseguire i test localmente;
+3. verificare l'applicazione in modalità Release;
+4. aggiornare la documentazione se necessario;
+5. fare commit e push;
+6. creare il tag;
+7. fare push del tag;
+8. verificare la GitHub Action;
+9. verificare la GitHub Release;
+10. verificare il download del pacchetto.
+
+Esempio:
+
+```powershell
+dotnet test MedReminder.sln -c Release
+
+git add .
+git commit -m "Prepare release v1.1.0"
+git push
+
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+Dopo il push del tag, non è necessario creare manualmente la Release su GitHub.
+
+---
+
+# Verifica del pacchetto
+
+Prima di considerare una release completata, verificare almeno:
+
+- l'applicazione si avvia;
+- il database SQLite viene creato/aperto correttamente;
+- le funzionalità principali sono operative;
+- l'invio email funziona se configurato;
+- la configurazione DPAPI funziona sul computer di destinazione;
+- non sono presenti file di sviluppo nel pacchetto;
+- il pacchetto contiene tutti i file necessari;
+- il download dalla pagina `releases/latest` funziona.
+
+La verifica deve essere eseguita preferibilmente su una macchina Windows separata dall'ambiente di sviluppo.
+
+---
+
+# Dati locali dell'applicazione
+
+Il pacchetto di distribuzione contiene il programma e le sue dipendenze.
+
+I dati generati durante l'utilizzo dell'applicazione non devono essere inclusi nel repository Git e non devono essere inseriti nel pacchetto di release.
+
+In particolare, evitare di distribuire:
+
+- database SQLite dell'ambiente di sviluppo;
+- configurazioni contenenti dati personali;
+- credenziali;
+- password;
+- token;
+- chiavi o segreti;
+- file temporanei;
+- log dell'ambiente di sviluppo.
+
+La configurazione necessaria all'utente finale deve essere gestita secondo quanto descritto in `docs/USER_GUIDE.md`.
+
+---
+
+# File da non versionare
+
+I seguenti elementi non devono essere committati nel repository:
+
+```text
+bin/
+obj/
+publish/
+*.user
+*.suo
+*.db
+*.sqlite
+*.sqlite3
+*.log
+```
+
+Eventuali file contenenti credenziali o segreti devono essere esclusi dal repository tramite `.gitignore`.
+
+---
+
+# Release e documentazione
+
+Per ogni release significativa è consigliato verificare la coerenza tra:
+
+```text
+README.md
+docs/USER_GUIDE.md
+docs/PACKAGING.md
+docs/ANALYSIS.md
+```
+
+`README.md` deve fornire informazioni sintetiche sul progetto e il collegamento al download.
+
+`USER_GUIDE.md` deve descrivere l'utilizzo dell'applicazione per l'utente finale.
+
+`PACKAGING.md` descrive build, test, pubblicazione e distribuzione.
+
+`ANALYSIS.md` contiene l'analisi tecnica e l'architettura del progetto.
+
+---
+
+# Evoluzioni future
+
+La distribuzione attuale prevede:
+
+```text
+Windows x64
+.NET 10
+Self-contained
+ZIP
+```
+
+Eventuali estensioni future possono aggiungere:
+
+- installer Windows (`Setup.exe`);
+- build `win-arm64`;
+- pacchetto MSIX;
+- firma digitale dell'eseguibile;
+- checksum SHA-256 degli asset;
+- release notes personalizzate;
+- aggiornamento automatico dell'applicazione.
+
+Queste funzionalità devono essere introdotte senza modificare il meccanismo di download della versione corrente, quando possibile.
+
+---
+
 
 ## Creazione di uno shortcut in tray
 

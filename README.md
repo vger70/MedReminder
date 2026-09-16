@@ -141,6 +141,14 @@ dotnet publish src\MedReminder.UI -c Release ^
   /p:PublishProfile=win-x64-self-contained
 ```
 
+## Download
+
+**Windows x64**
+
+[⬇️ Download MedReminder](https://github.com/vger70/MedReminder/releases/latest/download/MedReminder-win-x64.zip)
+
+[📦 View all releases](https://github.com/vger70/MedReminder/releases)
+
 ## Where data is stored
 
 Everything lives under `%LOCALAPPDATA%\MedReminder\`
