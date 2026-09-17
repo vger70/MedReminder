@@ -30,6 +30,47 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #7 — Document SmartScreen warning; add French and Spanish user guides
+
+Link: [vger70/MedReminder#7](https://github.com/vger70/MedReminder/pull/7)
+**Status:** open
+Branch: `smartscreen-advice`
+(previously `claude/jolly-mccarthy-xk8lc4`; renamed after first push)
+
+### Added
+
+- `docs/USER_GUIDE.fr.md` and `docs/USER_GUIDE.es.md`: native user
+  guides for the French and Spanish UI locales, matching the
+  content of `USER_GUIDE.en.md`. `HelpViewerForm` already resolves
+  `USER_GUIDE.<lang>.md` dynamically — only the csproj wiring
+  changed (`Content` + `EmbeddedResource`).
+
+### Docs
+
+- `README.md`: new "Windows SmartScreen warning on first run"
+  section after the Download block, explaining the SmartScreen
+  dialog and UAC "Unknown Publisher" prompt triggered by the
+  intentionally unsigned release, with the two-click bypass steps.
+- `docs/USER_GUIDE.en.md`, `docs/USER_GUIDE.it.md`,
+  `docs/USER_GUIDE.fr.md`, `docs/USER_GUIDE.es.md`: matching
+  "SmartScreen on first launch" subsection under *First start* /
+  *Primo avvio* / *Premier démarrage* / *Primer inicio*, using the
+  localized Windows dialog labels for each language.
+- `README.md`: drop the obsolete "guide localized in EN and IT
+  only" known limitation now that all four shipped languages have
+  a native guide.
+- `CLAUDE.md`: extend the English-only exceptions and the
+  repository layout section to list all four shipped user guides.
+
+### Build
+
+- `src/MedReminder.UI/MedReminder.UI.csproj`: register the two new
+  guides as `Content` (copied to `bin/localization/`) and
+  `EmbeddedResource` (single-file publish fallback). Comment on
+  the block updated to reflect the four supported languages.
+
+---
+
 ## PR #5 — Add CLAUDE.md, English-only docs, strip .pdb/.xml in Release
 
 Link: [vger70/MedReminder#5](https://github.com/vger70/MedReminder/pull/5)
