@@ -153,11 +153,15 @@ public sealed record ImportReport(
 translates the user's selected country into
 
 ```
-WHERE country IN (@user, 'EU')
+WHERE country IN (@user, 'EU')   -- default for EU-member countries
+WHERE country =  @user           -- for countries flagged as
+                                 -- not-covered-by-EU (e.g. UK GB)
 ```
 
-The UI never recomputes this set. When the user deliberately
-switches to `EU`, only supranational rows are returned.
+The choice is driven by a per-country `IncludesEuCentralised`
+flag on the country profile (§12 point 7). The UI never
+recomputes the set. When the user deliberately switches to `EU`,
+only supranational rows are returned.
 
 Use cases live here as thin coordinators:
 
@@ -352,10 +356,9 @@ blocker.
   `Assets/Catalogue/eu/`.
 - `EmaArticle57Parser` normalises `European Union` → `EU` at write
   time, so the DB never carries the long-form value.
-- Dedup rule (see §12, point 3): the default in this milestone is
-  **do not deduplicate**. Both an AIFA row and an EMA `EU` row for
-  the same product may appear; the autocomplete simply shows them.
-  If §12 point 3 is decided differently, adjust here.
+- Dedup rule (confirmed in §12 point 3): **do not deduplicate**.
+  Both an AIFA row and an EMA `EU` row for the same product may
+  appear; the autocomplete simply shows them.
 - No UI changes: the `country IN (@user, 'EU')` filter is already
   in place from M1.
 - Integration test: a query for a well-known centrally-authorised
@@ -374,9 +377,20 @@ For each new country:
 5. Add integration tests with a fixture reduced to ~200 rows.
 6. Update the four user guides.
 
-Recommended priority once M2 is live: **ES (AEMPS)** or **FR
-(ANSM / BDPM)** — both publish open data under permissive terms
-(subject to §12 point 4 verification).
+Confirmed target set (§12 point 4): **ES (AEMPS / CIMA)**, **FR
+(ANSM / BDPM)**, **UK (MHRA)**, **DE (BfArM)**. One PR per
+country. Ordering is deferred until M2 is live; ES and FR are the
+natural first candidates given the maturity of their open-data
+offerings.
+
+> **UK is a special case.** Since the UK left the EU and EMA, an
+> EMA `EU` centralised authorisation is no longer valid for the
+> Great Britain market (Northern Ireland still follows EU rules
+> under the Windsor Framework). The UK importer must ingest MHRA's
+> own product register, and for country `UK` the query must
+> **not** union with `EU` rows (see §12 point 7). This is the only
+> country in the confirmed target set that breaks the default
+> "national ∪ EU" rule.
 
 ### 3.6 M5 — Snapshot online updater (optional)
 
@@ -595,32 +609,61 @@ Touched files (indicative):
 
 ---
 
-## 12. Decisions still to confirm
+## 12. Decisions
+
+Six of the seven points below have been resolved. Point 1 is an
+engineering discovery output of M0 rather than a product decision;
+point 7 is a new sub-decision that emerged from the confirmed M4
+target set (§3.5) and is deferred until M4 planning starts.
 
 1. **AIFA dataset selection.** Which specific AIFA open-data file
-   (or minimal join) contains the field set the schema needs. To be
-   answered by M0.
-2. **AIFA snapshot cadence.** How often we ship a refreshed
-   snapshot. Tied to our own release rhythm; a monthly refresh
-   inside a monthly release train is the current working
-   assumption.
+   (or minimal join) contains the field set the schema needs.
+   *Status:* to be answered by the M0 spike (engineering output,
+   not a product decision).
+
+2. **AIFA snapshot cadence.**
+   *Status:* **Confirmed — monthly, aligned to a MedReminder app
+   release.** Data stays within a 30–60 day freshness window and
+   releases remain predictable.
+
 3. **EU / IT dedup.** Whether to deduplicate an EU-centralised
    product when it also appears as a separately-listed AIFA row.
-   Default in this document is **do not deduplicate** in M3. A
-   deduplication rule would need an explicit AIC ↔ EMA-product
-   mapping table, which no open source provides today; deferring
-   is safer.
-4. **Second country in M4.** ES (AEMPS) vs. FR (ANSM / BDPM). Both
-   are viable; the pick depends on which user population we want
-   to serve first.
+   *Status:* **Confirmed — do not deduplicate.** Both rows remain
+   visible; no AIC ↔ EMA product-number mapping is required.
+   §3.4 M3 is aligned.
+
+4. **Second country in M4 and target set.**
+   *Status:* **Confirmed — target set is ES, FR, UK, DE.**
+   Specific ordering deferred until M2 is live; ES and FR are the
+   natural first candidates given their open-data maturity. §3.5
+   M4 is aligned.
+
 5. **Country switching UX.** Does the user pick exactly one
    country (plus `EU`), or can they enable several national
-   catalogues simultaneously? The schema supports both; the
-   Settings screen needs a choice before it can be designed.
-6. **Marketing status filter.** Whether to hide, at query time,
-   rows whose `marketing_status` indicates the product is no longer
-   commercialised, or to show them tagged as such. Affects the
-   default UX; simplest v1 answer is to show all and tag withdrawn
-   rows with a visual marker.
+   catalogues simultaneously?
+   *Status:* **Confirmed — one national country + `EU`.** Settings
+   exposes a single dropdown; the query always unions with `EU`
+   unless the selected country is flagged otherwise (see point 7).
 
-Once these six points are settled, M1 can start.
+6. **Marketing status filter.**
+   *Status:* **Confirmed — show all rows, badge withdrawn ones.**
+   The autocomplete does not filter by `marketing_status`;
+   `MedicineAutocompleteBox` renders a visual marker on rows whose
+   `marketing_status` indicates the product is no longer
+   commercialised.
+
+7. **Per-country EU coverage flag.** New sub-decision surfaced by
+   §3.5 M4. Most target countries (IT, ES, FR, DE) are EU / EEA
+   members whose users benefit from seeing EMA `EU` centralised
+   rows alongside their national catalogue. UK left the EU and
+   EMA: for the Great Britain market, EMA `EU` rows are no longer
+   valid, so a UK user should see only MHRA rows. This implies a
+   per-country `IncludesEuCentralised` flag on the country profile
+   (default `true`; explicitly `false` for `UK`). Where the flag
+   lives — a small `country_profiles` table populated by the
+   importer, or a static lookup shipped with the code — is to be
+   decided when the UK importer is scheduled.
+
+Once point 1 is answered by M0 and point 7 is decided at M4
+planning time, no product decisions remain outstanding for the
+v1 scope (M0–M3).
