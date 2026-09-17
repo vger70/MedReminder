@@ -102,8 +102,8 @@ public class NotificationCycleTests
     [Fact]
     public void Eta_beyond_end_of_therapy_suppresses_notification()
     {
-        // La terapia termina il 20/09; l'ETA (23/09) è successiva. Nessun
-        // avviso: non serve una nuova prescrizione.
+        // The therapy ends on Sep 20; the ETA (Sep 23) is later.
+        // No warning: no new prescription is needed.
         var medicine = DomainFactory.Medicine(thresholdDays: 30, endDate: new DateOnly(2026, 9, 20));
         var eta = new DateOnly(2026, 9, 23);
 

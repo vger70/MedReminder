@@ -3,9 +3,9 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.UseCases;
 
-// Aggiunge scorta positiva (nuova confezione, aggiunta manuale, correzione
-// in eccesso). Incrementa StockEpoch della medicina: dopo un rifornimento
-// il ciclo di avviso riparte (spec §8, ANALYSIS §1.1 punto 4).
+// Adds positive stock (new package, manual addition, upward
+// correction). Increments the medicine's StockEpoch: after a refill,
+// the warning cycle restarts (spec §8, ANALYSIS §1.1 item 4).
 public sealed record AddStockCommand(
     Guid MedicineId,
     decimal Quantity,
@@ -35,12 +35,12 @@ public sealed class AddStock
     {
         ArgumentNullException.ThrowIfNull(cmd);
         if (cmd.Quantity <= 0m)
-            throw new ArgumentException("La quantità deve essere positiva.", nameof(cmd));
+            throw new ArgumentException("Quantity must be positive.", nameof(cmd));
         if (!IsPositiveKind(cmd.Kind))
-            throw new ArgumentException($"Il tipo di movimento {cmd.Kind} non è ammesso per un carico positivo.", nameof(cmd));
+            throw new ArgumentException($"Movement kind {cmd.Kind} is not allowed for a positive stock load.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
-            ?? throw new InvalidOperationException($"Medicina {cmd.MedicineId} non trovata.");
+            ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         medicine.StockEpoch += 1;
         medicine.UpdatedAt = _clock.GetUtcNow();

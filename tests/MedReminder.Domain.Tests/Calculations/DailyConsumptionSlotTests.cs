@@ -6,9 +6,9 @@ using Xunit;
 
 namespace MedReminder.Domain.Tests.Calculations;
 
-// Verifica del nuovo overload di DailyConsumption che accetta gli slot
-// di somministrazione: quando presenti, il consumo giornaliero è la
-// somma delle dosi; quando assenti si ricade sul modello legacy
+// Verifies the new DailyConsumption overload that accepts the
+// administration slots: when present, daily consumption is the
+// sum of the doses; when absent, we fall back to the legacy
 // dose × frequenza.
 public class DailyConsumptionSlotTests
 {
@@ -50,9 +50,10 @@ public class DailyConsumptionSlotTests
     [Fact]
     public void Slots_with_zero_total_still_win_over_legacy_when_present()
     {
-        // Contratto: se l'utente ha definito slot, la fonte di verità sono
-        // gli slot — anche se il totale è zero (medicina in "pausa dosi"
-        // pur senza sospensione formale). Legacy dose×freq NON viene usato.
+        // Contract: if the user has defined slots, the source of
+        // truth is the slots — even if the total is zero (medicine
+        // on a "dose pause" without a formal suspension). Legacy
+        // dose × freq is NOT used.
         var schedule = new[] { DomainFactory.Schedule(new DateOnly(2026, 9, 1), 1m, 2) };
         var slots = new[] { Slot(dose: 0m, time: new TimeOnly(9, 0)) };
 

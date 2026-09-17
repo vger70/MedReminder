@@ -74,7 +74,7 @@ public sealed class AddMedicine
 
         await _medicines.AddAsync(medicine, cancellationToken);
 
-        // Prima entry della schedule versionata.
+        // First entry of the versioned schedule.
         await _schedules.AddAsync(new MedicationScheduleHistory
         {
             MedicineId = medicine.Id,
@@ -83,7 +83,7 @@ public sealed class AddMedicine
             AdministrationsPerDay = cmd.AdministrationsPerDay,
         }, cancellationToken);
 
-        // Carico iniziale del magazzino (se >0).
+        // Initial stock load (if > 0).
         if (cmd.InitialQuantity > 0m)
         {
             var initialAt = ToLocalMiddayOffset(cmd.StartDate);
@@ -97,9 +97,9 @@ public sealed class AddMedicine
             }, cancellationToken);
         }
 
-        // Slot di somministrazione opzionali (Incremento 10). Se presenti
-        // vengono materializzati; se null/vuoto la medicina resta sul
-        // modello legacy dose × frequenza.
+        // Optional administration slots (Increment 10). If provided
+        // they are materialized; if null / empty the medicine stays on
+        // the legacy dose × frequency model.
         if (cmd.AdministrationSlots is { Count: > 0 } slots)
         {
             await _slots.AddRangeAsync(BuildSlots(medicine.Id, slots), cancellationToken);
@@ -136,18 +136,18 @@ public sealed class AddMedicine
     private static void Validate(AddMedicineCommand cmd)
     {
         if (string.IsNullOrWhiteSpace(cmd.Name))
-            throw new ArgumentException("Il nome della medicina è obbligatorio.", nameof(cmd));
+            throw new ArgumentException("Medicine name is required.", nameof(cmd));
         if (string.IsNullOrWhiteSpace(cmd.Unit))
-            throw new ArgumentException("L'unità di misura è obbligatoria.", nameof(cmd));
+            throw new ArgumentException("Unit of measure is required.", nameof(cmd));
         if (cmd.DosePerAdministration <= 0m)
-            throw new ArgumentException("La dose per somministrazione deve essere positiva.", nameof(cmd));
+            throw new ArgumentException("Dose per administration must be positive.", nameof(cmd));
         if (cmd.AdministrationsPerDay <= 0)
-            throw new ArgumentException("Le somministrazioni giornaliere devono essere almeno 1.", nameof(cmd));
+            throw new ArgumentException("Administrations per day must be at least 1.", nameof(cmd));
         if (cmd.ThresholdDays < 0)
-            throw new ArgumentException("La soglia in giorni non può essere negativa.", nameof(cmd));
+            throw new ArgumentException("Threshold in days cannot be negative.", nameof(cmd));
         if (cmd.EndDate is { } end && end < cmd.StartDate)
-            throw new ArgumentException("La data di fine terapia non può precedere quella di inizio.", nameof(cmd));
+            throw new ArgumentException("Therapy end date cannot precede start date.", nameof(cmd));
         if (cmd.InitialQuantity < 0m)
-            throw new ArgumentException("La quantità iniziale non può essere negativa.", nameof(cmd));
+            throw new ArgumentException("Initial quantity cannot be negative.", nameof(cmd));
     }
 }

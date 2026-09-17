@@ -5,8 +5,8 @@ using Xunit;
 namespace MedReminder.Infrastructure.Tests.Credentials;
 
 // Il progetto Infrastructure.Tests è net10.0-windows: la classe compila
-// solo su Windows. A runtime DPAPI CurrentUser richiede un contesto
-// utente reale — l'assunto della macchina di build.
+// only on Windows. At runtime DPAPI CurrentUser requires a real
+// user context — the assumption for the build machine.
 public class DpapiCredentialProtectorTests
 {
     [Fact]

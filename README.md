@@ -254,4 +254,4 @@ dose/quantity values are never written to the logs.**
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE).

@@ -1,8 +1,8 @@
 namespace MedReminder.Application.Abstractions;
 
-// Unità di lavoro: raggruppa più scritture in un singolo commit atomico.
-// Per l'MVP è sufficiente SaveChangesAsync — EF Core garantisce di per
-// sé la transazionalità del singolo SaveChanges.
+// Unit of work: groups multiple writes into a single atomic commit.
+// For the MVP, SaveChangesAsync is enough — EF Core already guarantees
+// the transactionality of a single SaveChanges call.
 public interface IUnitOfWork
 {
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);

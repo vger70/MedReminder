@@ -1,27 +1,30 @@
 namespace MedReminder.Domain.Calculations;
 
-// Risultato della previsione di esaurimento. DaysRemaining e
-// EstimatedRunOutDate sono null quando la previsione non è determinabile
-// (spec §7: nessun consumo giornaliero, medicina sospesa, ecc.).
+// Result of the run-out forecast. DaysRemaining and EstimatedRunOutDate
+// are null when the forecast cannot be determined (spec §7: no daily
+// consumption, suspended medicine, etc.).
 public sealed record RunOutForecastResult(
     int? DaysRemaining,
     DateOnly? EstimatedRunOutDate);
 
 public static class RunOutForecast
 {
-    // Calcola giorni residui ed ETA di esaurimento a partire da:
-    //  - today: data logica di riferimento (fornita dal chiamante,
-    //    tipicamente TimeProvider.GetLocalNow().ToDateOnly()) — evita
-    //    dipendenza da DateTime.Now come richiesto dalla spec §24.
-    //  - currentStock: quantità corrente (già ricalcolata da MedicineStock).
-    //  - dailyRate: consumo giornaliero effettivo alla data (DailyConsumption).
-    //  - isSuspendedToday: true se una sospensione copre `today`.
+    // Computes days remaining and run-out ETA from:
+    //  - today: logical reference date (supplied by the caller, usually
+    //    TimeProvider.GetLocalNow().ToDateOnly()) — avoids the
+    //    dependency on DateTime.Now required by spec §24.
+    //  - currentStock: current quantity (already computed by
+    //    MedicineStock).
+    //  - dailyRate: effective daily consumption on that date
+    //    (DailyConsumption).
+    //  - isSuspendedToday: true if a suspension covers `today`.
     //
-    // Regole:
-    //  - Sospesa oggi              → (null, null).
+    // Rules:
+    //  - Suspended today           → (null, null).
     //  - dailyRate <= 0            → (null, null).
-    //  - currentStock <= 0         → (0, today) (già esaurita).
-    //  - altrimenti                → floor(stock / rate) giorni; ETA in avanti.
+    //  - currentStock <= 0         → (0, today) (already depleted).
+    //  - otherwise                 → floor(stock / rate) days; ETA in
+    //                                the future.
     public static RunOutForecastResult Compute(
         DateOnly today,
         decimal currentStock,

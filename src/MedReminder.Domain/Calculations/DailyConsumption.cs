@@ -2,21 +2,21 @@ using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Domain.Calculations;
 
-// Consumo giornaliero effettivo su una data data.
+// Effective daily consumption on a given date.
 //
-// Due modelli supportati (spec §9 Incremento 10):
-//   A) Modello legacy dose×frequenza — usato quando la medicina NON
-//      ha slot di somministrazione definiti. La schedule versionata
-//      (MedicationScheduleHistory) fornisce dose/frequenza applicabili
-//      al giorno richiesto.
-//   B) Modello a slot — usato quando la medicina HA slot definiti:
-//      il consumo giornaliero è la SOMMA delle dosi degli slot,
-//      indipendente dal giorno (semantica "attuale retroattiva":
-//      i cambi di slot valgono anche per il passato non ancora
-//      materializzato — nel personal-use non fa differenza pratica).
+// Two models are supported (spec §9, Increment 10):
+//   A) Legacy dose × frequency model — used when the medicine has NO
+//      administration slots defined. The versioned schedule
+//      (MedicationScheduleHistory) yields the dose / frequency
+//      applicable to the requested day.
+//   B) Slot model — used when the medicine HAS slots defined: daily
+//      consumption is the SUM of the slots' doses, independent of the
+//      day ("current retroactive" semantics: slot changes also apply
+//      to past days that have not been materialized yet — for personal
+//      use this makes no practical difference).
 //
-// Se nessuna delle due strade è applicabile ritorna 0m (spec §7: nessuna
-// ETA quando il consumo giornaliero non è determinabile).
+// If neither path applies, returns 0m (spec §7: no ETA when daily
+// consumption cannot be determined).
 public static class DailyConsumption
 {
     public static decimal RateOn(

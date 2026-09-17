@@ -4,18 +4,18 @@ using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Application.Notifications;
 
-// Formatta i testi (subject/body per email, title/body per toast) a
-// partire dallo stato della medicina. Nessuna indicazione clinica
-// (spec §22): solo identificazione della medicina + invito a richiedere
-// prescrizione.
+// Formats the texts (subject / body for email, title / body for
+// toast) from the medicine state. No clinical information (spec §22):
+// only medicine identification + invitation to request a prescription.
 //
-// Localizzazione (Incremento 16d):
-//   - BuildEmail usa la lingua UTENTE (loc.CurrentLanguage), pertanto
-//     usa loc.Get(...) direttamente.
-//   - BuildToast usa la lingua SISTEMA (CultureInfo.CurrentUICulture),
-//     pertanto usa loc.GetIn(systemLanguageCode, ...).
-// Se `loc` è null (test esistenti), si ricade sui testi italiani
-// hardcoded — retrocompatibilità.
+// Localization (Increment 16d):
+//   - BuildEmail uses the USER language (loc.CurrentLanguage), so it
+//     calls loc.Get(...) directly.
+//   - BuildToast uses the SYSTEM language
+//     (CultureInfo.CurrentUICulture), so it calls
+//     loc.GetIn(systemLanguageCode, ...).
+// If `loc` is null (older tests), the hardcoded English texts are used
+// — backwards compatibility.
 public static class NotificationTexts
 {
     public static EmailMessage BuildEmail(
@@ -70,24 +70,24 @@ public static class NotificationTexts
         }
         else
         {
-            // Retrocompatibilità: testi italiani hardcoded per i test
-            // che non passano ILocalizationService.
-            subject = $"MedReminder — {medicine.Name} in esaurimento ({daysRemaining} gg)";
-            body.Append("Promemoria MedReminder.").Append('\n').Append('\n');
-            body.Append($"Medicina: {medicine.Name}").Append('\n');
+            // Backwards compatibility: English hardcoded texts for the
+            // tests that do not pass ILocalizationService.
+            subject = $"MedReminder — {medicine.Name} running low ({daysRemaining} days)";
+            body.Append("MedReminder reminder.").Append('\n').Append('\n');
+            body.Append($"Medicine: {medicine.Name}").Append('\n');
             if (!string.IsNullOrWhiteSpace(medicine.ActiveIngredient))
             {
-                body.Append($"Principio attivo: {medicine.ActiveIngredient}").Append('\n');
+                body.Append($"Active ingredient: {medicine.ActiveIngredient}").Append('\n');
             }
-            body.Append($"Quantità residua: {currentStock.ToString("0.##", c)} {medicine.Unit}").Append('\n');
-            body.Append($"Giorni residui stimati: {daysRemaining}").Append('\n');
+            body.Append($"Remaining quantity: {currentStock.ToString("0.##", c)} {medicine.Unit}").Append('\n');
+            body.Append($"Estimated days left: {daysRemaining}").Append('\n');
             if (estimatedRunOutDate is not null)
             {
-                body.Append($"Data prevista di esaurimento: {estimatedRunOutDate.Value.ToString("d", c)}").Append('\n');
+                body.Append($"Estimated run-out date: {estimatedRunOutDate.Value.ToString("d", c)}").Append('\n');
             }
             if (administrationSlots is { Count: > 0 } slots)
             {
-                body.Append("Posologia:").Append('\n');
+                body.Append("Dosage:").Append('\n');
                 foreach (var slot in slots.OrderBy(s => s.Time.HasValue ? 0 : 1).ThenBy(s => s.Time).ThenBy(s => s.Order))
                 {
                     body.Append("  - ").Append(FormatSlotForEmail(slot, medicine.Unit, c)).Append('\n');
@@ -95,12 +95,12 @@ public static class NotificationTexts
             }
             if (!string.IsNullOrWhiteSpace(medicine.DoctorName))
             {
-                body.Append($"Medico di riferimento: {medicine.DoctorName}").Append('\n');
+                body.Append($"Reference doctor: {medicine.DoctorName}").Append('\n');
             }
             body.Append('\n');
-            body.Append("È consigliabile richiedere per tempo una nuova prescrizione al proprio medico.").Append('\n');
+            body.Append("It is advisable to request a new prescription from your doctor in advance.").Append('\n');
             body.Append('\n');
-            body.Append("— MedReminder (promemoria organizzativo, non è un dispositivo medico).");
+            body.Append("— MedReminder (organizational reminder, not a medical device).");
         }
 
         return new EmailMessage(subject, body.ToString());
@@ -121,10 +121,10 @@ public static class NotificationTexts
         return sb.ToString();
     }
 
-    // Toast Windows: usa la lingua SISTEMA (systemLanguageCode).
-    // Il chiamante (MedicationMonitor) rileva la lingua sistema con
-    // DetectSystemLanguageCode() e la passa qui; il service usa
-    // GetIn(languageCode, key) per ignorare la lingua utente.
+    // Windows toast: uses the SYSTEM language (systemLanguageCode).
+    // The caller (MedicationMonitor) detects the system language with
+    // DetectSystemLanguageCode() and passes it here; the service uses
+    // GetIn(languageCode, key) to bypass the user language.
     public static (string Title, string Body) BuildToast(
         Medicine medicine,
         int daysRemaining,
@@ -144,17 +144,17 @@ public static class NotificationTexts
             return (title, body);
         }
 
-        // Retrocompatibilità: hardcoded IT.
-        var titleIt = $"{medicine.Name}: {daysRemaining} giorni residui";
-        var bodyIt = $"Quantità stimata per {daysRemaining} giorni. "
-                   + "È consigliabile richiedere una nuova prescrizione.";
-        return (titleIt, bodyIt);
+        // Backwards compatibility: hardcoded EN.
+        var titleEn = $"{medicine.Name}: {daysRemaining} days left";
+        var bodyEn = $"Estimated quantity for {daysRemaining} days. "
+                   + "Consider requesting a new prescription.";
+        return (titleEn, bodyEn);
     }
 
-    // Ritorna il codice lingua ISO 639-1 che corrisponde alla lingua
-    // Windows dell'utente (CultureInfo.CurrentUICulture); fallback "en"
-    // se la lingua non è tra quelle supportate dall'app. Deve restare
-    // allineato con SupportedLanguages.All.
+    // Returns the ISO 639-1 language code matching the user's Windows
+    // language (CultureInfo.CurrentUICulture); falls back to "en" if
+    // the language is not among the app's supported ones. Must stay
+    // aligned with SupportedLanguages.All.
     public static string DetectSystemLanguageCode()
     {
         var twoLetter = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();

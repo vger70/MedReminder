@@ -12,12 +12,12 @@ public sealed record RegisterIntakeCommand(
     decimal Quantity,
     string? Notes = null);
 
-// Registra una singola assunzione (spec §6). Sempre crea una riga in
-// MedicationIntakes per audit; se lo status è Taken produce anche uno
-// StockMovement Consumption con delta negativo pari alla quantità
-// indicata — così la scorta scende in tempo reale, non aspettando il
-// catch-up automatico. Il catch-up successivo salta il giorno grazie
-// alla presenza dell'intake (vedi ConsumptionCatchUp).
+// Records a single intake (spec §6). Always creates a row in
+// MedicationIntakes for audit; if the status is Taken it also creates
+// a Consumption StockMovement with a negative delta equal to the
+// given quantity — so stock decreases in real time, without waiting
+// for the automatic catch-up. The next catch-up skips the day thanks
+// to the presence of the intake (see ConsumptionCatchUp).
 public sealed class RegisterIntake
 {
     private readonly IMedicineRepository _medicines;
@@ -44,10 +44,10 @@ public sealed class RegisterIntake
     {
         ArgumentNullException.ThrowIfNull(cmd);
         if (cmd.Quantity <= 0m)
-            throw new ArgumentException("La quantità dell'assunzione deve essere positiva.", nameof(cmd));
+            throw new ArgumentException("Intake quantity must be positive.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
-            ?? throw new InvalidOperationException($"Medicina {cmd.MedicineId} non trovata.");
+            ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         var now = _clock.GetUtcNow();
 
@@ -64,13 +64,13 @@ public sealed class RegisterIntake
 
         if (cmd.Status == IntakeStatus.Taken)
         {
-            // Verifica di sanità: la scorta non può scendere sotto zero.
+            // Sanity check: stock cannot drop below zero.
             var movements = await _stock.ListForMedicineAsync(cmd.MedicineId, cancellationToken);
             var current = MedicineStock.Current(movements);
             if (MedicineStock.WouldGoNegative(current, -cmd.Quantity))
             {
                 throw new InvalidOperationException(
-                    $"L'assunzione porterebbe la scorta sotto zero (attuale: {current}).");
+                    $"The intake would push the stock below zero (current: {current}).");
             }
 
             var occurredAt = ToLocalMiddayOffset(cmd.Day);

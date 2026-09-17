@@ -4,11 +4,12 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.UseCases;
 
-// Correzione negativa manuale (scorta erroneamente contata, medicina
-// rovinata, ecc.). Non incrementa StockEpoch: non è un rifornimento.
+// Manual downward correction (stock counted by mistake, damaged
+// medicine, etc.). Does not increment StockEpoch: this is not a
+// refill.
 public sealed record AdjustStockDownCommand(
     Guid MedicineId,
-    decimal Quantity,   // positiva; verrà scritta come delta negativo
+    decimal Quantity,   // positive; written as a negative delta
     string? Notes = null);
 
 public sealed class AdjustStockDown
@@ -34,17 +35,17 @@ public sealed class AdjustStockDown
     {
         ArgumentNullException.ThrowIfNull(cmd);
         if (cmd.Quantity <= 0m)
-            throw new ArgumentException("La quantità da sottrarre deve essere positiva.", nameof(cmd));
+            throw new ArgumentException("Quantity to subtract must be positive.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
-            ?? throw new InvalidOperationException($"Medicina {cmd.MedicineId} non trovata.");
+            ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         var movements = await _stock.ListForMedicineAsync(cmd.MedicineId, cancellationToken);
         var current = MedicineStock.Current(movements);
         if (MedicineStock.WouldGoNegative(current, -cmd.Quantity))
         {
             throw new InvalidOperationException(
-                $"La correzione porterebbe la scorta sotto zero (attuale: {current}).");
+                $"The correction would push the stock below zero (current: {current}).");
         }
 
         var movement = new StockMovement

@@ -2,9 +2,9 @@ using MedReminder.Application.Abstractions;
 
 namespace MedReminder.Infrastructure.Persistence;
 
-// Implementazione EF Core dell'unità di lavoro: SaveChangesAsync sul
-// DbContext condiviso persiste tutte le modifiche accumulate dai
-// repository nella stessa scope DI.
+// EF Core implementation of the unit of work: SaveChangesAsync on
+// the shared DbContext persists every change accumulated by the
+// repositories in the same DI scope.
 internal sealed class UnitOfWork : IUnitOfWork
 {
     private readonly MedReminderDbContext _dbContext;

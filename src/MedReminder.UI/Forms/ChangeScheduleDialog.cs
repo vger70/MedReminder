@@ -4,11 +4,11 @@ using MedReminder.Application.UseCases;
 
 namespace MedReminder.UI.Forms;
 
-// Dialog per il cambio dose / frequenza a metà terapia. Il use case
-// ChangeMedicationSchedule (Application) crea una nuova entry in
-// MedicationScheduleHistory con EffectiveFrom = data di decorrenza —
-// preserva la storia della schedule (i giorni prima della decorrenza
-// continuano a usare la dose precedente).
+// Dialog for a mid-therapy dose / frequency change. The
+// ChangeMedicationSchedule use case (Application) creates a new
+// entry in MedicationScheduleHistory with EffectiveFrom = the
+// effective date — preserving the schedule history (days before
+// the effective date keep using the previous dose).
 internal sealed class ChangeScheduleDialog : MedReminderFormBase
 {
     public ChangeScheduleResult? Result { get; private set; }
@@ -63,9 +63,10 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
             Dock = DockStyle.Left,
             Width = 120,
         };
-        // Se la StartDate della medicina è nel futuro, MinDate finisce
-        // sopra Today e assegnare Value = Today solleva ArgumentOutOfRangeException.
-        // Il default sensato è il primo giorno ammesso.
+        // If the medicine's StartDate is in the future, MinDate ends
+        // up above Today and assigning Value = Today throws
+        // ArgumentOutOfRangeException. The sensible default is the
+        // first allowed day.
         var minDate = minimumEffectiveFrom.ToDateTime(TimeOnly.MinValue);
         var initialValue = DateTime.Today >= minDate ? DateTime.Today : minDate;
         _effectiveFromPicker = new DateTimePicker

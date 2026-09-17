@@ -1,7 +1,7 @@
 namespace MedReminder.Infrastructure.Email;
 
-// Configurazione trasporto SMTP. La password NON è qui: risiede nel
-// file cifrato DPAPI gestito da ISmtpCredentialStore.
+// SMTP transport configuration. The password is NOT here: it lives
+// in the DPAPI-encrypted file managed by ISmtpCredentialStore.
 public sealed class SmtpSettings
 {
     public const string SectionName = "Smtp";

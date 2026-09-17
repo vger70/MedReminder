@@ -1,39 +1,42 @@
 <#
 .SYNOPSIS
-    Genera un certificato self-signed per firmare build di sviluppo di
-    MedReminder (MSI + MSIX + exe).
+    Generates a self-signed certificate to sign MedReminder
+    development builds (MSI + MSIX + exe).
 
 .DESCRIPTION
-    Crea un certificato code-signing nello store CurrentUser\My. Il
-    Subject deve corrispondere ESATTAMENTE al Publisher dichiarato in
-    Package.appxmanifest (altrimenti il pacchetto MSIX non installa).
+    Creates a code-signing certificate in the CurrentUser\My store.
+    The Subject must EXACTLY match the Publisher declared in
+    Package.appxmanifest (otherwise the MSIX package will not
+    install).
 
-    Il certificato viene ANCHE esportato come .pfx (per usarlo da CI)
-    e .cer (per import nel Trusted Root della macchina di test).
+    The certificate is ALSO exported as .pfx (for CI use) and as
+    .cer (to import into the Trusted Root of the test machine).
 
 .PARAMETER Subject
-    Il Subject X.500 del cert. Default: quello del manifest MSIX di dev.
+    The cert's X.500 Subject. Default: the one in the dev MSIX
+    manifest.
 
 .PARAMETER Password
-    Password del .pfx esportato. NON committare mai.
-    Default: prompt interattivo.
+    Password of the exported .pfx. Never commit it.
+    Default: interactive prompt.
 
 .PARAMETER OutDir
-    Cartella dove salvare .pfx e .cer. Default: cartella dello script.
+    Folder where .pfx and .cer are saved. Default: the script's
+    folder.
 
 .EXAMPLE
     .\make-selfsigned-cert.ps1
     .\make-selfsigned-cert.ps1 -OutDir C:\temp\certs
 
 .NOTES
-    ATTENZIONE — self-signed:
-      - SmartScreen segnalerà l'app come "sconosciuta".
-      - Per installare un MSIX firmato self-signed, l'utente finale
-        DEVE prima importare il .cer nel Trusted Root Certification
-        Authorities del computer di destinazione (comando manuale o
-        via GPO). L'MSI invece si installa comunque, ma il warning
-        SmartScreen resta.
-      - Uso in produzione: SCONSIGLIATO. Acquistare un cert OV/EV.
+    WARNING — self-signed:
+      - SmartScreen flags the app as "unknown".
+      - To install a self-signed MSIX, the end user MUST first
+        import the .cer into the Trusted Root Certification
+        Authorities of the target machine (manual command or via
+        GPO). The MSI installs anyway, but the SmartScreen warning
+        remains.
+      - Production use: NOT RECOMMENDED. Buy an OV/EV cert.
 #>
 [CmdletBinding()]
 param(
@@ -45,12 +48,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $Password) {
-    $Password = Read-Host "Password per il .pfx esportato" -AsSecureString
+    $Password = Read-Host "Password for the exported .pfx" -AsSecureString
 }
 
-Write-Host "Generazione certificato self-signed..." -ForegroundColor Cyan
+Write-Host "Generating self-signed certificate..." -ForegroundColor Cyan
 Write-Host "  Subject : $Subject"
-Write-Host "  Validità: 3 anni"
+Write-Host "  Validity: 3 years"
 
 $cert = New-SelfSignedCertificate `
     -Type CodeSigningCert `
@@ -64,7 +67,7 @@ $cert = New-SelfSignedCertificate `
         "2.5.29.19={text}"
     )
 
-Write-Host "Certificato creato:" -ForegroundColor Green
+Write-Host "Certificate created:" -ForegroundColor Green
 Write-Host "  Thumbprint: $($cert.Thumbprint)"
 Write-Host "  Subject   : $($cert.Subject)"
 
@@ -79,16 +82,16 @@ Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $Password | Out-N
 Export-Certificate  -Cert $cert -FilePath $cerPath -Type CERT | Out-Null
 
 Write-Host ""
-Write-Host "Esportato:" -ForegroundColor Green
-Write-Host "  PFX (con chiave privata, per firmare): $pfxPath"
-Write-Host "  CER (chiave pubblica, per Trusted Root utenti): $cerPath"
+Write-Host "Exported:" -ForegroundColor Green
+Write-Host "  PFX (with private key, for signing): $pfxPath"
+Write-Host "  CER (public key, for users' Trusted Root): $cerPath"
 Write-Host ""
-Write-Host "PROSSIMI PASSI:" -ForegroundColor Yellow
-Write-Host "  1. Aggiungi *.pfx a .gitignore (già presente)."
-Write-Host "  2. Per firmare le build passa a sign-artifact.ps1:"
+Write-Host "NEXT STEPS:" -ForegroundColor Yellow
+Write-Host "  1. Add *.pfx to .gitignore (already present)."
+Write-Host "  2. To sign builds, invoke sign-artifact.ps1 with:"
 Write-Host "       -CertificateThumbprint $($cert.Thumbprint)"
-Write-Host "     oppure:"
+Write-Host "     or:"
 Write-Host "       -CertificatePath ""$pfxPath"" -CertificatePassword <password>"
-Write-Host "  3. Sulla macchina di test importa il .cer nel Trusted Root:"
+Write-Host "  3. On the test machine, import the .cer into the Trusted Root:"
 Write-Host "       certutil -addstore -f Root ""$cerPath"""
-Write-Host "     (richiede admin)"
+Write-Host "     (requires admin)"

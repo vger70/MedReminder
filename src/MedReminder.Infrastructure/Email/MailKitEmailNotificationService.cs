@@ -8,11 +8,12 @@ using MimeKit;
 
 namespace MedReminder.Infrastructure.Email;
 
-// SMTP tramite MailKit (System.Net.Mail.SmtpClient è marcato obsoleto
-// da .NET 6+, docs/ANALYSIS.md §1.1 punto 10). Adapter thin: apre una
-// connessione per invio, autentica se username/password sono presenti,
-// invia il messaggio, chiude. Nessun retry qui: il retry con back-off
-// vive nel monitor (Incremento 7 hardening).
+// SMTP via MailKit (System.Net.Mail.SmtpClient has been marked
+// obsolete since .NET 6+, docs/ANALYSIS.md §1.1 item 10). Thin
+// adapter: opens a connection per send, authenticates if
+// username / password are present, sends the message, disconnects.
+// No retry here: the retry with back-off lives in the monitor
+// (Increment 7 hardening).
 internal sealed class MailKitEmailNotificationService : IEmailNotificationService
 {
     private readonly IOptionsMonitor<SmtpSettings> _settingsMonitor;
@@ -35,7 +36,7 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         var settings = _settingsMonitor.CurrentValue;
         if (!settings.IsConfigured)
         {
-            throw new InvalidOperationException("Configurazione SMTP incompleta.");
+            throw new InvalidOperationException("SMTP configuration is incomplete.");
         }
 
         var mime = BuildMimeMessage(settings, message);
@@ -97,7 +98,7 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         if (string.IsNullOrEmpty(password))
         {
             throw new InvalidOperationException(
-                "Credenziali SMTP non presenti nel credential store cifrato.");
+                "SMTP credentials not present in the encrypted credential store.");
         }
         await client.AuthenticateAsync(settings.Username, password, cancellationToken);
     }

@@ -4,10 +4,11 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace MedReminder.Infrastructure.Persistence;
 
-// Factory design-time usata da `dotnet ef migrations add / database update`.
-// A runtime il DbContext è costruito dal DI container in Program.cs
-// (Incremento 5); qui costruiamo un'istanza standalone che punta al file
-// SQLite di default sotto %LOCALAPPDATA%\MedReminder\.
+// Design-time factory used by `dotnet ef migrations add /
+// database update`. At runtime the DbContext is built by the DI
+// container in Program.cs (Increment 5); here we build a standalone
+// instance pointing to the default SQLite file under
+// %LOCALAPPDATA%\MedReminder\.
 public sealed class MedReminderDbContextFactory
     : IDesignTimeDbContextFactory<MedReminderDbContext>
 {

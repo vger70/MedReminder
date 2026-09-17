@@ -2,19 +2,20 @@ using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Domain.Calculations;
 
-// Rappresenta un consumo giornaliero calcolato: la Application traduce
-// questa struttura in uno StockMovement di tipo Consumption con
-// QuantityDelta = -Quantity al momento della persistenza.
+// Represents a computed daily consumption: the Application translates
+// this structure into a Consumption StockMovement with
+// QuantityDelta = -Quantity when persisting.
 public sealed record MaterializedConsumption(DateOnly Day, decimal Quantity);
 
-// Pianifica i consumi automatici tra due date, applicando:
-//  - la finestra temporale della terapia (StartDate / EndDate);
-//  - i periodi di sospensione (salta i giorni sospesi);
-//  - la schedule versionata (dose × somministrazioni può variare nel tempo).
+// Plans automatic consumptions between two dates, applying:
+//  - the therapy time window (StartDate / EndDate);
+//  - suspension periods (skips suspended days);
+//  - the versioned schedule (dose × administrations may change over
+//    time).
 //
-// L'idempotenza per (MedicineId, giorno, Consumption) è responsabilità
-// del layer di persistenza (vincolo unico su indice composito). Qui si
-// propone soltanto l'elenco corretto.
+// Idempotency for (MedicineId, day, Consumption) is the persistence
+// layer's responsibility (unique constraint on a composite index).
+// Here we only propose the correct list.
 public static class ConsumptionMaterializer
 {
     public static IReadOnlyList<MaterializedConsumption> Plan(
@@ -45,13 +46,13 @@ public static class ConsumptionMaterializer
             return Array.Empty<MaterializedConsumption>();
         }
 
-        // Materializzo le collezioni una sola volta: sono percorse più
-        // volte all'interno del ciclo per giorno.
+        // Materialize the collections once: they are iterated many
+        // times inside the per-day loop.
         var scheduleList = scheduleHistory.ToList();
         var suspensionList = suspensions.ToList();
         var slotsList = administrationSlots?.ToList();
 
-        // Non oltre la data di fine terapia.
+        // Do not go past the therapy end date.
         var upperBound = rangeEndInclusive;
         if (medicine.EndDate is { } endDate && endDate < upperBound)
         {

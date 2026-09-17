@@ -3,9 +3,9 @@ using MedReminder.UI.Tray;
 
 namespace MedReminder.UI.Notifications;
 
-// Sostituisce BalloonTipNotificationService (Infrastructure) quando la
-// UI è avviata: riusa la NotifyIcon principale così l'utente vede
-// UNA sola icona tray. La lifetime è Singleton, coerente con
+// Replaces BalloonTipNotificationService (Infrastructure) when the
+// UI is running: reuses the main NotifyIcon so the user sees ONE
+// tray icon. Lifetime is Singleton, consistent with
 // ApplicationTrayIcon.
 internal sealed class TrayBalloonNotificationService : IWindowsNotificationService
 {

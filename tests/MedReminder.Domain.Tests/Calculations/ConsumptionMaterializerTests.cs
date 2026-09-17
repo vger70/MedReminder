@@ -134,7 +134,7 @@ public class ConsumptionMaterializerTests
     [Fact]
     public void Plan_skips_days_when_daily_rate_is_zero()
     {
-        // Nessuna schedule prima del 3/3 -> rate 0 nei primi due giorni.
+        // No schedule before Mar 3 -> rate 0 for the first two days.
         var medicine = DomainFactory.Medicine(startDate: new DateOnly(2026, 3, 1));
         var schedule = new[] { DomainFactory.Schedule(new DateOnly(2026, 3, 3), 1m, 2) };
 

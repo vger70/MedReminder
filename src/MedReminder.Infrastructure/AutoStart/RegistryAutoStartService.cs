@@ -5,8 +5,9 @@ using Microsoft.Win32;
 namespace MedReminder.Infrastructure.AutoStart;
 
 // Auto-start via HKCU\Software\Microsoft\Windows\CurrentVersion\Run
-// (spec §11, ANALYSIS §1.1 punto 12). Per-utente: nessun UAC elevato
-// richiesto. Argomento --minimized (spec §12) fa partire in tray.
+// (spec §11, ANALYSIS §1.1 item 12). Per-user: no elevated UAC
+// required. The --minimized argument (spec §12) starts the app in the
+// tray.
 [SupportedOSPlatform("windows")]
 internal sealed class RegistryAutoStartService : IAutoStartService
 {
@@ -17,15 +18,15 @@ internal sealed class RegistryAutoStartService : IAutoStartService
     private readonly string _valueName;
     private readonly string _executablePath;
 
-    // Il valueName è parametrizzabile per i test — così un test può
-    // usare un valore univoco (es. "MedReminder.Tests") senza impattare
-    // la configurazione reale dell'utente.
+    // valueName is parameterizable for tests — a test can use a
+    // unique value (e.g. "MedReminder.Tests") without impacting the
+    // user's real configuration.
     public RegistryAutoStartService(string? valueName = null, string? executablePath = null)
     {
         _valueName = valueName ?? DefaultValueName;
         _executablePath = executablePath
             ?? Environment.ProcessPath
-            ?? throw new InvalidOperationException("Impossibile determinare il percorso dell'eseguibile.");
+            ?? throw new InvalidOperationException("Unable to determine the executable path.");
     }
 
     public bool IsEnabled
@@ -42,7 +43,7 @@ internal sealed class RegistryAutoStartService : IAutoStartService
     public void Enable()
     {
         using var key = Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true)
-            ?? throw new InvalidOperationException("Impossibile aprire la chiave di Registry per la scrittura.");
+            ?? throw new InvalidOperationException("Unable to open the Registry key for writing.");
         var command = $"\"{_executablePath}\" {StartupArgument}";
         key.SetValue(_valueName, command, RegistryValueKind.String);
     }

@@ -8,8 +8,8 @@ public interface IMedicationSuspensionRepository
         Guid medicineId,
         CancellationToken cancellationToken);
 
-    // Sospensione attualmente aperta (EndDate = null) per la medicina;
-    // null se la medicina non è sospesa.
+    // Currently open suspension (EndDate = null) for the medicine;
+    // null if the medicine is not suspended.
     Task<MedicationSuspension?> GetOpenSuspensionAsync(
         Guid medicineId,
         CancellationToken cancellationToken);

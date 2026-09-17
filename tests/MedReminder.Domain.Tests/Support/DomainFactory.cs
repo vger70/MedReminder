@@ -4,8 +4,8 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Domain.Tests.Support;
 
-// Piccoli helper: creano istanze del dominio con default sensati e
-// consentono override chirurgici. Servono solo ai test di questa
+// Small helpers: create domain instances with sensible defaults
+// and allow surgical overrides. Only used by the tests in this
 // assembly.
 internal static class DomainFactory
 {

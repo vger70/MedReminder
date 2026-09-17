@@ -1,8 +1,9 @@
 namespace MedReminder.Application.Abstractions;
 
-// Custodia della password SMTP: mai in chiaro nel repo, mai nei log.
-// L'implementazione infrastruttura la cifra con DPAPI CurrentUser e la
-// serializza sotto %LOCALAPPDATA%\MedReminder\smtp.protected.
+// Vault for the SMTP password: never plaintext in the repo, never in
+// the logs. The Infrastructure implementation encrypts it with DPAPI
+// CurrentUser and serializes it under
+// %LOCALAPPDATA%\MedReminder\smtp.protected.
 public interface ISmtpCredentialStore
 {
     bool HasPassword { get; }

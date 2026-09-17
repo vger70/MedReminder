@@ -2,26 +2,26 @@ using System.Globalization;
 
 namespace MedReminder.Application.Abstractions;
 
-// Preferenze utente non-SMTP e non-Backup che vivono in
+// Non-SMTP, non-Backup user preferences that live in
 // %LOCALAPPDATA%\MedReminder\user.settings.json.
-// Al momento contiene solo la lingua (Incremento 16 — localizzazione).
-// Pattern coerente con SmtpSettings/BackupSettings: sezione "UI"
-// nell'IConfiguration, POCO editabile, IOptionsMonitor per il reload
-// a caldo (anche se la lingua richiede comunque restart, il reload
-// permette al nuovo processo di leggerla immediatamente).
+// Currently only holds the language (Increment 16 — localization).
+// Same pattern as SmtpSettings / BackupSettings: "UI" section in
+// IConfiguration, editable POCO, IOptionsMonitor for hot reload
+// (even though the language change still requires a restart, the
+// reload lets the new process pick it up immediately).
 public sealed class UserSettings
 {
     public const string SectionName = "UI";
 
-    // Codice lingua ISO 639-1, lowercase. Valori supportati:
-    //   "en" — inglese (default)
-    //   "it" — italiano
-    // Ogni altro valore ricade sull'inglese (fail-safe).
+    // ISO 639-1 language code, lowercase. Supported values:
+    //   "en" — English (default)
+    //   "it" — Italian
+    // Any other value falls back to English (fail-safe).
     public string Language { get; set; } = "en";
 }
 
-// Definizione della lingua "attualmente supportata" — usata da UI e
-// LocalizationService per validare l'input.
+// Definition of the "currently supported" languages — used by the UI
+// and by LocalizationService to validate the input.
 public static class SupportedLanguages
 {
     public const string Default = "en";

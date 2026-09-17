@@ -4,13 +4,15 @@ using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Infrastructure.Persistence;
 
-// Inizializzatore idempotente del database:
-//  1. crea il file DB e lo schema se assenti (EnsureCreated per MVP;
-//     una vera pipeline di migration verrà introdotta dopo l'MVP);
-//  2. applica patch di schema idempotenti per colonne aggiunte in
-//     incrementi successivi (evita che l'utente debba cancellare il DB
-//     ad ogni feature che aggiunge una colonna);
-//  3. imposta PRAGMA journal_mode=WAL, foreign_keys=ON, synchronous=NORMAL.
+// Idempotent database initializer:
+//  1. creates the DB file and schema if missing (EnsureCreated for
+//     the MVP; a proper migration pipeline will be introduced after
+//     the MVP);
+//  2. applies idempotent schema patches for columns added in later
+//     increments (so the user does not have to delete the DB every
+//     time a feature adds a column);
+//  3. sets PRAGMA journal_mode=WAL, foreign_keys=ON,
+//     synchronous=NORMAL.
 public sealed class DatabaseInitializer
 {
     private readonly MedReminderDbContext _db;
@@ -39,14 +41,14 @@ public sealed class DatabaseInitializer
         await _db.Database.ExecuteSqlRawAsync("PRAGMA synchronous = NORMAL;", cancellationToken);
     }
 
-    // Patch di schema per DB esistenti creati con versioni precedenti.
-    // Ogni patch DEVE essere idempotente (safe da rieseguire su un DB
-    // già aggiornato). Elenco ordinato cronologicamente delle patch:
+    // Schema patches for existing DBs created with earlier versions.
+    // Every patch MUST be idempotent (safe to re-run on an
+    // already-upgraded DB). Chronologically ordered list of patches:
     //
-    //   1) Incremento 9c: aggiunta colonna Day (TEXT NOT NULL) a
-    //      MedicationIntakes. Le righe pre-esistenti (nessuna in
-    //      circolazione dato che la tabella non era usata) ricevono
-    //      il default '0001-01-01'.
+    //   1) Increment 9c: added the Day column (TEXT NOT NULL) on
+    //      MedicationIntakes. Pre-existing rows (none in the wild
+    //      since the table was not used) receive the default
+    //      '0001-01-01'.
     private async Task ApplyIdempotentSchemaPatchesAsync(CancellationToken cancellationToken)
     {
         await AddColumnIfMissingAsync(
@@ -55,12 +57,12 @@ public sealed class DatabaseInitializer
             typeSpec: "TEXT NOT NULL DEFAULT '0001-01-01'",
             cancellationToken);
 
-        // Incremento 10: nuova tabella MedicationAdministrationSlots.
-        // CREATE TABLE IF NOT EXISTS è idempotente: se il DB è nuovo,
-        // EnsureCreatedAsync l'ha già creata (via ApplyConfiguration) e
-        // questo comando è un no-op. Se il DB è pre-Incremento 10,
-        // la tabella viene creata con lo stesso schema che EF Core
-        // emetterebbe.
+        // Increment 10: new MedicationAdministrationSlots table.
+        // CREATE TABLE IF NOT EXISTS is idempotent: if the DB is
+        // new, EnsureCreatedAsync has already created it (via
+        // ApplyConfiguration) and this command is a no-op. If the
+        // DB is pre-Increment 10, the table is created with the
+        // same schema EF Core would emit.
         await ExecuteRawSqlAsync(@"
             CREATE TABLE IF NOT EXISTS ""MedicationAdministrationSlots"" (
                 ""Id"" TEXT NOT NULL CONSTRAINT ""PK_MedicationAdministrationSlots"" PRIMARY KEY,
@@ -114,7 +116,7 @@ public sealed class DatabaseInitializer
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            // PRAGMA table_info restituisce colonne:
+            // PRAGMA table_info returns columns:
             //   0=cid  1=name  2=type  3=notnull  4=dflt_value  5=pk
             var name = reader.GetString(1);
             if (string.Equals(name, column, StringComparison.OrdinalIgnoreCase))

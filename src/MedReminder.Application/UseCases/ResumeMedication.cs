@@ -28,15 +28,15 @@ public sealed class ResumeMedication
         ArgumentNullException.ThrowIfNull(cmd);
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
-            ?? throw new InvalidOperationException($"Medicina {cmd.MedicineId} non trovata.");
+            ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         var open = await _suspensions.GetOpenSuspensionAsync(cmd.MedicineId, cancellationToken)
-            ?? throw new InvalidOperationException("La medicina non è sospesa.");
+            ?? throw new InvalidOperationException("Medicine is not suspended.");
 
         if (cmd.EndDate < open.StartDate)
         {
             throw new ArgumentException(
-                "La data di ripresa non può precedere l'inizio della sospensione.",
+                "Resume date cannot precede the start of the suspension.",
                 nameof(cmd));
         }
 

@@ -1,8 +1,8 @@
 namespace MedReminder.Domain.Notifications;
 
-// Registrazione di una notifica emessa (o tentata). Usata da
-// NotificationCycle per non ri-inviare la stessa notifica finché
-// l'epoch della medicina non cambia (spec §8, docs/ANALYSIS.md §2.9).
+// Record of a notification that has been emitted (or attempted). Used
+// by NotificationCycle to avoid re-sending the same notification until
+// the medicine's epoch changes (spec §8, docs/ANALYSIS.md §2.9).
 public sealed class NotificationEvent
 {
     public Guid Id { get; init; } = Guid.NewGuid();

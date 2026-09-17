@@ -4,18 +4,18 @@ using MedReminder.Domain.Notifications;
 
 namespace MedReminder.Application.UseCases;
 
-// Aggiorna campi non-schedule e non-stock. Cambi di dose/frequenza
-// vanno canalizzati su ChangeMedicationSchedule per preservare la
-// timeline; qui si aggiornano solo i campi "amministrativi" più,
-// opzionalmente, gli slot di somministrazione.
+// Updates non-schedule and non-stock fields. Dose / frequency changes
+// must go through ChangeMedicationSchedule to preserve the timeline;
+// here we only update the "administrative" fields plus, optionally,
+// the administration slots.
 //
-// Semantica AdministrationSlots (Incremento 10):
-//   null           → non toccare gli slot esistenti (il caller non
-//                    intende modificarli in questa richiesta).
-//   lista vuota    → azzera gli slot: la medicina torna al modello
-//                    legacy dose × frequenza.
-//   lista con item → sostituzione atomica (delete + insert) degli slot
-//                    correnti.
+// AdministrationSlots semantics (Increment 10):
+//   null           → leave the existing slots alone (the caller is
+//                    not touching them in this request).
+//   empty list     → clear the slots: the medicine goes back to the
+//                    legacy dose × frequency model.
+//   non-empty list → atomic replacement (delete + insert) of the
+//                    current slots.
 public sealed record UpdateMedicineCommand(
     Guid MedicineId,
     string Name,
@@ -53,17 +53,17 @@ public sealed class UpdateMedicine
     {
         ArgumentNullException.ThrowIfNull(cmd);
         if (string.IsNullOrWhiteSpace(cmd.Name))
-            throw new ArgumentException("Il nome della medicina è obbligatorio.", nameof(cmd));
+            throw new ArgumentException("Medicine name is required.", nameof(cmd));
         if (string.IsNullOrWhiteSpace(cmd.Unit))
-            throw new ArgumentException("L'unità di misura è obbligatoria.", nameof(cmd));
+            throw new ArgumentException("Unit of measure is required.", nameof(cmd));
         if (cmd.ThresholdDays < 0)
-            throw new ArgumentException("La soglia in giorni non può essere negativa.", nameof(cmd));
+            throw new ArgumentException("Threshold in days cannot be negative.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
-            ?? throw new InvalidOperationException($"Medicina {cmd.MedicineId} non trovata.");
+            ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         if (cmd.EndDate is { } end && end < medicine.StartDate)
-            throw new ArgumentException("La data di fine terapia non può precedere quella di inizio.", nameof(cmd));
+            throw new ArgumentException("Therapy end date cannot precede start date.", nameof(cmd));
 
         medicine.Name = cmd.Name.Trim();
         medicine.ActiveIngredient = string.IsNullOrWhiteSpace(cmd.ActiveIngredient) ? null : cmd.ActiveIngredient.Trim();

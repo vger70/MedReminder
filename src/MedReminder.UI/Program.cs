@@ -29,29 +29,31 @@ using WinFormThreadExceptionEventArgs = System.Threading.ThreadExceptionEventArg
 
 namespace MedReminder.UI;
 
-// Composition root: costruisce l'IHost, inizializza il DB, avvia lo
-// scheduler in background e passa il controllo al message loop WinForms.
+// Composition root: builds the IHost, initializes the DB, starts
+// the scheduler in the background and hands control off to the
+// WinForms message loop.
 internal static class Program
 {
     private const string MinimizedArgument = "--minimized";
-    // Local\\ prefix: mutex per-utente (sessione Terminal Server), non
-    // per-macchina. Un secondo utente Windows sulla stessa macchina può
-    // avviare la propria istanza.
+    // Local\\ prefix: per-user mutex (Terminal Server session),
+    // not per-machine. A second Windows user on the same machine can
+    // launch their own instance.
     private const string SingleInstanceMutexName = @"Local\MedReminder.SingleInstance.b0000004-4444-4444-4444-444444444444";
     private static readonly TimeSpan HostStopTimeout = TimeSpan.FromSeconds(5);
-    // Attesa massima sull'acquisizione del mutex all'avvio. Il caso
-    // tipico è il restart auto dopo restore backup: il nuovo processo
-    // parte mentre il vecchio si sta chiudendo (rilascia il mutex nel
-    // finally di Main). 5 secondi coprono lo shutdown pulito del monitor
-    // hosted service e del pool SQLite senza percepibile ritardo per
-    // avvii "normali" (dove il mutex è libero all'istante).
+    // Maximum wait on mutex acquisition at startup. Typical case:
+    // the automatic restart after a backup restore — the new process
+    // starts while the old one is closing (releases the mutex in
+    // Main's finally). 5 seconds cover the clean shutdown of the
+    // monitor hosted service and the SQLite pool without noticeable
+    // delay for "normal" starts (where the mutex is free
+    // instantly).
     private static readonly TimeSpan SingleInstanceAcquireTimeout = TimeSpan.FromSeconds(5);
 
-    // ILocalizationService "standalone" per i messaggi pre-IHost
-    // (mutex single-instance, ThreadException). Popolato all'inizio
-    // di Main leggendo user.settings.json a mano; l'istanza vera del
-    // servizio (Singleton via DI) è indipendente ma legge dallo
-    // stesso file, quindi il testo è sempre coerente.
+    // "Standalone" ILocalizationService for the pre-IHost messages
+    // (single-instance mutex, ThreadException). Populated at the
+    // start of Main by reading user.settings.json by hand; the real
+    // service instance (Singleton via DI) is independent but reads
+    // the same file, so the text is always consistent.
     private static ILocalizationService _bootstrapLoc = null!;
 
     [STAThread]
@@ -62,12 +64,12 @@ internal static class Program
 
         _bootstrapLoc = LocalizationService.CreateStandalone(ReadUserLanguage());
 
-        // Le eccezioni nate dentro handler UI (es. click sul pulsante
-        // "Stampa" di PrintPreviewDialog che invoca la SaveAs del driver
-        // PDF virtuale — l'annullamento genera Win32Exception 87) NON
-        // risalgono ai try/catch delle nostre form: le raccoglie il
-        // message loop. Con CatchException le indirizza qui invece di
-        // uccidere il processo.
+        // Exceptions raised inside UI handlers (e.g. clicking the
+        // "Print" button of PrintPreviewDialog which invokes the
+        // virtual PDF driver's SaveAs — cancellation raises
+        // Win32Exception 87) do NOT bubble to our forms' try/catch:
+        // the message loop catches them. With CatchException we
+        // route them here instead of killing the process.
         WinFormsApp.SetUnhandledExceptionMode(WinFormUnhandledExceptionMode.CatchException);
         WinFormsApp.ThreadException += OnUnhandledUiException;
 
@@ -79,15 +81,15 @@ internal static class Program
         }
         catch (AbandonedMutexException)
         {
-            // Un'istanza precedente è terminata senza rilasciare il mutex:
-            // Windows ce lo restituisce ownership-migrated. Consideriamola
-            // acquisita — la vecchia istanza è morta.
+            // A previous instance terminated without releasing the
+            // mutex: Windows hands it to us with ownership migrated.
+            // Treat it as acquired — the old instance is dead.
             acquired = true;
         }
 
         if (!acquired)
         {
-            Log.Information("Un'altra istanza di MedReminder è già in esecuzione. Uscita.");
+            Log.Information("Another instance of MedReminder is already running. Exiting.");
             System.Windows.Forms.MessageBox.Show(
                 _bootstrapLoc.Get("Ui.App.AlreadyRunning"),
                 _bootstrapLoc.Get("Ui.App.AlreadyRunning.Title"),
@@ -114,12 +116,12 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "MedReminder terminato da eccezione non gestita.");
+            Log.Fatal(ex, "MedReminder terminated by an unhandled exception.");
             throw;
         }
         finally
         {
-            try { singleInstance.ReleaseMutex(); } catch { /* già rilasciato */ }
+            try { singleInstance.ReleaseMutex(); } catch { /* already released */ }
             Log.CloseAndFlush();
         }
     }
@@ -128,16 +130,16 @@ internal static class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        // File utente sovrapposti ad appsettings.json.
-        // reloadOnChange=true fa aggiornare gli IOptionsMonitor<T>
-        // senza riavvio quando l'utente cambia impostazioni dalla UI.
+        // User files layered on top of appsettings.json.
+        // reloadOnChange=true refreshes IOptionsMonitor<T> without a
+        // restart when the user changes settings from the UI.
         var appDataDir = AppDataPaths.GetAppDataDirectory();
         var userSmtpSettingsFile = Path.Combine(appDataDir, "smtp.settings.json");
         var userBackupSettingsFile = Path.Combine(appDataDir, "backup.settings.json");
-        // user.settings.json (Incremento 16): al momento contiene solo
-        // la lingua dell'UI. reloadOnChange=false perché il cambio
-        // richiede comunque restart — la lettura avviene una sola volta
-        // al boot del processo.
+        // user.settings.json (Increment 16): currently only holds
+        // the UI language. reloadOnChange=false because the change
+        // requires a restart anyway — the read happens once at
+        // process boot.
         var userSettingsFile = Path.Combine(appDataDir, "user.settings.json");
 
         builder.Configuration
@@ -152,10 +154,10 @@ internal static class Program
         builder.Services.AddMedReminderApplication();
         builder.Services.AddMedReminderInfrastructure(builder.Configuration);
 
-        // La UI usa i Toast Windows moderni come primary, con fallback
-        // sul balloon della tray icon condivisa. Sovrascrive la
-        // registrazione default fatta da AddMedReminderInfrastructure
-        // (BalloonTipNotificationService).
+        // The UI uses modern Windows toasts as the primary, with a
+        // fallback to the shared tray icon's balloon. Overrides the
+        // default registration performed by
+        // AddMedReminderInfrastructure (BalloonTipNotificationService).
         builder.Services.RemoveAll<IWindowsNotificationService>();
         builder.Services.AddSingleton<TrayBalloonNotificationService>();
         builder.Services.AddSingleton<IWindowsNotificationService, ToastWindowsNotificationService>();
@@ -166,8 +168,8 @@ internal static class Program
         builder.Services.AddHostedService<MedicationMonitorHostedService>();
         builder.Services.AddHostedService<AutomaticBackupHostedService>();
 
-        // Restarter usato dopo un restore del DB (richiede rilancio
-        // dell'exe corrente per riacquisire i lock SQLite in modo pulito).
+        // Restarter used after a DB restore (requires relaunching
+        // the current exe to cleanly reacquire the SQLite locks).
         builder.Services.AddSingleton<IApplicationRestarter, ApplicationRestarter>();
 
         builder.Services.AddTransient<MainForm>();
@@ -195,16 +197,16 @@ internal static class Program
         }
         WinFormsApp.Run(mainForm);
 
-        // Disponi esplicitamente la tray icon dopo la chiusura del message
-        // loop: senza dispose l'icona rimane visibile in tray fino allo
-        // shutdown del processo.
+        // Explicitly dispose the tray icon after the message loop
+        // closes: without dispose the icon stays visible in the tray
+        // until the process shuts down.
         try
         {
             host.Services.GetRequiredService<ApplicationTrayIcon>().Dispose();
         }
         catch
         {
-            // ignoriamo: siamo in shutdown.
+            // ignore: we are in shutdown.
         }
     }
 
@@ -217,7 +219,7 @@ internal static class Program
         }
         catch (OperationCanceledException)
         {
-            // Timeout accettabile.
+            // Acceptable timeout.
         }
     }
 
@@ -227,11 +229,11 @@ internal static class Program
 
         if (IsPrintingException(ex))
         {
-            // Caso tipico: l'utente annulla la finestra "Salva PDF" del
-            // driver Microsoft Print to PDF. Il framework rilancia
-            // Win32Exception(87) dal dispositivo di stampa. Non è un
-            // errore dell'app — messaggio pulito, log a livello info.
-            Log.Information(ex, "Stampa annullata dall'utente o non completata.");
+            // Typical case: the user cancels the "Save PDF" window
+            // of the Microsoft Print to PDF driver. The framework
+            // rethrows Win32Exception(87) from the print device. Not
+            // an app error — clean message, info-level log.
+            Log.Information(ex, "Print cancelled by the user or not completed.");
             try
             {
                 System.Windows.Forms.MessageBox.Show(
@@ -242,13 +244,13 @@ internal static class Program
             }
             catch
             {
-                // ignoriamo: siamo in un contesto di errore, la MessageBox
-                // non deve mai propagare una seconda eccezione.
+                // ignore: we are in an error context, the MessageBox
+                // must never propagate a second exception.
             }
             return;
         }
 
-        Log.Error(ex, "Eccezione non gestita nel thread UI.");
+        Log.Error(ex, "Unhandled exception on the UI thread.");
         try
         {
             System.Windows.Forms.MessageBox.Show(
@@ -259,16 +261,16 @@ internal static class Program
         }
         catch
         {
-            // ignoriamo: come sopra, evitiamo cascate.
+            // ignore: as above, avoid cascades.
         }
     }
 
-    // Legge %LOCALAPPDATA%\MedReminder\user.settings.json senza
-    // dipendere dal binding IOptions/IConfiguration (che non esiste
-    // ancora al momento della chiamata). Struttura attesa:
+    // Reads %LOCALAPPDATA%\MedReminder\user.settings.json without
+    // depending on IOptions / IConfiguration binding (it does not
+    // exist yet at the moment of the call). Expected shape:
     //   { "UI": { "Language": "en" } }
-    // Ricade su null (→ default "en" nel service) se il file manca
-    // o è corrotto.
+    // Falls back to null (→ default "en" in the service) if the file
+    // is missing or corrupted.
     private static string? ReadUserLanguage()
     {
         try
@@ -286,22 +288,22 @@ internal static class Program
         }
         catch
         {
-            // File corrotto o unparsable: silenzioso, ricadiamo su default.
+            // Corrupted or unparsable file: silent, fall back to the default.
         }
         return null;
     }
 
-    // Riconosce le eccezioni che nascono dallo stack di stampa
-    // (System.Drawing.Printing e drivers virtuali PDF/XPS). Cammina
-    // la catena InnerException perché il wrapper esterno può essere
-    // un TargetInvocationException lanciato dal message loop.
+    // Recognizes exceptions raised from the printing stack
+    // (System.Drawing.Printing and virtual PDF / XPS drivers). Walks
+    // the InnerException chain because the outer wrapper may be a
+    // TargetInvocationException thrown by the message loop.
     private static bool IsPrintingException(Exception ex)
     {
         for (Exception? current = ex; current is not null; current = current.InnerException)
         {
             if (current is Win32Exception)
             {
-                // Se il produttore è la pipeline di stampa, lo stack lo mostra.
+                // If the producer is the printing pipeline, the stack shows it.
                 var trace = current.StackTrace ?? string.Empty;
                 if (trace.Contains("System.Drawing.Printing", StringComparison.Ordinal) ||
                     trace.Contains("PrintDocument", StringComparison.Ordinal) ||

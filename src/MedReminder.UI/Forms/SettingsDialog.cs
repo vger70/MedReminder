@@ -8,15 +8,16 @@ using Microsoft.Extensions.Options;
 
 namespace MedReminder.UI.Forms;
 
-// Impostazioni suddivise per scheda:
-//   Email  — SMTP host/porta/TLS/user, password protetta DPAPI, test invio.
-//   Avvio  — auto-start con Windows.
-//   Backup — export/import DB.
+// Settings split into tabs:
+//   Email  — SMTP host / port / TLS / user, DPAPI-protected
+//            password, send test.
+//   Startup — auto-start with Windows.
+//   Backup — DB export / import.
 //
-// I dati SMTP editabili vengono serializzati in
-// %LOCALAPPDATA%\MedReminder\smtp.settings.json (aggiunto al chain di
-// IConfiguration in Program.cs con reloadOnChange=true, così
-// IOptionsMonitor<SmtpSettings> si aggiorna senza riavvio).
+// The editable SMTP fields are serialized to
+// %LOCALAPPDATA%\MedReminder\smtp.settings.json (added to the
+// IConfiguration chain in Program.cs with reloadOnChange=true, so
+// IOptionsMonitor<SmtpSettings> refreshes without a restart).
 internal sealed class SettingsDialog : MedReminderFormBase
 {
     private readonly IOptionsMonitor<SmtpSettings> _smtpMonitor;
@@ -57,7 +58,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // Generale (Incremento 16b) — selezione lingua UI
     private ComboBox _languageCombo = null!;
 
-    // Component condiviso per i tooltip esplicativi sui campi tecnici
+    // Shared component for the explanatory tooltips on the technical fields.
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
     // ToolTip per dialog è la best practice WinForms.
     private readonly ToolTip _tooltips = new()
@@ -132,7 +133,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
 
         // ComboBox con Items = SupportedLanguage records. DisplayMember
-        // = DisplayName localizzato per la lingua corrente.
+        // = DisplayName localized for the current language.
         _languageCombo = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
@@ -197,7 +198,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             return;
         }
 
-        // Se la lingua non è cambiata, nessun restart necessario —
+        // If the language did not change, no restart needed —
         // basta un feedback breve. Diversamente chiediamo conferma
         // e riavviamo.
         if (string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
@@ -233,7 +234,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private sealed record LanguageChoice(string Code, string DisplayName);
 
     // Mappa un codice ISO 639-1 sulla chiave JSON che restituisce il
-    // nome della lingua nella lingua UI corrente. Codici sconosciuti
+    // the language name in the current UI language. Unknown codes
     // ricadono su Language.English (fail-safe).
     private static string LanguageDisplayKey(string code) => code switch
     {
@@ -327,8 +328,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 TimeoutSeconds = (int)_timeoutBox.Value,
             };
 
-            // Password: se l'utente ha digitato qualcosa la cifriamo;
-            // altrimenti manteniamo quella corrente. Il checkbox "clear"
+            // Password: if the user has typed something, encrypt it;
+            // otherwise keep the current one. The "clear" checkbox
             // ha precedenza e rimuove la password.
             if (_clearPasswordBox.Checked)
             {
@@ -361,8 +362,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private async Task TestSmtpAsync(Button button)
     {
-        // Prima salva perché il TestConnectionAsync lavora sui settings
-        // correnti (IOptionsMonitor si aggiorna dopo la scrittura del file).
+        // Save first because TestConnectionAsync operates on the
+        // current settings (IOptionsMonitor refreshes after the file
+        // is written).
         SaveSmtpSettings();
         button.Enabled = false;
         try
@@ -477,7 +479,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         browseButton.Click += (_, _) => BrowseBackupDirectory();
 
         // DateTimePicker in modalità "Time": mostra solo HH:mm (custom
-        // format), evita che l'utente cambi la data.
+        // format), prevent the user from changing the date.
         _backupTimePicker = new DateTimePicker
         {
             Format = DateTimePickerFormat.Custom,
@@ -612,7 +614,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
             if (!string.IsNullOrWhiteSpace(directory))
             {
-                // Crea la cartella se non esiste — feedback immediato all'utente.
+                // Create the folder if missing — immediate feedback to the user.
                 try { Directory.CreateDirectory(directory); }
                 catch (Exception ex)
                 {
@@ -828,9 +830,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private static DateTime ParsePreferredTimeAsDateTime(string raw)
     {
-        // Il DateTimePicker richiede un DateTime completo: usiamo la data
-        // "oggi" e sovrascriviamo solo l'orario. Se il parsing fallisce
-        // (default vuoto o testo invalido) fallback a 03:00.
+        // DateTimePicker needs a full DateTime: use "today" and
+        // overwrite just the time part. If parsing fails (empty
+        // default or invalid text) fall back to 03:00.
         if (!string.IsNullOrWhiteSpace(raw) &&
             (TimeOnly.TryParseExact(raw, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var t) ||
              TimeOnly.TryParse(raw, CultureInfo.InvariantCulture, out t)))

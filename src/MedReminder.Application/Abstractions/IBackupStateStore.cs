@@ -1,9 +1,9 @@
 namespace MedReminder.Application.Abstractions;
 
-// Stato runtime del backup (separato dalle preferenze).
-// Persistito in %LOCALAPPDATA%\MedReminder\backup.state.json.
-// Non fa parte di IConfiguration: cambia frequentemente e non è
-// interessante osservarne il diff via reload.
+// Backup runtime state (kept separate from preferences).
+// Persisted to %LOCALAPPDATA%\MedReminder\backup.state.json.
+// Not part of IConfiguration: it changes frequently and there is no
+// value in observing its diff via reload.
 public sealed record BackupState(
     DateTimeOffset? LastSuccessfulBackupAt,
     DateTimeOffset? LastAttemptAt,

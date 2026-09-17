@@ -18,9 +18,9 @@ internal sealed class MedicineConfiguration : IEntityTypeConfiguration<Medicine>
         builder.Property(m => m.DoctorName).HasMaxLength(200);
         builder.Property(m => m.Notes).HasMaxLength(1000);
 
-        // SQLite non ha decimal nativo. Uso HasConversion<string> per
-        // memorizzare come TEXT preservando la precisione (evita gli
-        // arrotondamenti che REAL introdurrebbe).
+        // SQLite has no native decimal. HasConversion<string> stores
+        // it as TEXT preserving precision (avoids the rounding REAL
+        // would introduce).
         builder.Property(m => m.DosePerAdministration).HasConversion<string>();
 
         builder.Property(m => m.NotificationChannels).HasConversion<int>();

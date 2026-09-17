@@ -6,7 +6,7 @@ namespace MedReminder.Infrastructure.Tests.Support;
 
 // Fixture per test integrazione: SQLite in-memory con connessione
 // tenuta aperta per la vita del test. Ogni test istanzia il proprio
-// fixture -> DB completamente isolato (nessuna interferenza tra test).
+// fixture -> fully isolated DB (no interference between tests).
 // Da usare in `using` per garantire dispose deterministico.
 internal sealed class SqliteInMemoryFixture : IDisposable
 {

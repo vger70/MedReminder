@@ -2,7 +2,7 @@ namespace MedReminder.Application.Tests.Support;
 
 // TimeProvider di test: orologio manuale in UTC. LocalTimeZone forzato a
 // UTC per rendere deterministica la conversione "local day" nei test —
-// evita che il fuso della macchina di build influenzi il risultato.
+// prevents the build machine's time zone from affecting the result.
 internal sealed class FakeTimeProvider : TimeProvider
 {
     private DateTimeOffset _utcNow;

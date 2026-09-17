@@ -5,13 +5,13 @@ using MedReminder.Domain.Medicines;
 
 namespace MedReminder.UI.Forms;
 
-// Dialog per registrare una singola assunzione (spec §6, esposto in
-// Incremento 9c). Lo status decide se creare anche uno StockMovement
-// Consumption:
-//   Taken           → sì, scorta scende di Quantity
-//   Skipped         → no, ma la giornata è marcata come "gestita"
-//   Cancelled       → no, cancellazione di una assunzione registrata
-//                     precedentemente (uso storico/audit).
+// Dialog to record a single intake (spec §6, exposed in
+// Increment 9c). The status decides whether to also create a
+// Consumption StockMovement:
+//   Taken           → yes, stock decreases by Quantity
+//   Skipped         → no, but the day is marked as "handled"
+//   Cancelled       → no, cancels a previously recorded intake
+//                     (historical / audit use).
 internal sealed class IntakeDialog : MedReminderFormBase
 {
     public IntakeResult? Result { get; private set; }
@@ -71,7 +71,7 @@ internal sealed class IntakeDialog : MedReminderFormBase
             Format = DateTimePickerFormat.Short,
             Dock = DockStyle.Fill,
             Value = DateTime.Today,
-            MaxDate = DateTime.Today,   // non registrabile per il futuro
+            MaxDate = DateTime.Today,   // not recordable for the future
         };
 
         _notesBox = new TextBox

@@ -31,7 +31,7 @@ internal sealed class InMemoryMedicationSuspensionRepository
 
     public Task UpdateAsync(MedicationSuspension suspension, CancellationToken cancellationToken)
     {
-        // È già lo stesso riferimento nella lista: nulla da fare per le
+        // Already the same reference in the list: nothing to do for
         // proprietà mutabili. Manteniamo il metodo per parità con l'API
         // del repository reale.
         _ = suspension;

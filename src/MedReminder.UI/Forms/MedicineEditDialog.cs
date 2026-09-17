@@ -5,10 +5,11 @@ using MedReminder.Domain.Notifications;
 
 namespace MedReminder.UI.Forms;
 
-// Dialog usato sia per "nuova medicina" (Mode=Create) sia per "modifica"
-// (Mode=Edit). Al termine espone Result: null se l'utente annulla,
-// altrimenti un DTO con i campi validi. La persistenza avviene nel
-// chiamante (MainForm) invocando il use case appropriato.
+// Dialog used both for "new medicine" (Mode=Create) and for "edit"
+// (Mode=Edit). At the end it exposes Result: null if the user
+// cancels, otherwise a DTO with the valid fields. Persistence is
+// performed by the caller (MainForm) by invoking the appropriate
+// use case.
 internal sealed class MedicineEditDialog : MedReminderFormBase
 {
     public enum EditMode { Create, Edit }
@@ -378,8 +379,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }
 
-// Trasporta dati tra dialog e caller in entrambi i sensi (seed per Edit).
-// Immutabile lato dialog: l'utente ottiene una nuova instance dopo Save.
+// Carries data between the dialog and the caller in both directions
+// (seed for Edit). Immutable on the dialog side: the user gets a new
+// instance after Save.
 internal sealed record MedicineEditResult(
     string Name,
     string? ActiveIngredient,
@@ -413,10 +415,10 @@ internal sealed record MedicineEditResult(
         InitialQuantity: InitialQuantity,
         AdministrationSlots: MapSlots());
 
-    // Passa sempre gli slot (anche vuoti): il use case UpdateMedicine
-    // distingue null=lascia-come-sono vs [] = azzera. Qui l'utente ha
-    // esplicitamente confermato la lista corrente, quindi vogliamo che
-    // venga applicata (sostituzione atomica).
+    // Always pass the slots (even empty): the UpdateMedicine use case
+    // distinguishes null=leave-as-is vs [] = clear. Here the user has
+    // explicitly confirmed the current list, so we want it applied
+    // (atomic replacement).
     public UpdateMedicineCommand ToUpdateCommand(Guid id) => new(
         MedicineId: id,
         Name: Name,
