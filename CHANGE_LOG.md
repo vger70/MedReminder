@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #13 — Add drug reference catalogue design analysis
+## PR #13 — Add drug reference catalogue design analysis (with M0 findings)
 
 Link: [vger70/MedReminder#13](https://github.com/vger70/MedReminder/pull/13)
 **Status:** open
@@ -48,9 +48,40 @@ Branch: `claude/database-principi-attivi-gl3rnw`
   strategy, localisation notes for the five shipped languages
   (`de`, `en`, `es`, `fr`, `it`), risks, effort estimate and the
   seven §12 decisions with their current status.
+- §3.1 M0 marked as completed. Full field mapping and
+  cardinalities are recorded in the M0 comment on issue
+  [#9](https://github.com/vger70/MedReminder/issues/9#issuecomment-5718752090):
+  85,697 imported packages, 9,619 commercial names,
+  5,750 active ingredients, 2,269 ATC codes after applying the
+  two documented import filters.
+- §2.4 schema: three new optional columns on `reference_medicines`
+  — `dispensing_regime` (from AIFA `FORNITURA`), `link_leaflet`
+  (from `LINK_FI`), `link_spc` (from `LINK_RCP`).
+- §3.2 M1: documented two AIFA import filters — skip
+  `TIPO_PROCEDURA = 'Omeopatico'` (74k rows, 46%) and skip
+  `PRINCIPIO_ATTIVO = 'N.D.'` in `PA_confezioni` (53k rows).
+- §7 Risks: replaced the speculative snapshot-size row with the
+  measured baseline (gzipped snapshot ~17–22 MB, SQLite growth
+  ~60–80 MB).
+- §12.1 marked Resolved with the resolved dataset choice
+  (`confezioni_fornitura.csv` joined with `PA_confezioni.csv`).
 - Follow-up to the discovery notes in
   [#9](https://github.com/vger70/MedReminder/issues/9).
 - No source code changes; no runtime behaviour changes.
+
+### Added
+
+- `tests/fixtures/catalogue/aifa-confezioni-sample.csv`,
+  `aifa-pa-sample.csv`, `aifa-atc-sample.csv` — 198 + 253 + 76
+  rows stratified from real AIFA open data. Cover `Sospesa`
+  status, `Procedura Centralizzata` (EU-authorised), OTC,
+  hospital-only, well-known brands (Augmentin, Aspirina,
+  Tachipirina, Cardura, Eutirox, Coumadin, Zoloft, …), common
+  active ingredients (paracetamolo, ibuprofene, metformina,
+  olmesartan, atorvastatina, simvastatina, omeprazolo,
+  amoxicillina, ramipril, bisoprololo), and 37 multi-ingredient
+  combinations so the M2M table is exercised. Consumed by M1
+  integration tests once M1 lands.
 
 ## PR #8 — Bump WebView2 to 1.0.4191.47; drop unused WPF reference
 
