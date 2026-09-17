@@ -23,4 +23,27 @@
     <ProjectReference Include="..\..\src\MedReminder.Application\MedReminder.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\assets\localization\strings.en.json">
+      <Link>localization\strings.en.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.it.json">
+      <Link>localization\strings.it.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.fr.json">
+      <Link>localization\strings.fr.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.es.json">
+      <Link>localization\strings.es.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.de.json">
+      <Link>localization\strings.de.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
