@@ -102,6 +102,10 @@
       <Link>localization\USER_GUIDE.es.md</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\docs\USER_GUIDE.de.md">
+      <Link>localization\USER_GUIDE.de.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="..\..\docs\USER_GUIDE.en.md">
       <Link>Assets\USER_GUIDE.en.md</Link>
       <LogicalName>USER_GUIDE.en.md</LogicalName>
@@ -117,6 +121,10 @@
     <EmbeddedResource Include="..\..\docs\USER_GUIDE.es.md">
       <Link>Assets\USER_GUIDE.es.md</Link>
       <LogicalName>USER_GUIDE.es.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.de.md">
+      <Link>Assets\USER_GUIDE.de.md</Link>
+      <LogicalName>USER_GUIDE.de.md</LogicalName>
     </EmbeddedResource>
     <!-- Localization dictionaries (Increment 16a). Copied as
          Content into bin/localization/ so they are inspectable and
@@ -139,6 +147,10 @@
       <Link>localization\strings.es.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\localization\strings.de.json">
+      <Link>localization\strings.de.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="..\..\assets\localization\strings.en.json">
       <Link>Assets\strings.en.json</Link>
       <LogicalName>strings.en.json</LogicalName>
@@ -154,6 +166,10 @@
     <EmbeddedResource Include="..\..\assets\localization\strings.es.json">
       <Link>Assets\strings.es.json</Link>
       <LogicalName>strings.es.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\localization\strings.de.json">
+      <Link>Assets\strings.de.json</Link>
+      <LogicalName>strings.de.json</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

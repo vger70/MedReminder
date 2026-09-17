@@ -16,6 +16,7 @@
   "Language.Italian": "Italian",
   "Language.French": "French",
   "Language.Spanish": "Spanish",
+  "Language.German": "German",
 
   "Domain.Medicine.Status.Ok": "OK",
   "Domain.Medicine.Status.Warning": "Warning",

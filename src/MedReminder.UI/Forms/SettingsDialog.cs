@@ -242,6 +242,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         "it" => "Language.Italian",
         "fr" => "Language.French",
         "es" => "Language.Spanish",
+        "de" => "Language.German",
         _ => "Language.English",
     };
 

@@ -16,6 +16,9 @@ public sealed class UserSettings
     // ISO 639-1 language code, lowercase. Supported values:
     //   "en" — English (default)
     //   "it" — Italian
+    //   "fr" — French
+    //   "es" — Spanish
+    //   "de" — German
     // Any other value falls back to English (fail-safe).
     public string Language { get; set; } = "en";
 }
@@ -32,6 +35,7 @@ public static class SupportedLanguages
         new SupportedLanguage("it", "Italiano", CultureInfo.GetCultureInfo("it")),
         new SupportedLanguage("fr", "Français", CultureInfo.GetCultureInfo("fr")),
         new SupportedLanguage("es", "Español", CultureInfo.GetCultureInfo("es")),
+        new SupportedLanguage("de", "Deutsch", CultureInfo.GetCultureInfo("de")),
     };
 
     public static SupportedLanguage Resolve(string? code)
