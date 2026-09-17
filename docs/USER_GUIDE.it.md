@@ -19,6 +19,20 @@ Guida operativa per l'utente finale. Il file
    nell'area di notifica di Windows resta sempre visibile finché
    l'app è in esecuzione.
 
+### SmartScreen di Windows al primo lancio
+
+I binari distribuiti non sono firmati digitalmente. Al primo lancio
+di `MedReminder.exe`, Windows mostra una finestra blu "PC protetto
+da Windows". Per procedere:
+
+1. Clicca **Ulteriori informazioni**.
+2. Clicca **Esegui comunque**.
+
+Windows ricorda la scelta per quello specifico file: gli avvii
+successivi non chiederanno più conferma. Se installi tramite MSI, la
+finestra UAC riporta "Editore sconosciuto" per lo stesso motivo ed è
+normale.
+
 ## Aggiungere una medicina
 
 1. Toolbar → **Nuova medicina**.
