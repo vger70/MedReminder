@@ -163,6 +163,7 @@ public static class NotificationTexts
             "it" => "it",
             "fr" => "fr",
             "es" => "es",
+            "de" => "de",
             _ => "en",
         };
     }
