@@ -1,8 +1,8 @@
 namespace MedReminder.UI.Presentation;
 
-// Riga della griglia principale (spec §13). Struttura piatta ottimizzata
-// per DataGridView data-binding; le regole di stato/colore vivono nel
-// MainForm che formatta la cella per riga.
+// Row of the main grid (spec §13). Flat structure optimized for
+// DataGridView data binding; the status / color rules live in
+// MainForm, which formats the cell per row.
 internal sealed class MedicineListItem
 {
     public Guid Id { get; set; }
@@ -16,15 +16,15 @@ internal sealed class MedicineListItem
     public bool IsSuspended { get; set; }
     public MedicineRowStatus Status { get; set; }
 
-    // Formattazioni pronte per il grid — evitano di replicare le
-    // conversioni in ogni cell-formatting event.
+    // Pre-formatted values for the grid — avoid replicating the
+    // conversions in every cell-formatting event.
     public string StockDisplay => $"{CurrentStock:0.##} {Unit}".TrimEnd();
-    public string DailyRateDisplay => DailyRate <= 0m ? "—" : $"{DailyRate:0.##}/gg";
+    public string DailyRateDisplay => DailyRate <= 0m ? "—" : $"{DailyRate:0.##}/day";
     public string DaysRemainingDisplay => DaysRemaining is null ? "—" : DaysRemaining.Value.ToString();
     public string EtaDisplay => EstimatedRunOutDate?.ToString("d") ?? "—";
-    // Impostato dal MedicineOverviewLoader in base alla lingua corrente
-    // dell'ILocalizationService — evita di iniettare il service in un DTO
-    // di databinding.
+    // Set by MedicineOverviewLoader based on the current language of
+    // ILocalizationService — avoids injecting the service into a
+    // data-binding DTO.
     public string StatusDisplay { get; set; } = string.Empty;
 }
 

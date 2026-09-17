@@ -3,25 +3,26 @@ using System.Reflection;
 
 namespace MedReminder.UI;
 
-// Icona applicazione: caricata una volta dall'embedded resource
-// "MedReminder.UI.medreminder.ico" e riusata da MedReminderFormBase
-// (tutte le form) e da ApplicationTrayIcon.
+// Application icon: loaded once from the embedded resource
+// "MedReminder.UI.medreminder.ico" and reused by MedReminderFormBase
+// (every form) and by ApplicationTrayIcon.
 //
-// System.Drawing.Icon carica dallo stream tutte le sotto-risoluzioni
-// disponibili nell'ico; Windows sceglie la size giusta in base al
-// contesto (title bar 16×16, alt-tab 32×32, taskbar 24/32, ecc.).
+// System.Drawing.Icon loads every sub-resolution available in the ico
+// from the stream; Windows picks the right size based on the context
+// (title bar 16×16, alt-tab 32×32, taskbar 24 / 32, etc.).
 //
-// Tenere un singolo Icon condiviso è ok: NON viene mai disposato
-// finché il processo è vivo (l'app owns the icon per l'intera durata).
+// Keeping a single shared Icon is fine: it is NEVER disposed while
+// the process is alive (the app owns the icon for its entire
+// lifetime).
 internal static class AppIcon
 {
     private const string ResourceName = "MedReminder.UI.medreminder.ico";
 
     private static readonly Lazy<Icon?> Instance = new(LoadFromResource);
 
-    // Icona applicazione. Ritorna null se il resource non è stato
-    // trovato (build corrotta): il caller deve gestire il fallback
-    // sull'icona default WinForms.
+    // Application icon. Returns null if the resource cannot be found
+    // (corrupted build): the caller must handle the fallback to the
+    // default WinForms icon.
     public static Icon? Default => Instance.Value;
 
     private static Icon? LoadFromResource()
@@ -29,9 +30,9 @@ internal static class AppIcon
         var assembly = Assembly.GetExecutingAssembly();
         using var stream = assembly.GetManifestResourceStream(ResourceName);
         if (stream is null) return null;
-        // Copia lo stream: Icon(stream) legge lazy e chiude quando finisce,
-        // ma tenere il file MemoryStream persistente in un Lazy è più
-        // sicuro contro dispose prematuri.
+        // Copy the stream: Icon(stream) reads lazily and closes when
+        // done, but keeping a persistent MemoryStream inside a Lazy
+        // is safer against premature disposal.
         var ms = new MemoryStream();
         stream.CopyTo(ms);
         ms.Position = 0;

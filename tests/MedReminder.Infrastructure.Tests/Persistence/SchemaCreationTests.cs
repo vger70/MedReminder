@@ -7,10 +7,10 @@ namespace MedReminder.Infrastructure.Tests.Persistence;
 
 public class SchemaCreationTests
 {
-    // Se EnsureCreated ha materializzato lo schema, ogni DbSet deve poter
-    // essere interrogato senza sollevare "no such table". Non usiamo
-    // sqlite_master direttamente: la sanità del mapping EF Core → SQLite
-    // è quello che vogliamo davvero verificare.
+    // If EnsureCreated has materialized the schema, every DbSet must
+    // be queryable without raising "no such table". We do not use
+    // sqlite_master directly: the sanity of the EF Core → SQLite
+    // mapping is what we actually want to verify.
     [Fact]
     public async Task Every_entity_set_is_queryable_after_ensure_created()
     {

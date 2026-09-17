@@ -5,9 +5,9 @@
     <RootNamespace>MedReminder.Infrastructure</RootNamespace>
     <AssemblyName>MedReminder.Infrastructure</AssemblyName>
     <IsPackable>false</IsPackable>
-    <!-- NotifyIcon lives in System.Windows.Forms: abilitiamo WinForms qui
-         per l'adapter di notifica locale. La UI (Incremento 6) userà lo
-         stesso namespace WinForms. -->
+    <!-- NotifyIcon lives in System.Windows.Forms: enable WinForms
+         here for the local notification adapter. The UI
+         (Increment 6) uses the same WinForms namespace. -->
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 

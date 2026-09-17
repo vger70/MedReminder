@@ -39,9 +39,10 @@ Branch: `claude/compassionate-pasteur-qmmt3h`
 ### Added
 
 - `CLAUDE.md` at the repository root, with repository conventions,
-  the English-only language policy (exception: `USER_GUIDE.it.md`),
-  build / test / publish commands, branch policy, data locations and
-  the pending code-comment translation task.
+  the English-only language policy (exception: `USER_GUIDE.it.md`
+  and the JSON translation dictionaries under
+  `assets/localization/`), build / test / publish commands, branch
+  policy, data locations and pointers to CHANGE_LOG.md maintenance.
 - `CHANGE_LOG.md` (this file) with per-PR entries and maintenance
   rules.
 
@@ -51,9 +52,20 @@ Branch: `claude/compassionate-pasteur-qmmt3h`
   `packaging/msix/Assets/README.md` translated from Italian to
   English. `USER_GUIDE.en.md` and `USER_GUIDE.it.md` intentionally
   left as-is — they are shipped to the end user in each locale.
-- Italian comments in the C# source code, publish profiles, workflow,
-  csproj files, WiX / MSIX packaging and packaging scripts translated
-  to English (identifiers and behavior unchanged).
+- Every Italian comment, log message, exception message and
+  hardcoded fallback string in the C# source (Domain, Application,
+  Infrastructure, UI and test projects) translated to English.
+  Identifiers and public APIs are untouched; hardcoded fallback
+  strings in `NotificationTexts` and `TherapyReport` now default to
+  English (matching the app's default locale) — used only when no
+  `ILocalizationService` is registered.
+- Italian comments in the ancillary config files translated to
+  English: `.csproj`, `.pubxml` publish profiles, WiX `Product.wxs`
+  and `MedReminder.wixproj`, MSIX `Package.appxmanifest`,
+  `MedReminder.mapping.txt` and `priconfig.xml`, packaging scripts
+  (`build-installer.ps1`, `make-selfsigned-cert.ps1`,
+  `sign-artifact.ps1`), the GitHub Actions workflow, WiX
+  `License.rtf` and `assets/build/generate_icon.py`.
 
 ### Build
 

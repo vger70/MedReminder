@@ -8,10 +8,10 @@ using Xunit;
 
 namespace MedReminder.Infrastructure.Tests.Email;
 
-// Non è possibile testare unit-test un vero invio SMTP senza spinning
+// A real SMTP send cannot be unit-tested without spinning up
 // di un fake server (fuori scope MVP). Ci concentriamo sulle
 // pre-condizioni: configurazione incompleta -> throw / TestConnection
-// ritorna false; credenziali non presenti -> throw specifico.
+// returns false; missing credentials -> specific throw.
 public class MailKitEmailNotificationServiceTests
 {
     [Fact]

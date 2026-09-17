@@ -6,13 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace MedReminder.UI.Hosting;
 
-// Scheduler interno del monitor (spec §18): esegue un catch-up del
-// consumo e un ciclo di controllo notifiche a intervalli regolari.
+// Internal monitor scheduler (spec §18): runs a consumption catch-up
+// and a notification check cycle at regular intervals.
 //
-// Vive nel progetto UI perché è la composition root a decidere quando
-// avviare la logica di monitoring — coerente con ANALYSIS §2.6.
-// Ogni tick crea la propria scope DI: EF Core resta scoped, il
-// DbContext non viene condiviso tra tick concorrenti.
+// Lives in the UI project because the composition root decides when
+// to start the monitoring logic — consistent with ANALYSIS §2.6.
+// Every tick creates its own DI scope: EF Core stays scoped, the
+// DbContext is not shared between concurrent ticks.
 internal sealed class MedicationMonitorHostedService : BackgroundService
 {
     private const int DefaultIntervalMinutes = 30;
@@ -30,7 +30,7 @@ internal sealed class MedicationMonitorHostedService : BackgroundService
         _services = services;
         _log = log;
 
-        // Uso l'indexer stringa per evitare una dipendenza esplicita da
+        // Use the string indexer to avoid an explicit dependency on
         // Microsoft.Extensions.Configuration.Binder (GetValue<T>).
         var raw = configuration["Monitoring:IntervalMinutes"];
         var configured = int.TryParse(raw, out var v) ? v : DefaultIntervalMinutes;
@@ -41,7 +41,7 @@ internal sealed class MedicationMonitorHostedService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _log.LogInformation(
-            "Monitor scheduler avviato; intervallo {IntervalMinutes} minuti.",
+            "Monitor scheduler started; interval {IntervalMinutes} minutes.",
             _interval.TotalMinutes);
 
         await RunOnceAsync(stoppingToken);
@@ -64,7 +64,7 @@ internal sealed class MedicationMonitorHostedService : BackgroundService
             await RunOnceAsync(stoppingToken);
         }
 
-        _log.LogInformation("Monitor scheduler fermato.");
+        _log.LogInformation("Monitor scheduler stopped.");
     }
 
     private async Task RunOnceAsync(CancellationToken cancellationToken)
@@ -79,17 +79,17 @@ internal sealed class MedicationMonitorHostedService : BackgroundService
             var result = await monitor.RunAsync(cancellationToken);
 
             _log.LogInformation(
-                "Tick monitor: consumi materializzati={Consumptions}, medicine ispezionate={Inspected}, notifiche inviate={Sent}",
+                "Monitor tick: consumptions materialized={Consumptions}, medicines inspected={Inspected}, notifications sent={Sent}",
                 consumptionCreated, result.MedicinesInspected, result.NotificationsSent);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // shutdown pulito: non è un errore.
+            // Clean shutdown: not an error.
         }
         catch (Exception ex)
         {
-            // Un errore in un tick non deve fermare lo scheduler.
-            _log.LogError(ex, "Errore nel tick del monitor medicine.");
+            // A single tick error must not stop the scheduler.
+            _log.LogError(ex, "Error in the medicine monitor tick.");
         }
     }
 }

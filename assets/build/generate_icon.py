@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Generatore dell'icona MedReminder.
+Generator of the MedReminder icon.
 
-Produce:
-  - assets/medreminder.svg  (sorgente vettoriale, ~solo per riferimento)
-  - assets/medreminder.ico  (multi-risoluzione 16/24/32/48/64/128/256)
-  - assets/medreminder-256.png (per anteprima/README)
+Produces:
+  - assets/medreminder.svg  (vector source, ~for reference only)
+  - assets/medreminder.ico  (multi-resolution 16/24/32/48/64/128/256)
+  - assets/medreminder-256.png (for preview / README)
 
-Design: pillola/capsula orizzontale ruotata di -30 gradi, bicolore
-blu scuro/blu chiaro, senza sfondo, con highlight superiore.
-Dimensione target di riferimento: 256x256.
+Design: horizontal pill / capsule rotated by -30 degrees, two-tone
+dark blue / light blue, transparent background, top highlight.
+Reference target size: 256x256.
 
-Prerequisiti: pip install Pillow
+Prerequisites: pip install Pillow
 
-Esecuzione:
+Run:
   python3 assets/build/generate_icon.py
 """
 
@@ -28,19 +28,19 @@ ROOT = Path(__file__).resolve().parents[2]
 ASSETS = ROOT / "assets"
 ASSETS.mkdir(exist_ok=True)
 
-# Palette blu MedReminder.
+# MedReminder blue palette.
 BLUE_DARK = (31, 90, 166, 255)     # #1F5AA6
 BLUE_LIGHT = (74, 158, 255, 255)   # #4A9EFF
-HIGHLIGHT = (255, 255, 255, 110)    # bianco semitrasparente
+HIGHLIGHT = (255, 255, 255, 110)    # semi-transparent white
 
 ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]
-CANVAS = 512  # renderizziamo a 512 e poi facciamo downsample: bordi più lisci
+CANVAS = 512  # render at 512 and downsample: smoother edges
 
 
 def draw_pill(canvas_size: int) -> Image.Image:
-    """Disegna la capsula ruotata su un'immagine canvas_size x canvas_size."""
-    # Renderizza la capsula orizzontale su un'immagine sovradimensionata
-    # per far spazio alla rotazione senza clipping.
+    """Draw the rotated capsule on a canvas_size x canvas_size image."""
+    # Render the horizontal capsule on an oversized image so the
+    # rotation does not clip.
     pad = canvas_size // 4
     pill_w = int(canvas_size * 0.78)
     pill_h = int(canvas_size * 0.34)
@@ -56,21 +56,22 @@ def draw_pill(canvas_size: int) -> Image.Image:
     xm = (x0 + x1) // 2
     r = pill_h // 2
 
-    # ---- Metà sinistra (blu scuro) ----
-    # Semicerchio sinistro + rettangolo fino a xm.
+    # ---- Left half (dark blue) ----
+    # Left semicircle + rectangle up to xm.
     draw.pieslice([x0, y0, x0 + pill_h, y1], start=90, end=270, fill=BLUE_DARK)
     draw.rectangle([x0 + r, y0, xm, y1], fill=BLUE_DARK)
 
-    # ---- Metà destra (blu chiaro) ----
+    # ---- Right half (light blue) ----
     draw.pieslice([x1 - pill_h, y0, x1, y1], start=270, end=450, fill=BLUE_LIGHT)
     draw.rectangle([xm, y0, x1 - r, y1], fill=BLUE_LIGHT)
 
-    # ---- Linea di giunzione centrale (leggerissima ombra) ----
+    # ---- Central joint line (very slight shadow) ----
     line_w = max(1, canvas_size // 128)
     draw.line([(xm, y0), (xm, y1)], fill=(255, 255, 255, 40), width=line_w)
 
-    # ---- Highlight superiore per dare volume ----
-    # Ellisse schiacciato bianco semitrasparente sulla metà alta della pillola.
+    # ---- Top highlight for volume ----
+    # Flattened semi-transparent white ellipse on the upper half of
+    # the pill.
     hl_pad_x = int(pill_w * 0.10)
     hl_h = int(pill_h * 0.35)
     hl_y = y0 + int(pill_h * 0.10)
@@ -79,10 +80,10 @@ def draw_pill(canvas_size: int) -> Image.Image:
         fill=HIGHLIGHT,
     )
 
-    # ---- Rotazione ----
+    # ---- Rotation ----
     rotated = temp.rotate(-30, resample=Image.BICUBIC, expand=True)
 
-    # Componi centrato su canvas quadrato trasparente.
+    # Compose centered on a transparent square canvas.
     canvas = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
     ox = (canvas_size - rotated.width) // 2
     oy = (canvas_size - rotated.height) // 2
@@ -91,11 +92,11 @@ def draw_pill(canvas_size: int) -> Image.Image:
 
 
 def write_svg() -> None:
-    """Scrive una versione SVG stilizzata equivalente (sorgente/riferimento).
+    """Write an equivalent stylized SVG version (source / reference).
 
-    Non è usata dall'app a runtime — l'app usa l'ICO. Utile per README e
-    modifiche future: chi vuole ritoccare il design lavora qui e ri-genera
-    l'ICO con questo script.
+    Not used by the app at runtime — the app uses the ICO. Useful for
+    the README and future changes: anyone who wants to tweak the
+    design works here and re-generates the ICO with this script.
     """
     svg = """<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
@@ -106,13 +107,13 @@ def write_svg() -> None:
     </linearGradient>
   </defs>
   <g transform="translate(256 256) rotate(-30) translate(-256 -256)">
-    <!-- Metà sinistra -->
+    <!-- Left half -->
     <path d="M 96 176 L 256 176 L 256 336 L 96 336 A 80 80 0 0 1 96 176 Z" fill="#1F5AA6"/>
-    <!-- Metà destra -->
+    <!-- Right half -->
     <path d="M 416 176 L 256 176 L 256 336 L 416 336 A 80 80 0 0 0 416 176 Z" fill="#4A9EFF"/>
-    <!-- Linea di giunzione centrale (leggera) -->
+    <!-- Central joint line (subtle) -->
     <line x1="256" y1="176" x2="256" y2="336" stroke="#ffffff" stroke-opacity="0.25" stroke-width="3"/>
-    <!-- Highlight superiore -->
+    <!-- Top highlight -->
     <ellipse cx="256" cy="212" rx="120" ry="22" fill="url(#hl)"/>
   </g>
 </svg>
@@ -121,7 +122,7 @@ def write_svg() -> None:
 
 
 def main() -> None:
-    # 1) Renderizza a 512, poi genera i mip-map per ogni size richiesto.
+    # 1) Render at 512, then generate mip-maps for each requested size.
     big = draw_pill(CANVAS)
 
     frames = []
@@ -129,23 +130,23 @@ def main() -> None:
         frame = big.resize((size, size), resample=Image.LANCZOS)
         frames.append(frame)
 
-    # 2) PNG di anteprima 256.
+    # 2) 256 preview PNG.
     preview = big.resize((256, 256), resample=Image.LANCZOS)
     preview.save(ASSETS / "medreminder-256.png", "PNG")
 
-    # 3) Scrivi l'ICO multi-res.
-    # Pillow scarta le sizes richieste se sono più grandi dell'immagine
-    # base: usiamo quindi la frame PIÙ GRANDE come base e lasciamo che
-    # sizes= elenchi tutte le risoluzioni desiderate. Pillow farà il
-    # downsampling interno con LANCZOS.
-    largest = big  # 512x512 render pulito
+    # 3) Write the multi-resolution ICO.
+    # Pillow drops requested sizes that are larger than the base
+    # image: we therefore use the LARGEST frame as the base and let
+    # sizes= list every desired resolution. Pillow will downsample
+    # internally with LANCZOS.
+    largest = big  # 512x512 clean render
     largest.save(
         ASSETS / "medreminder.ico",
         format="ICO",
         sizes=[(s, s) for s in ICO_SIZES],
     )
 
-    # 4) SVG statico (documentazione, non usato dall'app).
+    # 4) Static SVG (documentation, not used by the app).
     write_svg()
 
     print(f"Wrote: {ASSETS / 'medreminder.ico'}")

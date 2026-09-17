@@ -7,22 +7,23 @@ using Microsoft.Extensions.Options;
 
 namespace MedReminder.UI.Hosting;
 
-// Scheduler del backup automatico giornaliero.
+// Automatic daily backup scheduler.
 //
-// Politica "at-least-once-a-day con orario preferito":
-//   - Tick ogni 15 minuti.
-//   - Backup se: Enabled && LastSuccessfulBackupAt.Date < today locale
-//                && oraLocaleCorrente >= PreferredTime.
-//   - ⇒ Se l'app parte tardi rispetto all'orario preferito (es. PC
-//     acceso alle 09:00 ma orario impostato a 03:00), catch-up
-//     immediato al primo tick.
-//   - ⇒ Se l'app non era attiva a orario, il backup dell'ultimo giorno
-//     è perso; quello del giorno corrente viene fatto al primo tick
-//     dopo l'orario. Nessun giorno con app viva passa senza backup.
+// "At-least-once-a-day with a preferred time" policy:
+//   - Tick every 15 minutes.
+//   - Backup if: Enabled && LastSuccessfulBackupAt.Date < today
+//     (local) && currentLocalTime >= PreferredTime.
+//   - ⇒ If the app starts late relative to the preferred time (e.g.
+//     PC on at 09:00 but time set to 03:00), immediate catch-up on
+//     the first tick.
+//   - ⇒ If the app was not running at the preferred time, the
+//     previous day's backup is lost; the current day's backup runs
+//     at the first tick after the preferred time. No day with a
+//     live app goes without a backup.
 //
-// Fault-tolerant: un fallimento di export/prune non ferma lo scheduler
-// e viene registrato nello state (LastError / LastAttemptAt) oltre che
-// nei log.
+// Fault-tolerant: an export / prune failure does not stop the
+// scheduler and is recorded in the state (LastError /
+// LastAttemptAt) as well as in the logs.
 internal sealed class AutomaticBackupHostedService : BackgroundService
 {
     private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(15);
@@ -52,12 +53,12 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _log.LogInformation(
-            "Backup scheduler avviato; tick ogni {Minutes} minuti.",
+            "Backup scheduler started; tick every {Minutes} minutes.",
             TickInterval.TotalMinutes);
 
-        // Ritardo iniziale: lasciamo al DatabaseInitializer e al monitor
-        // il tempo di stabilizzarsi prima di aprire una nuova connessione
-        // sul DB per l'eventuale backup.
+        // Initial delay: give DatabaseInitializer and the monitor
+        // time to stabilize before opening a new connection to the
+        // DB for a possible backup.
         try
         {
             await Task.Delay(InitialDelay, stoppingToken);
@@ -80,7 +81,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             }
         }
 
-        _log.LogInformation("Backup scheduler fermato.");
+        _log.LogInformation("Backup scheduler stopped.");
     }
 
     private async Task TryRunAsync(CancellationToken cancellationToken)
@@ -91,7 +92,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             if (!settings.Enabled) return;
             if (string.IsNullOrWhiteSpace(settings.Directory))
             {
-                _log.LogWarning("Backup abilitato ma cartella non configurata; skip.");
+                _log.LogWarning("Backup enabled but no folder configured; skip.");
                 return;
             }
 
@@ -107,19 +108,19 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                     ConvertToLocal(last).DateTime);
                 if (lastLocalDay >= todayLocal)
                 {
-                    // Backup di oggi già fatto.
+                    // Today's backup already done.
                     return;
                 }
             }
 
             if (timeOfDay < preferred)
             {
-                // Non è ancora l'ora.
+                // Not yet time.
                 return;
             }
 
             _log.LogInformation(
-                "Avvio backup automatico giornaliero in {Directory}.",
+                "Starting automatic daily backup into {Directory}.",
                 settings.Directory);
 
             await using var scope = _services.CreateAsyncScope();
@@ -141,16 +142,16 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 LastBackupFile: file));
 
             _log.LogInformation(
-                "Backup automatico completato: {File} (retention: {Pruned} file rimossi).",
+                "Automatic backup completed: {File} (retention: {Pruned} files removed).",
                 file, pruned);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // Shutdown pulito.
+            // Clean shutdown.
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "Backup automatico fallito.");
+            _log.LogError(ex, "Automatic backup failed.");
             try
             {
                 var existing = _stateStore.Load();
@@ -162,8 +163,8 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             }
             catch
             {
-                // Se persino lo state store è rotto, il log resta l'unica
-                // fonte di verità per questo ciclo.
+                // If even the state store is broken, the log is the
+                // only source of truth for this cycle.
             }
         }
     }

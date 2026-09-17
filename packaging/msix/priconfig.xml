@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!--
-  Config PRI (Package Resource Index) per MSIX. Definisce le lingue
-  supportate; deve essere coerente con la sezione <Resources> del
-  manifest. Generato via:
+  PRI (Package Resource Index) config for MSIX. Declares the
+  supported languages; must be consistent with the manifest's
+  <Resources> section. Generated via:
 
     MakeAppx.exe /o /if priconfig.xml /pr <publishDir> /cf <this file>
 
-  ma è più semplice usare direttamente il default MakePri:
+  but it is easier to use the MakePri default directly:
     MakePri.exe createconfig /cf priconfig.xml /dq en-US /pv 10.0.19041.0 /o
 
-  poi editare per aggiungere le altre lingue nel qualifier <qualifier>.
+  then edit to add the other languages inside the <qualifier> entry.
 -->
 <resources targetOsVersion="10.0.19041.0" majorVersion="1">
   <packaging>

@@ -16,22 +16,22 @@ using Microsoft.Extensions.Options;
 
 namespace MedReminder.UI.Forms;
 
-// Finestra principale: elenco medicine, toolbar, integrazione tray.
-// Le operazioni asincrone creano una scope DI dedicata via
-// IServiceScopeFactory — il DbContext è Scoped, non deve essere
-// condiviso tra thread o operazioni concorrenti.
+// Main window: medicine list, toolbar, tray integration.
+// Async operations create a dedicated DI scope via
+// IServiceScopeFactory — the DbContext is Scoped, must not be shared
+// between threads or concurrent operations.
 internal sealed class MainForm : MedReminderFormBase
 {
-    // Sfondi tenui applicati a tutta la riga: layer "atmosfera" che
-    // suggerisce lo stato senza sovraccaricare la vista.
+    // Soft backgrounds applied to the whole row: "atmosphere"
+    // layer that hints at the state without overloading the view.
     private static readonly Color WarningColor = Color.FromArgb(255, 245, 205);
     private static readonly Color EmptyColor = Color.FromArgb(255, 210, 210);
     private static readonly Color SuspendedColor = Color.FromArgb(230, 230, 230);
 
-    // Cella "Stato": badge saturo con testo bold contrastato. Layer
-    // "segnale" — leggibile a colpo d'occhio anche se la riga non è
-    // in focus. Palette Material light 200/900 per garantire un
-    // contrasto WCAG AA sui foreground.
+    // "Status" cell: saturated badge with high-contrast bold text.
+    // "Signal" layer — legible at a glance even when the row is not
+    // focused. Material light 200 / 900 palette to guarantee WCAG
+    // AA contrast on the foreground colors.
     private static readonly Color StatusOkBack       = Color.FromArgb(200, 230, 201);  // #C8E6C9
     private static readonly Color StatusOkFore       = Color.FromArgb( 27,  94,  32);  // #1B5E20
     private static readonly Color StatusWarnBack     = Color.FromArgb(255, 236, 179);  // #FFECB3
@@ -53,11 +53,12 @@ internal sealed class MainForm : MedReminderFormBase
     private Panel _errorBanner = null!;
     private Label _errorBannerLabel = null!;
 
-    // Indice della colonna "Stato" per applicare i colori badge nel
-    // RowPrePaint senza dover cercare la colonna per nome ogni volta.
+    // Index of the "Status" column so we can apply the badge
+    // colors in RowPrePaint without looking the column up by name
+    // every time.
     private int _statusColumnIndex = -1;
-    // Font bold cache-ato per le celle dello Stato: creare un Font
-    // nuovo ad ogni prepaint sarebbe sprecato.
+    // Bold font cached for the Status cells: creating a new Font
+    // on every prepaint would be wasteful.
     private Font? _statusCellFont;
 
     private bool _closeToTray = true;
@@ -96,9 +97,10 @@ internal sealed class MainForm : MedReminderFormBase
         _grid = BuildGrid();
         _errorBanner = BuildErrorBanner();
 
-        // TableLayout in 5 righe: menu, toolbar, banner errore, grid, status.
-        // Il MenuStrip va aggiunto a Controls e assegnato a MainMenuStrip
-        // così i keyboard shortcut (Ctrl+N, F5, Alt+F4) funzionano ovunque.
+        // TableLayout with 5 rows: menu, toolbar, error banner,
+        // grid, status. The MenuStrip must be added to Controls AND
+        // assigned to MainMenuStrip so keyboard shortcuts (Ctrl+N,
+        // F5, Alt+F4) work everywhere.
         var container = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -124,17 +126,17 @@ internal sealed class MainForm : MedReminderFormBase
     private MenuStrip BuildMenuStrip()
     {
         // File
-        // Nota: NON registro Alt+F4 come ShortcutKeys — Alt+F4 è già
-        // gestito dall'OS (chiude/nasconde la finestra) e il tray-hide
-        // di OnFormClosing è il comportamento voluto in quel caso.
-        // "Esci" (Ctrl+Q) forza invece l'uscita reale via _reallyExit.
+        // Note: Alt+F4 is NOT registered as ShortcutKeys — the OS
+        // already handles it (closes / hides the window) and the
+        // tray-hide in OnFormClosing is the intended behavior there.
+        // "Exit" (Ctrl+Q) instead forces a real exit via _reallyExit.
         var fileMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.File"));
         var fileExit = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.File.Exit"), null,
             (_, _) => { _reallyExit = true; Close(); })
         { ShortcutKeys = Keys.Control | Keys.Q };
         fileMenu.DropDownItems.Add(fileExit);
 
-        // Terapia
+        // Therapy
         var therapyMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy"));
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.NewMedicine"),
             Mdl2Glyph.Glyphs.Add, Keys.Control | Keys.N,
@@ -238,11 +240,11 @@ internal sealed class MainForm : MedReminderFormBase
             MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
-    // Banner rosso che appare in cima alla griglia quando ReloadAsync
-    // fallisce. Include un pulsante "Riprova" perché lo status label a
-    // fondo pagina è troppo poco visibile per un errore che blocca la
-    // funzionalità principale (spec §19: errore non fatale, UI deve
-    // comunque comunicarlo).
+    // Red banner that appears above the grid when ReloadAsync
+    // fails. Includes a "Retry" button because the status label at
+    // the bottom of the page is too subtle for an error that blocks
+    // the main functionality (spec §19: non-fatal error, but the UI
+    // must still surface it).
     private Panel BuildErrorBanner()
     {
         var banner = new Panel
@@ -442,9 +444,10 @@ internal sealed class MainForm : MedReminderFormBase
             Width = 110,
             DefaultCellStyle = new DataGridViewCellStyle
             {
-                // Alignment e font sono livello-colonna: non cambiano per
-                // riga, così li impostiamo qui una volta. I colori dello
-                // stato invece variano e vanno applicati in RowPrePaint.
+                // Alignment and font are column-level: they do not
+                // change per row, so we set them here once. Status
+                // colors instead vary and must be applied in
+                // RowPrePaint.
                 Alignment = DataGridViewContentAlignment.MiddleCenter,
                 Font = _statusCellFont,
             },
@@ -463,7 +466,7 @@ internal sealed class MainForm : MedReminderFormBase
         var row = _grid.Rows[e.RowIndex];
         var item = _rows[e.RowIndex];
 
-        // Layer 1 — atmosfera sulla riga intera (colori tenui).
+        // Layer 1 — atmosphere across the whole row (soft colors).
         row.DefaultCellStyle.BackColor = item.Status switch
         {
             MedicineRowStatus.Warning => WarningColor,
@@ -472,9 +475,9 @@ internal sealed class MainForm : MedReminderFormBase
             _ => SystemColors.Window,
         };
 
-        // Layer 2 — badge sulla cella "Stato" (bg + fg saturi).
-        // SelectionBackColor/SelectionForeColor uguali al badge per
-        // preservare il segnale anche quando la riga è selezionata.
+        // Layer 2 — badge on the "Status" cell (saturated bg + fg).
+        // SelectionBackColor / SelectionForeColor mirror the badge
+        // so the signal survives even when the row is selected.
         if (_statusColumnIndex < 0 || _statusColumnIndex >= row.Cells.Count) return;
         var (bg, fg) = item.Status switch
         {
@@ -697,7 +700,7 @@ internal sealed class MainForm : MedReminderFormBase
         var row = GetSelectedRow();
         if (row is null) return;
 
-        // La dose default per il dialog è quella corrente della medicina.
+        // The dialog's default dose is the medicine's current one.
         decimal suggestedQuantity;
         try
         {
@@ -721,7 +724,7 @@ internal sealed class MainForm : MedReminderFormBase
             await using var scope = _scopeFactory.CreateAsyncScope();
             var usecase = scope.ServiceProvider.GetRequiredService<RegisterIntake>();
             await usecase.ExecuteAsync(dialog.Result.ToCommand(row.Id), CancellationToken.None);
-            _log.LogInformation("Assunzione registrata per medicina {MedicineId}: {Status} {Quantity} il {Day}",
+            _log.LogInformation("Intake recorded for medicine {MedicineId}: {Status} {Quantity} on {Day}",
                 row.Id, dialog.Result.Status, dialog.Result.Quantity, dialog.Result.Day);
             await ReloadAsync();
         }

@@ -52,28 +52,28 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # Scarica il repository
+      # Check out the repository
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Installa .NET 10
+      # Install .NET 10
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      # Ripristina i pacchetti
+      # Restore the NuGet packages
       - name: Restore
         run: dotnet restore MedReminder.sln
 
-      # Compila e pubblica l'applicazione WinForms.
+      # Build and publish the WinForms application.
       #
       # --self-contained true:
-      # include il runtime .NET nell'applicazione,
-      # quindi l'utente non deve installare .NET 10.
+      # bundles the .NET runtime inside the application, so the user
+      # does not need to install .NET 10 separately.
       #
       # -r win-x64:
-      # crea una versione per Windows 64 bit.
+      # produces a build targeting 64-bit Windows.
       - name: Publish
         run: >
           dotnet publish
@@ -83,7 +83,7 @@ jobs:
           --self-contained true
           -o publish
 
-      # Crea lo ZIP della versione pubblicata
+      # Create the ZIP of the published output
       - name: Create ZIP
         shell: pwsh
         run: |
@@ -91,7 +91,7 @@ jobs:
             -Path publish\* `
             -DestinationPath MedReminder-win-x64.zip
 
-      # Crea la GitHub Release e allega lo ZIP
+      # Create the GitHub Release and attach the ZIP
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

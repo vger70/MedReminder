@@ -4,9 +4,9 @@ using Xunit;
 
 namespace MedReminder.Infrastructure.Tests.Credentials;
 
-// Verifica che lo store cifri il payload prima di scriverlo su disco e
+// Verifies that the store encrypts the payload before writing it to disk and
 // lo restituisca correttamente in chiaro alla lettura. Usa un file
-// temporaneo per non toccare la configurazione reale dell'utente.
+// temporary file so we do not touch the user's real configuration.
 public class SmtpCredentialStoreTests : IDisposable
 {
     private readonly string _tempFile;
@@ -34,7 +34,7 @@ public class SmtpCredentialStoreTests : IDisposable
         sut.HasPassword.Should().BeTrue();
 
         var stored = File.ReadAllText(_tempFile);
-        stored.Should().NotContain("P@ssw0rd!");   // deve essere cifrato
+        stored.Should().NotContain("P@ssw0rd!");   // must be encrypted
 
         sut.GetPassword().Should().Be("P@ssw0rd!");
     }

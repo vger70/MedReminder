@@ -29,8 +29,9 @@ public class RunOutForecastTests
     [Fact]
     public void Fractional_result_is_floored()
     {
-        // 19/2 = 9.5 -> 9 giorni (spec §7 usa il consumo effettivo, quindi
-        // il floor evita di "regalare" un giorno che il calcolo non supporta).
+        // 19/2 = 9.5 -> 9 days (spec §7 uses the effective
+        // consumption, so the floor avoids "gifting" a day the
+        // calculation does not support).
         var result = RunOutForecast.Compute(Today, 19m, 2m, false);
 
         result.DaysRemaining.Should().Be(9);

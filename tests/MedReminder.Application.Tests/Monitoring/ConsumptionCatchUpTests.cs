@@ -11,8 +11,8 @@ namespace MedReminder.Application.Tests.Monitoring;
 public class ConsumptionCatchUpTests
 {
     // Il monitor materializza i consumi giornalieri fino a "ieri" incluso.
-    // I test fissano "oggi" al 2026-09-13; i giorni attesi vanno quindi
-    // dalla StartDate al 2026-09-12.
+    // The tests fix "today" at 2026-09-13; the expected days
+    // therefore run from StartDate to 2026-09-12.
     private static readonly DateTimeOffset FixedNow =
         new(2026, 9, 13, 12, 0, 0, TimeSpan.Zero);
 
@@ -103,7 +103,7 @@ public class ConsumptionCatchUpTests
         consumptions.Should().HaveCount(3);
         consumptions[0].QuantityDelta.Should().Be(-2m);   // 10/9
         consumptions[1].QuantityDelta.Should().Be(-2m);   // 11/9
-        consumptions[2].QuantityDelta.Should().Be(-3m);   // 12/9 (nuova schedule)
+        consumptions[2].QuantityDelta.Should().Be(-3m);   // Sep 12 (new schedule)
     }
 
     [Fact]

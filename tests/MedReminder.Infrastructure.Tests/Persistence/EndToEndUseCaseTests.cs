@@ -14,8 +14,9 @@ namespace MedReminder.Infrastructure.Tests.Persistence;
 
 // Verifica end-to-end che i use case Application, cablati sui repository
 // EF Core reali, producano lo stato atteso in un DB SQLite persistente.
-// Serve a scoprire disallineamenti fra la logica di dominio/applicativa
-// e la mappatura persistente prima che si manifestino in produzione.
+// Exists to catch misalignments between the domain / application
+// logic and the persistent mapping before they show up in
+// production.
 public class EndToEndUseCaseTests
 {
     private static TestTime FixedClock => new(new DateTimeOffset(2026, 9, 13, 12, 0, 0, TimeSpan.Zero));
@@ -146,8 +147,8 @@ public class EndToEndUseCaseTests
         }
     }
 
-    // Cronometro deterministico per i test integrazione (LocalTimeZone
-    // forzato a UTC come nel FakeTimeProvider degli Application.Tests).
+    // Deterministic clock for the integration tests (LocalTimeZone
+    // forced to UTC as in the FakeTimeProvider of Application.Tests).
     private sealed class TestTime : TimeProvider
     {
         private readonly DateTimeOffset _now;
@@ -156,9 +157,9 @@ public class EndToEndUseCaseTests
         public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
     }
 
-    // Fakes minimi per gli output notifiche: NON riesumiamo gli InMemory
-    // da Application.Tests per non introdurre una cross-reference tra
-    // due progetti test.
+    // Minimal fakes for notification outputs: we do NOT resurrect
+    // the InMemory ones from Application.Tests to avoid a
+    // cross-reference between two test projects.
     private sealed class RecordingEmailNotificationService
         : MedReminder.Application.Abstractions.IEmailNotificationService
     {

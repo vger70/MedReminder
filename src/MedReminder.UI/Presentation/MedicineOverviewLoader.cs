@@ -3,11 +3,10 @@ using MedReminder.Domain.Calculations;
 
 namespace MedReminder.UI.Presentation;
 
-// Costruisce la lista dei MedicineListItem per la MainForm.
-// Riutilizza le funzioni pure del dominio (MedicineStock,
-// DailyConsumption, SuspensionState, RunOutForecast): l'aggregato non
-// duplica logica, si limita a orchestrare i repository e a mappare la
-// vista.
+// Builds the list of MedicineListItem for MainForm.
+// Reuses the pure domain functions (MedicineStock, DailyConsumption,
+// SuspensionState, RunOutForecast): the aggregate does not duplicate
+// logic, it only orchestrates the repositories and maps the view.
 internal sealed class MedicineOverviewLoader
 {
     private readonly IMedicineRepository _medicines;

@@ -4,9 +4,9 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.UI.Forms;
 
-// Un solo dialog per: nuova confezione, aggiunta manuale, correzione
-// positiva o negativa. Il caller sceglie la StockOperationKind di default;
-// l'utente può cambiarla prima di confermare.
+// One dialog for: new package, manual addition, positive or
+// negative correction. The caller picks the default
+// StockOperationKind; the user can change it before confirming.
 internal sealed class StockAdjustmentDialog : MedReminderFormBase
 {
     public StockAdjustmentResult? Result { get; private set; }
@@ -127,8 +127,9 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
     }
 }
 
-// Astratto dal dominio StockMovementKind per evitare di esporre nella
-// UI kind che non sono selezionabili qui (InitialLoad, Consumption).
+// Abstracted from the domain StockMovementKind so we do not expose
+// in the UI the kinds that are not selectable here (InitialLoad,
+// Consumption).
 internal enum StockOperationKind
 {
     NewPackage,
