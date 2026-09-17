@@ -343,12 +343,15 @@ blocker.
   stays `NULL`. No validation blocks saving.
 - New Settings entry "Reference country" (default `IT`, dropdown
   over ISO codes present in the local DB plus `EU`).
-- Localisation: add every new UI key to all four
-  `assets/localization/strings.<lang>.json` files.
-- User guide: update `docs/USER_GUIDE.en.md`, `.it.md`, `.fr.md`,
-  `.es.md` with a section explaining the autocomplete, what to do
-  for a medicine not in the catalogue, and the source of the data
-  with its licence.
+- Localisation: add every new UI key to every
+  `assets/localization/strings.<lang>.json` file (currently
+  `de`, `en`, `es`, `fr`, `it`). The existing
+  `DictionaryParityTests` fail the build on any missing key.
+- User guide: update every `docs/USER_GUIDE.<lang>.md` shipped
+  with the app (currently `de`, `en`, `es`, `fr`, `it`) with a
+  section explaining the autocomplete, what to do for a medicine
+  not in the catalogue, and the source of the data with its
+  licence.
 
 ### 3.4 M3 — EU centralised authorisations
 
@@ -485,13 +488,19 @@ itself targets `net10.0-windows`.
 
 ## 6. Localisation
 
-Every new user-visible string is added to all four dictionaries in
-one commit:
+Every new user-visible string is added to all dictionaries in one
+commit (currently five):
 
+- `assets/localization/strings.de.json`
 - `assets/localization/strings.en.json`
-- `assets/localization/strings.it.json`
-- `assets/localization/strings.fr.json`
 - `assets/localization/strings.es.json`
+- `assets/localization/strings.fr.json`
+- `assets/localization/strings.it.json`
+
+The `DictionaryParityTests` in
+`tests/MedReminder.Application.Tests/Localization/` fail the
+build if a key is present in one dictionary and missing in
+another, so parity is enforced automatically.
 
 New keys (indicative, final names to be aligned with existing
 conventions):
@@ -593,9 +602,9 @@ Touched files (indicative):
   boxes.
 - `src/MedReminder.UI/Forms/SettingsForm.cs` — reference country
   dropdown.
-- `assets/localization/strings.{en,it,fr,es}.json` — new keys.
+- `assets/localization/strings.{de,en,es,fr,it}.json` — new keys.
 - `docs/ANALYSIS.md` §2.8 — reference to the new migration step.
-- `docs/USER_GUIDE.{en,it,fr,es}.md` — autocomplete section.
+- `docs/USER_GUIDE.{de,en,es,fr,it}.md` — autocomplete section.
 - `CHANGE_LOG.md` — per PR.
 
 ---
