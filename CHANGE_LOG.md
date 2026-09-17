@@ -30,6 +30,34 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #8 — Bump WebView2 to 1.0.4191.47; drop unused WPF reference
+
+Link: [vger70/MedReminder#8](https://github.com/vger70/MedReminder/pull/8)
+**Status:** open
+Branch: `webview2-strip-wpf-ref`
+
+### Changed
+
+- `Microsoft.Web.WebView2` bumped from `1.0.2792.45` to
+  `1.0.4191.47`.
+
+### Build
+
+- New MSBuild target `RemoveUnusedWebView2Wpf` in
+  `src/MedReminder.UI/MedReminder.UI.csproj`, running
+  `AfterTargets="ResolveAssemblyReferences"`, removes the unused
+  `Microsoft.Web.WebView2.Wpf` reference and its copy-local entry
+  from the WinForms-only host. This suppresses the `MSB3277`
+  warning introduced by the new package version (its WPF assembly
+  requires `WindowsBase 5.0.0.0`, unified against .NET 10's
+  `WindowsBase 4.0.0.0`) and removes the dead ~50 KB DLL from the
+  published output. `HelpViewerForm` and the native
+  `WebView2Loader.dll` under `runtimes/` are unaffected.
+
+### Fixed
+
+- `MSB3277` warning about conflicting `WindowsBase` versions that
+  appeared on every build after the WebView2 bump.
 ## PR #7 — Document SmartScreen warning; add French and Spanish user guides
 
 Link: [vger70/MedReminder#7](https://github.com/vger70/MedReminder/pull/7)

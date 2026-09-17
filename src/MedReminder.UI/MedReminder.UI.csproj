@@ -25,7 +25,7 @@
     <!-- Inline help (Increment 14): WebView2 for the HTML rendering +
          Markdig for the Markdown → HTML conversion of USER_GUIDE.md
          embedded as a resource. -->
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
     <PackageReference Include="Markdig" Version="0.42.0" />
   </ItemGroup>
 
@@ -33,6 +33,37 @@
     <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
     <ProjectReference Include="..\MedReminder.Infrastructure\MedReminder.Infrastructure.csproj" />
   </ItemGroup>
+
+  <!--
+    The Microsoft.Web.WebView2 NuGet package references both the
+    WinForms and the WPF integration assemblies. This project is
+    WinForms-only (`<UseWindowsForms>true`), so
+    `Microsoft.Web.WebView2.Wpf.dll` is never loaded at runtime — but
+    it pulls in `WindowsBase 5.0.0.0`, which unifies against the
+    `WindowsBase 4.0.0.0` provided by .NET 10 and produces an
+    MSB3277 warning at build time (plus ~50 KB of dead weight in
+    the published output).
+
+    Drop the WPF reference and its copy-local entry after MSBuild
+    has resolved package references. HelpViewerForm only uses
+    `Microsoft.Web.WebView2.WinForms`, so nothing at runtime changes;
+    the native `WebView2Loader.dll` (under `runtimes/`) is untouched
+    and still ships.
+  -->
+  <Target Name="RemoveUnusedWebView2Wpf"
+          AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths
+        Remove="@(ReferenceCopyLocalPaths)"
+        Condition="'%(FileName)' == 'Microsoft.Web.WebView2.Wpf'" />
+      <Reference
+        Remove="@(Reference)"
+        Condition="'%(FileName)' == 'Microsoft.Web.WebView2.Wpf'" />
+      <ReferencePath
+        Remove="@(ReferencePath)"
+        Condition="'%(FileName)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <None Update="appsettings.json">
