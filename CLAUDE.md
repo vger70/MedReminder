@@ -149,7 +149,7 @@ release pipeline.
 ## 5. Git and branching
 
 - The current working branch for Claude-driven changes is
-  **`claude/compassionate-pasteur-qmmt3h`**. Develop, commit and push
+  **`claude/translate-in-english`**. Develop, commit and push
   there unless the user explicitly asks otherwise.
 - Never push to `main` (or any other branch) without explicit
   permission.
