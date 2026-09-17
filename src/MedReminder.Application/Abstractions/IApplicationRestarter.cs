@@ -1,12 +1,12 @@
 namespace MedReminder.Application.Abstractions;
 
-// Restart auto-orchestrato dell'app: usato dopo un ripristino backup
-// per rilasciare i lock SQLite sul DB nuovo e ricaricare la UI con
-// dati coerenti.
+// Self-orchestrated restart of the app: used after a backup restore to
+// release the SQLite locks on the new DB and reload the UI with a
+// consistent state.
 //
-// L'implementazione in UI lancia un nuovo processo dell'eseguibile
-// corrente e chiude quello attuale. Il mutex Local\MedReminder.SingleInstance
-// viene rilasciato dal processo uscente in tempo per il nuovo.
+// The UI implementation spawns a new process of the current executable
+// and closes the current one. The Local\MedReminder.SingleInstance
+// mutex is released by the exiting process in time for the new one.
 public interface IApplicationRestarter
 {
     void RestartAndExit();

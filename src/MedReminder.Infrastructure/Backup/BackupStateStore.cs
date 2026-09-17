@@ -4,11 +4,11 @@ using MedReminder.Infrastructure.Storage;
 
 namespace MedReminder.Infrastructure.Backup;
 
-// Persistenza JSON di BackupState in
+// JSON persistence of BackupState in
 // %LOCALAPPDATA%\MedReminder\backup.state.json.
-// Tolerante ai fallimenti di I/O: un file corrotto o assente ritorna
-// BackupState.Empty (il servizio automatico ricomincia da zero senza
-// bloccare l'app).
+// Tolerant to I/O failures: a corrupted or missing file returns
+// BackupState.Empty (the automatic service starts from scratch
+// without blocking the app).
 internal sealed class BackupStateStore : IBackupStateStore
 {
     private const string StateFileName = "backup.state.json";
@@ -17,8 +17,9 @@ internal sealed class BackupStateStore : IBackupStateStore
         WriteIndented = true,
     };
 
-    // Serializza tutti gli accessi al file: BackupStateStore è singleton
-    // e viene letto/scritto sia dall'hosted service che dalla UI.
+    // Serialize every access to the file: BackupStateStore is a
+    // singleton and is read / written by both the hosted service and
+    // the UI.
     private readonly object _sync = new();
 
     public BackupState Load()
@@ -36,7 +37,7 @@ internal sealed class BackupStateStore : IBackupStateStore
             }
             catch
             {
-                // File corrotto o non leggibile: partiamo da zero.
+                // File corrupted or unreadable: start from scratch.
                 return BackupState.Empty;
             }
         }
@@ -52,7 +53,8 @@ internal sealed class BackupStateStore : IBackupStateStore
             var json = JsonSerializer.Serialize(state, JsonOptions);
             var tmp = path + ".tmp";
             File.WriteAllText(tmp, json);
-            // Move atomico: nessuno vede un file mezzo scritto in caso di crash.
+            // Atomic move: no one sees a half-written file if the
+            // process crashes.
             File.Move(tmp, path, overwrite: true);
         }
     }

@@ -8,23 +8,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MedReminder.Infrastructure.Backup;
 
-// Backup / restore del file DB.
+// DB-file backup / restore.
 //
-// Export: usa l'API online backup di SQLite (SqliteConnection.BackupDatabase)
-// che è thread-safe rispetto a scritture concorrenti — SQLite gestisce
-// il locking a livello di page e produce un file di destinazione coerente
-// anche se la scrittura di altre connessioni sta procedendo. È la
-// tecnica raccomandata da SQLite (https://sqlite.org/backup.html)
-// e sostituisce il File.Copy + WAL checkpoint che avevamo prima
-// (il checkpoint riduceva ma non eliminava la finestra di torn write).
+// Export: uses the SQLite online-backup API
+// (SqliteConnection.BackupDatabase), which is thread-safe with
+// respect to concurrent writes — SQLite handles page-level locking
+// and produces a consistent destination file even while writes from
+// other connections are in progress. This is the technique
+// recommended by SQLite (https://sqlite.org/backup.html) and
+// replaces the previous File.Copy + WAL checkpoint (the checkpoint
+// narrowed but did not eliminate the torn-write window).
 //
-// Retention: pattern medreminder-*.db, mai altro (l'utente potrebbe aver
-// messo file nella stessa cartella).
+// Retention: pattern medreminder-*.db, nothing else (the user might
+// have placed other files in the same folder).
 //
-// Import: prima di sostituire il file corrente, forza il rilascio degli
-// handle SQLite ancora in pool (ClearAllPools). Il caller (UI) deve
-// comunque riavviare l'app subito dopo — l'IApplicationRestarter è
-// pensato per questo.
+// Import: before replacing the current file, forces release of the
+// still-pooled SQLite handles (ClearAllPools). The caller (UI) must
+// restart the app right after — IApplicationRestarter exists for
+// that.
 internal sealed class BackupService : IBackupService
 {
     private static readonly Regex BackupFileRegex =
@@ -51,18 +52,19 @@ internal sealed class BackupService : IBackupService
         if (!File.Exists(sourcePath))
         {
             throw new InvalidOperationException(
-                $"Il file di database '{sourcePath}' non esiste.");
+                $"Database file '{sourcePath}' does not exist.");
         }
 
         var timestamp = _clock.GetUtcNow().ToString("yyyyMMdd-HHmmss");
         var destinationFile = Path.Combine(
             destinationDirectory, $"medreminder-{timestamp}.db");
 
-        // Uso una connessione dedicata sul DB principale (read-write ma
-        // in solo backup) anziché quella del DbContext scoped: evita
-        // di lasciare stato nel connection pool condiviso e rende la
-        // chiamata sicura anche se invocata fuori dal ciclo request DI.
-        // Cache=Private per non condividere lo shared cache dell'app.
+        // Use a dedicated connection on the main DB (read-write, but
+        // only for the backup) instead of the DbContext's scoped one:
+        // avoids leaving state in the shared connection pool and
+        // makes the call safe even when invoked outside the DI
+        // request cycle. Cache=Private so we do not share the app's
+        // shared cache.
         var sourceConnectionString =
             new SqliteConnectionStringBuilder(AppDataPaths.BuildSqliteConnectionString())
             {
@@ -82,12 +84,12 @@ internal sealed class BackupService : IBackupService
         await source.OpenAsync(cancellationToken);
         await dest.OpenAsync(cancellationToken);
 
-        // BackupDatabase è sincrona (non ha overload async in
-        // Microsoft.Data.Sqlite): la chiamiamo su ThreadPool per non
-        // bloccare l'eventuale UI thread caller.
+        // BackupDatabase is synchronous (Microsoft.Data.Sqlite has
+        // no async overload): call it on the ThreadPool so we do
+        // not block any UI thread caller.
         await Task.Run(() => source.BackupDatabase(dest), cancellationToken);
 
-        _ = _db; // il campo resta iniettato per coerenza con la lifecycle scoped
+        _ = _db; // the field is kept injected for consistency with the scoped lifecycle
         return destinationFile;
     }
 
@@ -105,9 +107,9 @@ internal sealed class BackupService : IBackupService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Doppio filtro: sia il glob che il regex esatto. Rifiuta
-            // "medreminder-manual-x.db" o backup rinominati dall'utente:
-            // non è nostro compito cancellarli.
+            // Double filter: both the glob and the exact regex.
+            // Rejects "medreminder-manual-x.db" or user-renamed
+            // backups: it is not our job to delete them.
             var name = Path.GetFileName(path);
             if (!BackupFileRegex.IsMatch(name)) continue;
 
@@ -122,9 +124,9 @@ internal sealed class BackupService : IBackupService
             }
             catch
             {
-                // Un file bloccato o senza permessi non deve interrompere
-                // la potatura degli altri. Il fallimento è visibile solo
-                // come "file rimasto in cartella".
+                // A locked file or a permission issue must not stop
+                // the pruning of the others. The failure is only
+                // visible as "file left in the folder".
             }
         }
 
@@ -136,20 +138,22 @@ internal sealed class BackupService : IBackupService
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceFilePath);
         if (!File.Exists(sourceFilePath))
         {
-            throw new FileNotFoundException("File di backup non trovato.", sourceFilePath);
+            throw new FileNotFoundException("Backup file not found.", sourceFilePath);
         }
 
         var target = DatabasePath;
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
 
-        // Chiudi qualunque connessione ancora in pool con path == target,
-        // altrimenti File.Move fallisce con "Sharing violation" su Windows.
-        // ClearAllPools() è idempotente e non lancia se non ci sono pool.
+        // Close any pooled connection with path == target, otherwise
+        // File.Move fails with "Sharing violation" on Windows.
+        // ClearAllPools() is idempotent and does not throw if there
+        // are no pools.
         SqliteConnection.ClearAllPools();
 
-        // Chiudi anche la connessione sottostante al DbContext scoped,
-        // se il caller non l'ha già fatto (paranoia): il DbContext è
-        // scoped ma il pooling di Microsoft.Data.Sqlite lavora sotto.
+        // Also close the underlying connection of the scoped
+        // DbContext, if the caller has not already done so
+        // (paranoia): the DbContext is scoped but
+        // Microsoft.Data.Sqlite's pooling works underneath.
         try
         {
             var conn = _db.Database.GetDbConnection();
@@ -160,8 +164,9 @@ internal sealed class BackupService : IBackupService
         }
         catch
         {
-            // Non blocchiamo l'import per un problema di chiusura
-            // preventiva: ClearAllPools ha già fatto il grosso.
+            // Do not block the import over a defensive close
+            // failure: ClearAllPools has already done the heavy
+            // lifting.
         }
 
         if (File.Exists(target))
@@ -171,15 +176,15 @@ internal sealed class BackupService : IBackupService
         }
         File.Copy(sourceFilePath, target, overwrite: false);
 
-        // Rimuovi eventuali file WAL/SHM residui del vecchio DB:
-        // la nuova base è "pulita" e verrà ri-inizializzata da
-        // DatabaseInitializer al prossimo avvio.
+        // Remove any residual WAL / SHM files of the old DB: the
+        // new base is "clean" and will be re-initialized by
+        // DatabaseInitializer on the next startup.
         foreach (var suffix in new[] { "-wal", "-shm" })
         {
             var side = target + suffix;
             if (File.Exists(side))
             {
-                try { File.Delete(side); } catch { /* ignora */ }
+                try { File.Delete(side); } catch { /* ignore */ }
             }
         }
 

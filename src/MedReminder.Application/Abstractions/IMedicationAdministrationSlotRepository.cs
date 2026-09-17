@@ -4,8 +4,8 @@ namespace MedReminder.Application.Abstractions;
 
 public interface IMedicationAdministrationSlotRepository
 {
-    // Slot correnti della medicina, ordinati per (Time, Order).
-    // Lista vuota se la medicina usa il modello legacy dose×frequenza.
+    // Current slots for the medicine, ordered by (Time, Order). Empty
+    // list if the medicine uses the legacy dose × frequency model.
     Task<IReadOnlyList<MedicationAdministrationSlot>> ListForMedicineAsync(
         Guid medicineId,
         CancellationToken cancellationToken);
@@ -14,9 +14,9 @@ public interface IMedicationAdministrationSlotRepository
         IEnumerable<MedicationAdministrationSlot> slots,
         CancellationToken cancellationToken);
 
-    // Cancella tutti gli slot correnti di una medicina; l'UpdateMedicine
-    // use case chiama Delete + AddRange nella stessa unità di lavoro per
-    // sostituire l'elenco atomically.
+    // Deletes every current slot of a medicine; the UpdateMedicine use
+    // case calls Delete + AddRange in the same unit of work to
+    // atomically replace the list.
     Task DeleteForMedicineAsync(
         Guid medicineId,
         CancellationToken cancellationToken);

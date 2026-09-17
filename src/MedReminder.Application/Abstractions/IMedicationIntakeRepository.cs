@@ -8,10 +8,9 @@ public interface IMedicationIntakeRepository
         Guid medicineId,
         CancellationToken cancellationToken);
 
-    // Elenco dei giorni (fuso locale) per i quali esiste una registrazione
-    // manuale nell'intervallo indicato. Usato dal ConsumptionCatchUp per
-    // saltare quelle giornate — l'assunzione manuale prevale sul
-    // materializzatore automatico.
+    // Days (local zone) for which a manual intake record exists in the
+    // given range. Used by ConsumptionCatchUp to skip those days — a
+    // manual intake wins over the automatic materializer.
     Task<IReadOnlyList<DateOnly>> ListManualIntakeDaysAsync(
         Guid medicineId,
         DateOnly fromInclusive,

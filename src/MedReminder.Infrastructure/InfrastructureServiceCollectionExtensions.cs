@@ -16,10 +16,10 @@ using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Infrastructure;
 
-// Helper di composizione: la UI (Incremento 5) chiamerà
-// services.AddMedReminderInfrastructure() per registrare DbContext,
-// repository, notifiche, credenziali e auto-start con le lifetime
-// corrette.
+// Composition helper: the UI (Increment 5) calls
+// services.AddMedReminderInfrastructure() to register the DbContext,
+// repositories, notifications, credentials and auto-start with the
+// correct lifetimes.
 public static class InfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddMedReminderInfrastructure(
@@ -27,7 +27,7 @@ public static class InfrastructureServiceCollectionExtensions
         IConfiguration configuration,
         string? databasePathOverride = null)
     {
-        // ------- Persistenza -------
+        // ------- Persistence -------
         var connectionString = AppDataPaths.BuildSqliteConnectionString(databasePathOverride);
         services.AddDbContext<MedReminderDbContext>(options =>
         {
@@ -45,31 +45,32 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IBackupService, BackupService>();
         services.AddScoped<DatabaseInitializer>();
 
-        // ------- Backup automatico -------
+        // ------- Automatic backup -------
         services.Configure<BackupSettings>(configuration.GetSection(BackupSettings.SectionName));
         services.TryAddSingleton<IBackupStateStore, BackupStateStore>();
 
-        // ------- Localizzazione (Incremento 16) -------
+        // ------- Localization (Increment 16) -------
         services.Configure<UserSettings>(configuration.GetSection(UserSettings.SectionName));
         services.TryAddSingleton<ILocalizationService, LocalizationService>();
 
-        // ------- Notifiche + credenziali + auto-start -------
+        // ------- Notifications + credentials + auto-start -------
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
 
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
 
-        // IEmailNotificationService è la MailKit implementation avvolta
-        // dal decoratore di retry con back-off (Incremento 7 hardening).
+        // IEmailNotificationService is the MailKit implementation
+        // wrapped by the retry-with-back-off decorator (Increment 7
+        // hardening).
         services.AddSingleton<MailKitEmailNotificationService>();
         services.AddSingleton<IEmailNotificationService>(sp => new RetryingEmailNotificationService(
             sp.GetRequiredService<MailKitEmailNotificationService>(),
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<ILogger<RetryingEmailNotificationService>>()));
 
-        // Placeholder Windows notification service: la UI (Incremento 6)
-        // sostituirà questa registrazione con quella che riusa la tray icon
-        // principale, evitando due icone in tray.
+        // Placeholder Windows notification service: the UI
+        // (Increment 6) replaces this registration with one that
+        // reuses the main tray icon, avoiding two tray icons.
         services.AddSingleton<IWindowsNotificationService, BalloonTipNotificationService>();
 
         services.AddSingleton<IAutoStartService>(_ => new RegistryAutoStartService());

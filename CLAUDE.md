@@ -165,6 +165,15 @@ self-contained x64 and creates the GitHub Release with
 `MedReminder-win-x64.zip` attached. See [`docs/PACKAGING.md`](docs/PACKAGING.md)
 for the full procedure.
 
+### CHANGE_LOG.md
+
+Every time a pull request is opened for this repository, prepend an
+entry to [`CHANGE_LOG.md`](CHANGE_LOG.md) describing the observable
+changes and linking back to the PR. Follow the format and rules that
+file itself documents at the top. Update the entry when the PR's
+scope changes materially, and mark it merged / closed once the PR
+resolves. Do not batch multiple PRs into one entry.
+
 ---
 
 ## 6. Data locations at runtime

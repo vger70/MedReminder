@@ -1,7 +1,8 @@
 namespace MedReminder.Application.Abstractions;
 
-// Cifratura/decifratura di segreti locali (es. password SMTP). L'MVP
-// implementa questa porta via DPAPI CurrentUser lato Infrastructure.
+// Encrypts / decrypts local secrets (e.g. the SMTP password). The MVP
+// implements this port via DPAPI CurrentUser on the Infrastructure
+// side.
 public interface ICredentialProtector
 {
     string Protect(string plaintext);

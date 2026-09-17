@@ -6,14 +6,15 @@ using SystemIcons = System.Drawing.SystemIcons;
 
 namespace MedReminder.Infrastructure.Notifications;
 
-// Notifica locale via NotifyIcon.ShowBalloonTip. Scelta pragmatica per
-// l'MVP (ANALYSIS §1.1 punto 9): niente Toast/AUMID/shortcut Start Menu
-// necessari per un'app unpackaged; il fallback è la default option.
+// Local notification via NotifyIcon.ShowBalloonTip. Pragmatic choice
+// for the MVP (ANALYSIS §1.1 item 9): no toast / AUMID / Start-Menu
+// shortcut required for an unpackaged app; the fallback is the
+// default option.
 //
-// NB: NotifyIcon deve essere Visible per mostrare il balloon; il servizio
-// mantiene un'icona minima nella tray. La UI (Incremento 6) sostituirà
-// questa registrazione con un'implementazione che riusa la tray-icon
-// principale, evitando due icone diverse per lo stesso processo.
+// NB: NotifyIcon must be Visible to display the balloon; the service
+// keeps a minimal icon in the tray. The UI (Increment 6) replaces
+// this registration with an implementation that reuses the main
+// tray icon, avoiding two icons for the same process.
 [SupportedOSPlatform("windows")]
 internal sealed class BalloonTipNotificationService
     : IWindowsNotificationService, IDisposable

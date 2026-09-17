@@ -4,10 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace MedReminder.Application;
 
-// Entrypoint DI dell'Application layer: la UI (Incremento 5) chiama
-// services.AddMedReminderApplication() per registrare use case e servizi
-// di monitoring con lifetime Scoped (una scope per tick del monitor,
-// una scope per interazione utente).
+// DI entrypoint of the Application layer: the UI (Increment 5) calls
+// services.AddMedReminderApplication() to register the use cases and
+// the monitoring services with Scoped lifetime (one scope per monitor
+// tick, one scope per user interaction).
 public static class ApplicationServiceCollectionExtensions
 {
     public static IServiceCollection AddMedReminderApplication(this IServiceCollection services)

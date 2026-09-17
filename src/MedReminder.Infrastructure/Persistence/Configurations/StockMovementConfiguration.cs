@@ -18,9 +18,9 @@ internal sealed class StockMovementConfiguration : IEntityTypeConfiguration<Stoc
         builder.HasIndex(m => m.MedicineId);
         builder.HasIndex(m => new { m.MedicineId, m.Kind, m.OccurredAt });
 
-        // Vincolo referenziale verso Medicine: cascade delete non
-        // desiderato (preferiamo disattivazione a cancellazione, spec §14).
-        // Configuriamo la FK con Restrict.
+        // Referential constraint towards Medicine: cascade delete not
+        // desired (we prefer deactivation over deletion, spec §14).
+        // Configure the FK with Restrict.
         builder.HasOne<Domain.Medicines.Medicine>()
             .WithMany()
             .HasForeignKey(m => m.MedicineId)

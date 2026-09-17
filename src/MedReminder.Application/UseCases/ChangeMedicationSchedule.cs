@@ -3,11 +3,11 @@ using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Application.UseCases;
 
-// Cambio di dose o frequenza di assunzione. Aggiunge un nuovo record in
-// MedicationScheduleHistory con EffectiveFrom = data di decorrenza;
-// aggiorna anche i campi "correnti" sull'entità Medicine per la UI.
-// La storia della schedule (docs/ANALYSIS.md §2.3) permette al
-// ConsumptionMaterializer di applicare la dose corretta a ciascun giorno.
+// Change of dose or intake frequency. Adds a new record to
+// MedicationScheduleHistory with EffectiveFrom = the change date;
+// also updates the "current" fields on the Medicine entity for the
+// UI. The schedule history (docs/ANALYSIS.md §2.3) lets the
+// ConsumptionMaterializer apply the correct dose to each day.
 public sealed record ChangeMedicationScheduleCommand(
     Guid MedicineId,
     decimal NewDosePerAdministration,
@@ -37,17 +37,17 @@ public sealed class ChangeMedicationSchedule
     {
         ArgumentNullException.ThrowIfNull(cmd);
         if (cmd.NewDosePerAdministration <= 0m)
-            throw new ArgumentException("La dose per somministrazione deve essere positiva.", nameof(cmd));
+            throw new ArgumentException("Dose per administration must be positive.", nameof(cmd));
         if (cmd.NewAdministrationsPerDay <= 0)
-            throw new ArgumentException("Le somministrazioni giornaliere devono essere almeno 1.", nameof(cmd));
+            throw new ArgumentException("Administrations per day must be at least 1.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
-            ?? throw new InvalidOperationException($"Medicina {cmd.MedicineId} non trovata.");
+            ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         if (cmd.EffectiveFrom < medicine.StartDate)
         {
             throw new ArgumentException(
-                "La data di decorrenza non può precedere l'inizio della terapia.",
+                "Effective date cannot precede the therapy start date.",
                 nameof(cmd));
         }
 

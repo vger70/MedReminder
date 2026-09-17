@@ -14,10 +14,10 @@ public interface IStockMovementRepository
         IEnumerable<StockMovement> movements,
         CancellationToken cancellationToken);
 
-    // Data locale (DateOnly) del giorno più recente in cui esiste un
-    // movimento di tipo Consumption per la medicina. Null se non ne esiste
-    // nessuno: la Application interpreta come "materializza a partire dalla
-    // StartDate della medicina".
+    // Local date (DateOnly) of the most recent day on which a
+    // Consumption movement exists for the medicine. Null if none
+    // exists: the Application interprets it as "materialize starting
+    // from the medicine's StartDate".
     Task<DateOnly?> GetLastConsumptionDayAsync(
         Guid medicineId,
         CancellationToken cancellationToken);

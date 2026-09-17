@@ -7,17 +7,19 @@ using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Application.Monitoring;
 
-// Orchestratore del controllo periodico (spec §18):
-//  1. lancia il catch-up del consumo giornaliero;
-//  2. per ogni medicina attiva calcola stock, rate, forecast;
-//  3. valuta NotificationCycle.ShouldNotify;
-//  4. spedisce sui canali configurati (Windows/Email) in modo isolato:
-//     un fallimento email NON impedisce la toast e viceversa;
-//  5. registra un NotificationEvent riassuntivo (Success = almeno un
-//     canale ha funzionato);
+// Orchestrator of the periodic check (spec §18):
+//  1. run the daily-consumption catch-up;
+//  2. for each active medicine, compute stock, rate, forecast;
+//  3. evaluate NotificationCycle.ShouldNotify;
+//  4. dispatch to the configured channels (Windows / Email) in
+//     isolation: an email failure does NOT prevent the toast and vice
+//     versa;
+//  5. record a summary NotificationEvent (Success = at least one
+//     channel worked);
 //  6. commit.
 //
-// Non dipende da IHostedService: lo scheduler vive nell'UI (Incremento 5).
+// Does not depend on IHostedService: the scheduler lives in the UI
+// (Increment 5).
 public sealed class MedicationMonitor
 {
     private readonly IMedicineRepository _medicines;
@@ -128,9 +130,10 @@ public sealed class MedicationMonitor
 
         if ((channels & NotificationChannels.Windows) != 0)
         {
-            // Toast: lingua di SISTEMA (Windows), non quella scelta dall'utente
-            // nell'app. NotificationTexts.BuildToast rileva la lingua sistema
-            // internamente via CultureInfo.CurrentUICulture.
+            // Toast: SYSTEM language (Windows), not the one chosen by
+            // the user in the app. NotificationTexts.BuildToast
+            // detects the system language internally via
+            // CultureInfo.CurrentUICulture.
             var (title, body) = NotificationTexts.BuildToast(
                 medicine, daysRemaining, localization: _localization);
             try
@@ -148,8 +151,8 @@ public sealed class MedicationMonitor
 
         if ((channels & NotificationChannels.Email) != 0)
         {
-            // Email: lingua UTENTE (scelta nell'app). Il service la usa
-            // come default via loc.Get(key).
+            // Email: USER language (chosen in the app). The service
+            // uses it as the default via loc.Get(key).
             var message = NotificationTexts.BuildEmail(
                 medicine, currentStock, daysRemaining, eta,
                 administrationSlots: slots,

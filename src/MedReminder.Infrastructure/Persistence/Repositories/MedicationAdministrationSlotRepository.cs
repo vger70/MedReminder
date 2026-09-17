@@ -33,10 +33,10 @@ internal sealed class MedicationAdministrationSlotRepository
     public async Task DeleteForMedicineAsync(
         Guid medicineId, CancellationToken cancellationToken)
     {
-        // Non uso ExecuteDeleteAsync (EF Core 7+) per restare all'interno
-        // dell'unità di lavoro corrente: caricare gli slot e rimuoverli
-        // via change tracker garantisce che il SaveChangesAsync del use
-        // case commetta delete + insert atomically.
+        // Do not use ExecuteDeleteAsync (EF Core 7+) so we stay
+        // inside the current unit of work: loading the slots and
+        // removing them through the change tracker ensures the use
+        // case's SaveChangesAsync commits delete + insert atomically.
         var existing = await _db.MedicationAdministrationSlots
             .Where(s => s.MedicineId == medicineId)
             .ToListAsync(cancellationToken);

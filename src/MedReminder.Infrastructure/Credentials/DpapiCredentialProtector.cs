@@ -5,15 +5,15 @@ using MedReminder.Application.Abstractions;
 
 namespace MedReminder.Infrastructure.Credentials;
 
-// Cifratura simmetrica user-scoped via DPAPI (ANALYSIS §1.1 punto 11).
-// Il ciphertext è vincolato all'utente Windows corrente: non è
-// riproducibile su un altro account/macchina, il che è esattamente ciò
-// che serve per una app single-user desktop.
+// User-scoped symmetric encryption via DPAPI (ANALYSIS §1.1 item 11).
+// The ciphertext is bound to the current Windows user: it cannot be
+// reproduced on another account or machine, which is exactly what a
+// single-user desktop app needs.
 //
-// L'output Protect è base64 di un blob DPAPI; Unprotect è idempotente
-// e case-sensitive sul ciphertext. Non aggiungiamo entropia extra:
-// se la vogliamo (per legare al processo o a un pin), la aggiungeremo
-// dietro un flag futuro senza rompere il formato del file.
+// Protect's output is base64 of a DPAPI blob; Unprotect is idempotent
+// and case-sensitive on the ciphertext. No extra entropy is added:
+// if we want some (to bind to the process or to a PIN), we will add
+// it behind a future flag without breaking the file format.
 [SupportedOSPlatform("windows")]
 internal sealed class DpapiCredentialProtector : ICredentialProtector
 {

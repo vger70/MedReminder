@@ -2,14 +2,15 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Domain.Calculations;
 
-// Calcolo della quantità corrente di una medicina come somma algebrica
-// dei suoi movimenti (spec §17). Non memorizzato: sempre ricomputato.
+// Computes the current quantity of a medicine as the algebraic sum of
+// its movements (spec §17). Never stored: always recomputed.
 public static class MedicineStock
 {
-    // Somma di QuantityDelta su tutti i movimenti. Se il totale è
-    // negativo (dato inconsistente causato da correzioni manuali eccessive)
-    // viene clampato a zero: fisicamente la scorta non può essere negativa
-    // e la UI mostrerà comunque il warning tramite la Application layer.
+    // Sum of QuantityDelta across every movement. If the total is
+    // negative (inconsistent data caused by excessive manual
+    // corrections), it is clamped to zero: physically, stock cannot be
+    // negative, and the UI still shows the warning through the
+    // Application layer.
     public static decimal Current(IEnumerable<StockMovement> movements)
     {
         ArgumentNullException.ThrowIfNull(movements);
@@ -21,7 +22,7 @@ public static class MedicineStock
         return sum < 0m ? 0m : sum;
     }
 
-    // Sub-total per una specifica epoch di stock. Utile per diagnostica.
+    // Sub-total for a specific stock epoch. Useful for diagnostics.
     public static decimal CurrentForEpoch(IEnumerable<StockMovement> movements, int epoch)
     {
         ArgumentNullException.ThrowIfNull(movements);
@@ -33,9 +34,9 @@ public static class MedicineStock
         return sum;
     }
 
-    // Verifica se applicare un ulteriore delta manderebbe il totale sotto
-    // zero. Usato dalla Application per bloccare correzioni manuali che
-    // renderebbero il magazzino inconsistente.
+    // Checks whether applying an additional delta would push the total
+    // below zero. Used by the Application to block manual corrections
+    // that would leave the stock inconsistent.
     public static bool WouldGoNegative(decimal currentStock, decimal proposedDelta)
         => currentStock + proposedDelta < 0m;
 }

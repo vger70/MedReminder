@@ -1,19 +1,19 @@
 namespace MedReminder.Domain.Medicines;
 
-// Registrazione di una singola assunzione (spec §6). Ora esposta via UI
-// in Incremento 9: l'utente può marcare una dose come assunta, saltata
-// o annullata; se Taken, la Application crea anche uno StockMovement
-// Consumption per scalare la scorta. Day è la giornata a cui l'assunzione
-// si riferisce (in fuso locale), non l'istante di registrazione — serve
-// al ConsumptionCatchUp per non generare consumi automatici duplicati
-// nei giorni in cui l'utente ha già registrato manualmente.
+// Record of a single intake (spec §6). Exposed via UI in Increment 9:
+// the user can mark a dose as Taken, Skipped or Cancelled; if Taken,
+// the Application also creates a Consumption StockMovement to decrease
+// the stock. Day is the calendar day the intake refers to (in local
+// time), not the moment it was recorded — it lets ConsumptionCatchUp
+// avoid generating duplicate automatic consumptions for the days the
+// user has already recorded manually.
 public sealed class MedicationIntake
 {
     public Guid Id { get; init; } = Guid.NewGuid();
 
     public required Guid MedicineId { get; init; }
 
-    // Giornata a cui si riferisce l'assunzione (fuso locale).
+    // Calendar day this intake refers to (local zone).
     public required DateOnly Day { get; init; }
 
     public DateTimeOffset? ScheduledAt { get; init; }

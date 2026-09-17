@@ -5,14 +5,14 @@ using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Application.Reporting;
 
-// Genera una scheda testuale della terapia corrente da mostrare/stampare
-// per il medico (spec Incremento 10). Nessuna informazione clinica libera
-// oltre a quanto già impostato dall'utente — MedReminder resta un
-// promemoria organizzativo.
+// Produces a textual card of the current therapy to be shown /
+// printed for the doctor (Increment 10). No free-form clinical
+// information beyond what the user already entered — MedReminder
+// stays an organizational reminder.
 //
-// Uso Environment.NewLine (= "\r\n" su Windows) invece di '\n' perché
-// la TextBox multiline di WinForms rende visibile una nuova riga SOLO
-// quando incontra CRLF; con LF stampa tutto su una linea.
+// Uses Environment.NewLine (= "\r\n" on Windows) instead of '\n'
+// because the WinForms multiline TextBox only renders a new line on
+// CRLF; with LF everything is printed on a single line.
 public sealed record TherapyReportEntry(
     Medicine Medicine,
     IReadOnlyList<MedicationAdministrationSlot> Slots);
@@ -21,19 +21,19 @@ public static class TherapyReport
 {
     private static readonly string NL = Environment.NewLine;
 
-    // Fallback italiano hardcoded — retrocompatibilità con i test
-    // esistenti che invocano Build(entries, date) senza service.
-    // Le stesse etichette esistono nel JSON (chiavi Reports.Therapy.*)
-    // per la versione localizzata.
-    private const string HeaderIt = "Scheda terapia — MedReminder";
-    private const string DateLabelIt = "Data: ";
-    private const string NoMedicinesIt = "Nessuna medicina attiva.";
-    private const string TimesFallbackIt = " × {0} volte al giorno";
-    private const string StartLabelIt = "   Inizio: ";
-    private const string EndLabelIt = " · Fine: ";
-    private const string DoctorLabelIt = "   Medico: ";
-    private const string NotesLabelIt = "   Note: ";
-    private const string DisclaimerIt = "— MedReminder: promemoria organizzativo, non è un dispositivo medico.";
+    // Hardcoded English fallback — backwards compatibility with the
+    // existing tests that invoke Build(entries, date) without the
+    // service. The same labels exist in the JSON dictionaries (keys
+    // Reports.Therapy.*) for the localized version.
+    private const string HeaderEn = "Therapy card — MedReminder";
+    private const string DateLabelEn = "Date: ";
+    private const string NoMedicinesEn = "No active medicines.";
+    private const string TimesFallbackEn = " × {0} times a day";
+    private const string StartLabelEn = "   Start: ";
+    private const string EndLabelEn = " · End: ";
+    private const string DoctorLabelEn = "   Doctor: ";
+    private const string NotesLabelEn = "   Notes: ";
+    private const string DisclaimerEn = "— MedReminder: organizational reminder, not a medical device.";
 
     public static string Build(
         IReadOnlyList<TherapyReportEntry> entries,
@@ -42,21 +42,21 @@ public static class TherapyReport
         ILocalizationService? localization = null)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        // Se il servizio è disponibile, la sua CurrentCulture ha priorità
-        // per la formattazione di date/numeri; altrimenti si onora la
-        // culture esplicita del caller (o CurrentCulture).
+        // If the service is available, its CurrentCulture has priority
+        // for date / number formatting; otherwise honor the caller's
+        // explicit culture (or CurrentCulture).
         var c = culture ?? localization?.CurrentCulture ?? CultureInfo.CurrentCulture;
 
         var sb = new StringBuilder();
-        sb.Append(L(localization, "Reports.Therapy.Header", HeaderIt)).Append(NL);
+        sb.Append(L(localization, "Reports.Therapy.Header", HeaderEn)).Append(NL);
         sb.Append(FormatOrDefault(localization, "Reports.Therapy.Date",
-            DateLabelIt + reportDate.ToString("d", c), reportDate.ToString("d", c)))
+            DateLabelEn + reportDate.ToString("d", c), reportDate.ToString("d", c)))
           .Append(NL).Append(NL);
 
         var active = entries.Where(e => e.Medicine.IsActive).ToList();
         if (active.Count == 0)
         {
-            sb.Append(L(localization, "Reports.Therapy.NoMedicines", NoMedicinesIt)).Append(NL);
+            sb.Append(L(localization, "Reports.Therapy.NoMedicines", NoMedicinesEn)).Append(NL);
             return sb.ToString();
         }
 
@@ -67,7 +67,7 @@ public static class TherapyReport
             sb.Append(NL);
         }
 
-        sb.Append(L(localization, "Reports.Therapy.Disclaimer", DisclaimerIt));
+        sb.Append(L(localization, "Reports.Therapy.Disclaimer", DisclaimerEn));
         return sb.ToString();
     }
 
@@ -92,19 +92,19 @@ public static class TherapyReport
         }
         else
         {
-            // Fallback modello legacy dose × frequenza.
+            // Legacy dose × frequency fallback.
             var freq = m.AdministrationsPerDay > 0 ? m.AdministrationsPerDay : 1;
             var doseText = m.DosePerAdministration.ToString("0.##", c);
             if (loc is not null)
             {
-                // Chiave completa "{0} {1} × {2} volte al giorno".
+                // Full key "{0} {1} × {2} times a day".
                 sb.Append("   - ").Append(loc.Get("Reports.Therapy.Fallback.Times",
                     doseText, m.Unit, freq)).Append(NL);
             }
             else
             {
                 sb.Append("   - ").Append(doseText).Append(' ').Append(m.Unit);
-                sb.Append(string.Format(CultureInfo.InvariantCulture, TimesFallbackIt, freq)).Append(NL);
+                sb.Append(string.Format(CultureInfo.InvariantCulture, TimesFallbackEn, freq)).Append(NL);
             }
         }
 
@@ -121,10 +121,10 @@ public static class TherapyReport
             }
             else
             {
-                sb.Append(StartLabelIt).Append(startText);
+                sb.Append(StartLabelEn).Append(startText);
                 if (m.EndDate is { } end)
                 {
-                    sb.Append(EndLabelIt).Append(end.ToString("d", c));
+                    sb.Append(EndLabelEn).Append(end.ToString("d", c));
                 }
             }
             sb.Append(NL);
@@ -137,7 +137,7 @@ public static class TherapyReport
             }
             else
             {
-                sb.Append(DoctorLabelIt).Append(m.DoctorName).Append(NL);
+                sb.Append(DoctorLabelEn).Append(m.DoctorName).Append(NL);
             }
         }
         if (!string.IsNullOrWhiteSpace(m.Notes))
@@ -148,7 +148,7 @@ public static class TherapyReport
             }
             else
             {
-                sb.Append(NotesLabelIt).Append(m.Notes).Append(NL);
+                sb.Append(NotesLabelEn).Append(m.Notes).Append(NL);
             }
         }
     }
@@ -170,20 +170,20 @@ public static class TherapyReport
         return sb.ToString();
     }
 
-    // Ordina prima gli slot con orario esplicito (in ordine cronologico),
-    // poi quelli senza orario (nell'ordine dichiarato dall'utente).
+    // Sorts slots with an explicit time first (chronological order),
+    // then the untimed ones (in the order the user declared).
     private static int SortKey(MedicationAdministrationSlot slot)
     {
         if (slot.Time is { } t) return t.Hour * 60 + t.Minute;
         return 10_000 + slot.Order;
     }
 
-    // Helper: usa il servizio se disponibile, altrimenti il fallback.
+    // Helper: uses the service if available, otherwise the fallback.
     private static string L(ILocalizationService? loc, string key, string fallback)
         => loc?.Get(key) ?? fallback;
 
-    // Helper per stringhe con placeholder {0}: se loc è null, ricade
-    // su un default già preformattato dal caller.
+    // Helper for strings with placeholder {0}: if loc is null, falls
+    // back to a default already preformatted by the caller.
     private static string FormatOrDefault(ILocalizationService? loc, string key,
         string fullFallback, params object?[] args)
         => loc?.Get(key, args) ?? fullFallback;

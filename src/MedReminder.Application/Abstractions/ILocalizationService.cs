@@ -2,35 +2,37 @@ using System.Globalization;
 
 namespace MedReminder.Application.Abstractions;
 
-// Servizio di localizzazione delle stringhe UI, email e report
-// (Incremento 16). Le stringhe sono chiavi dotted con namespace
-// (es. "Ui.MainForm.Menu.File", "Notifications.Email.Subject") e
-// vivono in file JSON per-lingua embedded nell'assembly UI, con
-// override opzionale su disco per personalizzazioni utente avanzate.
+// Localization service for UI strings, email bodies and reports
+// (Increment 16). Strings are dotted keys with a namespace
+// (e.g. "Ui.MainForm.Menu.File", "Notifications.Email.Subject") and
+// live in per-language JSON files embedded in the UI assembly, with
+// an optional on-disk override for advanced user customization.
 //
-// Regole di fallback:
-//   1. Cerca la chiave nel dizionario della lingua richiesta.
-//   2. Se assente, cerca nella lingua di default (SupportedLanguages.Default = "en").
-//   3. Se anche lì è assente, ritorna la chiave stessa fra parentesi
-//      quadre (es. "[Ui.MainForm.Menu.File]") — visibile in UI così
-//      lo sviluppatore individua subito le lacune. Mai eccezione.
+// Fallback rules:
+//   1. Look up the key in the requested language's dictionary.
+//   2. If missing, look it up in the default language
+//      (SupportedLanguages.Default = "en").
+//   3. If still missing, return the key itself wrapped in square
+//      brackets (e.g. "[Ui.MainForm.Menu.File]") — visible in the UI
+//      so the developer immediately spots the gap. Never throws.
 public interface ILocalizationService
 {
-    // Lingua attualmente selezionata dall'utente (dallo user.settings.
-    // json). Non cambia a runtime — dopo un save la modifica ha effetto
-    // dal riavvio.
+    // Language currently selected by the user (from user.settings.
+    // json). Does not change at runtime — after a save, the change
+    // takes effect on restart.
     string CurrentLanguage { get; }
 
-    // Traduce la chiave nella lingua corrente. Params sono passati a
-    // string.Format con la CultureInfo della lingua corrente.
+    // Translates the key in the current language. Params are passed
+    // to string.Format with the CultureInfo of the current language.
     string Get(string key, params object?[] args);
 
-    // Overload che forza una lingua specifica. Usato dal MedicationMonitor:
-    //   - email → GetIn(userLang, key)   (lingua utente scelta)
-    //   - toast → GetIn(systemLang, key) (lingua di sistema Windows)
+    // Overload that forces a specific language. Used by
+    // MedicationMonitor:
+    //   - email → GetIn(userLang, key)   (user's chosen language)
+    //   - toast → GetIn(systemLang, key) (Windows system language)
     string GetIn(string languageCode, string key, params object?[] args);
 
-    // CultureInfo della lingua corrente. Usata per formattare numeri,
-    // date, quando serve coerenza con il testo tradotto.
+    // CultureInfo of the current language. Used to format numbers
+    // and dates when consistency with the translated text matters.
     CultureInfo CurrentCulture { get; }
 }

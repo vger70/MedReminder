@@ -32,11 +32,11 @@ public sealed class SuspendMedication
         ArgumentNullException.ThrowIfNull(cmd);
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
-            ?? throw new InvalidOperationException($"Medicina {cmd.MedicineId} non trovata.");
+            ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         var open = await _suspensions.GetOpenSuspensionAsync(cmd.MedicineId, cancellationToken);
         if (open is not null)
-            throw new InvalidOperationException("La medicina è già sospesa.");
+            throw new InvalidOperationException("Medicine is already suspended.");
 
         var suspension = new MedicationSuspension
         {

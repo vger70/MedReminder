@@ -4,9 +4,9 @@ using MedReminder.Infrastructure.Storage;
 
 namespace MedReminder.Infrastructure.Credentials;
 
-// File-backed store per la password SMTP: contenuto = base64 di un blob
-// DPAPI. Il file (smtp.protected) risiede sotto
-// %LOCALAPPDATA%\MedReminder\, mai nel repository e mai in
+// File-backed store for the SMTP password: contents = base64 of a
+// DPAPI blob. The file (smtp.protected) lives under
+// %LOCALAPPDATA%\MedReminder\, never in the repository and never in
 // appsettings.json (spec §22).
 [SupportedOSPlatform("windows")]
 internal sealed class SmtpCredentialStore : ISmtpCredentialStore
@@ -19,8 +19,8 @@ internal sealed class SmtpCredentialStore : ISmtpCredentialStore
     {
     }
 
-    // Overload interno usato dai test: consente di puntare a un file
-    // temporaneo invece che a %LOCALAPPDATA%.
+    // Internal overload used by tests: lets us point at a temporary
+    // file instead of %LOCALAPPDATA%.
     internal SmtpCredentialStore(ICredentialProtector protector, string? filePath)
     {
         _protector = protector;
