@@ -1,232 +1,241 @@
-# MedReminder — Analisi tecnica e architettura
+# MedReminder — Technical Analysis and Architecture
 
-Documento prodotto in Fase 1 e Fase 2 come richiesto dalla sezione 31 delle
-specifiche. Non contiene codice implementativo: serve a fissare requisiti,
-scelte architetturali e piano incrementale prima di procedere.
+Document produced during Phase 1 and Phase 2, as required by section 31
+of the specification. It contains no implementation code: its purpose is
+to lock down requirements, architectural choices and the incremental
+plan before implementation starts.
 
-Classificazione epistemica utilizzata: `[VERIFIED]` (fatto stabilito),
-`[INFERRED]` (deduzione da fatti verificati), `[UNCERTAIN]` (dato che non
-posso confermare senza test o senza chiarimento dell'utente).
-
----
-
-## 1. Fase 1 — Analisi
-
-### 1.1 Requisiti ambigui o incompleti
-
-Vengono elencati soltanto i punti che influenzano l'architettura o il
-modello dati. Per ciascuno indico la decisione proposta e il motivo. Se una
-di queste decisioni non è accettabile, deve essere corretta prima di
-procedere alla Fase 3.
-
-1. **Definizione di "consumo giornaliero"**. Non è specificato se il
-   consumo giornaliero sia sempre calcolato dallo schema
-   (`dose × somministrazioni`) o eventualmente stimato dallo storico delle
-   assunzioni.
-   Decisione: per l'MVP il consumo giornaliero è **derivato dallo schema
-   configurato**. Le assunzioni reali (sezione 6 delle specifiche) restano
-   nel modello per una futura stima empirica, ma non influenzano il calcolo
-   MVP.
-
-2. **Somministrazioni giornaliere**. La specifica indica "numero" (un
-   intero), non un elenco di orari. Decisione: intero
-   `AdministrationsPerDay` in MVP; un futuro `AdministrationSchedule` con
-   orari è previsto solo come estensione, non necessario ora.
-
-3. **Soglia di avviso — singola o a più livelli**. La sezione 8 mostra
-   esempi 10/7/5/3, ma non chiarisce se sono livelli multipli
-   configurabili per la stessa medicina o alternative. Decisione MVP:
-   **un solo valore intero di soglia (giorni)** per medicina. Il campo può
-   essere esteso in futuro a un array di soglie senza rompere lo schema
-   (nuova tabella `MedicineThresholds`, oppure JSON).
-
-4. **Reset del ciclo di notifica**. La specifica dice "dopo un nuovo
-   rifornimento il ciclo deve poter ripartire". Cosa conta come
-   rifornimento? Decisione: **ogni movimento di stock positivo** di tipo
-   `NewPackage`, `ManualAdd`, `PositiveCorrection` incrementa un contatore
-   `StockEpoch` sulla medicina. Le notifiche sono legate all'epoch
-   corrente; una nuova epoch riazzera automaticamente il ciclo.
-
-5. **Sospensione temporanea**. La specifica la menziona (sezione 5) ma non
-   definisce la semantica. Decisione: entità `MedicationSuspension`
-   con `StartDate` e `EndDate?`. Nei periodi sospesi non viene generato
-   consumo automatico; giorni residui e ETA di esaurimento non vengono
-   calcolati fintanto che la medicina è sospesa (oppure sono calcolati
-   ignorando i giorni sospesi, se il periodo di sospensione è chiuso nel
-   passato).
-
-6. **Data di fine terapia**. Se `EndDate` è impostata e cade prima
-   dell'esaurimento stimato, ha senso avvisare per "medicina in
-   esaurimento"? Decisione: sì, la specifica richiede il promemoria per la
-   prescrizione indipendentemente dalla `EndDate`; ma se
-   `DataEsaurimentoStimata > EndDate` allora il sistema **non genera
-   avviso** (basta il residuo). Regola implementata nel dominio, testata.
-
-7. **Fuso orario e DST**. L'applicazione è desktop personale su Windows 11.
-   Decisione: **ora locale via `TimeProvider`**. Le date "logiche" (inizio
-   terapia, fine, sospensioni, giorno di consumo) sono `DateOnly`. Le date
-   "evento" (movimenti, notifiche, log) sono `DateTimeOffset` con offset
-   locale, così da resistere a cambi di DST.
-
-8. **UI "moderna e pulita" in WinForms**. WinForms non offre nativamente lo
-   stesso look di WinUI/WPF. Decisione: nessun framework di skin di terze
-   parti in MVP. Uso della segoe UI Variable, `HighDpiMode.PerMonitorV2`,
-   `DataGridView` doppio-bufferizzato, colori/renderer custom sui
-   `ToolStrip`, ownerdrawn dove serve. Se l'utente vuole un look Fluent
-   completo va valutato in seguito un porting a WinUI3, che però la
-   specifica ha esplicitamente escluso.
-
-9. **Notifiche Windows su app "unpackaged"**. Toast interattive su Windows
-   11 richiedono un AUMID e uno shortcut nello Start Menu. `[UNCERTAIN]` la
-   compatibilità immediata di `CommunityToolkit.WinUI.Notifications` (o del
-   suo predecessore `Microsoft.Toolkit.Uwp.Notifications`) con `net10.0`:
-   funzionerà, ma la stringa TFM esatta e l'attivatore COM andranno
-   verificati alla prima compilazione. Piano B: `System.Windows.Forms.NotifyIcon.ShowBalloonTip`
-   (funziona sempre, meno "moderno" ma senza vincoli di packaging).
-   Decisione: implementazione dietro `IWindowsNotificationService`, con
-   due adapter selezionabili tramite configurazione. Il primo tentativo
-   sarà toast tramite `Microsoft.Toolkit.Uwp.Notifications`, con
-   fallback automatico a `NotifyIcon` se l'inizializzazione fallisce.
-
-10. **SMTP client**. `[VERIFIED]` `System.Net.Mail.SmtpClient` è marcato
-    come "obsoleted for new development" da Microsoft dal .NET 6.
-    Decisione: dipendenza da **MailKit** (`MailKit`/`MimeKit`,
-    mantenuti, standard di fatto). Chiuso dietro
-    `IEmailNotificationService`, così il provider è sostituibile.
-
-11. **Storage delle credenziali email**. Decisione: la password SMTP viene
-    cifrata con **DPAPI** (`System.Security.Cryptography.ProtectedData`,
-    scope `CurrentUser`) e salvata come blob base64 nel file di
-    configurazione utente. Alternativa (Windows Credential Manager via
-    `CredWrite`) più corretta a livello formale ma richiede P/Invoke o
-    NuGet aggiuntivo; DPAPI è sufficiente per un'app single-user locale.
-
-12. **Auto-start con Windows**. Decisione: chiave di registro
-    `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (per-utente, non
-    richiede privilegi elevati, reversibile). Nessun servizio Windows in
-    MVP, conforme alla sezione 11.
-
-13. **Cartella dati**. Decisione:
-    `%LOCALAPPDATA%\MedReminder\` per database, log e settings. Motivo:
-    `LocalAppData` è appropriato per dati locali non roaming, non richiede
-    permessi speciali, non viaggia su rete come `AppData\Roaming`, e non è
-    nella directory di installazione (rispetta la sezione 15).
-
-14. **Concurrency**. Un solo processo per utente. Decisione: nessun lock
-    distribuito. Al più un mutex nominato all'avvio per impedire istanze
-    multiple, e SQLite in modalità WAL per resistere a chiusure improvvise.
-
-### 1.2 Casi limite identificati
-
-Devono essere testati nel dominio (vedi sezione 5 di questo documento):
-
-- `dailyRate == 0` → nessuna ETA, nessun avviso automatico.
-- `currentStock < 0` (correzione manuale che porta sotto zero) → clamp a 0,
-  log warning, l'app non "recupera" il debito.
-- Medicina sospesa → nessun consumo automatico nel periodo sospeso;
-  la catch-up di consumo giornaliero salta i giorni sospesi.
-- App non aperta per N giorni → catch-up del consumo giornaliero al
-  successivo avvio; le notifiche eventualmente perse sono generate una
-  sola volta (per epoch), non N volte.
-- Cambio dose/frequenza a metà terapia → nuova entry in
-  `MedicationScheduleHistory` (versionamento della schedule), il consumo
-  giornaliero è ricalcolato in avanti dalla data di cambio.
-- Rifornimento durante il periodo di soglia → nuovo `StockEpoch`, la
-  notifica successiva è ammessa quando la nuova epoch rientra in soglia.
-- Anno bisestile / cambio DST → coperti dall'uso di `DateOnly` per la
-  logica di giorno e da `TimeProvider` iniettato nei test.
-- Fallimento SMTP transitorio → retry con back-off limitato (max 3
-  tentativi, escalating 5s/30s/2m), poi log come `NotificationEvent`
-  fallita.
-- Database in sola lettura o disco pieno → l'applicazione non si chiude;
-  la UI mostra banner di errore, i controlli periodici continuano ma non
-  possono scrivere.
-- Configurazione SMTP mancante o palesemente errata → il sotto-sistema
-  email è marcato "disabilitato"; le notifiche Windows continuano a
-  funzionare.
-
-### 1.3 Decisioni architetturali che richiedono conferma
-
-Le decisioni sopra sono proposte tecniche autonome, motivate. Chiedo
-conferma esplicita solo sui punti che cambiano il perimetro funzionale:
-
-- **Q1**: Soglia singola per medicina in MVP (§1.1 punto 3), soglie
-  multiple in un secondo tempo. Ok?
-- **Q2**: `EndDate` che sopprime la notifica quando l'ETA la supera
-  (§1.1 punto 6). Ok?
-- **Q3**: Toast Windows via `Microsoft.Toolkit.Uwp.Notifications` con
-  fallback a `NotifyIcon` (§1.1 punto 9). Ok?
-- **Q4**: DPAPI (`CurrentUser`) per la password SMTP, non Credential
-  Manager (§1.1 punto 11). Ok?
-
-Se non arriva feedback, procedo con le proposte sopra.
+Epistemic classification used: `[VERIFIED]` (established fact),
+`[INFERRED]` (deduction from verified facts), `[UNCERTAIN]` (fact I
+cannot confirm without tests or without user clarification).
 
 ---
 
-## 2. Fase 2 — Architettura
+## 1. Phase 1 — Analysis
 
-### 2.1 Struttura della solution
+### 1.1 Ambiguous or incomplete requirements
+
+Only the points that affect the architecture or the data model are
+listed. For each one the proposed decision and the rationale are given.
+If any of these decisions is not acceptable, it must be corrected
+before Phase 3.
+
+1. **Definition of "daily consumption"**. The specification does not
+   state whether daily consumption is always computed from the schedule
+   (`dose × administrations`) or possibly estimated from the intake
+   history.
+   Decision: for the MVP, daily consumption is **derived from the
+   configured schedule**. Actual intakes (section 6 of the spec) stay
+   in the data model for a future empirical estimation, but they do
+   not influence the MVP calculation.
+
+2. **Daily administrations**. The specification says "number" (an
+   integer), not a list of times. Decision: an integer
+   `AdministrationsPerDay` in the MVP; a future
+   `AdministrationSchedule` with times is anticipated only as an
+   extension, not required now.
+
+3. **Warning threshold — single vs. multi-level**. Section 8 shows
+   examples 10/7/5/3, but does not clarify whether they are multiple
+   configurable levels for the same medicine or alternatives. MVP
+   decision: **a single integer threshold value (days)** per medicine.
+   The field can be extended later to an array of thresholds without
+   breaking the schema (new `MedicineThresholds` table, or JSON).
+
+4. **Notification-cycle reset**. The spec says "after a new refill the
+   cycle must be able to restart". What counts as a refill? Decision:
+   **every positive stock movement** of kind `NewPackage`, `ManualAdd`,
+   `PositiveCorrection` increments a `StockEpoch` counter on the
+   medicine. Notifications are keyed on the current epoch; a new epoch
+   automatically resets the cycle.
+
+5. **Temporary suspension**. The spec mentions it (section 5) but does
+   not define semantics. Decision: an entity `MedicationSuspension`
+   with `StartDate` and `EndDate?`. During suspended periods no
+   automatic consumption is generated; days remaining and estimated
+   run-out ETA are not computed while the medicine is suspended (or
+   they are computed skipping the suspended days, if the suspension
+   period is closed in the past).
+
+6. **Therapy end date**. If `EndDate` is set and falls before the
+   estimated run-out, does it still make sense to warn about "medicine
+   running out"? Decision: yes, the spec requires the reminder for the
+   prescription regardless of `EndDate`; but if
+   `EstimatedRunOutDate > EndDate` then the system **does not raise a
+   warning** (the residual is enough). Rule implemented in the domain,
+   tested.
+
+7. **Time zone and DST**. The application is a personal desktop app on
+   Windows 11. Decision: **local time via `TimeProvider`**. "Logical"
+   dates (therapy start, therapy end, suspensions, consumption day)
+   are `DateOnly`. "Event" timestamps (movements, notifications, log)
+   are `DateTimeOffset` with local offset, so they survive DST
+   transitions.
+
+8. **"Modern and clean" WinForms UI**. WinForms does not natively offer
+   the same look as WinUI/WPF. Decision: no third-party skin framework
+   in the MVP. Use Segoe UI Variable, `HighDpiMode.PerMonitorV2`,
+   double-buffered `DataGridView`, custom colors / renderers on
+   `ToolStrip`, owner-drawn where needed. If the user wants a full
+   Fluent look, a WinUI 3 port could be considered later — but the
+   spec has explicitly excluded that.
+
+9. **Windows notifications on an "unpackaged" app**. Interactive toasts
+   on Windows 11 require an AUMID and a Start Menu shortcut.
+   `[UNCERTAIN]` whether `CommunityToolkit.WinUI.Notifications` (or its
+   predecessor `Microsoft.Toolkit.Uwp.Notifications`) is immediately
+   compatible with `net10.0`: it will work, but the exact TFM string
+   and the COM activator will need to be verified at first
+   compilation. Plan B: `System.Windows.Forms.NotifyIcon.ShowBalloonTip`
+   (always works, less "modern" but no packaging constraints).
+   Decision: implementation behind `IWindowsNotificationService`, with
+   two adapters selectable via configuration. The first attempt will
+   be toast via `Microsoft.Toolkit.Uwp.Notifications`, with an
+   automatic fallback to `NotifyIcon` if initialization fails.
+
+10. **SMTP client**. `[VERIFIED]` `System.Net.Mail.SmtpClient` has been
+    marked as "obsoleted for new development" by Microsoft since .NET
+    6. Decision: dependency on **MailKit**
+    (`MailKit`/`MimeKit`, maintained, de facto standard). Wrapped
+    behind `IEmailNotificationService`, so the provider is
+    replaceable.
+
+11. **Email credential storage**. Decision: the SMTP password is
+    encrypted with **DPAPI**
+    (`System.Security.Cryptography.ProtectedData`, `CurrentUser`
+    scope) and saved as a base64 blob in the user's configuration
+    file. Alternative (Windows Credential Manager via `CredWrite`) is
+    formally more correct but requires P/Invoke or an extra NuGet;
+    DPAPI is sufficient for a single-user local application.
+
+12. **Auto-start with Windows**. Decision: registry key
+    `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (per-user,
+    does not require elevated privileges, reversible). No Windows
+    service in the MVP, consistent with section 11.
+
+13. **Data folder**. Decision: `%LOCALAPPDATA%\MedReminder\` for the
+    database, logs and settings. Reason: `LocalAppData` is appropriate
+    for local non-roaming data, does not require special permissions,
+    does not travel over the network like `AppData\Roaming`, and is
+    not inside the install directory (respects section 15).
+
+14. **Concurrency**. One process per user. Decision: no distributed
+    lock. At most a named mutex at startup to prevent multiple
+    instances, plus SQLite in WAL mode to survive abrupt shutdowns.
+
+### 1.2 Edge cases identified
+
+They must be tested in the domain (see section 5 of this document):
+
+- `dailyRate == 0` → no ETA, no automatic warning.
+- `currentStock < 0` (manual correction driving it below zero) → clamp
+  to 0, log warning, the app does not "recover" the debt.
+- Suspended medicine → no automatic consumption during the suspension;
+  the daily-consumption catch-up skips suspended days.
+- App not opened for N days → daily-consumption catch-up at the next
+  startup; missed notifications are generated only once (per epoch),
+  not N times.
+- Mid-therapy dose / frequency change → new entry in
+  `MedicationScheduleHistory` (versioned schedule), daily consumption
+  is recomputed forward from the change date.
+- Refill during the threshold period → new `StockEpoch`, the next
+  notification is allowed once the new epoch falls within the
+  threshold.
+- Leap year / DST change → covered by using `DateOnly` for day logic
+  and by injecting `TimeProvider` in tests.
+- Transient SMTP failure → retry with limited back-off (max 3
+  attempts, escalating 5s / 30s / 2m), then log a failed
+  `NotificationEvent`.
+- Read-only database or full disk → the application does not crash;
+  the UI shows an error banner, periodic checks continue but cannot
+  write.
+- Missing or plainly wrong SMTP configuration → the email sub-system
+  is marked "disabled"; Windows notifications keep working.
+
+### 1.3 Architectural decisions that need confirmation
+
+The decisions above are autonomous, motivated technical proposals.
+Explicit confirmation is requested only for the points that change
+the functional perimeter:
+
+- **Q1**: Single threshold per medicine in the MVP (§1.1 item 3),
+  multiple thresholds later. OK?
+- **Q2**: `EndDate` suppresses the notification when the ETA exceeds
+  it (§1.1 item 6). OK?
+- **Q3**: Windows toast via `Microsoft.Toolkit.Uwp.Notifications` with
+  fallback to `NotifyIcon` (§1.1 item 9). OK?
+- **Q4**: DPAPI (`CurrentUser`) for the SMTP password, not Credential
+  Manager (§1.1 item 11). OK?
+
+If no feedback is provided, the proposals above are followed.
+
+---
+
+## 2. Phase 2 — Architecture
+
+### 2.1 Solution structure
 
 ```
 MedReminder.sln
 src/
-  MedReminder.Domain/            netstandard2.1 o net10.0
+  MedReminder.Domain/            netstandard2.1 or net10.0
   MedReminder.Application/       net10.0
   MedReminder.Infrastructure/    net10.0-windows10.0.19041.0
-  MedReminder.UI/                net10.0-windows10.0.19041.0  (WinForms, output exe)
+  MedReminder.UI/                net10.0-windows10.0.19041.0  (WinForms, exe output)
 tests/
   MedReminder.Domain.Tests/      net10.0     xUnit
   MedReminder.Application.Tests/ net10.0     xUnit
   MedReminder.Infrastructure.Tests/ net10.0-windows10.0.19041.0 xUnit
 ```
 
-Motivazioni:
-- `Domain` in `netstandard2.1` (o `net10.0` puro) senza dipendenze Windows,
-  100% testabile senza SDK Windows.
-- `Application` in `net10.0`, contiene use case, servizi, interfacce
-  d'infrastruttura (porte). Non fa riferimento a EF Core, MailKit, Toast.
-- `Infrastructure` in `net10.0-windows10.0.19041.0` per poter usare API
-  Windows (registry, DPAPI, notifiche, tray). Contiene EF Core, MailKit,
-  logger file, adapter DPAPI, registrazione auto-start.
-- `UI` è l'unico exe. Referenzia `Application` e `Infrastructure`.
-- Nessun progetto "Shared" o "Common": non serve.
+Rationale:
+- `Domain` on `netstandard2.1` (or pure `net10.0`) with no Windows
+  dependencies, 100% testable without the Windows SDK.
+- `Application` on `net10.0`, contains use cases, services,
+  infrastructure interfaces (ports). It does not reference EF Core,
+  MailKit or Toast.
+- `Infrastructure` on `net10.0-windows10.0.19041.0` so it can use
+  Windows APIs (registry, DPAPI, notifications, tray). Contains EF
+  Core, MailKit, file logger, DPAPI adapter, auto-start registration.
+- `UI` is the only exe. It references `Application` and
+  `Infrastructure`.
+- No "Shared" or "Common" project: not needed.
 
-### 2.2 Dipendenze NuGet proposte
+### 2.2 Proposed NuGet dependencies
 
-Numero e motivazione volutamente minimi.
+Deliberately minimal in number and motivation.
 
-| Pacchetto | Progetto | Motivo |
+| Package | Project | Reason |
 |---|---|---|
 | `Microsoft.Extensions.Hosting` | UI | Generic host: DI, config, logging, hosted services |
 | `Microsoft.Extensions.Configuration.Json` | UI | `appsettings.json` + user override |
-| `Microsoft.EntityFrameworkCore.Sqlite` | Infrastructure | Persistenza + migrations |
+| `Microsoft.EntityFrameworkCore.Sqlite` | Infrastructure | Persistence + migrations |
 | `Microsoft.EntityFrameworkCore.Design` | Infrastructure (tool) | `dotnet ef migrations` |
-| `MailKit` | Infrastructure | SMTP moderno (sostituto di `SmtpClient`) |
-| `Microsoft.Toolkit.Uwp.Notifications` | Infrastructure | Toast Windows unpackaged |
-| `Serilog.Extensions.Hosting` + `Serilog.Sinks.File` | Infrastructure | Log strutturato rolling su file |
-| `xunit`, `xunit.runner.visualstudio`, `FluentAssertions` | Tests | Framework di test standard |
+| `MailKit` | Infrastructure | Modern SMTP (replacement for `SmtpClient`) |
+| `Microsoft.Toolkit.Uwp.Notifications` | Infrastructure | Windows toast, unpackaged |
+| `Serilog.Extensions.Hosting` + `Serilog.Sinks.File` | Infrastructure | Structured rolling file log |
+| `xunit`, `xunit.runner.visualstudio`, `FluentAssertions` | Tests | Standard test framework |
 
-Non aggiungerò librerie "skin" WinForms, non aggiungerò AutoMapper, non
-aggiungerò MediatR. Se un caso specifico lo giustificherà lo motiverò
-prima.
+No "skin" WinForms libraries, no AutoMapper, no MediatR. If a specific
+case justifies one, the rationale will be documented first.
 
-`[INFERRED]` EF Core 10 tag stabile è disponibile e supporta `net10.0`
-(release EF Core allineate al major .NET). Se al primo restore risultasse
-non ancora sul feed pubblico, ripiegherei su EF Core 9 (compatibile con
-`net10.0`) e lo segnalerei.
+`[INFERRED]` The EF Core 10 stable tag is available and supports
+`net10.0` (EF Core releases align with the .NET major). If, at the
+first restore, it is not yet on the public feed, fall back to EF Core
+9 (compatible with `net10.0`) and flag it.
 
-### 2.3 Modello dati
+### 2.3 Data model
 
-Nomi in inglese nel codice, coerenti con la specifica sezione 16. Nomi in
-italiano nella UI.
+Names in English in code, consistent with section 16 of the spec.
+Names in Italian in the UI.
 
 **Medicine**
 - `Id: Guid`
 - `Name: string`  (required)
 - `ActiveIngredient: string?`
 - `Package: string?`
-- `Unit: string`  (codice unità, es. "compresse", "ml", …)
-- `DosePerAdministration: decimal`  (unità per singola somministrazione)
+- `Unit: string`  (unit code, e.g. "tablets", "ml", …)
+- `DosePerAdministration: decimal`  (units per single administration)
 - `AdministrationsPerDay: int`
 - `StartDate: DateOnly`
 - `EndDate: DateOnly?`
@@ -234,7 +243,7 @@ italiano nella UI.
 - `DoctorName: string?`
 - `Notes: string?`
 - `IsActive: bool`
-- `StockEpoch: int`  (incrementato ad ogni movimento positivo)
+- `StockEpoch: int`  (incremented on every positive movement)
 - `NotificationChannels: NotificationChannels`  (flags: Email, Windows)
 - `CreatedAt: DateTimeOffset`
 - `UpdatedAt: DateTimeOffset`
@@ -245,37 +254,38 @@ italiano nella UI.
 - `OccurredAt: DateTimeOffset`
 - `Kind: StockMovementKind`  (`InitialLoad`, `NewPackage`, `ManualAdd`,
   `Consumption`, `PositiveCorrection`, `NegativeCorrection`)
-- `QuantityDelta: decimal`  (segno coerente con `Kind`)
-- `StockEpoch: int`  (l'epoch attivo al momento del movimento)
+- `QuantityDelta: decimal`  (sign consistent with `Kind`)
+- `StockEpoch: int`  (the epoch active at the time of the movement)
 - `Notes: string?`
 
 **MedicationSuspension**
 - `Id: Guid`
 - `MedicineId: Guid`
 - `StartDate: DateOnly`
-- `EndDate: DateOnly?`  (null = sospensione aperta)
+- `EndDate: DateOnly?`  (null = open suspension)
 - `Reason: string?`
 
-**MedicationScheduleHistory** (per gestire cambi di dose/frequenza a metà
-terapia senza distruggere lo storico)
+**MedicationScheduleHistory** (to handle mid-therapy dose / frequency
+changes without destroying the history)
 - `Id: Guid`
 - `MedicineId: Guid`
 - `EffectiveFrom: DateOnly`
 - `DosePerAdministration: decimal`
 - `AdministrationsPerDay: int`
 
-Nota: `Medicine.Dose*` e `Medicine.AdministrationsPerDay` sono lo stato
-"corrente", `MedicationScheduleHistory` è la timeline. Il calcolo del
-consumo giornaliero usa la history, non lo stato corrente.
+Note: `Medicine.Dose*` and `Medicine.AdministrationsPerDay` are the
+"current" state; `MedicationScheduleHistory` is the timeline. Daily
+consumption is computed from the history, not from the current state.
 
-**MedicationIntake**  (previsto ma non usato dall'MVP; presente per non
-bloccarne l'implementazione futura, sezione 6)
+**MedicationIntake** (planned but not used by the MVP; present so its
+future implementation is not blocked, section 6)
 - `Id: Guid`
 - `MedicineId: Guid`
 - `ScheduledAt: DateTimeOffset?`
 - `ActualAt: DateTimeOffset?`
 - `Quantity: decimal`
-- `Status: IntakeStatus`  (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`)
+- `Status: IntakeStatus`  (`Taken`, `Skipped`, `Cancelled`,
+  `ManualCorrection`)
 - `Notes: string?`
 
 **NotificationEvent**
@@ -288,240 +298,254 @@ bloccarne l'implementazione futura, sezione 6)
 - `Success: bool`
 - `ErrorMessage: string?`
 
-**ApplicationSetting**  (chiave/valore, per le impostazioni globali)
+**ApplicationSetting** (key/value, for global settings)
 - `Key: string`  (PK)
 - `Value: string`
 
-Le impostazioni SMTP e le preferenze applicative usano `IOptions<T>`
-proiettate da questa tabella (o da `appsettings.json` per i valori non
-sensibili).
+SMTP settings and application preferences use `IOptions<T>` projected
+from this table (or from `appsettings.json` for non-sensitive values).
 
-### 2.4 Regole di consistenza
+### 2.4 Consistency rules
 
-- `CurrentStock(medicineId) = Σ StockMovement.QuantityDelta` per quella
-  medicina. Non è persistita, è **funzione**. Se si dovesse memorizzare
-  per performance, sarebbe un campo denormalizzato con test di
-  consistenza.
-- `StockEpoch` corrente della medicina = max epoch presente sui movimenti
-  positivi. Il campo su `Medicine` è cache; test di consistenza in
+- `CurrentStock(medicineId) = Σ StockMovement.QuantityDelta` for that
+  medicine. It is not persisted, it is a **function**. If it were
+  stored for performance, it would be a denormalized field with a
+  consistency test.
+- Current `StockEpoch` of the medicine = max epoch on the positive
+  movements. The field on `Medicine` is a cache; consistency test in
   `NotificationCycleTests`.
-- La generazione di `StockMovement.Kind = Consumption` è responsabilità
-  del `ConsumptionCatchUpService` (idempotente per `(medicineId, date)`
-  grazie a un vincolo unico su `(MedicineId, OccurredAt.Date, Kind)` per
-  `Kind = Consumption`).
-- La sospensione impedisce la generazione di consumo per giorni contenuti
-  nel periodo sospeso.
+- Generating `StockMovement.Kind = Consumption` is the responsibility
+  of the `ConsumptionCatchUpService` (idempotent for
+  `(medicineId, date)` thanks to a unique constraint on
+  `(MedicineId, OccurredAt.Date, Kind)` for `Kind = Consumption`).
+- Suspension prevents consumption from being generated for days that
+  fall inside the suspended period.
 
-### 2.5 Interfacce principali (porte)
+### 2.5 Main interfaces (ports)
 
-Dichiarate in `MedReminder.Application` o `MedReminder.Domain` a seconda
-del layer. Solo firme, nessuna implementazione — questa è ancora Fase 2.
+Declared in `MedReminder.Application` or `MedReminder.Domain`
+depending on the layer. Signatures only, no implementation — this is
+still Phase 2.
 
-- `IMedicineRepository`  — CRUD su `Medicine` e sue collezioni.
+- `IMedicineRepository` — CRUD on `Medicine` and its collections.
 - `IStockMovementRepository`
 - `INotificationEventRepository`
-- `IUnitOfWork`  — transazioni.
-- `IEmailNotificationService`  — invio email; test di connessione.
-- `IWindowsNotificationService`  — toast/tray.
-- `IAutoStartService`  — registrazione/rimozione registry Run.
-- `ICredentialProtector`  — DPAPI wrapping/unwrapping.
-- `IClock`  ⇄ `TimeProvider` (uso `TimeProvider` direttamente, standard
-  .NET 8+; niente wrapper custom).
-- `IMedicationMonitoringService`  — ciclo di controllo periodico.
-- `IConsumptionCatchUpService`  — materializzazione del consumo giornaliero.
-- `IStockService`  — API applicativa per aggiungere/correggere stock.
-- `IBackupService`  — export/import DB.
-- `IEmailComposer`  — costruzione del contenuto email a partire dallo
-  stato medicina (separata dal transport per essere testabile).
+- `IUnitOfWork` — transactions.
+- `IEmailNotificationService` — email sending; connection test.
+- `IWindowsNotificationService` — toast / tray.
+- `IAutoStartService` — register / remove the Run registry entry.
+- `ICredentialProtector` — DPAPI wrapping / unwrapping.
+- `IClock` ⇄ `TimeProvider` (use `TimeProvider` directly, standard on
+  .NET 8+; no custom wrapper).
+- `IMedicationMonitoringService` — periodic control cycle.
+- `IConsumptionCatchUpService` — daily-consumption materialization.
+- `IStockService` — application API to add / correct stock.
+- `IBackupService` — export / import the DB.
+- `IEmailComposer` — build the email payload from the medicine state
+  (separated from transport so it is testable).
 
 ### 2.6 Scheduler / hosted service
 
-Un unico `IHostedService`: `MedicationMonitorHostedService`.
+A single `IHostedService`: `MedicationMonitorHostedService`.
 
-- Al `StartAsync`: catch-up consumo + primo run del controllo.
-- Ciclo periodico configurabile (default 30 minuti in
-  `appsettings.json`), realizzato con `PeriodicTimer` + `CancellationToken`.
-- Ad ogni run:
-  1. Ricarica medicine attive.
-  2. Chiede al `IConsumptionCatchUpService` di materializzare eventuali
-     giorni di consumo non ancora registrati.
-  3. Per ciascuna medicina calcola `DaysRemaining` e verifica la condizione
-     di avviso.
-  4. Consulta `NotificationEventRepository` con `(MedicineId, StockEpoch)`:
-     se non esiste già un evento per l'epoch corrente entro la soglia,
-     compone e invia notifica (canali configurati per la medicina) e
-     registra `NotificationEvent`.
-  5. In caso di errore email, retry con back-off; il fallimento definitivo
-     è registrato come `NotificationEvent` fallito (`Success = false`).
-- Sezione critica non necessaria: il service è single-threaded e nessun
-  altro scrittore agisce concorrentemente sullo stesso DB.
-- Alla `StopAsync`: il `CancellationToken` interrompe il ciclo entro un
-  paio di secondi. Nessuna scrittura pendente viene abbandonata (le
-  transazioni sono per singola operazione).
+- On `StartAsync`: consumption catch-up + first run of the check.
+- Periodic cycle configurable (default 30 minutes in
+  `appsettings.json`), implemented with `PeriodicTimer` +
+  `CancellationToken`.
+- On every run:
+  1. Reload active medicines.
+  2. Ask `IConsumptionCatchUpService` to materialize any consumption
+     days not yet recorded.
+  3. For each medicine compute `DaysRemaining` and check the warning
+     condition.
+  4. Query `NotificationEventRepository` with
+     `(MedicineId, StockEpoch)`: if no event exists yet for the
+     current epoch within the threshold, compose and send the
+     notification (channels configured for the medicine) and record a
+     `NotificationEvent`.
+  5. On email error, retry with back-off; a definitive failure is
+     recorded as a failed `NotificationEvent` (`Success = false`).
+- No critical section is needed: the service is single-threaded and no
+  other writer acts concurrently on the same DB.
+- On `StopAsync`: the `CancellationToken` breaks the cycle within a
+  couple of seconds. No pending write is abandoned (transactions are
+  per-operation).
 
-### 2.7 UI WinForms
+### 2.7 WinForms UI
 
-Struttura form:
+Form structure:
 
 - `MainForm`
-  - `DataGridView` medicine (colonne: Nome, Residuo, Consumo/gg, Giorni,
-    ETA, Stato).
-  - Toolbar: "Nuova", "Modifica", "Aggiungi scorte", "Registra consumo",
-    "Controlla ora", "Impostazioni".
-  - Stato riga colorato: normale / attenzione (dentro soglia) / esaurita /
-    sospesa.
-- `MedicineEditDialog` — nuovo/modifica.
-- `StockAdjustmentDialog` — carico, correzione ±, consumo manuale.
-- `SettingsDialog` — schede: Generali, Notifiche (Email/Windows/Entrambi/
-  Nessuna), Email SMTP (host, porta, TLS, user, password), Backup,
-  Auto-start.
-- `NotifyIcon` + menu (Apri, Controlla ora, Impostazioni, Esci).
-- `LogViewerDialog` — coda del file di log corrente.
+  - `DataGridView` for medicines (columns: Name, Remaining,
+    Consumption/day, Days, ETA, Status).
+  - Toolbar: "New", "Edit", "Add stock", "Register intake",
+    "Check now", "Settings".
+  - Row status colored: normal / warning (within threshold) /
+    depleted / suspended.
+- `MedicineEditDialog` — new / edit.
+- `StockAdjustmentDialog` — load, correction ±, manual consumption.
+- `SettingsDialog` — tabs: General, Notifications
+  (Email / Windows / Both / None), Email SMTP (host, port, TLS, user,
+  password), Backup, Auto-start.
+- `NotifyIcon` + menu (Open, Check now, Settings, Exit).
+- `LogViewerDialog` — tail of the current log file.
 
-Il ViewModel è tenuto minimale. Ogni form riceve dai propri costruttori i
-servizi applicativi che gli servono (DI via `IServiceProvider` root). Non
-introduco MVVM completo su WinForms: sarebbe over-engineering.
+The ViewModel is kept minimal. Each form receives from its
+constructors the application services it needs (DI via the root
+`IServiceProvider`). No full MVVM on WinForms: it would be
+over-engineering.
 
-### 2.8 Persistenza e migrations
+### 2.8 Persistence and migrations
 
 - SQLite file `medreminder.db` in `%LOCALAPPDATA%\MedReminder\`.
-- EF Core code-first, migrations versionate nel repository sotto
+- EF Core code-first, migrations versioned in the repository under
   `src/MedReminder.Infrastructure/Migrations/`.
-- `DbContext` applica `Database.Migrate()` all'avvio (idempotente).
-- Modalità WAL, `foreign_keys = ON`.
-- Backup: copia del file DB previa `WAL checkpoint TRUNCATE`. Import:
-  overwrite del file DB previa conferma e rinomina del file esistente in
-  `medreminder.db.bak-yyyyMMddHHmmss`.
+- `DbContext` calls `Database.Migrate()` at startup (idempotent).
+- WAL mode, `foreign_keys = ON`.
+- Backup: copy of the DB file after a `WAL checkpoint TRUNCATE`.
+  Import: overwrite of the DB file after confirmation and renaming of
+  the existing file to `medreminder.db.bak-yyyyMMddHHmmss`.
 
-### 2.9 Notifiche
+### 2.9 Notifications
 
-- `IEmailNotificationService` (MailKit): host/porta/TLS/user/password/
-  timeout/from/to; `SendAsync(subject, body, CancellationToken)`;
+- `IEmailNotificationService` (MailKit):
+  host / port / TLS / user / password / timeout / from / to;
+  `SendAsync(subject, body, CancellationToken)`;
   `TestConnectionAsync()`.
-- `IEmailComposer`: `Compose(medicine, remaining, daysRemaining, eta)`
-  → `EmailMessage`. Testato in isolamento con snapshot del testo.
-- `IWindowsNotificationService`: `NotifyAsync(title, body)` con
-  implementazione toast + fallback balloon.
-- `NotificationChannels` è un `[Flags]` enum su `Medicine` che decide
-  quali canali usare. Il monitor deduplica per `(MedicineId, StockEpoch)`,
-  non per canale: una volta notificata l'epoch, non si ri-notifica.
+- `IEmailComposer`:
+  `Compose(medicine, remaining, daysRemaining, eta)` → `EmailMessage`.
+  Tested in isolation with a snapshot of the text.
+- `IWindowsNotificationService`: `NotifyAsync(title, body)` with toast
+  implementation + balloon fallback.
+- `NotificationChannels` is a `[Flags]` enum on `Medicine` that
+  decides which channels to use. The monitor deduplicates by
+  `(MedicineId, StockEpoch)`, not by channel: once an epoch has been
+  notified, it is not notified again.
 
 ### 2.10 Logging
 
-- Serilog: file rolling giornaliero, retention 30 giorni, in
+- Serilog: daily rolling file, 30-day retention, in
   `%LOCALAPPDATA%\MedReminder\logs\medreminder-.log`.
-- Nessun contenuto di email, nessuna password, nessuna nota medica libera
-  finisce in log. Solo: `MedicineId`, `Name`, quantità, giorni residui,
-  esito operazione.
-- Livello configurabile in `appsettings.json`. Default `Information`.
+- No email content, no password, no free-form medical note ever
+  reaches the log. Only: `MedicineId`, `Name`, quantity, days
+  remaining, operation outcome.
+- Level configurable in `appsettings.json`. Default `Information`.
 
-### 2.11 Sicurezza e privacy
+### 2.11 Security and privacy
 
-- Password SMTP: DPAPI `CurrentUser`, base64, salvata nel file
-  `smtp.protected` accanto al DB (non nel repository, non in
-  `appsettings.json` versionato).
-- `appsettings.json` versionato contiene solo default innocui.
-- `.gitignore` deve escludere `bin/`, `obj/`, `*.user`, `.vs/`,
-  `*.db*`, `smtp.protected`, `logs/`.
-- Email inviata contiene: nome medicina, giorni residui, quantità,
-  suggerimento generico di richiedere prescrizione. Nessuna informazione
-  clinica libera.
+- SMTP password: DPAPI `CurrentUser`, base64, saved in
+  `smtp.protected` next to the DB (not in the repository, not in the
+  versioned `appsettings.json`).
+- The versioned `appsettings.json` contains only harmless defaults.
+- `.gitignore` must exclude `bin/`, `obj/`, `*.user`, `.vs/`, `*.db*`,
+  `smtp.protected`, `logs/`.
+- The email sent contains: medicine name, days remaining, quantity,
+  generic suggestion to request a prescription. No free-form clinical
+  information.
 
 ### 2.12 Auto-start
 
-`IAutoStartService` con `IsEnabled`, `Enable()`, `Disable()`. Implementato
-scrivendo/rimuovendo il valore
-`HKCU\Software\Microsoft\Windows\CurrentVersion\Run\MedReminder` che
-punta all'eseguibile con argomento `--minimized`.
+`IAutoStartService` with `IsEnabled`, `Enable()`, `Disable()`.
+Implemented by writing / removing the value
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run\MedReminder`,
+pointing to the executable with argument `--minimized`.
 
 ### 2.13 Tray
 
-Nella `MainForm`:
-- Alla chiusura, se impostazione "chiudi in tray" attiva, `e.Cancel =
-  true` e `Hide()`.
-- Doppio click sull'icona → `Show()` + `WindowState = Normal`.
-- Voce "Esci" nel menu chiama `Application.Exit()` bypassando il tray.
-- Argomento CLI `--minimized` fa partire l'app direttamente in tray.
+In `MainForm`:
+- On close, if the "close to tray" setting is on, `e.Cancel = true`
+  and `Hide()`.
+- Double-click on the icon → `Show()` + `WindowState = Normal`.
+- The "Exit" menu entry calls `Application.Exit()`, bypassing the
+  tray.
+- The CLI argument `--minimized` starts the app directly in the tray.
 
 ---
 
-## 3. Piano di implementazione incrementale
+## 3. Incremental implementation plan
 
-Ogni incremento termina con: `dotnet build` OK, `dotnet test` OK,
-commit descrittivo, push. Nessuna PR aperta finché l'utente non la
-richiede esplicitamente.
+Every increment ends with: `dotnet build` OK, `dotnet test` OK, a
+descriptive commit, push. No PR is opened until the user explicitly
+requests one.
 
-**Incremento 0 — Bootstrap solution**
-- File solution + 4 progetti + 3 progetti di test.
-- `Directory.Build.props` con `Nullable`, `ImplicitUsings`, `TargetFramework`.
-- `.gitignore`, `.editorconfig`, `README.md` aggiornato.
-- `dotnet build` verde, un test placeholder verde.
+**Increment 0 — Solution bootstrap**
+- Solution file + 4 projects + 3 test projects.
+- `Directory.Build.props` with `Nullable`, `ImplicitUsings`,
+  `TargetFramework`.
+- `.gitignore`, `.editorconfig`, updated `README.md`.
+- `dotnet build` green, one placeholder test green.
 
-**Incremento 1 — Dominio**
-- Entità pure: `Medicine`, `StockMovement`, `MedicationSuspension`,
-  `MedicationScheduleHistory`, `MedicationIntake`, `NotificationEvent`.
-- Enumerazioni.
-- `MedicineStock` (value object) con logica di somma dei movimenti,
-  clamp a zero, ricalcolo epoch.
-- `DailyConsumption` con schedule versionata.
-- `RunOutForecast` che calcola `DaysRemaining` ed `EstimatedRunOutDate`
-  usando `TimeProvider`.
-- `NotificationCycle` che decide "notifica sì/no" a fronte di
-  soglia + `NotificationEvent` esistenti per l'epoch.
-- Test unitari per tutti i casi limite della sezione 1.2.
+**Increment 1 — Domain**
+- Pure entities: `Medicine`, `StockMovement`,
+  `MedicationSuspension`, `MedicationScheduleHistory`,
+  `MedicationIntake`, `NotificationEvent`.
+- Enumerations.
+- `MedicineStock` (value object) with the logic that sums the
+  movements, clamps to zero and recomputes the epoch.
+- `DailyConsumption` with a versioned schedule.
+- `RunOutForecast` that computes `DaysRemaining` and
+  `EstimatedRunOutDate` using `TimeProvider`.
+- `NotificationCycle` that decides "notify yes / no" given the
+  threshold and the existing `NotificationEvent` values for the
+  epoch.
+- Unit tests for every edge case in section 1.2.
 
-**Incremento 2 — Application**
-- Interfacce di repository, `IEmailNotificationService`,
-  `IWindowsNotificationService`, `IAutoStartService`, `ICredentialProtector`.
-- Use case: `AddMedicine`, `UpdateMedicine`, `DeactivateMedicine`,
-  `AddStock`, `RegisterConsumption`, `AdjustStock`, `SuspendMedication`,
-  `ResumeMedication`, `RunPeriodicCheck`.
-- `MedicationMonitor` implementato in Application (senza scheduler).
-- `ConsumptionCatchUp` implementato con TimeProvider.
-- Test con repository in-memory (fake per gli increment 1-2).
+**Increment 2 — Application**
+- Repository interfaces, `IEmailNotificationService`,
+  `IWindowsNotificationService`, `IAutoStartService`,
+  `ICredentialProtector`.
+- Use cases: `AddMedicine`, `UpdateMedicine`, `DeactivateMedicine`,
+  `AddStock`, `RegisterConsumption`, `AdjustStock`,
+  `SuspendMedication`, `ResumeMedication`, `RunPeriodicCheck`.
+- `MedicationMonitor` implemented in Application (no scheduler).
+- `ConsumptionCatchUp` implemented with `TimeProvider`.
+- Tests with in-memory repositories (fakes for increments 1-2).
 
-**Incremento 3 — Infrastructure: persistenza**
-- `DbContext` EF Core Sqlite, entity configurations, migration iniziale.
+**Increment 3 — Infrastructure: persistence**
+- EF Core Sqlite `DbContext`, entity configurations, initial
+  migration.
 - Repositories.
-- `IUnitOfWork` con transazione EF Core.
-- Test d'integrazione con SQLite in-memory (`:memory:`) o file temporaneo.
-- Backup/import service base.
+- `IUnitOfWork` with an EF Core transaction.
+- Integration tests with SQLite in-memory (`:memory:`) or a temporary
+  file.
+- Base backup / import service.
 
-**Incremento 4 — Infrastructure: notifiche + credenziali + auto-start**
+**Increment 4 — Infrastructure: notifications + credentials + auto-start**
 - MailKit adapter + `IEmailComposer`.
-- Toast adapter + fallback `NotifyIcon`.
+- Toast adapter + `NotifyIcon` fallback.
 - `DpapiCredentialProtector`.
 - `RegistryAutoStartService`.
-- Test di unità dove sensato; toast non testabile automaticamente, si
-  documenta il test manuale.
+- Unit tests where meaningful; the toast cannot be tested
+  automatically, so the manual test is documented.
 
-**Incremento 5 — Hosted service**
+**Increment 5 — Hosted service**
 - `MedicationMonitorHostedService` + `PeriodicTimer`.
-- Composition root in `Program.cs` di `MedReminder.UI` con generic host.
-- Test: forcing period corto in test d'integrazione.
+- Composition root in `Program.cs` of `MedReminder.UI` with the
+  generic host.
+- Test: force a short period in an integration test.
 
-**Incremento 6 — UI**
-- `MainForm`, dialog di edit, dialog stock, settings, log viewer.
-- Tray + argomento `--minimized`.
-- Binding UI ↔ services.
+**Increment 6 — UI**
+- `MainForm`, edit dialog, stock dialog, settings, log viewer.
+- Tray + `--minimized` argument.
+- UI ↔ services bindings.
 
-**Incremento 7 — Hardening**
-- Retry SMTP con back-off.
-- Mutex single-instance.
-- Errori DB non-fatali (banner UI).
-- Verifica DST e cambio giorno con test dedicati.
-- Verifica notifiche non duplicate su restart.
+**Increment 7 — Hardening**
+- SMTP retry with back-off.
+- Single-instance mutex.
+- Non-fatal DB errors (UI banner).
+- DST and day-change verification with dedicated tests.
+- Verification that notifications are not duplicated on restart.
 
-**Incremento 8 — Packaging e documentazione**
+**Increment 8 — Packaging and documentation**
 - Publish `net10.0-windows` x64 self-contained.
-- README completo (§28), disclaimer non-dispositivo-medico.
-- Documentazione tecnica minima in `docs/` (già iniziata con questo
-  file).
-- Nessun installer nell'MVP (fuori scope minimo).
+- Complete README (§28), non-medical-device disclaimer.
+- Minimal technical documentation in `docs/` (already started with
+  this file).
+- No installer in the MVP (outside the minimum scope).
 
 ---
 
-## 4. Struttura file (esito atteso dopo Incremento 0)
+## 4. File layout (expected outcome after Increment 0)
 
 ```
 MedReminder/
@@ -532,7 +556,7 @@ MedReminder/
   README.md
   LICENSE
   docs/
-    ANALYSIS.md            (questo file)
+    ANALYSIS.md            (this file)
   src/
     MedReminder.Domain/
       MedReminder.Domain.csproj
@@ -551,16 +575,16 @@ MedReminder/
 
 ---
 
-## 5. Che cosa chiedo di approvare prima di procedere
+## 5. What must be approved before proceeding
 
-1. Le 4 decisioni marcate Q1–Q4 nella §1.3.
-2. La struttura della solution in §2.1 e la lista di dipendenze NuGet in
+1. The four decisions marked Q1–Q4 in §1.3.
+2. The solution structure in §2.1 and the NuGet dependency list in
    §2.2.
-3. Il modello dati in §2.3 (in particolare la presenza di
-   `MedicationScheduleHistory` e `MedicationSuspension`).
-4. Il piano incrementale in §3 e l'ordine dei passi.
+3. The data model in §2.3 (in particular the presence of
+   `MedicationScheduleHistory` and `MedicationSuspension`).
+4. The incremental plan in §3 and the order of the steps.
 
-Ricevuta approvazione (o correzioni), procedo con l'**Incremento 0** e in
-seguito Incremento 1, fermandomi a ogni incremento con build+test verdi e
-un breve report di ciò che è cambiato, come richiesto dalla sezione 29
-della specifica.
+Once approval (or corrections) is received, implementation proceeds
+with **Increment 0** and then Increment 1, stopping at every
+increment with build + test green and a short report of what changed,
+as required by section 29 of the specification.

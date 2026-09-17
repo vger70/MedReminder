@@ -14,14 +14,43 @@
     <RepositoryRoot>$(MSBuildThisFileDirectory)</RepositoryRoot>
   </PropertyGroup>
 
-  <!-- Versione centralizzata: tutti gli assembly la ereditano tramite
-       AssemblyVersion/FileVersion/InformationalVersion generati dal SDK.
-       Bumpare qui a ogni release. -->
+  <!-- Centralized version: every assembly inherits it through
+       AssemblyVersion / FileVersion / InformationalVersion generated
+       by the SDK. Bump here for every release. -->
   <PropertyGroup Label="Versioning">
     <VersionPrefix>1.0.1</VersionPrefix>
-    <!-- VersionSuffix opzionale: "beta", "rc1", "alpha.2" — produce
-         ad esempio 1.0.1-beta. Lascia vuoto per una release finale. -->
+    <!-- Optional VersionSuffix: "beta", "rc1", "alpha.2" — produces
+         for example 1.0.1-beta. Leave empty for a final release. -->
     <VersionSuffix></VersionSuffix>
   </PropertyGroup>
+
+  <!--
+    Release-only cleanup: at the end of every Release build and publish,
+    remove the debug symbols (*.pdb) and the XML documentation files
+    (*.xml) from the output and publish folders. Keeps the shipped ZIP /
+    MSI / MSIX free of debug and documentation noise.
+
+    Scoped by Configuration == Release so Debug builds keep their .pdb
+    and .xml files intact.
+
+    Test projects are excluded: they never ship, and their .pdb files
+    are useful when a test fails locally.
+  -->
+  <Target Name="StripReleaseDebugArtifacts"
+          AfterTargets="Build;Publish"
+          Condition="'$(Configuration)' == 'Release' and '$(IsTestProject)' != 'true' and !$(MSBuildProjectName.EndsWith('.Tests'))">
+    <ItemGroup>
+      <_ReleaseArtifactsToStrip Include="$(OutputPath)**\*.pdb" />
+      <_ReleaseArtifactsToStrip Include="$(OutputPath)**\*.xml" />
+      <_ReleaseArtifactsToStrip Include="$(PublishDir)**\*.pdb" Condition="'$(PublishDir)' != ''" />
+      <_ReleaseArtifactsToStrip Include="$(PublishDir)**\*.xml" Condition="'$(PublishDir)' != ''" />
+    </ItemGroup>
+    <Delete Files="@(_ReleaseArtifactsToStrip)"
+            TreatErrorsAsWarnings="true"
+            ContinueOnError="true" />
+    <Message Importance="high"
+             Text="StripReleaseDebugArtifacts: removed *.pdb and *.xml from $(OutputPath) and $(PublishDir)"
+             Condition="'@(_ReleaseArtifactsToStrip)' != ''" />
+  </Target>
 
 </Project>

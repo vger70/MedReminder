@@ -1,37 +1,38 @@
-# MedReminder MSIX — Assets grafici
+# MedReminder MSIX — Graphic Assets
 
-## Cosa serve
+## What is required
 
-MSIX richiede loghi PNG multi-size. Nomi e dimensioni sono fissati dal
-manifest (`Package.appxmanifest`).
+MSIX requires multi-size PNG logos. Names and dimensions are fixed by
+the manifest (`Package.appxmanifest`).
 
-| File | Dimensioni (px) | Uso |
+| File | Size (px) | Use |
 |---|---:|---|
-| `Square44x44Logo.png` | 44×44 | Icona taskbar / app list |
+| `Square44x44Logo.png` | 44×44 | Taskbar / app list icon |
 | `Square71x71Logo.png` | 71×71 | Small tile |
 | `Square150x150Logo.png` | 150×150 | Medium tile (default) |
 | `Square310x310Logo.png` | 310×310 | Large tile |
 | `Wide310x150Logo.png` | 310×150 | Wide tile |
 | `StoreLogo.png` | 50×50 | Store listing + installer |
-| `SplashScreen.png` | 620×300 | Splash all'avvio |
+| `SplashScreen.png` | 620×300 | Splash screen at startup |
 
-**Formato**: PNG con sfondo trasparente (tranne SplashScreen che ha
-sfondo blu `#0D47A1` da manifest).
+**Format**: PNG with transparent background (except SplashScreen, which
+has a blue background `#0D47A1` set by the manifest).
 
-## Come generarli
+## How to generate them
 
-Opzione 1 — **Visual Studio "Image Asset Generator"** (raccomandato):
-apre una MSIX packaging project, doppio click su `Assets\...`,
-"Generate all assets". Genera tutte le taglie da una source PNG 400×400.
+Option 1 — **Visual Studio "Image Asset Generator"** (recommended):
+open an MSIX packaging project, double-click on `Assets\...`,
+"Generate all assets". Produces every size from a single 400×400 source
+PNG.
 
-Opzione 2 — **CLI con ImageMagick** partendo da
-`assets/medreminder.ico` (multi-res 256×256 max):
+Option 2 — **CLI with ImageMagick**, starting from
+`assets/medreminder.ico` (multi-res, up to 256×256):
 
 ```bash
-# Estrae 256×256 dalla ico
+# Extract the 256×256 frame from the ico
 magick convert assets/medreminder.ico[0] -resize 256x256 base.png
 
-# Genera le taglie MSIX
+# Generate the MSIX sizes
 for size in 44 71 150 310; do
   magick convert base.png -resize ${size}x${size} \
     packaging/msix/Assets/Square${size}x${size}Logo.png
@@ -44,14 +45,14 @@ magick convert base.png -resize 620x300 -gravity center -background "#0D47A1" \
   -extent 620x300 packaging/msix/Assets/SplashScreen.png
 ```
 
-Opzione 3 — **build-msix.ps1** (nella cartella `packaging/scripts/`)
-prova a rigenerare gli asset mancanti se `magick.exe` è nel PATH,
-altrimenti fallisce con un messaggio chiaro.
+Option 3 — **build-msix.ps1** (in the `packaging/scripts/` folder)
+tries to regenerate any missing asset if `magick.exe` is on the PATH,
+otherwise it fails with a clear error message.
 
-## Verifica
+## Verification
 
-Dopo la build, `MakeAppx.exe pack` fallisce se un asset dichiarato nel
-manifest manca. Il pacchetto MSIX generato può essere ispezionato con:
+After the build, `MakeAppx.exe pack` fails if an asset declared in the
+manifest is missing. The generated MSIX package can be inspected with:
 
 ```bat
 MakeAppx.exe unpack /p MedReminder-1.0.1-x64.msix /d unpacked
