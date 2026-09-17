@@ -202,6 +202,9 @@ CREATE TABLE IF NOT EXISTS reference_medicines (
     dosage                 TEXT,
     mah                    TEXT,
     marketing_status       TEXT,
+    dispensing_regime      TEXT,                   -- prescription / OTC / hospital-only
+    link_leaflet           TEXT,                   -- URL to package leaflet (FI)
+    link_spc               TEXT,                   -- URL to summary of product characteristics (RCP)
     snapshot_version       TEXT NOT NULL,
     UNIQUE (country, national_code)
 );
@@ -285,22 +288,37 @@ and, once complete, refreshes the autocomplete cache.
 
 v1 shippable set is M0–M3. M4 and M5 are follow-ons.
 
-### 3.1 M0 — Discovery spike
+### 3.1 M0 — Discovery spike (completed)
 
-1. Download the current AIFA open-data files (developer performs
-   this locally; the CI environment cannot reach `aifa.gov.it`).
-2. Identify the minimal file (or join) that contains
-   `{AIC, commercial name, active ingredient, ATC, form, dosage,
-   MAH, marketing status}`.
-3. Measure cardinality: total rows, distinct commercial names,
-   distinct active ingredients.
-4. Identify gaps: rows without ATC, missing OTC / SOP.
-5. Extract ~200 representative rows into
-   `tests/fixtures/catalogue/aifa-sample.csv`.
-6. Document the final field mapping as a comment on issue #9.
+Ran against the current AIFA open-data files
+(`drive.aifa.gov.it/farmaci/`). Full findings and the field mapping
+are recorded in issue
+[#9](https://github.com/vger70/MedReminder/issues/9); the essentials:
 
-Output: the mapping table that M1 will implement, or a documented
-blocker.
+- **Source files**: `confezioni_fornitura.csv` (78.6 MB, 160,008
+  rows, one per package) as the primary source, joined on
+  `CODICE_AIC` with `PA_confezioni.csv` (11.0 MB, 338,527 rows,
+  one per package × active ingredient). `atc.csv` (193 KB) is
+  not needed for M1 — every row in `confezioni_fornitura`
+  already carries `CODICE_ATC`.
+- **Encoding**: ASCII throughout, delimiter `;`, `CODICE_AIC` is
+  a 9-digit `TEXT` in 100% of rows.
+- **Post-filter cardinalities** (after applying the two import
+  rules in §3.2 below): 85,697 reference_medicines,
+  9,619 distinct commercial names, 5,750 distinct active
+  ingredients, 2,269 distinct ATC codes. Zero kept AIC lack
+  active-ingredient data.
+- **Data volume**: ~60–80 MB additional SQLite pages;
+  gzipped snapshot ~17–22 MB inside the installer.
+- **Fixture**: `tests/fixtures/catalogue/aifa-confezioni-sample.csv`
+  (198 rows), `aifa-pa-sample.csv` (253 rows),
+  `aifa-atc-sample.csv` (76 rows). ~110 KB total, deliberately
+  covers `Sospesa`, `Procedura Centralizzata`, OTC,
+  hospital-only, well-known brands, and 37 multi-ingredient
+  combinations.
+- **OTC/SOP coverage**: 78,610 rows in the current file are OTC
+  ("da banco") or non-prescription — the previously-flagged
+  OTC gap does not exist.
 
 ### 3.2 M1 — Schema + import scaffolding
 
@@ -314,15 +332,49 @@ blocker.
 - Add the Infrastructure adapters listed in §2.3, wired through
   DI. Feature flag off by default so no UI is affected yet.
 - Add EF Core query-compilation for the two `SearchBy…` methods.
-- Integration tests on SQLite in-memory using the M0 fixture:
-  - Import once → expected row counts.
+- **AIFA import rules** (`AifaSnapshotParser`):
+  - Read `confezioni_fornitura.csv` as the primary source; join
+    on `CODICE_AIC` with `PA_confezioni.csv` for the M2M
+    ingredient rows.
+  - **Skip rows where `TIPO_PROCEDURA = 'Omeopatico'`** — 74,310
+    rows in the current file (46%). Homeopathic products carry no
+    active ingredient (`PA_confezioni` returns `N.D.` for them),
+    so the autocomplete has nothing meaningful to show; also
+    aligns with the "no clinical decision support" charter. A
+    Settings toggle can re-enable them later if requested.
+  - **Skip rows where `PRINCIPIO_ATTIVO = 'N.D.'`** in
+    `PA_confezioni` — 52,920 rows. Do not create
+    `reference_active_ingredients` for `N.D.` and do not create
+    join rows in `reference_medicine_ingredients`.
+  - **Keep `Sospesa` rows** and let the UI badge them per §12.6.
+    Only 33 packages are `Sospesa` in the current file, so the
+    badge fires on the exceptions.
+  - **Assign `country = 'IT'`** to every row imported from
+    `confezioni_fornitura`, regardless of `TIPO_PROCEDURA`. Rows
+    tagged `Procedura Centralizzata` are also physically
+    authorised on the Italian market, so from an Italian user's
+    point of view they are legitimately Italian rows. The EMA
+    `EU` catalogue lands in M3 as a second row per §12.3
+    (do-not-deduplicate).
+  - Populate `dispensing_regime` from `FORNITURA`, `link_leaflet`
+    from `LINK_FI`, `link_spc` from `LINK_RCP`.
+- Integration tests on SQLite in-memory using the M0 fixture
+  under `tests/fixtures/catalogue/`:
+  - Import once → expected row counts (198 raw rows in
+    `aifa-confezioni-sample.csv` → 198 − (Omeopatico in sample)
+    reference_medicines).
   - Import twice with the same `snapshot_version` → zero delta
     (idempotency).
   - Import a newer `snapshot_version` → stale rows for that
     country are removed.
-  - `SearchByCommercialNameAsync("para", "IT", 20, …)` returns
-    paracetamol-containing products; the same call with country
-    `"EU"` returns only supranational rows.
+  - `SearchByCommercialNameAsync("aug", "IT", 20, …)` returns the
+    fixture's Augmentin rows; the same call with country
+    `"EU"` returns only supranational rows (none in the
+    Italian-only fixture, so the result is empty as expected).
+  - Multi-ingredient AIC in the fixture (37 combinations) resolve
+    to the expected set of active ingredients via the M2M table
+    (Augmentin → amoxicillin + clavulanic acid;
+    Aspirina → acetylsalicylic + ascorbic acid).
 
 ### 3.3 M2 — Autocomplete Italy
 
@@ -521,7 +573,7 @@ conventions):
 
 | Risk                                                                               | Impact             | Mitigation                                                                                                                     |
 |------------------------------------------------------------------------------------|--------------------|--------------------------------------------------------------------------------------------------------------------------------|
-| AIFA snapshot exceeds ~50 MB and bloats the installer                              | Medium             | Gzip compression (5–8× on textual CSV); reconsider M5 if this becomes a real constraint                                        |
+| AIFA snapshot bloats the installer                                                 | Low (measured)     | M0 measured ~17–22 MB for the gzipped snapshot (raw `confezioni_fornitura.csv` 78.6 MB + `PA_confezioni.csv` 11.0 MB). SQLite table growth ~60–80 MB. Within budget; reconsider M5 only if a future dataset grows materially. |
 | Autocomplete is slow on large tables                                               | High (UX)          | `_norm` indexes, EF Core compiled queries, 150 ms debounce, hard limit of 20 rows                                              |
 | Wrong dedup between EU and national rows                                           | High (correctness) | Default is not to dedup (§3.4); revisit only with an explicit mapping table between AIC and EMA product number                 |
 | Attribution string dropped from the About dialog                                   | High (licence)     | Test that verifies the presence of the AIFA / EMA lines in the About dialog and in `THIRD-PARTY-NOTICES.md`                    |
@@ -589,8 +641,12 @@ New files (indicative):
 - `tests/MedReminder.Application.Tests/Catalogue/SearchCatalogueUseCaseTests.cs`
 - `tests/MedReminder.Infrastructure.Tests/Catalogue/CsvReferenceCatalogueImporterTests.cs`
 - `tests/MedReminder.Infrastructure.Tests/Catalogue/SqliteReferenceCatalogueQueryServiceTests.cs`
-- `tests/fixtures/catalogue/aifa-sample.csv`
-- `tests/fixtures/catalogue/ema-article57-sample.csv`
+- `tests/fixtures/catalogue/aifa-confezioni-sample.csv` — added
+  by M0 as part of this design PR.
+- `tests/fixtures/catalogue/aifa-pa-sample.csv` — added by M0.
+- `tests/fixtures/catalogue/aifa-atc-sample.csv` — added by M0.
+- `tests/fixtures/catalogue/ema-article57-sample.csv` — added in
+  the M3 spike.
 
 Touched files (indicative):
 
@@ -625,10 +681,13 @@ engineering discovery output of M0 rather than a product decision;
 point 7 is a new sub-decision that emerged from the confirmed M4
 target set (§3.5) and is deferred until M4 planning starts.
 
-1. **AIFA dataset selection.** Which specific AIFA open-data file
-   (or minimal join) contains the field set the schema needs.
-   *Status:* to be answered by the M0 spike (engineering output,
-   not a product decision).
+1. **AIFA dataset selection.**
+   *Status:* **Resolved by the M0 spike (§3.1).** Source is
+   `confezioni_fornitura.csv` joined with `PA_confezioni.csv` on
+   `CODICE_AIC`. `atc.csv` is not needed for M1 because
+   `confezioni_fornitura` already carries `CODICE_ATC` for every
+   row. Full field mapping is recorded in the M0 comment on
+   issue [#9](https://github.com/vger70/MedReminder/issues/9).
 
 2. **AIFA snapshot cadence.**
    *Status:* **Confirmed — monthly, aligned to a MedReminder app
