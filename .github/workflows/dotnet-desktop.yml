@@ -76,7 +76,8 @@ jobs:
       # so the user does not need to install .NET 10.
       #
       # -r win-x64:
-      # creates a version for 64-bit Windows.      - name: Publish
+      # creates a version for 64-bit Windows.      
+      - name: Publish
         run: >
           dotnet publish
           src/MedReminder.UI/MedReminder.UI.csproj
