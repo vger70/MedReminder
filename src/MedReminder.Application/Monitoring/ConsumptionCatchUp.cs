@@ -4,19 +4,20 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.Monitoring;
 
-// Genera i movimenti StockMovement (Kind=Consumption) mancanti per tutte
-// le medicine attive, dal giorno successivo all'ultimo consumo già
-// registrato fino a "today". Rispetta:
-//  - StartDate/EndDate della terapia (via ConsumptionMaterializer);
-//  - i periodi di sospensione (idem);
-//  - la schedule versionata (idem).
+// Generates the missing StockMovement (Kind=Consumption) entries for
+// every active medicine, from the day after the last recorded
+// consumption up to "today". Respects:
+//  - the therapy's StartDate / EndDate (via ConsumptionMaterializer);
+//  - suspension periods (idem);
+//  - the versioned schedule (idem).
 //
-// Idempotenza:
-//  - alla singola giornata: se un consumo per (medicineId, day) esiste
-//    già la Application salta il giorno grazie a GetLastConsumptionDayAsync.
-//  - a livello di persistenza: un vincolo unico su
-//    (MedicineId, Kind=Consumption, day) offerto dallo schema DB
-//    (Incremento 3) protegge da doppie chiamate concorrenti.
+// Idempotency:
+//  - for a single day: if a consumption for (medicineId, day) already
+//    exists, the Application skips the day thanks to
+//    GetLastConsumptionDayAsync.
+//  - at the persistence level: a unique constraint on
+//    (MedicineId, Kind=Consumption, day) provided by the DB schema
+//    (Increment 3) guards against concurrent double calls.
 public sealed class ConsumptionCatchUp
 {
     private readonly IMedicineRepository _medicines;
@@ -48,7 +49,7 @@ public sealed class ConsumptionCatchUp
         _clock = clock;
     }
 
-    // Ritorna il numero totale di movimenti Consumption creati.
+    // Returns the total number of Consumption movements created.
     public async Task<int> RunAsync(CancellationToken cancellationToken)
     {
         var today = LocalToday();
@@ -62,10 +63,10 @@ public sealed class ConsumptionCatchUp
                 ? medicine.StartDate
                 : lastDay.Value.AddDays(1);
 
-            // Materializziamo fino a "ieri" incluso: il consumo di oggi
-            // sarà scritto al prossimo run, quando la giornata sarà chiusa.
-            // Questo evita di scalare due volte oggi se l'utente registra
-            // manualmente un'assunzione poco dopo il catch-up.
+            // Materialize up to "yesterday" inclusive: today's
+            // consumption will be written on the next run, once the
+            // day has closed. Avoids double-decrementing today if the
+            // user records a manual intake shortly after catch-up.
             var rangeEnd = today.AddDays(-1);
             if (rangeStart > rangeEnd) continue;
 
@@ -77,11 +78,11 @@ public sealed class ConsumptionCatchUp
                 medicine, rangeStart, rangeEnd, schedule, suspensions, slots);
             if (plan.Count == 0) continue;
 
-            // Le giornate coperte da una registrazione manuale
-            // dell'assunzione (qualunque status) NON generano un consumo
-            // automatico: l'utente ha già dichiarato lo stato reale della
-            // giornata (Taken → movimento creato dal use case RegisterIntake;
-            // Skipped/Cancelled → nessun consumo). Vedi spec §6.
+            // Days covered by a manual intake record (any status) do
+            // NOT generate an automatic consumption: the user has
+            // already declared the actual state of the day (Taken →
+            // movement created by the RegisterIntake use case;
+            // Skipped / Cancelled → no consumption). See spec §6.
             var manualDays = await _intakes.ListManualIntakeDaysAsync(
                 medicine.Id, rangeStart, rangeEnd, cancellationToken);
             var manualDaysSet = manualDays.Count == 0

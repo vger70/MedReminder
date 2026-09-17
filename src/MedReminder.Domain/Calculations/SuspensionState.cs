@@ -2,8 +2,8 @@ using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Domain.Calculations;
 
-// Verifica se una data cade in un periodo di sospensione della terapia.
-// Una sospensione con EndDate == null è aperta (in corso).
+// Checks whether a date falls inside a therapy suspension period. A
+// suspension with EndDate == null is open (ongoing).
 public static class SuspensionState
 {
     public static bool IsSuspendedOn(

@@ -13,7 +13,7 @@ internal sealed class MedicationAdministrationSlotConfiguration
         builder.HasKey(s => s.Id);
 
         builder.Property(s => s.Dose).HasConversion<string>();
-        // TimeOnly nativo in EF Core 8+ (mappato a TEXT su SQLite).
+        // Native TimeOnly in EF Core 8+ (mapped to TEXT on SQLite).
         builder.Property(s => s.Time);
         builder.Property(s => s.TimingLabel).HasMaxLength(200);
         builder.Property(s => s.Order);

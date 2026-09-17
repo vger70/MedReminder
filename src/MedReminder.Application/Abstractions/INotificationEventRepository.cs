@@ -4,8 +4,9 @@ namespace MedReminder.Application.Abstractions;
 
 public interface INotificationEventRepository
 {
-    // Ultima notifica registrata per la medicina (a prescindere da esito e
-    // da epoch): la logica di soppressione la valuta NotificationCycle.
+    // Most recent notification recorded for the medicine (regardless
+    // of outcome and epoch): the suppression logic is decided by
+    // NotificationCycle.
     Task<NotificationEvent?> GetLatestForMedicineAsync(
         Guid medicineId,
         CancellationToken cancellationToken);

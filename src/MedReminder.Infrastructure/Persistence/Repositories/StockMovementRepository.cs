@@ -9,8 +9,9 @@ internal sealed class StockMovementRepository : IStockMovementRepository
     private readonly MedReminderDbContext _db;
     private readonly TimeProvider _clock;
 
-    // TimeProvider è opzionale (default TimeProvider.System) per non
-    // rompere i test integrazione che istanziano il repo senza scope DI.
+    // TimeProvider is optional (defaults to TimeProvider.System) so
+    // integration tests that instantiate the repo without a DI scope
+    // do not break.
     public StockMovementRepository(MedReminderDbContext db, TimeProvider? clock = null)
     {
         _db = db;
@@ -40,11 +41,12 @@ internal sealed class StockMovementRepository : IStockMovementRepository
     public async Task<DateOnly?> GetLastConsumptionDayAsync(
         Guid medicineId, CancellationToken cancellationToken)
     {
-        // Il provider SQLite di EF Core 10 non traduce Max()/Min() su
-        // DateTimeOffset (viene mappato a TEXT ISO 8601 con offset e le
-        // aggregate non hanno una traduzione sicura sulla stringa).
-        // Uso OrderByDescending + FirstOrDefault che è invece traducibile
-        // e produce un TOP 1 sull'indice (MedicineId, Kind, OccurredAt).
+        // The EF Core 10 SQLite provider does not translate Max() /
+        // Min() on DateTimeOffset (mapped to ISO 8601 TEXT with
+        // offset; aggregates have no safe translation on the
+        // string). OrderByDescending + FirstOrDefault is translatable
+        // and produces a TOP 1 on the (MedicineId, Kind, OccurredAt)
+        // index.
         var latest = await _db.StockMovements
             .AsNoTracking()
             .Where(m => m.MedicineId == medicineId
@@ -55,11 +57,11 @@ internal sealed class StockMovementRepository : IStockMovementRepository
 
         if (!latest.HasValue) return null;
 
-        // Dopo il value converter DateTimeOffset↔long il valore letto è
-        // sempre in offset zero (UTC). Riconvertiamo al fuso locale per
-        // ottenere il "giorno" nel quale il movimento è effettivamente
-        // avvenuto — coerente con come ConsumptionCatchUp scrive gli
-        // eventi (local midday nel fuso locale).
+        // After the DateTimeOffset ↔ long value converter, the read
+        // value is always in zero offset (UTC). Convert back to the
+        // local zone to get the "day" on which the movement actually
+        // happened — consistent with how ConsumptionCatchUp writes
+        // events (local midday in the local zone).
         var local = TimeZoneInfo.ConvertTime(latest.Value, _clock.LocalTimeZone);
         return DateOnly.FromDateTime(local.DateTime);
     }

@@ -40,8 +40,8 @@ internal sealed class MedicineRepository : IMedicineRepository
 
     public Task UpdateAsync(Medicine medicine, CancellationToken cancellationToken)
     {
-        // Idempotente: se già tracciato non serve toccare lo state; se non
-        // tracciato lo attacchiamo e forziamo Modified.
+        // Idempotent: if already tracked, no need to touch the state;
+        // if untracked, attach it and force Modified.
         var entry = _db.Entry(medicine);
         if (entry.State == EntityState.Detached)
         {

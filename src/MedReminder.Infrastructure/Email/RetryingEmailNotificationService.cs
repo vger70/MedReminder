@@ -6,15 +6,16 @@ using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Infrastructure.Email;
 
-// Decoratore che aggiunge retry con back-off su errori transitivi
-// dell'invio SMTP. Ragione (spec §19): un errore email non deve fermare
-// l'app né duplicare le notifiche; ma un failure transiente (rete che
-// oscilla, quota momentanea 4xx) va ritentato prima di rassegnarsi.
+// Decorator that adds retry with back-off on transient SMTP-send
+// errors. Rationale (spec §19): an email error must neither stop the
+// app nor duplicate notifications; but a transient failure (jittery
+// network, momentary 4xx quota) should be retried before giving up.
 //
-// Back-off fissi: 5s → 30s → 2m (tre tentativi oltre il primo). Nessun
-// jitter randomico — è un'app desktop single-user, non un client web
-// concorrente. Errori 5xx (autenticazione, destinatario non valido) NON
-// vengono ritentati: sono errori di configurazione, non transitivi.
+// Fixed back-offs: 5s → 30s → 2m (three retries beyond the first).
+// No random jitter — this is a single-user desktop app, not a
+// concurrent web client. 5xx errors (authentication, invalid
+// recipient) are NOT retried: they are configuration errors, not
+// transient.
 internal sealed class RetryingEmailNotificationService : IEmailNotificationService
 {
     private static readonly TimeSpan[] Backoffs =
@@ -67,8 +68,9 @@ internal sealed class RetryingEmailNotificationService : IEmailNotificationServi
                     attempt, delay.TotalSeconds);
                 await Task.Delay(delay, _clock, cancellationToken);
             }
-            // Le eccezioni non transitivie escono direttamente: non ha
-            // senso ritentare un 5xx autenticazione o destinatario invalido.
+            // Non-transient exceptions bubble up directly: there is
+            // no point retrying a 5xx authentication or invalid
+            // recipient.
         }
 
         throw lastError!;
@@ -87,8 +89,9 @@ internal sealed class RetryingEmailNotificationService : IEmailNotificationServi
         _ => false,
     };
 
-    // Codici SMTP 4xx sono errori temporanei ("try again later"); 5xx sono
-    // errori permanenti (autenticazione, destinatario inesistente, ecc.).
+    // SMTP 4xx codes are temporary errors ("try again later"); 5xx
+    // codes are permanent (authentication, non-existent recipient,
+    // etc.).
     private static bool IsTransientSmtpStatusCode(MailKit.Net.Smtp.SmtpStatusCode code)
     {
         var value = (int)code;

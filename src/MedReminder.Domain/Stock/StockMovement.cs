@@ -1,16 +1,15 @@
 namespace MedReminder.Domain.Stock;
 
-// Movimento di magazzino: la quantità corrente di una medicina è la
-// somma dei suoi movimenti (spec §17 e docs/ANALYSIS.md §2.4).
-// Immutabile: le correzioni sono nuovi movimenti, non modifiche al
-// passato.
+// Stock movement: the current quantity of a medicine is the sum of its
+// movements (spec §17 and docs/ANALYSIS.md §2.4). Immutable: corrections
+// are new movements, not edits to the past.
 //
-// Convenzione sul segno di QuantityDelta:
+// Sign convention on QuantityDelta:
 //   InitialLoad, NewPackage, ManualAdd, PositiveCorrection  -> >= 0
 //   Consumption, NegativeCorrection                         -> <= 0
-// Il vincolo è verificato dalla Application layer al momento della
-// scrittura; il Domain non lo forza per non impedire la lettura di dati
-// storici inconsistenti eventualmente presenti nel DB.
+// The constraint is enforced by the Application layer at write time;
+// the Domain does not enforce it so it can still read any inconsistent
+// historical data present in the DB.
 public sealed class StockMovement
 {
     public Guid Id { get; init; } = Guid.NewGuid();

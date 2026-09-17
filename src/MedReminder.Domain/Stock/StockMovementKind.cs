@@ -1,7 +1,7 @@
 namespace MedReminder.Domain.Stock;
 
-// Tipi di movimento di magazzino (spec §17). I valori numerici sono
-// espliciti perché persistiti su DB.
+// Kinds of stock movement (spec §17). Numeric values are explicit
+// because they are persisted to the DB.
 public enum StockMovementKind
 {
     InitialLoad = 1,

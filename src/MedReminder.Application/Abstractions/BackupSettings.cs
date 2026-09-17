@@ -1,14 +1,14 @@
 namespace MedReminder.Application.Abstractions;
 
-// Preferenze utente per il backup automatico giornaliero.
-// Sezione "Backup" del IConfiguration; persistite in
-// %LOCALAPPDATA%\MedReminder\backup.settings.json e mergiate sopra
-// appsettings.json (reloadOnChange=true → IOptionsMonitor si aggiorna
-// senza riavvio dell'app).
+// User preferences for the automatic daily backup.
+// "Backup" section of IConfiguration; persisted to
+// %LOCALAPPDATA%\MedReminder\backup.settings.json and merged on top of
+// appsettings.json (reloadOnChange=true → IOptionsMonitor refreshes
+// without restarting the app).
 //
-// PreferredTime è testuale ("HH:mm") per essere robusti al binder di
-// IConfiguration: TimeOnly non ha un converter di default, mentre una
-// string parsata a mano è a prova di misconfigurazione.
+// PreferredTime is textual ("HH:mm") to survive the IConfiguration
+// binder: TimeOnly has no default converter, while a string parsed by
+// hand is misconfiguration-proof.
 public sealed class BackupSettings
 {
     public const string SectionName = "Backup";
@@ -17,9 +17,9 @@ public sealed class BackupSettings
 
     public string Directory { get; set; } = string.Empty;
 
-    // Formato "HH:mm" (24h, cultura invariant). Vuoto → default 03:00.
+    // "HH:mm" format (24h, invariant culture). Empty → defaults to 03:00.
     public string PreferredTime { get; set; } = "03:00";
 
-    // Numero di giorni di retention. 0 = illimitato (sconsigliato).
+    // Retention window in days. 0 = unlimited (not recommended).
     public int RetentionDays { get; set; } = 30;
 }

@@ -2,15 +2,16 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MedReminder.Infrastructure.Persistence.ValueConverters;
 
-// Il provider SQLite di EF Core 10 rifiuta ORDER BY e le aggregate
-// (Max/Min) su DateTimeOffset (mappato di default a TEXT ISO 8601 con
-// offset — non c'è una traduzione sicura verso SQL). Convertiamo quindi
-// tutti i DateTimeOffset a INTEGER (long) contenenti gli UtcTicks:
-// long si ordina e si aggrega senza problemi.
+// The EF Core 10 SQLite provider refuses ORDER BY and aggregates
+// (Max / Min) on DateTimeOffset (mapped by default to ISO 8601 TEXT
+// with offset — no safe SQL translation exists). We therefore convert
+// every DateTimeOffset to INTEGER (long) holding UtcTicks: long
+// orders and aggregates without issue.
 //
-// Al ritorno DateTimeOffset è ricostruito con offset zero (UTC): chi
-// vuole il "giorno locale" del movimento deve convertirlo esplicitamente
-// tramite TimeProvider.LocalTimeZone (vedi StockMovementRepository).
+// On the way back, DateTimeOffset is reconstructed with a zero
+// offset (UTC): callers that want the "local day" of the movement
+// must convert it explicitly via TimeProvider.LocalTimeZone (see
+// StockMovementRepository).
 internal static class DateTimeOffsetConverters
 {
     public static readonly ValueConverter<DateTimeOffset, long> ToUtcTicks =

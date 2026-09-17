@@ -7,29 +7,29 @@ using Microsoft.Extensions.Options;
 
 namespace MedReminder.Infrastructure.Localization;
 
-// Implementazione ILocalizationService (Incremento 16a).
+// ILocalizationService implementation (Increment 16a).
 //
-// Strategia di caricamento:
-//   1. Per ogni lingua supportata, tenta di leggere:
+// Loading strategy:
+//   1. For each supported language, try to read:
 //      %LOCALAPPDATA%\MedReminder\localization\strings.<lang>.json
-//      (override utente, opzionale). File corrotto → viene ignorato,
-//      log warning implicito con l'exception silenziata.
-//   2. Poi legge la versione embedded da assembly (nome resource:
-//      "MedReminder.Infrastructure.Localization.strings.<lang>.json"
-//      — il progetto UI la include tramite Link con questo
-//      LogicalName, così il caricamento è consistente da qualunque
+//      (optional user override). Corrupted file → silently ignored,
+//      exception implicitly logged and swallowed.
+//   2. Then read the embedded version from the assembly (resource
+//      name: "MedReminder.Infrastructure.Localization.strings.<lang>.json"
+//      — the UI project also includes it via Link with this
+//      LogicalName, so loading works consistently from any
 //      assembly).
-//   3. Le due mappe sono fuse: le override utente vincono sui
-//      valori embedded per la stessa chiave.
+//   3. The two maps are merged: user overrides win over embedded
+//      values for the same key.
 //
-// Le mappe sono cache-ate per l'intera vita del processo (registrato
-// Singleton). Il cambio lingua richiede restart — coerente con la
-// documentazione utente.
+// The maps are cached for the entire process lifetime (registered as
+// Singleton). A language change requires a restart — consistent
+// with the user documentation.
 public sealed class LocalizationService : ILocalizationService
 {
     private const string OverrideSubdirectory = "localization";
-    // Suffix cercato dentro i nomi delle resource embedded — evita
-    // di dipendere dal formato esatto scelto da MSBuild (RootNamespace
+    // Suffix searched inside embedded-resource names — avoids
+    // depending on the exact format chosen by MSBuild (RootNamespace
     // + path vs LogicalName override).
     private const string ResourceSuffixFormat = "strings.{0}.json";
 
@@ -46,11 +46,11 @@ public sealed class LocalizationService : ILocalizationService
         _current = SupportedLanguages.Resolve(languageCode);
     }
 
-    // Factory usata da Program.Main per creare un'istanza PRIMA che
-    // l'IHost/DI siano pronti — così i messaggi pre-boot (mutex
-    // single-instance, ThreadException) sono localizzabili anch'essi.
-    // Legge user.settings.json a mano; se il file manca o è corrotto
-    // ricade sulla lingua di default (en).
+    // Factory used by Program.Main to create an instance BEFORE the
+    // IHost / DI are ready — so pre-boot messages (single-instance
+    // mutex, ThreadException) are localizable too. Reads
+    // user.settings.json by hand; if the file is missing or
+    // corrupted, falls back to the default language (en).
     public static ILocalizationService CreateStandalone(string? languageCode)
         => new LocalizationService(languageCode ?? SupportedLanguages.Default);
 
@@ -66,14 +66,14 @@ public sealed class LocalizationService : ILocalizationService
         ArgumentException.ThrowIfNullOrEmpty(key);
         var target = SupportedLanguages.Resolve(languageCode);
 
-        // 1. Cerca nella lingua richiesta.
+        // 1. Look up in the requested language.
         if (_dictionaries.TryGetValue(target.Code, out var primary)
             && primary.TryGetValue(key, out var value))
         {
             return FormatArgs(value, target.Culture, args);
         }
 
-        // 2. Fallback su lingua default.
+        // 2. Fallback to the default language.
         if (!string.Equals(target.Code, SupportedLanguages.Default, StringComparison.OrdinalIgnoreCase)
             && _dictionaries.TryGetValue(SupportedLanguages.Default, out var fallback)
             && fallback.TryGetValue(key, out var fallbackValue))
@@ -81,8 +81,9 @@ public sealed class LocalizationService : ILocalizationService
             return FormatArgs(fallbackValue, target.Culture, args);
         }
 
-        // 3. Fallback finale: la chiave stessa fra parentesi quadre —
-        // visibile in UI, aiuta il developer a trovare le lacune.
+        // 3. Final fallback: the key itself wrapped in square
+        // brackets — visible in the UI, helps the developer find
+        // gaps.
         return "[" + key + "]";
     }
 
@@ -92,9 +93,9 @@ public sealed class LocalizationService : ILocalizationService
         try { return string.Format(culture, template, args); }
         catch (FormatException)
         {
-            // Se il template ha placeholder non compatibili con gli args
-            // passati, non fare crashare l'UI: ritorna la stringa
-            // grezza come degradation graziosa.
+            // If the template has placeholders that are incompatible
+            // with the args, do not crash the UI: return the raw
+            // string as graceful degradation.
             return template;
         }
     }
@@ -107,16 +108,18 @@ public sealed class LocalizationService : ILocalizationService
 
         foreach (var lang in SupportedLanguages.All)
         {
-            // Ordine di precedenza (dal più forte al più debole):
-            //   1. override utente in %LOCALAPPDATA%\MedReminder\
+            // Precedence order (strongest to weakest):
+            //   1. user override in %LOCALAPPDATA%\MedReminder\
             //      localization\strings.<lang>.json
-            //   2. file "distribuiti" copiati in <bin>\localization\
-            //      strings.<lang>.json (Content del csproj)
-            //   3. resource embedded (per single-file publish o safety)
+            //   2. "distributed" files copied into
+            //      <bin>\localization\strings.<lang>.json (csproj
+            //      Content)
+            //   3. embedded resource (for single-file publish or
+            //      safety)
             //
-            // Le mappe successive vengono FUSE — le override utente
-            // vincono sui default, ma le chiavi mancanti nell'override
-            // ricadono sulle default.
+            // Later maps are MERGED — user overrides win over the
+            // defaults, but keys missing from the override fall
+            // back to the defaults.
             var overrides = LoadOverride(lang.Code);
             var baseDir = LoadFromBaseDirectory(lang.Code);
             var embedded = LoadEmbedded(lang.Code);
@@ -152,18 +155,19 @@ public sealed class LocalizationService : ILocalizationService
 
     private static IReadOnlyDictionary<string, string> LoadEmbedded(string languageCode)
     {
-        // Ricerca robusta: scansiona TUTTI gli assembly caricati e trova
-        // quello che embed una resource il cui nome finisce in
-        // "strings.<lang>.json". In questo modo non ci sono ipotesi sul
-        // ManifestResourceName esatto (LogicalName vs RootNamespace+path
-        // sono entrambi validi in progetti SDK-style diversi).
+        // Robust lookup: scans EVERY loaded assembly and finds the
+        // one that embeds a resource whose name ends with
+        // "strings.<lang>.json". This avoids any assumption about
+        // the exact ManifestResourceName (LogicalName vs
+        // RootNamespace+path are both valid across different
+        // SDK-style projects).
         var suffix = string.Format(CultureInfo.InvariantCulture, ResourceSuffixFormat, languageCode);
 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
             string[] resourceNames;
             try { resourceNames = assembly.GetManifestResourceNames(); }
-            catch { continue; }  // dynamic assemblies rifiutano GetManifestResourceNames
+            catch { continue; }  // dynamic assemblies reject GetManifestResourceNames
 
             foreach (var name in resourceNames)
             {
@@ -181,8 +185,8 @@ public sealed class LocalizationService : ILocalizationService
                 }
                 catch (JsonException)
                 {
-                    // file JSON corrotto — proviamo la prossima resource,
-                    // se ce n'è più di una.
+                    // Corrupted JSON file — try the next resource, if
+                    // there is more than one.
                 }
             }
         }
@@ -206,7 +210,8 @@ public sealed class LocalizationService : ILocalizationService
         }
         catch
         {
-            // File utente corrotto: silenzioso, l'app usa gli embedded.
+            // Corrupted user file: silent, the app uses the
+            // embedded strings.
             return EmptyDictionary;
         }
     }

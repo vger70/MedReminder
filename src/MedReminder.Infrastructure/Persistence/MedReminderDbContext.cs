@@ -7,9 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MedReminder.Infrastructure.Persistence;
 
-// DbContext EF Core con provider SQLite. Le entità sono quelle del
-// dominio: nessun DTO. Le configurazioni Fluent vivono in
-// Configurations/ e vengono applicate via ApplyConfigurationsFromAssembly.
+// EF Core DbContext with the SQLite provider. Entities are the domain
+// ones: no DTOs. Fluent configurations live in Configurations/ and
+// are applied via ApplyConfigurationsFromAssembly.
 public sealed class MedReminderDbContext : DbContext
 {
     public MedReminderDbContext(DbContextOptions<MedReminderDbContext> options)
@@ -39,10 +39,10 @@ public sealed class MedReminderDbContext : DbContext
         ApplyDateTimeOffsetConverter(modelBuilder);
     }
 
-    // Sostituisce di massa il mapping default DateTimeOffset(TEXT) →
-    // INTEGER(long UtcTicks) sul provider SQLite: sblocca ORDER BY e le
-    // aggregate (Max/Min) sui campi temporali. Da applicare DOPO
-    // ApplyConfiguration così l'iterazione vede il modello completo.
+    // Bulk-replaces the default DateTimeOffset(TEXT) mapping with
+    // INTEGER(long UtcTicks) on the SQLite provider: unlocks ORDER BY
+    // and aggregates (Max / Min) on temporal columns. Must be applied
+    // AFTER ApplyConfiguration so the iteration sees the full model.
     private static void ApplyDateTimeOffsetConverter(ModelBuilder modelBuilder)
     {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

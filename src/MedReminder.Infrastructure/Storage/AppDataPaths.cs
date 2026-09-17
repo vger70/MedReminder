@@ -1,8 +1,8 @@
 namespace MedReminder.Infrastructure.Storage;
 
-// Percorsi standard dell'applicazione sotto %LOCALAPPDATA%\MedReminder\
-// (docs/ANALYSIS.md §1.1 punto 13). Non nella directory di installazione:
-// rispetta i permessi utente e sopravvive agli aggiornamenti.
+// Standard application paths under %LOCALAPPDATA%\MedReminder\
+// (docs/ANALYSIS.md §1.1 item 13). Not inside the install directory:
+// respects user permissions and survives updates.
 public static class AppDataPaths
 {
     public const string ApplicationFolderName = "MedReminder";

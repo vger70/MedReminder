@@ -1,10 +1,10 @@
 namespace MedReminder.Domain.Medicines;
 
-// Periodo di sospensione della terapia. EndDate = null indica una
-// sospensione aperta (ancora in corso). Durante la sospensione:
-//  - il ConsumptionMaterializer salta i giorni sospesi;
-//  - RunOutForecast restituisce null (nessuna ETA);
-//  - NotificationCycle non attiva avvisi.
+// Therapy suspension period. EndDate = null means an open suspension
+// (still ongoing). While suspended:
+//  - the ConsumptionMaterializer skips suspended days;
+//  - RunOutForecast returns null (no ETA);
+//  - NotificationCycle does not raise warnings.
 public sealed class MedicationSuspension
 {
     public Guid Id { get; init; } = Guid.NewGuid();
