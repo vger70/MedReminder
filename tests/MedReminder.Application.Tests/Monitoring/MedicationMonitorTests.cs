@@ -12,9 +12,9 @@ public class MedicationMonitorTests
     private static readonly DateTimeOffset FixedNow =
         new(2026, 9, 13, 12, 0, 0, TimeSpan.Zero);
 
-    // Seed di comodo: crea una medicina con StartDate = "oggi" per evitare
+    // Convenience seed: creates a medicine with StartDate = "today" to avoid
     // che il consumo giornaliero materializzato dal catch-up alteri lo
-    // scenario. Il monitor testato qui NON invoca il catch-up: quello è
+    // scenario. The monitor tested here does NOT invoke the catch-up: that is
     // testato in ConsumptionCatchUpTests.
     private static async Task<Guid> SeedAsync(
         ApplicationTestScope scope,
@@ -40,7 +40,7 @@ public class MedicationMonitorTests
     public async Task Sends_windows_notification_when_days_remaining_within_threshold()
     {
         var scope = new ApplicationTestScope(FixedNow);
-        // Stock 6, rate 2 → 3 giorni residui < soglia 7.
+        // Stock 6, rate 2 → 3 days remaining < threshold 7.
         var id = await SeedAsync(scope, initialQuantity: 6m);
 
         var result = await scope.Monitor.RunAsync(CancellationToken.None);
@@ -92,14 +92,14 @@ public class MedicationMonitorTests
 
         await scope.Monitor.RunAsync(CancellationToken.None);
 
-        // Rifornimento: nuova epoch. Poi torniamo sotto soglia con una
-        // correzione negativa che non incrementa l'epoch.
+        // Refill: new epoch. Then we drop back under the threshold
+        // with a negative correction that does not increment the epoch.
         await scope.AddStock.ExecuteAsync(
             new AddStockCommand(id, 30m, StockMovementKind.NewPackage),
             CancellationToken.None);
         await scope.AdjustStockDown.ExecuteAsync(
             new AdjustStockDownCommand(id, 32m),
-            CancellationToken.None);  // 6+30-32 = 4 → 2 giorni residui
+            CancellationToken.None);  // 6+30-32 = 4 → 2 days remaining
 
         await scope.Monitor.RunAsync(CancellationToken.None);
 
@@ -127,7 +127,7 @@ public class MedicationMonitorTests
     public async Task End_date_before_eta_suppresses_notification()
     {
         var scope = new ApplicationTestScope(FixedNow);
-        // Stock 6, rate 2 → ETA 2026-09-16. EndDate 2026-09-14 (prima).
+        // Stock 6, rate 2 → ETA 2026-09-16. EndDate 2026-09-14 (before).
         _ = await SeedAsync(scope, initialQuantity: 6m,
             endDate: new DateOnly(2026, 9, 14));
 

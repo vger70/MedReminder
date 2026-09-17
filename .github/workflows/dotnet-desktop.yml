@@ -52,7 +52,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # Download the repository
+      # Check out the repository
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -62,21 +62,23 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Restore packages
+      # Restore the NuGet packages for both the main solution and the
+      # WiX MSI project so the MSI build step below can find its
+      # transitive tools.
       - name: Restore
         shell: pwsh
         run: |
           dotnet restore MedReminder.sln
           dotnet restore packaging/wix/MedReminder.wixproj
 
-      # Build and publish the WinForms application. 
+      # Build and publish the WinForms application.
       #
       # --self-contained true:
-      # includes the .NET runtime in the application,
-      # so the user does not need to install .NET 10.
+      # bundles the .NET runtime inside the application, so the user
+      # does not need to install .NET 10 separately.
       #
       # -r win-x64:
-      # creates a version for 64-bit Windows.      
+      # produces a build targeting 64-bit Windows.
       - name: Publish
         run: >
           dotnet publish
@@ -86,7 +88,7 @@ jobs:
           --self-contained true
           -o publish
 
-      # Crea lo ZIP della versione pubblicata
+      # Create the ZIP of the published output
       - name: Create ZIP
         shell: pwsh
         run: |
@@ -94,28 +96,29 @@ jobs:
             -Path publish\* `
             -DestinationPath MedReminder-win-x64.zip
 
-      # Create the WiX MSI installer using the same self-contained publish
-      # output distributed in the ZIP. The release tag (vX.Y.Z) determines the
-      # MSI version, ensuring upgrades correctly recognize the release.
+      # Build the WiX MSI installer using the same self-contained
+      # publish output distributed in the ZIP. The release tag
+      # (vX.Y.Z) determines the MSI version, so upgrades correctly
+      # recognize the release.
       - name: Build MSI
         shell: pwsh
         run: |
           $version = $env:GITHUB_REF_NAME -replace '^v', ''
           if ($version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "Il tag di release deve avere il formato vX.Y.Z; ricevuto: $env:GITHUB_REF_NAME"
+            throw "Release tag must be in the vX.Y.Z format; received: $env:GITHUB_REF_NAME"
           }
 
           $publishDir = (Resolve-Path publish).Path
           dotnet build packaging/wix/MedReminder.wixproj -c Release `
             /p:PublishDir="$publishDir" `
             /p:ProductVersion=$version
-          if ($LASTEXITCODE -ne 0) { throw 'Build MSI fallita.' }
+          if ($LASTEXITCODE -ne 0) { throw 'MSI build failed.' }
 
           $msi = "packaging/wix/bin/Release/MedReminder-$version-x64.msi"
-          if (-not (Test-Path $msi)) { throw "MSI non generato: $msi" }
+          if (-not (Test-Path $msi)) { throw "MSI not generated: $msi" }
           Copy-Item $msi 'MedReminder-win-x64.msi'
 
-      # Create the GitHub release and attach the ZIP and MSI.
+      # Create the GitHub Release and attach both the ZIP and the MSI.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

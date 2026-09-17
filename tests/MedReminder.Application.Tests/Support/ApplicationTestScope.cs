@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MedReminder.Application.Tests.Support;
 
-// Wiring uniforme delle dipendenze per i test: fornisce repository
+// Uniform wiring of the dependencies for the tests: provides
 // in-memory, orologio manuale e servizi di notifica registranti, oltre
 // alle istanze pre-costruite dei principali use case e del monitor.
 internal sealed class ApplicationTestScope

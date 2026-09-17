@@ -5,19 +5,21 @@ using WinFormsApp = System.Windows.Forms.Application;
 
 namespace MedReminder.UI.Services;
 
-// Riavvio auto-orchestrato dell'app dopo un restore backup.
+// Self-orchestrated restart of the app after a backup restore.
 //
-// Sequenza:
-//   1. Recupera il path dell'eseguibile corrente (Environment.ProcessPath).
-//   2. Lancia una nuova istanza in background (Process.Start): il nuovo
-//      processo tenterà di acquisire il mutex Local\MedReminder.SingleInstance
-//      e attenderà brevemente che l'attuale lo rilasci.
-//   3. Chiude il message loop WinForms; il finally in Program.Main
-//      rilascia il mutex e chiude Serilog. Il nuovo processo entra a
-//      quel punto.
+// Sequence:
+//   1. Retrieve the current executable path
+//      (Environment.ProcessPath).
+//   2. Launch a new instance in the background (Process.Start): the
+//      new process tries to acquire the
+//      Local\MedReminder.SingleInstance mutex and briefly waits for
+//      the current one to release it.
+//   3. Close the WinForms message loop; the finally in Program.Main
+//      releases the mutex and shuts Serilog down. The new process
+//      enters at that point.
 //
-// Nota: non usa --minimized (l'utente ha appena fatto un restore e si
-// aspetta di vedere l'app aperta con i dati nuovi).
+// Note: does not use --minimized (the user just performed a restore
+// and expects to see the app open with the new data).
 internal sealed class ApplicationRestarter : IApplicationRestarter
 {
     private readonly ILogger<ApplicationRestarter> _log;
@@ -33,7 +35,7 @@ internal sealed class ApplicationRestarter : IApplicationRestarter
         if (string.IsNullOrEmpty(exe))
         {
             _log.LogWarning(
-                "Environment.ProcessPath vuoto: impossibile riavviare l'app in automatico.");
+                "Environment.ProcessPath is empty: cannot restart the app automatically.");
             WinFormsApp.Exit();
             return;
         }
@@ -47,11 +49,11 @@ internal sealed class ApplicationRestarter : IApplicationRestarter
                 WorkingDirectory = Path.GetDirectoryName(exe) ?? Environment.CurrentDirectory,
             };
             Process.Start(psi);
-            _log.LogInformation("Riavvio MedReminder ({Exe}) — chiudo l'istanza corrente.", exe);
+            _log.LogInformation("Restarting MedReminder ({Exe}) — closing the current instance.", exe);
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "Impossibile avviare la nuova istanza; l'app verrà solo chiusa.");
+            _log.LogError(ex, "Unable to start the new instance; the app will only close.");
         }
         finally
         {

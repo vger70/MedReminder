@@ -3,14 +3,15 @@ using MedReminder.Application.Abstractions;
 
 namespace MedReminder.UI.Forms;
 
-// Editor di UN singolo slot di somministrazione (Incremento 10).
-// Usato dal MedicineEditDialog per aggiungere/modificare una riga.
-// L'utente può indicare orario esatto opzionale + descrizione libera
-// (con dropdown di preset comuni: "al mattino", "dopo cena", ecc.).
+// Editor for ONE administration slot (Increment 10). Used by
+// MedicineEditDialog to add / edit a single row. The user can
+// provide an optional exact time + free-form description (with a
+// dropdown of common presets: "in the morning", "after dinner",
+// etc.).
 internal sealed class AdministrationSlotDialog : MedReminderFormBase
 {
-    // Chiavi dei preset localizzati: la ComboBox mostra i testi tradotti
-    // per la lingua corrente.
+    // Keys for the localized presets: the ComboBox shows the
+    // translated texts for the current language.
     private static readonly string[] PresetKeys =
     {
         "Ui.AdministrationSlotDialog.Preset.Morning",
@@ -177,8 +178,8 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
     }
 }
 
-// Riga di slot mantenuta dal MedicineEditDialog. È il DTO UI-side che
-// viene poi tradotto in AdministrationSlotInput per il use case.
+// Slot row kept by MedicineEditDialog. UI-side DTO that gets
+// translated into AdministrationSlotInput for the use case.
 internal sealed record AdministrationSlotEntry(TimeOnly? Time, decimal Dose, string? TimingLabel)
 {
     public string TimeDisplay => Time?.ToString("HH:mm") ?? "—";

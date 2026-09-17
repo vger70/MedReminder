@@ -75,8 +75,9 @@ public class RegisterIntakeTests
     public async Task ConsumptionCatchUp_skips_days_covered_by_a_manual_intake()
     {
         // Fissiamo "oggi" al 13/9. Il catch-up materializza fino a
-        // 12/9 incluso. Registriamo un'assunzione Skipped per l'11/9:
-        // il catch-up deve saltare l'11/9 e materializzare solo 10 e 12.
+        // Sep 12 included. Record a Skipped intake for Sep 11:
+        // the catch-up must skip Sep 11 and materialize only 10
+        // and 12.
         var scope = new ApplicationTestScope(new DateTimeOffset(2026, 9, 13, 12, 0, 0, TimeSpan.Zero));
         var id = await SeedAsync(scope);
 

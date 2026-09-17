@@ -6,7 +6,7 @@ using Xunit;
 namespace MedReminder.Infrastructure.Tests.AutoStart;
 
 // Il servizio scrive in HKCU\Software\Microsoft\Windows\CurrentVersion\Run.
-// Per non impattare la configurazione reale dell'utente, i test usano
+// To avoid impacting the user's real configuration, the tests use
 // un nome-valore univoco (Guid) e lo puliscono a fine test.
 public class RegistryAutoStartServiceTests : IDisposable
 {

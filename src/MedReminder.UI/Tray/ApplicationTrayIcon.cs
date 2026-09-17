@@ -4,10 +4,10 @@ using MedReminder.Application.Abstractions;
 
 namespace MedReminder.UI.Tray;
 
-// Icona tray singleton condivisa: MainForm la usa per il menu (Apri /
-// Controlla ora / Impostazioni / Esci), TrayBalloonNotificationService
-// la usa per emettere balloon. Un solo NotifyIcon per il processo:
-// niente doppie icone in tray (ANALYSIS §2.9).
+// Shared singleton tray icon: MainForm uses it for the menu (Open /
+// Check now / Settings / Exit), TrayBalloonNotificationService uses
+// it to emit balloons. A single NotifyIcon per process: no duplicate
+// tray icons (ANALYSIS §2.9).
 internal sealed class ApplicationTrayIcon : IDisposable
 {
     public NotifyIcon NotifyIcon { get; }
@@ -33,9 +33,10 @@ internal sealed class ApplicationTrayIcon : IDisposable
 
         NotifyIcon = new NotifyIcon
         {
-            // AppIcon.Default può essere null se l'embedded resource
-            // manca (build corrotta): fallback a SystemIcons.Information
-            // per non lasciare la tray senza icona.
+            // AppIcon.Default can be null if the embedded resource is
+            // missing (corrupted build): fall back to
+            // SystemIcons.Information so the tray is never left
+            // without an icon.
             Icon = AppIcon.Default ?? SystemIcons.Information,
             Text = "MedReminder",
             Visible = true,

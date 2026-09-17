@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- Il TFM include l'SDK Windows 10.0.19041 (Windows 10 2004/20H1+)
-         per accedere alle API WinRT ToastNotification via
-         Microsoft.Toolkit.Uwp.Notifications. Compatibile con tutte le
-         versioni di Windows 10/11 attualmente supportate. -->
+    <!-- The TFM includes the Windows SDK 10.0.19041 (Windows 10
+         2004 / 20H1+) so we can access the WinRT ToastNotification
+         APIs via Microsoft.Toolkit.Uwp.Notifications. Compatible
+         with every currently supported Windows 10 / 11 version. -->
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <RootNamespace>MedReminder.UI</RootNamespace>
@@ -22,9 +22,9 @@
     <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
-    <!-- Help in linea (Incremento 14): WebView2 per il rendering HTML +
-         Markdig per la conversione Markdown → HTML del USER_GUIDE.md
-         embedded come resource. -->
+    <!-- Inline help (Increment 14): WebView2 for the HTML rendering +
+         Markdig for the Markdown → HTML conversion of USER_GUIDE.md
+         embedded as a resource. -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
     <PackageReference Include="Markdig" Version="0.42.0" />
   </ItemGroup>
@@ -41,18 +41,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Icona embedded come resource: viene caricata a runtime da
-         AppIcon.Load() per assegnarla a ogni Form + tray NotifyIcon.
-         L'exe stesso usa la versione multi-res via ApplicationIcon. -->
+    <!-- Icon embedded as a resource: loaded at runtime by
+         AppIcon.Load() and assigned to every Form + the tray
+         NotifyIcon. The exe itself uses the multi-resolution
+         version via ApplicationIcon. -->
     <EmbeddedResource Include="..\..\assets\medreminder.ico">
       <Link>Assets\medreminder.ico</Link>
       <LogicalName>MedReminder.UI.medreminder.ico</LogicalName>
     </EmbeddedResource>
-    <!-- Guida utente localizzata (Incremento 16e): due file per lingua
-         (it, en) sotto docs/. HelpViewerForm carica quello che matcha
-         la lingua UI corrente; se manca ricade sull'inglese.
-         Copiati come Content nel bin/localization/ così sono
-         ispezionabili/editabili; ANCHE embedded per single-file publish. -->
+    <!-- Localized user guide (Increment 16e): two files per
+         language (it, en) under docs/. HelpViewerForm loads the one
+         matching the current UI language; if missing, falls back to
+         English. Copied as Content into bin/localization/ so they
+         are inspectable / editable; ALSO embedded for single-file
+         publish. -->
     <Content Include="..\..\docs\USER_GUIDE.it.md">
       <Link>localization\USER_GUIDE.it.md</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -69,11 +71,11 @@
       <Link>Assets\USER_GUIDE.en.md</Link>
       <LogicalName>USER_GUIDE.en.md</LogicalName>
     </EmbeddedResource>
-    <!-- Dizionari di localizzazione (Incremento 16a). Copiati come
-         Content nel bin/localization/ per essere ispezionabili e
-         modificabili dall'utente senza ricompilare. Inclusi ANCHE
-         come EmbeddedResource per il fallback (es. single-file
-         publish dove Content non sopravvive). -->
+    <!-- Localization dictionaries (Increment 16a). Copied as
+         Content into bin/localization/ so they are inspectable and
+         editable by the user without recompiling. Also included as
+         EmbeddedResource for the fallback (e.g. single-file publish
+         where Content does not survive). -->
     <Content Include="..\..\assets\localization\strings.en.json">
       <Link>localization\strings.en.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -4,24 +4,25 @@ using System.Drawing.Text;
 
 namespace MedReminder.UI.UiExtensions;
 
-// Renderizza un glyph "Segoe MDL2 Assets" (font di sistema Windows 10+)
-// in un Bitmap utilizzabile come ToolStripButton.Image o Icon custom.
+// Renders a "Segoe MDL2 Assets" glyph (Windows 10+ system font) into
+// a Bitmap that can be used as ToolStripButton.Image or as a custom
+// Icon.
 //
-// "Segoe MDL2 Assets" espone i simboli Fluent/Metro nell'area PUA
-// (Private Use Area) del piano BMP di Unicode: es. "" = Add,
-// "" = Edit, "" = Refresh, ecc.
-// Riferimento completo: https://learn.microsoft.com/windows/apps/design/style/segoe-ui-symbol-font
+// "Segoe MDL2 Assets" exposes Fluent / Metro symbols in the PUA
+// (Private Use Area) of Unicode's BMP: e.g. "" = Add,
+// "" = Edit, "" = Refresh, etc.
+// Full reference: https://learn.microsoft.com/windows/apps/design/style/segoe-ui-symbol-font
 //
-// Il rendering usa GDI+ ad alta qualità: single-pass, anti-aliased
-// grid-fit — su schermi HiDPI vale la pena richiamare Create() con
-// un size scelto in base al DeviceDpi corrente della form.
+// Rendering uses high-quality GDI+: single-pass, anti-aliased
+// grid-fit — on HiDPI displays it is worth calling Create() with a
+// size chosen based on the form's current DeviceDpi.
 internal static class Mdl2Glyph
 {
     private const string FontFamily = "Segoe MDL2 Assets";
 
-    // Cache thread-safe per non ricreare la stessa immagine ad ogni
-    // rebuild della UI. La chiave include size e colore per supportare
-    // temi diversi.
+    // Thread-safe cache so we do not rebuild the same image on
+    // every UI rebuild. The key includes size and color to support
+    // different themes.
     private static readonly Dictionary<(string glyph, int size, int argb), Bitmap> Cache = new();
     private static readonly object CacheSync = new();
 
@@ -47,10 +48,10 @@ internal static class Mdl2Glyph
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             g.CompositingQuality = CompositingQuality.HighQuality;
 
-            // Un font "Segoe MDL2 Assets" dimensionato a ~75% dell'area
-            // lascia margine visivo attorno al glyph. Uso GraphicsUnit.
-            // Pixel per essere DPI-neutro (il caller passa già il size
-            // corretto).
+            // A "Segoe MDL2 Assets" font sized at ~75% of the area
+            // leaves visual padding around the glyph. Use
+            // GraphicsUnit.Pixel to stay DPI-neutral (the caller
+            // already passes the correct size).
             using var font = new Font(FontFamily, size * 0.72f, FontStyle.Regular, GraphicsUnit.Pixel);
             using var brush = new SolidBrush(col);
             using var format = new StringFormat
@@ -63,8 +64,8 @@ internal static class Mdl2Glyph
 
         lock (CacheSync)
         {
-            // Race innocua: se un altro thread ha già inserito la stessa
-            // chiave, disponiamo il nostro duplicato e restituiamo il suo.
+            // Harmless race: if another thread has already inserted
+            // the same key, dispose our duplicate and return theirs.
             if (Cache.TryGetValue(key, out var existing))
             {
                 bmp.Dispose();
@@ -75,8 +76,9 @@ internal static class Mdl2Glyph
         return bmp;
     }
 
-    // Glyphs più usati come costanti nominali: evitano di sparpagliare
-    // "" nel codice UI, dove sono impossibili da leggere.
+    // Most-used glyphs as named constants: avoid scattering PUA
+    // characters ("", etc.) through the UI code, where they
+    // are impossible to read.
     public static class Glyphs
     {
         public const string Add = "";           // Add / Plus

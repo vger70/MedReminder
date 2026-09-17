@@ -9,8 +9,8 @@ using Xunit;
 namespace MedReminder.Infrastructure.Tests.Persistence;
 
 // Verifica il round-trip dei tipi problematici su SQLite (DateOnly,
-// DateTimeOffset, decimal, enum, Guid, Flags): dopo un ciclo write→read
-// i valori devono tornare uguali senza perdite.
+// DateTimeOffset, decimal, enum, Guid, Flags): after a write → read
+// round-trip the values must come back equal without loss.
 public class RoundTripTests
 {
     [Fact]
@@ -141,7 +141,7 @@ public class RoundTripTests
         {
             var repo = new StockMovementRepository(ctx);
             var last = await repo.GetLastConsumptionDayAsync(medicineId, CancellationToken.None);
-            last.Should().Be(new DateOnly(2026, 9, 8));   // il NewPackage non è Consumption
+            last.Should().Be(new DateOnly(2026, 9, 8));   // the NewPackage is not a Consumption
         }
     }
 

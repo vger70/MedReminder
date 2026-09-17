@@ -46,11 +46,19 @@ Everything committed to this repository **must be written in English**:
 user**. The user writes and reads Italian in chat; every artifact that
 lands in the repository is English.
 
-### Pending translation work (see §7)
+### Exceptions
 
-Existing Italian comments in the C# source code have not been translated
-yet. This is the immediate next task after the current documentation
-sweep.
+The following files intentionally contain non-English text and are
+NOT subject to the English-only rule:
+
+- `docs/USER_GUIDE.it.md` — the Italian user guide shipped inside the
+  app.
+- `assets/localization/strings.<lang>.json` — the JSON dictionaries
+  for the UI languages (en, it, fr, es). Values are user-visible
+  translated strings by design.
+
+Everything else in the repository — including comments, log messages
+and exception messages — must be English.
 
 ---
 
@@ -200,14 +208,7 @@ the logs.
 
 Kept here so future sessions pick them up without re-deriving them:
 
-1. **Translate Italian comments in the C# source code to English.**
-   The documentation sweep completed in September 2026 covers the
-   Markdown files only; several `.cs` files (notably under
-   `src/MedReminder.Infrastructure/`, `src/MedReminder.UI/` and the
-   publish profiles) still carry Italian comments and Italian log /
-   exception strings. This must be done project-wide, preserving
-   behavior, before any further feature work that touches those files.
-2. Multi-user feature (Increment 15) — designed in
+1. Multi-user feature (Increment 15) — designed in
    `docs/ANALYSIS-MULTI-USER.md`, not yet implemented.
 
 ---

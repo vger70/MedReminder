@@ -11,21 +11,22 @@ using Microsoft.Web.WebView2.WinForms;
 
 namespace MedReminder.UI.Forms;
 
-// Guida utente integrata (Incremento 14).
+// Integrated user guide (Increment 14).
 //
-// Il file docs/USER_GUIDE.md è embedded come resource; a ogni apertura
-// viene renderizzato in HTML con Markdig (in-memory, no I/O) e caricato
-// in un WebView2 con NavigateToString (nessun file temporaneo scritto
-// su disco).
+// The docs/USER_GUIDE.md file is embedded as a resource; every time
+// it is opened, it is rendered to HTML with Markdig (in-memory, no
+// I/O) and loaded in a WebView2 with NavigateToString (no temporary
+// file written to disk).
 //
-// WebView2 richiede l'Edge Runtime, che è pre-installato su Windows 11
-// e Windows 10 con aggiornamenti recenti. Se l'inizializzazione fallisce
-// mostriamo un messaggio di fallback che offre di aprire la guida
-// direttamente su GitHub nel browser predefinito.
+// WebView2 requires the Edge Runtime, which is pre-installed on
+// Windows 11 and on recently updated Windows 10. If initialization
+// fails we show a fallback message that offers to open the guide
+// directly on GitHub in the default browser.
 internal sealed class HelpViewerForm : MedReminderFormBase
 {
-    // Il pulsante "Apri su GitHub" punta alla versione MD della guida
-    // nella lingua UI corrente. GitHub rende automaticamente il markdown.
+    // The "Open on GitHub" button points at the MD version of the
+    // guide in the current UI language. GitHub renders the markdown
+    // automatically.
     private string GithubGuideUrl =>
         $"https://github.com/vger70/MedReminder/blob/main/docs/USER_GUIDE.{_loc.CurrentLanguage}.md";
 
@@ -110,8 +111,9 @@ internal sealed class HelpViewerForm : MedReminderFormBase
     {
         try
         {
-            // EnsureCoreWebView2Async carica l'Edge Runtime e prepara
-            // l'istanza. Fallisce se il runtime non è installato.
+            // EnsureCoreWebView2Async loads the Edge Runtime and
+            // sets up the instance. Fails if the runtime is not
+            // installed.
             await _webView.EnsureCoreWebView2Async(null);
 
             var html = BuildHtmlFromEmbeddedGuide();
@@ -165,12 +167,12 @@ internal sealed class HelpViewerForm : MedReminderFormBase
 
     private string BuildHtmlFromEmbeddedGuide()
     {
-        // Guida localizzata (Incremento 16e). Ordine di risoluzione:
-        //   1. File nella lingua utente sotto <bin>/localization/
-        //      USER_GUIDE.<lang>.md (Content copiato dal csproj).
-        //   2. File embedded nella lingua utente.
-        //   3. Come 1-2 ma sulla lingua di default ("en").
-        //   4. Se manca tutto, messaggio "Guida non disponibile".
+        // Localized guide (Increment 16e). Resolution order:
+        //   1. File in the user language under <bin>/localization/
+        //      USER_GUIDE.<lang>.md (Content copied from csproj).
+        //   2. Embedded file in the user language.
+        //   3. Same 1-2 but on the default language ("en").
+        //   4. If everything is missing, "Guide not available".
         var lang = _loc.CurrentLanguage;
         var markdown =
             TryLoadGuideFromDisk(lang) ??
@@ -180,19 +182,20 @@ internal sealed class HelpViewerForm : MedReminderFormBase
             _loc.Get("Ui.HelpViewer.NoResource");
 
         var pipeline = new MarkdownPipelineBuilder()
-            .UseAdvancedExtensions() // tabelle, task list, autolink, footnote, ecc.
+            .UseAdvancedExtensions() // tables, task lists, autolinks, footnotes, etc.
             .Build();
         var body = Markdown.ToHtml(markdown, pipeline);
 
-        // Template HTML minimale con CSS inline: font di sistema, larghezza
-        // controllata, tema adattivo (chiaro/scuro) via prefers-color-scheme.
-        // Nessun asset esterno — tutto self-contained per NavigateToString.
+        // Minimal HTML template with inline CSS: system font,
+        // controlled width, adaptive theme (light / dark) via
+        // prefers-color-scheme. No external assets — fully
+        // self-contained for NavigateToString.
         return $@"<!DOCTYPE html>
-<html lang=""it"">
+<html lang=""{_loc.CurrentLanguage}"">
 <head>
 <meta charset=""utf-8"">
 <meta name=""viewport"" content=""width=device-width, initial-scale=1"">
-<title>Guida MedReminder</title>
+<title>MedReminder guide</title>
 <style>
   :root {{
     --bg: #ffffff;
@@ -263,8 +266,8 @@ internal sealed class HelpViewerForm : MedReminderFormBase
 </html>";
     }
 
-    // Cerca <bin>/localization/USER_GUIDE.<lang>.md. Null se assente
-    // o illeggibile.
+    // Looks up <bin>/localization/USER_GUIDE.<lang>.md. Null if
+    // absent or unreadable.
     private static string? TryLoadGuideFromDisk(string languageCode)
     {
         try
@@ -281,9 +284,9 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         }
     }
 
-    // Cerca fra le resource embedded di TUTTI gli assembly caricati
-    // una che finisce in "USER_GUIDE.<lang>.md" — stesso pattern robusto
-    // usato per i dizionari (LocalizationService).
+    // Scans the embedded resources of EVERY loaded assembly for
+    // one ending with "USER_GUIDE.<lang>.md" — same robust pattern
+    // used for the dictionaries (LocalizationService).
     private static string? TryLoadGuideFromEmbedded(string languageCode)
     {
         var suffix = $"USER_GUIDE.{languageCode}.md";

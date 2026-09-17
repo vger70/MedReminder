@@ -1,24 +1,25 @@
 <Project Sdk="WixToolset.Sdk/5.0.2">
 
   <!--
-    Progetto WiX v5 SDK-style: produce MedReminder-<versione>-x64.msi.
+    WiX v5 SDK-style project: produces MedReminder-<version>-x64.msi.
 
-    Come si builda:
+    How to build:
       dotnet build packaging/wix/MedReminder.wixproj -c Release ^
         /p:PublishDir=..\..\src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\ ^
         /p:ProductVersion=1.0.1
 
-    Prerequisiti build:
+    Build prerequisites:
       dotnet nuget add source https://api.nuget.org/v3/index.json
-      dotnet tool install [g]lobal wix (opzionale, solo per CLI wix)
-      Il pacchetto WixToolset.Sdk 5.x viene ripristinato automaticamente.
+      dotnet tool install [g]lobal wix (optional, only for the wix CLI)
+      The WixToolset.Sdk 5.x package is restored automatically.
 
-    Prima di buildare l'MSI, PUBBLICA l'app (win-x64-sc profile):
+    Before building the MSI, PUBLISH the app (win-x64-sc profile):
       dotnet publish src\MedReminder.UI -c Release
         /p:PublishProfile=win-x64-self-contained
 
-    L'installer harvesta l'intera cartella publish e la copia sotto
-    %LOCALAPPDATA%\Programs\MedReminder\ (install per-user, no UAC).
+    The installer harvests the whole publish folder and copies it
+    under %LOCALAPPDATA%\Programs\MedReminder\ (per-user install,
+    no UAC).
   -->
 
   <PropertyGroup>
@@ -26,15 +27,16 @@
     <OutputName>MedReminder-$(ProductVersion)-x64</OutputName>
     <InstallerPlatform>x64</InstallerPlatform>
 
-    <!-- Versione: default 1.0.1, override da CLI con /p:ProductVersion=... -->
+    <!-- Version: defaults to 1.0.1, override from the CLI with /p:ProductVersion=... -->
     <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.1</ProductVersion>
 
-    <!-- Cartella con l'app pubblicata (win-x64-self-contained). Deve
-         essere passata da CLI o dallo script build-installer.ps1. -->
+    <!-- Folder with the published app (win-x64-self-contained).
+         Must be passed from the CLI or by the build-installer.ps1
+         script. -->
     <PublishDir Condition="'$(PublishDir)' == ''">..\..\src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\</PublishDir>
 
-    <!-- Manda gli errori di validazione light.exe come warning per
-         permettere ICE cookie di grandi cartelle harvestate. -->
+    <!-- Downgrade light.exe validation errors to warnings so
+         ICE cookies for large harvested folders are tolerated. -->
     <SuppressIces>ICE60;ICE64;ICE69;ICE38;ICE91</SuppressIces>
   </PropertyGroup>
 
@@ -44,8 +46,8 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <!-- Passa la versione e la cartella publish a Product.wxs come
-         costanti preprocessore ($(var.NomeCostante)). -->
+    <!-- Pass the version and the publish folder to Product.wxs
+         as preprocessor constants ($(var.ConstantName)). -->
     <DefineConstants>$(DefineConstants);ProductVersion=$(ProductVersion);PublishDir=$(PublishDir)</DefineConstants>
   </PropertyGroup>
 
