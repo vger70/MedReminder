@@ -266,8 +266,8 @@ dose/quantity values are never written to the logs.**
   instance) is planned but not yet implemented — see
   [`docs/ANALYSIS-MULTI-USER.md`](docs/ANALYSIS-MULTI-USER.md) for
   the design.
-- User guide localized in EN and IT only — FR/ES UI users see the
-  guide in English (graceful fallback).
+- User guide localized in EN, IT, FR and ES — matches every
+  supported UI language.
 - Email sending depends on Internet connectivity and SMTP server
   reachability; on transient errors the app retries with backoff
   5s → 30s → 2m, then gives up, logging the error.
