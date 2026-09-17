@@ -14,11 +14,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MedReminder.Infrastructure"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MedReminder.UI", "src\MedReminder.UI\MedReminder.UI.csproj", "{B0000004-4444-4444-4444-444444444444}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MedReminder.DataImporter", "src\MedReminder.DataImporter\MedReminder.DataImporter.csproj", "{B0000005-5555-5555-5555-555555555555}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MedReminder.Domain.Tests", "tests\MedReminder.Domain.Tests\MedReminder.Domain.Tests.csproj", "{C0000001-1111-1111-1111-111111111111}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MedReminder.Application.Tests", "tests\MedReminder.Application.Tests\MedReminder.Application.Tests.csproj", "{C0000002-2222-2222-2222-222222222222}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MedReminder.Infrastructure.Tests", "tests\MedReminder.Infrastructure.Tests\MedReminder.Infrastructure.Tests.csproj", "{C0000003-3333-3333-3333-333333333333}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MedReminder.DataImporter.Tests", "tests\MedReminder.DataImporter.Tests\MedReminder.DataImporter.Tests.csproj", "{C0000004-4444-4444-4444-444444444444}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -42,6 +46,10 @@ Global
 		{B0000004-4444-4444-4444-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B0000004-4444-4444-4444-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B0000004-4444-4444-4444-444444444444}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0000005-5555-5555-5555-555555555555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0000005-5555-5555-5555-555555555555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0000005-5555-5555-5555-555555555555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0000005-5555-5555-5555-555555555555}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C0000001-1111-1111-1111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C0000001-1111-1111-1111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C0000001-1111-1111-1111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -54,6 +62,10 @@ Global
 		{C0000003-3333-3333-3333-333333333333}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C0000003-3333-3333-3333-333333333333}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C0000003-3333-3333-3333-333333333333}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0000004-4444-4444-4444-444444444444}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0000004-4444-4444-4444-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0000004-4444-4444-4444-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0000004-4444-4444-4444-444444444444}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -63,9 +75,11 @@ Global
 		{B0000002-2222-2222-2222-222222222222} = {A0000001-1111-1111-1111-111111111111}
 		{B0000003-3333-3333-3333-333333333333} = {A0000001-1111-1111-1111-111111111111}
 		{B0000004-4444-4444-4444-444444444444} = {A0000001-1111-1111-1111-111111111111}
+		{B0000005-5555-5555-5555-555555555555} = {A0000001-1111-1111-1111-111111111111}
 		{C0000001-1111-1111-1111-111111111111} = {A0000002-2222-2222-2222-222222222222}
 		{C0000002-2222-2222-2222-222222222222} = {A0000002-2222-2222-2222-222222222222}
 		{C0000003-3333-3333-3333-333333333333} = {A0000002-2222-2222-2222-222222222222}
+		{C0000004-4444-4444-4444-444444444444} = {A0000002-2222-2222-2222-222222222222}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D0000000-0000-0000-0000-000000000001}
