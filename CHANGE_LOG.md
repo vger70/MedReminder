@@ -30,6 +30,28 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #13 — Add drug reference catalogue design analysis
+
+Link: [vger70/MedReminder#13](https://github.com/vger70/MedReminder/pull/13)
+**Status:** open
+Branch: `claude/database-principi-attivi-gl3rnw`
+
+### Docs
+
+- `docs/ANALYSIS-DRUG-CATALOGUE.md` (new): engineering plan for
+  the future reference catalogue of medicinal products (commercial
+  name ↔ active ingredient ↔ ATC), country-aware from the start.
+  Covers scope, Clean-Architecture impact on the four projects,
+  Domain / Application / Infrastructure additions, SQLite schema
+  sketch, snapshot layout and attribution obligations for AIFA
+  (CC BY 4.0) and EMA Article 57, milestones M0–M5, testing
+  strategy, localisation notes for the five shipped languages
+  (`de`, `en`, `es`, `fr`, `it`), risks, effort estimate and the
+  seven §12 decisions with their current status.
+- Follow-up to the discovery notes in
+  [#9](https://github.com/vger70/MedReminder/issues/9).
+- No source code changes; no runtime behaviour changes.
+
 ## PR #8 — Bump WebView2 to 1.0.4191.47; drop unused WPF reference
 
 Link: [vger70/MedReminder#8](https://github.com/vger70/MedReminder/pull/8)
