@@ -20,6 +20,20 @@ architecture instead.
    The icon in the Windows notification area stays visible while
    the app is running.
 
+### Windows SmartScreen on first launch
+
+The published binaries are not code-signed. On the very first launch
+of `MedReminder.exe`, Windows shows a blue "Windows protected your
+PC" dialog. To proceed:
+
+1. Click **More info**.
+2. Click **Run anyway**.
+
+Windows remembers the choice for that specific file: subsequent
+launches do not prompt again. If you install via the MSI, the UAC
+dialog reports "Unknown Publisher" for the same reason and is
+expected.
+
 ## Add a medicine
 
 1. Toolbar → **New medicine**.

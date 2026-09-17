@@ -32,10 +32,11 @@ Everything committed to this repository **must be written in English**:
 - Source code identifiers, comments, log messages, exception messages,
   XML documentation.
 - Markdown files (`README.md`, `docs/*.md`, `CLAUDE.md`, `packaging/**/*.md`, …).
-  **Exception:** the localized user guides `docs/USER_GUIDE.en.md` and
-  `docs/USER_GUIDE.it.md` keep their respective languages (English and
-  Italian) because they are shipped to the end user and rendered inside
-  the app by `HelpViewerForm`.
+  **Exception:** the localized user guides `docs/USER_GUIDE.en.md`,
+  `docs/USER_GUIDE.it.md`, `docs/USER_GUIDE.fr.md` and
+  `docs/USER_GUIDE.es.md` keep their respective languages (English,
+  Italian, French and Spanish) because they are shipped to the end
+  user and rendered inside the app by `HelpViewerForm`.
 - Commit messages, PR titles and PR descriptions.
 - Build scripts, MSBuild files, CI workflows.
 - Localization keys (JSON `strings.<lang>.json` values are the only place
@@ -51,8 +52,9 @@ lands in the repository is English.
 The following files intentionally contain non-English text and are
 NOT subject to the English-only rule:
 
-- `docs/USER_GUIDE.it.md` — the Italian user guide shipped inside the
-  app.
+- `docs/USER_GUIDE.it.md`, `docs/USER_GUIDE.fr.md` and
+  `docs/USER_GUIDE.es.md` — the Italian, French and Spanish user
+  guides shipped inside the app.
 - `assets/localization/strings.<lang>.json` — the JSON dictionaries
   for the UI languages (en, it, fr, es). Values are user-visible
   translated strings by design.
@@ -94,6 +96,8 @@ docs/
   ANALYSIS-MULTI-USER.md        design of the planned multi-user feature
   USER_GUIDE.en.md              shipped user guide (English)
   USER_GUIDE.it.md              shipped user guide (Italian)
+  USER_GUIDE.fr.md              shipped user guide (French)
+  USER_GUIDE.es.md              shipped user guide (Spanish)
   PACKAGING.md                  build / publish / distribute
 
 packaging/
@@ -228,8 +232,11 @@ Kept here so future sessions pick them up without re-deriving them:
 
 ## 9. What to never do
 
-- Never commit an Italian string to source code, comments, docs
-  (except `USER_GUIDE.it.md`), commit messages, or PR text.
+- Never commit a non-English string to source code, comments, docs
+  (except the shipped user guides `USER_GUIDE.it.md`,
+  `USER_GUIDE.fr.md` and `USER_GUIDE.es.md`, and the localization
+  dictionaries under `assets/localization/`), commit messages, or PR
+  text.
 - Never remove the Release-time `.pdb` / `.xml` cleanup target.
 - Never introduce `SmtpClient` from `System.Net.Mail` — MailKit is the
   only supported SMTP client.
