@@ -80,27 +80,43 @@
       <Link>Assets\medreminder.ico</Link>
       <LogicalName>MedReminder.UI.medreminder.ico</LogicalName>
     </EmbeddedResource>
-    <!-- Localized user guide (Increment 16e): two files per
-         language (it, en) under docs/. HelpViewerForm loads the one
-         matching the current UI language; if missing, falls back to
-         English. Copied as Content into bin/localization/ so they
-         are inspectable / editable; ALSO embedded for single-file
-         publish. -->
-    <Content Include="..\..\docs\USER_GUIDE.it.md">
-      <Link>localization\USER_GUIDE.it.md</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <!-- Localized user guide (Increment 16e): one file per supported
+         UI language (en, it, fr, es) under docs/. HelpViewerForm
+         loads the one matching the current UI language; if missing,
+         falls back to English. Copied as Content into
+         bin/localization/ so they are inspectable / editable; ALSO
+         embedded for single-file publish. -->
     <Content Include="..\..\docs\USER_GUIDE.en.md">
       <Link>localization\USER_GUIDE.en.md</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\docs\USER_GUIDE.it.md">
+      <Link>localization\USER_GUIDE.it.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\docs\USER_GUIDE.fr.md">
+      <Link>localization\USER_GUIDE.fr.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\docs\USER_GUIDE.es.md">
+      <Link>localization\USER_GUIDE.es.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.en.md">
+      <Link>Assets\USER_GUIDE.en.md</Link>
+      <LogicalName>USER_GUIDE.en.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\..\docs\USER_GUIDE.it.md">
       <Link>Assets\USER_GUIDE.it.md</Link>
       <LogicalName>USER_GUIDE.it.md</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\..\docs\USER_GUIDE.en.md">
-      <Link>Assets\USER_GUIDE.en.md</Link>
-      <LogicalName>USER_GUIDE.en.md</LogicalName>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.fr.md">
+      <Link>Assets\USER_GUIDE.fr.md</Link>
+      <LogicalName>USER_GUIDE.fr.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.es.md">
+      <Link>Assets\USER_GUIDE.es.md</Link>
+      <LogicalName>USER_GUIDE.es.md</LogicalName>
     </EmbeddedResource>
     <!-- Localization dictionaries (Increment 16a). Copied as
          Content into bin/localization/ so they are inspectable and
