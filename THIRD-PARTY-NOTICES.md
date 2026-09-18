@@ -28,6 +28,62 @@ separately) and is surfaced in the app's About dialog through the
   `TIPO_PROCEDURA = 'Omeopatico'` and
   `PRINCIPIO_ATTIVO = 'N.D.'` rows are dropped.
 
+### AEMPS — Agencia Española de Medicamentos y Productos Sanitarios (Spain)
+
+- **Dataset:** AEMPS CIMA — "Medicamentos" register (the tabular
+  XLSX export served by the CIMA portal; the alternative XML
+  "Prescripción" bundle is not the one MedReminder ships).
+- **Source:** <https://cima.aemps.es/cima/publico/home.html>
+  ("Nomenclátor / Descargas" section).
+- **Licence / terms of use:** Spanish public-sector information
+  reuse regime (Ley 37/2007, de 16 de noviembre, sobre reutilización
+  de la información del sector público), allowing redistribution with
+  attribution and without implying endorsement. Confirm the exact
+  wording of the "Aviso legal" on the CIMA download page at
+  retrieval time — if AEMPS ever narrows the terms, MedReminder
+  must stop shipping the snapshot until the situation is resolved.
+- **Attribution:** "Fuente: Agencia Española de Medicamentos y
+  Productos Sanitarios (AEMPS)."
+- **Snapshot shipped with this build:** see
+  `src/MedReminder.Infrastructure/Assets/Catalogue/es/aemps-<yyyymm>.zip`.
+  The `<yyyymm>` suffix identifies the export month and is the value
+  written to the `snapshot_version` column of every imported row.
+- **Modifications:** the parser drops no rows on ingest — the CIMA
+  "Medicamentos" register is human-only (veterinary products live in
+  the separate CIMAvet portal, not shipped here). `PharmaceuticalForm`
+  and `Dosage` are left null on the row schema (form and dose are
+  embedded inside the CommercialName text in this dataset); a future
+  increment can switch to the XML variant to lift them out without
+  changing the row shape. `DispensingRegime` is populated verbatim
+  from the free-text `Observaciones` column.
+
+### ANSM — Agence nationale de sécurité du médicament (France)
+
+- **Dataset:** ANSM BDPM — *Base de données publique des
+  médicaments*. Three TSV files (`CIS_bdpm.txt`, `CIS_CIP_bdpm.txt`,
+  `CIS_COMPO_bdpm.txt`); MedReminder consumes CIS and COMPO, keeps
+  CIP in the shipped ZIP for symmetry with what ANSM publishes.
+- **Source:** <https://base-donnees-publique.medicaments.gouv.fr/telechargement.php>
+- **Licence / terms of use:** Licence Ouverte Etalab 2.0 as
+  declared on the download portal at retrieval time —
+  <https://www.etalab.gouv.fr/licence-ouverte-open-licence>.
+  Permits reuse, modification and redistribution (including
+  commercially) subject to attribution.
+- **Attribution:** "Source : ANSM — Base de données publique des
+  médicaments (BDPM), diffusée sous Licence Ouverte Etalab 2.0."
+- **Snapshot shipped with this build:** see
+  `src/MedReminder.Infrastructure/Assets/Catalogue/fr/bdpm-<yyyymm>.zip`.
+- **Modifications:** rows whose `Type de procédure AMM` starts with
+  `Enreg homéo` are skipped at parse time (recorded as `Skipped` in
+  `ImportReport`) — homeopathic products carry no meaningful
+  active-ingredient signal for the autocomplete, mirroring the
+  Omeopatico filter applied to the Italian AIFA dataset.
+  `DispensingRegime`, `LinkLeaflet` and `LinkSpc` are left null:
+  BDPM base does not expose them as structured columns.
+  `ActiveIngredientRow.Atc` is always null: BDPM base has no
+  structured ATC column. The `Titulaires` column is left-trimmed
+  (upstream ships it with a leading space).
+
 ### EMA — European Medicines Agency (EU centrally authorised)
 
 - **Dataset:** EMA EPAR — *European public assessment reports*

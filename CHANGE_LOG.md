@@ -30,6 +30,188 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #20 — Reference catalogue: AEMPS (Spain) + BDPM (France) national catalogues (M4)
+
+Link: [vger70/MedReminder#20](https://github.com/vger70/MedReminder/pull/20)
+**Status:** open
+Branch: `M4_Additional_national_catalogues`
+
+Implements **M4** of the drug reference catalogue described in
+[`docs/ANALYSIS-DRUG-CATALOGUE.md`](docs/ANALYSIS-DRUG-CATALOGUE.md)
+§3.5 — the first two additional national catalogues, Spain (AEMPS
+CIMA) and France (ANSM BDPM). ES and FR are EU member states, so
+the existing `IncludesEuCentralised = true` default in
+`StaticCountryProfileProvider` covers them without any change:
+searches from `userCountry = ES` now scope to `{ ES, EU }`, and
+searches from `userCountry = FR` scope to `{ FR, EU }`.
+
+### Added
+
+- Two new snapshots embedded in the Infrastructure assembly:
+  `src/MedReminder.Infrastructure/Assets/Catalogue/es/aemps-202609.zip`
+  (2.7 MB, XLSX-in-ZIP wrapper) and
+  `src/MedReminder.Infrastructure/Assets/Catalogue/fr/bdpm-202609.zip`
+  (1.6 MB, three ISO-8859-15 TSVs at the archive root). Picked up
+  automatically by two new `<EmbeddedResource>` globs and served
+  under `MedReminder.Infrastructure.Assets.Catalogue.{es,fr}.<file>`
+  — mirrors the existing IT / EU convention, no changes to
+  `EmbeddedSnapshotProvider` needed.
+- `AempsCimaParser` (`src/MedReminder.Infrastructure/Catalogue/Parsers/`):
+  `IReferenceSnapshotParser` for country `ES`. Reads a single-XLSX
+  ZIP entry (`aemps.xlsx` at the archive root) via
+  `System.IO.Compression.ZipArchive` + `System.Xml.XmlReader`
+  streaming — no new XLSX library dependency. Handles both the
+  shared-string cell type (`t="s"`, the shape the real CIMA export
+  emits) and the inline-string cell type (`t="inlineStr"`, the
+  shape openpyxl-generated fixtures emit) via the same code path.
+  Validates the fixed 15-column header at parse time, maps every
+  row to `country = "ES"`, copies the row-level `Cód. ATC` onto
+  every ingredient (pattern shared with `AifaSnapshotParser` and
+  `EmaEparParser`), splits `Principios Activos` on `", "`, and
+  populates `DispensingRegime` verbatim from the free-text
+  `Observaciones` column. Registered next to `AifaSnapshotParser`
+  in `InfrastructureServiceCollectionExtensions`.
+- `AnsmBdpmParser`: `IReferenceSnapshotParser` for country `FR`.
+  Reads `CIS_bdpm.txt` joined on CIS with `CIS_COMPO_bdpm.txt`
+  from the ZIP archive. Encoding is **Windows-1252** — the ANSM
+  portal documents it as ISO-8859-15 but the actual bytes contain
+  cp1252-only 0x92 (curly single-quote `’`) used as apostrophe in
+  French denominations; the code page provider is registered
+  defensively on first use, requiring a new
+  `System.Text.Encoding.CodePages` package reference on
+  Infrastructure. **No header row** (columns are positional and
+  hard-coded per the ANSM description); a shape-validation guard
+  asserts the first non-short row's Statut column starts with
+  `Autorisation` so a future column-order change in the ANSM
+  export trips the parser instead of silently corrupting every
+  row's MAH / MarketingStatus. Skips rows whose `Type de procédure
+  AMM` starts with `Enreg homéo` — analogue of the `Omeopatico`
+  filter in `AifaSnapshotParser`. `CIS_CIP_bdpm.txt` is kept in
+  the shipped ZIP for symmetry with what ANSM publishes but is
+  not consumed (the reference catalogue keys on CIS, and upstream
+  CIP ships with a divergent UTF-8 encoding).
+- `CatalogueRefreshHostedService.ImportOrder` extended from
+  `{ IT, EU }` to `{ IT, EU, ES, FR }`. Each country still runs in
+  its own transaction so a broken snapshot for one never blocks
+  the others.
+- Two new localisation keys `about.dataSources.aemps` and
+  `about.dataSources.bdpm` in every dictionary
+  (`en/it/fr/es/de`). Parity holds at 350 keys per dictionary;
+  `DictionaryParityTests` stays green. `MainForm.ShowAboutDialog`
+  appends both attributions below the existing AIFA and EMA EPAR
+  lines, matching the four rows `THIRD-PARTY-NOTICES.md` carries.
+- Curated fixtures:
+  `tests/fixtures/catalogue/aemps-cima-sample.xlsx` (145 rows +
+  header, stratified across Estado / multi-ingredient / brands,
+  with three mandatory pins for the `Nº P. Activos`-aware split
+  code path — REZAFUNGINA/NEVIRAPINA/TETRAKIS),
+  `tests/fixtures/catalogue/bdpm-cis-sample.txt` (102 CIS in
+  Windows-1252 — includes 9 homeopathic rows for the skip filter
+  and two mandatory pins carrying the curly single-quote byte
+  0x92, CELSIOR and CARMIN D'INDIGO),
+  `bdpm-compo-sample.txt` (224 COMPO rows, 57 CIS with 2+
+  ingredients), `bdpm-cip-sample.txt` (129 rows, kept only for
+  fixture symmetry).
+- `AempsCimaParserTests` (13 tests): row-count invariant on the
+  fixture, ES-country invariant on every row, three-Estado
+  coverage, multi-ingredient `", "` splitter guided by
+  `Nº P. Activos` (mono-ingredient rows with intra-name commas
+  like `REZAFUNGINA, ACETATO DE` stay intact), row-level ATC copied
+  onto every ingredient, `Observaciones` on `DispensingRegime`,
+  `PharmaceuticalForm` / `Dosage` / `LinkLeaflet` / `LinkSpc` all
+  null, non-seekable stream. One dedicated test builds an XLSX in
+  memory using `t="s"` + `sharedStrings.xml` so the code path
+  used by the real AEMPS export is covered even though the
+  openpyxl-generated fixture emits `t="inlineStr"`. Another
+  dedicated test builds an XLSX with a leading blank row so the
+  header-latch skip is exercised.
+- `AnsmBdpmParserTests` (13 tests): 93 rows + 9 homeopathic
+  skipped, FR-country invariant, Windows-1252 round-trip on
+  accented denominations, curly single-quote (byte 0x92) preserved
+  on CELSIOR / CARMIN D'INDIGO fixture pins, multi-ingredient
+  join, ATC always null, MAH leading-space trim, status coverage,
+  non-seekable stream. One dedicated test synthesises a broken
+  BDPM row whose Statut column does not start with `Autorisation`
+  and asserts the shape-validation `InvalidDataException`.
+- `CsvReferenceCatalogueImporterTests` M4 additions: importing
+  IT + EU + ES + FR in order populates each country row count as
+  expected (168 + 70 + 145 + 93 = 476 rows, 4 distinct countries);
+  a newer ES snapshot never touches FR rows at their older
+  `snapshot_version`.
+- `SqliteReferenceCatalogueQueryServiceTests` M4 additions:
+  search from `userCountry = ES` returns rows scoped to
+  `{ ES, EU }`; search from `userCountry = FR` returns rows
+  scoped to `{ FR, EU }`; `ListAvailableCountriesAsync` surfaces
+  all four countries after loading `IT + EU + ES + FR`.
+- `StaticCountryProfileProviderTests` M4 additions: explicit
+  `GetSearchScope("ES") = { ES, EU }` and
+  `GetSearchScope("FR") = { FR, EU }` — the default "any country
+  not explicitly listed" branch already covered them, but M4 gets
+  an explicit assertion.
+
+### Changed
+
+- New `System.Text.Encoding.CodePages` package reference in
+  `MedReminder.Infrastructure.csproj` (Microsoft, MIT). Only the
+  BDPM parser needs it — every other parser stays on UTF-8.
+- `THIRD-PARTY-NOTICES.md`: two new sections — AEMPS CIMA
+  (Spain, reused under Ley 37/2007, attribution *"Fuente: AEMPS"*)
+  and ANSM BDPM (France, reused under Licence Ouverte Etalab 2.0).
+  Each section documents source URL, licence, applied filters,
+  snapshot path and any deviation from the row schema.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md`: the "What ships" table gains ES and
+  FR rows. New §5 documents the AEMPS refresh procedure (portal
+  URL, XLSX-inside-ZIP layout, naming convention, drop path, boot
+  log line). New §6 does the same for BDPM (portal URL,
+  three-TSV-inside-ZIP layout, no-header positional columns,
+  ISO-8859-15 encoding note for CIP-only, homeopathic-skip filter).
+  §7 renames the former §5 "other countries" section and shrinks
+  the pending list to UK + DE. Fixture-regen notes for the two new
+  fixtures land in §4.3 (AEMPS) and §4.4 (BDPM), following the
+  §4.2 template.
+- `docs/USER_GUIDE.{en,it,fr,es,de}.md`: the "Reference catalogue
+  (Italy + EU)" section is renamed to "Reference catalogue
+  (multi-country)" and gains a "Spanish and French national
+  catalogues" subsection. Each guide is written in its own
+  language and points to Settings → General → Reference country
+  for switching. The "Data sources and terms" paragraph now
+  mentions AEMPS (Ley 37/2007) and ANSM (Licence Ouverte Etalab
+  2.0) alongside AIFA and EMA.
+
+### Deviations from `docs/ANALYSIS-DRUG-CATALOGUE.md`
+
+- **One PR for ES + FR instead of one PR per country.** §3.5 M4
+  says "One PR per country". This PR ships ES + FR together as
+  requested. Ordering rationale (§3.5): ES and FR are the two
+  most mature open-data offerings on the M4 shortlist and share
+  the "EU member → `IncludesEuCentralised = true`" profile, so
+  they can land in a single reviewable slice without any code
+  divergence. UK (which needs the per-country EU-flag override
+  documented in §12.7) and DE stay on the M4 backlog.
+- **AEMPS XLSX instead of the XML "Prescripción" bundle.** AEMPS
+  ships two alternative dumps of the same registry — a tabular
+  XLSX (~2.7 MB) and a relational XML bundle (~16 MB compressed,
+  ~200 MB decompressed). The XLSX is ~6× smaller, needs no new
+  library dependency (`System.Xml.XmlReader` +
+  `System.IO.Compression` from the BCL cover it), and covers every
+  field the autocomplete uses. `PharmaceuticalForm` / `Dosage` /
+  `LinkLeaflet` / `LinkSpc` land as null — form and dose are
+  embedded in the CommercialName text (same as AIFA
+  `DENOMINAZIONE`); a future increment can switch to the XML
+  variant without changing the row schema.
+- **BDPM CIP file present but not parsed.** `CIS_CIP_bdpm.txt`
+  ships in the embedded ZIP for symmetry with what ANSM publishes,
+  but the M4 parser only consumes CIS + COMPO. The reference
+  catalogue keys on CIS, not on packaging-level CIP, and upstream
+  CIP has a divergent UTF-8 encoding (mismatch with the ISO-8859-15
+  CIS / COMPO files); ignoring CIP keeps the parser on a single
+  encoding path.
+
+---
+
 ## PR #19 — Reference catalogue: EU centralised authorisations (EPAR) (M3)
 
 Link: [vger70/MedReminder#19](https://github.com/vger70/MedReminder/pull/19)

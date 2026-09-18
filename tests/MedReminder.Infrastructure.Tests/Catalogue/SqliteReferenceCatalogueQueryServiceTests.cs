@@ -212,4 +212,146 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
 
         countries.Select(c => c.Value).Should().Contain(new[] { "IT", "EU" });
     }
+
+    // --- M4: ES + FR cross-country search ---------------------------
+
+    private static readonly CountryCode Spain = CountryCode.Parse("ES");
+    private static readonly CountryCode France = CountryCode.Parse("FR");
+
+    [Fact]
+    public async Task Search_from_userCountry_ES_returns_ES_and_EU_rows_after_loading_ES_and_EU()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[]
+            {
+                new AifaSnapshotParser(),
+                new EmaEparParser(),
+                new AempsCimaParser(),
+                new AnsmBdpmParser(),
+            },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+        await using (var spain = CatalogueFixtures.BuildAempsSnapshotStream())
+        {
+            await importer.ImportAsync(spain, Spain, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+
+        // The AEMPS and EPAR fixtures are disjoint on any short prefix
+        // (the curated CIMA sample and the curated EMA sample never
+        // overlap on the same starting letters at fixture size), so a
+        // single query cannot demonstrate both country codes in the
+        // result set without either widening the limit past the row
+        // count or picking a fragile prefix. Instead we hit the scope
+        // twice — once with a prefix present in the ES fixture and
+        // once with a prefix present only in the EU fixture — proving
+        // that the scope `{ ES, EU }` lets each side through.
+
+        var esHits = await sut.SearchByCommercialNameAsync(
+            prefix: "amo",
+            countryScope: new[] { Spain, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+        esHits.Should().NotBeEmpty();
+        esHits.Should().OnlyContain(h => h.Country.Value == "ES" || h.Country.Value == "EU");
+        esHits.Select(h => h.Country.Value).Should().Contain("ES");
+
+        var euHits = await sut.SearchByCommercialNameAsync(
+            prefix: "sym",
+            countryScope: new[] { Spain, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+        euHits.Should().NotBeEmpty();
+        euHits.Should().OnlyContain(h => h.Country.Value == "ES" || h.Country.Value == "EU");
+        euHits.Select(h => h.Country.Value).Should().Contain("EU");
+    }
+
+    [Fact]
+    public async Task Search_from_userCountry_FR_returns_FR_and_EU_rows_after_loading_FR_and_EU()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[]
+            {
+                new AifaSnapshotParser(),
+                new EmaEparParser(),
+                new AempsCimaParser(),
+                new AnsmBdpmParser(),
+            },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+        await using (var france = CatalogueFixtures.BuildBdpmSnapshotStream())
+        {
+            await importer.ImportAsync(france, France, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+
+        // See the ES-side test for why we run two prefix probes here
+        // instead of a single broad query. BDPM in particular has
+        // ~60 rows starting with "A" in the fixture, which would
+        // saturate a limit-50 mixed-scope query before any EPAR "A"
+        // row (Abrysvo, Aybintio) could enter the result set. The
+        // two-probe pattern proves scope { FR, EU } lets each side
+        // through without depending on how alphabetical ordering
+        // interacts with the fixture's row density.
+
+        var frHits = await sut.SearchByCommercialNameAsync(
+            prefix: "amox",
+            countryScope: new[] { France, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+        frHits.Should().NotBeEmpty();
+        frHits.Should().OnlyContain(h => h.Country.Value == "FR" || h.Country.Value == "EU");
+        frHits.Select(h => h.Country.Value).Should().Contain("FR");
+
+        var euHits = await sut.SearchByCommercialNameAsync(
+            prefix: "sym",
+            countryScope: new[] { France, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+        euHits.Should().NotBeEmpty();
+        euHits.Should().OnlyContain(h => h.Country.Value == "FR" || h.Country.Value == "EU");
+        euHits.Select(h => h.Country.Value).Should().Contain("EU");
+    }
+
+    [Fact]
+    public async Task Available_countries_lists_all_four_after_loading_IT_EU_ES_FR()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[]
+            {
+                new AifaSnapshotParser(),
+                new EmaEparParser(),
+                new AempsCimaParser(),
+                new AnsmBdpmParser(),
+            },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+        await using (var spain = CatalogueFixtures.BuildAempsSnapshotStream())
+        {
+            await importer.ImportAsync(spain, Spain, "202609", CancellationToken.None);
+        }
+        await using (var france = CatalogueFixtures.BuildBdpmSnapshotStream())
+        {
+            await importer.ImportAsync(france, France, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+        var countries = await sut.ListAvailableCountriesAsync(CancellationToken.None);
+
+        countries.Select(c => c.Value).Should().Contain(new[] { "IT", "EU", "ES", "FR" });
+    }
 }

@@ -238,13 +238,15 @@ internal sealed class MainForm : MedReminderFormBase
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "dev";
         var body = _loc.Get("Ui.MainForm.About.Body", version);
-        // Data-source attributions (M2 §2.7). Two lines always
-        // appended so both AIFA (already shipped) and the reserved
-        // EMA notice are visible in every build — matching what
-        // THIRD-PARTY-NOTICES.md carries.
+        // Data-source attributions (M2 §2.7, M3 EPAR, M4 ES + FR).
+        // Every catalogue embedded in the build has one line here,
+        // matching what THIRD-PARTY-NOTICES.md carries. Order mirrors
+        // CatalogueRefreshHostedService.ImportOrder for readability.
         var aifa = _loc.Get("about.dataSources.aifa");
         var ema = _loc.Get("about.dataSources.emaArticle57");
-        var message = body + "\n\n" + aifa + "\n" + ema;
+        var aemps = _loc.Get("about.dataSources.aemps");
+        var bdpm = _loc.Get("about.dataSources.bdpm");
+        var message = body + "\n\n" + aifa + "\n" + ema + "\n" + aemps + "\n" + bdpm;
         MessageBox.Show(this, message, _loc.Get("Ui.MainForm.About.Title"),
             MessageBoxButtons.OK, MessageBoxIcon.Information);
     }

@@ -49,7 +49,7 @@ normale.
    funzioni.
 6. **Salva**.
 
-## Catalogo di riferimento (Italia + UE)
+## Catalogo di riferimento (multi-paese)
 
 MedReminder include due snapshot di un catalogo di medicinali di
 riferimento e li usa per completare automaticamente il form della
@@ -95,14 +95,38 @@ nello stesso elenco a tendina dell'autocomplete.
   vengono deduplicate. Scegli quella che corrisponde alla confezione
   che hai in mano.
 
+### Cataloghi nazionali spagnolo e francese
+
+Il catalogo spagnolo proviene da AEMPS CIMA (registro
+"Medicamentos") e quello francese da ANSM BDPM (*Base de données
+publique des médicaments*). Nell'autocomplete si comportano
+esattamente come il catalogo italiano:
+
+- Imposta **Impostazioni → Generale → Paese di riferimento** su
+  `ES` o `FR` una volta caricato lo snapshot corrispondente (`ES`
+  e `FR` compaiono automaticamente nel menu a tendina non appena
+  i loro cataloghi sono in DB).
+- L'autocomplete elenca allora **il tuo catalogo nazionale + i
+  medicinali centralizzati UE**, mescolati nello stesso elenco.
+  Spagna e Francia sono Stati UE, quindi le righe UE sono
+  incluse per impostazione predefinita esattamente come per
+  l'Italia.
+- Tutte le altre regole restano identiche: seleziona una riga per
+  riempire entrambi i lati, oppure continua a digitare per
+  memorizzare una voce a testo libero che l'app non conosce.
+
 **Fonti dei dati e termini di riuso.** Il catalogo italiano
 proviene dai dati aperti AIFA (Agenzia Italiana del Farmaco),
 pubblicati sotto licenza Creative Commons Attribution 4.0
 International (CC BY 4.0). Il catalogo UE proviene dal dataset
 EMA EPAR, riutilizzato secondo la nota legale EMA (decisione
-2011/833/UE sul riuso dei documenti della Commissione). La
-finestra Informazioni e il file `THIRD-PARTY-NOTICES.md` nella
-radice dell'installazione riportano le attribuzioni complete.
+2011/833/UE sul riuso dei documenti della Commissione). Il
+catalogo spagnolo proviene da AEMPS CIMA, riutilizzato secondo il
+regime spagnolo di riuso dell'informazione del settore pubblico
+(Legge 37/2007). Il catalogo francese proviene da ANSM BDPM,
+riutilizzato sotto Licence Ouverte Etalab 2.0. La finestra
+Informazioni e il file `THIRD-PARTY-NOTICES.md` nella radice
+dell'installazione riportano le attribuzioni complete.
 
 ## Aggiungere scorte (nuova confezione)
 

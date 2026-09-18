@@ -53,7 +53,7 @@ Grund „Unbekannter Herausgeber“, was zu erwarten ist.
    konfiguriert sein (siehe unten).
 6. **Speichern**.
 
-## Referenzkatalog (Italien + EU)
+## Referenzkatalog (mehrere Länder)
 
 MedReminder liefert zwei Momentaufnahmen eines
 Referenzarzneimittelkatalogs mit und nutzt sie, um das
@@ -102,15 +102,40 @@ Autovervollständigungs-Dropdown-Liste an.
   werden nicht dedupliziert. Wähle die, die zur Packung in deiner
   Hand passt.
 
+### Spanischer und französischer nationaler Katalog
+
+Der spanische Katalog stammt aus AEMPS CIMA
+(„Medicamentos"-Register) und der französische Katalog aus ANSM
+BDPM (*Base de données publique des médicaments*). In der
+Autovervollständigung verhalten sie sich genau wie der
+italienische Katalog:
+
+- Setze **Einstellungen → Allgemein → Referenzland** auf `ES`
+  oder `FR`, sobald der entsprechende Snapshot geladen ist (`ES`
+  und `FR` erscheinen automatisch im Dropdown, sobald ihre
+  Kataloge in der Datenbank sind).
+- Die Autovervollständigung listet dann **deinen nationalen
+  Katalog + die EU-weit zentral zugelassenen Arzneimittel**,
+  gemischt in derselben Liste. Spanien und Frankreich sind
+  EU-Mitgliedstaaten, daher werden EU-Zeilen standardmäßig
+  einbezogen — genauso wie für Italien.
+- Alle übrigen Regeln bleiben identisch: eine Zeile auswählen,
+  um beide Seiten auszufüllen, oder weitertippen, um einen
+  freien Text zu speichern, den die Anwendung nicht kennt.
+
 **Datenquellen und Nutzungsbedingungen.** Der italienische Katalog
 stammt aus den offenen Daten der AIFA (Agenzia Italiana del
 Farmaco), veröffentlicht unter der Creative Commons Attribution
 4.0 International-Lizenz (CC BY 4.0). Der EU-Katalog stammt aus
 dem EMA-EPAR-Datensatz, weiterverwendet gemäß dem rechtlichen
 Hinweis der EMA (Beschluss 2011/833/EU über die Weiterverwendung
-von Kommissionsdokumenten). Der Info-Dialog und die Datei
-`THIRD-PARTY-NOTICES.md` im Installationsstamm enthalten die
-vollständigen Namensnennungen.
+von Kommissionsdokumenten). Der spanische Katalog stammt aus
+AEMPS CIMA, weiterverwendet gemäß der spanischen Regelung zur
+Weiterverwendung von Informationen des öffentlichen Sektors
+(Gesetz 37/2007). Der französische Katalog stammt aus ANSM BDPM,
+weiterverwendet unter Licence Ouverte Etalab 2.0. Der Info-Dialog
+und die Datei `THIRD-PARTY-NOTICES.md` im Installationsstamm
+enthalten die vollständigen Namensnennungen.
 
 ## Bestand hinzufügen (neue Packung)
 

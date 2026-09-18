@@ -21,6 +21,11 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
     <PackageReference Include="MailKit" Version="4.18.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
+    <!-- Windows-1252 is a code page and requires the CodePages
+         provider at runtime (registered by AnsmBdpmParser via
+         Encoding.RegisterProvider). Only the FR / BDPM parser needs
+         it today; other parsers stay on UTF-8. -->
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.12" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +47,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Assets\Catalogue\eu\ema-epar-*.zip">
       <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.eu.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Assets\Catalogue\es\aemps-*.zip">
+      <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.es.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Assets\Catalogue\fr\bdpm-*.zip">
+      <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.fr.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

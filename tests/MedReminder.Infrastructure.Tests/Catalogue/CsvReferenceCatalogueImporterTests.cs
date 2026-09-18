@@ -15,6 +15,8 @@ public sealed class CsvReferenceCatalogueImporterTests
 {
     private static readonly CountryCode Italy = CountryCode.Parse("IT");
     private static readonly CountryCode Eu = CountryCode.Parse("EU");
+    private static readonly CountryCode Spain = CountryCode.Parse("ES");
+    private static readonly CountryCode France = CountryCode.Parse("FR");
 
     [Fact]
     public async Task Happy_import_writes_the_expected_number_of_rows()
@@ -263,6 +265,107 @@ public sealed class CsvReferenceCatalogueImporterTests
             fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
             TimeProvider.System);
+    }
+
+    private static CsvReferenceCatalogueImporter BuildImporterWithAllParsers(
+        SqliteInMemoryFixture fixture)
+    {
+        return new CsvReferenceCatalogueImporter(
+            fixture.CreateContext(),
+            new IReferenceSnapshotParser[]
+            {
+                new AifaSnapshotParser(),
+                new EmaEparParser(),
+                new AempsCimaParser(),
+                new AnsmBdpmParser(),
+            },
+            TimeProvider.System);
+    }
+
+    // --- M4: IT + EU + ES + FR coexistence -------------------------
+
+    [Fact]
+    public async Task Importing_all_four_countries_in_order_populates_each_country_row_count()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporterWithAllParsers(fixture);
+
+        await using (var italy = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(italy, Italy, "202609", CancellationToken.None);
+        }
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, Eu, "202609", CancellationToken.None);
+        }
+        await using (var spain = CatalogueFixtures.BuildAempsSnapshotStream())
+        {
+            var esReport = await importer.ImportAsync(spain, Spain, "202609", CancellationToken.None);
+            esReport.Inserted.Should().Be(145);
+        }
+        await using (var france = CatalogueFixtures.BuildBdpmSnapshotStream())
+        {
+            var frReport = await importer.ImportAsync(france, France, "202609", CancellationToken.None);
+            frReport.Inserted.Should().Be(93);
+        }
+
+        await using var context = fixture.CreateContext();
+        var connection = context.Database.GetDbConnection();
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'IT';"))
+            .Should().Be(168);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'EU';"))
+            .Should().Be(70);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'ES';"))
+            .Should().Be(145);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'FR';"))
+            .Should().Be(93);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(DISTINCT country) FROM reference_medicines;"))
+            .Should().Be(4);
+    }
+
+    [Fact]
+    public async Task Newer_ES_snapshot_does_not_touch_FR_rows()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporterWithAllParsers(fixture);
+
+        // Seed both national catalogues at 202609.
+        await using (var spain = CatalogueFixtures.BuildAempsSnapshotStream())
+        {
+            await importer.ImportAsync(spain, Spain, "202609", CancellationToken.None);
+        }
+        await using (var france = CatalogueFixtures.BuildBdpmSnapshotStream())
+        {
+            await importer.ImportAsync(france, France, "202609", CancellationToken.None);
+        }
+
+        // Push a newer ES snapshot; the FR rows must survive at their
+        // original snapshot_version, mirroring the per-country
+        // transactional isolation §3.4 M3 already guarantees.
+        await using (var newerSpain = CatalogueFixtures.BuildAempsSnapshotStream())
+        {
+            var upgrade = await importer.ImportAsync(newerSpain, Spain, "202610", CancellationToken.None);
+            upgrade.Inserted.Should().Be(145);
+            upgrade.Deleted.Should().Be(145);
+            upgrade.SnapshotVersion.Should().Be("202610");
+        }
+
+        await using var context = fixture.CreateContext();
+        var connection = context.Database.GetDbConnection();
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'ES' AND snapshot_version = '202610';"))
+            .Should().Be(145);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'ES' AND snapshot_version = '202609';"))
+            .Should().Be(0);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'FR' AND snapshot_version = '202609';"))
+            .Should().Be(93);
     }
 
     private static async Task<long> ScalarLongAsync(

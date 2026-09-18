@@ -28,12 +28,15 @@ namespace MedReminder.UI.Hosting;
 internal sealed class CatalogueRefreshHostedService : BackgroundService
 {
     // Ordered so IT runs first (default reference country), then the
-    // supranational EU catalogue. A future national catalogue (M4)
-    // gets appended here.
+    // supranational EU catalogue, then the M4 national additions
+    // (ES → AEMPS, FR → BDPM). Each country runs in its own
+    // transaction; a broken snapshot for one never stops the next.
     private static readonly IReadOnlyList<CountryCode> ImportOrder = new[]
     {
         CountryCode.Parse("IT"),
         CountryCode.Parse("EU"),
+        CountryCode.Parse("ES"),
+        CountryCode.Parse("FR"),
     };
 
     private readonly IServiceProvider _services;

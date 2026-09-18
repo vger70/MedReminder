@@ -48,6 +48,28 @@ public sealed class StaticCountryProfileProviderTests
     }
 
     [Fact]
+    public void GetSearchScope_for_ES_returns_ES_then_EU()
+    {
+        // M4 §12.7: Spain is an EU member, so the default
+        // IncludesEuCentralised=true applies and the search scope
+        // unions the national catalogue with EU-centralised rows.
+        var scope = _sut.GetSearchScope(CountryCode.Parse("ES"));
+
+        scope.Should().Equal(CountryCode.Parse("ES"), CountryCode.Parse("EU"));
+    }
+
+    [Fact]
+    public void GetSearchScope_for_FR_returns_FR_then_EU()
+    {
+        // M4 §12.7: France is an EU member, so the default
+        // IncludesEuCentralised=true applies and the search scope
+        // unions the national catalogue with EU-centralised rows.
+        var scope = _sut.GetSearchScope(CountryCode.Parse("FR"));
+
+        scope.Should().Equal(CountryCode.Parse("FR"), CountryCode.Parse("EU"));
+    }
+
+    [Fact]
     public void GetSearchScope_for_UK_returns_only_UK()
     {
         var scope = _sut.GetSearchScope(CountryCode.Parse("UK"));
