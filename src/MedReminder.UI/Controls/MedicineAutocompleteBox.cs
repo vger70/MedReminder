@@ -91,6 +91,11 @@ public sealed class MedicineAutocompleteBox : UserControl
             BorderStyle = BorderStyle.FixedSingle,
             DrawMode = DrawMode.OwnerDrawFixed,
             ItemHeight = 22,
+            // Long AIFA rows (name — ingredient — full DESCRIZIONE)
+            // easily exceed the input width. Show a horizontal bar
+            // instead of clipping the text — the row width is set
+            // per query in RenderDropdown().
+            HorizontalScrollbar = true,
         };
         _dropdown.DrawItem += OnDrawItem;
         _dropdown.MouseClick += (_, _) => CommitSelection();
@@ -281,7 +286,31 @@ public sealed class MedicineAutocompleteBox : UserControl
             _dropdown.SelectedIndex = 0;
         }
         _dropdown.EndUpdate();
+
+        // Set the horizontal extent to the widest row plus a small
+        // margin (badge glyph + focus rect). Cheap to measure — at
+        // most 20 rows — and lets the horizontal scrollbar reach the
+        // end of every entry regardless of the visible dropdown
+        // width.
+        _dropdown.HorizontalExtent = MeasureMaxRowWidth();
+
         ShowDropdown();
+    }
+
+    private int MeasureMaxRowWidth()
+    {
+        if (_dropdown.Items.Count == 0) return 0;
+        using var graphics = _dropdown.CreateGraphics();
+        var font = _dropdown.Font;
+        var max = 0;
+        foreach (var item in _dropdown.Items)
+        {
+            var width = (int)Math.Ceiling(graphics.MeasureString(item?.ToString() ?? string.Empty, font).Width);
+            if (width > max) max = width;
+        }
+        // Room for the withdrawn badge (glyph + gap) and a couple of
+        // pixels so the last character never touches the scrollbar.
+        return max + 32;
     }
 
     // Row layout: "commercial_name — active_ingredient — dosage"
@@ -366,10 +395,24 @@ public sealed class MedicineAutocompleteBox : UserControl
         var origin = _input.PointToScreen(new Point(0, _input.Height));
         var formOrigin = form.PointToClient(origin);
         _dropdown.Location = formOrigin;
-        _dropdown.Width = Math.Max(_input.Width, 360);
 
+        // Visible width: try to span the form's client area from the
+        // dropdown's origin to a small right margin, but never
+        // narrower than the input itself. Long rows stay reachable
+        // through the horizontal scrollbar (HorizontalExtent is set
+        // in RenderDropdown per query).
+        var rightMargin = 16;
+        var maxWidth = Math.Max(_input.Width, form.ClientSize.Width - formOrigin.X - rightMargin);
+        _dropdown.Width = maxWidth;
+
+        // Reserve a row of height for the horizontal scrollbar when
+        // any row is wider than the visible area — the ListBox does
+        // not auto-shrink its content region otherwise.
+        var scrollExtra = _dropdown.HorizontalExtent > _dropdown.Width
+            ? SystemInformation.HorizontalScrollBarHeight
+            : 0;
         var visibleRows = Math.Min(Math.Max(_dropdown.Items.Count, 1), ResultLimit);
-        _dropdown.Height = visibleRows * _dropdown.ItemHeight + 4;
+        _dropdown.Height = visibleRows * _dropdown.ItemHeight + 4 + scrollExtra;
         _dropdown.Visible = true;
         _dropdown.BringToFront();
     }

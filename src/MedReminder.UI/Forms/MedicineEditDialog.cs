@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
@@ -102,6 +103,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _ingredientBox.TextEdited += (_, _) => ClearReferenceLinkage();
         }
         _unitBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown };
+        // Keep the DropDown style: the AIFA FORMA field carries many
+        // pharmaceutical forms this list doesn't enumerate ("collirio",
+        // "polvere per soluzione orale", …). When the map below finds
+        // no hit the raw FORMA string is put here verbatim.
         _unitBox.Items.AddRange(new object[]
         {
             _loc.Get("Ui.MedicineEditDialog.Unit.Tablets"),
@@ -110,6 +115,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _loc.Get("Ui.MedicineEditDialog.Unit.Ml"),
             _loc.Get("Ui.MedicineEditDialog.Unit.Doses"),
             _loc.Get("Ui.MedicineEditDialog.Unit.Vials"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Granules"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Drops"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Suppositories"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Patches"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Grams"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Puffs"),
+            _loc.Get("Ui.MedicineEditDialog.Unit.Ampoules"),
         });
         _doseBox = MakeDecimalUpDown(0.01m, 1000m, 2, initial: 1m);
         _adminPerDayBox = MakeIntUpDown(1, 24, initial: 2);
@@ -295,24 +307,40 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     }
 
     // Picking a catalogue row on either side populates the sibling
-    // free-text field and caches the linkage until the user diverges
-    // by typing over one of the boxes.
+    // free-text fields (commercial name, active ingredient, package,
+    // unit) and caches the reference linkage until the user diverges
+    // by editing one of the two autocomplete boxes.
     private void OnReferenceSelected(object? sender, ReferenceMedicineSelectedEventArgs e)
     {
         var reference = e.Reference;
 
-        // Fill the opposite side. Suppress its own change event so it
-        // does not clear the linkage we just set.
-        if (ReferenceEquals(sender, _nameBox))
+        // Extend the commercial name with strength + pharmaceutical
+        // form when we can compose them from the AIFA row — leaves
+        // enough context in the saved Name to distinguish, e.g., a
+        // 500 mg Tachipirina from a 1000 mg one.
+        _nameBox.InputText = BuildExtendedCommercialName(reference);
+
+        // Active ingredient side: mirror the reference row.
+        _ingredientBox.InputText = reference.ActiveIngredients.Count == 0
+            ? string.Empty
+            : string.Join(" / ", reference.ActiveIngredients.Select(a => a.Name));
+
+        // Package: the full AIFA DESCRIZIONE carries strength + form +
+        // pack count + primary packaging material — that's what a user
+        // sees on the box.
+        if (!string.IsNullOrWhiteSpace(reference.Dosage))
         {
-            var ingredients = reference.ActiveIngredients.Count == 0
-                ? string.Empty
-                : string.Join(" / ", reference.ActiveIngredients.Select(a => a.Name));
-            _ingredientBox.InputText = ingredients;
+            _packageBox.Text = reference.Dosage;
         }
-        else if (ReferenceEquals(sender, _ingredientBox))
+
+        // Unit: map FORMA to a localised unit label when the mapping
+        // knows it; otherwise put the raw FORMA verbatim (the combo is
+        // free-text, so any string is legal). Never overwrite an
+        // existing unit with an empty value.
+        var unitLabel = MapPharmaceuticalFormToUnit(reference.PharmaceuticalForm, _loc);
+        if (!string.IsNullOrEmpty(unitLabel))
         {
-            _nameBox.InputText = reference.CommercialName;
+            _unitBox.Text = unitLabel;
         }
 
         _linkedNationalCode = reference.NationalCode;
@@ -320,6 +348,72 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             .Select(a => a.Atc)
             .FirstOrDefault(a => a.HasValue);
         _linkedReferenceMedicineId = reference.Id;
+    }
+
+    // "TACHIPIRINA" + " 500 MG" + " compresse" → "TACHIPIRINA 500 MG compresse".
+    // Falls back to just CommercialName when neither strength nor form
+    // is available.
+    private static string BuildExtendedCommercialName(ReferenceMedicine reference)
+    {
+        var parts = new List<string>(3) { reference.CommercialName };
+        var strength = ExtractStrengthToken(reference.Dosage);
+        if (!string.IsNullOrEmpty(strength))
+        {
+            parts.Add(strength);
+        }
+        if (!string.IsNullOrWhiteSpace(reference.PharmaceuticalForm))
+        {
+            parts.Add(reference.PharmaceuticalForm.Trim().ToLowerInvariant());
+        }
+        return string.Join(" ", parts);
+    }
+
+    // Extracts the first strength token from an AIFA DESCRIZIONE
+    // string ("500 MG COMPRESSE 20 …" → "500 MG"). Matches an integer
+    // or decimal number followed by a common pharmaceutical unit.
+    // Deliberately conservative: on no match, returns null so the
+    // extended name stays clean rather than picking up garbage.
+    private static readonly Regex StrengthRegex = new(
+        @"\b\d+([.,]\d+)?\s*(mg|g|mcg|µg|ug|ml|l|ui|iu|%)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static string? ExtractStrengthToken(string? dosage)
+    {
+        if (string.IsNullOrWhiteSpace(dosage)) return null;
+        var match = StrengthRegex.Match(dosage);
+        return match.Success ? match.Value : null;
+    }
+
+    // AIFA FORMA is a free-text column with many variants. We match
+    // by contains on lowercased text against a short list of stems
+    // that cover the common cases; anything else falls through to
+    // returning the raw FORMA (the combo is DropDown, so free text
+    // is fine).
+    private static string? MapPharmaceuticalFormToUnit(string? forma, ILocalizationService loc)
+    {
+        if (string.IsNullOrWhiteSpace(forma)) return null;
+        var lower = forma.ToLowerInvariant();
+
+        static bool Has(string haystack, string needle) => haystack.Contains(needle, StringComparison.Ordinal);
+
+        if (Has(lower, "compress")) return loc.Get("Ui.MedicineEditDialog.Unit.Tablets");
+        if (Has(lower, "capsul")) return loc.Get("Ui.MedicineEditDialog.Unit.Capsules");
+        if (Has(lower, "bustin")) return loc.Get("Ui.MedicineEditDialog.Unit.Sachets");
+        if (Has(lower, "granulat")) return loc.Get("Ui.MedicineEditDialog.Unit.Granules");
+        if (Has(lower, "gocce") || Has(lower, "collir")) return loc.Get("Ui.MedicineEditDialog.Unit.Drops");
+        if (Has(lower, "sciropp") || Has(lower, "sospension") || Has(lower, "soluzion") || Has(lower, "sospens"))
+            return loc.Get("Ui.MedicineEditDialog.Unit.Ml");
+        if (Has(lower, "supposte") || Has(lower, "supposta")) return loc.Get("Ui.MedicineEditDialog.Unit.Suppositories");
+        if (Has(lower, "cerott")) return loc.Get("Ui.MedicineEditDialog.Unit.Patches");
+        if (Has(lower, "crema") || Has(lower, "unguent") || Has(lower, "pomata") || Has(lower, "gel"))
+            return loc.Get("Ui.MedicineEditDialog.Unit.Grams");
+        if (Has(lower, "spray") || Has(lower, "erogazion") || Has(lower, "polvere per inalazion"))
+            return loc.Get("Ui.MedicineEditDialog.Unit.Puffs");
+        if (Has(lower, "fiala") || Has(lower, "fiale")) return loc.Get("Ui.MedicineEditDialog.Unit.Ampoules");
+        if (Has(lower, "flacon")) return loc.Get("Ui.MedicineEditDialog.Unit.Vials");
+        if (Has(lower, "polvere")) return loc.Get("Ui.MedicineEditDialog.Unit.Sachets");
+
+        // Unknown FORMA: keep the AIFA text as-is so nothing is lost.
+        return forma.Trim();
     }
 
     private void ClearReferenceLinkage()
