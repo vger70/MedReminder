@@ -30,10 +30,95 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #22 — Increment 15a: profile registry and ICurrentProfile abstraction
+
+Link: [vger70/MedReminder#22](https://github.com/vger70/MedReminder/pull/22)
+**Status:** open
+Branch: `claude/incremento-15`
+
+First sub-increment of the multi-user support work designed in
+[`docs/ANALYSIS-MULTI-USER.md`](docs/ANALYSIS-MULTI-USER.md) §15a. The
+app still boots as single-user: this PR introduces the abstractions
+and the on-disk registry (`profiles.json`) but does not yet wire
+them into the boot flow — that lands in 15c. Zero user-visible
+behavior change.
+
+### Added
+
+- `MedReminder.Application.Abstractions.ProfileRole` (User / Admin,
+  `docs/ANALYSIS-MULTI-USER.md` §1.1a).
+- `MedReminder.Application.Abstractions.Profile` — immutable record
+  exposed by the registry (`Id`, `DisplayName`, `Role`, `CreatedAt`,
+  `LastUsedAt`, `HasPin`).
+- `MedReminder.Application.Abstractions.IProfileRegistry` — port
+  owning `%LOCALAPPDATA%\MedReminder\profiles.json` with atomic
+  writes, tolerant deserialization and the "at least one admin"
+  invariant enforced on every mutation (§2.2, §2.3).
+- `MedReminder.Application.Abstractions.ICurrentProfile` — read-only
+  view of the profile the running process opened; `IsAdmin` is
+  exposed here (§2.4).
+- `MedReminder.Application.Abstractions.NotificationSettings` —
+  per-profile POCO holding only `ToAddress`. Not yet consumed by
+  `MailKitEmailNotificationService`; wiring lands in 15c (§7.1).
+- `MedReminder.Infrastructure.Profiles.ProfileRegistry` — JSON
+  persistence with PBKDF2-HMAC-SHA256 (100_000 iterations, 16-byte
+  salt) for the optional PIN (§8.3), tmp + `File.Move` atomic
+  writes (same pattern as `BackupStateStore`), and fail-safe
+  "unknown role → user" deserialization.
+- `MedReminder.Infrastructure.Profiles.CurrentProfile` — the
+  concrete `ICurrentProfile` assembled at boot in 15c.
+- `MedReminder.Infrastructure.Storage.DatabasePathProvider` —
+  internal singleton fed by the composition root so
+  `BackupService` shares the same DB path as EF Core without
+  reaching back to `AppDataPaths`.
+- `tests/MedReminder.Infrastructure.Tests/Profiles/ProfileRegistryTests.cs`
+  — 19 unit tests covering CRUD, atomic save, PBKDF2 PIN roundtrip,
+  last-admin refusal, tolerant `Role` deserialization, and the
+  first-profile-forced-to-admin rule.
+
+### Changed
+
+- `MedReminder.Infrastructure.Storage.AppDataPaths` — removed the
+  implicit `GetDatabasePath()` (moved to `ICurrentProfile.DatabasePath`
+  in 15c); added `GetProfilesRootDirectory()`,
+  `GetProfilesRegistryPath()` and `GetProfileDataDirectory(id)`
+  (§2.5, §3). `BuildSqliteConnectionString` now requires an
+  explicit path — no per-machine default.
+- `MedReminder.Infrastructure.InfrastructureServiceCollectionExtensions.AddMedReminderInfrastructure`
+  — new required `string databasePath` parameter. Registers the
+  new `DatabasePathProvider` singleton.
+- `MedReminder.Infrastructure.Backup.BackupService` — takes
+  `DatabasePathProvider` from DI; `DatabasePath` now flows through
+  the provider so the export target matches the EF Core
+  connection string. Signature change to `ExportProfileAsync` /
+  `ImportProfileAsync` is postponed to 15c (§11.2).
+- `MedReminder.Infrastructure.Persistence.MedReminderDbContextFactory`
+  — design-time factory passes an explicit legacy path (only used
+  by `dotnet ef` tooling for schema generation).
+- `MedReminder.UI.Program.BuildHost` — passes the legacy
+  single-user path
+  (`%LOCALAPPDATA%\MedReminder\medreminder.db`) to
+  `AddMedReminderInfrastructure`. The multi-profile boot flow
+  arrives in 15c; upgrades continue to open the historical file
+  until then.
+- `CLAUDE.md` §5 — updated the "current working branch" to
+  `claude/incremento-15`.
+
+### Docs
+
+- No changes to `docs/ANALYSIS-MULTI-USER.md`: it stays the
+  authoritative design document and will be marked as implemented
+  at the bottom by 15e.
+- No new localisation keys — the registry has no UI surface in
+  15a. The 15-30 keys mentioned in the plan land in 15c / 15d /
+  15e.
+
+---
+
 ## PR #21 — Reference catalogue: suspend M4b (UK / DE) — sources not readily obtainable
 
 Link: [vger70/MedReminder#21](https://github.com/vger70/MedReminder/pull/21)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `M4b_UK_DE_national_catalogues`
 
 Documents the decision to **suspend M4b** (the UK MHRA and Germany

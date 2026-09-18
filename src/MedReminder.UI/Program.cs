@@ -154,7 +154,19 @@ internal static class Program
         builder.Services.AddSingleton(TimeProvider.System);
 
         builder.Services.AddMedReminderApplication();
-        builder.Services.AddMedReminderInfrastructure(builder.Configuration);
+
+        // Increment 15a (docs/ANALYSIS-MULTI-USER.md §2.5) removed
+        // the implicit default from AppDataPaths — every caller now
+        // states which database file it opens. The multi-profile
+        // boot flow lands in 15c; until then the composition root
+        // keeps the historical single-user location so upgrades run
+        // seamlessly. The V1→V2 migrator (15b) moves this file into
+        // profiles\default\, at which point Program.cs will pass
+        // ICurrentProfile.DatabasePath instead.
+        var legacyDatabasePath = Path.Combine(
+            appDataDir, AppDataPaths.DatabaseFileName);
+        builder.Services.AddMedReminderInfrastructure(
+            builder.Configuration, legacyDatabasePath);
 
         // The UI uses modern Windows toasts as the primary, with a
         // fallback to the shared tray icon's balloon. Overrides the
