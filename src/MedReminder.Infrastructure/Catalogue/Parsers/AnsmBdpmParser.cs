@@ -280,8 +280,8 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
         if (!statut.StartsWith(ExpectedStatutPrefix, StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                $"BDPM CIS_bdpm.txt column {CisIdx_StatutAmm} does not start with " +
-                $"'{ExpectedStatutPrefix}' as expected — got '{statut}'. " +
+                $"BDPM CIS_bdpm.txt Statut administratif AMM column (index {CisIdx_StatutAmm}) " +
+                $"does not start with '{ExpectedStatutPrefix}' as expected — got '{statut}'. " +
                 "ANSM may have changed the column order; verify the layout at " +
                 "https://base-donnees-publique.medicaments.gouv.fr/telechargement.php " +
                 "and adjust AnsmBdpmParser.CisIdx_* accordingly.");
