@@ -100,6 +100,25 @@ public sealed class SqliteReferenceCatalogueQueryService : IReferenceCatalogueQu
         return await HydrateAsync(connection, ids, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<CountryCode>> ListAvailableCountriesAsync(
+        CancellationToken cancellationToken)
+    {
+        var connection = await OpenAsync(cancellationToken);
+        var codes = new List<CountryCode>();
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"SELECT DISTINCT ""country"" FROM ""reference_medicines"" ORDER BY ""country"";";
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var raw = reader.GetString(0);
+            if (CountryCode.TryParse(raw, out var code))
+            {
+                codes.Add(code);
+            }
+        }
+        return codes;
+    }
+
     public async Task<ReferenceMedicine?> GetByNationalCodeAsync(
         CountryCode country, string nationalCode, CancellationToken cancellationToken)
     {

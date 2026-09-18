@@ -1,9 +1,20 @@
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Notifications;
+using MedReminder.UI.Controls;
 
 namespace MedReminder.UI.Forms;
+
+// Dependencies the medicine form needs to offer catalogue-driven
+// autocomplete (M2). Null when the feature flag Catalogue:Enabled is
+// off — the dialog then falls back to plain text entry.
+internal sealed record CatalogueAutocompleteContext(
+    MedicineAutocompleteBox.ReferenceMedicineSearchAsync SearchCommercialName,
+    MedicineAutocompleteBox.ReferenceMedicineSearchAsync SearchActiveIngredient,
+    CountryCode Country);
 
 // Dialog used both for "new medicine" (Mode=Create) and for "edit"
 // (Mode=Edit). At the end it exposes Result: null if the user
@@ -17,8 +28,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     public MedicineEditResult? Result { get; private set; }
 
     private readonly ILocalizationService _loc;
-    private readonly TextBox _nameBox;
-    private readonly TextBox _ingredientBox;
+    private readonly MedicineAutocompleteBox _nameBox;
+    private readonly MedicineAutocompleteBox _ingredientBox;
     private readonly TextBox _packageBox;
     private readonly ComboBox _unitBox;
     private readonly NumericUpDown _doseBox;
@@ -38,7 +49,17 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private readonly List<AdministrationSlotEntry> _slots = new();
     private readonly EditMode _mode;
 
-    public MedicineEditDialog(EditMode mode, ILocalizationService localization, MedicineEditResult? seed = null)
+    // Populated when the user picks a catalogue row; cleared as soon
+    // as they diverge from it by editing either autocomplete field.
+    private string? _linkedNationalCode;
+    private AtcCode? _linkedAtcCode;
+    private Guid? _linkedReferenceMedicineId;
+
+    public MedicineEditDialog(
+        EditMode mode,
+        ILocalizationService localization,
+        MedicineEditResult? seed = null,
+        CatalogueAutocompleteContext? catalogueContext = null)
     {
         _loc = localization;
         _mode = mode;
@@ -53,9 +74,33 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         MaximizeBox = false;
         Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
-        _nameBox = new TextBox { Dock = DockStyle.Fill, MaxLength = 200 };
-        _ingredientBox = new TextBox { Dock = DockStyle.Fill, MaxLength = 200 };
+        _nameBox = new MedicineAutocompleteBox { Dock = DockStyle.Fill };
+        _ingredientBox = new MedicineAutocompleteBox { Dock = DockStyle.Fill };
         _packageBox = new TextBox { Dock = DockStyle.Fill, MaxLength = 200 };
+
+        // Wire the autocomplete only when the catalogue is on and a
+        // search delegate is available. Otherwise the boxes stay in
+        // pure text-entry mode (nothing bound, no dropdown ever
+        // shown) so the dialog remains usable when the feature flag
+        // is off.
+        if (catalogueContext is not null)
+        {
+            _nameBox.BindSearch(
+                MedicineAutocompleteBox.SearchField.CommercialName,
+                catalogueContext.SearchCommercialName,
+                localization,
+                catalogueContext.Country);
+            _ingredientBox.BindSearch(
+                MedicineAutocompleteBox.SearchField.ActiveIngredient,
+                catalogueContext.SearchActiveIngredient,
+                localization,
+                catalogueContext.Country);
+
+            _nameBox.ReferenceSelected += OnReferenceSelected;
+            _ingredientBox.ReferenceSelected += OnReferenceSelected;
+            _nameBox.TextEdited += (_, _) => ClearReferenceLinkage();
+            _ingredientBox.TextEdited += (_, _) => ClearReferenceLinkage();
+        }
         _unitBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown };
         _unitBox.Items.AddRange(new object[]
         {
@@ -165,9 +210,12 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private void ApplySeed(MedicineEditResult seed)
     {
-        _nameBox.Text = seed.Name;
-        _ingredientBox.Text = seed.ActiveIngredient ?? string.Empty;
+        _nameBox.InputText = seed.Name;
+        _ingredientBox.InputText = seed.ActiveIngredient ?? string.Empty;
         _packageBox.Text = seed.Package ?? string.Empty;
+        _linkedNationalCode = seed.NationalCode;
+        _linkedAtcCode = seed.AtcCode;
+        _linkedReferenceMedicineId = seed.LinkedReferenceMedicineId;
         _unitBox.Text = seed.Unit;
         _doseBox.Value = seed.DosePerAdministration;
         _adminPerDayBox.Value = seed.AdministrationsPerDay;
@@ -193,7 +241,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private void OnConfirmClick(object? sender, EventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_nameBox.Text))
+        if (string.IsNullOrWhiteSpace(_nameBox.InputText))
         {
             MessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.Validation.NameRequired"),
@@ -226,8 +274,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (_channelEmail.Checked) channels |= NotificationChannels.Email;
 
         Result = new MedicineEditResult(
-            Name: _nameBox.Text.Trim(),
-            ActiveIngredient: NullIfBlank(_ingredientBox.Text),
+            Name: _nameBox.InputText.Trim(),
+            ActiveIngredient: NullIfBlank(_ingredientBox.InputText),
             Package: NullIfBlank(_packageBox.Text),
             Unit: _unitBox.Text.Trim(),
             DosePerAdministration: _doseBox.Value,
@@ -240,7 +288,45 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             InitialQuantity: _initialQtyBox.Value,
             NotificationChannels: channels,
             IsActive: _isActiveBox.Checked,
-            Slots: _slots.ToList());
+            Slots: _slots.ToList(),
+            NationalCode: _linkedNationalCode,
+            AtcCode: _linkedAtcCode,
+            LinkedReferenceMedicineId: _linkedReferenceMedicineId);
+    }
+
+    // Picking a catalogue row on either side populates the sibling
+    // free-text field and caches the linkage until the user diverges
+    // by typing over one of the boxes.
+    private void OnReferenceSelected(object? sender, ReferenceMedicineSelectedEventArgs e)
+    {
+        var reference = e.Reference;
+
+        // Fill the opposite side. Suppress its own change event so it
+        // does not clear the linkage we just set.
+        if (ReferenceEquals(sender, _nameBox))
+        {
+            var ingredients = reference.ActiveIngredients.Count == 0
+                ? string.Empty
+                : string.Join(" / ", reference.ActiveIngredients.Select(a => a.Name));
+            _ingredientBox.InputText = ingredients;
+        }
+        else if (ReferenceEquals(sender, _ingredientBox))
+        {
+            _nameBox.InputText = reference.CommercialName;
+        }
+
+        _linkedNationalCode = reference.NationalCode;
+        _linkedAtcCode = reference.ActiveIngredients
+            .Select(a => a.Atc)
+            .FirstOrDefault(a => a.HasValue);
+        _linkedReferenceMedicineId = reference.Id;
+    }
+
+    private void ClearReferenceLinkage()
+    {
+        _linkedNationalCode = null;
+        _linkedAtcCode = null;
+        _linkedReferenceMedicineId = null;
     }
 
     private Control BuildChannelsPanel()
@@ -397,7 +483,10 @@ internal sealed record MedicineEditResult(
     decimal InitialQuantity,
     NotificationChannels NotificationChannels,
     bool IsActive,
-    IReadOnlyList<AdministrationSlotEntry>? Slots = null)
+    IReadOnlyList<AdministrationSlotEntry>? Slots = null,
+    string? NationalCode = null,
+    AtcCode? AtcCode = null,
+    Guid? LinkedReferenceMedicineId = null)
 {
     public AddMedicineCommand ToAddCommand() => new(
         Name: Name,
@@ -413,12 +502,20 @@ internal sealed record MedicineEditResult(
         DoctorName: DoctorName,
         Notes: Notes,
         InitialQuantity: InitialQuantity,
-        AdministrationSlots: MapSlots());
+        AdministrationSlots: MapSlots(),
+        NationalCode: NationalCode,
+        AtcCode: AtcCode,
+        LinkedReferenceMedicineId: LinkedReferenceMedicineId);
 
     // Always pass the slots (even empty): the UpdateMedicine use case
     // distinguishes null=leave-as-is vs [] = clear. Here the user has
     // explicitly confirmed the current list, so we want it applied
     // (atomic replacement).
+    //
+    // The Catalogue block is always sent too: the user's Save always
+    // encodes an explicit intent (either linked to a reference row
+    // they picked, or fully free-text / unlinked). Sending null there
+    // would leave a stale linkage from a previous edit untouched.
     public UpdateMedicineCommand ToUpdateCommand(Guid id) => new(
         MedicineId: id,
         Name: Name,
@@ -431,7 +528,8 @@ internal sealed record MedicineEditResult(
         DoctorName: DoctorName,
         Notes: Notes,
         IsActive: IsActive,
-        AdministrationSlots: MapSlots() ?? Array.Empty<AdministrationSlotInput>());
+        AdministrationSlots: MapSlots() ?? Array.Empty<AdministrationSlotInput>(),
+        Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId));
 
     private IReadOnlyList<AdministrationSlotInput>? MapSlots()
     {

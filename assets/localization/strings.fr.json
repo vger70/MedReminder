@@ -356,5 +356,16 @@
   "Reports.Therapy.End": " · Fin : {0}",
   "Reports.Therapy.Doctor": "Médecin : {0}",
   "Reports.Therapy.Notes": "Notes : {0}",
-  "Reports.Therapy.Disclaimer": "— MedReminder : rappel organisationnel, pas un dispositif médical."
+  "Reports.Therapy.Disclaimer": "— MedReminder : rappel organisationnel, pas un dispositif médical.",
+
+  "medicine.field.commercialName": "Nom commercial",
+  "medicine.field.activeIngredient": "Principe actif",
+  "medicine.field.atcCode": "Code ATC",
+  "medicine.autocomplete.hint": "Commencez à taper pour rechercher dans le catalogue de référence.",
+  "medicine.autocomplete.noMatches": "Aucune correspondance dans le catalogue de référence.",
+  "medicine.autocomplete.badge.withdrawn": "Médicament suspendu ou retiré",
+  "settings.referenceCountry.label": "Pays de référence",
+  "settings.referenceCountry.help": "Pays dont le catalogue de médicaments est interrogé par l'auto-complétion du formulaire de médicament. UE ajoute les produits en autorisation centralisée.",
+  "about.dataSources.aifa": "Catalogue italien des médicaments : données ouvertes AIFA (CC BY 4.0).",
+  "about.dataSources.emaArticle57": "Produits européens en autorisation centralisée : jeu de données EMA Article 57 (prévu pour une prochaine version)."
 }

@@ -49,6 +49,33 @@ normale.
    funzioni.
 6. **Salva**.
 
+## Catalogo di riferimento (Italia)
+
+MedReminder include uno snapshot dei dati aperti AIFA e lo usa per
+completare automaticamente il form della medicina.
+
+- Nei campi **Nome commerciale** e **Principio attivo** inizia a
+  scrivere per vedere le corrispondenze. Selezionando una riga viene
+  compilato anche l'altro campo (e, dietro le quinte, il codice
+  nazionale e il codice ATC), così non devi digitare entrambi.
+- L'elenco a tendina mostra al massimo 20 righe e si aggiorna circa
+  150 ms dopo che smetti di digitare. Un pallino rosso accanto a una
+  riga indica che il prodotto è **sospeso o ritirato dal commercio**:
+  puoi comunque sceglierlo, MedReminder si limita a segnalare lo stato.
+- **Medicina non presente in catalogo?** Continua a scrivere il testo
+  che vuoi. Se non selezioni alcuna riga dell'elenco, MedReminder
+  salva il testo così com'è e non memorizza alcun collegamento al
+  catalogo: il promemoria funziona esattamente come prima.
+- Il **paese di riferimento** si sceglie da *Impostazioni → Generale
+  → Paese di riferimento*. Il valore predefinito è Italia; una
+  modifica ha effetto alla successiva apertura del form della
+  medicina.
+- **Fonte dei dati e licenza.** Il catalogo italiano proviene dai
+  dati aperti AIFA (Agenzia Italiana del Farmaco), pubblicati sotto
+  licenza Creative Commons Attribution 4.0 International (CC BY 4.0).
+  La finestra Informazioni e il file `THIRD-PARTY-NOTICES.md` nella
+  radice dell'installazione riportano l'attribuzione completa.
+
 ## Aggiungere scorte (nuova confezione)
 
 1. Seleziona la medicina nella griglia.

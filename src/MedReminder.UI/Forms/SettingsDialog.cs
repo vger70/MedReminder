@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text.Json;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
+using MedReminder.Domain.Catalogue;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.Extensions.Options;
@@ -22,6 +24,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
 {
     private readonly IOptionsMonitor<SmtpSettings> _smtpMonitor;
     private readonly IOptionsMonitor<BackupSettings> _backupMonitor;
+    private readonly IOptionsMonitor<UserSettings> _userMonitor;
     private readonly ISmtpCredentialStore _credentialStore;
     private readonly IEmailNotificationService _emailService;
     private readonly IAutoStartService _autoStart;
@@ -29,6 +32,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private readonly IBackupStateStore _backupState;
     private readonly IApplicationRestarter _restarter;
     private readonly ILocalizationService _loc;
+    private readonly IReferenceCatalogueQueryService _catalogueQuery;
 
     // Email tab controls
     private TextBox _hostBox = null!;
@@ -57,6 +61,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     // Generale (Incremento 16b) — selezione lingua UI
     private ComboBox _languageCombo = null!;
+    // Reference-catalogue country (M2). Dropdown populated with
+    // countries actually present in the local catalogue plus a
+    // synthetic "EU" entry for supranational authorisations.
+    private ComboBox _referenceCountryCombo = null!;
 
     // Shared component for the explanatory tooltips on the technical fields.
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
@@ -72,16 +80,19 @@ internal sealed class SettingsDialog : MedReminderFormBase
     public SettingsDialog(
         IOptionsMonitor<SmtpSettings> smtpMonitor,
         IOptionsMonitor<BackupSettings> backupMonitor,
+        IOptionsMonitor<UserSettings> userMonitor,
         ISmtpCredentialStore credentialStore,
         IEmailNotificationService emailService,
         IAutoStartService autoStart,
         IBackupService backup,
         IBackupStateStore backupState,
         IApplicationRestarter restarter,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IReferenceCatalogueQueryService catalogueQuery)
     {
         _smtpMonitor = smtpMonitor;
         _backupMonitor = backupMonitor;
+        _userMonitor = userMonitor;
         _credentialStore = credentialStore;
         _emailService = emailService;
         _autoStart = autoStart;
@@ -89,6 +100,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _backupState = backupState;
         _restarter = restarter;
         _loc = localization;
+        _catalogueQuery = catalogueQuery;
 
         Text = _loc.Get("Ui.SettingsDialog.Title");
         Width = 620;
@@ -152,13 +164,35 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
         _tooltips.SetToolTip(_languageCombo, _loc.Get("Ui.SettingsDialog.Tooltip.Language"));
 
+        // Reference country (M2). Sits under the language row.
+        var referenceCountryLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("settings.referenceCountry.label"),
+        };
+        _referenceCountryCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        PopulateReferenceCountryCombo();
+        _tooltips.SetToolTip(_referenceCountryCombo, _loc.Get("settings.referenceCountry.help"));
+
+        var referenceCountryHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = System.Drawing.Color.DarkGray,
+            Text = _loc.Get("settings.referenceCountry.help"),
+        };
+
         var saveButton = new Button
         {
             Text = _loc.Get("Ui.SettingsDialog.General.Save"),
             AutoSize = true,
             Height = 30,
         };
-        saveButton.Click += (_, _) => SaveLanguage();
+        saveButton.Click += (_, _) => SaveGeneral();
 
         var note = new Label
         {
@@ -176,19 +210,68 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
         panel.Controls.Add(languageLabel);
         panel.Controls.Add(_languageCombo);
+        panel.Controls.Add(referenceCountryLabel);
+        panel.Controls.Add(_referenceCountryCombo);
+        panel.Controls.Add(referenceCountryHelp);
         panel.Controls.Add(saveButton);
         panel.Controls.Add(note);
         page.Controls.Add(panel);
         return page;
     }
 
-    private void SaveLanguage()
+    // Fill the reference-country dropdown with the distinct countries
+    // present in the local catalogue plus the synthetic "EU" entry
+    // (supranational). "IT" is always offered even on an empty DB so
+    // the user has something meaningful to pick before the first
+    // snapshot import completes.
+    private void PopulateReferenceCountryCombo()
+    {
+        var options = new SortedSet<string>(StringComparer.Ordinal) { "IT", "EU" };
+        try
+        {
+            var present = _catalogueQuery
+                .ListAvailableCountriesAsync(CancellationToken.None)
+                .GetAwaiter().GetResult();
+            foreach (var code in present)
+            {
+                options.Add(code.Value);
+            }
+        }
+        catch
+        {
+            // Best-effort: an empty or unavailable catalogue must not
+            // stop the Settings dialog from opening.
+        }
+
+        var selected = _userMonitor.CurrentValue.ReferenceCountry ?? "IT";
+        foreach (var option in options)
+        {
+            _referenceCountryCombo.Items.Add(option);
+            if (string.Equals(option, selected, StringComparison.OrdinalIgnoreCase))
+            {
+                _referenceCountryCombo.SelectedIndex = _referenceCountryCombo.Items.Count - 1;
+            }
+        }
+        if (_referenceCountryCombo.SelectedIndex < 0 && _referenceCountryCombo.Items.Count > 0)
+        {
+            _referenceCountryCombo.SelectedIndex = 0;
+        }
+    }
+
+    private void SaveGeneral()
     {
         if (_languageCombo.SelectedItem is not LanguageChoice choice) return;
 
+        var referenceCountry = _referenceCountryCombo.SelectedItem as string ?? "IT";
+        var settings = new UserSettings
+        {
+            Language = choice.Code,
+            ReferenceCountry = referenceCountry,
+        };
+
         try
         {
-            WriteUserSettingsToDisk(new UserSettings { Language = choice.Code });
+            WriteUserSettingsToDisk(settings);
         }
         catch (Exception ex)
         {
@@ -198,9 +281,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
             return;
         }
 
-        // If the language did not change, no restart needed —
-        // basta un feedback breve. Diversamente chiediamo conferma
-        // e riavviamo.
+        // If the language did not change, no restart needed. A
+        // ReferenceCountry change alone is picked up at the next
+        // opening of the medicine form via IOptionsMonitor
+        // (user.settings.json is watched with reloadOnChange=true).
         if (string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
         {
             MessageBox.Show(this,

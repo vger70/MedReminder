@@ -357,5 +357,16 @@
   "Reports.Therapy.End": " · Fine: {0}",
   "Reports.Therapy.Doctor": "Medico: {0}",
   "Reports.Therapy.Notes": "Note: {0}",
-  "Reports.Therapy.Disclaimer": "— MedReminder: promemoria organizzativo, non è un dispositivo medico."
+  "Reports.Therapy.Disclaimer": "— MedReminder: promemoria organizzativo, non è un dispositivo medico.",
+
+  "medicine.field.commercialName": "Nome commerciale",
+  "medicine.field.activeIngredient": "Principio attivo",
+  "medicine.field.atcCode": "Codice ATC",
+  "medicine.autocomplete.hint": "Inizia a scrivere per cercare nel catalogo di riferimento.",
+  "medicine.autocomplete.noMatches": "Nessuna corrispondenza nel catalogo di riferimento.",
+  "medicine.autocomplete.badge.withdrawn": "Farmaco sospeso o ritirato",
+  "settings.referenceCountry.label": "Paese di riferimento",
+  "settings.referenceCountry.help": "Paese il cui catalogo farmaci viene interrogato dall'autocompletamento nel form della medicina. EU aggiunge i prodotti ad autorizzazione centralizzata.",
+  "about.dataSources.aifa": "Catalogo farmaci italiano: dati aperti AIFA (CC BY 4.0).",
+  "about.dataSources.emaArticle57": "Prodotti ad autorizzazione centralizzata europea: dataset EMA Article 57 (previsto in una release futura)."
 }

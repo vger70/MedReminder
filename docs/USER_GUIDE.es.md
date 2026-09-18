@@ -50,6 +50,36 @@ normal.
    e-mail funcione.
 6. **Guardar**.
 
+## Catálogo de referencia (Italia)
+
+MedReminder incluye una instantánea de los datos abiertos de AIFA
+y la utiliza para autocompletar el formulario del medicamento.
+
+- En los campos **Nombre comercial** y **Principio activo** empieza
+  a escribir para ver las coincidencias. Seleccionar una fila
+  rellena también el otro campo (y, entre bastidores, el código
+  nacional y el código ATC), de modo que no tienes que escribir
+  ambos.
+- La lista desplegable muestra como máximo 20 filas y se actualiza
+  unos 150 ms después de dejar de teclear. Un círculo rojo junto a
+  una fila indica que el producto está **suspendido o retirado del
+  mercado**: puedes elegirlo igualmente, MedReminder solo señala el
+  estado.
+- **¿Medicamento no incluido en el catálogo?** Simplemente sigue
+  escribiendo lo que sepas. Si no seleccionas ninguna fila de la
+  lista, MedReminder guarda el texto tal cual y no se almacena
+  ningún vínculo con el catálogo: el recordatorio funciona
+  exactamente como antes.
+- El **país de referencia** se elige en *Ajustes → General → País
+  de referencia*. El valor por defecto es Italia; el cambio se
+  aplica en la siguiente apertura del formulario del medicamento.
+- **Fuente de los datos y licencia.** El catálogo italiano procede
+  de los datos abiertos de AIFA (Agenzia Italiana del Farmaco),
+  publicados bajo licencia Creative Commons Attribution 4.0
+  International (CC BY 4.0). El cuadro de diálogo Acerca de y el
+  archivo `THIRD-PARTY-NOTICES.md` en la raíz de la instalación
+  incluyen la atribución completa.
+
 ## Añadir stock (nueva caja)
 
 1. Selecciona el medicamento en la cuadrícula.

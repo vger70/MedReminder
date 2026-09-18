@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 
@@ -16,6 +17,11 @@ namespace MedReminder.Application.UseCases;
 //                    legacy dose × frequency model.
 //   non-empty list → atomic replacement (delete + insert) of the
 //                    current slots.
+// Catalogue linkage semantics (M2, ANALYSIS-DRUG-CATALOGUE.md §2.5):
+//   null       → do not touch the existing linkage.
+//   non-null   → replace the linkage with the given values. Pass a
+//                CatalogueLink with all-null fields to explicitly
+//                clear the linkage.
 public sealed record UpdateMedicineCommand(
     Guid MedicineId,
     string Name,
@@ -28,7 +34,13 @@ public sealed record UpdateMedicineCommand(
     string? DoctorName,
     string? Notes,
     bool IsActive,
-    IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null);
+    IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null,
+    CatalogueLink? Catalogue = null);
+
+public sealed record CatalogueLink(
+    string? NationalCode,
+    AtcCode? AtcCode,
+    Guid? LinkedReferenceMedicineId);
 
 public sealed class UpdateMedicine
 {
@@ -75,6 +87,12 @@ public sealed class UpdateMedicine
         medicine.DoctorName = string.IsNullOrWhiteSpace(cmd.DoctorName) ? null : cmd.DoctorName.Trim();
         medicine.Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim();
         medicine.IsActive = cmd.IsActive;
+        if (cmd.Catalogue is { } link)
+        {
+            medicine.NationalCode = string.IsNullOrWhiteSpace(link.NationalCode) ? null : link.NationalCode.Trim();
+            medicine.AtcCode = link.AtcCode;
+            medicine.LinkedReferenceMedicineId = link.LinkedReferenceMedicineId;
+        }
         medicine.UpdatedAt = _clock.GetUtcNow();
 
         await _medicines.UpdateAsync(medicine, cancellationToken);

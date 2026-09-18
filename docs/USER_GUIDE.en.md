@@ -49,6 +49,32 @@ expected.
    have configured SMTP settings (see below) for the email to work.
 6. **Save**.
 
+## Reference catalogue (Italy)
+
+MedReminder ships with a snapshot of the AIFA open-data medicine
+catalogue and uses it to autocomplete the medicine form.
+
+- On the **Commercial name** and **Active ingredient** fields, start
+  typing to see matches. Picking a row fills in the other side (and
+  the technical fields — national code and ATC — behind the scenes)
+  so you don't have to type both.
+- The dropdown shows at most 20 rows and updates about 150 ms after
+  you stop typing. A red circle next to a row means the product is
+  **suspended or withdrawn** — you can still pick it, MedReminder
+  only surfaces the status.
+- **Medicine not in the catalogue?** Just keep typing what you know.
+  If you never pick a row from the dropdown, MedReminder saves your
+  text as-is and no reference linkage is stored — the reminder works
+  exactly as before.
+- The **reference country** is picked from *Settings → General →
+  Reference country*. Default is Italy; a change takes effect at the
+  next opening of the medicine form.
+- **Data source and licence.** The Italian catalogue comes from
+  AIFA (Agenzia Italiana del Farmaco) open data, released under the
+  Creative Commons Attribution 4.0 International licence (CC BY 4.0).
+  The About dialog and `THIRD-PARTY-NOTICES.md` at the root of the
+  installation carry the full attribution.
+
 ## Add stock (new package)
 
 1. Select the medicine in the grid.

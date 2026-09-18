@@ -37,4 +37,12 @@ public interface IReferenceCatalogueQueryService
         CountryCode country,
         string nationalCode,
         CancellationToken cancellationToken);
+
+    // Distinct country codes with at least one row in the local
+    // catalogue. Used by the Settings dialog to populate the
+    // "Reference country" dropdown. Empty when no snapshot has been
+    // imported yet — callers should still surface "IT" and "EU" as
+    // fixed options.
+    Task<IReadOnlyList<CountryCode>> ListAvailableCountriesAsync(
+        CancellationToken cancellationToken);
 }

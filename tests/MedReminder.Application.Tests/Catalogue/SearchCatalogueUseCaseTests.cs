@@ -182,6 +182,10 @@ public sealed class SearchCatalogueUseCaseTests
             CountryCode country, string nationalCode, CancellationToken cancellationToken)
             => Task.FromResult<ReferenceMedicine?>(null);
 
+        public Task<IReadOnlyList<CountryCode>> ListAvailableCountriesAsync(
+            CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<CountryCode>>(Array.Empty<CountryCode>());
+
         private static (string, string?) ScopeKey(IReadOnlyCollection<CountryCode> scope)
         {
             var list = scope.ToList();

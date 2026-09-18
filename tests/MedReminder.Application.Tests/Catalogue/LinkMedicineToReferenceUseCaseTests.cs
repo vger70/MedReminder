@@ -203,6 +203,11 @@ public sealed class LinkMedicineToReferenceUseCaseTests
         public Task<ReferenceMedicine?> GetByNationalCodeAsync(
             CountryCode country, string nationalCode, CancellationToken cancellationToken)
             => Task.FromResult(_rows.GetValueOrDefault((country.Value, nationalCode)));
+
+        public Task<IReadOnlyList<CountryCode>> ListAvailableCountriesAsync(
+            CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<CountryCode>>(
+                _rows.Keys.Select(k => CountryCode.Parse(k.Country)).Distinct().ToList());
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

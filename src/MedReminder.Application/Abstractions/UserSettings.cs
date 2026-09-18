@@ -21,6 +21,12 @@ public sealed class UserSettings
     //   "de" — German
     // Any other value falls back to English (fail-safe).
     public string Language { get; set; } = "en";
+
+    // Reference-catalogue country used by the medicine autocomplete.
+    // ISO 3166-1 alpha-2 (uppercase) or "EU". Default "IT" matches
+    // the AIFA snapshot shipped with the app. See
+    // docs/ANALYSIS-DRUG-CATALOGUE.md §2.2 for the country-scope rule.
+    public string ReferenceCountry { get; set; } = "IT";
 }
 
 // Definition of the "currently supported" languages — used by the UI
