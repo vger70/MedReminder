@@ -147,7 +147,14 @@
   "Ui.MedicineEditDialog.Unit.Sachets": "Beutel",
   "Ui.MedicineEditDialog.Unit.Ml": "ml",
   "Ui.MedicineEditDialog.Unit.Doses": "Dosen",
-  "Ui.MedicineEditDialog.Unit.Vials": "Ampullen",
+  "Ui.MedicineEditDialog.Unit.Vials": "Fläschchen",
+  "Ui.MedicineEditDialog.Unit.Granules": "Granulat",
+  "Ui.MedicineEditDialog.Unit.Drops": "Tropfen",
+  "Ui.MedicineEditDialog.Unit.Suppositories": "Zäpfchen",
+  "Ui.MedicineEditDialog.Unit.Patches": "Pflaster",
+  "Ui.MedicineEditDialog.Unit.Grams": "Gramm",
+  "Ui.MedicineEditDialog.Unit.Puffs": "Sprühstöße",
+  "Ui.MedicineEditDialog.Unit.Ampoules": "Ampullen",
   "Ui.MedicineEditDialog.Cancel": "Abbrechen",
   "Ui.MedicineEditDialog.Save": "Speichern",
   "Ui.MedicineEditDialog.Validation.NameRequired": "Der Name ist erforderlich.",
@@ -356,5 +363,16 @@
   "Reports.Therapy.End": " · Ende: {0}",
   "Reports.Therapy.Doctor": "Arzt: {0}",
   "Reports.Therapy.Notes": "Notizen: {0}",
-  "Reports.Therapy.Disclaimer": "— MedReminder: organisatorische Erinnerung, kein Medizinprodukt."
+  "Reports.Therapy.Disclaimer": "— MedReminder: organisatorische Erinnerung, kein Medizinprodukt.",
+
+  "medicine.field.commercialName": "Handelsname",
+  "medicine.field.activeIngredient": "Wirkstoff",
+  "medicine.field.atcCode": "ATC-Code",
+  "medicine.autocomplete.hint": "Beginnen Sie zu tippen, um im Referenzkatalog zu suchen.",
+  "medicine.autocomplete.noMatches": "Keine Treffer im Referenzkatalog.",
+  "medicine.autocomplete.badge.withdrawn": "Ausgesetztes oder zurückgezogenes Arzneimittel",
+  "settings.referenceCountry.label": "Referenzland",
+  "settings.referenceCountry.help": "Land, dessen Arzneimittelkatalog von der Auto-Vervollständigung im Medikamentenformular abgefragt wird. EU ergänzt zentral zugelassene Produkte.",
+  "about.dataSources.aifa": "Italienischer Arzneimittelkatalog: AIFA-Offene-Daten (CC BY 4.0).",
+  "about.dataSources.emaArticle57": "Europäische zentral zugelassene Produkte: EMA-Article-57-Datensatz (für eine zukünftige Version vorgesehen)."
 }

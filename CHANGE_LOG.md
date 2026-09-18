@@ -30,6 +30,163 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #18 — Reference catalogue: foundations + AIFA autocomplete (Italy) (M1 + M2)
+
+Link: [vger70/MedReminder#18](https://github.com/vger70/MedReminder/pull/18)
+**Status:** open
+Branch: `claude/sleepy-turing-s6fwzy`
+
+### M2 — Autocomplete Italy (`src/MedReminder.UI` + snapshot embedded)
+
+#### Added
+
+- First real AIFA snapshot embedded in the Infrastructure assembly:
+  `src/MedReminder.Infrastructure/Assets/Catalogue/it/aifa-202609.zip`
+  (94 MB uncompressed, ~5 MB compressed), picked up automatically by
+  a `<EmbeddedResource>` glob and served under
+  `MedReminder.Infrastructure.Assets.Catalogue.it.aifa-202609.zip`.
+- `MedicineAutocompleteBox` WinForms control
+  (`src/MedReminder.UI/Controls/`): text input + owner-drawn ListBox
+  with 150 ms debounce on keystrokes, hard 20-row limit per query,
+  row template `commercial_name — active_ingredient — dosage`, red
+  circle badge on rows whose AIFA `STATO_AMMINISTRATIVO` contains
+  `sospesa`, `ritirat` or `revocata` (case-insensitive substring —
+  free-text column, no enum assumed), horizontal scrollbar with
+  measured `HorizontalExtent`, dropdown anchored at the form's left
+  edge and spanning the full dialog width.
+- `CatalogueRefreshHostedService` (`src/MedReminder.UI/Hosting/`):
+  boot-time importer that runs on a background thread only when
+  `Catalogue:Enabled == true`, opens the embedded snapshot via
+  `EmbeddedSnapshotProvider` and short-circuits when the recorded
+  `snapshot_version` matches. Registered conditionally in
+  `Program.BuildHost`.
+- `MedicineEditDialog` hosts two `MedicineAutocompleteBox` instances
+  — one on "Commercial name" and one on "Active ingredient".
+  Picking a catalogue row on either side fills the sibling text
+  field plus `Package` (from AIFA `DESCRIZIONE`), `Unit` (mapped
+  from AIFA `FORMA` to a localised label via a 13-entry stem table,
+  falling back to raw FORMA when nothing matches), and an extended
+  commercial name of the shape `<CommercialName> <strength> <form>`
+  where strength is extracted from `DESCRIZIONE` with a
+  conservative regex (`mg / g / mcg / µg / ug / ml / l / ui / iu / %`).
+  Free-text edits clear the reference linkage so a manually-typed
+  entry saves unlinked.
+- Settings dialog — General tab: new "Reference country" dropdown
+  populated from `IReferenceCatalogueQueryService.ListAvailableCountriesAsync`
+  plus the fixed `IT` and `EU` options. Save writes Language +
+  ReferenceCountry atomically to `user.settings.json`.
+- Root `THIRD-PARTY-NOTICES.md` listing the AIFA attribution
+  (CC BY 4.0) and a placeholder for EMA Article 57 (M3). The two
+  `about.dataSources.*` strings are surfaced in the About dialog.
+- `docs/CATALOGUE-DATA.md`: monthly AIFA-refresh procedure — where
+  to download, how to build the ZIP, where to drop it, how to
+  regenerate the reduced fixture.
+- Seven new unit keys in all five dictionaries (`Granules`,
+  `Drops`, `Suppositories`, `Patches`, `Grams`, `Puffs`,
+  `Ampoules`) — the medicine form's unit combo grew from 6 to 13
+  options and picks up AIFA FORMA values automatically. Ten new
+  M2 keys (`medicine.field.*`, `medicine.autocomplete.*`,
+  `settings.referenceCountry.*`, `about.dataSources.*`). Parity
+  verified across the 5 dictionaries (348 keys each).
+
+#### Changed
+
+- `UserSettings` gains `ReferenceCountry` (default `"IT"`).
+  `user.settings.json` is now loaded with `reloadOnChange: true`
+  so a country change takes effect at the next medicine-form open
+  without a restart.
+- `IReferenceCatalogueQueryService` gains
+  `ListAvailableCountriesAsync` — one method, needed by the
+  Settings dropdown.
+- `AddMedicineCommand` and `UpdateMedicineCommand` gain trailing
+  optional catalogue-linkage parameters (`NationalCode`,
+  `AtcCode`, `LinkedReferenceMedicineId` on Add; a `CatalogueLink`
+  block on Update). Existing named-arg callers stay
+  source-compatible; the two use-case implementations copy the
+  linkage into the Medicine entity when set.
+- `CatalogueFeatureOptions.Enabled` defaults to `true` in
+  `appsettings.json`, activating the feature end-to-end.
+- `MedicineEditDialog` width bumped from 620 to 880 px so the
+  autocomplete dropdown has enough room for long AIFA rows without
+  heavy horizontal scrolling; German `Unit.Vials` translation fixed
+  from "Ampullen" (semantically ambiguous) to "Fläschchen", freeing
+  "Ampullen" for the new `Ampoules` key that maps AIFA "fiale".
+
+#### Docs
+
+- `USER_GUIDE.{en,it,fr,es,de}.md`: new "Reference catalogue
+  (Italy)" section covering autocomplete behaviour, the free-text
+  fallback, the reference-country setting, and the AIFA source with
+  its CC BY 4.0 licence — each guide in its own language.
+
+---
+
+### M1 — Foundations (`src/MedReminder.Domain` + `Application` + `Infrastructure`)
+
+#### Added
+
+- Domain (`net10.0`): `CountryCode` value object (normalises
+  `European Union` → `EU`, validates ISO 3166-1 alpha-2) and
+  `AtcCode` value object (7-character WHO ATC pattern), plus the
+  `ReferenceMedicine` and `ReferenceActiveIngredient` read models
+  under `src/MedReminder.Domain/Catalogue/`.
+- Application (`net10.0`): `IReferenceCatalogueQueryService`,
+  `IReferenceCatalogueImporter`, `ImportReport`,
+  `SearchCatalogueUseCase`, `LinkMedicineToReferenceUseCase`,
+  `ICountryProfileProvider` / `StaticCountryProfileProvider` (the
+  sole owner of the "national ∪ EU" filter — default `true`;
+  explicitly `false` for `GB` / `UK` per §12 point 7) and
+  `CatalogueFeatureOptions` (off by default).
+- Infrastructure (`net10.0-windows`): `AifaSnapshotParser` reads
+  `confezioni_fornitura.csv` joined on `CODICE_AIC` with
+  `PA_confezioni.csv` inside a ZIP archive, skipping
+  `TIPO_PROCEDURA = 'Omeopatico'` and `PRINCIPIO_ATTIVO = 'N.D.'`;
+  every row lands with `country = 'IT'`; `dispensing_regime` /
+  `link_leaflet` / `link_spc` are mapped from `FORNITURA` /
+  `LINK_FI` / `LINK_RCP`; 9-digit AIC leading zeros preserved.
+- `CsvReferenceCatalogueImporter` (transactional replace,
+  short-circuits on same recorded `snapshot_version`),
+  `SqliteReferenceCatalogueQueryService` (raw-SQL adapter hitting
+  the indexed `_norm` columns), `CatalogueTextNormalizer` (shared
+  lowercase + diacritics stripping) and an `EmbeddedSnapshotProvider`
+  stub (M2 will ship the first real snapshot).
+- DI wiring for the catalogue ports; feature flag registered off by
+  default, so no runtime behaviour changes.
+- Tests: 35 new Domain tests (`CountryCode`, `AtcCode`), 25 new
+  Application tests (fake-port union semantics for
+  `SearchCatalogueUseCase`, `StaticCountryProfileProvider`,
+  `LinkMedicineToReferenceUseCase`) and five new Infrastructure
+  test files (`CatalogueSchemaTests`, `AifaSnapshotParserTests`,
+  `CsvReferenceCatalogueImporterTests`,
+  `SqliteReferenceCatalogueQueryServiceTests`, `CatalogueFixtures`)
+  exercising the M0 fixture (168 kept / 29 Omeopatico skipped,
+  idempotent replay, newer-version replace, Aspirina M2M).
+
+#### Changed
+
+- `Medicine` gains three optional catalogue fields — `NationalCode`,
+  `AtcCode`, `LinkedReferenceMedicineId` — surfaced on the entity
+  and mapped in `MedicineConfiguration` for fresh DBs.
+- `DatabaseInitializer.InitializeAsync` now applies the catalogue
+  DDL unconditionally on every boot (additive, idempotent — no
+  `EnsureCreated` shortcut for the catalogue tables per §2.4) and
+  adds the three Medicine columns to pre-existing DBs via
+  `AddColumnIfMissingAsync`.
+- `MedReminder.Infrastructure.Tests.csproj` copies the
+  `tests/fixtures/catalogue/*.csv` files as content to the test
+  output directory.
+
+#### Docs
+
+- No changes to `docs/ANALYSIS-DRUG-CATALOGUE.md`. Four
+  M1-time deviations flagged in the PR description
+  (fixture uses ASPIRINA not Augmentin, port carries a pre-computed
+  `countryScope`, AIFA parser copies `CODICE_ATC` onto every
+  ingredient of a row, catalogue table ids stored as `TEXT` to
+  match how EF stores Guids elsewhere).
+
+---
+
 ## PR #13 — Add drug reference catalogue design analysis (with M0 findings)
 
 Link: [vger70/MedReminder#13](https://github.com/vger70/MedReminder/pull/13)

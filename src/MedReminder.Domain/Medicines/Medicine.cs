@@ -1,3 +1,4 @@
+using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Notifications;
 
 namespace MedReminder.Domain.Medicines;
@@ -54,4 +55,21 @@ public sealed class Medicine
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
+
+    // Optional link to the reference catalogue (ANALYSIS-DRUG-
+    // CATALOGUE.md §2.5). All three fields stay NULL for user-authored
+    // medicines that were never linked. Free-text Name /
+    // ActiveIngredient remain the authoritative display fields.
+
+    // National code in the reference catalogue (AIC for IT, EMA
+    // product number for EU, national code for other countries).
+    public string? NationalCode { get; set; }
+
+    // ATC code inherited from the linked reference row.
+    public AtcCode? AtcCode { get; set; }
+
+    // Weak FK to reference_medicines.id: not enforced by a physical
+    // FK because the reference catalogue lives in independently-
+    // refreshable snapshots and its rows may be swapped out.
+    public Guid? LinkedReferenceMedicineId { get; set; }
 }

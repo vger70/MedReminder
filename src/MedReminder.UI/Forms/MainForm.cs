@@ -3,8 +3,10 @@ using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
 using MedReminder.UI.Presentation;
@@ -235,7 +237,14 @@ internal sealed class MainForm : MedReminderFormBase
     private void ShowAboutDialog()
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "dev";
-        var message = _loc.Get("Ui.MainForm.About.Body", version);
+        var body = _loc.Get("Ui.MainForm.About.Body", version);
+        // Data-source attributions (M2 §2.7). Two lines always
+        // appended so both AIFA (already shipped) and the reserved
+        // EMA notice are visible in every build — matching what
+        // THIRD-PARTY-NOTICES.md carries.
+        var aifa = _loc.Get("about.dataSources.aifa");
+        var ema = _loc.Get("about.dataSources.emaArticle57");
+        var message = body + "\n\n" + aifa + "\n" + ema;
         MessageBox.Show(this, message, _loc.Get("Ui.MainForm.About.Title"),
             MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
@@ -555,9 +564,42 @@ internal sealed class MainForm : MedReminderFormBase
     private void SetStatus(string text) => _statusLabel.Text = text;
 
     // ------------------ Actions ------------------
+    // Build a fresh CatalogueAutocompleteContext for a dialog opening.
+    // Each keystroke inside the dialog will spin up its own DI scope
+    // to answer the search, so the scope owning the DbContext never
+    // outlives one query. Returns null when the feature flag is off,
+    // which puts the two autocomplete boxes into plain-text mode.
+    private CatalogueAutocompleteContext? BuildCatalogueContext()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var options = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<CatalogueFeatureOptions>>();
+        if (!options.CurrentValue.Enabled) return null;
+
+        var userSettings = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<UserSettings>>();
+        var raw = userSettings.CurrentValue.ReferenceCountry ?? "IT";
+        var country = CountryCode.TryParse(raw, out var parsed) ? parsed : CountryCode.Parse("IT");
+
+        return new CatalogueAutocompleteContext(
+            SearchCommercialName: (prefix, ctry, ct) => SearchCatalogueAsync(prefix, ctry, ct, byName: true),
+            SearchActiveIngredient: (prefix, ctry, ct) => SearchCatalogueAsync(prefix, ctry, ct, byName: false),
+            Country: country);
+    }
+
+    private async Task<IReadOnlyList<MedReminder.Domain.Catalogue.ReferenceMedicine>> SearchCatalogueAsync(
+        string prefix, CountryCode country, CancellationToken cancellationToken, bool byName)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var usecase = scope.ServiceProvider.GetRequiredService<SearchCatalogueUseCase>();
+        return byName
+            ? await usecase.SearchByCommercialNameAsync(prefix, country, cancellationToken)
+            : await usecase.SearchByActiveIngredientAsync(prefix, country, cancellationToken);
+    }
+
     private async Task ShowNewMedicineAsync()
     {
-        using var dialog = new MedicineEditDialog(MedicineEditDialog.EditMode.Create, _loc);
+        using var dialog = new MedicineEditDialog(
+            MedicineEditDialog.EditMode.Create, _loc,
+            catalogueContext: BuildCatalogueContext());
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -599,7 +641,10 @@ internal sealed class MainForm : MedReminderFormBase
                 medicine.StartDate, medicine.EndDate, medicine.ThresholdDays,
                 medicine.DoctorName, medicine.Notes,
                 InitialQuantity: 0m, medicine.NotificationChannels, medicine.IsActive,
-                Slots: seedSlots);
+                Slots: seedSlots,
+                NationalCode: medicine.NationalCode,
+                AtcCode: medicine.AtcCode,
+                LinkedReferenceMedicineId: medicine.LinkedReferenceMedicineId);
         }
         catch (Exception ex)
         {
@@ -607,7 +652,9 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        using var dialog = new MedicineEditDialog(MedicineEditDialog.EditMode.Edit, _loc, seed);
+        using var dialog = new MedicineEditDialog(
+            MedicineEditDialog.EditMode.Edit, _loc, seed,
+            catalogueContext: BuildCatalogueContext());
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -796,13 +843,15 @@ internal sealed class MainForm : MedReminderFormBase
             using var dialog = new SettingsDialog(
                 scope.ServiceProvider.GetRequiredService<IOptionsMonitor<SmtpSettings>>(),
                 scope.ServiceProvider.GetRequiredService<IOptionsMonitor<BackupSettings>>(),
+                scope.ServiceProvider.GetRequiredService<IOptionsMonitor<UserSettings>>(),
                 scope.ServiceProvider.GetRequiredService<ISmtpCredentialStore>(),
                 scope.ServiceProvider.GetRequiredService<IEmailNotificationService>(),
                 scope.ServiceProvider.GetRequiredService<IAutoStartService>(),
                 scope.ServiceProvider.GetRequiredService<IBackupService>(),
                 scope.ServiceProvider.GetRequiredService<IBackupStateStore>(),
                 scope.ServiceProvider.GetRequiredService<IApplicationRestarter>(),
-                scope.ServiceProvider.GetRequiredService<ILocalizationService>());
+                scope.ServiceProvider.GetRequiredService<ILocalizationService>(),
+                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Catalogue.IReferenceCatalogueQueryService>());
             dialog.ShowDialog(this);
         }
         catch (Exception ex)

@@ -53,6 +53,36 @@ Grund „Unbekannter Herausgeber“, was zu erwarten ist.
    konfiguriert sein (siehe unten).
 6. **Speichern**.
 
+## Referenzkatalog (Italien)
+
+MedReminder liefert eine Momentaufnahme der offenen AIFA-Daten mit
+und nutzt sie, um das Medikamentenformular automatisch zu
+vervollständigen.
+
+- Beginne in den Feldern **Handelsname** und **Wirkstoff** zu
+  tippen, um Treffer zu sehen. Ein Klick auf einen Eintrag füllt
+  auch das andere Feld (und im Hintergrund die technischen Felder
+  nationaler Code und ATC-Code), sodass du nicht beides eintippen
+  musst.
+- Die Dropdown-Liste zeigt höchstens 20 Zeilen und aktualisiert
+  sich etwa 150 ms nach dem letzten Tastendruck. Ein roter Punkt
+  neben einer Zeile bedeutet, dass das Produkt **ausgesetzt oder
+  zurückgezogen** ist: du kannst es trotzdem auswählen, MedReminder
+  weist nur auf den Status hin.
+- **Medikament nicht im Katalog?** Tippe einfach weiter, was du
+  weißt. Wenn du keine Zeile aus der Liste auswählst, speichert
+  MedReminder deinen Text unverändert und speichert keine
+  Katalogverknüpfung — die Erinnerung funktioniert genau wie zuvor.
+- Das **Referenzland** wird unter *Einstellungen → Allgemein →
+  Referenzland* gewählt. Standard ist Italien; eine Änderung wirkt
+  beim nächsten Öffnen des Medikamentenformulars.
+- **Datenquelle und Lizenz.** Der italienische Katalog stammt aus
+  den offenen Daten der AIFA (Agenzia Italiana del Farmaco),
+  veröffentlicht unter der Creative Commons Attribution 4.0
+  International-Lizenz (CC BY 4.0). Der Info-Dialog und die Datei
+  `THIRD-PARTY-NOTICES.md` im Installationsstamm enthalten die
+  vollständige Namensnennung.
+
 ## Bestand hinzufügen (neue Packung)
 
 1. Wähle das Medikament in der Liste aus.

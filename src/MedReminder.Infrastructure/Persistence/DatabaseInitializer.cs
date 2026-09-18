@@ -1,4 +1,5 @@
 using System.Data.Common;
+using MedReminder.Infrastructure.Catalogue;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -36,9 +37,26 @@ public sealed class DatabaseInitializer
             await ApplyIdempotentSchemaPatchesAsync(cancellationToken);
         }
 
+        // The catalogue tables are intentionally kept out of the EF
+        // model (ANALYSIS-DRUG-CATALOGUE.md §2.4). Their DDL runs
+        // unconditionally on every boot so fresh databases and
+        // pre-existing databases converge on the same schema without
+        // an EnsureCreated shortcut for these tables.
+        await ApplyCatalogueSchemaAsync(cancellationToken);
+
         await _db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode = WAL;", cancellationToken);
         await _db.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON;", cancellationToken);
         await _db.Database.ExecuteSqlRawAsync("PRAGMA synchronous = NORMAL;", cancellationToken);
+    }
+
+    private async Task ApplyCatalogueSchemaAsync(CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+        await CatalogueSchema.ApplyAsync(connection, cancellationToken);
     }
 
     // Schema patches for existing DBs created with earlier versions.
@@ -80,6 +98,25 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_MedicationAdministrationSlots_MedicineId_Order""
                 ON ""MedicationAdministrationSlots"" (""MedicineId"", ""Order"");", cancellationToken);
+
+        // M1 (Reference catalogue): three optional columns extending
+        // the existing Medicines table. Each ADD COLUMN is guarded by
+        // a PRAGMA table_info check so this stays idempotent.
+        await AddColumnIfMissingAsync(
+            table: "Medicines",
+            column: "NationalCode",
+            typeSpec: "TEXT NULL",
+            cancellationToken);
+        await AddColumnIfMissingAsync(
+            table: "Medicines",
+            column: "AtcCode",
+            typeSpec: "TEXT NULL",
+            cancellationToken);
+        await AddColumnIfMissingAsync(
+            table: "Medicines",
+            column: "LinkedReferenceMedicineId",
+            typeSpec: "TEXT NULL",
+            cancellationToken);
     }
 
     private async Task ExecuteRawSqlAsync(string sql, CancellationToken cancellationToken)

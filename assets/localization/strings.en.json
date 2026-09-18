@@ -149,6 +149,13 @@
   "Ui.MedicineEditDialog.Unit.Ml": "ml",
   "Ui.MedicineEditDialog.Unit.Doses": "doses",
   "Ui.MedicineEditDialog.Unit.Vials": "vials",
+  "Ui.MedicineEditDialog.Unit.Granules": "granules",
+  "Ui.MedicineEditDialog.Unit.Drops": "drops",
+  "Ui.MedicineEditDialog.Unit.Suppositories": "suppositories",
+  "Ui.MedicineEditDialog.Unit.Patches": "patches",
+  "Ui.MedicineEditDialog.Unit.Grams": "grams",
+  "Ui.MedicineEditDialog.Unit.Puffs": "puffs",
+  "Ui.MedicineEditDialog.Unit.Ampoules": "ampoules",
   "Ui.MedicineEditDialog.Cancel": "Cancel",
   "Ui.MedicineEditDialog.Save": "Save",
   "Ui.MedicineEditDialog.Validation.NameRequired": "Name is required.",
@@ -357,5 +364,16 @@
   "Reports.Therapy.End": " · End: {0}",
   "Reports.Therapy.Doctor": "Doctor: {0}",
   "Reports.Therapy.Notes": "Notes: {0}",
-  "Reports.Therapy.Disclaimer": "— MedReminder: organizational reminder, not a medical device."
+  "Reports.Therapy.Disclaimer": "— MedReminder: organizational reminder, not a medical device.",
+
+  "medicine.field.commercialName": "Commercial name",
+  "medicine.field.activeIngredient": "Active ingredient",
+  "medicine.field.atcCode": "ATC code",
+  "medicine.autocomplete.hint": "Start typing to search the reference catalogue.",
+  "medicine.autocomplete.noMatches": "No match in the reference catalogue.",
+  "medicine.autocomplete.badge.withdrawn": "Withdrawn or suspended product",
+  "settings.referenceCountry.label": "Reference country",
+  "settings.referenceCountry.help": "Country whose medicine catalogue is searched from the autocomplete on the medicine form. EU adds centrally authorised products.",
+  "about.dataSources.aifa": "Italian medicine catalogue: AIFA open data (CC BY 4.0).",
+  "about.dataSources.emaArticle57": "European centrally authorised products: EMA Article 57 dataset (reserved for a future release)."
 }

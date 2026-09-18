@@ -136,10 +136,12 @@ internal static class Program
         var appDataDir = AppDataPaths.GetAppDataDirectory();
         var userSmtpSettingsFile = Path.Combine(appDataDir, "smtp.settings.json");
         var userBackupSettingsFile = Path.Combine(appDataDir, "backup.settings.json");
-        // user.settings.json (Increment 16): currently only holds
-        // the UI language. reloadOnChange=false because the change
-        // requires a restart anyway — the read happens once at
-        // process boot.
+        // user.settings.json holds the UI language (still requires a
+        // restart to rebind the singleton LocalizationService) and
+        // the reference-catalogue country (M2: picked up at the next
+        // medicine-form open via IOptionsMonitor<UserSettings>).
+        // reloadOnChange=true so the country change takes effect
+        // without asking the user to restart.
         var userSettingsFile = Path.Combine(appDataDir, "user.settings.json");
 
         builder.Configuration
@@ -147,7 +149,7 @@ internal static class Program
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
             .AddJsonFile(userSmtpSettingsFile, optional: true, reloadOnChange: true)
             .AddJsonFile(userBackupSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(userSettingsFile, optional: true, reloadOnChange: false);
+            .AddJsonFile(userSettingsFile, optional: true, reloadOnChange: true);
 
         builder.Services.AddSingleton(TimeProvider.System);
 
@@ -167,6 +169,20 @@ internal static class Program
 
         builder.Services.AddHostedService<MedicationMonitorHostedService>();
         builder.Services.AddHostedService<AutomaticBackupHostedService>();
+
+        // Reference catalogue (M2): boot-time importer runs only when
+        // the feature flag is on. Reads Catalogue:Enabled via the
+        // string indexer to avoid an explicit dependency on
+        // Microsoft.Extensions.Configuration.Binder — same pattern as
+        // MedicationMonitorHostedService. The service itself re-checks
+        // the flag before doing anything, so toggling it at runtime
+        // stays safe.
+        var catalogueEnabledRaw = builder.Configuration[
+            MedReminder.Application.Catalogue.CatalogueFeatureOptions.SectionName + ":Enabled"];
+        if (bool.TryParse(catalogueEnabledRaw, out var catalogueEnabled) && catalogueEnabled)
+        {
+            builder.Services.AddHostedService<CatalogueRefreshHostedService>();
+        }
 
         // Restarter used after a DB restore (requires relaunching
         // the current exe to cleanly reacquire the SQLite locks).

@@ -1,3 +1,4 @@
+using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -24,6 +25,16 @@ internal sealed class MedicineConfiguration : IEntityTypeConfiguration<Medicine>
         builder.Property(m => m.DosePerAdministration).HasConversion<string>();
 
         builder.Property(m => m.NotificationChannels).HasConversion<int>();
+
+        // Optional catalogue link (M1). The columns are also added
+        // to pre-existing DBs by DatabaseInitializer's additive step.
+        builder.Property(m => m.NationalCode).HasMaxLength(40);
+        builder.Property(m => m.AtcCode)
+            .HasMaxLength(7)
+            .HasConversion(
+                atc => atc.HasValue ? atc.Value.Value : null,
+                text => string.IsNullOrEmpty(text) ? (AtcCode?)null : AtcCode.Parse(text));
+        builder.Property(m => m.LinkedReferenceMedicineId);
 
         builder.HasIndex(m => m.IsActive);
         builder.HasIndex(m => m.Name);

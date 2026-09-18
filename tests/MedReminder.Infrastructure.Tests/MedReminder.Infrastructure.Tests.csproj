@@ -24,4 +24,19 @@
     <ProjectReference Include="..\..\src\MedReminder.Infrastructure\MedReminder.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\fixtures\catalogue\aifa-confezioni-sample.csv">
+      <Link>fixtures\catalogue\aifa-confezioni-sample.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\aifa-pa-sample.csv">
+      <Link>fixtures\catalogue\aifa-pa-sample.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\aifa-atc-sample.csv">
+      <Link>fixtures\catalogue\aifa-atc-sample.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

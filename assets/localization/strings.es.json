@@ -148,6 +148,13 @@
   "Ui.MedicineEditDialog.Unit.Ml": "ml",
   "Ui.MedicineEditDialog.Unit.Doses": "dosis",
   "Ui.MedicineEditDialog.Unit.Vials": "viales",
+  "Ui.MedicineEditDialog.Unit.Granules": "granulado",
+  "Ui.MedicineEditDialog.Unit.Drops": "gotas",
+  "Ui.MedicineEditDialog.Unit.Suppositories": "supositorios",
+  "Ui.MedicineEditDialog.Unit.Patches": "parches",
+  "Ui.MedicineEditDialog.Unit.Grams": "gramos",
+  "Ui.MedicineEditDialog.Unit.Puffs": "pulsaciones",
+  "Ui.MedicineEditDialog.Unit.Ampoules": "ampollas",
   "Ui.MedicineEditDialog.Cancel": "Cancelar",
   "Ui.MedicineEditDialog.Save": "Guardar",
   "Ui.MedicineEditDialog.Validation.NameRequired": "El nombre es obligatorio.",
@@ -356,5 +363,16 @@
   "Reports.Therapy.End": " · Fin: {0}",
   "Reports.Therapy.Doctor": "Médico: {0}",
   "Reports.Therapy.Notes": "Notas: {0}",
-  "Reports.Therapy.Disclaimer": "— MedReminder: recordatorio organizativo, no es un dispositivo médico."
+  "Reports.Therapy.Disclaimer": "— MedReminder: recordatorio organizativo, no es un dispositivo médico.",
+
+  "medicine.field.commercialName": "Nombre comercial",
+  "medicine.field.activeIngredient": "Principio activo",
+  "medicine.field.atcCode": "Código ATC",
+  "medicine.autocomplete.hint": "Empieza a escribir para buscar en el catálogo de referencia.",
+  "medicine.autocomplete.noMatches": "Sin coincidencias en el catálogo de referencia.",
+  "medicine.autocomplete.badge.withdrawn": "Medicamento suspendido o retirado",
+  "settings.referenceCountry.label": "País de referencia",
+  "settings.referenceCountry.help": "País cuyo catálogo de medicamentos se consulta desde el autocompletado del formulario de medicamento. UE añade los productos con autorización centralizada.",
+  "about.dataSources.aifa": "Catálogo italiano de medicamentos: datos abiertos AIFA (CC BY 4.0).",
+  "about.dataSources.emaArticle57": "Productos europeos con autorización centralizada: conjunto de datos EMA Article 57 (previsto para una futura versión)."
 }

@@ -1,10 +1,15 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.UseCases;
 
+// The three catalogue-linkage fields (NationalCode, AtcCode,
+// LinkedReferenceMedicineId) are optional. Populate them when the
+// UI has picked a row from the reference catalogue; leave them null
+// for free-text entries. See ANALYSIS-DRUG-CATALOGUE.md §2.5.
 public sealed record AddMedicineCommand(
     string Name,
     string Unit,
@@ -19,7 +24,10 @@ public sealed record AddMedicineCommand(
     string? DoctorName = null,
     string? Notes = null,
     decimal InitialQuantity = 0m,
-    IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null);
+    IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null,
+    string? NationalCode = null,
+    AtcCode? AtcCode = null,
+    Guid? LinkedReferenceMedicineId = null);
 
 public sealed class AddMedicine
 {
@@ -68,6 +76,9 @@ public sealed class AddMedicine
             IsActive = true,
             StockEpoch = 1,
             NotificationChannels = cmd.NotificationChannels,
+            NationalCode = string.IsNullOrWhiteSpace(cmd.NationalCode) ? null : cmd.NationalCode.Trim(),
+            AtcCode = cmd.AtcCode,
+            LinkedReferenceMedicineId = cmd.LinkedReferenceMedicineId,
             CreatedAt = now,
             UpdatedAt = now,
         };

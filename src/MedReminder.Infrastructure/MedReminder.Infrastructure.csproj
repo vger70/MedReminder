@@ -28,4 +28,18 @@
     <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
   </ItemGroup>
 
+  <!--
+    Reference-catalogue snapshots (ANALYSIS-DRUG-CATALOGUE.md §2.6).
+    Ship each AIFA / EMA snapshot ZIP as an embedded resource so
+    EmbeddedSnapshotProvider can open it from the assembly on boot.
+    LogicalName pins the manifest-resource name to
+    MedReminder.Infrastructure.Assets.Catalogue.<country>.<file>
+    regardless of the on-disk folder capitalisation.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Catalogue\it\aifa-*.zip">
+      <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.it.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>
