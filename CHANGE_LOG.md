@@ -30,6 +30,87 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #23 — Increment 15b: V1 → V2 on-disk migration
+
+Link: [vger70/MedReminder#23](https://github.com/vger70/MedReminder/pull/23)
+**Status:** open
+Branch: `claude/incremento-15b` (stacked on `claude/incremento-15` from PR #22)
+
+Second sub-increment of the multi-user work
+(`docs/ANALYSIS-MULTI-USER.md` §5, §15b). Adds the data-lossless
+migrator that moves an existing V1 installation to the V2 on-disk
+layout under `%LOCALAPPDATA%\MedReminder\`. **The migrator is
+dormant**: `Program.Main` does not call it in this PR. Wiring lands
+in 15c together with the boot flow, so the app still boots as
+single-user and no user-visible behavior changes.
+
+### Added
+
+- `MedReminder.Infrastructure.Migration.MigrationV1toV2` — one-shot
+  idempotent V1 → V2 migrator with mandatory pre-migration backup
+  and full rollback on any post-backup failure (§5.2).
+  - Idempotence guard: runs only when `profiles.json` is missing
+    AND a legacy `medreminder.db` sits at the app-data root (§5.1).
+  - Step 1 copies `medreminder.db` (+ `-wal` / `-shm`) and
+    `smtp.settings.json` into
+    `backups\pre-migration-YYYYMMDD-HHmmss\`. The folder is
+    self-describing and never overwritten — user is responsible
+    for manual cleanup (§14 F).
+  - Steps 2-3 move the DB files into `profiles\default\`.
+  - Step 5 extracts `Smtp.ToAddress` from the legacy
+    `smtp.settings.json` into
+    `profiles\default\notifications.settings.json` and rewrites
+    the source with the key removed. Empty / missing `ToAddress`
+    is handled gracefully.
+  - Step 6 seeds `profiles.json` via a new internal
+    `ProfileRegistry.SeedFromV1Migration(id, displayName)` — the
+    migrated profile is always `Role = admin`, `Id = "default"`,
+    `DisplayName = "User"` (§5.2 step 6). The registry refuses to
+    seed a non-empty file.
+  - Any exception between steps 2 and 6 triggers
+    `RollbackFromPreBackup`: `profiles.json` and
+    `profiles\default\` are dropped, the DB files are restored
+    from the pre-backup, and `smtp.settings.json` is restored
+    verbatim. The pre-backup itself is preserved.
+- `MigrationOutcome` public enum (`NotNeeded`, `Migrated`) — returned
+  by `MigrationV1toV2.Run()` so the future boot flow can log the
+  outcome.
+- `tests/MedReminder.Infrastructure.Tests/Migration/MigrationV1toV2Tests.cs`
+  — 6 integration tests exercising the migrator against a fake V1
+  tree under `Path.GetTempPath()`:
+  - fresh install (no legacy DB) → `NotNeeded`
+  - already migrated (`profiles.json` present) → `NotNeeded`
+  - full V1 tree with `ToAddress` → V2 layout, per-profile
+    notifications file, `ToAddress` stripped from source
+  - V1 without `smtp.settings.json` → DB migrated, no
+    notifications file
+  - V1 with empty `ToAddress` → key stripped, no notifications file
+  - forced mid-migration failure → rollback restores the V1 state
+    and the pre-migration backup is preserved
+- Two extra `ProfileRegistryTests` covering the new
+  `SeedFromV1Migration` internal (default admin seeding + refusal on
+  a populated registry).
+
+### Changed
+
+- `MedReminder.Infrastructure.Profiles.ProfileRegistry`: added the
+  internal `SeedFromV1Migration(string id, string displayName)`
+  hook. It writes the initial `profiles.json` with a caller-chosen
+  `Id` (the migrator uses the literal `"default"`) and forces
+  `Role = Admin`. Throws if the registry is already populated so
+  the migrator cannot silently be re-run.
+
+### Docs / rollback semantics
+
+- No changes to `docs/ANALYSIS-MULTI-USER.md`: the design is
+  authoritative and will be marked as implemented at the bottom
+  by 15e.
+- No new localisation keys — the migrator is silent, log-only in
+  15b. UI wiring for the outcome banner (if any) can be added in
+  15c when the boot flow calls the migrator.
+
+---
+
 ## PR #22 — Increment 15a: profile registry and ICurrentProfile abstraction
 
 Link: [vger70/MedReminder#22](https://github.com/vger70/MedReminder/pull/22)
