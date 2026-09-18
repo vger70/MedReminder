@@ -1,3 +1,4 @@
+using MedReminder.Application.Catalogue;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.UseCases;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,13 @@ public static class ApplicationServiceCollectionExtensions
 
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();
+
+        // Reference catalogue (M1). The country-profile provider owns
+        // the "national ∪ EU" rule; use cases are cheap façades over
+        // the ports registered by the Infrastructure layer.
+        services.AddSingleton<ICountryProfileProvider, StaticCountryProfileProvider>();
+        services.AddScoped<SearchCatalogueUseCase>();
+        services.AddScoped<LinkMedicineToReferenceUseCase>();
 
         return services;
     }

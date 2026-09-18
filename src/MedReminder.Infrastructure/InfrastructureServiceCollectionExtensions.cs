@@ -1,6 +1,9 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Infrastructure.AutoStart;
 using MedReminder.Infrastructure.Backup;
+using MedReminder.Infrastructure.Catalogue;
+using MedReminder.Infrastructure.Catalogue.Parsers;
 using MedReminder.Infrastructure.Credentials;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Localization;
@@ -74,6 +77,22 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IWindowsNotificationService, BalloonTipNotificationService>();
 
         services.AddSingleton<IAutoStartService>(_ => new RegistryAutoStartService());
+
+        // ------- Reference catalogue (M1) -------
+        //
+        // Registered unconditionally so the ports resolve, but the
+        // feature stays dormant until M2 wires the UI. The feature
+        // flag defaults to false; nothing in M1 reads it, so this
+        // registration has no runtime effect.
+        services.Configure<CatalogueFeatureOptions>(
+            configuration.GetSection(CatalogueFeatureOptions.SectionName));
+        services.AddSingleton<EmbeddedSnapshotProvider>();
+        services.AddScoped<IReferenceSnapshotParser, AifaSnapshotParser>();
+        services.AddScoped<IReferenceCatalogueQueryService, SqliteReferenceCatalogueQueryService>();
+        services.AddScoped<IReferenceCatalogueImporter>(sp => new CsvReferenceCatalogueImporter(
+            sp.GetRequiredService<MedReminderDbContext>(),
+            sp.GetServices<IReferenceSnapshotParser>(),
+            sp.GetRequiredService<TimeProvider>()));
 
         return services;
     }
