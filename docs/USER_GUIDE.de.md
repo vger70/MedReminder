@@ -53,11 +53,11 @@ Grund „Unbekannter Herausgeber“, was zu erwarten ist.
    konfiguriert sein (siehe unten).
 6. **Speichern**.
 
-## Referenzkatalog (Italien)
+## Referenzkatalog (Italien + EU)
 
-MedReminder liefert eine Momentaufnahme der offenen AIFA-Daten mit
-und nutzt sie, um das Medikamentenformular automatisch zu
-vervollständigen.
+MedReminder liefert zwei Momentaufnahmen eines
+Referenzarzneimittelkatalogs mit und nutzt sie, um das
+Medikamentenformular automatisch zu vervollständigen.
 
 - Beginne in den Feldern **Handelsname** und **Wirkstoff** zu
   tippen, um Treffer zu sehen. Ein Klick auf einen Eintrag füllt
@@ -76,12 +76,41 @@ vervollständigen.
 - Das **Referenzland** wird unter *Einstellungen → Allgemein →
   Referenzland* gewählt. Standard ist Italien; eine Änderung wirkt
   beim nächsten Öffnen des Medikamentenformulars.
-- **Datenquelle und Lizenz.** Der italienische Katalog stammt aus
-  den offenen Daten der AIFA (Agenzia Italiana del Farmaco),
-  veröffentlicht unter der Creative Commons Attribution 4.0
-  International-Lizenz (CC BY 4.0). Der Info-Dialog und die Datei
-  `THIRD-PARTY-NOTICES.md` im Installationsstamm enthalten die
-  vollständige Namensnennung.
+
+### Zentral zugelassene EU-Arzneimittel
+
+Einige Arzneimittel sind über das *zentralisierte Verfahren* in der
+gesamten Europäischen Union zugelassen; das Verfahren wird von der
+Europäischen Arzneimittel-Agentur (EMA) durchgeführt. MedReminder
+enthält den EMA-EPAR-Katalog — *European public assessment
+reports* — und zeigt diese Arzneimittel in derselben
+Autovervollständigungs-Dropdown-Liste an.
+
+- Ist dein **Referenzland ein EU-Mitgliedstaat** (z. B. das
+  standardmäßig eingestellte Italien oder ein anderes in den
+  Einstellungen ausgewähltes EU-Land), zeigt die
+  Autovervollständigung **deinen nationalen Katalog + die
+  EU-weit zentral zugelassenen Arzneimittel**, gemischt in
+  derselben Liste. Du musst nichts umstellen: EU-Zeilen erscheinen
+  automatisch, wenn sie passen.
+- Stellst du das **Referenzland auf `EU`**, zeigt die
+  Autovervollständigung **nur** die EU-zentralisiert zugelassenen
+  Arzneimittel, ohne nationale Zeilen. Nützlich, wenn du gezielt
+  ein Produkt seiner EMA-Zulassung zuordnen willst.
+- Ein EU-Arzneimittel und ein entsprechendes nationales Produkt
+  können gleichzeitig in der Liste erscheinen; die beiden Zeilen
+  werden nicht dedupliziert. Wähle die, die zur Packung in deiner
+  Hand passt.
+
+**Datenquellen und Nutzungsbedingungen.** Der italienische Katalog
+stammt aus den offenen Daten der AIFA (Agenzia Italiana del
+Farmaco), veröffentlicht unter der Creative Commons Attribution
+4.0 International-Lizenz (CC BY 4.0). Der EU-Katalog stammt aus
+dem EMA-EPAR-Datensatz, weiterverwendet gemäß dem rechtlichen
+Hinweis der EMA (Beschluss 2011/833/EU über die Weiterverwendung
+von Kommissionsdokumenten). Der Info-Dialog und die Datei
+`THIRD-PARTY-NOTICES.md` im Installationsstamm enthalten die
+vollständigen Namensnennungen.
 
 ## Bestand hinzufügen (neue Packung)
 

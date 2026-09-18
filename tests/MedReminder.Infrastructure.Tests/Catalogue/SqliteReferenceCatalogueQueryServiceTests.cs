@@ -138,4 +138,78 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
 
         hits.Select(h => h.CommercialName).Should().Contain("ASPIRINA");
     }
+
+    // --- M3: cross-country search after loading both catalogues -----
+
+    [Fact]
+    public async Task Search_from_userCountry_IT_returns_IT_and_EU_rows_after_loading_EU()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+
+        // Symtuza (EU-only) starts with 'sy'; an Italian user with
+        // scope { IT, EU } must see it — even though the Italian
+        // fixture never contains it.
+        var hits = await sut.SearchByCommercialNameAsync(
+            prefix: "sym",
+            countryScope: new[] { Italy, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+
+        hits.Should().NotBeEmpty();
+        hits.Select(h => h.CommercialName).Should().Contain("Symtuza");
+        hits.Should().OnlyContain(h => h.Country.Value == "IT" || h.Country.Value == "EU");
+    }
+
+    [Fact]
+    public async Task Search_from_userCountry_EU_returns_only_EU_rows_after_loading_EU()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+
+        // Prefix "a" would match dozens of Italian rows too, but with
+        // scope { EU } only supranational rows are returned.
+        var hits = await sut.SearchByCommercialNameAsync(
+            prefix: "a",
+            countryScope: new[] { EU },
+            limit: 50,
+            cancellationToken: CancellationToken.None);
+
+        hits.Should().NotBeEmpty();
+        hits.Should().OnlyContain(h => h.Country.Value == "EU");
+    }
+
+    [Fact]
+    public async Task Available_countries_includes_both_IT_and_EU_after_loading_EU()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+        var countries = await sut.ListAvailableCountriesAsync(CancellationToken.None);
+
+        countries.Select(c => c.Value).Should().Contain(new[] { "IT", "EU" });
+    }
 }

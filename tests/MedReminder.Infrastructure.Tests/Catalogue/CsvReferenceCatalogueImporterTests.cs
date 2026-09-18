@@ -14,6 +14,7 @@ namespace MedReminder.Infrastructure.Tests.Catalogue;
 public sealed class CsvReferenceCatalogueImporterTests
 {
     private static readonly CountryCode Italy = CountryCode.Parse("IT");
+    private static readonly CountryCode Eu = CountryCode.Parse("EU");
 
     [Fact]
     public async Task Happy_import_writes_the_expected_number_of_rows()
@@ -122,7 +123,10 @@ public sealed class CsvReferenceCatalogueImporterTests
     public async Task Import_dispatches_only_on_supported_country()
     {
         using var fixture = new SqliteInMemoryFixture();
-        var importer = BuildImporter(fixture);
+        var importer = new CsvReferenceCatalogueImporter(
+            fixture.CreateContext(),
+            new IReferenceSnapshotParser[] { new AifaSnapshotParser() },
+            TimeProvider.System);
 
         await using var snapshot = CatalogueFixtures.BuildAifaSnapshotStream();
         var act = () => importer.ImportAsync(
@@ -131,11 +135,133 @@ public sealed class CsvReferenceCatalogueImporterTests
         await act.Should().ThrowAsync<NotSupportedException>();
     }
 
+    // --- M3: IT + EU coexistence -----------------------------------
+
+    [Fact]
+    public async Task Importing_IT_then_EU_populates_both_countries_without_dedup()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporterWithBothParsers(fixture);
+
+        await using (var italy = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(italy, Italy, "202609", CancellationToken.None);
+        }
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, Eu, "202609", CancellationToken.None);
+        }
+
+        await using var context = fixture.CreateContext();
+        var connection = context.Database.GetDbConnection();
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'IT';"))
+            .Should().Be(168);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'EU';"))
+            .Should().Be(70);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country IN ('IT','EU');"))
+            .Should().Be(168 + 70);
+    }
+
+    [Fact]
+    public async Task Importing_only_EU_leaves_no_IT_rows()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporterWithBothParsers(fixture);
+
+        await using var eu = CatalogueFixtures.BuildEmaEparSnapshotStream();
+        var report = await importer.ImportAsync(eu, Eu, "202609", CancellationToken.None);
+
+        report.Inserted.Should().Be(70);
+        report.Skipped.Should().Be(3);
+        report.SnapshotVersion.Should().Be("202609");
+
+        await using var context = fixture.CreateContext();
+        var connection = context.Database.GetDbConnection();
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'IT';"))
+            .Should().Be(0);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'EU';"))
+            .Should().Be(70);
+    }
+
+    [Fact]
+    public async Task Newer_EU_snapshot_does_not_touch_IT_rows()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporterWithBothParsers(fixture);
+
+        // Seed both countries at snapshot 202609.
+        await using (var italy = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(italy, Italy, "202609", CancellationToken.None);
+        }
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, Eu, "202609", CancellationToken.None);
+        }
+
+        // Now push a newer EU snapshot; the IT rows must survive at
+        // their original snapshot_version.
+        await using (var newerEu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            var upgrade = await importer.ImportAsync(newerEu, Eu, "202610", CancellationToken.None);
+            upgrade.Inserted.Should().Be(70);
+            upgrade.Deleted.Should().Be(70);
+            upgrade.SnapshotVersion.Should().Be("202610");
+        }
+
+        await using var context = fixture.CreateContext();
+        var connection = context.Database.GetDbConnection();
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'IT' AND snapshot_version = '202609';"))
+            .Should().Be(168);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'EU' AND snapshot_version = '202610';"))
+            .Should().Be(70);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'EU' AND snapshot_version = '202609';"))
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public async Task EU_rows_never_carry_the_long_form_country_value()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporterWithBothParsers(fixture);
+
+        await using var eu = CatalogueFixtures.BuildEmaEparSnapshotStream();
+        await importer.ImportAsync(eu, Eu, "202609", CancellationToken.None);
+
+        await using var context = fixture.CreateContext();
+        var connection = context.Database.GetDbConnection();
+        // The persisted country column stays the 2-char code; the
+        // "European Union" long form never reaches the DB (§3.4 M3).
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'European Union';"))
+            .Should().Be(0);
+        (await ScalarLongAsync(connection,
+            "SELECT COUNT(*) FROM reference_medicines WHERE country = 'EU';"))
+            .Should().Be(70);
+    }
+
     private static CsvReferenceCatalogueImporter BuildImporter(SqliteInMemoryFixture fixture)
     {
         return new CsvReferenceCatalogueImporter(
             fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser() },
+            TimeProvider.System);
+    }
+
+    private static CsvReferenceCatalogueImporter BuildImporterWithBothParsers(
+        SqliteInMemoryFixture fixture)
+    {
+        return new CsvReferenceCatalogueImporter(
+            fixture.CreateContext(),
+            new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
             TimeProvider.System);
     }
 

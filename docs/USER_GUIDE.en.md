@@ -49,10 +49,10 @@ expected.
    have configured SMTP settings (see below) for the email to work.
 6. **Save**.
 
-## Reference catalogue (Italy)
+## Reference catalogue (Italy + EU)
 
-MedReminder ships with a snapshot of the AIFA open-data medicine
-catalogue and uses it to autocomplete the medicine form.
+MedReminder ships with two snapshots of a reference medicine
+catalogue and uses them to autocomplete the medicine form.
 
 - On the **Commercial name** and **Active ingredient** fields, start
   typing to see matches. Picking a row fills in the other side (and
@@ -69,11 +69,36 @@ catalogue and uses it to autocomplete the medicine form.
 - The **reference country** is picked from *Settings → General →
   Reference country*. Default is Italy; a change takes effect at the
   next opening of the medicine form.
-- **Data source and licence.** The Italian catalogue comes from
-  AIFA (Agenzia Italiana del Farmaco) open data, released under the
-  Creative Commons Attribution 4.0 International licence (CC BY 4.0).
-  The About dialog and `THIRD-PARTY-NOTICES.md` at the root of the
-  installation carry the full attribution.
+
+### EU centrally authorised medicines
+
+Some medicines are authorised across the whole European Union under
+the *centralised procedure*, run by the European Medicines Agency
+(EMA). MedReminder embeds the EMA EPAR catalogue — *European public
+assessment reports* — and shows those medicines in the same
+autocomplete dropdown.
+
+- If your **reference country is an EU member** (e.g. the default
+  Italy, or any other EU country you pick from Settings), the
+  autocomplete shows **your national catalogue + the EU-wide
+  centrally authorised medicines**, mixed in the same list. You do
+  not have to switch anything: EU rows just appear when they match.
+- If you set the **reference country to `EU`**, the autocomplete
+  shows **only** the EU-centralised medicines — no national rows.
+  Useful if you specifically want to browse or link a product to
+  its EMA authorisation.
+- An EU medicine and an equivalent national product may both appear
+  in the list at the same time; neither is deduplicated against the
+  other. Pick whichever matches the box in your hand.
+
+**Data sources and terms.** The Italian catalogue comes from
+AIFA (Agenzia Italiana del Farmaco) open data, released under the
+Creative Commons Attribution 4.0 International licence (CC BY 4.0).
+The EU catalogue comes from the EMA EPAR dataset, reused under
+EMA's legal notice (Commission decision 2011/833/EU on the reuse
+of Commission documents). The About dialog and
+`THIRD-PARTY-NOTICES.md` at the root of the installation carry the
+full attributions.
 
 ## Add stock (new package)
 

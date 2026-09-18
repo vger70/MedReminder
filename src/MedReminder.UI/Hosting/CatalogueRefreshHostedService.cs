@@ -9,21 +9,33 @@ using Microsoft.Extensions.Options;
 namespace MedReminder.UI.Hosting;
 
 // Boot-time reference-catalogue import
-// (ANALYSIS-DRUG-CATALOGUE.md §2.6, M2 §3.3 B).
+// (ANALYSIS-DRUG-CATALOGUE.md §2.6, M2 §3.3 B, M3 §3.4).
 //
-// Runs once on startup, in the background, if the feature flag is on:
-//   - opens the embedded AIFA snapshot from
-//     MedReminder.Infrastructure.Assets.Catalogue.it.aifa-*.zip
-//     via EmbeddedSnapshotProvider,
-//   - hands it to CsvReferenceCatalogueImporter which short-circuits
-//     when the recorded snapshot_version already matches (idempotent
-//     replay = zero work).
+// Runs once on startup, in the background, if the feature flag is on.
+// For each supported country a snapshot is embedded for, opens it via
+// EmbeddedSnapshotProvider and hands it to CsvReferenceCatalogueImporter,
+// which short-circuits when the recorded snapshot_version already
+// matches (idempotent replay = zero work).
+//
+// Each country is imported in its own transaction (owned by the
+// importer). A failure on one country is logged and swallowed so the
+// next country still runs — a broken EU snapshot must never take the
+// Italian catalogue offline, and vice versa.
 //
 // Nothing blocks the UI: the whole run lives on a background thread
 // pool task started from ExecuteAsync. When the flag is off the
 // service is not registered at all (see Program.BuildHost).
 internal sealed class CatalogueRefreshHostedService : BackgroundService
 {
+    // Ordered so IT runs first (default reference country), then the
+    // supranational EU catalogue. A future national catalogue (M4)
+    // gets appended here.
+    private static readonly IReadOnlyList<CountryCode> ImportOrder = new[]
+    {
+        CountryCode.Parse("IT"),
+        CountryCode.Parse("EU"),
+    };
+
     private readonly IServiceProvider _services;
     private readonly ILogger<CatalogueRefreshHostedService> _log;
 
@@ -73,12 +85,24 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         var provider = scope.ServiceProvider.GetRequiredService<EmbeddedSnapshotProvider>();
         var importer = scope.ServiceProvider.GetRequiredService<IReferenceCatalogueImporter>();
 
-        var italy = CountryCode.Parse("IT");
-        if (!provider.TryOpen(italy, out var stream, out var snapshotVersion))
+        foreach (var country in ImportOrder)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await ImportCountryAsync(provider, importer, country, cancellationToken);
+        }
+    }
+
+    private async Task ImportCountryAsync(
+        EmbeddedSnapshotProvider provider,
+        IReferenceCatalogueImporter importer,
+        CountryCode country,
+        CancellationToken cancellationToken)
+    {
+        if (!provider.TryOpen(country, out var stream, out var snapshotVersion))
         {
             _log.LogInformation(
                 "No embedded reference-catalogue snapshot for {Country}; skipping boot import.",
-                italy.Value);
+                country.Value);
             return;
         }
 
@@ -86,15 +110,33 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         {
             _log.LogInformation(
                 "Starting reference-catalogue import for {Country}, snapshot {Version}.",
-                italy.Value, snapshotVersion);
+                country.Value, snapshotVersion);
 
-            var report = await importer.ImportAsync(stream, italy, snapshotVersion, cancellationToken);
+            try
+            {
+                var report = await importer.ImportAsync(stream, country, snapshotVersion, cancellationToken);
 
-            _log.LogInformation(
-                "Reference-catalogue import for {Country} complete: inserted={Inserted}, deleted={Deleted}, skipped={Skipped}, version={Version}, completedAt={CompletedAt}.",
-                italy.Value,
-                report.Inserted, report.Deleted, report.Skipped,
-                report.SnapshotVersion, report.CompletedAt);
+                _log.LogInformation(
+                    "Reference-catalogue import for {Country} complete: inserted={Inserted}, deleted={Deleted}, skipped={Skipped}, version={Version}, completedAt={CompletedAt}.",
+                    country.Value,
+                    report.Inserted, report.Deleted, report.Skipped,
+                    report.SnapshotVersion, report.CompletedAt);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Per-country isolation: a broken snapshot for one
+                // country must not stop the import of the next one.
+                // The importer runs each country in its own
+                // transaction, so a rollback here does not touch rows
+                // written for a previously-completed country.
+                _log.LogError(ex,
+                    "Reference-catalogue import for {Country} failed; other countries continue.",
+                    country.Value);
+            }
         }
     }
 }

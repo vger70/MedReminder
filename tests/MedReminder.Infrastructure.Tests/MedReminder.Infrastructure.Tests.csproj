@@ -37,6 +37,10 @@
       <Link>fixtures\catalogue\aifa-atc-sample.csv</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\fixtures\catalogue\ema-epar-sample.csv">
+      <Link>fixtures\catalogue\ema-epar-sample.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

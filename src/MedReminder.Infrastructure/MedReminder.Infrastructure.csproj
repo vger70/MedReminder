@@ -40,6 +40,9 @@
     <EmbeddedResource Include="Assets\Catalogue\it\aifa-*.zip">
       <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.it.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="Assets\Catalogue\eu\ema-epar-*.zip">
+      <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.eu.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

@@ -49,10 +49,11 @@ normale.
    funzioni.
 6. **Salva**.
 
-## Catalogo di riferimento (Italia)
+## Catalogo di riferimento (Italia + UE)
 
-MedReminder include uno snapshot dei dati aperti AIFA e lo usa per
-completare automaticamente il form della medicina.
+MedReminder include due snapshot di un catalogo di medicinali di
+riferimento e li usa per completare automaticamente il form della
+medicina.
 
 - Nei campi **Nome commerciale** e **Principio attivo** inizia a
   scrivere per vedere le corrispondenze. Selezionando una riga viene
@@ -70,11 +71,38 @@ completare automaticamente il form della medicina.
   → Paese di riferimento*. Il valore predefinito è Italia; una
   modifica ha effetto alla successiva apertura del form della
   medicina.
-- **Fonte dei dati e licenza.** Il catalogo italiano proviene dai
-  dati aperti AIFA (Agenzia Italiana del Farmaco), pubblicati sotto
-  licenza Creative Commons Attribution 4.0 International (CC BY 4.0).
-  La finestra Informazioni e il file `THIRD-PARTY-NOTICES.md` nella
-  radice dell'installazione riportano l'attribuzione completa.
+
+### Medicinali ad autorizzazione centralizzata UE
+
+Alcuni medicinali sono autorizzati per tutta l'Unione Europea con
+la *procedura centralizzata*, gestita dall'Agenzia Europea per i
+Medicinali (EMA). MedReminder incorpora il catalogo EMA EPAR —
+*European public assessment reports* — e mostra questi medicinali
+nello stesso elenco a tendina dell'autocomplete.
+
+- Se il tuo **paese di riferimento è uno Stato UE** (es. l'Italia
+  predefinita, o un altro paese UE che scegli da Impostazioni),
+  l'autocomplete mostra **il tuo catalogo nazionale + i medicinali
+  centralizzati validi in tutta l'UE**, mescolati nello stesso
+  elenco. Non devi cambiare nulla: le righe UE compaiono da sole
+  quando corrispondono.
+- Se imposti il **paese di riferimento su `EU`**, l'autocomplete
+  mostra **solo** i medicinali centralizzati UE, senza righe
+  nazionali. Utile quando vuoi specificamente scorrere o collegare
+  un prodotto alla sua autorizzazione EMA.
+- Un medicinale UE e un prodotto nazionale equivalente possono
+  comparire contemporaneamente nell'elenco; le due righe non
+  vengono deduplicate. Scegli quella che corrisponde alla confezione
+  che hai in mano.
+
+**Fonti dei dati e termini di riuso.** Il catalogo italiano
+proviene dai dati aperti AIFA (Agenzia Italiana del Farmaco),
+pubblicati sotto licenza Creative Commons Attribution 4.0
+International (CC BY 4.0). Il catalogo UE proviene dal dataset
+EMA EPAR, riutilizzato secondo la nota legale EMA (decisione
+2011/833/UE sul riuso dei documenti della Commissione). La
+finestra Informazioni e il file `THIRD-PARTY-NOTICES.md` nella
+radice dell'installazione riportano le attribuzioni complete.
 
 ## Aggiungere scorte (nuova confezione)
 

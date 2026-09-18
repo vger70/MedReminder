@@ -30,6 +30,134 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #19 — Reference catalogue: EU centralised authorisations (EPAR) (M3)
+
+Link: [vger70/MedReminder#19](https://github.com/vger70/MedReminder/pull/19)
+**Status:** open
+Branch: `M3-drug-reference-catalogue`
+
+Implements **M3** of the drug reference catalogue described in
+[`docs/ANALYSIS-DRUG-CATALOGUE.md`](docs/ANALYSIS-DRUG-CATALOGUE.md)
+§3.4 — the supranational `EU` catalogue. Instead of the Article 57
+dataset the analysis mentions, this ships the EMA EPAR (European
+public assessment reports) dataset, which is the file that
+concretely materialises the "EU-centralised authorisations" concept
+the design targets. Article 57 (pan-EEA per-country
+authorisations) stays out of scope; the deviation is documented in
+the PR body and in `THIRD-PARTY-NOTICES.md`.
+
+### Added
+
+- First real EMA snapshot embedded in the Infrastructure assembly:
+  `src/MedReminder.Infrastructure/Assets/Catalogue/eu/ema-epar-202609.zip`
+  (2.1 MB uncompressed, 486 KB compressed). Picked up automatically
+  by a new `<EmbeddedResource>` glob and served under
+  `MedReminder.Infrastructure.Assets.Catalogue.eu.ema-epar-202609.zip`
+  — mirrors the existing IT convention, no changes to
+  `EmbeddedSnapshotProvider` needed.
+- `EmaEparParser` (`src/MedReminder.Infrastructure/Catalogue/Parsers/`):
+  `IReferenceSnapshotParser` for country `EU`, reads a single-CSV ZIP
+  entry (`ema-epar.csv`) at the archive root, matches EPAR header
+  columns case-insensitively, filters `Category != 'Human'` (395
+  veterinary rows dropped from the full 2 734-row export). Every
+  emitted row carries `country = 'EU'` via
+  `CountryCode.Parse("European Union")` — the long form never
+  reaches the DB. `NationalCode` = EMA product number
+  (e.g. `EMEA/H/C/004556`), guaranteed unique per row so the
+  `UNIQUE (country, national_code)` constraint stays trivially
+  satisfied without any synthetic derivation. Active substances
+  split on `;` only (comma stays inside a single substance
+  description); the row-level ATC is copied onto every ingredient
+  of the row, same convention as `AifaSnapshotParser`. Registered
+  next to `AifaSnapshotParser` in
+  `InfrastructureServiceCollectionExtensions`.
+- Extended `CatalogueRefreshHostedService` to iterate over
+  `{ IT, EU }` instead of importing IT only. Each country runs in
+  its own transaction (owned by the importer); a per-country
+  `try/catch` around the import ensures a broken snapshot for one
+  country never blocks the other.
+- Curated fixture `tests/fixtures/catalogue/ema-epar-sample.csv`
+  (73 rows: 70 Human + 3 Veterinary) covering every non-veterinary
+  `Medicine status` EMA emits (`Authorised`, `Withdrawn`, `Refused`,
+  `Suspended`, `Lapsed`, `Application withdrawn`, `Expired`,
+  `Revoked`, `Opinion`), plus multi-substance rows (DuoPlavin,
+  Symtuza, Qdenga) to exercise the `;` splitter, Gardasil 9 for the
+  "comma-inside-a-single-substance" case, three no-ATC rows
+  (Camcevi, Myqorzo, Vafseo), and a handful of well-known brands so
+  assertions stay readable.
+- New `EmaEparParserTests` (11 tests) exercising the fixture:
+  row-count invariants, EU-country invariant on every yielded row,
+  `;` vs `,` splitter behaviour, `EMEA/H/...` uniqueness, status
+  pass-through, no-ATC handling, `Medicine URL` mirrored onto both
+  leaflet + SPC links, non-seekable-stream buffering.
+- `CsvReferenceCatalogueImporterTests` M3 additions:
+  IT-then-EU import populates both countries with no dedup
+  (168 + 70 = 238 rows visible with `country IN ('IT','EU')`),
+  EU-only import leaves IT rows alone, a newer EU snapshot never
+  touches IT rows at their older `snapshot_version`, no row ever
+  lands with the `'European Union'` long form in `country`.
+- `SqliteReferenceCatalogueQueryServiceTests` M3 additions:
+  cross-country search after loading the EU fixture on top of the
+  Italian one — scope `{ IT, EU }` returns Symtuza (an EU-only
+  medicine that never appears in the Italian fixture); scope
+  `{ EU }` returns only EU rows; `ListAvailableCountriesAsync`
+  surfaces both `IT` and `EU`.
+
+### Changed
+
+- `about.dataSources.emaArticle57` value updated in all 5
+  dictionaries (`en/it/fr/es/de`) from the M2 "reserved for a
+  future release" placeholder to the real EPAR attribution line.
+  The **key name** is left unchanged for parity stability — it
+  is an internal identifier, the user-visible text is what
+  changed. Parity holds at 348 keys per dictionary;
+  `DictionaryParityTests` stays green.
+- `THIRD-PARTY-NOTICES.md`: replaced the EMA placeholder section
+  with the real attribution — EPAR dataset, EMA legal notice
+  (Commission decision 2011/833/EU on reuse of Commission
+  documents), snapshot path, applied filter (`Category = 'Human'`),
+  and an explicit note that EPAR ≠ Article 57.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md`: new §3 "Refresh procedure (EU — EMA
+  EPAR)" covering the XLSX-to-CSV conversion, the ZIP layout
+  (single `ema-epar.csv` at archive root), the naming convention
+  (`ema-epar-<yyyymm>.zip`), the drop path and the boot
+  verification. §1 table gains the EU row; §5 renames from "other
+  countries" and drops EMA from the pending list. Fixture-regen
+  notes for AIFA move to §4.1, EPAR gets §4.2 with the exact
+  status buckets the fixture must cover.
+- `docs/USER_GUIDE.{en,it,fr,es,de}.md`: "Reference catalogue
+  (Italy)" section becomes "Reference catalogue (Italy + EU)"
+  with a new "EU centrally authorised medicines" subsection
+  explaining what EPAR is, that the autocomplete shows EU rows
+  automatically when the reference country is any EU member
+  (default IT), and that setting reference country to `EU`
+  narrows the list to EU-only. Each guide in its own language.
+
+### Deviations from `docs/ANALYSIS-DRUG-CATALOGUE.md`
+
+- **EPAR instead of Article 57.** The design doc §1.3 lists "EMA
+  Article 57" as the source for the `EU` country. The public
+  Article 57 dump is actually the pan-EEA per-country
+  authorisation register (~160 000 rows, one per (product ×
+  authorisation country)) and has no explicit "centralised" flag —
+  importing all of it as `country = 'EU'` would mis-label 160k
+  national authorisations as supranational. EPAR is the concrete
+  dataset that matches "EU-centralised medicines valid across the
+  EU/EEA" (~2 700 rows, 1 568 currently Authorised), and it also
+  ships ATC, MAH and the EMA product number as structured columns.
+  File names, parser class and doc language use "EPAR" throughout;
+  the localisation key `about.dataSources.emaArticle57` is kept
+  as-is for compatibility with the M2 dictionaries.
+- **Category = 'Human' filter.** Veterinary rows (395 of 2 734)
+  are skipped at parse time — MedReminder targets human medicine
+  reminders, and mixing veterinary products into the autocomplete
+  would confuse users. Recorded as `Skipped` in `ImportReport`.
+
+---
+
 ## PR #18 — Reference catalogue: foundations + AIFA autocomplete (Italy) (M1 + M2)
 
 Link: [vger70/MedReminder#18](https://github.com/vger70/MedReminder/pull/18)

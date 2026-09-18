@@ -374,5 +374,5 @@
   "settings.referenceCountry.label": "Pays de référence",
   "settings.referenceCountry.help": "Pays dont le catalogue de médicaments est interrogé par l'auto-complétion du formulaire de médicament. UE ajoute les produits en autorisation centralisée.",
   "about.dataSources.aifa": "Catalogue italien des médicaments : données ouvertes AIFA (CC BY 4.0).",
-  "about.dataSources.emaArticle57": "Produits européens en autorisation centralisée : jeu de données EMA Article 57 (prévu pour une prochaine version)."
+  "about.dataSources.emaArticle57": "Médicaments européens en autorisation centralisée : jeu de données EMA EPAR (European public assessment reports), réutilisé selon les conditions d'utilisation des contenus publics de l'EMA."
 }

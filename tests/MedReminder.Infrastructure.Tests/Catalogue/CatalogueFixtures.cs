@@ -2,17 +2,18 @@ using System.IO.Compression;
 
 namespace MedReminder.Infrastructure.Tests.Catalogue;
 
-// Repackages the M0 fixture CSVs into the ZIP layout the AIFA
-// parser expects. Tests call BuildAifaSnapshotStream() to get a
-// fresh Stream per test — the parser never mutates the archive, but
-// keeping streams disposable keeps the test resource lifecycle
-// unambiguous.
+// Repackages the fixture CSVs into the ZIP layout the parsers
+// expect. Tests call one of the Build*SnapshotStream() helpers to
+// get a fresh Stream per test — the parsers never mutate the
+// archive, but keeping streams disposable keeps the test resource
+// lifecycle unambiguous.
 internal static class CatalogueFixtures
 {
     private const string FixtureDirectory = "fixtures/catalogue";
 
     public const string ConfezioniCsv = "aifa-confezioni-sample.csv";
     public const string PaCsv = "aifa-pa-sample.csv";
+    public const string EmaEparCsv = "ema-epar-sample.csv";
 
     public static Stream BuildAifaSnapshotStream()
     {
@@ -21,6 +22,17 @@ internal static class CatalogueFixtures
         {
             AddEntry(archive, "confezioni_fornitura.csv", ConfezioniCsv);
             AddEntry(archive, "PA_confezioni.csv", PaCsv);
+        }
+        buffer.Position = 0;
+        return buffer;
+    }
+
+    public static Stream BuildEmaEparSnapshotStream()
+    {
+        var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            AddEntry(archive, "ema-epar.csv", EmaEparCsv);
         }
         buffer.Position = 0;
         return buffer;
