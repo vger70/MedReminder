@@ -109,6 +109,15 @@
 65329132	dispersion	99607	IDÉCABTAGÈNE VICLEUCEL 	260 - 500 x 1 000 000 cellules dans une ou plusieurs poches	1 g de pommade rectale	SA	1
 65379402	comprimé	00382	LÉVOTHYROXINE SODIQUE	125 microgrammes	un comprimé	SA	1
 65379402	comprimé	68783	LÉVOTHYROXINE	121,59 microgrammes	un comprimé	FT	1
+65635346	solution	00093	CHLORURE DE POTASSIUM	1,118 g	1 litre de solution	SA	7
+65635346	solution	00430	CHLORURE DE CALCIUM DIHYDRATÉ	0,037 g	1 litre de solution	SA	6
+65635346	solution	00537	GLUTATHION	0,921 g	1 litre de solution	SA	1
+65635346	solution	00544	HISTIDINE	4,65 g	1 litre de solution	SA	9
+65635346	solution	01044	ACIDE GLUTAMIQUE	2,942 g	1 litre de solution	SA	4
+65635346	solution	03011	MANNITOL	10,93 g	1 litre de solution	SA	2
+65635346	solution	03018	CHLORURE DE MAGNÉSIUM HEXAHYDRATÉ	2,642 g	1 litre de solution	SA	8
+65635346	solution	04549	HYDROXYDE DE SODIUM	4 g	1 litre de solution	SA	5
+65635346	solution	53647	ACIDE LACTOBIONIQUE	28,664 g	1 litre de solution	SA	3
 65698396	comprimé	26125	ABIES NIGRA POUR PRÉPARATIONS HOMÉOPATHIQUES	2CH à 30CH et 4DH à 60DH	un comprimé	SA	18
 65698396	granules	26125	ABIES NIGRA POUR PRÉPARATIONS HOMÉOPATHIQUES	2CH à 30CH et 4DH à 60DH	un comprimé	SA	17
 65698396	pommade	26125	ABIES NIGRA POUR PRÉPARATIONS HOMÉOPATHIQUES	2CH à 30CH et 4DH à 60DH pommade à 4 %	un comprimé	SA	24
@@ -173,6 +182,7 @@
 68371745	comprimé	20540	ACARBOSE	100 mg	un comprimé	SA	1
 68416845	comprimé	00382	LÉVOTHYROXINE SODIQUE	100 microgrammes	un comprimé	SA	1
 68416845	comprimé	68783	LÉVOTHYROXINE	97,28 microgrammes	un comprimé	FT	1
+68437608	solution	27062	INDIGOTINE	40 mg	5 mL de solution	SA	1
 68473102	comprimé	04442	METFORMINE BASE	780 mg	un comprimé	FT	1
 68473102	comprimé	24321	CHLORHYDRATE DE METFORMINE	1000 mg	un comprimé	SA	1
 68478448	comprimé	37304	ACÉTATE D'ABIRATÉRONE	500 mg	un comprimé	SA	1

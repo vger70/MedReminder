@@ -73,16 +73,23 @@ searches from `userCountry = FR` scope to `{ FR, EU }`.
   in `InfrastructureServiceCollectionExtensions`.
 - `AnsmBdpmParser`: `IReferenceSnapshotParser` for country `FR`.
   Reads `CIS_bdpm.txt` joined on CIS with `CIS_COMPO_bdpm.txt`
-  from the ZIP archive. Encoding is **ISO-8859-15** (the code page
-  provider is registered defensively on first use, requiring a new
+  from the ZIP archive. Encoding is **Windows-1252** — the ANSM
+  portal documents it as ISO-8859-15 but the actual bytes contain
+  cp1252-only 0x92 (curly single-quote `’`) used as apostrophe in
+  French denominations; the code page provider is registered
+  defensively on first use, requiring a new
   `System.Text.Encoding.CodePages` package reference on
-  Infrastructure), **no header row** (columns are positional and
-  hard-coded per the ANSM description). Skips rows whose `Type de
-  procédure AMM` starts with `Enreg homéo` — analogue of the
-  `Omeopatico` filter in `AifaSnapshotParser`. `CIS_CIP_bdpm.txt`
-  is kept in the shipped ZIP for symmetry with what ANSM publishes
-  but is not consumed (the reference catalogue keys on CIS, and
-  upstream CIP ships with a divergent UTF-8 encoding).
+  Infrastructure. **No header row** (columns are positional and
+  hard-coded per the ANSM description); a shape-validation guard
+  asserts the first non-short row's Statut column starts with
+  `Autorisation` so a future column-order change in the ANSM
+  export trips the parser instead of silently corrupting every
+  row's MAH / MarketingStatus. Skips rows whose `Type de procédure
+  AMM` starts with `Enreg homéo` — analogue of the `Omeopatico`
+  filter in `AifaSnapshotParser`. `CIS_CIP_bdpm.txt` is kept in
+  the shipped ZIP for symmetry with what ANSM publishes but is
+  not consumed (the reference catalogue keys on CIS, and upstream
+  CIP ships with a divergent UTF-8 encoding).
 - `CatalogueRefreshHostedService.ImportOrder` extended from
   `{ IT, EU }` to `{ IT, EU, ES, FR }`. Each country still runs in
   its own transaction so a broken snapshot for one never blocks
@@ -94,29 +101,41 @@ searches from `userCountry = FR` scope to `{ FR, EU }`.
   appends both attributions below the existing AIFA and EMA EPAR
   lines, matching the four rows `THIRD-PARTY-NOTICES.md` carries.
 - Curated fixtures:
-  `tests/fixtures/catalogue/aemps-cima-sample.xlsx` (142 rows +
-  header, stratified across Estado / multi-ingredient / brands),
-  `tests/fixtures/catalogue/bdpm-cis-sample.txt` (100 CIS
-  including 9 homeopathic to exercise the skip filter),
-  `bdpm-compo-sample.txt` (214 COMPO rows, 56 CIS with 2+
-  ingredients), `bdpm-cip-sample.txt` (127 rows, kept only for
+  `tests/fixtures/catalogue/aemps-cima-sample.xlsx` (145 rows +
+  header, stratified across Estado / multi-ingredient / brands,
+  with three mandatory pins for the `Nº P. Activos`-aware split
+  code path — REZAFUNGINA/NEVIRAPINA/TETRAKIS),
+  `tests/fixtures/catalogue/bdpm-cis-sample.txt` (102 CIS in
+  Windows-1252 — includes 9 homeopathic rows for the skip filter
+  and two mandatory pins carrying the curly single-quote byte
+  0x92, CELSIOR and CARMIN D'INDIGO),
+  `bdpm-compo-sample.txt` (224 COMPO rows, 57 CIS with 2+
+  ingredients), `bdpm-cip-sample.txt` (129 rows, kept only for
   fixture symmetry).
-- `AempsCimaParserTests` (11 tests): row-count invariant on the
+- `AempsCimaParserTests` (13 tests): row-count invariant on the
   fixture, ES-country invariant on every row, three-Estado
-  coverage, multi-ingredient `", "` splitter, row-level ATC copied
+  coverage, multi-ingredient `", "` splitter guided by
+  `Nº P. Activos` (mono-ingredient rows with intra-name commas
+  like `REZAFUNGINA, ACETATO DE` stay intact), row-level ATC copied
   onto every ingredient, `Observaciones` on `DispensingRegime`,
   `PharmaceuticalForm` / `Dosage` / `LinkLeaflet` / `LinkSpc` all
   null, non-seekable stream. One dedicated test builds an XLSX in
   memory using `t="s"` + `sharedStrings.xml` so the code path
   used by the real AEMPS export is covered even though the
-  openpyxl-generated fixture emits `t="inlineStr"`.
-- `AnsmBdpmParserTests` (11 tests): 91 rows + 9 homeopathic
-  skipped, FR-country invariant, ISO-8859-15 round-trip on
-  accented denominations, multi-ingredient join, ATC always null,
-  MAH leading-space trim, status coverage, non-seekable stream.
+  openpyxl-generated fixture emits `t="inlineStr"`. Another
+  dedicated test builds an XLSX with a leading blank row so the
+  header-latch skip is exercised.
+- `AnsmBdpmParserTests` (13 tests): 93 rows + 9 homeopathic
+  skipped, FR-country invariant, Windows-1252 round-trip on
+  accented denominations, curly single-quote (byte 0x92) preserved
+  on CELSIOR / CARMIN D'INDIGO fixture pins, multi-ingredient
+  join, ATC always null, MAH leading-space trim, status coverage,
+  non-seekable stream. One dedicated test synthesises a broken
+  BDPM row whose Statut column does not start with `Autorisation`
+  and asserts the shape-validation `InvalidDataException`.
 - `CsvReferenceCatalogueImporterTests` M4 additions: importing
   IT + EU + ES + FR in order populates each country row count as
-  expected (168 + 70 + 142 + 91 = 471 rows, 4 distinct countries);
+  expected (168 + 70 + 145 + 93 = 476 rows, 4 distinct countries);
   a newer ES snapshot never touches FR rows at their older
   `snapshot_version`.
 - `SqliteReferenceCatalogueQueryServiceTests` M4 additions:

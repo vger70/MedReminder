@@ -9,7 +9,7 @@ namespace MedReminder.Infrastructure.Tests.Catalogue;
 // under tests/fixtures/catalogue/bdpm-cis-sample.txt (+ COMPO). The
 // fixture keeps 9 rows whose Type de procédure AMM starts with
 // "Enreg homéo" so the homeopathic-skip filter is exercised; the
-// remaining 91 must reach the row stream.
+// remaining 93 must reach the row stream.
 public sealed class AnsmBdpmParserTests
 {
     private static readonly CountryCode France = CountryCode.Parse("FR");
@@ -22,7 +22,7 @@ public sealed class AnsmBdpmParserTests
 
         var rows = await CollectAsync(parser, report);
 
-        rows.Should().HaveCount(91);
+        rows.Should().HaveCount(93);
         report.Skipped.Should().Be(9);
     }
 
@@ -58,21 +58,92 @@ public sealed class AnsmBdpmParserTests
     }
 
     [Fact]
-    public async Task Iso_8859_15_encoding_round_trips_accented_denominations()
+    public async Task Windows_1252_encoding_round_trips_accented_denominations()
     {
         var parser = new AnsmBdpmParser();
         var report = new ParseReport();
         var rows = await CollectAsync(parser, report);
 
         // Every BDPM denomination that carries an accented letter must
-        // round-trip through the ISO-8859-15 code-page reader without
-        // mojibake. If the encoding were wrong the accented bytes
-        // would decode as replacement chars (�) or Latin-1
-        // near-equivalents.
+        // round-trip through the code-page reader without mojibake. If
+        // the encoding were wrong the accented bytes would decode as
+        // replacement chars (�) or Latin-1 near-equivalents.
         rows.Should().NotContain(r => r.CommercialName.Contains('�'));
         rows.Should().Contain(r => r.CommercialName.Contains('é')
             || r.CommercialName.Contains('è')
             || r.CommercialName.Contains('à'));
+    }
+
+    [Fact]
+    public async Task Windows_1252_curly_apostrophe_survives_the_encoding_round_trip()
+    {
+        var parser = new AnsmBdpmParser();
+        var report = new ParseReport();
+        var rows = await CollectAsync(parser, report);
+
+        // ANSM ships BDPM in Windows-1252 (documented as ISO-8859-15
+        // but actually cp1252). Byte 0x92 is `’` (U+2019) in cp1252 and
+        // a U+0092 control char in ISO-8859-15. The fixture pins CIS
+        // 65635346 (CELSIOR … d’organes) and 68437608 (CARMIN D’INDIGO
+        // …); both must arrive with the curly single-quote intact.
+        var celsior = rows.SingleOrDefault(r => r.NationalCode == "65635346");
+        celsior.Should().NotBeNull("fixture pin CELSIOR must be present");
+        celsior!.CommercialName.Should().Contain("d’organes");
+        celsior.CommercialName.Should().NotContain("");
+
+        var carmin = rows.SingleOrDefault(r => r.NationalCode == "68437608");
+        carmin.Should().NotBeNull("fixture pin CARMIN D’INDIGO must be present");
+        carmin!.CommercialName.Should().Contain("D’INDIGO");
+        carmin.CommercialName.Should().NotContain("");
+    }
+
+    [Fact]
+    public async Task Shape_validation_throws_when_the_Statut_column_shifts()
+    {
+        // Synthesise a BDPM CIS row where column 4 (Statut AMM) is not
+        // an "Autorisation …" value — simulating a future ANSM schema
+        // change that reorders columns. The parser must throw loudly
+        // instead of silently mapping every downstream field to the
+        // wrong column.
+        var parser = new AnsmBdpmParser();
+        var report = new ParseReport();
+
+        await using var snapshot = BuildBrokenCisSnapshot();
+        var act = async () =>
+        {
+            await foreach (var _ in parser.ParseAsync(snapshot, report, CancellationToken.None))
+            {
+            }
+        };
+        await act.Should().ThrowAsync<InvalidDataException>()
+            .WithMessage("*Statut*Autorisation*");
+    }
+
+    private static Stream BuildBrokenCisSnapshot()
+    {
+        var buffer = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(buffer,
+            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            AddText(zip, "CIS_bdpm.txt",
+                // 12 columns, column 4 (index 4, Statut AMM) is a
+                // wrong-looking value — imitates ANSM having inserted a
+                // column between Voies (idx 3) and Statut AMM.
+                "12345678\tDénom X\tforme\tvoies\tSCHEMA-DRIFT\tProc\tCommer\t01/01/2020\t\t\tTitulaire\tNon\r\n");
+            AddText(zip, "CIS_COMPO_bdpm.txt", string.Empty);
+        }
+        buffer.Position = 0;
+        return buffer;
+    }
+
+    private static void AddText(System.IO.Compression.ZipArchive zip, string name, string body)
+    {
+        var entry = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression);
+        using var s = entry.Open();
+        // Content is ASCII in the drift-test snapshot, so cp1252 and
+        // UTF-8 both produce the same bytes; use UTF-8 for readability.
+        var bytes = System.Text.Encoding.UTF8.GetBytes(body);
+        s.Write(bytes, 0, bytes.Length);
     }
 
     [Fact]
@@ -161,7 +232,7 @@ public sealed class AnsmBdpmParserTests
             rows.Add(row);
         }
 
-        rows.Should().HaveCount(91);
+        rows.Should().HaveCount(93);
     }
 
     private static async Task<List<ReferenceMedicineRow>> CollectAsync(

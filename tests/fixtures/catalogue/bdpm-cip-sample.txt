@@ -63,9 +63,10 @@
 65198099	3640734	28 plaquette(s) thermoformée(s) aluminium de 1 comprimé(s)	Présentation active	Déclaration de commercialisation	15/07/2004	3400936407343	oui	65%	23,83	24,85	1,02	
 65198099	4950011	28 plaquette(s) thermoformée(s) aluminium de 1 comprimé(s) (distributeur parallèle :  MEDIWIN Limited)	Présentation active	Déclaration de commercialisation	01/04/2016	3400949500116	oui	65%	22,65	23,67	1,02	
 65198099	4950020	28 plaquette(s) thermoformée(s) aluminium de 1 comprimé(s) (distributeur parallèle :  BB Farma s.r.l)	Présentation active	Déclaration de commercialisation	14/11/2016	3400949500208	oui	65%	22,65	23,67	1,02	
-65329132	5508498	1 ou plusieurs poches EVA : éthylène vinyl acétate copolymère - Spécifique au patient, jusqu?à 100 mL,	Présentation active	Déclaration de commercialisation	04/01/2022	3400955084983	oui					
+65329132	5508498	1 ou plusieurs poches EVA : éthylène vinyl acétate copolymère - Spécifique au patient, jusqu’à 100 mL,	Présentation active	Déclaration de commercialisation	04/01/2022	3400955084983	oui					
 65379402	3006601	plaquette(s) PVC aluminium de 30 comprimé(s)	Présentation active	Déclaration de commercialisation	27/03/2017	3400930066010	oui	65%	2,36	3,38	1,02	
 65379402	3012144	plaquette(s) PVC aluminium de 90 comprimé(s)	Présentation active	Déclaration de commercialisation	28/05/2018	3400930121443	oui	65%	6,44	9,20	2,76	
+65635346	5504951	4 poches  éthylène vinyl acétate copolymère suremballées en aluminium de 1 litre avec sachet absorbeur d’oxygène	Présentation active	Déclaration de commercialisation	16/04/2019	3400955049517	oui					
 65857902	3009317	30 plaquette(s) PVC-Aluminium PVDC de 1 comprimé(s)	Présentation active	Déclaration de commercialisation	12/09/2017	3400930093177	oui	100%	134,42	135,44	1,02	
 66053338	3445085	8 sachet(s)-dose(s) papier aluminium polyéthylène de 1,566 g	Présentation active	Déclaration de commercialisation	02/10/2000	3400934450853	oui	65%	5,47	6,49	1,02	
 66053338	3445116	12 sachet(s)-dose(s) papier aluminium polyéthylène de 1,566 g	Présentation active	Déclaration de commercialisation	01/05/1998	3400934451164	oui	65%	6,85	7,87	1,02	
@@ -106,6 +107,7 @@
 68371745	2223388	plaquette(s) PVC polyéthylène PVDC aluminium de 90 comprimé(s)	Présentation active	Déclaration d'arrêt de commercialisation	28/03/2024	3400922233888	non	65%	13,87	14,89	1,02	
 68416845	3006589	plaquette(s) PVC aluminium de 30 comprimé(s)	Présentation active	Déclaration de commercialisation	17/03/2017	3400930065891	oui	65%	1,96	2,98	1,02	
 68416845	3012142	plaquette(s) PVC aluminium de 90 comprimé(s)	Présentation active	Déclaration de commercialisation	28/05/2018	3400930121429	oui	65%	5,19	7,95	2,76	
+68437608	5508750	5 ampoules en verre brun de 5 mL	Présentation active	Déclaration de commercialisation	01/09/2022	3400955087502	oui					
 68473102	3023615	plaquette(s) PVC aluminium de 30 comprimé(s)	Présentation active	Déclaration de commercialisation	08/09/2023	3400930236154	oui	65 %	1,95	2,97	1,02	
 68473102	3023617	plaquette(s) PVC aluminium de 90 comprimé(s)	Présentation active	Déclaration de commercialisation	08/09/2023	3400930236178	oui	65 %	5,15	6,17	1,02	
 68478448	3024416	plaquette(s) PVC polyéthylène PVDC papier aluminium de 60 comprimé(s)	Présentation active	Déclaration de commercialisation	13/09/2022	3400930244166	oui	100 %	871,44	872,46	1,02	

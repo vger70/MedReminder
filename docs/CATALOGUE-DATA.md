@@ -403,14 +403,25 @@ the BDPM export daily.
 
 2. **Wire format** (verified against the current BDPM export):
    - Delimiter: **TAB** (`\t`).
-   - Encoding: **ISO-8859-15** on `CIS_bdpm.txt` and
-     `CIS_COMPO_bdpm.txt`. `CIS_CIP_bdpm.txt` is UTF-8 upstream,
-     which is a known ANSM inconsistency — MedReminder does not
-     parse it, so the mismatch is inert.
+   - Encoding: **Windows-1252** on `CIS_bdpm.txt` and
+     `CIS_COMPO_bdpm.txt`. The ANSM portal documents the encoding
+     as ISO-8859-15, but the actual bytes include cp1252-only 0x92
+     (the curly single-quote `’` used as apostrophe in French
+     denominations — `d’organes`, `Pack d’initiation`,
+     `CARMIN D’INDIGO`). Reading those files as strict ISO-8859-15
+     turns the byte into a U+0092 C1 control character;
+     Windows-1252 covers both the documented spec and the actual
+     content, so the parser uses it. `CIS_CIP_bdpm.txt` is
+     UTF-8 upstream — a separate ANSM inconsistency — and
+     MedReminder does not parse it, so that mismatch is inert.
    - **No header row**: columns are positional and documented at
      the portal ("Description des fichiers de la BDPM"). The
-     parser hard-codes the column indices it needs and re-validates
-     the row length before mapping.
+     parser hard-codes the column indices it needs, re-validates
+     the row length before mapping, and asserts on the first
+     non-short row that the Statut administratif AMM column starts
+     with `Autorisation` (invariant prefix of every value ANSM
+     writes there) so a future column-order change trips loudly
+     instead of silently corrupting every row's MAH / MarketingStatus.
 
 3. **Build the ZIP.** Place the three TSVs at the **root** of the
    archive (no sub-directory). File names must be preserved verbatim

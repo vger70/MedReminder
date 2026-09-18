@@ -22,11 +22,25 @@ namespace MedReminder.Infrastructure.Catalogue.Parsers;
 //
 // Wire format for the two consumed files:
 //   - Delimiter: TAB (`\t`).
-//   - Encoding:  ISO-8859-15 (a code page — the parser registers the
-//     CodePages provider defensively on first use).
+//   - Encoding:  Windows-1252 (cp1252). The ANSM portal documents it
+//     as ISO-8859-15, but the actual files contain cp1252-only bytes
+//     — 0x92 (curly single-quote `’`, used as apostrophe in
+//     `d’organes`, `Pack d’initiation`, `CARMIN D’INDIGO`) is present
+//     dozens of times in every current export. Reading those bytes as
+//     ISO-8859-15 turns them into the U+0092 C1 control character.
+//     Windows-1252 is a strict superset of ISO-8859-1 in the 0xA0–0xFF
+//     range and additionally maps every byte in 0x80–0x9F to a
+//     graphical character, so it round-trips both the mis-documented
+//     cp1252 bytes and the standard Latin-1 accented letters. The
+//     parser registers the CodePages provider defensively on first
+//     use so the code page resolves on every host that runs it.
 //   - Header row: absent. Columns are positional and documented at
 //     https://base-donnees-publique.medicaments.gouv.fr/telechargement.php
-//     ("Description des fichiers de la BDPM").
+//     ("Description des fichiers de la BDPM"). The parser validates
+//     the first non-empty row's Statut administratif AMM starts with
+//     "Autorisation" as a shape sanity check — if ANSM ever renumbers
+//     the columns, that check trips loudly instead of the mis-mapped
+//     fields silently corrupting the DB.
 //
 // Import filters applied here:
 //   - Skip rows whose CIS_bdpm[5] (Type de procédure AMM) starts with
@@ -67,15 +81,17 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
     private const int CompoIdx_SubstanceName = 3;
     private const int CompoIdx_MinColumns = 4;
 
+    private const string ExpectedStatutPrefix = "Autorisation";
+
     private static readonly CountryCode France = CountryCode.Parse("FR");
 
-    // ISO-8859-15 is a code page. .NET on non-Windows targets only
+    // Windows-1252 is a code page. .NET on non-Windows targets only
     // registers the ASCII / Latin1 / UTF-* families by default; we
     // register the CodePages provider defensively so the parser works
     // in every host that consumes it (Windows runtime + test host).
     // Encoding.RegisterProvider is idempotent, so repeated calls from
     // parallel imports are a no-op.
-    private static readonly Encoding Iso8859_15 = ResolveIso8859_15();
+    private static readonly Encoding Windows1252 = ResolveWindows1252();
 
     public IReadOnlyCollection<CountryCode> SupportedCountries { get; } = new[] { France };
 
@@ -129,7 +145,13 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
         var byCis = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
         await using var stream = entry.Open();
-        using var reader = new StreamReader(stream, Iso8859_15);
+        using var reader = new StreamReader(stream, Windows1252);
+
+        // Parallel HashSet per CIS keeps dedup at O(1) per substance
+        // insert. A pathological polytherapy CIS (~10 substances
+        // repeated across dozens of pharmaceutical-element rows)
+        // otherwise costs O(n²) on the linear List.Contains scan.
+        var seenPerCis = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
 
         string? line;
         while ((line = await reader.ReadLineAsync(cancellationToken)) is not null)
@@ -156,13 +178,14 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
             {
                 list = new List<string>(capacity: 2);
                 byCis[cis] = list;
+                seenPerCis[cis] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
 
             // Deduplicate while preserving source order — a single CIS
-            // often has one COMPO row per pharmaceutical element (e.g.
-            // gélule + solution buvable) with the same substance
+            // often has one COMPO row per pharmaceutical element
+            // (e.g. gélule + solution buvable) with the same substance
             // repeated verbatim.
-            if (!list.Contains(substance, StringComparer.OrdinalIgnoreCase))
+            if (seenPerCis[cis].Add(substance))
             {
                 list.Add(substance);
             }
@@ -178,7 +201,9 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await using var stream = entry.Open();
-        using var reader = new StreamReader(stream, Iso8859_15);
+        using var reader = new StreamReader(stream, Windows1252);
+
+        var shapeValidated = false;
 
         string? line;
         while ((line = await reader.ReadLineAsync(cancellationToken)) is not null)
@@ -193,6 +218,12 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
             {
                 report.RecordSkip();
                 continue;
+            }
+
+            if (!shapeValidated)
+            {
+                ValidateShape(fields);
+                shapeValidated = true;
             }
 
             if (fields[CisIdx_TypeProcedure].StartsWith(HomeopathicProcedurePrefix, StringComparison.Ordinal))
@@ -224,12 +255,36 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
                 CommercialName: commercialName,
                 PharmaceuticalForm: NullIfBlank(fields[CisIdx_Form]),
                 Dosage: NullIfBlank(fields[CisIdx_Voies]),
-                MarketingAuthorisationHolder: NullIfBlank(TrimTitulaire(FieldOrEmpty(fields, CisIdx_Titulaire))),
+                MarketingAuthorisationHolder: NullIfBlank(fields[CisIdx_Titulaire].Trim()),
                 MarketingStatus: NullIfBlank(fields[CisIdx_StatutAmm]),
                 DispensingRegime: null,
                 LinkLeaflet: null,
                 LinkSpc: null,
                 ActiveIngredients: ingredients);
+        }
+    }
+
+    // Shape sanity check on the first non-short row. CIS_bdpm has no
+    // header — columns are positional, documented at the BDPM portal.
+    // If ANSM ever inserts or shifts a column, every downstream
+    // MarketingAuthorisationHolder / MarketingStatus / TypeProcedure
+    // read would map to the wrong field and the parser would silently
+    // corrupt every FR row. Instead: assert that the Statut column
+    // starts with "Autorisation" (the invariant prefix of every value
+    // BDPM writes there — "Autorisation active", "Autorisation
+    // retirée", "Autorisation abrogée", "Autorisation archivée"). A
+    // schema change trips this check loudly.
+    private static void ValidateShape(string[] fields)
+    {
+        var statut = fields[CisIdx_StatutAmm];
+        if (!statut.StartsWith(ExpectedStatutPrefix, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"BDPM CIS_bdpm.txt column {CisIdx_StatutAmm} does not start with " +
+                $"'{ExpectedStatutPrefix}' as expected — got '{statut}'. " +
+                "ANSM may have changed the column order; verify the layout at " +
+                "https://base-donnees-publique.medicaments.gouv.fr/telechargement.php " +
+                "and adjust AnsmBdpmParser.CisIdx_* accordingly.");
         }
     }
 
@@ -248,14 +303,6 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
         return rows;
     }
 
-    // Upstream CIS_bdpm rows sometimes ship the titulaire field with a
-    // leading space (" PHARMA DEVELOPPEMENT"). Trim to keep the DB row
-    // consistent with the other parsers.
-    private static string TrimTitulaire(string raw) => raw.Trim();
-
-    private static string FieldOrEmpty(string[] fields, int index)
-        => index < fields.Length ? fields[index] : string.Empty;
-
     private static async Task<Stream> BufferAsync(Stream input, CancellationToken cancellationToken)
     {
         var buffer = new MemoryStream();
@@ -267,9 +314,9 @@ internal sealed class AnsmBdpmParser : IReferenceSnapshotParser
     private static string? NullIfBlank(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
 
-    private static Encoding ResolveIso8859_15()
+    private static Encoding ResolveWindows1252()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        return Encoding.GetEncoding("iso-8859-15");
+        return Encoding.GetEncoding("windows-1252");
     }
 }

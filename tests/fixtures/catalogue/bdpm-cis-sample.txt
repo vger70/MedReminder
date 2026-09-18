@@ -53,6 +53,7 @@
 65198099	ABILIFY 10 mg, comprimé	comprimé	orale	Autorisation active	Procédure centralisée	Commercialisée	04/06/2004		EU/1/04/276	 OTSUKA PHARMACEUTICAL NETHERLANDS (PAYS BAS)	Non
 65329132	ABECMA 260 - 500 x 1 000 000 cellules, dispersion pour perfusion	dispersion pour perfusion	intraveineuse	Autorisation active	Procédure centralisée	Commercialisée	18/08/2021		EU/1/21/1539	 BRISTOL-MYERS SQUIBB PHARMA (IRLANDE)	Oui
 65379402	LEVOTHYROX 125 microgrammes, comprimé sécable	comprimé sécable	orale	Autorisation active	Procédure nationale	Commercialisée	09/02/1999			 MERCK SANTE	Non
+65635346	CELSIOR, solution pour conservation d’organes	solution	voie extracorporelle autre	Autorisation active	Procédure décentralisée	Commercialisée	17/01/2018			 INSTITUT GEORGES LOPEZ	Non
 65698396	ABIES NIGRA BOIRON, degré de dilution compris entre 2CH à 30CH et 4DH à 60DH	 comprimé et solution(s) et granules et poudre et pommade	cutanée;orale;sublinguale	Autorisation active	Enreg homéo (Proc. Nat.)	Commercialisée	04/08/2016			 BOIRON	Non
 65857902	ABACAVIR/LAMIVUDINE TEVA 600 mg/300 mg, comprimé pelliculé	comprimé pelliculé	orale	Autorisation active	Procédure décentralisée	Commercialisée	03/05/2017			 TEVA SANTE	Non
 66053338	AUGMENTIN 1 g/125 mg, poudre pour suspension buvable en sachet-dose (rapport amoxicilline/acide clavulanique : 8/1)	poudre pour suspension buvable	orale	Autorisation active	Procédure nationale	Commercialisée	03/09/1997			 GLAXOSMITHKLINE	Non
@@ -83,6 +84,7 @@
 68257528	ABACAVIR/LAMIVUDINE ACCORD 600 mg/300 mg, comprimé pelliculé	comprimé pelliculé	orale	Autorisation archivée	Procédure nationale	Non commercialisée	16/03/2017	Warning disponibilité		 ACCORD HEALTHCARE FRANCE	Non
 68371745	ACARBOSE ARROW LAB 100 mg, comprimé	comprimé	orale	Autorisation abrogée	Procédure décentralisée	Non commercialisée	31/05/2012	Warning disponibilité		 GENEVIDA (ALLEMAGNE)	Non
 68416845	LEVOTHYROX 100 microgrammes, comprimé sécable	comprimé sécable	orale	Autorisation active	Procédure nationale	Commercialisée	08/02/1982			 MERCK SANTE	Non
+68437608	CARMIN D’INDIGO PROVINGO 40 mg/5 mL, solution injectable	solution injectable	intraveineuse	Autorisation active	Procédure de reconnaissance mutuelle	Commercialisée	24/02/2022			 PROVEPHARM	Non
 68473102	METFORMINE ACCORD 1000 mg, comprimé pelliculé sécable	comprimé pelliculé sécable	orale	Autorisation active	Procédure décentralisée	Commercialisée	27/08/2021			 ACCORD HEALTHCARE FRANCE	Non
 68478448	ABIRATERONE KRKA 500 mg, comprimé pelliculé	comprimé pelliculé	orale	Autorisation active	Procédure centralisée	Commercialisée	24/06/2021		EU/1/21/1553	 KRKA (SLOVENIE)	Non
 68600724	ACECLOFENAC ACCORD 100 mg, comprimé pelliculé	comprimé pelliculé	orale	Autorisation abrogée	Procédure nationale	Non commercialisée	24/01/2011	Warning disponibilité		 ACCORD HEALTHCARE FRANCE	Non

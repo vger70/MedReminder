@@ -56,8 +56,12 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
 {
     private const string XlsxEntryName = "aemps.xlsx";
     private const string SpreadsheetNs = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+    private const string PackageRelsNs = "http://schemas.openxmlformats.org/package/2006/relationships";
+    private const string OfficeDocumentRelType =
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
+    private const string WorksheetRelType =
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet";
     private const string SharedStringsEntry = "xl/sharedStrings.xml";
-    private const string SheetEntry = "xl/worksheets/sheet1.xml";
     private const string ActiveIngredientSeparator = ", ";
 
     private const int Col_NRegistro = 0;
@@ -66,6 +70,7 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
     private const int Col_Estado = 4;
     private const int Col_Atc = 6;
     private const int Col_PrincipiosActivos = 7;
+    private const int Col_NPActivos = 8;
     private const int Col_Observaciones = 11;
     private const int Col_Count = 15;
 
@@ -89,12 +94,16 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
 
             // The inner .xlsx is itself a ZIP; ZipArchive needs a
             // seekable stream, and the outer entry stream is not
-            // seekable, so buffer it once.
-            await using var xlsxBuffer = await BufferAsync(xlsxEntry.Open(), cancellationToken);
+            // seekable, so buffer it once. The DeflateStream backing
+            // the ZipArchive entry is disposed here — leaving the
+            // buffer copy as the seekable snapshot the inner reader
+            // consumes.
+            await using var xlsxEntryStream = xlsxEntry.Open();
+            await using var xlsxBuffer = await BufferAsync(xlsxEntryStream, cancellationToken);
             using var xlsx = new ZipArchive(xlsxBuffer, ZipArchiveMode.Read, leaveOpen: true);
 
             var sharedStrings = await ReadSharedStringsAsync(xlsx, cancellationToken);
-            var sheet = FindZipEntry(xlsx, SheetEntry);
+            var sheet = await ResolveFirstSheetEntryAsync(xlsx, cancellationToken);
 
             await foreach (var row in ReadRowsAsync(sheet, sharedStrings, report, cancellationToken))
             {
@@ -110,6 +119,188 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
         }
     }
 
+    // Walk the OOXML package relationships to find the *first sheet's*
+    // actual worksheet part path, instead of assuming it lives at
+    // xl/worksheets/sheet1.xml. Different XLSX writers name it
+    // differently (Excel keeps sheet1.xml, Libre Office rewrites on
+    // save, some tools use a workbook-relative path). The resolution
+    // chain: package `_rels/.rels` → workbook part path (typically
+    // xl/workbook.xml) → workbook `_rels/workbook.xml.rels` →
+    // r:id of the first `<sheet>` in `<sheets>` → target path.
+    // Falls back to the first `xl/worksheets/*.xml` entry when the
+    // relationships cannot be traversed (defensive; AEMPS's own
+    // export follows the standard, but leave the fallback so a
+    // malformed package still parses instead of throwing).
+    private static async Task<ZipArchiveEntry> ResolveFirstSheetEntryAsync(
+        ZipArchive xlsx, CancellationToken cancellationToken)
+    {
+        string? workbookPath = await FindTargetOfTypeAsync(
+            xlsx, "_rels/.rels", OfficeDocumentRelType, cancellationToken);
+        if (workbookPath is not null)
+        {
+            workbookPath = NormalizeRelativePath(workbookPath, baseDir: string.Empty);
+            var workbookRelsPath = SiblingRelsPath(workbookPath);
+            var firstSheetRid = await ReadFirstSheetRidAsync(xlsx, workbookPath, cancellationToken);
+            if (firstSheetRid is not null)
+            {
+                var sheetTarget = await FindTargetOfIdAsync(
+                    xlsx, workbookRelsPath, firstSheetRid, cancellationToken);
+                if (sheetTarget is not null)
+                {
+                    var workbookDir = PathDirectory(workbookPath);
+                    var absolute = NormalizeRelativePath(sheetTarget, workbookDir);
+                    var entry = TryFindZipEntry(xlsx, absolute);
+                    if (entry is not null)
+                    {
+                        return entry;
+                    }
+                }
+            }
+        }
+
+        // Fallback: pick the alphabetically-first worksheet part.
+        foreach (var candidate in xlsx.Entries.OrderBy(e => e.FullName, StringComparer.Ordinal))
+        {
+            if (candidate.FullName.StartsWith("xl/worksheets/", StringComparison.OrdinalIgnoreCase)
+                && candidate.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+        }
+        throw new InvalidDataException(
+            "AEMPS spreadsheet has no worksheet part under xl/worksheets/.");
+    }
+
+    private static async Task<string?> ReadFirstSheetRidAsync(
+        ZipArchive xlsx, string workbookPath, CancellationToken cancellationToken)
+    {
+        var entry = TryFindZipEntry(xlsx, workbookPath);
+        if (entry is null)
+        {
+            return null;
+        }
+        await using var stream = entry.Open();
+        using var xr = XmlReader.Create(stream, new XmlReaderSettings
+        {
+            Async = true,
+            IgnoreWhitespace = true,
+            IgnoreComments = true,
+            IgnoreProcessingInstructions = true,
+        });
+        while (await xr.ReadAsync())
+        {
+            if (xr.NodeType == XmlNodeType.Element
+                && xr.LocalName == "sheet"
+                && xr.NamespaceURI == SpreadsheetNs)
+            {
+                // r:id lives in the "…/relationships" namespace but
+                // XmlReader.GetAttribute("id", ns) matches by prefix
+                // any way; use the literal "r:id" as sold by every
+                // real workbook.
+                var rid = xr.GetAttribute("r:id")
+                    ?? xr.GetAttribute("id", "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+                return rid;
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        return null;
+    }
+
+    private static async Task<string?> FindTargetOfTypeAsync(
+        ZipArchive xlsx, string relsPath, string type, CancellationToken cancellationToken)
+    {
+        var entry = TryFindZipEntry(xlsx, relsPath);
+        if (entry is null)
+        {
+            return null;
+        }
+        await using var stream = entry.Open();
+        using var xr = XmlReader.Create(stream, new XmlReaderSettings
+        {
+            Async = true,
+            IgnoreWhitespace = true,
+            IgnoreComments = true,
+            IgnoreProcessingInstructions = true,
+        });
+        while (await xr.ReadAsync())
+        {
+            if (xr.NodeType == XmlNodeType.Element
+                && xr.LocalName == "Relationship"
+                && xr.NamespaceURI == PackageRelsNs
+                && string.Equals(xr.GetAttribute("Type"), type, StringComparison.Ordinal))
+            {
+                return xr.GetAttribute("Target");
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        return null;
+    }
+
+    private static async Task<string?> FindTargetOfIdAsync(
+        ZipArchive xlsx, string relsPath, string rid, CancellationToken cancellationToken)
+    {
+        var entry = TryFindZipEntry(xlsx, relsPath);
+        if (entry is null)
+        {
+            return null;
+        }
+        await using var stream = entry.Open();
+        using var xr = XmlReader.Create(stream, new XmlReaderSettings
+        {
+            Async = true,
+            IgnoreWhitespace = true,
+            IgnoreComments = true,
+            IgnoreProcessingInstructions = true,
+        });
+        while (await xr.ReadAsync())
+        {
+            if (xr.NodeType == XmlNodeType.Element
+                && xr.LocalName == "Relationship"
+                && xr.NamespaceURI == PackageRelsNs
+                && string.Equals(xr.GetAttribute("Id"), rid, StringComparison.Ordinal)
+                && string.Equals(xr.GetAttribute("Type"), WorksheetRelType, StringComparison.Ordinal))
+            {
+                return xr.GetAttribute("Target");
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        return null;
+    }
+
+    private static string SiblingRelsPath(string partPath)
+    {
+        var dir = PathDirectory(partPath);
+        var file = partPath.Substring(dir.Length == 0 ? 0 : dir.Length + 1);
+        return dir.Length == 0 ? $"_rels/{file}.rels" : $"{dir}/_rels/{file}.rels";
+    }
+
+    private static string PathDirectory(string path)
+    {
+        var slash = path.LastIndexOf('/');
+        return slash < 0 ? string.Empty : path.Substring(0, slash);
+    }
+
+    private static string NormalizeRelativePath(string target, string baseDir)
+    {
+        if (target.Length > 0 && target[0] == '/')
+        {
+            return target.TrimStart('/');
+        }
+        return baseDir.Length == 0 ? target : $"{baseDir}/{target}";
+    }
+
+    private static ZipArchiveEntry? TryFindZipEntry(ZipArchive archive, string fullName)
+    {
+        foreach (var entry in archive.Entries)
+        {
+            if (string.Equals(entry.FullName, fullName, StringComparison.OrdinalIgnoreCase))
+            {
+                return entry;
+            }
+        }
+        return null;
+    }
+
     private static ZipArchiveEntry FindEntry(ZipArchive archive, string logicalName)
     {
         foreach (var entry in archive.Entries)
@@ -121,19 +312,6 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
         }
         throw new InvalidDataException(
             $"AEMPS snapshot is missing required entry '{logicalName}'.");
-    }
-
-    private static ZipArchiveEntry FindZipEntry(ZipArchive archive, string fullName)
-    {
-        foreach (var entry in archive.Entries)
-        {
-            if (string.Equals(entry.FullName, fullName, StringComparison.OrdinalIgnoreCase))
-            {
-                return entry;
-            }
-        }
-        throw new InvalidDataException(
-            $"AEMPS spreadsheet is missing required part '{fullName}'.");
     }
 
     // Reads xl/sharedStrings.xml (if present) into an indexed list.
@@ -228,10 +406,15 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
             IgnoreProcessingInstructions = true,
         });
 
-        // Reusable buffer sized to the fixed column count. Cleared per
-        // row so a short row's trailing cells default to empty string.
+        // Reusable buffer sized to the fixed column count. Filled with
+        // empty strings per row so a short row's trailing cells (or
+        // absent <c/> gaps between existing cells) read as "" instead
+        // of null — every consumer downstream uses `?? string.Empty`
+        // as a safety belt too, but starting from "" avoids a
+        // NullReferenceException the first time somebody adds a
+        // direct cell read.
         var cells = new string[Col_Count];
-        var isHeader = true;
+        var seenHeader = false;
 
         while (await xr.ReadAsync())
         {
@@ -244,12 +427,20 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
                 continue;
             }
 
-            Array.Clear(cells);
+            Array.Fill(cells, string.Empty);
             await ReadRowCellsAsync(xr, sharedStrings, cells, cancellationToken);
 
-            if (isHeader)
+            if (!seenHeader)
             {
-                isHeader = false;
+                // Some XLSX writers emit leading empty rows (frozen
+                // panes, styling filler, a merged title row above the
+                // real header). Skip anything blank until we find the
+                // header — then latch and validate it.
+                if (IsBlankRow(cells))
+                {
+                    continue;
+                }
+                seenHeader = true;
                 ValidateHeader(cells);
                 continue;
             }
@@ -262,6 +453,18 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
             }
             yield return row;
         }
+    }
+
+    private static bool IsBlankRow(string[] cells)
+    {
+        for (var i = 0; i < cells.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(cells[i]))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static async Task ReadRowCellsAsync(
@@ -297,7 +500,7 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
             var columnIndex = ColumnIndexFromReference(reference);
             var value = rowReader.IsEmptyElement
                 ? string.Empty
-                : await ReadCellValueAsync(rowReader, type, sharedStrings);
+                : await ReadCellValueAsync(rowReader, type, sharedStrings, cancellationToken);
 
             if (columnIndex >= 0 && columnIndex < cells.Length)
             {
@@ -312,7 +515,7 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
     // <t> would advance the main reader past the end tag onto the
     // next sibling <c>, silently swallowing the rest of the row.
     private static async Task<string> ReadCellValueAsync(
-        XmlReader xr, string? type, List<string> sharedStrings)
+        XmlReader xr, string? type, List<string> sharedStrings, CancellationToken cancellationToken)
     {
         string? vText = null;
         var sb = new System.Text.StringBuilder(); // for inline strings
@@ -342,12 +545,13 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
                     // Inline string: <is><t>value</t></is> or <is><r><t>…</t></r>…</is>
                     if (!cellReader.IsEmptyElement)
                     {
-                        await AppendInlineTextsAsync(cellReader, sb);
+                        await AppendInlineTextsAsync(cellReader, sb, cancellationToken);
                     }
                     break;
                 default:
                     break;
             }
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         if (type == "s")
@@ -369,7 +573,8 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
         return vText ?? string.Empty;
     }
 
-    private static async Task AppendInlineTextsAsync(XmlReader xr, System.Text.StringBuilder sb)
+    private static async Task AppendInlineTextsAsync(
+        XmlReader xr, System.Text.StringBuilder sb, CancellationToken cancellationToken)
     {
         using var isReader = xr.ReadSubtree();
         await isReader.ReadAsync(); // move onto <is>
@@ -382,6 +587,7 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
             {
                 sb.Append(await isReader.ReadElementContentAsStringAsync());
             }
+            cancellationToken.ThrowIfCancellationRequested();
         }
     }
 
@@ -452,7 +658,10 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
             return null;
         }
 
-        var ingredients = BuildIngredients(cells[Col_PrincipiosActivos], cells[Col_Atc]);
+        var ingredients = BuildIngredients(
+            cells[Col_PrincipiosActivos],
+            cells[Col_Atc],
+            cells[Col_NPActivos]);
 
         return new ReferenceMedicineRow(
             Country: Spain,
@@ -468,8 +677,20 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
             ActiveIngredients: ingredients);
     }
 
+    // Splits Principios Activos into individual substances, guided by
+    // the Nº P. Activos column when it is available. AEMPS ships a
+    // handful of substance names that themselves embed a ", " —
+    // salt/hydrate qualifiers ("REZAFUNGINA, ACETATO DE";
+    // "NEVIRAPINA, ANHIDRA"; "CACAHUETE POLVO DESENGRASADO,
+    // SEMILLAS"), organometallic bracketed formulas
+    // ("[TETRAKIS…], TETRAFLUOROBORATO DE") and more. A blind split on
+    // ", " would over-split those rows into wrong ingredients, so we
+    // only trust the split when its count matches Nº P. Activos.
+    // If the header column is missing or the count doesn't match, we
+    // treat the whole cell as a single substance (accepts one loss of
+    // granularity, avoids inventing wrong names).
     private static IReadOnlyList<ReferenceActiveIngredientRow> BuildIngredients(
-        string? rawActive, string? rawAtc)
+        string? rawActive, string? rawAtc, string? rawExpectedCount)
     {
         if (string.IsNullOrWhiteSpace(rawActive))
         {
@@ -478,7 +699,32 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
 
         var atc = AtcCode.TryParse(rawAtc ?? string.Empty, out var parsed) ? parsed : (AtcCode?)null;
 
+        int? expected = null;
+        if (!string.IsNullOrWhiteSpace(rawExpectedCount)
+            && int.TryParse(rawExpectedCount, System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out var n)
+            && n > 0)
+        {
+            expected = n;
+        }
+
+        if (expected is 1)
+        {
+            // Ground truth from AEMPS: exactly one substance, even if
+            // the value contains ", ". Don't split.
+            return new[] { new ReferenceActiveIngredientRow(rawActive.Trim(), atc) };
+        }
+
         var parts = rawActive.Split(ActiveIngredientSeparator, StringSplitOptions.RemoveEmptyEntries);
+        if (expected is int e && parts.Length != e)
+        {
+            // Split disagrees with the authoritative substance count —
+            // the ", " separator hit an intra-name comma. Fall back to
+            // the whole string as one ingredient (imprecise but never
+            // wrong).
+            return new[] { new ReferenceActiveIngredientRow(rawActive.Trim(), atc) };
+        }
+
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var rows = new List<ReferenceActiveIngredientRow>(capacity: parts.Length);
         foreach (var raw in parts)

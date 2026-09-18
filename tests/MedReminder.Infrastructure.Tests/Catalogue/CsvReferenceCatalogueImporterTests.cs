@@ -301,12 +301,12 @@ public sealed class CsvReferenceCatalogueImporterTests
         await using (var spain = CatalogueFixtures.BuildAempsSnapshotStream())
         {
             var esReport = await importer.ImportAsync(spain, Spain, "202609", CancellationToken.None);
-            esReport.Inserted.Should().Be(142);
+            esReport.Inserted.Should().Be(145);
         }
         await using (var france = CatalogueFixtures.BuildBdpmSnapshotStream())
         {
             var frReport = await importer.ImportAsync(france, France, "202609", CancellationToken.None);
-            frReport.Inserted.Should().Be(91);
+            frReport.Inserted.Should().Be(93);
         }
 
         await using var context = fixture.CreateContext();
@@ -319,10 +319,10 @@ public sealed class CsvReferenceCatalogueImporterTests
             .Should().Be(70);
         (await ScalarLongAsync(connection,
             "SELECT COUNT(*) FROM reference_medicines WHERE country = 'ES';"))
-            .Should().Be(142);
+            .Should().Be(145);
         (await ScalarLongAsync(connection,
             "SELECT COUNT(*) FROM reference_medicines WHERE country = 'FR';"))
-            .Should().Be(91);
+            .Should().Be(93);
         (await ScalarLongAsync(connection,
             "SELECT COUNT(DISTINCT country) FROM reference_medicines;"))
             .Should().Be(4);
@@ -350,8 +350,8 @@ public sealed class CsvReferenceCatalogueImporterTests
         await using (var newerSpain = CatalogueFixtures.BuildAempsSnapshotStream())
         {
             var upgrade = await importer.ImportAsync(newerSpain, Spain, "202610", CancellationToken.None);
-            upgrade.Inserted.Should().Be(142);
-            upgrade.Deleted.Should().Be(142);
+            upgrade.Inserted.Should().Be(145);
+            upgrade.Deleted.Should().Be(145);
             upgrade.SnapshotVersion.Should().Be("202610");
         }
 
@@ -359,13 +359,13 @@ public sealed class CsvReferenceCatalogueImporterTests
         var connection = context.Database.GetDbConnection();
         (await ScalarLongAsync(connection,
             "SELECT COUNT(*) FROM reference_medicines WHERE country = 'ES' AND snapshot_version = '202610';"))
-            .Should().Be(142);
+            .Should().Be(145);
         (await ScalarLongAsync(connection,
             "SELECT COUNT(*) FROM reference_medicines WHERE country = 'ES' AND snapshot_version = '202609';"))
             .Should().Be(0);
         (await ScalarLongAsync(connection,
             "SELECT COUNT(*) FROM reference_medicines WHERE country = 'FR' AND snapshot_version = '202609';"))
-            .Should().Be(91);
+            .Should().Be(93);
     }
 
     private static async Task<long> ScalarLongAsync(
