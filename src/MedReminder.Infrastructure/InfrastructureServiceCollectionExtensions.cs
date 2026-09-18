@@ -89,6 +89,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<EmbeddedSnapshotProvider>();
         services.AddScoped<IReferenceSnapshotParser, AifaSnapshotParser>();
         services.AddScoped<IReferenceSnapshotParser, EmaEparParser>();
+        services.AddScoped<IReferenceSnapshotParser, AempsCimaParser>();
+        services.AddScoped<IReferenceSnapshotParser, AnsmBdpmParser>();
         services.AddScoped<IReferenceCatalogueQueryService, SqliteReferenceCatalogueQueryService>();
         services.AddScoped<IReferenceCatalogueImporter>(sp => new CsvReferenceCatalogueImporter(
             sp.GetRequiredService<MedReminderDbContext>(),
