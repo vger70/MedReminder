@@ -33,14 +33,19 @@ internal sealed class BackupService : IBackupService
 
     private readonly MedReminderDbContext _db;
     private readonly TimeProvider _clock;
+    private readonly DatabasePathProvider _databasePathProvider;
 
-    public BackupService(MedReminderDbContext db, TimeProvider clock)
+    public BackupService(
+        MedReminderDbContext db,
+        TimeProvider clock,
+        DatabasePathProvider databasePathProvider)
     {
         _db = db;
         _clock = clock;
+        _databasePathProvider = databasePathProvider;
     }
 
-    public string DatabasePath => AppDataPaths.GetDatabasePath();
+    public string DatabasePath => _databasePathProvider.DatabasePath;
 
     public async Task<string> ExportAsync(
         string destinationDirectory, CancellationToken cancellationToken)
@@ -66,7 +71,8 @@ internal sealed class BackupService : IBackupService
         // request cycle. Cache=Private so we do not share the app's
         // shared cache.
         var sourceConnectionString =
-            new SqliteConnectionStringBuilder(AppDataPaths.BuildSqliteConnectionString())
+            new SqliteConnectionStringBuilder(
+                AppDataPaths.BuildSqliteConnectionString(sourcePath))
             {
                 Cache = SqliteCacheMode.Private,
                 Mode = SqliteOpenMode.ReadWriteCreate,

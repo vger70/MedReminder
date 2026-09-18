@@ -28,10 +28,18 @@ public static class InfrastructureServiceCollectionExtensions
     public static IServiceCollection AddMedReminderInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        string? databasePathOverride = null)
+        string databasePath)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+
         // ------- Persistence -------
-        var connectionString = AppDataPaths.BuildSqliteConnectionString(databasePathOverride);
+        // Increment 15a (docs/ANALYSIS-MULTI-USER.md §2.5): the DB
+        // path is now an explicit input. BackupService no longer
+        // recomputes it from AppDataPaths — it reads the singleton
+        // registered here so both the EF Core connection and the
+        // backup export target the same file.
+        var connectionString = AppDataPaths.BuildSqliteConnectionString(databasePath);
+        services.TryAddSingleton(new DatabasePathProvider(databasePath));
         services.AddDbContext<MedReminderDbContext>(options =>
         {
             options.UseSqlite(connectionString);

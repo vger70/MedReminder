@@ -165,8 +165,9 @@ release pipeline.
 ## 5. Git and branching
 
 - The current working branch for Claude-driven changes is
-  **`claude/translate-in-english`**. Develop, commit and push
-  there unless the user explicitly asks otherwise.
+  **`claude/incremento-15`** (Increment 15 — multi-user support,
+  designed in `docs/ANALYSIS-MULTI-USER.md`). Develop, commit and
+  push there unless the user explicitly asks otherwise.
 - Never push to `main` (or any other branch) without explicit
   permission.
 - Commit messages: imperative, English, focused on the "why". End with
