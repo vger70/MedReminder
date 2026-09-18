@@ -88,6 +88,7 @@ public static class InfrastructureServiceCollectionExtensions
             configuration.GetSection(CatalogueFeatureOptions.SectionName));
         services.AddSingleton<EmbeddedSnapshotProvider>();
         services.AddScoped<IReferenceSnapshotParser, AifaSnapshotParser>();
+        services.AddScoped<IReferenceSnapshotParser, EmaEparParser>();
         services.AddScoped<IReferenceCatalogueQueryService, SqliteReferenceCatalogueQueryService>();
         services.AddScoped<IReferenceCatalogueImporter>(sp => new CsvReferenceCatalogueImporter(
             sp.GetRequiredService<MedReminderDbContext>(),
