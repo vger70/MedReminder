@@ -242,21 +242,33 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
 
         var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
 
-        // Broad prefix "a" hits both ES rows (many, since the AEMPS
-        // fixture starts with brands like AMOXICILINA, ATORVASTATINA,
-        // AUGMENTINE) and EU rows. Assertion: every returned row is
-        // either ES or EU, and both country codes are present.
-        var hits = await sut.SearchByCommercialNameAsync(
-            prefix: "a",
-            countryScope: new[] { Spain, EU },
-            limit: 50,
-            cancellationToken: CancellationToken.None);
+        // The AEMPS and EPAR fixtures are disjoint on any short prefix
+        // (the curated CIMA sample and the curated EMA sample never
+        // overlap on the same starting letters at fixture size), so a
+        // single query cannot demonstrate both country codes in the
+        // result set without either widening the limit past the row
+        // count or picking a fragile prefix. Instead we hit the scope
+        // twice — once with a prefix present in the ES fixture and
+        // once with a prefix present only in the EU fixture — proving
+        // that the scope `{ ES, EU }` lets each side through.
 
-        hits.Should().NotBeEmpty();
-        hits.Should().OnlyContain(h => h.Country.Value == "ES" || h.Country.Value == "EU");
-        var countries = hits.Select(h => h.Country.Value).Distinct().ToList();
-        countries.Should().Contain("ES");
-        countries.Should().Contain("EU");
+        var esHits = await sut.SearchByCommercialNameAsync(
+            prefix: "amo",
+            countryScope: new[] { Spain, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+        esHits.Should().NotBeEmpty();
+        esHits.Should().OnlyContain(h => h.Country.Value == "ES" || h.Country.Value == "EU");
+        esHits.Select(h => h.Country.Value).Should().Contain("ES");
+
+        var euHits = await sut.SearchByCommercialNameAsync(
+            prefix: "sym",
+            countryScope: new[] { Spain, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+        euHits.Should().NotBeEmpty();
+        euHits.Should().OnlyContain(h => h.Country.Value == "ES" || h.Country.Value == "EU");
+        euHits.Select(h => h.Country.Value).Should().Contain("EU");
     }
 
     [Fact]
@@ -283,19 +295,32 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
 
         var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
 
-        // "a" broadly matches BDPM rows starting with A (ABACAVIR,
-        // AMOXICILLINE, ATORVASTATINE, ...) as well as EU rows.
-        var hits = await sut.SearchByCommercialNameAsync(
-            prefix: "a",
-            countryScope: new[] { France, EU },
-            limit: 50,
-            cancellationToken: CancellationToken.None);
+        // See the ES-side test for why we run two prefix probes here
+        // instead of a single broad query. BDPM in particular has
+        // ~60 rows starting with "A" in the fixture, which would
+        // saturate a limit-50 mixed-scope query before any EPAR "A"
+        // row (Abrysvo, Aybintio) could enter the result set. The
+        // two-probe pattern proves scope { FR, EU } lets each side
+        // through without depending on how alphabetical ordering
+        // interacts with the fixture's row density.
 
-        hits.Should().NotBeEmpty();
-        hits.Should().OnlyContain(h => h.Country.Value == "FR" || h.Country.Value == "EU");
-        var countries = hits.Select(h => h.Country.Value).Distinct().ToList();
-        countries.Should().Contain("FR");
-        countries.Should().Contain("EU");
+        var frHits = await sut.SearchByCommercialNameAsync(
+            prefix: "amox",
+            countryScope: new[] { France, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+        frHits.Should().NotBeEmpty();
+        frHits.Should().OnlyContain(h => h.Country.Value == "FR" || h.Country.Value == "EU");
+        frHits.Select(h => h.Country.Value).Should().Contain("FR");
+
+        var euHits = await sut.SearchByCommercialNameAsync(
+            prefix: "sym",
+            countryScope: new[] { France, EU },
+            limit: 20,
+            cancellationToken: CancellationToken.None);
+        euHits.Should().NotBeEmpty();
+        euHits.Should().OnlyContain(h => h.Country.Value == "FR" || h.Country.Value == "EU");
+        euHits.Select(h => h.Country.Value).Should().Contain("EU");
     }
 
     [Fact]
