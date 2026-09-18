@@ -50,7 +50,7 @@ normal.
    e-mail funcione.
 6. **Guardar**.
 
-## Catálogo de referencia (Italia + UE)
+## Catálogo de referencia (multi-país)
 
 MedReminder incluye dos instantáneas de un catálogo de medicamentos
 de referencia y las utiliza para autocompletar el formulario del
@@ -98,15 +98,38 @@ medicamentos en la misma lista desplegable del autocompletado.
   deduplican. Elige la que corresponde a la caja que tienes en la
   mano.
 
+### Catálogos nacionales español y francés
+
+El catálogo español procede de AEMPS CIMA (registro
+«Medicamentos») y el catálogo francés de ANSM BDPM (*Base de
+données publique des médicaments*). En el autocompletado se
+comportan exactamente como el catálogo italiano:
+
+- Configura **Ajustes → General → País de referencia** en `ES` o
+  `FR` una vez cargada la instantánea correspondiente (`ES` y `FR`
+  aparecen automáticamente en el menú desplegable en cuanto sus
+  catálogos están en la base de datos).
+- El autocompletado enumera entonces **tu catálogo nacional + los
+  medicamentos centralizados UE**, mezclados en la misma lista.
+  España y Francia son Estados miembros de la UE, así que las
+  filas UE se incluyen por defecto igual que para Italia.
+- Las demás reglas se mantienen: selecciona una fila para rellenar
+  ambos lados, o sigue escribiendo para guardar un texto libre que
+  la aplicación no conoce.
+
 **Fuentes de los datos y condiciones de reutilización.** El
 catálogo italiano procede de los datos abiertos de AIFA
 (Agenzia Italiana del Farmaco), publicados bajo licencia Creative
 Commons Attribution 4.0 International (CC BY 4.0). El catálogo UE
 procede del conjunto de datos EMA EPAR, reutilizado según el aviso
 legal de la EMA (decisión 2011/833/UE sobre la reutilización de
-los documentos de la Comisión). El cuadro de diálogo Acerca de y
-el archivo `THIRD-PARTY-NOTICES.md` en la raíz de la instalación
-incluyen las atribuciones completas.
+los documentos de la Comisión). El catálogo español procede de
+AEMPS CIMA, reutilizado según el régimen español de reutilización
+de la información del sector público (Ley 37/2007). El catálogo
+francés procede de ANSM BDPM, reutilizado bajo Licence Ouverte
+Etalab 2.0. El cuadro de diálogo Acerca de y el archivo
+`THIRD-PARTY-NOTICES.md` en la raíz de la instalación incluyen
+las atribuciones completas.
 
 ## Añadir stock (nueva caja)
 

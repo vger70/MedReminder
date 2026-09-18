@@ -374,5 +374,7 @@
   "settings.referenceCountry.label": "País de referencia",
   "settings.referenceCountry.help": "País cuyo catálogo de medicamentos se consulta desde el autocompletado del formulario de medicamento. UE añade los productos con autorización centralizada.",
   "about.dataSources.aifa": "Catálogo italiano de medicamentos: datos abiertos AIFA (CC BY 4.0).",
-  "about.dataSources.emaArticle57": "Medicamentos europeos con autorización centralizada: conjunto de datos EMA EPAR (European public assessment reports), reutilizado según los términos de uso de los contenidos públicos de la EMA."
+  "about.dataSources.emaArticle57": "Medicamentos europeos con autorización centralizada: conjunto de datos EMA EPAR (European public assessment reports), reutilizado según los términos de uso de los contenidos públicos de la EMA.",
+  "about.dataSources.aemps": "Catálogo español de medicamentos: registro AEMPS CIMA «Medicamentos», reutilizado según el régimen español de reutilización de la información del sector público (Ley 37/2007). Fuente: Agencia Española de Medicamentos y Productos Sanitarios (AEMPS).",
+  "about.dataSources.bdpm": "Catálogo francés de medicamentos: ANSM BDPM (Base de données publique des médicaments), reutilizado bajo la Licence Ouverte Etalab 2.0."
 }

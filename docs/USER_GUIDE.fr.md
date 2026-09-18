@@ -52,7 +52,7 @@ normal.
    l'e-mail fonctionne.
 6. **Enregistrer**.
 
-## Catalogue de référence (Italie + UE)
+## Catalogue de référence (multi-pays)
 
 MedReminder embarque deux instantanés d'un catalogue de médicaments
 de référence et s'en sert pour auto-compléter le formulaire de
@@ -99,13 +99,36 @@ dans la même liste déroulante d'auto-complétion.
   pas dédoublonnées. Choisis celle qui correspond à la boîte que tu
   as en main.
 
+### Catalogues nationaux espagnol et français
+
+Le catalogue espagnol provient de l'AEMPS CIMA (registre
+« Medicamentos ») et le catalogue français d'ANSM BDPM (*Base de
+données publique des médicaments*). Dans l'auto-complétion, ils
+se comportent exactement comme le catalogue italien :
+
+- Règle **Paramètres → Général → Pays de référence** sur `ES` ou
+  `FR` une fois l'instantané correspondant chargé (`ES` et `FR`
+  apparaissent automatiquement dans le menu déroulant dès que
+  leurs catalogues sont en base).
+- L'auto-complétion liste alors **ton catalogue national + les
+  médicaments centralisés UE**, mélangés dans la même liste.
+  L'Espagne et la France sont des États membres de l'UE, donc
+  les lignes UE sont incluses par défaut comme pour l'Italie.
+- Toutes les autres règles restent identiques : sélectionne une
+  ligne pour remplir les deux côtés, ou continue à saisir pour
+  enregistrer une entrée en texte libre inconnue de l'application.
+
 **Sources des données et conditions de réutilisation.** Le
 catalogue italien provient des données ouvertes AIFA (Agenzia
 Italiana del Farmaco), publiées sous licence Creative Commons
 Attribution 4.0 International (CC BY 4.0). Le catalogue UE
 provient du jeu de données EMA EPAR, réutilisé selon la note
 légale de l'EMA (décision 2011/833/UE sur la réutilisation des
-documents de la Commission). La boîte de dialogue « À propos » et
+documents de la Commission). Le catalogue espagnol provient
+d'AEMPS CIMA, réutilisé selon le régime espagnol de
+réutilisation des informations du secteur public (Loi 37/2007).
+Le catalogue français provient d'ANSM BDPM, réutilisé sous
+Licence Ouverte Etalab 2.0. La boîte de dialogue « À propos » et
 le fichier `THIRD-PARTY-NOTICES.md` à la racine de l'installation
 contiennent les attributions complètes.
 

@@ -49,7 +49,7 @@ expected.
    have configured SMTP settings (see below) for the email to work.
 6. **Save**.
 
-## Reference catalogue (Italy + EU)
+## Reference catalogue (multi-country)
 
 MedReminder ships with two snapshots of a reference medicine
 catalogue and uses them to autocomplete the medicine form.
@@ -91,12 +91,34 @@ autocomplete dropdown.
   in the list at the same time; neither is deduplicated against the
   other. Pick whichever matches the box in your hand.
 
+### Spanish and French national catalogues
+
+The Spanish catalogue comes from AEMPS CIMA ("Medicamentos"
+register) and the French one from ANSM BDPM (*Base de données
+publique des médicaments*). They behave exactly like the Italian
+catalogue in the autocomplete:
+
+- Set **Settings → General → Reference country** to `ES` or `FR`
+  once the corresponding snapshot is loaded (`ES` and `FR` appear
+  automatically in the dropdown as soon as their catalogues are
+  in the DB).
+- The autocomplete then lists **your national catalogue + the
+  EU-wide centrally authorised medicines**, mixed in the same list.
+  Spain and France are EU members, so EU rows are included by
+  default the same way they are for Italy.
+- All the other rules stay the same: pick a row to fill both
+  sides, or keep typing to store a free-text entry the app has
+  never seen.
+
 **Data sources and terms.** The Italian catalogue comes from
 AIFA (Agenzia Italiana del Farmaco) open data, released under the
 Creative Commons Attribution 4.0 International licence (CC BY 4.0).
 The EU catalogue comes from the EMA EPAR dataset, reused under
 EMA's legal notice (Commission decision 2011/833/EU on the reuse
-of Commission documents). The About dialog and
+of Commission documents). The Spanish catalogue comes from AEMPS
+CIMA, reused under Spain's public-sector information reuse regime
+(Law 37/2007). The French catalogue comes from ANSM BDPM, reused
+under Licence Ouverte Etalab 2.0. The About dialog and
 `THIRD-PARTY-NOTICES.md` at the root of the installation carry the
 full attributions.
 

@@ -375,5 +375,7 @@
   "settings.referenceCountry.label": "Reference country",
   "settings.referenceCountry.help": "Country whose medicine catalogue is searched from the autocomplete on the medicine form. EU adds centrally authorised products.",
   "about.dataSources.aifa": "Italian medicine catalogue: AIFA open data (CC BY 4.0).",
-  "about.dataSources.emaArticle57": "European centrally authorised medicines: EMA EPAR dataset (European public assessment reports), reused under EMA's public-content terms."
+  "about.dataSources.emaArticle57": "European centrally authorised medicines: EMA EPAR dataset (European public assessment reports), reused under EMA's public-content terms.",
+  "about.dataSources.aemps": "Spanish medicine catalogue: AEMPS CIMA \"Medicamentos\" register, reused under Spain's public-sector information reuse regime (Law 37/2007). Source: Agencia Española de Medicamentos y Productos Sanitarios (AEMPS).",
+  "about.dataSources.bdpm": "French medicine catalogue: ANSM BDPM (Base de données publique des médicaments), reused under Licence Ouverte Etalab 2.0."
 }
