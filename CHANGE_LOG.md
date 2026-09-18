@@ -30,9 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — Reference catalogue: EU centralised authorisations (EPAR) (M3)
+## PR #19 — Reference catalogue: EU centralised authorisations (EPAR) (M3)
 
-Link: _(to be filled in once the PR is opened)_
+Link: [vger70/MedReminder#19](https://github.com/vger70/MedReminder/pull/19)
 **Status:** open
 Branch: `M3-drug-reference-catalogue`
 
