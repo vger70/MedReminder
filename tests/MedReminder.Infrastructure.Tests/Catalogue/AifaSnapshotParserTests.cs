@@ -76,9 +76,10 @@ public sealed class AifaSnapshotParserTests
         aspirina.ActiveIngredients.Select(a => a.Name)
             .Should().BeEquivalentTo(new[] { "ACIDO ACETILSALICILICO", "ACIDO ASCORBICO" });
 
-        // ATC is not attached to individual ingredients when the
-        // medicine has more than one ingredient (combo ATC).
-        aspirina.ActiveIngredients.Should().OnlyContain(a => a.Atc == null);
+        // The medicine's CODICE_ATC (N02BA01) is copied onto every
+        // ingredient of the row — see BuildIngredients for the
+        // rationale.
+        aspirina.ActiveIngredients.Should().OnlyContain(a => a.Atc == AtcCode.Parse("N02BA01"));
     }
 
     [Fact]

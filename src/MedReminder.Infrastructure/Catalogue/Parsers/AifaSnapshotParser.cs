@@ -211,11 +211,14 @@ internal sealed class AifaSnapshotParser : IReferenceSnapshotParser
         }
     }
 
-    // The medicine-level CODICE_ATC represents the substance
-    // (single-ingredient) or the combination (multi-ingredient).
-    // Attaching a combo ATC to each ingredient would be semantically
-    // wrong, so ATC is copied onto the ingredient only for single-
-    // ingredient medicines.
+    // The medicine-level CODICE_ATC is copied onto every ingredient
+    // of the medicine, whether single- or multi-ingredient. For a
+    // combo (e.g. J01CR02 = amoxicillin + clavulanic acid) this is
+    // semantically imprecise — the combo ATC does not describe each
+    // substance in isolation — but it preserves the lookup path so
+    // LinkMedicineToReferenceUseCase always finds an ATC when the
+    // catalogue row has one. Downstream interning keeps the first
+    // ATC seen for a given (country, ingredient) pair.
     private static IReadOnlyList<ReferenceActiveIngredientRow> BuildIngredients(
         List<string>? names, string rawAtc)
     {
@@ -224,14 +227,12 @@ internal sealed class AifaSnapshotParser : IReferenceSnapshotParser
             return Array.Empty<ReferenceActiveIngredientRow>();
         }
 
-        var atc = names.Count == 1 && AtcCode.TryParse(rawAtc, out var parsed)
-            ? parsed
-            : (AtcCode?)null;
+        var atc = AtcCode.TryParse(rawAtc, out var parsed) ? parsed : (AtcCode?)null;
 
         var rows = new ReferenceActiveIngredientRow[names.Count];
         for (var i = 0; i < names.Count; i++)
         {
-            rows[i] = new ReferenceActiveIngredientRow(names[i], i == 0 ? atc : null);
+            rows[i] = new ReferenceActiveIngredientRow(names[i], atc);
         }
         return rows;
     }
