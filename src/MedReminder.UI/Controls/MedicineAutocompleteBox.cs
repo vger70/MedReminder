@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
@@ -135,6 +136,15 @@ public sealed class MedicineAutocompleteBox : UserControl
     // debounce so the medicine form can seed the value (Edit mode)
     // or reflect a pick made in the sibling autocomplete without
     // triggering a spurious search.
+    //
+    // The control is only constructed in code (never dropped from
+    // the WinForms designer), so the runtime string carried here
+    // must not be baked into any generated InitializeComponent.
+    // The two attributes together silence the WFO1000 analyzer and
+    // keep the designer honest if this control ever gets dragged
+    // onto a Form later.
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public string InputText
     {
         get => _input.Text;
