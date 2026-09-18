@@ -67,7 +67,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         Text = _loc.Get(mode == EditMode.Create
             ? "Ui.MedicineEditDialog.Title.New"
             : "Ui.MedicineEditDialog.Title.Edit");
-        Width = 620;
+        // Wider than the original 620 so the catalogue autocomplete
+        // dropdown has enough room to show AIFA rows without heavy
+        // horizontal scrolling: a row like
+        // "TACHIPIRINA — PARACETAMOLO — 500 MG COMPRESSE 20 …"
+        // needs ~700 px to be legible. The dialog stays FixedDialog
+        // so this size is what the user gets.
+        Width = 880;
         Height = 800;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;

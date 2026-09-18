@@ -392,18 +392,19 @@ public sealed class MedicineAutocompleteBox : UserControl
             _dropdown.BringToFront();
         }
 
-        var origin = _input.PointToScreen(new Point(0, _input.Height));
-        var formOrigin = form.PointToClient(origin);
-        _dropdown.Location = formOrigin;
-
-        // Visible width: try to span the form's client area from the
-        // dropdown's origin to a small right margin, but never
-        // narrower than the input itself. Long rows stay reachable
-        // through the horizontal scrollbar (HorizontalExtent is set
-        // in RenderDropdown per query).
-        var rightMargin = 16;
-        var maxWidth = Math.Max(_input.Width, form.ClientSize.Width - formOrigin.X - rightMargin);
-        _dropdown.Width = maxWidth;
+        // Vertical anchor stays under the input; horizontal anchor
+        // slides all the way to the form's left margin so the
+        // dropdown can span the ENTIRE form width — the TextBox
+        // itself sits in the second TableLayoutPanel column (label
+        // + input), which would otherwise leave only ~360 px for
+        // rows that easily exceed 600 px. Aligning under the input
+        // is a lesser UX win than letting the user actually read
+        // the row they need to pick.
+        const int horizontalMargin = 8;
+        var inputBottomScreen = _input.PointToScreen(new Point(0, _input.Height));
+        var formTopOfDropdown = form.PointToClient(inputBottomScreen).Y;
+        _dropdown.Location = new Point(horizontalMargin, formTopOfDropdown);
+        _dropdown.Width = Math.Max(_input.Width, form.ClientSize.Width - 2 * horizontalMargin);
 
         // Reserve a row of height for the horizontal scrollbar when
         // any row is wider than the visible area — the ListBox does
