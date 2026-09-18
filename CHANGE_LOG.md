@@ -30,10 +30,97 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #25 — Increment 15d: ProfilesManagerForm, admin/user gating, restore-into-profile
+
+Link: [vger70/MedReminder#25](https://github.com/vger70/MedReminder/pull/25)
+**Status:** open
+Branch: `claude/incremento-15d`
+
+Fourth sub-increment of the multi-user work
+(`docs/ANALYSIS-MULTI-USER.md` §7.4, §11.3, §12, §15d). Adds the
+admin-only profile-management UI, gates the SettingsDialog by role,
+surfaces the active profile in the main window and lets the admin
+restore any profile from the Backup tab. PIN prompt polish and the
+user-guide entries remain for 15e.
+
+### Added
+
+- `MedReminder.UI.Forms.ProfilesManagerForm` — admin-only CRUD for
+  profiles (§12.4). Columns: name, role, PIN status, last-used
+  (`dd/MM HH:mm`), active-indicator. Inline dialogs for New / Rename
+  / Change PIN and a **type-name-to-confirm** delete dialog with an
+  "also delete data on disk" checkbox that defaults to OFF (§13).
+  Delete button is disabled for the currently active profile
+  (§14a H) and for the last remaining admin (§2.2). Defense-in-depth
+  guards inside the form back up the button-disable logic in case
+  the form is opened by a non-admin caller.
+- `File → Change profile…` menu entry (everyone): opens the
+  `ProfilePickerForm`, sets the hint on confirm and restarts through
+  `IApplicationRestarter` (§6.1).
+- `Tools → Manage profiles…` menu entry (admin only, hidden for
+  non-admins — §12.2).
+- New **Notifications** tab in `SettingsDialog` (§7.4). Visible to
+  every profile; contains only the per-profile `ToAddress`. Persists
+  to `<DataDirectory>\notifications.settings.json`.
+- **Restore-into-profile** dropdown in the Backup tab (§11.3).
+  Extracts the `profileId` from the backup filename
+  (`medreminder-<profileId>-YYYYMMDD-HHmmss.db`) as the default
+  selection, falling back to the active profile when the filename
+  does not follow the convention. `RestartAndExit` is called only
+  when the target profile is the active one — restoring into an
+  inactive profile does not touch the live `DbContext` connection.
+
+### Changed
+
+- `SettingsDialog` — Email and Backup tabs are hidden for non-admin
+  profiles. The Email tab no longer contains the recipient field;
+  it lives in the new Notifications tab (visible to everyone). The
+  Save button on the Email tab writes only SMTP; the Notifications
+  tab has its own Save button that writes only the per-profile
+  file. `IProfileRegistry` was added to the constructor so the
+  Backup dropdown can enumerate profiles.
+- `MainForm` — title bar shows the profile name
+  (`MedReminder — Grandma`, §12.1). StatusStrip carries a
+  `Profile: <name>` label on the left, bold + dark-blue with the
+  `(admin)` suffix when the current profile is an admin
+  (distinctive badge, §12.1). The constructor now injects
+  `ICurrentProfile`, `IProfileRegistry` and `IApplicationRestarter`.
+
+### Localisation
+
+- **60 new keys** added to every dictionary
+  (`assets/localization/strings.{en,it,fr,es,de}.json`) — menus,
+  StatusStrip, ProfilesManagerForm dialogs, Notifications tab,
+  restore-into-profile chooser. All 5 dictionaries stay at
+  **parity at 438 keys each** — `DictionaryParityTests` remain
+  green.
+
+### Invariants (unchanged, enforced twice)
+
+- **At least one admin** — Delete refuses in `ProfileRegistry` and
+  the Delete button is disabled for the last admin.
+- **Active profile not deletable** — Delete button is disabled;
+  the form also shows an explanatory warning if a script triggers
+  the click (§14a H).
+- **Immutable role** — no promote/demote path exists in the UI or
+  in the registry API (§14a G). Explicit hint label at the bottom
+  of the form.
+- **Restore into inactive profile skips restart** — only the
+  active-profile restore triggers `RestartAndExit` (§11.2).
+
+### Out of scope (still)
+
+- PIN prompt polish, tooltip wording pass, user-guide entries —
+  15e.
+- Promote/demote flow, cross-profile consolidated view — non-goals
+  for Increment 15 (§16).
+
+---
+
 ## PR #24 — Increment 15c: multi-profile boot flow and per-profile services
 
 Link: [vger70/MedReminder#24](https://github.com/vger70/MedReminder/pull/24)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `claude/incremento-15c` (stacked on `claude/incremento-15b` from PR #23)
 
 Third and largest sub-increment of the multi-user work
@@ -157,7 +244,7 @@ polish and user-guide entries remain for 15e.
 ## PR #23 — Increment 15b: V1 → V2 on-disk migration
 
 Link: [vger70/MedReminder#23](https://github.com/vger70/MedReminder/pull/23)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `claude/incremento-15b` (stacked on `claude/incremento-15` from PR #22)
 
 Second sub-increment of the multi-user work
@@ -238,7 +325,7 @@ single-user and no user-visible behavior changes.
 ## PR #22 — Increment 15a: profile registry and ICurrentProfile abstraction
 
 Link: [vger70/MedReminder#22](https://github.com/vger70/MedReminder/pull/22)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `claude/incremento-15`
 
 First sub-increment of the multi-user support work designed in

@@ -47,6 +47,9 @@ internal sealed class MainForm : MedReminderFormBase
     private readonly ApplicationTrayIcon _tray;
     private readonly ILogger<MainForm> _log;
     private readonly ILocalizationService _loc;
+    private readonly ICurrentProfile _currentProfile;
+    private readonly IProfileRegistry _profileRegistry;
+    private readonly IApplicationRestarter _restarter;
 
     private DataGridView _grid = null!;
     private BindingList<MedicineListItem> _rows = new();
@@ -70,14 +73,23 @@ internal sealed class MainForm : MedReminderFormBase
         IServiceScopeFactory scopeFactory,
         ApplicationTrayIcon tray,
         ILogger<MainForm> log,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        ICurrentProfile currentProfile,
+        IProfileRegistry profileRegistry,
+        IApplicationRestarter restarter)
     {
         _scopeFactory = scopeFactory;
         _tray = tray;
         _log = log;
         _loc = localization;
+        _currentProfile = currentProfile;
+        _profileRegistry = profileRegistry;
+        _restarter = restarter;
 
-        Text = _loc.Get("Ui.MainForm.Title");
+        // Title bar shows the active profile so multi-profile users
+        // can always see which one is open (§12.1).
+        Text = _loc.Get("Ui.MainForm.Title.WithProfile",
+            _loc.Get("Ui.MainForm.Title"), _currentProfile.DisplayName);
         Width = 960;
         Height = 560;
         StartPosition = FormStartPosition.CenterScreen;
@@ -133,6 +145,15 @@ internal sealed class MainForm : MedReminderFormBase
         // tray-hide in OnFormClosing is the intended behavior there.
         // "Exit" (Ctrl+Q) instead forces a real exit via _reallyExit.
         var fileMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.File"));
+        // "Change profile…" — visible to every profile (§12.2, decision
+        // §14a I: one profile at a time). Opens the picker and, on
+        // confirm, sets the hint and restarts the app so the new
+        // profile is fully isolated.
+        fileMenu.DropDownItems.Add(BuildMenuItem(
+            _loc.Get("Ui.MainForm.Menu.File.ChangeProfile"),
+            Mdl2Glyph.Glyphs.Contact, Keys.None,
+            () => { ChangeProfile(); return Task.CompletedTask; }));
+        fileMenu.DropDownItems.Add(new ToolStripSeparator());
         var fileExit = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.File.Exit"), null,
             (_, _) => { _reallyExit = true; Close(); })
         { ShortcutKeys = Keys.Control | Keys.Q };
@@ -180,6 +201,17 @@ internal sealed class MainForm : MedReminderFormBase
             Mdl2Glyph.Glyphs.Sync, Keys.Control | Keys.R,
             async () => await RunMonitorAsync()));
         toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+        // Manage profiles… — admin only. The design (§12.2) is
+        // clear: non-admin users must not see this entry at all,
+        // not merely see it disabled. The check is repeated inside
+        // the form as defense-in-depth.
+        if (_currentProfile.IsAdmin)
+        {
+            toolsMenu.DropDownItems.Add(BuildMenuItem(
+                _loc.Get("Ui.MainForm.Menu.Tools.ManageProfiles"),
+                Mdl2Glyph.Glyphs.Contact, Keys.None,
+                () => { ShowProfilesManager(); return Task.CompletedTask; }));
+        }
         toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Settings"),
             Mdl2Glyph.Glyphs.Settings, Keys.Control | Keys.Oemcomma,
             () => { ShowSettings(); return Task.CompletedTask; }));
@@ -385,6 +417,22 @@ internal sealed class MainForm : MedReminderFormBase
 
     private StatusStrip BuildStatusStrip()
     {
+        // Profile indicator on the left (docs/ANALYSIS-MULTI-USER.md
+        // §12.1). Admin gets a distinct visual badge so the user
+        // knows whose account is running.
+        var profileLabel = new ToolStripStatusLabel(
+            _loc.Get(_currentProfile.IsAdmin
+                ? "Ui.MainForm.Status.ProfileAdmin"
+                : "Ui.MainForm.Status.Profile",
+                _currentProfile.DisplayName))
+        {
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = _currentProfile.IsAdmin
+                ? System.Drawing.Color.DarkBlue
+                : System.Drawing.Color.Black,
+            Font = new Font("Segoe UI", 9.75F,
+                _currentProfile.IsAdmin ? FontStyle.Bold : FontStyle.Regular),
+        };
         _statusLabel = new ToolStripStatusLabel(_loc.Get("Ui.App.Ready"))
         {
             Spring = true,
@@ -395,9 +443,63 @@ internal sealed class MainForm : MedReminderFormBase
             TextAlign = ContentAlignment.MiddleRight,
         };
         var strip = new StatusStrip { SizingGrip = false };
+        strip.Items.Add(profileLabel);
+        strip.Items.Add(new ToolStripSeparator());
         strip.Items.Add(_statusLabel);
         strip.Items.Add(_lastCheckLabel);
         return strip;
+    }
+
+    // ------------------ Profile switch / manage ------------------
+
+    private void ChangeProfile()
+    {
+        try
+        {
+            using var picker = new ProfilePickerForm(_profileRegistry, _loc);
+            var result = picker.ShowDialog(this);
+            if (result != DialogResult.OK || picker.SelectedProfile is null)
+            {
+                return;
+            }
+            var chosen = picker.SelectedProfile;
+            if (string.Equals(chosen.Id, _currentProfile.Id, StringComparison.Ordinal))
+            {
+                // Same profile — nothing to do.
+                return;
+            }
+
+            // Persist the new hint so the restarted process opens the
+            // chosen profile without showing the picker again
+            // (§6.1 flow).
+            _profileRegistry.SetActiveProfileHint(chosen.Id);
+            _restarter.RestartAndExit();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.ChangeProfile"), ex);
+        }
+    }
+
+    private void ShowProfilesManager()
+    {
+        if (!_currentProfile.IsAdmin)
+        {
+            // Defense in depth: the menu entry is hidden for non-admin
+            // users but a slash command or accessibility tool could
+            // still trigger this handler.
+            return;
+        }
+        try
+        {
+            using var dialog = new ProfilesManagerForm(
+                _profileRegistry, _currentProfile, _loc);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.ManageProfiles"), ex);
+        }
     }
 
     private DataGridView BuildGrid()
@@ -854,6 +956,7 @@ internal sealed class MainForm : MedReminderFormBase
                 scope.ServiceProvider.GetRequiredService<IBackupStateStore>(),
                 scope.ServiceProvider.GetRequiredService<IApplicationRestarter>(),
                 scope.ServiceProvider.GetRequiredService<ICurrentProfile>(),
+                scope.ServiceProvider.GetRequiredService<IProfileRegistry>(),
                 scope.ServiceProvider.GetRequiredService<ILocalizationService>(),
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Catalogue.IReferenceCatalogueQueryService>());
             dialog.ShowDialog(this);
