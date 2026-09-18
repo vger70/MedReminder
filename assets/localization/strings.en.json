@@ -375,5 +375,5 @@
   "settings.referenceCountry.label": "Reference country",
   "settings.referenceCountry.help": "Country whose medicine catalogue is searched from the autocomplete on the medicine form. EU adds centrally authorised products.",
   "about.dataSources.aifa": "Italian medicine catalogue: AIFA open data (CC BY 4.0).",
-  "about.dataSources.emaArticle57": "European centrally authorised products: EMA Article 57 dataset (reserved for a future release)."
+  "about.dataSources.emaArticle57": "European centrally authorised medicines: EMA EPAR dataset (European public assessment reports), reused under EMA's public-content terms."
 }

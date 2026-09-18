@@ -52,10 +52,11 @@ normal.
    l'e-mail fonctionne.
 6. **Enregistrer**.
 
-## Catalogue de référence (Italie)
+## Catalogue de référence (Italie + UE)
 
-MedReminder embarque un instantané des données ouvertes AIFA et
-s'en sert pour auto-compléter le formulaire de médicament.
+MedReminder embarque deux instantanés d'un catalogue de médicaments
+de référence et s'en sert pour auto-compléter le formulaire de
+médicament.
 
 - Dans les champs **Nom commercial** et **Principe actif**,
   commence à taper pour voir les correspondances. Sélectionner une
@@ -74,12 +75,39 @@ s'en sert pour auto-compléter le formulaire de médicament.
 - Le **pays de référence** se choisit dans *Paramètres → Général →
   Pays de référence*. Par défaut : Italie ; un changement prend
   effet à la prochaine ouverture du formulaire de médicament.
-- **Source des données et licence.** Le catalogue italien provient
-  des données ouvertes AIFA (Agenzia Italiana del Farmaco),
-  publiées sous licence Creative Commons Attribution 4.0
-  International (CC BY 4.0). La boîte de dialogue « À propos » et
-  le fichier `THIRD-PARTY-NOTICES.md` à la racine de l'installation
-  contiennent l'attribution complète.
+
+### Médicaments en autorisation centralisée UE
+
+Certains médicaments sont autorisés dans toute l'Union européenne
+via la *procédure centralisée*, gérée par l'Agence européenne des
+médicaments (EMA). MedReminder embarque le catalogue EMA EPAR —
+*European public assessment reports* — et affiche ces médicaments
+dans la même liste déroulante d'auto-complétion.
+
+- Si ton **pays de référence est un État membre de l'UE** (par
+  exemple l'Italie par défaut, ou un autre pays UE choisi dans
+  Paramètres), l'auto-complétion affiche **ton catalogue national
+  + les médicaments centralisés valables dans toute l'UE**,
+  mélangés dans la même liste. Rien à changer : les lignes UE
+  apparaissent d'elles-mêmes quand elles correspondent.
+- Si tu règles le **pays de référence sur `EU`**, l'auto-complétion
+  n'affiche **que** les médicaments centralisés UE, sans les lignes
+  nationales. Utile lorsque tu veux spécifiquement parcourir ou
+  lier un produit à son autorisation EMA.
+- Un médicament UE et un produit national équivalent peuvent
+  apparaître en même temps dans la liste ; les deux lignes ne sont
+  pas dédoublonnées. Choisis celle qui correspond à la boîte que tu
+  as en main.
+
+**Sources des données et conditions de réutilisation.** Le
+catalogue italien provient des données ouvertes AIFA (Agenzia
+Italiana del Farmaco), publiées sous licence Creative Commons
+Attribution 4.0 International (CC BY 4.0). Le catalogue UE
+provient du jeu de données EMA EPAR, réutilisé selon la note
+légale de l'EMA (décision 2011/833/UE sur la réutilisation des
+documents de la Commission). La boîte de dialogue « À propos » et
+le fichier `THIRD-PARTY-NOTICES.md` à la racine de l'installation
+contiennent les attributions complètes.
 
 ## Ajouter du stock (nouvelle boîte)
 

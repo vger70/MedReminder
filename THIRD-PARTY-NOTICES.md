@@ -28,14 +28,39 @@ separately) and is surfaced in the app's About dialog through the
   `TIPO_PROCEDURA = 'Omeopatico'` and
   `PRINCIPIO_ATTIVO = 'N.D.'` rows are dropped.
 
-### EMA — European Medicines Agency (reserved for a future release)
+### EMA — European Medicines Agency (EU centrally authorised)
 
-The EMA Article 57 dataset covers centrally authorised medicinal
-products valid in every EU / EEA member state. Its integration is
-planned in a future release (M3 in
-`docs/ANALYSIS-DRUG-CATALOGUE.md` §3.4). Once landed, this file will
-be updated with the corresponding attribution and the About dialog
-will surface it through `about.dataSources.emaArticle57`.
+- **Dataset:** EMA EPAR — *European public assessment reports*
+  (Medicines report, human medicines). Covers every medicinal
+  product authorised through the EU centralised procedure and
+  therefore valid across the EU / EEA. The `EU` catalogue in
+  MedReminder is populated from this dataset.
+- **Source:** <https://www.ema.europa.eu/en/medicines/download-medicine-data>
+  ("Medicines" report, exported as an Excel spreadsheet and
+  converted to CSV before being packaged into the shipped ZIP).
+- **Terms of use:** the EMA website content is public and may be
+  reused with attribution under EMA's legal notice
+  (<https://www.ema.europa.eu/en/about-us/legal-notice>), which
+  applies the European Commission's *Reuse of Commission documents*
+  policy (Commission Decision 2011/833/EU). Attribution required;
+  no endorsement implied.
+- **Attribution:** "European centrally authorised medicines: EMA
+  EPAR dataset (European public assessment reports)."
+- **Snapshot shipped with this build:** see
+  `src/MedReminder.Infrastructure/Assets/Catalogue/eu/ema-epar-<yyyymm>.zip`.
+  The `<yyyymm>` suffix identifies the export month and is written
+  to the `snapshot_version` column of every imported row.
+- **Modifications:** one documented row filter is applied at import
+  time (`docs/ANALYSIS-DRUG-CATALOGUE.md` §3.4) — rows whose
+  `Category` is not `Human` are dropped. Every imported row lands
+  with `country = 'EU'`; the EMA long form `European Union` is
+  normalised to the two-character `EU` code via `CountryCode.Parse`
+  and never reaches the database. Note that the shipped catalogue
+  is EPAR (centralised procedure), not the wider EMA Article 57
+  dataset which also carries per-country national authorisations —
+  a distinction preserved in the localisation key name
+  `about.dataSources.emaArticle57` (kept for compatibility with the
+  M2 dictionaries) and the surrounding docs.
 
 ---
 

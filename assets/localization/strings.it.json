@@ -375,5 +375,5 @@
   "settings.referenceCountry.label": "Paese di riferimento",
   "settings.referenceCountry.help": "Paese il cui catalogo farmaci viene interrogato dall'autocompletamento nel form della medicina. EU aggiunge i prodotti ad autorizzazione centralizzata.",
   "about.dataSources.aifa": "Catalogo farmaci italiano: dati aperti AIFA (CC BY 4.0).",
-  "about.dataSources.emaArticle57": "Prodotti ad autorizzazione centralizzata europea: dataset EMA Article 57 (previsto in una release futura)."
+  "about.dataSources.emaArticle57": "Medicinali europei ad autorizzazione centralizzata: dataset EMA EPAR (European public assessment reports), riutilizzato secondo i termini d'uso dei contenuti pubblici EMA."
 }

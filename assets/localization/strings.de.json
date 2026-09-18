@@ -374,5 +374,5 @@
   "settings.referenceCountry.label": "Referenzland",
   "settings.referenceCountry.help": "Land, dessen Arzneimittelkatalog von der Auto-Vervollständigung im Medikamentenformular abgefragt wird. EU ergänzt zentral zugelassene Produkte.",
   "about.dataSources.aifa": "Italienischer Arzneimittelkatalog: AIFA-Offene-Daten (CC BY 4.0).",
-  "about.dataSources.emaArticle57": "Europäische zentral zugelassene Produkte: EMA-Article-57-Datensatz (für eine zukünftige Version vorgesehen)."
+  "about.dataSources.emaArticle57": "Europäische zentral zugelassene Arzneimittel: EMA-EPAR-Datensatz (European public assessment reports), gemäß den EMA-Nutzungsbedingungen für öffentliche Inhalte weiterverwendet."
 }
