@@ -33,6 +33,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private readonly IBackupStateStore _backupState;
     private readonly IApplicationRestarter _restarter;
     private readonly ICurrentProfile _currentProfile;
+    private readonly IProfileRegistry _profileRegistry;
     private readonly ILocalizationService _loc;
     private readonly IReferenceCatalogueQueryService _catalogueQuery;
 
@@ -91,6 +92,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         IBackupStateStore backupState,
         IApplicationRestarter restarter,
         ICurrentProfile currentProfile,
+        IProfileRegistry profileRegistry,
         ILocalizationService localization,
         IReferenceCatalogueQueryService catalogueQuery)
     {
@@ -105,6 +107,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _backupState = backupState;
         _restarter = restarter;
         _currentProfile = currentProfile;
+        _profileRegistry = profileRegistry;
         _loc = localization;
         _catalogueQuery = catalogueQuery;
 
@@ -119,9 +122,20 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
         var tabs = new TabControl { Dock = DockStyle.Fill };
         tabs.TabPages.Add(BuildGeneralTab());
-        tabs.TabPages.Add(BuildEmailTab());
+        // Increment 15d (docs/ANALYSIS-MULTI-USER.md §7.4): SMTP and
+        // Backup tabs are admin-only. Every profile still needs to
+        // choose its own recipient — that lives in the new
+        // Notifications tab, visible to admins and users alike.
+        if (_currentProfile.IsAdmin)
+        {
+            tabs.TabPages.Add(BuildEmailTab());
+        }
+        tabs.TabPages.Add(BuildNotificationsTab());
         tabs.TabPages.Add(BuildStartupTab());
-        tabs.TabPages.Add(BuildBackupTab());
+        if (_currentProfile.IsAdmin)
+        {
+            tabs.TabPages.Add(BuildBackupTab());
+        }
 
         var closeButton = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
         var buttonPanel = new FlowLayoutPanel
@@ -339,10 +353,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // ------------------ Email tab ------------------
     private TabPage BuildEmailTab()
     {
+        // Admin-only tab (§7.4). The per-profile ToAddress moved to
+        // the Notifications tab in Increment 15d; the Email tab now
+        // only holds the global SMTP transport configuration.
         var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Email"));
         var current = _smtpMonitor.CurrentValue;
 
-        var currentNotifications = _notificationMonitor.CurrentValue;
         _hostBox = new TextBox { Dock = DockStyle.Fill, Text = current.Host };
         _portBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 1, Maximum = 65535, Value = current.Port > 0 ? current.Port : 587 };
         _useTlsBox = new CheckBox { Text = _loc.Get("Ui.SettingsDialog.Email.UseTls"), AutoSize = true, Checked = current.UseStartTls };
@@ -351,10 +367,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _clearPasswordBox = new CheckBox { Text = _loc.Get("Ui.SettingsDialog.Email.ClearPassword"), AutoSize = true };
         _fromBox = new TextBox { Dock = DockStyle.Fill, Text = current.FromAddress };
         _fromNameBox = new TextBox { Dock = DockStyle.Fill, Text = string.IsNullOrEmpty(current.FromDisplayName) ? "MedReminder" : current.FromDisplayName };
-        // ToAddress is per-profile (docs/ANALYSIS-MULTI-USER.md §7.1)
-        // — read from NotificationSettings, written to
-        // <DataDirectory>\notifications.settings.json on save.
-        _toBox = new TextBox { Dock = DockStyle.Fill, Text = currentNotifications.ToAddress };
         _timeoutBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 5, Maximum = 300, Value = current.TimeoutSeconds > 0 ? current.TimeoutSeconds : 30 };
 
         _tooltips.SetToolTip(_hostBox, _loc.Get("Ui.SettingsDialog.Tooltip.Host"));
@@ -365,7 +377,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _tooltips.SetToolTip(_clearPasswordBox, _loc.Get("Ui.SettingsDialog.Tooltip.ClearPassword"));
         _tooltips.SetToolTip(_fromBox, _loc.Get("Ui.SettingsDialog.Tooltip.From"));
         _tooltips.SetToolTip(_fromNameBox, _loc.Get("Ui.SettingsDialog.Tooltip.FromName"));
-        _tooltips.SetToolTip(_toBox, _loc.Get("Ui.SettingsDialog.Tooltip.To"));
         _tooltips.SetToolTip(_timeoutBox, _loc.Get("Ui.SettingsDialog.Tooltip.Timeout"));
 
         _passwordStatusLabel = new Label
@@ -392,7 +403,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
         AddRow(table, string.Empty, _clearPasswordBox);
         AddRow(table, _loc.Get("Ui.SettingsDialog.Email.From"), _fromBox);
         AddRow(table, _loc.Get("Ui.SettingsDialog.Email.FromName"), _fromNameBox);
-        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.To"), _toBox);
         AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Timeout"), _timeoutBox);
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(12) };
@@ -421,10 +431,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 FromDisplayName = _fromNameBox.Text.Trim(),
                 TimeoutSeconds = (int)_timeoutBox.Value,
             };
-            var notifications = new NotificationSettings
-            {
-                ToAddress = _toBox.Text.Trim(),
-            };
 
             // Password: if the user has typed something, encrypt it;
             // otherwise keep the current one. The "clear" checkbox
@@ -439,7 +445,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
             }
 
             WriteSmtpSettingsToDisk(settings);
-            WriteNotificationSettingsToDisk(notifications, _currentProfile.NotificationSettingsPath);
             _passwordStatusLabel.Text = _loc.Get(_credentialStore.HasPassword
                 ? "Ui.SettingsDialog.Email.PasswordStored"
                 : "Ui.SettingsDialog.Email.PasswordEmpty");
@@ -514,6 +519,85 @@ internal sealed class SettingsDialog : MedReminderFormBase
             WriteIndented = true,
         });
         File.WriteAllText(path, json);
+    }
+
+    // ------------------ Notifications tab (Increment 15d) ------------------
+    // Per-profile "where do the emails go" tab (§7.4). Visible to
+    // every profile: an admin sees it in addition to the Email tab
+    // (SMTP transport); a non-admin user sees only this tab and
+    // relies on the admin for the SMTP configuration itself.
+    private TabPage BuildNotificationsTab()
+    {
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Notifications"));
+        var current = _notificationMonitor.CurrentValue;
+
+        _toBox = new TextBox { Dock = DockStyle.Fill, Text = current.ToAddress };
+        _tooltips.SetToolTip(_toBox, _loc.Get("Ui.SettingsDialog.Tooltip.To"));
+
+        var saveButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.Save"),
+            AutoSize = true,
+            Height = 28,
+        };
+        saveButton.Click += (_, _) => SaveNotificationSettings();
+
+        var explanation = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = System.Drawing.Color.DarkGray,
+            Text = _loc.Get(_currentProfile.IsAdmin
+                ? "Ui.SettingsDialog.Notifications.NoteAdmin"
+                : "Ui.SettingsDialog.Notifications.NoteUser"),
+        };
+
+        var table = BuildFormTable();
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.To"), _toBox);
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            Padding = new Padding(12),
+        };
+        buttons.Controls.Add(saveButton);
+
+        var container = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16),
+            AutoScroll = true,
+        };
+        container.Controls.Add(table);
+        container.Controls.Add(buttons);
+        container.Controls.Add(explanation);
+
+        page.Controls.Add(container);
+        return page;
+    }
+
+    private void SaveNotificationSettings()
+    {
+        try
+        {
+            var settings = new NotificationSettings
+            {
+                ToAddress = _toBox.Text.Trim(),
+            };
+            WriteNotificationSettingsToDisk(settings, _currentProfile.NotificationSettingsPath);
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Notifications.Saved"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     // ------------------ Startup tab ------------------
@@ -846,13 +930,28 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private async Task ImportBackupAsync(Button button)
     {
-        using var dialog = new OpenFileDialog
+        using var fileDialog = new OpenFileDialog
         {
             Title = _loc.Get("Ui.SettingsDialog.Backup.FileDialog.Title"),
             Filter = _loc.Get("Ui.SettingsDialog.Backup.FileDialog.Filter"),
             CheckFileExists = true,
         };
-        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        if (fileDialog.ShowDialog(this) != DialogResult.OK) return;
+
+        // Increment 15d (docs/ANALYSIS-MULTI-USER.md §11.3): after
+        // picking the .db, show a chooser dialog with a dropdown of
+        // known profiles. Default to the profileId extracted from the
+        // filename (medreminder-<profileId>-YYYYMMDD-HHmmss.db) so
+        // the common case is a one-click restore into the profile
+        // the backup originally came from.
+        var profiles = _profileRegistry.ListProfiles();
+        var fileName = Path.GetFileName(fileDialog.FileName);
+        var extractedId = TryExtractProfileIdFromBackupName(fileName);
+        using var chooser = new RestoreIntoProfileDialog(
+            _loc, profiles, extractedId, _currentProfile.Id);
+        if (chooser.ShowDialog(this) != DialogResult.OK) return;
+        var targetProfileId = chooser.SelectedProfileId;
+        if (string.IsNullOrWhiteSpace(targetProfileId)) return;
 
         var confirm = MessageBox.Show(this,
             _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirm"),
@@ -863,18 +962,26 @@ internal sealed class SettingsDialog : MedReminderFormBase
         button.Enabled = false;
         try
         {
-            // Increment 15c: restore into the active profile.
-            // Increment 15d adds the "Restore into profile…"
-            // dropdown that lets the admin pick a different profile
-            // and skips RestartAndExit when the target is inactive
-            // (docs/ANALYSIS-MULTI-USER.md §11.3).
             await _backup.ImportProfileAsync(
-                _currentProfile.Id, dialog.FileName, CancellationToken.None);
+                targetProfileId, fileDialog.FileName, CancellationToken.None);
+
+            var isActive = string.Equals(
+                targetProfileId, _currentProfile.Id, StringComparison.Ordinal);
             MessageBox.Show(this,
-                _loc.Get("Ui.SettingsDialog.Backup.RestoreDone"),
+                _loc.Get(isActive
+                    ? "Ui.SettingsDialog.Backup.RestoreDone"
+                    : "Ui.SettingsDialog.Backup.RestoreDoneInactive"),
                 _loc.Get("Ui.SettingsDialog.Backup.ImportTitle"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
-            _restarter.RestartAndExit();
+
+            // §11.2: only restart when the imported profile is the
+            // active one — the process is still holding the old DB
+            // open through EF Core. Restoring an inactive profile
+            // does not touch the live connection.
+            if (isActive)
+            {
+                _restarter.RestartAndExit();
+            }
         }
         catch (Exception ex)
         {
@@ -885,6 +992,146 @@ internal sealed class SettingsDialog : MedReminderFormBase
         finally
         {
             button.Enabled = true;
+        }
+    }
+
+    // Parses "medreminder-<profileId>-YYYYMMDD-HHmmss.db" and returns
+    // the profileId, or null when the filename does not follow the
+    // convention (user-renamed backup, pre-15c filename, etc.).
+    private static string? TryExtractProfileIdFromBackupName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)) return null;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            fileName,
+            @"^medreminder-(?<profileId>[0-9a-fA-F]{32}|default)-\d{8}-\d{6}\.db$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups["profileId"].Value : null;
+    }
+
+    // Nested chooser dialog for the restore-into-profile UX (§11.3).
+    // Sits close to the caller to keep the wiring one-file; the
+    // logic is trivial enough that a separate top-level class would
+    // be overkill.
+    private sealed class RestoreIntoProfileDialog : MedReminderFormBase
+    {
+        private readonly ComboBox _combo;
+
+        public RestoreIntoProfileDialog(
+            ILocalizationService loc,
+            IReadOnlyList<Profile> profiles,
+            string? filenameProfileId,
+            string activeProfileId)
+        {
+            Text = loc.Get("Ui.SettingsDialog.Backup.RestoreInto.Title");
+            Width = 460;
+            Height = 260;
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MinimizeBox = false;
+            MaximizeBox = false;
+            ShowInTaskbar = false;
+            Font = new System.Drawing.Font("Segoe UI", 9.75F);
+
+            var prompt = new Label
+            {
+                AutoSize = true,
+                MaximumSize = new System.Drawing.Size(420, 0),
+                Location = new System.Drawing.Point(16, 12),
+                Text = loc.Get("Ui.SettingsDialog.Backup.RestoreInto.Prompt"),
+            };
+
+            _combo = new ComboBox
+            {
+                Location = new System.Drawing.Point(16, 56),
+                Width = 420,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+            };
+            foreach (var p in profiles)
+            {
+                var label = p.DisplayName;
+                if (string.Equals(p.Id, activeProfileId, StringComparison.Ordinal))
+                {
+                    label = loc.Get("Ui.SettingsDialog.Backup.RestoreInto.ActiveSuffix", label);
+                }
+                _combo.Items.Add(new ProfileItem(p.Id, label));
+            }
+            // Default selection: filename profileId first, then the
+            // active profile as a safe fallback.
+            int defaultIndex = -1;
+            if (!string.IsNullOrWhiteSpace(filenameProfileId))
+            {
+                for (int i = 0; i < _combo.Items.Count; i++)
+                {
+                    if (((ProfileItem)_combo.Items[i]!).Id
+                            .Equals(filenameProfileId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        defaultIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (defaultIndex < 0)
+            {
+                for (int i = 0; i < _combo.Items.Count; i++)
+                {
+                    if (((ProfileItem)_combo.Items[i]!).Id
+                            .Equals(activeProfileId, StringComparison.Ordinal))
+                    {
+                        defaultIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (defaultIndex >= 0) _combo.SelectedIndex = defaultIndex;
+
+            var extractedNote = new Label
+            {
+                AutoSize = true,
+                MaximumSize = new System.Drawing.Size(420, 0),
+                Location = new System.Drawing.Point(16, 96),
+                ForeColor = System.Drawing.Color.DarkGray,
+                Text = string.IsNullOrWhiteSpace(filenameProfileId)
+                    ? loc.Get("Ui.SettingsDialog.Backup.RestoreInto.NoFilenameHint")
+                    : loc.Get("Ui.SettingsDialog.Backup.RestoreInto.FilenameHint", filenameProfileId),
+            };
+
+            var okButton = new Button
+            {
+                Text = loc.Get("Common.Ok"),
+                Location = new System.Drawing.Point(256, 172),
+                Width = 90,
+            };
+            var cancelButton = new Button
+            {
+                Text = loc.Get("Common.Cancel"),
+                DialogResult = DialogResult.Cancel,
+                Location = new System.Drawing.Point(356, 172),
+                Width = 80,
+            };
+            okButton.Click += (_, _) =>
+            {
+                if (_combo.SelectedItem is ProfileItem picked)
+                {
+                    SelectedProfileId = picked.Id;
+                    DialogResult = DialogResult.OK;
+                    Close();
+                }
+            };
+            AcceptButton = okButton;
+            CancelButton = cancelButton;
+
+            Controls.Add(prompt);
+            Controls.Add(_combo);
+            Controls.Add(extractedNote);
+            Controls.Add(okButton);
+            Controls.Add(cancelButton);
+        }
+
+        public string? SelectedProfileId { get; private set; }
+
+        private sealed record ProfileItem(string Id, string Label)
+        {
+            public override string ToString() => Label;
         }
     }
 
