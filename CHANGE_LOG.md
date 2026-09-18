@@ -30,6 +30,73 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #18 — Reference catalogue foundations (M1)
+
+Link: [vger70/MedReminder#18](https://github.com/vger70/MedReminder/pull/18)
+**Status:** open
+Branch: `claude/sleepy-turing-s6fwzy`
+
+### Added
+
+- Domain (`net10.0`): `CountryCode` value object (normalises
+  `European Union` → `EU`, validates ISO 3166-1 alpha-2) and
+  `AtcCode` value object (7-character WHO ATC pattern), plus the
+  `ReferenceMedicine` and `ReferenceActiveIngredient` read models
+  under `src/MedReminder.Domain/Catalogue/`.
+- Application (`net10.0`): `IReferenceCatalogueQueryService`,
+  `IReferenceCatalogueImporter`, `ImportReport`,
+  `SearchCatalogueUseCase`, `LinkMedicineToReferenceUseCase`,
+  `ICountryProfileProvider` / `StaticCountryProfileProvider` (the
+  sole owner of the "national ∪ EU" filter — default `true`;
+  explicitly `false` for `GB` / `UK` per §12 point 7) and
+  `CatalogueFeatureOptions` (off by default).
+- Infrastructure (`net10.0-windows`): `AifaSnapshotParser` reads
+  `confezioni_fornitura.csv` joined on `CODICE_AIC` with
+  `PA_confezioni.csv` inside a ZIP archive, skipping
+  `TIPO_PROCEDURA = 'Omeopatico'` and `PRINCIPIO_ATTIVO = 'N.D.'`;
+  every row lands with `country = 'IT'`; `dispensing_regime` /
+  `link_leaflet` / `link_spc` are mapped from `FORNITURA` /
+  `LINK_FI` / `LINK_RCP`; 9-digit AIC leading zeros preserved.
+- `CsvReferenceCatalogueImporter` (transactional replace,
+  short-circuits on same recorded `snapshot_version`),
+  `SqliteReferenceCatalogueQueryService` (raw-SQL adapter hitting
+  the indexed `_norm` columns), `CatalogueTextNormalizer` (shared
+  lowercase + diacritics stripping) and an `EmbeddedSnapshotProvider`
+  stub (M2 will ship the first real snapshot).
+- DI wiring for the catalogue ports; feature flag registered off by
+  default, so no runtime behaviour changes.
+- Tests: 35 new Domain tests (`CountryCode`, `AtcCode`), 25 new
+  Application tests (fake-port union semantics for
+  `SearchCatalogueUseCase`, `StaticCountryProfileProvider`,
+  `LinkMedicineToReferenceUseCase`) and five new Infrastructure
+  test files (`CatalogueSchemaTests`, `AifaSnapshotParserTests`,
+  `CsvReferenceCatalogueImporterTests`,
+  `SqliteReferenceCatalogueQueryServiceTests`, `CatalogueFixtures`)
+  exercising the M0 fixture (168 kept / 29 Omeopatico skipped,
+  idempotent replay, newer-version replace, Aspirina M2M).
+
+### Changed
+
+- `Medicine` gains three optional catalogue fields — `NationalCode`,
+  `AtcCode`, `LinkedReferenceMedicineId` — surfaced on the entity
+  and mapped in `MedicineConfiguration` for fresh DBs.
+- `DatabaseInitializer.InitializeAsync` now applies the catalogue
+  DDL unconditionally on every boot (additive, idempotent — no
+  `EnsureCreated` shortcut for the catalogue tables per §2.4) and
+  adds the three Medicine columns to pre-existing DBs via
+  `AddColumnIfMissingAsync`.
+- `MedReminder.Infrastructure.Tests.csproj` copies the
+  `tests/fixtures/catalogue/*.csv` files as content to the test
+  output directory.
+
+### Docs
+
+- No changes to `docs/ANALYSIS-DRUG-CATALOGUE.md`. Four
+  implementation-time deviations are flagged in the PR description
+  for review before the design doc is edited.
+
+---
+
 ## PR #13 — Add drug reference catalogue design analysis (with M0 findings)
 
 Link: [vger70/MedReminder#13](https://github.com/vger70/MedReminder/pull/13)
