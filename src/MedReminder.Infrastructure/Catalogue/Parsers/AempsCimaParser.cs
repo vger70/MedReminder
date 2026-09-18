@@ -182,6 +182,12 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
     // A <si> can contain either a single <t> (plain string) or a
     // sequence of <r><t>…</t></r> (rich text runs). We concatenate the
     // text of every <t> descendant, dropping formatting.
+    //
+    // Uses ReadSubtree so the reader can never overshoot into the
+    // next <si> sibling. `ReadElementContentAsStringAsync` advances
+    // past the end tag it consumed; without the subtree isolation
+    // that would leave the main reader on the sibling element and
+    // any depth-based loop bound would silently keep processing it.
     private static async Task<string> ReadSharedStringItemAsync(
         XmlReader xr, CancellationToken cancellationToken)
     {
@@ -191,20 +197,16 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
         }
 
         var sb = new System.Text.StringBuilder();
-        var startDepth = xr.Depth;
-        while (await xr.ReadAsync())
+        using var sub = xr.ReadSubtree();
+        await sub.ReadAsync(); // move onto <si> inside the subtree
+        while (await sub.ReadAsync())
         {
-            if (xr.NodeType == XmlNodeType.EndElement && xr.Depth == startDepth)
+            if (sub.NodeType == XmlNodeType.Element
+                && sub.LocalName == "t"
+                && sub.NamespaceURI == SpreadsheetNs
+                && !sub.IsEmptyElement)
             {
-                break;
-            }
-            if (xr.NodeType == XmlNodeType.Element && xr.LocalName == "t" && xr.NamespaceURI == SpreadsheetNs)
-            {
-                if (xr.IsEmptyElement)
-                {
-                    continue;
-                }
-                sb.Append(await xr.ReadElementContentAsStringAsync());
+                sb.Append(await sub.ReadElementContentAsStringAsync());
             }
             cancellationToken.ThrowIfCancellationRequested();
         }
@@ -273,28 +275,29 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
             return;
         }
 
-        var startDepth = xr.Depth;
-        while (await xr.ReadAsync())
+        // ReadSubtree gives us a reader that cannot escape the <row>.
+        // The main reader is guaranteed to land past </row> when this
+        // helper returns, regardless of what any nested Read* call
+        // consumes internally.
+        using var rowReader = xr.ReadSubtree();
+        await rowReader.ReadAsync(); // move onto <row>
+        while (await rowReader.ReadAsync())
         {
-            if (xr.NodeType == XmlNodeType.EndElement && xr.Depth == startDepth)
-            {
-                return;
-            }
-            if (xr.NodeType != XmlNodeType.Element)
+            if (rowReader.NodeType != XmlNodeType.Element)
             {
                 continue;
             }
-            if (xr.LocalName != "c" || xr.NamespaceURI != SpreadsheetNs)
+            if (rowReader.LocalName != "c" || rowReader.NamespaceURI != SpreadsheetNs)
             {
                 continue;
             }
 
-            var reference = xr.GetAttribute("r"); // e.g. "A5"
-            var type = xr.GetAttribute("t");      // e.g. "s", "inlineStr", "str", "b", null
+            var reference = rowReader.GetAttribute("r"); // e.g. "A5"
+            var type = rowReader.GetAttribute("t");      // e.g. "s", "inlineStr", "str", "b", null
             var columnIndex = ColumnIndexFromReference(reference);
-            var value = xr.IsEmptyElement
+            var value = rowReader.IsEmptyElement
                 ? string.Empty
-                : await ReadCellValueAsync(xr, type, sharedStrings);
+                : await ReadCellValueAsync(rowReader, type, sharedStrings);
 
             if (columnIndex >= 0 && columnIndex < cells.Length)
             {
@@ -304,41 +307,42 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
         }
     }
 
+    // Reads one <c> cell. Uses ReadSubtree so the reader stays bounded
+    // by </c> — otherwise ReadElementContentAsStringAsync on <v> or
+    // <t> would advance the main reader past the end tag onto the
+    // next sibling <c>, silently swallowing the rest of the row.
     private static async Task<string> ReadCellValueAsync(
         XmlReader xr, string? type, List<string> sharedStrings)
     {
-        var startDepth = xr.Depth;
         string? vText = null;
         var sb = new System.Text.StringBuilder(); // for inline strings
 
-        while (await xr.ReadAsync())
+        using var cellReader = xr.ReadSubtree();
+        await cellReader.ReadAsync(); // move onto <c>
+        while (await cellReader.ReadAsync())
         {
-            if (xr.NodeType == XmlNodeType.EndElement && xr.Depth == startDepth)
-            {
-                break;
-            }
-            if (xr.NodeType != XmlNodeType.Element)
+            if (cellReader.NodeType != XmlNodeType.Element)
             {
                 continue;
             }
-            if (xr.NamespaceURI != SpreadsheetNs)
+            if (cellReader.NamespaceURI != SpreadsheetNs)
             {
                 continue;
             }
 
-            switch (xr.LocalName)
+            switch (cellReader.LocalName)
             {
                 case "v":
-                    if (!xr.IsEmptyElement)
+                    if (!cellReader.IsEmptyElement)
                     {
-                        vText = await xr.ReadElementContentAsStringAsync();
+                        vText = await cellReader.ReadElementContentAsStringAsync();
                     }
                     break;
                 case "is":
                     // Inline string: <is><t>value</t></is> or <is><r><t>…</t></r>…</is>
-                    if (!xr.IsEmptyElement)
+                    if (!cellReader.IsEmptyElement)
                     {
-                        await AppendInlineTextsAsync(xr, sb);
+                        await AppendInlineTextsAsync(cellReader, sb);
                     }
                     break;
                 default:
@@ -367,19 +371,16 @@ internal sealed class AempsCimaParser : IReferenceSnapshotParser
 
     private static async Task AppendInlineTextsAsync(XmlReader xr, System.Text.StringBuilder sb)
     {
-        var startDepth = xr.Depth;
-        while (await xr.ReadAsync())
+        using var isReader = xr.ReadSubtree();
+        await isReader.ReadAsync(); // move onto <is>
+        while (await isReader.ReadAsync())
         {
-            if (xr.NodeType == XmlNodeType.EndElement && xr.Depth == startDepth)
+            if (isReader.NodeType == XmlNodeType.Element
+                && isReader.LocalName == "t"
+                && isReader.NamespaceURI == SpreadsheetNs
+                && !isReader.IsEmptyElement)
             {
-                return;
-            }
-            if (xr.NodeType == XmlNodeType.Element
-                && xr.LocalName == "t"
-                && xr.NamespaceURI == SpreadsheetNs
-                && !xr.IsEmptyElement)
-            {
-                sb.Append(await xr.ReadElementContentAsStringAsync());
+                sb.Append(await isReader.ReadElementContentAsStringAsync());
             }
         }
     }
