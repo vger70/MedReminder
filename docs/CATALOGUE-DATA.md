@@ -475,9 +475,60 @@ Mapping notes:
 
 ---
 
-## 7. Refresh cadence for other countries
+## 7. Suspended countries (M4b: UK / MHRA and DE / BfArM)
 
-Not shipping yet — MHRA (`uk`) and BfArM (`de`) remain the last two
-target countries on the M4 shortlist. Each will gain its own
-subsection here when implemented; the mechanical steps will mirror
-§2 with the source URL and terms adjusted.
+Not shipping. Both remaining target countries on the M4 shortlist
+— MHRA (`gb`) and BfArM (`de`) — are **suspended**, tracked in
+[`docs/ANALYSIS-DRUG-CATALOGUE.md`](ANALYSIS-DRUG-CATALOGUE.md) §3.5
+under "M4b status" and closed in PR #21. Nothing under
+`Assets/Catalogue/gb/` or `Assets/Catalogue/de/` is committed; the
+boot-time importer iterates over `{ IT, EU, ES, FR }` only.
+
+The suspension is a redistribution-licence problem, not an
+engineering one. §3.5 point 2 of the analysis is a hard gate:
+MedReminder ships the reference catalogue inside the binary, so
+redistribution must be explicitly permitted by whatever licence the
+upstream portal declares at retrieval time. Both agencies currently
+fail that gate:
+
+- **UK / MHRA.** The `products.mhra.gov.uk` portal exposes the
+  Products dictionary through a search UI and per-product HTML
+  pages, not through a bulk structured export that could be dropped
+  into `Assets/Catalogue/gb/`. The realistic alternative — NHS BSA
+  *Dictionary of Medicines and Devices* (dm+d) — carries a
+  separate NHS BSA licence that does not permit silent
+  redistribution inside a third-party binary.
+- **DE / BfArM.** The public medicines registry (AMIS-öffentlich,
+  now AMIce Public) has changed layout multiple times and the
+  current portal does not surface a stable bulk export **with a
+  licence declared at the point of download**. The Datenlizenz
+  Deutschland – Namensnennung 2.0 policy that would apply is not
+  attached to the download itself, and past bulk endpoints have
+  been withdrawn without notice.
+
+Reopening either country requires **all** of the following, in one
+PR:
+
+1. A specific bulk endpoint URL that returns a structured export
+   (CSV, TSV, XML or XLSX — no HTML-scraping) covering the fields
+   listed in §3.5 (national code, commercial name, active
+   ingredients, ATC where available, form, dosage, MAH, marketing
+   status, homoeopathic filter signal for DE).
+2. A licence declared **on the download page** that permits
+   redistribution inside the shipped MedReminder binary with
+   attribution — OGL 3.0 for the UK, DL-DE-BY-2.0 (or an
+   equivalent open licence) for Germany. A licence inferred from
+   policy but absent from the landing page is not enough.
+3. A `<yyyymm>` snapshot ZIP dropped at
+   `src/MedReminder.Infrastructure/Assets/Catalogue/<gb|de>/`,
+   with fixture and parser mirroring §4.3 (AEMPS) and §4.4 (BDPM)
+   respectively.
+
+Until then the section stays as a checklist. When both gates open
+the mechanical refresh procedure will land here, mirroring §5 and
+§6 with the agency-specific URL, encoding and column layout
+substituted. `IncludesEuCentralised` handling for the two
+countries is already encoded in `StaticCountryProfileProvider`
+(UK/GB explicitly `false`, DE defaulting to `true`), so nothing in
+the country-profile layer needs to change when the milestones
+reopen.

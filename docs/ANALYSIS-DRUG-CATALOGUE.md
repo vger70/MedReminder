@@ -438,14 +438,60 @@ country. Ordering is deferred until M2 is live; ES and FR are the
 natural first candidates given the maturity of their open-data
 offerings.
 
+**M4 status:**
+
+| Country | Agency        | Status                     | Shipped as of                          |
+|---------|---------------|----------------------------|----------------------------------------|
+| ES      | AEMPS / CIMA  | Shipped (M4, PR #20)       | `Assets/Catalogue/es/aemps-<yyyymm>.zip` |
+| FR      | ANSM / BDPM   | Shipped (M4, PR #20)       | `Assets/Catalogue/fr/bdpm-<yyyymm>.zip`  |
+| UK / GB | MHRA          | **Suspended (M4b, PR #21)**| —                                      |
+| DE      | BfArM         | **Suspended (M4b, PR #21)**| —                                      |
+
+**Why M4b is suspended.** MedReminder ships the reference catalogue
+inside the binary, so §3.5 point 2 (verify the licence allows
+redistribution inside the shipped build, otherwise do not proceed)
+is a hard gate. Both remaining target countries fail that gate as
+of 2026-09:
+
+- **UK / MHRA.** The `products.mhra.gov.uk` portal exposes the
+  Products dictionary through a search UI and per-product HTML
+  pages, not through a bulk structured export. The realistic
+  alternative — NHS BSA's *Dictionary of Medicines and Devices*
+  (dm+d) — has the coverage MedReminder would need but is
+  distributed under a NHS BSA licence that requires a separate
+  agreement and does not allow silent redistribution inside a
+  third-party product binary. OpenPrescribing UK is derivative,
+  not authoritative, and inherits the same underlying licence
+  question. Until a bulk MHRA export appears (or NHS BSA changes
+  their licensing stance) M4b for UK stays closed.
+- **DE / BfArM.** The German public-medicines registry has been
+  distributed under several successive names (AMIS-öffentlich,
+  now AMIce Public) and the layout has changed shape multiple
+  times. At the time of writing the current portal does not offer
+  a stable bulk export with a clearly declared open-data licence
+  at the point of download — the "Datenlizenz Deutschland –
+  Namensnennung 2.0" that would apply by policy is not surfaced on
+  the download landing page, and BfArM has in the past withdrawn
+  bulk endpoints without notice. Until both prerequisites are met
+  simultaneously (stable bulk endpoint + licence declared at
+  retrieval time), M4b for DE stays closed.
+
+Reopening either country requires that the corresponding gate is
+met with a specific URL, a specific ZIP layout and a specific
+licence text captured at retrieval time. `IncludesEuCentralised`
+handling for both is already encoded in
+`StaticCountryProfileProvider` (UK/GB explicitly `false`, DE
+defaulting to `true`), so no country-profile work is blocking. See
+`docs/CATALOGUE-DATA.md` §7 for the operational rationale mirror.
+
 > **UK is a special case.** Since the UK left the EU and EMA, an
 > EMA `EU` centralised authorisation is no longer valid for the
 > Great Britain market (Northern Ireland still follows EU rules
-> under the Windsor Framework). The UK importer must ingest MHRA's
-> own product register, and for country `UK` the query must
-> **not** union with `EU` rows (see §12 point 7). This is the only
-> country in the confirmed target set that breaks the default
-> "national ∪ EU" rule.
+> under the Windsor Framework). The UK importer, when it lands,
+> must ingest MHRA's own product register, and for country `GB`
+> (or its `UK` alias) the query must **not** union with `EU` rows
+> (see §12 point 7). This is the only country in the confirmed
+> target set that breaks the default "national ∪ EU" rule.
 
 ### 3.6 M5 — Snapshot online updater (optional)
 
