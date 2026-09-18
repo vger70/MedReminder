@@ -23,6 +23,7 @@ namespace MedReminder.UI.Forms;
 internal sealed class SettingsDialog : MedReminderFormBase
 {
     private readonly IOptionsMonitor<SmtpSettings> _smtpMonitor;
+    private readonly IOptionsMonitor<NotificationSettings> _notificationMonitor;
     private readonly IOptionsMonitor<BackupSettings> _backupMonitor;
     private readonly IOptionsMonitor<UserSettings> _userMonitor;
     private readonly ISmtpCredentialStore _credentialStore;
@@ -31,6 +32,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private readonly IBackupService _backup;
     private readonly IBackupStateStore _backupState;
     private readonly IApplicationRestarter _restarter;
+    private readonly ICurrentProfile _currentProfile;
     private readonly ILocalizationService _loc;
     private readonly IReferenceCatalogueQueryService _catalogueQuery;
 
@@ -79,6 +81,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     public SettingsDialog(
         IOptionsMonitor<SmtpSettings> smtpMonitor,
+        IOptionsMonitor<NotificationSettings> notificationMonitor,
         IOptionsMonitor<BackupSettings> backupMonitor,
         IOptionsMonitor<UserSettings> userMonitor,
         ISmtpCredentialStore credentialStore,
@@ -87,10 +90,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
         IBackupService backup,
         IBackupStateStore backupState,
         IApplicationRestarter restarter,
+        ICurrentProfile currentProfile,
         ILocalizationService localization,
         IReferenceCatalogueQueryService catalogueQuery)
     {
         _smtpMonitor = smtpMonitor;
+        _notificationMonitor = notificationMonitor;
         _backupMonitor = backupMonitor;
         _userMonitor = userMonitor;
         _credentialStore = credentialStore;
@@ -99,6 +104,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _backup = backup;
         _backupState = backupState;
         _restarter = restarter;
+        _currentProfile = currentProfile;
         _loc = localization;
         _catalogueQuery = catalogueQuery;
 
@@ -336,6 +342,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Email"));
         var current = _smtpMonitor.CurrentValue;
 
+        var currentNotifications = _notificationMonitor.CurrentValue;
         _hostBox = new TextBox { Dock = DockStyle.Fill, Text = current.Host };
         _portBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 1, Maximum = 65535, Value = current.Port > 0 ? current.Port : 587 };
         _useTlsBox = new CheckBox { Text = _loc.Get("Ui.SettingsDialog.Email.UseTls"), AutoSize = true, Checked = current.UseStartTls };
@@ -344,7 +351,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _clearPasswordBox = new CheckBox { Text = _loc.Get("Ui.SettingsDialog.Email.ClearPassword"), AutoSize = true };
         _fromBox = new TextBox { Dock = DockStyle.Fill, Text = current.FromAddress };
         _fromNameBox = new TextBox { Dock = DockStyle.Fill, Text = string.IsNullOrEmpty(current.FromDisplayName) ? "MedReminder" : current.FromDisplayName };
-        _toBox = new TextBox { Dock = DockStyle.Fill, Text = current.ToAddress };
+        // ToAddress is per-profile (docs/ANALYSIS-MULTI-USER.md §7.1)
+        // — read from NotificationSettings, written to
+        // <DataDirectory>\notifications.settings.json on save.
+        _toBox = new TextBox { Dock = DockStyle.Fill, Text = currentNotifications.ToAddress };
         _timeoutBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 5, Maximum = 300, Value = current.TimeoutSeconds > 0 ? current.TimeoutSeconds : 30 };
 
         _tooltips.SetToolTip(_hostBox, _loc.Get("Ui.SettingsDialog.Tooltip.Host"));
@@ -409,8 +419,11 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 Username = _usernameBox.Text.Trim(),
                 FromAddress = _fromBox.Text.Trim(),
                 FromDisplayName = _fromNameBox.Text.Trim(),
-                ToAddress = _toBox.Text.Trim(),
                 TimeoutSeconds = (int)_timeoutBox.Value,
+            };
+            var notifications = new NotificationSettings
+            {
+                ToAddress = _toBox.Text.Trim(),
             };
 
             // Password: if the user has typed something, encrypt it;
@@ -426,6 +439,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             }
 
             WriteSmtpSettingsToDisk(settings);
+            WriteNotificationSettingsToDisk(notifications, _currentProfile.NotificationSettingsPath);
             _passwordStatusLabel.Text = _loc.Get(_credentialStore.HasPassword
                 ? "Ui.SettingsDialog.Email.PasswordStored"
                 : "Ui.SettingsDialog.Email.PasswordEmpty");
@@ -480,6 +494,21 @@ internal sealed class SettingsDialog : MedReminderFormBase
     {
         var payload = new { Smtp = settings };
         var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "smtp.settings.json");
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+        });
+        File.WriteAllText(path, json);
+    }
+
+    // Writes the per-profile notifications.settings.json. Introduced
+    // in Increment 15c (docs/ANALYSIS-MULTI-USER.md §7.1) alongside
+    // the SmtpSettings.ToAddress removal.
+    private static void WriteNotificationSettingsToDisk(
+        NotificationSettings settings, string path)
+    {
+        var payload = new { Notifications = settings };
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
         {
             WriteIndented = true,
@@ -748,7 +777,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
         button.Enabled = false;
         try
         {
-            var file = await _backup.ExportAsync(directory, CancellationToken.None);
+            var file = await _backup.ExportProfileAsync(
+                _currentProfile.Id, directory, CancellationToken.None);
             var retention = (int)_backupRetentionBox.Value;
             var pruned = retention > 0
                 ? await _backup.PruneOldBackupsAsync(directory, retention, CancellationToken.None)
@@ -795,7 +825,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
         button.Enabled = false;
         try
         {
-            var file = await _backup.ExportAsync(dialog.SelectedPath, CancellationToken.None);
+            var file = await _backup.ExportProfileAsync(
+                _currentProfile.Id, dialog.SelectedPath, CancellationToken.None);
             MessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Backup.RunSuccess", file),
                 _loc.Get("Ui.SettingsDialog.Backup.ExportTitle"),
@@ -832,7 +863,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
         button.Enabled = false;
         try
         {
-            await _backup.ImportAsync(dialog.FileName, CancellationToken.None);
+            // Increment 15c: restore into the active profile.
+            // Increment 15d adds the "Restore into profile…"
+            // dropdown that lets the admin pick a different profile
+            // and skips RestartAndExit when the target is inactive
+            // (docs/ANALYSIS-MULTI-USER.md §11.3).
+            await _backup.ImportProfileAsync(
+                _currentProfile.Id, dialog.FileName, CancellationToken.None);
             MessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Backup.RestoreDone"),
                 _loc.Get("Ui.SettingsDialog.Backup.ImportTitle"),

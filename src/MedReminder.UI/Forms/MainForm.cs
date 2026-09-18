@@ -844,6 +844,7 @@ internal sealed class MainForm : MedReminderFormBase
             using var scope = _scopeFactory.CreateScope();
             using var dialog = new SettingsDialog(
                 scope.ServiceProvider.GetRequiredService<IOptionsMonitor<SmtpSettings>>(),
+                scope.ServiceProvider.GetRequiredService<IOptionsMonitor<NotificationSettings>>(),
                 scope.ServiceProvider.GetRequiredService<IOptionsMonitor<BackupSettings>>(),
                 scope.ServiceProvider.GetRequiredService<IOptionsMonitor<UserSettings>>(),
                 scope.ServiceProvider.GetRequiredService<ISmtpCredentialStore>(),
@@ -852,6 +853,7 @@ internal sealed class MainForm : MedReminderFormBase
                 scope.ServiceProvider.GetRequiredService<IBackupService>(),
                 scope.ServiceProvider.GetRequiredService<IBackupStateStore>(),
                 scope.ServiceProvider.GetRequiredService<IApplicationRestarter>(),
+                scope.ServiceProvider.GetRequiredService<ICurrentProfile>(),
                 scope.ServiceProvider.GetRequiredService<ILocalizationService>(),
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Catalogue.IReferenceCatalogueQueryService>());
             dialog.ShowDialog(this);

@@ -10,7 +10,7 @@ namespace MedReminder.Infrastructure.Profiles;
 // In Increment 15a nobody registers it in the DI container: the
 // class is available and unit-testable, but the app still boots as
 // single-user. Wiring happens in 15c.
-internal sealed class CurrentProfile : ICurrentProfile
+public sealed class CurrentProfile : ICurrentProfile
 {
     public CurrentProfile(Profile profile)
     {
