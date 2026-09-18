@@ -212,4 +212,121 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
 
         countries.Select(c => c.Value).Should().Contain(new[] { "IT", "EU" });
     }
+
+    // --- M4: ES + FR cross-country search ---------------------------
+
+    private static readonly CountryCode Spain = CountryCode.Parse("ES");
+    private static readonly CountryCode France = CountryCode.Parse("FR");
+
+    [Fact]
+    public async Task Search_from_userCountry_ES_returns_ES_and_EU_rows_after_loading_ES_and_EU()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[]
+            {
+                new AifaSnapshotParser(),
+                new EmaEparParser(),
+                new AempsCimaParser(),
+                new AnsmBdpmParser(),
+            },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+        await using (var spain = CatalogueFixtures.BuildAempsSnapshotStream())
+        {
+            await importer.ImportAsync(spain, Spain, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+
+        // Broad prefix "a" hits both ES rows (many, since the AEMPS
+        // fixture starts with brands like AMOXICILINA, ATORVASTATINA,
+        // AUGMENTINE) and EU rows. Assertion: every returned row is
+        // either ES or EU, and both country codes are present.
+        var hits = await sut.SearchByCommercialNameAsync(
+            prefix: "a",
+            countryScope: new[] { Spain, EU },
+            limit: 50,
+            cancellationToken: CancellationToken.None);
+
+        hits.Should().NotBeEmpty();
+        hits.Should().OnlyContain(h => h.Country.Value == "ES" || h.Country.Value == "EU");
+        var countries = hits.Select(h => h.Country.Value).Distinct().ToList();
+        countries.Should().Contain("ES");
+        countries.Should().Contain("EU");
+    }
+
+    [Fact]
+    public async Task Search_from_userCountry_FR_returns_FR_and_EU_rows_after_loading_FR_and_EU()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[]
+            {
+                new AifaSnapshotParser(),
+                new EmaEparParser(),
+                new AempsCimaParser(),
+                new AnsmBdpmParser(),
+            },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+        await using (var france = CatalogueFixtures.BuildBdpmSnapshotStream())
+        {
+            await importer.ImportAsync(france, France, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+
+        // "a" broadly matches BDPM rows starting with A (ABACAVIR,
+        // AMOXICILLINE, ATORVASTATINE, ...) as well as EU rows.
+        var hits = await sut.SearchByCommercialNameAsync(
+            prefix: "a",
+            countryScope: new[] { France, EU },
+            limit: 50,
+            cancellationToken: CancellationToken.None);
+
+        hits.Should().NotBeEmpty();
+        hits.Should().OnlyContain(h => h.Country.Value == "FR" || h.Country.Value == "EU");
+        var countries = hits.Select(h => h.Country.Value).Distinct().ToList();
+        countries.Should().Contain("FR");
+        countries.Should().Contain("EU");
+    }
+
+    [Fact]
+    public async Task Available_countries_lists_all_four_after_loading_IT_EU_ES_FR()
+    {
+        var importer = new CsvReferenceCatalogueImporter(
+            _fixture.CreateContext(),
+            new IReferenceSnapshotParser[]
+            {
+                new AifaSnapshotParser(),
+                new EmaEparParser(),
+                new AempsCimaParser(),
+                new AnsmBdpmParser(),
+            },
+            TimeProvider.System);
+        await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
+        {
+            await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
+        }
+        await using (var spain = CatalogueFixtures.BuildAempsSnapshotStream())
+        {
+            await importer.ImportAsync(spain, Spain, "202609", CancellationToken.None);
+        }
+        await using (var france = CatalogueFixtures.BuildBdpmSnapshotStream())
+        {
+            await importer.ImportAsync(france, France, "202609", CancellationToken.None);
+        }
+
+        var sut = new SqliteReferenceCatalogueQueryService(_fixture.CreateContext());
+        var countries = await sut.ListAvailableCountriesAsync(CancellationToken.None);
+
+        countries.Select(c => c.Value).Should().Contain(new[] { "IT", "EU", "ES", "FR" });
+    }
 }
