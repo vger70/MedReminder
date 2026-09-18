@@ -30,10 +30,60 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #21 — Reference catalogue: suspend M4b (UK / DE) — sources not readily obtainable
+
+Link: [vger70/MedReminder#21](https://github.com/vger70/MedReminder/pull/21)
+**Status:** open
+Branch: `M4b_UK_DE_national_catalogues`
+
+Documents the decision to **suspend M4b** (the UK MHRA and Germany
+BfArM national catalogues described in
+[`docs/ANALYSIS-DRUG-CATALOGUE.md`](docs/ANALYSIS-DRUG-CATALOGUE.md)
+§3.5) for lack of an easily obtainable, licence-clear bulk source.
+No code, snapshots, tests or localisation keys change: the shipped
+country set stays at IT + EU + ES + FR (M4 baseline).
+
+### Docs
+
+- `docs/ANALYSIS-DRUG-CATALOGUE.md` §3.5 — M4 status table extended
+  with a "Suspended" row for UK and DE, spelling out why:
+  - **UK / MHRA:** the `products.mhra.gov.uk` portal does not offer
+    a bulk structured export of the Products dictionary. The
+    realistic alternative (NHS BSA dm+d) ships under a licence that
+    is not compatible with redistribution inside the shipped binary
+    without a separate agreement. Post-Brexit UK is also the only
+    country in the confirmed target set that would need
+    `IncludesEuCentralised = false` — the override is already
+    encoded in `StaticCountryProfileProvider.NonEuCovered` and stays
+    dormant.
+  - **DE / BfArM:** the AMIS-öffentlich / AMIce distribution has
+    changed shape multiple times, and the current portal does not
+    surface a stable bulk export with a clearly declared open-data
+    licence at the point of download. Reopening the milestone
+    requires that both prerequisites are met simultaneously.
+- `docs/CATALOGUE-DATA.md` §7 — rewritten from "not shipping yet"
+  to "suspended", with the rationale mirroring the analysis note
+  and pointers back to the criteria that would need to be met to
+  reopen the milestone.
+- No changes to `THIRD-PARTY-NOTICES.md`: nothing new is
+  redistributed. No changes to the About dialog, localisation
+  dictionaries, parsers, tests or embedded assets.
+
+### Changed
+
+- `CHANGE_LOG.md` — the PR #20 entry (M4 ES + FR) is transitioned
+  from `open` to `merged (2026-09-18)` in the same commit that
+  prepends this entry, per the "update the entry when the PR's
+  scope changes materially, and mark it merged / closed once the
+  PR resolves" rule at the top of this file. PR #20 landed on
+  `main` on 2026-09-18 as commit `ead9f5d`.
+
+---
+
 ## PR #20 — Reference catalogue: AEMPS (Spain) + BDPM (France) national catalogues (M4)
 
 Link: [vger70/MedReminder#20](https://github.com/vger70/MedReminder/pull/20)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `M4_Additional_national_catalogues`
 
 Implements **M4** of the drug reference catalogue described in
