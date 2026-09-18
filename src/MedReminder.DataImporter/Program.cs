@@ -20,10 +20,11 @@ internal static class Program
     {
         if (args.Length == 0 || args[0] is "--help" or "-h") { PrintHelp(); return Success; }
         if (args[0] is "--version" or "-v") { Console.WriteLine(typeof(Program).Assembly.GetName().Version); return Success; }
-        if (args[0] is not ("import-aifa" or "validate-aifa")) { Console.Error.WriteLine("Unknown command."); PrintHelp(); return InvalidCommand; }
+        if (args[0] is not ("import-aifa" or "validate-aifa" or "export-sqlite")) { Console.Error.WriteLine("Unknown command."); PrintHelp(); return InvalidCommand; }
 
         try
         {
+            if (args[0] == "export-sqlite") return await ExportSqliteAsync(args.Skip(1).ToArray());
             var files = ParseFiles(args.Skip(1).ToArray(), out var connectionOverride);
             using var cancellation = new CancellationTokenSource();
             Console.CancelKeyPress += (_, eventArgs) => { eventArgs.Cancel = true; cancellation.Cancel(); };
@@ -56,9 +57,36 @@ internal static class Program
         if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentException("A PostgreSQL connection string is required. Use --connection-string or ConnectionStrings__MedReminder.");
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(new ImportRepository(connectionString, options));
+        builder.Services.AddSingleton(provider => new SqliteExporter(
+            connectionString,
+            options,
+            provider.GetRequiredService<ILogger<SqliteExporter>>()));
         builder.Services.AddSingleton<AifaCsvLoader>();
         builder.Services.AddSingleton<AifaImporter>();
         return builder.Build();
+    }
+
+    private static async Task<int> ExportSqliteAsync(string[] args)
+    {
+        string? output = null;
+        string? connectionString = null;
+        var overwrite = false;
+        for (var index = 0; index < args.Length; index++)
+        {
+            switch (args[index])
+            {
+                case "--overwrite": overwrite = true; break;
+                case "--output" when ++index < args.Length: output = args[index]; break;
+                case "--connection-string" when ++index < args.Length: connectionString = args[index]; break;
+                default: throw new ArgumentException($"Unknown option or missing value: '{args[index]}'.");
+            }
+        }
+        using var cancellation = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, eventArgs) => { eventArgs.Cancel = true; cancellation.Cancel(); };
+        using var host = BuildHost(connectionString);
+        await host.Services.GetRequiredService<SqliteExporter>().ExportAsync(output ?? string.Empty, overwrite, cancellation.Token);
+        Console.WriteLine($"SQLite pharmaceutical catalog created: {Path.GetFullPath(output!)}");
+        return Success;
     }
 
     private static AifaImportFiles ParseFiles(string[] args, out string? connectionString)
@@ -86,6 +114,7 @@ internal static class Program
         Commands:
           import-aifa   Load, validate and normalize AIFA CSV files into PostgreSQL.
           validate-aifa Load and validate AIFA CSV files without modifying core.
+          export-sqlite Export the PostgreSQL pharmaceutical catalog to a separate SQLite file.
 
         Required options:
           --packages <path>      confezioni_fornitura.csv
@@ -94,6 +123,7 @@ internal static class Program
 
         Optional:
           --connection-string <connection string>
+          export-sqlite --output <path> [--overwrite] [--connection-string <connection string>]
           --help, -h
           --version, -v
         """);

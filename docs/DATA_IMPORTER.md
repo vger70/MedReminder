@@ -39,9 +39,14 @@ dotnet run --project src/MedReminder.DataImporter -- import-aifa `
   --packages 'C:\AIFA\confezioni_fornitura.csv' `
   --ingredients 'C:\AIFA\PA_confezioni.csv' `
   --atc 'C:\AIFA\atc.csv'
+
+dotnet run --project src/MedReminder.DataImporter -- export-sqlite `
+  --output 'C:\MedReminder\medreminder-pharma.db'
 ```
 
 `validate-aifa` creates an import run and staging records for diagnostics, but never writes `core`. `import-aifa` normalizes only after staging validation has passed.
+
+`export-sqlite` copies the current PostgreSQL pharmaceutical catalog to a separate SQLite database. It never reads from or writes to the WinForms application database (`medreminder.db`). The destination must not already exist unless `--overwrite` is specified.
 
 ## Import flow and recovery
 
