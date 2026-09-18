@@ -32,7 +32,7 @@ namespace MedReminder.Infrastructure.Profiles;
 // processes from mutating the file from the same Windows session
 // (§10.1). The internal lock guards concurrent calls from within
 // the same process (the UI thread and background services).
-internal sealed class ProfileRegistry : IProfileRegistry
+public sealed class ProfileRegistry : IProfileRegistry
 {
     private const int CurrentSchemaVersion = 1;
     private const int PinIterations = 100_000;

@@ -22,7 +22,7 @@ namespace MedReminder.Infrastructure.Migration;
 // dropped, profiles.json dropped). The pre-migration backup at
 // backups\pre-migration-YYYYMMDD-HHmmss\ is never touched again
 // after step 1 — the user has to clean it up manually (§14 F).
-internal sealed class MigrationV1toV2
+public sealed class MigrationV1toV2
 {
     private const string DatabaseFileName = "medreminder.db";
     private const string SmtpSettingsFileName = "smtp.settings.json";

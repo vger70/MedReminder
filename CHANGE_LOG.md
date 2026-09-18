@@ -30,6 +30,130 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #24 — Increment 15c: multi-profile boot flow and per-profile services
+
+Link: [vger70/MedReminder#24](https://github.com/vger70/MedReminder/pull/24)
+**Status:** open
+Branch: `claude/incremento-15c` (stacked on `claude/incremento-15b` from PR #23)
+
+Third and largest sub-increment of the multi-user work
+(`docs/ANALYSIS-MULTI-USER.md` §4, §7, §11, §15c). Wires the
+15a / 15b groundwork into the boot flow. After this PR the app
+opens with a picker when more than one profile exists, runs the
+first-run wizard on a clean install, gates the DB and per-profile
+recipient behind `ICurrentProfile`, backs up every profile on each
+successful automatic-backup tick, and enforces the profile PIN
+when one is set. Admin/user UI gating remains for 15d; PIN prompt
+polish and user-guide entries remain for 15e.
+
+### Added
+
+- `MedReminder.UI.Forms.FirstRunWizardForm` — mandatory wizard
+  shown when the registry is empty. Collects the admin name and
+  an optional PIN, then creates the profile through
+  `IProfileRegistry.Create` (which forces `Role = Admin` on an
+  empty registry). Cannot be dismissed with the window `X`;
+  Exit closes the app (§12.3).
+- `MedReminder.UI.Forms.ProfilePickerForm` — boot picker shown
+  when more than one profile exists. `ListView` with name / role
+  badge / `dd/MM HH:mm` last-used (decision §14 D), sorted by
+  `LastUsedAt` descending, `ActiveProfileIdHint` pre-selected.
+- `MedReminder.UI.Forms.PinPromptForm` — three in-memory attempts
+  (§8.3). Returns `DialogResult.Abort` on lockout so the caller
+  bails out of the boot flow. Tooltip already carries the
+  "friction, not security" note; the polish pass lands in 15e.
+
+### Changed
+
+- `IBackupService` — replaced `ExportAsync(dir, ct)` /
+  `ImportAsync(src, ct)` with per-profile
+  `ExportProfileAsync(profileId, dir, ct)` /
+  `ImportProfileAsync(profileId, src, ct)` (§11.2). File name
+  becomes `medreminder-<profileId>-YYYYMMDD-HHmmss.db` so
+  different profiles can share a folder.
+- `BackupService` — implements the new API. The retention regex
+  captures the `profileId` group so
+  `PruneOldBackupsAsync` applies retention per-profile: the most
+  recent backup of profile A does not shield old backups of
+  profile B (§11.1). `ImportProfileAsync` only closes the
+  currently-active `DbContext` connection when the target matches
+  the DB path — an import of an inactive profile no longer
+  touches the live connection.
+- `AutomaticBackupHostedService` — each tick now enumerates
+  `IProfileRegistry.ListProfiles()` and calls `ExportProfileAsync`
+  for every profile. A failure on one profile is logged but does
+  not stop the others. Retention runs once on the shared folder.
+  The tick is marked successful when at least one profile
+  exported, so a partial failure never masks days without any
+  backup (§11.1).
+- `SmtpSettings` — dropped `ToAddress`. The recipient moved to
+  `NotificationSettings.ToAddress` in
+  `<DataDirectory>\notifications.settings.json` (§7.1).
+  `IsConfigured` no longer checks the recipient.
+- `MailKitEmailNotificationService` — now takes
+  `IOptionsMonitor<SmtpSettings>` **and**
+  `IOptionsMonitor<NotificationSettings>`. Throws a specific
+  `InvalidOperationException` when the per-profile recipient is
+  missing (§7.1).
+- `AddMedReminderInfrastructure` — takes `ICurrentProfile` in
+  place of a raw `databasePath`. Registers the current profile
+  as a singleton, registers `IProfileRegistry` (built from
+  `AppDataPaths`), and binds `NotificationSettings` from the
+  configuration chain.
+- `Program.Main` — new multi-profile boot flow (§4.1): run the
+  V1 → V2 migrator, list profiles, pick one (first-run wizard /
+  hint / `--profile` / picker), prompt for the PIN if the profile
+  has one, then build the host. `--minimized` skips the picker
+  and uses the hint (§4.2). `--profile <id>` bypasses the picker
+  (§4.3). The single-instance mutex stays per Windows account,
+  independent of the profile (§10.1).
+- `Program.BuildHost` — adds
+  `notifications.settings.json` (per-profile path from
+  `ICurrentProfile.NotificationSettingsPath`) to the configuration
+  chain with `reloadOnChange: true`.
+- `SettingsDialog` — reads / writes `NotificationSettings` for
+  the recipient (per-profile file). Export / import buttons now
+  call the new per-profile backup APIs against
+  `_currentProfile.Id`. The Backup tab still shows every existing
+  option to the current user; the admin/user gating and the
+  "Restore into profile…" dropdown land in 15d.
+- `MainForm.ShowSettings` — passes the new
+  `IOptionsMonitor<NotificationSettings>` and `ICurrentProfile`
+  dependencies through the DI scope.
+- `MedReminder.Infrastructure.Profiles.ProfileRegistry`,
+  `CurrentProfile`, `MedReminder.Infrastructure.Migration.MigrationV1toV2`
+  are now `public sealed class` so `Program.Main` (in
+  `MedReminder.UI`) can build them at boot without expanding
+  `InternalsVisibleTo`.
+
+### Tests
+
+- `MailKitEmailNotificationServiceTests` updated to the new
+  two-monitor constructor. New test:
+  `Send_throws_when_recipient_is_missing`.
+- Existing `MigrationV1toV2Tests` and `ProfileRegistryTests`
+  unchanged and still green: the migrator is now called at boot
+  but its API is untouched.
+
+### Localisation
+
+- 27 new keys added to every dictionary
+  (`assets/localization/strings.{en,it,fr,es,de}.json`) —
+  `Common.Exit`, migration-failure banner, PIN prompt,
+  profile picker, first-run wizard. All 5 dictionaries stay at
+  parity (378 keys each) — `DictionaryParityTests` remain green.
+
+### Out of scope (still)
+
+- `ProfilesManagerForm`, admin/user UI gating, `File → Change
+  profile…` menu entry, restore-into-profile dropdown — 15d.
+- PIN prompt polish, tooltips wording pass, user-guide entries —
+  15e.
+- Promote/demote flow and consolidated admin view — non-goals
+  for Increment 15 (§16).
+
+---
+
 ## PR #23 — Increment 15b: V1 → V2 on-disk migration
 
 Link: [vger70/MedReminder#23](https://github.com/vger70/MedReminder/pull/23)
