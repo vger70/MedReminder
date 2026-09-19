@@ -15,11 +15,20 @@ beschrieben.
 ## Erster Start
 
 1. Starte `MedReminder.exe`.
-2. Beim ersten Öffnen ist das Fenster leer: die Datenbank wird
-   automatisch unter `%LOCALAPPDATA%\MedReminder\medreminder.db`
+2. Beim allerersten Start zeigt die Anwendung einen
+   **Willkommens-Assistenten** und fordert dich auf, das erste
+   Profil anzulegen. Dieses Profil ist immer der
+   **Administrator**: es verwaltet den gemeinsamen E-Mail-Server
+   und die automatische Sicherung und kann die weiteren Profile
+   anlegen (siehe *Mehrere Profile*). Im selben Assistenten kannst
+   du eine optionale PIN festlegen.
+3. Die Datenbank wird automatisch unter
+   `%LOCALAPPDATA%\MedReminder\profiles\<profil-id>\medreminder.db`
    angelegt.
-3. Oben findest du die Symbolleiste, unten die Statusleiste. Das
-   Symbol im Windows-Infobereich bleibt sichtbar, solange die
+4. Oben findest du die Symbolleiste, unten zeigt die Statusleiste
+   das aktive Profil an („Profil: Owner (Administrator)“ für einen
+   Administrator, „Profil: Oma“ für ein normales Benutzerprofil).
+   Das Symbol im Windows-Infobereich bleibt sichtbar, solange die
    Anwendung läuft.
 
 ### Windows SmartScreen beim ersten Start
@@ -182,6 +191,162 @@ Vorgang mit einer Fehlermeldung blockiert.
   Meldungen, die historischen Daten (Bewegungen,
   Benachrichtigungen) bleiben aus Audit-Gründen in der
   Datenbank.
+
+## Mehrere Profile und Rollen Administrator/Benutzer
+
+MedReminder kann Medikamente für **mehrere Personen** aus demselben
+Windows-Konto verwalten — typischer Fall: ein Elternteil, das die
+eigene Therapie und die eines oder zweier Angehöriger begleitet.
+Jedes Profil hat seine eigene Datenbank und seinen eigenen
+E-Mail-Empfänger; der SMTP-Server, der Ordner für die automatische
+Sicherung und das Profilregister werden gemeinsam genutzt und vom
+**Administrator-Profil** verwaltet.
+
+### Rollen
+
+- **Administrator** — verwaltet die globalen Einstellungen (SMTP,
+  Sicherung, Profilliste, PIN eines beliebigen Profils) zusätzlich
+  zu den eigenen Daten. Es muss immer mindestens einen
+  Administrator geben.
+- **Benutzer** — verwaltet nur das eigene Profil (Medikamente,
+  Bestand, Therapien, persönlicher E-Mail-Empfänger). Sieht in den
+  Einstellungen weder die SMTP- noch die Sicherungs-Registerkarte
+  und sieht `Extras → Profile verwalten…` nicht.
+
+Die Rolle wird bei der Profilerstellung gewählt und kann
+**danach nicht mehr geändert werden**. Wenn du in Zukunft die Rolle
+eines Profils ändern möchtest, ist der aktuelle Weg, ein neues
+Profil mit der gewünschten Rolle anzulegen und die Daten
+darüberzukopieren.
+
+Die Rolle ist eine „weiche“ Hürde: wer Zugriff auf das Dateisystem
+hat, kann `profiles.json` von Hand ändern und zum Administrator
+werden. Die Benutzeroberfläche respektiert die Rolle, das
+Dateisystem nicht.
+
+### Weitere Profile anlegen (Administrator)
+
+1. `Extras → Profile verwalten…` — dieser Eintrag existiert nur
+   für Administratoren.
+2. **Neues Profil** → Name eingeben, Administrator oder Benutzer
+   wählen (Standard: Benutzer), optional eine PIN setzen.
+   Bestätigen.
+3. Das neue Profil erscheint beim nächsten Start sofort im
+   Profilauswahldialog.
+
+### Profil wechseln
+
+`Datei → Profil wechseln…` öffnet die Profilauswahl. Wähle das
+Zielprofil und bestätige: die Anwendung startet automatisch neu,
+damit das neue Profil vollständig isoliert läuft. Hat das
+gewählte Profil eine PIN, wird die Abfrage vor dem Öffnen der
+Anwendung angezeigt.
+
+### Umbenennen, PIN ändern, löschen
+
+`Extras → Profile verwalten…` (nur Administrator) bietet außerdem:
+
+- **Umbenennen** — nur den Anzeigenamen. Die interne ID ändert
+  sich nie.
+- **PIN ändern** — PIN eines beliebigen Profils setzen,
+  aktualisieren oder entfernen.
+- **Löschen** — fragt, den **Profilnamen einzutippen**, um zu
+  bestätigen. Eine separate Auswahlbox erlaubt zusätzlich das
+  Löschen der Profildaten auf der Festplatte; sie ist
+  standardmäßig deaktiviert, damit der Ordner für eine manuelle
+  Wiederherstellung erhalten bleibt.
+
+Das aktive Profil kann nicht gelöscht werden (wechsle vorher das
+Profil), ebenso wenig der letzte verbleibende Administrator.
+
+### Zur PIN
+
+Die PIN ist eine **Hürde, kein Schutz**. Sie verhindert
+versehentliche Profilwechsel, **verschlüsselt** die Daten aber
+nicht — jeder mit Zugriff auf diesen PC kann die Profildateien
+weiterhin öffnen. Drei Fehlversuche schließen die Abfrage und die
+Anwendung.
+
+Wenn du eine PIN vergessen hast, entferne sie von Hand aus
+`%LOCALAPPDATA%\MedReminder\profiles.json` (lösche `PinHash` und
+`PinSalt` und setze `PinIterations` für den betroffenen Eintrag
+auf `0`). Das ist absichtlich so dokumentiert und nicht durch
+einen „PIN zurücksetzen“-Ablauf gelöst: die Wiederherstellung ist
+kein Fehler, weil die PIN keine Sicherheit ist.
+
+### Aufbau auf der Festplatte
+
+```
+%LOCALAPPDATA%\MedReminder\
+├── profiles.json                        ← Profilregister
+├── smtp.settings.json                   ← gemeinsames SMTP (admin)
+├── smtp.protected                       ← DPAPI-verschlüsseltes Passwort
+├── backup.settings.json                 ← gemeinsame Backup-Config (admin)
+├── backup.state.json                    ← Status der letzten automatischen Sicherung
+├── logs\medreminder-YYYYMMDD.log
+└── profiles\
+    ├── <profil-id>\                     ← ein Ordner pro Profil
+    │   ├── medreminder.db (+ -wal, -shm)
+    │   └── notifications.settings.json  ← ToAddress dieses Profils
+    └── …
+```
+
+### Die automatische Sicherung erfasst alle Profile
+
+Wenn die automatische Sicherung aktiv ist, sichert jeder
+tägliche Lauf die Datenbank **jedes** Profils im gemeinsamen
+Ordner, mit Dateinamen der Form
+`medreminder-<profil-id>-YYYYMMDD-HHmmss.db`. Die Aufbewahrung
+wird pro Profil angewendet, sodass die neueste Sicherung eines
+Profils die älteren Sicherungen eines anderen Profils nicht
+schützt.
+
+Bei der Wiederherstellung über `Einstellungen → Sicherung →
+Sicherung wiederherstellen…` fragt der Dialog, welches Profil die
+importierte Datenbank erhalten soll. Standardmäßig wählt er das
+Profil, das im Dateinamen angegeben ist. Bei einer
+Wiederherstellung in ein anderes als das aktive Profil startet die
+Anwendung nicht neu; bei einer Wiederherstellung in das aktive
+Profil startet sie neu, um die neue Datenbank sauber zu öffnen.
+
+### Automatischer Windows-Start
+
+Der Windows-Autostart-Eintrag ist pro Windows-Benutzer eindeutig.
+Beim Anmelden öffnet die Anwendung das **zuletzt** verwendete
+Profil ohne den Auswahldialog anzuzeigen; hat dieses Profil eine
+PIN, wird die Abfrage über dem leeren Fenster angezeigt. Um beim
+Autostart ein anderes Profil zu öffnen, verwende
+`Datei → Profil wechseln…`, sobald die Anwendung offen ist.
+
+### Aktualisierung von einer Einzelbenutzer-Installation
+
+Falls du bereits eine `medreminder.db`-Datei unter
+`%LOCALAPPDATA%\MedReminder\` aus einer älteren Version hast,
+führt die Anwendung beim nächsten Start eine einmalige
+**V1 → V2-Migration** aus:
+
+1. Sie legt eine verpflichtende Sicherung unter
+   `%LOCALAPPDATA%\MedReminder\backups\pre-migration-YYYYMMDD-HHmmss\`
+   an, die die ursprüngliche `medreminder.db` (und ihre
+   Nebendateien) sowie die ursprüngliche `smtp.settings.json`
+   enthält.
+2. Sie verschiebt die Datenbank nach
+   `profiles\default\medreminder.db` und legt die initiale
+   `profiles.json` mit einem einzigen Administrator-Profil namens
+   `User` an.
+3. Sie extrahiert den Empfänger (`Smtp.ToAddress`) aus
+   `smtp.settings.json` nach
+   `profiles\default\notifications.settings.json`.
+
+Die Migration ist **atomar** — schlägt ein Schritt nach der
+Vorab-Sicherung fehl, kehrt die Anwendung in den V1-Zustand
+zurück und behält die Pre-Migration-Sicherung.
+
+Die **Pre-Migration-Sicherung wird nicht automatisch aufgeräumt**:
+Nachdem du geprüft hast, dass die migrierte Anwendung dieselben
+Daten öffnet, kannst du den Ordner `backups\pre-migration-*` von
+Hand löschen. Benenne das Profil `User` unter
+`Extras → Profile verwalten… → Umbenennen` nach Belieben um.
 
 ## E-Mail-Versand konfigurieren
 

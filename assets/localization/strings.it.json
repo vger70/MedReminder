@@ -387,6 +387,7 @@
   "Ui.PinPromptForm.Wrong": "PIN errato. Tentativi rimanenti: {0}.",
   "Ui.PinPromptForm.LockedOut": "Troppi tentativi errati. L'app verrà chiusa.",
   "Ui.PinPromptForm.Tooltip.Friction": "Il PIN è una barriera contro cambi di profilo accidentali, non protezione contro l'accesso al filesystem.",
+  "Ui.PinPromptForm.FrictionNote": "Il PIN blocca gli accessi accidentali a questo profilo. Non cifra i dati — chiunque abbia accesso a questo PC può comunque aprire i file del profilo.",
   "Ui.ProfilePickerForm.Title": "Scegli profilo",
   "Ui.ProfilePickerForm.Header": "Seleziona il profilo da aprire.",
   "Ui.ProfilePickerForm.Column.Name": "Nome",

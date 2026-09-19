@@ -14,11 +14,18 @@ architecture instead.
 ## First start
 
 1. Launch `MedReminder.exe`.
-2. On first open the window is empty: the database is created
-   automatically under `%LOCALAPPDATA%\MedReminder\medreminder.db`.
-3. At the top you find the toolbar; at the bottom the status bar.
-   The icon in the Windows notification area stays visible while
-   the app is running.
+2. On the very first launch the app shows a **welcome wizard** and
+   asks you to create the first profile. This profile is always the
+   **administrator**: it can manage the shared email server and the
+   automatic backup, and it can create the other profiles (see
+   *Multiple profiles*). You may set an optional PIN in the same
+   wizard.
+3. The database is created automatically under
+   `%LOCALAPPDATA%\MedReminder\profiles\<profile-id>\medreminder.db`.
+4. At the top you find the toolbar; at the bottom the status bar
+   shows the active profile ("Profile: Owner (admin)" for an admin,
+   "Profile: Grandma" for a regular user). The icon in the Windows
+   notification area stays visible while the app is running.
 
 ### Windows SmartScreen on first launch
 
@@ -161,6 +168,145 @@ blocked with an error.
 - **Deactivate**: toolbar → **Deactivate**. The medicine disappears
   from automatic checks and alerts, but historical data (movements,
   notifications) stays in the DB for audit.
+
+## Multiple profiles and admin/user roles
+
+MedReminder can manage medicines for **more than one person** from
+the same Windows account — typical case: a parent taking care of
+their own therapy and of one or two family members. Each profile
+has its own database and its own email recipient; the SMTP server,
+the automatic backup folder and the profile registry are shared and
+administered by an **administrator profile**.
+
+### Roles
+
+- **Administrator** — manages the global settings (Email SMTP,
+  Backup, list of profiles, PIN of any profile) in addition to
+  their own data. There must always be at least one administrator.
+- **User** — manages only their own profile (medicines, stock,
+  therapies, personal email recipient). Does not see the Email SMTP
+  tab or the Backup tab in Settings, and does not see
+  `Tools → Manage profiles…`.
+
+The role is chosen when the profile is created and **cannot be
+changed later**. If in the future you need to change a profile's
+role, the current workaround is to create a new profile with the
+target role and copy the data over.
+
+The role is soft security: a user with filesystem access can
+edit `profiles.json` by hand and become admin. The user interface
+honors the role, the filesystem does not.
+
+### Create additional profiles (administrator)
+
+1. `Tools → Manage profiles…` — this entry is only present for
+   administrators.
+2. **New profile** → enter a name, choose Administrator or User
+   (default: User), optionally set a PIN. Confirm.
+3. The new profile immediately appears in the picker at the next
+   launch.
+
+### Switch profile
+
+`File → Change profile…` opens the picker. Choose the target
+profile and confirm: the app restarts automatically so the new
+profile is fully isolated. If the chosen profile has a PIN, the
+prompt appears before the app opens.
+
+### Rename, change PIN, delete
+
+`Tools → Manage profiles…` (administrator only) also offers:
+
+- **Rename** — the display name only. The internal id never
+  changes.
+- **Change PIN** — set, rotate or clear the PIN on any profile.
+- **Delete** — asks you to **type the profile name** to confirm.
+  A separate checkbox lets you also delete the profile's data
+  on disk; it defaults to OFF, so the folder stays available for
+  manual recovery.
+
+The active profile cannot be deleted (switch first), and the last
+remaining administrator cannot be deleted either.
+
+### About the PIN
+
+The PIN is **friction, not security**. It blocks accidental
+switches into the wrong profile, but it does **not** encrypt the
+data — anyone with access to this PC can still open the profile's
+files. Three wrong attempts close the prompt and the app.
+
+If you forget a PIN, remove it manually from
+`%LOCALAPPDATA%\MedReminder\profiles.json` (delete the `PinHash`,
+`PinSalt` and set `PinIterations` to `0` for the affected entry).
+This is documented rather than fixed with a "reset PIN" flow on
+purpose: recovery is not a bug, because the PIN is not security.
+
+### On-disk layout
+
+```
+%LOCALAPPDATA%\MedReminder\
+├── profiles.json                        ← profile registry
+├── smtp.settings.json                   ← shared SMTP (admin)
+├── smtp.protected                       ← DPAPI-encrypted password
+├── backup.settings.json                 ← shared backup config (admin)
+├── backup.state.json                    ← last automatic-backup state
+├── logs\medreminder-YYYYMMDD.log
+└── profiles\
+    ├── <profile-id>\                    ← one folder per profile
+    │   ├── medreminder.db (+ -wal, -shm)
+    │   └── notifications.settings.json  ← this profile's ToAddress
+    └── …
+```
+
+### Automatic backup covers every profile
+
+When automatic backup is enabled, each daily tick backs up **every**
+profile's database into the shared folder, with filenames of the
+form `medreminder-<profile-id>-YYYYMMDD-HHmmss.db`. Retention is
+applied per-profile so the most recent backup of one profile does
+not shield the older backups of another.
+
+When restoring from `Settings → Backup → Restore backup…`, the
+dialog asks which profile should receive the imported database.
+By default it picks the profile the filename refers to. If you
+restore into a profile other than the active one, the app does not
+restart; if you restore into the active profile, the app restarts
+so the new database can be opened cleanly.
+
+### Auto-start with Windows
+
+The Windows auto-start entry is unique per Windows user. On login,
+the app opens the **last used** profile without showing the picker;
+if that profile has a PIN, the prompt is raised over the empty
+window. To open a different profile at auto-start, use
+`File → Change profile…` once the app is up.
+
+### Upgrading from a single-user install
+
+If you already have a `medreminder.db` file at
+`%LOCALAPPDATA%\MedReminder\` from an older version, the app runs
+a one-shot **V1 → V2 migration** on next launch:
+
+1. It takes a mandatory backup at
+   `%LOCALAPPDATA%\MedReminder\backups\pre-migration-YYYYMMDD-HHmmss\`
+   containing the original `medreminder.db` (and its side files)
+   and the original `smtp.settings.json`.
+2. It moves the database into `profiles\default\medreminder.db`
+   and creates the initial `profiles.json` with a single
+   administrator profile called `User`.
+3. It extracts the recipient (`Smtp.ToAddress`) from
+   `smtp.settings.json` into
+   `profiles\default\notifications.settings.json`.
+
+The migration is **atomic** — if any step fails after the pre-
+backup, the app rolls back to the V1 state and preserves the
+pre-migration backup.
+
+The **pre-migration backup is not cleaned up automatically** —
+after you have verified that the migrated app opens the same data,
+you can delete the `backups\pre-migration-*` folder manually.
+Rename the profile from `User` to something you prefer in
+`Tools → Manage profiles… → Rename`.
 
 ## Configure email sending
 
