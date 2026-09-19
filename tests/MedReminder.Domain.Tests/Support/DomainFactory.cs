@@ -56,6 +56,33 @@ internal static class DomainFactory
         };
     }
 
+    // A1: schedule-history entry whose ScheduleKind / SchedulePayload
+    // come from a Schedule value object. The legacy dose / admin
+    // fields still carry defaults so the row is valid on disk and
+    // the FixedDaily fallback path stays exercised.
+    public static MedicationScheduleHistory ScheduleFor(
+        DateOnly effectiveFrom,
+        Domain.Medicines.Schedule schedule,
+        Guid? medicineId = null,
+        decimal fallbackDosePerAdministration = 1m,
+        int fallbackAdministrationsPerDay = 1)
+    {
+        var (kind, payload) = ScheduleCodec.Serialize(schedule);
+        return new MedicationScheduleHistory
+        {
+            MedicineId = medicineId ?? MedicineId,
+            EffectiveFrom = effectiveFrom,
+            DosePerAdministration = schedule is FixedDailySchedule f
+                ? f.DosePerAdministration
+                : fallbackDosePerAdministration,
+            AdministrationsPerDay = schedule is FixedDailySchedule fx
+                ? fx.AdministrationsPerDay
+                : fallbackAdministrationsPerDay,
+            ScheduleKind = kind,
+            SchedulePayload = payload,
+        };
+    }
+
     public static MedicationSuspension Suspension(
         DateOnly startDate,
         DateOnly? endDate = null,

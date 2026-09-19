@@ -4,19 +4,21 @@ namespace MedReminder.Domain.Calculations;
 
 // Effective daily consumption on a given date.
 //
-// Two models are supported (spec §9, Increment 10):
-//   A) Legacy dose × frequency model — used when the medicine has NO
-//      administration slots defined. The versioned schedule
-//      (MedicationScheduleHistory) yields the dose / frequency
-//      applicable to the requested day.
-//   B) Slot model — used when the medicine HAS slots defined: daily
-//      consumption is the SUM of the slots' doses, independent of the
-//      day ("current retroactive" semantics: slot changes also apply
-//      to past days that have not been materialized yet — for personal
-//      use this makes no practical difference).
+// Three models compose (spec §9, Increment 10, A1):
+//   A) Slot model — takes precedence when the medicine HAS slots
+//      defined: daily consumption is the SUM of the slots' doses,
+//      independent of the day ("current retroactive" semantics).
+//   B) Schedule model (A1) — used when the medicine has no slots and
+//      the applicable MedicationScheduleHistory entry carries a
+//      non-FixedDaily ScheduleKind. Dispatches via ScheduleCodec to
+//      the Schedule value object's RateOn.
+//   C) Legacy dose × frequency model — the FixedDaily default; falls
+//      out of the Schedule dispatch through the codec, so
+//      Deserialize(FixedDaily, null, dose, admin).RateOn(day, anchor)
+//      returns dose × admin as before.
 //
-// If neither path applies, returns 0m (spec §7: no ETA when daily
-// consumption cannot be determined).
+// If none of these paths yields a positive rate, returns 0m (spec §7:
+// no ETA when daily consumption cannot be determined).
 public static class DailyConsumption
 {
     public static decimal RateOn(
@@ -59,6 +61,12 @@ public static class DailyConsumption
         }
 
         if (latest is null) return 0m;
-        return latest.DosePerAdministration * latest.AdministrationsPerDay;
+
+        var schedule = ScheduleCodec.Deserialize(
+            latest.ScheduleKind,
+            latest.SchedulePayload,
+            latest.DosePerAdministration,
+            latest.AdministrationsPerDay);
+        return schedule.RateOn(date, latest.EffectiveFrom);
     }
 }
