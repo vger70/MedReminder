@@ -55,13 +55,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // docs/ANALYSIS-A1-REGIMENS.md §5.2.
     private readonly SchedulePanel? _schedulePanel;
 
-    // Dialog height for the Simple layout, cached so Advanced
-    // expansion is reversible without accumulating errors.
-    private int _simpleHeight;
-    // Extra pixels claimed by the Advanced sub-panel (mode label +
-    // kind dropdown + tallest kind-specific sub-panel — Tapering).
-    private const int AdvancedHeightBonus = 320;
-
     // Populated when the user picks a catalogue row; cleared as soon
     // as they diverge from it by editing either autocomplete field.
     private string? _linkedNationalCode;
@@ -87,7 +80,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         // so this size is what the user gets.
         Width = 880;
         Height = 820;
-        _simpleHeight = Height;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -176,9 +168,14 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             Text = string.Empty,
         };
 
+        // Dock=Top (not Fill) + AutoSize lets the table grow taller
+        // than the surrounding AutoScroll Panel — Dock=Fill pins the
+        // table height to the viewport and defeats the scrollbar,
+        // which was why the Advanced sub-panel was hidden by the
+        // Save / Cancel row on the previous PR round.
         var table = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             ColumnCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -198,15 +195,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         // dose / administrations fields it complements. Only wired in
         // Create mode — Edit mode routes schedule shape changes
         // through ChangeScheduleDialog to preserve the versioned
-        // history.
+        // history. Overflow (Weekly grid / Tapering summary) is
+        // handled by the outer AutoScroll Panel — no dynamic dialog
+        // resize needed.
         if (_mode == EditMode.Create)
         {
             _schedulePanel = new SchedulePanel(_loc);
-            _schedulePanel.ModeChanged += (_, _) =>
-            {
-                SyncSimpleControlsEnabled();
-                AdjustDialogHeightForScheduleMode();
-            };
+            _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
             AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
         }
 
@@ -381,27 +376,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _doseBox.Enabled = simple;
         _adminPerDayBox.Enabled = simple;
         _slotsList.Enabled = simple;
-    }
-
-    // Grows the dialog when Advanced is selected so the kind-specific
-    // sub-panel is not hidden behind the Cancel / Save button row;
-    // shrinks back to the base Simple layout when the user toggles
-    // Simple again. Caps at ~90% of the screen so a very small monitor
-    // still shows the buttons — anything past that is handled by the
-    // AutoScroll fallback on the outer content Panel.
-    private void AdjustDialogHeightForScheduleMode()
-    {
-        if (_schedulePanel is null) return;
-        var target = _schedulePanel.AdvancedSelected
-            ? _simpleHeight + AdvancedHeightBonus
-            : _simpleHeight;
-        var workingArea = Screen.FromControl(this).WorkingArea.Height;
-        var cap = (int)(workingArea * 0.905);
-        int height = Math.Min(target, cap); ;
-        int delta = height - Height;
-        Height = height;
-        // keep the dialog roughly centered on the screen
-        Top = Math.Max(0, Top - (delta / 2));
     }
 
     // Picking a catalogue row on either side populates the sibling

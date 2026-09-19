@@ -26,8 +26,6 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
     private readonly DateTimePicker _effectiveFromPicker;
     private readonly SchedulePanel _schedulePanel;
 
-    private int _simpleHeight;
-    private const int AdvancedHeightBonus = 320;
 
     public ChangeScheduleDialog(
         string medicineName,
@@ -40,7 +38,6 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         Text = _loc.Get("Ui.ChangeScheduleDialog.Title");
         Width = 640;
         Height = 560;
-        _simpleHeight = Height;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -97,9 +94,12 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
             Text = _loc.Get("Ui.ChangeScheduleDialog.Note"),
         };
 
+        // Dock=Top (not Fill) + AutoSize lets the table grow taller
+        // than the surrounding AutoScroll Panel so the scrollbar
+        // kicks in when the kind-specific sub-panel expands.
         var table = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             ColumnCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -109,11 +109,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         _schedulePanel = new SchedulePanel(_loc);
-        _schedulePanel.ModeChanged += (_, _) =>
-        {
-            SyncSimpleControlsEnabled();
-            AdjustDialogHeightForScheduleMode();
-        };
+        _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
 
         AddRow(table, string.Empty, header);
         AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewDose"), _doseBox);
@@ -172,19 +168,6 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         var simple = !_schedulePanel.AdvancedSelected;
         _doseBox.Enabled = simple;
         _freqBox.Enabled = simple;
-    }
-
-    // Grows the dialog when Advanced is selected so the kind-specific
-    // sub-panel is not hidden behind the Apply / Cancel buttons;
-    // shrinks back to the base Simple layout on Simple. Screen-bound.
-    private void AdjustDialogHeightForScheduleMode()
-    {
-        var target = _schedulePanel.AdvancedSelected
-            ? _simpleHeight + AdvancedHeightBonus
-            : _simpleHeight;
-        var workingArea = Screen.FromControl(this).WorkingArea.Height;
-        var cap = (int)(workingArea * 0.9);
-        Height = Math.Min(target, cap);
     }
 
     private static void AddRow(TableLayoutPanel table, string label, Control input)
