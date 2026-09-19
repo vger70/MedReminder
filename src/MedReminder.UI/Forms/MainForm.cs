@@ -780,6 +780,7 @@ internal sealed class MainForm : MedReminderFormBase
         return new CatalogueAutocompleteContext(
             SearchCommercialName: (prefix, ctry, ct) => SearchCatalogueAsync(prefix, ctry, ct, byName: true),
             SearchActiveIngredient: (prefix, ctry, ct) => SearchCatalogueAsync(prefix, ctry, ct, byName: false),
+            LookupByNationalCode: LookupReferenceByNationalCodeAsync,
             Country: country);
     }
 
@@ -791,6 +792,18 @@ internal sealed class MainForm : MedReminderFormBase
         return byName
             ? await usecase.SearchByCommercialNameAsync(prefix, country, cancellationToken)
             : await usecase.SearchByActiveIngredientAsync(prefix, country, cancellationToken);
+    }
+
+    // Exact-lookup path used by MedicineEditDialog to re-hydrate the
+    // AIFA LINK_FI / LINK_RCP URLs in Edit mode. Runs in a fresh DI
+    // scope so the DbContext behind the reference-catalogue query
+    // service is disposed straight after the call.
+    private async Task<MedReminder.Domain.Catalogue.ReferenceMedicine?> LookupReferenceByNationalCodeAsync(
+        CountryCode country, string nationalCode, CancellationToken cancellationToken)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var query = scope.ServiceProvider.GetRequiredService<MedReminder.Application.Catalogue.IReferenceCatalogueQueryService>();
+        return await query.GetByNationalCodeAsync(country, nationalCode, cancellationToken);
     }
 
     private async Task ShowNewMedicineAsync()
