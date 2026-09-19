@@ -187,6 +187,19 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Unit"), _unitBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.DosePerAdmin"), _doseBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.AdminsPerDay"), _adminPerDayBox);
+
+        // A1: Simple / Advanced schedule editor lives right after the
+        // dose / administrations fields it complements. Only wired in
+        // Create mode — Edit mode routes schedule shape changes
+        // through ChangeScheduleDialog to preserve the versioned
+        // history.
+        if (_mode == EditMode.Create)
+        {
+            _schedulePanel = new SchedulePanel(_loc);
+            _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
+            AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
+        }
+
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.StartDateFull"), _startDatePicker);
         AddRow(table, string.Empty, _hasEndDate);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.EndDateFull"), _endDatePicker);
@@ -207,16 +220,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         AddRow(table, string.Empty, _slotsSummary);
         UpdateSlotsSummary();
 
-        // A1: Simple / Advanced schedule editor. Only wired in Create
-        // mode — Edit mode routes schedule shape changes through
-        // ChangeScheduleDialog to preserve the versioned history.
-        if (_mode == EditMode.Create)
-        {
-            _schedulePanel = new SchedulePanel(_loc);
-            _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
-            AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
-            SyncSimpleControlsEnabled();
-        }
+        // Now that every control is on the table, honor the initial
+        // Simple selection by disabling nothing yet — SyncSimpleControlsEnabled
+        // reads the current SchedulePanel state (Simple by default).
+        if (_schedulePanel is not null) SyncSimpleControlsEnabled();
 
         var okButton = new Button { Text = _loc.Get("Ui.MedicineEditDialog.Save"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
         var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };

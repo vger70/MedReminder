@@ -293,17 +293,22 @@ internal sealed class SchedulePanel
 
     private Control BuildRoot()
     {
-        // FlowLayoutPanel with TopDown flow reliably computes AutoSize
-        // when nested inside an AutoSize TableLayoutPanel cell —
-        // Panel + Dock=Fill + AutoSize on both sides collapses the
-        // row to zero height. See docs/ANALYSIS-A1-REGIMENS.md §5.1.
-        var root = new FlowLayoutPanel
+        // TableLayoutPanel with AutoSize rows is the only WinForms
+        // container that reliably reports a correct AutoSize when it
+        // is itself hosted inside an AutoSize cell of another
+        // TableLayoutPanel (Panel + Dock=Fill collapses the outer row
+        // to zero height; FlowLayoutPanel's AutoSize does not always
+        // pick up its children's AutoSize until the first layout
+        // pass). See docs/ANALYSIS-A1-REGIMENS.md §5.1.
+        var root = new TableLayoutPanel
         {
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
+            ColumnCount = 1,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = Padding.Empty,
         };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
         var modeRow = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.LeftToRight,
@@ -311,25 +316,30 @@ internal sealed class SchedulePanel
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             WrapContents = false,
             Margin = Padding.Empty,
+            MinimumSize = new System.Drawing.Size(0, 26),
         };
         modeRow.Controls.Add(_modeSimple);
         modeRow.Controls.Add(_modeAdvanced);
 
-        root.Controls.Add(modeRow);
-        root.Controls.Add(_advancedContainer);
+        root.RowCount = 2;
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.Controls.Add(modeRow, 0, 0);
+        root.Controls.Add(_advancedContainer, 0, 1);
         return root;
     }
 
-    private FlowLayoutPanel BuildAdvancedContainer()
+    private TableLayoutPanel BuildAdvancedContainer()
     {
-        var container = new FlowLayoutPanel
+        var container = new TableLayoutPanel
         {
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
+            ColumnCount = 1,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Margin = new Padding(0, 6, 0, 0),
         };
+        container.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
         var kindRow = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.LeftToRight,
@@ -347,22 +357,27 @@ internal sealed class SchedulePanel
         kindRow.Controls.Add(kindLabel);
         kindRow.Controls.Add(_kindBox);
 
-        var subPanelsHost = new FlowLayoutPanel
+        var subPanelsHost = new TableLayoutPanel
         {
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
+            ColumnCount = 1,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Margin = new Padding(0, 6, 0, 0),
         };
-        subPanelsHost.Controls.Add(_fixedPanel);
-        subPanelsHost.Controls.Add(_weeklyPanel);
-        subPanelsHost.Controls.Add(_cyclicPanel);
-        subPanelsHost.Controls.Add(_taperingPanel);
-        subPanelsHost.Controls.Add(_prnPanel);
+        subPanelsHost.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        subPanelsHost.RowCount = 5;
+        for (var i = 0; i < 5; i++) subPanelsHost.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        subPanelsHost.Controls.Add(_fixedPanel, 0, 0);
+        subPanelsHost.Controls.Add(_weeklyPanel, 0, 1);
+        subPanelsHost.Controls.Add(_cyclicPanel, 0, 2);
+        subPanelsHost.Controls.Add(_taperingPanel, 0, 3);
+        subPanelsHost.Controls.Add(_prnPanel, 0, 4);
 
-        container.Controls.Add(kindRow);
-        container.Controls.Add(subPanelsHost);
+        container.RowCount = 2;
+        container.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        container.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        container.Controls.Add(kindRow, 0, 0);
+        container.Controls.Add(subPanelsHost, 0, 1);
         return container;
     }
 
