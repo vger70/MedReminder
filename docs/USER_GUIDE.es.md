@@ -55,7 +55,50 @@ normal.
 5. **Canales de notificación**: marca Windows y/o E-mail. Debes
    haber configurado los ajustes SMTP (ver más abajo) para que el
    e-mail funcione.
-6. **Guardar**.
+6. **Esquema**: déjalo en **Simple** para una dosis fija tomada cada
+   día — es el valor por defecto y coincide con el comportamiento
+   histórico de la aplicación. Consulta *Regímenes complejos* más
+   abajo para terapias cíclicas, decrecientes, semanales o a
+   demanda.
+7. **Guardar**.
+
+## Regímenes complejos
+
+No todas las terapias consumen la misma cantidad de medicamento
+cada día. En el formulario **Nuevo medicamento** el selector
+*Esquema* pasa de **Simple** (una dosis diaria fija) a **Avanzado**
+y muestra un desplegable *Tipo de régimen* con cuatro formas
+adicionales:
+
+- **Patrón semanal** — una cantidad diferente para cada día de la
+  semana (por ejemplo un anticoagulante oral con dosis distintas
+  lun/mié/vie respecto al resto).
+- **Cíclico (N días on / M off)** — una cantidad fija durante los
+  primeros `N` días del ciclo seguidos de `M` días off. Típico de
+  las terapias hormonales y de los pulsos de cortisona.
+- **Reducción progresiva** — una dosis que baja (o sube) un paso
+  fijo cada X días hasta alcanzar la dosis final, y luego se
+  mantiene. Típico del descenso de glucocorticoides.
+- **A demanda (PRN)** — sin consumo planificado. MedReminder sigue
+  llevando el stock pero la columna *días restantes* queda vacía
+  hasta que cambie el tipo de esquema.
+
+Al seleccionar Avanzado, los campos *Dosis por toma*, *Tomas al
+día* y *Horarios* de la parte superior del formulario se
+desactivan: el esquema que configures abajo es la única fuente
+para la cantidad diaria. Para volver al flujo "un clic" con dosis
+fija, vuelve a poner el selector en Simple.
+
+Para cambiar la forma de una terapia en curso, usa *Barra de
+herramientas → Cambiar pauta*. Ahí está disponible el mismo
+selector Simple/Avanzado y surte efecto a partir de la *Fecha de
+vigencia* que elijas, de modo que el esquema anterior sigue siendo
+válido para los días previos.
+
+MedReminder no es un dispositivo médico: no comprueba dosis máximas
+diarias, no avisa de sobredosis y no verifica interacciones
+farmacológicas. Solo sigue la terapia que tu médico ha prescrito y
+te recuerda antes de que se agote el stock.
 
 ## Catálogo de referencia (multi-país)
 

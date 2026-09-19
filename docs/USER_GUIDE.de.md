@@ -60,7 +60,53 @@ Grund „Unbekannter Herausgeber“, was zu erwarten ist.
 5. **Benachrichtigungskanäle**: aktiviere Windows und/oder
    E-Mail. Für den E-Mail-Kanal müssen die SMTP-Einstellungen
    konfiguriert sein (siehe unten).
-6. **Speichern**.
+6. **Schema**: belasse es auf **Einfach** für eine feste
+   Tagesdosis — das ist der Standard und entspricht dem
+   bisherigen Verhalten der App. Für zyklische, absteigende,
+   wöchentliche oder Bedarfstherapien siehe *Komplexe Schemata*
+   unten.
+7. **Speichern**.
+
+## Komplexe Schemata
+
+Nicht jede Therapie verbraucht jeden Tag die gleiche Menge
+Medikament. Im Formular **Neues Medikament** wechselt der
+Selektor *Schema* von **Einfach** (feste Tagesdosis) auf
+**Erweitert** und blendet ein Dropdown *Regime-Typ* mit vier
+weiteren Formen ein:
+
+- **Wochenmuster** — eine unterschiedliche Menge für jeden
+  Wochentag (zum Beispiel ein oraler Gerinnungshemmer mit
+  anderen Dosen an Mo/Mi/Fr als an den übrigen Tagen).
+- **Zyklisch (N Tage an / M aus)** — eine feste Menge für die
+  ersten `N` Tage des Zyklus, gefolgt von `M` Tagen ohne
+  Einnahme. Typisch für Hormontherapien und Kortison-Stöße.
+- **Ausschleichen** — eine Dosis, die alle `X` Tage um einen
+  festen Schritt sinkt (oder steigt), bis die Enddosis erreicht
+  ist, und dann bleibt. Typisch für das Ausschleichen von
+  Glukokortikoiden.
+- **Bei Bedarf (PRN)** — kein geplanter Verbrauch. MedReminder
+  verfolgt weiterhin den Bestand, aber die Spalte *verbleibende
+  Tage* bleibt leer, bis sich die Schema-Form ändert.
+
+Wenn Erweitert ausgewählt ist, werden die Felder *Dosis pro
+Einnahme*, *Einnahmen pro Tag* und *Einnahmezeitpunkte* oben im
+Formular deaktiviert: Das Schema, das du unten konfigurierst, ist
+die einzige Quelle für die Tagesmenge. Um zum "Ein-Klick"-Ablauf
+mit fester Dosis zurückzukehren, stelle den Selektor wieder auf
+Einfach.
+
+Um die Form einer laufenden Therapie zu ändern, verwende
+*Symbolleiste → Schema ändern*. Dort steht derselbe
+Einfach/Erweitert-Selektor zur Verfügung und wirkt ab dem *Gültig
+ab*-Datum, das du wählst — das vorherige Schema bleibt für die
+Tage davor gültig.
+
+MedReminder ist kein Medizinprodukt: Es prüft keine maximalen
+Tagesdosen, warnt nicht vor Überdosierungen und kontrolliert
+keine Wechselwirkungen zwischen Medikamenten. Es folgt lediglich
+der von deinem Arzt verordneten Therapie und erinnert dich, bevor
+der Bestand zur Neige geht.
 
 ## Referenzkatalog (mehrere Länder)
 

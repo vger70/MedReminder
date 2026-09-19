@@ -57,7 +57,51 @@ normal.
 5. **Canaux de notification** : coche Windows et/ou E-mail. Il faut
    avoir configuré les paramètres SMTP (voir plus bas) pour que
    l'e-mail fonctionne.
-6. **Enregistrer**.
+6. **Schéma** : laisse sur **Simple** pour une dose fixe prise
+   chaque jour — c'est la valeur par défaut, identique au
+   fonctionnement historique de l'application. Voir *Schémas
+   complexes* ci-dessous pour les traitements cycliques,
+   décroissants, hebdomadaires ou au besoin.
+7. **Enregistrer**.
+
+## Schémas complexes
+
+Tous les traitements ne consomment pas la même quantité de
+médicament chaque jour. Sur le formulaire **Nouveau médicament**, le
+sélecteur *Schéma* bascule de **Simple** (dose journalière fixe) à
+**Avancé** et fait apparaître un menu *Type de régime* avec quatre
+formes supplémentaires :
+
+- **Motif hebdomadaire** — une quantité différente pour chaque jour
+  de la semaine (par exemple un anticoagulant oral pris à des doses
+  différentes les lun/mer/ven par rapport aux autres jours).
+- **Cyclique (N jours on / M off)** — une quantité fixe pendant les
+  `N` premiers jours du cycle puis `M` jours off. Typique des
+  traitements hormonaux et des bolus de cortisone.
+- **Décroissance** — une dose qui descend (ou monte) d'un pas fixe
+  tous les X jours jusqu'à la dose finale, puis se stabilise.
+  Typique de la décroissance des glucocorticoïdes.
+- **Au besoin (PRN)** — aucune consommation planifiée. MedReminder
+  continue à suivre le stock mais la colonne *jours restants* reste
+  vide tant que le type de schéma ne change pas.
+
+Quand tu passes en Avancé, les champs *Dose par prise*, *Prises par
+jour* et *Horaires* en haut du formulaire sont désactivés : le
+schéma que tu configures en bas est la seule source pour la
+quantité journalière. Pour revenir au flux "un clic" avec dose
+fixe, remets le sélecteur sur Simple.
+
+Pour changer la forme d'un traitement en cours, utilise *Barre
+d'outils → Changer la posologie*. Le même sélecteur Simple/Avancé y
+est disponible et s'applique à partir de la *Date d'effet* que tu
+choisis, de sorte que le schéma précédent reste valable pour les
+jours antérieurs à cette date.
+
+MedReminder n'est pas un dispositif médical : il ne vérifie pas les
+doses maximales journalières, n'alerte pas sur les surdosages et ne
+contrôle pas les interactions médicamenteuses. Il suit uniquement la
+prescription de ton médecin et te prévient avant que le stock ne
+s'épuise.
 
 ## Catalogue de référence (multi-pays)
 

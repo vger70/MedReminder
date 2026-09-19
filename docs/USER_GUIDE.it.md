@@ -55,7 +55,48 @@ normale.
 5. **Canali di notifica**: spunta Windows e/o Email. Devi aver
    configurato le impostazioni SMTP (vedi sotto) perché l'email
    funzioni.
-6. **Salva**.
+6. **Schema**: lascia su **Semplice** per una dose fissa presa ogni
+   giorno — è il default e corrisponde al comportamento storico
+   dell'app. Consulta *Regimi complessi* qui sotto per terapie
+   cicliche, a scalare, settimanali o al bisogno.
+7. **Salva**.
+
+## Regimi complessi
+
+Non tutte le terapie consumano la stessa quantità di farmaco ogni
+giorno. Nel form **Nuova medicina** il selettore *Schema* passa da
+**Semplice** (una dose giornaliera fissa) a **Avanzato** e mostra
+un menu *Tipo di regime* con quattro forme aggiuntive:
+
+- **Settimanale** — una quantità diversa per ciascun giorno della
+  settimana (per esempio un anticoagulante orale con dosi diverse
+  lun/mer/ven rispetto agli altri giorni).
+- **Ciclico (N on / M off)** — una quantità fissa per i primi `N`
+  giorni del ciclo seguiti da `M` giorni off. Tipico delle terapie
+  ormonali e dei bolo di cortisone.
+- **Scalare** — una dose che scende (o sale) di un valore fisso ogni
+  intervallo di giorni finché non raggiunge la dose finale, e poi si
+  ferma lì. Tipico della decalage di glucocorticoidi.
+- **Al bisogno (PRN)** — nessun consumo pianificato. MedReminder
+  continua a tenere traccia della scorta ma la colonna *giorni
+  residui* resta vuota finché non cambi il tipo di schema.
+
+Quando selezioni Avanzato i campi *Dose per somministrazione*,
+*Somministrazioni al giorno* e *Orari* in alto nel form vengono
+disattivati: lo schema che configuri sotto è l'unica sorgente per la
+quantità giornaliera. Per tornare al flusso "un click" con dose
+fissa, riporta il selettore su Semplice.
+
+Per cambiare la forma di una terapia in corso, usa *Toolbar → Cambia
+schedulazione*. Lo stesso selettore Semplice/Avanzato è disponibile
+lì e si applica a partire dalla *Data di decorrenza* che scegli, in
+modo che lo schema precedente resti valido per i giorni prima di
+quella data.
+
+MedReminder non è un dispositivo medico: non controlla le dosi
+massime giornaliere, non avvisa di sovradosaggi e non verifica
+interazioni farmacologiche. Segue soltanto la terapia che il tuo
+medico ha prescritto e ti ricorda prima che la scorta finisca.
 
 ## Catalogo di riferimento (multi-paese)
 
