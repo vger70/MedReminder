@@ -1,14 +1,21 @@
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Medicines;
+using MedReminder.UI.Controls;
 
 namespace MedReminder.UI.Forms;
 
-// Dialog for a mid-therapy dose / frequency change. The
+// Dialog for a mid-therapy dose / frequency / shape change. The
 // ChangeMedicationSchedule use case (Application) creates a new
 // entry in MedicationScheduleHistory with EffectiveFrom = the
 // effective date — preserving the schedule history (days before
-// the effective date keep using the previous dose).
+// the effective date keep using the previous dose or shape).
+//
+// A1: the embedded SchedulePanel lets the user switch the new
+// schedule to Weekly, Cyclic, Tapering or Prn. In Simple mode the
+// dose / frequency controls above still drive the change and the
+// use case rebuilds a FixedDailySchedule internally.
 internal sealed class ChangeScheduleDialog : MedReminderFormBase
 {
     public ChangeScheduleResult? Result { get; private set; }
@@ -17,6 +24,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
     private readonly NumericUpDown _doseBox;
     private readonly NumericUpDown _freqBox;
     private readonly DateTimePicker _effectiveFromPicker;
+    private readonly SchedulePanel _schedulePanel;
 
     public ChangeScheduleDialog(
         string medicineName,
@@ -27,8 +35,8 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
     {
         _loc = localization;
         Text = _loc.Get("Ui.ChangeScheduleDialog.Title");
-        Width = 500;
-        Height = 340;
+        Width = 640;
+        Height = 560;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -96,10 +104,14 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
+        _schedulePanel = new SchedulePanel(_loc);
+        _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
+
         AddRow(table, string.Empty, header);
         AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewDose"), _doseBox);
         AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewFrequency"), _freqBox);
         AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.EffectiveFrom"), _effectiveFromPicker);
+        AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
         AddRow(table, string.Empty, note);
 
         var okButton = new Button { Text = _loc.Get("Ui.ChangeScheduleDialog.Apply"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
@@ -116,16 +128,42 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         buttonPanel.Controls.Add(okButton);
         buttonPanel.Controls.Add(cancelButton);
 
-        Controls.Add(table);
+        var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+        scroll.Controls.Add(table);
+
+        Controls.Add(scroll);
         Controls.Add(buttonPanel);
         AcceptButton = okButton;
         CancelButton = cancelButton;
+
+        SyncSimpleControlsEnabled();
     }
 
     private void OnConfirm(object? sender, EventArgs e)
     {
         var effectiveFrom = DateOnly.FromDateTime(_effectiveFromPicker.Value.Date);
-        Result = new ChangeScheduleResult(_doseBox.Value, (int)_freqBox.Value, effectiveFrom);
+        Schedule? newSchedule = null;
+        if (_schedulePanel.AdvancedSelected)
+        {
+            newSchedule = _schedulePanel.TryBuildSchedule(out var error);
+            if (newSchedule is null)
+            {
+                MessageBox.Show(this,
+                    error ?? _loc.Get("Ui.Schedule.Validation.Generic"),
+                    _loc.Get("Ui.ChangeScheduleDialog.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                DialogResult = DialogResult.None;
+                return;
+            }
+        }
+        Result = new ChangeScheduleResult(_doseBox.Value, (int)_freqBox.Value, effectiveFrom, newSchedule);
+    }
+
+    private void SyncSimpleControlsEnabled()
+    {
+        var simple = !_schedulePanel.AdvancedSelected;
+        _doseBox.Enabled = simple;
+        _freqBox.Enabled = simple;
     }
 
     private static void AddRow(TableLayoutPanel table, string label, Control input)
@@ -141,8 +179,9 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
 internal sealed record ChangeScheduleResult(
     decimal NewDose,
     int NewFreq,
-    DateOnly EffectiveFrom)
+    DateOnly EffectiveFrom,
+    Schedule? NewSchedule = null)
 {
     public ChangeMedicationScheduleCommand ToCommand(Guid medicineId)
-        => new(medicineId, NewDose, NewFreq, EffectiveFrom);
+        => new(medicineId, NewDose, NewFreq, EffectiveFrom, NewSchedule);
 }
