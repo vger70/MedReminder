@@ -27,7 +27,7 @@ internal sealed class AboutDialog : MedReminderFormBase
     private Label _updateStatusLabel = null!;
 
     private const string AuthorHandle = "vger70";
-    private const string AuthorEmail = "m.mosti@gmail.com";
+    private const string AuthorEmail = "medreminder26@gmail.com";
     private const string RepositoryUrl = "https://github.com/vger70/MedReminder";
     private const string LicenseUrl = "https://github.com/vger70/MedReminder/blob/main/LICENSE";
     private const string IssuesUrl = "https://github.com/vger70/MedReminder/issues";
@@ -42,8 +42,11 @@ internal sealed class AboutDialog : MedReminderFormBase
         _log = log;
 
         Text = _loc.Get("Ui.AboutDialog.Title");
-        Width = 560;
-        Height = 500;
+        // Sized to fit the longest label the dialog carries (the
+        // GitHub source-code URL) without clipping in any of the
+        // shipped languages.
+        Width = 680;
+        Height = 560;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -120,7 +123,11 @@ internal sealed class AboutDialog : MedReminderFormBase
         var disclaimer = new Label
         {
             AutoSize = true,
-            MaximumSize = new Size(460, 0),
+            // Matches the usable width inside the body panel
+            // (dialog width - 2 * body padding). Kept slightly under
+            // that value to leave room for the vertical scrollbar
+            // WinForms reserves on high-DPI displays.
+            MaximumSize = new Size(620, 0),
             ForeColor = Color.DimGray,
             Text = _loc.Get("Ui.AboutDialog.Disclaimer"),
         };
@@ -143,7 +150,7 @@ internal sealed class AboutDialog : MedReminderFormBase
         {
             AutoSize = true,
             ForeColor = Color.DimGray,
-            MaximumSize = new Size(360, 0),
+            MaximumSize = new Size(480, 0),
             Text = string.Empty,
         };
 

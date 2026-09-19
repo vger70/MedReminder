@@ -84,7 +84,7 @@
   "Ui.AboutDialog.Email": "Email: {0}",
   "Ui.AboutDialog.Repository": "Codice sorgente: {0}",
   "Ui.AboutDialog.ReportIssue": "Segnala un problema su GitHub",
-  "Ui.AboutDialog.License": "Rilasciato con licenza MIT",
+  "Ui.AboutDialog.License": "Rilasciato con licenza Apache 2.0",
   "Ui.AboutDialog.Disclaimer": "Promemoria organizzativo per le scorte di medicine. Non è un dispositivo medico: non fornisce indicazioni cliniche. Ogni decisione terapeutica va concordata con il medico.",
   "Ui.AboutDialog.DataSources": "Fonti dei dati integrate",
   "Ui.AboutDialog.CheckForUpdates": "Controlla aggiornamenti ora",

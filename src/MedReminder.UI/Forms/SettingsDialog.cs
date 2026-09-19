@@ -120,8 +120,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _catalogueQuery = catalogueQuery;
 
         Text = _loc.Get("Ui.SettingsDialog.Title");
-        Width = 620;
-        Height = 560;
+        // Sized so that the Backup tab fits the folder textbox, the
+        // Browse button, and every localised help/warning label
+        // without an horizontal scrollbar. Every other tab has
+        // Dock=Fill or AutoSize controls that scale to fit.
+        Width = 780;
+        Height = 620;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -767,7 +771,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
         _backupDirectoryBox = new TextBox
         {
-            Width = 400,
+            // Sized against the current SettingsDialog width so
+            // it never pushes the Backup tab into an horizontal
+            // scrollbar. Column 0 of BuildFormTable is 160 wide,
+            // container padding is 16 on each side, table padding
+            // is 12 on each side — the directory box + browse
+            // button must stay under (Width − 160 − 32 − 24).
+            Width = 460,
             Text = settings.Directory,
             ReadOnly = false,
         };
@@ -817,7 +827,11 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _backupCloudWarningLabel = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(560, 0),
+            // Constrained to the width available in table column 1
+            // (dialog − 160 − container padding − table padding),
+            // so the localized warning text wraps within the tab
+            // instead of forcing an horizontal scrollbar.
+            MaximumSize = new System.Drawing.Size(540, 0),
             ForeColor = System.Drawing.Color.DarkOrange,
             Text = string.Empty,
             Visible = false,
@@ -856,18 +870,25 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var note = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(560, 0),
+            // Wraps against the tab's usable width (dialog width
+            // minus container padding on both sides).
+            MaximumSize = new System.Drawing.Size(700, 0),
             AutoEllipsis = false,
             Text = _loc.Get("Ui.SettingsDialog.Backup.Note"),
             ForeColor = System.Drawing.Color.DarkGray,
         };
 
+        // AutoScroll intentionally left off: the SettingsDialog is
+        // now sized so the Backup tab fits without any scrollbar,
+        // and enabling AutoScroll here would restore both vertical
+        // and horizontal scrollbars for edge cases we already
+        // handle via the MaximumSize wraps above.
         var container = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
-            AutoScroll = true,
+            WrapContents = false,
         };
         container.Controls.Add(_dbPathLabel);
         container.Controls.Add(table);

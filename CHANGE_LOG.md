@@ -46,7 +46,7 @@ changes to the domain, persistence or notification pipelines.
   version (from `Assembly.GetExecutingAssembly().GetName().Version`),
   the author handle (`vger70`), the author email
   (`m.mosti@gmail.com`), a link to the GitHub repository, a link to
-  report an issue, the MIT-license note, the "not a medical device"
+  report an issue, the Apache-2.0 license note, the "not a medical device"
   disclaimer, and the existing per-country reference-catalogue
   attributions (AIFA / EMA / AEMPS / BDPM). It also embeds a
   *Check for updates now* button that hits the same endpoint as the

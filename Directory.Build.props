@@ -33,11 +33,11 @@
     <Product>MedReminder</Product>
     <Authors>vger70</Authors>
     <Company>vger70</Company>
-    <Copyright>Copyright (c) vger70. Licensed under the MIT License.</Copyright>
+    <Copyright>Copyright (c) vger70. Licensed under the Apache License 2.0.</Copyright>
     <PackageProjectUrl>https://github.com/vger70/MedReminder</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vger70/MedReminder</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
   </PropertyGroup>
 
   <!--
