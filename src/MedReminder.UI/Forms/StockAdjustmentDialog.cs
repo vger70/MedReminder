@@ -1,4 +1,3 @@
-using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Domain.Stock;
 
@@ -38,13 +37,13 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
         };
 
         _kindBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
-        _kindBox.Items.AddRange(new object[]
-        {
+        _kindBox.Items.AddRange(
+        [
             new KindOption(StockOperationKind.NewPackage, _loc.Get("Ui.StockAdjustmentDialog.Kind.NewPackage")),
             new KindOption(StockOperationKind.ManualAdd, _loc.Get("Ui.StockAdjustmentDialog.Kind.ManualAdd")),
             new KindOption(StockOperationKind.PositiveCorrection, _loc.Get("Ui.StockAdjustmentDialog.Kind.PositiveCorrection")),
             new KindOption(StockOperationKind.NegativeCorrection, _loc.Get("Ui.StockAdjustmentDialog.Kind.NegativeCorrection")),
-        });
+        ]);
         _kindBox.SelectedIndex = _kindBox.Items
             .Cast<KindOption>()
             .Select((o, idx) => (o, idx))

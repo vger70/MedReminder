@@ -18,6 +18,10 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);IDE0011</NoWarn>
+  </PropertyGroup>
+    
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

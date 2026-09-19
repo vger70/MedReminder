@@ -358,7 +358,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             // In Advanced mode slots × non-fixed combinations are out
             // of scope (§3.1) — drop the slots so the schedule owns
             // the daily rate uniquely.
-            Slots: initialSchedule is null ? _slots.ToList() : new List<AdministrationSlotEntry>(),
+            Slots: initialSchedule is null ? [.. _slots] : new List<AdministrationSlotEntry>(),
             NationalCode: _linkedNationalCode,
             AtcCode: _linkedAtcCode,
             LinkedReferenceMedicineId: _linkedReferenceMedicineId,
@@ -696,7 +696,7 @@ internal sealed record MedicineEditResult(
         DoctorName: DoctorName,
         Notes: Notes,
         IsActive: IsActive,
-        AdministrationSlots: MapSlots() ?? Array.Empty<AdministrationSlotInput>(),
+        AdministrationSlots: MapSlots() ?? [],
         Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId));
 
     private IReadOnlyList<AdministrationSlotInput>? MapSlots()

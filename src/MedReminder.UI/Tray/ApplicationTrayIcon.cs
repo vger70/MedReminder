@@ -1,5 +1,3 @@
-using System.Drawing;
-using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 
 namespace MedReminder.UI.Tray;

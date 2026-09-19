@@ -1,5 +1,3 @@
-using System.Windows.Forms;
-
 namespace MedReminder.UI.Forms;
 
 // Base class for every form in the app. Single source of truth for

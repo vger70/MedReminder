@@ -1,6 +1,4 @@
 using System.ComponentModel;
-using System.Drawing;
-using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Domain.Catalogue;

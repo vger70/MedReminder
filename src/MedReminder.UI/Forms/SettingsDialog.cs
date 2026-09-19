@@ -1,9 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
-using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
-using MedReminder.Domain.Catalogue;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.Extensions.Options;
@@ -86,6 +84,11 @@ internal sealed class SettingsDialog : MedReminderFormBase
         InitialDelay = 400,
         ReshowDelay = 200,
         ShowAlways = true,
+    };
+
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        WriteIndented = true,
     };
 
     public SettingsDialog(
@@ -359,10 +362,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     {
         var payload = new { UI = settings };
         var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "user.settings.json");
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-        });
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
         File.WriteAllText(path, json);
     }
 
@@ -530,10 +530,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     {
         var payload = new { Smtp = settings };
         var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "smtp.settings.json");
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-        });
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
         File.WriteAllText(path, json);
     }
 
@@ -545,10 +542,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     {
         var payload = new { Notifications = settings };
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-        });
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
         File.WriteAllText(path, json);
     }
 
@@ -792,8 +786,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
             CustomFormat = "HH:mm",
             ShowUpDown = true,
             Width = 100,
+            Value = ParsePreferredTimeAsDateTime(settings.PreferredTime)
         };
-        _backupTimePicker.Value = ParsePreferredTimeAsDateTime(settings.PreferredTime);
 
         _backupRetentionBox = new NumericUpDown
         {
@@ -1313,10 +1307,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     {
         var payload = new { Backup = settings };
         var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "backup.settings.json");
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-        });
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
         File.WriteAllText(path, json);
     }
 

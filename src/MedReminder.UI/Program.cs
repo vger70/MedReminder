@@ -1,8 +1,4 @@
-using System;
 using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Text.Json;
 using MedReminder.Application;
 using MedReminder.Application.Abstractions;
@@ -26,9 +22,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
 using WinFormsApp = System.Windows.Forms.Application;
-using WinFormWindowState = System.Windows.Forms.FormWindowState;
-using WinFormUnhandledExceptionMode = System.Windows.Forms.UnhandledExceptionMode;
 using WinFormThreadExceptionEventArgs = System.Threading.ThreadExceptionEventArgs;
+using WinFormUnhandledExceptionMode = System.Windows.Forms.UnhandledExceptionMode;
+using WinFormWindowState = System.Windows.Forms.FormWindowState;
 
 namespace MedReminder.UI;
 
@@ -284,7 +280,7 @@ internal static class Program
             var prefix = ProfileArgumentPrefix + "=";
             if (a.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
-                return a.Substring(prefix.Length);
+                return a[prefix.Length..];
             }
         }
         return null;

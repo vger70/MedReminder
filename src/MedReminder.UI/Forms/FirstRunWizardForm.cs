@@ -1,4 +1,3 @@
-using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 
 namespace MedReminder.UI.Forms;

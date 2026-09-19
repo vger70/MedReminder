@@ -12,6 +12,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);IDE0011</NoWarn>
+  </PropertyGroup>
+    
   <ItemGroup>
     <ProjectReference Include="..\MedReminder.Domain\MedReminder.Domain.csproj" />
   </ItemGroup>

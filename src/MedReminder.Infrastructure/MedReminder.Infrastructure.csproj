@@ -31,6 +31,10 @@
     <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);IDE0011</NoWarn>
+  </PropertyGroup>
+    
   <!--
     Reference-catalogue snapshots (ANALYSIS-DRUG-CATALOGUE.md §2.6).
     Ship each AIFA / EMA snapshot ZIP as an embedded resource so

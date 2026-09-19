@@ -64,7 +64,7 @@ internal sealed class MainForm : MedReminderFormBase
     // on every prepaint would be wasteful.
     private Font? _statusCellFont;
 
-    private bool _closeToTray = true;
+    private readonly bool _closeToTray = true;
     private bool _reallyExit;
 
     public MainForm(
@@ -567,7 +567,7 @@ internal sealed class MainForm : MedReminderFormBase
             // than one profile ChooseProfile still shows the picker
             // unless "--profile <id>" is passed, so pass it too.
             _profileRegistry.SetActiveProfileHint(chosen.Id);
-            _restarter.RestartAndExit(new[] { "--profile", chosen.Id });
+            _restarter.RestartAndExit(["--profile", chosen.Id]);
         }
         catch (Exception ex)
         {
@@ -829,9 +829,7 @@ internal sealed class MainForm : MedReminderFormBase
             if (medicine is null) return;
 
             var slots = await slotRepo.ListForMedicineAsync(row.Id, CancellationToken.None);
-            IReadOnlyList<AdministrationSlotEntry> seedSlots = slots
-                .Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel))
-                .ToList();
+            IReadOnlyList<AdministrationSlotEntry> seedSlots = [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel))];
 
             seed = new MedicineEditResult(
                 medicine.Name, medicine.ActiveIngredient, medicine.Package, medicine.Unit,
