@@ -73,6 +73,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // countries actually present in the local catalogue plus a
     // synthetic "EU" entry for supranational authorisations.
     private ComboBox _referenceCountryCombo = null!;
+    // Passive update check opt-in — surfaces new GitHub releases at
+    // startup without downloading anything.
+    private CheckBox _checkUpdatesBox = null!;
 
     // Shared component for the explanatory tooltips on the technical fields.
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
@@ -219,6 +222,15 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Text = _loc.Get("settings.referenceCountry.help"),
         };
 
+        _checkUpdatesBox = new CheckBox
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.CheckUpdates"),
+            Checked = _userMonitor.CurrentValue.CheckForUpdatesOnStartup,
+        };
+        _tooltips.SetToolTip(_checkUpdatesBox,
+            _loc.Get("Ui.SettingsDialog.Tooltip.CheckUpdates"));
+
         var saveButton = new Button
         {
             Text = _loc.Get("Ui.SettingsDialog.General.Save"),
@@ -246,6 +258,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         panel.Controls.Add(referenceCountryLabel);
         panel.Controls.Add(_referenceCountryCombo);
         panel.Controls.Add(referenceCountryHelp);
+        panel.Controls.Add(_checkUpdatesBox);
         panel.Controls.Add(saveButton);
         panel.Controls.Add(note);
         page.Controls.Add(panel);
@@ -300,6 +313,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             Language = choice.Code,
             ReferenceCountry = referenceCountry,
+            CheckForUpdatesOnStartup = _checkUpdatesBox.Checked,
         };
 
         try

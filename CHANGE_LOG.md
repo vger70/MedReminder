@@ -30,6 +30,87 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #29 — About dialog with credits + passive GitHub update check
+
+Link: [vger70/MedReminder#29](https://github.com/vger70/MedReminder/pull/29)
+**Status:** open
+Branch: `claude/stoic-bohr-dker85`
+
+Two small user-facing additions and their supporting plumbing. No
+changes to the domain, persistence or notification pipelines.
+
+### Added
+
+- New `MedReminder.UI.Forms.AboutDialog` — clickable About window
+  reachable from Help → *About MedReminder…*. Shows the running
+  version (from `Assembly.GetExecutingAssembly().GetName().Version`),
+  the author handle (`vger70`), the author email
+  (`m.mosti@gmail.com`), a link to the GitHub repository, a link to
+  report an issue, the MIT-license note, the "not a medical device"
+  disclaimer, and the existing per-country reference-catalogue
+  attributions (AIFA / EMA / AEMPS / BDPM). It also embeds a
+  *Check for updates now* button that hits the same endpoint as the
+  passive startup check.
+- Passive update check against the public GitHub Releases API. New
+  ports and adapter live under `MedReminder.Application.UpdateChecking`
+  (`IUpdateChecker`, `UpdateCheckResult`, `GitHubReleaseParser`) and
+  `MedReminder.Infrastructure.UpdateChecking.GitHubUpdateChecker`.
+  On main-window load the app queries
+  `https://api.github.com/repos/vger70/MedReminder/releases/latest`,
+  compares the tag with the assembly version and pops a non-modal
+  prompt if a newer stable release exists — otherwise it stays
+  silent. The check downloads and installs nothing; the user still
+  opens the release page in their browser to upgrade manually.
+  Timeouts, rate limits and network errors all collapse into a
+  no-op on startup (logged at Information).
+- New Help → *Check for updates…* menu entry that always runs the
+  check on demand and always reports the outcome (up to date, new
+  version, or error), regardless of the opt-in flag.
+- New checkbox on the Settings → General tab:
+  *Check for updates on startup (GitHub)*, backed by
+  `UserSettings.CheckForUpdatesOnStartup` (default `true`, persisted
+  in `%LOCALAPPDATA%\MedReminder\user.settings.json`).
+- Assembly and package metadata in `Directory.Build.props`
+  (`Authors`, `Company`, `Product`, `Copyright`, `PackageProjectUrl`,
+  `RepositoryUrl`, `RepositoryType`, `PackageLicenseExpression`) so
+  the shipped `.exe` carries proper file properties in Windows
+  Explorer and the About dialog can read them via
+  `Assembly.GetCustomAttribute`.
+
+### Localisation
+
+- 21 new keys added to every shipped dictionary
+  (`en`, `it`, `fr`, `es`, `de`):
+  - `Ui.MainForm.Menu.Help.CheckUpdates`
+  - `Ui.AboutDialog.Title`, `.AppName`, `.Version`, `.Author`,
+    `.Email`, `.Repository`, `.ReportIssue`, `.License`,
+    `.Disclaimer`, `.DataSources`, `.CheckForUpdates`,
+    `.CheckingForUpdates`
+  - `Ui.UpdateCheck.Title`, `.UpToDate`, `.NewVersion`, `.Error`,
+    `.NewVersionTitle`, `.NewVersionPrompt`
+  - `Ui.SettingsDialog.General.CheckUpdates`
+  - `Ui.SettingsDialog.Tooltip.CheckUpdates`
+- The obsolete `Ui.MainForm.About.Body` / `Ui.MainForm.About.Title`
+  keys are removed from all five dictionaries — they were the copy
+  of the previous `MessageBox`-based About that the new dialog
+  replaces.
+
+### Tests
+
+- `MedReminder.Application.Tests.UpdateChecking.GitHubReleaseParserTests`
+  covers tag parsing (`v2.0.1`, `V2.0.1`, `2.0.1`, `v2.0.1-rc1`,
+  garbage), version comparison (ahead / equal / behind), the
+  revision-component normalisation, prerelease / draft flags, and
+  malformed / incomplete JSON payloads.
+
+### Version
+
+- `Directory.Build.props`: `VersionPrefix` set to `2.0.1` to match
+  the released tag; the release workflow will bump it further on the
+  next release.
+
+---
+
 ## PR #28 — Profile UX polish (Increment 15 follow-up)
 
 Link: [vger70/MedReminder#28](https://github.com/vger70/MedReminder/pull/28)

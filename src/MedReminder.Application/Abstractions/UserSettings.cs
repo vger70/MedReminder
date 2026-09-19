@@ -27,6 +27,16 @@ public sealed class UserSettings
     // the AIFA snapshot shipped with the app. See
     // docs/ANALYSIS-DRUG-CATALOGUE.md §2.2 for the country-scope rule.
     public string ReferenceCountry { get; set; } = "IT";
+
+    // Passive update check: on startup, query the GitHub Releases
+    // API for the latest published release and, if the tag is newer
+    // than the running assembly version, show a non-modal
+    // notification pointing at the release page. No download and no
+    // in-place update — the user still installs the new build
+    // manually. Defaults to true; the user can opt out from the
+    // General tab of the Settings dialog. The manual "Check for
+    // updates now" menu entry always runs regardless of this flag.
+    public bool CheckForUpdatesOnStartup { get; set; } = true;
 }
 
 // Definition of the "currently supported" languages — used by the UI

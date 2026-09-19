@@ -24,6 +24,22 @@
     <VersionSuffix></VersionSuffix>
   </PropertyGroup>
 
+  <!-- Assembly / package metadata inherited by every project. These
+       values surface in the file properties of the shipped .exe
+       ("Details" tab in Windows Explorer) and in the About dialog
+       (which reads them via Assembly.GetCustomAttribute). Keep the
+       repository URLs pointing at the canonical GitHub repository. -->
+  <PropertyGroup Label="Assembly metadata">
+    <Product>MedReminder</Product>
+    <Authors>vger70</Authors>
+    <Company>vger70</Company>
+    <Copyright>Copyright (c) vger70. Licensed under the MIT License.</Copyright>
+    <PackageProjectUrl>https://github.com/vger70/MedReminder</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/vger70/MedReminder</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
   <!--
     Release-only cleanup: at the end of every Release build and publish,
     remove the debug symbols (*.pdb) and the XML documentation files
