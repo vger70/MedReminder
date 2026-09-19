@@ -54,7 +54,48 @@ expected.
    is created.
 5. **Notification channels**: check Windows and/or Email. You must
    have configured SMTP settings (see below) for the email to work.
-6. **Save**.
+6. **Schedule**: leave on **Simple** for a fixed dose taken every
+   day — this is the default and matches how the app has always
+   worked. See *Complex regimens* below for cyclic, tapering,
+   weekly or as-needed therapies.
+7. **Save**.
+
+## Complex regimens
+
+Not every therapy consumes the same amount of medicine every day.
+On the **New medicine** form the *Schedule* selector switches from
+**Simple** (a fixed daily dose) to **Advanced** and reveals a
+*Regime type* dropdown with four additional shapes:
+
+- **Weekly pattern** — a per-day quantity for each day of the week
+  (for example an oral anticoagulant taken at different doses on
+  Mon / Wed / Fri than on the other days).
+- **Cyclic (N on / M off)** — a fixed quantity for the first `N`
+  days of the cycle followed by `M` days off. Typical of hormonal
+  therapies and cortisone pulses.
+- **Tapering** — a decreasing (or increasing) dose that steps by a
+  fixed amount every fixed number of days until the end dose is
+  reached, then holds. Typical of glucocorticoid down-titration.
+- **As needed (PRN)** — no scheduled consumption. MedReminder keeps
+  tracking the stock but the *days remaining* column stays empty
+  until the schedule shape changes.
+
+When Advanced is selected the *Dose per administration*,
+*Administrations / day* and *Administration slots* fields at the
+top of the form become inactive: the schedule you configure below
+is the sole source used for the daily quantity. To go back to the
+one-click fixed-daily flow, switch the selector back to Simple.
+
+To change the shape of an existing therapy mid-course, use
+*Toolbar → Change schedule*. The same Simple / Advanced selector
+is available there and takes effect from the *Effective from* date
+you pick, so the previous schedule stays valid for the days before
+that date.
+
+MedReminder is not a medical device: it does not check maximum
+daily doses, does not warn about overdoses and does not verify
+drug-drug interactions. It only follows the therapy your doctor
+prescribed and reminds you before the stock runs out.
 
 ## Reference catalogue (multi-country)
 

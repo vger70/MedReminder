@@ -378,7 +378,29 @@ Rules:
 
 ### 5.1 Location
 
-`MedicineEditDialog` (create + edit modes). No new form.
+Two dialogs already carry schedule-shaping semantics and both get
+the Simple / Advanced toggle via a shared `SchedulePanel` control:
+
+- `MedicineEditDialog` in **Create mode** — the schedule chosen
+  here becomes the first `MedicationScheduleHistory` entry for the
+  new therapy.
+- `ChangeScheduleDialog` — the schedule chosen here becomes a new
+  history entry with `EffectiveFrom` set by the user, so the
+  earlier days of the therapy keep the previous shape.
+
+`MedicineEditDialog` in **Edit mode** is intentionally left as is:
+dose / administrations / slots remain shown but not persisted (they
+are display-only; the current behavior stayed that way in pre-A1
+too), and users who want to change the schedule shape mid-therapy
+use `ChangeScheduleDialog` — the same tool that has always handled
+mid-therapy dose changes.
+
+Both dialogs embed a single `SchedulePanel` (in
+`src/MedReminder.UI/Controls/SchedulePanel.cs`) that owns the
+Simple / Advanced radio pair, the Regime-type dropdown, the
+kind-specific sub-panels and the codec bridge back to the domain
+`Schedule` value object. Splitting the panel out keeps both dialogs
+narrow and guarantees the two flows stay in lockstep.
 
 ### 5.2 Simple / Advanced toggle
 
@@ -423,20 +445,20 @@ Compact, reuse of existing controls. All labels come from
   will only track stock and won't materialize automatic
   consumption. No inputs.
 
-### 5.4 Read-only display in `MainForm` grid
+### 5.4 Read-only display in `MainForm` grid — deferred
 
-The `Consumption/day` column keeps its numeric value on FixedDaily
-therapies. For other kinds the same column shows a badge:
+Originally sketched here as part of A1. Not shipped in the initial
+PR: the grid keeps rendering the *current-day rate* returned by
+`DailyConsumption.RateOn`, which for non-FixedDaily therapies varies
+over time and lands at `0` on off-days and PRN entries. That is not
+misleading (the number reflects the day's actual rate) but it does
+not communicate the schedule shape.
 
-- `Weekly` — a compact string `Mo·Tu·We·Th·Fr·Sa·Su` where cells
-  with a positive dose are visually highlighted.
-- `Cyclic` — `{On}/{Off}` (e.g. `21/7`).
-- `Tapering` — `{StartDose}→{EndDose}` (`4→0.5` mg).
-- `PRN` — the literal `PRN` in a muted color.
-
-`[INFERRED]` The badges live inside the same cell to avoid a new
-column; keeps the grid width unchanged, which is important on
-smaller screens.
+A follow-up commit or PR can add badges as originally sketched
+(`Mo·Tu·We…`, `{On}/{Off}`, `{Start}→{End}`, `PRN`) once the grid
+column layout is revisited. The domain layer already exposes the
+`ScheduleKind` on each `MedicationScheduleHistory` entry, so the
+information is available at read time without a new query.
 
 ### 5.5 Validation errors
 
@@ -705,3 +727,35 @@ in detail — the actual demand will dictate the shape.
 - 2026-09-19 — §12 rewritten as confirmed decisions after
   maintainer sign-off; §13 added with the deferred slot × schedule
   follow-up.
+- 2026-09-19 — §5.1 rewritten to reflect the two-dialog layout
+  actually shipped (MedicineEditDialog Create + ChangeScheduleDialog,
+  via a shared SchedulePanel); §5.4 marked as deferred to a
+  follow-up; implementation-status footer added.
+
+---
+
+## Implementation status
+
+**Shipped — feature branch `feature/complex-regimens` (2026-09-19).**
+
+| Layer          | Deliverable                                                                                                                                |
+|----------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| Domain         | `Schedule` value object with `FixedDaily`, `Weekly`, `Cyclic`, `Tapering`, `Prn`; `ScheduleCodec`; `MedicationScheduleHistory` gains `ScheduleKind` + `SchedulePayload`; `DailyConsumption.RateOn` dispatches through the codec |
+| Application    | `AddMedicineCommand.InitialSchedule` and `ChangeMedicationScheduleCommand.NewSchedule`, both optional and back-compatible                  |
+| Infrastructure | EF Core configuration for the two new columns; idempotent `ALTER TABLE … ADD COLUMN` patch in `DatabaseInitializer`                        |
+| UI             | Shared `SchedulePanel` control; `MedicineEditDialog` (Create) and `ChangeScheduleDialog` both host the Simple / Advanced toggle             |
+| Localization   | 29 new keys in every dictionary (`en`, `fr`, `es`, `de`); Italian ships with `TODO(it):` placeholders per the maintainer's preference       |
+| Docs           | Short "Complex regimens" section added to `docs/USER_GUIDE.en.md`; localized guides (`it`, `fr`, `es`, `de`) awaiting a follow-up          |
+| Tests          | Domain per-kind rate progression + codec round-trip; Application persistence + validation; Infrastructure pre-A1 → patch → post-A1 round trip |
+
+**Deferred (not in the initial A1 PR):**
+
+- MainForm grid badges for non-FixedDaily therapies (§5.4).
+- Italian final translations of the new UI strings (currently
+  `TODO(it): …` placeholders).
+- Localized *Complex regimens* section in the four non-English user
+  guides.
+- Slot × non-FixedDaily schedule combinations — kept as a future
+  refactor path per §13, out of scope for A1.
+- Forward-integrating run-out ETA that walks the schedule day by
+  day — §3.3 remains scalar-snapshot.
