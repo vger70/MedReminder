@@ -32,7 +32,7 @@ namespace MedReminder.Infrastructure.Profiles;
 // processes from mutating the file from the same Windows session
 // (§10.1). The internal lock guards concurrent calls from within
 // the same process (the UI thread and background services).
-internal sealed class ProfileRegistry : IProfileRegistry
+public sealed class ProfileRegistry : IProfileRegistry
 {
     private const int CurrentSchemaVersion = 1;
     private const int PinIterations = 100_000;
@@ -106,6 +106,46 @@ internal sealed class ProfileRegistry : IProfileRegistry
                     ? null
                     : doc.ActiveProfileId;
             }
+        }
+    }
+
+    // One-shot seeding hook reserved for the V1→V2 migration
+    // (docs/ANALYSIS-MULTI-USER.md §5.2 step 6). Writes the initial
+    // profiles.json with a single entry whose Id is the literal
+    // "default" (later profiles use Guids) and Role forced to Admin
+    // (§1.1a — the sole existing V1 user carries admin rights into
+    // V2). Refuses if the registry is already populated: the
+    // migrator is idempotent at the boot level (§5.1) and must not
+    // be called twice.
+    internal Profile SeedFromV1Migration(string id, string displayName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        lock (_sync)
+        {
+            var doc = LoadOrEmpty();
+            if (doc.Profiles.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "Cannot seed a non-empty registry.");
+            }
+
+            var now = _clock.GetUtcNow();
+            var entry = new ProfileEntry
+            {
+                Id = id,
+                DisplayName = displayName.Trim(),
+                Role = RoleToString(ProfileRole.Admin),
+                CreatedAt = now,
+                LastUsedAt = now,
+                PinHash = null,
+                PinSalt = null,
+                PinIterations = 0,
+            };
+            doc.Profiles.Add(entry);
+            doc.ActiveProfileId = entry.Id;
+            Save(doc);
+            return ToProfile(entry);
         }
     }
 

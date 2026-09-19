@@ -21,9 +21,11 @@ namespace MedReminder.UI.Hosting;
 //     at the first tick after the preferred time. No day with a
 //     live app goes without a backup.
 //
-// Fault-tolerant: an export / prune failure does not stop the
-// scheduler and is recorded in the state (LastError /
-// LastAttemptAt) as well as in the logs.
+// Multi-profile (Increment 15c, docs/ANALYSIS-MULTI-USER.md §11.1):
+// each tick backs up EVERY profile in the registry, not only the
+// one the running process opened. Retention runs once at the end,
+// on the shared folder, and applies per-profile (§11.1). A backup
+// error on one profile does not stop the others.
 internal sealed class AutomaticBackupHostedService : BackgroundService
 {
     private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(15);
@@ -56,9 +58,6 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             "Backup scheduler started; tick every {Minutes} minutes.",
             TickInterval.TotalMinutes);
 
-        // Initial delay: give DatabaseInitializer and the monitor
-        // time to stabilize before opening a new connection to the
-        // DB for a possible backup.
         try
         {
             await Task.Delay(InitialDelay, stoppingToken);
@@ -108,14 +107,12 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                     ConvertToLocal(last).DateTime);
                 if (lastLocalDay >= todayLocal)
                 {
-                    // Today's backup already done.
                     return;
                 }
             }
 
             if (timeOfDay < preferred)
             {
-                // Not yet time.
                 return;
             }
 
@@ -125,25 +122,88 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
 
             await using var scope = _services.CreateAsyncScope();
             var backup = scope.ServiceProvider.GetRequiredService<IBackupService>();
+            var registry = scope.ServiceProvider.GetRequiredService<IProfileRegistry>();
 
-            var file = await backup.ExportAsync(settings.Directory, cancellationToken);
+            var profiles = registry.ListProfiles();
+            if (profiles.Count == 0)
+            {
+                _log.LogInformation(
+                    "Automatic backup skipped: no profile in the registry.");
+                return;
+            }
+
+            // Back up every profile. A failure on one profile is
+            // logged but does not stop the others: the daily backup
+            // is best-effort per profile. The overall tick is
+            // considered successful when at least one profile was
+            // exported; that way an unrecoverable failure on one
+            // profile does not silently mask days without any
+            // backup at all.
+            var exportedFiles = new List<string>();
+            var perProfileErrors = new List<string>();
+            foreach (var profile in profiles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    var file = await backup.ExportProfileAsync(
+                        profile.Id, settings.Directory, cancellationToken);
+                    exportedFiles.Add(file);
+                    _log.LogInformation(
+                        "Automatic backup exported profile {Profile} to {File}.",
+                        profile.Id, file);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    var message = $"{profile.Id}: {ex.Message}";
+                    perProfileErrors.Add(message);
+                    _log.LogError(ex,
+                        "Automatic backup failed for profile {Profile}.", profile.Id);
+                }
+            }
 
             var pruned = 0;
             if (settings.RetentionDays > 0)
             {
-                pruned = await backup.PruneOldBackupsAsync(
-                    settings.Directory, settings.RetentionDays, cancellationToken);
+                try
+                {
+                    pruned = await backup.PruneOldBackupsAsync(
+                        settings.Directory, settings.RetentionDays, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Backup retention prune failed.");
+                }
             }
 
-            _stateStore.Save(new BackupState(
-                LastSuccessfulBackupAt: _clock.GetUtcNow(),
-                LastAttemptAt: _clock.GetUtcNow(),
-                LastError: null,
-                LastBackupFile: file));
+            var errorSummary = perProfileErrors.Count == 0
+                ? null
+                : string.Join("; ", perProfileErrors);
 
-            _log.LogInformation(
-                "Automatic backup completed: {File} (retention: {Pruned} files removed).",
-                file, pruned);
+            if (exportedFiles.Count > 0)
+            {
+                _stateStore.Save(new BackupState(
+                    LastSuccessfulBackupAt: _clock.GetUtcNow(),
+                    LastAttemptAt: _clock.GetUtcNow(),
+                    LastError: errorSummary,
+                    LastBackupFile: exportedFiles[^1]));
+
+                _log.LogInformation(
+                    "Automatic backup tick completed: {ExportedCount} profile(s) exported, {Pruned} old file(s) pruned.",
+                    exportedFiles.Count, pruned);
+            }
+            else
+            {
+                _stateStore.Save(new BackupState(
+                    LastSuccessfulBackupAt: state.LastSuccessfulBackupAt,
+                    LastAttemptAt: _clock.GetUtcNow(),
+                    LastError: errorSummary,
+                    LastBackupFile: state.LastBackupFile));
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

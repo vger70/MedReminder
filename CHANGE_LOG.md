@@ -30,10 +30,369 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #26 — Increment 15e: PIN polish, user guide, feature marked implemented
+
+Link: [vger70/MedReminder#26](https://github.com/vger70/MedReminder/pull/26)
+**Status:** open
+Branch: `claude/incremento-15e`
+
+Fifth and final sub-increment of the multi-user work
+(`docs/ANALYSIS-MULTI-USER.md` §8, §12, §15e). Wraps up the
+feature: polishes the PIN prompt, documents the multi-profile
+experience in every shipped language, marks the design as
+implemented, and clears Increment 15 from the CLAUDE.md pending
+list. No behavior change beyond the PinPromptForm touches.
+
+### Changed
+
+- `MedReminder.UI.Forms.PinPromptForm` — polish pass:
+  - The "friction, not security" wording is now shown as an
+    always-visible label under the PIN box, not only as a
+    tooltip (§8.2). New localisation key
+    `Ui.PinPromptForm.FrictionNote`.
+  - On the third wrong attempt the dialog now shows a modal
+    "locked out" `MessageBox` before closing, so the user sees
+    what happened instead of watching the window vanish.
+  - Layout widened to 420×240 to accommodate the note without
+    reflow.
+
+### Docs
+
+- `docs/USER_GUIDE.{en,it,fr,es,de}.md` — new
+  **"Multiple profiles and admin/user roles"** section, added to
+  each shipped language between "Edit or deactivate a medicine"
+  and "Configure email sending". Covers: roles, creating and
+  switching profiles, rename / PIN / delete, on-disk layout,
+  multi-profile automatic backup, restore-into-profile,
+  Windows auto-start behaviour, and the V1 → V2 upgrade with the
+  manual pre-migration backup cleanup note (§14 F).
+  "First start" was also updated in each language to describe the
+  first-run wizard and the new per-profile database path.
+- `docs/ANALYSIS-MULTI-USER.md` — added an **Implementation
+  status** footer that maps every sub-increment to its PR and
+  reiterates the two non-goals (promote/demote, consolidated
+  admin view) that remain deferred (§16).
+- `CLAUDE.md` §5 — no standing working branch after Increment 15;
+  new features start from `main`.
+- `CLAUDE.md` §6 — "Data locations at runtime" table split into
+  shared/admin-managed and per-profile files, matching the V2
+  layout that shipped in 15b + 15c.
+- `CLAUDE.md` §7 — Increment 15 removed from the pending list;
+  only the two documented non-goals remain deferred.
+
+### Localisation
+
+- **1 new key** added to every dictionary
+  (`Ui.PinPromptForm.FrictionNote`). All 5 dictionaries stay at
+  parity at **439 keys each** — `DictionaryParityTests` remain
+  green.
+
+### Increment 15 complete
+
+Increment 15 shipped in **five sequential pull requests**
+(#22 → #26). All the confirmed decisions in
+`docs/ANALYSIS-MULTI-USER.md` §14 / §14a are honored in the
+shipped code. The two explicit non-goals — profile promote /
+demote and the consolidated admin view — remain deferred.
+
+---
+
+## PR #25 — Increment 15d: ProfilesManagerForm, admin/user gating, restore-into-profile
+
+Link: [vger70/MedReminder#25](https://github.com/vger70/MedReminder/pull/25)
+**Status:** merged (2026-09-19)
+Branch: `claude/incremento-15d`
+
+Fourth sub-increment of the multi-user work
+(`docs/ANALYSIS-MULTI-USER.md` §7.4, §11.3, §12, §15d). Adds the
+admin-only profile-management UI, gates the SettingsDialog by role,
+surfaces the active profile in the main window and lets the admin
+restore any profile from the Backup tab. PIN prompt polish and the
+user-guide entries remain for 15e.
+
+### Added
+
+- `MedReminder.UI.Forms.ProfilesManagerForm` — admin-only CRUD for
+  profiles (§12.4). Columns: name, role, PIN status, last-used
+  (`dd/MM HH:mm`), active-indicator. Inline dialogs for New / Rename
+  / Change PIN and a **type-name-to-confirm** delete dialog with an
+  "also delete data on disk" checkbox that defaults to OFF (§13).
+  Delete button is disabled for the currently active profile
+  (§14a H) and for the last remaining admin (§2.2). Defense-in-depth
+  guards inside the form back up the button-disable logic in case
+  the form is opened by a non-admin caller.
+- `File → Change profile…` menu entry (everyone): opens the
+  `ProfilePickerForm`, sets the hint on confirm and restarts through
+  `IApplicationRestarter` (§6.1).
+- `Tools → Manage profiles…` menu entry (admin only, hidden for
+  non-admins — §12.2).
+- New **Notifications** tab in `SettingsDialog` (§7.4). Visible to
+  every profile; contains only the per-profile `ToAddress`. Persists
+  to `<DataDirectory>\notifications.settings.json`.
+- **Restore-into-profile** dropdown in the Backup tab (§11.3).
+  Extracts the `profileId` from the backup filename
+  (`medreminder-<profileId>-YYYYMMDD-HHmmss.db`) as the default
+  selection, falling back to the active profile when the filename
+  does not follow the convention. `RestartAndExit` is called only
+  when the target profile is the active one — restoring into an
+  inactive profile does not touch the live `DbContext` connection.
+
+### Changed
+
+- `SettingsDialog` — Email and Backup tabs are hidden for non-admin
+  profiles. The Email tab no longer contains the recipient field;
+  it lives in the new Notifications tab (visible to everyone). The
+  Save button on the Email tab writes only SMTP; the Notifications
+  tab has its own Save button that writes only the per-profile
+  file. `IProfileRegistry` was added to the constructor so the
+  Backup dropdown can enumerate profiles.
+- `MainForm` — title bar shows the profile name
+  (`MedReminder — Grandma`, §12.1). StatusStrip carries a
+  `Profile: <name>` label on the left, bold + dark-blue with the
+  `(admin)` suffix when the current profile is an admin
+  (distinctive badge, §12.1). The constructor now injects
+  `ICurrentProfile`, `IProfileRegistry` and `IApplicationRestarter`.
+
+### Localisation
+
+- **60 new keys** added to every dictionary
+  (`assets/localization/strings.{en,it,fr,es,de}.json`) — menus,
+  StatusStrip, ProfilesManagerForm dialogs, Notifications tab,
+  restore-into-profile chooser. All 5 dictionaries stay at
+  **parity at 438 keys each** — `DictionaryParityTests` remain
+  green.
+
+### Invariants (unchanged, enforced twice)
+
+- **At least one admin** — Delete refuses in `ProfileRegistry` and
+  the Delete button is disabled for the last admin.
+- **Active profile not deletable** — Delete button is disabled;
+  the form also shows an explanatory warning if a script triggers
+  the click (§14a H).
+- **Immutable role** — no promote/demote path exists in the UI or
+  in the registry API (§14a G). Explicit hint label at the bottom
+  of the form.
+- **Restore into inactive profile skips restart** — only the
+  active-profile restore triggers `RestartAndExit` (§11.2).
+
+### Out of scope (still)
+
+- PIN prompt polish, tooltip wording pass, user-guide entries —
+  15e.
+- Promote/demote flow, cross-profile consolidated view — non-goals
+  for Increment 15 (§16).
+
+---
+
+## PR #24 — Increment 15c: multi-profile boot flow and per-profile services
+
+Link: [vger70/MedReminder#24](https://github.com/vger70/MedReminder/pull/24)
+**Status:** merged (2026-09-18)
+Branch: `claude/incremento-15c` (stacked on `claude/incremento-15b` from PR #23)
+
+Third and largest sub-increment of the multi-user work
+(`docs/ANALYSIS-MULTI-USER.md` §4, §7, §11, §15c). Wires the
+15a / 15b groundwork into the boot flow. After this PR the app
+opens with a picker when more than one profile exists, runs the
+first-run wizard on a clean install, gates the DB and per-profile
+recipient behind `ICurrentProfile`, backs up every profile on each
+successful automatic-backup tick, and enforces the profile PIN
+when one is set. Admin/user UI gating remains for 15d; PIN prompt
+polish and user-guide entries remain for 15e.
+
+### Added
+
+- `MedReminder.UI.Forms.FirstRunWizardForm` — mandatory wizard
+  shown when the registry is empty. Collects the admin name and
+  an optional PIN, then creates the profile through
+  `IProfileRegistry.Create` (which forces `Role = Admin` on an
+  empty registry). Cannot be dismissed with the window `X`;
+  Exit closes the app (§12.3).
+- `MedReminder.UI.Forms.ProfilePickerForm` — boot picker shown
+  when more than one profile exists. `ListView` with name / role
+  badge / `dd/MM HH:mm` last-used (decision §14 D), sorted by
+  `LastUsedAt` descending, `ActiveProfileIdHint` pre-selected.
+- `MedReminder.UI.Forms.PinPromptForm` — three in-memory attempts
+  (§8.3). Returns `DialogResult.Abort` on lockout so the caller
+  bails out of the boot flow. Tooltip already carries the
+  "friction, not security" note; the polish pass lands in 15e.
+
+### Changed
+
+- `IBackupService` — replaced `ExportAsync(dir, ct)` /
+  `ImportAsync(src, ct)` with per-profile
+  `ExportProfileAsync(profileId, dir, ct)` /
+  `ImportProfileAsync(profileId, src, ct)` (§11.2). File name
+  becomes `medreminder-<profileId>-YYYYMMDD-HHmmss.db` so
+  different profiles can share a folder.
+- `BackupService` — implements the new API. The retention regex
+  captures the `profileId` group so
+  `PruneOldBackupsAsync` applies retention per-profile: the most
+  recent backup of profile A does not shield old backups of
+  profile B (§11.1). `ImportProfileAsync` only closes the
+  currently-active `DbContext` connection when the target matches
+  the DB path — an import of an inactive profile no longer
+  touches the live connection.
+- `AutomaticBackupHostedService` — each tick now enumerates
+  `IProfileRegistry.ListProfiles()` and calls `ExportProfileAsync`
+  for every profile. A failure on one profile is logged but does
+  not stop the others. Retention runs once on the shared folder.
+  The tick is marked successful when at least one profile
+  exported, so a partial failure never masks days without any
+  backup (§11.1).
+- `SmtpSettings` — dropped `ToAddress`. The recipient moved to
+  `NotificationSettings.ToAddress` in
+  `<DataDirectory>\notifications.settings.json` (§7.1).
+  `IsConfigured` no longer checks the recipient.
+- `MailKitEmailNotificationService` — now takes
+  `IOptionsMonitor<SmtpSettings>` **and**
+  `IOptionsMonitor<NotificationSettings>`. Throws a specific
+  `InvalidOperationException` when the per-profile recipient is
+  missing (§7.1).
+- `AddMedReminderInfrastructure` — takes `ICurrentProfile` in
+  place of a raw `databasePath`. Registers the current profile
+  as a singleton, registers `IProfileRegistry` (built from
+  `AppDataPaths`), and binds `NotificationSettings` from the
+  configuration chain.
+- `Program.Main` — new multi-profile boot flow (§4.1): run the
+  V1 → V2 migrator, list profiles, pick one (first-run wizard /
+  hint / `--profile` / picker), prompt for the PIN if the profile
+  has one, then build the host. `--minimized` skips the picker
+  and uses the hint (§4.2). `--profile <id>` bypasses the picker
+  (§4.3). The single-instance mutex stays per Windows account,
+  independent of the profile (§10.1).
+- `Program.BuildHost` — adds
+  `notifications.settings.json` (per-profile path from
+  `ICurrentProfile.NotificationSettingsPath`) to the configuration
+  chain with `reloadOnChange: true`.
+- `SettingsDialog` — reads / writes `NotificationSettings` for
+  the recipient (per-profile file). Export / import buttons now
+  call the new per-profile backup APIs against
+  `_currentProfile.Id`. The Backup tab still shows every existing
+  option to the current user; the admin/user gating and the
+  "Restore into profile…" dropdown land in 15d.
+- `MainForm.ShowSettings` — passes the new
+  `IOptionsMonitor<NotificationSettings>` and `ICurrentProfile`
+  dependencies through the DI scope.
+- `MedReminder.Infrastructure.Profiles.ProfileRegistry`,
+  `CurrentProfile`, `MedReminder.Infrastructure.Migration.MigrationV1toV2`
+  are now `public sealed class` so `Program.Main` (in
+  `MedReminder.UI`) can build them at boot without expanding
+  `InternalsVisibleTo`.
+
+### Tests
+
+- `MailKitEmailNotificationServiceTests` updated to the new
+  two-monitor constructor. New test:
+  `Send_throws_when_recipient_is_missing`.
+- Existing `MigrationV1toV2Tests` and `ProfileRegistryTests`
+  unchanged and still green: the migrator is now called at boot
+  but its API is untouched.
+
+### Localisation
+
+- 27 new keys added to every dictionary
+  (`assets/localization/strings.{en,it,fr,es,de}.json`) —
+  `Common.Exit`, migration-failure banner, PIN prompt,
+  profile picker, first-run wizard. All 5 dictionaries stay at
+  parity (378 keys each) — `DictionaryParityTests` remain green.
+
+### Out of scope (still)
+
+- `ProfilesManagerForm`, admin/user UI gating, `File → Change
+  profile…` menu entry, restore-into-profile dropdown — 15d.
+- PIN prompt polish, tooltips wording pass, user-guide entries —
+  15e.
+- Promote/demote flow and consolidated admin view — non-goals
+  for Increment 15 (§16).
+
+---
+
+## PR #23 — Increment 15b: V1 → V2 on-disk migration
+
+Link: [vger70/MedReminder#23](https://github.com/vger70/MedReminder/pull/23)
+**Status:** merged (2026-09-18)
+Branch: `claude/incremento-15b` (stacked on `claude/incremento-15` from PR #22)
+
+Second sub-increment of the multi-user work
+(`docs/ANALYSIS-MULTI-USER.md` §5, §15b). Adds the data-lossless
+migrator that moves an existing V1 installation to the V2 on-disk
+layout under `%LOCALAPPDATA%\MedReminder\`. **The migrator is
+dormant**: `Program.Main` does not call it in this PR. Wiring lands
+in 15c together with the boot flow, so the app still boots as
+single-user and no user-visible behavior changes.
+
+### Added
+
+- `MedReminder.Infrastructure.Migration.MigrationV1toV2` — one-shot
+  idempotent V1 → V2 migrator with mandatory pre-migration backup
+  and full rollback on any post-backup failure (§5.2).
+  - Idempotence guard: runs only when `profiles.json` is missing
+    AND a legacy `medreminder.db` sits at the app-data root (§5.1).
+  - Step 1 copies `medreminder.db` (+ `-wal` / `-shm`) and
+    `smtp.settings.json` into
+    `backups\pre-migration-YYYYMMDD-HHmmss\`. The folder is
+    self-describing and never overwritten — user is responsible
+    for manual cleanup (§14 F).
+  - Steps 2-3 move the DB files into `profiles\default\`.
+  - Step 5 extracts `Smtp.ToAddress` from the legacy
+    `smtp.settings.json` into
+    `profiles\default\notifications.settings.json` and rewrites
+    the source with the key removed. Empty / missing `ToAddress`
+    is handled gracefully.
+  - Step 6 seeds `profiles.json` via a new internal
+    `ProfileRegistry.SeedFromV1Migration(id, displayName)` — the
+    migrated profile is always `Role = admin`, `Id = "default"`,
+    `DisplayName = "User"` (§5.2 step 6). The registry refuses to
+    seed a non-empty file.
+  - Any exception between steps 2 and 6 triggers
+    `RollbackFromPreBackup`: `profiles.json` and
+    `profiles\default\` are dropped, the DB files are restored
+    from the pre-backup, and `smtp.settings.json` is restored
+    verbatim. The pre-backup itself is preserved.
+- `MigrationOutcome` public enum (`NotNeeded`, `Migrated`) — returned
+  by `MigrationV1toV2.Run()` so the future boot flow can log the
+  outcome.
+- `tests/MedReminder.Infrastructure.Tests/Migration/MigrationV1toV2Tests.cs`
+  — 6 integration tests exercising the migrator against a fake V1
+  tree under `Path.GetTempPath()`:
+  - fresh install (no legacy DB) → `NotNeeded`
+  - already migrated (`profiles.json` present) → `NotNeeded`
+  - full V1 tree with `ToAddress` → V2 layout, per-profile
+    notifications file, `ToAddress` stripped from source
+  - V1 without `smtp.settings.json` → DB migrated, no
+    notifications file
+  - V1 with empty `ToAddress` → key stripped, no notifications file
+  - forced mid-migration failure → rollback restores the V1 state
+    and the pre-migration backup is preserved
+- Two extra `ProfileRegistryTests` covering the new
+  `SeedFromV1Migration` internal (default admin seeding + refusal on
+  a populated registry).
+
+### Changed
+
+- `MedReminder.Infrastructure.Profiles.ProfileRegistry`: added the
+  internal `SeedFromV1Migration(string id, string displayName)`
+  hook. It writes the initial `profiles.json` with a caller-chosen
+  `Id` (the migrator uses the literal `"default"`) and forces
+  `Role = Admin`. Throws if the registry is already populated so
+  the migrator cannot silently be re-run.
+
+### Docs / rollback semantics
+
+- No changes to `docs/ANALYSIS-MULTI-USER.md`: the design is
+  authoritative and will be marked as implemented at the bottom
+  by 15e.
+- No new localisation keys — the migrator is silent, log-only in
+  15b. UI wiring for the outcome banner (if any) can be added in
+  15c when the boot flow calls the migrator.
+
+---
+
 ## PR #22 — Increment 15a: profile registry and ICurrentProfile abstraction
 
 Link: [vger70/MedReminder#22](https://github.com/vger70/MedReminder/pull/22)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `claude/incremento-15`
 
 First sub-increment of the multi-user support work designed in

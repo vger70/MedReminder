@@ -10,6 +10,7 @@ using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Notifications;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
+using MedReminder.Infrastructure.Profiles;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -28,18 +29,35 @@ public static class InfrastructureServiceCollectionExtensions
     public static IServiceCollection AddMedReminderInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        string databasePath)
+        ICurrentProfile currentProfile)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+        ArgumentNullException.ThrowIfNull(currentProfile);
+
+        // ------- Multi-profile (Increment 15c) -------
+        // The composition root picked the profile up-front (picker,
+        // first-run wizard, hint or --profile) and hands us the
+        // resolved ICurrentProfile. Register it as a singleton so
+        // downstream services (BackupService, MailKit, UI) share
+        // exactly the same instance.
+        services.TryAddSingleton(currentProfile);
+
+        // ------- Profile registry -------
+        // Wired here so the multi-profile-aware UI and the automatic
+        // backup service can enumerate every profile without having
+        // to reach into Infrastructure.Profiles from Program.cs.
+        services.TryAddSingleton<IProfileRegistry>(_ => new ProfileRegistry(
+            AppDataPaths.GetProfilesRegistryPath(),
+            AppDataPaths.GetProfilesRootDirectory(),
+            TimeProvider.System));
 
         // ------- Persistence -------
         // Increment 15a (docs/ANALYSIS-MULTI-USER.md §2.5): the DB
-        // path is now an explicit input. BackupService no longer
-        // recomputes it from AppDataPaths — it reads the singleton
-        // registered here so both the EF Core connection and the
-        // backup export target the same file.
-        var connectionString = AppDataPaths.BuildSqliteConnectionString(databasePath);
-        services.TryAddSingleton(new DatabasePathProvider(databasePath));
+        // path is now an explicit input. BackupService reads the
+        // singleton registered here so both the EF Core connection
+        // and the backup export target the same file. In 15c the
+        // path comes from ICurrentProfile.
+        var connectionString = AppDataPaths.BuildSqliteConnectionString(currentProfile.DatabasePath);
+        services.TryAddSingleton(new DatabasePathProvider(currentProfile.DatabasePath));
         services.AddDbContext<MedReminderDbContext>(options =>
         {
             options.UseSqlite(connectionString);
@@ -65,7 +83,14 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<ILocalizationService, LocalizationService>();
 
         // ------- Notifications + credentials + auto-start -------
+        // Global SMTP transport (admin-managed, §7.1).
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        // Per-profile recipient (§7.1). Loaded from
+        // <DataDirectory>\notifications.settings.json — Program.cs
+        // adds the file to the configuration chain before calling
+        // this extension.
+        services.Configure<NotificationSettings>(
+            configuration.GetSection(NotificationSettings.SectionName));
 
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();

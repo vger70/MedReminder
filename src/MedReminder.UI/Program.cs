@@ -8,7 +8,9 @@ using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Infrastructure;
 using MedReminder.Infrastructure.Localization;
+using MedReminder.Infrastructure.Migration;
 using MedReminder.Infrastructure.Persistence;
+using MedReminder.Infrastructure.Profiles;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.UI.Forms;
 using MedReminder.UI.Hosting;
@@ -21,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
 using WinFormsApp = System.Windows.Forms.Application;
 using WinFormWindowState = System.Windows.Forms.FormWindowState;
@@ -32,28 +35,23 @@ namespace MedReminder.UI;
 // Composition root: builds the IHost, initializes the DB, starts
 // the scheduler in the background and hands control off to the
 // WinForms message loop.
+//
+// Increment 15c (docs/ANALYSIS-MULTI-USER.md §4.1): the boot flow
+// now runs the V1 → V2 migrator, reads the profile registry, and
+// hands the selected profile to AddMedReminderInfrastructure.
 internal static class Program
 {
     private const string MinimizedArgument = "--minimized";
+    private const string ProfileArgumentPrefix = "--profile";
+
     // Local\\ prefix: per-user mutex (Terminal Server session),
     // not per-machine. A second Windows user on the same machine can
-    // launch their own instance.
+    // launch their own instance. Increment 15c keeps the mutex
+    // per-machine + Windows user, independent of the profile (§10.1).
     private const string SingleInstanceMutexName = @"Local\MedReminder.SingleInstance.b0000004-4444-4444-4444-444444444444";
     private static readonly TimeSpan HostStopTimeout = TimeSpan.FromSeconds(5);
-    // Maximum wait on mutex acquisition at startup. Typical case:
-    // the automatic restart after a backup restore — the new process
-    // starts while the old one is closing (releases the mutex in
-    // Main's finally). 5 seconds cover the clean shutdown of the
-    // monitor hosted service and the SQLite pool without noticeable
-    // delay for "normal" starts (where the mutex is free
-    // instantly).
     private static readonly TimeSpan SingleInstanceAcquireTimeout = TimeSpan.FromSeconds(5);
 
-    // "Standalone" ILocalizationService for the pre-IHost messages
-    // (single-instance mutex, ThreadException). Populated at the
-    // start of Main by reading user.settings.json by hand; the real
-    // service instance (Singleton via DI) is independent but reads
-    // the same file, so the text is always consistent.
     private static ILocalizationService _bootstrapLoc = null!;
 
     [STAThread]
@@ -64,12 +62,6 @@ internal static class Program
 
         _bootstrapLoc = LocalizationService.CreateStandalone(ReadUserLanguage());
 
-        // Exceptions raised inside UI handlers (e.g. clicking the
-        // "Print" button of PrintPreviewDialog which invokes the
-        // virtual PDF driver's SaveAs — cancellation raises
-        // Win32Exception 87) do NOT bubble to our forms' try/catch:
-        // the message loop catches them. With CatchException we
-        // route them here instead of killing the process.
         WinFormsApp.SetUnhandledExceptionMode(WinFormUnhandledExceptionMode.CatchException);
         WinFormsApp.ThreadException += OnUnhandledUiException;
 
@@ -81,9 +73,6 @@ internal static class Program
         }
         catch (AbandonedMutexException)
         {
-            // A previous instance terminated without releasing the
-            // mutex: Windows hands it to us with ownership migrated.
-            // Treat it as acquired — the old instance is dead.
             acquired = true;
         }
 
@@ -101,13 +90,47 @@ internal static class Program
 
         try
         {
-            using var host = BuildHost(args);
+            // ---- Multi-profile boot flow (Increment 15c) ----
+
+            // 1) Run the V1 → V2 migrator if it applies. Idempotent —
+            //    subsequent starts short-circuit on the first check.
+            RunMigrationIfNeeded();
+
+            // 2) Build the ProfileRegistry directly. AddMedReminderInfrastructure
+            //    also creates one internally, but here we need it BEFORE
+            //    the DI container is built to decide which profile to open.
+            var registry = new ProfileRegistry(
+                AppDataPaths.GetProfilesRegistryPath(),
+                AppDataPaths.GetProfilesRootDirectory(),
+                TimeProvider.System);
+
+            // 3) Decide which profile to open (picker / hint / --profile
+            //    / first-run wizard). May exit if the user cancels.
+            var startMinimized = args.Contains(MinimizedArgument);
+            var explicitProfileId = TryReadProfileArg(args);
+            var current = ChooseProfile(registry, explicitProfileId, startMinimized);
+            if (current is null)
+            {
+                Log.Information("Boot flow ended without a selected profile. Exiting.");
+                return;
+            }
+
+            // Update the "last used" hint so the next auto-start
+            // (Windows Run entry with --minimized) opens the same
+            // profile again (§4.2).
+            try { registry.SetActiveProfileHint(current.Id); }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to update ActiveProfileIdHint for {Profile}.", current.Id);
+            }
+
+            using var host = BuildHost(args, current);
             InitializeDatabase(host);
             host.StartAsync().GetAwaiter().GetResult();
 
             try
             {
-                RunUi(host, startMinimized: args.Contains(MinimizedArgument));
+                RunUi(host, startMinimized: startMinimized);
             }
             finally
             {
@@ -126,52 +149,173 @@ internal static class Program
         }
     }
 
-    private static IHost BuildHost(string[] args)
+    private static void RunMigrationIfNeeded()
+    {
+        try
+        {
+            var appDataRoot = AppDataPaths.GetAppDataDirectory();
+            var seedRegistry = new ProfileRegistry(
+                AppDataPaths.GetProfilesRegistryPath(),
+                AppDataPaths.GetProfilesRootDirectory(),
+                TimeProvider.System);
+            var migrator = new MigrationV1toV2(
+                appDataRoot,
+                seedRegistry,
+                TimeProvider.System,
+                NullLogger<MigrationV1toV2>.Instance);
+            var outcome = migrator.Run();
+            if (outcome == MigrationOutcome.Migrated)
+            {
+                Log.Information("V1 → V2 migration completed successfully at boot.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex,
+                "V1 → V2 migration failed. The pre-migration backup at %LOCALAPPDATA%\\MedReminder\\backups\\ still contains the original V1 files.");
+            System.Windows.Forms.MessageBox.Show(
+                _bootstrapLoc.Get("Ui.App.MigrationFailed.Body", ex.Message),
+                _bootstrapLoc.Get("Ui.App.MigrationFailed.Title"),
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Error);
+            throw;
+        }
+    }
+
+    // Decides the profile to open. Returns null when the user
+    // cancels the picker or the wizard — the caller then exits.
+    private static ICurrentProfile? ChooseProfile(
+        ProfileRegistry registry, string? explicitProfileId, bool startMinimized)
+    {
+        var profiles = registry.ListProfiles();
+
+        // First-run wizard: no profile exists yet (§12.3).
+        if (profiles.Count == 0)
+        {
+            using var wizard = new FirstRunWizardForm(registry, _bootstrapLoc);
+            var result = wizard.ShowDialog();
+            if (result != System.Windows.Forms.DialogResult.OK || wizard.CreatedProfile is null)
+            {
+                return null;
+            }
+            return new CurrentProfile(wizard.CreatedProfile);
+        }
+
+        // --profile <id> from CLI — highest priority (§4.3).
+        if (!string.IsNullOrWhiteSpace(explicitProfileId))
+        {
+            var explicitProfile = registry.GetById(explicitProfileId!);
+            if (explicitProfile is not null)
+            {
+                return VerifyPinIfNeeded(registry, explicitProfile);
+            }
+            Log.Warning("--profile {Id} did not match any registered profile; falling back to picker.", explicitProfileId);
+        }
+
+        // Auto-start (--minimized) uses the hint without a picker (§4.2).
+        if (startMinimized)
+        {
+            var hinted = ResolveHintedProfile(registry, profiles);
+            if (hinted is not null)
+            {
+                return VerifyPinIfNeeded(registry, hinted);
+            }
+        }
+
+        // Single profile — auto-select (§4.1).
+        if (profiles.Count == 1)
+        {
+            return VerifyPinIfNeeded(registry, profiles[0]);
+        }
+
+        // Multiple profiles — picker.
+        using var picker = new ProfilePickerForm(registry, _bootstrapLoc);
+        var pickerResult = picker.ShowDialog();
+        if (pickerResult != System.Windows.Forms.DialogResult.OK || picker.SelectedProfile is null)
+        {
+            return null;
+        }
+        return VerifyPinIfNeeded(registry, picker.SelectedProfile);
+    }
+
+    private static Profile? ResolveHintedProfile(
+        ProfileRegistry registry, IReadOnlyList<Profile> profiles)
+    {
+        var hint = registry.ActiveProfileIdHint;
+        if (!string.IsNullOrWhiteSpace(hint))
+        {
+            var byHint = registry.GetById(hint!);
+            if (byHint is not null) return byHint;
+        }
+        // No hint or stale hint: fall back to the first profile by
+        // LastUsedAt so auto-start still lands on the most recently
+        // used one.
+        return profiles.OrderByDescending(p => p.LastUsedAt).FirstOrDefault();
+    }
+
+    private static ICurrentProfile? VerifyPinIfNeeded(ProfileRegistry registry, Profile profile)
+    {
+        if (!profile.HasPin)
+        {
+            return new CurrentProfile(profile);
+        }
+        using var prompt = new PinPromptForm(registry, profile, _bootstrapLoc);
+        var result = prompt.ShowDialog();
+        if (result != System.Windows.Forms.DialogResult.OK)
+        {
+            // Cancel or three failed attempts. Either way the app
+            // must not open the profile without a valid PIN.
+            return null;
+        }
+        return new CurrentProfile(profile);
+    }
+
+    private static string? TryReadProfileArg(string[] args)
+    {
+        // Supports both "--profile abc123" and "--profile=abc123".
+        for (int i = 0; i < args.Length; i++)
+        {
+            var a = args[i];
+            if (string.Equals(a, ProfileArgumentPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                if (i + 1 < args.Length) return args[i + 1];
+                return null;
+            }
+            var prefix = ProfileArgumentPrefix + "=";
+            if (a.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return a.Substring(prefix.Length);
+            }
+        }
+        return null;
+    }
+
+    private static IHost BuildHost(string[] args, ICurrentProfile currentProfile)
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        // User files layered on top of appsettings.json.
-        // reloadOnChange=true refreshes IOptionsMonitor<T> without a
-        // restart when the user changes settings from the UI.
         var appDataDir = AppDataPaths.GetAppDataDirectory();
         var userSmtpSettingsFile = Path.Combine(appDataDir, "smtp.settings.json");
         var userBackupSettingsFile = Path.Combine(appDataDir, "backup.settings.json");
-        // user.settings.json holds the UI language (still requires a
-        // restart to rebind the singleton LocalizationService) and
-        // the reference-catalogue country (M2: picked up at the next
-        // medicine-form open via IOptionsMonitor<UserSettings>).
-        // reloadOnChange=true so the country change takes effect
-        // without asking the user to restart.
         var userSettingsFile = Path.Combine(appDataDir, "user.settings.json");
+        // Per-profile notifications file (§7.1). Absent on a fresh
+        // install; the settings dialog materialises it the first time
+        // the user saves a ToAddress.
+        var notificationSettingsFile = currentProfile.NotificationSettingsPath;
 
         builder.Configuration
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
             .AddJsonFile(userSmtpSettingsFile, optional: true, reloadOnChange: true)
             .AddJsonFile(userBackupSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(userSettingsFile, optional: true, reloadOnChange: true);
+            .AddJsonFile(userSettingsFile, optional: true, reloadOnChange: true)
+            .AddJsonFile(notificationSettingsFile, optional: true, reloadOnChange: true);
 
         builder.Services.AddSingleton(TimeProvider.System);
 
         builder.Services.AddMedReminderApplication();
+        builder.Services.AddMedReminderInfrastructure(builder.Configuration, currentProfile);
 
-        // Increment 15a (docs/ANALYSIS-MULTI-USER.md §2.5) removed
-        // the implicit default from AppDataPaths — every caller now
-        // states which database file it opens. The multi-profile
-        // boot flow lands in 15c; until then the composition root
-        // keeps the historical single-user location so upgrades run
-        // seamlessly. The V1→V2 migrator (15b) moves this file into
-        // profiles\default\, at which point Program.cs will pass
-        // ICurrentProfile.DatabasePath instead.
-        var legacyDatabasePath = Path.Combine(
-            appDataDir, AppDataPaths.DatabaseFileName);
-        builder.Services.AddMedReminderInfrastructure(
-            builder.Configuration, legacyDatabasePath);
-
-        // The UI uses modern Windows toasts as the primary, with a
-        // fallback to the shared tray icon's balloon. Overrides the
-        // default registration performed by
-        // AddMedReminderInfrastructure (BalloonTipNotificationService).
         builder.Services.RemoveAll<IWindowsNotificationService>();
         builder.Services.AddSingleton<TrayBalloonNotificationService>();
         builder.Services.AddSingleton<IWindowsNotificationService, ToastWindowsNotificationService>();
@@ -182,13 +326,6 @@ internal static class Program
         builder.Services.AddHostedService<MedicationMonitorHostedService>();
         builder.Services.AddHostedService<AutomaticBackupHostedService>();
 
-        // Reference catalogue (M2): boot-time importer runs only when
-        // the feature flag is on. Reads Catalogue:Enabled via the
-        // string indexer to avoid an explicit dependency on
-        // Microsoft.Extensions.Configuration.Binder — same pattern as
-        // MedicationMonitorHostedService. The service itself re-checks
-        // the flag before doing anything, so toggling it at runtime
-        // stays safe.
         var catalogueEnabledRaw = builder.Configuration[
             MedReminder.Application.Catalogue.CatalogueFeatureOptions.SectionName + ":Enabled"];
         if (bool.TryParse(catalogueEnabledRaw, out var catalogueEnabled) && catalogueEnabled)
@@ -196,8 +333,6 @@ internal static class Program
             builder.Services.AddHostedService<CatalogueRefreshHostedService>();
         }
 
-        // Restarter used after a DB restore (requires relaunching
-        // the current exe to cleanly reacquire the SQLite locks).
         builder.Services.AddSingleton<IApplicationRestarter, ApplicationRestarter>();
 
         builder.Services.AddTransient<MainForm>();
@@ -225,9 +360,6 @@ internal static class Program
         }
         WinFormsApp.Run(mainForm);
 
-        // Explicitly dispose the tray icon after the message loop
-        // closes: without dispose the icon stays visible in the tray
-        // until the process shuts down.
         try
         {
             host.Services.GetRequiredService<ApplicationTrayIcon>().Dispose();
@@ -257,10 +389,6 @@ internal static class Program
 
         if (IsPrintingException(ex))
         {
-            // Typical case: the user cancels the "Save PDF" window
-            // of the Microsoft Print to PDF driver. The framework
-            // rethrows Win32Exception(87) from the print device. Not
-            // an app error — clean message, info-level log.
             Log.Information(ex, "Print cancelled by the user or not completed.");
             try
             {
@@ -272,8 +400,7 @@ internal static class Program
             }
             catch
             {
-                // ignore: we are in an error context, the MessageBox
-                // must never propagate a second exception.
+                // ignore
             }
             return;
         }
@@ -289,16 +416,10 @@ internal static class Program
         }
         catch
         {
-            // ignore: as above, avoid cascades.
+            // ignore
         }
     }
 
-    // Reads %LOCALAPPDATA%\MedReminder\user.settings.json without
-    // depending on IOptions / IConfiguration binding (it does not
-    // exist yet at the moment of the call). Expected shape:
-    //   { "UI": { "Language": "en" } }
-    // Falls back to null (→ default "en" in the service) if the file
-    // is missing or corrupted.
     private static string? ReadUserLanguage()
     {
         try
@@ -316,22 +437,16 @@ internal static class Program
         }
         catch
         {
-            // Corrupted or unparsable file: silent, fall back to the default.
         }
         return null;
     }
 
-    // Recognizes exceptions raised from the printing stack
-    // (System.Drawing.Printing and virtual PDF / XPS drivers). Walks
-    // the InnerException chain because the outer wrapper may be a
-    // TargetInvocationException thrown by the message loop.
     private static bool IsPrintingException(Exception ex)
     {
         for (Exception? current = ex; current is not null; current = current.InnerException)
         {
             if (current is Win32Exception)
             {
-                // If the producer is the printing pipeline, the stack shows it.
                 var trace = current.StackTrace ?? string.Empty;
                 if (trace.Contains("System.Drawing.Printing", StringComparison.Ordinal) ||
                     trace.Contains("PrintDocument", StringComparison.Ordinal) ||

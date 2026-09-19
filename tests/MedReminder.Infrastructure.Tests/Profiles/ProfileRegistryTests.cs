@@ -301,6 +301,31 @@ public sealed class ProfileRegistryTests : IDisposable
     }
 
     [Fact]
+    public void SeedFromV1Migration_writes_default_admin_and_sets_hint()
+    {
+        var sut = NewRegistry();
+
+        var seeded = sut.SeedFromV1Migration("default", "User");
+
+        seeded.Id.Should().Be("default");
+        seeded.Role.Should().Be(ProfileRole.Admin);
+        seeded.DisplayName.Should().Be("User");
+        sut.ActiveProfileIdHint.Should().Be("default");
+    }
+
+    [Fact]
+    public void SeedFromV1Migration_refuses_on_non_empty_registry()
+    {
+        var sut = NewRegistry();
+        sut.Create("Owner", ProfileRole.Admin);
+
+        var act = () => sut.SeedFromV1Migration("default", "User");
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*non-empty*");
+    }
+
+    [Fact]
     public void Delete_active_profile_clears_or_moves_the_hint()
     {
         var sut = NewRegistry();

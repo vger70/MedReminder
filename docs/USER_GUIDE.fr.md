@@ -15,12 +15,19 @@ technique.
 ## Premier démarrage
 
 1. Lance `MedReminder.exe`.
-2. Au premier lancement la fenêtre est vide : la base de données est
-   créée automatiquement sous
-   `%LOCALAPPDATA%\MedReminder\medreminder.db`.
-3. En haut se trouve la barre d'outils ; en bas la barre d'état.
-   L'icône dans la zone de notification de Windows reste visible tant
-   que l'application est en cours d'exécution.
+2. Au tout premier lancement l'application affiche un **assistant
+   de bienvenue** et te demande de créer le premier profil. Ce
+   profil est toujours l'**administrateur** : il peut gérer le
+   serveur e-mail partagé et la sauvegarde automatique, et créer
+   les autres profils (voir *Profils multiples*). Tu peux définir
+   un PIN facultatif dans le même assistant.
+3. La base de données est créée automatiquement sous
+   `%LOCALAPPDATA%\MedReminder\profiles\<id-profil>\medreminder.db`.
+4. En haut se trouve la barre d'outils ; en bas la barre d'état
+   affiche le profil actif ("Profil : Owner (administrateur)" pour
+   un administrateur, "Profil : Grand-mère" pour un utilisateur
+   normal). L'icône dans la zone de notification de Windows reste
+   visible tant que l'application est en cours d'exécution.
 
 ### SmartScreen de Windows au premier lancement
 
@@ -176,6 +183,159 @@ bloquée par une erreur.
   disparaît des contrôles automatiques et des alertes, mais les
   données historiques (mouvements, notifications) restent en base
   pour audit.
+
+## Profils multiples et rôles administrateur/utilisateur
+
+MedReminder peut gérer les médicaments de **plusieurs personnes**
+depuis le même compte Windows — cas typique : un parent qui suit
+son propre traitement et celui d'un ou deux proches. Chaque profil
+a sa propre base de données et son propre destinataire e-mail ; le
+serveur SMTP, le dossier de sauvegarde automatique et le registre
+des profils sont partagés et gérés par un profil
+**administrateur**.
+
+### Rôles
+
+- **Administrateur** — gère les paramètres globaux (SMTP,
+  Sauvegarde, liste des profils, PIN de n'importe quel profil) en
+  plus de ses propres données. Il doit toujours exister au moins
+  un administrateur.
+- **Utilisateur** — gère uniquement son propre profil (médicaments,
+  stock, thérapies, destinataire e-mail personnel). Ne voit pas
+  l'onglet SMTP ni l'onglet Sauvegarde dans les Paramètres, et ne
+  voit pas `Outils → Gérer les profils…`.
+
+Le rôle est choisi à la création du profil et **ne peut pas être
+modifié ensuite**. Si tu as besoin plus tard de changer le rôle
+d'un profil, la solution actuelle est de créer un nouveau profil
+avec le rôle voulu et d'y recopier les données.
+
+Le rôle est une barrière « douce » : quiconque a accès au système
+de fichiers peut modifier `profiles.json` à la main et devenir
+administrateur. L'interface respecte le rôle, pas le système de
+fichiers.
+
+### Créer d'autres profils (administrateur)
+
+1. `Outils → Gérer les profils…` — cette entrée n'existe que pour
+   les administrateurs.
+2. **Nouveau profil** → saisis un nom, choisis Administrateur ou
+   Utilisateur (par défaut : Utilisateur), définis éventuellement
+   un PIN. Confirme.
+3. Le nouveau profil apparaît immédiatement dans le sélecteur au
+   prochain lancement.
+
+### Changer de profil
+
+`Fichier → Changer de profil…` ouvre le sélecteur. Choisis le
+profil cible et confirme : l'application redémarre automatiquement
+pour que le nouveau profil soit complètement isolé. Si le profil
+choisi a un PIN, la demande apparaît avant l'ouverture de
+l'application.
+
+### Renommer, changer le PIN, supprimer
+
+`Outils → Gérer les profils…` (administrateur uniquement) propose
+aussi :
+
+- **Renommer** — uniquement le nom affiché. L'identifiant interne
+  ne change jamais.
+- **Changer le PIN** — définir, changer ou effacer le PIN de
+  n'importe quel profil.
+- **Supprimer** — demande de **saisir le nom du profil** pour
+  confirmer. Une case séparée permet de supprimer aussi les
+  données du profil sur le disque ; elle est désactivée par
+  défaut, ainsi le dossier reste disponible pour une récupération
+  manuelle.
+
+Le profil actif ne peut pas être supprimé (change d'abord de
+profil), ni le dernier administrateur restant.
+
+### À propos du PIN
+
+Le PIN est une **friction, pas une sécurité**. Il empêche les
+changements de profil accidentels, mais **ne** chiffre pas les
+données — quiconque a accès à ce PC peut toujours ouvrir les
+fichiers du profil. Trois tentatives incorrectes ferment la
+demande et l'application.
+
+Si tu oublies un PIN, supprime-le à la main dans
+`%LOCALAPPDATA%\MedReminder\profiles.json` (efface `PinHash` et
+`PinSalt` et mets `PinIterations` à `0` pour l'entrée concernée).
+Ce fonctionnement est documenté plutôt que corrigé par un flux
+« réinitialiser le PIN » exprès : la récupération n'est pas un
+bug, parce que le PIN n'est pas une sécurité.
+
+### Disposition sur le disque
+
+```
+%LOCALAPPDATA%\MedReminder\
+├── profiles.json                        ← registre des profils
+├── smtp.settings.json                   ← SMTP partagé (admin)
+├── smtp.protected                       ← mot de passe chiffré DPAPI
+├── backup.settings.json                 ← config sauvegarde partagée (admin)
+├── backup.state.json                    ← état de la dernière sauvegarde
+├── logs\medreminder-YYYYMMDD.log
+└── profiles\
+    ├── <id-profil>\                     ← un dossier par profil
+    │   ├── medreminder.db (+ -wal, -shm)
+    │   └── notifications.settings.json  ← ToAddress de ce profil
+    └── …
+```
+
+### La sauvegarde automatique couvre tous les profils
+
+Quand la sauvegarde automatique est activée, chaque exécution
+journalière sauvegarde la base de données de **tous** les profils
+dans le dossier partagé, sous des noms de la forme
+`medreminder-<id-profil>-YYYYMMDD-HHmmss.db`. La rétention est
+appliquée par profil : la sauvegarde la plus récente d'un profil
+ne protège pas les sauvegardes plus anciennes d'un autre.
+
+Lors de la restauration depuis `Paramètres → Sauvegarde → Restaurer
+sauvegarde…`, la boîte de dialogue demande quel profil doit
+recevoir la base importée. Par défaut, elle sélectionne le profil
+référencé dans le nom du fichier. Si tu restaures dans un profil
+autre que l'actif, l'application ne redémarre pas ; si tu
+restaures dans le profil actif, elle redémarre pour ouvrir
+proprement la nouvelle base.
+
+### Démarrage automatique avec Windows
+
+L'entrée de démarrage automatique de Windows est unique par
+utilisateur Windows. À la connexion, l'application ouvre le
+**dernier** profil sans afficher le sélecteur ; si ce profil a un
+PIN, la demande s'affiche par-dessus la fenêtre vide. Pour ouvrir
+un profil différent au démarrage automatique, utilise
+`Fichier → Changer de profil…` une fois l'application ouverte.
+
+### Mise à niveau depuis une installation mono-utilisateur
+
+Si tu as déjà un fichier `medreminder.db` sous
+`%LOCALAPPDATA%\MedReminder\` d'une version antérieure,
+l'application exécute une **migration V1 → V2** au prochain
+lancement :
+
+1. Elle effectue une sauvegarde obligatoire dans
+   `%LOCALAPPDATA%\MedReminder\backups\pre-migration-YYYYMMDD-HHmmss\`
+   contenant le `medreminder.db` original (et ses fichiers
+   associés) et le `smtp.settings.json` original.
+2. Elle déplace la base dans `profiles\default\medreminder.db` et
+   crée le `profiles.json` initial avec un seul profil
+   administrateur nommé `User`.
+3. Elle extrait le destinataire (`Smtp.ToAddress`) de
+   `smtp.settings.json` vers
+   `profiles\default\notifications.settings.json`.
+
+La migration est **atomique** — si une étape échoue après le
+pré-backup, l'application revient à l'état V1 et conserve la
+sauvegarde de pré-migration.
+
+Le **backup de pré-migration n'est pas nettoyé automatiquement** :
+après avoir vérifié que l'application migrée ouvre les mêmes
+données, tu peux supprimer manuellement le dossier
+`backups\pre-migration-*`. Renomme le profil `User` comme tu
+préfères depuis `Outils → Gérer les profils… → Renommer`.
 
 ## Configurer l'envoi d'e-mails
 

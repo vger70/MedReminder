@@ -985,3 +985,26 @@ service.
 **Non-goals for Increment 15**: profile promote / demote (§14a
 point G), consolidated admin view (§14a point I). They go into
 Increment 15+ if the need emerges.
+
+---
+
+## Implementation status
+
+**Implemented — 2026-09-19.** Increment 15 shipped in five
+sequential pull requests:
+
+| Sub-increment | PR | Scope |
+|---|---|---|
+| 15a | #22 | Profile registry, `ICurrentProfile`, `NotificationSettings` POCO, `AppDataPaths` refactor |
+| 15b | #23 | V1 → V2 on-disk migration with pre-backup and rollback |
+| 15c | #24 | Boot flow, `ProfilePickerForm`, `FirstRunWizardForm`, `PinPromptForm`, per-profile `IBackupService`, multi-profile automatic backup, removal of `SmtpSettings.ToAddress` |
+| 15d | #25 | `ProfilesManagerForm`, admin/user UI gating, `Notifications` tab, restore-into-profile dropdown |
+| 15e | #26 | PIN polish, user-guide sections, this footer, `CLAUDE.md §7` update |
+
+All confirmed decisions (§14, §14a) are honored in the shipped
+code. The two explicit non-goals above — promote/demote and the
+consolidated admin view — remain deferred to a future increment.
+The user-facing entry points are documented in
+[`docs/USER_GUIDE.en.md`](USER_GUIDE.en.md) §"Multiple profiles
+and admin/user roles" (and the four translations shipped inside
+the app).

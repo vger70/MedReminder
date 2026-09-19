@@ -8,20 +8,23 @@ using Xunit;
 
 namespace MedReminder.Infrastructure.Tests.Email;
 
-// A real SMTP send cannot be unit-tested without spinning up
-// di un fake server (fuori scope MVP). Ci concentriamo sulle
-// pre-condizioni: configurazione incompleta -> throw / TestConnection
-// returns false; missing credentials -> specific throw.
+// A real SMTP send cannot be unit-tested without spinning up a fake
+// server (out of scope for the MVP). We focus on pre-conditions:
+// incomplete configuration → throw / TestConnection returns false;
+// missing per-profile recipient → specific throw.
 public class MailKitEmailNotificationServiceTests
 {
     [Fact]
-    public async Task Send_throws_when_settings_are_incomplete()
+    public async Task Send_throws_when_smtp_settings_are_incomplete()
     {
-        var settings = new SmtpSettings();   // Host vuoto
-        var monitor = new StaticOptionsMonitor<SmtpSettings>(settings);
+        var smtp = new StaticOptionsMonitor<SmtpSettings>(new SmtpSettings()); // Host empty
+        var notifications = new StaticOptionsMonitor<NotificationSettings>(new NotificationSettings
+        {
+            ToAddress = "user@example.org",
+        });
         var store = new StubCredentialStore();
         var sut = new MailKitEmailNotificationService(
-            monitor, store, NullLogger<MailKitEmailNotificationService>.Instance);
+            smtp, notifications, store, NullLogger<MailKitEmailNotificationService>.Instance);
 
         await FluentActions.Awaiting(() =>
                 sut.SendAsync(new EmailMessage("s", "b"), CancellationToken.None))
@@ -29,13 +32,33 @@ public class MailKitEmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task TestConnection_returns_false_when_settings_incomplete()
+    public async Task Send_throws_when_recipient_is_missing()
     {
-        var settings = new SmtpSettings();
-        var monitor = new StaticOptionsMonitor<SmtpSettings>(settings);
+        var smtp = new StaticOptionsMonitor<SmtpSettings>(new SmtpSettings
+        {
+            Host = "smtp.example.org",
+            Port = 587,
+            FromAddress = "sender@example.org",
+        });
+        var notifications = new StaticOptionsMonitor<NotificationSettings>(new NotificationSettings());
         var store = new StubCredentialStore();
         var sut = new MailKitEmailNotificationService(
-            monitor, store, NullLogger<MailKitEmailNotificationService>.Instance);
+            smtp, notifications, store, NullLogger<MailKitEmailNotificationService>.Instance);
+
+        await FluentActions.Awaiting(() =>
+                sut.SendAsync(new EmailMessage("s", "b"), CancellationToken.None))
+            .Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*recipient*");
+    }
+
+    [Fact]
+    public async Task TestConnection_returns_false_when_settings_incomplete()
+    {
+        var smtp = new StaticOptionsMonitor<SmtpSettings>(new SmtpSettings());
+        var notifications = new StaticOptionsMonitor<NotificationSettings>(new NotificationSettings());
+        var store = new StubCredentialStore();
+        var sut = new MailKitEmailNotificationService(
+            smtp, notifications, store, NullLogger<MailKitEmailNotificationService>.Instance);
 
         var ok = await sut.TestConnectionAsync(CancellationToken.None);
         ok.Should().BeFalse();

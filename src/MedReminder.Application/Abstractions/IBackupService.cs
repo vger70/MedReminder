@@ -1,30 +1,48 @@
 namespace MedReminder.Application.Abstractions;
 
-// User-DB backup (spec §23, Increment 11).
-// Export copies the current DB to a user-chosen location using
-// SQLite's online-backup API (safe hot backup without stopping the
-// app); import restores it after releasing the locks held by pooled
-// connections. Retention: removal of files older than N days from the
-// same folder.
+// User-DB backup (spec §23, Increment 11; multi-profile in Increment
+// 15c — docs/ANALYSIS-MULTI-USER.md §11.2).
+//
+// Every profile in the registry has its own SQLite database under
+// %LOCALAPPDATA%\MedReminder\profiles\<id>\medreminder.db. The
+// backup service targets one profile at a time so the automatic
+// hosted service can loop over IProfileRegistry.ListProfiles and
+// back everyone up on a single successful tick.
 public interface IBackupService
 {
+    // Path of the database of the profile the calling process is
+    // running against. Kept for backward compatibility with the
+    // Increment 11 UI wiring (single-profile "run now" from the
+    // SettingsDialog). Multi-profile operations use the explicit
+    // ExportProfileAsync / ImportProfileAsync overloads below.
     string DatabasePath { get; }
 
-    // Copies the DB into the given folder (filename derived from a UTC
-    // timestamp). Returns the path of the created file.
-    Task<string> ExportAsync(string destinationDirectory, CancellationToken cancellationToken);
+    // Copies the specified profile's DB into destinationDirectory
+    // using the SQLite online-backup API. The output file is named
+    // "medreminder-<profileId>-YYYYMMDD-HHmmss.db" so different
+    // profiles' backups can share a folder without collision (§11.1).
+    // Returns the full path of the created file.
+    Task<string> ExportProfileAsync(
+        string profileId,
+        string destinationDirectory,
+        CancellationToken cancellationToken);
 
-    // Removes the "medreminder-*.db" files older than retentionDays
-    // from the given folder. Returns the number of deleted files.
-    // Silent if the folder does not exist or is empty; does NOT touch
-    // files that do not match the pattern (the user might have put
-    // other things there).
+    // Removes backup files older than retentionDays. The regex is
+    // extended to capture the profileId so retention is applied
+    // per-profile: the most recent backup of profile A never
+    // "protects" older backups of profile B (§11.1). Files that do
+    // not match the expected pattern are left alone.
     Task<int> PruneOldBackupsAsync(
         string directory, int retentionDays, CancellationToken cancellationToken);
 
-    // Replaces the current DB with the given one. The caller (UI)
-    // must stop the monitor and the scheduler BEFORE; the
-    // implementation forces ClearAllPools() on Microsoft.Data.Sqlite
-    // to release the handles opened by DbContext pooling.
-    Task ImportAsync(string sourceFilePath, CancellationToken cancellationToken);
+    // Replaces the DB of the specified profile with the given
+    // backup file. Idempotently forces ClearAllPools() so pooled
+    // SQLite connections release the target file on Windows. If
+    // profileId is the currently active profile, the UI caller must
+    // follow up with IApplicationRestarter.RestartAndExit() — the
+    // process is holding the old file open through EF Core (§11.2).
+    Task ImportProfileAsync(
+        string profileId,
+        string sourceFilePath,
+        CancellationToken cancellationToken);
 }

@@ -13,9 +13,17 @@ Guida operativa per l'utente finale. Il file
 ## Primo avvio
 
 1. Lancia `MedReminder.exe`.
-2. Alla prima apertura la finestra è vuota: il database viene creato
-   automaticamente sotto `%LOCALAPPDATA%\MedReminder\medreminder.db`.
-3. In alto trovi la toolbar; in basso la barra di stato. L'icona
+2. Al primissimo avvio l'app mostra una **procedura guidata di
+   benvenuto** e chiede di creare il primo profilo. Questo profilo
+   è sempre l'**amministratore**: può gestire il server email
+   condiviso e il backup automatico e può creare gli altri profili
+   (vedi *Profili multipli*). Puoi impostare un PIN opzionale nella
+   stessa procedura.
+3. Il database viene creato automaticamente sotto
+   `%LOCALAPPDATA%\MedReminder\profiles\<id-profilo>\medreminder.db`.
+4. In alto trovi la toolbar; in basso la barra di stato mostra il
+   profilo attivo ("Profilo: Owner (amministratore)" per un
+   amministratore, "Profilo: Nonna" per un utente normale). L'icona
    nell'area di notifica di Windows resta sempre visibile finché
    l'app è in esecuzione.
 
@@ -167,6 +175,148 @@ bloccata con un errore.
 - **Disattiva**: toolbar → **Disattiva**. La medicina scompare dai
   controlli automatici e dagli avvisi, ma i dati storici (movimenti,
   notifiche) restano nel DB per audit.
+
+## Profili multipli e ruoli amministratore/utente
+
+MedReminder può gestire farmaci per **più persone** dallo stesso
+account Windows — caso tipico: un genitore che segue la propria
+terapia e quella di uno o due familiari. Ogni profilo ha il proprio
+database e il proprio destinatario email; il server SMTP, la
+cartella del backup automatico e il registro dei profili sono
+condivisi e gestiti da un profilo **amministratore**.
+
+### Ruoli
+
+- **Amministratore** — gestisce le impostazioni globali (SMTP,
+  Backup, elenco profili, PIN di qualunque profilo) oltre ai propri
+  dati. Deve sempre esistere almeno un amministratore.
+- **Utente** — gestisce solo il proprio profilo (medicine, scorte,
+  terapie, destinatario email personale). Non vede la scheda SMTP
+  né la scheda Backup nelle Impostazioni, e non vede
+  `Strumenti → Gestisci profili…`.
+
+Il ruolo si sceglie alla creazione del profilo e **non può essere
+cambiato in seguito**. Se in futuro dovessi voler cambiare il ruolo
+a un profilo, la soluzione oggi è creare un nuovo profilo con il
+ruolo desiderato e copiarci sopra i dati.
+
+Il ruolo è una barriera "soft": chi ha accesso al filesystem può
+modificare `profiles.json` a mano e diventare amministratore.
+L'interfaccia rispetta il ruolo, il filesystem no.
+
+### Creare altri profili (amministratore)
+
+1. `Strumenti → Gestisci profili…` — la voce esiste solo per gli
+   amministratori.
+2. **Nuovo profilo** → inserisci un nome, scegli Amministratore o
+   Utente (predefinito: Utente), imposta eventualmente un PIN.
+   Conferma.
+3. Il nuovo profilo appare subito nel picker al successivo avvio.
+
+### Cambiare profilo
+
+`File → Cambia profilo…` apre il picker. Scegli il profilo di
+destinazione e conferma: l'app si riavvia automaticamente in modo
+che il nuovo profilo sia completamente isolato. Se il profilo
+scelto ha un PIN, la richiesta appare prima che l'app si apra.
+
+### Rinominare, cambiare PIN, eliminare
+
+`Strumenti → Gestisci profili…` (solo amministratore) offre anche:
+
+- **Rinomina** — solo il nome visualizzato. L'id interno non
+  cambia mai.
+- **Cambia PIN** — imposta, sostituisci o rimuovi il PIN di
+  qualunque profilo.
+- **Elimina** — chiede di **digitare il nome del profilo** per
+  confermare. Una casella separata consente anche di eliminare i
+  dati del profilo su disco; è disattivata di default, così la
+  cartella resta disponibile per un ripristino manuale.
+
+Il profilo attivo non è eliminabile (cambia prima profilo), e
+neppure l'ultimo amministratore rimasto.
+
+### Il PIN
+
+Il PIN è una **barriera, non protezione**. Blocca cambi di profilo
+accidentali, ma **non** cifra i dati — chiunque abbia accesso a
+questo PC può comunque aprire i file del profilo. Tre tentativi
+errati chiudono la richiesta e l'app.
+
+Se dimentichi un PIN, rimuovilo a mano da
+`%LOCALAPPDATA%\MedReminder\profiles.json` (cancella `PinHash` e
+`PinSalt` e imposta `PinIterations` a `0` nella voce interessata).
+Questo è documentato invece di essere risolto con una funzione
+"resetta PIN" per scelta: il recupero non è un bug, perché il PIN
+non è sicurezza.
+
+### Struttura su disco
+
+```
+%LOCALAPPDATA%\MedReminder\
+├── profiles.json                        ← registro dei profili
+├── smtp.settings.json                   ← SMTP condiviso (admin)
+├── smtp.protected                       ← password DPAPI-cifrata
+├── backup.settings.json                 ← config backup condivisa (admin)
+├── backup.state.json                    ← stato ultimo backup automatico
+├── logs\medreminder-YYYYMMDD.log
+└── profiles\
+    ├── <id-profilo>\                    ← una cartella per profilo
+    │   ├── medreminder.db (+ -wal, -shm)
+    │   └── notifications.settings.json  ← ToAddress di questo profilo
+    └── …
+```
+
+### Il backup automatico copre tutti i profili
+
+Quando il backup automatico è attivo, ogni tick giornaliero salva
+il database di **tutti** i profili nella cartella condivisa, con
+nomi del tipo `medreminder-<id-profilo>-YYYYMMDD-HHmmss.db`. La
+retention viene applicata per-profilo, in modo che il backup più
+recente di un profilo non protegga i backup più vecchi di un
+altro.
+
+Quando ripristini da `Impostazioni → Backup → Ripristina backup…`,
+la finestra chiede in quale profilo caricare il database
+importato. In automatico seleziona il profilo indicato nel nome
+del file. Se ripristini in un profilo diverso da quello attivo,
+l'app non si riavvia; se ripristini nel profilo attivo, l'app si
+riavvia per aprire il nuovo database in modo pulito.
+
+### Avvio automatico con Windows
+
+La voce di avvio automatico di Windows è unica per utente Windows.
+Al login l'app apre il profilo **più recente** senza mostrare il
+picker; se quel profilo ha un PIN, la richiesta viene mostrata
+sopra la finestra vuota. Per aprire un profilo diverso all'avvio,
+usa `File → Cambia profilo…` una volta che l'app è aperta.
+
+### Aggiornamento da un'installazione single-user
+
+Se hai già un file `medreminder.db` in
+`%LOCALAPPDATA%\MedReminder\` da una versione precedente, al
+prossimo avvio l'app esegue una **migrazione V1 → V2** una tantum:
+
+1. Fa un backup obbligatorio in
+   `%LOCALAPPDATA%\MedReminder\backups\pre-migration-YYYYMMDD-HHmmss\`
+   che contiene il `medreminder.db` originale (e i suoi file
+   collaterali) e il `smtp.settings.json` originale.
+2. Sposta il database in `profiles\default\medreminder.db` e crea
+   il `profiles.json` iniziale con un unico profilo amministratore
+   di nome `User`.
+3. Estrae il destinatario (`Smtp.ToAddress`) da
+   `smtp.settings.json` in
+   `profiles\default\notifications.settings.json`.
+
+La migrazione è **atomica** — se un passo dopo il pre-backup
+fallisce, l'app fa il rollback allo stato V1 e conserva il backup
+di pre-migrazione.
+
+Il **backup di pre-migrazione non viene ripulito automaticamente**:
+dopo aver verificato che l'app migrata apre gli stessi dati, puoi
+eliminare a mano la cartella `backups\pre-migration-*`. Rinomina
+il profilo `User` come preferisci da
+`Strumenti → Gestisci profili… → Rinomina`.
 
 ## Configurare l'invio email
 
