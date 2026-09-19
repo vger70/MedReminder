@@ -79,17 +79,44 @@ jobs:
       #
       # -r win-x64:
       # produces a build targeting 64-bit Windows.
-      - name: Publish
+      # Publish self-contained (.NET included)
+      - name: Publish self-contained
         run: >
           dotnet publish
           src/MedReminder.UI/MedReminder.UI.csproj
           -c Release
           -r win-x64
           --self-contained true
+          -o publish-net10
+
+      # ZIP self-contained
+      - name: Create self-contained ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path publish-net10\* `
+            -DestinationPath MedReminder-win-x64-net10.zip
+
+    # Build and publish the WinForms application.
+      #
+      # --self-contained false:
+      # does not bundle the .NET runtime inside the application, so the user
+      # needs to install .NET 10 separately.
+      #
+      # -r win-x64:
+      # produces a build targeting 64-bit Windows.
+      # Publish framework-dependent (.NET runtime required)
+      - name: Publish framework-dependent
+        run: >
+          dotnet publish
+          src/MedReminder.UI/MedReminder.UI.csproj
+          -c Release
+          -r win-x64
+          --self-contained false
           -o publish
 
-      # Create the ZIP of the published output
-      - name: Create ZIP
+      # ZIP framework-dependent
+      - name: Create framework-dependent ZIP
         shell: pwsh
         run: |
           Compress-Archive `
@@ -123,6 +150,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
+            MedReminder-win-x64-net10.zip
             MedReminder-win-x64.zip
             MedReminder-win-x64.msi
           generate_release_notes: true
