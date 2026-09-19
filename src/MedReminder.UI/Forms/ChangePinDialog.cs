@@ -9,7 +9,7 @@ namespace MedReminder.UI.Forms;
 // profile). The dialog does not know which profile is being edited
 // nor who is calling — it only collects the intent (clear vs new
 // value) and returns it to the caller for persistence.
-public sealed class ChangePinDialog : MedReminderFormBase
+internal sealed class ChangePinDialog : MedReminderFormBase
 {
     private readonly ILocalizationService _loc;
     private readonly TextBox _pinBox;
