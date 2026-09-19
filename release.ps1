@@ -62,15 +62,17 @@ $TagName = "v$Version"
 try {
     Invoke-GitCommand "git status" "Verifica stato repository"
     Invoke-GitCommand "git add ." "Aggiunta file"
-
-    # Verifica modifiche da committare
-    git diff --cached --quiet
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Nessuna modifica da committare." -ForegroundColor Yellow
-        exit 0
-    }
-
+	
+	Write-Host "==> Commit" -ForegroundColor Cyan
     Invoke-GitCommand "git commit -m `"$CommitMessage`"" "Commit"
+	
+	if ($LASTEXITCODE -eq 0) {
+		Write-Host "OK: Commit eseguito" -ForegroundColor Green
+	}
+	else {
+		Write-Host "Nessuna modifica da committare, continuo..." -ForegroundColor Yellow
+	}	
+	
     Invoke-GitCommand "git push" "Push branch"
     Invoke-GitCommand "git tag $TagName" "Creazione tag"
     Invoke-GitCommand "git push origin $TagName" "Push tag"
