@@ -117,6 +117,23 @@ public sealed class DatabaseInitializer
             column: "LinkedReferenceMedicineId",
             typeSpec: "TEXT NULL",
             cancellationToken);
+
+        // A1 (Complex therapy regimens): two additive columns on the
+        // MedicationScheduleHistories table so each entry can carry a
+        // discriminated Schedule shape (see ANALYSIS-A1-REGIMENS.md
+        // §2.4). ScheduleKind defaults to 0 = FixedDaily; existing
+        // rows read back with legacy semantics without a data-fix
+        // pass. Idempotent through the PRAGMA table_info guard.
+        await AddColumnIfMissingAsync(
+            table: "MedicationScheduleHistories",
+            column: "ScheduleKind",
+            typeSpec: "INTEGER NOT NULL DEFAULT 0",
+            cancellationToken);
+        await AddColumnIfMissingAsync(
+            table: "MedicationScheduleHistories",
+            column: "SchedulePayload",
+            typeSpec: "TEXT NULL",
+            cancellationToken);
     }
 
     private async Task ExecuteRawSqlAsync(string sql, CancellationToken cancellationToken)
