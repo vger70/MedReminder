@@ -57,6 +57,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // docs/ANALYSIS-A1-REGIMENS.md §5.2.
     private readonly SchedulePanel? _schedulePanel;
 
+    // Dialog height for the Simple layout, cached so Advanced
+    // expansion is reversible without accumulating errors.
+    private int _simpleHeight;
+    // Extra pixels claimed by the Advanced sub-panel (mode label +
+    // kind dropdown + tallest kind-specific sub-panel — Tapering).
+    private const int AdvancedHeightBonus = 320;
+
     // Populated when the user picks a catalogue row; cleared as soon
     // as they diverge from it by editing either autocomplete field.
     private string? _linkedNationalCode;
@@ -82,6 +89,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         // so this size is what the user gets.
         Width = 880;
         Height = 800;
+        _simpleHeight = Height;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -196,7 +204,11 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (_mode == EditMode.Create)
         {
             _schedulePanel = new SchedulePanel(_loc);
-            _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
+            _schedulePanel.ModeChanged += (_, _) =>
+            {
+                SyncSimpleControlsEnabled();
+                AdjustDialogHeightForScheduleMode();
+            };
             AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
         }
 
@@ -371,6 +383,23 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _doseBox.Enabled = simple;
         _adminPerDayBox.Enabled = simple;
         _slotsList.Enabled = simple;
+    }
+
+    // Grows the dialog when Advanced is selected so the kind-specific
+    // sub-panel is not hidden behind the Cancel / Save button row;
+    // shrinks back to the base Simple layout when the user toggles
+    // Simple again. Caps at ~90% of the screen so a very small monitor
+    // still shows the buttons — anything past that is handled by the
+    // AutoScroll fallback on the outer content Panel.
+    private void AdjustDialogHeightForScheduleMode()
+    {
+        if (_schedulePanel is null) return;
+        var target = _schedulePanel.AdvancedSelected
+            ? _simpleHeight + AdvancedHeightBonus
+            : _simpleHeight;
+        var workingArea = Screen.FromControl(this).WorkingArea.Height;
+        var cap = (int)(workingArea * 0.9);
+        Height = Math.Min(target, cap);
     }
 
     // Picking a catalogue row on either side populates the sibling
