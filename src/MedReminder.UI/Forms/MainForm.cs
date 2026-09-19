@@ -1,10 +1,12 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
+using System.Threading;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Stock;
@@ -100,6 +102,7 @@ internal sealed class MainForm : MedReminderFormBase
         WireTrayHandlers();
 
         Load += async (_, _) => await ReloadAsync();
+        Load += (_, _) => TryStartPassiveUpdateCheck();
         FormClosing += OnFormClosing;
     }
 
@@ -221,10 +224,16 @@ internal sealed class MainForm : MedReminderFormBase
         var helpGuide = BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Help.Guide"),
             Mdl2Glyph.Glyphs.Help, Keys.F1,
             () => { OpenUserGuide(); return Task.CompletedTask; });
+        var helpCheckUpdates = BuildMenuItem(
+            _loc.Get("Ui.MainForm.Menu.Help.CheckUpdates"),
+            Mdl2Glyph.Glyphs.Sync, Keys.None,
+            async () => await ManualUpdateCheckAsync());
         var helpAbout = BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Help.About"),
             Mdl2Glyph.Glyphs.Info, Keys.None,
             () => { ShowAboutDialog(); return Task.CompletedTask; });
         helpMenu.DropDownItems.Add(helpGuide);
+        helpMenu.DropDownItems.Add(new ToolStripSeparator());
+        helpMenu.DropDownItems.Add(helpCheckUpdates);
         helpMenu.DropDownItems.Add(helpAbout);
 
         var strip = new MenuStrip { Dock = DockStyle.Top };
@@ -268,19 +277,106 @@ internal sealed class MainForm : MedReminderFormBase
 
     private void ShowAboutDialog()
     {
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "dev";
-        var body = _loc.Get("Ui.MainForm.About.Body", version);
-        // Data-source attributions (M2 §2.7, M3 EPAR, M4 ES + FR).
-        // Every catalogue embedded in the build has one line here,
-        // matching what THIRD-PARTY-NOTICES.md carries. Order mirrors
-        // CatalogueRefreshHostedService.ImportOrder for readability.
-        var aifa = _loc.Get("about.dataSources.aifa");
-        var ema = _loc.Get("about.dataSources.emaArticle57");
-        var aemps = _loc.Get("about.dataSources.aemps");
-        var bdpm = _loc.Get("about.dataSources.bdpm");
-        var message = body + "\n\n" + aifa + "\n" + ema + "\n" + aemps + "\n" + bdpm;
-        MessageBox.Show(this, message, _loc.Get("Ui.MainForm.About.Title"),
-            MessageBoxButtons.OK, MessageBoxIcon.Information);
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            using var dialog = scope.ServiceProvider.GetRequiredService<AboutDialog>();
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to open the About dialog.");
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    // Manual "Check for updates now" entry — always runs regardless
+    // of the opt-in flag and always reports the outcome (up to date,
+    // new version, or error).
+    private async Task ManualUpdateCheckAsync()
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var checker = scope.ServiceProvider.GetRequiredService<IUpdateChecker>();
+            var current = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
+            UseWaitCursor = true;
+            var result = await checker.CheckAsync(current, cts.Token);
+            UseWaitCursor = false;
+
+            switch (result.Status)
+            {
+                case UpdateCheckStatus.UpToDate:
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.UpdateCheck.UpToDate"),
+                        _loc.Get("Ui.UpdateCheck.Title"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    break;
+
+                case UpdateCheckStatus.NewVersionAvailable:
+                    UpdateCheckPrompt.Show(this, _loc, result);
+                    break;
+
+                case UpdateCheckStatus.Error:
+                default:
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.UpdateCheck.Error", result.ErrorMessage ?? string.Empty),
+                        _loc.Get("Ui.UpdateCheck.Title"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            UseWaitCursor = false;
+            _log.LogWarning(ex, "Manual update check failed.");
+            MessageBox.Show(this,
+                _loc.Get("Ui.UpdateCheck.Error", ex.Message),
+                _loc.Get("Ui.UpdateCheck.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    // Fire-and-forget passive check on window load. Respects
+    // UserSettings.CheckForUpdatesOnStartup (default true). A new
+    // version pops the shared prompt; every other outcome (up to
+    // date, network error, rate limit) is silent — the startup
+    // path must never bother the user with transient failures.
+    private void TryStartPassiveUpdateCheck()
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var settings = scope.ServiceProvider
+                    .GetRequiredService<IOptionsMonitor<UserSettings>>()
+                    .CurrentValue;
+                if (!settings.CheckForUpdatesOnStartup) return;
+
+                var checker = scope.ServiceProvider.GetRequiredService<IUpdateChecker>();
+                var current = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                var result = await checker.CheckAsync(current, cts.Token);
+
+                if (result.Status != UpdateCheckStatus.NewVersionAvailable) return;
+
+                if (IsDisposed || !IsHandleCreated) return;
+                BeginInvoke(new Action(() =>
+                {
+                    if (IsDisposed) return;
+                    UpdateCheckPrompt.Show(this, _loc, result);
+                }));
+            }
+            catch (Exception ex)
+            {
+                _log.LogInformation(ex, "Startup update check failed silently.");
+            }
+        });
     }
 
     // Red banner that appears above the grid when ReloadAsync

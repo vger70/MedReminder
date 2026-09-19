@@ -74,7 +74,7 @@ MedReminder.sln
 Directory.Build.props           centralized version + build settings
 CLAUDE.md                       this file
 README.md                       public project README
-LICENSE                         MIT
+LICENSE                         Apache License 2.0
 
 .github/workflows/
   dotnet-desktop.yml            release workflow (triggered by tag v*)

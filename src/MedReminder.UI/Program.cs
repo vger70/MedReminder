@@ -336,6 +336,7 @@ internal static class Program
         builder.Services.AddSingleton<IApplicationRestarter, ApplicationRestarter>();
 
         builder.Services.AddTransient<MainForm>();
+        builder.Services.AddTransient<AboutDialog>();
 
         builder.Logging.ClearProviders();
         builder.Logging.AddSerilog(dispose: false);

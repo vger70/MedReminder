@@ -12,6 +12,8 @@ using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
 using MedReminder.Infrastructure.Profiles;
 using MedReminder.Infrastructure.Storage;
+using MedReminder.Infrastructure.UpdateChecking;
+using MedReminder.Application.UpdateChecking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -110,6 +112,12 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IWindowsNotificationService, BalloonTipNotificationService>();
 
         services.AddSingleton<IAutoStartService>(_ => new RegistryAutoStartService());
+
+        // ------- Passive update check (GitHub Releases) -------
+        // Singleton so the underlying HttpClient is reused across
+        // both the startup check and the manual "Check for updates
+        // now" menu entry.
+        services.TryAddSingleton<IUpdateChecker, GitHubUpdateChecker>();
 
         // ------- Reference catalogue (M1) -------
         //

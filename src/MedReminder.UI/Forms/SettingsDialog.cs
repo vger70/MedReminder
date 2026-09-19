@@ -73,6 +73,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // countries actually present in the local catalogue plus a
     // synthetic "EU" entry for supranational authorisations.
     private ComboBox _referenceCountryCombo = null!;
+    // Passive update check opt-in — surfaces new GitHub releases at
+    // startup without downloading anything.
+    private CheckBox _checkUpdatesBox = null!;
 
     // Shared component for the explanatory tooltips on the technical fields.
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
@@ -117,8 +120,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _catalogueQuery = catalogueQuery;
 
         Text = _loc.Get("Ui.SettingsDialog.Title");
-        Width = 620;
-        Height = 560;
+        // Sized so that the Backup tab fits the folder textbox, the
+        // Browse button, and every localised help/warning label
+        // without an horizontal scrollbar. Every other tab has
+        // Dock=Fill or AutoSize controls that scale to fit.
+        Width = 800;
+        Height = 620;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -219,6 +226,15 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Text = _loc.Get("settings.referenceCountry.help"),
         };
 
+        _checkUpdatesBox = new CheckBox
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.CheckUpdates"),
+            Checked = _userMonitor.CurrentValue.CheckForUpdatesOnStartup,
+        };
+        _tooltips.SetToolTip(_checkUpdatesBox,
+            _loc.Get("Ui.SettingsDialog.Tooltip.CheckUpdates"));
+
         var saveButton = new Button
         {
             Text = _loc.Get("Ui.SettingsDialog.General.Save"),
@@ -246,6 +262,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         panel.Controls.Add(referenceCountryLabel);
         panel.Controls.Add(_referenceCountryCombo);
         panel.Controls.Add(referenceCountryHelp);
+        panel.Controls.Add(_checkUpdatesBox);
         panel.Controls.Add(saveButton);
         panel.Controls.Add(note);
         page.Controls.Add(panel);
@@ -300,6 +317,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             Language = choice.Code,
             ReferenceCountry = referenceCountry,
+            CheckForUpdatesOnStartup = _checkUpdatesBox.Checked,
         };
 
         try
@@ -753,7 +771,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
         _backupDirectoryBox = new TextBox
         {
-            Width = 400,
+            // Sized against the current SettingsDialog width so
+            // it never pushes the Backup tab into an horizontal
+            // scrollbar. Column 0 of BuildFormTable is 160 wide,
+            // container padding is 16 on each side, table padding
+            // is 12 on each side — the directory box + browse
+            // button must stay under (Width − 160 − 32 − 24).
+            Width = 460,
             Text = settings.Directory,
             ReadOnly = false,
         };
@@ -803,7 +827,11 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _backupCloudWarningLabel = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(560, 0),
+            // Constrained to the width available in table column 1
+            // (dialog − 160 − container padding − table padding),
+            // so the localized warning text wraps within the tab
+            // instead of forcing an horizontal scrollbar.
+            MaximumSize = new System.Drawing.Size(540, 0),
             ForeColor = System.Drawing.Color.DarkOrange,
             Text = string.Empty,
             Visible = false,
@@ -842,18 +870,25 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var note = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(560, 0),
+            // Wraps against the tab's usable width (dialog width
+            // minus container padding on both sides).
+            MaximumSize = new System.Drawing.Size(700, 0),
             AutoEllipsis = false,
             Text = _loc.Get("Ui.SettingsDialog.Backup.Note"),
             ForeColor = System.Drawing.Color.DarkGray,
         };
 
+        // AutoScroll intentionally left off: the SettingsDialog is
+        // now sized so the Backup tab fits without any scrollbar,
+        // and enabling AutoScroll here would restore both vertical
+        // and horizontal scrollbars for edge cases we already
+        // handle via the MaximumSize wraps above.
         var container = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
-            AutoScroll = true,
+            WrapContents = false,
         };
         container.Controls.Add(_dbPathLabel);
         container.Controls.Add(table);
