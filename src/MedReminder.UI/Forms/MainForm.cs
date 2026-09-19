@@ -471,9 +471,11 @@ internal sealed class MainForm : MedReminderFormBase
 
             // Persist the new hint so the restarted process opens the
             // chosen profile without showing the picker again
-            // (§6.1 flow).
+            // (§6.1 flow). The hint alone is not enough — with more
+            // than one profile ChooseProfile still shows the picker
+            // unless "--profile <id>" is passed, so pass it too.
             _profileRegistry.SetActiveProfileHint(chosen.Id);
-            _restarter.RestartAndExit();
+            _restarter.RestartAndExit(new[] { "--profile", chosen.Id });
         }
         catch (Exception ex)
         {

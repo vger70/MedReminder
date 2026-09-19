@@ -5,7 +5,8 @@ using WinFormsApp = System.Windows.Forms.Application;
 
 namespace MedReminder.UI.Services;
 
-// Self-orchestrated restart of the app after a backup restore.
+// Self-orchestrated restart of the app after a backup restore or a
+// profile switch.
 //
 // Sequence:
 //   1. Retrieve the current executable path
@@ -18,8 +19,14 @@ namespace MedReminder.UI.Services;
 //      releases the mutex and shuts Serilog down. The new process
 //      enters at that point.
 //
+// Extra command-line arguments (e.g. "--profile <id>" after a
+// profile switch) are appended via ProcessStartInfo.ArgumentList so
+// values with spaces or quotes are escaped correctly by the CLR
+// without any manual quoting.
+//
 // Note: does not use --minimized (the user just performed a restore
-// and expects to see the app open with the new data).
+// or a profile switch and expects to see the app open with the new
+// data).
 internal sealed class ApplicationRestarter : IApplicationRestarter
 {
     private readonly ILogger<ApplicationRestarter> _log;
@@ -29,7 +36,9 @@ internal sealed class ApplicationRestarter : IApplicationRestarter
         _log = log;
     }
 
-    public void RestartAndExit()
+    public void RestartAndExit() => RestartAndExit(null);
+
+    public void RestartAndExit(IReadOnlyList<string>? extraArgs)
     {
         var exe = Environment.ProcessPath;
         if (string.IsNullOrEmpty(exe))
@@ -48,6 +57,14 @@ internal sealed class ApplicationRestarter : IApplicationRestarter
                 UseShellExecute = false,
                 WorkingDirectory = Path.GetDirectoryName(exe) ?? Environment.CurrentDirectory,
             };
+            if (extraArgs is not null)
+            {
+                foreach (var arg in extraArgs)
+                {
+                    if (arg is null) continue;
+                    psi.ArgumentList.Add(arg);
+                }
+            }
             Process.Start(psi);
             _log.LogInformation("Restarting MedReminder ({Exe}) — closing the current instance.", exe);
         }
