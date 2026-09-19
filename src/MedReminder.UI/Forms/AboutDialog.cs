@@ -134,17 +134,41 @@ internal sealed class AboutDialog : MedReminderFormBase
 
         // Data-source attributions match those previously shown in
         // the legacy MessageBox About: one line per reference-
-        // catalogue snapshot embedded in the build.
+        // catalogue snapshot embedded in the build. Each label
+        // wraps within the body's usable width — without the
+        // MaximumSize they render on a single very long line and
+        // are clipped by the dialog's right edge.
         var sourcesHeader = new Label
         {
             AutoSize = true,
             Font = new Font(Font, FontStyle.Bold),
             Text = _loc.Get("Ui.AboutDialog.DataSources"),
         };
-        var aifa = new Label { AutoSize = true, Text = _loc.Get("about.dataSources.aifa") };
-        var ema = new Label { AutoSize = true, Text = _loc.Get("about.dataSources.emaArticle57") };
-        var aemps = new Label { AutoSize = true, Text = _loc.Get("about.dataSources.aemps") };
-        var bdpm = new Label { AutoSize = true, Text = _loc.Get("about.dataSources.bdpm") };
+        var sourceLabelMaxSize = new Size(620, 0);
+        var aifa = new Label
+        {
+            AutoSize = true,
+            MaximumSize = sourceLabelMaxSize,
+            Text = _loc.Get("about.dataSources.aifa"),
+        };
+        var ema = new Label
+        {
+            AutoSize = true,
+            MaximumSize = sourceLabelMaxSize,
+            Text = _loc.Get("about.dataSources.emaArticle57"),
+        };
+        var aemps = new Label
+        {
+            AutoSize = true,
+            MaximumSize = sourceLabelMaxSize,
+            Text = _loc.Get("about.dataSources.aemps"),
+        };
+        var bdpm = new Label
+        {
+            AutoSize = true,
+            MaximumSize = sourceLabelMaxSize,
+            Text = _loc.Get("about.dataSources.bdpm"),
+        };
 
         _updateStatusLabel = new Label
         {
@@ -200,12 +224,19 @@ internal sealed class AboutDialog : MedReminderFormBase
         header.Controls.Add(appIcon, 0, 0);
         header.Controls.Add(textStack, 1, 0);
 
+        // Body panel: Dock=Fill inside a TableLayoutPanel row is
+        // reliable only when AutoSize is OFF — with AutoSize=true
+        // the FlowLayoutPanel grew past its cell and pushed the
+        // button row off the visible area of the dialog.
+        // AutoScroll is on as a safety net for very tall
+        // localisations, but the default localisations fit without
+        // scrollbars in the sized dialog.
         var body = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
-            AutoSize = true,
             Dock = DockStyle.Fill,
             WrapContents = false,
+            AutoScroll = true,
             Padding = new Padding(16, 8, 16, 8),
         };
         body.Controls.Add(disclaimer);
@@ -220,8 +251,9 @@ internal sealed class AboutDialog : MedReminderFormBase
         {
             FlowDirection = FlowDirection.LeftToRight,
             AutoSize = true,
-            Dock = DockStyle.Bottom,
-            Padding = new Padding(16, 8, 16, 4),
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16, 4, 16, 4),
         };
         updatePanel.Controls.Add(_checkUpdatesButton);
         updatePanel.Controls.Add(_updateStatusLabel);
@@ -229,12 +261,16 @@ internal sealed class AboutDialog : MedReminderFormBase
         var buttons = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 48,
+            Dock = DockStyle.Fill,
             Padding = new Padding(12, 8, 12, 8),
         };
         buttons.Controls.Add(okButton);
 
+        // Root: 4 rows — header (auto), body (fill), update row
+        // (auto, ~44 px), close button row (auto, ~44 px). Every
+        // AutoSize row is sized against a MinimumSize so the button
+        // rows never collapse to zero — a lesson from the previous
+        // layout where the buttons vanished from view.
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -243,8 +279,8 @@ internal sealed class AboutDialog : MedReminderFormBase
         };
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         root.Controls.Add(header, 0, 0);
         root.Controls.Add(body, 0, 1);
         root.Controls.Add(updatePanel, 0, 2);
