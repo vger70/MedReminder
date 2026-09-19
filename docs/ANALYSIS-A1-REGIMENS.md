@@ -649,25 +649,59 @@ familiarity gained from the multi-user refactor.
 
 ---
 
-## 12. Decisions still to confirm
+## 12. Confirmed decisions
 
-Only these items require input; everything above is a locked
-technical proposal.
+Everything above is a locked technical proposal. The four review
+points that were open at initial draft time are resolved as
+follows (maintainer sign-off, 2026-09-19):
 
-1. **Italian labels** (§6). User decides the exact wording;
-   placeholders proposed. `en` / `fr` / `es` / `de` will be drafted
-   with the implementation PR and marked for review.
-2. **Slot × schedule combinations**. This document deliberately
-   excludes them for A1. Confirm.
-3. **PRN semantics — `0` daily rate, no forecast** (§3.3, §9).
-   Confirm that a PRN therapy shows *no* days-remaining in the
-   grid (empty cell) rather than a large or a placeholder number.
-4. **Advanced-mode slot behavior** (§5.2). Currently: in Advanced
-   mode the slot list is hidden. Alternative: keep it visible on
-   FixedDaily-Advanced. Confirm.
+1. **Italian labels** (§6). Decided on the actual form during
+   implementation review. The implementation PR ships `strings.it.json`
+   with `TODO(it): <english fallback>` placeholders so the missing
+   translations are visible; final wording is applied in the same PR
+   after the form is inspected.
+2. **Slot × schedule combinations.** Deliberately out of scope for
+   A1. In Advanced mode the slot list is hidden for every kind. See
+   §13 for the intended follow-up when the need materializes.
+3. **PRN semantics.** `dailyRate = 0` → `RunOutForecastResult(null,
+   null)` (existing behavior of `RunOutForecast.Compute`, `[VERIFIED]`)
+   → `MainForm` grid shows empty cells for `Days` and `ETA` on a PRN
+   therapy. The `Consumption/day` cell shows the localized `PRN`
+   badge in place of a number.
+4. **Advanced-mode slot behavior.** Slot list is hidden in Advanced
+   for every kind, including `FixedDaily`. A user who wants slot-driven
+   daily consumption toggles back to Simple.
+
+---
+
+## 13. Future work — slot × non-fixed schedule (deferred, not in A1)
+
+Point 2 above is a deferral, not a closure. When the need arises,
+the intended shape is:
+
+- Each `MedicationAdministrationSlot` gains an optional
+  `QuantityPattern` (default `null` = same dose every day, current
+  behavior).
+- `QuantityPattern` reuses the `Schedule` taxonomy in this document
+  (`Weekly`, `Cyclic`, `Tapering`), applied to the single slot's
+  dose rather than to the daily total.
+- `DailyConsumption.RateOn` sums `slot.RateOn(day, slot.AnchorDate)`
+  across slots when slots are present, otherwise falls back to the
+  medicine-level `Schedule` as defined in this document.
+- `PrnSchedule` is not allowed as a slot pattern: PRN belongs at the
+  medicine level, not at the slot level.
+- UI: the slot list is shown in Advanced too, and each slot row
+  gains a "…" affordance opening the pattern editor.
+
+This section is a placeholder to keep the future refactor path
+consistent with A1's data model. It is intentionally not planned
+in detail — the actual demand will dictate the shape.
 
 ---
 
 ## Change log for this document
 
 - 2026-09-19 — initial draft (pre-implementation).
+- 2026-09-19 — §12 rewritten as confirmed decisions after
+  maintainer sign-off; §13 added with the deferred slot × schedule
+  follow-up.
