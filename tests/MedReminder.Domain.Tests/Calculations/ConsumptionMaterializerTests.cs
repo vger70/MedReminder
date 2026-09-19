@@ -180,4 +180,103 @@ public class ConsumptionMaterializerTests
 
         plan.Should().ContainSingle().Which.Should().Be(new MaterializedConsumption(day, 2m));
     }
+
+    // ---------- A1 schedule kinds ----------------------------------
+
+    [Fact]
+    public void Plan_cyclic_schedule_only_emits_on_days_across_two_full_periods()
+    {
+        var effectiveFrom = new DateOnly(2026, 3, 1);
+        var medicine = DomainFactory.Medicine(startDate: effectiveFrom);
+        var schedule = new[]
+        {
+            DomainFactory.ScheduleFor(effectiveFrom, new CyclicSchedule(onDays: 3, offDays: 2, quantityPerOnDay: 1m)),
+        };
+
+        var plan = ConsumptionMaterializer.Plan(
+            medicine,
+            effectiveFrom,
+            effectiveFrom.AddDays(9),   // 10-day window = two full periods
+            schedule,
+            Array.Empty<MedicationSuspension>());
+
+        plan.Select(p => p.Day).Should().Equal(
+            effectiveFrom,
+            effectiveFrom.AddDays(1),
+            effectiveFrom.AddDays(2),
+            // off: +3, +4
+            effectiveFrom.AddDays(5),
+            effectiveFrom.AddDays(6),
+            effectiveFrom.AddDays(7));
+            // off: +8, +9
+        plan.Should().OnlyContain(p => p.Quantity == 1m);
+    }
+
+    [Fact]
+    public void Plan_tapering_schedule_steps_down_across_intervals()
+    {
+        var effectiveFrom = new DateOnly(2026, 3, 1);
+        var medicine = DomainFactory.Medicine(startDate: effectiveFrom);
+        var schedule = new[]
+        {
+            DomainFactory.ScheduleFor(effectiveFrom,
+                new TaperingSchedule(startDose: 3m, endDose: 1m, step: 1m, intervalDays: 7)),
+        };
+
+        var plan = ConsumptionMaterializer.Plan(
+            medicine,
+            effectiveFrom,
+            effectiveFrom.AddDays(20),   // 21 days = 3 intervals
+            schedule,
+            Array.Empty<MedicationSuspension>());
+
+        plan.Should().HaveCount(21);
+        // Day 0..6 → 3, day 7..13 → 2, day 14..20 → 1 (clamped at end).
+        plan.Take(7).Should().OnlyContain(p => p.Quantity == 3m);
+        plan.Skip(7).Take(7).Should().OnlyContain(p => p.Quantity == 2m);
+        plan.Skip(14).Should().OnlyContain(p => p.Quantity == 1m);
+    }
+
+    [Fact]
+    public void Plan_prn_schedule_emits_nothing()
+    {
+        var effectiveFrom = new DateOnly(2026, 3, 1);
+        var medicine = DomainFactory.Medicine(startDate: effectiveFrom);
+        var schedule = new[]
+        {
+            DomainFactory.ScheduleFor(effectiveFrom, new PrnSchedule()),
+        };
+
+        var plan = ConsumptionMaterializer.Plan(
+            medicine,
+            effectiveFrom,
+            effectiveFrom.AddDays(30),
+            schedule,
+            Array.Empty<MedicationSuspension>());
+
+        plan.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Plan_weekly_schedule_emits_only_positive_days()
+    {
+        // Warfarin-style: 1 mg Mon/Wed/Fri, 0.5 mg on the other days.
+        var effectiveFrom = new DateOnly(2026, 3, 2);   // Monday
+        var medicine = DomainFactory.Medicine(startDate: effectiveFrom);
+        var schedule = new[]
+        {
+            DomainFactory.ScheduleFor(effectiveFrom,
+                new WeeklySchedule(new[] { 1m, 0.5m, 1m, 0.5m, 1m, 0.5m, 0.5m })),
+        };
+
+        var plan = ConsumptionMaterializer.Plan(
+            medicine,
+            effectiveFrom,
+            effectiveFrom.AddDays(6),   // one full week
+            schedule,
+            Array.Empty<MedicationSuspension>());
+
+        plan.Should().HaveCount(7);
+        plan.Select(p => p.Quantity).Should().Equal(1m, 0.5m, 1m, 0.5m, 1m, 0.5m, 0.5m);
+    }
 }

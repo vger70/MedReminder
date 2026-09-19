@@ -1,9 +1,8 @@
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
-using MedReminder.Application.Catalogue;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.UI.Controls;
 
@@ -50,6 +49,12 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private readonly List<AdministrationSlotEntry> _slots = new();
     private readonly EditMode _mode;
 
+    // Simple / Advanced schedule editor (A1). Present only in Create
+    // mode: in Edit mode dose / administrations are display-only and
+    // schedule shape changes go through ChangeScheduleDialog. See
+    // docs/ANALYSIS-A1-REGIMENS.md §5.2.
+    private readonly SchedulePanel? _schedulePanel;
+
     // Populated when the user picks a catalogue row; cleared as soon
     // as they diverge from it by editing either autocomplete field.
     private string? _linkedNationalCode;
@@ -74,7 +79,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         // needs ~700 px to be legible. The dialog stays FixedDialog
         // so this size is what the user gets.
         Width = 880;
-        Height = 800;
+        Height = 820;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -163,9 +168,14 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             Text = string.Empty,
         };
 
+        // Dock=Top (not Fill) + AutoSize lets the table grow taller
+        // than the surrounding AutoScroll Panel — Dock=Fill pins the
+        // table height to the viewport and defeats the scrollbar,
+        // which was why the Advanced sub-panel was hidden by the
+        // Save / Cancel row on the previous PR round.
         var table = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             ColumnCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -180,6 +190,21 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Unit"), _unitBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.DosePerAdmin"), _doseBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.AdminsPerDay"), _adminPerDayBox);
+
+        // A1: Simple / Advanced schedule editor lives right after the
+        // dose / administrations fields it complements. Only wired in
+        // Create mode — Edit mode routes schedule shape changes
+        // through ChangeScheduleDialog to preserve the versioned
+        // history. Overflow (Weekly grid / Tapering summary) is
+        // handled by the outer AutoScroll Panel — no dynamic dialog
+        // resize needed.
+        if (_mode == EditMode.Create)
+        {
+            _schedulePanel = new SchedulePanel(_loc);
+            _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
+            AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
+        }
+
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.StartDateFull"), _startDatePicker);
         AddRow(table, string.Empty, _hasEndDate);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.EndDateFull"), _endDatePicker);
@@ -199,6 +224,11 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.SlotsOptional"), BuildSlotsPanel());
         AddRow(table, string.Empty, _slotsSummary);
         UpdateSlotsSummary();
+
+        // Now that every control is on the table, honor the initial
+        // Simple selection by disabling nothing yet — SyncSimpleControlsEnabled
+        // reads the current SchedulePanel state (Simple by default).
+        if (_schedulePanel is not null) SyncSimpleControlsEnabled();
 
         var okButton = new Button { Text = _loc.Get("Ui.MedicineEditDialog.Save"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
         var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
@@ -291,6 +321,25 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (_channelWindows.Checked) channels |= NotificationChannels.Windows;
         if (_channelEmail.Checked) channels |= NotificationChannels.Email;
 
+        // A1: build the Schedule value object when Advanced is
+        // selected. Simple mode keeps InitialSchedule = null so
+        // AddMedicine constructs FixedDaily from Dose × Admin
+        // exactly like pre-A1.
+        Schedule? initialSchedule = null;
+        if (_schedulePanel is { AdvancedSelected: true })
+        {
+            initialSchedule = _schedulePanel.TryBuildSchedule(out var scheduleError);
+            if (initialSchedule is null)
+            {
+                MessageBox.Show(this,
+                    scheduleError ?? _loc.Get("Ui.Schedule.Validation.Generic"),
+                    _loc.Get("Ui.MedicineEditDialog.InconsistentData.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                DialogResult = DialogResult.None;
+                return;
+            }
+        }
+
         Result = new MedicineEditResult(
             Name: _nameBox.InputText.Trim(),
             ActiveIngredient: NullIfBlank(_ingredientBox.InputText),
@@ -306,10 +355,27 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             InitialQuantity: _initialQtyBox.Value,
             NotificationChannels: channels,
             IsActive: _isActiveBox.Checked,
-            Slots: _slots.ToList(),
+            // In Advanced mode slots × non-fixed combinations are out
+            // of scope (§3.1) — drop the slots so the schedule owns
+            // the daily rate uniquely.
+            Slots: initialSchedule is null ? _slots.ToList() : new List<AdministrationSlotEntry>(),
             NationalCode: _linkedNationalCode,
             AtcCode: _linkedAtcCode,
-            LinkedReferenceMedicineId: _linkedReferenceMedicineId);
+            LinkedReferenceMedicineId: _linkedReferenceMedicineId,
+            InitialSchedule: initialSchedule);
+    }
+
+    // Disables the Simple-mode inputs (dose, admin/day, slot buttons)
+    // whenever the user flips into Advanced, so it is unambiguous
+    // which set of controls drives the projection. Called from the
+    // SchedulePanel.ModeChanged event.
+    private void SyncSimpleControlsEnabled()
+    {
+        if (_schedulePanel is null) return;
+        var simple = !_schedulePanel.AdvancedSelected;
+        _doseBox.Enabled = simple;
+        _adminPerDayBox.Enabled = simple;
+        _slotsList.Enabled = simple;
     }
 
     // Picking a catalogue row on either side populates the sibling
@@ -586,7 +652,8 @@ internal sealed record MedicineEditResult(
     IReadOnlyList<AdministrationSlotEntry>? Slots = null,
     string? NationalCode = null,
     AtcCode? AtcCode = null,
-    Guid? LinkedReferenceMedicineId = null)
+    Guid? LinkedReferenceMedicineId = null,
+    Schedule? InitialSchedule = null)
 {
     public AddMedicineCommand ToAddCommand() => new(
         Name: Name,
@@ -605,7 +672,8 @@ internal sealed record MedicineEditResult(
         AdministrationSlots: MapSlots(),
         NationalCode: NationalCode,
         AtcCode: AtcCode,
-        LinkedReferenceMedicineId: LinkedReferenceMedicineId);
+        LinkedReferenceMedicineId: LinkedReferenceMedicineId,
+        InitialSchedule: InitialSchedule);
 
     // Always pass the slots (even empty): the UpdateMedicine use case
     // distinguishes null=leave-as-is vs [] = clear. Here the user has

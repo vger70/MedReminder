@@ -10,6 +10,12 @@ namespace MedReminder.Application.UseCases;
 // LinkedReferenceMedicineId) are optional. Populate them when the
 // UI has picked a row from the reference catalogue; leave them null
 // for free-text entries. See ANALYSIS-DRUG-CATALOGUE.md §2.5.
+//
+// InitialSchedule (A1, docs/ANALYSIS-A1-REGIMENS.md §3.5) is
+// optional. When null the use case builds a FixedDailySchedule
+// from DosePerAdministration and AdministrationsPerDay (the legacy
+// behavior). When set it is persisted verbatim and the legacy
+// fields become read-only display values on the Medicine entity.
 public sealed record AddMedicineCommand(
     string Name,
     string Unit,
@@ -27,7 +33,8 @@ public sealed record AddMedicineCommand(
     IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null,
     string? NationalCode = null,
     AtcCode? AtcCode = null,
-    Guid? LinkedReferenceMedicineId = null);
+    Guid? LinkedReferenceMedicineId = null,
+    Schedule? InitialSchedule = null);
 
 public sealed class AddMedicine
 {
@@ -59,6 +66,9 @@ public sealed class AddMedicine
         ArgumentNullException.ThrowIfNull(cmd);
         Validate(cmd);
 
+        var effectiveSchedule = cmd.InitialSchedule
+            ?? new FixedDailySchedule(cmd.DosePerAdministration, cmd.AdministrationsPerDay);
+
         var now = _clock.GetUtcNow();
         var medicine = new Medicine
         {
@@ -85,13 +95,19 @@ public sealed class AddMedicine
 
         await _medicines.AddAsync(medicine, cancellationToken);
 
-        // First entry of the versioned schedule.
+        // First entry of the versioned schedule. The codec carries
+        // the schedule shape; the legacy dose / administrations
+        // columns are used by the codec as the FixedDaily fallback
+        // and, for other kinds, as display-only values.
+        var (kind, payload) = ScheduleCodec.Serialize(effectiveSchedule);
         await _schedules.AddAsync(new MedicationScheduleHistory
         {
             MedicineId = medicine.Id,
             EffectiveFrom = cmd.StartDate,
             DosePerAdministration = cmd.DosePerAdministration,
             AdministrationsPerDay = cmd.AdministrationsPerDay,
+            ScheduleKind = kind,
+            SchedulePayload = payload,
         }, cancellationToken);
 
         // Initial stock load (if > 0).
@@ -150,10 +166,27 @@ public sealed class AddMedicine
             throw new ArgumentException("Medicine name is required.", nameof(cmd));
         if (string.IsNullOrWhiteSpace(cmd.Unit))
             throw new ArgumentException("Unit of measure is required.", nameof(cmd));
-        if (cmd.DosePerAdministration <= 0m)
-            throw new ArgumentException("Dose per administration must be positive.", nameof(cmd));
-        if (cmd.AdministrationsPerDay <= 0)
-            throw new ArgumentException("Administrations per day must be at least 1.", nameof(cmd));
+        if (cmd.InitialSchedule is null)
+        {
+            // Legacy path: the schedule is derived from Dose + Admin;
+            // the existing invariants stay strict.
+            if (cmd.DosePerAdministration <= 0m)
+                throw new ArgumentException("Dose per administration must be positive.", nameof(cmd));
+            if (cmd.AdministrationsPerDay <= 0)
+                throw new ArgumentException("Administrations per day must be at least 1.", nameof(cmd));
+        }
+        else
+        {
+            // A1 path: the schedule itself has validated its own
+            // invariants at construction. The legacy fields are
+            // display-only (see §3.5 of ANALYSIS-A1-REGIMENS.md);
+            // only refuse negative values so the Medicine summary
+            // never carries garbage.
+            if (cmd.DosePerAdministration < 0m)
+                throw new ArgumentException("Display dose cannot be negative.", nameof(cmd));
+            if (cmd.AdministrationsPerDay < 0)
+                throw new ArgumentException("Display administrations per day cannot be negative.", nameof(cmd));
+        }
         if (cmd.ThresholdDays < 0)
             throw new ArgumentException("Threshold in days cannot be negative.", nameof(cmd));
         if (cmd.EndDate is { } end && end < cmd.StartDate)

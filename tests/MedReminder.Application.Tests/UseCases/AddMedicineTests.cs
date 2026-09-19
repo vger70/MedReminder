@@ -1,6 +1,7 @@
 using FluentAssertions;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using Xunit;
@@ -99,5 +100,65 @@ public class AddMedicineTests
         await FluentActions
             .Awaiting(() => scope.AddMedicine.ExecuteAsync(cmd, CancellationToken.None))
             .Should().ThrowAsync<ArgumentException>();
+    }
+
+    // ---------- A1 InitialSchedule ---------------------------------
+
+    [Fact]
+    public async Task Persists_schedule_kind_and_payload_when_initial_schedule_is_supplied()
+    {
+        var scope = new ApplicationTestScope();
+        var cyclic = new CyclicSchedule(onDays: 21, offDays: 7, quantityPerOnDay: 1m);
+        var cmd = ValidCommand() with
+        {
+            DosePerAdministration = 0.75m,   // display value, not projection input
+            AdministrationsPerDay = 1,
+            InitialSchedule = cyclic,
+        };
+
+        var id = await scope.AddMedicine.ExecuteAsync(cmd, CancellationToken.None);
+
+        var schedule = await scope.Schedules.ListForMedicineAsync(id, CancellationToken.None);
+        var entry = schedule.Should().ContainSingle().Subject;
+        entry.ScheduleKind.Should().Be(ScheduleKind.Cyclic);
+        entry.SchedulePayload.Should().NotBeNullOrWhiteSpace();
+
+        // Round-trip via the codec must yield the same value object.
+        var round = ScheduleCodec.Deserialize(
+            entry.ScheduleKind,
+            entry.SchedulePayload,
+            entry.DosePerAdministration,
+            entry.AdministrationsPerDay);
+        round.Should().Be(cyclic);
+    }
+
+    [Fact]
+    public async Task Prn_schedule_accepts_zero_display_dose()
+    {
+        var scope = new ApplicationTestScope();
+        var cmd = ValidCommand() with
+        {
+            DosePerAdministration = 0m,   // PRN display convention
+            AdministrationsPerDay = 1,
+            InitialSchedule = new PrnSchedule(),
+        };
+
+        var id = await scope.AddMedicine.ExecuteAsync(cmd, CancellationToken.None);
+
+        var schedule = await scope.Schedules.ListForMedicineAsync(id, CancellationToken.None);
+        schedule.Should().ContainSingle()
+            .Which.ScheduleKind.Should().Be(ScheduleKind.Prn);
+    }
+
+    [Fact]
+    public async Task Legacy_command_still_persists_fixed_daily_with_null_payload()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await scope.AddMedicine.ExecuteAsync(ValidCommand(), CancellationToken.None);
+
+        var entry = (await scope.Schedules.ListForMedicineAsync(id, CancellationToken.None))
+            .Should().ContainSingle().Subject;
+        entry.ScheduleKind.Should().Be(ScheduleKind.FixedDaily);
+        entry.SchedulePayload.Should().BeNull();
     }
 }

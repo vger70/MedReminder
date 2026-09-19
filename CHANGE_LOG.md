@@ -30,6 +30,108 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #31 — A1: Complex therapy regimens (Schedule value object, Simple/Advanced UI)
+
+Link: [vger70/MedReminder#31](https://github.com/vger70/MedReminder/pull/31)
+**Status:** open
+Branch: `feature/complex-regimens`
+
+Implements Group A item **A1** from `docs/EVOLUTION.md` §3.1 per
+the design locked in `docs/ANALYSIS-A1-REGIMENS.md`. Extends the
+linear `dose × administrations/day` consumption model with four
+non-constant schedule shapes so cyclic, weekly, tapering and
+as-needed therapies produce the correct daily rate for the
+projection engine. Pre-A1 databases upgrade transparently: an
+additive `ALTER TABLE … ADD COLUMN` patch guarded by
+`PRAGMA table_info` runs on first boot, and the existing rows read
+back as `FixedDaily` via SQLite's `DEFAULT 0` — the projection
+stays byte-for-byte identical without a data-fix pass.
+
+### Added
+
+- New `Schedule` value object in `MedReminder.Domain` with five
+  discriminated shapes: `FixedDailySchedule` (existing behavior),
+  `WeeklySchedule` (per-day-of-week quantities),
+  `CyclicSchedule` (N on / M off with a per-on-day quantity),
+  `TaperingSchedule` (start dose → end dose in fixed steps every
+  fixed number of days) and `PrnSchedule` (as-needed; no
+  scheduled consumption).
+- `ScheduleCodec` — `System.Text.Json` (de)serializer that bridges
+  the domain value object to `ScheduleKind` + optional payload
+  columns on `MedicationScheduleHistory`. Unknown enum values fall
+  back to `FixedDaily` (fail-safe); malformed payloads throw
+  `InvalidOperationException` naming the offending kind.
+- Reusable `SchedulePanel` control hosting the Simple / Advanced
+  toggle, the Regime-type dropdown and one sub-panel per kind.
+  Embedded in the "New medicine" dialog (Create mode) and in the
+  "Change schedule" dialog; the Simple flow stays one click and
+  the Advanced flow is validated against each `Schedule` subtype's
+  invariants (weekly requires 7 non-negative days with at least
+  one > 0; cyclic requires `on ≥ 1`, `off ≥ 0`, `quantity > 0`;
+  tapering rejects `start == end`; PRN takes no inputs).
+- "Complex regimens" section in `docs/USER_GUIDE.en.md` explaining
+  the Simple / Advanced selector, each kind's semantics, and an
+  explicit reminder that MedReminder performs no clinical checks
+  (no maximum-daily-dose, no interaction warnings).
+- 29 new `Ui.Schedule.*` localization keys covering the toggle,
+  the regime types, the weekly weekday headers, the cyclic /
+  tapering summary strings, the PRN help text and the validation
+  fallback. Italian ships with `TODO(it): <english fallback>`
+  placeholders per the maintainer's preference to finalize the
+  wording on the form itself.
+
+### Changed
+
+- `MedicationScheduleHistory` gains two nullable / defaulted
+  fields: `ScheduleKind` (defaults to `FixedDaily`) and
+  `SchedulePayload` (`null` for `FixedDaily`, JSON otherwise).
+  Existing rows keep their meaning without a data-fix pass.
+- `DailyConsumption.RateOn` now picks the latest applicable
+  `MedicationScheduleHistory` entry and dispatches through
+  `ScheduleCodec.Deserialize(...).RateOn(day, anchor)`. Slot
+  behavior is unchanged: slots keep taking precedence when
+  present.
+- `AddMedicineCommand.InitialSchedule` and
+  `ChangeMedicationScheduleCommand.NewSchedule` are optional and
+  default to `null` (every existing caller keeps compiling).
+  When set they are persisted verbatim; when `null` the use case
+  builds a `FixedDailySchedule` from the legacy Dose /
+  Administrations parameters, so the pre-A1 path is preserved.
+  Validation on those two parameters is relaxed to `>= 0` when
+  a `Schedule` is supplied (so PRN's display `Dose = 0` is
+  accepted) and stays strict `> 0` otherwise.
+- `MedicineEditResult.InitialSchedule` and
+  `ChangeScheduleResult.NewSchedule` thread the value object from
+  the dialogs down to the use cases. In Advanced mode the outer
+  Dose / Administrations / Slots inputs are disabled so the
+  source of truth is unambiguous.
+
+### Docs
+
+- New `docs/ANALYSIS-A1-REGIMENS.md`: full pre-implementation
+  design, confirmed decisions (§12), deferred slot × schedule
+  follow-up path (§13) and implementation-status footer listing
+  every shipped and deferred item.
+
+### Build
+
+- No new NuGet dependencies. `System.Text.Json` used by the codec
+  ships with the target runtime.
+
+### Deferred (deliberately out of scope for this PR)
+
+- `MainForm` grid badges for non-FixedDaily therapies — the
+  Consumption/day cell shows today's numeric rate as before.
+- Italian final translations of the new UI strings.
+- "Complex regimens" section translated into the four non-English
+  user guides (`it`, `fr`, `es`, `de`).
+- Slot × non-FixedDaily combinations — the design's future path is
+  captured in `docs/ANALYSIS-A1-REGIMENS.md` §13.
+- Forward-integrating run-out ETA (the forecast stays a
+  scalar-snapshot using today's rate).
+
+---
+
 ## PR #30 — Add EVOLUTION.md, prospective work beyond Increment 15
 
 Link: [vger70/MedReminder#30](https://github.com/vger70/MedReminder/pull/30)
