@@ -30,6 +30,67 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #30 — Add EVOLUTION.md, prospective work beyond Increment 15
+
+Link: [vger70/MedReminder#30](https://github.com/vger70/MedReminder/pull/30)
+**Status:** open
+Branch: `claude/practical-maxwell-uzn54q`
+
+Docs-only change. Adds a new prospective-analysis document that
+records candidate evolutions past the Increment 15 baseline so
+future sessions and maintainers do not re-derive them. No source
+code, tests, build scripts, CI workflows or localization
+dictionaries are touched; runtime behavior is unchanged.
+
+### Docs
+
+- New `docs/EVOLUTION.md` covering:
+  - **Group A** — low-friction extensions: complex therapy regimens
+    (cycles, tapering, PRN — extending the `Schedule` value object
+    in `MedReminder.Domain`), AIC/barcode scan of the medicine
+    package leveraging the existing reference catalogue, and
+    caregiver email notifications reusing the MailKit transport.
+  - **C.3** — manual export/import as encrypted zip (Argon2id
+    passphrase key derivation, AES-GCM payload, deliberately not
+    DPAPI so the export survives device migration); public JSON
+    format to be documented in a follow-up `docs/EXPORT-FORMAT.md`
+    once the feature lands.
+  - **C.3+** — automatic backup targeting a user-controlled cloud
+    folder (OneDrive, iCloud Drive, Dropbox…) with explicit
+    *Restore from backup* on a second device. Reuses the existing
+    `backup.settings.json` mechanism from `CLAUDE.md` §6. Model is
+    single-writer, multiple-reader-on-demand — not real-time sync.
+  - **B.1** — mobile companion client. Portable `MedReminder.Domain`
+    and `MedReminder.Application` reuse table; per-platform
+    replacement of the `MedReminder.Infrastructure` adapters
+    (DPAPI → Keychain/Keystore; WinRT toast → local notifications;
+    tray → n/a; single-instance mutex → n/a). MAUI recommended as
+    default UI framework, with Avalonia as the fallback when
+    desktop Linux is also a target. Precondition: do not ship B.1
+    without C.3+ in place.
+  - **C.1** — end-to-end encrypted sync with a dedicated backend
+    (zero-knowledge; Argon2id-derived master key; ChaCha20-Poly1305
+    per-record; append-only operation log; ASP.NET Core + Postgres
+    hosted in the EU). Documents the non-technical cost of running
+    a service (perpetual operation, recovery UX for lost passphrases,
+    business-model shift), and the GDPR posture on ciphertext blobs.
+    Recommends Bitwarden and Standard Notes as prior art.
+- **C.2** (raw file-sync of the live SQLite database via OneDrive /
+  iCloud / Dropbox) explicitly rejected in §7.1 on technical
+  grounds (SQLite FAQ; WAL/SHM ordering; no distributed locking;
+  meaningless conflict files).
+- **Group D** (national health-system integrations) and
+  medical-device functions (adherence tracking, clinical alerts,
+  drug-interaction checks) explicitly excluded from the document
+  with rationale — the first for regulatory / API-access
+  uncertainty, the second for EU MDR 2017/745 scope.
+- Priority order set out in §2: Group A → C.3 → C.3+ → B.1 → C.1.
+- Non-commitment posture: the document records options, not work
+  planned. Items become work only once explicitly approved and
+  turned into a dedicated analysis document or GitHub issue.
+
+---
+
 ## PR #29 — About dialog with credits + passive GitHub update check
 
 Link: [vger70/MedReminder#29](https://github.com/vger70/MedReminder/pull/29)
