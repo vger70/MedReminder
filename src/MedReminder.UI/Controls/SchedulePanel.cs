@@ -291,44 +291,52 @@ internal sealed class SchedulePanel
             _taperingInterval.Value.ToString("0", CultureInfo.CurrentUICulture));
     }
 
-    private Panel BuildRoot()
+    private Control BuildRoot()
     {
-        var root = new Panel { AutoSize = true, Dock = DockStyle.Fill };
+        // FlowLayoutPanel with TopDown flow reliably computes AutoSize
+        // when nested inside an AutoSize TableLayoutPanel cell —
+        // Panel + Dock=Fill + AutoSize on both sides collapses the
+        // row to zero height. See docs/ANALYSIS-A1-REGIMENS.md §5.1.
+        var root = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        };
         var modeRow = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.LeftToRight,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             WrapContents = false,
-            Dock = DockStyle.Top,
+            Margin = Padding.Empty,
         };
-        var modeLabel = new Label
-        {
-            Text = _loc.Get("Ui.Schedule.Mode.Label"),
-            AutoSize = true,
-            Margin = new Padding(0, 6, 8, 0),
-        };
-        modeRow.Controls.Add(modeLabel);
         modeRow.Controls.Add(_modeSimple);
         modeRow.Controls.Add(_modeAdvanced);
 
-        _advancedContainer.Dock = DockStyle.Top;
-
-        // WinForms docking order: last-added-Top ends up on top,
-        // so add the container first, then the modeRow.
-        root.Controls.Add(_advancedContainer);
         root.Controls.Add(modeRow);
+        root.Controls.Add(_advancedContainer);
         return root;
     }
 
-    private Panel BuildAdvancedContainer()
+    private FlowLayoutPanel BuildAdvancedContainer()
     {
-        var container = new Panel { AutoSize = true, Dock = DockStyle.Top, Padding = new Padding(0, 6, 0, 0) };
+        var container = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = new Padding(0, 6, 0, 0),
+        };
         var kindRow = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.LeftToRight,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             WrapContents = false,
-            Dock = DockStyle.Top,
+            Margin = Padding.Empty,
         };
         var kindLabel = new Label
         {
@@ -339,20 +347,22 @@ internal sealed class SchedulePanel
         kindRow.Controls.Add(kindLabel);
         kindRow.Controls.Add(_kindBox);
 
-        var subPanelsHost = new Panel { AutoSize = true, Dock = DockStyle.Top, Padding = new Padding(0, 6, 0, 0) };
-        _fixedPanel.Dock = DockStyle.Top;
-        _weeklyPanel.Dock = DockStyle.Top;
-        _cyclicPanel.Dock = DockStyle.Top;
-        _taperingPanel.Dock = DockStyle.Top;
-        _prnPanel.Dock = DockStyle.Top;
-        subPanelsHost.Controls.Add(_prnPanel);
-        subPanelsHost.Controls.Add(_taperingPanel);
-        subPanelsHost.Controls.Add(_cyclicPanel);
-        subPanelsHost.Controls.Add(_weeklyPanel);
+        var subPanelsHost = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = new Padding(0, 6, 0, 0),
+        };
         subPanelsHost.Controls.Add(_fixedPanel);
+        subPanelsHost.Controls.Add(_weeklyPanel);
+        subPanelsHost.Controls.Add(_cyclicPanel);
+        subPanelsHost.Controls.Add(_taperingPanel);
+        subPanelsHost.Controls.Add(_prnPanel);
 
-        container.Controls.Add(subPanelsHost);
         container.Controls.Add(kindRow);
+        container.Controls.Add(subPanelsHost);
         return container;
     }
 
