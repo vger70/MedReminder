@@ -1,15 +1,11 @@
 using System.ComponentModel;
-using System.Drawing;
 using System.Reflection;
-using System.Threading;
-using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
-using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
 using MedReminder.UI.Presentation;
 using MedReminder.UI.Tray;
@@ -54,7 +50,7 @@ internal sealed class MainForm : MedReminderFormBase
     private readonly IApplicationRestarter _restarter;
 
     private DataGridView _grid = null!;
-    private BindingList<MedicineListItem> _rows = new();
+    private BindingList<MedicineListItem> _rows = [];
     private ToolStripStatusLabel _statusLabel = null!;
     private ToolStripStatusLabel _lastCheckLabel = null!;
     private Panel _errorBanner = null!;

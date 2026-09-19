@@ -19,7 +19,7 @@ internal sealed class MedicineListItem
     // Pre-formatted values for the grid — avoid replicating the
     // conversions in every cell-formatting event.
     public string StockDisplay => $"{CurrentStock:0.##} {Unit}".TrimEnd();
-    public string DailyRateDisplay => DailyRate <= 0m ? "—" : $"{DailyRate:0.##}/day";
+    public string DailyRateDisplay { get; set; } = string.Empty; // => DailyRate <= 0m ? "—" : $"{DailyRate:0.##}/day";
     public string DaysRemainingDisplay => DaysRemaining is null ? "—" : DaysRemaining.Value.ToString();
     public string EtaDisplay => EstimatedRunOutDate?.ToString("d") ?? "—";
     // Set by MedicineOverviewLoader based on the current language of

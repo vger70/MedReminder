@@ -40,6 +40,7 @@
   "Ui.MainForm.Column.Medicine": "Medicine",
   "Ui.MainForm.Column.Stock": "Stock",
   "Ui.MainForm.Column.DailyRate": "Daily rate",
+  "Ui.MainForm.Column.DailyRate.Unit": "day",
   "Ui.MainForm.Column.DaysRemaining": "Days left",
   "Ui.MainForm.Column.RunOut": "Runs out",
   "Ui.MainForm.Column.Status": "Status",

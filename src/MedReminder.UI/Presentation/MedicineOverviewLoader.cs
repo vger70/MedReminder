@@ -63,6 +63,7 @@ internal sealed class MedicineOverviewLoader
                 Unit = m.Unit,
                 CurrentStock = currentStock,
                 DailyRate = rate,
+                DailyRateDisplay = rate <= 0m ? "—" : $"{rate:0.##}/{_loc.Get("Ui.MainForm.Column.DailyRate.Unit")}",
                 DaysRemaining = forecast.DaysRemaining,
                 EstimatedRunOutDate = forecast.EstimatedRunOutDate,
                 ThresholdDays = m.ThresholdDays,

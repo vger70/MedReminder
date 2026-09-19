@@ -40,6 +40,7 @@
   "Ui.MainForm.Column.Medicine": "Medikament",
   "Ui.MainForm.Column.Stock": "Bestand",
   "Ui.MainForm.Column.DailyRate": "Verbr./Tag",
+  "Ui.MainForm.Column.DailyRate.Unit": "tag",
   "Ui.MainForm.Column.DaysRemaining": "Verbleibende Tage",
   "Ui.MainForm.Column.RunOut": "Aufgebraucht am",
   "Ui.MainForm.Column.Status": "Status",

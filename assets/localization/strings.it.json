@@ -40,6 +40,7 @@
   "Ui.MainForm.Column.Medicine": "Medicina",
   "Ui.MainForm.Column.Stock": "Scorta",
   "Ui.MainForm.Column.DailyRate": "Consumo/gg",
+  "Ui.MainForm.Column.DailyRate.Unit": "gg",
   "Ui.MainForm.Column.DaysRemaining": "Giorni residui",
   "Ui.MainForm.Column.RunOut": "Esaurimento",
   "Ui.MainForm.Column.Status": "Stato",
