@@ -50,6 +50,11 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private NumericUpDown _timeoutBox = null!;
     private Label _passwordStatusLabel = null!;
 
+    // My PIN section on the Notifications tab. Lets a non-admin
+    // profile set or clear its own PIN without opening the
+    // admin-only ProfilesManagerForm.
+    private Label _pinStateLabel = null!;
+
     // Auto-start
     private CheckBox _autoStartCheck = null!;
 
@@ -131,7 +136,15 @@ internal sealed class SettingsDialog : MedReminderFormBase
             tabs.TabPages.Add(BuildEmailTab());
         }
         tabs.TabPages.Add(BuildNotificationsTab());
-        tabs.TabPages.Add(BuildStartupTab());
+        // The Windows Run entry is a per-Windows-account setting, so
+        // it must not be toggled by a non-admin profile: doing so
+        // would change the auto-start behaviour for every profile of
+        // the same Windows user. Admin-only, coherent with the
+        // Email and Backup gating (§7.4).
+        if (_currentProfile.IsAdmin)
+        {
+            tabs.TabPages.Add(BuildStartupTab());
+        }
         if (_currentProfile.IsAdmin)
         {
             tabs.TabPages.Add(BuildBackupTab());
@@ -573,9 +586,80 @@ internal sealed class SettingsDialog : MedReminderFormBase
         container.Controls.Add(table);
         container.Controls.Add(buttons);
         container.Controls.Add(explanation);
+        container.Controls.Add(BuildMyPinSection());
 
         page.Controls.Add(container);
         return page;
+    }
+
+    // Self-service PIN management for the current profile. Renders
+    // on the Notifications tab because that is the only settings
+    // page visible to non-admin profiles — the admin-only
+    // ProfilesManagerForm can still change PINs for any profile
+    // (§8).
+    private GroupBox BuildMyPinSection()
+    {
+        var group = new GroupBox
+        {
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.MyPin"),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(12),
+            Margin = new Padding(0, 12, 0, 0),
+        };
+
+        _pinStateLabel = new Label
+        {
+            AutoSize = true,
+            Location = new System.Drawing.Point(12, 24),
+            Text = FormatPinStateText(),
+        };
+
+        var changeButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.SetPin"),
+            AutoSize = true,
+            Location = new System.Drawing.Point(12, 52),
+        };
+        changeButton.Click += (_, _) => ChangeMyPin();
+
+        group.Controls.Add(_pinStateLabel);
+        group.Controls.Add(changeButton);
+        return group;
+    }
+
+    private string FormatPinStateText()
+    {
+        var stateKey = _profileRegistry.HasPin(_currentProfile.Id)
+            ? "Ui.SettingsDialog.Notifications.PinStateSet"
+            : "Ui.SettingsDialog.Notifications.PinStateNone";
+        return _loc.Get(stateKey);
+    }
+
+    private void ChangeMyPin()
+    {
+        try
+        {
+            var hasPin = _profileRegistry.HasPin(_currentProfile.Id);
+            using var dialog = new ChangePinDialog(_loc, hasPin);
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+            _profileRegistry.SetPin(
+                _currentProfile.Id,
+                dialog.ClearPin ? null : dialog.NewPin);
+
+            _pinStateLabel.Text = FormatPinStateText();
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Notifications.PinChanged"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private void SaveNotificationSettings()
@@ -978,9 +1062,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
             // active one — the process is still holding the old DB
             // open through EF Core. Restoring an inactive profile
             // does not touch the live connection.
+            //
+            // Pass "--profile <id>" so the restarted process opens
+            // the same profile without going through the picker,
+            // even if the registry contains more than one profile.
             if (isActive)
             {
-                _restarter.RestartAndExit();
+                _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
             }
         }
         catch (Exception ex)

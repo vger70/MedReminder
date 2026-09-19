@@ -30,10 +30,83 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #28 — Profile UX polish (Increment 15 follow-up)
+
+Link: [vger70/MedReminder#28](https://github.com/vger70/MedReminder/pull/28)
+**Status:** open
+Branch: `claude/profile-ux-polish`
+
+Three small follow-ups on the multi-user feature that shipped in
+Increment 15. No new capability — cleanup only.
+
+### Added
+
+- `MedReminder.UI.Forms.ChangePinDialog` — the PIN dialog is now a
+  top-level `public sealed class` under `MedReminder.UI.Forms`,
+  reused by `ProfilesManagerForm` (admin action on any profile)
+  and by a new "My PIN" section on the Notifications tab of
+  `SettingsDialog` (self-service action on the caller's own
+  profile). A non-admin profile no longer has to ask the
+  administrator to set or clear its own PIN
+  (`docs/ANALYSIS-MULTI-USER.md` §8). Five new localisation
+  keys, added to every shipped language:
+  - `Ui.SettingsDialog.Notifications.MyPin`
+  - `Ui.SettingsDialog.Notifications.PinStateSet`
+  - `Ui.SettingsDialog.Notifications.PinStateNone`
+  - `Ui.SettingsDialog.Notifications.SetPin`
+  - `Ui.SettingsDialog.Notifications.PinChanged`
+
+### Changed
+
+- `MedReminder.UI.Forms.SettingsDialog` — the Startup tab is now
+  admin-only, alongside Email and Backup. The Windows Run entry
+  is a per-Windows-account setting, so a non-admin profile must
+  not toggle it (would change auto-start behaviour for every
+  profile of the same Windows account). Coherent with the §7.4
+  gating already applied to Email and Backup.
+- `MedReminder.Application.Abstractions.IApplicationRestarter` —
+  new overload `RestartAndExit(IReadOnlyList<string>? extraArgs)`;
+  the no-argument overload is preserved and delegates to it. The
+  UI implementation forwards each argument via
+  `ProcessStartInfo.ArgumentList` so the CLR handles escaping.
+
+### Fixed
+
+- `MedReminder.UI.Forms.MainForm.ChangeProfile` — switching
+  profile from *File → Change profile…* no longer opens the
+  profile picker twice. The restarted process is now given
+  `--profile <id>` on the command line, which `Program.Main`
+  already honours as the highest-priority profile selector
+  (`ANALYSIS-MULTI-USER.md` §6.1). The
+  `ActiveProfileIdHint` is still set as a fallback but is no
+  longer relied upon to skip the picker.
+- `MedReminder.UI.Forms.SettingsDialog.ImportBackupAsync` —
+  when the imported backup targets the active profile, the
+  restart now also passes `--profile <id>` for the same reason.
+  Redundant with the hint but symmetric with the profile-switch
+  restart.
+
+---
+
+## PR #27 — Increment 15: merge multi-user support into main
+
+Link: [vger70/MedReminder#27](https://github.com/vger70/MedReminder/pull/27)
+**Status:** merged (2026-09-19)
+Branch: `claude/incremento-15b`
+
+Rollup merge of the four Increment 15 sub-increments (15b + 15c +
+15d + 15e — PRs #23, #24, #25, #26) into `main`. No code changes
+of its own; the observable outcome is that
+`docs/ANALYSIS-MULTI-USER.md` is now fully implemented on `main`
+and Increment 15 has been cleared from `CLAUDE.md` §7 pending
+list.
+
+---
+
 ## PR #26 — Increment 15e: PIN polish, user guide, feature marked implemented
 
 Link: [vger70/MedReminder#26](https://github.com/vger70/MedReminder/pull/26)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `claude/incremento-15e`
 
 Fifth and final sub-increment of the multi-user work
