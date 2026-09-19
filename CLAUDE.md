@@ -164,10 +164,9 @@ release pipeline.
 
 ## 5. Git and branching
 
-- The current working branch for Claude-driven changes is
-  **`claude/incremento-15`** (Increment 15 — multi-user support,
-  designed in `docs/ANALYSIS-MULTI-USER.md`). Develop, commit and
-  push there unless the user explicitly asks otherwise.
+- No standing working branch — the previous multi-user work
+  (Increment 15) landed in PRs #22–#26. Ask before starting a new
+  feature branch; use `main` as the base.
 - Never push to `main` (or any other branch) without explicit
   permission.
 - Commit messages: imperative, English, focused on the "why". End with
@@ -196,16 +195,29 @@ resolves. Do not batch multiple PRs into one entry.
 ## 6. Data locations at runtime
 
 Everything the app writes lives under
-`%LOCALAPPDATA%\MedReminder\`:
+`%LOCALAPPDATA%\MedReminder\`. Since Increment 15 the database is
+per-profile — the root holds admin-managed shared files and the
+profile registry, while each profile has its own subfolder under
+`profiles\`. See `docs/ANALYSIS-MULTI-USER.md` §3 for the full
+layout.
+
+Shared, admin-managed:
 
 | File | Content |
 |---|---|
-| `medreminder.db` (+ `-shm`, `-wal`) | SQLite database |
-| `smtp.settings.json` | SMTP configuration (no password) |
+| `profiles.json` | Profile registry (admin/user, PIN hash, LastUsedAt hint) |
+| `smtp.settings.json` | Shared SMTP transport (no password, no recipient) |
 | `smtp.protected` | SMTP password, DPAPI-encrypted (CurrentUser scope) |
-| `backup.settings.json` / `backup.state.json` | Automatic backup config + state |
-| `user.settings.json` | UI language preference |
+| `backup.settings.json` / `backup.state.json` | Automatic backup config + last-tick state |
+| `user.settings.json` | UI language + reference-catalogue country |
 | `logs/medreminder-YYYYMMDD.log` | Daily rolling log, 30-day retention |
+
+Per-profile, under `profiles\<profile-id>\`:
+
+| File | Content |
+|---|---|
+| `medreminder.db` (+ `-shm`, `-wal`) | This profile's SQLite database |
+| `notifications.settings.json` | This profile's `ToAddress` for email notifications |
 
 Nothing outside `%LOCALAPPDATA%\MedReminder\` is written by the app.
 Sensitive fields (passwords, email bodies, medical notes) never reach
@@ -217,8 +229,12 @@ the logs.
 
 Kept here so future sessions pick them up without re-deriving them:
 
-1. Multi-user feature (Increment 15) — designed in
-   `docs/ANALYSIS-MULTI-USER.md`, not yet implemented.
+- (No open work items — Increment 15 landed in PRs #22 → #26.
+  The two explicit non-goals from
+  [`docs/ANALYSIS-MULTI-USER.md`](docs/ANALYSIS-MULTI-USER.md)
+  §16 remain deferred: profile promote / demote, and the
+  consolidated admin view. Reopen only when the need actually
+  emerges.)
 
 ---
 

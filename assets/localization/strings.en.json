@@ -387,6 +387,7 @@
   "Ui.PinPromptForm.Wrong": "Wrong PIN. Attempts left: {0}.",
   "Ui.PinPromptForm.LockedOut": "Too many wrong attempts. The app will close.",
   "Ui.PinPromptForm.Tooltip.Friction": "The PIN is friction against accidental profile switches, not protection against filesystem access.",
+  "Ui.PinPromptForm.FrictionNote": "The PIN blocks accidental switches into this profile. It does not encrypt the data — anyone with access to this PC can still open the profile's files.",
   "Ui.ProfilePickerForm.Title": "Choose profile",
   "Ui.ProfilePickerForm.Header": "Select the profile to open.",
   "Ui.ProfilePickerForm.Column.Name": "Name",

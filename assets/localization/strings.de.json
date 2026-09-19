@@ -386,6 +386,7 @@
   "Ui.PinPromptForm.Wrong": "Falsche PIN. Verbleibende Versuche: {0}.",
   "Ui.PinPromptForm.LockedOut": "Zu viele Fehlversuche. Die App wird geschlossen.",
   "Ui.PinPromptForm.Tooltip.Friction": "Die PIN ist eine Hürde gegen versehentliches Profilwechsel, kein Schutz gegen den Zugriff auf das Dateisystem.",
+  "Ui.PinPromptForm.FrictionNote": "Die PIN verhindert versehentliche Zugriffe auf dieses Profil. Sie verschlüsselt die Daten nicht — jeder mit Zugriff auf diesen PC kann die Profildateien weiterhin öffnen.",
   "Ui.ProfilePickerForm.Title": "Profil auswählen",
   "Ui.ProfilePickerForm.Header": "Wählen Sie das Profil, das geöffnet werden soll.",
   "Ui.ProfilePickerForm.Column.Name": "Name",

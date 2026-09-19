@@ -4,15 +4,14 @@ using MedReminder.Application.Abstractions;
 namespace MedReminder.UI.Forms;
 
 // Boot-time PIN prompt for a picked profile
-// (docs/ANALYSIS-MULTI-USER.md §8). Introduced in Increment 15c so
-// the picker can gate profiles that carry a PIN; the polish pass
-// (tooltips, refined copy) lands in 15e together with the
-// user-guide entries.
+// (docs/ANALYSIS-MULTI-USER.md §8). The PIN is friction against
+// accidental profile switches, not protection against filesystem
+// access — the "friction, not security" line is always visible,
+// not hidden behind a tooltip, so the user cannot miss it (§8.2,
+// polished in Increment 15e).
 //
-// The PIN is friction against accidental profile switches, not
-// protection against filesystem access — see §8.2. The rate limit
-// (three wrong attempts before the form gives up) lives in-memory
-// only, exactly as the design requires.
+// Three wrong attempts close the dialog with DialogResult.Abort;
+// the rate limit lives in memory only, matching §8.3.
 internal sealed class PinPromptForm : MedReminderFormBase
 {
     private const int MaxAttempts = 3;
@@ -33,8 +32,8 @@ internal sealed class PinPromptForm : MedReminderFormBase
         _loc = loc;
 
         Text = _loc.Get("Ui.PinPromptForm.Title", profile.DisplayName);
-        Width = 380;
-        Height = 200;
+        Width = 420;
+        Height = 240;
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -46,23 +45,35 @@ internal sealed class PinPromptForm : MedReminderFormBase
         {
             AutoSize = true,
             Text = _loc.Get("Ui.PinPromptForm.Prompt", profile.DisplayName),
-            MaximumSize = new System.Drawing.Size(340, 0),
+            MaximumSize = new System.Drawing.Size(380, 0),
             Location = new System.Drawing.Point(16, 12),
         };
 
         _pinBox = new TextBox
         {
             UseSystemPasswordChar = true,
-            Width = 200,
+            Width = 240,
             Location = new System.Drawing.Point(16, 60),
             MaxLength = 32,
+        };
+
+        // "Friction, not security" note is always visible in the
+        // dialog — hiding it behind a tooltip would understate the
+        // point (§8.2).
+        var frictionNote = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(380, 0),
+            ForeColor = System.Drawing.Color.DarkGray,
+            Location = new System.Drawing.Point(16, 92),
+            Text = _loc.Get("Ui.PinPromptForm.FrictionNote"),
         };
 
         _statusLabel = new Label
         {
             AutoSize = true,
             ForeColor = System.Drawing.Color.Firebrick,
-            Location = new System.Drawing.Point(16, 92),
+            Location = new System.Drawing.Point(16, 130),
             Text = string.Empty,
         };
 
@@ -70,14 +81,14 @@ internal sealed class PinPromptForm : MedReminderFormBase
         {
             Text = _loc.Get("Common.Ok"),
             DialogResult = DialogResult.None,
-            Location = new System.Drawing.Point(180, 128),
+            Location = new System.Drawing.Point(216, 168),
             Width = 80,
         };
         _cancelButton = new Button
         {
             Text = _loc.Get("Common.Cancel"),
             DialogResult = DialogResult.Cancel,
-            Location = new System.Drawing.Point(264, 128),
+            Location = new System.Drawing.Point(304, 168),
             Width = 80,
         };
         _okButton.Click += (_, _) => Verify();
@@ -89,6 +100,7 @@ internal sealed class PinPromptForm : MedReminderFormBase
 
         Controls.Add(prompt);
         Controls.Add(_pinBox);
+        Controls.Add(frictionNote);
         Controls.Add(_statusLabel);
         Controls.Add(_okButton);
         Controls.Add(_cancelButton);
@@ -126,7 +138,14 @@ internal sealed class PinPromptForm : MedReminderFormBase
         _pinBox.Clear();
         if (_attemptsLeft <= 0)
         {
-            _statusLabel.Text = _loc.Get("Ui.PinPromptForm.LockedOut");
+            // Explicit modal before closing — the previous 15c
+            // behaviour flashed the status label for a fraction of a
+            // second while Close() ran, so the user only saw the
+            // window disappear (polished in 15e).
+            MessageBox.Show(this,
+                _loc.Get("Ui.PinPromptForm.LockedOut"),
+                _loc.Get("Ui.PinPromptForm.Title", _profile.DisplayName),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.Abort;
             Close();
             return;

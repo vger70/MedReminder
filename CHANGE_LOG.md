@@ -30,10 +30,77 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #26 — Increment 15e: PIN polish, user guide, feature marked implemented
+
+Link: [vger70/MedReminder#26](https://github.com/vger70/MedReminder/pull/26)
+**Status:** open
+Branch: `claude/incremento-15e`
+
+Fifth and final sub-increment of the multi-user work
+(`docs/ANALYSIS-MULTI-USER.md` §8, §12, §15e). Wraps up the
+feature: polishes the PIN prompt, documents the multi-profile
+experience in every shipped language, marks the design as
+implemented, and clears Increment 15 from the CLAUDE.md pending
+list. No behavior change beyond the PinPromptForm touches.
+
+### Changed
+
+- `MedReminder.UI.Forms.PinPromptForm` — polish pass:
+  - The "friction, not security" wording is now shown as an
+    always-visible label under the PIN box, not only as a
+    tooltip (§8.2). New localisation key
+    `Ui.PinPromptForm.FrictionNote`.
+  - On the third wrong attempt the dialog now shows a modal
+    "locked out" `MessageBox` before closing, so the user sees
+    what happened instead of watching the window vanish.
+  - Layout widened to 420×240 to accommodate the note without
+    reflow.
+
+### Docs
+
+- `docs/USER_GUIDE.{en,it,fr,es,de}.md` — new
+  **"Multiple profiles and admin/user roles"** section, added to
+  each shipped language between "Edit or deactivate a medicine"
+  and "Configure email sending". Covers: roles, creating and
+  switching profiles, rename / PIN / delete, on-disk layout,
+  multi-profile automatic backup, restore-into-profile,
+  Windows auto-start behaviour, and the V1 → V2 upgrade with the
+  manual pre-migration backup cleanup note (§14 F).
+  "First start" was also updated in each language to describe the
+  first-run wizard and the new per-profile database path.
+- `docs/ANALYSIS-MULTI-USER.md` — added an **Implementation
+  status** footer that maps every sub-increment to its PR and
+  reiterates the two non-goals (promote/demote, consolidated
+  admin view) that remain deferred (§16).
+- `CLAUDE.md` §5 — no standing working branch after Increment 15;
+  new features start from `main`.
+- `CLAUDE.md` §6 — "Data locations at runtime" table split into
+  shared/admin-managed and per-profile files, matching the V2
+  layout that shipped in 15b + 15c.
+- `CLAUDE.md` §7 — Increment 15 removed from the pending list;
+  only the two documented non-goals remain deferred.
+
+### Localisation
+
+- **1 new key** added to every dictionary
+  (`Ui.PinPromptForm.FrictionNote`). All 5 dictionaries stay at
+  parity at **439 keys each** — `DictionaryParityTests` remain
+  green.
+
+### Increment 15 complete
+
+Increment 15 shipped in **five sequential pull requests**
+(#22 → #26). All the confirmed decisions in
+`docs/ANALYSIS-MULTI-USER.md` §14 / §14a are honored in the
+shipped code. The two explicit non-goals — profile promote /
+demote and the consolidated admin view — remain deferred.
+
+---
+
 ## PR #25 — Increment 15d: ProfilesManagerForm, admin/user gating, restore-into-profile
 
 Link: [vger70/MedReminder#25](https://github.com/vger70/MedReminder/pull/25)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `claude/incremento-15d`
 
 Fourth sub-increment of the multi-user work
