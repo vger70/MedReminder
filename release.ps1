@@ -64,7 +64,7 @@ try {
     Invoke-GitCommand "git add ." "Aggiunta file"
 	
 	Write-Host "==> Commit" -ForegroundColor Cyan
-    Invoke-GitCommand "git commit -m `"$CommitMessage`"" "Commit"
+    git commit -m "$CommitMessage"
 	
 	if ($LASTEXITCODE -eq 0) {
 		Write-Host "OK: Commit eseguito" -ForegroundColor Green
