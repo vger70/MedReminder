@@ -1,7 +1,5 @@
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
-using MedReminder.Application.Catalogue;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
@@ -88,7 +86,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         // needs ~700 px to be legible. The dialog stays FixedDialog
         // so this size is what the user gets.
         Width = 880;
-        Height = 800;
+        Height = 820;
         _simpleHeight = Height;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -398,8 +396,12 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             ? _simpleHeight + AdvancedHeightBonus
             : _simpleHeight;
         var workingArea = Screen.FromControl(this).WorkingArea.Height;
-        var cap = (int)(workingArea * 0.9);
-        Height = Math.Min(target, cap);
+        var cap = (int)(workingArea * 0.905);
+        int height = Math.Min(target, cap); ;
+        int delta = height - Height;
+        Height = height;
+        // keep the dialog roughly centered on the screen
+        Top = Math.Max(0, Top - (delta / 2));
     }
 
     // Picking a catalogue row on either side populates the sibling
