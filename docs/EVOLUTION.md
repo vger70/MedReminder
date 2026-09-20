@@ -73,7 +73,11 @@ Recommended by this document, in ascending ambition and cost:
 The ordering is not a Gantt chart. Group A items can proceed in any
 order relative to each other, and C.3 can ship before A completes.
 The rule is: **do not skip C.3 → C.3+ before attempting B.1, and do
-not skip B.1 before deciding on C.1**.
+not skip B.1 before deciding on C.1**. Inside Group A one hard
+dependency exists: **A5 (dose-time reminder) must not ship before
+A1 has stabilized dose times as a first-class schedule field** —
+without a reliable time anchor the reminder has no wall clock to
+fire on.
 
 ---
 
@@ -178,6 +182,108 @@ user has already accepted (see `CLAUDE.md` §6).
 Originally sketched as an A-group item, but the mechanism is the
 foundation of the C.3 track. It is described in §4 rather than
 duplicated here.
+
+### 3.5 A5 — Dose-time "remind me to take it" notification
+
+**Motivation.** The current notification path only fires around
+stock exhaustion (low-stock / tolerated-delay / reorder). Some
+users forget the *dose*, not the *reorder*. A toast (and optional
+email) delivered at the scheduled time of each dose closes the
+gap without changing the product's non-clinical positioning.
+
+**Preconditions — already in place.** The A1 groundwork has
+partially landed: `AdministrationSlotEntry` already carries an
+optional `Time` (`TimeOnly?`), used today for sorting and
+report rendering (see
+`src/MedReminder.Application/Notifications/NotificationTexts.cs`
+and `src/MedReminder.Application/Reporting/TherapyReport.cs`).
+The `Schedule` value object and `SchedulePanel` UI likewise exist
+(see `src/MedReminder.UI/Forms/MedicineEditDialog.cs`). This
+feature therefore *extends* existing plumbing — no new schedule
+model is required. [VERIFIED against the current tree at the
+time of writing]
+
+**Design sketch.**
+
+- **Data.** Add a per-medicine boolean `RemindOnDose` (default
+  `false`) alongside the existing per-medicine notification-channel
+  flags. Additive, idempotent schema patch per `ANALYSIS.md` §2.8.
+  Slot-level granularity (a flag per slot) is *not* recommended for
+  the first cut — it doubles the UI complexity for marginal value;
+  reopen only if users ask.
+- **UI (`MedicineEditDialog`).** Add a checkbox
+  `Ui.MedicineEditDialog.Field.RemindOnDose` next to the existing
+  `_channelWindows` / `_channelEmail` checkboxes. The checkbox is
+  **enabled only** when both conditions hold at the moment the
+  dialog is opened or when they change during editing:
+  - The medicine is *active in the therapy* (has an active
+    schedule / has slots with a `Time` value — an entry with no
+    time cannot be a dose-time anchor and grays the checkbox out
+    with a tooltip explaining why).
+  - Current on-hand stock is `> 0`.
+  When either condition fails, the checkbox is cleared and
+  disabled, and a short helper label states the reason
+  (localized). Saving the medicine while disabled forces the flag
+  back to `false` — never persist an "armed" reminder that has no
+  chance of firing.
+- **Runtime.** Extend `MedicationMonitor` (or split a sibling
+  `DoseReminderService`) that, on each minute tick:
+  1. Enumerates medicines with `RemindOnDose = true` and
+     `Stock > 0` whose therapy is active.
+  2. For each slot with a `Time`, computes the next local
+     wall-clock firing today.
+  3. Emits one notification per (medicine, slot, day) at the
+     configured time, deduplicated via the existing
+     `MedicationScheduleHistory` table pattern so that a
+     restart within the same minute does not double-fire.
+- **Channels.** Reuse the existing toast (WinRT) and MailKit paths.
+  The per-medicine `_channelWindows` / `_channelEmail` flags
+  already control channel selection and are respected as-is.
+- **Localization.** Add the new key to every dictionary under
+  `assets/localization/` (en, it, fr, es, de) per `CLAUDE.md` §8.
+
+**Effort.** 1–1.5 weeks including schema patch, UI wiring,
+scheduler extension, deduplication test, five-language
+localization and shipped-user-guide updates. [INFERRED]
+
+**Risks and constraints.**
+
+- **Medical-device drift — the real risk.** A "did you take the
+  08:00 dose?" acknowledgement, retention of missed-dose events,
+  or any alert on missed doses would push the app into EU MDR
+  2017/745 adherence-tracking territory (see §8.2). This item is
+  scoped strictly to *emit a reminder*: no ack UI, no missed-dose
+  logging, no clinical alert wording. The disclaimer copy in
+  `CLAUDE.md` §1 remains sufficient only as long as this line
+  holds. [INFERRED — MDR classification depends on the declared
+  intended use]
+- **Local time / DST.** Slot `Time` values are wall-clock. The
+  scheduler must anchor on local time, not UTC, and behave
+  documented-ly on DST transitions (skip the missing hour,
+  fire once on the repeated hour). Document in the user guide.
+- **Silent hours.** A 06:00 dose fires at 06:00. Consider a
+  per-profile quiet-hours window as an optional refinement, not a
+  first-cut requirement.
+- **Email as a dose channel is fragile.** Delivery latency
+  defeats the point of a punctual dose reminder. Toast is the
+  primary channel; email should be an opt-in fallback for
+  scenarios where the PC is on but unattended.
+- **Interaction with the existing low-stock reminder.** The two
+  notification paths must not compete on the same slot tick.
+  Keep them independent code-paths but share the deduplication
+  history table so a "reorder soon" and a "take now" for the
+  same medicine at the same minute do not stack into two toasts.
+- **Stock = 0 is a "hard off".** When stock drops to zero mid-day,
+  in-flight reminders for the rest of the day must stop. The
+  scheduler evaluates the gate on every tick, not once at the
+  start of day.
+
+**Verdict.** Small, isolated, high user-visible value; sits
+cleanly on top of already-shipped groundwork; must be scoped
+narrowly to stay non-clinical. Ship after A1 stabilizes (dose
+times must be a first-class, always-present part of the
+therapy) and before or alongside A3 (caregiver notifications) —
+the same channel plumbing carries both.
 
 ---
 
@@ -497,3 +603,6 @@ decision that must precede any implementation attempt.
 - 2026-09-19 — initial draft. Group A, C.3, C.3+, B.1, C.1
   documented. C.2 rejected with rationale. Group D and
   medical-device features explicitly excluded.
+- 2026-09-20 — added A5 (dose-time "remind me to take it"
+  notification). §2 priority ordering updated with the A1 → A5
+  precondition.
