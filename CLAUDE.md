@@ -103,11 +103,6 @@ docs/
   USER_GUIDE.es.md              shipped user guide (Spanish)
   USER_GUIDE.de.md              shipped user guide (German)
   PACKAGING.md                  build / publish / distribute
-
-packaging/
-  msix/                         MSIX manifest, mapping and assets
-  wix/                          MSI (WiX v5) project
-  scripts/                      build-installer.ps1 + signing helpers
 ```
 
 Architecture is Clean Architecture: **UI → Application → Domain**, with
@@ -240,12 +235,49 @@ the logs.
 
 Kept here so future sessions pick them up without re-deriving them:
 
-- (No open work items — Increment 15 landed in PRs #22 → #26.
-  The two explicit non-goals from
+- **Multi-user baseline — shipped.** Increment 15 landed in
+  PRs #22 → #26. The two explicit non-goals from
   [`docs/ANALYSIS-MULTI-USER.md`](docs/ANALYSIS-MULTI-USER.md)
   §16 remain deferred: profile promote / demote, and the
   consolidated admin view. Reopen only when the need actually
-  emerges.)
+  emerges.
+
+- **Decided implementation order (2026-09-20): A6 → A5 first, then
+  the rest.** The product owner set the donation/support UI (A6) as
+  the first item to implement, immediately followed by the dose-time
+  reminder (A5), then all remaining planned items in the cost-ordered
+  sequence (A2 → A3 → C.3 → C.3+ → B.1 → C.1). A1 is already [DONE],
+  which satisfies A5's precondition. Full rationale and sequence in
+  [`docs/EVOLUTION.md`](docs/EVOLUTION.md) §2.0.
+
+- **Prospective evolutions — see [`docs/EVOLUTION.md`](docs/EVOLUTION.md).**
+  That document is the candidate-work backlog (not a commitment).
+  Current status of the items that have progressed past a sketch:
+  - **A1 — complex therapy regimens: marked [DONE] in
+    `EVOLUTION.md` §3.1.** The dose-slot groundwork it introduced
+    (`AdministrationSlotEntry.Time`, the `Schedule` value object,
+    `SchedulePanel`) is present in the tree and is the precondition
+    for A5. [VERIFIED against the current tree; merge/PR status not
+    recorded here — confirm in git history before relying on it.]
+  - **A5 — dose-time "remind me to take it" notification:
+    analysis stage.** Requirements/design drafted in
+    `docs/ANALYSIS-A5-DOSE-TIME-REMINDER.md`. Not implemented.
+    Dedup design **decided 2026-09-20**: a dedicated
+    `DoseReminderEvents` table keyed on
+    `(MedicineId, SlotKey, LocalDate)` — **not** the
+    `MedicationScheduleHistory` / shared-table hint that
+    `EVOLUTION.md` §3.5 originally suggested, whose supersession is
+    now confirmed (that document §13 items 3–4).
+  - **A6 — donation / support UI: analysis stage.** Requirements
+    /design drafted in `docs/ANALYSIS-A6-DONATION-SUPPORT.md`
+    (from `docs/DONATION-SUPPORT-FEATURE.md`). Not implemented.
+    Open decision: the entry point ("Help menu") is not documented
+    in the `ANALYSIS.md` MVP surface — confirm against the tree at
+    implementation time (that document §8.1 / §17).
+
+  None of the EVOLUTION items is committed work until explicitly
+  approved. The analysis documents exist to be reviewed and signed
+  off, not to authorize implementation.
 
 ---
 
