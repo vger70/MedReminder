@@ -25,6 +25,7 @@ against a primary source, it is tagged:
   inference.
 - **[UNCERTAIN]** — no sufficient data at the time of writing; treat as
   a hypothesis, not a plan input.
+- **[DONE]** - alredy shipped.
 
 Untagged claims are ordinary design opinion.
 
@@ -92,7 +93,7 @@ dependencies respected — is:
    dependency on A1.
 4. **A1 — complex therapy regimens.** 2–3 weeks. Highest single-item
    value of Group A, but also the largest and the one that must
-   land before A5 can be attempted.
+   land before A5 can be attempted. [DONE]
 5. **A5 — dose-time reminder.** 1–1.5 weeks. Hard-depends on A1
    for a reliable wall-clock anchor on every therapy — without
    stabilized dose times the reminder has no time to fire on.
@@ -112,7 +113,7 @@ Windows binary, not a medical device). Effort estimates are
 grossly indicative and assume one developer familiar with the
 codebase.
 
-### 3.1 A1 — Complex therapy regimens
+### 3.1 A1 — Complex therapy regimens [DONE]
 
 **Motivation.** The current model appears to assume linear
 consumption (X units per day). Real regimens include cycles
