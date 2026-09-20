@@ -174,21 +174,34 @@ tagged source in this repository.
 
 ## Where data is stored
 
-Everything lives under `%LOCALAPPDATA%\MedReminder\`
-(`C:\Users\<user>\AppData\Local\MedReminder\`):
+Everything the app writes lives under
+`%LOCALAPPDATA%\MedReminder\`. Since Increment 15 the database is
+per-profile — the root holds admin-managed shared files and the
+profile registry, while each profile has its own subfolder under
+`profiles\`. See `docs/ANALYSIS-MULTI-USER.md` §3 for the full
+layout.
+
+Shared, admin-managed:
 
 | File | Content |
 |---|---|
-| `medreminder.db` (+ `-shm`, `-wal`) | SQLite database: medicines, movements, schedule history, suspensions, notifications, intakes, administration slots |
-| `smtp.settings.json` | SMTP configuration (without password, overrides appsettings.json) |
-| `smtp.protected` | SMTP password encrypted with DPAPI (CurrentUser) |
-| `backup.settings.json` | Automatic backup preferences (enable, folder, time, retention) |
-| `backup.state.json` | Last-attempt state of the automatic backup |
-| `user.settings.json` | UI language preference |
-| `logs\medreminder-YYYYMMDD.log` | Daily logs, 30-day retention, 10 MB per file |
+| `profiles.json` | Profile registry (admin/user, PIN hash, LastUsedAt hint) |
+| `smtp.settings.json` | Shared SMTP transport (no password, no recipient) |
+| `smtp.protected` | SMTP password, DPAPI-encrypted (CurrentUser scope) |
+| `backup.settings.json` / `backup.state.json` | Automatic backup config + last-tick state |
+| `user.settings.json` | UI language + reference-catalogue country |
+| `logs/medreminder-YYYYMMDD.log` | Daily rolling log, 30-day retention |
 
-No data is sent to external services except the email when SMTP
-notifications are configured.
+Per-profile, under `profiles\<profile-id>\`:
+
+| File | Content |
+|---|---|
+| `medreminder.db` (+ `-shm`, `-wal`) | This profile's SQLite database |
+| `notifications.settings.json` | This profile's `ToAddress` for email notifications |
+
+Nothing outside `%LOCALAPPDATA%\MedReminder\` is written by the app.
+Sensitive fields (passwords, email bodies, medical notes) never reach
+the logs.
 
 ## How to configure notifications
 
