@@ -38,6 +38,39 @@ if ($Help -or [string]::IsNullOrWhiteSpace($Version)) {
     exit 0
 }
 
+function Set-Version {
+	# Aggiorna Directory.Build.props
+	$PropsFile = Join-Path $PSScriptRoot "Directory.Build.props"
+
+	if (-not (Test-Path $PropsFile)) {
+		Write-Host "File Directory.Build.props non trovato: $PropsFile" -ForegroundColor Red
+		exit 1
+	}
+
+	Write-Host "==> Aggiorno versione in Directory.Build.props" -ForegroundColor Cyan
+
+	[xml]$xml = Get-Content $PropsFile
+
+	$versionPrefixNode = $xml.SelectSingleNode("//VersionPrefix")
+
+	if ($null -eq $versionPrefixNode) {
+		Write-Host "Tag <VersionPrefix> non trovato" -ForegroundColor Red
+		exit 1
+	}
+
+	$currentVersion = $versionPrefixNode.InnerText
+
+	if ($currentVersion -ne $Version) {
+		$versionPrefixNode.InnerText = $Version
+		$xml.Save($PropsFile)
+
+		Write-Host "VersionPrefix aggiornato da $currentVersion a $Version" -ForegroundColor Green
+	}
+	else {
+		Write-Host "VersionPrefix già impostato a $Version" -ForegroundColor Yellow
+	}
+}
+
 function Invoke-GitCommand {
     param(
         [string]$Command,
@@ -60,6 +93,8 @@ $CommitMessage = "Prepare release v$Version"
 $TagName = "v$Version"
 
 try {
+	Set-Version
+		
     Invoke-GitCommand "git status" "Verifica stato repository"
     Invoke-GitCommand "git add ." "Aggiunta file"
 	
