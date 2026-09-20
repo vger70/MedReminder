@@ -67,6 +67,12 @@ internal sealed class MainForm : MedReminderFormBase
     private readonly bool _closeToTray = true;
     private bool _reallyExit;
 
+    // Sorting state for the "Days remaining" column. The DataGridView
+    private SortOrder _sortOrderDaysRemaining = SortOrder.None;
+    private string? _sortColumn;
+    // Sorting state for the "Name" column. The DataGridView does not
+    private SortOrder _sortOrderName = SortOrder.None;
+
     public MainForm(
         IServiceScopeFactory scopeFactory,
         ApplicationTrayIcon tray,
@@ -618,6 +624,7 @@ internal sealed class MainForm : MedReminderFormBase
             DataPropertyName = nameof(MedicineListItem.Name),
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
             MinimumWidth = 160,
+            SortMode = DataGridViewColumnSortMode.Programmatic
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
@@ -636,7 +643,9 @@ internal sealed class MainForm : MedReminderFormBase
             HeaderText = _loc.Get("Ui.MainForm.Column.DaysRemaining"),
             DataPropertyName = nameof(MedicineListItem.DaysRemainingDisplay),
             Width = 100,
+            SortMode = DataGridViewColumnSortMode.Programmatic
         });
+
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.RunOut"),
@@ -662,6 +671,79 @@ internal sealed class MainForm : MedReminderFormBase
         grid.Columns.Add(statusColumn);
         _statusColumnIndex = statusColumn.Index;
         grid.DataSource = _rows;
+        grid.CellFormatting += (s, e) =>
+        {
+            if (grid.Columns[e.ColumnIndex].DataPropertyName ==
+                nameof(MedicineListItem.DaysRemaining))
+            {
+                e.Value ??= "—";
+                e.FormattingApplied = true;
+            }
+        };
+        grid.ColumnHeaderMouseClick += (s, e) =>
+        {
+            var column = grid.Columns[e.ColumnIndex];
+
+            if (grid.DataSource == null) return;
+
+            if (column.DataPropertyName == nameof(MedicineListItem.DaysRemainingDisplay))
+            {
+                // Toggle if the same column is clicked again, otherwise reset to ascending.
+                if (_sortColumn == column.DataPropertyName)
+                {
+                    _sortOrderDaysRemaining = _sortOrderDaysRemaining == SortOrder.Ascending
+                        ? SortOrder.Descending
+                        : SortOrder.Ascending;
+                }
+                else
+                {
+                    _sortColumn = column.DataPropertyName;
+                    _sortOrderDaysRemaining = SortOrder.Ascending;
+                }
+
+                var items = ((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
+
+                items = _sortOrderDaysRemaining == SortOrder.Ascending
+                    ? [.. items.OrderBy(x => x.DaysRemaining ?? int.MaxValue)]
+                    : [.. items.OrderByDescending(x => x.DaysRemaining ?? int.MinValue)];
+
+                grid.DataSource = new BindingList<MedicineListItem>(items);
+
+                column.HeaderCell.SortGlyphDirection = _sortOrderDaysRemaining;
+
+                grid.Columns.Cast<DataGridViewColumn>()
+                    .FirstOrDefault(c => c.DataPropertyName == nameof(MedicineListItem.Name))
+                    ?.HeaderCell.SortGlyphDirection = SortOrder.None;
+            }
+            else if (column.DataPropertyName == nameof(MedicineListItem.Name))
+            {
+                // Toggle if the same column is clicked again, otherwise reset to ascending.
+                if (_sortColumn == column.DataPropertyName)
+                {
+                    _sortOrderName = _sortOrderName == SortOrder.Ascending
+                        ? SortOrder.Descending
+                        : SortOrder.Ascending;
+                }
+                else
+                {
+                    _sortColumn = column.DataPropertyName;
+                    _sortOrderName = SortOrder.Ascending;
+                }
+
+                var items = ((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
+                items = _sortOrderName == SortOrder.Ascending
+                    ? [.. items.OrderBy(x => x.Name)]
+                    : [.. items.OrderByDescending(x => x.Name)];
+
+                column.HeaderCell.SortGlyphDirection = _sortOrderName;
+
+                grid.DataSource = new BindingList<MedicineListItem>(items);
+
+                grid.Columns.Cast<DataGridViewColumn>()
+                    .FirstOrDefault(c => c.DataPropertyName == nameof(MedicineListItem.DaysRemainingDisplay))
+                    ?.HeaderCell.SortGlyphDirection = SortOrder.None;
+            }
+        };
         grid.RowPrePaint += OnRowPrePaint;
         grid.CellDoubleClick += async (_, _) => await ShowEditMedicineAsync();
         return grid;
