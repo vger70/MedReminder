@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
@@ -8,12 +9,20 @@ using MedReminder.UI.Controls;
 
 namespace MedReminder.UI.Forms;
 
+// Exact lookup used by the dialog to re-hydrate AIFA leaflet / SPC
+// URLs on Edit mode. Returns null when the seeded national code is
+// no longer present in the local catalogue (stale link after a
+// snapshot refresh) — the dialog then silently hides the row.
+internal delegate Task<ReferenceMedicine?> ReferenceMedicineLookupAsync(
+    CountryCode country, string nationalCode, CancellationToken cancellationToken);
+
 // Dependencies the medicine form needs to offer catalogue-driven
 // autocomplete (M2). Null when the feature flag Catalogue:Enabled is
 // off — the dialog then falls back to plain text entry.
 internal sealed record CatalogueAutocompleteContext(
     MedicineAutocompleteBox.ReferenceMedicineSearchAsync SearchCommercialName,
     MedicineAutocompleteBox.ReferenceMedicineSearchAsync SearchActiveIngredient,
+    ReferenceMedicineLookupAsync LookupByNationalCode,
     CountryCode Country);
 
 // Dialog used both for "new medicine" (Mode=Create) and for "edit"
@@ -60,6 +69,19 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private string? _linkedNationalCode;
     private AtcCode? _linkedAtcCode;
     private Guid? _linkedReferenceMedicineId;
+
+    // AIFA leaflet / SPC links surfaced under the "Principio attivo"
+    // row. Non-null only for the Italian catalogue (country == "IT"):
+    // the other supported catalogues (EMA, ANSM, AEMPS) do not carry
+    // per-package leaflet / SPC URLs. The row starts hidden and is
+    // shown as soon as at least one URL is available (either from a
+    // fresh autocomplete pick or from the Edit-mode seed lookup).
+    private readonly CountryCode? _documentsCountry;
+    private readonly ReferenceMedicineLookupAsync? _documentsLookup;
+    private readonly FlowLayoutPanel? _documentsRow;
+    private readonly LinkLabel? _leafletLink;
+    private readonly LinkLabel? _spcLink;
+    private string? _pendingSeedNationalCode;
 
     public MedicineEditDialog(
         EditMode mode,
@@ -112,6 +134,27 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _ingredientBox.ReferenceSelected += OnReferenceSelected;
             _nameBox.TextEdited += (_, _) => ClearReferenceLinkage();
             _ingredientBox.TextEdited += (_, _) => ClearReferenceLinkage();
+
+            // LINK_FI / LINK_RCP only exist on AIFA rows: keep the row
+            // out of the layout entirely for non-Italian catalogues so
+            // the label + empty flow panel don't leave dead space.
+            if (catalogueContext.Country.Value == "IT")
+            {
+                _documentsCountry = catalogueContext.Country;
+                _documentsLookup = catalogueContext.LookupByNationalCode;
+                _leafletLink = MakeDocumentLink(_loc.Get("Ui.MedicineEditDialog.Documents.Leaflet"));
+                _spcLink = MakeDocumentLink(_loc.Get("Ui.MedicineEditDialog.Documents.Spc"));
+                _documentsRow = new FlowLayoutPanel
+                {
+                    FlowDirection = FlowDirection.LeftToRight,
+                    AutoSize = true,
+                    WrapContents = false,
+                    Margin = new Padding(0),
+                    Visible = false,
+                };
+                _documentsRow.Controls.Add(_leafletLink);
+                _documentsRow.Controls.Add(_spcLink);
+            }
         }
         _unitBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown };
         // Keep the DropDown style: the AIFA FORMA field carries many
@@ -186,6 +229,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Name"), _nameBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.ActiveIngredient"), _ingredientBox);
+        if (_documentsRow is not null)
+        {
+            AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Documents"), _documentsRow);
+        }
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Package"), _packageBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Unit"), _unitBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.DosePerAdmin"), _doseBox);
@@ -264,6 +311,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _linkedNationalCode = seed.NationalCode;
         _linkedAtcCode = seed.AtcCode;
         _linkedReferenceMedicineId = seed.LinkedReferenceMedicineId;
+        _pendingSeedNationalCode = seed.NationalCode;
         _unitBox.Text = seed.Unit;
         _doseBox.Value = seed.DosePerAdministration;
         _adminPerDayBox.Value = seed.AdministrationsPerDay;
@@ -420,6 +468,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             .Select(a => a.Atc)
             .FirstOrDefault(a => a.HasValue);
         _linkedReferenceMedicineId = reference.Id;
+
+        UpdateDocumentLinks(reference.LinkLeaflet, reference.LinkSummaryOfProductCharacteristics);
     }
 
     // "TACHIPIRINA" + " 500 MG" + " compresse" → "TACHIPIRINA 500 MG compresse".
@@ -493,6 +543,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _linkedNationalCode = null;
         _linkedAtcCode = null;
         _linkedReferenceMedicineId = null;
+
+        UpdateDocumentLinks(null, null);
     }
 
     private Control BuildChannelsPanel()
@@ -629,6 +681,106 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private static string? NullIfBlank(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    // Fired once the dialog becomes visible: in Edit mode with a
+    // seeded NationalCode, look up the current AIFA row to surface
+    // its LINK_FI / LINK_RCP. Fire-and-forget by design — a failed
+    // lookup must never block the dialog.
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        _ = HydrateSeededDocumentsAsync();
+    }
+
+    private async Task HydrateSeededDocumentsAsync()
+    {
+        if (_documentsLookup is null || _documentsCountry is null) return;
+        var code = _pendingSeedNationalCode;
+        _pendingSeedNationalCode = null;
+        if (string.IsNullOrWhiteSpace(code)) return;
+
+        ReferenceMedicine? row;
+        try
+        {
+            row = await _documentsLookup(_documentsCountry.Value, code, CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort: a failing catalogue lookup must never crash
+            // the medicine dialog. The row simply stays hidden and the
+            // user can still edit their medicine.
+            return;
+        }
+        if (row is null || IsDisposed) return;
+        UpdateDocumentLinks(row.LinkLeaflet, row.LinkSummaryOfProductCharacteristics);
+    }
+
+    private LinkLabel MakeDocumentLink(string text)
+    {
+        var link = new LinkLabel
+        {
+            Text = text,
+            AutoSize = true,
+            Visible = false,
+            LinkBehavior = LinkBehavior.HoverUnderline,
+            Margin = new Padding(0, 4, 16, 4),
+        };
+        link.LinkClicked += OnDocumentLinkClicked;
+        return link;
+    }
+
+    private void UpdateDocumentLinks(string? leafletUrl, string? spcUrl)
+    {
+        if (_documentsRow is null || _leafletLink is null || _spcLink is null) return;
+
+        var safeLeaflet = IsSafeAifaUrl(leafletUrl) ? leafletUrl : null;
+        var safeSpc = IsSafeAifaUrl(spcUrl) ? spcUrl : null;
+
+        _leafletLink.Tag = safeLeaflet;
+        _spcLink.Tag = safeSpc;
+        _leafletLink.LinkVisited = false;
+        _spcLink.LinkVisited = false;
+        _leafletLink.Visible = safeLeaflet is not null;
+        _spcLink.Visible = safeSpc is not null;
+        _documentsRow.Visible = safeLeaflet is not null || safeSpc is not null;
+    }
+
+    private void OnDocumentLinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
+    {
+        if (sender is not LinkLabel link) return;
+        if (link.Tag is not string url) return;
+        if (!IsSafeAifaUrl(url)) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            link.LinkVisited = true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this,
+                _loc.Get("Ui.MedicineEditDialog.Documents.OpenError", ex.Message),
+                _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    // Restrict browser-launched URLs to the AIFA-owned domains that
+    // ship these links in the open-data feed. A corrupted or spoofed
+    // catalogue row could otherwise become a redirect vector when the
+    // user clicks the label. The scheme must be HTTPS, and the host
+    // must be one of AIFA's own domains (bare or subdomain).
+    private static bool IsSafeAifaUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal)) return false;
+        var host = uri.Host.ToLowerInvariant();
+        return host == "aifa.gov.it"
+            || host.EndsWith(".aifa.gov.it", StringComparison.Ordinal)
+            || host == "agenziafarmaco.gov.it"
+            || host.EndsWith(".agenziafarmaco.gov.it", StringComparison.Ordinal);
+    }
 }
 
 // Carries data between the dialog and the caller in both directions

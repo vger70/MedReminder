@@ -30,6 +30,57 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #33 — Expose AIFA leaflet / SPC links in the medicine edit dialog
+
+Link: [vger70/MedReminder#33](https://github.com/vger70/MedReminder/pull/33)
+**Status:** open
+Branch: `claude/vigilant-thompson-0colfk`
+
+The reference-catalogue SQLite table already stores `link_leaflet`
+(AIFA `LINK_FI`, the package leaflet) and `link_spc` (AIFA
+`LINK_RCP`, the summary of product characteristics) for every
+Italian row, but no UI surface exposed them. This PR adds a
+"Documenti AIFA" row to `MedicineEditDialog`, immediately below
+the active-ingredient field, that surfaces both documents as
+`LinkLabel`s that open in the user's default browser.
+
+### Added
+
+- New "Documenti AIFA" row in `MedicineEditDialog` with two
+  `LinkLabel`s — one for the package leaflet, one for the SPC —
+  present only when the user's reference country is Italy (the
+  other supported catalogues do not carry these fields). Each
+  link is shown only if the corresponding URL is available on the
+  linked reference row; the whole row hides when neither is.
+- `ReferenceMedicineLookupAsync` delegate on
+  `CatalogueAutocompleteContext`, implemented in
+  `MainForm.LookupReferenceByNationalCodeAsync` through
+  `IReferenceCatalogueQueryService.GetByNationalCodeAsync`
+  (already existed). Used by the dialog on `OnLoad` in Edit mode
+  to re-hydrate the two URLs from the seeded `NationalCode`.
+- `IsSafeAifaUrl` guard: `Process.Start(UseShellExecute = true)`
+  only fires for `https` URLs whose host equals or ends with
+  `aifa.gov.it` or `agenziafarmaco.gov.it`. A corrupted catalogue
+  snapshot cannot turn either label into an open-redirect vector.
+- Four localization keys — `Ui.MedicineEditDialog.Field.Documents`,
+  `Ui.MedicineEditDialog.Documents.Leaflet`,
+  `Ui.MedicineEditDialog.Documents.Spc`,
+  `Ui.MedicineEditDialog.Documents.OpenError` — added to every
+  shipped dictionary (`en`, `it`, `fr`, `es`, `de`).
+
+### Changed
+
+- `CatalogueAutocompleteContext` gains a fourth field
+  `LookupByNationalCode` for the exact-match hydration path. The
+  three search / country fields keep their meaning.
+- `OnReferenceSelected` also refreshes the two links from the
+  freshly picked `ReferenceMedicine`, and `ClearReferenceLinkage`
+  hides them when the user diverges from the linked record —
+  matching the existing NationalCode / AtcCode / LinkedReferenceMedicineId
+  bookkeeping.
+
+---
+
 ## PR #31 — A1: Complex therapy regimens (Schedule value object, Simple/Advanced UI)
 
 Link: [vger70/MedReminder#31](https://github.com/vger70/MedReminder/pull/31)
