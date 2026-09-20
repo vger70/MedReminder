@@ -33,7 +33,7 @@ with the classification adapted to per-PR granularity: **Added**,
 ## PR #35 — Add A6 donation/support UI evolution to EVOLUTION.md
 
 Link: [vger70/MedReminder#35](https://github.com/vger70/MedReminder/pull/35)
-**Status:** open
+**Status:** merged (2026-09-20)
 Branch: `claude/stoic-mendel-p9jlaf`
 
 Docs-only change. Classifies the donation/support feature drafted
