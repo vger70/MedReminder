@@ -58,6 +58,31 @@ Deliberately excluded from this document:
 
 ## 2. Priority ordering
 
+**DECIDED 2026-09-20 — top two priorities: A6 → A5.** The product
+owner set the donation/support UI (A6) as the first item to
+implement, immediately followed by the dose-time reminder (A5), then
+all the remaining planned items below. Rationale: A6 is the lowest
+cost/lowest risk item and opens a voluntary funding channel for the
+maintenance costs later items accrue; A5 carries the highest
+end-user value of Group A and its only hard precondition (A1) is
+already **[DONE]**, so the A1 → A5 dependency is satisfied and A5 can
+follow A6 directly. See §2.0 for the resulting full sequence.
+
+### 2.0 Decided implementation sequence
+
+1. **A6 — donation / support UI.** First. (§3.6)
+2. **A5 — dose-time reminder.** Second. Precondition A1 is [DONE].
+   (§3.5)
+3. **All remaining planned items**, in the cost-ordered sequence
+   already documented below: A2 (§3.2), then A3 (§3.3), then the
+   multi-device track C.3 (§4) → C.3+ (§5) → B.1 (§6) → C.1 (§7),
+   with C.2 rejected (§7.1). A1 (§3.1) is already [DONE] and is not
+   scheduled again.
+
+The remainder of this section records the original cost-ordered
+reasoning that informed the decision above; where it differs from
+§2.0, §2.0 governs.
+
 Recommended by this document, in ascending ambition and cost:
 
 1. **Group A** — each item independently deliverable. Start here.
@@ -215,6 +240,12 @@ users forget the *dose*, not the *reorder*. A toast (and optional
 email) delivered at the scheduled time of each dose closes the
 gap without changing the product's non-clinical positioning.
 
+> **Authoritative analysis.** This section is the original sketch.
+> The approved design is `ANALYSIS-A5-DOSE-TIME-REMINDER.md`, which
+> **corrects the deduplication mechanism described below** — see the
+> two "Correction" notes. Where this section and the A5 analysis
+> disagree, the A5 analysis wins.
+
 **Preconditions — already in place.** The A1 groundwork has
 partially landed: `AdministrationSlotEntry` already carries an
 optional `Time` (`TimeOnly?`), used today for sorting and
@@ -257,9 +288,20 @@ time of writing]
   2. For each slot with a `Time`, computes the next local
      wall-clock firing today.
   3. Emits one notification per (medicine, slot, day) at the
-     configured time, deduplicated via the existing
-     `MedicationScheduleHistory` table pattern so that a
-     restart within the same minute does not double-fire.
+     configured time, deduplicated so that a restart within the
+     same minute does not double-fire.
+
+  > **Correction (see `ANALYSIS-A5` §3.2).** The original wording
+  > here said "deduplicated via the existing `MedicationScheduleHistory`
+  > table pattern". That reference is **wrong** and must not be
+  > implemented literally: `MedicationScheduleHistory` is the
+  > schedule-versioning table (`ANALYSIS.md` §2.3) and has no notion
+  > of "a notification was sent", and the `NotificationEvent` table
+  > is keyed by `(MedicineId, StockEpoch)` (`ANALYSIS.md` §2.9),
+  > which changes only on refill and so would never repeat daily.
+  > The correct idempotency key is `(MedicineId, SlotKey, LocalDate)`
+  > in a dedicated `DoseReminderEvents` table. See `ANALYSIS-A5` §3.2.
+
 - **Channels.** Reuse the existing toast (WinRT) and MailKit paths.
   The per-medicine `_channelWindows` / `_channelEmail` flags
   already control channel selection and are respected as-is.
@@ -294,9 +336,26 @@ localization and shipped-user-guide updates. [INFERRED]
   scenarios where the PC is on but unattended.
 - **Interaction with the existing low-stock reminder.** The two
   notification paths must not compete on the same slot tick.
-  Keep them independent code-paths but share the deduplication
-  history table so a "reorder soon" and a "take now" for the
-  same medicine at the same minute do not stack into two toasts.
+  Keep them independent code-paths.
+
+  > **Correction (see `ANALYSIS-A5` §4.6).** The original wording
+  > here added "but share the deduplication history table so a
+  > 'reorder soon' and a 'take now' for the same medicine at the
+  > same minute do not stack into two toasts". The A5 analysis
+  > **supersedes** this: the two paths dedup on structurally
+  > different keys (`(MedicineId, StockEpoch)` vs
+  > `(MedicineId, SlotKey, LocalDate)`), so a shared table is an
+  > anti-pattern; and "reorder soon" and "take now" are *distinct*
+  > messages that may legitimately both appear — that is not the
+  > duplication this note was guarding against. Per-path keyed
+  > dedup prevents the *same* message double-firing. If
+  > at-most-one-toast-per-minute coalescing is still wanted, it is
+  > a UI-layer throttle, not a reason to merge the tables.
+  > **DECIDED 2026-09-20:** the product owner confirmed the
+  > supersession and selected the dedicated-table design
+  > (`ANALYSIS-A5` §13 items 3–4). The per-minute UI throttle was
+  > not requested and remains an optional later refinement.
+
 - **Stock = 0 is a "hard off".** When stock drops to zero mid-day,
   in-flight reminders for the rest of the day must stop. The
   scheduler evaluates the gate on every tick, not once at the
@@ -321,6 +380,13 @@ are today absorbed by the maintainer. A voluntary, unobtrusive
 without changing the product's positioning: the app remains free,
 local-first, and non-clinical. The full requirement draft lives
 in `docs/DONATION-SUPPORT-FEATURE.md`.
+
+> **Authoritative analysis.** The approved design is
+> `ANALYSIS-A6-DONATION-SUPPORT.md`, which notes that the "Help
+> menu" entry point assumed below is **not** documented in the
+> `ANALYSIS.md` MVP (only a toolbar and a tray menu are); a Help
+> surface (`HelpViewerForm`) exists post-MVP and the exact entry
+> point must be confirmed against the tree. See `ANALYSIS-A6` §8.1.
 
 **Preconditions — already in place.** WinForms host, per-profile
 `user.settings.json` reader, MailKit-independent logging
@@ -756,3 +822,21 @@ decision that must precede any implementation attempt.
   backend, no schema patch). §2 priority ordering rewritten with
   an explicit inside-Group-A cost/benefit sequence:
   A6 → A2 → A3 → A1 → A5, with the A1 → A5 dependency preserved.
+- 2026-09-20 — recorded the product owner's decided implementation
+  sequence in a new §2.0: **A6 → A5 as the top two priorities**,
+  followed by all remaining planned items (A2 → A3 → C.3 → C.3+ →
+  B.1 → C.1; A1 already [DONE]). The A1 → A5 hard dependency is
+  satisfied because A1 is [DONE]. The original cost-ordered
+  reasoning in §2 is retained but is now subordinate to §2.0.
+- 2026-09-20 — §3.5 and §3.6 reconciled with their now-approved
+  analysis documents. §3.5: added two "Correction" notes flagging
+  that the deduplication hints in the original sketch
+  (`MedicationScheduleHistory` table pattern; "share the
+  deduplication history table") are wrong / superseded by
+  `ANALYSIS-A5` §3.2 and §4.6, which key dose reminders on
+  `(MedicineId, SlotKey, LocalDate)` in a dedicated
+  `DoseReminderEvents` table and keep the low-stock and dose paths
+  on separate tables. §3.6: added an "Authoritative analysis" note
+  that the "Help menu" entry point is not documented in the
+  `ANALYSIS.md` MVP and must be confirmed against the tree
+  (`ANALYSIS-A6` §8.1). No priority-ordering change.
