@@ -1,4 +1,4 @@
-# EVOLUTION — Prospective work beyond Increment 15
+# EVOLUTION — Prospective work beyond A1
 
 Working document listing candidate evolutions of MedReminder, prepared
 in September 2026. It records options, tradeoffs and rejection
@@ -93,7 +93,7 @@ dependencies respected — is:
    dependency on A1.
 4. **A1 — complex therapy regimens.** 2–3 weeks. Highest single-item
    value of Group A, but also the largest and the one that must
-   land before A5 can be attempted. [DONE]
+   land before A5 can be attempted. **[DONE]**
 5. **A5 — dose-time reminder.** 1–1.5 weeks. Hard-depends on A1
    for a reliable wall-clock anchor on every therapy — without
    stabilized dose times the reminder has no time to fire on.
