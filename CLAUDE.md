@@ -164,16 +164,25 @@ release pipeline.
 
 ## 5. Git and branching
 
+The rules in this section are **mandatory**. They apply to every
+work session on this repository without exception.
+
 - No standing working branch. Ask before starting a new
   feature branch; use `main` as the base.
-- The branch name must be relevant to the user request and not chosen at
-  random. It should be `claude/<new-branch-name>` for general
-  development and `feature/<new-branch-name>` for the development
-  of new features.
+- **Mandatory — branch naming.** The branch name **must** be
+  relevant to the user request and **must not** be chosen at
+  random. It **must** use one of exactly two prefixes:
+  `claude/<new-branch-name>` for general development, or
+  `feature/<new-branch-name>` for the development of new
+  features. Any other prefix, or a randomly generated name, is
+  a policy violation.
 - Never push to `main` (or any other branch) without explicit
   permission.
-- Commit messages: imperative, English, focused on the "why". 
-- Open pull requests after the first commit of new work session.
+- Commit messages: imperative, English, focused on the "why".
+- **Mandatory — open a pull request early.** A pull request
+  **must** be opened for the working branch after the first
+  commit of a new work session, not at the end. Later commits
+  in the same session update the same PR.
 
 ### Release procedure
 
@@ -242,6 +251,11 @@ Kept here so future sessions pick them up without re-deriving them:
 
 ## 8. What to always do
 
+- **Name the working branch after the user request**, never at
+  random, and always with the `claude/<new-branch-name>` or
+  `feature/<new-branch-name>` prefix — see §5 for the full rule.
+- **Open the pull request after the first commit of a new work
+  session**, not at the end — see §5 for the full rule.
 - Read `docs/ANALYSIS.md` before making architectural changes.
 - Keep the Domain project free of Windows-specific APIs and of EF Core.
 - Keep secrets out of the repository (`smtp.protected`, `*.pfx`, `*.p12`

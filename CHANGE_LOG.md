@@ -63,6 +63,11 @@ PR #34.
 - §2 priority ordering rewritten with an explicit
   inside-Group-A cost/benefit sequence.
 - Change log entry appended to `docs/EVOLUTION.md` §9.
+- `CLAUDE.md` §5 tightened: branch naming and "open PR after
+  first commit of a work session" are now marked **mandatory**
+  explicitly. Both rules are also mirrored at the top of §8
+  "What to always do" so they surface in the non-negotiable
+  checklist.
 
 ---
 
