@@ -562,6 +562,7 @@ The reason C.1 is rated last:
   blob-storage architecture. Recommended primary reference.
 - **Standard Notes** — similar zero-knowledge model, well
   documented.
+- **Peer-to-cloud** synchronization via OneDrive/GoogleDrive
 
 Study these before designing anything from scratch.
 
