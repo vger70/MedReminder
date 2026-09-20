@@ -714,6 +714,8 @@ internal sealed class MainForm : MedReminderFormBase
                 grid.Columns.Cast<DataGridViewColumn>()
                     .FirstOrDefault(c => c.DataPropertyName == nameof(MedicineListItem.Name))
                     ?.HeaderCell.SortGlyphDirection = SortOrder.None;
+
+                grid.Refresh();
             }
             else if (column.DataPropertyName == nameof(MedicineListItem.Name))
             {
@@ -742,6 +744,8 @@ internal sealed class MainForm : MedReminderFormBase
                 grid.Columns.Cast<DataGridViewColumn>()
                     .FirstOrDefault(c => c.DataPropertyName == nameof(MedicineListItem.DaysRemainingDisplay))
                     ?.HeaderCell.SortGlyphDirection = SortOrder.None;
+
+                grid.Refresh();
             }
         };
         grid.RowPrePaint += OnRowPrePaint;
@@ -753,7 +757,7 @@ internal sealed class MainForm : MedReminderFormBase
     {
         if (e.RowIndex < 0 || e.RowIndex >= _rows.Count) return;
         var row = _grid.Rows[e.RowIndex];
-        var item = _rows[e.RowIndex];
+        if (row.DataBoundItem is not MedicineListItem item) return;
 
         // Layer 1 — atmosphere across the whole row (soft colors).
         row.DefaultCellStyle.BackColor = item.Status switch
