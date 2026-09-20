@@ -30,6 +30,47 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #35 — Add A6 donation/support UI evolution to EVOLUTION.md
+
+Link: [vger70/MedReminder#35](https://github.com/vger70/MedReminder/pull/35)
+**Status:** open
+Branch: `claude/stoic-mendel-p9jlaf`
+
+Docs-only change. Classifies the donation/support feature drafted
+in `docs/DONATION-SUPPORT-FEATURE.md` as a Group A item (A6) —
+pure UI + configuration, no backend, no schema patch, no change
+to the app's local-first, non-clinical posture. Records the
+design constraints: hosted payment pages only (Stripe Payment
+Links, PayPal hosted donate URL), no secrets in the client,
+provider abstraction (`IDonationProvider`) shaped so a future
+backend can swap the "open a hosted URL" adapter for a
+"call our checkout API + verify via webhook" adapter without
+touching the UI, no false payment-completion claims, single
+Help menu entry with no launch nagware. Rewrites the
+inside-Group-A priority ordering in §2 by ascending cost with
+dependencies respected: A6 (3–5 days, zero deps) → A2 → A3 →
+A1 → A5, preserving the A1 → A5 precondition introduced in
+PR #34.
+
+### Docs
+
+- New §3.6 in `docs/EVOLUTION.md` — A6 evolution with
+  motivation, preconditions, design sketch (options model,
+  storage path, provider abstraction, amount tiers,
+  browser-launch UX, validation, logging), effort estimate,
+  risks (false confirmation, secrets, nagware, store policy,
+  regional payment failure) and verdict.
+- §2 priority ordering rewritten with an explicit
+  inside-Group-A cost/benefit sequence.
+- Change log entry appended to `docs/EVOLUTION.md` §9.
+- `CLAUDE.md` §5 tightened: branch naming and "open PR after
+  first commit of a work session" are now marked **mandatory**
+  explicitly. Both rules are also mirrored at the top of §8
+  "What to always do" so they surface in the non-negotiable
+  checklist.
+
+---
+
 ## PR #34 — Add A5 dose-time "remind me to take it" evolution to EVOLUTION.md
 
 Link: [vger70/MedReminder#34](https://github.com/vger70/MedReminder/pull/34)

@@ -25,6 +25,7 @@ against a primary source, it is tagged:
   inference.
 - **[UNCERTAIN]** — no sufficient data at the time of writing; treat as
   a hypothesis, not a plan input.
+- **[DONE]** - alredy shipped.
 
 Untagged claims are ordinary design opinion.
 
@@ -70,14 +71,37 @@ Recommended by this document, in ascending ambition and cost:
 **C.2** (raw file-sync of the live SQLite database) is documented but
 **rejected** on technical grounds — see §7.
 
-The ordering is not a Gantt chart. Group A items can proceed in any
-order relative to each other, and C.3 can ship before A completes.
-The rule is: **do not skip C.3 → C.3+ before attempting B.1, and do
-not skip B.1 before deciding on C.1**. Inside Group A one hard
-dependency exists: **A5 (dose-time reminder) must not ship before
-A1 has stabilized dose times as a first-class schedule field** —
-without a reliable time anchor the reminder has no wall clock to
-fire on.
+The ordering across groups is not a Gantt chart. Group A items can
+proceed in any order relative to each other, and C.3 can ship before
+A completes. The rule is: **do not skip C.3 → C.3+ before attempting
+B.1, and do not skip B.1 before deciding on C.1**.
+
+**Inside Group A**, the recommended order — by ascending cost, with
+dependencies respected — is:
+
+1. **A6 — donation/support UI.** 3–5 days. No dependencies on any
+   other item, no schema patch, no domain or monitor changes; pure
+   UI + configuration. Ship first as a low-risk baseline that also
+   opens a voluntary funding channel for the maintenance costs the
+   later items will accrue. Indirectly de-risks §7 (C.1) by
+   exercising monetization plumbing before committing to a service.
+2. **A2 — AIC / barcode scan.** 1–2 weeks. Isolated, high
+   user-visible value, no cross-item preconditions. Good pairing
+   with A6 in the same release.
+3. **A3 — caregiver notifications.** 1 week. Reuses the existing
+   MailKit transport and per-profile notification settings; no
+   dependency on A1.
+4. **A1 — complex therapy regimens.** 2–3 weeks. Highest single-item
+   value of Group A, but also the largest and the one that must
+   land before A5 can be attempted. [DONE]
+5. **A5 — dose-time reminder.** 1–1.5 weeks. Hard-depends on A1
+   for a reliable wall-clock anchor on every therapy — without
+   stabilized dose times the reminder has no time to fire on.
+
+Two hard dependencies to respect inside Group A: **A5 must not ship
+before A1** (as above), and everything else in Group A is free of
+cross-item preconditions — reorder freely if funding, contributor
+availability or user demand suggests it.
 
 ---
 
@@ -89,7 +113,7 @@ Windows binary, not a medical device). Effort estimates are
 grossly indicative and assume one developer familiar with the
 codebase.
 
-### 3.1 A1 — Complex therapy regimens
+### 3.1 A1 — Complex therapy regimens [DONE]
 
 **Motivation.** The current model appears to assume linear
 consumption (X units per day). Real regimens include cycles
@@ -284,6 +308,125 @@ narrowly to stay non-clinical. Ship after A1 stabilizes (dose
 times must be a first-class, always-present part of the
 therapy) and before or alongside A3 (caregiver notifications) —
 the same channel plumbing carries both.
+
+### 3.6 A6 — Donation / support UI
+
+**Motivation.** MedReminder is distributed free of charge under
+Apache-2.0 (see `LICENSE`) and has no monetization channel today.
+Perpetual maintenance costs — code signing certificate renewals,
+tooling, developer time, and the operational costs any future
+service item in this document (C.1 in particular) would incur —
+are today absorbed by the maintainer. A voluntary, unobtrusive
+"support development" surface inside the app closes that gap
+without changing the product's positioning: the app remains free,
+local-first, and non-clinical. The full requirement draft lives
+in `docs/DONATION-SUPPORT-FEATURE.md`.
+
+**Preconditions — already in place.** WinForms host, per-profile
+`user.settings.json` reader, MailKit-independent logging
+infrastructure, five-language localization pipeline. No new
+NuGet dependency, no schema patch, no domain change.
+[VERIFIED against `CLAUDE.md` §§3, 6, 8]
+
+**Design sketch.**
+
+- **Model.** New `DonationOptions` in `MedReminder.Application`
+  holding `Enabled`, `Currency`, and a per-provider block with
+  `Enabled` + a `PaymentLinks` map `{amount → URL}`. Only public
+  Payment Link URLs; no client secret, no access token, no API
+  key of any kind lives in the client — `CLAUDE.md` §9 already
+  forbids plaintext secrets, and this feature must not weaken
+  that stance.
+- **Storage.** A new admin-managed
+  `%LOCALAPPDATA%\MedReminder\donations.settings.json` alongside
+  the other shared JSON files listed in `CLAUDE.md` §6. Public
+  URLs only — do not route through `smtp.protected` or any
+  DPAPI-encrypted store; there is nothing sensitive to protect.
+- **Provider abstraction.** `IDonationProvider` port in
+  `MedReminder.Application`, with `StripeDonationProvider` and
+  `PayPalDonationProvider` adapters in
+  `MedReminder.Infrastructure`. The port returns a
+  `DonationLaunchResult` describing the URL to open and the
+  provider that produced it. The abstraction is intentionally
+  designed so that a later backend (see §7 — C.1) can swap the
+  "open a hosted URL" adapter for a "call our checkout API +
+  verify via webhook" adapter without touching the UI or the
+  service layer.
+- **Amount tiers.** €2 / €5 / €10 / €20 as fixed Payment Links
+  (one URL per amount per provider). A custom-amount field is
+  offered **only** where the provider natively supports amount
+  selection on a public hosted page without client credentials.
+  [UNCERTAIN — Stripe Payment Links today configure the amount
+  server-side per link; PayPal's hosted donate flow can accept
+  an `amount` query parameter on the classic donate button. Both
+  behaviors depend on the account configuration used to mint the
+  link and must be verified at implementation time against the
+  provider's current documentation, not memory.]
+- **UI.** A dedicated `DonateForm` reachable from a single Help
+  menu entry — `Ui.MenuHelp.SupportDevelopment` — never from a
+  startup prompt. Voluntary tone; explicit "not required to use
+  the application" copy. Localize the new strings across en / it
+  / fr / es / de per `CLAUDE.md` §8. No `WebBrowser` control, no
+  embedded browser: the URL opens in the system default browser
+  via `Process.Start` with `UseShellExecute = true`.
+- **Validation before launch.** The service must reject non-HTTPS
+  URLs, syntactically malformed URLs, disabled providers, unknown
+  amounts, and missing configuration. User-facing errors stay
+  short and non-technical; the real reason lands only in the
+  daily rolling log under `logs/`.
+- **Post-launch messaging.** The app must not claim the payment
+  succeeded. The confirmation copy is strictly of the form "a
+  payment page has been opened in your browser". No webhook, no
+  order capture, no URL inspection, no browser scraping. This is
+  a hard product-safety line, not a nice-to-have.
+- **Logging.** Reuse the existing logger. Log provider, amount,
+  launch attempt and browser-launch errors. Never log the URL's
+  query string beyond the amount tier, never log payment
+  metadata, never log card data (the app does not see it).
+
+**Effort.** 3–5 developer-days including the provider port, the
+two adapters, the WinForms form, HTTPS validation, error paths,
+unit tests (per §Testing in the requirement draft), five-language
+localization and shipped-user-guide updates. [INFERRED]
+
+**Risks and constraints.**
+
+- **False confirmation is the real risk.** Without a backend the
+  desktop cannot know whether the payment completed. Any UI
+  wording that implies otherwise is a defect, not a polish item.
+  The requirement draft is explicit on this point and this
+  document endorses it.
+- **Secrets must not enter the client.** Payment Link URLs are
+  public identifiers, not credentials, and are the only piece of
+  provider configuration allowed in the shipped artifact. Any
+  drift here undoes the security posture the rest of the app
+  enforces (`CLAUDE.md` §9).
+- **Nagware would sink adoption.** No dialog on launch, no
+  countdown, no periodic prompt. The entry point is a single Help
+  menu item; that is the entire surface.
+- **Store-channel policy.** If the app is ever redistributed
+  through the Microsoft Store, the store's rules on third-party
+  payments outside its own commerce system may restrict or
+  forbid this UI. [UNCERTAIN — Store policy varies by app
+  category and evolves] The primary distribution channels today
+  are the ZIP and MSI produced by the release workflow (see
+  `docs/PACKAGING.md`), so this is not a blocker but a note for
+  a future MSIX push.
+- **Regional payment failure.** Not every user's card / PayPal
+  region will accept every Payment Link. The graceful
+  degradation is the browser's own error page; do not attempt to
+  detect or handle it inside the app.
+- **Not a medical-device concern.** The donation surface is
+  strictly commercial UX — it does not touch therapy data, does
+  not read stock, does not read schedules. It stays well clear
+  of EU MDR 2017/745 (§8.2).
+
+**Verdict.** The smallest and most self-contained item in Group A.
+No dependencies on A1..A5, no schema patch, no monitor changes;
+purely UI + configuration + a provider port. Ship first inside
+Group A as a low-risk baseline that also opens a voluntary
+funding channel for the maintenance costs the later items in
+this document will accrue.
 
 ---
 
@@ -607,3 +750,9 @@ decision that must precede any implementation attempt.
 - 2026-09-20 — added A5 (dose-time "remind me to take it"
   notification). §2 priority ordering updated with the A1 → A5
   precondition.
+- 2026-09-20 — added A6 (donation / support UI) from the draft in
+  `docs/DONATION-SUPPORT-FEATURE.md`. Classified as a Group A
+  item (low-friction extension, UI + configuration only, no
+  backend, no schema patch). §2 priority ordering rewritten with
+  an explicit inside-Group-A cost/benefit sequence:
+  A6 → A2 → A3 → A1 → A5, with the A1 → A5 dependency preserved.
