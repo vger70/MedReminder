@@ -30,6 +30,40 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #34 — Add A5 dose-time "remind me to take it" evolution to EVOLUTION.md
+
+Link: [vger70/MedReminder#34](https://github.com/vger70/MedReminder/pull/34)
+**Status:** open
+Branch: `claude/sleepy-bardeen-f5y5ir`
+
+Docs-only change. Adds a new candidate evolution (A5) to
+`docs/EVOLUTION.md` describing a per-medicine dose-time reminder
+that fires a toast (and optional email) at the scheduled time of
+each dose, gated by a "remind me to take it" checkbox in
+`MedicineEditDialog` that is enabled only when the medicine is
+active in the therapy and on-hand stock is greater than zero.
+The analysis records that the existing groundwork
+(`AdministrationSlotEntry.Time`, `SchedulePanel`, `Schedule`,
+per-medicine channel checkboxes, `MedicationMonitor`
+deduplication) is sufficient, and explicitly bounds the feature
+away from adherence tracking / EU MDR 2017/745 scope: no
+acknowledgement UI, no missed-dose logging, no clinical alerts.
+The Group A ordering note is updated with the hard A1 → A5
+precondition.
+
+### Docs
+
+- New §3.5 in `docs/EVOLUTION.md` — A5 evolution with
+  motivation, preconditions (verified against the current tree),
+  design sketch, effort estimate, risks and verdict.
+- §2 priority ordering note updated with the A1 → A5
+  dependency.
+- §9 change log entry appended for 2026-09-20.
+
+No source, build or runtime behavior is changed.
+
+---
+
 ## PR #33 — Expose AIFA leaflet / SPC links in the medicine edit dialog
 
 Link: [vger70/MedReminder#33](https://github.com/vger70/MedReminder/pull/33)
