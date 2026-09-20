@@ -164,14 +164,16 @@ release pipeline.
 
 ## 5. Git and branching
 
-- No standing working branch — the previous multi-user work
-  (Increment 15) landed in PRs #22–#26. Ask before starting a new
+- No standing working branch. Ask before starting a new
   feature branch; use `main` as the base.
+- The branch name must be relevant to the user request and not chosen at
+  random. It should be `claude/<new-branch-name>` for general
+  development and `feature/<new-branch-name>` for the development
+  of new features.
 - Never push to `main` (or any other branch) without explicit
   permission.
-- Commit messages: imperative, English, focused on the "why". End with
-  the Claude attribution footer configured for this session.
-- Do not open pull requests unless the user asks for one.
+- Commit messages: imperative, English, focused on the "why". 
+- Open pull requests after the first commit of new work session.
 
 ### Release procedure
 
