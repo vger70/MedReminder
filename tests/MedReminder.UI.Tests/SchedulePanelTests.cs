@@ -2,6 +2,7 @@ using System.Globalization;
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Notifications;
 using MedReminder.UI.Controls;
 using Forms = MedReminder.UI.Forms;
 using Xunit;
@@ -144,6 +145,73 @@ public sealed class SchedulePanelTests
                 System.Windows.Forms.Application.DoEvents();
 
                 var panelField = typeof(Forms.ChangeScheduleDialog)
+                    .GetField("_schedulePanel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var panel = (SchedulePanel)panelField!.GetValue(dialog)!;
+                rebuilt = panel.TryBuildSchedule(out _);
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (failure is not null) throw failure;
+
+        rebuilt.Should().Be(seed);
+    }
+
+    // Regression: opening the Edit medicine dialog on a therapy that
+    // currently uses a stepped-taper schedule must repopulate the
+    // SchedulePanel with the saved stages, not reset to Simple. Before
+    // this test the dialog captured _seedSchedule at construction but
+    // never called ApplySchedule from OnLoad, so the panel only got
+    // Advanced selected (defaulting to FixedDaily) and every stage was
+    // lost.
+    [Fact]
+    public void Edit_medicine_dialog_reopens_on_the_saved_stepped_schedule()
+    {
+        var seed = new SteppedTaperingSchedule(
+            new[]
+            {
+                new TaperStage(4m, 7),
+                new TaperStage(2m, 7),
+                new TaperStage(1m, 14),
+            },
+            maintainLastDose: true);
+
+        Schedule? rebuilt = null;
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var editSeed = new Forms.MedicineEditResult(
+                    Name: "Prednisone",
+                    ActiveIngredient: null,
+                    Package: null,
+                    Unit: "cpr",
+                    DosePerAdministration: 4m,
+                    AdministrationsPerDay: 1,
+                    StartDate: new DateOnly(2026, 1, 1),
+                    EndDate: null,
+                    ThresholdDays: 7,
+                    DoctorName: null,
+                    Notes: null,
+                    InitialQuantity: 0m,
+                    NotificationChannels: NotificationChannels.Windows,
+                    IsActive: true,
+                    InitialSchedule: seed);
+                using var dialog = new Forms.MedicineEditDialog(
+                    Forms.MedicineEditDialog.EditMode.Edit,
+                    new KeyEchoLocalization(),
+                    editSeed);
+                _ = dialog.Handle;
+                dialog.Show();
+                System.Windows.Forms.Application.DoEvents();
+
+                var panelField = typeof(Forms.MedicineEditDialog)
                     .GetField("_schedulePanel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                 var panel = (SchedulePanel)panelField!.GetValue(dialog)!;
                 rebuilt = panel.TryBuildSchedule(out _);
