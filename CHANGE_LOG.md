@@ -73,9 +73,9 @@ the EU MDR line.
 
 ### Docs
 
-- New "Dose-time reminder" section in `docs/USER_GUIDE.en.md`
-  (opt-in, toast/email, grace window, DST behavior). Localized
-  guides to follow.
+- New "Dose-time reminder" section in `docs/USER_GUIDE.en.md` and
+  in all four localized guides (`it`, `fr`, `es`, `de`) — opt-in,
+  toast/email, grace window, DST behavior.
 
 ---
 

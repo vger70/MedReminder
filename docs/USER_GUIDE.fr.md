@@ -103,6 +103,44 @@ contrôle pas les interactions médicamenteuses. Il suit uniquement la
 prescription de ton médecin et te prévient avant que le stock ne
 s'épuise.
 
+## Rappel à l'heure de la prise
+
+Pour les médicaments qui ont des **créneaux de prise avec horaire** (un
+moment précis de la journée défini sur chaque créneau d'administration),
+tu peux demander à MedReminder de te rappeler *au moment où la dose est
+due*. Coche **Me rappeler à l'heure de la prise** dans le formulaire
+d'ajout ou de modification du médicament. L'option n'est disponible que
+lorsque le médicament a au moins un créneau avec un horaire et qu'il
+reste du stock ; sinon elle reste grisée.
+
+Lorsqu'elle est activée, à chaque heure de créneau MedReminder affiche
+une notification sur le bureau (« Il est temps de prendre … »). Si tu
+as configuré les notifications par e-mail et sélectionné le canal
+e-mail pour ce médicament, le même rappel est aussi envoyé par e-mail.
+
+Quelques détails utiles à connaître :
+
+- **Un rappel par créneau et par jour.** Chaque créneau avec horaire se
+  déclenche au plus une fois pour un jour calendaire donné, même si
+  l'application est redémarrée.
+- **Fenêtre de tolérance.** Si l'application ne tourne pas exactement à
+  l'heure du créneau — par exemple si l'ordinateur était en veille — le
+  rappel se déclenche quand même à la prochaine vérification de
+  l'application, à condition d'être dans les 30 minutes suivant l'heure
+  du créneau. Au-delà de cette fenêtre, la dose est considérée comme
+  manquée et aucun rappel n'est affiché ; MedReminder ne tient pas de
+  journal des doses manquées et ne donne jamais de conseil clinique.
+- **Un stock à zéro désactive le rappel.** Quand le stock atteint zéro,
+  aucun rappel n'est envoyé, car il n'y a plus rien à prendre.
+- **Heure d'été.** La nuit du passage à l'heure d'été, un créneau qui
+  tombe dans l'heure sautée ne se déclenche pas (cette heure n'existe
+  pas). La nuit du passage à l'heure d'hiver, le créneau se déclenche
+  une seule fois, comme d'habitude.
+
+Ce rappel n'est qu'une invite pratique. Il n'enregistre pas si tu as
+pris la dose et ne modifie pas le stock : pour cela, utilise
+*Enregistrer la prise*.
+
 ## Catalogue de référence (multi-pays)
 
 MedReminder embarque deux instantanés d'un catalogue de médicaments

@@ -98,6 +98,45 @@ massime giornaliere, non avvisa di sovradosaggi e non verifica
 interazioni farmacologiche. Segue soltanto la terapia che il tuo
 medico ha prescritto e ti ricorda prima che la scorta finisca.
 
+## Promemoria all'orario della dose
+
+Per le medicine che hanno **slot di dose con orario** (un momento
+preciso della giornata impostato su ciascuno slot di somministrazione)
+puoi chiedere a MedReminder di ricordarti *nel momento in cui la dose
+è dovuta*. Spunta **Ricordami all'orario della dose** nel modulo di
+aggiunta o modifica della medicina. L'opzione è disponibile solo
+quando la medicina ha almeno uno slot con un orario e ha ancora scorta
+a disposizione; altrimenti resta disattivata.
+
+Quando è attiva, a ogni orario dello slot MedReminder mostra una
+notifica sul desktop ("È ora di prendere …"). Se hai configurato le
+notifiche via email e hai selezionato il canale email per quella
+medicina, lo stesso promemoria viene inviato anche via email.
+
+Alcuni dettagli utili da sapere:
+
+- **Un promemoria per slot al giorno.** Ogni slot con orario si attiva
+  al massimo una volta in un dato giorno di calendario, anche se l'app
+  viene riavviata.
+- **Finestra di tolleranza.** Se l'app non è in esecuzione esattamente
+  all'orario dello slot — per esempio il computer era sospeso — il
+  promemoria si attiva comunque al successivo controllo dell'app,
+  purché entro 30 minuti dall'orario dello slot. Oltre questa finestra
+  la dose è considerata mancata e non viene mostrato alcun promemoria;
+  MedReminder non tiene un registro delle dosi mancate e non fornisce
+  mai consigli clinici.
+- **Scorta a zero disattiva il promemoria.** Quando la scorta arriva a
+  zero non viene inviato alcun promemoria, perché non c'è più nulla da
+  prendere.
+- **Ora legale.** Nella notte in cui l'orologio va avanti, uno slot che
+  cade nell'ora saltata non si attiva (quell'orario non esiste). Nella
+  notte in cui l'orologio torna indietro, lo slot si attiva una volta
+  sola, come di consueto.
+
+Questo promemoria è solo un avviso di comodità. Non registra se hai
+preso la dose e non modifica la scorta: per quello usa *Registra
+assunzione*.
+
 ## Catalogo di riferimento (multi-paese)
 
 MedReminder include due snapshot di un catalogo di medicinali di

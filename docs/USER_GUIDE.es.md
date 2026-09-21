@@ -100,6 +100,45 @@ diarias, no avisa de sobredosis y no verifica interacciones
 farmacológicas. Solo sigue la terapia que tu médico ha prescrito y
 te recuerda antes de que se agote el stock.
 
+## Recordatorio a la hora de la dosis
+
+Para los medicamentos que tienen **franjas de dosis con hora** (un
+momento concreto del día definido en cada franja de administración)
+puedes pedir a MedReminder que te avise *en el momento en que la dosis
+corresponde*. Marca **Recordarme a la hora de la dosis** en el
+formulario de añadir o editar el medicamento. La opción solo está
+disponible cuando el medicamento tiene al menos una franja con hora y
+todavía queda stock; en caso contrario permanece desactivada.
+
+Cuando está activada, a la hora de cada franja MedReminder muestra una
+notificación en el escritorio («Es hora de tomar …»). Si has
+configurado las notificaciones por e-mail y has seleccionado el canal
+de e-mail para ese medicamento, el mismo recordatorio también se envía
+por e-mail.
+
+Algunos detalles útiles que conviene saber:
+
+- **Un recordatorio por franja y día.** Cada franja con hora se activa
+  como máximo una vez en un día natural dado, aunque se reinicie la
+  aplicación.
+- **Ventana de tolerancia.** Si la aplicación no se está ejecutando
+  exactamente a la hora de la franja — por ejemplo, el ordenador estaba
+  suspendido — el recordatorio se activa igualmente en la siguiente
+  comprobación de la aplicación, siempre que sea dentro de los 30
+  minutos posteriores a la hora de la franja. Pasada esa ventana, la
+  dosis se considera perdida y no se muestra ningún recordatorio;
+  MedReminder no lleva un registro de dosis perdidas y nunca da consejos
+  clínicos.
+- **Un stock a cero lo desactiva.** Cuando el stock llega a cero no se
+  envía ningún recordatorio, porque ya no queda nada que tomar.
+- **Horario de verano.** En la noche del cambio a horario de verano,
+  una franja que cae en la hora omitida no se activa (esa hora no
+  existe). En la noche del cambio a horario de invierno, la franja se
+  activa una sola vez, como de costumbre.
+
+Este recordatorio es solo un aviso práctico. No registra si has tomado
+la dosis y no modifica el stock: para eso usa *Registrar toma*.
+
 ## Catálogo de referencia (multi-país)
 
 MedReminder incluye dos instantáneas de un catálogo de medicamentos

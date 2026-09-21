@@ -108,6 +108,45 @@ keine Wechselwirkungen zwischen Medikamenten. Es folgt lediglich
 der von deinem Arzt verordneten Therapie und erinnert dich, bevor
 der Bestand zur Neige geht.
 
+## Erinnerung zur Einnahmezeit
+
+Für Medikamente mit **Einnahmezeiten** (eine feste Uhrzeit, die für
+jeden Einnahmeslot festgelegt ist) kannst du MedReminder bitten, dich
+*genau dann zu erinnern, wenn die Dosis fällig ist*. Aktiviere **Zur
+Einnahmezeit erinnern** im Formular zum Hinzufügen oder Bearbeiten des
+Medikaments. Die Option ist nur verfügbar, wenn das Medikament
+mindestens einen Slot mit Uhrzeit hat und noch Bestand vorhanden ist;
+andernfalls bleibt sie ausgegraut.
+
+Wenn sie aktiviert ist, zeigt MedReminder zu jeder Slot-Uhrzeit eine
+Desktop-Benachrichtigung an („Zeit für die Einnahme von …"). Wenn du
+E-Mail-Benachrichtigungen eingerichtet und den E-Mail-Kanal für dieses
+Medikament ausgewählt hast, wird dieselbe Erinnerung auch per E-Mail
+versendet.
+
+Einige nützliche Details:
+
+- **Eine Erinnerung pro Slot und Tag.** Jeder Slot mit Uhrzeit löst an
+  einem bestimmten Kalendertag höchstens einmal aus, auch wenn die App
+  neu gestartet wird.
+- **Toleranzfenster.** Wenn die App nicht genau zur Slot-Uhrzeit läuft
+  — zum Beispiel weil der Computer im Ruhezustand war — löst die
+  Erinnerung trotzdem bei der nächsten Prüfung der App aus, sofern dies
+  innerhalb von 30 Minuten nach der Slot-Uhrzeit geschieht. Nach diesem
+  Fenster gilt die Dosis als verpasst und es wird keine Erinnerung
+  angezeigt; MedReminder führt kein Protokoll verpasster Dosen und gibt
+  niemals klinische Ratschläge.
+- **Bestand null schaltet sie aus.** Wenn der Bestand null erreicht,
+  wird keine Erinnerung gesendet, weil nichts mehr einzunehmen ist.
+- **Sommerzeit.** In der Nacht der Zeitumstellung auf Sommerzeit löst
+  ein Slot, der in die übersprungene Stunde fällt, nicht aus (diese
+  Uhrzeit existiert nicht). In der Nacht der Umstellung auf Winterzeit
+  löst der Slot wie gewohnt einmal aus.
+
+Diese Erinnerung ist nur ein praktischer Hinweis. Sie erfasst nicht, ob
+du die Dosis eingenommen hast, und ändert den Bestand nicht — dafür
+nutze *Einnahme erfassen*.
+
 ## Referenzkatalog (mehrere Länder)
 
 MedReminder liefert zwei Momentaufnahmen eines
