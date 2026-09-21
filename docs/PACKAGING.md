@@ -578,3 +578,94 @@ Possible future improvements include:
 - improved MSI installation and upgrade handling.
 
 These enhancements should preserve the existing stable ZIP download mechanism whenever practical.
+
+## 23. Donation / Support Development configuration (maintainer)
+
+The "Support Development" feature (A6) is **off by default** and ships
+with no real links. It reads its configuration from a shared,
+admin-managed file at the root of the local application data folder:
+
+```text
+%LOCALAPPDATA%\MedReminder\donations.settings.json
+```
+
+A template with placeholder URLs (`donations.settings.json`) is copied
+into the build output next to `appsettings.json`. The application does
+**not** read the template from the install directory — copy it to the
+data-folder root above and edit it there. If the file is missing, the
+`Donations` section is absent, or `Enabled` is `false`, the feature
+stays silently off and the **Help → Support development…** menu entry
+does not appear.
+
+The file holds only **public payment URLs**. It must never contain a
+secret — no Stripe secret/restricted key, no PayPal client secret, no
+access token, no private key. It is therefore plain JSON, not
+DPAPI-encrypted.
+
+### File shape
+
+```json
+{
+  "Donations": {
+    "Enabled": true,
+    "Currency": "EUR",
+    "Stripe": {
+      "Enabled": true,
+      "PaymentLinks": {
+        "2":  "https://donate.stripe.com/...",
+        "5":  "https://donate.stripe.com/...",
+        "10": "https://donate.stripe.com/...",
+        "20": "https://donate.stripe.com/...",
+        "custom": "https://donate.stripe.com/..."
+      }
+    },
+    "PayPal": {
+      "Enabled": true,
+      "PaymentLinks": {
+        "2":  "https://www.paypal.com/donate/?hosted_button_id=...",
+        "5":  "https://www.paypal.com/donate/?hosted_button_id=...",
+        "10": "https://www.paypal.com/donate/?hosted_button_id=...",
+        "20": "https://www.paypal.com/donate/?hosted_button_id=...",
+        "custom": "https://www.paypal.com/donate/?hosted_button_id=..."
+      }
+    }
+  }
+}
+```
+
+- Keys `"2"`, `"5"`, `"10"`, `"20"` are the fixed tiers. Each must be
+  its own **fixed-amount** Payment Link — the app never appends an
+  amount to a URL.
+- The optional `"custom"` key is a provider-native "choose your amount"
+  link. Omit it (or leave it blank) to hide the custom option for that
+  provider; the fixed tiers still work. The app opens the `"custom"`
+  link **verbatim** — the payer enters the amount on the provider's
+  page.
+- Every URL must be **HTTPS**. Non-HTTPS or malformed links are rejected
+  at launch time and never opened.
+- Set a provider's `"Enabled"` to `false` (or leave its `PaymentLinks`
+  empty) to hide it in the dialog.
+
+### Creating the links
+
+**Stripe** — in the Stripe Dashboard, create a **Payment Link** for a
+product/price per tier:
+
+1. Products → Payment Links → New.
+2. For a fixed tier, set a fixed price (e.g. €10) and copy the
+   `https://donate.stripe.com/...` URL into the matching key.
+3. For the `"custom"` key, create a Payment Link whose price is set to
+   **"customer chooses price"**, then copy its URL. No secret key is
+   involved — only the public link.
+
+**PayPal** — create a hosted **donate button** per tier:
+
+1. PayPal → Donations / Buttons → create a button.
+2. For a fixed tier, set a fixed amount and use the resulting hosted
+   `https://www.paypal.com/donate/?hosted_button_id=...` URL.
+3. For the `"custom"` key, create a donate button **without** a fixed
+   amount so the payer chooses it on PayPal's page, and copy that URL.
+
+Do not embed any API credential — only the hosted button URL belongs in
+the file. After editing, restart MedReminder; the menu entry appears
+once `Enabled` is `true` and at least one provider has valid links.

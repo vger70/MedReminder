@@ -491,6 +491,26 @@ Hinweise:
 - E-Mail-Benachrichtigungen und der Therapieplan verwenden die
   hier gewählte Sprache.
 
+## Entwicklung unterstützen
+
+Wenn der Betreuer sie aktiviert hat, öffnet der Eintrag **? →
+Entwicklung unterstützen…** ein kleines Fenster, in dem Sie das Projekt
+ganz freiwillig unterstützen können. Es ist optional und für die
+Nutzung von MedReminder niemals erforderlich.
+
+- Wählen Sie einen festen Betrag (2 €, 5 €, 10 €, 20 €) oder, sofern
+  angeboten, einen **individuellen Betrag**.
+- Wählen Sie eine Zahlungsmethode (Stripe oder PayPal).
+- Klicken Sie auf **Mit … fortfahren**: MedReminder öffnet die
+  offizielle Zahlungsseite des Anbieters in Ihrem Standardbrowser.
+
+Bei einem individuellen Betrag wählen Sie die genaue Summe **auf der
+Seite des Anbieters**, nicht in MedReminder. Die Anwendung wickelt die
+Zahlung nie selbst ab, sieht Ihre Kartendaten nicht und kann nicht
+bestätigen, dass eine Zahlung abgeschlossen wurde – sie öffnet nur die
+Seite. Hat der Betreuer diese Funktion nicht konfiguriert, erscheint
+der Menüeintrag nicht.
+
 ## Diagnose
 
 - **Protokolle**:

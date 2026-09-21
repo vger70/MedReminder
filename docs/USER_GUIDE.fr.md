@@ -478,6 +478,26 @@ Notes :
 - Les notifications e-mail et la fiche de traitement utilisent la
   langue sélectionnée ici.
 
+## Soutenir le développement
+
+Si le mainteneur l'a activée, l'entrée **? → Soutenir le
+développement…** ouvre une petite fenêtre où vous pouvez, de manière
+totalement volontaire, contribuer au projet. C'est facultatif et jamais
+nécessaire pour utiliser MedReminder.
+
+- Choisissez un montant fixe (2 €, 5 €, 10 €, 20 €) ou, lorsqu'il est
+  proposé, un **montant personnalisé**.
+- Choisissez un moyen de paiement (Stripe ou PayPal).
+- Cliquez sur **Continuer avec …** : MedReminder ouvre la page de
+  paiement officielle du prestataire dans votre navigateur par défaut.
+
+Avec un montant personnalisé, vous choisissez le montant exact **sur la
+page du prestataire**, pas dans MedReminder. L'application ne traite
+jamais le paiement elle-même, ne voit pas les données de votre carte et
+ne peut pas confirmer qu'un paiement a abouti : elle ne fait qu'ouvrir
+la page. Si le mainteneur n'a pas configuré cette fonction, l'entrée de
+menu n'apparaît pas.
+
 ## Diagnostic
 
 - **Journaux** :
