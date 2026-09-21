@@ -134,6 +134,29 @@ public sealed class DatabaseInitializer
             column: "SchedulePayload",
             typeSpec: "TEXT NULL",
             cancellationToken);
+
+        // A5 (Dose-time reminder): flag on Medicines and the
+        // DoseReminderEvents dedup table (ANALYSIS-A5 §3.3).
+        // DEFAULT 0 keeps RemindOnDose = false for every pre-A5 row;
+        // no reminder is ever "armed" by the upgrade.
+        await AddColumnIfMissingAsync(
+            table: "Medicines",
+            column: "RemindOnDose",
+            typeSpec: "INTEGER NOT NULL DEFAULT 0",
+            cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""DoseReminderEvents"" (
+                ""Id""         TEXT    NOT NULL CONSTRAINT ""PK_DoseReminderEvents"" PRIMARY KEY,
+                ""MedicineId"" TEXT    NOT NULL,
+                ""SlotKey""    TEXT    NOT NULL,
+                ""LocalDate""  TEXT    NOT NULL,
+                ""FiredAt""    INTEGER NOT NULL,
+                ""Channel""    INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DoseReminderEvents_Dedup""
+                ON ""DoseReminderEvents"" (""MedicineId"", ""SlotKey"", ""LocalDate"");",
+            cancellationToken);
     }
 
     private async Task ExecuteRawSqlAsync(string sql, CancellationToken cancellationToken)

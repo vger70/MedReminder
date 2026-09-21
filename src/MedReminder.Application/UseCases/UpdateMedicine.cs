@@ -34,6 +34,7 @@ public sealed record UpdateMedicineCommand(
     string? DoctorName,
     string? Notes,
     bool IsActive,
+    bool RemindOnDose = false,
     IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null,
     CatalogueLink? Catalogue = null);
 
@@ -87,6 +88,7 @@ public sealed class UpdateMedicine
         medicine.DoctorName = string.IsNullOrWhiteSpace(cmd.DoctorName) ? null : cmd.DoctorName.Trim();
         medicine.Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim();
         medicine.IsActive = cmd.IsActive;
+        medicine.RemindOnDose = cmd.RemindOnDose;
         if (cmd.Catalogue is { } link)
         {
             medicine.NationalCode = string.IsNullOrWhiteSpace(link.NationalCode) ? null : link.NationalCode.Trim();

@@ -34,7 +34,8 @@ public sealed record AddMedicineCommand(
     string? NationalCode = null,
     AtcCode? AtcCode = null,
     Guid? LinkedReferenceMedicineId = null,
-    Schedule? InitialSchedule = null);
+    Schedule? InitialSchedule = null,
+    bool RemindOnDose = false);
 
 public sealed class AddMedicine
 {
@@ -86,6 +87,7 @@ public sealed class AddMedicine
             IsActive = true,
             StockEpoch = 1,
             NotificationChannels = cmd.NotificationChannels,
+            RemindOnDose = cmd.RemindOnDose,
             NationalCode = string.IsNullOrWhiteSpace(cmd.NationalCode) ? null : cmd.NationalCode.Trim(),
             AtcCode = cmd.AtcCode,
             LinkedReferenceMedicineId = cmd.LinkedReferenceMedicineId,

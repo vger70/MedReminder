@@ -25,6 +25,7 @@ public static class ApplicationServiceCollectionExtensions
 
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();
+        services.AddScoped<DoseReminderService>();
 
         // Reference catalogue (M1). The country-profile provider owns
         // the "national ∪ EU" rule; use cases are cheap façades over

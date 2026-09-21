@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using MedReminder.Application;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Monitoring;
 using MedReminder.Infrastructure;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Migration;
@@ -312,6 +313,30 @@ internal static class Program
         builder.Services.AddMedReminderApplication();
         builder.Services.AddMedReminderInfrastructure(builder.Configuration, currentProfile);
 
+        // A5: override the Application-layer DoseReminderService
+        // registration so the grace window is read from configuration
+        // (DoseReminder:GraceWindowMinutes; defaults to 30 minutes).
+        // The rest of the dependencies are resolved from DI as usual.
+        builder.Services.AddScoped<DoseReminderService>(sp =>
+        {
+            var minutes = builder.Configuration.GetValue<int?>("DoseReminder:GraceWindowMinutes");
+            TimeSpan? graceWindow = minutes is > 0 ? TimeSpan.FromMinutes(minutes.Value) : null;
+            return new DoseReminderService(
+                sp.GetRequiredService<IMedicineRepository>(),
+                sp.GetRequiredService<IStockMovementRepository>(),
+                sp.GetRequiredService<IMedicationScheduleHistoryRepository>(),
+                sp.GetRequiredService<IMedicationSuspensionRepository>(),
+                sp.GetRequiredService<IMedicationAdministrationSlotRepository>(),
+                sp.GetRequiredService<IDoseReminderEventRepository>(),
+                sp.GetRequiredService<IEmailNotificationService>(),
+                sp.GetRequiredService<IWindowsNotificationService>(),
+                sp.GetRequiredService<IUnitOfWork>(),
+                sp.GetRequiredService<TimeProvider>(),
+                sp.GetRequiredService<ILogger<DoseReminderService>>(),
+                sp.GetService<ILocalizationService>(),
+                graceWindow);
+        });
+
         builder.Services.RemoveAll<IWindowsNotificationService>();
         builder.Services.AddSingleton<TrayBalloonNotificationService>();
         builder.Services.AddSingleton<IWindowsNotificationService, ToastWindowsNotificationService>();
@@ -320,6 +345,7 @@ internal static class Program
         builder.Services.AddScoped<MedicineOverviewLoader>();
 
         builder.Services.AddHostedService<MedicationMonitorHostedService>();
+        builder.Services.AddHostedService<DoseReminderHostedService>();
         builder.Services.AddHostedService<AutomaticBackupHostedService>();
 
         var catalogueEnabledRaw = builder.Configuration[

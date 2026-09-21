@@ -56,6 +56,22 @@ public sealed class Medicine
 
     public DateTimeOffset UpdatedAt { get; set; }
 
+    // When true, the DoseReminderService fires one notification per
+    // (medicine, slot, local-day) at each timed slot's wall-clock
+    // time. Default false; cleared by save-time clamp when no timed
+    // slot exists or stock is zero (ANALYSIS-A5 §3.1, §5.3).
+    public bool RemindOnDose { get; set; } = false;
+
+    // Save-time clamp / availability rule for RemindOnDose
+    // (ANALYSIS-A5 §5.2–§5.3): the dose-time reminder can be enabled
+    // only when the medicine has at least one timed slot AND positive
+    // stock. A pure predicate so the UI availability gate, the
+    // save-time clamp, and the tests share one definition. This is NOT
+    // the runtime firing gate — DoseReminderService independently
+    // re-checks stock and therapy activity on every tick.
+    public static bool CanRemindOnDose(bool hasTimedSlot, decimal currentStock)
+        => hasTimedSlot && currentStock > 0m;
+
     // Optional link to the reference catalogue (ANALYSIS-DRUG-
     // CATALOGUE.md §2.5). All three fields stay NULL for user-authored
     // medicines that were never linked. Free-text Name /
