@@ -30,6 +30,42 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #43 — Mark A1/A5/A6 as DONE in EVOLUTION; mark all PRs as merged in CHANGE_LOG
+
+Link: [vger70/MedReminder#43](https://github.com/vger70/MedReminder/pull/43)
+**Status:** open
+
+Branch: `claude/marca-done-merged-docs-x39j35`
+
+Docs-only sync so `EVOLUTION.md` and `CHANGE_LOG.md` reflect the
+current state of the repo.
+
+### Docs
+
+- `docs/EVOLUTION.md`: A5 (§3.5) and A6 (§3.6) section headers now
+  carry **[DONE]**, matching the pre-existing A1 (§3.1). §2.0
+  items 1 and 2 and the "Inside Group A" cost-ordered list items 1
+  and 5 are flagged accordingly, and §9 records the 2026-09-21
+  update.
+- `CHANGE_LOG.md`: every remaining `**Status:** open` entry moves
+  to `**Status:** merged (<date>)`, using the actual GitHub merge
+  timestamps: PR #7/#8/#13 (2026-09-17); PR #18/#19 (2026-09-18);
+  PR #28/#29/#30/#31 (2026-09-19); PR #33/#34 (2026-09-20);
+  PR #38/#39/#40/#42 (2026-09-21). PR #5 was superseded by PR #6
+  and is recorded as `closed (not merged)`.
+
+No source, build, test, localization or runtime changes.
+
+### Caveat
+
+PR #37 ("Implement A5 dose-time reminder") is still open on GitHub
+at the time this entry is written. `EVOLUTION.md` was updated per
+the maintainer's instruction to flag A5 as `[DONE]`; confirm the
+merge of #37 (or the equivalent A5 code path) before treating the
+tag as authoritative on the runtime side.
+
+---
+
 ## PR #42 — Seed the Edit-medicine schedule panel in OnLoad
 
 Link: [vger70/MedReminder#42](https://github.com/vger70/MedReminder/pull/42)
