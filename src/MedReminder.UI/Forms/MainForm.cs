@@ -6,6 +6,7 @@ using MedReminder.Application.Monitoring;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Medicines;
 using MedReminder.Infrastructure.Email;
 using MedReminder.UI.Presentation;
 using MedReminder.UI.Tray;
@@ -1003,6 +1004,7 @@ internal sealed class MainForm : MedReminderFormBase
         decimal currentDose;
         int currentFreq;
         DateOnly startDate;
+        Schedule? currentSchedule = null;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -1012,6 +1014,31 @@ internal sealed class MainForm : MedReminderFormBase
             currentDose = medicine.DosePerAdministration;
             currentFreq = medicine.AdministrationsPerDay;
             startDate = medicine.StartDate;
+
+            // Reconstruct the therapy's current schedule from the most
+            // recent history entry so the dialog opens pre-populated
+            // with an existing advanced regime instead of resetting to
+            // Simple. FixedDaily reconstructs to a FixedDailySchedule,
+            // which the dialog treats as Simple mode.
+            var schedules = scope.ServiceProvider
+                .GetRequiredService<IMedicationScheduleHistoryRepository>();
+            var history = await schedules.ListForMedicineAsync(row.Id, CancellationToken.None);
+            MedicationScheduleHistory? latest = null;
+            foreach (var entry in history)
+            {
+                if (latest is null || entry.EffectiveFrom > latest.EffectiveFrom)
+                {
+                    latest = entry;
+                }
+            }
+            if (latest is not null)
+            {
+                currentSchedule = ScheduleCodec.Deserialize(
+                    latest.ScheduleKind,
+                    latest.SchedulePayload,
+                    latest.DosePerAdministration,
+                    latest.AdministrationsPerDay);
+            }
         }
         catch (Exception ex)
         {
@@ -1019,7 +1046,7 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        using var dialog = new ChangeScheduleDialog(row.Name, currentDose, currentFreq, startDate, _loc);
+        using var dialog = new ChangeScheduleDialog(row.Name, currentDose, currentFreq, startDate, _loc, currentSchedule);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try

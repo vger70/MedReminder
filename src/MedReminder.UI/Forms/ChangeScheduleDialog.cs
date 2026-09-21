@@ -31,7 +31,8 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         decimal currentDose,
         int currentFreq,
         DateOnly minimumEffectiveFrom,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        Schedule? currentSchedule = null)
     {
         _loc = localization;
         Text = _loc.Get("Ui.ChangeScheduleDialog.Title");
@@ -109,6 +110,12 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
 
         _schedulePanel = new SchedulePanel(_loc);
         _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
+        // Pre-populate the panel with the therapy's current schedule so
+        // an existing advanced regime (weekly, cyclic, tapering, PRN,
+        // stepped) opens on its own values instead of resetting to
+        // Simple. A FixedDaily (or null) schedule leaves the panel in
+        // Simple mode, driven by the dose / frequency inputs above.
+        _schedulePanel.ApplySchedule(currentSchedule);
 
         AddRow(table, string.Empty, header);
         AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewDose"), _doseBox);

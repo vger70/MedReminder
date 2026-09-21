@@ -66,6 +66,16 @@ tapering shipped with A1 could not express.
 - `docs/USER_GUIDE.en.md` — the *Complex regimens* section documents
   the Linear / Stepped split and the maintenance option.
 
+### Fixed
+
+- The *Change dose/frequency* dialog now opens pre-populated with the
+  therapy's current schedule. Previously it always reset to Simple
+  mode, so an existing advanced regime (stepped, but also weekly,
+  cyclic, tapering or PRN) looked as if it had never been saved.
+  `MainForm` now loads the latest `MedicationScheduleHistory` entry,
+  rebuilds the `Schedule` via `ScheduleCodec` and seeds the dialog's
+  `SchedulePanel` through the existing `ApplySchedule`.
+
 No change to the projection engine (the `Schedule.RateOn` contract and
 the day-by-day materializer already handle a varying rate), to the
 application command signatures, or to existing linear tapers.
