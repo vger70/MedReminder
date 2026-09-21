@@ -1,10 +1,11 @@
 namespace MedReminder.Domain.Medicines;
 
 // Value object describing HOW MUCH of a medicine is consumed on a
-// given day. Five discriminated shapes; only FixedDaily is used by
+// given day. Six discriminated shapes; only FixedDaily is used by
 // pre-A1 databases via the ScheduleCodec fallback.
 //
-// See docs/ANALYSIS-A1-REGIMENS.md §2 for the full design.
+// See docs/ANALYSIS-A1-REGIMENS.md §2 for the base design and
+// docs/ANALYSIS-A1-STEPPED-TAPER.md for the multi-stage taper.
 public abstract record Schedule
 {
     public ScheduleKind Kind { get; }
@@ -229,4 +230,124 @@ public sealed record PrnSchedule : Schedule
     public PrnSchedule() : base(ScheduleKind.Prn) { }
 
     public override decimal RateOn(DateOnly day, DateOnly anchor) => 0m;
+}
+
+// One stage of a stepped taper: a flat dose held for a whole number of
+// consecutive days. See docs/ANALYSIS-A1-STEPPED-TAPER.md §2.1.
+public sealed record TaperStage
+{
+    public decimal Dose { get; }
+    public int DurationDays { get; }
+
+    public TaperStage(decimal dose, int durationDays)
+    {
+        if (dose <= 0m)
+        {
+            throw new ArgumentException(
+                "Taper stage dose must be positive.",
+                nameof(dose));
+        }
+        if (durationDays < 1)
+        {
+            throw new ArgumentException(
+                "Taper stage duration must be at least 1 day.",
+                nameof(durationDays));
+        }
+        Dose = dose;
+        DurationDays = durationDays;
+    }
+}
+
+// Multi-stage (stepped) taper: an ordered sequence of stages, each a
+// flat dose held for its own number of days. Unlike TaperingSchedule
+// (a single constant step every fixed interval), the doses and
+// durations of each stage are arbitrary, so it can express regimens
+// such as "4/day for 7 days, then 2/day for 7 days, then 1/day for
+// 14 days". See docs/ANALYSIS-A1-STEPPED-TAPER.md §2.1.
+public sealed record SteppedTaperingSchedule : Schedule
+{
+    public IReadOnlyList<TaperStage> Stages { get; }
+
+    // When true, the last stage's DurationDays is ignored and its dose
+    // is held indefinitely (a maintenance regime). When false, the
+    // course ends once the last stage's days elapse and the rate
+    // returns to zero.
+    public bool MaintainLastDose { get; }
+
+    public SteppedTaperingSchedule(
+        IReadOnlyList<TaperStage> stages,
+        bool maintainLastDose = false)
+        : base(ScheduleKind.SteppedTapering)
+    {
+        ArgumentNullException.ThrowIfNull(stages);
+        if (stages.Count < 2)
+        {
+            throw new ArgumentException(
+                "Stepped tapering requires at least two stages; use FixedDailySchedule for a single constant dose.",
+                nameof(stages));
+        }
+        // Defensive copy so the caller cannot mutate the payload after
+        // construction (same discipline as WeeklySchedule). Each stage
+        // has already validated its own invariants in its constructor.
+        var buffer = new TaperStage[stages.Count];
+        for (var i = 0; i < stages.Count; i++)
+        {
+            buffer[i] = stages[i] ?? throw new ArgumentException(
+                "Stepped tapering stages cannot be null.", nameof(stages));
+        }
+        Stages = buffer;
+        MaintainLastDose = maintainLastDose;
+    }
+
+    public override decimal RateOn(DateOnly day, DateOnly anchor)
+    {
+        if (day < anchor) return 0m;
+        var elapsed = day.DayNumber - anchor.DayNumber; // 0-based
+        var cursor = 0;
+        for (var i = 0; i < Stages.Count; i++)
+        {
+            var stage = Stages[i];
+            var isLast = i == Stages.Count - 1;
+            // The last stage, when MaintainLastDose is set, holds its
+            // dose for any day at or past its start.
+            if (isLast && MaintainLastDose)
+            {
+                return stage.Dose;
+            }
+            if (elapsed < cursor + stage.DurationDays)
+            {
+                return stage.Dose;
+            }
+            cursor += stage.DurationDays;
+        }
+        // Past the end of a bounded course: the therapy is over.
+        return 0m;
+    }
+
+    // Records auto-generate equality from declared properties.
+    // IReadOnlyList<TaperStage> uses reference equality, which is wrong
+    // for two structurally identical schedules — override both, as
+    // WeeklySchedule does.
+    public bool Equals(SteppedTaperingSchedule? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        if (other.Kind != Kind) return false;
+        if (other.MaintainLastDose != MaintainLastDose) return false;
+        if (other.Stages.Count != Stages.Count) return false;
+        for (var i = 0; i < Stages.Count; i++)
+        {
+            if (Stages[i] != other.Stages[i]) return false;
+        }
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Kind);
+        hash.Add(MaintainLastDose);
+        foreach (var stage in Stages) hash.Add(stage);
+        return hash.ToHashCode();
+    }
 }

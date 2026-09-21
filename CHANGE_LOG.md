@@ -30,6 +30,48 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #TBD — Implement multi-stage (stepped) tapering regimens
+
+Link: [vger70/MedReminder#TBD](https://github.com/vger70/MedReminder/pull/TBD)
+**Status:** open
+
+Branch: `feature/stepped-tapering`
+
+Implements the multi-stage tapering regime designed in
+`docs/ANALYSIS-A1-STEPPED-TAPER.md` (PR #39). Tapering therapies can
+now step the dose down (or up) through an explicit list of stages,
+each with its own dose and its own duration — for example 4/day for 7
+days, then 2/day for 7 days, then 1/day for 14 days — which the linear
+tapering shipped with A1 could not express.
+
+### Added
+
+- New domain value objects `TaperStage` and `SteppedTaperingSchedule`
+  (`ScheduleKind.SteppedTapering = 5`) in `MedReminder.Domain`, with a
+  `MaintainLastDose` flag: by default the course ends after the last
+  stage, or the last dose is held indefinitely as a maintenance
+  regime when the flag is set. Serialized through the existing
+  `ScheduleCodec` into A1's `SchedulePayload` column — **no database
+  schema change**.
+- In the medicine and change-schedule dialogs, the Tapering panel now
+  offers a **Linear / Stepped** choice. Stepped mode has a dynamic
+  add/remove stage editor, a "keep the last dose as maintenance"
+  checkbox, and a live preview of the whole breakdown (per-stage
+  totals, day ranges and grand total) before saving.
+- 14 localization keys added to every dictionary (`en`, `it`, `fr`,
+  `es`, `de`).
+
+### Changed
+
+- `docs/USER_GUIDE.en.md` — the *Complex regimens* section documents
+  the Linear / Stepped split and the maintenance option.
+
+No change to the projection engine (the `Schedule.RateOn` contract and
+the day-by-day materializer already handle a varying rate), to the
+application command signatures, or to existing linear tapers.
+
+---
+
 ## PR #35 — Add A6 donation/support UI evolution to EVOLUTION.md
 
 Link: [vger70/MedReminder#35](https://github.com/vger70/MedReminder/pull/35)

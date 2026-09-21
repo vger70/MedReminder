@@ -73,9 +73,19 @@ On the **New medicine** form the *Schedule* selector switches from
 - **Cyclic (N on / M off)** — a fixed quantity for the first `N`
   days of the cycle followed by `M` days off. Typical of hormonal
   therapies and cortisone pulses.
-- **Tapering** — a decreasing (or increasing) dose that steps by a
-  fixed amount every fixed number of days until the end dose is
-  reached, then holds. Typical of glucocorticoid down-titration.
+- **Tapering** — a step-down (or step-up) dose. Two shapes are
+  available through the *Linear / Stepped* selector inside the
+  Tapering panel:
+  - **Linear** — the dose changes by a fixed amount every fixed
+    number of days until the end dose is reached, then holds.
+    Typical of a simple glucocorticoid down-titration.
+  - **Stepped** — an explicit list of stages, each with its own
+    dose and its own duration in days (for example 4/day for 7
+    days, then 2/day for 7 days, then 1/day for 14 days). Use
+    *Add stage* / *Remove* to shape the sequence, and read the
+    live preview below the list to check the totals before saving.
+    Tick *Keep the last dose as maintenance* when the final dose
+    should continue indefinitely instead of ending the course.
 - **As needed (PRN)** — no scheduled consumption. MedReminder keeps
   tracking the stock but the *days remaining* column stays empty
   until the schedule shape changes.

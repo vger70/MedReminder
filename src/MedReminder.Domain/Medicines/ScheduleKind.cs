@@ -15,4 +15,5 @@ public enum ScheduleKind
     Cyclic = 2,
     Tapering = 3,
     Prn = 4,
+    SteppedTapering = 5,
 }

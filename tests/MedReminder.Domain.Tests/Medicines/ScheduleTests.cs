@@ -184,4 +184,117 @@ public class ScheduleTests
         schedule.RateOn(Anchor.AddDays(1000), Anchor).Should().Be(0m);
         schedule.RateOn(Anchor.AddDays(-500), Anchor).Should().Be(0m);
     }
+
+    // ---------- TaperStage -----------------------------------------
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Taper_stage_rejects_non_positive_dose(int dose)
+    {
+        Action act = () => _ = new TaperStage(dose, 7);
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-3)]
+    public void Taper_stage_rejects_non_positive_duration(int days)
+    {
+        Action act = () => _ = new TaperStage(1m, days);
+        act.Should().Throw<ArgumentException>();
+    }
+
+    // ---------- SteppedTaperingSchedule ----------------------------
+
+    private static SteppedTaperingSchedule ThreeStageTaper(bool maintain = false)
+        // 4/day for 7 days, 2/day for 7 days, 1/day for 14 days.
+        => new(
+            new[]
+            {
+                new TaperStage(4m, 7),
+                new TaperStage(2m, 7),
+                new TaperStage(1m, 14),
+            },
+            maintainLastDose: maintain);
+
+    [Fact]
+    public void Stepped_taper_returns_the_dose_of_the_stage_containing_the_day()
+    {
+        var schedule = ThreeStageTaper();
+
+        // Stage 1: elapsed 0..6 → 4.
+        schedule.RateOn(Anchor, Anchor).Should().Be(4m);
+        schedule.RateOn(Anchor.AddDays(6), Anchor).Should().Be(4m);
+        // Stage 2: elapsed 7..13 → 2.
+        schedule.RateOn(Anchor.AddDays(7), Anchor).Should().Be(2m);
+        schedule.RateOn(Anchor.AddDays(13), Anchor).Should().Be(2m);
+        // Stage 3: elapsed 14..27 → 1.
+        schedule.RateOn(Anchor.AddDays(14), Anchor).Should().Be(1m);
+        schedule.RateOn(Anchor.AddDays(27), Anchor).Should().Be(1m);
+    }
+
+    [Fact]
+    public void Stepped_taper_seams_land_on_the_next_stage_exactly()
+    {
+        var schedule = ThreeStageTaper();
+        // Day 7 (elapsed 6) is the last day of stage 1; day 8 (elapsed
+        // 7) is the first day of stage 2.
+        schedule.RateOn(Anchor.AddDays(6), Anchor).Should().Be(4m);
+        schedule.RateOn(Anchor.AddDays(7), Anchor).Should().Be(2m);
+        schedule.RateOn(Anchor.AddDays(13), Anchor).Should().Be(2m);
+        schedule.RateOn(Anchor.AddDays(14), Anchor).Should().Be(1m);
+    }
+
+    [Fact]
+    public void Stepped_taper_returns_zero_before_the_anchor()
+    {
+        ThreeStageTaper().RateOn(Anchor.AddDays(-1), Anchor).Should().Be(0m);
+    }
+
+    [Fact]
+    public void Stepped_taper_bounded_course_returns_zero_after_the_last_stage()
+    {
+        var schedule = ThreeStageTaper();
+        // Total span is 7 + 7 + 14 = 28 days (elapsed 0..27).
+        schedule.RateOn(Anchor.AddDays(28), Anchor).Should().Be(0m);
+        schedule.RateOn(Anchor.AddDays(1000), Anchor).Should().Be(0m);
+    }
+
+    [Fact]
+    public void Stepped_taper_maintenance_holds_the_last_dose_indefinitely()
+    {
+        var schedule = ThreeStageTaper(maintain: true);
+        // Earlier stages behave the same...
+        schedule.RateOn(Anchor.AddDays(6), Anchor).Should().Be(4m);
+        schedule.RateOn(Anchor.AddDays(7), Anchor).Should().Be(2m);
+        // ...but the last dose now holds past the nominal end.
+        schedule.RateOn(Anchor.AddDays(14), Anchor).Should().Be(1m);
+        schedule.RateOn(Anchor.AddDays(28), Anchor).Should().Be(1m);
+        schedule.RateOn(Anchor.AddDays(1000), Anchor).Should().Be(1m);
+    }
+
+    [Fact]
+    public void Stepped_taper_rejects_fewer_than_two_stages()
+    {
+        Action act = () => _ = new SteppedTaperingSchedule(new[] { new TaperStage(1m, 7) });
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Stepped_taper_equality_is_structural()
+    {
+        ThreeStageTaper().Should().Be(ThreeStageTaper());
+        ThreeStageTaper().GetHashCode().Should().Be(ThreeStageTaper().GetHashCode());
+        // Differing maintenance flag compares unequal.
+        ThreeStageTaper(maintain: true).Should().NotBe(ThreeStageTaper(maintain: false));
+        // Differing stage compares unequal.
+        var other = new SteppedTaperingSchedule(new[]
+        {
+            new TaperStage(4m, 7),
+            new TaperStage(3m, 7),
+            new TaperStage(1m, 14),
+        });
+        ThreeStageTaper().Should().NotBe(other);
+    }
 }
