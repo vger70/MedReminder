@@ -330,13 +330,31 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (seed is not null) ApplySeed(seed);
     }
 
-    // Fired once the dialog becomes visible: in Edit mode with a
-    // seeded NationalCode, look up the current AIFA row to surface
-    // its LINK_FI / LINK_RCP. Fire-and-forget by design — a failed
-    // lookup must never block the dialog.
+    // Fired once the dialog becomes visible.
+    //
+    // 1) Seed the schedule editor with the therapy's current schedule
+    //    (Edit mode). Deferred to OnLoad, not the constructor, because
+    //    NumericUpDown values assigned to still parent-less controls
+    //    are not reflected once the controls are realized — the panel
+    //    would show the right regime type but reset every dose /
+    //    duration / day field to its default (same discipline as
+    //    ChangeScheduleDialog, fix bda16f5). This was previously fixed
+    //    in PR #42 and removed again in commit 0dbd0a4; reinstated
+    //    here so F2 / double-click / Modifica reopens the SchedulePanel
+    //    on the therapy's saved regime (weekly, cyclic, linear taper,
+    //    stepped taper, PRN) instead of resetting to Simple.
+    //
+    // 2) In Edit mode with a seeded NationalCode, look up the current
+    //    AIFA row to surface its LINK_FI / LINK_RCP. Fire-and-forget
+    //    by design — a failed lookup must never block the dialog.
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
+        if (_schedulePanel is not null)
+        {
+            _schedulePanel.ApplySchedule(_seedSchedule);
+            SyncSimpleControlsEnabled();
+        }
         _ = HydrateSeededDocumentsAsync();
     }
 

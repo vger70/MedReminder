@@ -73,18 +73,23 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
             Dock = DockStyle.Left,
             Width = 120,
         };
-        // If the medicine's StartDate is in the future, MinDate ends
-        // up above Today and assigning Value = Today throws
-        // ArgumentOutOfRangeException. The sensible default is the
-        // first allowed day.
+        // Default the picker to the therapy's start date rather than
+        // to today: when the user changes the dose or shape shortly
+        // after creating the medicine, the intent is almost always to
+        // make the new schedule effective from the beginning of the
+        // therapy, not from the current day. Users who want to backdate
+        // (or forward-date) a change to a different day can still edit
+        // the picker; MinDate keeps the value from going below the
+        // start date. Assigning minDate first also avoids the
+        // ArgumentOutOfRangeException DateTimePicker throws when
+        // MinDate is set above the current Value.
         var minDate = minimumEffectiveFrom.ToDateTime(TimeOnly.MinValue);
-        var initialValue = DateTime.Today >= minDate ? DateTime.Today : minDate;
         _effectiveFromPicker = new DateTimePicker
         {
             Format = DateTimePickerFormat.Short,
             Dock = DockStyle.Fill,
             MinDate = minDate,
-            Value = initialValue,
+            Value = minDate,
         };
 
         var note = new Label
