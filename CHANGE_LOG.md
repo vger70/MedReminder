@@ -30,6 +30,55 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #40 — Implement multi-stage (stepped) tapering regimens
+
+Link: [vger70/MedReminder#40](https://github.com/vger70/MedReminder/pull/40)
+**Status:** open
+
+Branch: `feature/stepped-tapering`
+
+Implements the multi-stage tapering regime designed in
+`docs/ANALYSIS-A1-STEPPED-TAPER.md` (PR #39). Tapering therapies can
+now step the dose down (or up) through an explicit list of stages,
+each with its own dose and its own duration — for example 4/day for 7
+days, then 2/day for 7 days, then 1/day for 14 days — which the linear
+tapering shipped with A1 could not express.
+
+### Added
+
+- New domain value objects `TaperStage` and `SteppedTaperingSchedule`
+  (`ScheduleKind.SteppedTapering = 5`) in `MedReminder.Domain`, with a
+  `MaintainLastDose` flag: by default the course ends after the last
+  stage, or the last dose is held indefinitely as a maintenance
+  regime when the flag is set. Serialized through the existing
+  `ScheduleCodec` into A1's `SchedulePayload` column — **no database
+  schema change**.
+- In the medicine and change-schedule dialogs, the Tapering panel now
+  offers a **Linear / Stepped** choice. Stepped mode has a dynamic
+  add/remove stage editor, a "keep the last dose as maintenance"
+  checkbox, and a live preview of the whole breakdown (per-stage
+  totals, day ranges and grand total) before saving.
+- 14 localization keys added to every dictionary (`en`, `it`, `fr`,
+  `es`, `de`).
+
+### Changed
+
+- `docs/USER_GUIDE.en.md` — the *Complex regimens* section documents
+  the Linear / Stepped split and the maintenance option.
+
+### Fixed
+
+- The *Change dose/frequency* dialog now opens pre-populated with the
+  therapy's current schedule. Previously it always reset to Simple
+  mode, so an existing advanced regime (stepped, but also weekly,
+  cyclic, tapering or PRN) looked as if it had never been saved.
+  `MainForm` now loads the latest `MedicationScheduleHistory` entry,
+  rebuilds the `Schedule` via `ScheduleCodec` and seeds the dialog's
+  `SchedulePanel` through the existing `ApplySchedule`.
+
+No change to the projection engine (the `Schedule.RateOn` contract and
+the day-by-day materializer already handle a varying rate), to the
+application command signatures, or to existing linear tapers.
 ## PR #38 — Implement A6 donation / Support Development feature
 
 Link: [vger70/MedReminder#38](https://github.com/vger70/MedReminder/pull/38)

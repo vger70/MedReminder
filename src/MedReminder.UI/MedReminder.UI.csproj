@@ -42,6 +42,10 @@
     <ProjectReference Include="..\MedReminder.Infrastructure\MedReminder.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="MedReminder.UI.Tests" />
+  </ItemGroup>
+
   <!--
     The Microsoft.Web.WebView2 NuGet package references both the
     WinForms and the WPF integration assemblies. This project is

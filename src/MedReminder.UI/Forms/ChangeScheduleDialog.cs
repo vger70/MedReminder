@@ -24,6 +24,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
     private readonly NumericUpDown _freqBox;
     private readonly DateTimePicker _effectiveFromPicker;
     private readonly SchedulePanel _schedulePanel;
+    private readonly Schedule? _seedSchedule;
 
 
     public ChangeScheduleDialog(
@@ -31,7 +32,8 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         decimal currentDose,
         int currentFreq,
         DateOnly minimumEffectiveFrom,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        Schedule? currentSchedule = null)
     {
         _loc = localization;
         Text = _loc.Get("Ui.ChangeScheduleDialog.Title");
@@ -109,6 +111,13 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
 
         _schedulePanel = new SchedulePanel(_loc);
         _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
+        // Seeding is deferred to OnLoad: the therapy's current schedule
+        // is applied only once the panel's controls have a native
+        // handle, otherwise NumericUpDown values assigned to still
+        // parent-less controls are not reflected when they are realized
+        // (the kind dropdown would populate but the numeric fields
+        // would show their defaults).
+        _seedSchedule = currentSchedule;
 
         AddRow(table, string.Empty, header);
         AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewDose"), _doseBox);
@@ -139,6 +148,16 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         AcceptButton = okButton;
         CancelButton = cancelButton;
 
+        SyncSimpleControlsEnabled();
+    }
+
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        // Now that the panel's controls are realized, seed it with the
+        // therapy's current schedule and sync the Simple / Advanced
+        // enabled state to whatever mode the seed selected.
+        _schedulePanel.ApplySchedule(_seedSchedule);
         SyncSimpleControlsEnabled();
     }
 

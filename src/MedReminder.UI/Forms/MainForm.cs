@@ -7,6 +7,7 @@ using MedReminder.Application.Monitoring;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Medicines;
 using MedReminder.Infrastructure.Email;
 using MedReminder.UI.Presentation;
 using MedReminder.UI.Tray;
@@ -963,6 +964,26 @@ internal sealed class MainForm : MedReminderFormBase
             var slots = await slotRepo.ListForMedicineAsync(row.Id, CancellationToken.None);
             IReadOnlyList<AdministrationSlotEntry> seedSlots = [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel))];
 
+            // Reconstruct the therapy's current schedule from the most
+            // recent history entry, so the edit dialog opens
+            // pre-populated with an existing advanced regime instead of
+            // resetting to Simple.
+            var schedules = scope.ServiceProvider.GetRequiredService<IMedicationScheduleHistoryRepository>();
+            var history = await schedules.ListForMedicineAsync(row.Id, CancellationToken.None);
+            MedicationScheduleHistory? latest = null;
+            foreach (var entry in history)
+            {
+                if (latest is null || entry.EffectiveFrom > latest.EffectiveFrom)
+                {
+                    latest = entry;
+                }
+            }
+            var currentSchedule = latest is null
+                ? null
+                : ScheduleCodec.Deserialize(
+                    latest.ScheduleKind, latest.SchedulePayload,
+                    latest.DosePerAdministration, latest.AdministrationsPerDay);
+
             seed = new MedicineEditResult(
                 medicine.Name, medicine.ActiveIngredient, medicine.Package, medicine.Unit,
                 medicine.DosePerAdministration, medicine.AdministrationsPerDay,
@@ -972,7 +993,8 @@ internal sealed class MainForm : MedReminderFormBase
                 Slots: seedSlots,
                 NationalCode: medicine.NationalCode,
                 AtcCode: medicine.AtcCode,
-                LinkedReferenceMedicineId: medicine.LinkedReferenceMedicineId);
+                LinkedReferenceMedicineId: medicine.LinkedReferenceMedicineId,
+                InitialSchedule: currentSchedule);
         }
         catch (Exception ex)
         {
@@ -990,6 +1012,35 @@ internal sealed class MainForm : MedReminderFormBase
             await using var scope = _scopeFactory.CreateAsyncScope();
             var usecase = scope.ServiceProvider.GetRequiredService<UpdateMedicine>();
             await usecase.ExecuteAsync(dialog.Result.ToUpdateCommand(row.Id), CancellationToken.None);
+
+            // If the user changed the schedule shape in the edit dialog,
+            // record it as a new versioned schedule entry effective
+            // today, preserving the timeline before that date.
+            // UpdateMedicine deliberately does not touch the schedule,
+            // so this is the path that persists it.
+            //
+            // Advanced mode → InitialSchedule is the chosen value object.
+            // Simple mode → InitialSchedule is null; if the seed was an
+            // advanced regime, the user switched back to a plain fixed
+            // daily dose, which we persist as a FixedDailySchedule built
+            // from the dose / frequency fields.
+            var chosen = dialog.Result.InitialSchedule
+                ?? new FixedDailySchedule(
+                    dialog.Result.DosePerAdministration,
+                    dialog.Result.AdministrationsPerDay);
+            var seedSchedule = seed.InitialSchedule
+                ?? new FixedDailySchedule(seed.DosePerAdministration, seed.AdministrationsPerDay);
+            if (!chosen.Equals(seedSchedule))
+            {
+                var change = scope.ServiceProvider.GetRequiredService<ChangeMedicationSchedule>();
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var effectiveFrom = today < seed.StartDate ? seed.StartDate : today;
+                var (displayDose, displayFreq) = ScheduleDisplayValues(chosen, seed);
+                await change.ExecuteAsync(
+                    new ChangeMedicationScheduleCommand(row.Id, displayDose, displayFreq, effectiveFrom, chosen),
+                    CancellationToken.None);
+            }
+
             await ReloadAsync();
         }
         catch (Exception ex)
@@ -997,6 +1048,23 @@ internal sealed class MainForm : MedReminderFormBase
             ShowError(_loc.Get("Ui.MainForm.Error.UpdateMedicine"), ex);
         }
     }
+
+    // Quick-glance dose / frequency stored on the Medicine row for a
+    // non-FixedDaily schedule. Mirrors the display back-fill described
+    // in docs/ANALYSIS-A1-STEPPED-TAPER.md §3.2 / ANALYSIS-A1-REGIMENS.md
+    // §3.5 — never used by the projection, only for the summary column.
+    private static (decimal Dose, int Freq) ScheduleDisplayValues(
+        Schedule schedule, MedicineEditResult seed)
+        => schedule switch
+        {
+            FixedDailySchedule f => (f.DosePerAdministration, f.AdministrationsPerDay),
+            SteppedTaperingSchedule s => (s.Stages[0].Dose, 1),
+            TaperingSchedule t => (t.StartDose, 1),
+            CyclicSchedule c => (c.QuantityPerOnDay, 1),
+            WeeklySchedule => (seed.DosePerAdministration, 1),
+            PrnSchedule => (seed.DosePerAdministration, 1),
+            _ => (seed.DosePerAdministration, seed.AdministrationsPerDay),
+        };
 
     private async Task DeactivateSelectedAsync()
     {
@@ -1036,6 +1104,7 @@ internal sealed class MainForm : MedReminderFormBase
         decimal currentDose;
         int currentFreq;
         DateOnly startDate;
+        Schedule? currentSchedule = null;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -1045,6 +1114,31 @@ internal sealed class MainForm : MedReminderFormBase
             currentDose = medicine.DosePerAdministration;
             currentFreq = medicine.AdministrationsPerDay;
             startDate = medicine.StartDate;
+
+            // Reconstruct the therapy's current schedule from the most
+            // recent history entry so the dialog opens pre-populated
+            // with an existing advanced regime instead of resetting to
+            // Simple. FixedDaily reconstructs to a FixedDailySchedule,
+            // which the dialog treats as Simple mode.
+            var schedules = scope.ServiceProvider
+                .GetRequiredService<IMedicationScheduleHistoryRepository>();
+            var history = await schedules.ListForMedicineAsync(row.Id, CancellationToken.None);
+            MedicationScheduleHistory? latest = null;
+            foreach (var entry in history)
+            {
+                if (latest is null || entry.EffectiveFrom > latest.EffectiveFrom)
+                {
+                    latest = entry;
+                }
+            }
+            if (latest is not null)
+            {
+                currentSchedule = ScheduleCodec.Deserialize(
+                    latest.ScheduleKind,
+                    latest.SchedulePayload,
+                    latest.DosePerAdministration,
+                    latest.AdministrationsPerDay);
+            }
         }
         catch (Exception ex)
         {
@@ -1052,7 +1146,7 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        using var dialog = new ChangeScheduleDialog(row.Name, currentDose, currentFreq, startDate, _loc);
+        using var dialog = new ChangeScheduleDialog(row.Name, currentDose, currentFreq, startDate, _loc, currentSchedule);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try

@@ -279,4 +279,64 @@ public class ConsumptionMaterializerTests
         plan.Should().HaveCount(7);
         plan.Select(p => p.Quantity).Should().Equal(1m, 0.5m, 1m, 0.5m, 1m, 0.5m, 0.5m);
     }
+
+    [Fact]
+    public void Plan_stepped_tapering_bounded_course_materializes_each_stage_then_stops()
+    {
+        // 4/day for 7 days, 2/day for 7 days, 1/day for 14 days = 56 units.
+        var effectiveFrom = new DateOnly(2026, 3, 1);
+        var medicine = DomainFactory.Medicine(startDate: effectiveFrom);
+        var schedule = new[]
+        {
+            DomainFactory.ScheduleFor(effectiveFrom, new SteppedTaperingSchedule(new[]
+            {
+                new TaperStage(4m, 7),
+                new TaperStage(2m, 7),
+                new TaperStage(1m, 14),
+            })),
+        };
+
+        var plan = ConsumptionMaterializer.Plan(
+            medicine,
+            effectiveFrom,
+            effectiveFrom.AddDays(34),   // window extends past the 28-day course
+            schedule,
+            Array.Empty<MedicationSuspension>());
+
+        // Nothing beyond day 28 (elapsed 27); the course is over.
+        plan.Should().HaveCount(28);
+        plan.Take(7).Should().OnlyContain(p => p.Quantity == 4m);
+        plan.Skip(7).Take(7).Should().OnlyContain(p => p.Quantity == 2m);
+        plan.Skip(14).Take(14).Should().OnlyContain(p => p.Quantity == 1m);
+        plan.Sum(p => p.Quantity).Should().Be(56m);
+    }
+
+    [Fact]
+    public void Plan_stepped_tapering_maintenance_keeps_the_last_dose_past_the_last_stage()
+    {
+        var effectiveFrom = new DateOnly(2026, 3, 1);
+        var medicine = DomainFactory.Medicine(startDate: effectiveFrom);
+        var schedule = new[]
+        {
+            DomainFactory.ScheduleFor(effectiveFrom, new SteppedTaperingSchedule(
+                new[]
+                {
+                    new TaperStage(4m, 7),
+                    new TaperStage(2m, 7),
+                    new TaperStage(1m, 14),
+                },
+                maintainLastDose: true)),
+        };
+
+        var plan = ConsumptionMaterializer.Plan(
+            medicine,
+            effectiveFrom,
+            effectiveFrom.AddDays(34),   // 35 days
+            schedule,
+            Array.Empty<MedicationSuspension>());
+
+        plan.Should().HaveCount(35);
+        // Days 28..34 (elapsed 28..34) keep the maintenance dose of 1.
+        plan.Skip(28).Should().OnlyContain(p => p.Quantity == 1m);
+    }
 }

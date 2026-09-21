@@ -45,12 +45,23 @@ internal sealed class SchedulePanel
     private readonly NumericUpDown _cyclicQuantity;
     private readonly Label _cyclicSummary;
 
-    // Tapering controls.
+    // Tapering controls (linear sub-mode).
+    private readonly RadioButton _taperingModeLinear;
+    private readonly RadioButton _taperingModeStepped;
+    private readonly Panel _taperingLinearPanel;
     private readonly NumericUpDown _taperingStart;
     private readonly NumericUpDown _taperingEnd;
     private readonly NumericUpDown _taperingStep;
     private readonly NumericUpDown _taperingInterval;
     private readonly Label _taperingSummary;
+
+    // Tapering controls (stepped sub-mode).
+    private readonly Panel _taperingSteppedPanel;
+    private readonly TableLayoutPanel _stageRows;
+    private readonly Button _addStageButton;
+    private readonly CheckBox _maintainLastDose;
+    private readonly Label _steppedPreview;
+    private readonly List<StageRow> _stages = new();
 
     public SchedulePanel(ILocalizationService localization)
     {
@@ -118,8 +129,60 @@ internal sealed class SchedulePanel
         _taperingEnd.ValueChanged += (_, _) => UpdateTaperingSummary();
         _taperingStep.ValueChanged += (_, _) => UpdateTaperingSummary();
         _taperingInterval.ValueChanged += (_, _) => UpdateTaperingSummary();
+
+        _taperingModeLinear = new RadioButton
+        {
+            Text = _loc.Get("Ui.Schedule.Tapering.Mode.Linear"),
+            AutoSize = true,
+            Checked = true,
+        };
+        _taperingModeStepped = new RadioButton
+        {
+            Text = _loc.Get("Ui.Schedule.Tapering.Mode.Stepped"),
+            AutoSize = true,
+        };
+        _taperingModeLinear.CheckedChanged += (_, _) => UpdateTaperingSubModeVisibility();
+        _taperingModeStepped.CheckedChanged += (_, _) => UpdateTaperingSubModeVisibility();
+
+        _stageRows = new TableLayoutPanel
+        {
+            ColumnCount = 4,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = Padding.Empty,
+        };
+        for (var i = 0; i < 4; i++) _stageRows.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _addStageButton = new Button
+        {
+            Text = _loc.Get("Ui.Schedule.Tapering.Stepped.AddStage"),
+            AutoSize = true,
+            Margin = new Padding(0, 4, 0, 4),
+        };
+        _addStageButton.Click += (_, _) => { AddStageRow(4m, 7); RefreshStages(); };
+        _maintainLastDose = new CheckBox
+        {
+            Text = _loc.Get("Ui.Schedule.Tapering.Stepped.Maintain"),
+            AutoSize = true,
+            Margin = new Padding(0, 4, 0, 4),
+        };
+        _maintainLastDose.CheckedChanged += (_, _) => RefreshStages();
+        _steppedPreview = new Label
+        {
+            AutoSize = true,
+            ForeColor = System.Drawing.Color.DarkGray,
+            Margin = new Padding(0, 4, 0, 0),
+        };
+
+        _taperingLinearPanel = BuildTaperingLinearPanel();
+        _taperingSteppedPanel = BuildTaperingSteppedPanel();
         _taperingPanel = BuildTaperingPanel();
         UpdateTaperingSummary();
+        // Seed the stepped editor with two default stages so it is
+        // always valid the moment the user switches to it.
+        AddStageRow(4m, 7);
+        AddStageRow(2m, 7);
+        RefreshStages();
+        UpdateTaperingSubModeVisibility();
 
         _prnPanel = BuildPrnPanel();
 
@@ -162,8 +225,7 @@ internal sealed class SchedulePanel
                 ScheduleKind.FixedDaily => new FixedDailySchedule(_fixedDose.Value, (int)_fixedAdmin.Value),
                 ScheduleKind.Weekly => BuildWeekly(),
                 ScheduleKind.Cyclic => new CyclicSchedule((int)_cyclicOn.Value, (int)_cyclicOff.Value, _cyclicQuantity.Value),
-                ScheduleKind.Tapering => new TaperingSchedule(
-                    _taperingStart.Value, _taperingEnd.Value, _taperingStep.Value, (int)_taperingInterval.Value),
+                ScheduleKind.Tapering => BuildTapering(),
                 ScheduleKind.Prn => new PrnSchedule(),
                 _ => new FixedDailySchedule(_fixedDose.Value, (int)_fixedAdmin.Value),
             };
@@ -210,11 +272,20 @@ internal sealed class SchedulePanel
                 break;
             case TaperingSchedule t:
                 SelectKind(ScheduleKind.Tapering);
+                _taperingModeLinear.Checked = true;
                 _taperingStart.Value = ClampDecimal(t.StartDose, _taperingStart.Minimum, _taperingStart.Maximum);
                 _taperingEnd.Value = ClampDecimal(t.EndDose, _taperingEnd.Minimum, _taperingEnd.Maximum);
                 _taperingStep.Value = ClampDecimal(t.Step, _taperingStep.Minimum, _taperingStep.Maximum);
                 _taperingInterval.Value = ClampInt(t.IntervalDays, (int)_taperingInterval.Minimum, (int)_taperingInterval.Maximum);
                 UpdateTaperingSummary();
+                break;
+            case SteppedTaperingSchedule s:
+                SelectKind(ScheduleKind.Tapering);
+                _taperingModeStepped.Checked = true;
+                ClearStageRows();
+                foreach (var stage in s.Stages) AddStageRow(stage.Dose, stage.DurationDays);
+                _maintainLastDose.Checked = s.MaintainLastDose;
+                RefreshStages();
                 break;
             case PrnSchedule:
                 SelectKind(ScheduleKind.Prn);
@@ -449,7 +520,39 @@ internal sealed class SchedulePanel
         return panel;
     }
 
+    // Outer tapering panel: a Linear / Stepped radio pair on top of the
+    // two sub-mode panels. Only one sub-panel is visible at a time.
     private Panel BuildTaperingPanel()
+    {
+        var panel = new TableLayoutPanel
+        {
+            ColumnCount = 1,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(0, 4, 0, 4),
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+        var modeRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            Margin = Padding.Empty,
+        };
+        modeRow.Controls.Add(_taperingModeLinear);
+        modeRow.Controls.Add(_taperingModeStepped);
+
+        panel.RowCount = 3;
+        for (var i = 0; i < 3; i++) panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        panel.Controls.Add(modeRow, 0, 0);
+        panel.Controls.Add(_taperingLinearPanel, 0, 1);
+        panel.Controls.Add(_taperingSteppedPanel, 0, 2);
+        return panel;
+    }
+
+    private Panel BuildTaperingLinearPanel()
     {
         var panel = new TableLayoutPanel
         {
@@ -468,6 +571,185 @@ internal sealed class SchedulePanel
         return panel;
     }
 
+    private Panel BuildTaperingSteppedPanel()
+    {
+        var panel = new TableLayoutPanel
+        {
+            ColumnCount = 1,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(0, 4, 0, 4),
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        panel.RowCount = 4;
+        for (var i = 0; i < 4; i++) panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        panel.Controls.Add(_stageRows, 0, 0);
+        panel.Controls.Add(_addStageButton, 0, 1);
+        panel.Controls.Add(_maintainLastDose, 0, 2);
+        panel.Controls.Add(_steppedPreview, 0, 3);
+        return panel;
+    }
+
+    private Schedule BuildTapering()
+    {
+        if (!_taperingModeStepped.Checked)
+        {
+            return new TaperingSchedule(
+                _taperingStart.Value, _taperingEnd.Value, _taperingStep.Value, (int)_taperingInterval.Value);
+        }
+        var stages = new List<TaperStage>(_stages.Count);
+        foreach (var row in _stages)
+        {
+            stages.Add(new TaperStage(row.Dose.Value, (int)row.Duration.Value));
+        }
+        return new SteppedTaperingSchedule(stages, _maintainLastDose.Checked);
+    }
+
+    private void AddStageRow(decimal dose, int durationDays)
+    {
+        var index = _stages.Count;
+        var stageLabel = new Label
+        {
+            Text = string.Format(
+                CultureInfo.CurrentUICulture,
+                _loc.Get("Ui.Schedule.Tapering.Stepped.Stage"),
+                index + 1),
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 6, 8, 2),
+        };
+        var doseBox = MakeDecimal(0.01m, 1000m, decimals: 2, initial: ClampDecimal(dose, 0.01m, 1000m));
+        var durationBox = MakeInteger(1, 3650, initial: ClampInt(durationDays, 1, 3650));
+        var removeButton = new Button
+        {
+            Text = _loc.Get("Ui.Schedule.Tapering.Stepped.Remove"),
+            AutoSize = true,
+            Margin = new Padding(8, 2, 0, 2),
+        };
+
+        var row = new StageRow(stageLabel, doseBox, durationBox, removeButton);
+        doseBox.ValueChanged += (_, _) => UpdateSteppedPreview();
+        durationBox.ValueChanged += (_, _) => UpdateSteppedPreview();
+        removeButton.Click += (_, _) => RemoveStageRow(row);
+
+        _stages.Add(row);
+        RebuildStageGrid();
+    }
+
+    private void RemoveStageRow(StageRow row)
+    {
+        // Never let the user drop below the two-stage invariant.
+        if (_stages.Count <= 2) return;
+        _stages.Remove(row);
+        RebuildStageGrid();
+        RefreshStages();
+    }
+
+    private void ClearStageRows()
+    {
+        _stages.Clear();
+        RebuildStageGrid();
+    }
+
+    // Re-lays every stage row into the grid; called after add / remove
+    // so the stage numbers and row positions stay contiguous.
+    private void RebuildStageGrid()
+    {
+        _stageRows.SuspendLayout();
+        _stageRows.Controls.Clear();
+        _stageRows.RowStyles.Clear();
+        _stageRows.RowCount = _stages.Count + 1;
+
+        // Row 0: column headers (Dose / Duration).
+        _stageRows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _stageRows.Controls.Add(new Label { Text = string.Empty, AutoSize = true }, 0, 0);
+        _stageRows.Controls.Add(HeaderCell(_loc.Get("Ui.Schedule.Tapering.Stepped.Dose")), 1, 0);
+        _stageRows.Controls.Add(HeaderCell(_loc.Get("Ui.Schedule.Tapering.Stepped.Duration")), 2, 0);
+        _stageRows.Controls.Add(new Label { Text = string.Empty, AutoSize = true }, 3, 0);
+
+        for (var i = 0; i < _stages.Count; i++)
+        {
+            var row = _stages[i];
+            var gridRow = i + 1;
+            row.Label.Text = string.Format(
+                CultureInfo.CurrentUICulture,
+                _loc.Get("Ui.Schedule.Tapering.Stepped.Stage"),
+                i + 1);
+            _stageRows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            _stageRows.Controls.Add(row.Label, 0, gridRow);
+            _stageRows.Controls.Add(row.Dose, 1, gridRow);
+            _stageRows.Controls.Add(row.Duration, 2, gridRow);
+            _stageRows.Controls.Add(row.Remove, 3, gridRow);
+            // Remove is disabled while only the two mandatory stages
+            // remain, so the UI cannot break the >= 2 invariant.
+            row.Remove.Enabled = _stages.Count > 2;
+        }
+        _stageRows.ResumeLayout(true);
+    }
+
+    private void RefreshStages()
+    {
+        // The last stage's duration is irrelevant when the last dose is
+        // held indefinitely — gray it out so that is visible.
+        if (_stages.Count > 0)
+        {
+            var last = _stages[^1];
+            last.Duration.Enabled = !_maintainLastDose.Checked;
+        }
+        UpdateSteppedPreview();
+    }
+
+    private void UpdateTaperingSubModeVisibility()
+    {
+        _taperingLinearPanel.Visible = !_taperingModeStepped.Checked;
+        _taperingSteppedPanel.Visible = _taperingModeStepped.Checked;
+    }
+
+    private void UpdateSteppedPreview()
+    {
+        var builder = new System.Text.StringBuilder();
+        var cumulativeDay = 1;      // 1-based for display
+        decimal total = 0m;
+        for (var i = 0; i < _stages.Count; i++)
+        {
+            var row = _stages[i];
+            var dose = row.Dose.Value;
+            var days = (int)row.Duration.Value;
+            var isLast = i == _stages.Count - 1;
+            if (isLast && _maintainLastDose.Checked)
+            {
+                builder.AppendLine(string.Format(
+                    CultureInfo.CurrentUICulture,
+                    _loc.Get("Ui.Schedule.Tapering.Stepped.PreviewRowMaint"),
+                    i + 1,
+                    dose.ToString("0.##", CultureInfo.CurrentUICulture),
+                    cumulativeDay));
+            }
+            else
+            {
+                var lastDay = cumulativeDay + days - 1;
+                builder.AppendLine(string.Format(
+                    CultureInfo.CurrentUICulture,
+                    _loc.Get("Ui.Schedule.Tapering.Stepped.PreviewRow"),
+                    i + 1,
+                    dose.ToString("0.##", CultureInfo.CurrentUICulture),
+                    days,
+                    (dose * days).ToString("0.##", CultureInfo.CurrentUICulture),
+                    cumulativeDay,
+                    lastDay));
+                total += dose * days;
+                cumulativeDay = lastDay + 1;
+            }
+        }
+        var totalDays = cumulativeDay - 1;
+        builder.Append(string.Format(
+            CultureInfo.CurrentUICulture,
+            _loc.Get("Ui.Schedule.Tapering.Stepped.PreviewTotal"),
+            totalDays,
+            total.ToString("0.##", CultureInfo.CurrentUICulture)));
+        _steppedPreview.Text = builder.ToString();
+    }
+
     private Panel BuildPrnPanel()
     {
         var panel = new Panel
@@ -484,6 +766,15 @@ internal sealed class SchedulePanel
         });
         return panel;
     }
+
+    private static Label HeaderCell(string text)
+        => new()
+        {
+            Text = text,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(4, 4, 4, 2),
+        };
 
     private static void AddRow(TableLayoutPanel table, string label, Control input)
     {
@@ -526,4 +817,12 @@ internal sealed class SchedulePanel
     {
         public override string ToString() => Label;
     }
+
+    // One editable row of the stepped-taper editor: its stage label,
+    // the dose and duration inputs, and the remove button.
+    private sealed record StageRow(
+        Label Label,
+        NumericUpDown Dose,
+        NumericUpDown Duration,
+        Button Remove);
 }
