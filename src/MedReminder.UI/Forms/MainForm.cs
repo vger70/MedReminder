@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Reflection;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Donations;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
@@ -48,6 +49,7 @@ internal sealed class MainForm : MedReminderFormBase
     private readonly ICurrentProfile _currentProfile;
     private readonly IProfileRegistry _profileRegistry;
     private readonly IApplicationRestarter _restarter;
+    private readonly DonationService _donations;
 
     private DataGridView _grid = null!;
     private BindingList<MedicineListItem> _rows = [];
@@ -80,7 +82,8 @@ internal sealed class MainForm : MedReminderFormBase
         ILocalizationService localization,
         ICurrentProfile currentProfile,
         IProfileRegistry profileRegistry,
-        IApplicationRestarter restarter)
+        IApplicationRestarter restarter,
+        DonationService donations)
     {
         _scopeFactory = scopeFactory;
         _tray = tray;
@@ -89,6 +92,7 @@ internal sealed class MainForm : MedReminderFormBase
         _currentProfile = currentProfile;
         _profileRegistry = profileRegistry;
         _restarter = restarter;
+        _donations = donations;
 
         // Title bar shows the active profile so multi-profile users
         // can always see which one is open (§12.1).
@@ -238,6 +242,18 @@ internal sealed class MainForm : MedReminderFormBase
         helpMenu.DropDownItems.Add(helpCheckUpdates);
         helpMenu.DropDownItems.Add(helpAbout);
 
+        // Support Development (A6). Only shown when the donation feature
+        // is enabled and a provider is configured — no nagware, no
+        // auto-popup. Hidden entirely otherwise (§8.1).
+        if (_donations.IsFeatureAvailable)
+        {
+            helpMenu.DropDownItems.Add(new ToolStripSeparator());
+            helpMenu.DropDownItems.Add(BuildMenuItem(
+                _loc.Get("Ui.MenuHelp.SupportDevelopment"),
+                Mdl2Glyph.Glyphs.HealthReport, Keys.None,
+                () => { ShowDonateDialog(); return Task.CompletedTask; }));
+        }
+
         var strip = new MenuStrip { Dock = DockStyle.Top };
         strip.Items.Add(fileMenu);
         strip.Items.Add(therapyMenu);
@@ -288,6 +304,23 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             _log.LogError(ex, "Failed to open the About dialog.");
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ShowDonateDialog()
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            using var dialog = scope.ServiceProvider.GetRequiredService<DonateForm>();
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to open the Support Development dialog.");
             MessageBox.Show(this, ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);

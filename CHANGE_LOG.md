@@ -30,6 +30,54 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #38 — Implement A6 donation / Support Development feature
+
+Link: [vger70/MedReminder#38](https://github.com/vger70/MedReminder/pull/38)
+**Status:** open
+
+Branch: `feature/donation-support`
+
+Implements feature A6: an unobtrusive "Support Development" surface.
+A dialog lets the user pick a fixed donation tier (€2/€5/€10/€20) or a
+provider-native custom amount, choose a provider (Stripe or PayPal),
+and open the provider's public hosted payment page in the default
+browser. The app never handles money, holds no secrets, and never
+claims a payment succeeded. Hosted Payment Links only; no backend, no
+webhooks, no card data, no false confirmation, no nagware. Zero new
+NuGet packages, no schema change, no per-profile data. The feature is
+off unless a `donations.settings.json` with `Enabled: true` and valid
+HTTPS links is present, in which case the menu entry stays hidden.
+
+### Added
+
+- Application `Donations`: `DonationProvider` enum (Stripe/PayPal live,
+  KoFi/BuyMeACoffee reserved), `IDonationProvider` / `IUrlLauncher`
+  ports, `DonationOptions` / `ProviderOptions`, `DonationLaunchResult`,
+  `DonationFailureReason`, and `DonationService` — the single
+  orchestrator owning the ordered validation pipeline.
+- Infrastructure adapters: `StripeDonationProvider`,
+  `PayPalDonationProvider`, `ShellUrlLauncher` (the only place
+  `Process.Start` is called), `JsonDonationOptionsProvider`.
+- UI `DonateForm` and a "Support Development" entry under the Help menu,
+  hidden when the feature is disabled or unconfigured.
+- `donations.settings.json` template with placeholder links (custom
+  "choose your amount" key included).
+- Localization keys in all five dictionaries.
+
+### Docs
+
+- "Support Development" section in the user guides.
+- Maintainer section in `docs/PACKAGING.md` on creating Stripe / PayPal
+  Payment Links (including the custom-amount link) and populating
+  `donations.settings.json`.
+
+### Tests
+
+- `DonationService` tests (fixed tiers, amount validation,
+  feature/provider gates, malformed/non-HTTPS links, launch success and
+  failure, custom-amount verbatim launch and failure modes).
+- Infrastructure tests for the provider adapters and the JSON options
+  loader.
 ## PR #39 — Add analysis for multi-stage (stepped) tapering regimens
 
 Link: [vger70/MedReminder#39](https://github.com/vger70/MedReminder/pull/39)
