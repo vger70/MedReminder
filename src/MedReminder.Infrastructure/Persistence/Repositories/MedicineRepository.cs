@@ -25,6 +25,16 @@ internal sealed class MedicineRepository : IMedicineRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Medicine>> ListActiveWithDoseReminderAsync(
+        CancellationToken cancellationToken)
+    {
+        return await _db.Medicines
+            .AsNoTracking()
+            .Where(m => m.IsActive && m.RemindOnDose)
+            .OrderBy(m => m.Name)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Medicine>> ListAllAsync(CancellationToken cancellationToken)
     {
         return await _db.Medicines

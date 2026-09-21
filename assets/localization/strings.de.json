@@ -149,6 +149,10 @@
   "Ui.MedicineEditDialog.Field.NotifyWindowsShort": "Windows-Benachrichtigung",
   "Ui.MedicineEditDialog.Field.NotifyEmailShort": "E-Mail",
   "Ui.MedicineEditDialog.Field.IsActive": "Aktiv",
+  "Ui.MedicineEditDialog.Field.RemindOnDose": "Zur Einnahmezeit erinnern",
+  "Ui.MedicineEditDialog.RemindOnDose.Help": "Sendet zu jeder geplanten Einnahmezeit eine Benachrichtigung.",
+  "Ui.MedicineEditDialog.RemindOnDose.DisabledNoTime": "Für dieses Medikament sind keine Einnahmezeiten konfiguriert.",
+  "Ui.MedicineEditDialog.RemindOnDose.DisabledNoStock": "Nicht verfügbar, wenn der Bestand null ist.",
   "Ui.MedicineEditDialog.Field.HasEndDateFull": "Mit Therapieende",
   "Ui.MedicineEditDialog.Field.StartDateFull": "Beginn der Therapie*",
   "Ui.MedicineEditDialog.Field.EndDateFull": "Ende der Therapie",
@@ -443,6 +447,8 @@
 
   "Notifications.Toast.Title": "{0}: {1} Tage verbleiben",
   "Notifications.Toast.Body": "Geschätzt für {0} Tage. Es ist ratsam, ein neues Rezept anzufordern.",
+  "Notifications.DoseReminder.Title": "Zeit für die Einnahme von {0}",
+  "Notifications.DoseReminder.Body": "{0} — geplante Dosis um {1}",
 
   "Reports.Therapy.Header": "Therapieplan — MedReminder",
   "Reports.Therapy.Date": "Datum: {0}",
