@@ -52,6 +52,14 @@ Branch: `claude/relaxed-shannon-4unkbv`
   now calls `ApplySchedule` after `base.OnLoad` — same OnLoad-not-
   constructor discipline `ChangeScheduleDialog` already uses since
   bda16f5.
+- The *Cambia dose/frequenza* dialog now defaults its "Effettiva dal"
+  picker to the therapy's start date rather than to today. When the
+  user opens the dialog shortly after creating a medicine to attach
+  an advanced schedule to it, the intent is almost always to make
+  the new schedule effective from the beginning of the therapy, not
+  from the current day. Users who want to backdate or forward-date a
+  change to a different day can still edit the picker; `MinDate`
+  still holds the value at or above the therapy's start date.
 
 ### Tests
 
