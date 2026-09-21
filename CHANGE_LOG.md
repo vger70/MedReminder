@@ -62,8 +62,8 @@ the EU MDR line.
   in `appsettings.json`): a slot older than the window is treated as
   missed and silently dropped, with no dedup row so a later in-window
   tick can still fire.
-- Six localization keys added to all five dictionaries (`en` final;
-  `it/fr/es/de` carry placeholder translations pending a follow-up).
+- Six localization keys added and translated in all five dictionaries
+  (`en`, `it`, `fr`, `es`, `de`).
 
 ### Changed
 
