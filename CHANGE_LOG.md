@@ -78,6 +78,36 @@ HTTPS links is present, in which case the menu entry stays hidden.
   failure, custom-amount verbatim launch and failure modes).
 - Infrastructure tests for the provider adapters and the JSON options
   loader.
+## PR #39 — Add analysis for multi-stage (stepped) tapering regimens
+
+Link: [vger70/MedReminder#39](https://github.com/vger70/MedReminder/pull/39)
+**Status:** open
+
+Branch: `feature/stepped-tapering-analysis`
+
+Docs-only change. Adds `docs/ANALYSIS-A1-STEPPED-TAPER.md`, a
+pre-implementation design for tapering regimes that require
+intermediate step-down stages (dose D for X days, D/2 for Y days,
+D_final for Z days) — a shape the linear `TaperingSchedule` shipped
+with A1 cannot express. Proposes a new `SteppedTaperingSchedule` value
+object (`ScheduleKind = 5`) holding an ordered list of
+`(dose, durationDays)` stages, serialized into A1's existing
+`SchedulePayload` column so **no SQLite schema patch is required**.
+Records the two confirmed product decisions: both end-of-course
+behaviors via a `MaintainLastDose` flag (the course ends by default,
+with an opt-in indefinite maintenance dose), and a Linear / Stepped
+sub-choice inside the existing "Tapering" regime, with a dynamic stage
+editor and a pre-save preview. No code change; implementation is a
+separate PR pending sign-off.
+
+### Docs
+
+- New `docs/ANALYSIS-A1-STEPPED-TAPER.md` — data model, codec payload,
+  projection-engine impact (none structural), UI, localization keys,
+  tests, retro-compatibility, risks, implementation plan, and the
+  confirmed / open decisions.
+
+---
 
 ## PR #35 — Add A6 donation/support UI evolution to EVOLUTION.md
 
