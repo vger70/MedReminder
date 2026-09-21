@@ -445,6 +445,25 @@ Notes:
 - Email notifications and the therapy report use the language
   selected here.
 
+## Support Development
+
+If the maintainer has enabled it, the **Help → Support development…**
+entry opens a small dialog where you can, entirely voluntarily,
+contribute to the project. It is optional and never required to use
+MedReminder.
+
+- Pick a fixed amount (€2, €5, €10, €20) or, when offered, a **custom
+  amount**.
+- Pick a payment method (Stripe or PayPal).
+- Click **Continue with …** — MedReminder opens the provider's official
+  payment page in your default browser.
+
+With a custom amount you choose the exact figure **on the provider's
+page**, not inside MedReminder. The application never processes the
+payment itself, never sees your card details, and cannot confirm that a
+payment completed — it only opens the page. If the maintainer has not
+configured this feature, the menu entry does not appear.
+
 ## Diagnostics
 
 - **Logs**: `%LOCALAPPDATA%\MedReminder\logs\medreminder-YYYYMMDD.log`.
