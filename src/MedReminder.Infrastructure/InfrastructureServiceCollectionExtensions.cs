@@ -1,8 +1,10 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Donations;
 using MedReminder.Infrastructure.AutoStart;
 using MedReminder.Infrastructure.Backup;
 using MedReminder.Infrastructure.Catalogue;
+using MedReminder.Infrastructure.Donations;
 using MedReminder.Infrastructure.Catalogue.Parsers;
 using MedReminder.Infrastructure.Credentials;
 using MedReminder.Infrastructure.Email;
@@ -138,6 +140,23 @@ public static class InfrastructureServiceCollectionExtensions
             sp.GetRequiredService<MedReminderDbContext>(),
             sp.GetServices<IReferenceSnapshotParser>(),
             sp.GetRequiredService<TimeProvider>()));
+
+        // ------- Donation / "Support Development" (A6) -------
+        //
+        // The options come from the shared, admin-managed
+        // donations.settings.json (public URLs only, no DPAPI). A
+        // missing/corrupt file binds to Enabled = false — the feature
+        // stays silently off and the menu entry hides. DonationOptions
+        // is registered as a singleton so the providers and the
+        // DonationService (registered by the Application layer) share
+        // the same instance; each provider binds its own ProviderOptions
+        // section.
+        services.AddSingleton(_ => new JsonDonationOptionsProvider().Load());
+        services.AddSingleton<IDonationProvider>(sp =>
+            new StripeDonationProvider(sp.GetRequiredService<DonationOptions>().Stripe));
+        services.AddSingleton<IDonationProvider>(sp =>
+            new PayPalDonationProvider(sp.GetRequiredService<DonationOptions>().PayPal));
+        services.AddSingleton<IUrlLauncher, ShellUrlLauncher>();
 
         return services;
     }

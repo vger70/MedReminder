@@ -76,6 +76,202 @@ the EU MDR line.
 - New "Dose-time reminder" section in `docs/USER_GUIDE.en.md` and
   in all four localized guides (`it`, `fr`, `es`, `de`) — opt-in,
   toast/email, grace window, DST behavior.
+## PR #43 — Mark A1/A5/A6 as DONE in EVOLUTION; mark all PRs as merged in CHANGE_LOG
+
+Link: [vger70/MedReminder#43](https://github.com/vger70/MedReminder/pull/43)
+**Status:** open
+
+Branch: `claude/marca-done-merged-docs-x39j35`
+
+Docs-only sync so `EVOLUTION.md` and `CHANGE_LOG.md` reflect the
+current state of the repo.
+
+### Docs
+
+- `docs/EVOLUTION.md`: A5 (§3.5) and A6 (§3.6) section headers now
+  carry **[DONE]**, matching the pre-existing A1 (§3.1). §2.0
+  items 1 and 2 and the "Inside Group A" cost-ordered list items 1
+  and 5 are flagged accordingly, and §9 records the 2026-09-21
+  update.
+- `CHANGE_LOG.md`: every remaining `**Status:** open` entry moves
+  to `**Status:** merged (<date>)`, using the actual GitHub merge
+  timestamps: PR #7/#8/#13 (2026-09-17); PR #18/#19 (2026-09-18);
+  PR #28/#29/#30/#31 (2026-09-19); PR #33/#34 (2026-09-20);
+  PR #38/#39/#40/#42 (2026-09-21). PR #5 was superseded by PR #6
+  and is recorded as `closed (not merged)`.
+
+No source, build, test, localization or runtime changes.
+
+### Caveat
+
+PR #37 ("Implement A5 dose-time reminder") is still open on GitHub
+at the time this entry is written. `EVOLUTION.md` was updated per
+the maintainer's instruction to flag A5 as `[DONE]`; confirm the
+merge of #37 (or the equivalent A5 code path) before treating the
+tag as authoritative on the runtime side.
+
+---
+
+## PR #42 — Seed the Edit-medicine schedule panel in OnLoad
+
+Link: [vger70/MedReminder#42](https://github.com/vger70/MedReminder/pull/42)
+**Status:** merged (2026-09-21)
+
+Branch: `claude/relaxed-shannon-4unkbv`
+
+### Fixed
+
+- The *Modifica medicina* (Edit medicine) dialog now opens
+  pre-populated with the therapy's current schedule. PR #40 had
+  wired the `SchedulePanel` into Edit mode too and the constructor
+  captured `_seedSchedule = seed?.InitialSchedule`, but the same PR
+  left the `_schedulePanel.ApplySchedule(_seedSchedule)` call inside
+  a commented-out `OnLoad` draft. Reopening the dialog on any
+  advanced regime (stepped taper, weekly, cyclic, linear taper, PRN)
+  therefore showed the panel in Simple defaults: `Advanced` stayed
+  unchecked, the kind combo fell back to `FixedDaily`, and every
+  stage / dose / duration input was lost. `MedicineEditDialog.OnLoad`
+  now calls `ApplySchedule` after `base.OnLoad` — same OnLoad-not-
+  constructor discipline `ChangeScheduleDialog` already uses since
+  bda16f5.
+
+### Tests
+
+- New `SchedulePanelTests.Edit_medicine_dialog_reopens_on_the_saved_stepped_schedule`
+  round-trips a three-stage `SteppedTaperingSchedule` seed through
+  `MedicineEditDialog` in Edit mode, driving it through `OnLoad` the
+  way `ShowDialog` would, and asserts the panel rebuilds the exact
+  seed. Guards against the same regression coming back.
+
+No change to `ChangeScheduleDialog` (already correct via bda16f5), to
+domain / application code, to `ScheduleCodec`, to the database schema,
+or to release packaging.
+
+## PR #40 — Implement multi-stage (stepped) tapering regimens
+
+Link: [vger70/MedReminder#40](https://github.com/vger70/MedReminder/pull/40)
+**Status:** merged (2026-09-21)
+
+Branch: `feature/stepped-tapering`
+
+Implements the multi-stage tapering regime designed in
+`docs/ANALYSIS-A1-STEPPED-TAPER.md` (PR #39). Tapering therapies can
+now step the dose down (or up) through an explicit list of stages,
+each with its own dose and its own duration — for example 4/day for 7
+days, then 2/day for 7 days, then 1/day for 14 days — which the linear
+tapering shipped with A1 could not express.
+
+### Added
+
+- New domain value objects `TaperStage` and `SteppedTaperingSchedule`
+  (`ScheduleKind.SteppedTapering = 5`) in `MedReminder.Domain`, with a
+  `MaintainLastDose` flag: by default the course ends after the last
+  stage, or the last dose is held indefinitely as a maintenance
+  regime when the flag is set. Serialized through the existing
+  `ScheduleCodec` into A1's `SchedulePayload` column — **no database
+  schema change**.
+- In the medicine and change-schedule dialogs, the Tapering panel now
+  offers a **Linear / Stepped** choice. Stepped mode has a dynamic
+  add/remove stage editor, a "keep the last dose as maintenance"
+  checkbox, and a live preview of the whole breakdown (per-stage
+  totals, day ranges and grand total) before saving.
+- 14 localization keys added to every dictionary (`en`, `it`, `fr`,
+  `es`, `de`).
+
+### Changed
+
+- `docs/USER_GUIDE.en.md` — the *Complex regimens* section documents
+  the Linear / Stepped split and the maintenance option.
+
+### Fixed
+
+- The *Change dose/frequency* dialog now opens pre-populated with the
+  therapy's current schedule. Previously it always reset to Simple
+  mode, so an existing advanced regime (stepped, but also weekly,
+  cyclic, tapering or PRN) looked as if it had never been saved.
+  `MainForm` now loads the latest `MedicationScheduleHistory` entry,
+  rebuilds the `Schedule` via `ScheduleCodec` and seeds the dialog's
+  `SchedulePanel` through the existing `ApplySchedule`.
+
+No change to the projection engine (the `Schedule.RateOn` contract and
+the day-by-day materializer already handle a varying rate), to the
+application command signatures, or to existing linear tapers.
+## PR #38 — Implement A6 donation / Support Development feature
+
+Link: [vger70/MedReminder#38](https://github.com/vger70/MedReminder/pull/38)
+**Status:** merged (2026-09-21)
+
+Branch: `feature/donation-support`
+
+Implements feature A6: an unobtrusive "Support Development" surface.
+A dialog lets the user pick a fixed donation tier (€2/€5/€10/€20) or a
+provider-native custom amount, choose a provider (Stripe or PayPal),
+and open the provider's public hosted payment page in the default
+browser. The app never handles money, holds no secrets, and never
+claims a payment succeeded. Hosted Payment Links only; no backend, no
+webhooks, no card data, no false confirmation, no nagware. Zero new
+NuGet packages, no schema change, no per-profile data. The feature is
+off unless a `donations.settings.json` with `Enabled: true` and valid
+HTTPS links is present, in which case the menu entry stays hidden.
+
+### Added
+
+- Application `Donations`: `DonationProvider` enum (Stripe/PayPal live,
+  KoFi/BuyMeACoffee reserved), `IDonationProvider` / `IUrlLauncher`
+  ports, `DonationOptions` / `ProviderOptions`, `DonationLaunchResult`,
+  `DonationFailureReason`, and `DonationService` — the single
+  orchestrator owning the ordered validation pipeline.
+- Infrastructure adapters: `StripeDonationProvider`,
+  `PayPalDonationProvider`, `ShellUrlLauncher` (the only place
+  `Process.Start` is called), `JsonDonationOptionsProvider`.
+- UI `DonateForm` and a "Support Development" entry under the Help menu,
+  hidden when the feature is disabled or unconfigured.
+- `donations.settings.json` template with placeholder links (custom
+  "choose your amount" key included).
+- Localization keys in all five dictionaries.
+
+### Docs
+
+- "Support Development" section in the user guides.
+- Maintainer section in `docs/PACKAGING.md` on creating Stripe / PayPal
+  Payment Links (including the custom-amount link) and populating
+  `donations.settings.json`.
+
+### Tests
+
+- `DonationService` tests (fixed tiers, amount validation,
+  feature/provider gates, malformed/non-HTTPS links, launch success and
+  failure, custom-amount verbatim launch and failure modes).
+- Infrastructure tests for the provider adapters and the JSON options
+  loader.
+## PR #39 — Add analysis for multi-stage (stepped) tapering regimens
+
+Link: [vger70/MedReminder#39](https://github.com/vger70/MedReminder/pull/39)
+**Status:** merged (2026-09-21)
+
+Branch: `feature/stepped-tapering-analysis`
+
+Docs-only change. Adds `docs/ANALYSIS-A1-STEPPED-TAPER.md`, a
+pre-implementation design for tapering regimes that require
+intermediate step-down stages (dose D for X days, D/2 for Y days,
+D_final for Z days) — a shape the linear `TaperingSchedule` shipped
+with A1 cannot express. Proposes a new `SteppedTaperingSchedule` value
+object (`ScheduleKind = 5`) holding an ordered list of
+`(dose, durationDays)` stages, serialized into A1's existing
+`SchedulePayload` column so **no SQLite schema patch is required**.
+Records the two confirmed product decisions: both end-of-course
+behaviors via a `MaintainLastDose` flag (the course ends by default,
+with an opt-in indefinite maintenance dose), and a Linear / Stepped
+sub-choice inside the existing "Tapering" regime, with a dynamic stage
+editor and a pre-save preview. No code change; implementation is a
+separate PR pending sign-off.
+
+### Docs
+
+- New `docs/ANALYSIS-A1-STEPPED-TAPER.md` — data model, codec payload,
+  projection-engine impact (none structural), UI, localization keys,
+  tests, retro-compatibility, risks, implementation plan, and the
+  confirmed / open decisions.
 
 ---
 
@@ -124,7 +320,7 @@ PR #34.
 ## PR #34 — Add A5 dose-time "remind me to take it" evolution to EVOLUTION.md
 
 Link: [vger70/MedReminder#34](https://github.com/vger70/MedReminder/pull/34)
-**Status:** open
+**Status:** merged (2026-09-20)
 Branch: `claude/sleepy-bardeen-f5y5ir`
 
 Docs-only change. Adds a new candidate evolution (A5) to
@@ -158,7 +354,7 @@ No source, build or runtime behavior is changed.
 ## PR #33 — Expose AIFA leaflet / SPC links in the medicine edit dialog
 
 Link: [vger70/MedReminder#33](https://github.com/vger70/MedReminder/pull/33)
-**Status:** open
+**Status:** merged (2026-09-20)
 Branch: `claude/vigilant-thompson-0colfk`
 
 The reference-catalogue SQLite table already stores `link_leaflet`
@@ -209,7 +405,7 @@ the active-ingredient field, that surfaces both documents as
 ## PR #31 — A1: Complex therapy regimens (Schedule value object, Simple/Advanced UI)
 
 Link: [vger70/MedReminder#31](https://github.com/vger70/MedReminder/pull/31)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `feature/complex-regimens`
 
 Implements Group A item **A1** from `docs/EVOLUTION.md` §3.1 per
@@ -311,7 +507,7 @@ stays byte-for-byte identical without a data-fix pass.
 ## PR #30 — Add EVOLUTION.md, prospective work beyond Increment 15
 
 Link: [vger70/MedReminder#30](https://github.com/vger70/MedReminder/pull/30)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `claude/practical-maxwell-uzn54q`
 
 Docs-only change. Adds a new prospective-analysis document that
@@ -372,7 +568,7 @@ dictionaries are touched; runtime behavior is unchanged.
 ## PR #29 — About dialog with credits + passive GitHub update check
 
 Link: [vger70/MedReminder#29](https://github.com/vger70/MedReminder/pull/29)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `claude/stoic-bohr-dker85`
 
 Two small user-facing additions and their supporting plumbing. No
@@ -453,7 +649,7 @@ changes to the domain, persistence or notification pipelines.
 ## PR #28 — Profile UX polish (Increment 15 follow-up)
 
 Link: [vger70/MedReminder#28](https://github.com/vger70/MedReminder/pull/28)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `claude/profile-ux-polish`
 
 Three small follow-ups on the multi-user feature that shipped in
@@ -1202,7 +1398,7 @@ searches from `userCountry = FR` scope to `{ FR, EU }`.
 ## PR #19 — Reference catalogue: EU centralised authorisations (EPAR) (M3)
 
 Link: [vger70/MedReminder#19](https://github.com/vger70/MedReminder/pull/19)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `M3-drug-reference-catalogue`
 
 Implements **M3** of the drug reference catalogue described in
@@ -1330,7 +1526,7 @@ the PR body and in `THIRD-PARTY-NOTICES.md`.
 ## PR #18 — Reference catalogue: foundations + AIFA autocomplete (Italy) (M1 + M2)
 
 Link: [vger70/MedReminder#18](https://github.com/vger70/MedReminder/pull/18)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `claude/sleepy-turing-s6fwzy`
 
 ### M2 — Autocomplete Italy (`src/MedReminder.UI` + snapshot embedded)
@@ -1487,7 +1683,7 @@ Branch: `claude/sleepy-turing-s6fwzy`
 ## PR #13 — Add drug reference catalogue design analysis (with M0 findings)
 
 Link: [vger70/MedReminder#13](https://github.com/vger70/MedReminder/pull/13)
-**Status:** open
+**Status:** merged (2026-09-17)
 Branch: `claude/database-principi-attivi-gl3rnw`
 
 ### Docs
@@ -1540,7 +1736,7 @@ Branch: `claude/database-principi-attivi-gl3rnw`
 ## PR #8 — Bump WebView2 to 1.0.4191.47; drop unused WPF reference
 
 Link: [vger70/MedReminder#8](https://github.com/vger70/MedReminder/pull/8)
-**Status:** open
+**Status:** merged (2026-09-17)
 Branch: `webview2-strip-wpf-ref`
 
 ### Changed
@@ -1568,7 +1764,7 @@ Branch: `webview2-strip-wpf-ref`
 ## PR #7 — Document SmartScreen warning; add French and Spanish user guides
 
 Link: [vger70/MedReminder#7](https://github.com/vger70/MedReminder/pull/7)
-**Status:** open
+**Status:** merged (2026-09-17)
 Branch: `smartscreen-advice`
 (previously `claude/jolly-mccarthy-xk8lc4`; renamed after first push)
 
@@ -1609,7 +1805,7 @@ Branch: `smartscreen-advice`
 ## PR #5 — Add CLAUDE.md, English-only docs, strip .pdb/.xml in Release
 
 Link: [vger70/MedReminder#5](https://github.com/vger70/MedReminder/pull/5)
-**Status:** open
+**Status:** closed (not merged)
 Branch: `claude/translate-in-english`
 (previously `claude/compassionate-pasteur-qmmt3h`; renamed after
 opening)

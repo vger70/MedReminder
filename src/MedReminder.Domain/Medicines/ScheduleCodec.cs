@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -47,6 +48,14 @@ public static class ScheduleCodec
                     IntervalDays = tapering.IntervalDays,
                 }, JsonOptions)),
             PrnSchedule => (ScheduleKind.Prn, "{}"),
+            SteppedTaperingSchedule stepped => (ScheduleKind.SteppedTapering, JsonSerializer.Serialize(
+                new SteppedTaperingPayload
+                {
+                    MaintainLastDose = stepped.MaintainLastDose,
+                    Stages = stepped.Stages
+                        .Select(s => new StagePayload { Dose = s.Dose, Days = s.DurationDays })
+                        .ToArray(),
+                }, JsonOptions)),
             _ => throw new InvalidOperationException(
                 $"Unknown Schedule subtype: {schedule.GetType().FullName}"),
         };
@@ -92,6 +101,21 @@ public static class ScheduleCodec
                 }
             case ScheduleKind.Prn:
                 return new PrnSchedule();
+            case ScheduleKind.SteppedTapering:
+                {
+                    var data = DeserializePayload<SteppedTaperingPayload>(payload, kind);
+                    if (data.Stages is null || data.Stages.Length == 0)
+                    {
+                        throw new InvalidOperationException(
+                            "Stepped tapering payload must carry at least one stage.");
+                    }
+                    var stages = new TaperStage[data.Stages.Length];
+                    for (var i = 0; i < data.Stages.Length; i++)
+                    {
+                        stages[i] = new TaperStage(data.Stages[i].Dose, data.Stages[i].Days);
+                    }
+                    return new SteppedTaperingSchedule(stages, data.MaintainLastDose);
+                }
             default:
                 return BuildFixedDaily(legacyDosePerAdministration, legacyAdministrationsPerDay);
         }
@@ -160,5 +184,23 @@ public static class ScheduleCodec
 
         [JsonPropertyName("intervalDays")]
         public int IntervalDays { get; set; }
+    }
+
+    private sealed class SteppedTaperingPayload
+    {
+        [JsonPropertyName("maintainLastDose")]
+        public bool MaintainLastDose { get; set; }
+
+        [JsonPropertyName("stages")]
+        public StagePayload[]? Stages { get; set; }
+    }
+
+    private sealed class StagePayload
+    {
+        [JsonPropertyName("dose")]
+        public decimal Dose { get; set; }
+
+        [JsonPropertyName("days")]
+        public int Days { get; set; }
     }
 }

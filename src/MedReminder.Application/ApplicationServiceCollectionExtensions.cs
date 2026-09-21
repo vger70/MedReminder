@@ -1,4 +1,5 @@
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Donations;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.UseCases;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,13 @@ public static class ApplicationServiceCollectionExtensions
         services.AddSingleton<ICountryProfileProvider, StaticCountryProfileProvider>();
         services.AddScoped<SearchCatalogueUseCase>();
         services.AddScoped<LinkMedicineToReferenceUseCase>();
+
+        // Donation / "Support Development" (A6). The orchestrator is a
+        // stateless singleton; the provider adapters, the URL launcher
+        // and the bound DonationOptions are registered by the
+        // Infrastructure layer (composition root wires the options
+        // instance from donations.settings.json).
+        services.AddSingleton<DonationService>();
 
         return services;
     }

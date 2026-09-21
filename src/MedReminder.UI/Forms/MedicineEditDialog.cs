@@ -69,11 +69,17 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private readonly List<AdministrationSlotEntry> _slots = new();
     private readonly EditMode _mode;
 
-    // Simple / Advanced schedule editor (A1). Present only in Create
-    // mode: in Edit mode dose / administrations are display-only and
-    // schedule shape changes go through ChangeScheduleDialog. See
-    // docs/ANALYSIS-A1-REGIMENS.md §5.2.
+    // Simple / Advanced schedule editor (A1). Present in both Create
+    // and Edit mode. In Edit mode it is seeded from the therapy's
+    // current schedule; saving a changed shape creates a new versioned
+    // schedule entry (see MainForm.ShowEditMedicineAsync). See
+    // docs/ANALYSIS-A1-REGIMENS.md §5.2 and
+    // docs/ANALYSIS-A1-STEPPED-TAPER.md §5.
     private readonly SchedulePanel? _schedulePanel;
+
+    // Schedule the dialog was seeded with (Edit mode). Applied in
+    // OnLoad, once the panel's controls have a native handle.
+    private readonly Schedule? _seedSchedule;
 
     // Populated when the user picks a catalogue row; cleared as soon
     // as they diverge from it by editing either autocomplete field.
@@ -255,18 +261,16 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.AdminsPerDay"), _adminPerDayBox);
 
         // A1: Simple / Advanced schedule editor lives right after the
-        // dose / administrations fields it complements. Only wired in
-        // Create mode — Edit mode routes schedule shape changes
-        // through ChangeScheduleDialog to preserve the versioned
-        // history. Overflow (Weekly grid / Tapering summary) is
-        // handled by the outer AutoScroll Panel — no dynamic dialog
-        // resize needed.
-        if (_mode == EditMode.Create)
-        {
-            _schedulePanel = new SchedulePanel(_loc);
-            _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
-            AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
-        }
+        // dose / administrations fields it complements. Wired in both
+        // Create and Edit mode. In Edit mode it is seeded (in OnLoad)
+        // from the therapy's current schedule, and saving a changed
+        // shape creates a new versioned schedule entry so the timeline
+        // is preserved (see MainForm.ShowEditMedicineAsync). Overflow
+        // (Weekly grid / Tapering summary) is handled by the outer
+        // AutoScroll Panel — no dynamic dialog resize needed.
+        _schedulePanel = new SchedulePanel(_loc);
+        _schedulePanel.ModeChanged += (_, _) => SyncSimpleControlsEnabled();
+        AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
 
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.StartDateFull"), _startDatePicker);
         AddRow(table, string.Empty, _hasEndDate);
@@ -322,7 +326,18 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         AcceptButton = okButton;
         CancelButton = cancelButton;
 
+        _seedSchedule = seed?.InitialSchedule;
         if (seed is not null) ApplySeed(seed);
+    }
+
+    // Fired once the dialog becomes visible: in Edit mode with a
+    // seeded NationalCode, look up the current AIFA row to surface
+    // its LINK_FI / LINK_RCP. Fire-and-forget by design — a failed
+    // lookup must never block the dialog.
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        _ = HydrateSeededDocumentsAsync();
     }
 
     private void ApplySeed(MedicineEditResult seed)
@@ -763,16 +778,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private static string? NullIfBlank(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();
-
-    // Fired once the dialog becomes visible: in Edit mode with a
-    // seeded NationalCode, look up the current AIFA row to surface
-    // its LINK_FI / LINK_RCP. Fire-and-forget by design — a failed
-    // lookup must never block the dialog.
-    protected override void OnLoad(EventArgs e)
-    {
-        base.OnLoad(e);
-        _ = HydrateSeededDocumentsAsync();
-    }
 
     private async Task HydrateSeededDocumentsAsync()
     {

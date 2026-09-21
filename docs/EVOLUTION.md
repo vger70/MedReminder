@@ -67,12 +67,14 @@ maintenance costs later items accrue; A5 carries the highest
 end-user value of Group A and its only hard precondition (A1) is
 already **[DONE]**, so the A1 → A5 dependency is satisfied and A5 can
 follow A6 directly. See §2.0 for the resulting full sequence.
+**Both A6 and A5 are now [DONE] as of 2026-09-21** together with the
+pre-existing A1; see §9 for the change-log entry.
 
 ### 2.0 Decided implementation sequence
 
-1. **A6 — donation / support UI.** First. (§3.6)
+1. **A6 — donation / support UI.** First. (§3.6) **[DONE]**
 2. **A5 — dose-time reminder.** Second. Precondition A1 is [DONE].
-   (§3.5)
+   (§3.5) **[DONE]**
 3. **All remaining planned items**, in the cost-ordered sequence
    already documented below: A2 (§3.2), then A3 (§3.3), then the
    multi-device track C.3 (§4) → C.3+ (§5) → B.1 (§6) → C.1 (§7),
@@ -110,6 +112,7 @@ dependencies respected — is:
    opens a voluntary funding channel for the maintenance costs the
    later items will accrue. Indirectly de-risks §7 (C.1) by
    exercising monetization plumbing before committing to a service.
+   **[DONE]**
 2. **A2 — AIC / barcode scan.** 1–2 weeks. Isolated, high
    user-visible value, no cross-item preconditions. Good pairing
    with A6 in the same release.
@@ -122,6 +125,7 @@ dependencies respected — is:
 5. **A5 — dose-time reminder.** 1–1.5 weeks. Hard-depends on A1
    for a reliable wall-clock anchor on every therapy — without
    stabilized dose times the reminder has no time to fire on.
+   **[DONE]**
 
 Two hard dependencies to respect inside Group A: **A5 must not ship
 before A1** (as above), and everything else in Group A is free of
@@ -232,7 +236,7 @@ Originally sketched as an A-group item, but the mechanism is the
 foundation of the C.3 track. It is described in §4 rather than
 duplicated here.
 
-### 3.5 A5 — Dose-time "remind me to take it" notification
+### 3.5 A5 — Dose-time "remind me to take it" notification [DONE]
 
 **Motivation.** The current notification path only fires around
 stock exhaustion (low-stock / tolerated-delay / reorder). Some
@@ -368,7 +372,7 @@ times must be a first-class, always-present part of the
 therapy) and before or alongside A3 (caregiver notifications) —
 the same channel plumbing carries both.
 
-### 3.6 A6 — Donation / support UI
+### 3.6 A6 — Donation / support UI [DONE]
 
 **Motivation.** MedReminder is distributed free of charge under
 Apache-2.0 (see `LICENSE`) and has no monetization channel today.
@@ -840,3 +844,10 @@ decision that must precede any implementation attempt.
   that the "Help menu" entry point is not documented in the
   `ANALYSIS.md` MVP and must be confirmed against the tree
   (`ANALYSIS-A6` §8.1). No priority-ordering change.
+- 2026-09-21 — marked A5 (§3.5) and A6 (§3.6) as **[DONE]**.
+  Combined with the pre-existing A1 (§3.1), every Group A item that
+  §2.0 lists as a top priority has now shipped. §2.0 items 1 and 2,
+  the "Inside Group A" cost-ordered list items 1 and 5, and the two
+  section headers were flagged accordingly. The remaining Group A
+  items (A2, A3) and the multi-device track (C.3 → C.3+ → B.1 → C.1)
+  are unchanged.

@@ -73,9 +73,19 @@ On the **New medicine** form the *Schedule* selector switches from
 - **Cyclic (N on / M off)** — a fixed quantity for the first `N`
   days of the cycle followed by `M` days off. Typical of hormonal
   therapies and cortisone pulses.
-- **Tapering** — a decreasing (or increasing) dose that steps by a
-  fixed amount every fixed number of days until the end dose is
-  reached, then holds. Typical of glucocorticoid down-titration.
+- **Tapering** — a step-down (or step-up) dose. Two shapes are
+  available through the *Linear / Stepped* selector inside the
+  Tapering panel:
+  - **Linear** — the dose changes by a fixed amount every fixed
+    number of days until the end dose is reached, then holds.
+    Typical of a simple glucocorticoid down-titration.
+  - **Stepped** — an explicit list of stages, each with its own
+    dose and its own duration in days (for example 4/day for 7
+    days, then 2/day for 7 days, then 1/day for 14 days). Use
+    *Add stage* / *Remove* to shape the sequence, and read the
+    live preview below the list to check the totals before saving.
+    Tick *Keep the last dose as maintenance* when the final dose
+    should continue indefinitely instead of ending the course.
 - **As needed (PRN)** — no scheduled consumption. MedReminder keeps
   tracking the stock but the *days remaining* column stays empty
   until the schedule shape changes.
@@ -469,6 +479,25 @@ Notes:
   (Windows), independently from the language chosen here.
 - Email notifications and the therapy report use the language
   selected here.
+
+## Support Development
+
+If the maintainer has enabled it, the **Help → Support development…**
+entry opens a small dialog where you can, entirely voluntarily,
+contribute to the project. It is optional and never required to use
+MedReminder.
+
+- Pick a fixed amount (€2, €5, €10, €20) or, when offered, a **custom
+  amount**.
+- Pick a payment method (Stripe or PayPal).
+- Click **Continue with …** — MedReminder opens the provider's official
+  payment page in your default browser.
+
+With a custom amount you choose the exact figure **on the provider's
+page**, not inside MedReminder. The application never processes the
+payment itself, never sees your card details, and cannot confirm that a
+payment completed — it only opens the page. If the maintainer has not
+configured this feature, the menu entry does not appear.
 
 ## Diagnostics
 

@@ -507,6 +507,25 @@ Notas:
 - Las notificaciones e-mail y la ficha de terapia usan el idioma
   seleccionado aquí.
 
+## Apoyar el desarrollo
+
+Si el mantenedor lo ha habilitado, la opción **? → Apoyar el
+desarrollo…** abre una pequeña ventana en la que puedes, de forma
+totalmente voluntaria, contribuir al proyecto. Es opcional y nunca es
+necesario para usar MedReminder.
+
+- Elige un importe fijo (2 €, 5 €, 10 €, 20 €) o, cuando se ofrezca, un
+  **importe personalizado**.
+- Elige un método de pago (Stripe o PayPal).
+- Haz clic en **Continuar con …**: MedReminder abre la página de pago
+  oficial del proveedor en tu navegador predeterminado.
+
+Con un importe personalizado eliges la cifra exacta **en la página del
+proveedor**, no dentro de MedReminder. La aplicación nunca procesa el
+pago, no ve los datos de tu tarjeta y no puede confirmar que un pago se
+haya completado: solo abre la página. Si el mantenedor no ha
+configurado esta función, la opción de menú no aparece.
+
 ## Diagnóstico
 
 - **Logs**:

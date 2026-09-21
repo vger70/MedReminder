@@ -359,6 +359,7 @@ internal static class Program
 
         builder.Services.AddTransient<MainForm>();
         builder.Services.AddTransient<AboutDialog>();
+        builder.Services.AddTransient<DonateForm>();
 
         builder.Logging.ClearProviders();
         builder.Logging.AddSerilog(dispose: false);

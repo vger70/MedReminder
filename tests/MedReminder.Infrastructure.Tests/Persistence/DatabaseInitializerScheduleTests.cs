@@ -164,6 +164,61 @@ public class DatabaseInitializerScheduleTests
         }
     }
 
+    [Fact]
+    public async Task Round_trips_a_stepped_tapering_schedule_via_ef_core()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+
+        var medicineId = Guid.NewGuid();
+        var stepped = new SteppedTaperingSchedule(
+            new[]
+            {
+                new TaperStage(4m, 7),
+                new TaperStage(2m, 7),
+                new TaperStage(1m, 14),
+            },
+            maintainLastDose: true);
+        var (kind, payload) = ScheduleCodec.Serialize(stepped);
+
+        using (var ctx = fixture.CreateContext())
+        {
+            ctx.Medicines.Add(new Medicine
+            {
+                Id = medicineId,
+                Name = "Tapered steroid",
+                Unit = "compresse",
+                DosePerAdministration = 4m,
+                AdministrationsPerDay = 1,
+                StartDate = new DateOnly(2026, 3, 1),
+                ThresholdDays = 7,
+                CreatedAt = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                UpdatedAt = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+            });
+            ctx.MedicationScheduleHistories.Add(new MedicationScheduleHistory
+            {
+                MedicineId = medicineId,
+                EffectiveFrom = new DateOnly(2026, 3, 1),
+                DosePerAdministration = 4m,
+                AdministrationsPerDay = 1,
+                ScheduleKind = kind,
+                SchedulePayload = payload,
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = fixture.CreateContext())
+        {
+            var entry = await ctx.MedicationScheduleHistories.SingleAsync();
+            entry.ScheduleKind.Should().Be(ScheduleKind.SteppedTapering);
+            entry.SchedulePayload.Should().NotBeNullOrWhiteSpace();
+
+            var restored = ScheduleCodec.Deserialize(
+                entry.ScheduleKind, entry.SchedulePayload,
+                entry.DosePerAdministration, entry.AdministrationsPerDay);
+            restored.Should().Be(stepped);
+        }
+    }
+
     private static async Task<bool> ColumnExistsAsync(
         SqliteInMemoryFixture fixture, string table, string column)
     {

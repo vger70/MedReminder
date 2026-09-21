@@ -42,6 +42,10 @@
     <ProjectReference Include="..\MedReminder.Infrastructure\MedReminder.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="MedReminder.UI.Tests" />
+  </ItemGroup>
+
   <!--
     The Microsoft.Web.WebView2 NuGet package references both the
     WinForms and the WPF integration assemblies. This project is
@@ -68,6 +72,15 @@
 
   <ItemGroup>
     <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Donation config TEMPLATE (A6). Placeholder public URLs only,
+         no secrets. Shipped to the output so the maintainer can copy
+         it to %LOCALAPPDATA%\MedReminder\donations.settings.json and
+         paste real Payment Links. The app does NOT read it from the
+         install directory; a missing file at the data-folder root
+         keeps the feature silently off. -->
+    <None Update="donations.settings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
