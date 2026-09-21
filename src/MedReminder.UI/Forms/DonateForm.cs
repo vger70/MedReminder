@@ -129,6 +129,18 @@ internal sealed class DonateForm : MedReminderFormBase
             WrapContents = false,
             Margin = new Padding(0),
         };
+
+        // Create the primary button before wiring the provider radios:
+        // checking the first radio raises CheckedChanged, whose handler
+        // calls UpdateContinueButton() — the button must already exist.
+        _continueButton = new Button
+        {
+            AutoSize = true,
+            Height = 30,
+            Padding = new Padding(8, 0, 8, 0),
+        };
+        _continueButton.Click += (_, _) => OnContinue();
+
         foreach (var provider in new[] { DonationProvider.Stripe, DonationProvider.PayPal })
         {
             if (!_donations.IsProviderUsable(provider)) continue;
@@ -154,14 +166,6 @@ internal sealed class DonateForm : MedReminderFormBase
         {
             _providerRadios[0].Checked = true;
         }
-
-        _continueButton = new Button
-        {
-            AutoSize = true,
-            Height = 30,
-            Padding = new Padding(8, 0, 8, 0),
-        };
-        _continueButton.Click += (_, _) => OnContinue();
 
         var closeButton = new Button
         {
