@@ -30,6 +30,40 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #44 — Reinstate Edit-medicine schedule seed; default Effettiva-dal to therapy start
+
+Link: [vger70/MedReminder#44](https://github.com/vger70/MedReminder/pull/44)
+**Status:** open
+
+Branch: `claude/relaxed-shannon-4unkbv`
+
+### Fixed
+
+- The *Modifica medicina* dialog (F2 / double-click / Modifica menu)
+  now re-opens on the therapy's saved schedule again. Commit `0dbd0a4`
+  (post-merge of PR #42) had removed the
+  `_schedulePanel.ApplySchedule(_seedSchedule)` call from
+  `MedicineEditDialog.OnLoad`, re-opening exactly the regression PR
+  #42 was supposed to close: on any advanced regime (stepped taper,
+  weekly, cyclic, linear taper, PRN) the `SchedulePanel` reset to
+  Simple defaults, `Advanced` unchecked, kind combo back to
+  `FixedDaily`, every stage / dose / duration input lost. The
+  regression test `SchedulePanelTests.Edit_medicine_dialog_reopens_
+  on_the_saved_stepped_schedule` — which stayed in the tree — has
+  been failing since that commit. Reinstated the seeding call with
+  `SyncSimpleControlsEnabled` after it, same deferred-to-OnLoad
+  discipline `ChangeScheduleDialog` already uses since bda16f5.
+- The *Cambia dose/frequenza* dialog now defaults its "Effettiva dal"
+  picker to the therapy's start date rather than to today. Common
+  case: the user creates a medicine and immediately opens the dialog
+  to attach an advanced schedule to it — the intended semantics is
+  "the new schedule applies from the beginning of the therapy", not
+  "from now onwards". Users can still backdate or forward-date freely;
+  `MinDate` still enforces the lower bound.
+
+No change to `ScheduleCodec`, to any domain / application code, to
+persistence, or to release packaging.
+
 ## PR #37 — A5: dose-time reminder ("remind me to take it")
 
 Link: [vger70/MedReminder#37](https://github.com/vger70/MedReminder/pull/37)
