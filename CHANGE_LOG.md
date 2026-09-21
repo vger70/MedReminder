@@ -30,10 +30,46 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #43 — Mark A1/A5/A6 as DONE in EVOLUTION; mark all PRs as merged in CHANGE_LOG
+
+Link: [vger70/MedReminder#43](https://github.com/vger70/MedReminder/pull/43)
+**Status:** open
+
+Branch: `claude/marca-done-merged-docs-x39j35`
+
+Docs-only sync so `EVOLUTION.md` and `CHANGE_LOG.md` reflect the
+current state of the repo.
+
+### Docs
+
+- `docs/EVOLUTION.md`: A5 (§3.5) and A6 (§3.6) section headers now
+  carry **[DONE]**, matching the pre-existing A1 (§3.1). §2.0
+  items 1 and 2 and the "Inside Group A" cost-ordered list items 1
+  and 5 are flagged accordingly, and §9 records the 2026-09-21
+  update.
+- `CHANGE_LOG.md`: every remaining `**Status:** open` entry moves
+  to `**Status:** merged (<date>)`, using the actual GitHub merge
+  timestamps: PR #7/#8/#13 (2026-09-17); PR #18/#19 (2026-09-18);
+  PR #28/#29/#30/#31 (2026-09-19); PR #33/#34 (2026-09-20);
+  PR #38/#39/#40/#42 (2026-09-21). PR #5 was superseded by PR #6
+  and is recorded as `closed (not merged)`.
+
+No source, build, test, localization or runtime changes.
+
+### Caveat
+
+PR #37 ("Implement A5 dose-time reminder") is still open on GitHub
+at the time this entry is written. `EVOLUTION.md` was updated per
+the maintainer's instruction to flag A5 as `[DONE]`; confirm the
+merge of #37 (or the equivalent A5 code path) before treating the
+tag as authoritative on the runtime side.
+
+---
+
 ## PR #42 — Seed the Edit-medicine schedule panel in OnLoad
 
 Link: [vger70/MedReminder#42](https://github.com/vger70/MedReminder/pull/42)
-**Status:** open
+**Status:** merged (2026-09-21)
 
 Branch: `claude/relaxed-shannon-4unkbv`
 
@@ -68,7 +104,7 @@ or to release packaging.
 ## PR #40 — Implement multi-stage (stepped) tapering regimens
 
 Link: [vger70/MedReminder#40](https://github.com/vger70/MedReminder/pull/40)
-**Status:** open
+**Status:** merged (2026-09-21)
 
 Branch: `feature/stepped-tapering`
 
@@ -117,7 +153,7 @@ application command signatures, or to existing linear tapers.
 ## PR #38 — Implement A6 donation / Support Development feature
 
 Link: [vger70/MedReminder#38](https://github.com/vger70/MedReminder/pull/38)
-**Status:** open
+**Status:** merged (2026-09-21)
 
 Branch: `feature/donation-support`
 
@@ -165,7 +201,7 @@ HTTPS links is present, in which case the menu entry stays hidden.
 ## PR #39 — Add analysis for multi-stage (stepped) tapering regimens
 
 Link: [vger70/MedReminder#39](https://github.com/vger70/MedReminder/pull/39)
-**Status:** open
+**Status:** merged (2026-09-21)
 
 Branch: `feature/stepped-tapering-analysis`
 
@@ -238,7 +274,7 @@ PR #34.
 ## PR #34 — Add A5 dose-time "remind me to take it" evolution to EVOLUTION.md
 
 Link: [vger70/MedReminder#34](https://github.com/vger70/MedReminder/pull/34)
-**Status:** open
+**Status:** merged (2026-09-20)
 Branch: `claude/sleepy-bardeen-f5y5ir`
 
 Docs-only change. Adds a new candidate evolution (A5) to
@@ -272,7 +308,7 @@ No source, build or runtime behavior is changed.
 ## PR #33 — Expose AIFA leaflet / SPC links in the medicine edit dialog
 
 Link: [vger70/MedReminder#33](https://github.com/vger70/MedReminder/pull/33)
-**Status:** open
+**Status:** merged (2026-09-20)
 Branch: `claude/vigilant-thompson-0colfk`
 
 The reference-catalogue SQLite table already stores `link_leaflet`
@@ -323,7 +359,7 @@ the active-ingredient field, that surfaces both documents as
 ## PR #31 — A1: Complex therapy regimens (Schedule value object, Simple/Advanced UI)
 
 Link: [vger70/MedReminder#31](https://github.com/vger70/MedReminder/pull/31)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `feature/complex-regimens`
 
 Implements Group A item **A1** from `docs/EVOLUTION.md` §3.1 per
@@ -425,7 +461,7 @@ stays byte-for-byte identical without a data-fix pass.
 ## PR #30 — Add EVOLUTION.md, prospective work beyond Increment 15
 
 Link: [vger70/MedReminder#30](https://github.com/vger70/MedReminder/pull/30)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `claude/practical-maxwell-uzn54q`
 
 Docs-only change. Adds a new prospective-analysis document that
@@ -486,7 +522,7 @@ dictionaries are touched; runtime behavior is unchanged.
 ## PR #29 — About dialog with credits + passive GitHub update check
 
 Link: [vger70/MedReminder#29](https://github.com/vger70/MedReminder/pull/29)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `claude/stoic-bohr-dker85`
 
 Two small user-facing additions and their supporting plumbing. No
@@ -567,7 +603,7 @@ changes to the domain, persistence or notification pipelines.
 ## PR #28 — Profile UX polish (Increment 15 follow-up)
 
 Link: [vger70/MedReminder#28](https://github.com/vger70/MedReminder/pull/28)
-**Status:** open
+**Status:** merged (2026-09-19)
 Branch: `claude/profile-ux-polish`
 
 Three small follow-ups on the multi-user feature that shipped in
@@ -1316,7 +1352,7 @@ searches from `userCountry = FR` scope to `{ FR, EU }`.
 ## PR #19 — Reference catalogue: EU centralised authorisations (EPAR) (M3)
 
 Link: [vger70/MedReminder#19](https://github.com/vger70/MedReminder/pull/19)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `M3-drug-reference-catalogue`
 
 Implements **M3** of the drug reference catalogue described in
@@ -1444,7 +1480,7 @@ the PR body and in `THIRD-PARTY-NOTICES.md`.
 ## PR #18 — Reference catalogue: foundations + AIFA autocomplete (Italy) (M1 + M2)
 
 Link: [vger70/MedReminder#18](https://github.com/vger70/MedReminder/pull/18)
-**Status:** open
+**Status:** merged (2026-09-18)
 Branch: `claude/sleepy-turing-s6fwzy`
 
 ### M2 — Autocomplete Italy (`src/MedReminder.UI` + snapshot embedded)
@@ -1601,7 +1637,7 @@ Branch: `claude/sleepy-turing-s6fwzy`
 ## PR #13 — Add drug reference catalogue design analysis (with M0 findings)
 
 Link: [vger70/MedReminder#13](https://github.com/vger70/MedReminder/pull/13)
-**Status:** open
+**Status:** merged (2026-09-17)
 Branch: `claude/database-principi-attivi-gl3rnw`
 
 ### Docs
@@ -1654,7 +1690,7 @@ Branch: `claude/database-principi-attivi-gl3rnw`
 ## PR #8 — Bump WebView2 to 1.0.4191.47; drop unused WPF reference
 
 Link: [vger70/MedReminder#8](https://github.com/vger70/MedReminder/pull/8)
-**Status:** open
+**Status:** merged (2026-09-17)
 Branch: `webview2-strip-wpf-ref`
 
 ### Changed
@@ -1682,7 +1718,7 @@ Branch: `webview2-strip-wpf-ref`
 ## PR #7 — Document SmartScreen warning; add French and Spanish user guides
 
 Link: [vger70/MedReminder#7](https://github.com/vger70/MedReminder/pull/7)
-**Status:** open
+**Status:** merged (2026-09-17)
 Branch: `smartscreen-advice`
 (previously `claude/jolly-mccarthy-xk8lc4`; renamed after first push)
 
@@ -1723,7 +1759,7 @@ Branch: `smartscreen-advice`
 ## PR #5 — Add CLAUDE.md, English-only docs, strip .pdb/.xml in Release
 
 Link: [vger70/MedReminder#5](https://github.com/vger70/MedReminder/pull/5)
-**Status:** open
+**Status:** closed (not merged)
 Branch: `claude/translate-in-english`
 (previously `claude/compassionate-pasteur-qmmt3h`; renamed after
 opening)
