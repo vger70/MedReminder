@@ -30,9 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — Add analysis for multi-stage (stepped) tapering regimens
+## PR #39 — Add analysis for multi-stage (stepped) tapering regimens
 
-Link: [vger70/MedReminder#TBD](https://github.com/vger70/MedReminder/pull/TBD)
+Link: [vger70/MedReminder#39](https://github.com/vger70/MedReminder/pull/39)
 **Status:** open
 
 Branch: `feature/stepped-tapering-analysis`
