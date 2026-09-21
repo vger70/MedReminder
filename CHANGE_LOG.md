@@ -30,6 +30,41 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #42 — Seed the Edit-medicine schedule panel in OnLoad
+
+Link: [vger70/MedReminder#42](https://github.com/vger70/MedReminder/pull/42)
+**Status:** open
+
+Branch: `claude/relaxed-shannon-4unkbv`
+
+### Fixed
+
+- The *Modifica medicina* (Edit medicine) dialog now opens
+  pre-populated with the therapy's current schedule. PR #40 had
+  wired the `SchedulePanel` into Edit mode too and the constructor
+  captured `_seedSchedule = seed?.InitialSchedule`, but the same PR
+  left the `_schedulePanel.ApplySchedule(_seedSchedule)` call inside
+  a commented-out `OnLoad` draft. Reopening the dialog on any
+  advanced regime (stepped taper, weekly, cyclic, linear taper, PRN)
+  therefore showed the panel in Simple defaults: `Advanced` stayed
+  unchecked, the kind combo fell back to `FixedDaily`, and every
+  stage / dose / duration input was lost. `MedicineEditDialog.OnLoad`
+  now calls `ApplySchedule` after `base.OnLoad` — same OnLoad-not-
+  constructor discipline `ChangeScheduleDialog` already uses since
+  bda16f5.
+
+### Tests
+
+- New `SchedulePanelTests.Edit_medicine_dialog_reopens_on_the_saved_stepped_schedule`
+  round-trips a three-stage `SteppedTaperingSchedule` seed through
+  `MedicineEditDialog` in Edit mode, driving it through `OnLoad` the
+  way `ShowDialog` would, and asserts the panel rebuilds the exact
+  seed. Guards against the same regression coming back.
+
+No change to `ChangeScheduleDialog` (already correct via bda16f5), to
+domain / application code, to `ScheduleCodec`, to the database schema,
+or to release packaging.
+
 ## PR #40 — Implement multi-stage (stepped) tapering regimens
 
 Link: [vger70/MedReminder#40](https://github.com/vger70/MedReminder/pull/40)
