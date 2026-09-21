@@ -30,9 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — A5: dose-time reminder ("remind me to take it")
+## PR #37 — A5: dose-time reminder ("remind me to take it")
 
-Link: [vger70/MedReminder#TBD](https://github.com/vger70/MedReminder/pull/TBD)
+Link: [vger70/MedReminder#37](https://github.com/vger70/MedReminder/pull/37)
 **Status:** open
 
 Branch: `feature/dose-time-reminder`
