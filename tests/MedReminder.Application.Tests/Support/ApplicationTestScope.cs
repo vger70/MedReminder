@@ -17,6 +17,7 @@ internal sealed class ApplicationTestScope
     public InMemoryMedicationIntakeRepository Intakes { get; } = new();
     public InMemoryMedicationAdministrationSlotRepository Slots { get; } = new();
     public InMemoryNotificationEventRepository Notifications { get; } = new();
+    public InMemoryDoseReminderEventRepository DoseEvents { get; } = new();
     public InMemoryUnitOfWork Uow { get; } = new();
     public RecordingEmailNotificationService Email { get; } = new();
     public RecordingWindowsNotificationService Windows { get; } = new();
@@ -53,4 +54,15 @@ internal sealed class ApplicationTestScope
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance);
     }
+
+    // Builds a DoseReminderService (A5) wired to the same in-memory
+    // dependencies. graceWindow is optional so tests can exercise the
+    // "missed dose" drop path with a short window.
+    public DoseReminderService BuildDoseReminder(TimeSpan? graceWindow = null)
+        => new(
+            Medicines, Stock, Schedules, Suspensions, Slots, DoseEvents,
+            Email, Windows, Uow, Clock,
+            NullLogger<DoseReminderService>.Instance,
+            localization: null,
+            graceWindow: graceWindow);
 }

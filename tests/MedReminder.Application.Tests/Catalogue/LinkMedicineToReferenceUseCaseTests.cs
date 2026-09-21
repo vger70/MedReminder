@@ -169,6 +169,9 @@ public sealed class LinkMedicineToReferenceUseCaseTests
         public Task<IReadOnlyList<Medicine>> ListActiveAsync(CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<Medicine>>(_rows.Values.Where(m => m.IsActive).ToArray());
 
+        public Task<IReadOnlyList<Medicine>> ListActiveWithDoseReminderAsync(CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<Medicine>>(_rows.Values.Where(m => m.IsActive && m.RemindOnDose).ToArray());
+
         public Task<IReadOnlyList<Medicine>> ListAllAsync(CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<Medicine>>(_rows.Values.ToArray());
 

@@ -74,6 +74,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<INotificationEventRepository, NotificationEventRepository>();
         services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
         services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();
+        services.AddScoped<IDoseReminderEventRepository, DoseReminderEventRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IBackupService, BackupService>();
         services.AddScoped<DatabaseInitializer>();

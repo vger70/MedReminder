@@ -990,6 +990,7 @@ internal sealed class MainForm : MedReminderFormBase
                 medicine.StartDate, medicine.EndDate, medicine.ThresholdDays,
                 medicine.DoctorName, medicine.Notes,
                 InitialQuantity: 0m, medicine.NotificationChannels, medicine.IsActive,
+                RemindOnDose: medicine.RemindOnDose,
                 Slots: seedSlots,
                 NationalCode: medicine.NationalCode,
                 AtcCode: medicine.AtcCode,
@@ -1004,7 +1005,8 @@ internal sealed class MainForm : MedReminderFormBase
 
         using var dialog = new MedicineEditDialog(
             MedicineEditDialog.EditMode.Edit, _loc, seed,
-            catalogueContext: BuildCatalogueContext());
+            catalogueContext: BuildCatalogueContext(),
+            currentStock: row.CurrentStock);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try

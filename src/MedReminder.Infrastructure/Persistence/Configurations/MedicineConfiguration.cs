@@ -36,6 +36,13 @@ internal sealed class MedicineConfiguration : IEntityTypeConfiguration<Medicine>
                 text => string.IsNullOrEmpty(text) ? (AtcCode?)null : AtcCode.Parse(text));
         builder.Property(m => m.LinkedReferenceMedicineId);
 
+        // A5: dose-time reminder opt-in flag (ANALYSIS-A5 §3.1).
+        // Also added to pre-existing DBs by DatabaseInitializer's additive step.
+        // HasDefaultValue(false) makes the generated column NOT NULL DEFAULT 0,
+        // consistent with the additive patch, so no reminder is ever "armed"
+        // by the upgrade and legacy inserts that omit the column still succeed.
+        builder.Property(m => m.RemindOnDose).HasDefaultValue(false);
+
         builder.HasIndex(m => m.IsActive);
         builder.HasIndex(m => m.Name);
     }
