@@ -30,6 +30,55 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #TBD — A5: dose-time reminder ("remind me to take it")
+
+Link: [vger70/MedReminder#TBD](https://github.com/vger70/MedReminder/pull/TBD)
+**Status:** open
+
+Branch: `feature/dose-time-reminder`
+
+Implements evolution A5 (`docs/ANALYSIS-A5-DOSE-TIME-REMINDER.md`):
+an opt-in, per-medicine reminder that fires at each scheduled dose
+slot's wall-clock time. Strictly a convenience prompt — it does not
+acknowledge, log, or infer a missed dose, does not touch stock, and
+gives no clinical advice, so the app stays on the non-device side of
+the EU MDR line.
+
+### Added
+
+- **Per-medicine opt-in** *Remind me at dose time* on the New /
+  Edit medicine form (`MedicineEditDialog`). Enabled only when the
+  medicine has at least one timed slot and non-zero stock; the rule
+  lives in `Medicine.CanRemindOnDose` so UI and domain agree.
+- **DoseReminderService** (Application) evaluated once a minute by
+  `DoseReminderHostedService` (UI). At each due slot it dispatches a
+  toast and, when the email channel is selected, an email, using
+  `NotificationTexts.BuildDoseReminder` (system-language, English
+  fallback).
+- **At-most-once-per-day dedup** via a dedicated `DoseReminderEvents`
+  table keyed on `(MedicineId, SlotKey, LocalDate)` with a unique
+  index; survives restarts. 30-day retention prune on each tick.
+- **Grace window** (default 30 min, `DoseReminder:GraceWindowMinutes`
+  in `appsettings.json`): a slot older than the window is treated as
+  missed and silently dropped, with no dedup row so a later in-window
+  tick can still fire.
+- Six localization keys added to all five dictionaries (`en` final;
+  `it/fr/es/de` carry placeholder translations pending a follow-up).
+
+### Changed
+
+- `Medicines.RemindOnDose` column added additively and idempotently
+  by `DatabaseInitializer` (INTEGER NOT NULL DEFAULT 0); no
+  `EnsureCreated`. Pre-A5 databases upgrade with the flag off.
+
+### Docs
+
+- New "Dose-time reminder" section in `docs/USER_GUIDE.en.md`
+  (opt-in, toast/email, grace window, DST behavior). Localized
+  guides to follow.
+
+---
+
 ## PR #35 — Add A6 donation/support UI evolution to EVOLUTION.md
 
 Link: [vger70/MedReminder#35](https://github.com/vger70/MedReminder/pull/35)

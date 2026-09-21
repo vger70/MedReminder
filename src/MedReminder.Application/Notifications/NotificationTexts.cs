@@ -151,6 +151,36 @@ public static class NotificationTexts
         return (titleEn, bodyEn);
     }
 
+    // Dose-time reminder: fired once per (medicine, slot, local-day)
+    // at the slot's wall-clock time. Uses the SYSTEM language exactly
+    // as BuildToast does — the reminder appears in the system's UI
+    // language, not the app's user-chosen language.
+    public static (string Title, string Body) BuildDoseReminder(
+        Medicine medicine,
+        TimeOnly slotTime,
+        ILocalizationService? localization = null,
+        string? systemLanguageCode = null)
+    {
+        ArgumentNullException.ThrowIfNull(medicine);
+
+        if (localization is not null)
+        {
+            var langCode = systemLanguageCode ?? DetectSystemLanguageCode();
+            var title = localization.GetIn(langCode,
+                "Notifications.DoseReminder.Title", medicine.Name);
+            var body = localization.GetIn(langCode,
+                "Notifications.DoseReminder.Body",
+                medicine.Name,
+                slotTime.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture));
+            return (title, body);
+        }
+
+        // Backwards compatibility: hardcoded EN.
+        return (
+            $"Time to take {medicine.Name}",
+            $"{medicine.Name} — scheduled dose at {slotTime:HH:mm}");
+    }
+
     // Returns the ISO 639-1 language code matching the user's Windows
     // language (CultureInfo.CurrentUICulture); falls back to "en" if
     // the language is not among the app's supported ones. Must stay

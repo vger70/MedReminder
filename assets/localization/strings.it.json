@@ -149,6 +149,10 @@
   "Ui.MedicineEditDialog.Field.NotifyWindowsShort": "Notifica Windows",
   "Ui.MedicineEditDialog.Field.NotifyEmailShort": "Email",
   "Ui.MedicineEditDialog.Field.IsActive": "Attiva",
+  "Ui.MedicineEditDialog.Field.RemindOnDose": "TODO(it): Remind me at dose time",
+  "Ui.MedicineEditDialog.RemindOnDose.Help": "TODO(it): Sends a notification at each scheduled dose time.",
+  "Ui.MedicineEditDialog.RemindOnDose.DisabledNoTime": "TODO(it): No timed dose slots are configured for this medicine.",
+  "Ui.MedicineEditDialog.RemindOnDose.DisabledNoStock": "TODO(it): Not available when stock is zero.",
   "Ui.MedicineEditDialog.Field.HasEndDateFull": "Con data di fine terapia",
   "Ui.MedicineEditDialog.Field.StartDateFull": "Data inizio terapia*",
   "Ui.MedicineEditDialog.Field.EndDateFull": "Data fine terapia",
@@ -409,6 +413,8 @@
 
   "Notifications.Toast.Title": "{0}: {1} giorni residui",
   "Notifications.Toast.Body": "Quantità stimata per {0} giorni. È consigliabile richiedere una nuova prescrizione.",
+  "Notifications.DoseReminder.Title": "TODO(it): Time to take {0}",
+  "Notifications.DoseReminder.Body": "TODO(it): {0} — scheduled dose at {1}",
 
   "Reports.Therapy.Header": "Scheda terapia — MedReminder",
   "Reports.Therapy.Date": "Data: {0}",

@@ -97,6 +97,41 @@ daily doses, does not warn about overdoses and does not verify
 drug-drug interactions. It only follows the therapy your doctor
 prescribed and reminds you before the stock runs out.
 
+## Dose-time reminder
+
+For medicines that have **timed dose slots** (a specific time of
+day set on each administration slot), you can ask MedReminder to
+remind you *at the moment the dose is due*. Tick **Remind me at
+dose time** on the New medicine or Edit medicine form. The option
+is only available when the medicine has at least one slot with a
+time and still has stock on hand; it stays greyed out otherwise.
+
+When enabled, at each slot's time MedReminder shows a desktop
+notification ("Time to take …"). If you have configured email
+notifications and selected the email channel for that medicine, the
+same reminder is also sent by email.
+
+A few details worth knowing:
+
+- **One reminder per slot per day.** Each timed slot fires at most
+  once on a given calendar day, even if the app is restarted.
+- **Grace window.** If the app is not running exactly at the slot
+  time — for example the computer was asleep — the reminder still
+  fires when the app next checks, as long as it is within 30 minutes
+  of the slot time. Past that window the dose is treated as missed
+  and no reminder is shown; MedReminder does not keep a missed-dose
+  log and never gives clinical advice.
+- **Zero stock turns it off.** When the stock reaches zero no dose
+  reminder is sent, because there is nothing left to take.
+- **Daylight saving time.** On the spring-forward night a slot that
+  falls inside the skipped hour does not fire (that wall-clock time
+  does not exist). On the fall-back night the slot fires once, as
+  usual.
+
+This reminder is a convenience prompt only. It does not record
+whether you took the dose and does not change your stock — use
+*Register intake* for that.
+
 ## Reference catalogue (multi-country)
 
 MedReminder ships with two snapshots of a reference medicine

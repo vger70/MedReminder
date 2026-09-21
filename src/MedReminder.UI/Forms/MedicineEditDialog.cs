@@ -52,7 +52,18 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private readonly NumericUpDown _initialQtyBox;
     private readonly CheckBox _channelWindows;
     private readonly CheckBox _channelEmail;
+    // A5 dose-time reminder opt-in. Enabled only when the medicine has
+    // at least one timed slot AND stock > 0 (ANALYSIS-A5 §5.2); a
+    // save-time clamp forces it back to false when disabled (§5.3).
+    private readonly CheckBox _remindOnDose;
+    private readonly Label _remindOnDoseHelp;
+    private readonly ToolTip _remindOnDoseTip;
     private readonly CheckBox _isActiveBox;
+
+    // Current on-hand stock for the RemindOnDose availability gate.
+    // Create mode reads the live _initialQtyBox instead; in Edit mode
+    // this carries the value MainForm computed from the stock ledger.
+    private readonly decimal _currentStock;
     private readonly ListView _slotsList;
     private readonly Label _slotsSummary;
     private readonly List<AdministrationSlotEntry> _slots = new();
@@ -87,10 +98,12 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         EditMode mode,
         ILocalizationService localization,
         MedicineEditResult? seed = null,
-        CatalogueAutocompleteContext? catalogueContext = null)
+        CatalogueAutocompleteContext? catalogueContext = null,
+        decimal currentStock = 0m)
     {
         _loc = localization;
         _mode = mode;
+        _currentStock = currentStock;
         Text = _loc.Get(mode == EditMode.Create
             ? "Ui.MedicineEditDialog.Title.New"
             : "Ui.MedicineEditDialog.Title.Edit");
@@ -189,6 +202,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _initialQtyBox = MakeDecimalUpDown(0m, 100000m, 2, initial: 0m);
         _channelWindows = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.NotifyWindowsShort"), AutoSize = true, Checked = true };
         _channelEmail = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.NotifyEmailShort"), AutoSize = true, Checked = false };
+        _remindOnDose = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.RemindOnDose"), AutoSize = true, Checked = false };
+        _remindOnDoseHelp = new Label { AutoSize = true, ForeColor = System.Drawing.Color.DarkGray, Text = string.Empty, Margin = new Padding(20, 0, 4, 4) };
+        _remindOnDoseTip = new ToolTip();
         _isActiveBox = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.IsActive"), AutoSize = true, Checked = true };
 
         _slotsList = new ListView
@@ -263,6 +279,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.InitialStock"), _initialQtyBox);
         }
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Channels"), BuildChannelsPanel());
+        AddRow(table, string.Empty, BuildRemindOnDosePanel());
         if (_mode == EditMode.Edit)
         {
             AddRow(table, string.Empty, _isActiveBox);
@@ -271,6 +288,11 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.SlotsOptional"), BuildSlotsPanel());
         AddRow(table, string.Empty, _slotsSummary);
         UpdateSlotsSummary();
+
+        // A5: the initial-stock field feeds the RemindOnDose gate in
+        // Create mode, so re-evaluate availability whenever it changes.
+        _initialQtyBox.ValueChanged += (_, _) => UpdateRemindOnDoseAvailability();
+        UpdateRemindOnDoseAvailability();
 
         // Now that every control is on the table, honor the initial
         // Simple selection by disabling nothing yet — SyncSimpleControlsEnabled
@@ -325,6 +347,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _initialQtyBox.Value = seed.InitialQuantity;
         _channelWindows.Checked = (seed.NotificationChannels & NotificationChannels.Windows) != 0;
         _channelEmail.Checked = (seed.NotificationChannels & NotificationChannels.Email) != 0;
+        _remindOnDose.Checked = seed.RemindOnDose;
         _isActiveBox.Checked = seed.IsActive;
 
         _slots.Clear();
@@ -332,6 +355,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         {
             _slots.AddRange(seed.Slots);
         }
+        // RefreshSlotsList re-evaluates the RemindOnDose gate, which
+        // clears the seeded checkbox if the medicine no longer has a
+        // timed slot or is out of stock.
         RefreshSlotsList();
     }
 
@@ -369,6 +395,12 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (_channelWindows.Checked) channels |= NotificationChannels.Windows;
         if (_channelEmail.Checked) channels |= NotificationChannels.Email;
 
+        // A5 save-time clamp (ANALYSIS-A5 §5.3): RemindOnDose may be
+        // true only while the checkbox is actually enabled — i.e. a
+        // timed slot exists AND stock > 0. A disabled checkbox always
+        // persists false regardless of any stale seeded value.
+        var remindOnDose = _remindOnDose.Enabled && _remindOnDose.Checked;
+
         // A1: build the Schedule value object when Advanced is
         // selected. Simple mode keeps InitialSchedule = null so
         // AddMedicine constructs FixedDaily from Dose × Admin
@@ -403,6 +435,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             InitialQuantity: _initialQtyBox.Value,
             NotificationChannels: channels,
             IsActive: _isActiveBox.Checked,
+            RemindOnDose: remindOnDose,
             // In Advanced mode slots × non-fixed combinations are out
             // of scope (§3.1) — drop the slots so the schedule owns
             // the daily rate uniquely.
@@ -555,6 +588,53 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         return panel;
     }
 
+    // A5: the RemindOnDose opt-in plus its one-line helper / disabled
+    // reason label, stacked vertically so the reason sits under the
+    // checkbox. Uses the medicine's configured channels for delivery.
+    private Control BuildRemindOnDosePanel()
+    {
+        var panel = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false };
+        panel.Controls.Add(_remindOnDose);
+        panel.Controls.Add(_remindOnDoseHelp);
+        return panel;
+    }
+
+    // Re-evaluates the RemindOnDose availability gate (ANALYSIS-A5 §5.2):
+    // enabled only when the medicine has at least one timed slot AND
+    // stock > 0. When disabled the checkbox is cleared and a localized
+    // reason is shown both inline and as a tooltip. Called at open and
+    // whenever the slots or the initial-stock field change.
+    private void UpdateRemindOnDoseAvailability()
+    {
+        var hasTimedSlot = _slots.Any(s => s.Time.HasValue);
+        var hasStock = CurrentStockForGate() > 0m;
+        var enabled = Medicine.CanRemindOnDose(hasTimedSlot, CurrentStockForGate());
+
+        _remindOnDose.Enabled = enabled;
+        string helpKey;
+        if (enabled)
+        {
+            helpKey = "Ui.MedicineEditDialog.RemindOnDose.Help";
+        }
+        else
+        {
+            _remindOnDose.Checked = false;
+            // No-timed-slot takes precedence over no-stock in the message.
+            helpKey = !hasTimedSlot
+                ? "Ui.MedicineEditDialog.RemindOnDose.DisabledNoTime"
+                : "Ui.MedicineEditDialog.RemindOnDose.DisabledNoStock";
+        }
+
+        var helpText = _loc.Get(helpKey);
+        _remindOnDoseHelp.Text = helpText;
+        _remindOnDoseTip.SetToolTip(_remindOnDose, helpText);
+    }
+
+    // Stock used by the RemindOnDose gate: the live initial-stock box
+    // in Create mode, the ledger value MainForm passed in Edit mode.
+    private decimal CurrentStockForGate()
+        => _mode == EditMode.Create ? _initialQtyBox.Value : _currentStock;
+
     private Control BuildSlotsPanel()
     {
         var addButton = new Button { Text = _loc.Get("Ui.MedicineEditDialog.Slots.AddButton"), AutoSize = true, Height = 26 };
@@ -632,6 +712,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         }
         _slotsList.EndUpdate();
         UpdateSlotsSummary();
+        // Adding / removing a timed slot can flip the RemindOnDose gate.
+        UpdateRemindOnDoseAvailability();
     }
 
     private void UpdateSlotsSummary()
@@ -801,6 +883,7 @@ internal sealed record MedicineEditResult(
     decimal InitialQuantity,
     NotificationChannels NotificationChannels,
     bool IsActive,
+    bool RemindOnDose = false,
     IReadOnlyList<AdministrationSlotEntry>? Slots = null,
     string? NationalCode = null,
     AtcCode? AtcCode = null,
@@ -825,7 +908,8 @@ internal sealed record MedicineEditResult(
         NationalCode: NationalCode,
         AtcCode: AtcCode,
         LinkedReferenceMedicineId: LinkedReferenceMedicineId,
-        InitialSchedule: InitialSchedule);
+        InitialSchedule: InitialSchedule,
+        RemindOnDose: RemindOnDose);
 
     // Always pass the slots (even empty): the UpdateMedicine use case
     // distinguishes null=leave-as-is vs [] = clear. Here the user has
@@ -848,6 +932,7 @@ internal sealed record MedicineEditResult(
         DoctorName: DoctorName,
         Notes: Notes,
         IsActive: IsActive,
+        RemindOnDose: RemindOnDose,
         AdministrationSlots: MapSlots() ?? [],
         Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId));
 

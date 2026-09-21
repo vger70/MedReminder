@@ -16,6 +16,12 @@ internal sealed class InMemoryMedicineRepository : IMedicineRepository
         return Task.FromResult(result);
     }
 
+    public Task<IReadOnlyList<Medicine>> ListActiveWithDoseReminderAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Medicine> result = _items.Values.Where(m => m.IsActive && m.RemindOnDose).ToList();
+        return Task.FromResult(result);
+    }
+
     public Task<IReadOnlyList<Medicine>> ListAllAsync(CancellationToken cancellationToken)
     {
         IReadOnlyList<Medicine> result = _items.Values.ToList();
