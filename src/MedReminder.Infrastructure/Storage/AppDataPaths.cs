@@ -20,7 +20,6 @@ public static class AppDataPaths
     public const string LogsFolderName = "logs";
     public const string ProfilesFolderName = "profiles";
     public const string ProfilesRegistryFileName = "profiles.json";
-    public const string DonationsSettingsFileName = "donations.settings.json";
 
     public static string GetAppDataDirectory()
     {
@@ -34,9 +33,6 @@ public static class AppDataPaths
 
     public static string GetCredentialsPath() =>
         Path.Combine(GetAppDataDirectory(), CredentialsFileName);
-
-    public static string GetDonationsSettingsPath() =>
-        Path.Combine(GetAppDataDirectory(), DonationsSettingsFileName);
 
     public static string GetLogsDirectory()
     {

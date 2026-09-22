@@ -54,7 +54,7 @@ public class JsonDonationOptionsProviderTests : IDisposable
         }
         """);
 
-        var options = new JsonDonationOptionsProvider().Load(path);
+        var options = JsonDonationOptionsProvider.Load(path);
 
         options.Enabled.Should().BeTrue();
         options.Currency.Should().Be("EUR");
@@ -71,7 +71,7 @@ public class JsonDonationOptionsProviderTests : IDisposable
     {
         var path = Path.Combine(_dir, "does-not-exist.json");
 
-        var options = new JsonDonationOptionsProvider().Load(path);
+        var options = JsonDonationOptionsProvider.Load(path);
 
         options.Enabled.Should().BeFalse();
     }
@@ -81,7 +81,7 @@ public class JsonDonationOptionsProviderTests : IDisposable
     {
         var path = WriteFile("""{ "Something": { "Else": true } }""");
 
-        var options = new JsonDonationOptionsProvider().Load(path);
+        var options = JsonDonationOptionsProvider.Load(path);
 
         options.Enabled.Should().BeFalse();
     }
@@ -91,7 +91,7 @@ public class JsonDonationOptionsProviderTests : IDisposable
     {
         var path = WriteFile("{ this is not valid json ");
 
-        var options = new JsonDonationOptionsProvider().Load(path);
+        var options = JsonDonationOptionsProvider.Load(path);
 
         options.Enabled.Should().BeFalse();
     }

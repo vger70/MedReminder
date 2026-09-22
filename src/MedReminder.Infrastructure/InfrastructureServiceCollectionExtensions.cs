@@ -151,7 +151,7 @@ public static class InfrastructureServiceCollectionExtensions
         // DonationService (registered by the Application layer) share
         // the same instance; each provider binds its own ProviderOptions
         // section.
-        services.AddSingleton(_ => new JsonDonationOptionsProvider().Load());
+        services.AddSingleton(_ => JsonDonationOptionsProvider.Load());
         services.AddSingleton<IDonationProvider>(sp =>
             new StripeDonationProvider(sp.GetRequiredService<DonationOptions>().Stripe));
         services.AddSingleton<IDonationProvider>(sp =>

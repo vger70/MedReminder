@@ -76,11 +76,11 @@ internal static class Program
         if (!acquired)
         {
             Log.Information("Another instance of MedReminder is already running. Exiting.");
-            System.Windows.Forms.MessageBox.Show(
+            MessageBox.Show(
                 _bootstrapLoc.Get("Ui.App.AlreadyRunning"),
                 _bootstrapLoc.Get("Ui.App.AlreadyRunning.Title"),
-                System.Windows.Forms.MessageBoxButtons.OK,
-                System.Windows.Forms.MessageBoxIcon.Information);
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
             Log.CloseAndFlush();
             return;
         }
@@ -170,11 +170,11 @@ internal static class Program
         {
             Log.Error(ex,
                 "V1 → V2 migration failed. The pre-migration backup at %LOCALAPPDATA%\\MedReminder\\backups\\ still contains the original V1 files.");
-            System.Windows.Forms.MessageBox.Show(
+            MessageBox.Show(
                 _bootstrapLoc.Get("Ui.App.MigrationFailed.Body", ex.Message),
                 _bootstrapLoc.Get("Ui.App.MigrationFailed.Title"),
-                System.Windows.Forms.MessageBoxButtons.OK,
-                System.Windows.Forms.MessageBoxIcon.Error);
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             throw;
         }
     }
@@ -416,11 +416,11 @@ internal static class Program
             Log.Information(ex, "Print cancelled by the user or not completed.");
             try
             {
-                System.Windows.Forms.MessageBox.Show(
+                MessageBox.Show(
                     _bootstrapLoc.Get("Ui.App.PrintCancelled.Body"),
                     _bootstrapLoc.Get("Ui.App.PrintCancelled.Title"),
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Information);
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
             catch
             {
@@ -432,11 +432,11 @@ internal static class Program
         Log.Error(ex, "Unhandled exception on the UI thread.");
         try
         {
-            System.Windows.Forms.MessageBox.Show(
+            MessageBox.Show(
                 _bootstrapLoc.Get("Ui.App.UnexpectedError.Body", ex.Message),
                 _bootstrapLoc.Get("Ui.App.UnexpectedError.Title"),
-                System.Windows.Forms.MessageBoxButtons.OK,
-                System.Windows.Forms.MessageBoxIcon.Error);
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
         catch
         {

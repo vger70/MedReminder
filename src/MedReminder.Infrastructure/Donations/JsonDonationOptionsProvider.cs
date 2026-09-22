@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Xml.Linq;
 using MedReminder.Application.Donations;
 using MedReminder.Infrastructure.Storage;
 
@@ -19,7 +18,7 @@ namespace MedReminder.Infrastructure.Donations;
 // throws to the caller.
 public sealed class JsonDonationOptionsProvider
 {
-    public const string SettingsFileName = AppDataPaths.DonationsSettingsFileName;
+    public const string SettingsFileName = "donations.settings.json";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -29,18 +28,21 @@ public sealed class JsonDonationOptionsProvider
     };
 
     // Loads from the standard shared location.
-    public DonationOptions Load() =>
+    public static DonationOptions Load() =>
         Load(Path.Combine(AppDataPaths.GetAppDataDirectory(), SettingsFileName));
 
     // Loads from an explicit path (used by tests). Any failure yields a
     // disabled DonationOptions.
-    public DonationOptions Load(string path)
+    public static DonationOptions Load(string path)
     {
         try
         {
             var assembly = typeof(JsonDonationOptionsProvider).Assembly;
 
-            using var stream = assembly.GetManifestResourceStream(AppDataPaths.DonationsSettingsFileName);
+            using var stream =
+                typeof(JsonDonationOptionsProvider)
+                .Assembly
+                .GetManifestResourceStream(SettingsFileName);
 
             if (stream is null)
                 return new DonationOptions();
