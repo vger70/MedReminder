@@ -1,0 +1,26 @@
+{
+  "Donations": {
+    "Enabled": true,
+    "Currency": "EUR",
+    "Stripe": {
+      "Enabled": true,
+      "PaymentLinks": {
+        "2": "https://donate.stripe.com/REPLACE_2eur",
+        "5": "https://donate.stripe.com/REPLACE_5eur",
+        "10": "https://donate.stripe.com/REPLACE_10eur",
+        "20": "https://donate.stripe.com/REPLACE_20eur",
+        "custom": "https://donate.stripe.com/REPLACE_choose_amount"
+      }
+    },
+    "PayPal": {
+      "Enabled": true,
+      "PaymentLinks": {
+        "2": "https://www.paypal.com/ncp/payment/5JWWREFDJHPEJ",
+        "5": "https://www.paypal.com/ncp/payment/3V74ADPBXFZEY",
+        "10": "https://www.paypal.com/ncp/payment/LNMEUQ9QTL47W",
+        "20": "https://www.paypal.com/ncp/payment/G6EXWD3HJX4HC",
+        "custom": "https://www.paypal.com/ncp/payment/FMFNHXX9ADYLS"
+      }
+    }
+  }
+}

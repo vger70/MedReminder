@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using MedReminder.Application.Donations;
 using MedReminder.Infrastructure.Storage;
 
@@ -18,7 +19,7 @@ namespace MedReminder.Infrastructure.Donations;
 // throws to the caller.
 public sealed class JsonDonationOptionsProvider
 {
-    public const string SettingsFileName = "donations.settings.json";
+    public const string SettingsFileName = AppDataPaths.DonationsSettingsFileName;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -37,21 +38,25 @@ public sealed class JsonDonationOptionsProvider
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-            {
+            var assembly = typeof(JsonDonationOptionsProvider).Assembly;
+
+            using var stream = assembly.GetManifestResourceStream(AppDataPaths.DonationsSettingsFileName);
+
+            if (stream is null)
                 return new DonationOptions();
-            }
-            var json = File.ReadAllText(path);
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                return new DonationOptions();
-            }
-            var root = JsonSerializer.Deserialize<DonationsFileRoot>(json, JsonOptions);
+
+            using var reader = new StreamReader(stream);
+
+            var json = reader.ReadToEnd();
+
+            var root = JsonSerializer.Deserialize<DonationsFileRoot>(
+                json,
+                JsonOptions);
+
             return root?.Donations ?? new DonationOptions();
         }
         catch
         {
-            // Corrupted or unreadable: feature stays silently off.
             return new DonationOptions();
         }
     }

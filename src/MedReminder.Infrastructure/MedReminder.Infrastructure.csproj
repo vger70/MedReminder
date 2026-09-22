@@ -56,6 +56,10 @@
     <EmbeddedResource Include="Assets\Catalogue\fr\bdpm-*.zip">
       <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.fr.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\donations.settings.json">
+      <Link>Assets\donations.settings.json</Link>
+      <LogicalName>donations.settings.json</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
