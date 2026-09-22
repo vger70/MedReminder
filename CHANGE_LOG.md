@@ -30,6 +30,60 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #45 — Add analysis and implementation prompts for A3, C.3, C.3+
+
+Link: [vger70/MedReminder#45](https://github.com/vger70/MedReminder/pull/45)
+**Status:** open
+
+Branch: `claude/gracious-ptolemy-bf39iz`
+
+Adds six documentation artifacts under `docs/` covering the next
+three items in `EVOLUTION.md` §2.0 (after the shipped A6 and A5).
+No source code, no schema, no packaging change — analysis and
+implementation-prompt files only, ready to gate the three
+follow-up implementation PRs.
+
+### Docs
+
+- **A3 — Caregiver notifications.**
+  `docs/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md` and
+  `docs/PROMPT-A3-IMPLEMENTATION.md`. Per-profile
+  `CaregiverAddress` added to `notifications.settings.json`; the
+  MailKit adapter fans out to a second `To` recipient. No schema
+  change; no per-event opt-in in the first cut; toasts
+  unaffected (local channel). One open decision: whether A5
+  dose-time emails should also fan out to the caregiver.
+- **C.3 — Manual export / import.**
+  `docs/ANALYSIS-C3-EXPORT-IMPORT.md` and
+  `docs/PROMPT-C3-IMPLEMENTATION.md`. Encrypted `.mrz` archive =
+  ZIP (cleartext `manifest.json` + AES-GCM `payload.enc` +
+  nonce); Argon2id KDF (matches C.1's later choice). DPAPI is
+  deliberately not used for the archive — DPAPI ties data to the
+  Windows account and defeats migration. SMTP password inclusion
+  is opt-in and re-encrypted with the archive key across
+  accounts. Overwrite-only import in the first cut; merge is
+  deferred. Public format contract to ship as
+  `docs/EXPORT-FORMAT.md`.
+- **C.3+ — Backup to cloud folder + explicit restore.**
+  `docs/ANALYSIS-C3PLUS-CLOUD-BACKUP.md` and
+  `docs/PROMPT-C3PLUS-IMPLEMENTATION.md`. Hard precondition: C.3
+  shipped. Reuses C.3's `.mrz` format; extends
+  `AutomaticBackupHostedService` to also write snapshots into a
+  user-picked local folder synchronized by the user's own cloud
+  agent. No cloud API usage; no live-DB file-sync
+  (`EVOLUTION.md` §7.1 rejection stands). Model C selected for
+  the unattended-passphrase problem: a separate backup
+  passphrase, DPAPI-cached in `cloud-backup.protected`, distinct
+  from the C.3 export passphrase.
+
+Each analysis follows the pattern established by
+`ANALYSIS-A5-DOSE-TIME-REMINDER.md` and
+`ANALYSIS-A6-DONATION-SUPPORT.md` (Scope · Preconditions · Data
+model · Runtime · UI · Localization · Tests · Retro-compatibility ·
+Risks · Decisions still to confirm · Implementation plan · Change
+log). Each implementation prompt mirrors
+`PROMPT-A5-IMPLEMENTATION.md`.
+
 ## PR #44 — Reinstate Edit-medicine schedule seed; default Effettiva-dal to therapy start
 
 Link: [vger70/MedReminder#44](https://github.com/vger70/MedReminder/pull/44)
