@@ -73,3 +73,4 @@ desktop.ini
 ## Node/other (defensive: never expected here)
 node_modules/
 *.msi
+/.claude/settings.local.json
