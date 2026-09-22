@@ -73,9 +73,9 @@ Produce a **multilingual static website** that:
   on every page, matching the posture of `CLAUDE.md` §1.
 - **Not a tracked analytics platform.** No Google Analytics, no
   Facebook Pixel, no fingerprinting. A simple, privacy-respecting
-  page-view counter (Plausible or self-hosted Umami) is
-  acceptable if the privacy policy covers it; all others are
-  excluded.
+  page-view counter is used instead — resolved to Cloudflare Web
+  Analytics (§3.3, §8.4): no cookies, no cross-site tracking, no
+  cookie consent banner required.
 - **Not a forum or community platform.** Support and questions go
   to the GitHub Issues tracker.
 
@@ -221,9 +221,10 @@ tier; verify at implementation time]`
 
 **Analytics.** Cloudflare Web Analytics is included in the free
 plan, requires no cookie banner, and meets GDPR requirements
-without a third-party service. This eliminates the Plausible
-(€9/month) or self-hosted Umami option listed in decision §15
-point 3, which is now resolved: use Cloudflare Web Analytics.
+without a third-party service. This supersedes the earlier
+Plausible (€9/month) and self-hosted Umami candidates; the
+decision is recorded as resolved in §15.a — use Cloudflare Web
+Analytics.
 
 **Custom domain.** Cloudflare manages TLS automatically (Universal
 SSL, Let's Encrypt). The custom domain is configured in the
@@ -321,12 +322,19 @@ website/
     fr.yaml
     es.yaml
     de.yaml
-  .github/workflows/
-    website.yml         Build and deploy workflow
 ```
 
-If the website lives in a separate repository the structure is
-the same without the `website/` prefix.
+**Workflow location.** GitHub Actions only discovers workflows
+under `.github/workflows/` at the **repository root**; nested
+workflow directories are ignored. In the co-located case the
+website build/deploy workflow therefore lives at
+`.github/workflows/website.yml` in the repo root (alongside the
+existing `dotnet-desktop.yml`), scoped with a `paths: [website/**]`
+filter so it only runs when the website source changes. In the
+separate-repository case the workflow lives at
+`.github/workflows/website.yml` in that repository's root, without
+the path filter, and the tree above collapses without the
+`website/` prefix.
 
 **Rationale for co-location vs. separation.** A dedicated
 repository keeps the app CI and the website CI independent, avoids
@@ -676,10 +684,12 @@ for the medical-adjacent audience.
 **Content:**
 
 - The website itself collects no personal data from visitors.
-- If a lightweight analytics tool is used (Plausible or Umami,
-  see §3.1), the collected data is limited to: page views,
-  referrer domain (hashed), operating system, browser family,
-  country (IP is not stored). No cookies. No cross-site tracking.
+- The site uses Cloudflare Web Analytics (see §3.3 and §8.4).
+  The collected data is limited to: page views, referrer domain,
+  operating system, browser family, and country derived from the
+  IP address; the IP itself is not stored. No cookies are set. No
+  cross-site tracking. No cookie consent banner is required under
+  the ePrivacy Directive.
 - Donation payments are processed entirely on the provider's
   platform (Stripe / PayPal). MedReminder's website receives no
   payment data.
@@ -702,7 +712,7 @@ non-technical questions.
 
 **Format.** Accordion (expandable / collapsible items), so the
 page does not become overwhelming. CSS-only accordion is preferred
-(`:details` / `<summary>` HTML elements — no JavaScript needed).
+(`<details>` / `<summary>` HTML elements — no JavaScript needed).
 
 **Recommended question set:**
 
@@ -835,12 +845,19 @@ register of the intended audience.
 ### 7.2 Language detection and switching
 
 On first visit, the preferred language is inferred from the
-`Accept-Language` HTTP header (handled by Hugo's built-in
-language detection, which generates a redirect from `/` to the
-detected language prefix). The user can switch language at any
-time via the language picker in the nav bar. The selected language
-is stored in `localStorage` and applied on subsequent visits.
-`[INFERRED — standard Hugo multilingual pattern]`
+`Accept-Language` HTTP header. Hugo is a static site generator and
+cannot read HTTP headers at runtime, so the detection happens at
+the edge via the Cloudflare Worker function documented in §3.3
+(`functions/_middleware.js`), which issues a 302 redirect from
+`/` to the matching language prefix (`/en/`, `/it/`, …). If the
+site is deployed on GitHub Pages instead (fallback in §3.3), the
+Worker is unavailable and the redirect degrades to a
+JavaScript-based fallback in `static/index.html`. The user can
+switch language at any time via the language picker in the nav
+bar. The selected language is stored in `localStorage` and applied
+on subsequent visits, overriding the `Accept-Language` result.
+`[INFERRED — standard pattern for Hugo + edge-detected language
+routing]`
 
 ### 7.3 Content organization
 
@@ -932,10 +949,11 @@ plan. It requires adding a single `<script>` tag to the base
 template; no cookies are set, no fingerprinting occurs, and no
 cookie consent banner is required under the ePrivacy Directive.
 The data (page views, referrer domain, country, browser, OS) is
-visible in the Cloudflare dashboard. This replaces Plausible and
-Umami as options and resolves decision §15 point 3.
+visible in the Cloudflare dashboard. This replaces the earlier
+Plausible / Umami candidates; the decision is recorded as
+resolved in §15.a.
 
-### 8.4 Sitemap and robots.txt
+### 8.5 Sitemap and robots.txt
 
 Hugo generates `sitemap.xml` and `robots.txt` automatically.
 No manual intervention needed.
@@ -996,9 +1014,10 @@ medical-adjacent application in the EU]`
   This eliminates a render-blocking external request and matches
   the Segoe UI typeface used in the Windows app. `[INFERRED —
   system-ui resolves to Segoe UI on Windows]`
-- **No third-party JavaScript** except the optional analytics
-  snippet (Plausible / Umami, < 1 KB gzipped). No jQuery, no
-  Bootstrap JS, no Google Tag Manager.
+- **No third-party JavaScript** except the Cloudflare Web
+  Analytics beacon (< 5 KB gzipped, served from the same
+  Cloudflare edge as the site). No jQuery, no Bootstrap JS, no
+  Google Tag Manager.
 - Hugo's asset pipeline minifies and fingerprints CSS and JS
   automatically.
 
@@ -1137,41 +1156,52 @@ commit messages are English.
 2. **Custom domain.** Recommendation: acquire a custom domain
    (`medreminder.app` or similar) for better SEO and a more
    trustworthy URL for the primary audience. Confirm — or use the
-   GitHub Pages default URL. `[UNCERTAIN — domain availability and
-   cost must be checked]`
+   Cloudflare Pages default `*.pages.dev` URL (or the GitHub Pages
+   default if the fallback host is chosen). `[UNCERTAIN — domain
+   availability and cost must be checked]`
 
-3. **Analytics tool.** ~~Plausible / Umami~~ **Resolved —
-   Cloudflare Web Analytics** (§3.3, §8.4). Included in the free
-   Cloudflare Pages plan, no cookies, no third-party dependency.
-   No further decision required.
-
-4. **Donation URLs.** The donation section requires real Stripe
+3. **Donation URLs.** The donation section requires real Stripe
    Payment Links and PayPal hosted button URLs. These are
    maintainer-managed and must be provided before the donate
    section can go live. The section can be omitted from v1 and
    added once the URLs are ready, without any architectural change.
 
-5. **Screenshot set.** Confirm which specific UI states to capture
+4. **Screenshot set.** Confirm which specific UI states to capture
    and whether they need to be retaken after each release or only
    on significant UI changes.
 
-6. **Version badge approach.** Option A (static, manually updated)
+5. **Version badge approach.** Option A (static, manually updated)
    vs. Option B (Shields.io live badge). Confirm.
 
-7. **Roadmap section.** Include a "What's coming" section based
+6. **Roadmap section.** Include a "What's coming" section based
    on `EVOLUTION.md` items (mobile companion, cloud backup, etc.)?
    This increases interest but must be clearly labelled as planned,
    not promised. Confirm inclusion and exact wording.
 
-8. **Dark mode in v1.** Omit (recommended) or include.
+7. **Dark mode in v1.** Omit (recommended) or include.
+
+### 15.a Decisions already resolved
+
+- **Hosting.** Cloudflare Pages, with GitHub Pages as a documented
+  fallback (§3.3). Resolved 2026-09-22.
+- **Analytics tool.** Cloudflare Web Analytics (§3.3, §8.4).
+  Replaces the earlier Plausible / Umami candidates. Resolved
+  2026-09-22.
+- **Deployment pipeline.** GitHub Actions + Wrangler (Option A,
+  §3.4), with Cloudflare direct connection (Option B) as a
+  simpler alternative. Resolved 2026-09-22.
 
 ---
 
 ## 16. Implementation plan
 
-One repository (new or existing) and one PR. Per `CLAUDE.md` §5
-the PR is opened after the first commit. A `CHANGE_LOG.md` entry
-is prepended when the PR opens. Indicative commit order:
+One repository (new or existing) and one PR. If the work happens
+in this repository (co-located case), `CLAUDE.md` §5 governs:
+branch prefix `claude/` or `feature/`, PR opened after the first
+commit, `CHANGE_LOG.md` entry prepended when the PR opens. If the
+work happens in a dedicated `vger70/medreminder-website`
+repository, that repository sets its own conventions; the
+`CHANGE_LOG.md` update does not apply. Indicative commit order:
 
 1. **Scaffold.** Hugo project structure: `config/`, `layouts/`,
    `static/`, `assets/`, `i18n/`, `functions/`. Empty English
@@ -1252,3 +1282,22 @@ each if the content is translated by the maintainer.
   §15 decision #1 (Cloudflare project detail) and decision #3
   (analytics resolved — no further input needed), §16
   implementation plan step 1 (Wrangler and `_redirects` scaffold).
+- 2026-09-22 — internal-consistency pass. §7.2 rewritten to state
+  that `Accept-Language` detection runs at the Cloudflare Worker
+  edge (not Hugo, which is a static generator); §6.9 and §10.2
+  updated to name Cloudflare Web Analytics as the analytics
+  provider (previously still referenced Plausible / Umami); §8.4
+  numbering fixed (former duplicate §8.4 "Sitemap and robots.txt"
+  renumbered to §8.5); §6.10 typo fixed (`:details` →
+  `<details>`); §4 clarified that GitHub Actions workflows must
+  live at the repository root even in the co-located layout
+  (`.github/workflows/website.yml` with a `paths: [website/**]`
+  filter), not inside `website/.github/`; §16 clarified that
+  `CLAUDE.md` §5 governs only the co-located case; §15
+  restructured — the resolved decisions (hosting, analytics,
+  deployment pipeline) moved out of the "still to confirm" list
+  into a new §15.a "Decisions already resolved" subsection, and
+  the remaining decisions renumbered accordingly (former #4–#8
+  become #3–#7). §15 decision #2 also updated to reference the
+  Cloudflare Pages default URL (`*.pages.dev`) as the no-domain
+  fallback.
