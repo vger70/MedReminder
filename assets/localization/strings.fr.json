@@ -84,6 +84,7 @@
   "Ui.AboutDialog.Author": "Auteur : {0}",
   "Ui.AboutDialog.Email": "Courriel : {0}",
   "Ui.AboutDialog.Repository": "Code source : {0}",
+  "Ui.AboutDialog.Site": "Site web: {0}",
   "Ui.AboutDialog.ReportIssue": "Signaler un problème sur GitHub",
   "Ui.AboutDialog.License": "Publié sous licence Apache 2.0",
   "Ui.AboutDialog.Disclaimer": "Rappel organisationnel pour les stocks de médicaments. N'est pas un dispositif médical : ne fournit pas d'avis clinique. Toute décision thérapeutique doit être prise avec votre médecin.",

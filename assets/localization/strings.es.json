@@ -84,6 +84,7 @@
   "Ui.AboutDialog.Author": "Autor: {0}",
   "Ui.AboutDialog.Email": "Correo electrónico: {0}",
   "Ui.AboutDialog.Repository": "Código fuente: {0}",
+  "Ui.AboutDialog.Site": "Sitio web: {0}",
   "Ui.AboutDialog.ReportIssue": "Informar de un problema en GitHub",
   "Ui.AboutDialog.License": "Publicado bajo licencia Apache 2.0",
   "Ui.AboutDialog.Disclaimer": "Recordatorio organizativo para el stock de medicamentos. No es un dispositivo médico: no ofrece asesoramiento clínico. Toda decisión terapéutica debe consultarse con su médico.",
