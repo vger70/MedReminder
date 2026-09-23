@@ -66,35 +66,15 @@ The website is scoped strictly as a **static marketing site**
 The following items from `ANALYSIS-WEBSITE.md` §15 are open. Confirm
 each with the product owner before coding begins:
 
-1. **Repository placement.** Co-located under `website/` in this
-   repository, or a separate `vger70/medreminder-website` repository?
-   Recommendation: separate repository for clean CI separation.
-   If co-located, the GitHub Actions workflow lives at
-   `.github/workflows/website.yml` with a `paths: [website/**]`
-   filter.
-
-2. **Custom domain.** Acquire a custom domain (`medreminder.app` or
-   similar) or use the Cloudflare Pages default `*.pages.dev` URL?
-   Domain availability and cost must be checked.
-
-3. **Donation URLs.** The donate section requires real Stripe Payment
-   Links and PayPal hosted button URLs. These are not available until
-   the product owner supplies them. The section may be omitted from
-   v1 and added later without architectural change.
-
-4. **Screenshot set.** Confirm which specific UI states to capture
+1. **Screenshot set.** Confirm which specific UI states to capture
    and whether screenshots are retaken after every release or only on
    significant UI changes. Screenshots must be real, not mockups.
 
-5. **Version badge.** Option A (static string, manually updated per
-   release) or Option B (Shields.io live badge via `<img>`)?
-   Recommendation: Option A.
-
-6. **Roadmap section.** Include a "What's coming" section on the About
+2. **Roadmap section.** Include a "What's coming" section on the About
    page sourced from `EVOLUTION.md`? Must be labelled as planned, not
    promised.
 
-7. **Dark mode in v1.** Omit (recommended) or include.
+3. **Dark mode in v1.** Omit (recommended) or include.
 
 Record each answer in `ANALYSIS-WEBSITE.md` §15.a before the first
 commit.
@@ -112,6 +92,12 @@ be re-opened without the product owner's explicit sign-off:
   banner (`ANALYSIS-WEBSITE.md` §3.3, §8.4). Resolved 2026-09-22.
 - **Deployment pipeline.** GitHub Actions + Wrangler (Option A,
   `ANALYSIS-WEBSITE.md` §3.4). Resolved 2026-09-22.
+- **Repository placement.** Separate repository `vger70/medreminder-website` 
+  for clean CI separation.
+- **Custom domain.** Use the Cloudflare Pages default `*.pages.dev`.
+- **Donation URLs.** The donate section requires real Stripe Payment
+   Links and PayPal hosted button URLs are available in `donations.settings.json`
+- **Version badge.** Static string, manually updated per release
 
 ---
 
@@ -119,7 +105,7 @@ be re-opened without the product owner's explicit sign-off:
 
 Per `CLAUDE.md` §5 (co-located case only):
 
-- Branch name: **`feature/public-website`**, based on `main`.
+- Branch name **MUST** be: **`feature/public-website`**, based on `main`.
 - Open a pull request **after the first commit**, not at the end.
 - Prepend a `CHANGE_LOG.md` entry when the PR opens (follow the
   format documented at the top of that file).
