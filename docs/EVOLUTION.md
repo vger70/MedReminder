@@ -808,6 +808,62 @@ decision that must precede any implementation attempt.
 
 ---
 
+## 9.5 Public presentation website
+
+**Motivation.** MedReminder is currently distributed exclusively via
+the GitHub Releases page, which is addressed at technically literate
+users. A dedicated public website closes four gaps: it makes the app's
+value proposition clear at a glance to the primary audience (adults
+managing long-term medication), answers common pre-download questions
+(system requirements, SmartScreen warning, privacy), provides a
+donation entry point outside the Windows app, and improves search-engine
+discoverability for natural-language queries in all five supported
+languages.
+
+**Authoritative analysis.** The approved design is
+`docs/analysis/ANALYSIS-WEBSITE.md`. The implementation prompt is
+`docs/prompt/PROMPT-WEBSITE-IMPLEMENTATION.md`.
+
+**Design sketch.**
+
+- **Hugo** static site generator (single binary, no Node.js, first-class
+  multilingual support) with minimal handwritten CSS and JS; no
+  framework.
+- **Five languages**: English (canonical), Italian, French, Spanish,
+  German — mirroring the application's localization.
+- **Cloudflare Pages** hosting (free tier, 300+ PoP CDN, server-side
+  `_redirects`, PR preview deployments, built-in Web Analytics). GitHub
+  Pages is the documented fallback.
+- **Cloudflare Web Analytics** for privacy-respecting page-view
+  counting — no cookies, no consent banner required.
+- **No backend, no server, no CMS.** The donation section opens
+  Stripe/PayPal hosted URLs in the browser; the site makes no network
+  calls.
+- **Repository placement**: co-located under `website/` in this
+  repository (`.github/workflows/website.yml` with a path filter),
+  or a dedicated `vger70/medreminder-website` repository. Decision open.
+
+**Key sections**: Hero with download CTA, Features grid, How it works,
+Screenshots gallery, System requirements, SmartScreen explanation,
+Download, Donate, Privacy, FAQ, About, Footer.
+
+**Effort.** 2–3 developer-weeks for English + Italian + one additional
+language, full design, accessibility and performance pass. The
+remaining two languages add 1–2 days each. `[INFERRED]`
+
+**Open decisions.** Co-located vs. separate repository; custom domain
+vs. `*.pages.dev`; donation URLs (maintainer-managed); screenshot set;
+version badge approach; roadmap section; dark mode in v1. See
+`ANALYSIS-WEBSITE.md` §15 for the full list and §15.a for resolved
+items.
+
+**Verdict.** Low risk, entirely outside the application binary, no
+schema change, no new NuGet dependency. The primary audience benefits
+immediately; SEO and donation surface are side effects. Begin once the
+repository placement decision is confirmed.
+
+---
+
 ## 9. Change log for this document
 
 - 2026-09-19 — initial draft. Group A, C.3, C.3+, B.1, C.1
@@ -847,3 +903,8 @@ decision that must precede any implementation attempt.
   section headers were flagged accordingly. The remaining Group A
   items (A2, A3) and the multi-device track (C.3 → C.3+ → B.1 → C.1)
   are unchanged.
+- 2026-09-23 — added §9.5 (Public presentation website). Captures the
+  motivation, design sketch (Hugo, Cloudflare Pages, five-language
+  static site, no backend), effort estimate, open decisions, and pointers
+  to the authoritative analysis (`ANALYSIS-WEBSITE.md`) and
+  implementation prompt (`PROMPT-WEBSITE-IMPLEMENTATION.md`).
