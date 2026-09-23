@@ -19,9 +19,7 @@ prescription from their doctor before a medicine's stock runs out.
   advice. Every therapy decision must be taken with the user's doctor.
 
 Full technical analysis lives in [`docs/ANALYSIS.md`](docs/ANALYSIS.md);
-the planned multi-user redesign is in
-[`docs/ANALYSIS-MULTI-USER.md`](docs/ANALYSIS-MULTI-USER.md); the release
-pipeline is documented in [`docs/PACKAGING.md`](docs/PACKAGING.md).
+the release pipeline is documented in [`docs/PACKAGING.md`](docs/PACKAGING.md).
 
 ---
 
@@ -61,9 +59,6 @@ NOT subject to the English-only rule:
 - `assets/localization/strings.<lang>.json` — the JSON dictionaries
   for the UI languages (en, it, fr, es, de). Values are user-visible
   translated strings by design.
-
-Everything else in the repository — including comments, log messages
-and exception messages — must be English.
 
 ---
 
@@ -118,22 +113,20 @@ Restore, build and test:
 
 ```powershell
 dotnet restore MedReminder.sln
-dotnet build   MedReminder.sln -c Release
-dotnet test    MedReminder.sln -c Release
+dotnet build MedReminder.sln -c Release
+dotnet test MedReminder.sln -c Release
 ```
 
 Publish (framework-dependent, small):
 
 ```powershell
-dotnet publish src/MedReminder.UI -c Release `
-  /p:PublishProfile=win-x64-framework-dependent
+dotnet publish src/MedReminder.UI -c Release /p:PublishProfile=win-x64-framework-dependent
 ```
 
 Publish (self-contained, official production build):
 
 ```powershell
-dotnet publish src/MedReminder.UI -c Release `
-  /p:PublishProfile=win-x64-self-contained
+dotnet publish src/MedReminder.UI -c Release /p:PublishProfile=win-x64-self-contained
 ```
 
 The infrastructure tests use DPAPI and the Windows registry and
@@ -179,14 +172,6 @@ work session on this repository without exception.
   commit of a new work session, not at the end. Later commits
   in the same session update the same PR.
 
-### Release procedure
-
-A release is triggered by pushing a `v*` tag. The workflow
-`.github/workflows/dotnet-desktop.yml` restores, publishes
-self-contained x64 and creates the GitHub Release with
-`MedReminder-win-x64.zip` attached. See [`docs/PACKAGING.md`](docs/PACKAGING.md)
-for the full procedure.
-
 ### CHANGE_LOG.md
 
 Every time a pull request is opened for this repository, prepend an
@@ -201,7 +186,7 @@ resolves. Do not batch multiple PRs into one entry.
 ## 6. Data locations at runtime
 
 Everything the app writes lives under
-`%LOCALAPPDATA%\MedReminder\`. Since Increment 15 the database is
+`%LOCALAPPDATA%\MedReminder\`. The database is
 per-profile — the root holds admin-managed shared files and the
 profile registry, while each profile has its own subfolder under
 `profiles\`. See `docs/ANALYSIS-MULTI-USER.md` §3 for the full
@@ -235,49 +220,8 @@ the logs.
 
 Kept here so future sessions pick them up without re-deriving them:
 
-- **Multi-user baseline — shipped.** Increment 15 landed in
-  PRs #22 → #26. The two explicit non-goals from
-  [`docs/ANALYSIS-MULTI-USER.md`](docs/ANALYSIS-MULTI-USER.md)
-  §16 remain deferred: profile promote / demote, and the
-  consolidated admin view. Reopen only when the need actually
-  emerges.
-
-- **Decided implementation order (2026-09-20): A6 → A5 first, then
-  the rest.** The product owner set the donation/support UI (A6) as
-  the first item to implement, immediately followed by the dose-time
-  reminder (A5), then all remaining planned items in the cost-ordered
-  sequence (A2 → A3 → C.3 → C.3+ → B.1 → C.1). A1 is already [DONE],
-  which satisfies A5's precondition. Full rationale and sequence in
-  [`docs/EVOLUTION.md`](docs/EVOLUTION.md) §2.0.
-
 - **Prospective evolutions — see [`docs/EVOLUTION.md`](docs/EVOLUTION.md).**
   That document is the candidate-work backlog (not a commitment).
-  Current status of the items that have progressed past a sketch:
-  - **A1 — complex therapy regimens: marked [DONE] in
-    `EVOLUTION.md` §3.1.** The dose-slot groundwork it introduced
-    (`AdministrationSlotEntry.Time`, the `Schedule` value object,
-    `SchedulePanel`) is present in the tree and is the precondition
-    for A5. [VERIFIED against the current tree; merge/PR status not
-    recorded here — confirm in git history before relying on it.]
-  - **A5 — dose-time "remind me to take it" notification:
-    analysis stage.** Requirements/design drafted in
-    `docs/ANALYSIS-A5-DOSE-TIME-REMINDER.md`. Not implemented.
-    Dedup design **decided 2026-09-20**: a dedicated
-    `DoseReminderEvents` table keyed on
-    `(MedicineId, SlotKey, LocalDate)` — **not** the
-    `MedicationScheduleHistory` / shared-table hint that
-    `EVOLUTION.md` §3.5 originally suggested, whose supersession is
-    now confirmed (that document §13 items 3–4).
-  - **A6 — donation / support UI: analysis stage.** Requirements
-    /design drafted in `docs/ANALYSIS-A6-DONATION-SUPPORT.md`
-    (from `docs/DONATION-SUPPORT-FEATURE.md`). Not implemented.
-    Open decision: the entry point ("Help menu") is not documented
-    in the `ANALYSIS.md` MVP surface — confirm against the tree at
-    implementation time (that document §8.1 / §17).
-
-  None of the EVOLUTION items is committed work until explicitly
-  approved. The analysis documents exist to be reviewed and signed
-  off, not to authorize implementation.
 
 ---
 
@@ -294,10 +238,11 @@ Kept here so future sessions pick them up without re-deriving them:
   are already in `.gitignore`).
 - When adding a UI string, add its key to **every** dictionary under
   `assets/localization/`.
-- Run `dotnet build` and `dotnet test` before committing anything that
-  touches source code.
+- Ask user to run `dotnet build` and `dotnet test` before committing anything that
+  touches source code and wait results.
 - Match the tone of the existing Markdown: sober, factual, no marketing
-  language, no emoji unless the user explicitly asks.
+  language, no emoji, concise in the description, but detailed when asking 
+  the user to complete an action.
 
 ## 9. What to never do
 

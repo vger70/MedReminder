@@ -87,12 +87,32 @@ reasoning that informed the decision above; where it differs from
 
 Recommended by this document, in ascending ambition and cost:
 
-1. **Group A** — each item independently deliverable. Start here.
-2. **C.3** — manual export/import (GDPR portability + migration).
-3. **C.3+** — automatic backup to a user-controlled cloud folder with
+1. **A1 — complex therapy regimens.** 2–3 weeks. Highest single-item
+   value of Group A, but also the largest and the one that must
+   land before A5 can be attempted. **[DONE]**
+2. **A5 — dose-time reminder.** 1–1.5 weeks. Hard-depends on A1
+   for a reliable wall-clock anchor on every therapy — without
+   stabilized dose times the reminder has no time to fire on.
+   **[DONE]**
+3. **A6 — donation/support UI.** 3–5 days. No dependencies on any
+   other item, no schema patch, no domain or monitor changes; pure
+   UI + configuration. Ship first as a low-risk baseline that also
+   opens a voluntary funding channel for the maintenance costs the
+   later items will accrue. Indirectly de-risks §7 (C.1) by
+   exercising monetization plumbing before committing to a service.
+   **[DONE]**
+4. **A3 — caregiver notifications.** 1 week. Reuses the existing
+   MailKit transport and per-profile notification settings; no
+   dependency on A1.
+5. **C.3** — manual export/import (GDPR portability + migration).
+6. **C.3+** — automatic backup to a user-controlled cloud folder with
    explicit restore on a second device.
-4. **B.1** — mobile companion client that consumes C.3+.
-5. **C.1** — end-to-end encrypted sync with a dedicated backend.
+7. **C.3++**: Native Cloud Provider Integration Strategy.
+8. **A2 — AIC / barcode scan.** 1–2 weeks. Isolated, high
+   user-visible value, no cross-item preconditions. Good pairing
+   with A6 in the same release.
+9. **B.1** — mobile companion client that consumes C.3+.
+10. **C.1** — end-to-end encrypted sync with a dedicated backend.
    Only if the product accepts becoming a service.
 
 **C.2** (raw file-sync of the live SQLite database) is documented but
@@ -102,30 +122,6 @@ The ordering across groups is not a Gantt chart. Group A items can
 proceed in any order relative to each other, and C.3 can ship before
 A completes. The rule is: **do not skip C.3 → C.3+ before attempting
 B.1, and do not skip B.1 before deciding on C.1**.
-
-**Inside Group A**, the recommended order — by ascending cost, with
-dependencies respected — is:
-
-1. **A6 — donation/support UI.** 3–5 days. No dependencies on any
-   other item, no schema patch, no domain or monitor changes; pure
-   UI + configuration. Ship first as a low-risk baseline that also
-   opens a voluntary funding channel for the maintenance costs the
-   later items will accrue. Indirectly de-risks §7 (C.1) by
-   exercising monetization plumbing before committing to a service.
-   **[DONE]**
-2. **A2 — AIC / barcode scan.** 1–2 weeks. Isolated, high
-   user-visible value, no cross-item preconditions. Good pairing
-   with A6 in the same release.
-3. **A3 — caregiver notifications.** 1 week. Reuses the existing
-   MailKit transport and per-profile notification settings; no
-   dependency on A1.
-4. **A1 — complex therapy regimens.** 2–3 weeks. Highest single-item
-   value of Group A, but also the largest and the one that must
-   land before A5 can be attempted. **[DONE]**
-5. **A5 — dose-time reminder.** 1–1.5 weeks. Hard-depends on A1
-   for a reliable wall-clock anchor on every therapy — without
-   stabilized dose times the reminder has no time to fire on.
-   **[DONE]**
 
 Two hard dependencies to respect inside Group A: **A5 must not ship
 before A1** (as above), and everything else in Group A is free of

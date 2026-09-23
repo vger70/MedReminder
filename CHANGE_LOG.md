@@ -33,7 +33,7 @@ with the classification adapted to per-PR granularity: **Added**,
 ## PR #45 — Add analysis and implementation prompts for A3, C.3, C.3+
 
 Link: [vger70/MedReminder#45](https://github.com/vger70/MedReminder/pull/45)
-**Status:** open
+**Status:** merged [2026-09-22]
 
 Branch: `claude/gracious-ptolemy-bf39iz`
 
@@ -87,7 +87,7 @@ log). Each implementation prompt mirrors
 ## PR #44 — Reinstate Edit-medicine schedule seed; default Effettiva-dal to therapy start
 
 Link: [vger70/MedReminder#44](https://github.com/vger70/MedReminder/pull/44)
-**Status:** open
+**Status:** merged [2026-09-21]
 
 Branch: `claude/relaxed-shannon-4unkbv`
 
@@ -121,7 +121,7 @@ persistence, or to release packaging.
 ## PR #37 — A5: dose-time reminder ("remind me to take it")
 
 Link: [vger70/MedReminder#37](https://github.com/vger70/MedReminder/pull/37)
-**Status:** open
+**Status:** merged [2026-09-21]
 
 Branch: `feature/dose-time-reminder`
 
@@ -164,39 +164,6 @@ the EU MDR line.
 - New "Dose-time reminder" section in `docs/USER_GUIDE.en.md` and
   in all four localized guides (`it`, `fr`, `es`, `de`) — opt-in,
   toast/email, grace window, DST behavior.
-## PR #43 — Mark A1/A5/A6 as DONE in EVOLUTION; mark all PRs as merged in CHANGE_LOG
-
-Link: [vger70/MedReminder#43](https://github.com/vger70/MedReminder/pull/43)
-**Status:** open
-
-Branch: `claude/marca-done-merged-docs-x39j35`
-
-Docs-only sync so `EVOLUTION.md` and `CHANGE_LOG.md` reflect the
-current state of the repo.
-
-### Docs
-
-- `docs/EVOLUTION.md`: A5 (§3.5) and A6 (§3.6) section headers now
-  carry **[DONE]**, matching the pre-existing A1 (§3.1). §2.0
-  items 1 and 2 and the "Inside Group A" cost-ordered list items 1
-  and 5 are flagged accordingly, and §9 records the 2026-09-21
-  update.
-- `CHANGE_LOG.md`: every remaining `**Status:** open` entry moves
-  to `**Status:** merged (<date>)`, using the actual GitHub merge
-  timestamps: PR #7/#8/#13 (2026-09-17); PR #18/#19 (2026-09-18);
-  PR #28/#29/#30/#31 (2026-09-19); PR #33/#34 (2026-09-20);
-  PR #38/#39/#40/#42 (2026-09-21). PR #5 was superseded by PR #6
-  and is recorded as `closed (not merged)`.
-
-No source, build, test, localization or runtime changes.
-
-### Caveat
-
-PR #37 ("Implement A5 dose-time reminder") is still open on GitHub
-at the time this entry is written. `EVOLUTION.md` was updated per
-the maintainer's instruction to flag A5 as `[DONE]`; confirm the
-merge of #37 (or the equivalent A5 code path) before treating the
-tag as authoritative on the runtime side.
 
 ---
 
