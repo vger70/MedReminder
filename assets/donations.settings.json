@@ -5,11 +5,11 @@
     "Stripe": {
       "Enabled": true,
       "PaymentLinks": {
-        "2": "https://donate.stripe.com/REPLACE_2eur",
-        "5": "https://donate.stripe.com/REPLACE_5eur",
-        "10": "https://donate.stripe.com/REPLACE_10eur",
-        "20": "https://donate.stripe.com/REPLACE_20eur",
-        "custom": "https://donate.stripe.com/REPLACE_choose_amount"
+        "2": "https://buy.stripe.com/00w8wH26s8Kv19g0SR7IY06",
+        "5": "https://buy.stripe.com/00w8wHaCY3qb8BIbxv7IY05",
+        "10": "https://buy.stripe.com/5kQcMXaCYbWHg4agRP7IY04",
+        "20": "https://buy.stripe.com/14AfZ98uQbWH7xE5977IY02",
+        "custom": "https://buy.stripe.com/14AfZ98uQbWH7xE5977IY02"
       }
     },
     "PayPal": {
