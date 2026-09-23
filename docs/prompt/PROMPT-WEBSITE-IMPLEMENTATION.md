@@ -93,11 +93,11 @@ be re-opened without the product owner's explicit sign-off:
 - **Deployment pipeline.** GitHub Actions + Wrangler (Option A,
   `ANALYSIS-WEBSITE.md` §3.4). Resolved 2026-09-22.
 - **Repository placement.** Separate repository `vger70/medreminder-website` 
-  for clean CI separation.
-- **Custom domain.** Use the Cloudflare Pages default `*.pages.dev`.
+  for clean CI separation. Resolved 2026-09-23.
+- **Custom domain.** Use the Cloudflare Pages default `*.pages.dev`. Resolved 2026-09-23.
 - **Donation URLs.** The donate section requires real Stripe Payment
-   Links and PayPal hosted button URLs are available in `donations.settings.json`
-- **Version badge.** Static string, manually updated per release
+  Links and PayPal hosted button URLs are available in `donations.settings.json`. Resolved 2026-09-23.
+- **Version badge.** Static string, manually updated per release. Resolved 2026-09-23.
 
 ---
 

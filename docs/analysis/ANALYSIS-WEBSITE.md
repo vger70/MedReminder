@@ -1147,38 +1147,15 @@ commit messages are English.
 
 ## 15. Decisions still to confirm
 
-1. **Co-located vs. separate repository.** Recommendation:
-   separate repository (`vger70/medreminder-website`) for clean
-   CI separation and independent Cloudflare Pages project
-   configuration. Confirm — or decide to keep everything in the
-   main repository under `website/`.
+1. **Screenshot set.** Confirm which specific UI states to capture
+   and whether screenshots are retaken after every release or only on
+   significant UI changes. Screenshots must be real, not mockups.
 
-2. **Custom domain.** Recommendation: acquire a custom domain
-   (`medreminder.app` or similar) for better SEO and a more
-   trustworthy URL for the primary audience. Confirm — or use the
-   Cloudflare Pages default `*.pages.dev` URL (or the GitHub Pages
-   default if the fallback host is chosen). `[UNCERTAIN — domain
-   availability and cost must be checked]`
+2. **Roadmap section.** Include a "What's coming" section on the About
+   page sourced from `EVOLUTION.md`? Must be labelled as planned, not
+   promised.
 
-3. **Donation URLs.** The donation section requires real Stripe
-   Payment Links and PayPal hosted button URLs. These are
-   maintainer-managed and must be provided before the donate
-   section can go live. The section can be omitted from v1 and
-   added once the URLs are ready, without any architectural change.
-
-4. **Screenshot set.** Confirm which specific UI states to capture
-   and whether they need to be retaken after each release or only
-   on significant UI changes.
-
-5. **Version badge approach.** Option A (static, manually updated)
-   vs. Option B (Shields.io live badge). Confirm.
-
-6. **Roadmap section.** Include a "What's coming" section based
-   on `EVOLUTION.md` items (mobile companion, cloud backup, etc.)?
-   This increases interest but must be clearly labelled as planned,
-   not promised. Confirm inclusion and exact wording.
-
-7. **Dark mode in v1.** Omit (recommended) or include.
+3. **Dark mode in v1.** Omit (recommended) or include.
 
 ### 15.a Decisions already resolved
 
@@ -1190,6 +1167,12 @@ commit messages are English.
 - **Deployment pipeline.** GitHub Actions + Wrangler (Option A,
   §3.4), with Cloudflare direct connection (Option B) as a
   simpler alternative. Resolved 2026-09-22.
+- **Repository placement.** Separate repository `vger70/medreminder-website` 
+  for clean CI separation. Resolved 2026-09-23.
+- **Custom domain.** Use the Cloudflare Pages default `*.pages.dev`. Resolved 2026-09-23.
+- **Donation URLs.** The donate section requires real Stripe Payment
+  Links and PayPal hosted button URLs are available in `donations.settings.json`. Resolved 2026-09-23.
+- **Version badge.** Static string, manually updated per release. Resolved 2026-09-23.
 
 ---
 
