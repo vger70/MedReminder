@@ -30,6 +30,34 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #46 — Add implementation prompt and EVOLUTION entry for public website
+
+Link: [vger70/MedReminder#46](https://github.com/vger70/MedReminder/pull/46)
+**Status:** open
+
+Branch: `claude/website-implementation-prompt-821c66`
+
+Adds the authoring artifacts needed to gate the MedReminder public
+presentation website implementation. No source code, no schema, no
+packaging change — prompt and evolution-document update only.
+
+### Docs
+
+- **`docs/prompt/PROMPT-WEBSITE-IMPLEMENTATION.md`** (new). Self-contained
+  implementation briefing for the website Claude Code session. Structure
+  mirrors `PROMPT-C3PLUS-IMPLEMENTATION.md`: hard boundaries (no backend,
+  no framework, no third-party analytics, no dark mode in v1), seven open
+  decisions to confirm before coding, three resolved decisions (Cloudflare
+  Pages, Cloudflare Web Analytics, GitHub Actions + Wrangler), technical
+  stack table (Hugo, system-font CSS, < 10 KB JS), full repository layout,
+  ten-step implementation order, content governance rules, risk mitigations,
+  and fourteen acceptance criteria.
+- **`docs/EVOLUTION.md`** — new §9.5 (Public presentation website). Records
+  motivation, design sketch, effort estimate, open decisions, and pointers to
+  `ANALYSIS-WEBSITE.md` and the new prompt. Change-log entry appended.
+
+---
+
 ## PR #45 — Add analysis and implementation prompts for A3, C.3, C.3+
 
 Link: [vger70/MedReminder#45](https://github.com/vger70/MedReminder/pull/45)
