@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.Extensions.Options;
@@ -34,6 +35,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private readonly IProfileRegistry _profileRegistry;
     private readonly ILocalizationService _loc;
     private readonly IReferenceCatalogueQueryService _catalogueQuery;
+    // C.3: encrypted export / import (§5). The dialogs run the services
+    // off the UI thread; the SettingsDialog only launches them.
+    private readonly IExportService _exportService;
+    private readonly IImportService _importService;
 
     // Email tab controls
     private TextBox _hostBox = null!;
@@ -119,7 +124,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         ICurrentProfile currentProfile,
         IProfileRegistry profileRegistry,
         ILocalizationService localization,
-        IReferenceCatalogueQueryService catalogueQuery)
+        IReferenceCatalogueQueryService catalogueQuery,
+        IExportService exportService,
+        IImportService importService)
     {
         _smtpMonitor = smtpMonitor;
         _notificationMonitor = notificationMonitor;
@@ -135,6 +142,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _profileRegistry = profileRegistry;
         _loc = localization;
         _catalogueQuery = catalogueQuery;
+        _exportService = exportService;
+        _importService = importService;
 
         Text = _loc.Get("Ui.SettingsDialog.Title");
         // Sized so that the Backup tab fits the folder textbox, the
@@ -873,6 +882,26 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var importButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.Restore"), AutoSize = true, Height = 30 };
         importButton.Click += async (_, _) => await ImportBackupAsync(importButton);
 
+        // C.3: encrypted, portable export / import (§5.4). Sits next to
+        // the raw DB backup / restore because it is the same "move my
+        // data" concern, but produces a passphrase-encrypted .mrz that
+        // is portable across Windows accounts and machines.
+        var exportEncryptedButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.File.ExportData"),
+            AutoSize = true,
+            Height = 30,
+        };
+        exportEncryptedButton.Click += (_, _) => ShowExportDialog();
+
+        var importEncryptedButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.File.ImportData"),
+            AutoSize = true,
+            Height = 30,
+        };
+        importEncryptedButton.Click += (_, _) => ShowImportDialog();
+
         _backupStatusLabel = new Label { AutoSize = true };
         UpdateBackupStatusLabel();
 
@@ -918,6 +947,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
         actionButtons.Controls.Add(runNowButton);
         actionButtons.Controls.Add(exportButton);
         actionButtons.Controls.Add(importButton);
+        actionButtons.Controls.Add(exportEncryptedButton);
+        actionButtons.Controls.Add(importEncryptedButton);
 
         var note = new Label
         {
@@ -1167,6 +1198,29 @@ internal sealed class SettingsDialog : MedReminderFormBase
         finally
         {
             button.Enabled = true;
+        }
+    }
+
+    // C.3: launches the encrypted-export dialog. The dialog owns the
+    // whole flow (destination, passphrase, opt-in scope, progress); the
+    // SettingsDialog only opens it.
+    private void ShowExportDialog()
+    {
+        using var dialog = new ExportDialog(_loc, _exportService);
+        dialog.ShowDialog(this);
+    }
+
+    // C.3: launches the encrypted-import dialog. On a successful import
+    // the dialog reports whether the user accepted the restart prompt
+    // (§4.2 step 11); the profile DB has been swapped from under EF
+    // Core, so a restart into the same profile is the clean path.
+    private void ShowImportDialog()
+    {
+        using var dialog = new ImportDialog(_loc, _importService);
+        var result = dialog.ShowDialog(this);
+        if (result == DialogResult.OK && dialog.RestartRequested)
+        {
+            _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
         }
     }
 

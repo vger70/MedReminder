@@ -1278,7 +1278,9 @@ internal sealed class MainForm : MedReminderFormBase
                 scope.ServiceProvider.GetRequiredService<ICurrentProfile>(),
                 scope.ServiceProvider.GetRequiredService<IProfileRegistry>(),
                 scope.ServiceProvider.GetRequiredService<ILocalizationService>(),
-                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Catalogue.IReferenceCatalogueQueryService>());
+                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Catalogue.IReferenceCatalogueQueryService>(),
+                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.IExportService>(),
+                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.IImportService>());
             dialog.ShowDialog(this);
         }
         catch (Exception ex)
