@@ -473,6 +473,48 @@ required.
   replaced. **Close and reopen MedReminder** after the restore
   to avoid inconsistencies.
 
+## Export and import
+
+Alongside the raw database backup, MedReminder can produce a single
+**encrypted, portable file** with all of your data. Unlike a plain
+backup, this file is not tied to your Windows account or PC, so it is
+also the recommended way to move MedReminder to a new computer.
+
+**Settings → Backup → Export all data (encrypted)…**:
+
+- Pick where to save the file (extension `.mrz`).
+- Choose a **passphrase** (at least 12 characters) and type it twice.
+- Optionally tick the shared settings you want to include: SMTP
+  transport settings, the SMTP password, backup preferences, user
+  preferences (language and catalogue country). All are off by default.
+  If you include the SMTP password, it is re-encrypted with your
+  passphrase — it is never written in clear text.
+- Click **Export**.
+
+**The passphrase cannot be recovered.** There is no reset, no backdoor
+and no server copy. If you lose the passphrase, the file can never be
+read again — store it somewhere safe.
+
+**Settings → Backup → Import from export…**:
+
+- Pick the `.mrz` file. MedReminder shows what it contains (version,
+  date, scope, included settings) before doing anything.
+- Type the passphrase.
+- Tick **"I understand that this will overwrite the current profile's
+  data."** Import replaces the current profile's data entirely — there
+  is no merge. A safety copy of the current database is kept as
+  `medreminder.db.bak-<timestamp>` first.
+- Click **Import**, then **restart** MedReminder when prompted so the
+  imported data is loaded cleanly.
+
+If the passphrase is wrong, or the file is damaged, or it was produced by
+a newer version of MedReminder, the import stops with a clear message and
+your current data is left untouched.
+
+The archive format is documented publicly in
+[`docs/EXPORT-FORMAT.md`](EXPORT-FORMAT.md), so your data is never locked
+in — it can be decrypted with standard tools if you ever need to.
+
 ## Check now
 
 The monitor runs automatically every 30 minutes (configurable in
