@@ -26,8 +26,10 @@ internal sealed class AboutDialog : MedReminderFormBase
     private Button _checkUpdatesButton = null!;
     private Label _updateStatusLabel = null!;
 
-    private const string AuthorHandle = "vger70";
-    private const string AuthorEmail = "medreminder26@gmail.com";
+    private const string AuthorHandle = "@vger70";
+    private const string AuthorEmail = "info@medreminder26.org";
+    private const string SiteUrl = "https://www.medreminder26.org";
+
     private const string RepositoryUrl = "https://github.com/vger70/MedReminder";
     private const string LicenseUrl = "https://github.com/vger70/MedReminder/blob/main/LICENSE";
     private const string IssuesUrl = "https://github.com/vger70/MedReminder/issues";
@@ -105,6 +107,14 @@ internal sealed class AboutDialog : MedReminderFormBase
             LinkArea = ComputeLinkArea(_loc.Get("Ui.AboutDialog.Repository", RepositoryUrl), RepositoryUrl),
         };
         repoLink.LinkClicked += (_, _) => OpenExternal(RepositoryUrl);
+
+        var siteLink = new LinkLabel
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.AboutDialog.Site", SiteUrl),
+            LinkArea = ComputeLinkArea(_loc.Get("Ui.AboutDialog.Site", SiteUrl), SiteUrl),
+        };
+        siteLink.LinkClicked += (_, _) => OpenExternal(SiteUrl);
 
         var issuesLink = new LinkLabel
         {
@@ -207,6 +217,7 @@ internal sealed class AboutDialog : MedReminderFormBase
         textStack.Controls.Add(BuildSpacer(6));
         textStack.Controls.Add(authorLabel);
         textStack.Controls.Add(emailLink);
+        textStack.Controls.Add(siteLink);
         textStack.Controls.Add(repoLink);
         textStack.Controls.Add(issuesLink);
         textStack.Controls.Add(licenseLink);

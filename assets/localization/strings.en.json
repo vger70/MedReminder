@@ -84,6 +84,7 @@
   "Ui.AboutDialog.Author": "Author: {0}",
   "Ui.AboutDialog.Email": "Email: {0}",
   "Ui.AboutDialog.Repository": "Source code: {0}",
+  "Ui.AboutDialog.Site": "Website: {0}",
   "Ui.AboutDialog.ReportIssue": "Report an issue on GitHub",
   "Ui.AboutDialog.License": "Released under the Apache License 2.0",
   "Ui.AboutDialog.Disclaimer": "Organizational reminder for medicine stock. Not a medical device: it does not provide clinical advice. Every therapy decision must be discussed with your doctor.",

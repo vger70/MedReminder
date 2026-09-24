@@ -84,6 +84,7 @@
   "Ui.AboutDialog.Author": "Autor: {0}",
   "Ui.AboutDialog.Email": "E-Mail: {0}",
   "Ui.AboutDialog.Repository": "Quellcode: {0}",
+  "Ui.AboutDialog.Site": "Webseite: {0}",
   "Ui.AboutDialog.ReportIssue": "Problem auf GitHub melden",
   "Ui.AboutDialog.License": "Veröffentlicht unter der Apache-2.0-Lizenz",
   "Ui.AboutDialog.Disclaimer": "Organisatorische Erinnerung an Medikamentenbestände. Kein Medizinprodukt: keine klinische Beratung. Jede therapeutische Entscheidung muss mit Ihrer Ärztin oder Ihrem Arzt besprochen werden.",
