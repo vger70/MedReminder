@@ -30,6 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #52 — Allow non-admin profiles to use manual export and import
+
+Link: [vger70/MedReminder#52](https://github.com/vger70/MedReminder/pull/52)
+**Status:** open
+
+Branch: `claude/non-admin-export-import-181083`
+
+Non-admin profiles were inadvertently locked out of the four manual
+export/import commands introduced in PR #48, because the entire Backup
+tab was admin-gated. This change exposes the Backup tab to all profiles
+while keeping the automatic-backup settings (directory, schedule,
+retention, Save, Run-now) visible only to admins.
+
+### Changed
+
+- **`SettingsDialog`**: `BuildBackupTab()` is now called unconditionally;
+  the automatic-backup `TableLayoutPanel` and the Save / Run-now buttons
+  are conditionally hidden when `_currentProfile.IsAdmin` is false.
+
+---
+
 ## PR #48 — C.3: Manual encrypted export / import
 
 Link: [vger70/MedReminder#48](https://github.com/vger70/MedReminder/pull/48)
