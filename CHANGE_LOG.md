@@ -37,10 +37,9 @@ Link: [vger70/MedReminder#53](https://github.com/vger70/MedReminder/pull/53)
 
 Branch: `claude/negli-user-guide-fixes-461ae2`
 
-Corrects six inconsistencies in `docs/USER_GUIDE.it.md` and adds the three
-recently shipped features that were documented only in the English guide.
-A follow-up commit on the same branch will propagate equivalent corrections to
-`en`, `fr`, `es`, and `de` once the Italian version is approved.
+Corrects six inconsistencies in all five shipped user guides and adds the
+three recently shipped features (stepped tapering, A3 caregiver notifications,
+C3 export/import) that were missing from the non-English guides.
 
 ### Fixed
 
@@ -67,6 +66,14 @@ A follow-up commit on the same branch will propagate equivalent corrections to
 - **`docs/USER_GUIDE.it.md`** — "Esportazione e importazione" section (C3,
   PR #48): encrypted `.mrz` archive, passphrase requirements, and import
   overwrite semantics, consistent with the English guide.
+- **`docs/USER_GUIDE.en.md`** — same corrections 2 and 3 (MVP text and
+  "What does NOT do") applied; the other four were already present.
+- **`docs/USER_GUIDE.fr.md`**, **`docs/USER_GUIDE.es.md`**,
+  **`docs/USER_GUIDE.de.md`** — all six corrections applied in the
+  respective languages (fr: Linéaire/Par paliers, Notifications au soignant,
+  Export et importation; es: Lineal/Por etapas, Notificaciones al cuidador,
+  Exportación e importación; de: Linear/Stufenweise,
+  Benachrichtigungen für Pflegepersonen, Export und Import).
 
 ---
 
