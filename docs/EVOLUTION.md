@@ -68,7 +68,7 @@ end-user value of Group A and its only hard precondition (A1) is
 already **[DONE]**, so the A1 → A5 dependency is satisfied and A5 can
 follow A6 directly. See §2.0 for the resulting full sequence.
 **Both A6 and A5 are now [DONE] as of 2026-09-21** together with the
-pre-existing A1; see §9 for the change-log entry.
+pre-existing A1; see §11 for the change-log entry.
 
 ### 2.0 Decided implementation sequence
 
@@ -77,8 +77,8 @@ pre-existing A1; see §9 for the change-log entry.
    (§3.5) **[DONE]**
 3. **All remaining planned items**, in the cost-ordered sequence
    already documented below: A2 (§3.2), then A3 (§3.3), then the
-   multi-device track C.3 (§4) → C.3+ (§5) → B.1 (§6) → C.1 (§7),
-   with C.2 rejected (§7.1). A1 (§3.1) is already [DONE] and is not
+   multi-device track C.3 (§4) → C.3+ (§5) → B.1 (§7) → C.1 (§8),
+   with C.2 rejected (§9.1). A1 (§3.1) is already [DONE] and is not
    scheduled again.
 
 The remainder of this section records the original cost-ordered
@@ -98,7 +98,7 @@ Recommended by this document, in ascending ambition and cost:
    other item, no schema patch, no domain or monitor changes; pure
    UI + configuration. Ship first as a low-risk baseline that also
    opens a voluntary funding channel for the maintenance costs the
-   later items will accrue. Indirectly de-risks §7 (C.1) by
+   later items will accrue. Indirectly de-risks §8 (C.1) by
    exercising monetization plumbing before committing to a service.
    **[DONE]**
 4. **A3 — caregiver notifications.** 1 week. Reuses the existing
@@ -116,7 +116,7 @@ Recommended by this document, in ascending ambition and cost:
    Only if the product accepts becoming a service.
 
 **C.2** (raw file-sync of the live SQLite database) is documented but
-**rejected** on technical grounds — see §7.
+**rejected** on technical grounds — see §8.
 
 The ordering across groups is not a Gantt chart. Group A items can
 proceed in any order relative to each other, and C.3 can ship before
@@ -182,7 +182,7 @@ and uniquely identifies the medicinal product.
 
 - On desktop: use the PC camera or a handheld USB barcode scanner
   as HID keyboard input.
-- On the mobile companion (see §6): the phone camera is the
+- On the mobile companion (see §7): the phone camera is the
   natural scanner; `ZXing.Net.Maui` or equivalent handles the
   decode.
 - Once the AIC is captured, look it up in the local reference
@@ -190,7 +190,7 @@ and uniquely identifies the medicinal product.
   already exists) and populate the medicine record.
 
 **Effort.** 1–2 weeks for the desktop path. Mobile path lands
-together with §6. [INFERRED]
+together with §7. [INFERRED]
 
 **Risks.** Camera access adds a new permission surface on Windows;
 handheld scanners are the safer default for the desktop MVP.
@@ -222,7 +222,7 @@ the caregiver's inbox".
 recipient must be an explicit user choice — the UI copy has to
 make that clear. Do not enable by default. Nothing in the mail
 body reveals sensitive medical details beyond what the primary
-user has already accepted (see `CLAUDE.md` §6).
+user has already accepted (see `CLAUDE.md` §7).
 
 **Verdict.** Low cost, high real-world usefulness. Ship after A1.
 
@@ -306,7 +306,7 @@ time of writing]
   The per-medicine `_channelWindows` / `_channelEmail` flags
   already control channel selection and are respected as-is.
 - **Localization.** Add the new key to every dictionary under
-  `assets/localization/` (en, it, fr, es, de) per `CLAUDE.md` §8.
+  `assets/localization/` (en, it, fr, es, de) per `CLAUDE.md` §9.
 
 **Effort.** 1–1.5 weeks including schema patch, UI wiring,
 scheduler extension, deduplication test, five-language
@@ -317,7 +317,7 @@ localization and shipped-user-guide updates. [INFERRED]
 - **Medical-device drift — the real risk.** A "did you take the
   08:00 dose?" acknowledgement, retention of missed-dose events,
   or any alert on missed doses would push the app into EU MDR
-  2017/745 adherence-tracking territory (see §8.2). This item is
+  2017/745 adherence-tracking territory (see §9.2). This item is
   scoped strictly to *emit a reminder*: no ack UI, no missed-dose
   logging, no clinical alert wording. The disclaimer copy in
   `CLAUDE.md` §1 remains sufficient only as long as this line
@@ -386,7 +386,7 @@ in `docs/DONATION-SUPPORT-FEATURE.md`.
 > menu" entry point assumed below is **not** documented in the
 > `ANALYSIS.md` MVP (only a toolbar and a tray menu are); a Help
 > surface (`HelpViewerForm`) exists post-MVP and the exact entry
-> point must be confirmed against the tree. See `ANALYSIS-A6` §8.1.
+> point must be confirmed against the tree. See `ANALYSIS-A6` §9.1.
 
 **Preconditions — already in place.** WinForms host, per-profile
 `user.settings.json` reader, MailKit-independent logging
@@ -400,12 +400,12 @@ NuGet dependency, no schema patch, no domain change.
   holding `Enabled`, `Currency`, and a per-provider block with
   `Enabled` + a `PaymentLinks` map `{amount → URL}`. Only public
   Payment Link URLs; no client secret, no access token, no API
-  key of any kind lives in the client — `CLAUDE.md` §9 already
+  key of any kind lives in the client — `CLAUDE.md` §11 already
   forbids plaintext secrets, and this feature must not weaken
   that stance.
 - **Storage.** A new admin-managed
   `%LOCALAPPDATA%\MedReminder\donations.settings.json` alongside
-  the other shared JSON files listed in `CLAUDE.md` §6. Public
+  the other shared JSON files listed in `CLAUDE.md` §7. Public
   URLs only — do not route through `smtp.protected` or any
   DPAPI-encrypted store; there is nothing sensitive to protect.
 - **Provider abstraction.** `IDonationProvider` port in
@@ -414,7 +414,7 @@ NuGet dependency, no schema patch, no domain change.
   `MedReminder.Infrastructure`. The port returns a
   `DonationLaunchResult` describing the URL to open and the
   provider that produced it. The abstraction is intentionally
-  designed so that a later backend (see §7 — C.1) can swap the
+  designed so that a later backend (see §8 — C.1) can swap the
   "open a hosted URL" adapter for a "call our checkout API +
   verify via webhook" adapter without touching the UI or the
   service layer.
@@ -432,7 +432,7 @@ NuGet dependency, no schema patch, no domain change.
   menu entry — `Ui.MenuHelp.SupportDevelopment` — never from a
   startup prompt. Voluntary tone; explicit "not required to use
   the application" copy. Localize the new strings across en / it
-  / fr / es / de per `CLAUDE.md` §8. No `WebBrowser` control, no
+  / fr / es / de per `CLAUDE.md` §9. No `WebBrowser` control, no
   embedded browser: the URL opens in the system default browser
   via `Process.Start` with `UseShellExecute = true`.
 - **Validation before launch.** The service must reject non-HTTPS
@@ -466,7 +466,7 @@ localization and shipped-user-guide updates. [INFERRED]
   public identifiers, not credentials, and are the only piece of
   provider configuration allowed in the shipped artifact. Any
   drift here undoes the security posture the rest of the app
-  enforces (`CLAUDE.md` §9).
+  enforces (`CLAUDE.md` §11).
 - **Nagware would sink adoption.** No dialog on launch, no
   countdown, no periodic prompt. The entry point is a single Help
   menu item; that is the entire surface.
@@ -485,7 +485,7 @@ localization and shipped-user-guide updates. [INFERRED]
 - **Not a medical-device concern.** The donation surface is
   strictly commercial UX — it does not touch therapy data, does
   not read stock, does not read schedules. It stays well clear
-  of EU MDR 2017/745 (§8.2).
+  of EU MDR 2017/745 (§9.2).
 
 **Verdict.** The smallest and most self-contained item in Group A.
 No dependencies on A1..A5, no schema patch, no monitor changes;
@@ -557,7 +557,7 @@ regardless of what happens after.
 
 An honest, low-cost approximation of multi-device operation without
 building a backend. The automatic-backup mechanism already exists
-(`backup.settings.json`, `backup.state.json` — see `CLAUDE.md` §6);
+(`backup.settings.json`, `backup.state.json` — see `CLAUDE.md` §7);
 this evolution reuses it.
 
 ### 5.2 Design sketch
@@ -565,7 +565,7 @@ this evolution reuses it.
 - Extend the automatic-backup destination to accept **any local
   folder**, including one that is synchronized by the user's cloud
   provider (OneDrive, iCloud Drive, Dropbox, Google Drive Desktop).
-- The app writes atomic snapshots (never the live DB — see §7 on
+- The app writes atomic snapshots (never the live DB — see §8 on
   why file-sync of the live DB corrupts SQLite).
 - On a second device, an explicit **Restore from backup** action
   reads the most recent snapshot and replaces the local profile.
@@ -596,16 +596,76 @@ C.3.
 
 ---
 
-## 6. B.1 — Mobile companion client
+## 6. C.3++ — Native Cloud Provider Integration Strategy
 
-### 6.1 Portable code already available
+**Motivation.**
+C.3+ intentionally relies on user-selected cloud-synced folders
+(OneDrive, Google Drive Desktop, Dropbox, iCloud Drive, Nextcloud,
+etc.) and therefore remains provider-independent. This approach is
+the preferred starting point because it avoids OAuth flows, SDK
+dependencies, cloud API quotas and provider lock-in. The primary
+driver for revisiting this decision is the future B.1 mobile
+companion, where the filesystem abstraction available on Windows
+does not map cleanly to Android and iOS.
+
+**Design direction.**
+Introduce an IArchiveStorage abstraction between archive creation
+and archive delivery:
+
+Data → MRZ Archive → IArchiveStorage → Storage Backend
+
+The .mrz encrypted archive format remains the long-term
+interoperability contract. Storage backends become replaceable
+adapters.
+
+Phase 1 ships only:
+- LocalFolderArchiveStorage
+- user-selected cloud-synced folders
+- no provider-specific SDK
+- no OAuth authentication
+
+Future implementations may include:
+- OneDriveArchiveStorage (Microsoft Graph)
+- GoogleDriveArchiveStorage
+- DropboxArchiveStorage
+
+**Decision.**
+Native cloud-provider integrations are explicitly deferred until
+B.1 (mobile companion) creates a concrete requirement for them.
+The recommended priority order is:
+
+1. OneDrive
+2. Google Drive
+3. Dropbox
+
+iCloud on Windows remains on the synchronized-folder model and is
+not considered a viable native integration target.
+
+**Mobile strategy.**
+The first B.1 release should use a provider file picker
+(Scenario A) rather than provider-specific OAuth integrations.
+Native cloud APIs may be introduced in a later B.1 iteration once
+the companion application has stabilized.
+
+**Verdict.**
+Keep C.3+ as the default user experience. Introduce the storage
+abstraction early, but defer native provider integrations until
+they produce tangible value for mobile scenarios.
+
+---
+
+---
+
+## 7. B.1 — Mobile companion client
+
+### 7.1 Portable code already available
 
 The projects `MedReminder.Domain` and `MedReminder.Application`
 target `net10.0` with no Windows-specific dependencies. They are
 reusable from a mobile host without modification. [VERIFIED against
 `CLAUDE.md` §3]
 
-### 6.2 What must be re-implemented per platform
+### 7.2 What must be re-implemented per platform
 
 `MedReminder.Infrastructure` targets `net10.0-windows` and hosts
 platform-bound adapters:
@@ -621,7 +681,7 @@ platform-bound adapters:
 EF Core with `Microsoft.EntityFrameworkCore.Sqlite` runs natively on
 iOS and Android with no changes. MailKit runs on both.
 
-### 6.3 UI framework choice
+### 7.3 UI framework choice
 
 - **.NET MAUI** — Microsoft-official, XAML, iOS/Android/Windows/
   macOS. Best integration with the .NET ecosystem. Stability
@@ -636,7 +696,7 @@ Recommended default: **MAUI**, on ecosystem grounds (documentation,
 Visual Studio integration, sample density). Avalonia becomes the
 better choice only if desktop Linux is also a target.
 
-### 6.4 Effort
+### 7.4 Effort
 
 - Rough MVP (browse medicines, add/edit, low-stock notification,
   settings) with no sync: **2–4 developer-months**. [INFERRED —
@@ -645,7 +705,7 @@ better choice only if desktop Linux is also a target.
   Every screen must be re-thought for touch, scroll, stack
   navigation and system notifications.
 
-### 6.5 Distribution
+### 7.5 Distribution
 
 - **iOS**: Apple Developer Program ~99 USD/year; App Store review
   required; TestFlight for beta.
@@ -656,7 +716,7 @@ Neither store rejects "medication reminder" apps as long as no
 clinical claims are made — the existing disclaimer wording
 (`CLAUDE.md` §1) is sufficient.
 
-### 6.6 Localization
+### 7.6 Localization
 
 Reuses `assets/localization/strings.<lang>.json` unchanged if the
 loader is a service exposed via a port from
@@ -665,22 +725,22 @@ loader is a service exposed via a port from
 This move should be part of the B.1 preparation, not a duplicate
 translation effort.
 
-### 6.7 Precondition
+### 7.7 Precondition
 
 Do **not** ship B.1 without at least C.3+ in place. A mobile
 client whose data does not connect to the desktop's data is a new
 app, not a companion.
 
-### 6.8 Verdict
+### 7.8 Verdict
 
 Meaningful only when paired with C.3+ or C.1. As a standalone
 effort, it is a large investment (months) for uncertain reward.
 
 ---
 
-## 7. C.1 — End-to-end encrypted sync with dedicated backend
+## 8. C.1 — End-to-end encrypted sync with dedicated backend
 
-### 7.1 Rejection of C.2 (raw file-sync of the live SQLite DB)
+### 8.1 Rejection of C.2 (raw file-sync of the live SQLite DB)
 
 Documented here rather than as a separate item because C.2 is a
 tempting-looking non-option: it should be ruled out before C.1 is
@@ -701,13 +761,13 @@ C.2 is therefore rejected. Its only defensible variant is
 **backup-of-a-snapshot on a cloud folder**, which is C.3+ (§5) —
 not sync.
 
-### 7.2 C.1 motivation
+### 8.2 C.1 motivation
 
 The only option that both scales to real multi-device operation
 and respects the sensitivity of medical data. Its cost is the
 switch from "distribute a binary" to "operate a service".
 
-### 7.3 Architecture
+### 8.3 Architecture
 
 Zero-knowledge model:
 
@@ -723,7 +783,7 @@ Zero-knowledge model:
    merge. Each device publishes its own operations, pulls the
    others, replays locally. Simpler and less conflict-prone.
 
-### 7.4 Multi-device bootstrap
+### 8.4 Multi-device bootstrap
 
 Since MedReminder is single-user per account, no Signal-style
 device pairing is required. The user re-enters the same passphrase
@@ -731,7 +791,7 @@ on the second device → same derived key → the server-stored blobs
 decrypt. Force a printable **recovery kit** (mnemonic phrase) at
 first-device setup to mitigate passphrase loss.
 
-### 7.5 Backend
+### 8.5 Backend
 
 - **Stack**: ASP.NET Core (coherent with the rest), Postgres for
   the blob store, email+password auth **separate** from the E2E
@@ -743,7 +803,7 @@ first-device setup to mitigate passphrase loss.
 - **Backups**: encrypted blobs only, so off-site backups carry no
   additional privacy risk.
 
-### 7.6 Non-technical cost
+### 8.6 Non-technical cost
 
 The reason C.1 is rated last:
 
@@ -765,7 +825,7 @@ The reason C.1 is rated last:
    [INFERRED — the cautious legal reading; obtain qualified
    advice before production]
 
-### 7.7 Prior art
+### 8.7 Prior art
 
 - **Bitwarden** — open source, documented key-derivation and
   blob-storage architecture. Recommended primary reference.
@@ -775,7 +835,7 @@ The reason C.1 is rated last:
 
 Study these before designing anything from scratch.
 
-### 7.8 Verdict
+### 8.8 Verdict
 
 Warranted only if the product owner accepts the shift from
 "desktop tool" to "small service" and the perpetual cost that
@@ -784,9 +844,9 @@ explicitly.
 
 ---
 
-## 8. Explicitly excluded — and why
+## 9. Explicitly excluded — and why
 
-### 8.1 Group D — national health-system integrations
+### 9.1 Group D — national health-system integrations
 
 Kept out of this document because access to Fascicolo Sanitario
 Elettronico, electronic prescription systems and pharmacy
@@ -796,7 +856,7 @@ credentialed professional roles. [UNCERTAIN — status as of writing]
 When the picture stabilizes, this becomes its own analysis
 document rather than a section here.
 
-### 8.2 Medical-device functions
+### 9.2 Medical-device functions
 
 Adherence tracking ("did you take the 08:00 dose?"), clinical
 alerts, drug-interaction checks and dose-safety warnings all fall
@@ -808,7 +868,7 @@ decision that must precede any implementation attempt.
 
 ---
 
-## 9.5 Public presentation website
+## 10. Public presentation website
 
 **Motivation.** MedReminder is currently distributed exclusively via
 the GitHub Releases page, which is addressed at technically literate
@@ -864,7 +924,7 @@ repository placement decision is confirmed.
 
 ---
 
-## 9. Change log for this document
+## 11. Change log for this document
 
 - 2026-09-19 — initial draft. Group A, C.3, C.3+, B.1, C.1
   documented. C.2 rejected with rationale. Group D and
@@ -895,7 +955,7 @@ repository placement decision is confirmed.
   on separate tables. §3.6: added an "Authoritative analysis" note
   that the "Help menu" entry point is not documented in the
   `ANALYSIS.md` MVP and must be confirmed against the tree
-  (`ANALYSIS-A6` §8.1). No priority-ordering change.
+  (`ANALYSIS-A6` §9.1). No priority-ordering change.
 - 2026-09-21 — marked A5 (§3.5) and A6 (§3.6) as **[DONE]**.
   Combined with the pre-existing A1 (§3.1), every Group A item that
   §2.0 lists as a top priority has now shipped. §2.0 items 1 and 2,
@@ -903,7 +963,7 @@ repository placement decision is confirmed.
   section headers were flagged accordingly. The remaining Group A
   items (A2, A3) and the multi-device track (C.3 → C.3+ → B.1 → C.1)
   are unchanged.
-- 2026-09-23 — added §9.5 (Public presentation website). Captures the
+- 2026-09-23 — added §10 (Public presentation website). Captures the
   motivation, design sketch (Hugo, Cloudflare Pages, five-language
   static site, no backend), effort estimate, open decisions, and pointers
   to the authoritative analysis (`ANALYSIS-WEBSITE.md`) and
