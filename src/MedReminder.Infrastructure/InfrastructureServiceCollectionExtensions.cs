@@ -104,10 +104,12 @@ public static class InfrastructureServiceCollectionExtensions
 
         // ------- Encrypted export / import (C.3) -------
         // Argon2id + AES-GCM archive cipher (singleton, stateless) plus
-        // the user-initiated export service. The import service is
-        // registered once it lands in its own step.
+        // the user-initiated export / import services. The import service
+        // depends on the scoped DbContext to release the live connection
+        // before swapping the DB, so both are scoped.
         services.TryAddSingleton<IArchiveCipher, ArchiveCipher>();
         services.AddScoped<IExportService, ExportService>();
+        services.AddScoped<IImportService, ImportService>();
 
         // IEmailNotificationService is the MailKit implementation
         // wrapped by the retry-with-back-off decorator (Increment 7
