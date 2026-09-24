@@ -103,10 +103,10 @@ Recommended by this document, in ascending ambition and cost:
    **[DONE]**
 4. **A3 — caregiver notifications.** 1 week. Reuses the existing
    MailKit transport and per-profile notification settings; no
-   dependency on A1.
-5. **C.3** — manual export/import (GDPR portability + migration).
+   dependency on A1. **[DONE]**
+5. **C.3** — manual export/import (GDPR portability + migration). **[DONE]**
 6. **C.3+** — automatic backup to a user-controlled cloud folder with
-   explicit restore on a second device.
+   explicit restore on a second device. **[DONE]**
 7. **C.3++**: Native Cloud Provider Integration Strategy.
 8. **A2 — AIC / barcode scan.** 1–2 weeks. Isolated, high
    user-visible value, no cross-item preconditions. Good pairing
@@ -198,7 +198,7 @@ handheld scanners are the safer default for the desktop MVP.
 **Verdict.** Small, isolated, high user-visible value. Good
 candidate to ship alongside A1.
 
-### 3.3 A3 — Caregiver notifications
+### 3.3 A3 — Caregiver notifications **[DONE]**
 
 **Motivation.** The elderly are frequently the real end-user of a
 medication reminder, but a family member or paid caregiver often
@@ -496,7 +496,7 @@ this document will accrue.
 
 ---
 
-## 4. C.3 — Manual export/import
+## 4. C.3 — Manual export/import **[DONE]**
 
 ### 4.1 Motivation
 
@@ -551,7 +551,7 @@ regardless of what happens after.
 
 ---
 
-## 5. C.3+ — Backup to user-controlled cloud folder + explicit restore
+## 5. C.3+ — Backup to user-controlled cloud folder + explicit restore **[DONE]**
 
 ### 5.1 Motivation
 
