@@ -249,8 +249,8 @@ blocked with an error.
   You can change name, active ingredient, package, unit, threshold,
   doctor, notes, end date, notification channels, and Active/Inactive
   state.
-  **Dose and frequency are NOT changed from here**: use the
-  schedule change (command-line function or DB edit for the MVP).
+  **Dose and frequency are NOT changed from here**: use
+  *Toolbar → Change schedule* (see *Complex regimens* above).
 - **Deactivate**: toolbar → **Deactivate**. The medicine disappears
   from automatic checks and alerts, but historical data (movements,
   notifications) stays in the DB for audit.
@@ -580,8 +580,9 @@ configured this feature, the menu entry does not appear.
 
 ## What MedReminder does NOT do
 
-- It does not remind you to take a specific dose (it is not an
-  alarm clock).
+- It does not record whether you took a dose, does not track
+  adherence and does not alert on missed doses (the dose-time
+  reminder is a convenience prompt only, not an adherence system).
 - It does not provide therapy instructions or drug interactions.
 - It does not sync between different devices.
 - It does not automatically order medicines.

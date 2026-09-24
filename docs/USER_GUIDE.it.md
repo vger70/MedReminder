@@ -74,9 +74,19 @@ un menu *Tipo di regime* con quattro forme aggiuntive:
 - **Ciclico (N on / M off)** — una quantità fissa per i primi `N`
   giorni del ciclo seguiti da `M` giorni off. Tipico delle terapie
   ormonali e dei bolo di cortisone.
-- **Scalare** — una dose che scende (o sale) di un valore fisso ogni
-  intervallo di giorni finché non raggiunge la dose finale, e poi si
-  ferma lì. Tipico della decalage di glucocorticoidi.
+- **Scalare** — una dose che scende (o sale) gradualmente fino alla
+  dose finale. Il pannello Scalare offre due varianti tramite il
+  selettore *Lineare / A stadi*:
+  - **Lineare** — la dose varia di un valore fisso ogni numero fisso
+    di giorni finché non raggiunge la dose finale, e poi si ferma.
+    Tipico della decalage semplice di glucocorticoidi.
+  - **A stadi** — un elenco esplicito di stadi, ognuno con la propria
+    dose e la propria durata in giorni (per esempio 4/giorno per 7
+    giorni, poi 2/giorno per 7 giorni, poi 1/giorno per 14 giorni).
+    Usa *Aggiungi stadio* / *Rimuovi* per costruire la sequenza e
+    controlla l'anteprima live sotto l'elenco prima di salvare. Spunta
+    *Mantieni l'ultima dose come dose di mantenimento* se la dose
+    finale deve proseguire indefinitamente anziché terminare il ciclo.
 - **Al bisogno (PRN)** — nessun consumo pianificato. MedReminder
   continua a tenere traccia della scorta ma la colonna *giorni
   residui* resta vuota finché non cambi il tipo di schema.
@@ -250,8 +260,8 @@ bloccata con un errore.
 - **Modifica**: doppio click sulla riga oppure toolbar → **Modifica**.
   Puoi cambiare nome, principio attivo, package, unità, soglia, medico,
   note, data fine, canali di notifica, e stato Attiva/Non attiva.
-  **La dose e la frequenza NON si modificano da qui**: usare il
-  cambio schedule (funzione da linea di comando o edit DB per l'MVP).
+  **La dose e la frequenza NON si modificano da qui**: usa
+  *Toolbar → Cambia schedulazione* (vedi *Regimi complessi* qui sopra).
 - **Disattiva**: toolbar → **Disattiva**. La medicina scompare dai
   controlli automatici e dagli avvisi, ma i dati storici (movimenti,
   notifiche) restano nel DB per audit.
@@ -433,7 +443,33 @@ il profilo `User` come preferisci da
 Google e altri provider possono cambiare i requisiti: consulta la
 documentazione del tuo provider se il test connessione fallisce.
 
-## Avvio automatico con Windows
+## Notifiche al caregiver
+
+**Impostazioni → Notifiche → E-mail caregiver (facoltativa)**.
+
+Un profilo può indicare un secondo destinatario — ad esempio un
+familiare o un caregiver che gestisce il rinnovo della ricetta per
+conto tuo. Quando questo campo è impostato, ogni email inviata al
+destinatario principale viene recapitata anche al caregiver, nello
+**stesso** messaggio. Non cambia nulla altro: il trasporto, il
+contenuto del messaggio e i momenti in cui le email vengono inviate
+sono esattamente gli stessi di prima.
+
+- **Per attivarlo**: digita l'indirizzo email del caregiver e salva.
+- **Per disattivarlo**: svuota il campo e salva. Il campo vuoto
+  significa nessun caregiver configurato — il comportamento predefinito.
+- **Entrambi gli indirizzi sono visibili a entrambi i destinatari**:
+  il caregiver e il destinatario principale possono vedere l'indirizzo
+  dell'altro sull'email. È intenzionale, in modo che una risposta
+  raggiunga tutti.
+- L'indirizzo del caregiver non può coincidere con quello principale
+  e deve essere un indirizzo email valido; altrimenti il salvataggio
+  viene rifiutato con un messaggio.
+
+L'impostazione è per profilo: il caregiver di un profilo non è il
+caregiver di un altro profilo.
+
+## Configurare l'avvio automatico
 
 **Impostazioni → Avvio automatico**: spunta la casella. Viene creata
 una voce in `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` che
@@ -451,6 +487,54 @@ finestra nascosta). Non richiede privilegi amministrativi.
   viene rinominato in `medreminder.db.bak-<timestamp>` (non perso!)
   e sostituito. **Chiudi e riapri MedReminder** dopo il ripristino
   per evitare inconsistenze.
+
+## Esportazione e importazione
+
+Oltre al backup grezzo del database, MedReminder può produrre un
+unico **file cifrato e portabile** con tutti i tuoi dati. A
+differenza di un backup normale, questo file non è legato al tuo
+account Windows né al PC, ed è quindi il percorso consigliato per
+spostare MedReminder su un nuovo computer.
+
+**Impostazioni → Backup → Esporta tutti i dati (cifrato)…**:
+
+- Scegli dove salvare il file (estensione `.mrz`).
+- Scegli una **passphrase** (almeno 12 caratteri) e digitala due volte.
+- Attiva facoltativamente le impostazioni condivise da includere:
+  impostazioni SMTP, password SMTP, preferenze di backup, preferenze
+  utente (lingua e paese di riferimento del catalogo). Tutte
+  disattivate per impostazione predefinita. Se includi la password
+  SMTP, viene cifrata nuovamente con la tua passphrase — non viene
+  mai scritta in chiaro.
+- Clicca **Esporta**.
+
+**La passphrase non può essere recuperata.** Non esiste reset,
+backdoor né copia sul server. Se perdi la passphrase, il file non
+potrà mai più essere letto — conservala in un posto sicuro.
+
+**Impostazioni → Backup → Importa da esportazione…**:
+
+- Seleziona il file `.mrz`. MedReminder mostra cosa contiene
+  (versione, data, ambito, impostazioni incluse) prima di fare
+  qualsiasi cosa.
+- Digita la passphrase.
+- Spunta **"Capisco che questo sovrascriverà i dati del profilo
+  corrente."** L'importazione sostituisce interamente i dati del
+  profilo corrente — non esiste una modalità di fusione. Prima viene
+  mantenuta una copia di sicurezza del database corrente come
+  `medreminder.db.bak-<timestamp>`.
+- Clicca **Importa**, poi **riavvia** MedReminder quando richiesto in
+  modo che i dati importati vengano caricati in modo pulito.
+
+Se la passphrase è errata, il file è danneggiato o è stato prodotto
+da una versione più recente di MedReminder, l'importazione si
+interrompe con un messaggio chiaro e i tuoi dati correnti restano
+invariati.
+
+Il formato dell'archivio è documentato pubblicamente in
+[`docs/EXPORT-FORMAT.md`](EXPORT-FORMAT.md), quindi i tuoi dati non
+sono mai bloccati — possono essere decifrati con strumenti standard
+se necessario.
 
 ## Controlla ora
 
@@ -518,8 +602,10 @@ non compare.
 
 ## Cosa NON fa MedReminder
 
-- Non ricorda di prendere la medicina alla singola dose (non è una
-  sveglia).
+- Non registra se hai preso la singola dose, non tiene traccia
+  dell'aderenza terapeutica e non avvisa per dosi mancate (il
+  promemoria all'orario della dose è solo un avviso di comodità,
+  non è un sistema di aderenza terapeutica).
 - Non fornisce indicazioni terapeutiche o interazioni farmacologiche.
 - Non sincronizza tra dispositivi diversi.
 - Non ordina medicine automaticamente.

@@ -78,9 +78,20 @@ formes supplémentaires :
 - **Cyclique (N jours on / M off)** — une quantité fixe pendant les
   `N` premiers jours du cycle puis `M` jours off. Typique des
   traitements hormonaux et des bolus de cortisone.
-- **Décroissance** — une dose qui descend (ou monte) d'un pas fixe
-  tous les X jours jusqu'à la dose finale, puis se stabilise.
-  Typique de la décroissance des glucocorticoïdes.
+- **Décroissance** — une dose qui diminue (ou augmente)
+  progressivement jusqu'à la dose finale. Le panneau Décroissance
+  propose deux variantes via le sélecteur *Linéaire / Par paliers* :
+  - **Linéaire** — la dose varie d'un pas fixe tous les X jours
+    jusqu'à la dose finale, puis se stabilise. Typique d'une
+    décroissance simple de glucocorticoïdes.
+  - **Par paliers** — une liste explicite de paliers, chacun avec
+    sa propre dose et sa propre durée en jours (par exemple 4/jour
+    pendant 7 jours, puis 2/jour pendant 7 jours, puis 1/jour
+    pendant 14 jours). Utilise *Ajouter un palier* / *Supprimer*
+    pour construire la séquence et consulte l'aperçu en temps réel
+    sous la liste avant d'enregistrer. Coche *Maintenir la dernière
+    dose comme dose d'entretien* si la dose finale doit se
+    poursuivre indéfiniment plutôt que de terminer le traitement.
 - **Au besoin (PRN)** — aucune consommation planifiée. MedReminder
   continue à suivre le stock mais la colonne *jours restants* reste
   vide tant que le type de schéma ne change pas.
@@ -259,8 +270,8 @@ bloquée par une erreur.
   conditionnement, l'unité, le seuil, le médecin, les notes, la
   date de fin, les canaux de notification, et l'état Actif/Inactif.
   **La dose et la fréquence NE se modifient PAS d'ici** : utilise
-  le changement de posologie (fonction en ligne de commande ou
-  édition DB pour le MVP).
+  *Barre d'outils → Changer la posologie* (voir *Schémas complexes*
+  plus haut).
 - **Désactiver** : barre d'outils → **Désactiver**. Le médicament
   disparaît des contrôles automatiques et des alertes, mais les
   données historiques (mouvements, notifications) restent en base
@@ -459,7 +470,34 @@ Google et d'autres fournisseurs peuvent modifier leurs exigences :
 consulte la documentation de ton fournisseur si le test de connexion
 échoue.
 
-## Démarrage automatique avec Windows
+## Notifications au soignant
+
+**Paramètres → Notifications → E-mail soignant (facultatif)**.
+
+Un profil peut désigner un second destinataire — par exemple un membre
+de la famille ou un soignant qui gère le renouvellement d'ordonnance à
+ta place. Lorsque ce champ est renseigné, chaque e-mail envoyé au
+destinataire principal est également envoyé au soignant, dans le
+**même** message. Rien d'autre ne change : le transport, le contenu du
+message et les moments d'envoi sont exactement les mêmes qu'avant.
+
+- **Pour l'activer** : saisis l'adresse e-mail du soignant et
+  enregistre.
+- **Pour le désactiver** : vide le champ et enregistre. Un champ
+  vide signifie qu'aucun soignant n'est configuré — comportement par
+  défaut.
+- **Les deux adresses sont visibles aux deux destinataires** : le
+  soignant et le destinataire principal peuvent voir l'adresse de
+  l'autre sur l'e-mail. C'est intentionnel pour qu'une réponse
+  parvienne à tous.
+- L'adresse du soignant ne peut pas être identique à celle du
+  destinataire principal et doit être une adresse e-mail valide ;
+  sinon l'enregistrement est rejeté avec un message.
+
+Le réglage est par profil : le soignant d'un profil n'est pas le
+soignant d'un autre profil.
+
+## Configurer le démarrage automatique
 
 **Paramètres → Démarrage automatique** : coche la case. Une entrée
 est créée dans
@@ -480,6 +518,55 @@ requis.
   actuelle est renommée en `medreminder.db.bak-<horodatage>` (pas
   perdue !) et remplacée. **Ferme puis rouvre MedReminder** après
   la restauration pour éviter les incohérences.
+
+## Export et importation
+
+En plus de la sauvegarde brute de la base de données, MedReminder peut
+produire un **fichier chiffré et portable** unique avec toutes tes
+données. Contrairement à une sauvegarde ordinaire, ce fichier n'est pas
+lié à ton compte Windows ni à ton PC — c'est donc le moyen recommandé
+pour transférer MedReminder vers un nouvel ordinateur.
+
+**Paramètres → Sauvegarde → Exporter toutes les données (chiffré)…** :
+
+- Choisis où enregistrer le fichier (extension `.mrz`).
+- Choisis une **phrase secrète** (au moins 12 caractères) et
+  saisis-la deux fois.
+- Active facultativement les paramètres partagés à inclure :
+  paramètres SMTP, mot de passe SMTP, préférences de sauvegarde,
+  préférences utilisateur (langue et pays de référence du catalogue).
+  Tous sont désactivés par défaut. Si tu inclus le mot de passe SMTP,
+  il est chiffré de nouveau avec ta phrase secrète — il n'est jamais
+  écrit en clair.
+- Clique sur **Exporter**.
+
+**La phrase secrète ne peut pas être récupérée.** Il n'existe ni
+réinitialisation, ni porte dérobée, ni copie sur serveur. Si tu perds
+la phrase secrète, le fichier ne pourra plus jamais être lu — conserve-la
+en lieu sûr.
+
+**Paramètres → Sauvegarde → Importer depuis une exportation…** :
+
+- Sélectionne le fichier `.mrz`. MedReminder affiche son contenu
+  (version, date, portée, paramètres inclus) avant toute opération.
+- Saisis la phrase secrète.
+- Coche **« Je comprends que ceci remplacera les données du profil
+  actuel. »** L'importation remplace entièrement les données du profil
+  actuel — il n'y a pas de mode fusion. Une copie de sécurité de la
+  base de données actuelle est conservée sous le nom
+  `medreminder.db.bak-<horodatage>`.
+- Clique sur **Importer**, puis **redémarre** MedReminder quand c'est
+  demandé, afin que les données importées soient chargées proprement.
+
+Si la phrase secrète est incorrecte, si le fichier est endommagé ou
+s'il a été produit par une version plus récente de MedReminder,
+l'importation s'arrête avec un message clair et tes données actuelles
+restent intactes.
+
+Le format de l'archive est documenté publiquement dans
+[`docs/EXPORT-FORMAT.md`](EXPORT-FORMAT.md), ainsi tes données ne sont
+jamais enfermées — elles peuvent être déchiffrées avec des outils
+standards si nécessaire.
 
 ## Vérifier maintenant
 
@@ -553,8 +640,10 @@ menu n'apparaît pas.
 
 ## Ce que MedReminder ne fait PAS
 
-- Il ne rappelle pas la prise d'une dose précise (ce n'est pas un
-  réveil).
+- Il n'enregistre pas si tu as pris une dose, ne suit pas
+  l'observance thérapeutique et n'alerte pas sur les prises manquées
+  (le rappel à l'heure de la prise n'est qu'une invite pratique, pas
+  un système d'observance).
 - Il ne fournit pas d'indications thérapeutiques ni d'interactions
   médicamenteuses.
 - Il ne synchronise pas entre différents appareils.
