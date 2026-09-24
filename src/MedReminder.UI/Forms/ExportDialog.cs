@@ -41,19 +41,19 @@ internal sealed class ExportDialog : MedReminderFormBase
         _exportService = exportService;
 
         Text = _loc.Get("Ui.ExportDialog.Title");
-        Width = 560;
+        Width = 570;
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        Font = new Font("Segoe UI", 9.75F);
 
         var intro = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(520, 0),
+            MaximumSize = new Size(520, 0),
             Text = _loc.Get("Ui.ExportDialog.Intro"),
         };
 
@@ -102,8 +102,8 @@ internal sealed class ExportDialog : MedReminderFormBase
         var lostPassphraseWarning = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(520, 0),
-            ForeColor = System.Drawing.Color.DarkOrange,
+            MaximumSize = new Size(520, 0),
+            ForeColor = Color.DarkOrange,
             Text = _loc.Get("Ui.ExportDialog.Warning.LostPassphrase"),
         };
 
@@ -121,8 +121,8 @@ internal sealed class ExportDialog : MedReminderFormBase
         _smtpPasswordWarning = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(520, 0),
-            ForeColor = System.Drawing.Color.DarkOrange,
+            MaximumSize = new Size(520, 0),
+            ForeColor = Color.DarkOrange,
             Text = _loc.Get("Ui.ExportDialog.Warning.SmtpPasswordIncluded"),
             Visible = false,
         };
@@ -160,7 +160,7 @@ internal sealed class ExportDialog : MedReminderFormBase
         _statusLabel = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(520, 0),
+            MaximumSize = new Size(520, 0),
             Text = string.Empty,
         };
 
@@ -297,7 +297,7 @@ internal sealed class ExportDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            _statusLabel.ForeColor = System.Drawing.Color.Firebrick;
+            _statusLabel.ForeColor = Color.Firebrick;
             _statusLabel.Text = ex.Message;
         }
         finally
@@ -327,7 +327,7 @@ internal sealed class ExportDialog : MedReminderFormBase
         if (running)
         {
             _progressBar.Value = 0;
-            _statusLabel.ForeColor = System.Drawing.SystemColors.ControlText;
+            _statusLabel.ForeColor = SystemColors.ControlText;
             _statusLabel.Text = _loc.Get("Ui.ExportDialog.Running");
         }
         _exportButton.Enabled = !running;
@@ -335,7 +335,7 @@ internal sealed class ExportDialog : MedReminderFormBase
 
     private void ShowValidation(string message)
     {
-        _statusLabel.ForeColor = System.Drawing.Color.Firebrick;
+        _statusLabel.ForeColor = Color.Firebrick;
         _statusLabel.Text = message;
     }
 
