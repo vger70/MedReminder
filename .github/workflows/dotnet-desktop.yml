@@ -36,6 +36,45 @@
 # For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
 # refer to https://github.com/microsoft/github-actions-for-desktop-apps
 
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+#
+# This workflow builds, packages and publishes a Windows release
+# of MedReminder whenever a Git tag matching v* is pushed.
+#
+# Example:
+#
+#   git tag v2.3.2
+#   git push origin v2.3.2
+#
+# The workflow automatically:
+#   - extracts version 2.3.2 from the tag
+#   - builds the application
+#   - stamps assemblies with version 2.3.2
+#   - generates ZIP packages
+#   - generates the MSI installer
+#   - publishes a GitHub Release
+#
+# NOTES ABOUT VERSIONING
+#
+# The repository can keep any value inside Directory.Build.props,
+# for example:
+#
+#   <VersionPrefix>0.0.0</VersionPrefix>
+#
+# During CI/CD the value is overridden by the Git tag version
+# through MSBuild properties:
+#
+#   Version
+#   VersionPrefix
+#   AssemblyVersion
+#   FileVersion
+#   InformationalVersion
+#
+# Therefore no file is modified or committed back to the repository.
+
 name: Build and Release MedReminder
 
 on:
@@ -52,34 +91,72 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # Check out the repository
+
+      # ------------------------------------------------------------
+      # Checkout source code
+      # ------------------------------------------------------------
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Install .NET 10
+      # ------------------------------------------------------------
+      # Install .NET SDK
+      # ------------------------------------------------------------
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
-      # Restore the NuGet packages for both the main solution and the
-      # WiX MSI project so the MSI build step below can find its
-      # transitive tools.
+      # ------------------------------------------------------------
+      # Extract version from Git tag.
+      #
+      # Examples:
+      #
+      #   v1.0.0  -> 1.0.0
+      #   v2.3.2  -> 2.3.2
+      #
+      # The extracted value is exposed as:
+      #
+      #   steps.version.outputs.version
+      # ------------------------------------------------------------
+      - name: Extract Version From Tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Release tag must be in format vX.Y.Z"
+          }
+
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+          Write-Host ""
+          Write-Host "========================================="
+          Write-Host "Release Version: $version"
+          Write-Host "========================================="
+          Write-Host ""
+
+      # ------------------------------------------------------------
+      # Restore NuGet dependencies
+      #
+      # Both the main solution and the WiX installer project
+      # are restored.
+      # ------------------------------------------------------------
       - name: Restore
         shell: pwsh
         run: |
           dotnet restore MedReminder.sln
           dotnet restore packaging/wix/MedReminder.wixproj
 
-      # Build and publish the WinForms application.
+      # ------------------------------------------------------------
+      # Publish self-contained application
       #
-      # --self-contained true:
-      # bundles the .NET runtime inside the application, so the user
-      # does not need to install .NET 10 separately.
+      # Self-contained means the .NET runtime is bundled into
+      # the package, therefore the user does not need to install
+      # .NET separately.
       #
-      # -r win-x64:
-      # produces a build targeting 64-bit Windows.
-      # Publish self-contained (.NET included)
+      # The release version comes from the Git tag.
+      # ------------------------------------------------------------
       - name: Publish self-contained
         run: >
           dotnet publish
@@ -88,8 +165,15 @@ jobs:
           -r win-x64
           --self-contained true
           -o publish-net10
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:VersionPrefix=${{ steps.version.outputs.version }}
+          -p:AssemblyVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
 
-      # ZIP self-contained
+      # ------------------------------------------------------------
+      # Create self-contained ZIP package
+      # ------------------------------------------------------------
       - name: Create self-contained ZIP
         shell: pwsh
         run: |
@@ -97,15 +181,12 @@ jobs:
             -Path publish-net10\* `
             -DestinationPath MedReminder-win-x64-net10.zip
 
-    # Build and publish the WinForms application.
+      # ------------------------------------------------------------
+      # Publish framework-dependent application
       #
-      # --self-contained false:
-      # does not bundle the .NET runtime inside the application, so the user
-      # needs to install .NET 10 separately.
-      #
-      # -r win-x64:
-      # produces a build targeting 64-bit Windows.
-      # Publish framework-dependent (.NET runtime required)
+      # Framework-dependent means the target machine must
+      # already have the required .NET runtime installed.
+      # ------------------------------------------------------------
       - name: Publish framework-dependent
         run: >
           dotnet publish
@@ -114,8 +195,15 @@ jobs:
           -r win-x64
           --self-contained false
           -o publish
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:VersionPrefix=${{ steps.version.outputs.version }}
+          -p:AssemblyVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
 
-      # ZIP framework-dependent
+      # ------------------------------------------------------------
+      # Create framework-dependent ZIP package
+      # ------------------------------------------------------------
       - name: Create framework-dependent ZIP
         shell: pwsh
         run: |
@@ -123,29 +211,45 @@ jobs:
             -Path publish\* `
             -DestinationPath MedReminder-win-x64.zip
 
-      # Build the WiX MSI installer using the same self-contained
-      # publish output distributed in the ZIP. The release tag
-      # (vX.Y.Z) determines the MSI version, so upgrades correctly
-      # recognize the release.
+      # ------------------------------------------------------------
+      # Build MSI installer using WiX
+      #
+      # ProductVersion must match the release version in order
+      # for Windows Installer upgrade detection to function
+      # correctly.
+      # ------------------------------------------------------------
       - name: Build MSI
         shell: pwsh
         run: |
-          $version = $env:GITHUB_REF_NAME -replace '^v', ''
-          if ($version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "Release tag must be in the vX.Y.Z format; received: $env:GITHUB_REF_NAME"
-          }
+          $version = "${{ steps.version.outputs.version }}"
 
           $publishDir = (Resolve-Path publish).Path
-          dotnet build packaging/wix/MedReminder.wixproj -c Release `
+
+          dotnet build packaging/wix/MedReminder.wixproj `
+            -c Release `
             /p:PublishDir="$publishDir" `
             /p:ProductVersion=$version
-          if ($LASTEXITCODE -ne 0) { throw 'MSI build failed.' }
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "MSI build failed."
+          }
 
           $msi = "packaging/wix/bin/Release/MedReminder-$version-x64.msi"
-          if (-not (Test-Path $msi)) { throw "MSI not generated: $msi" }
-          Copy-Item $msi 'MedReminder-win-x64.msi'
 
-      # Create the GitHub Release and attach both the ZIP and the MSI.
+          if (-not (Test-Path $msi)) {
+            throw "MSI not generated: $msi"
+          }
+
+          Copy-Item `
+            $msi `
+            "MedReminder-win-x64.msi"
+
+      # ------------------------------------------------------------
+      # Create GitHub Release
+      #
+      # The release is automatically associated with the tag
+      # that triggered the workflow.
+      # ------------------------------------------------------------
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
