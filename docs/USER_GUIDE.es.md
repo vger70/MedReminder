@@ -76,9 +76,20 @@ adicionales:
 - **Cíclico (N días on / M off)** — una cantidad fija durante los
   primeros `N` días del ciclo seguidos de `M` días off. Típico de
   las terapias hormonales y de los pulsos de cortisona.
-- **Reducción progresiva** — una dosis que baja (o sube) un paso
-  fijo cada X días hasta alcanzar la dosis final, y luego se
-  mantiene. Típico del descenso de glucocorticoides.
+- **Reducción progresiva** — una dosis que baja (o sube)
+  gradualmente hasta la dosis final. El panel de reducción ofrece
+  dos variantes mediante el selector *Lineal / Por etapas*:
+  - **Lineal** — la dosis varía un paso fijo cada X días hasta
+    alcanzar la dosis final, y luego se mantiene. Típico del
+    descenso simple de glucocorticoides.
+  - **Por etapas** — una lista explícita de etapas, cada una con
+    su propia dosis y su propia duración en días (por ejemplo
+    4/día durante 7 días, luego 2/día durante 7 días, luego 1/día
+    durante 14 días). Usa *Añadir etapa* / *Eliminar* para
+    construir la secuencia y revisa la vista previa en vivo bajo la
+    lista antes de guardar. Marca *Mantener la última dosis como
+    dosis de mantenimiento* si la dosis final debe continuar
+    indefinidamente en lugar de terminar el ciclo.
 - **A demanda (PRN)** — sin consumo planificado. MedReminder sigue
   llevando el stock pero la columna *días restantes* queda vacía
   hasta que cambie el tipo de esquema.
@@ -256,9 +267,9 @@ bloquea con un error.
   **Editar**. Puedes cambiar el nombre, principio activo, envase,
   unidad, umbral, médico, notas, fecha de fin, canales de
   notificación, y el estado Activo/Inactivo.
-  **La dosis y la frecuencia NO se modifican desde aquí**: usa el
-  cambio de posología (función en línea de comandos o edición
-  directa de la DB en el MVP).
+  **La dosis y la frecuencia NO se modifican desde aquí**: usa
+  *Barra de herramientas → Cambiar pauta* (véase *Regímenes
+  complejos* más arriba).
 - **Desactivar**: barra de herramientas → **Desactivar**. El
   medicamento desaparece de las comprobaciones automáticas y de los
   avisos, pero los datos históricos (movimientos, notificaciones)
@@ -453,7 +464,34 @@ Renombra el perfil `User` como prefieras desde
 Google y otros proveedores pueden modificar sus requisitos: consulta
 la documentación de tu proveedor si la prueba de conexión falla.
 
-## Inicio automático con Windows
+## Notificaciones al cuidador
+
+**Configuración → Notificaciones → E-mail del cuidador (opcional)**.
+
+Un perfil puede designar un segundo destinatario — por ejemplo un
+familiar o un cuidador que gestiona la renovación de la receta en tu
+nombre. Cuando este campo está configurado, cada e-mail enviado al
+destinatario principal también se envía al cuidador, en el **mismo**
+mensaje. Nada más cambia: el transporte, el contenido del mensaje y los
+momentos de envío son exactamente los mismos que antes.
+
+- **Para activarlo**: escribe la dirección e-mail del cuidador y
+  guarda.
+- **Para desactivarlo**: vacía el campo y guarda. Un campo vacío
+  significa que no hay cuidador configurado — el comportamiento por
+  defecto.
+- **Ambas direcciones son visibles para ambos destinatarios**: el
+  cuidador y el destinatario principal pueden ver la dirección del
+  otro en el e-mail. Es intencional para que una respuesta llegue a
+  todos.
+- La dirección del cuidador no puede coincidir con la del
+  destinatario principal y debe ser una dirección e-mail válida; de
+  lo contrario el guardado se rechaza con un mensaje.
+
+El ajuste es por perfil: el cuidador de un perfil no es el cuidador de
+otro perfil.
+
+## Configurar el inicio automático
 
 **Configuración → Inicio automático**: marca la casilla. Se crea
 una entrada en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
@@ -472,6 +510,52 @@ administrador.
   renombra a `medreminder.db.bak-<timestamp>` (¡no se pierde!) y se
   sustituye. **Cierra y vuelve a abrir MedReminder** tras la
   restauración para evitar incoherencias.
+
+## Exportación e importación
+
+Además de la copia de seguridad directa de la base de datos, MedReminder
+puede producir un único **archivo cifrado y portable** con todos tus
+datos. A diferencia de una copia normal, este archivo no está vinculado
+a tu cuenta de Windows ni a tu PC, por lo que es el método recomendado
+para mover MedReminder a un nuevo ordenador.
+
+**Configuración → Copia de seguridad → Exportar todos los datos
+(cifrado)…**:
+
+- Elige dónde guardar el archivo (extensión `.mrz`).
+- Elige una **frase de contraseña** (mínimo 12 caracteres) e
+  introdúcela dos veces.
+- Activa opcionalmente los ajustes compartidos a incluir: ajustes
+  SMTP, contraseña SMTP, preferencias de copia, preferencias de
+  usuario (idioma y país de referencia del catálogo). Todos
+  desactivados por defecto. Si incluyes la contraseña SMTP, se
+  vuelve a cifrar con tu frase — nunca se escribe en texto claro.
+- Haz clic en **Exportar**.
+
+**La frase de contraseña no puede recuperarse.** No existe reinicio,
+puerta trasera ni copia en servidor. Si pierdes la frase, el archivo no
+podrá leerse nunca — guárdala en un lugar seguro.
+
+**Configuración → Copia de seguridad → Importar desde exportación…**:
+
+- Selecciona el archivo `.mrz`. MedReminder muestra su contenido
+  (versión, fecha, alcance, ajustes incluidos) antes de hacer nada.
+- Escribe la frase de contraseña.
+- Marca **«Entiendo que esto sobrescribirá los datos del perfil
+  actual.»** La importación reemplaza íntegramente los datos del
+  perfil actual — no hay modo de fusión. Antes se conserva una copia
+  de seguridad como `medreminder.db.bak-<timestamp>`.
+- Haz clic en **Importar** y luego **reinicia** MedReminder cuando
+  se solicite para que los datos importados se carguen limpiamente.
+
+Si la frase es incorrecta, el archivo está dañado o fue producido por
+una versión más reciente de MedReminder, la importación se detiene con
+un mensaje claro y tus datos actuales quedan intactos.
+
+El formato del archivo está documentado públicamente en
+[`docs/EXPORT-FORMAT.md`](EXPORT-FORMAT.md), así que tus datos nunca
+están bloqueados — pueden descifrarse con herramientas estándar si es
+necesario.
 
 ## Comprobar ahora
 
@@ -543,7 +627,10 @@ configurado esta función, la opción de menú no aparece.
 
 ## Lo que MedReminder NO hace
 
-- No recuerda tomar el medicamento en cada dosis (no es una alarma).
+- No registra si has tomado una dosis, no hace seguimiento de la
+  adherencia terapéutica y no alerta por dosis perdidas (el
+  recordatorio a la hora de la dosis es solo un aviso práctico, no
+  un sistema de adherencia).
 - No proporciona indicaciones terapéuticas ni interacciones
   farmacológicas.
 - No sincroniza entre dispositivos.

@@ -81,10 +81,20 @@ weiteren Formen ein:
 - **Zyklisch (N Tage an / M aus)** — eine feste Menge für die
   ersten `N` Tage des Zyklus, gefolgt von `M` Tagen ohne
   Einnahme. Typisch für Hormontherapien und Kortison-Stöße.
-- **Ausschleichen** — eine Dosis, die alle `X` Tage um einen
-  festen Schritt sinkt (oder steigt), bis die Enddosis erreicht
-  ist, und dann bleibt. Typisch für das Ausschleichen von
-  Glukokortikoiden.
+- **Ausschleichen** — eine Dosis, die schrittweise bis zur
+  Enddosis sinkt (oder steigt). Im Ausschleichen-Panel stehen über
+  den Selektor *Linear / Stufenweise* zwei Varianten zur Verfügung:
+  - **Linear** — die Dosis verringert sich alle X Tage um einen
+    festen Schritt, bis die Enddosis erreicht ist, und bleibt dann.
+    Typisch für ein einfaches Ausschleichen von Glukokortikoiden.
+  - **Stufenweise** — eine explizite Liste von Stufen, jede mit
+    eigener Dosis und Dauer in Tagen (zum Beispiel 4/Tag für 7
+    Tage, dann 2/Tag für 7 Tage, dann 1/Tag für 14 Tage). Verwende
+    *Stufe hinzufügen* / *Entfernen*, um die Sequenz aufzubauen,
+    und prüfe die Live-Vorschau unter der Liste vor dem Speichern.
+    Aktiviere *Letzte Dosis als Erhaltungsdosis beibehalten*, wenn
+    die letzte Dosis unbegrenzt weiterlaufen soll, anstatt die
+    Therapie zu beenden.
 - **Bei Bedarf (PRN)** — kein geplanter Verbrauch. MedReminder
   verfolgt weiterhin den Bestand, aber die Spalte *verbleibende
   Tage* bleibt leer, bis sich die Schema-Form ändert.
@@ -268,9 +278,8 @@ Vorgang mit einer Fehlermeldung blockiert.
   **Bearbeiten**. Du kannst Name, Wirkstoff, Packung, Einheit,
   Warnschwelle, Arzt, Notizen, Enddatum, Benachrichtigungskanäle
   und den Zustand Aktiv/Inaktiv ändern.
-  **Dosis und Häufigkeit werden hier NICHT geändert**: dafür ist
-  die Planänderung vorgesehen (Kommandozeilenfunktion bzw.
-  direkte DB-Bearbeitung im MVP).
+  **Dosis und Häufigkeit werden hier NICHT geändert**: verwende
+  *Symbolleiste → Schema ändern* (siehe *Komplexe Schemata* oben).
 - **Deaktivieren**: Symbolleiste → **Deaktivieren**. Das
   Medikament verschwindet aus den automatischen Prüfungen und
   Meldungen, die historischen Daten (Bewegungen,
@@ -475,7 +484,33 @@ Google und andere Anbieter können ihre Anforderungen ändern:
 konsultiere bei fehlgeschlagenem Verbindungstest die
 Dokumentation deines Anbieters.
 
-## Automatischer Windows-Start
+## Benachrichtigungen für Pflegepersonen
+
+**Einstellungen → Benachrichtigungen → Pflegeperson-E-Mail (optional)**.
+
+Ein Profil kann eine zweite Empfängeradresse angeben — zum Beispiel ein
+Familienmitglied oder eine Pflegeperson, die die Rezepterneuerung für
+dich erledigt. Wenn dieses Feld gesetzt ist, wird jede E-Mail an den
+Hauptempfänger gleichzeitig auch an die Pflegeperson in der **selben**
+Nachricht gesendet. Nichts anderes ändert sich: Transport,
+Nachrichteninhalt und Sendezeitpunkte sind exakt wie bisher.
+
+- **Aktivieren**: gib die E-Mail-Adresse der Pflegeperson ein und
+  speichere.
+- **Deaktivieren**: leere das Feld und speichere. Ein leeres Feld
+  bedeutet keine konfigurierte Pflegeperson — das Standardverhalten.
+- **Beide Adressen sind für beide Empfänger sichtbar**: die
+  Pflegeperson und der Hauptempfänger können die Adresse des anderen
+  in der E-Mail sehen. Das ist beabsichtigt, damit eine Antwort alle
+  erreicht.
+- Die Pflegeperson-Adresse darf nicht mit der des Hauptempfängers
+  übereinstimmen und muss eine gültige E-Mail-Adresse sein;
+  andernfalls wird das Speichern mit einer Meldung abgelehnt.
+
+Die Einstellung gilt pro Profil: die Pflegeperson eines Profils ist
+nicht die Pflegeperson eines anderen Profils.
+
+## Autostart konfigurieren
 
 **Einstellungen → Autostart**: aktiviere die Checkbox. In
 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` wird ein
@@ -496,6 +531,55 @@ Administratorrechte werden nicht benötigt.
   umbenannt (also nicht verloren!) und ersetzt. **Schließe und
   öffne MedReminder erneut** nach der Wiederherstellung, um
   Inkonsistenzen zu vermeiden.
+
+## Export und Import
+
+Neben der einfachen Datenbanksicherung kann MedReminder eine einzelne
+**verschlüsselte, portable Datei** mit allen deinen Daten erstellen.
+Anders als eine normale Sicherung ist diese Datei nicht an dein
+Windows-Konto oder deinen PC gebunden — sie ist daher der empfohlene
+Weg, MedReminder auf einen neuen Computer umzuziehen.
+
+**Einstellungen → Sicherung → Alle Daten exportieren
+(verschlüsselt)…**:
+
+- Wähle, wo die Datei gespeichert werden soll (Endung `.mrz`).
+- Wähle eine **Passphrase** (mindestens 12 Zeichen) und gib sie
+  zweimal ein.
+- Aktiviere optional gemeinsam genutzte Einstellungen: SMTP-
+  Einstellungen, SMTP-Passwort, Sicherungseinstellungen,
+  Benutzereinstellungen (Sprache und Referenzland des Katalogs). Alle
+  sind standardmäßig deaktiviert. Wenn du das SMTP-Passwort
+  einschließt, wird es mit deiner Passphrase neu verschlüsselt — es
+  wird nie im Klartext gespeichert.
+- Klicke auf **Exportieren**.
+
+**Die Passphrase kann nicht wiederhergestellt werden.** Es gibt keinen
+Reset, keine Hintertür und keine Server-Kopie. Wenn du die Passphrase
+verlierst, kann die Datei nie wieder gelesen werden — bewahre sie sicher
+auf.
+
+**Einstellungen → Sicherung → Aus Export importieren…**:
+
+- Wähle die `.mrz`-Datei. MedReminder zeigt den Inhalt an (Version,
+  Datum, Umfang, enthaltene Einstellungen), bevor irgendetwas passiert.
+- Gib die Passphrase ein.
+- Hake **„Ich verstehe, dass dies die Daten des aktuellen Profils
+  überschreibt."** ab. Der Import ersetzt die Daten des aktuellen
+  Profils vollständig — es gibt keinen Zusammenführungsmodus. Vorher
+  wird eine Sicherungskopie als `medreminder.db.bak-<Zeitstempel>`
+  aufbewahrt.
+- Klicke auf **Importieren** und **starte** MedReminder neu, wenn
+  aufgefordert, damit die importierten Daten sauber geladen werden.
+
+Wenn die Passphrase falsch ist, die Datei beschädigt ist oder von einer
+neueren Version von MedReminder stammt, bricht der Import mit einer
+klaren Meldung ab und deine aktuellen Daten bleiben unverändert.
+
+Das Archivformat ist öffentlich dokumentiert in
+[`docs/EXPORT-FORMAT.md`](EXPORT-FORMAT.md) — deine Daten sind also
+niemals eingesperrt und können bei Bedarf mit Standardwerkzeugen
+entschlüsselt werden.
 
 ## Jetzt prüfen
 
@@ -566,8 +650,10 @@ der Menüeintrag nicht.
 
 ## Was MedReminder NICHT tut
 
-- Es erinnert nicht an eine konkrete Einnahme (es ist kein
-  Wecker).
+- Es erfasst nicht, ob du eine Dosis eingenommen hast, verfolgt
+  keine Therapietreue und warnt nicht bei verpassten Dosen (die
+  Einnahme-Erinnerung ist nur ein praktischer Hinweis, kein
+  Adherence-System).
 - Es liefert keine Therapieanweisungen und keine
   Wechselwirkungen.
 - Es synchronisiert nicht zwischen mehreren Geräten.
