@@ -33,7 +33,7 @@ with the classification adapted to per-PR granularity: **Added**,
 ## PR #53 — Fix and expand user guides (6 corrections + A3/C3/stepped tapering)
 
 Link: [vger70/MedReminder#53](https://github.com/vger70/MedReminder/pull/53)
-**Status:** open
+**Status:** merged (2026-09-24)
 
 Branch: `claude/negli-user-guide-fixes-461ae2`
 
