@@ -27,6 +27,19 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
     private readonly ISmtpCredentialStore _credentialStore;
     private readonly ILogger<MailKitEmailNotificationService> _log;
 
+    // MimeKit accepts a bare local part (e.g. "not-an-email") as a
+    // valid mailbox by default (ParserOptions.AllowAddressesWithoutDomain
+    // is true). A caregiver address must be a full mailbox with a
+    // domain, so parse with that leniency turned off: a value without a
+    // domain is treated as malformed and falls back to primary-only
+    // (A3 §4.3). The save-time UI validation in SettingsDialog mirrors
+    // this rule with its own ParserOptions so the dialog accepts exactly
+    // what the adapter accepts.
+    internal static readonly ParserOptions AddressParserOptions = new()
+    {
+        AllowAddressesWithoutDomain = false,
+    };
+
     public MailKitEmailNotificationService(
         IOptionsMonitor<SmtpSettings> smtpMonitor,
         IOptionsMonitor<NotificationSettings> notificationMonitor,
@@ -118,12 +131,45 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         await client.AuthenticateAsync(settings.Username, password, cancellationToken);
     }
 
-    private static MimeMessage BuildMimeMessage(
+    // Internal (not private) so the infrastructure tests can assert on
+    // the recipient list without spinning up a real SMTP server
+    // (see MailKitEmailNotificationServiceTests). The instance
+    // dependency is only the logger, needed for the caregiver
+    // malformed-address warning (A3 §4.3).
+    internal MimeMessage BuildMimeMessage(
         SmtpSettings settings, NotificationSettings notifications, EmailMessage message)
     {
         var mime = new MimeMessage();
         mime.From.Add(new MailboxAddress(settings.FromDisplayName, settings.FromAddress));
         mime.To.Add(MailboxAddress.Parse(notifications.ToAddress));
+
+        // A3 (docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md §4.2,
+        // §6): when a caregiver address is configured, add it as a
+        // second To recipient in the same message. A malformed value
+        // must not block delivery to the primary (§4.3), so the parse
+        // is defensive: on failure we log a warning and fall back to
+        // primary-only. A self-copy (caregiver == primary) is skipped
+        // so the message is not built with the same address twice —
+        // save-time UI validation is the primary defence; this guards
+        // hand-edited JSON.
+        if (!string.IsNullOrWhiteSpace(notifications.CaregiverAddress))
+        {
+            var caregiver = notifications.CaregiverAddress.Trim();
+            if (!string.Equals(caregiver, notifications.ToAddress.Trim(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    mime.To.Add(MailboxAddress.Parse(AddressParserOptions, caregiver));
+                }
+                catch (ParseException ex)
+                {
+                    _log.LogWarning(ex,
+                        "Caregiver address is malformed; sending to primary only.");
+                }
+            }
+        }
+
         mime.Subject = message.Subject;
         mime.Body = new TextPart("plain") { Text = message.Body };
         return mime;
