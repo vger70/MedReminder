@@ -45,6 +45,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private TextBox _fromBox = null!;
     private TextBox _fromNameBox = null!;
     private TextBox _toBox = null!;
+    // A3 (docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md §5): the
+    // optional per-profile secondary recipient, on the Notifications tab.
+    private TextBox _caregiverBox = null!;
     private NumericUpDown _timeoutBox = null!;
     private Label _passwordStatusLabel = null!;
 
@@ -89,6 +92,17 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         WriteIndented = true,
+    };
+
+    // A3 (§5.2): validate the caregiver address exactly as the MailKit
+    // adapter does. MimeKit accepts a bare local part as a valid mailbox
+    // by default; a caregiver address must carry a domain, so parse with
+    // AllowAddressesWithoutDomain off. Kept in sync with
+    // MailKitEmailNotificationService.AddressParserOptions (the adapter's
+    // copy), which is internal to the Infrastructure assembly.
+    private static readonly MimeKit.ParserOptions _addressParserOptions = new()
+    {
+        AllowAddressesWithoutDomain = false,
     };
 
     public SettingsDialog(
@@ -559,6 +573,17 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _toBox = new TextBox { Dock = DockStyle.Fill, Text = current.ToAddress };
         _tooltips.SetToolTip(_toBox, _loc.Get("Ui.SettingsDialog.Tooltip.To"));
 
+        // A3: optional secondary recipient. Empty = no caregiver (§3.1).
+        _caregiverBox = new TextBox { Dock = DockStyle.Fill, Text = current.CaregiverAddress };
+
+        var caregiverHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = System.Drawing.Color.DarkGray,
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Help"),
+        };
+
         var saveButton = new Button
         {
             Text = _loc.Get("Ui.SettingsDialog.Notifications.Save"),
@@ -579,6 +604,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
         var table = BuildFormTable();
         AddRow(table, _loc.Get("Ui.SettingsDialog.Email.To"), _toBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Label"), _caregiverBox);
 
         var buttons = new FlowLayoutPanel
         {
@@ -596,6 +622,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoScroll = true,
         };
         container.Controls.Add(table);
+        container.Controls.Add(caregiverHelp);
         container.Controls.Add(buttons);
         container.Controls.Add(explanation);
         container.Controls.Add(BuildMyPinSection());
@@ -678,9 +705,40 @@ internal sealed class SettingsDialog : MedReminderFormBase
     {
         try
         {
+            var toAddress = _toBox.Text.Trim();
+            var caregiverAddress = _caregiverBox.Text.Trim();
+
+            // A3 (§5.2): a non-empty caregiver address must parse as a
+            // well-formed mailbox and must not equal the primary
+            // (case-insensitive). An empty value is allowed
+            // (unconfigured). On failure, surface an inline error and
+            // abort the save.
+            if (caregiverAddress.Length > 0)
+            {
+                if (!MimeKit.MailboxAddress.TryParse(
+                        _addressParserOptions, caregiverAddress, out _))
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Invalid"),
+                        _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (string.Equals(caregiverAddress, toAddress, StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.SameAsPrimary"),
+                        _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
             var settings = new NotificationSettings
             {
-                ToAddress = _toBox.Text.Trim(),
+                ToAddress = toAddress,
+                CaregiverAddress = caregiverAddress,
             };
             WriteNotificationSettingsToDisk(settings, _currentProfile.NotificationSettingsPath);
             MessageBox.Show(this,

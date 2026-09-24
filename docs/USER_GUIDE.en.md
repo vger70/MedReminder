@@ -429,6 +429,30 @@ Rename the profile from `User` to something you prefer in
 Google and other providers can change the requirements: consult
 your provider's documentation if the connection test fails.
 
+## Caregiver notifications
+
+**Settings → Notifications → Caregiver e-mail (optional)**.
+
+A profile can name a second recipient — for example a family
+member or a caregiver who handles the reorder on your behalf.
+When this field is set, every e-mail sent to the primary
+recipient is also sent to the caregiver, in the **same** message.
+Nothing else changes: the transport, the message content and when
+the e-mails are sent are exactly the same as before.
+
+- **To enable it**: type the caregiver's e-mail address and save.
+- **To disable it**: clear the field and save. Leaving it empty
+  means no caregiver is configured — the default.
+- **Both addresses are visible to both recipients**: the caregiver
+  and the primary recipient can see each other's address on the
+  e-mail. This is intentional, so a reply reaches everyone.
+- The caregiver address cannot be the same as the primary
+  recipient, and must be a valid e-mail address; otherwise the
+  save is rejected with a message.
+
+The setting is per profile: one profile's caregiver is not
+another profile's caregiver.
+
 ## Windows automatic startup
 
 **Settings → Automatic startup**: check the box. An entry is

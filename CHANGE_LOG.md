@@ -30,6 +30,54 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #47 — A3: Caregiver notifications
+
+Link: [vger70/MedReminder#47](https://github.com/vger70/MedReminder/pull/47)
+**Status:** open
+
+Branch: `feature/caregiver-notifications`
+
+Adds an optional per-profile secondary email recipient. When set, every
+email delivered to the primary recipient is also delivered to the
+caregiver in the same message. No new transport, no schema change, no
+change to the email body — the recipient list widens by one address.
+Implements `docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`.
+
+### Added
+
+- **`NotificationSettings.CaregiverAddress`** (default empty). Pre-A3
+  `notifications.settings.json` files load unchanged (empty = no
+  caregiver).
+- **MailKit fan-out** in
+  `MailKitEmailNotificationService.BuildMimeMessage`: the caregiver is
+  appended as a second `To` recipient (primary first) when configured.
+- **`SettingsDialog` Notifications tab**: a "Caregiver e-mail
+  (optional)" field with helper copy and save-time validation.
+- **Four localization keys** in all five dictionaries
+  (`assets/localization/`). English is final; `it`/`fr`/`es`/`de` ship
+  as `TODO(<lang>)` placeholders pending maintainer sign-off.
+
+### Changed
+
+- Caregiver address validation rejects addresses without a domain
+  (`AllowAddressesWithoutDomain = false`), applied consistently in the
+  adapter and in the settings dialog.
+
+### Security
+
+- A malformed caregiver address falls back to primary-only delivery and
+  logs a warning without writing the address to the log (`CLAUDE.md`
+  §9). A self-copy (caregiver equal to primary) is deduplicated to a
+  single recipient and rejected at save time.
+
+### Docs
+
+- **`docs/USER_GUIDE.en.md`** — new "Caregiver notifications" section
+  (how to enable, same-email semantics, mutual visibility, empty =
+  disabled). The four localized guides may follow.
+
+---
+
 ## PR #46 — Add implementation prompt and EVOLUTION entry for public website
 
 Link: [vger70/MedReminder#46](https://github.com/vger70/MedReminder/pull/46)
