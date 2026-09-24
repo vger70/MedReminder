@@ -103,9 +103,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
 
         // ------- Encrypted export / import (C.3) -------
-        // Argon2id + AES-GCM archive cipher. The export / import
-        // services are registered in their own steps once implemented.
+        // Argon2id + AES-GCM archive cipher (singleton, stateless) plus
+        // the user-initiated export service. The import service is
+        // registered once it lands in its own step.
         services.TryAddSingleton<IArchiveCipher, ArchiveCipher>();
+        services.AddScoped<IExportService, ExportService>();
 
         // IEmailNotificationService is the MailKit implementation
         // wrapped by the retry-with-back-off decorator (Increment 7
