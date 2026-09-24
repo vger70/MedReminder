@@ -26,7 +26,7 @@ DPAPI ties data to the Windows account and defeats migration.
 The authoritative design lives in two documents — read them before
 coding:
 
-- **`docs/ANALYSIS-C3-EXPORT-IMPORT.md`** — the approved design.
+- **`docs/analsis/ANALYSIS-C3-EXPORT-IMPORT.md`** — the approved design.
   Sections §3–§13 describe the archive layout, encryption details,
   runtime, UI, localization, tests and implementation order. Where
   this prompt and the analysis document disagree, **the analysis
@@ -41,7 +41,7 @@ Also read before making any architectural change:
   never do.
 - **`docs/ANALYSIS.md`** — the base architecture (data model, EF
   Core patterns, DPAPI usage, per-profile paths).
-- **`docs/ANALYSIS-MULTI-USER.md`** §3 and §11 — the per-profile
+- **`docs/analsis/ANALYSIS-MULTI-USER.md`** §3 and §11 — the per-profile
   data layout the export follows.
 
 ---
