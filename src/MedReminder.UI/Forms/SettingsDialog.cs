@@ -172,16 +172,16 @@ internal sealed class SettingsDialog : MedReminderFormBase
         // The Windows Run entry is a per-Windows-account setting, so
         // it must not be toggled by a non-admin profile: doing so
         // would change the auto-start behaviour for every profile of
-        // the same Windows user. Admin-only, coherent with the
-        // Email and Backup gating (§7.4).
+        // the same Windows user. Admin-only, coherent with Email
+        // gating (§7.4).
         if (_currentProfile.IsAdmin)
         {
             tabs.TabPages.Add(BuildStartupTab());
         }
-        if (_currentProfile.IsAdmin)
-        {
-            tabs.TabPages.Add(BuildBackupTab());
-        }
+        // Backup tab: all profiles. Automatic-backup settings and the
+        // Save/Run-now buttons are hidden for non-admin profiles;
+        // the manual export/import buttons are always visible.
+        tabs.TabPages.Add(BuildBackupTab());
 
         var closeButton = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
         var buttonPanel = new FlowLayoutPanel
@@ -813,6 +813,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private TabPage BuildBackupTab()
     {
         var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Backup"));
+        var isAdmin = _currentProfile.IsAdmin;
         var settings = _backupMonitor.CurrentValue;
 
         _dbPathLabel = new Label
@@ -936,6 +937,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.RetentionDays"), _backupRetentionBox);
         AddRow(table, string.Empty, _backupStatusLabel);
         AddRow(table, string.Empty, _backupCloudWarningLabel);
+        table.Visible = isAdmin;
 
         var actionButtons = new FlowLayoutPanel
         {
@@ -943,8 +945,11 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
             Padding = new Padding(4, 8, 4, 8),
         };
-        actionButtons.Controls.Add(saveButton);
-        actionButtons.Controls.Add(runNowButton);
+        if (isAdmin)
+        {
+            actionButtons.Controls.Add(saveButton);
+            actionButtons.Controls.Add(runNowButton);
+        }
         actionButtons.Controls.Add(exportButton);
         actionButtons.Controls.Add(importButton);
         actionButtons.Controls.Add(exportEncryptedButton);
