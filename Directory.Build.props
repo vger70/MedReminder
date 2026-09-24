@@ -29,8 +29,8 @@
   <PropertyGroup Label="Assembly metadata">
     <Product>MedReminder</Product>
     <Authors>vger70</Authors>
-    <Company>vger70</Company>
-    <Copyright>Copyright (c) vger70. Licensed under the Apache License 2.0.</Copyright>
+    <Company>VGER70 SW</Company>
+    <Copyright>Copyright (c) VGER70 SW. Licensed under the Apache License 2.0.</Copyright>
     <PackageProjectUrl>https://github.com/vger70/MedReminder</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vger70/MedReminder</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
