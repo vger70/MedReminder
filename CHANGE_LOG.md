@@ -33,7 +33,9 @@ with the classification adapted to per-PR granularity: **Added**,
 ## PR #48 — C.3: Manual encrypted export / import
 
 Link: [vger70/MedReminder#48](https://github.com/vger70/MedReminder/pull/48)
-**Status:** open
+**Status:** open — feature-complete (all implementation steps 1–10 of
+`ANALYSIS-C3-EXPORT-IMPORT.md` §13 done), awaiting review and the
+pre-merge manual QA checklist in the PR description.
 
 Branch: `feature/export-import`
 
@@ -73,6 +75,21 @@ archive so it is not bound to the Windows account. Implements
   manifest and payload schemas, KDF / cipher parameters, and an
   off-the-shelf decryption recipe).
 - **"Export and import" section** in `docs/USER_GUIDE.en.md`.
+
+### Tests
+
+- **`ArchiveCipher`**: deterministic KDF, salt / passphrase key
+  separation, AES-GCM round-trip, wrong-key and tampered-input rejection.
+- **`ExportService`**: ZIP layout, manifest fields, payload decrypts and
+  matches the hash, short-passphrase refusal, SMTP opt-in / opt-out with
+  password re-encryption, scratch-snapshot cleanup.
+- **`ImportService`**: manifest read, newer-version and non-MedReminder
+  refusal, missing-payload / non-zip / missing-file corruption surfaces.
+- **End-to-end round-trip**: export → wipe → import restores every entity
+  (row counts and field-for-field on a rich and a bare medicine); wrong
+  passphrase, tampered payload, truncated archive, newer format / schema
+  version, older-schema defaulting, and SMTP-password round-trip each
+  behave as specified, leaving the target untouched on failure.
 
 ### Security
 
