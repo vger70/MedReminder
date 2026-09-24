@@ -1,8 +1,3 @@
-Ecco una versione ottimizzata, condensata e ad altissima efficienza di token del tuo file CLAUDE.md.
-Principi dell'ottimizzazione:
- * Riduzione dei token (circa -35/40%): Rimossi i preamboli descrittivi, le spiegazioni ridondanti e le tabelle non essenziali (sostituite con elenchi puntati compatti).
- * Preservazione totale delle regole rigide: Tutte le regole vincolanti (branching claude/ o feature/, PR anticipata, policy linguistica, rimozione PDB/XML in Release, Clean Architecture, percorsi dei file) sono state mantenute intatte ma in forma prescrittiva.
- * Migliore scansionabilità per l'LLM: L'uso di strutture elancate chiare e sintassi imperativa rende più facile per Claude Code seguire le istruzioni senza perdersi in testi lunghi.
 # CLAUDE.md
 
 ## 1. Project Overview
