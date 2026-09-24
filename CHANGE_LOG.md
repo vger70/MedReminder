@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #51 — Allow non-admin profiles to export and import their own backup
+
+Link: [vger70/MedReminder#51](https://github.com/vger70/MedReminder/pull/51)
+**Status:** open
+
+Branch: `claude/backup-crittografato-profili-ed0fdc`
+
+**Changed**
+- The Backup tab in `SettingsDialog` is now visible to every profile, not only admins.
+  Non-admin profiles see Export and Import buttons only; the automatic-backup
+  configuration section (schedule, directory, retention, Save, Run Now) remains
+  admin-only.
+- `ImportBackupAsync` locks the restore target to the current profile for non-admins,
+  preventing them from overwriting another profile's database.
+
+---
+
 ## PR #47 — A3: Caregiver notifications
 
 Link: [vger70/MedReminder#47](https://github.com/vger70/MedReminder/pull/47)
