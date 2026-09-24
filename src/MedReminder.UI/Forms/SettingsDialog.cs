@@ -61,12 +61,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     // Backup
     private Label _dbPathLabel = null!;
-    private CheckBox _backupEnabledBox = null!;
-    private TextBox _backupDirectoryBox = null!;
-    private DateTimePicker _backupTimePicker = null!;
-    private NumericUpDown _backupRetentionBox = null!;
-    private Label _backupStatusLabel = null!;
-    private Label _backupCloudWarningLabel = null!;
+    // Admin-only controls; null when the current profile is not an admin.
+    private CheckBox? _backupEnabledBox;
+    private TextBox? _backupDirectoryBox;
+    private DateTimePicker? _backupTimePicker;
+    private NumericUpDown? _backupRetentionBox;
+    private Label? _backupStatusLabel;
+    private Label? _backupCloudWarningLabel;
 
     // Generale (Incremento 16b) — selezione lingua UI
     private ComboBox _languageCombo = null!;
@@ -169,10 +170,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             tabs.TabPages.Add(BuildStartupTab());
         }
-        if (_currentProfile.IsAdmin)
-        {
-            tabs.TabPages.Add(BuildBackupTab());
-        }
+        // Backup tab is visible to every profile; admin-only controls
+        // (automatic backup settings, Run Now) are hidden for non-admins.
+        tabs.TabPages.Add(BuildBackupTab());
 
         var closeButton = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
         var buttonPanel = new FlowLayoutPanel
@@ -804,7 +804,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private TabPage BuildBackupTab()
     {
         var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Backup"));
-        var settings = _backupMonitor.CurrentValue;
 
         _dbPathLabel = new Label
         {
@@ -814,58 +813,94 @@ internal sealed class SettingsDialog : MedReminderFormBase
             ForeColor = System.Drawing.Color.DarkGray,
         };
 
-        _backupEnabledBox = new CheckBox
+        var table = BuildFormTable();
+
+        // Admin-only section: automatic backup configuration.
+        if (_currentProfile.IsAdmin)
         {
-            Text = _loc.Get("Ui.SettingsDialog.Backup.Enable"),
-            AutoSize = true,
-            Checked = settings.Enabled,
-        };
+            var settings = _backupMonitor.CurrentValue;
 
-        _backupDirectoryBox = new TextBox
-        {
-            // Sized against the current SettingsDialog width so
-            // it never pushes the Backup tab into an horizontal
-            // scrollbar. Column 0 of BuildFormTable is 160 wide,
-            // container padding is 16 on each side, table padding
-            // is 12 on each side — the directory box + browse
-            // button must stay under (Width − 160 − 32 − 24).
-            Width = 460,
-            Text = settings.Directory,
-            ReadOnly = false,
-        };
-        var browseButton = new Button { Text = _loc.Get("Common.Browse"), AutoSize = true };
-        browseButton.Click += (_, _) => BrowseBackupDirectory();
+            _backupEnabledBox = new CheckBox
+            {
+                Text = _loc.Get("Ui.SettingsDialog.Backup.Enable"),
+                AutoSize = true,
+                Checked = settings.Enabled,
+            };
 
-        // DateTimePicker in modalità "Time": mostra solo HH:mm (custom
-        // format), prevent the user from changing the date.
-        _backupTimePicker = new DateTimePicker
-        {
-            Format = DateTimePickerFormat.Custom,
-            CustomFormat = "HH:mm",
-            ShowUpDown = true,
-            Width = 100,
-            Value = ParsePreferredTimeAsDateTime(settings.PreferredTime)
-        };
+            _backupDirectoryBox = new TextBox
+            {
+                // Sized against the current SettingsDialog width so
+                // it never pushes the Backup tab into an horizontal
+                // scrollbar. Column 0 of BuildFormTable is 160 wide,
+                // container padding is 16 on each side, table padding
+                // is 12 on each side — the directory box + browse
+                // button must stay under (Width − 160 − 32 − 24).
+                Width = 460,
+                Text = settings.Directory,
+                ReadOnly = false,
+            };
+            var browseButton = new Button { Text = _loc.Get("Common.Browse"), AutoSize = true };
+            browseButton.Click += (_, _) => BrowseBackupDirectory();
 
-        _backupRetentionBox = new NumericUpDown
-        {
-            Width = 80,
-            Minimum = 0,
-            Maximum = 3650,
-            Value = settings.RetentionDays > 0 ? settings.RetentionDays : 30,
-        };
+            // DateTimePicker in time mode: shows only HH:mm (custom
+            // format); prevents the user from changing the date part.
+            _backupTimePicker = new DateTimePicker
+            {
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "HH:mm",
+                ShowUpDown = true,
+                Width = 100,
+                Value = ParsePreferredTimeAsDateTime(settings.PreferredTime)
+            };
 
-        _tooltips.SetToolTip(_backupEnabledBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupEnabled"));
-        _tooltips.SetToolTip(_backupDirectoryBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupDirectory"));
-        _tooltips.SetToolTip(_backupTimePicker, _loc.Get("Ui.SettingsDialog.Tooltip.BackupTime"));
-        _tooltips.SetToolTip(_backupRetentionBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupRetention"));
-        _tooltips.SetToolTip(browseButton, _loc.Get("Ui.SettingsDialog.Tooltip.BackupBrowse"));
+            _backupRetentionBox = new NumericUpDown
+            {
+                Width = 80,
+                Minimum = 0,
+                Maximum = 3650,
+                Value = settings.RetentionDays > 0 ? settings.RetentionDays : 30,
+            };
 
-        var saveButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.SaveSettings"), AutoSize = true, Height = 30 };
-        saveButton.Click += (_, _) => SaveBackupSettings();
+            _tooltips.SetToolTip(_backupEnabledBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupEnabled"));
+            _tooltips.SetToolTip(_backupDirectoryBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupDirectory"));
+            _tooltips.SetToolTip(_backupTimePicker, _loc.Get("Ui.SettingsDialog.Tooltip.BackupTime"));
+            _tooltips.SetToolTip(_backupRetentionBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupRetention"));
+            _tooltips.SetToolTip(browseButton, _loc.Get("Ui.SettingsDialog.Tooltip.BackupBrowse"));
 
-        var runNowButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.RunNow"), AutoSize = true, Height = 30 };
-        runNowButton.Click += async (_, _) => await RunBackupNowAsync(runNowButton);
+            _backupStatusLabel = new Label { AutoSize = true };
+            UpdateBackupStatusLabel();
+
+            _backupCloudWarningLabel = new Label
+            {
+                AutoSize = true,
+                // Constrained to the width available in table column 1
+                // (dialog − 160 − container padding − table padding),
+                // so the localized warning text wraps within the tab
+                // instead of forcing an horizontal scrollbar.
+                MaximumSize = new System.Drawing.Size(540, 0),
+                ForeColor = System.Drawing.Color.DarkOrange,
+                Text = string.Empty,
+                Visible = false,
+            };
+            UpdateCloudWarning();
+            _backupDirectoryBox.TextChanged += (_, _) => UpdateCloudWarning();
+
+            var directoryRow = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = false,
+            };
+            directoryRow.Controls.Add(_backupDirectoryBox);
+            directoryRow.Controls.Add(browseButton);
+
+            AddRow(table, string.Empty, _backupEnabledBox);
+            AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.Directory"), directoryRow);
+            AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.PreferredTime"), _backupTimePicker);
+            AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.RetentionDays"), _backupRetentionBox);
+            AddRow(table, string.Empty, _backupStatusLabel);
+            AddRow(table, string.Empty, _backupCloudWarningLabel);
+        }
 
         var exportButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.ExportCustom"), AutoSize = true, Height = 30 };
         exportButton.Click += async (_, _) => await ExportBackupAsync(exportButton);
@@ -873,49 +908,25 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var importButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.Restore"), AutoSize = true, Height = 30 };
         importButton.Click += async (_, _) => await ImportBackupAsync(importButton);
 
-        _backupStatusLabel = new Label { AutoSize = true };
-        UpdateBackupStatusLabel();
-
-        _backupCloudWarningLabel = new Label
-        {
-            AutoSize = true,
-            // Constrained to the width available in table column 1
-            // (dialog − 160 − container padding − table padding),
-            // so the localized warning text wraps within the tab
-            // instead of forcing an horizontal scrollbar.
-            MaximumSize = new System.Drawing.Size(540, 0),
-            ForeColor = System.Drawing.Color.DarkOrange,
-            Text = string.Empty,
-            Visible = false,
-        };
-        UpdateCloudWarning();
-        _backupDirectoryBox.TextChanged += (_, _) => UpdateCloudWarning();
-
-        var directoryRow = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            WrapContents = false,
-        };
-        directoryRow.Controls.Add(_backupDirectoryBox);
-        directoryRow.Controls.Add(browseButton);
-
-        var table = BuildFormTable();
-        AddRow(table, string.Empty, _backupEnabledBox);
-        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.Directory"), directoryRow);
-        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.PreferredTime"), _backupTimePicker);
-        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.RetentionDays"), _backupRetentionBox);
-        AddRow(table, string.Empty, _backupStatusLabel);
-        AddRow(table, string.Empty, _backupCloudWarningLabel);
-
         var actionButtons = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.LeftToRight,
             AutoSize = true,
             Padding = new Padding(4, 8, 4, 8),
         };
-        actionButtons.Controls.Add(saveButton);
-        actionButtons.Controls.Add(runNowButton);
+
+        if (_currentProfile.IsAdmin)
+        {
+            var saveButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.SaveSettings"), AutoSize = true, Height = 30 };
+            saveButton.Click += (_, _) => SaveBackupSettings();
+
+            var runNowButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.RunNow"), AutoSize = true, Height = 30 };
+            runNowButton.Click += async (_, _) => await RunBackupNowAsync(runNowButton);
+
+            actionButtons.Controls.Add(saveButton);
+            actionButtons.Controls.Add(runNowButton);
+        }
+
         actionButtons.Controls.Add(exportButton);
         actionButtons.Controls.Add(importButton);
 
@@ -952,6 +963,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private void BrowseBackupDirectory()
     {
+        if (_backupDirectoryBox is null) return;
         using var dialog = new FolderBrowserDialog
         {
             Description = _loc.Get("Ui.SettingsDialog.Backup.BrowseDialog.Title"),
@@ -967,6 +979,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private void SaveBackupSettings()
     {
+        if (_backupDirectoryBox is null || _backupEnabledBox is null ||
+            _backupTimePicker is null || _backupRetentionBox is null) return;
         try
         {
             var directory = _backupDirectoryBox.Text.Trim();
@@ -1019,6 +1033,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private async Task RunBackupNowAsync(Button button)
     {
+        if (_backupDirectoryBox is null || _backupRetentionBox is null) return;
         var directory = _backupDirectoryBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(directory))
         {
@@ -1115,14 +1130,24 @@ internal sealed class SettingsDialog : MedReminderFormBase
         // filename (medreminder-<profileId>-YYYYMMDD-HHmmss.db) so
         // the common case is a one-click restore into the profile
         // the backup originally came from.
-        var profiles = _profileRegistry.ListProfiles();
-        var fileName = Path.GetFileName(fileDialog.FileName);
-        var extractedId = TryExtractProfileIdFromBackupName(fileName);
-        using var chooser = new RestoreIntoProfileDialog(
-            _loc, profiles, extractedId, _currentProfile.Id);
-        if (chooser.ShowDialog(this) != DialogResult.OK) return;
-        var targetProfileId = chooser.SelectedProfileId;
-        if (string.IsNullOrWhiteSpace(targetProfileId)) return;
+        // Non-admin profiles can only restore into their own profile;
+        // skip the chooser and lock the target to the current profile.
+        string? targetProfileId;
+        if (_currentProfile.IsAdmin)
+        {
+            var profiles = _profileRegistry.ListProfiles();
+            var fileName = Path.GetFileName(fileDialog.FileName);
+            var extractedId = TryExtractProfileIdFromBackupName(fileName);
+            using var chooser = new RestoreIntoProfileDialog(
+                _loc, profiles, extractedId, _currentProfile.Id);
+            if (chooser.ShowDialog(this) != DialogResult.OK) return;
+            targetProfileId = chooser.SelectedProfileId;
+            if (string.IsNullOrWhiteSpace(targetProfileId)) return;
+        }
+        else
+        {
+            targetProfileId = _currentProfile.Id;
+        }
 
         var confirm = MessageBox.Show(this,
             _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirm"),
@@ -1312,6 +1337,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private void UpdateBackupStatusLabel()
     {
+        if (_backupStatusLabel is null) return;
         var state = _backupState.Load();
         if (state.LastSuccessfulBackupAt is null && state.LastAttemptAt is null)
         {
@@ -1343,6 +1369,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private void UpdateCloudWarning()
     {
+        if (_backupDirectoryBox is null || _backupCloudWarningLabel is null) return;
         var path = _backupDirectoryBox.Text ?? string.Empty;
         var isCloud =
             path.Contains("OneDrive", StringComparison.OrdinalIgnoreCase) ||
