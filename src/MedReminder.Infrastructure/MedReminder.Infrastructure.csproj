@@ -20,6 +20,11 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
     <PackageReference Include="MailKit" Version="4.18.0" />
+    <!-- Argon2id KDF for the encrypted export archive (C.3,
+         docs/analysis/ANALYSIS-C3-EXPORT-IMPORT.md §3.3). Managed,
+         MIT, no native dependency. AES-GCM comes from the in-box
+         System.Security.Cryptography.AesGcm. -->
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <!-- Windows-1252 is a code page and requires the CodePages
          provider at runtime (registered by AnsmBdpmParser via
          Encoding.RegisterProvider). Only the FR / BDPM parser needs

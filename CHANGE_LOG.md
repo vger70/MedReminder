@@ -30,6 +30,64 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #48 — C.3: Manual encrypted export / import
+
+Link: [vger70/MedReminder#48](https://github.com/vger70/MedReminder/pull/48)
+**Status:** open
+
+Branch: `feature/export-import`
+
+Adds two user-triggered commands under Settings → Backup: **Export all
+data** and **Import from export**. The export writes a single encrypted
+`.mrz` archive (a ZIP with a cleartext `manifest.json` and an
+AES-GCM-encrypted `payload.enc`) covering the current profile's data
+plus optional shared settings. The archive is portable across Windows
+accounts and machines, so it doubles as the recommended device-migration
+path. Import applies an archive to the current profile in Overwrite mode
+after a safety backup. Encryption is Argon2id (KDF) + AES-GCM (cipher)
+with a user-chosen passphrase; DPAPI is deliberately not used for the
+archive so it is not bound to the Windows account. Implements
+`docs/analysis/ANALYSIS-C3-EXPORT-IMPORT.md`.
+
+### Added
+
+- **`MedReminder.Application.Export` namespace**: `IExportService`,
+  `IImportService`, `IArchiveCipher` ports, the `ExportManifest` /
+  `ExportPayload` shapes, `ExportOptions` / `ImportOptions`, and the
+  typed `ExportValidationException` / `ImportFailedException` failure
+  surfaces.
+- **`ArchiveCipher`** (Infrastructure): Argon2id
+  (`Konscious.Security.Cryptography.Argon2`, first cut t=3, m=64 MiB,
+  p=1) + in-box `AesGcm` (256-bit key, 96-bit nonce, 128-bit tag).
+- **`ExportService` / `ImportService`** (Infrastructure): DB snapshot
+  via `BackupService`, entity round-trip through a temporary read-only
+  EF Core context, encrypted ZIP write, manifest / hash / version
+  validation, transactional overwrite with a pre-import safety copy.
+- **Export / Import dialogs** in `SettingsDialog` (Backup tab): passphrase
+  entry with confirmation, opt-in shared-settings checkboxes, manifest
+  info panel, mandatory overwrite confirmation, progress and cancel.
+- **Localization keys** for the new UI in all five dictionaries
+  (`assets/localization/`). English is final; `it`/`fr`/`es`/`de` ship
+  as `TODO(<lang>)` placeholders pending maintainer sign-off.
+- **`docs/EXPORT-FORMAT.md`**: the public archive contract (ZIP layout,
+  manifest and payload schemas, KDF / cipher parameters, and an
+  off-the-shelf decryption recipe).
+- **"Export and import" section** in `docs/USER_GUIDE.en.md`.
+
+### Security
+
+- The archive is always encrypted; there is no plaintext export path.
+  An empty or too-short passphrase refuses the export before any file is
+  written. The passphrase, the derived key and the payload plaintext are
+  never logged.
+- The SMTP password is opt-in only, DPAPI-decrypted and re-encrypted with
+  the archive key on export, and DPAPI-re-encrypted on the target machine
+  on import — never carried across accounts as a raw DPAPI blob.
+
+### Build
+
+- New dependency `Konscious.Security.Cryptography.Argon2` (MIT, managed).
+
 ## PR #47 — A3: Caregiver notifications
 
 Link: [vger70/MedReminder#47](https://github.com/vger70/MedReminder/pull/47)

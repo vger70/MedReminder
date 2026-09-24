@@ -1,6 +1,7 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
+using MedReminder.Application.Export;
 using MedReminder.Infrastructure.AutoStart;
 using MedReminder.Infrastructure.Backup;
 using MedReminder.Infrastructure.Catalogue;
@@ -8,6 +9,7 @@ using MedReminder.Infrastructure.Donations;
 using MedReminder.Infrastructure.Catalogue.Parsers;
 using MedReminder.Infrastructure.Credentials;
 using MedReminder.Infrastructure.Email;
+using MedReminder.Infrastructure.Export;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Notifications;
 using MedReminder.Infrastructure.Persistence;
@@ -99,6 +101,11 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
+
+        // ------- Encrypted export / import (C.3) -------
+        // Argon2id + AES-GCM archive cipher. The export / import
+        // services are registered in their own steps once implemented.
+        services.TryAddSingleton<IArchiveCipher, ArchiveCipher>();
 
         // IEmailNotificationService is the MailKit implementation
         // wrapped by the retry-with-back-off decorator (Increment 7
