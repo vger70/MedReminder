@@ -30,6 +30,46 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #53 — Fix and expand user guides (6 corrections + A3/C3/stepped tapering)
+
+Link: [vger70/MedReminder#53](https://github.com/vger70/MedReminder/pull/53)
+**Status:** open
+
+Branch: `claude/negli-user-guide-fixes-461ae2`
+
+Corrects six inconsistencies in `docs/USER_GUIDE.it.md` and adds the three
+recently shipped features that were documented only in the English guide.
+A follow-up commit on the same branch will propagate equivalent corrections to
+`en`, `fr`, `es`, and `de` once the Italian version is approved.
+
+### Fixed
+
+- **`docs/USER_GUIDE.it.md`** — duplicate section title: the standalone
+  "Avvio automatico con Windows" (configure Settings → Automatic startup)
+  renamed to "Configurare l'avvio automatico" so it no longer collides with
+  the same-named sub-section inside "Profili multipli" (which describes
+  which profile opens at login).
+- **`docs/USER_GUIDE.it.md`** — stale MVP note in "Modificare o disattivare":
+  replaced "funzione da linea di comando o edit DB per l'MVP" with the correct
+  reference to `Toolbar → Cambia schedulazione`.
+- **`docs/USER_GUIDE.it.md`** — contradiction with A5: the "Cosa NON fa"
+  bullet that stated the app does not remind you to take a specific dose is
+  replaced with an accurate statement about what MedReminder does not track
+  (adherence, missed doses, clinical advice).
+
+### Added
+
+- **`docs/USER_GUIDE.it.md`** — "Scalare" entry in "Regimi complessi"
+  expanded to document the Linear / Stepped sub-selector and stage editor
+  added by PR #40, which were missing from the Italian guide.
+- **`docs/USER_GUIDE.it.md`** — "Notifiche al caregiver" section (A3,
+  PR #47): optional second e-mail recipient, consistent with the English guide.
+- **`docs/USER_GUIDE.it.md`** — "Esportazione e importazione" section (C3,
+  PR #48): encrypted `.mrz` archive, passphrase requirements, and import
+  overwrite semantics, consistent with the English guide.
+
+---
+
 ## PR #52 — Allow non-admin profiles to use manual export and import
 
 Link: [vger70/MedReminder#52](https://github.com/vger70/MedReminder/pull/52)
