@@ -96,13 +96,8 @@ Each item cites where the site says it and what the app does.
 8. **"Email alerts"** — `data/features_<lang>.yaml`. Emails cover
    low stock and, if enabled per medicine, dose-time reminders. The
    optional caregiver address receives every email the user receives,
-   not only low-stock ones.
-9. **Donate "custom" link, Stripe** — `config/_default/config.toml`
-   `[params.donate.stripe]`: `custom` has the same URL as `"20"`.
-   Confirm with the maintainer whether a separate "choose your
-   amount" Payment Link exists. Do not invent a URL; if none exists,
-   ask whether to hide the Custom button for Stripe.
-10. **Requirements** — `data/requirements_<lang>.yaml`. "About
+   including dose-time reminders, not only low-stock ones.
+9. **Requirements** — `data/requirements_<lang>.yaml`. "About
     100 MB" is not verified; measure the extracted size of the
     current `MedReminder-win-x64.zip` and round it, or remove the
     line. Optionally mention the smaller framework-dependent ZIP
@@ -112,28 +107,56 @@ Each item cites where the site says it and what the app does.
 ## 4. Shipped features missing from the site — add
 
 Add to `data/features_<lang>.yaml`. The grid has 10 cards; keep it
-readable (about 12 at most) by merging where natural rather than
-adding one card per item.
+readable (about 12–14) by merging into existing cards where noted
+rather than adding one card per item. Every item below is required.
+Check each against the user guide section named in brackets.
 
-- **Flexible schedules**: weekly patterns, on/off cycles, tapering
-  (linear or in steps) and as-needed medicines; the run-out estimate
-  follows the schedule.
-- **Encrypted export and import**: one passphrase-protected file with
-  all of a profile's data, for moving to a new PC or keeping a
-  personal copy; format documented publicly.
-- **Backup to a cloud-synced folder + restore on another PC**
-  (replaces the current "Automatic backup" card, see item 3).
-- **Caregiver email** (can be merged into "Email alerts").
-- **Therapy card for the doctor**: printable summary of current
-  medicines and doses.
-- **Intake log**: mark a dose as taken or skipped.
-- Optional, lower priority: pause a therapy (suspensions), start with
-  Windows / tray icon, built-in user guide (F1), links to the official
-  leaflet for Italian medicines.
+- **Flexible schedules** (new card) [Complex regimens]: weekly
+  patterns, on/off cycles, tapering (linear or in steps) and
+  as-needed medicines; the run-out estimate follows the schedule.
+- **Encrypted export and import** (new card) [Export and import]:
+  one passphrase-protected file with a profile's data, for moving to
+  a new PC or keeping a personal copy; works across Windows accounts;
+  format documented publicly.
+- **Backup to a cloud-synced folder and restore on another PC**
+  (replaces the "Automatic backup" card, see item 3) [Database
+  backup, Cloud folder backup]: daily local backup of every profile,
+  plus an optional encrypted snapshot into a folder synchronized by
+  the user's own cloud app, and **Restore from cloud folder** on a
+  second PC. State that it is not real-time sync.
+- **Therapy report for the doctor** (new card): printable summary of
+  the current medicines, doses and times.
+- **Caregiver email** (merge into "Email alerts") [Caregiver
+  notifications]: an optional second address per profile receives
+  the same emails.
+- **Profiles with roles** (extend "Multiple profiles") [Multiple
+  profiles and admin/user roles]: administrator and user roles; the
+  PIN is optional.
+- **Therapy pauses** (merge into "Stock tracking" or "Prescription
+  reminder"): a medicine can be suspended for a period; the stock
+  projection accounts for it.
+- **Runs quietly in the background** (new card or merge into
+  "Prescription reminder") [Notification area icon, Windows automatic
+  startup]: notification-area icon, optional start with Windows,
+  "Check now".
+- **Built-in user guide** (merge into "Five languages"): the guide
+  opens with F1, in the same five languages as the interface.
+- **Official leaflet links** (merge into "Medicine catalogue")
+  [Reference catalogue]: for Italian medicines, links to the official
+  leaflet and summary of product characteristics.
+- **Update notice** (merge into "Free and open-source"): the app can
+  tell you when a new version is on GitHub; nothing is downloaded or
+  installed automatically. Must match the privacy wording of item 6.
+
+Do not add the intake log (taken / skipped registration): it is
+deliberately left off the site.
 
 Wording must stay organizational: no "adherence", no "never miss a
 dose" promise. The current dose-time card says "so you never miss a
 tablet"; soften to "a reminder at each scheduled dose time".
+
+Update the screenshot alt texts in `data/screenshots_<lang>.yaml`
+only if a new card makes an existing alt text misleading.
 
 ## 5. Screenshots
 
@@ -150,14 +173,15 @@ the refresh procedure in the website `README.md` and
 - `hugo --minify --gc` must build without warnings.
 - Check every language page renders the new cards and FAQ answers,
   and that the MSI link resolves.
-- PR description lists items 1–10 above with "fixed", "needs
-  maintainer input" (item 9, possibly 10) or "skipped, because …".
+- PR description lists items 1–9 and every §4 feature with "done",
+  "needs maintainer input" (item 9 if the size cannot be measured)
+  or "skipped, because …".
 
 ## 7. Acceptance criteria
 
 - No sentence on the site contradicts §2 above.
-- Features grid covers §4 at least for flexible schedules, export /
-  import, cloud-folder backup and restore, and the therapy card.
+- Every §4 feature appears on the site, as its own card or merged
+  into an existing one; the intake log does not.
 - All five languages updated or marked `# TODO: translate`.
 - Privacy section states the app's startup update check and the
   site's GitHub API call.
