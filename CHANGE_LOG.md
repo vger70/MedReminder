@@ -30,6 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #66 — Let admin profiles export every profile in one step
+
+Link: [vger70/MedReminder#66](https://github.com/vger70/MedReminder/pull/66)
+Branch: `claude/export-all-profiles-admin` (stacked on PR #65)
+**Status:** open (draft)
+
+### Added
+
+- **Export every profile (admin).** With more than one profile, the
+  Export dialog of an admin profile writes one encrypted single-profile
+  `.mrz` per profile into a chosen folder, all under the same
+  passphrase (`src/MedReminder.UI/Forms/ExportDialog.cs`). Archive
+  format unchanged; the profile registry is never exported. New
+  localization keys in all five languages.
+
+### Docs
+
+- User guides (5 languages) and `ANALYSIS-C3-EXPORT-IMPORT.md` §3.5.
+
+---
+
 ## PR #65 — Back up every profile to the cloud folder and guard cross-profile restores
 
 Link: [vger70/MedReminder#65](https://github.com/vger70/MedReminder/pull/65)
