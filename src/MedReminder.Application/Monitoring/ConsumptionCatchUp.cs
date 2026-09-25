@@ -15,9 +15,10 @@ namespace MedReminder.Application.Monitoring;
 //  - for a single day: if a consumption for (medicineId, day) already
 //    exists, the Application skips the day thanks to
 //    GetLastConsumptionDayAsync.
-//  - at the persistence level: a unique constraint on
-//    (MedicineId, Kind=Consumption, day) provided by the DB schema
-//    (Increment 3) guards against concurrent double calls.
+//  - against concurrent calls (hosted-service tick and "Check now"):
+//    RunAsync holds MonitoringGate, so a second call only reads the
+//    last consumption day after the first one has committed. There is
+//    no unique constraint in the schema (see MonitoringGate).
 public sealed class ConsumptionCatchUp
 {
     private readonly IMedicineRepository _medicines;
@@ -50,7 +51,10 @@ public sealed class ConsumptionCatchUp
     }
 
     // Returns the total number of Consumption movements created.
-    public async Task<int> RunAsync(CancellationToken cancellationToken)
+    public Task<int> RunAsync(CancellationToken cancellationToken)
+        => MonitoringGate.RunExclusiveAsync(RunCoreAsync, cancellationToken);
+
+    private async Task<int> RunCoreAsync(CancellationToken cancellationToken)
     {
         var today = LocalToday();
         var medicines = await _medicines.ListActiveAsync(cancellationToken);

@@ -65,7 +65,12 @@ public sealed class MedicationMonitor
 
     public sealed record RunResult(int MedicinesInspected, int NotificationsSent);
 
-    public async Task<RunResult> RunAsync(CancellationToken cancellationToken)
+    // Serialized with ConsumptionCatchUp through MonitoringGate, so two
+    // concurrent passes cannot both decide to notify the same epoch.
+    public Task<RunResult> RunAsync(CancellationToken cancellationToken)
+        => MonitoringGate.RunExclusiveAsync(RunCoreAsync, cancellationToken);
+
+    private async Task<RunResult> RunCoreAsync(CancellationToken cancellationToken)
     {
         var today = LocalToday();
         var medicines = await _medicines.ListActiveAsync(cancellationToken);

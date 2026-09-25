@@ -30,11 +30,39 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #62 — Serialize consumption catch-up and monitor passes
+
+Link: [vger70/MedReminder#62](https://github.com/vger70/MedReminder/pull/62)
+Branch: `claude/serialize-consumption-catch-up`
+**Status:** open
+
+### Fixed
+
+- **Automatic consumption could be written twice.** The monitor tick
+  and "Check now" ran the consumption catch-up concurrently, each in
+  its own scope; overlapping runs wrote the same days twice and
+  understated stock. Overlapping monitor passes could also send the
+  same low-stock warning twice. Both passes now run under a
+  process-wide gate
+  (`src/MedReminder.Application/Monitoring/MonitoringGate.cs`).
+
+### Changed
+
+- Corrected the `ConsumptionCatchUp` comment that cited a database
+  unique constraint that does not exist.
+
+### Added
+
+- Regression test for concurrent catch-ups
+  (`tests/MedReminder.Application.Tests/Monitoring/ConsumptionCatchUpTests.cs`).
+
+---
+
 ## PR #63 — Correct stale donation-config comments and CLAUDE.md frameworks
 
 Link: [vger70/MedReminder#63](https://github.com/vger70/MedReminder/pull/63)
 Branch: `claude/fix-stale-donation-and-tfm-docs`
-**Status:** open
+**Status:** merged (2026-09-25)
 
 ### Docs
 
