@@ -555,7 +555,7 @@
   "Ui.SettingsDialog.Notifications.Saved": "Destinatario de notificaciones guardado.",
   "Ui.SettingsDialog.Notifications.SaveError": "No se pudo guardar el destinatario.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Label": "E-mail del cuidador (opcional)",
-  "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Si se define, los mismos e-mails de existencias bajas también se envían a esta dirección. Déjalo vacío para desactivarlo.",
+  "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Si se define, cada e-mail enviado a este perfil (existencias bajas y recordatorios a la hora de la dosis) también se envía a esta dirección. Déjalo vacío para desactivarlo.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Invalid": "Introduce una dirección de e-mail válida.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.SameAsPrimary": "La dirección del cuidador no puede ser la misma que la del destinatario principal.",
   "Ui.SettingsDialog.Notifications.NoteAdmin": "También puedes cambiar el servidor SMTP compartido en la pestaña Email.",
