@@ -27,24 +27,36 @@ dotnet test MedReminder.sln -c Release
 # Publish
 dotnet publish src/MedReminder.UI -c Release /p:PublishProfile=win-x64-framework-dependent
 dotnet publish src/MedReminder.UI -c Release /p:PublishProfile=win-x64-self-contained
-
+```
 Note: Infra tests require Windows (DPAPI/Registry). Release build deletes .pdb and .xml via MSBuild target StripReleaseDebugArtifacts (DO NOT REMOVE).
-4. Git, Branching & PR Workflow (MANDATORY)
+
+---
+
+## 4. Git, Branching & PR Workflow (MANDATORY)
  * Base Branch: main. Ask before creating a feature branch.
  * Branch Naming: MUST reflect request. Prefixes allowed: claude/<name> or feature/<name>.
  * Early PR Requirement: Open PR after the first commit of the session. Do not wait until the end.
  * Commit Messages: Imperative, English, explain "why". Never push to main directly.
  * Changelog: Update CHANGE_LOG.md when opening/updating a PR.
-5. Runtime Data (%LOCALAPPDATA%\MedReminder\)
+
+---
+
+## 5. Runtime Data (%LOCALAPPDATA%\MedReminder\)
  * Shared: profiles.json, smtp.settings.json, smtp.protected (DPAPI), backup.*.json, user.settings.json, logs/*.log.
  * Per-Profile (profiles\<id>\): medreminder.db (SQLite), notifications.settings.json.
  * Constraint: Never write outside %LOCALAPPDATA%\MedReminder\. Never log secrets/PII.
-6. DOs (Always Follow)
+
+---
+
+## 6. DOs (Always Follow)
  * Name branches correctly (claude/ or feature/) and open PR after 1st commit.
  * Ask user to run dotnet build and dotnet test before committing source code.
  * Add new UI string keys to ALL assets/localization/strings.<lang>.json files.
  * Keep tone sober, factual, concise, and no emojis in documentation.
-7. DONTs (Strictly Forbidden)
+
+---
+
+## 7. DONTs (Strictly Forbidden)
  * NEVER commit non-English text to code, logs, or docs (except authorized user guides/JSONs).
  * NEVER use System.Net.Mail.SmtpClient (use MailKit).
  * NEVER log plaintext passwords, email bodies, or medical notes.
