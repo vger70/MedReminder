@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #70 — List all five interface languages in the user guides
+
+Link: [vger70/MedReminder#70](https://github.com/vger70/MedReminder/pull/70)
+Branch: `claude/website-content-refresh-qzen39`
+
+### Docs
+
+- `docs/USER_GUIDE.{en,it,fr,es}.md`, section "Interface language":
+  list English, Italian, French, Spanish and German, matching
+  `SupportedLanguages.All`. The guides previously named two or four.
+
+---
+
 ## PR #68 — Consolidate evolution drafts into a single ranked proposal note
 
 Link: [vger70/MedReminder#68](https://github.com/vger70/MedReminder/pull/68)
