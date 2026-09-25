@@ -30,11 +30,40 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #65 — Back up every profile to the cloud folder and guard cross-profile restores
+
+Link: [vger70/MedReminder#65](https://github.com/vger70/MedReminder/pull/65)
+Branch: `claude/export-every-profile`
+**Status:** open
+
+### Changed
+
+- **Cloud-folder backup covers every profile.** The automatic cloud
+  target writes one encrypted `.mrz` per registered profile, like the
+  local target, all under the same backup passphrase
+  (`src/MedReminder.UI/Hosting/AutomaticBackupHostedService.cs`).
+- **Export of another profile.** `ExportOptions.ProfileId`; allowed to
+  admin profiles and to the automatic backup
+  (`src/MedReminder.Infrastructure/Export/ExportService.cs`).
+
+### Added
+
+- Restore preselects the active profile's newest snapshot; restore and
+  import ask for confirmation before applying another profile's
+  archive (`src/MedReminder.UI/Forms/OtherProfileArchivePrompt.cs`).
+  New localization keys in all five languages.
+
+### Docs
+
+- User guides (5 languages) and `ANALYSIS-C3PLUS-CLOUD-BACKUP.md`.
+
+---
+
 ## PR #64 — Stop manual intakes from hiding or doubling automatic consumption
 
 Link: [vger70/MedReminder#64](https://github.com/vger70/MedReminder/pull/64)
 Branch: `claude/consumption-day-coverage`
-**Status:** open
+**Status:** merged (2026-09-25)
 
 ### Fixed
 

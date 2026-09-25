@@ -658,5 +658,7 @@
   "Ui.ImportDialog.Error.NotConfirmed": "Spunta la casella di conferma per procedere.",
   "Ui.Import.Error.WrongPassphrase": "La passphrase non corrisponde a questo file.",
   "Ui.Import.Error.Corrupt": "Il file di export è danneggiato e non può essere importato.",
-  "Ui.Import.Error.UnsupportedVersion": "Questo export è stato prodotto da una versione più recente di MedReminder. Aggiorna l'app e riprova."
+  "Ui.Import.Error.UnsupportedVersion": "Questo export è stato prodotto da una versione più recente di MedReminder. Aggiorna l'app e riprova.",
+  "Ui.Import.OtherProfile.Title": "Archivio di un altro profilo",
+  "Ui.Import.OtherProfile.Body": "Questo archivio appartiene al profilo \"{0}\". Importandolo, tutti i dati del profilo attivo \"{1}\" verranno sostituiti con quelli di \"{0}\". Vuoi continuare?"
 }

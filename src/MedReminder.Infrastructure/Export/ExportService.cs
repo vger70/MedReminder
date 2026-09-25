@@ -13,7 +13,8 @@ using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Infrastructure.Export;
 
-// Produces an encrypted .mrz archive of the current profile
+// Produces an encrypted .mrz archive of one profile — the active one
+// by default, or ExportOptions.ProfileId
 // (docs/analysis/ANALYSIS-C3-EXPORT-IMPORT.md §4.1). The algorithm
 // follows §4.1 step by step: validate the passphrase, snapshot the DB
 // via the SQLite online-backup API (BackupService), read every entity
@@ -27,7 +28,11 @@ namespace MedReminder.Infrastructure.Export;
 [SupportedOSPlatform("windows")]
 internal sealed class ExportService : IExportService
 {
+    // Same file name CurrentProfile uses for the per-profile recipient.
+    private const string ProfileNotificationSettingsFileName = "notifications.settings.json";
+
     private readonly ICurrentProfile _currentProfile;
+    private readonly IProfileRegistry? _profileRegistry;
     private readonly IBackupService _backupService;
     private readonly IArchiveCipher _cipher;
     private readonly ISmtpCredentialStore _credentialStore;
@@ -41,9 +46,10 @@ internal sealed class ExportService : IExportService
         IArchiveCipher cipher,
         ISmtpCredentialStore credentialStore,
         TimeProvider clock,
-        ILogger<ExportService> log)
+        ILogger<ExportService> log,
+        IProfileRegistry profileRegistry)
         : this(currentProfile, backupService, cipher, credentialStore, clock, log,
-            AppDataPaths.GetAppDataDirectory())
+            AppDataPaths.GetAppDataDirectory(), profileRegistry)
     {
     }
 
@@ -56,9 +62,11 @@ internal sealed class ExportService : IExportService
         ISmtpCredentialStore credentialStore,
         TimeProvider clock,
         ILogger<ExportService> log,
-        string sharedDirectory)
+        string sharedDirectory,
+        IProfileRegistry? profileRegistry = null)
     {
         _currentProfile = currentProfile;
+        _profileRegistry = profileRegistry;
         _backupService = backupService;
         _cipher = cipher;
         _credentialStore = credentialStore;
@@ -94,6 +102,8 @@ internal sealed class ExportService : IExportService
                 "Only single-profile export is supported in this version.");
         }
 
+        var target = ResolveTarget(options);
+
         progress?.Report(0);
 
         var scratchDirectory = Path.Combine(
@@ -105,15 +115,15 @@ internal sealed class ExportService : IExportService
         {
             // Step 2: torn-write-free snapshot via the online-backup API.
             var snapshotPath = await _backupService.ExportProfileAsync(
-                _currentProfile.Id, scratchDirectory, cancellationToken);
+                target.Id, scratchDirectory, cancellationToken);
 
             // Step 3: read every entity from the snapshot into DTOs.
-            var payload = await ReadPayloadAsync(snapshotPath, cancellationToken);
+            var payload = await ReadPayloadAsync(snapshotPath, target, cancellationToken);
 
             // Step 4: collect the opt-in shared files.
             var settingsFiles = new ExportSettingsFiles(_sharedDirectory);
             payload.NotificationSettings =
-                settingsFiles.ReadNotificationSettings(_currentProfile.NotificationSettingsPath);
+                settingsFiles.ReadNotificationSettings(target.NotificationSettingsPath);
 
             var includes = new ManifestIncludes();
             CollectSharedFiles(options, settingsFiles, payload, includes);
@@ -157,7 +167,7 @@ internal sealed class ExportService : IExportService
                 AppVersion = ResolveAppVersion(),
                 CreatedAtUtc = _clock.GetUtcNow(),
                 Scope = "profile",
-                ProfileId = _currentProfile.Id,
+                ProfileId = target.Id,
                 Kdf = new ManifestKdf
                 {
                     Iterations = kdfParams.Iterations,
@@ -189,7 +199,7 @@ internal sealed class ExportService : IExportService
                 manifest.Device = new ManifestDevice
                 {
                     HostNameSha256 = HashHostName(Environment.MachineName),
-                    ProfileId = _currentProfile.Id,
+                    ProfileId = target.Id,
                 };
             }
 
@@ -198,7 +208,7 @@ internal sealed class ExportService : IExportService
 
             progress?.Report(100);
             _log.LogInformation(
-                "Exported profile {ProfileId} to an encrypted archive.", _currentProfile.Id);
+                "Exported profile {ProfileId} to an encrypted archive.", target.Id);
             return options.DestinationPath;
         }
         finally
@@ -218,8 +228,46 @@ internal sealed class ExportService : IExportService
         }
     }
 
+    // Identity and paths of the profile being exported.
+    private sealed record ExportTarget(
+        string Id, string DisplayName, ProfileRole Role, string NotificationSettingsPath);
+
+    private ExportTarget ResolveTarget(ExportOptions options)
+    {
+        var requested = options.ProfileId;
+        if (string.IsNullOrWhiteSpace(requested)
+            || string.Equals(requested, _currentProfile.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ExportTarget(
+                _currentProfile.Id,
+                _currentProfile.DisplayName,
+                _currentProfile.Role,
+                _currentProfile.NotificationSettingsPath);
+        }
+
+        if (!options.AutomaticSource && !_currentProfile.IsAdmin)
+        {
+            throw new ExportValidationException(
+                ExportValidationReason.ScopeNotPermitted,
+                "Only an admin profile can export another profile.");
+        }
+
+        var profile = _profileRegistry?.GetById(requested)
+            ?? throw new ExportValidationException(
+                ExportValidationReason.ProfileNotFound,
+                $"Profile '{requested}' is not registered.");
+
+        return new ExportTarget(
+            profile.Id,
+            profile.DisplayName,
+            profile.Role,
+            Path.Combine(
+                AppDataPaths.GetProfileDataDirectory(profile.Id),
+                ProfileNotificationSettingsFileName));
+    }
+
     private async Task<ExportPayload> ReadPayloadAsync(
-        string snapshotPath, CancellationToken cancellationToken)
+        string snapshotPath, ExportTarget target, CancellationToken cancellationToken)
     {
         var options = new DbContextOptionsBuilder<MedReminderDbContext>()
             .UseSqlite(AppDataPaths.BuildSqliteConnectionString(snapshotPath))
@@ -231,9 +279,9 @@ internal sealed class ExportService : IExportService
         {
             Profile = new ExportedProfileInfo
             {
-                Id = _currentProfile.Id,
-                DisplayName = _currentProfile.DisplayName,
-                Role = _currentProfile.Role.ToString(),
+                Id = target.Id,
+                DisplayName = target.DisplayName,
+                Role = target.Role.ToString(),
                 CreatedAt = _clock.GetUtcNow(),
             },
         };

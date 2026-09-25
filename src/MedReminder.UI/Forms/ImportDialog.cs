@@ -19,6 +19,8 @@ internal sealed class ImportDialog : MedReminderFormBase
 {
     private readonly ILocalizationService _loc;
     private readonly IImportService _importService;
+    private readonly ICurrentProfile _currentProfile;
+    private readonly IProfileRegistry _profileRegistry;
 
     private readonly TextBox _sourceBox;
     private readonly TextBox _passphraseBox;
@@ -33,11 +35,18 @@ internal sealed class ImportDialog : MedReminderFormBase
     private CancellationTokenSource? _cts;
     private bool _running;
     private bool _manifestLoaded;
+    private string? _manifestProfileId;
 
-    public ImportDialog(ILocalizationService loc, IImportService importService)
+    public ImportDialog(
+        ILocalizationService loc,
+        IImportService importService,
+        ICurrentProfile currentProfile,
+        IProfileRegistry profileRegistry)
     {
         _loc = loc;
         _importService = importService;
+        _currentProfile = currentProfile;
+        _profileRegistry = profileRegistry;
 
         Text = _loc.Get("Ui.ImportDialog.Title");
         Width = 560;
@@ -188,6 +197,7 @@ internal sealed class ImportDialog : MedReminderFormBase
     private async Task LoadManifestAsync(string archivePath)
     {
         _manifestLoaded = false;
+        _manifestProfileId = null;
         UpdateImportEnabled();
         try
         {
@@ -195,6 +205,7 @@ internal sealed class ImportDialog : MedReminderFormBase
                 archivePath, CancellationToken.None);
             _infoLabel.ForeColor = System.Drawing.Color.DarkGray;
             _infoLabel.Text = FormatManifest(manifest);
+            _manifestProfileId = manifest.ProfileId;
             _manifestLoaded = true;
         }
         catch (ImportFailedException ex)
@@ -229,7 +240,7 @@ internal sealed class ImportDialog : MedReminderFormBase
             manifest.AppVersion,
             createdLocal,
             manifest.Scope,
-            manifest.ProfileId ?? "—",
+            OtherProfileArchivePrompt.DisplayName(_profileRegistry, manifest.ProfileId),
             includedText);
     }
 
@@ -246,6 +257,11 @@ internal sealed class ImportDialog : MedReminderFormBase
         if (!_confirmOverwriteBox.Checked)
         {
             ShowValidation(_loc.Get("Ui.ImportDialog.Error.NotConfirmed"));
+            return;
+        }
+        if (!OtherProfileArchivePrompt.Confirm(
+                this, _loc, _currentProfile, _profileRegistry, _manifestProfileId))
+        {
             return;
         }
 
