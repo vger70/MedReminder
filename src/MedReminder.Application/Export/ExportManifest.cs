@@ -41,6 +41,31 @@ public sealed class ExportManifest
 
     // Which opt-in shared files the archive carries (§3.4).
     public ManifestIncludes Includes { get; set; } = new();
+
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.6):
+    // optional origin marker. "automatic" for a scheduled cloud
+    // snapshot, "user" (or null) for a user-triggered C.3 export. Older
+    // readers ignore the property (§4.3 additive-field rule).
+    public string? Source { get; set; }
+
+    // C.3+ §3.6: optional device descriptor. Present on automatic
+    // cloud snapshots; the host name is stored HASHED (SHA-256, hex,
+    // lower-case) so a leaked archive does not disclose the plain
+    // host name. Enough to group snapshots by originating machine in
+    // the Restore dialog, not enough to identify it.
+    public ManifestDevice? Device { get; set; }
+}
+
+public sealed class ManifestDevice
+{
+    // SHA-256 hex of the plain host name. Never the plain name.
+    public string HostNameSha256 { get; set; } = string.Empty;
+
+    // Convenience mirror of the top-level ProfileId — the Restore
+    // dialog reads this from a folder listing without decrypting the
+    // payload, so keeping it here saves an extra manifest lookup on
+    // the sibling ProfileId field.
+    public string ProfileId { get; set; } = string.Empty;
 }
 
 public sealed class ManifestKdf

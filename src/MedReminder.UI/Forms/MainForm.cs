@@ -1280,7 +1280,9 @@ internal sealed class MainForm : MedReminderFormBase
                 scope.ServiceProvider.GetRequiredService<ILocalizationService>(),
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Catalogue.IReferenceCatalogueQueryService>(),
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.IExportService>(),
-                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.IImportService>());
+                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.IImportService>(),
+                scope.ServiceProvider.GetRequiredService<ICloudBackupPassphraseStore>(),
+                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.ICloudRestoreService>());
             dialog.ShowDialog(this);
         }
         catch (Exception ex)

@@ -101,10 +101,20 @@ Field by field:
 | `includes.smtpSettings` | bool | The archive carries SMTP transport settings. |
 | `includes.userSettings` | bool | The archive carries user preferences. |
 | `includes.backupSettings` | bool | The archive carries backup preferences. |
+| `source` | string, optional | `"automatic"` when the archive was produced by the C.3+ automatic cloud-folder backup. Absent (or `"user"`) when the archive was produced by the user-triggered **Export all data** dialog. Additive since C.3+: readers that ignore it lose nothing. |
+| `device` | object, optional | Present on automatic cloud-folder snapshots only. See below. |
+| `device.hostNameSha256` | string | SHA-256 of the source machine's plain host name, hex-encoded, lower-case. Never the plain name. Lets a restore dialog group snapshots by originating machine without disclosing it. |
+| `device.profileId` | string | Convenience mirror of the top-level `profileId`, so a folder-listing UI can group snapshots by profile without decrypting anything. |
 
 The KDF and cipher parameters live in the manifest, not in the reader,
 so the reader honours what the archive declares. A future build may
 strengthen the defaults without breaking older archives.
+
+The `source` and `device` fields are additive: an older reader
+ignores unknown keys and still imports the archive normally. The
+current build sets both only on the automatic scheduled cloud-folder
+snapshot; a manually-triggered export from the Settings dialog omits
+them.
 
 ---
 

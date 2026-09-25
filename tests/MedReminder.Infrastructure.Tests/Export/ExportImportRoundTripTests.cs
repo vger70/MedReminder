@@ -370,6 +370,70 @@ public sealed class ExportImportRoundTripTests : IDisposable
     }
 
     [Fact]
+    public async Task Automatic_source_annotates_manifest_with_source_and_hashed_hostname()
+    {
+        // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.6):
+        // when AutomaticSource is true the manifest must carry
+        // Source = "automatic" and a Device block with a SHA-256 hex
+        // hash of the machine's host name.
+        await SeedAsync();
+
+        var archivePath = NewArchivePath();
+        var export = CreateExportService(new FakeCredentialStore());
+        try
+        {
+            await export.ExportAsync(
+                new ExportOptions
+                {
+                    DestinationPath = archivePath,
+                    AutomaticSource = true,
+                },
+                Passphrase.ToCharArray(), null, CancellationToken.None);
+
+            await using var live = CreateProfileContext();
+            var import = CreateImportService(live, new FakeCredentialProtector());
+            var manifest = await import.ReadManifestAsync(archivePath, CancellationToken.None);
+
+            manifest.Source.Should().Be("automatic");
+            manifest.Device.Should().NotBeNull();
+            manifest.Device!.HostNameSha256.Should().HaveLength(64)
+                .And.MatchRegex("^[0-9a-f]+$");
+            manifest.Device.HostNameSha256.Should().NotContain(Environment.MachineName);
+            manifest.Device.ProfileId.Should().Be(_profileId);
+        }
+        finally
+        {
+            TryDeleteFile(archivePath);
+        }
+    }
+
+    [Fact]
+    public async Task User_source_leaves_source_and_device_null()
+    {
+        await SeedAsync();
+
+        var archivePath = NewArchivePath();
+        var export = CreateExportService(new FakeCredentialStore());
+        try
+        {
+            await export.ExportAsync(
+                new ExportOptions { DestinationPath = archivePath },
+                Passphrase.ToCharArray(), null, CancellationToken.None);
+
+            await using var live = CreateProfileContext();
+            var import = CreateImportService(live, new FakeCredentialProtector());
+            var manifest = await import.ReadManifestAsync(archivePath, CancellationToken.None);
+
+            manifest.Source.Should().BeNull();
+            manifest.Device.Should().BeNull();
+        }
+        finally
+        {
+            TryDeleteFile(archivePath);
+        }
+    }
+
+    [Fact]
     public async Task Smtp_password_round_trips_through_the_archive_key()
     {
         await SeedAsync();

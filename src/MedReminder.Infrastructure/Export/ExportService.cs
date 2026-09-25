@@ -178,6 +178,21 @@ internal sealed class ExportService : IExportService
                 Includes = includes,
             };
 
+            // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.6):
+            // automatic-scheduled cloud snapshots carry an origin marker
+            // and a HASHED host name. User-triggered C.3 exports leave
+            // both fields null so the archive stays byte-compatible with
+            // pre-C.3+ readers.
+            if (options.AutomaticSource)
+            {
+                manifest.Source = "automatic";
+                manifest.Device = new ManifestDevice
+                {
+                    HostNameSha256 = HashHostName(Environment.MachineName),
+                    ProfileId = _currentProfile.Id,
+                };
+            }
+
             // Step 10: write the ZIP (manifest.json cleartext + payload.enc).
             WriteArchive(options.DestinationPath, manifest, ciphertext);
 
@@ -347,6 +362,13 @@ internal sealed class ExportService : IExportService
             System.IO.Compression.CompressionLevel.Optimal);
         using var payloadStream = payloadEntry.Open();
         payloadStream.Write(ciphertext);
+    }
+
+    private static string HashHostName(string hostName)
+    {
+        var normalized = (hostName ?? string.Empty).Trim();
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
     private static string ResolveAppVersion()

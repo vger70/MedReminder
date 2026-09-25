@@ -30,6 +30,109 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #55 — C.3+ backup to a user-controlled cloud folder + explicit restore
+
+Link: [vger70/MedReminder#55](https://github.com/vger70/MedReminder/pull/55)
+Branch: `feature/cloud-folder-backup`
+**Status:** in progress
+
+Implements `docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md`. The automatic
+daily backup gains a second, independent target that writes encrypted
+`.mrz` snapshots (C.3's archive format) into a user-chosen local folder,
+which the user's OS-level sync agent (OneDrive, iCloud Drive, Dropbox,
+Google Drive Desktop, …) is free to upload. A new **Restore from cloud
+folder** dialog reads the most recent snapshot on a second device and
+applies it through the existing C.3 `IImportService`.
+
+The user model is single-writer / multiple-reader-on-demand: this is
+explicitly not real-time sync. The UI copy states it and the user guide
+restates it.
+
+### Added
+
+- **Cloud-folder target on the automatic backup.**
+  `BackupSettings.CloudFolderEnabled` / `CloudFolderDirectory` /
+  `CloudFolderRetention` (`src/MedReminder.Application/Abstractions/BackupSettings.cs`).
+  Independent from the existing raw-DB `Directory` — a user may run
+  either target, both, or neither.
+- **Backup passphrase, DPAPI-cached.** New
+  `ICloudBackupPassphraseStore` port with a DPAPI-`CurrentUser`
+  Infrastructure adapter backed by
+  `%LOCALAPPDATA%\MedReminder\cloud-backup.protected`. Distinct from the
+  user-typed C.3 export passphrase so a compromise of one does not
+  compromise the other.
+- **`ICloudRestoreService`.** Lists the `.mrz` archives in a folder,
+  reads each manifest without decrypting, and delegates the actual
+  restore to `IImportService`.
+- **Manifest additions.** Optional `source` (`"automatic"` for a
+  scheduled snapshot, absent for a user export) and hashed
+  `device.hostName` block (SHA-256 hex of the plain host name) —
+  additive, ignored by older readers.
+
+### Changed
+
+- **`AutomaticBackupHostedService`.** Same daily schedule, now runs
+  both targets with independent try/catch so a failure on one target
+  never skips the other. The cloud target uses temp-then-move to
+  publish an atomic `.mrz` into the user's folder; sync agents watching
+  the folder only see the finished file.
+- **`BackupService.PruneCloudFolderAsync`.** Separate regex for
+  `medreminder-<profileId>-YYYYMMDD-HHmmss.mrz`, distinct from the
+  `.db` regex, so the two retention windows never cross-prune when the
+  user points both targets at the same folder.
+- **Settings dialog.** Backup tab gains a *Backup to a cloud-synced
+  folder (encrypted)* subsection (admin-only writer): enable checkbox,
+  folder picker, retention counter, backup-passphrase set/change
+  button, and two disclaimers ("this is not real-time sync", "losing
+  the passphrase means losing the ability to restore"). A new
+  **Restore from cloud folder…** button opens the C.3+ restore dialog
+  and is available to every profile.
+
+### Added (UI)
+
+- **`ChangeCloudPassphraseDialog`.** Small modal to set or rotate the
+  DPAPI-cached backup passphrase; enforces the same minimum length as
+  C.3 exports.
+- **`RestoreFromCloudDialog`.** Lists the `.mrz` snapshots in the
+  chosen folder with date, profile, source and hashed device columns;
+  accepts the DPAPI-cached passphrase or a user-typed one; requires
+  the explicit *"I understand this will overwrite"* confirmation;
+  prompts for restart on success.
+
+### Localization
+
+- All five dictionaries (`en`, `it`, `fr`, `es`, `de`) gain the
+  `Ui.SettingsDialog.CloudBackup.*`, `Ui.RestoreCloudDialog.*`,
+  `Ui.CloudBackup.*` and `Ui.SettingsDialog.File.RestoreFromCloud`
+  key families. `DictionaryParityTests` passes.
+
+### Tests
+
+- `MedReminder.Application.Tests`: `BackupSettingsBindingTests` covers
+  the additive JSON deserialization contract (old file → defaults,
+  new file → round-trip).
+- `MedReminder.Infrastructure.Tests`:
+  `DpapiCloudBackupPassphraseStoreTests` (DPAPI round-trip, tampering
+  rejection, empty-passphrase refusal) and
+  `BackupServicePruneCloudTests` (regex isolation from `.db` files,
+  per-profile retention, retention-of-zero no-op).
+- `ExportImportRoundTripTests`: two new tests assert that
+  `AutomaticSource=true` writes `manifest.source = "automatic"` plus
+  a valid 64-hex-char device hash, and that a user export leaves both
+  fields null.
+
+### Docs
+
+- `docs/USER_GUIDE.en.md` gains a "Cloud folder backup" section
+  covering setup on device #1, setup + restore on device #2, and the
+  passphrase-loss / provider-recycle-bin caveats.
+- `docs/EXPORT-FORMAT.md` documents the optional `source` and
+  `device.{hostNameSha256, profileId}` manifest fields.
+- The four non-English user guides may follow in a separate PR,
+  mirroring A1 / A5.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+
 ## PR #53 — Fix and expand user guides (6 corrections + A3/C3/stepped tapering)
 
 Link: [vger70/MedReminder#53](https://github.com/vger70/MedReminder/pull/53)
