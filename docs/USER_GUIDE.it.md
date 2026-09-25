@@ -508,6 +508,14 @@ spostare MedReminder su un nuovo computer.
   mai scritta in chiaro.
 - Clicca **Esporta**.
 
+**Amministratore: tutti i profili insieme.** Se esiste più di un
+profilo, un profilo amministratore vede anche **Esporta tutti i
+profili**. Scegli una cartella invece di un file: MedReminder scrive
+un file crittografato per profilo
+(`medreminder-export-<profileId>-<timestamp>.mrz`), tutti con la
+stessa passphrase. Per ripristinare un profilo, apri quel profilo e
+importa il suo file.
+
 **La passphrase non può essere recuperata.** Non esiste reset,
 backdoor né copia sul server. Se perdi la passphrase, il file non
 potrà mai più essere letto — conservala in un posto sicuro.

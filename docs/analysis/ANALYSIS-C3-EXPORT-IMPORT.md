@@ -316,6 +316,17 @@ The admin variant is called out as an **open decision** in §12:
 it is small in code but doubles the test matrix and the UI. First
 cut may ship `profile` scope only.
 
+**Decision (2026-09-25).** The admin variant ships as a batch of
+single-profile archives, not as one `all-profiles` archive: the
+Export dialog of an admin profile offers "export every profile" and
+writes one `scope = "profile"` `.mrz` per registered profile into a
+chosen folder, all under the same passphrase. The format, the
+importer and `docs/EXPORT-FORMAT.md` are unchanged, and the registry
+(`profiles.json`, PIN hashes, roles) is never exported. Each file is
+restored by importing it from the profile it belongs to; import
+asks for confirmation when the archive comes from another profile.
+The `all-profiles` token stays reserved.
+
 ### 3.6 No SQLite schema change
 
 C.3 does not add columns or tables. It reads existing entities
@@ -779,3 +790,6 @@ documentation, tests and five-language localization
   wrapper with cleartext manifest (§3.1), overwrite-only import
   in the first cut (§1.3), and explicit opt-in for SMTP password
   inclusion with re-encryption (§3.4).
+- 2026-09-25 — §3.5: the admin "all profiles" export ships as one
+  single-profile archive per profile; the `all-profiles` scope stays
+  reserved.

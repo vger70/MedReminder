@@ -1444,7 +1444,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // SettingsDialog only opens it.
     private void ShowExportDialog()
     {
-        using var dialog = new ExportDialog(_loc, _exportService);
+        using var dialog = new ExportDialog(_loc, _exportService, _currentProfile, _profileRegistry);
         dialog.ShowDialog(this);
     }
 

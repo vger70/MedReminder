@@ -491,6 +491,13 @@ also the recommended way to move MedReminder to a new computer.
   passphrase — it is never written in clear text.
 - Click **Export**.
 
+**Admin: every profile at once.** When more than one profile exists,
+an admin profile also sees **Export every profile**. Pick a folder
+instead of a file: MedReminder writes one encrypted file per profile
+(`medreminder-export-<profileId>-<timestamp>.mrz`), all with the same
+passphrase. To restore a profile, open that profile and import its
+file.
+
 **The passphrase cannot be recovered.** There is no reset, no backdoor
 and no server copy. If you lose the passphrase, the file can never be
 read again — store it somewhere safe.
