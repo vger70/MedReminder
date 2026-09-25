@@ -108,6 +108,11 @@ public static class InfrastructureServiceCollectionExtensions
         // itself is per-call.
         services.TryAddSingleton<ICloudBackupPassphraseStore, DpapiCloudBackupPassphraseStore>();
 
+        // C.3++ Phase 1 (docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md
+        // §7.3): delivery of the cloud-folder .mrz snapshots. Stateless;
+        // reads BackupSettings.CloudFolderDirectory on every call.
+        services.TryAddSingleton<IArchiveStorage, LocalFolderArchiveStorage>();
+
         // ------- Encrypted export / import (C.3) -------
         // Argon2id + AES-GCM archive cipher (singleton, stateless) plus
         // the user-initiated export / import services. The import service

@@ -164,55 +164,41 @@ internal sealed class BackupService : IBackupService
         return Task.FromResult(deleted);
     }
 
-    public Task<int> PruneCloudFolderAsync(
-        string directory, int retentionDays, CancellationToken cancellationToken)
+    public async Task<int> PruneCloudFolderAsync(
+        IArchiveStorage storage, int retentionDays, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
-        if (retentionDays <= 0) return Task.FromResult(0);
-        if (!Directory.Exists(directory)) return Task.FromResult(0);
+        ArgumentNullException.ThrowIfNull(storage);
+        if (retentionDays <= 0) return 0;
 
-        var cutoff = _clock.GetUtcNow().UtcDateTime.AddDays(-retentionDays);
+        var cutoff = _clock.GetUtcNow().AddDays(-retentionDays);
+        var archives = await storage.ListAsync(cancellationToken);
 
-        // Same per-profile grouping semantics as PruneOldBackupsAsync,
-        // but keyed on the C.3+ .mrz regex (§3.3). Files that do not
-        // match are left alone — a user's hand-copied archive with a
-        // different name must not be pruned.
-        var candidates = new List<(string Path, string ProfileId, DateTime LastWriteUtc)>();
-        foreach (var path in Directory.EnumerateFiles(directory, "medreminder-*.mrz"))
+        var deleted = 0;
+        foreach (var archive in archives)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var name = Path.GetFileName(path);
-            var match = CloudBackupFileRegex.Match(name);
-            if (!match.Success) continue;
+
+            // Only the C.3+ .mrz naming (§3.3) is eligible: a user's
+            // hand-copied archive with a different name is left alone.
+            if (!CloudBackupFileRegex.IsMatch(archive.Name)) continue;
+            if (archive.CreatedAtUtc >= cutoff) continue;
+
             try
             {
-                candidates.Add((path, match.Groups["profileId"].Value.ToLowerInvariant(),
-                    File.GetLastWriteTimeUtc(path)));
+                await storage.DeleteAsync(archive.Id, cancellationToken);
+                deleted++;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
-                // Locked / permission problem: skip.
+                // A locked file must not stop pruning the others.
             }
         }
 
-        var deleted = 0;
-        foreach (var candidate in candidates)
-        {
-            if (candidate.LastWriteUtc < cutoff)
-            {
-                try
-                {
-                    File.Delete(candidate.Path);
-                    deleted++;
-                }
-                catch
-                {
-                    // A locked file must not stop pruning the others.
-                }
-            }
-        }
-
-        return Task.FromResult(deleted);
+        return deleted;
     }
 
     public Task ImportProfileAsync(

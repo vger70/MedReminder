@@ -136,6 +136,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             await using var scope = _services.CreateAsyncScope();
             var backup = scope.ServiceProvider.GetRequiredService<IBackupService>();
             var registry = scope.ServiceProvider.GetRequiredService<IProfileRegistry>();
+            var archiveStorage = scope.ServiceProvider.GetRequiredService<IArchiveStorage>();
 
             var profiles = registry.ListProfiles();
             if (profiles.Count == 0)
@@ -188,11 +189,19 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             {
                 try
                 {
-                    await RunCloudTargetAsync(scope.ServiceProvider, settings, cancellationToken);
+                    await RunCloudTargetAsync(scope.ServiceProvider, archiveStorage, cancellationToken);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     throw;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // Storage target unavailable: skip this run, not a
+                    // failure of the tick (ANALYSIS-C3PLUS §4.3).
+                    _log.LogWarning(
+                        "Cloud-folder backup skipped: folder {Directory} does not exist.",
+                        settings.CloudFolderDirectory);
                 }
                 catch (Exception ex)
                 {
@@ -220,7 +229,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 try
                 {
                     await backup.PruneCloudFolderAsync(
-                        settings.CloudFolderDirectory,
+                        archiveStorage,
                         settings.CloudFolderRetention,
                         cancellationToken);
                 }
@@ -281,23 +290,17 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
 
     // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §4.1):
     // export the current profile to a fresh .mrz in a temp folder, then
-    // atomically move it into the user's cloud folder so a sync agent
-    // never picks up a torn write. Uses the DPAPI-cached backup
+    // hand it to IArchiveStorage (C.3++,
+    // docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md §7.5), which owns
+    // delivery into the cloud folder. Uses the DPAPI-cached backup
     // passphrase; a missing passphrase logs a warning and skips (§4.6),
-    // it is not a failure of the whole tick.
+    // it is not a failure of the whole tick. An unavailable storage
+    // target surfaces as DirectoryNotFoundException for the caller.
     private async Task RunCloudTargetAsync(
         IServiceProvider scopedServices,
-        BackupSettings settings,
+        IArchiveStorage archiveStorage,
         CancellationToken cancellationToken)
     {
-        if (!Directory.Exists(settings.CloudFolderDirectory))
-        {
-            _log.LogWarning(
-                "Cloud-folder backup skipped: folder {Directory} does not exist.",
-                settings.CloudFolderDirectory);
-            return;
-        }
-
         var passStore = scopedServices.GetService<ICloudBackupPassphraseStore>();
         if (passStore is null || !passStore.HasPassphrase)
         {
@@ -324,7 +327,6 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         var timestamp = _clock.GetUtcNow().ToString("yyyyMMdd-HHmmss");
         var fileName = $"medreminder-{currentProfile.Id}-{timestamp}.mrz";
         var tempPath = Path.Combine(scratchDirectory, fileName);
-        var finalPath = Path.Combine(settings.CloudFolderDirectory, fileName);
 
         try
         {
@@ -343,11 +345,12 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 progress: null,
                 cancellationToken);
 
-            // Atomic move: sync agents watching the cloud folder see a
-            // complete file, never a torn one (§4.1).
-            File.Move(tempPath, finalPath, overwrite: false);
+            // The storage disposes the stream; it must be closed before
+            // the finally block deletes the temp file.
+            var archiveId = await archiveStorage.UploadAsync(
+                File.OpenRead(tempPath), fileName, cancellationToken);
             _log.LogInformation(
-                "Cloud-folder backup wrote {File}.", finalPath);
+                "Cloud-folder backup wrote {File}.", archiveId);
         }
         finally
         {
