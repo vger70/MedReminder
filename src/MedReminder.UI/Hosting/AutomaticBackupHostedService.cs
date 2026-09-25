@@ -84,7 +84,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         _log.LogInformation("Backup scheduler stopped.");
     }
 
-    private async Task TryRunAsync(CancellationToken cancellationToken)
+    internal async Task TryRunAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -146,6 +146,9 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 return;
             }
 
+            // Every backup written this tick, by either target. The day
+            // counts as backed up as soon as one exists, so a cloud-only
+            // configuration does not re-export on every tick.
             var exportedFiles = new List<string>();
             var perProfileErrors = new List<string>();
 
@@ -189,7 +192,12 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             {
                 try
                 {
-                    await RunCloudTargetAsync(scope.ServiceProvider, archiveStorage, cancellationToken);
+                    var archiveId = await RunCloudTargetAsync(
+                        scope.ServiceProvider, archiveStorage, cancellationToken);
+                    if (archiveId is not null)
+                    {
+                        exportedFiles.Add(archiveId);
+                    }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -252,7 +260,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                     LastBackupFile: exportedFiles[^1]));
 
                 _log.LogInformation(
-                    "Automatic backup tick completed: {ExportedCount} profile(s) exported, {Pruned} old file(s) pruned.",
+                    "Automatic backup tick completed: {ExportedCount} backup file(s) written, {Pruned} old file(s) pruned.",
                     exportedFiles.Count, pruned);
             }
             else
@@ -296,7 +304,8 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
     // passphrase; a missing passphrase logs a warning and skips (§4.6),
     // it is not a failure of the whole tick. An unavailable storage
     // target surfaces as DirectoryNotFoundException for the caller.
-    private async Task RunCloudTargetAsync(
+    // Returns the stored archive id, or null when the run was skipped.
+    private async Task<string?> RunCloudTargetAsync(
         IServiceProvider scopedServices,
         IArchiveStorage archiveStorage,
         CancellationToken cancellationToken)
@@ -306,7 +315,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         {
             _log.LogWarning(
                 "Cloud-folder backup skipped: no backup passphrase configured on this machine.");
-            return;
+            return null;
         }
 
         var passphrase = passStore.GetPassphrase();
@@ -314,7 +323,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         {
             _log.LogWarning(
                 "Cloud-folder backup skipped: the stored backup passphrase could not be read.");
-            return;
+            return null;
         }
 
         var exportService = scopedServices.GetRequiredService<IExportService>();
@@ -351,6 +360,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 File.OpenRead(tempPath), fileName, cancellationToken);
             _log.LogInformation(
                 "Cloud-folder backup wrote {File}.", archiveId);
+            return archiveId;
         }
         finally
         {
