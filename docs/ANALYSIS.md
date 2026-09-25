@@ -514,14 +514,15 @@ Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:
 
 ## 13. Known gaps
 
-- **No database-level uniqueness for automatic consumption.**
-  `ConsumptionCatchUp` states that a unique constraint on
-  `(MedicineId, Kind = Consumption, day)` guards against double
-  materialization, but `StockMovementConfiguration` defines only a
-  non-unique index on `(MedicineId, Kind, OccurredAt)` and no patch
-  creates one. Idempotency currently relies on the application check
-  (last consumption day) and on the single writer per profile
-  (single-instance mutex, one monitor tick at a time).
+- **Concurrent catch-up can double automatic consumption.** The
+  monitor tick and the "Check now" command run `ConsumptionCatchUp`
+  and `MedicationMonitor` in separate scopes with no mutual
+  exclusion; overlapping runs can write the same consumption days
+  twice and send the same low-stock warning twice. The comment in
+  `ConsumptionCatchUp` cites a unique constraint that does not exist,
+  and one cannot be added as described because manual intakes write
+  several `Consumption` rows per day with the same `OccurredAt`.
+  Addressed by PR #62 (process-wide gate).
 - **Cloud-folder snapshots cover the current profile only**; local raw
   backups cover all profiles.
 - **Export scope is the current profile**; the all-profiles export for
