@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 **MedReminder**: Windows desktop app (C# / .NET 10 / WinForms / SQLite via EF Core 10) to remind users about medicine stock & prescriptions. Non-medical device.
-- **Frameworks**: `net10.0-windows10.0.19041.0` (UI/Infra) | `net10.0` (Domain/App)
+- **Frameworks**: `net10.0-windows10.0.19041.0` (UI) | `net10.0-windows` (Infra) | `net10.0` (Domain/App/DataImporter)
 - **Architecture**: Clean Architecture (`UI` → `App` → `Domain`, `Infra` implements `App` ports). Domain must not depend on Infra/App or Windows APIs.
 - **Docs**: `docs/ANALYSIS.md` (architecture), `docs/PACKAGING.md` (release).
 

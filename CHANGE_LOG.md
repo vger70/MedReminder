@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #63 — Correct stale donation-config comments and CLAUDE.md frameworks
+
+Link: [vger70/MedReminder#63](https://github.com/vger70/MedReminder/pull/63)
+Branch: `claude/fix-stale-donation-and-tfm-docs`
+**Status:** open
+
+### Docs
+
+- `JsonDonationOptionsProvider` and `MedReminder.UI.csproj` comments now
+  state that the donation configuration comes from the embedded
+  `assets/donations.settings.json`, not from `%LOCALAPPDATA%`.
+- `CLAUDE.md`: Infrastructure targets `net10.0-windows`.
+
+---
+
 ## PR #59 — Fix clipped first-run/PIN dialogs, Backup tab scroll, system language on first run
 
 Link: [vger70/MedReminder#59](https://github.com/vger70/MedReminder/pull/59)
