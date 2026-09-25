@@ -361,6 +361,15 @@ nicht — jeder mit Zugriff auf diesen PC kann die Profildateien
 weiterhin öffnen. Drei Fehlversuche schließen die Abfrage und die
 Anwendung.
 
+**Echte Trennung erfordert getrennte Windows-Konten.** Jedes
+Windows-Konto hat einen eigenen Ordner `%LOCALAPPDATA%\MedReminder\`,
+den andere Standardbenutzer von Windows (ohne Administratorrechte)
+nicht lesen können. Profile innerhalb eines Windows-Kontos sind eine
+Bequemlichkeit, keine Schutzgrenze für die Privatsphäre: Wer dieses
+Konto benutzt, kann die Dateien aller Profile lesen, und die vom
+Administrator eingerichteten automatischen Sicherungen enthalten alle
+Profile, auch PIN-geschützte.
+
 Wenn du eine PIN vergessen hast, entferne sie von Hand aus
 `%LOCALAPPDATA%\MedReminder\profiles.json` (lösche `PinHash` und
 `PinSalt` und setze `PinIterations` für den betroffenen Eintrag
