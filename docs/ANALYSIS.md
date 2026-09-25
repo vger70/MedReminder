@@ -523,6 +523,12 @@ Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:
   and one cannot be added as described because manual intakes write
   several `Consumption` rows per day with the same `OccurredAt`.
   Addressed by PR #62 (process-wide gate).
+- **Manual intakes and automatic consumption can disagree.** A
+  backdated intake for a day that already has the automatic
+  consumption adds to it (Taken) or leaves it in place
+  (Skipped/Cancelled), understating stock. An intake recorded for
+  today before the first catch-up moves the catch-up start past the
+  earlier unmaterialized days, overstating stock. Addressed by PR #64.
 - **Cloud-folder snapshots cover the current profile only**; local raw
   backups cover all profiles.
 - **Export scope is the current profile**; the all-profiles export for
