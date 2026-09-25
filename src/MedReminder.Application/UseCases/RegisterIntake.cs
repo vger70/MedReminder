@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Monitoring;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Stock;
@@ -18,6 +19,16 @@ public sealed record RegisterIntakeCommand(
 // given quantity — so stock decreases in real time, without waiting
 // for the automatic catch-up. The next catch-up skips the day thanks
 // to the presence of the intake (see ConsumptionCatchUp).
+//
+// Backdated intakes: a past day may already carry the automatic
+// consumption written by ConsumptionCatchUp. The first intake recorded
+// for such a day (any status) replaces it, consistently with the
+// catch-up rule that an intake day gets no automatic consumption: a
+// PositiveCorrection movement reverses the automatic quantity, then
+// the Taken quantity (if any) is booked as usual. The ledger stays
+// append-only. StockEpoch is not incremented: this is not a refill.
+// Consumption on a day without any intake is always automatic, since
+// only ConsumptionCatchUp and this use case write Consumption.
 public sealed class RegisterIntake
 {
     private readonly IMedicineRepository _medicines;
@@ -40,9 +51,17 @@ public sealed class RegisterIntake
         _clock = clock;
     }
 
-    public async Task<Guid> ExecuteAsync(RegisterIntakeCommand cmd, CancellationToken cancellationToken)
+    // Runs under MonitoringGate: a catch-up interleaved between the
+    // ledger read and the commit could otherwise write the automatic
+    // consumption for cmd.Day without it being reversed.
+    public Task<Guid> ExecuteAsync(RegisterIntakeCommand cmd, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cmd);
+        return MonitoringGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
+
+    private async Task<Guid> ExecuteCoreAsync(RegisterIntakeCommand cmd, CancellationToken cancellationToken)
+    {
         if (cmd.Quantity <= 0m)
             throw new ArgumentException("Intake quantity must be positive.", nameof(cmd));
 
@@ -50,6 +69,29 @@ public sealed class RegisterIntake
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         var now = _clock.GetUtcNow();
+
+        // Read before adding the intake below: a prior intake means the
+        // day's consumption is already manual and must not be reversed.
+        var priorIntakeDays = await _intakes.ListManualIntakeDaysAsync(
+            medicine.Id, cmd.Day, cmd.Day, cancellationToken);
+        var movements = await _stock.ListForMedicineAsync(cmd.MedicineId, cancellationToken);
+        var automaticQuantity = priorIntakeDays.Count > 0
+            ? 0m
+            : -movements
+                .Where(m => m.Kind == StockMovementKind.Consumption
+                            && LocalDay(m.OccurredAt) == cmd.Day)
+                .Sum(m => m.QuantityDelta);
+
+        if (cmd.Status == IntakeStatus.Taken)
+        {
+            // Sanity check: stock cannot drop below zero.
+            var current = MedicineStock.Current(movements) + automaticQuantity;
+            if (MedicineStock.WouldGoNegative(current, -cmd.Quantity))
+            {
+                throw new InvalidOperationException(
+                    $"The intake would push the stock below zero (current: {current}).");
+            }
+        }
 
         var intake = new MedicationIntake
         {
@@ -62,18 +104,21 @@ public sealed class RegisterIntake
         };
         await _intakes.AddAsync(intake, cancellationToken);
 
+        var occurredAt = ToLocalMiddayOffset(cmd.Day);
+        if (automaticQuantity > 0m)
+        {
+            await _stock.AddAsync(new StockMovement
+            {
+                MedicineId = medicine.Id,
+                OccurredAt = occurredAt,
+                Kind = StockMovementKind.PositiveCorrection,
+                QuantityDelta = automaticQuantity,
+                StockEpoch = medicine.StockEpoch,
+            }, cancellationToken);
+        }
+
         if (cmd.Status == IntakeStatus.Taken)
         {
-            // Sanity check: stock cannot drop below zero.
-            var movements = await _stock.ListForMedicineAsync(cmd.MedicineId, cancellationToken);
-            var current = MedicineStock.Current(movements);
-            if (MedicineStock.WouldGoNegative(current, -cmd.Quantity))
-            {
-                throw new InvalidOperationException(
-                    $"The intake would push the stock below zero (current: {current}).");
-            }
-
-            var occurredAt = ToLocalMiddayOffset(cmd.Day);
             var movement = new StockMovement
             {
                 MedicineId = medicine.Id,
@@ -90,6 +135,14 @@ public sealed class RegisterIntake
         await _medicines.UpdateAsync(medicine, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
         return intake.Id;
+    }
+
+    // Movements read back from SQLite carry a zero offset (UTC ticks);
+    // convert to the local zone before taking the calendar day.
+    private DateOnly LocalDay(DateTimeOffset occurredAt)
+    {
+        var local = TimeZoneInfo.ConvertTime(occurredAt, _clock.LocalTimeZone);
+        return DateOnly.FromDateTime(local.DateTime);
     }
 
     private DateTimeOffset ToLocalMiddayOffset(DateOnly day)

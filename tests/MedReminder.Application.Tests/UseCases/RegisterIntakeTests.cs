@@ -97,4 +97,72 @@ public class RegisterIntakeTests
             .ToList();
         consumptionDays.Should().NotContain(new DateOnly(2026, 9, 11));
     }
+
+    [Fact]
+    public async Task Backdated_taken_intake_replaces_the_automatic_consumption()
+    {
+        // StartDate 1/9, today 13/9: the catch-up books 12 days x 2.
+        var scope = new ApplicationTestScope();
+        var id = await SeedAsync(scope);
+        await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, new DateOnly(2026, 9, 11), IntakeStatus.Taken, Quantity: 1m),
+            CancellationToken.None);
+
+        var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
+        movements.Should().ContainSingle(m => m.Kind == StockMovementKind.PositiveCorrection)
+            .Which.QuantityDelta.Should().Be(2m);
+        MedicineStock.Current(movements).Should().Be(30m - 24m + 2m - 1m);
+    }
+
+    [Fact]
+    public async Task Backdated_skipped_intake_reverses_the_automatic_consumption()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedAsync(scope);
+        await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, new DateOnly(2026, 9, 11), IntakeStatus.Skipped, Quantity: 1m),
+            CancellationToken.None);
+
+        var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
+        MedicineStock.Current(movements).Should().Be(30m - 24m + 2m);
+    }
+
+    [Fact]
+    public async Task Second_intake_on_the_same_day_does_not_reverse_again()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedAsync(scope);
+        await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+        var day = new DateOnly(2026, 9, 11);
+
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, day, IntakeStatus.Taken, Quantity: 1m),
+            CancellationToken.None);
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, day, IntakeStatus.Taken, Quantity: 1m),
+            CancellationToken.None);
+
+        var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
+        movements.Count(m => m.Kind == StockMovementKind.PositiveCorrection).Should().Be(1);
+        MedicineStock.Current(movements).Should().Be(30m - 24m + 2m - 1m - 1m);
+    }
+
+    [Fact]
+    public async Task Intake_for_today_writes_no_correction()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedAsync(scope);
+        await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, new DateOnly(2026, 9, 13), IntakeStatus.Taken, Quantity: 1m),
+            CancellationToken.None);
+
+        var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
+        movements.Should().NotContain(m => m.Kind == StockMovementKind.PositiveCorrection);
+    }
 }

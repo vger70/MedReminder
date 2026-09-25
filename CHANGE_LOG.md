@@ -55,7 +55,7 @@ Branch: `claude/export-all-profiles-admin` (stacked on PR #65)
 
 Link: [vger70/MedReminder#65](https://github.com/vger70/MedReminder/pull/65)
 Branch: `claude/export-every-profile`
-**Status:** open (draft)
+**Status:** open
 
 ### Changed
 
@@ -77,6 +77,74 @@ Branch: `claude/export-every-profile`
 ### Docs
 
 - User guides (5 languages) and `ANALYSIS-C3PLUS-CLOUD-BACKUP.md`.
+
+---
+
+## PR #64 — Stop manual intakes from hiding or doubling automatic consumption
+
+Link: [vger70/MedReminder#64](https://github.com/vger70/MedReminder/pull/64)
+Branch: `claude/consumption-day-coverage`
+**Status:** merged (2026-09-25)
+
+### Fixed
+
+- **Backdated intakes counted twice.** Recording an intake for a past
+  day that already had the automatic consumption now reverses that
+  consumption (`PositiveCorrection`) before booking the intake
+  (`src/MedReminder.Application/UseCases/RegisterIntake.cs`).
+- **Manual intakes could hide unmaterialized days.** The catch-up now
+  starts after the last automatic consumption day instead of the last
+  consumption of any kind, and skips days that already have a
+  consumption or an intake
+  (`src/MedReminder.Application/Monitoring/ConsumptionCatchUp.cs`).
+
+### Added
+
+- Application tests for both cases and a SQLite integration test with
+  a non-UTC local zone.
+
+---
+
+## PR #62 — Serialize consumption catch-up and monitor passes
+
+Link: [vger70/MedReminder#62](https://github.com/vger70/MedReminder/pull/62)
+Branch: `claude/serialize-consumption-catch-up`
+**Status:** merged (2026-09-25)
+
+### Fixed
+
+- **Automatic consumption could be written twice.** The monitor tick
+  and "Check now" ran the consumption catch-up concurrently, each in
+  its own scope; overlapping runs wrote the same days twice and
+  understated stock. Overlapping monitor passes could also send the
+  same low-stock warning twice. Both passes now run under a
+  process-wide gate
+  (`src/MedReminder.Application/Monitoring/MonitoringGate.cs`).
+
+### Changed
+
+- Corrected the `ConsumptionCatchUp` comment that cited a database
+  unique constraint that does not exist.
+
+### Added
+
+- Regression test for concurrent catch-ups
+  (`tests/MedReminder.Application.Tests/Monitoring/ConsumptionCatchUpTests.cs`).
+
+---
+
+## PR #63 — Correct stale donation-config comments and CLAUDE.md frameworks
+
+Link: [vger70/MedReminder#63](https://github.com/vger70/MedReminder/pull/63)
+Branch: `claude/fix-stale-donation-and-tfm-docs`
+**Status:** merged (2026-09-25)
+
+### Docs
+
+- `JsonDonationOptionsProvider` and `MedReminder.UI.csproj` comments now
+  state that the donation configuration comes from the embedded
+  `assets/donations.settings.json`, not from `%LOCALAPPDATA%`.
+- `CLAUDE.md`: Infrastructure targets `net10.0-windows`.
 
 ---
 
