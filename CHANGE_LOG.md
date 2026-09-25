@@ -30,6 +30,30 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #59 — Fix clipped first-run/PIN dialogs, Backup tab scroll, system language on first run
+
+Link: [vger70/MedReminder#59](https://github.com/vger70/MedReminder/pull/59)
+Branch: `claude/ui-issues-first-run-backup-ssh7hd`
+
+### Fixed
+
+- **Clipped buttons in the first-run wizard and the PIN prompt.** Both
+  dialogs used absolute coordinates and a fixed size. They now use
+  auto-sizing layout panels with DPI-scaled widths and minimum button
+  sizes (`src/MedReminder.UI/Forms/FirstRunWizardForm.cs`,
+  `src/MedReminder.UI/Forms/PinPromptForm.cs`).
+- **Backup tab cut off.** The tab container now scrolls vertically when
+  its content is taller than the tab
+  (`src/MedReminder.UI/Forms/SettingsDialog.cs`).
+
+### Changed
+
+- **First-run language.** With no profile and no `user.settings.json`,
+  the UI language follows the Windows UI culture (English fallback) and
+  is persisted (`src/MedReminder.UI/Program.cs`).
+
+---
+
 ## PR #58 — Skip the cloud export early when the cloud folder is missing
 
 Link: [vger70/MedReminder#58](https://github.com/vger70/MedReminder/pull/58)
