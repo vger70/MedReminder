@@ -499,6 +499,13 @@ also the recommended way to move MedReminder to a new computer.
   passphrase — it is never written in clear text.
 - Click **Export**.
 
+**Admin: every profile at once.** When more than one profile exists,
+an admin profile also sees **Export every profile**. Pick a folder
+instead of a file: MedReminder writes one encrypted file per profile
+(`medreminder-export-<profileId>-<timestamp>.mrz`), all with the same
+passphrase. To restore a profile, open that profile and import its
+file.
+
 **The passphrase cannot be recovered.** There is no reset, no backdoor
 and no server copy. If you lose the passphrase, the file can never be
 read again — store it somewhere safe.
@@ -512,6 +519,9 @@ read again — store it somewhere safe.
   data."** Import replaces the current profile's data entirely — there
   is no merge. A safety copy of the current database is kept as
   `medreminder.db.bak-<timestamp>` first.
+- If the file was exported from a different profile, MedReminder asks
+  for confirmation: importing it replaces the active profile's data
+  with that profile's data.
 - Click **Import**, then **restart** MedReminder when prompted so the
   imported data is loaded cleanly.
 
@@ -559,6 +569,11 @@ From the next daily tick onward, MedReminder writes
 is encrypted with a key derived from your backup passphrase; the
 cloud provider never sees your data in the clear.
 
+One snapshot is written for **every profile** on the computer, like
+the local backup, and all of them are encrypted with the same backup
+passphrase. Whoever knows the passphrase can therefore read the data
+of every profile, including profiles protected by a PIN.
+
 ### Setup on the second device
 
 - Install MedReminder.
@@ -576,10 +591,16 @@ cloud provider never sees your data in the clear.
 - Point the dialog at the local sync folder (the same one the first
   device writes into).
 - Pick the most recent snapshot from the list. Each row shows the
-  date, the profile id, and a short "device hash" so you can tell
-  snapshots from different machines apart. The device hash is
-  a SHA-256 fingerprint of the source machine's host name — enough to
-  group snapshots by origin, not enough to identify the machine.
+  date, the profile name (or its id, if the profile does not exist on
+  this computer), and a short "device hash" so you can tell snapshots
+  from different machines apart. The device hash is a SHA-256
+  fingerprint of the source machine's host name — enough to group
+  snapshots by origin, not enough to identify the machine.
+- The newest snapshot of the active profile is preselected. Restore
+  always overwrites the **active** profile: to restore another
+  profile, switch to it first. If you pick a snapshot of a different
+  profile, MedReminder asks for confirmation before replacing the
+  active profile's data with it.
 - Tick **"I understand that this will overwrite the current profile's
   data."** — restore is Overwrite-only.
 - Click **Restore**. MedReminder decrypts the snapshot, replaces

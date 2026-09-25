@@ -9,6 +9,13 @@ namespace MedReminder.UI.Forms;
 // checkboxes, then runs IExportService off the UI thread with a
 // Progress<int> bar and a Cancel button.
 //
+// Admin profiles with more than one registered profile also get an
+// "export every profile" switch: each profile is written to its own
+// single-profile .mrz in a chosen folder, all under the same
+// passphrase. The archive format is unchanged (one profile per file),
+// and each file is restored by importing it from the profile it
+// belongs to.
+//
 // Passphrase handling (§5.2, prompt Step 7): the passphrase text boxes
 // are cleared and their buffers overwritten in Dispose; the passphrase
 // is never logged and only crosses into the service as a char[] that
@@ -17,8 +24,12 @@ internal sealed class ExportDialog : MedReminderFormBase
 {
     private readonly ILocalizationService _loc;
     private readonly IExportService _exportService;
+    private readonly ICurrentProfile _currentProfile;
+    private readonly IProfileRegistry _profileRegistry;
 
+    private readonly Label _destinationLabel;
     private readonly TextBox _destinationBox;
+    private readonly CheckBox _allProfilesBox;
     private readonly TextBox _passphraseBox;
     private readonly TextBox _passphraseConfirmBox;
     private readonly CheckBox _showPassphraseBox;
@@ -35,10 +46,16 @@ internal sealed class ExportDialog : MedReminderFormBase
     private CancellationTokenSource? _cts;
     private bool _running;
 
-    public ExportDialog(ILocalizationService loc, IExportService exportService)
+    public ExportDialog(
+        ILocalizationService loc,
+        IExportService exportService,
+        ICurrentProfile currentProfile,
+        IProfileRegistry profileRegistry)
     {
         _loc = loc;
         _exportService = exportService;
+        _currentProfile = currentProfile;
+        _profileRegistry = profileRegistry;
 
         Text = _loc.Get("Ui.ExportDialog.Title");
         Width = 570;
@@ -57,10 +74,34 @@ internal sealed class ExportDialog : MedReminderFormBase
             Text = _loc.Get("Ui.ExportDialog.Intro"),
         };
 
-        var destinationLabel = new Label
+        _allProfilesBox = new CheckBox
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.ExportDialog.AllProfiles"),
+            Visible = _currentProfile.IsAdmin && _profileRegistry.ListProfiles().Count > 1,
+        };
+        var allProfilesHint = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new Size(520, 0),
+            ForeColor = Color.DimGray,
+            Text = _loc.Get("Ui.ExportDialog.AllProfiles.Hint"),
+            Visible = false,
+        };
+
+        _destinationLabel = new Label
         {
             AutoSize = true,
             Text = _loc.Get("Ui.ExportDialog.Destination.Label"),
+        };
+        _allProfilesBox.CheckedChanged += (_, _) =>
+        {
+            // The destination switches between a file and a folder.
+            _destinationBox.Text = string.Empty;
+            _destinationLabel.Text = _loc.Get(_allProfilesBox.Checked
+                ? "Ui.ExportDialog.DestinationFolder.Label"
+                : "Ui.ExportDialog.Destination.Label");
+            allProfilesHint.Visible = _allProfilesBox.Checked;
         };
         _destinationBox = new TextBox { Width = 400, ReadOnly = true };
         var browseButton = new Button { Text = _loc.Get("Common.Browse"), AutoSize = true };
@@ -197,7 +238,9 @@ internal sealed class ExportDialog : MedReminderFormBase
             AutoScroll = true,
         };
         layout.Controls.Add(intro);
-        layout.Controls.Add(destinationLabel);
+        layout.Controls.Add(_allProfilesBox);
+        layout.Controls.Add(allProfilesHint);
+        layout.Controls.Add(_destinationLabel);
         layout.Controls.Add(destinationRow);
         layout.Controls.Add(passphraseLabel);
         layout.Controls.Add(_passphraseBox);
@@ -220,6 +263,21 @@ internal sealed class ExportDialog : MedReminderFormBase
 
     private void BrowseDestination()
     {
+        if (_allProfilesBox.Checked)
+        {
+            using var folderDialog = new FolderBrowserDialog
+            {
+                Description = _loc.Get("Ui.ExportDialog.DestinationFolder.Label"),
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton = true,
+            };
+            if (folderDialog.ShowDialog(this) == DialogResult.OK)
+            {
+                _destinationBox.Text = folderDialog.SelectedPath;
+            }
+            return;
+        }
+
         using var dialog = new SaveFileDialog
         {
             Title = _loc.Get("Ui.ExportDialog.Destination.Label"),
@@ -239,10 +297,13 @@ internal sealed class ExportDialog : MedReminderFormBase
     {
         if (_running) return;
 
+        var allProfiles = _allProfilesBox.Checked;
         var destination = _destinationBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(destination))
         {
-            ShowValidation(_loc.Get("Ui.ExportDialog.Error.NoDestination"));
+            ShowValidation(_loc.Get(allProfiles
+                ? "Ui.ExportDialog.Error.NoDestinationFolder"
+                : "Ui.ExportDialog.Error.NoDestination"));
             return;
         }
 
@@ -276,15 +337,32 @@ internal sealed class ExportDialog : MedReminderFormBase
 
         try
         {
-            var path = await _exportService.ExportAsync(
-                options, passphraseBuffer, progress, _cts.Token);
+            string successMessage;
+            if (allProfiles)
+            {
+                var count = await ExportEveryProfileAsync(
+                    destination, options, passphraseBuffer, progress, _cts.Token);
+                successMessage = _loc.Get("Ui.ExportDialog.SuccessAll", count, destination);
+            }
+            else
+            {
+                var path = await _exportService.ExportAsync(
+                    options, passphraseBuffer, progress, _cts.Token);
+                successMessage = _loc.Get("Ui.ExportDialog.Success", path);
+            }
 
             MessageBox.Show(this,
-                _loc.Get("Ui.ExportDialog.Success", path),
+                successMessage,
                 _loc.Get("Ui.ExportDialog.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             DialogResult = DialogResult.OK;
             Close();
+        }
+        catch (ProfileExportFailedException ex)
+        {
+            _statusLabel.ForeColor = Color.Firebrick;
+            _statusLabel.Text = _loc.Get(
+                "Ui.ExportDialog.Error.ProfileFailed", ex.ProfileName, ex.InnerException?.Message ?? string.Empty);
         }
         catch (OperationCanceledException)
         {
@@ -307,6 +385,51 @@ internal sealed class ExportDialog : MedReminderFormBase
             _cts.Dispose();
             _cts = null;
         }
+    }
+
+    // Writes one single-profile archive per registered profile into
+    // folder. Stops at the first failure; files already written are
+    // kept. Returns the number of archives written.
+    private async Task<int> ExportEveryProfileAsync(
+        string folder,
+        ExportOptions baseOptions,
+        char[] passphrase,
+        IProgress<int> progress,
+        CancellationToken cancellationToken)
+    {
+        var profiles = _profileRegistry.ListProfiles();
+        var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+
+        for (var i = 0; i < profiles.Count; i++)
+        {
+            var profile = profiles[i];
+            var index = i;
+            var perProfile = new Progress<int>(value =>
+                progress.Report(((index * 100) + value) / profiles.Count));
+            var options = baseOptions with
+            {
+                DestinationPath = Path.Combine(
+                    folder, $"medreminder-export-{profile.Id}-{timestamp}{ExportFormat.ArchiveExtension}"),
+                ProfileId = profile.Id,
+            };
+
+            try
+            {
+                await _exportService.ExportAsync(options, passphrase, perProfile, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException and not ExportValidationException)
+            {
+                throw new ProfileExportFailedException(profile.DisplayName, ex);
+            }
+        }
+
+        return profiles.Count;
+    }
+
+    private sealed class ProfileExportFailedException(string profileName, Exception inner)
+        : Exception(inner.Message, inner)
+    {
+        public string ProfileName { get; } = profileName;
     }
 
     private void OnCancel()

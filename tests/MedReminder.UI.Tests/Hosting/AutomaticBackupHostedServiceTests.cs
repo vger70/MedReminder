@@ -13,7 +13,8 @@ namespace MedReminder.UI.Tests.Hosting;
 // must mark the day as backed up, otherwise every 15-minute tick after
 // the preferred time would re-export. Skips must leave the day open so
 // a later tick retries, and a missing folder must be detected before
-// the (Argon2id) export runs.
+// the (Argon2id) export runs. Every registered profile is exported,
+// and a failure on one profile does not stop the others.
 public sealed class AutomaticBackupHostedServiceTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 25, 12, 0, 0, TimeSpan.Zero);
@@ -103,14 +104,44 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
 
         var state = _state.Load();
         state.LastSuccessfulBackupAt.Should().BeNull();
-        state.LastError.Should().Be("cloud: disk full");
+        state.LastError.Should().Be($"cloud {ProfileId}: disk full");
     }
 
-    private AutomaticBackupHostedService CreateHost(bool hasPassphrase, string? cloudFolder = null)
+    [Fact]
+    public async Task Cloud_tick_exports_every_registered_profile()
+    {
+        var host = CreateHost(hasPassphrase: true, profileIds: new[] { ProfileId, OtherProfileId });
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _export.ProfileIds.Should().Equal(ProfileId, OtherProfileId);
+        _storage.Uploads.Should().HaveCount(2);
+        _storage.Uploads.Should().Contain(n => n.StartsWith($"medreminder-{ProfileId}-"));
+        _storage.Uploads.Should().Contain(n => n.StartsWith($"medreminder-{OtherProfileId}-"));
+        _state.Load().LastSuccessfulBackupAt.Should().Be(Now);
+    }
+
+    [Fact]
+    public async Task Cloud_failure_on_one_profile_does_not_stop_the_others()
+    {
+        _export.FailingProfileId = ProfileId;
+        var host = CreateHost(hasPassphrase: true, profileIds: new[] { ProfileId, OtherProfileId });
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _storage.Uploads.Should().ContainSingle()
+            .Which.Should().StartWith($"medreminder-{OtherProfileId}-");
+        var state = _state.Load();
+        state.LastSuccessfulBackupAt.Should().Be(Now);
+        state.LastError.Should().Be($"cloud {ProfileId}: export failed");
+    }
+
+    private AutomaticBackupHostedService CreateHost(
+        bool hasPassphrase, string? cloudFolder = null, string[]? profileIds = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IBackupService, LocalTargetUnusedBackupService>();
-        services.AddSingleton<IProfileRegistry, SingleProfileRegistry>();
+        services.AddSingleton<IProfileRegistry>(new FixedProfileRegistry(profileIds ?? new[] { ProfileId }));
         services.AddSingleton<IArchiveStorage>(_storage);
         services.AddSingleton<ICloudBackupPassphraseStore>(new FakePassphraseStore(hasPassphrase));
         services.AddSingleton<IExportService>(_export);
@@ -134,6 +165,7 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     }
 
     private const string ProfileId = "0123456789abcdef0123456789abcdef";
+    private const string OtherProfileId = "fedcba9876543210fedcba9876543210";
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
@@ -192,11 +224,18 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     private sealed class CountingExportService : IExportService
     {
         public int Calls { get; private set; }
+        public List<string?> ProfileIds { get; } = new();
+        public string? FailingProfileId { get; set; }
 
         public async Task<string> ExportAsync(
             ExportOptions options, char[] passphrase, IProgress<int>? progress, CancellationToken cancellationToken)
         {
             Calls++;
+            ProfileIds.Add(options.ProfileId);
+            if (options.ProfileId == FailingProfileId)
+            {
+                throw new InvalidOperationException("export failed");
+            }
             await File.WriteAllBytesAsync(options.DestinationPath, new byte[] { 1, 2, 3 }, cancellationToken);
             return options.DestinationPath;
         }
@@ -213,10 +252,11 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         public string NotificationSettingsPath => string.Empty;
     }
 
-    private sealed class SingleProfileRegistry : IProfileRegistry
+    private sealed class FixedProfileRegistry(string[] ids) : IProfileRegistry
     {
         public IReadOnlyList<Profile> ListProfiles() =>
-            new[] { new Profile(ProfileId, "Test", ProfileRole.Admin, Now, Now, HasPin: false) };
+            ids.Select(id => new Profile(id, "Test " + id[..4], ProfileRole.Admin, Now, Now, HasPin: false))
+               .ToList();
 
         public Profile? GetById(string id) => ListProfiles().SingleOrDefault(p => p.Id == id);
         public string? ActiveProfileIdHint => ProfileId;

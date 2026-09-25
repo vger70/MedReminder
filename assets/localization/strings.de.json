@@ -639,6 +639,12 @@
   "Ui.ExportDialog.Cancelled": "Export abgebrochen.",
   "Ui.ExportDialog.Success": "Nach {0} exportiert. Bewahren Sie die Passphrase sicher auf — MedReminder kann sie nicht wiederherstellen.",
   "Ui.ExportDialog.Error.NoDestination": "Wählen Sie zuerst eine Zieldatei aus.",
+  "Ui.ExportDialog.AllProfiles": "Alle Profile exportieren (eine verschlüsselte Datei pro Profil)",
+  "Ui.ExportDialog.AllProfiles.Hint": "Jedes Profil wird in eine eigene Datei im gewählten Ordner geschrieben, alle mit dieser Passphrase. Um ein Profil wiederherzustellen, öffnen Sie es und importieren Sie seine Datei.",
+  "Ui.ExportDialog.DestinationFolder.Label": "Zielordner",
+  "Ui.ExportDialog.Error.NoDestinationFolder": "Wählen Sie zuerst einen Zielordner aus.",
+  "Ui.ExportDialog.SuccessAll": "{0} Profile nach {1} exportiert. Bewahren Sie die Passphrase sicher auf — MedReminder kann sie nicht wiederherstellen.",
+  "Ui.ExportDialog.Error.ProfileFailed": "Der Export des Profils „{0}“ ist fehlgeschlagen: {1} Bereits geschriebene Dateien bleiben im Ordner.",
   "Ui.ExportDialog.Error.PassphraseMismatch": "Die beiden Passphrasen stimmen nicht überein.",
   "Ui.Export.Error.PassphraseTooShort": "Die Passphrase muss mindestens {0} Zeichen lang sein.",
   "Ui.ImportDialog.Title": "Aus Export importieren",
@@ -657,5 +663,7 @@
   "Ui.ImportDialog.Error.NotConfirmed": "Aktivieren Sie das Bestätigungskästchen, um fortzufahren.",
   "Ui.Import.Error.WrongPassphrase": "Die Passphrase passt nicht zu dieser Datei.",
   "Ui.Import.Error.Corrupt": "Die Exportdatei ist beschädigt und kann nicht importiert werden.",
-  "Ui.Import.Error.UnsupportedVersion": "Dieser Export wurde mit einer neueren Version von MedReminder erstellt. Aktualisieren Sie die App und versuchen Sie es erneut."
+  "Ui.Import.Error.UnsupportedVersion": "Dieser Export wurde mit einer neueren Version von MedReminder erstellt. Aktualisieren Sie die App und versuchen Sie es erneut.",
+  "Ui.Import.OtherProfile.Title": "Archiv eines anderen Profils",
+  "Ui.Import.OtherProfile.Body": "Dieses Archiv gehört zum Profil „{0}“. Beim Import werden alle Daten des aktiven Profils „{1}“ durch die Daten von „{0}“ ersetzt. Möchten Sie fortfahren?"
 }

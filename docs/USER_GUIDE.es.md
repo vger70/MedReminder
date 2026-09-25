@@ -542,6 +542,14 @@ para mover MedReminder a un nuevo ordenador.
   vuelve a cifrar con tu frase — nunca se escribe en texto claro.
 - Haz clic en **Exportar**.
 
+**Administrador: todos los perfiles a la vez.** Cuando existe más de
+un perfil, un perfil administrador ve también **Exportar todos los
+perfiles**. Elige una carpeta en lugar de un archivo: MedReminder
+escribe un archivo cifrado por perfil
+(`medreminder-export-<profileId>-<timestamp>.mrz`), todos con la misma
+frase de contraseña. Para restaurar un perfil, abre ese perfil e
+importa su archivo.
+
 **La frase de contraseña no puede recuperarse.** No existe reinicio,
 puerta trasera ni copia en servidor. Si pierdes la frase, el archivo no
 podrá leerse nunca — guárdala en un lugar seguro.
@@ -555,6 +563,9 @@ podrá leerse nunca — guárdala en un lugar seguro.
   actual.»** La importación reemplaza íntegramente los datos del
   perfil actual — no hay modo de fusión. Antes se conserva una copia
   de seguridad como `medreminder.db.bak-<timestamp>`.
+- Si el archivo se exportó desde otro perfil, MedReminder pide
+  confirmación: importarlo sustituye los datos del perfil activo por
+  los del otro perfil.
 - Haz clic en **Importar** y luego **reinicia** MedReminder cuando
   se solicite para que los datos importados se carguen limpiamente.
 
@@ -605,6 +616,11 @@ A partir del siguiente ciclo diario, MedReminder escribe
 está cifrado con una clave derivada de tu frase de contraseña de
 copia; el servicio en la nube nunca ve tus datos en claro.
 
+Se escribe una instantánea para **cada perfil** del equipo, como en la
+copia local, y todas se cifran con la misma frase de contraseña de
+copia. Quien conozca la frase puede, por tanto, leer los datos de
+todos los perfiles, incluidos los protegidos con PIN.
+
 ### Configuración en el segundo dispositivo
 
 - Instala MedReminder.
@@ -624,11 +640,17 @@ nube…**:
 - Indica en la ventana la carpeta de sincronización local (la misma en
   la que escribe el primer dispositivo).
 - Elige la instantánea más reciente de la lista. Cada fila muestra la
-  fecha, el id del perfil y un breve "hash del dispositivo" para
-  distinguir instantáneas de equipos distintos. El hash del
-  dispositivo es una huella SHA-256 del nombre de host del equipo de
-  origen — suficiente para agrupar instantáneas por procedencia, no
-  para identificar el equipo.
+  fecha, el nombre del perfil (o su id, si el perfil no existe en este
+  equipo) y un breve "hash del dispositivo" para distinguir
+  instantáneas de equipos distintos. El hash del dispositivo es una
+  huella SHA-256 del nombre de host del equipo de origen — suficiente
+  para agrupar instantáneas por procedencia, no para identificar el
+  equipo.
+- Se preselecciona la instantánea más reciente del perfil activo. La
+  restauración siempre sobrescribe el perfil **activo**: para
+  restaurar otro perfil, cambia antes a ese perfil. Si eliges la
+  instantánea de un perfil distinto, MedReminder pide confirmación
+  antes de sustituir con ella los datos del perfil activo.
 - Marca **"Entiendo que esto sobrescribirá los datos del perfil
   actual."** — la restauración solo sobrescribe.
 - Haz clic en **Restaurar**. MedReminder descifra la instantánea,

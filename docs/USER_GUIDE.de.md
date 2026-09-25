@@ -563,6 +563,14 @@ Weg, MedReminder auf einen neuen Computer umzuziehen.
   wird nie im Klartext gespeichert.
 - Klicke auf **Exportieren**.
 
+**Administrator: alle Profile auf einmal.** Wenn mehr als ein Profil
+existiert, sieht ein Administratorprofil zusätzlich **Alle Profile
+exportieren**. Wähle einen Ordner statt einer Datei: MedReminder
+schreibt eine verschlüsselte Datei pro Profil
+(`medreminder-export-<profileId>-<timestamp>.mrz`), alle mit derselben
+Passphrase. Um ein Profil wiederherzustellen, öffne dieses Profil und
+importiere seine Datei.
+
 **Die Passphrase kann nicht wiederhergestellt werden.** Es gibt keinen
 Reset, keine Hintertür und keine Server-Kopie. Wenn du die Passphrase
 verlierst, kann die Datei nie wieder gelesen werden — bewahre sie sicher
@@ -578,6 +586,9 @@ auf.
   Profils vollständig — es gibt keinen Zusammenführungsmodus. Vorher
   wird eine Sicherungskopie als `medreminder.db.bak-<Zeitstempel>`
   aufbewahrt.
+- Wurde die Datei aus einem anderen Profil exportiert, fragt
+  MedReminder nach einer Bestätigung: Der Import ersetzt die Daten des
+  aktiven Profils durch die des anderen Profils.
 - Klicke auf **Importieren** und **starte** MedReminder neu, wenn
   aufgefordert, damit die importierten Daten sauber geladen werden.
 
@@ -631,6 +642,11 @@ Ab dem nächsten täglichen Durchlauf schreibt MedReminder
 mit einem aus deiner Backup-Passphrase abgeleiteten Schlüssel
 verschlüsselt; der Cloud-Anbieter sieht deine Daten nie im Klartext.
 
+Für **jedes Profil** auf dem Rechner wird ein Snapshot geschrieben,
+wie bei der lokalen Sicherung, und alle werden mit derselben
+Backup-Passphrase verschlüsselt. Wer die Passphrase kennt, kann daher
+die Daten aller Profile lesen, auch die von PIN-geschützten Profilen.
+
 ### Einrichtung auf dem zweiten Gerät
 
 - Installiere MedReminder.
@@ -649,11 +665,18 @@ verschlüsselt; der Cloud-Anbieter sieht deine Daten nie im Klartext.
 - Wähle im Dialog den lokalen Synchronisationsordner (denselben, in
   den das erste Gerät schreibt).
 - Wähle den neuesten Snapshot aus der Liste. Jede Zeile zeigt das
-  Datum, die Profil-ID und einen kurzen „Geräte-Hash", damit du
-  Snapshots verschiedener Rechner unterscheiden kannst. Der
+  Datum, den Profilnamen (oder die Profil-ID, wenn das Profil auf
+  diesem Rechner nicht existiert) und einen kurzen „Geräte-Hash",
+  damit du Snapshots verschiedener Rechner unterscheiden kannst. Der
   Geräte-Hash ist ein SHA-256-Fingerabdruck des Hostnamens des
   Ursprungsrechners — genug, um Snapshots nach Herkunft zu gruppieren,
   nicht genug, um den Rechner zu identifizieren.
+- Vorausgewählt ist der neueste Snapshot des aktiven Profils. Die
+  Wiederherstellung überschreibt immer das **aktive** Profil: Um ein
+  anderes Profil wiederherzustellen, wechsle zuerst zu diesem Profil.
+  Wählst du den Snapshot eines anderen Profils, fragt MedReminder nach
+  einer Bestätigung, bevor die Daten des aktiven Profils damit ersetzt
+  werden.
 - Setze das Häkchen bei **„Ich verstehe, dass dies die Daten des
   aktuellen Profils überschreibt."** — die Wiederherstellung
   überschreibt immer.
