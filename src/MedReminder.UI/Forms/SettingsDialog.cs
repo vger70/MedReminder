@@ -40,6 +40,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private readonly IExportService _exportService;
     private readonly IImportService _importService;
 
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §5): the
+    // Cloud Backup section reads / writes the DPAPI-cached backup
+    // passphrase, and the Restore-from-cloud dialog enumerates and
+    // applies snapshots via the cloud-restore service.
+    private readonly ICloudBackupPassphraseStore _cloudPassStore;
+    private readonly ICloudRestoreService _cloudRestore;
+
     // Email tab controls
     private TextBox _hostBox = null!;
     private NumericUpDown _portBox = null!;
@@ -72,6 +79,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private NumericUpDown _backupRetentionBox = null!;
     private Label _backupStatusLabel = null!;
     private Label _backupCloudWarningLabel = null!;
+
+    // C.3+ Cloud Backup subsection controls.
+    private CheckBox _cloudEnabledBox = null!;
+    private TextBox _cloudDirectoryBox = null!;
+    private NumericUpDown _cloudRetentionBox = null!;
+    private Label _cloudPassStatusLabel = null!;
+    private Button _cloudPassChangeButton = null!;
 
     // Generale (Incremento 16b) — selezione lingua UI
     private ComboBox _languageCombo = null!;
@@ -126,7 +140,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         ILocalizationService localization,
         IReferenceCatalogueQueryService catalogueQuery,
         IExportService exportService,
-        IImportService importService)
+        IImportService importService,
+        ICloudBackupPassphraseStore cloudPassStore,
+        ICloudRestoreService cloudRestore)
     {
         _smtpMonitor = smtpMonitor;
         _notificationMonitor = notificationMonitor;
@@ -144,6 +160,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _catalogueQuery = catalogueQuery;
         _exportService = exportService;
         _importService = importService;
+        _cloudPassStore = cloudPassStore;
+        _cloudRestore = cloudRestore;
 
         Text = _loc.Get("Ui.SettingsDialog.Title");
         // Sized so that the Backup tab fits the folder textbox, the
@@ -955,6 +973,22 @@ internal sealed class SettingsDialog : MedReminderFormBase
         actionButtons.Controls.Add(exportEncryptedButton);
         actionButtons.Controls.Add(importEncryptedButton);
 
+        // C.3+ (§5.3): Restore-from-cloud sits next to the encrypted
+        // export / import buttons since it is the same "move my data"
+        // concern. Always visible so a non-admin profile can still
+        // restore a snapshot into its own DB after installing the app
+        // on a fresh machine.
+        var restoreFromCloudButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.File.RestoreFromCloud"),
+            AutoSize = true,
+            Height = 30,
+        };
+        restoreFromCloudButton.Click += (_, _) => ShowRestoreFromCloudDialog();
+        actionButtons.Controls.Add(restoreFromCloudButton);
+
+        var cloudSection = BuildCloudBackupSection(isAdmin);
+
         var note = new Label
         {
             AutoSize = true,
@@ -980,10 +1014,170 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
         container.Controls.Add(_dbPathLabel);
         container.Controls.Add(table);
+        if (cloudSection is not null)
+        {
+            container.Controls.Add(cloudSection);
+        }
         container.Controls.Add(actionButtons);
         container.Controls.Add(note);
         page.Controls.Add(container);
         return page;
+    }
+
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §5.1):
+    // second target that writes encrypted .mrz snapshots into a
+    // user-picked cloud-synced folder. Admin-only writer (the settings
+    // live in backup.settings.json alongside the raw-DB target) — a
+    // non-admin profile can still trigger a restore from the encrypted
+    // export / import row above.
+    private Control? BuildCloudBackupSection(bool isAdmin)
+    {
+        if (!isAdmin)
+        {
+            // Nothing to configure for a non-admin profile — the
+            // Restore-from-cloud button above remains available so the
+            // user can still consume snapshots.
+            return null;
+        }
+
+        var settings = _backupMonitor.CurrentValue;
+
+        var groupTitle = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+            Font = new System.Drawing.Font(Font, System.Drawing.FontStyle.Bold),
+            Padding = new Padding(0, 12, 0, 4),
+        };
+
+        _cloudEnabledBox = new CheckBox
+        {
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Enabled"),
+            AutoSize = true,
+            Checked = settings.CloudFolderEnabled,
+        };
+
+        _cloudDirectoryBox = new TextBox
+        {
+            Width = 460,
+            Text = settings.CloudFolderDirectory,
+        };
+        var cloudBrowseButton = new Button
+        {
+            Text = _loc.Get("Common.Browse"),
+            AutoSize = true,
+        };
+        cloudBrowseButton.Click += (_, _) => BrowseCloudDirectory();
+        var cloudDirectoryRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            WrapContents = false,
+        };
+        cloudDirectoryRow.Controls.Add(_cloudDirectoryBox);
+        cloudDirectoryRow.Controls.Add(cloudBrowseButton);
+
+        _cloudRetentionBox = new NumericUpDown
+        {
+            Width = 80,
+            Minimum = 0,
+            Maximum = 3650,
+            Value = settings.CloudFolderRetention > 0 ? settings.CloudFolderRetention : 30,
+        };
+
+        _cloudPassStatusLabel = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(360, 0),
+            Text = _cloudPassStore.HasPassphrase
+                ? _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Set")
+                : _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.NotSet"),
+        };
+        _cloudPassChangeButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Change"),
+            AutoSize = true,
+        };
+        _cloudPassChangeButton.Click += (_, _) => ChangeCloudPassphrase();
+        var passRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            WrapContents = false,
+        };
+        passRow.Controls.Add(_cloudPassStatusLabel);
+        passRow.Controls.Add(_cloudPassChangeButton);
+
+        var notSyncWarning = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(600, 0),
+            ForeColor = System.Drawing.Color.DarkOrange,
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Warning.NotSync"),
+        };
+        var lostPassWarning = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(600, 0),
+            ForeColor = System.Drawing.Color.DarkOrange,
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Warning.LostPassphrase"),
+        };
+
+        var cloudTable = BuildFormTable();
+        AddRow(cloudTable, string.Empty, _cloudEnabledBox);
+        AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Directory.Label"), cloudDirectoryRow);
+        AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Retention.Label"), _cloudRetentionBox);
+        AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Label"), passRow);
+        AddRow(cloudTable, string.Empty, notSyncWarning);
+        AddRow(cloudTable, string.Empty, lostPassWarning);
+
+        var wrapper = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            AutoSize = true,
+            WrapContents = false,
+        };
+        wrapper.Controls.Add(groupTitle);
+        wrapper.Controls.Add(cloudTable);
+        return wrapper;
+    }
+
+    private void BrowseCloudDirectory()
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = _loc.Get("Ui.SettingsDialog.CloudBackup.Directory.Browse.Title"),
+            InitialDirectory = string.IsNullOrWhiteSpace(_cloudDirectoryBox.Text)
+                ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                : _cloudDirectoryBox.Text,
+        };
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            _cloudDirectoryBox.Text = dialog.SelectedPath;
+        }
+    }
+
+    private void ChangeCloudPassphrase()
+    {
+        using var dialog = new ChangeCloudPassphraseDialog(_loc, _cloudPassStore);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            _cloudPassStatusLabel.Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Set");
+        }
+    }
+
+    private void ShowRestoreFromCloudDialog()
+    {
+        var defaultFolder = _cloudDirectoryBox is null
+            ? _backupMonitor.CurrentValue.CloudFolderDirectory
+            : _cloudDirectoryBox.Text;
+        using var dialog = new RestoreFromCloudDialog(
+            _loc, _cloudRestore, _cloudPassStore, defaultFolder ?? string.Empty);
+        var result = dialog.ShowDialog(this);
+        if (result == DialogResult.OK && dialog.RestartRequested)
+        {
+            _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
+        }
     }
 
     private void BrowseBackupDirectory()
@@ -1031,12 +1225,50 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 }
             }
 
+            var cloudEnabled = _cloudEnabledBox?.Checked ?? false;
+            var cloudDirectory = _cloudDirectoryBox?.Text.Trim() ?? string.Empty;
+            var cloudRetention = _cloudRetentionBox is null
+                ? 30
+                : (int)_cloudRetentionBox.Value;
+
+            if (cloudEnabled)
+            {
+                if (string.IsNullOrWhiteSpace(cloudDirectory))
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.CloudBackup.Error.FolderMissing"),
+                        _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                if (!_cloudPassStore.HasPassphrase)
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.CloudBackup.Error.PassphraseMissing"),
+                        _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                try { Directory.CreateDirectory(cloudDirectory); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.SettingsDialog.Backup.DirectoryCreateError", ex.Message),
+                        _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+
             var settings = new BackupSettings
             {
                 Enabled = enabled,
                 Directory = directory,
                 PreferredTime = _backupTimePicker.Value.ToString("HH:mm", CultureInfo.InvariantCulture),
                 RetentionDays = (int)_backupRetentionBox.Value,
+                CloudFolderEnabled = cloudEnabled,
+                CloudFolderDirectory = cloudDirectory,
+                CloudFolderRetention = cloudRetention,
             };
 
             WriteBackupSettingsToDisk(settings);

@@ -515,6 +515,84 @@ The archive format is documented publicly in
 [`docs/EXPORT-FORMAT.md`](EXPORT-FORMAT.md), so your data is never locked
 in — it can be decrypted with standard tools if you ever need to.
 
+## Cloud folder backup
+
+MedReminder can also write the automatic daily backup as an **encrypted
+snapshot** into a local folder that your operating system is already
+synchronizing (OneDrive, iCloud Drive, Dropbox, Google Drive Desktop, …).
+This is the low-cost way to move your data from a "home PC" to a
+"work PC" without running a server, and it keeps a copy off the
+machine in case the disk fails.
+
+**This is not real-time sync.** MedReminder writes a snapshot at
+most once a day, and only one computer at a time should be writing.
+If you edit medicines on two devices between two snapshots, the two
+copies diverge — and the next restore wipes whichever machine you
+restore on. Decide up front which device is "active" and only
+restore on the other one when you switch.
+
+### Setup on the first device
+
+**Settings → Backup → Backup to a cloud-synced folder (encrypted)**:
+
+- Tick the checkbox.
+- Pick a folder inside your cloud provider's local sync folder
+  (for example `C:\Users\<name>\OneDrive\MedReminder`). MedReminder
+  never talks to OneDrive / iCloud / Dropbox itself — it just writes
+  files there, and your OS-level agent uploads them.
+- Set the number of snapshots to keep (default: 30).
+- Click **Set / change…** next to Backup passphrase and choose a
+  passphrase (at least 12 characters). This passphrase never leaves
+  the machine.
+- Save.
+
+From the next daily tick onward, MedReminder writes
+`medreminder-<profileId>-<timestamp>.mrz` into the folder. The file
+is encrypted with a key derived from your backup passphrase; the
+cloud provider never sees your data in the clear.
+
+### Setup on the second device
+
+- Install MedReminder.
+- **Settings → Backup → Set / change…** and enter the **same** backup
+  passphrase you configured on the first device. This is the only
+  irreducible step: without the same passphrase, the second machine
+  cannot decrypt what the first one wrote.
+- The daily automatic snapshot is off on the second device — you
+  only need it on one machine.
+
+### Restore on the second device
+
+**Settings → Backup → Restore from cloud folder…**:
+
+- Point the dialog at the local sync folder (the same one the first
+  device writes into).
+- Pick the most recent snapshot from the list. Each row shows the
+  date, the profile id, and a short "device hash" so you can tell
+  snapshots from different machines apart. The device hash is
+  a SHA-256 fingerprint of the source machine's host name — enough to
+  group snapshots by origin, not enough to identify the machine.
+- Tick **"I understand that this will overwrite the current profile's
+  data."** — restore is Overwrite-only.
+- Click **Restore**. MedReminder decrypts the snapshot, replaces
+  the current profile's database, and prompts you to restart.
+
+### Notes
+
+- **Losing the passphrase is losing the data.** There is no reset.
+  The passphrase is stored locally, encrypted with your Windows
+  account credentials; it never leaves the machine and never appears
+  in the cloud.
+- The daily automatic snapshot does **not** include your SMTP
+  password or your user preferences — for that, use the one-shot
+  encrypted export above with the shared-settings tickboxes.
+- MedReminder's own retention only deletes old files from the visible
+  folder. Your cloud provider likely keeps deleted files in its own
+  recycle bin (OneDrive: 30 days by default) — MedReminder cannot
+  purge that on your behalf, and doesn't try to.
+- Do **not** place the live database file into a cloud-synced folder.
+  Only the encrypted `.mrz` snapshots belong there.
+
 ## Check now
 
 The monitor runs automatically every 30 minutes (configurable in
