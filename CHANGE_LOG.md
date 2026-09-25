@@ -34,7 +34,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 Link: [vger70/MedReminder#61](https://github.com/vger70/MedReminder/pull/61)
 Branch: `claude/review-analysis-md-43wfc3`
-**Status:** open
+**Status:** merged (2026-09-25)
 
 ### Docs
 
