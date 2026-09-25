@@ -312,7 +312,7 @@ C3 export/import) that were missing from the non-English guides.
 ## PR #52 — Allow non-admin profiles to use manual export and import
 
 Link: [vger70/MedReminder#52](https://github.com/vger70/MedReminder/pull/52)
-**Status:** open
+**Status:** merged (2026-09-24)
 
 Branch: `claude/non-admin-export-import-181083`
 
@@ -333,9 +333,7 @@ retention, Save, Run-now) visible only to admins.
 ## PR #48 — C.3: Manual encrypted export / import
 
 Link: [vger70/MedReminder#48](https://github.com/vger70/MedReminder/pull/48)
-**Status:** open — feature-complete (all implementation steps 1–10 of
-`ANALYSIS-C3-EXPORT-IMPORT.md` §13 done), awaiting review and the
-pre-merge manual QA checklist in the PR description.
+**Status:** merged (2026-09-24)
 
 Branch: `feature/export-import`
 
@@ -408,7 +406,7 @@ archive so it is not bound to the Windows account. Implements
 ## PR #47 — A3: Caregiver notifications
 
 Link: [vger70/MedReminder#47](https://github.com/vger70/MedReminder/pull/47)
-**Status:** open
+**Status:** merged (2026-09-24)
 
 Branch: `feature/caregiver-notifications`
 
@@ -456,7 +454,7 @@ Implements `docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`.
 ## PR #46 — Add implementation prompt and EVOLUTION entry for public website
 
 Link: [vger70/MedReminder#46](https://github.com/vger70/MedReminder/pull/46)
-**Status:** open
+**Status:** merged (2026-09-23)
 
 Branch: `claude/website-implementation-prompt-821c66`
 
@@ -484,7 +482,7 @@ packaging change — prompt and evolution-document update only.
 ## PR #45 — Add analysis and implementation prompts for A3, C.3, C.3+
 
 Link: [vger70/MedReminder#45](https://github.com/vger70/MedReminder/pull/45)
-**Status:** merged [2026-09-22]
+**Status:** merged (2026-09-22)
 
 Branch: `claude/gracious-ptolemy-bf39iz`
 
@@ -538,7 +536,7 @@ log). Each implementation prompt mirrors
 ## PR #44 — Reinstate Edit-medicine schedule seed; default Effettiva-dal to therapy start
 
 Link: [vger70/MedReminder#44](https://github.com/vger70/MedReminder/pull/44)
-**Status:** merged [2026-09-21]
+**Status:** merged (2026-09-21)
 
 Branch: `claude/relaxed-shannon-4unkbv`
 
@@ -572,7 +570,7 @@ persistence, or to release packaging.
 ## PR #37 — A5: dose-time reminder ("remind me to take it")
 
 Link: [vger70/MedReminder#37](https://github.com/vger70/MedReminder/pull/37)
-**Status:** merged [2026-09-21]
+**Status:** merged (2026-09-21)
 
 Branch: `feature/dose-time-reminder`
 
