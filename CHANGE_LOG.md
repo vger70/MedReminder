@@ -34,7 +34,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 Link: [vger70/MedReminder#62](https://github.com/vger70/MedReminder/pull/62)
 Branch: `claude/serialize-consumption-catch-up`
-**Status:** open (draft)
+**Status:** open
 
 ### Fixed
 
@@ -55,6 +55,21 @@ Branch: `claude/serialize-consumption-catch-up`
 
 - Regression test for concurrent catch-ups
   (`tests/MedReminder.Application.Tests/Monitoring/ConsumptionCatchUpTests.cs`).
+
+---
+
+## PR #63 — Correct stale donation-config comments and CLAUDE.md frameworks
+
+Link: [vger70/MedReminder#63](https://github.com/vger70/MedReminder/pull/63)
+Branch: `claude/fix-stale-donation-and-tfm-docs`
+**Status:** merged (2026-09-25)
+
+### Docs
+
+- `JsonDonationOptionsProvider` and `MedReminder.UI.csproj` comments now
+  state that the donation configuration comes from the embedded
+  `assets/donations.settings.json`, not from `%LOCALAPPDATA%`.
+- `CLAUDE.md`: Infrastructure targets `net10.0-windows`.
 
 ---
 
