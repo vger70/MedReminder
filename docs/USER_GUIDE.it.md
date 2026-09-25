@@ -536,6 +536,89 @@ Il formato dell'archivio è documentato pubblicamente in
 sono mai bloccati — possono essere decifrati con strumenti standard
 se necessario.
 
+## Backup su cartella cloud
+
+MedReminder può scrivere il backup automatico giornaliero anche come
+**snapshot cifrato** in una cartella locale che il sistema operativo
+sta già sincronizzando (OneDrive, iCloud Drive, Dropbox, Google Drive
+Desktop, …). È il modo economico per portare i tuoi dati da un "PC di
+casa" a un "PC di lavoro" senza un server, e tiene una copia fuori dal
+computer nel caso il disco si guasti.
+
+**Questa non è sincronizzazione in tempo reale.** MedReminder scrive
+al massimo uno snapshot al giorno, e un solo computer alla volta
+dovrebbe scrivere. Se modifichi i medicinali su due dispositivi tra
+due snapshot, le due copie divergono — e il ripristino successivo
+cancella i dati del computer su cui ripristini. Decidi in anticipo
+quale dispositivo è quello "attivo" e ripristina sull'altro solo
+quando cambi.
+
+### Configurazione sul primo dispositivo
+
+**Impostazioni → Backup → Backup su cartella sincronizzata (cifrato)**:
+
+- Spunta la casella.
+- Scegli una cartella all'interno della cartella di sincronizzazione
+  locale del tuo servizio cloud (per esempio
+  `C:\Users\<nome>\OneDrive\MedReminder`). MedReminder non comunica
+  mai direttamente con OneDrive / iCloud / Dropbox — scrive solo i
+  file lì, e l'agente di sincronizzazione del sistema li carica.
+- Imposta il numero di snapshot da conservare (predefinito: 30).
+- Clicca **Imposta / cambia…** accanto a Passphrase di backup e
+  scegli una passphrase (almeno 12 caratteri). Questa passphrase non
+  lascia mai il computer.
+- Salva.
+
+Dal tick giornaliero successivo MedReminder scrive
+`medreminder-<profileId>-<timestamp>.mrz` nella cartella. Il file è
+cifrato con una chiave derivata dalla tua passphrase di backup; il
+servizio cloud non vede mai i tuoi dati in chiaro.
+
+### Configurazione sul secondo dispositivo
+
+- Installa MedReminder.
+- **Impostazioni → Backup → Imposta / cambia…** e inserisci la
+  **stessa** passphrase di backup configurata sul primo dispositivo.
+  È l'unico passaggio irrinunciabile: senza la stessa passphrase, il
+  secondo computer non può decifrare ciò che ha scritto il primo.
+- Lo snapshot automatico giornaliero resta disattivato sul secondo
+  dispositivo — serve su un solo computer.
+
+### Ripristino sul secondo dispositivo
+
+**Impostazioni → Backup → Ripristina da cartella cloud…**:
+
+- Indica nella finestra la cartella di sincronizzazione locale (la
+  stessa in cui scrive il primo dispositivo).
+- Scegli lo snapshot più recente dall'elenco. Ogni riga mostra la
+  data, l'id del profilo e un breve "hash del dispositivo" per
+  distinguere gli snapshot provenienti da computer diversi. L'hash
+  del dispositivo è un'impronta SHA-256 del nome host del computer di
+  origine — sufficiente a raggruppare gli snapshot per provenienza,
+  non a identificare il computer.
+- Spunta **"Confermo che questa operazione sovrascriverà i dati del
+  profilo corrente."** — il ripristino è solo in sovrascrittura.
+- Clicca **Ripristina**. MedReminder decifra lo snapshot, sostituisce
+  il database del profilo corrente e ti chiede di riavviare.
+
+### Note
+
+- **Perdere la passphrase significa perdere i dati.** Non esiste
+  reset. La passphrase è salvata in locale, cifrata con le
+  credenziali del tuo account Windows; non lascia mai il computer e
+  non compare mai nel cloud.
+- Lo snapshot automatico giornaliero **non** include la password
+  SMTP né le preferenze utente — per quelle usa l'esportazione
+  cifrata descritta sopra, con le caselle delle impostazioni
+  condivise.
+- La conservazione di MedReminder elimina i file vecchi solo dalla
+  cartella visibile. Il tuo servizio cloud probabilmente conserva i
+  file eliminati nel proprio cestino (OneDrive: 30 giorni per
+  impostazione predefinita) — MedReminder non può svuotarlo al posto
+  tuo, e non ci prova.
+- **Non** mettere il file del database in uso in una cartella
+  sincronizzata. Lì vanno solo gli snapshot cifrati `.mrz`.
+
 ## Controlla ora
 
 Il monitor gira automaticamente ogni 30 minuti (configurabile in

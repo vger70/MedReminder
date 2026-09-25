@@ -555,7 +555,7 @@
   "Ui.SettingsDialog.Notifications.Saved": "Destinataire des notifications enregistré.",
   "Ui.SettingsDialog.Notifications.SaveError": "Échec de l'enregistrement du destinataire.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Label": "E-mail de l'aidant (facultatif)",
-  "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Si renseignée, les mêmes e-mails de stock faible sont aussi envoyés à cette adresse. Laisse vide pour désactiver.",
+  "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Si renseignée, chaque e-mail envoyé à ce profil (stock faible et rappels à l'heure de la prise) est aussi envoyé à cette adresse. Laisse vide pour désactiver.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Invalid": "Saisis une adresse e-mail valide.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.SameAsPrimary": "L'adresse de l'aidant ne peut pas être identique à celle du destinataire principal.",
   "Ui.SettingsDialog.Notifications.NoteAdmin": "Vous pouvez aussi modifier le serveur SMTP partagé dans l'onglet Email.",

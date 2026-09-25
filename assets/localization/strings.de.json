@@ -555,7 +555,7 @@
   "Ui.SettingsDialog.Notifications.Saved": "Benachrichtigungsempfänger gespeichert.",
   "Ui.SettingsDialog.Notifications.SaveError": "Empfänger konnte nicht gespeichert werden.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Label": "E-Mail der Betreuungsperson (optional)",
-  "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Wenn gesetzt, werden dieselben E-Mails bei niedrigem Bestand auch an diese Adresse gesendet. Zum Deaktivieren leer lassen.",
+  "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Wenn gesetzt, wird jede E-Mail an dieses Profil (niedriger Bestand und Erinnerungen zur Einnahmezeit) auch an diese Adresse gesendet. Zum Deaktivieren leer lassen.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Invalid": "Bitte eine gültige E-Mail-Adresse eingeben.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.SameAsPrimary": "Die Adresse der Betreuungsperson darf nicht mit der des Hauptempfängers übereinstimmen.",
   "Ui.SettingsDialog.Notifications.NoteAdmin": "Sie können den freigegebenen SMTP-Server auch auf der Registerkarte E-Mail ändern.",

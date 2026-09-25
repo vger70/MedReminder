@@ -34,6 +34,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 Link: [vger70/MedReminder#59](https://github.com/vger70/MedReminder/pull/59)
 Branch: `claude/ui-issues-first-run-backup-ssh7hd`
+**Status:** merged (2026-09-25)
 
 ### Fixed
 
@@ -243,6 +244,24 @@ restates it.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 
+## PR #54 — Document implementation decisions confirmed on 2026-09-25
+
+Link: [vger70/MedReminder#54](https://github.com/vger70/MedReminder/pull/54)
+Branch: `claude/festive-meitner-ppf0wb`
+**Status:** merged (2026-09-25)
+
+### Docs
+
+- **Website decisions recorded before the first implementation commit.**
+  New §14 in `docs/analysis/ANALYSIS-WEBSITE.md` closes the four items
+  that were still open: the site lives in the separate repository
+  `vger70/medreminder-website` (so this file does not track its PRs),
+  no roadmap teaser on the About page in v1, no dark mode in v1, and
+  screenshots are retaken only when a UI change materially alters what
+  a shot depicts.
+
+---
+
 ## PR #53 — Fix and expand user guides (6 corrections + A3/C3/stepped tapering)
 
 Link: [vger70/MedReminder#53](https://github.com/vger70/MedReminder/pull/53)
@@ -293,7 +312,7 @@ C3 export/import) that were missing from the non-English guides.
 ## PR #52 — Allow non-admin profiles to use manual export and import
 
 Link: [vger70/MedReminder#52](https://github.com/vger70/MedReminder/pull/52)
-**Status:** open
+**Status:** merged (2026-09-24)
 
 Branch: `claude/non-admin-export-import-181083`
 
@@ -314,9 +333,7 @@ retention, Save, Run-now) visible only to admins.
 ## PR #48 — C.3: Manual encrypted export / import
 
 Link: [vger70/MedReminder#48](https://github.com/vger70/MedReminder/pull/48)
-**Status:** open — feature-complete (all implementation steps 1–10 of
-`ANALYSIS-C3-EXPORT-IMPORT.md` §13 done), awaiting review and the
-pre-merge manual QA checklist in the PR description.
+**Status:** merged (2026-09-24)
 
 Branch: `feature/export-import`
 
@@ -389,7 +406,7 @@ archive so it is not bound to the Windows account. Implements
 ## PR #47 — A3: Caregiver notifications
 
 Link: [vger70/MedReminder#47](https://github.com/vger70/MedReminder/pull/47)
-**Status:** open
+**Status:** merged (2026-09-24)
 
 Branch: `feature/caregiver-notifications`
 
@@ -437,7 +454,7 @@ Implements `docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`.
 ## PR #46 — Add implementation prompt and EVOLUTION entry for public website
 
 Link: [vger70/MedReminder#46](https://github.com/vger70/MedReminder/pull/46)
-**Status:** open
+**Status:** merged (2026-09-23)
 
 Branch: `claude/website-implementation-prompt-821c66`
 
@@ -465,7 +482,7 @@ packaging change — prompt and evolution-document update only.
 ## PR #45 — Add analysis and implementation prompts for A3, C.3, C.3+
 
 Link: [vger70/MedReminder#45](https://github.com/vger70/MedReminder/pull/45)
-**Status:** merged [2026-09-22]
+**Status:** merged (2026-09-22)
 
 Branch: `claude/gracious-ptolemy-bf39iz`
 
@@ -519,7 +536,7 @@ log). Each implementation prompt mirrors
 ## PR #44 — Reinstate Edit-medicine schedule seed; default Effettiva-dal to therapy start
 
 Link: [vger70/MedReminder#44](https://github.com/vger70/MedReminder/pull/44)
-**Status:** merged [2026-09-21]
+**Status:** merged (2026-09-21)
 
 Branch: `claude/relaxed-shannon-4unkbv`
 
@@ -553,7 +570,7 @@ persistence, or to release packaging.
 ## PR #37 — A5: dose-time reminder ("remind me to take it")
 
 Link: [vger70/MedReminder#37](https://github.com/vger70/MedReminder/pull/37)
-**Status:** merged [2026-09-21]
+**Status:** merged (2026-09-21)
 
 Branch: `feature/dose-time-reminder`
 

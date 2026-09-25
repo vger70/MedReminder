@@ -556,7 +556,7 @@
   "Ui.SettingsDialog.Notifications.Saved": "Destinatario notifiche salvato.",
   "Ui.SettingsDialog.Notifications.SaveError": "Impossibile salvare il destinatario.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Label": "E-mail assistente (facoltativa)",
-  "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Se impostata, le stesse e-mail di scorta in esaurimento vengono inviate anche a questo indirizzo. Lascia vuoto per disattivare.",
+  "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Se impostata, ogni e-mail inviata a questo profilo (scorta in esaurimento e promemoria all'orario della dose) viene inviata anche a questo indirizzo. Lascia vuoto per disattivare.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Invalid": "Inserisci un indirizzo e-mail valido.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.SameAsPrimary": "L'indirizzo dell'assistente non può coincidere con quello del destinatario principale.",
   "Ui.SettingsDialog.Notifications.NoteAdmin": "Puoi modificare anche il server SMTP condiviso nella scheda Email.",

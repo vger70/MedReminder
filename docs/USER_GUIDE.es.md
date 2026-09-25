@@ -557,6 +557,90 @@ El formato del archivo está documentado públicamente en
 están bloqueados — pueden descifrarse con herramientas estándar si es
 necesario.
 
+## Copia de seguridad en carpeta en la nube
+
+MedReminder también puede escribir la copia de seguridad automática
+diaria como una **instantánea cifrada** en una carpeta local que tu
+sistema operativo ya está sincronizando (OneDrive, iCloud Drive,
+Dropbox, Google Drive Desktop, …). Es la forma económica de llevar tus
+datos de un "PC de casa" a un "PC del trabajo" sin ningún servidor, y
+mantiene una copia fuera del equipo por si falla el disco.
+
+**Esto no es sincronización en tiempo real.** MedReminder escribe como
+máximo una instantánea al día, y solo un ordenador a la vez debería
+escribir. Si editas medicamentos en dos dispositivos entre dos
+instantáneas, las dos copias divergen — y la siguiente restauración
+borra los datos del equipo en el que restauras. Decide de antemano qué
+dispositivo es el "activo" y restaura en el otro solo cuando cambies.
+
+### Configuración en el primer dispositivo
+
+**Configuración → Copia de seguridad → Copia de seguridad a carpeta
+sincronizada (cifrada)**:
+
+- Marca la casilla.
+- Elige una carpeta dentro de la carpeta de sincronización local de tu
+  servicio en la nube (por ejemplo
+  `C:\Users\<nombre>\OneDrive\MedReminder`). MedReminder nunca se
+  comunica por sí mismo con OneDrive / iCloud / Dropbox — solo escribe
+  los archivos ahí, y el agente de sincronización del sistema los sube.
+- Indica el número de instantáneas que conservar (por defecto: 30).
+- Haz clic en **Establecer / cambiar…** junto a Frase de contraseña de
+  copia de seguridad y elige una frase (mínimo 12 caracteres). Esta
+  frase nunca sale del equipo.
+- Guarda.
+
+A partir del siguiente ciclo diario, MedReminder escribe
+`medreminder-<profileId>-<timestamp>.mrz` en la carpeta. El archivo
+está cifrado con una clave derivada de tu frase de contraseña de
+copia; el servicio en la nube nunca ve tus datos en claro.
+
+### Configuración en el segundo dispositivo
+
+- Instala MedReminder.
+- **Configuración → Copia de seguridad → Establecer / cambiar…** e
+  introduce la **misma** frase de contraseña de copia que configuraste
+  en el primer dispositivo. Es el único paso imprescindible: sin la
+  misma frase, el segundo equipo no puede descifrar lo que escribió el
+  primero.
+- La instantánea automática diaria queda desactivada en el segundo
+  dispositivo — solo hace falta en un equipo.
+
+### Restauración en el segundo dispositivo
+
+**Configuración → Copia de seguridad → Restaurar desde carpeta en la
+nube…**:
+
+- Indica en la ventana la carpeta de sincronización local (la misma en
+  la que escribe el primer dispositivo).
+- Elige la instantánea más reciente de la lista. Cada fila muestra la
+  fecha, el id del perfil y un breve "hash del dispositivo" para
+  distinguir instantáneas de equipos distintos. El hash del
+  dispositivo es una huella SHA-256 del nombre de host del equipo de
+  origen — suficiente para agrupar instantáneas por procedencia, no
+  para identificar el equipo.
+- Marca **"Entiendo que esto sobrescribirá los datos del perfil
+  actual."** — la restauración solo sobrescribe.
+- Haz clic en **Restaurar**. MedReminder descifra la instantánea,
+  sustituye la base de datos del perfil actual y te pide reiniciar.
+
+### Notas
+
+- **Perder la frase de contraseña es perder los datos.** No hay forma
+  de restablecerla. La frase se guarda localmente, cifrada con las
+  credenciales de tu cuenta de Windows; nunca sale del equipo ni
+  aparece en la nube.
+- La instantánea automática diaria **no** incluye la contraseña SMTP
+  ni tus preferencias de usuario — para eso, usa la exportación
+  cifrada puntual descrita arriba, con las casillas de ajustes
+  compartidos.
+- La retención de MedReminder solo elimina archivos antiguos de la
+  carpeta visible. Tu servicio en la nube probablemente conserva los
+  archivos eliminados en su propia papelera (OneDrive: 30 días por
+  defecto) — MedReminder no puede vaciarla por ti, y no lo intenta.
+- **No** coloques el archivo de base de datos en uso en una carpeta
+  sincronizada. Ahí solo deben ir las instantáneas cifradas `.mrz`.
+
 ## Comprobar ahora
 
 El monitor se ejecuta automáticamente cada 30 minutos (configurable
