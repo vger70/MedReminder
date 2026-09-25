@@ -525,7 +525,7 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-MULTI-USER.md`](analysis/ANALYSIS-MULTI-USER.md) | Profiles, roles, PIN, V1→V2 migration |
 | [`ANALYSIS-A1-REGIMENS.md`](analysis/ANALYSIS-A1-REGIMENS.md) | Weekly, cyclic, tapering and PRN schedules |
 | [`ANALYSIS-A1-STEPPED-TAPER.md`](analysis/ANALYSIS-A1-STEPPED-TAPER.md) | Multi-stage tapering |
-| [`ANALYSIS-A2-BARCODE-WEBCAM.md`](analysis/ANALYSIS-A2-BARCODE-WEBCAM.md) | Barcode scanning (analysis only) |
+| [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning, USB HID scanner and webcam (analysis only) |
 | [`ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`](analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md) | Caregiver email recipient |
 | [`ANALYSIS-A5-DOSE-TIME-REMINDER.md`](analysis/ANALYSIS-A5-DOSE-TIME-REMINDER.md) | Dose-time reminder |
 | [`ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md) | Donation links |
