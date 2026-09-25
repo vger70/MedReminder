@@ -1,4 +1,4 @@
-# EVOLUTION — Prospective work beyond A1
+# EVOLUTION — Open evolution backlog
 
 Working document listing candidate evolutions of MedReminder, prepared
 in September 2026. It records options, tradeoffs and rejection
@@ -7,6 +7,13 @@ re-derive them from scratch. **It is not a commitment.** Individual
 items become work only once explicitly approved and turned into a
 dedicated analysis document (see `ANALYSIS-MULTI-USER.md` for the
 pattern) or a GitHub issue.
+
+**Split on 2026-09-25.** This file now holds only the open items.
+Shipped items (A1, A3, A5, A6, C.3, C.3+, C.3++ Phase 1, website v1)
+moved to `EVOLUTION-DONE.md`, rewritten to match what was
+implemented. Section numbers are unchanged, so existing
+`EVOLUTION.md §<n>` references elsewhere stay valid: a section that
+moved keeps a one-line pointer here.
 
 The two open non-goals from `ANALYSIS-MULTI-USER.md` §16 (profile
 promote/demote and the consolidated admin view) remain deferred and
@@ -25,7 +32,6 @@ against a primary source, it is tagged:
   inference.
 - **[UNCERTAIN]** — no sufficient data at the time of writing; treat as
   a hypothesis, not a plan input.
-- **[DONE]** - alredy shipped.
 
 Untagged claims are ordinary design opinion.
 
@@ -58,75 +64,30 @@ Deliberately excluded from this document:
 
 ## 2. Priority ordering
 
-**DECIDED 2026-09-20 — top two priorities: A6 → A5.** The product
-owner set the donation/support UI (A6) as the first item to
-implement, immediately followed by the dose-time reminder (A5), then
-all the remaining planned items below. Rationale: A6 is the lowest
-cost/lowest risk item and opens a voluntary funding channel for the
-maintenance costs later items accrue; A5 carries the highest
-end-user value of Group A and its only hard precondition (A1) is
-already **[DONE]**, so the A1 → A5 dependency is satisfied and A5 can
-follow A6 directly. See §2.0 for the resulting full sequence.
-**Both A6 and A5 are now [DONE] as of 2026-09-21** together with the
-pre-existing A1; see §11 for the change-log entry.
+**DECIDED 2026-09-20 — sequence.** The product owner set the order
+A6 → A5 → remaining items. As of 2026-09-25 A1, A3, A5, A6, C.3,
+C.3+ and C.3++ Phase 1 have shipped (see `EVOLUTION-DONE.md`).
 
-### 2.0 Decided implementation sequence
+### 2.0 Remaining sequence
 
-1. **A6 — donation / support UI.** First. (§3.6) **[DONE]**
-2. **A5 — dose-time reminder.** Second. Precondition A1 is [DONE].
-   (§3.5) **[DONE]**
-3. **All remaining planned items**, in the cost-ordered sequence
-   already documented below: A2 (§3.2), then A3 (§3.3), then the
-   multi-device track C.3 (§4) → C.3+ (§5) → B.1 (§7) → C.1 (§8),
-   with C.2 rejected (§9.1). A1 (§3.1) is already [DONE] and is not
-   scheduled again.
+1. **A2 — AIC / barcode scan** (§3.2). Next Group A item in the
+   decided sequence. Design in
+   `docs/analysis/ANALYSIS-A2-BARCODE-WEBCAM.md` (webcam variant).
+   No cross-item preconditions.
+2. **B.1 — mobile companion client** (§7). Its precondition, C.3+,
+   is met.
+3. **C.3++ Phase 2 — native cloud providers** (§6). Only once B.1 is
+   approved; the `IArchiveStorage` port it plugs into already exists.
+4. **C.1 — end-to-end encrypted sync with a dedicated backend**
+   (§8). Only if the product owner accepts turning the app into a
+   service.
 
-The remainder of this section records the original cost-ordered
-reasoning that informed the decision above; where it differs from
-§2.0, §2.0 governs.
+**C.2** (raw file-sync of the live SQLite database) stays **rejected**
+— see §8.1.
 
-Recommended by this document, in ascending ambition and cost:
-
-1. **A1 — complex therapy regimens.** 2–3 weeks. Highest single-item
-   value of Group A, but also the largest and the one that must
-   land before A5 can be attempted. **[DONE]**
-2. **A5 — dose-time reminder.** 1–1.5 weeks. Hard-depends on A1
-   for a reliable wall-clock anchor on every therapy — without
-   stabilized dose times the reminder has no time to fire on.
-   **[DONE]**
-3. **A6 — donation/support UI.** 3–5 days. No dependencies on any
-   other item, no schema patch, no domain or monitor changes; pure
-   UI + configuration. Ship first as a low-risk baseline that also
-   opens a voluntary funding channel for the maintenance costs the
-   later items will accrue. Indirectly de-risks §8 (C.1) by
-   exercising monetization plumbing before committing to a service.
-   **[DONE]**
-4. **A3 — caregiver notifications.** 1 week. Reuses the existing
-   MailKit transport and per-profile notification settings; no
-   dependency on A1. **[DONE]**
-5. **C.3** — manual export/import (GDPR portability + migration). **[DONE]**
-6. **C.3+** — automatic backup to a user-controlled cloud folder with
-   explicit restore on a second device. **[DONE]**
-7. **C.3++**: Native Cloud Provider Integration Strategy.
-8. **A2 — AIC / barcode scan.** 1–2 weeks. Isolated, high
-   user-visible value, no cross-item preconditions. Good pairing
-   with A6 in the same release.
-9. **B.1** — mobile companion client that consumes C.3+.
-10. **C.1** — end-to-end encrypted sync with a dedicated backend.
-   Only if the product accepts becoming a service.
-
-**C.2** (raw file-sync of the live SQLite database) is documented but
-**rejected** on technical grounds — see §8.
-
-The ordering across groups is not a Gantt chart. Group A items can
-proceed in any order relative to each other, and C.3 can ship before
-A completes. The rule is: **do not skip C.3 → C.3+ before attempting
-B.1, and do not skip B.1 before deciding on C.1**.
-
-Two hard dependencies to respect inside Group A: **A5 must not ship
-before A1** (as above), and everything else in Group A is free of
-cross-item preconditions — reorder freely if funding, contributor
-availability or user demand suggests it.
+Rules that still apply: do not ship B.1 without the C.3 / C.3+
+foundation (met), and do not decide on C.1 before B.1. A2 is
+independent of the multi-device track and can be reordered freely.
 
 ---
 
@@ -138,40 +99,17 @@ Windows binary, not a medical device). Effort estimates are
 grossly indicative and assume one developer familiar with the
 codebase.
 
-### 3.1 A1 — Complex therapy regimens [DONE]
+### 3.1 A1 — Complex therapy regimens
 
-**Motivation.** The current model appears to assume linear
-consumption (X units per day). Real regimens include cycles
-(7 days on, 7 days off), tapering doses (decreasing over weeks) and
-as-needed (PRN) doses. Without support for these, the "days
-remaining" projection is wrong for the very users who most need a
-reminder.
-
-**Design sketch.**
-
-- Extend the therapy entity in `MedReminder.Domain` with a
-  `Schedule` value object able to represent:
-  - Fixed daily quantity (existing behavior).
-  - Weekly pattern (7-day mask + per-day quantity).
-  - Cyclic pattern (N days on / M days off).
-  - Tapering (start dose, end dose, step interval).
-  - PRN (no scheduled consumption, only stock tracking; the
-    projection engine falls back to "user-declared expected rate").
-- Update the projection engine in `MedReminder.Application` to sum
-  over the schedule instead of multiplying by a constant.
-- Additive schema patch, idempotent on boot per `ANALYSIS.md` §2.8.
-
-**Effort.** 2–3 weeks including UI, tests and localization. [INFERRED]
-
-**Risks.** UI complexity — the therapy form is already dense.
-Consider a "simple / advanced" toggle so that the linear case stays
-one-click.
-
-**Verdict.** Highest-value item in Group A. The current linear
-model is the most frequently cited limitation of reminder apps of
-this class.
+Shipped. See `EVOLUTION-DONE.md` §3.1.
 
 ### 3.2 A2 — AIC / barcode scan of medicine package
+
+**Status.** Open. Next item in the decided sequence (§2.0).
+Approved design: `docs/analysis/ANALYSIS-A2-BARCODE-WEBCAM.md`,
+which covers the **webcam** variant and leaves the USB HID-scanner
+variant sketched below out of scope. Where the two disagree, the
+analysis wins.
 
 **Motivation.** Reduce data-entry errors and friction when adding a
 medicine. The Italian AIC code (Autorizzazione all'Immissione in
@@ -195,464 +133,77 @@ together with §7. [INFERRED]
 **Risks.** Camera access adds a new permission surface on Windows;
 handheld scanners are the safer default for the desktop MVP.
 
-**Verdict.** Small, isolated, high user-visible value. Good
-candidate to ship alongside A1.
+**Verdict.** Small, isolated, high user-visible value. No
+dependency on the multi-device track.
 
-### 3.3 A3 — Caregiver notifications **[DONE]**
 
-**Motivation.** The elderly are frequently the real end-user of a
-medication reminder, but a family member or paid caregiver often
-manages the actual reorder. The multi-user work of Increment 15
-covers "several patients on one PC", but not "notification reaches
-the caregiver's inbox".
+### 3.3 A3 — Caregiver notifications
 
-**Design sketch.**
+Shipped. See `EVOLUTION-DONE.md` §3.3.
 
-- Per profile, allow a second email recipient (`CaregiverAddress`)
-  in `notifications.settings.json`.
-- When stock crosses the low-threshold or a tolerated-delay
-  threshold, send the same notification to that address too.
-- MailKit path is already in place; no new transport.
-- Optional refinement: independent per-event opt-in (low stock
-  yes, generic reminder no).
+### 3.4 A4 — Data export/import
 
-**Effort.** 1 week. [INFERRED]
+Merged into C.3. See `EVOLUTION-DONE.md` §4.
 
-**Risks.** Sending medical-relevant information to a second
-recipient must be an explicit user choice — the UI copy has to
-make that clear. Do not enable by default. Nothing in the mail
-body reveals sensitive medical details beyond what the primary
-user has already accepted (see `CLAUDE.md` §7).
+### 3.5 A5 — Dose-time "remind me to take it" notification
 
-**Verdict.** Low cost, high real-world usefulness. Ship after A1.
+Shipped. See `EVOLUTION-DONE.md` §3.5.
 
-### 3.4 A4 — Data export/import (see §4 — moved to C.3)
+### 3.6 A6 — Donation / support UI
 
-Originally sketched as an A-group item, but the mechanism is the
-foundation of the C.3 track. It is described in §4 rather than
-duplicated here.
-
-### 3.5 A5 — Dose-time "remind me to take it" notification [DONE]
-
-**Motivation.** The current notification path only fires around
-stock exhaustion (low-stock / tolerated-delay / reorder). Some
-users forget the *dose*, not the *reorder*. A toast (and optional
-email) delivered at the scheduled time of each dose closes the
-gap without changing the product's non-clinical positioning.
-
-> **Authoritative analysis.** This section is the original sketch.
-> The approved design is `ANALYSIS-A5-DOSE-TIME-REMINDER.md`, which
-> **corrects the deduplication mechanism described below** — see the
-> two "Correction" notes. Where this section and the A5 analysis
-> disagree, the A5 analysis wins.
-
-**Preconditions — already in place.** The A1 groundwork has
-partially landed: `AdministrationSlotEntry` already carries an
-optional `Time` (`TimeOnly?`), used today for sorting and
-report rendering (see
-`src/MedReminder.Application/Notifications/NotificationTexts.cs`
-and `src/MedReminder.Application/Reporting/TherapyReport.cs`).
-The `Schedule` value object and `SchedulePanel` UI likewise exist
-(see `src/MedReminder.UI/Forms/MedicineEditDialog.cs`). This
-feature therefore *extends* existing plumbing — no new schedule
-model is required. [VERIFIED against the current tree at the
-time of writing]
-
-**Design sketch.**
-
-- **Data.** Add a per-medicine boolean `RemindOnDose` (default
-  `false`) alongside the existing per-medicine notification-channel
-  flags. Additive, idempotent schema patch per `ANALYSIS.md` §2.8.
-  Slot-level granularity (a flag per slot) is *not* recommended for
-  the first cut — it doubles the UI complexity for marginal value;
-  reopen only if users ask.
-- **UI (`MedicineEditDialog`).** Add a checkbox
-  `Ui.MedicineEditDialog.Field.RemindOnDose` next to the existing
-  `_channelWindows` / `_channelEmail` checkboxes. The checkbox is
-  **enabled only** when both conditions hold at the moment the
-  dialog is opened or when they change during editing:
-  - The medicine is *active in the therapy* (has an active
-    schedule / has slots with a `Time` value — an entry with no
-    time cannot be a dose-time anchor and grays the checkbox out
-    with a tooltip explaining why).
-  - Current on-hand stock is `> 0`.
-  When either condition fails, the checkbox is cleared and
-  disabled, and a short helper label states the reason
-  (localized). Saving the medicine while disabled forces the flag
-  back to `false` — never persist an "armed" reminder that has no
-  chance of firing.
-- **Runtime.** Extend `MedicationMonitor` (or split a sibling
-  `DoseReminderService`) that, on each minute tick:
-  1. Enumerates medicines with `RemindOnDose = true` and
-     `Stock > 0` whose therapy is active.
-  2. For each slot with a `Time`, computes the next local
-     wall-clock firing today.
-  3. Emits one notification per (medicine, slot, day) at the
-     configured time, deduplicated so that a restart within the
-     same minute does not double-fire.
-
-  > **Correction (see `ANALYSIS-A5` §3.2).** The original wording
-  > here said "deduplicated via the existing `MedicationScheduleHistory`
-  > table pattern". That reference is **wrong** and must not be
-  > implemented literally: `MedicationScheduleHistory` is the
-  > schedule-versioning table (`ANALYSIS.md` §2.3) and has no notion
-  > of "a notification was sent", and the `NotificationEvent` table
-  > is keyed by `(MedicineId, StockEpoch)` (`ANALYSIS.md` §2.9),
-  > which changes only on refill and so would never repeat daily.
-  > The correct idempotency key is `(MedicineId, SlotKey, LocalDate)`
-  > in a dedicated `DoseReminderEvents` table. See `ANALYSIS-A5` §3.2.
-
-- **Channels.** Reuse the existing toast (WinRT) and MailKit paths.
-  The per-medicine `_channelWindows` / `_channelEmail` flags
-  already control channel selection and are respected as-is.
-- **Localization.** Add the new key to every dictionary under
-  `assets/localization/` (en, it, fr, es, de) per `CLAUDE.md` §9.
-
-**Effort.** 1–1.5 weeks including schema patch, UI wiring,
-scheduler extension, deduplication test, five-language
-localization and shipped-user-guide updates. [INFERRED]
-
-**Risks and constraints.**
-
-- **Medical-device drift — the real risk.** A "did you take the
-  08:00 dose?" acknowledgement, retention of missed-dose events,
-  or any alert on missed doses would push the app into EU MDR
-  2017/745 adherence-tracking territory (see §9.2). This item is
-  scoped strictly to *emit a reminder*: no ack UI, no missed-dose
-  logging, no clinical alert wording. The disclaimer copy in
-  `CLAUDE.md` §1 remains sufficient only as long as this line
-  holds. [INFERRED — MDR classification depends on the declared
-  intended use]
-- **Local time / DST.** Slot `Time` values are wall-clock. The
-  scheduler must anchor on local time, not UTC, and behave
-  documented-ly on DST transitions (skip the missing hour,
-  fire once on the repeated hour). Document in the user guide.
-- **Silent hours.** A 06:00 dose fires at 06:00. Consider a
-  per-profile quiet-hours window as an optional refinement, not a
-  first-cut requirement.
-- **Email as a dose channel is fragile.** Delivery latency
-  defeats the point of a punctual dose reminder. Toast is the
-  primary channel; email should be an opt-in fallback for
-  scenarios where the PC is on but unattended.
-- **Interaction with the existing low-stock reminder.** The two
-  notification paths must not compete on the same slot tick.
-  Keep them independent code-paths.
-
-  > **Correction (see `ANALYSIS-A5` §4.6).** The original wording
-  > here added "but share the deduplication history table so a
-  > 'reorder soon' and a 'take now' for the same medicine at the
-  > same minute do not stack into two toasts". The A5 analysis
-  > **supersedes** this: the two paths dedup on structurally
-  > different keys (`(MedicineId, StockEpoch)` vs
-  > `(MedicineId, SlotKey, LocalDate)`), so a shared table is an
-  > anti-pattern; and "reorder soon" and "take now" are *distinct*
-  > messages that may legitimately both appear — that is not the
-  > duplication this note was guarding against. Per-path keyed
-  > dedup prevents the *same* message double-firing. If
-  > at-most-one-toast-per-minute coalescing is still wanted, it is
-  > a UI-layer throttle, not a reason to merge the tables.
-  > **DECIDED 2026-09-20:** the product owner confirmed the
-  > supersession and selected the dedicated-table design
-  > (`ANALYSIS-A5` §13 items 3–4). The per-minute UI throttle was
-  > not requested and remains an optional later refinement.
-
-- **Stock = 0 is a "hard off".** When stock drops to zero mid-day,
-  in-flight reminders for the rest of the day must stop. The
-  scheduler evaluates the gate on every tick, not once at the
-  start of day.
-
-**Verdict.** Small, isolated, high user-visible value; sits
-cleanly on top of already-shipped groundwork; must be scoped
-narrowly to stay non-clinical. Ship after A1 stabilizes (dose
-times must be a first-class, always-present part of the
-therapy) and before or alongside A3 (caregiver notifications) —
-the same channel plumbing carries both.
-
-### 3.6 A6 — Donation / support UI [DONE]
-
-**Motivation.** MedReminder is distributed free of charge under
-Apache-2.0 (see `LICENSE`) and has no monetization channel today.
-Perpetual maintenance costs — code signing certificate renewals,
-tooling, developer time, and the operational costs any future
-service item in this document (C.1 in particular) would incur —
-are today absorbed by the maintainer. A voluntary, unobtrusive
-"support development" surface inside the app closes that gap
-without changing the product's positioning: the app remains free,
-local-first, and non-clinical. The full requirement draft lives
-in `docs/DONATION-SUPPORT-FEATURE.md`.
-
-> **Authoritative analysis.** The approved design is
-> `ANALYSIS-A6-DONATION-SUPPORT.md`, which notes that the "Help
-> menu" entry point assumed below is **not** documented in the
-> `ANALYSIS.md` MVP (only a toolbar and a tray menu are); a Help
-> surface (`HelpViewerForm`) exists post-MVP and the exact entry
-> point must be confirmed against the tree. See `ANALYSIS-A6` §9.1.
-
-**Preconditions — already in place.** WinForms host, per-profile
-`user.settings.json` reader, MailKit-independent logging
-infrastructure, five-language localization pipeline. No new
-NuGet dependency, no schema patch, no domain change.
-[VERIFIED against `CLAUDE.md` §§3, 6, 8]
-
-**Design sketch.**
-
-- **Model.** New `DonationOptions` in `MedReminder.Application`
-  holding `Enabled`, `Currency`, and a per-provider block with
-  `Enabled` + a `PaymentLinks` map `{amount → URL}`. Only public
-  Payment Link URLs; no client secret, no access token, no API
-  key of any kind lives in the client — `CLAUDE.md` §11 already
-  forbids plaintext secrets, and this feature must not weaken
-  that stance.
-- **Storage.** A new admin-managed
-  `%LOCALAPPDATA%\MedReminder\donations.settings.json` alongside
-  the other shared JSON files listed in `CLAUDE.md` §7. Public
-  URLs only — do not route through `smtp.protected` or any
-  DPAPI-encrypted store; there is nothing sensitive to protect.
-- **Provider abstraction.** `IDonationProvider` port in
-  `MedReminder.Application`, with `StripeDonationProvider` and
-  `PayPalDonationProvider` adapters in
-  `MedReminder.Infrastructure`. The port returns a
-  `DonationLaunchResult` describing the URL to open and the
-  provider that produced it. The abstraction is intentionally
-  designed so that a later backend (see §8 — C.1) can swap the
-  "open a hosted URL" adapter for a "call our checkout API +
-  verify via webhook" adapter without touching the UI or the
-  service layer.
-- **Amount tiers.** €2 / €5 / €10 / €20 as fixed Payment Links
-  (one URL per amount per provider). A custom-amount field is
-  offered **only** where the provider natively supports amount
-  selection on a public hosted page without client credentials.
-  [UNCERTAIN — Stripe Payment Links today configure the amount
-  server-side per link; PayPal's hosted donate flow can accept
-  an `amount` query parameter on the classic donate button. Both
-  behaviors depend on the account configuration used to mint the
-  link and must be verified at implementation time against the
-  provider's current documentation, not memory.]
-- **UI.** A dedicated `DonateForm` reachable from a single Help
-  menu entry — `Ui.MenuHelp.SupportDevelopment` — never from a
-  startup prompt. Voluntary tone; explicit "not required to use
-  the application" copy. Localize the new strings across en / it
-  / fr / es / de per `CLAUDE.md` §9. No `WebBrowser` control, no
-  embedded browser: the URL opens in the system default browser
-  via `Process.Start` with `UseShellExecute = true`.
-- **Validation before launch.** The service must reject non-HTTPS
-  URLs, syntactically malformed URLs, disabled providers, unknown
-  amounts, and missing configuration. User-facing errors stay
-  short and non-technical; the real reason lands only in the
-  daily rolling log under `logs/`.
-- **Post-launch messaging.** The app must not claim the payment
-  succeeded. The confirmation copy is strictly of the form "a
-  payment page has been opened in your browser". No webhook, no
-  order capture, no URL inspection, no browser scraping. This is
-  a hard product-safety line, not a nice-to-have.
-- **Logging.** Reuse the existing logger. Log provider, amount,
-  launch attempt and browser-launch errors. Never log the URL's
-  query string beyond the amount tier, never log payment
-  metadata, never log card data (the app does not see it).
-
-**Effort.** 3–5 developer-days including the provider port, the
-two adapters, the WinForms form, HTTPS validation, error paths,
-unit tests (per §Testing in the requirement draft), five-language
-localization and shipped-user-guide updates. [INFERRED]
-
-**Risks and constraints.**
-
-- **False confirmation is the real risk.** Without a backend the
-  desktop cannot know whether the payment completed. Any UI
-  wording that implies otherwise is a defect, not a polish item.
-  The requirement draft is explicit on this point and this
-  document endorses it.
-- **Secrets must not enter the client.** Payment Link URLs are
-  public identifiers, not credentials, and are the only piece of
-  provider configuration allowed in the shipped artifact. Any
-  drift here undoes the security posture the rest of the app
-  enforces (`CLAUDE.md` §11).
-- **Nagware would sink adoption.** No dialog on launch, no
-  countdown, no periodic prompt. The entry point is a single Help
-  menu item; that is the entire surface.
-- **Store-channel policy.** If the app is ever redistributed
-  through the Microsoft Store, the store's rules on third-party
-  payments outside its own commerce system may restrict or
-  forbid this UI. [UNCERTAIN — Store policy varies by app
-  category and evolves] The primary distribution channels today
-  are the ZIP and MSI produced by the release workflow (see
-  `docs/PACKAGING.md`), so this is not a blocker but a note for
-  a future MSIX push.
-- **Regional payment failure.** Not every user's card / PayPal
-  region will accept every Payment Link. The graceful
-  degradation is the browser's own error page; do not attempt to
-  detect or handle it inside the app.
-- **Not a medical-device concern.** The donation surface is
-  strictly commercial UX — it does not touch therapy data, does
-  not read stock, does not read schedules. It stays well clear
-  of EU MDR 2017/745 (§9.2).
-
-**Verdict.** The smallest and most self-contained item in Group A.
-No dependencies on A1..A5, no schema patch, no monitor changes;
-purely UI + configuration + a provider port. Ship first inside
-Group A as a low-risk baseline that also opens a voluntary
-funding channel for the maintenance costs the later items in
-this document will accrue.
+Shipped. See `EVOLUTION-DONE.md` §3.6.
 
 ---
 
-## 4. C.3 — Manual export/import **[DONE]**
+## 4. C.3 — Manual export/import
 
-### 4.1 Motivation
-
-Two distinct concerns solved by one mechanism:
-
-- **GDPR art. 20** — the user has a right to receive their data in
-  a structured, commonly used, machine-readable format.
-- **Device migration** — moving the app from an old PC to a new one
-  today relies on manually copying `%LOCALAPPDATA%\MedReminder\`.
-  That is possible for a technical user, unfriendly to everyone
-  else.
-
-### 4.2 Design sketch
-
-- Command **Export all data** in Settings → File.
-- Output: an encrypted zip archive containing a documented JSON
-  structure covering all entities of the current profile (or all
-  profiles, admin-only variant), plus a schema-version header.
-- Encryption: passphrase chosen by the user, keyed via Argon2id,
-  AES-GCM for the payload. Do **not** reuse DPAPI here — DPAPI is
-  bound to the Windows account and defeats the migration use case.
-- Command **Import from export** with two modes:
-  - **Overwrite** (replace the profile's DB with the imported
-    content).
-  - **Merge** (deferred — merge rules are non-trivial; see §4.4).
-- Format documented publicly under `docs/EXPORT-FORMAT.md` (to be
-  written when the feature lands), so a user can migrate away to
-  another tool without lock-in.
-
-### 4.3 Effort
-
-2–3 weeks including UI, tests, format documentation and a
-round-trip integration test. [INFERRED]
-
-### 4.4 Risks and constraints
-
-- **Merge rules are dangerous** and should not be shipped without
-  an explicit design pass. Ship overwrite first, defer merge.
-- **Schema evolution.** The exported JSON must carry a schema
-  version so that a future MedReminder can read a today-exported
-  file. Adopt the same additive-only discipline as the SQLite
-  patches (`ANALYSIS.md` §2.8).
-- **Do not include the SMTP password** in the export unless the
-  user explicitly checks a box for it. If included, it must be
-  re-encrypted with the export passphrase, not DPAPI.
-
-### 4.5 Verdict
-
-Ship early. It is the smallest, safest and most portable move on
-the multi-device track, and GDPR portability is a compliance win
-regardless of what happens after.
+Shipped. See `EVOLUTION-DONE.md` §4.
 
 ---
 
-## 5. C.3+ — Backup to user-controlled cloud folder + explicit restore **[DONE]**
+## 5. C.3+ — Backup to user-controlled cloud folder + explicit restore
 
-### 5.1 Motivation
-
-An honest, low-cost approximation of multi-device operation without
-building a backend. The automatic-backup mechanism already exists
-(`backup.settings.json`, `backup.state.json` — see `CLAUDE.md` §7);
-this evolution reuses it.
-
-### 5.2 Design sketch
-
-- Extend the automatic-backup destination to accept **any local
-  folder**, including one that is synchronized by the user's cloud
-  provider (OneDrive, iCloud Drive, Dropbox, Google Drive Desktop).
-- The app writes atomic snapshots (never the live DB — see §8 on
-  why file-sync of the live DB corrupts SQLite).
-- On a second device, an explicit **Restore from backup** action
-  reads the most recent snapshot and replaces the local profile.
-- User model: **single-writer, multiple-reader-on-demand**. There
-  is no concurrent editing — the user consciously switches which
-  device is "active".
-
-### 5.3 Effort
-
-1–2 weeks on top of C.3 and the existing backup mechanism. [INFERRED]
-
-### 5.4 Risks and constraints
-
-- **Not sync.** The UX has to make that explicit — this is
-  assisted migration, not real-time synchronization. Two devices
-  editing between two syncs diverge silently, and the last restore
-  wins.
-- **Cloud folder detection is fragile.** The app must not assume
-  where OneDrive/iCloud is installed; let the user pick a folder.
-- **The snapshot must be encrypted** with the same mechanism as
-  C.3. Never write a plaintext DB to a cloud-synced folder.
-
-### 5.5 Verdict
-
-Best-value compromise for the ~90% of users who want "reminder on
-my phone that reflects yesterday's changes on my PC". Ship after
-C.3.
+Shipped. See `EVOLUTION-DONE.md` §5.
 
 ---
 
-## 6. C.3++ — Native Cloud Provider Integration Strategy
+## 6. C.3++ — Native cloud provider integrations (Phase 2 onward)
 
-**Motivation.**
-C.3+ intentionally relies on user-selected cloud-synced folders
-(OneDrive, Google Drive Desktop, Dropbox, iCloud Drive, Nextcloud,
-etc.) and therefore remains provider-independent. This approach is
-the preferred starting point because it avoids OAuth flows, SDK
-dependencies, cloud API quotas and provider lock-in. The primary
-driver for revisiting this decision is the future B.1 mobile
-companion, where the filesystem abstraction available on Windows
-does not map cleanly to Android and iOS.
+**Status.** Phase 1 (`IArchiveStorage` + `LocalFolderArchiveStorage`)
+shipped in PR #56 — see `EVOLUTION-DONE.md` §6. What remains is the
+provider-specific work, deferred by decision.
 
-**Design direction.**
-Introduce an IArchiveStorage abstraction between archive creation
-and archive delivery:
+**Authoritative analysis.**
+`docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md` (§14 roadmap).
 
-Data → MRZ Archive → IArchiveStorage → Storage Backend
+**Motivation.** C.3+ relies on a user-selected cloud-synced folder
+and stays provider-independent: no OAuth, no SDK, no API quotas, no
+lock-in. The driver for native backends is the future B.1 mobile
+companion, where the Windows filesystem model does not map cleanly
+to Android and iOS.
 
-The .mrz encrypted archive format remains the long-term
-interoperability contract. Storage backends become replaceable
-adapters.
+**Remaining phases** (from `ANALYSIS-C3PP` §14):
 
-Phase 1 ships only:
-- LocalFolderArchiveStorage
-- user-selected cloud-synced folders
-- no provider-specific SDK
-- no OAuth authentication
+- **Phase 2 — when B.1 is approved.** `OneDriveArchiveStorage`
+  (Microsoft Graph, MSAL token cache), `GoogleDriveArchiveStorage`,
+  a `BackupSettings.CloudProvider` discriminator, provider selection
+  and OAuth sign-in / sign-out in `SettingsDialog`, localization.
+  Each backend must pass the existing `ArchiveStorageContractTests`.
+- **Phase 3 — optional.** `DropboxArchiveStorage`; REST-only
+  enterprise providers (SharePoint, Box, Nextcloud).
+- **Phase 4 — re-evaluate on data.** iCloud on Windows stays on the
+  synced-folder model unless Apple publishes a supported Windows SDK.
 
-Future implementations may include:
-- OneDriveArchiveStorage (Microsoft Graph)
-- GoogleDriveArchiveStorage
-- DropboxArchiveStorage
+Priority among providers: OneDrive, then Google Drive, then Dropbox.
+The `.mrz` archive format stays the interoperability contract.
 
-**Decision.**
-Native cloud-provider integrations are explicitly deferred until
-B.1 (mobile companion) creates a concrete requirement for them.
-The recommended priority order is:
+**Mobile strategy.** The first B.1 release should use the platform
+file picker (`ANALYSIS-C3PP` §6.1, Scenario A) rather than
+provider-specific OAuth; native APIs can follow once the companion
+has stabilized.
 
-1. OneDrive
-2. Google Drive
-3. Dropbox
-
-iCloud on Windows remains on the synchronized-folder model and is
-not considered a viable native integration target.
-
-**Mobile strategy.**
-The first B.1 release should use a provider file picker
-(Scenario A) rather than provider-specific OAuth integrations.
-Native cloud APIs may be introduced in a later B.1 iteration once
-the companion application has stabilized.
-
-**Verdict.**
-Keep C.3+ as the default user experience. Introduce the storage
-abstraction early, but defer native provider integrations until
-they produce tangible value for mobile scenarios.
-
----
+**Verdict.** Do not start Phase 2 before B.1 creates a concrete
+requirement for it.
 
 ---
 
@@ -729,7 +280,10 @@ translation effort.
 
 Do **not** ship B.1 without at least C.3+ in place. A mobile
 client whose data does not connect to the desktop's data is a new
-app, not a companion.
+app, not a companion. **Met as of 2026-09-25:** C.3+ shipped, and
+the `.mrz` format (`docs/EXPORT-FORMAT.md`) plus the
+`IArchiveStorage` port (C.3++ Phase 1) are the contracts a
+companion would read.
 
 ### 7.8 Verdict
 
@@ -870,57 +424,11 @@ decision that must precede any implementation attempt.
 
 ## 10. Public presentation website
 
-**Motivation.** MedReminder is currently distributed exclusively via
-the GitHub Releases page, which is addressed at technically literate
-users. A dedicated public website closes four gaps: it makes the app's
-value proposition clear at a glance to the primary audience (adults
-managing long-term medication), answers common pre-download questions
-(system requirements, SmartScreen warning, privacy), provides a
-donation entry point outside the Windows app, and improves search-engine
-discoverability for natural-language queries in all five supported
-languages.
-
-**Authoritative analysis.** The approved design is
-`docs/analysis/ANALYSIS-WEBSITE.md`. The implementation prompt is
-`docs/prompt/PROMPT-WEBSITE-IMPLEMENTATION.md`.
-
-**Design sketch.**
-
-- **Hugo** static site generator (single binary, no Node.js, first-class
-  multilingual support) with minimal handwritten CSS and JS; no
-  framework.
-- **Five languages**: English (canonical), Italian, French, Spanish,
-  German — mirroring the application's localization.
-- **Cloudflare Pages** hosting (free tier, 300+ PoP CDN, server-side
-  `_redirects`, PR preview deployments, built-in Web Analytics). GitHub
-  Pages is the documented fallback.
-- **Cloudflare Web Analytics** for privacy-respecting page-view
-  counting — no cookies, no consent banner required.
-- **No backend, no server, no CMS.** The donation section opens
-  Stripe/PayPal hosted URLs in the browser; the site makes no network
-  calls.
-- **Repository placement**: co-located under `website/` in this
-  repository (`.github/workflows/website.yml` with a path filter),
-  or a dedicated `vger70/medreminder-website` repository. Decision open.
-
-**Key sections**: Hero with download CTA, Features grid, How it works,
-Screenshots gallery, System requirements, SmartScreen explanation,
-Download, Donate, Privacy, FAQ, About, Footer.
-
-**Effort.** 2–3 developer-weeks for English + Italian + one additional
-language, full design, accessibility and performance pass. The
-remaining two languages add 1–2 days each. `[INFERRED]`
-
-**Open decisions.** Co-located vs. separate repository; custom domain
-vs. `*.pages.dev`; donation URLs (maintainer-managed); screenshot set;
-version badge approach; roadmap section; dark mode in v1. See
-`ANALYSIS-WEBSITE.md` §15 for the full list and §15.a for resolved
-items.
-
-**Verdict.** Low risk, entirely outside the application binary, no
-schema change, no new NuGet dependency. The primary audience benefits
-immediately; SEO and donation surface are side effects. Begin once the
-repository placement decision is confirmed.
+v1 shipped on 2026-09-25 in `vger70/medreminder-website`. See
+`EVOLUTION-DONE.md` §10 for what was built and how it deviates from
+the design. A content refresh to align the site with the current
+application is prepared in
+`docs/prompt/PROMPT-WEBSITE-CONTENT-REFRESH.md`.
 
 ---
 
@@ -968,3 +476,10 @@ repository placement decision is confirmed.
   static site, no backend), effort estimate, open decisions, and pointers
   to the authoritative analysis (`ANALYSIS-WEBSITE.md`) and
   implementation prompt (`PROMPT-WEBSITE-IMPLEMENTATION.md`).
+- 2026-09-25 — split into `EVOLUTION.md` (open items) and
+  `EVOLUTION-DONE.md` (shipped items, rewritten to match the
+  implementation). Marked C.3, C.3+, C.3++ Phase 1 and website v1
+  as shipped. §2 rewritten around the remaining sequence
+  A2 → B.1 → C.3++ Phase 2 → C.1. §6 narrowed to the deferred
+  native-provider phases. §7.7 records that the C.3+ precondition
+  is met. Section numbers kept, with pointers for moved sections.
