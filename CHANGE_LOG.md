@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #68 — Consolidate evolution drafts into a single ranked proposal note
+
+Link: [vger70/MedReminder#68](https://github.com/vger70/MedReminder/pull/68)
+Branch: `claude/consolidate-evolution-docs-z32p4u`
+
+### Docs
+
+- Added `docs/notes/EVOLUTION-PROPOSALS.md`, merging the proposals from
+  the two evolution drafts into one list ranked by user value, with
+  shipped items separated and feasibility caveats recorded.
+- Removed `docs/notes/EVOLUZIONI-1.md` and `docs/notes/EVOLUZIONI-2.md`,
+  superseded by the new note.
+
+---
+
 ## PR #61 — Rewrite ANALYSIS.md as the as-built architecture reference
 
 Link: [vger70/MedReminder#61](https://github.com/vger70/MedReminder/pull/61)
