@@ -30,6 +30,28 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #58 — Skip the cloud export early when the cloud folder is missing
+
+Link: [vger70/MedReminder#58](https://github.com/vger70/MedReminder/pull/58)
+Branch: `claude/skip-cloud-export-when-folder-missing`
+**Status:** merged (2026-09-25)
+
+### Fixed
+
+- **Wasted exports with a missing cloud folder.** Since PR #56, a
+  missing folder was only detected at upload time, after the Argon2id
+  export. The day stays open so a later tick retries, so every 15-minute
+  tick after the preferred time ran a full export for nothing. The host
+  checks the folder again before exporting, as C.3+ did
+  (`src/MedReminder.UI/Hosting/AutomaticBackupHostedService.cs`).
+  No user-visible change.
+
+### Docs
+
+- `ANALYSIS-C3PLUS-CLOUD-BACKUP.md` §4.7 describes the pre-export check.
+
+---
+
 ## PR #57 — Fix cloud-only automatic backup re-exporting on every tick
 
 Link: [vger70/MedReminder#57](https://github.com/vger70/MedReminder/pull/57)

@@ -193,7 +193,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 try
                 {
                     var archiveId = await RunCloudTargetAsync(
-                        scope.ServiceProvider, archiveStorage, cancellationToken);
+                        scope.ServiceProvider, archiveStorage, settings.CloudFolderDirectory, cancellationToken);
                     if (archiveId is not null)
                     {
                         exportedFiles.Add(archiveId);
@@ -205,8 +205,8 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 }
                 catch (DirectoryNotFoundException)
                 {
-                    // Storage target unavailable: skip this run, not a
-                    // failure of the tick (ANALYSIS-C3PLUS §4.3).
+                    // Folder removed while the export ran: skip this run,
+                    // not a failure of the tick (ANALYSIS-C3PLUS §4.3).
                     _log.LogWarning(
                         "Cloud-folder backup skipped: folder {Directory} does not exist.",
                         settings.CloudFolderDirectory);
@@ -302,14 +302,27 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
     // docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md §7.5), which owns
     // delivery into the cloud folder. Uses the DPAPI-cached backup
     // passphrase; a missing passphrase logs a warning and skips (§4.6),
-    // it is not a failure of the whole tick. An unavailable storage
-    // target surfaces as DirectoryNotFoundException for the caller.
-    // Returns the stored archive id, or null when the run was skipped.
+    // it is not a failure of the whole tick. Returns the stored archive
+    // id, or null when the run was skipped.
     private async Task<string?> RunCloudTargetAsync(
         IServiceProvider scopedServices,
         IArchiveStorage archiveStorage,
+        string cloudFolderDirectory,
         CancellationToken cancellationToken)
     {
+        // Cheap check before the Argon2id export: a missing folder keeps
+        // the day open, so without it every 15-minute tick would pay for
+        // an export that the upload then rejects. Specific to the local
+        // folder, the only IArchiveStorage backend so far; a native
+        // provider will need its own availability check here.
+        if (!Directory.Exists(cloudFolderDirectory))
+        {
+            _log.LogWarning(
+                "Cloud-folder backup skipped: folder {Directory} does not exist.",
+                cloudFolderDirectory);
+            return null;
+        }
+
         var passStore = scopedServices.GetService<ICloudBackupPassphraseStore>();
         if (passStore is null || !passStore.HasPassphrase)
         {
