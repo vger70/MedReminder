@@ -34,7 +34,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 Link: [vger70/MedReminder#58](https://github.com/vger70/MedReminder/pull/58)
 Branch: `claude/skip-cloud-export-when-folder-missing`
-**Status:** in progress
+**Status:** merged (2026-09-25)
 
 ### Fixed
 
