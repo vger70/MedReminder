@@ -540,6 +540,14 @@ pour transférer MedReminder vers un nouvel ordinateur.
   écrit en clair.
 - Clique sur **Exporter**.
 
+**Administrateur : tous les profils en une fois.** Lorsqu'il existe
+plus d'un profil, un profil administrateur voit aussi **Exporter tous
+les profils**. Choisis un dossier au lieu d'un fichier : MedReminder
+écrit un fichier chiffré par profil
+(`medreminder-export-<profileId>-<timestamp>.mrz`), tous avec la même
+phrase de passe. Pour restaurer un profil, ouvre ce profil et importe
+son fichier.
+
 **La phrase secrète ne peut pas être récupérée.** Il n'existe ni
 réinitialisation, ni porte dérobée, ni copie sur serveur. Si tu perds
 la phrase secrète, le fichier ne pourra plus jamais être lu — conserve-la

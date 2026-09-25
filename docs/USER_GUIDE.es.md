@@ -532,6 +532,14 @@ para mover MedReminder a un nuevo ordenador.
   vuelve a cifrar con tu frase — nunca se escribe en texto claro.
 - Haz clic en **Exportar**.
 
+**Administrador: todos los perfiles a la vez.** Cuando existe más de
+un perfil, un perfil administrador ve también **Exportar todos los
+perfiles**. Elige una carpeta en lugar de un archivo: MedReminder
+escribe un archivo cifrado por perfil
+(`medreminder-export-<profileId>-<timestamp>.mrz`), todos con la misma
+frase de contraseña. Para restaurar un perfil, abre ese perfil e
+importa su archivo.
+
 **La frase de contraseña no puede recuperarse.** No existe reinicio,
 puerta trasera ni copia en servidor. Si pierdes la frase, el archivo no
 podrá leerse nunca — guárdala en un lugar seguro.
