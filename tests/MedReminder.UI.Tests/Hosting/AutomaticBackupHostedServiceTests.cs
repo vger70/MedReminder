@@ -12,13 +12,28 @@ namespace MedReminder.UI.Tests.Hosting;
 // Cloud-only configuration (local raw-DB target off): a written .mrz
 // must mark the day as backed up, otherwise every 15-minute tick after
 // the preferred time would re-export. Skips must leave the day open so
-// a later tick retries.
-public sealed class AutomaticBackupHostedServiceTests
+// a later tick retries, and a missing folder must be detected before
+// the (Argon2id) export runs.
+public sealed class AutomaticBackupHostedServiceTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 25, 12, 0, 0, TimeSpan.Zero);
 
     private readonly InMemoryBackupStateStore _state = new();
     private readonly RecordingArchiveStorage _storage = new();
+    private readonly CountingExportService _export = new();
+    private readonly string _cloudFolder;
+
+    public AutomaticBackupHostedServiceTests()
+    {
+        _cloudFolder = Path.Combine(
+            Path.GetTempPath(), "mr-host-cloud-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_cloudFolder);
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_cloudFolder, recursive: true); } catch { /* best effort */ }
+    }
 
     [Fact]
     public async Task Cloud_only_tick_that_writes_an_archive_marks_the_day_as_backed_up()
@@ -50,13 +65,29 @@ public sealed class AutomaticBackupHostedServiceTests
     }
 
     [Fact]
-    public async Task Cloud_only_tick_with_a_missing_folder_is_skipped_without_error()
+    public async Task Cloud_only_tick_with_a_missing_folder_skips_before_exporting()
+    {
+        var host = CreateHost(
+            hasPassphrase: true, cloudFolder: Path.Combine(_cloudFolder, "missing"));
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _export.Calls.Should().Be(0, "a missing folder must not cost an Argon2id export");
+        _storage.Uploads.Should().BeEmpty();
+        var state = _state.Load();
+        state.LastSuccessfulBackupAt.Should().BeNull();
+        state.LastError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Cloud_only_tick_whose_folder_disappears_during_the_export_is_skipped_without_error()
     {
         _storage.UploadFailure = new DirectoryNotFoundException("missing");
         var host = CreateHost(hasPassphrase: true);
 
         await host.TryRunAsync(CancellationToken.None);
 
+        _export.Calls.Should().Be(1);
         var state = _state.Load();
         state.LastSuccessfulBackupAt.Should().BeNull();
         state.LastError.Should().BeNull();
@@ -75,21 +106,21 @@ public sealed class AutomaticBackupHostedServiceTests
         state.LastError.Should().Be("cloud: disk full");
     }
 
-    private AutomaticBackupHostedService CreateHost(bool hasPassphrase)
+    private AutomaticBackupHostedService CreateHost(bool hasPassphrase, string? cloudFolder = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IBackupService, LocalTargetUnusedBackupService>();
         services.AddSingleton<IProfileRegistry, SingleProfileRegistry>();
         services.AddSingleton<IArchiveStorage>(_storage);
         services.AddSingleton<ICloudBackupPassphraseStore>(new FakePassphraseStore(hasPassphrase));
-        services.AddSingleton<IExportService, FakeExportService>();
+        services.AddSingleton<IExportService>(_export);
         services.AddSingleton<ICurrentProfile, FakeCurrentProfile>();
 
         var settings = new BackupSettings
         {
             Enabled = false,
             CloudFolderEnabled = true,
-            CloudFolderDirectory = "cloud",
+            CloudFolderDirectory = cloudFolder ?? _cloudFolder,
             CloudFolderRetention = 30,
             PreferredTime = "03:00",
         };
@@ -158,11 +189,14 @@ public sealed class AutomaticBackupHostedServiceTests
         public void Clear() => throw new NotSupportedException();
     }
 
-    private sealed class FakeExportService : IExportService
+    private sealed class CountingExportService : IExportService
     {
+        public int Calls { get; private set; }
+
         public async Task<string> ExportAsync(
             ExportOptions options, char[] passphrase, IProgress<int>? progress, CancellationToken cancellationToken)
         {
+            Calls++;
             await File.WriteAllBytesAsync(options.DestinationPath, new byte[] { 1, 2, 3 }, cancellationToken);
             return options.DestinationPath;
         }

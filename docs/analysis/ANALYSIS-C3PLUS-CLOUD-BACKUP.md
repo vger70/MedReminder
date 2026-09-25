@@ -400,7 +400,12 @@ The only implementation, `LocalFolderArchiveStorage`, keeps the
 temp-then-move discipline of §4.1, reads `CloudFolderDirectory`
 on every call, and signals a missing folder with
 `DirectoryNotFoundException`, which the host logs and skips as
-§4.3 / §4.6 require. User-visible behaviour is unchanged.
+§4.3 / §4.6 require. The host still checks that the folder exists
+before exporting: a missing folder leaves the day open, so without
+the check every 15-minute tick would run an Argon2id export only
+for the upload to reject it. The `DirectoryNotFoundException` path
+covers a folder that disappears during the export. User-visible
+behaviour is unchanged.
 
 ---
 
