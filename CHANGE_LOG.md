@@ -33,8 +33,8 @@ with the classification adapted to per-PR granularity: **Added**,
 ## PR #64 — Stop manual intakes from hiding or doubling automatic consumption
 
 Link: [vger70/MedReminder#64](https://github.com/vger70/MedReminder/pull/64)
-Branch: `claude/consumption-day-coverage` (stacked on PR #62)
-**Status:** open (draft)
+Branch: `claude/consumption-day-coverage`
+**Status:** open
 
 ### Fixed
 
@@ -59,7 +59,7 @@ Branch: `claude/consumption-day-coverage` (stacked on PR #62)
 
 Link: [vger70/MedReminder#62](https://github.com/vger70/MedReminder/pull/62)
 Branch: `claude/serialize-consumption-catch-up`
-**Status:** open
+**Status:** merged (2026-09-25)
 
 ### Fixed
 
