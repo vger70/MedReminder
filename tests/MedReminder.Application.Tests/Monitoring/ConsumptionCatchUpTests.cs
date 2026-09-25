@@ -4,6 +4,7 @@ using MedReminder.Application.Monitoring;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using Xunit;
@@ -131,14 +132,51 @@ public class ConsumptionCatchUpTests
     }
 
     [Fact]
+    public async Task Manual_intake_for_today_does_not_hide_earlier_unmaterialized_days()
+    {
+        // The user records today's intake before the first catch-up has
+        // run (medicine added with a past StartDate). Days 10, 11 and
+        // 12 must still be materialized.
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope, new DateOnly(2026, 9, 10));
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, new DateOnly(2026, 9, 13), IntakeStatus.Taken, Quantity: 2m),
+            CancellationToken.None);
+
+        var created = await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+
+        created.Should().Be(3);
+        var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
+        MedicineStock.Current(movements).Should().Be(30m - (4 * 2m));
+    }
+
+    [Fact]
+    public async Task Catch_up_after_a_backdated_intake_writes_nothing_new()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope, new DateOnly(2026, 9, 10));
+        await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, new DateOnly(2026, 9, 11), IntakeStatus.Taken, Quantity: 1m),
+            CancellationToken.None);
+
+        var created = await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+
+        created.Should().Be(0);
+        var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
+        // Days 10 and 12 automatic (2 each), day 11 manual (1).
+        MedicineStock.Current(movements).Should().Be(30m - 2m - 1m - 2m);
+    }
+
+    [Fact]
     public async Task Concurrent_calls_do_not_materialize_the_same_days_twice()
     {
         // Reproduces the hosted-service tick racing the "Check now"
         // command: two catch-ups with separate instances over the same
-        // store. The barrier holds each read of the last consumption
-        // day until both callers have arrived (or a timeout elapses),
-        // so without serialization both would read "none" and both
-        // would write days 10, 11 and 12.
+        // store. The barrier holds each read of the stock ledger until
+        // both callers have arrived (or a timeout elapses), so without
+        // serialization both would read an empty ledger and both would
+        // write days 10, 11 and 12.
         var scope = new ApplicationTestScope(FixedNow);
         var id = await SeedAsync(scope, new DateOnly(2026, 9, 10));
         var stock = new BarrierStockMovementRepository(scope.Stock, TimeSpan.FromMilliseconds(300));
@@ -157,7 +195,7 @@ public class ConsumptionCatchUpTests
     }
 
     // Delegates to the in-memory store under a lock and makes
-    // GetLastConsumptionDayAsync wait for a second caller.
+    // ListForMedicineAsync wait for a second caller.
     private sealed class BarrierStockMovementRepository : IStockMovementRepository
     {
         private readonly InMemoryStockMovementRepository _inner;
@@ -173,13 +211,20 @@ public class ConsumptionCatchUpTests
             _timeout = timeout;
         }
 
-        public Task<IReadOnlyList<StockMovement>> ListForMedicineAsync(
+        public async Task<IReadOnlyList<StockMovement>> ListForMedicineAsync(
             Guid medicineId, CancellationToken cancellationToken)
         {
+            if (Interlocked.Increment(ref _arrivals) >= 2)
+            {
+                _bothArrived.TrySetResult();
+            }
+            await Task.WhenAny(_bothArrived.Task, Task.Delay(_timeout, cancellationToken));
+            Task<IReadOnlyList<StockMovement>> read;
             lock (_sync)
             {
-                return _inner.ListForMedicineAsync(medicineId, cancellationToken);
+                read = _inner.ListForMedicineAsync(medicineId, cancellationToken);
             }
+            return await read;
         }
 
         public Task AddAsync(StockMovement movement, CancellationToken cancellationToken)
@@ -199,20 +244,13 @@ public class ConsumptionCatchUpTests
             }
         }
 
-        public async Task<DateOnly?> GetLastConsumptionDayAsync(
+        public Task<DateOnly?> GetLastConsumptionDayAsync(
             Guid medicineId, CancellationToken cancellationToken)
         {
-            if (Interlocked.Increment(ref _arrivals) >= 2)
-            {
-                _bothArrived.TrySetResult();
-            }
-            await Task.WhenAny(_bothArrived.Task, Task.Delay(_timeout, cancellationToken));
-            Task<DateOnly?> read;
             lock (_sync)
             {
-                read = _inner.GetLastConsumptionDayAsync(medicineId, cancellationToken);
+                return _inner.GetLastConsumptionDayAsync(medicineId, cancellationToken);
             }
-            return await read;
         }
     }
 }
