@@ -168,7 +168,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         // Browse button, and every localised help/warning label
         // without an horizontal scrollbar. Every other tab has
         // Dock=Fill or AutoSize controls that scale to fit.
-        Width = 800;
+        Width = 840;
         Height = 620;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
