@@ -30,6 +30,30 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #57 — Fix cloud-only automatic backup re-exporting on every tick
+
+Link: [vger70/MedReminder#57](https://github.com/vger70/MedReminder/pull/57)
+Branch: `claude/fix-cloud-only-backup-state` (stacked on PR #56)
+**Status:** in progress
+
+### Fixed
+
+- **Cloud-only automatic backup ran every 15 minutes.** When only the
+  cloud-folder target was enabled, a written `.mrz` did not mark the day
+  as backed up. Every tick after the preferred time exported another
+  snapshot into the synced folder, until the end of the day. A snapshot
+  written by either target now completes the day. Skips (missing
+  passphrase or folder) and failed uploads still leave the day open, so
+  a later tick retries
+  (`src/MedReminder.UI/Hosting/AutomaticBackupHostedService.cs`).
+
+### Added
+
+- Regression tests for the cloud-only tick
+  (`tests/MedReminder.UI.Tests/Hosting/AutomaticBackupHostedServiceTests.cs`).
+
+---
+
 ## PR #56 — C.3++ Phase 1: IArchiveStorage + LocalFolderArchiveStorage
 
 Link: [vger70/MedReminder#56](https://github.com/vger70/MedReminder/pull/56)
