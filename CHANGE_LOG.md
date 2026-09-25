@@ -34,6 +34,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 Link: [vger70/MedReminder#59](https://github.com/vger70/MedReminder/pull/59)
 Branch: `claude/ui-issues-first-run-backup-ssh7hd`
+**Status:** merged (2026-09-25)
 
 ### Fixed
 
@@ -242,6 +243,24 @@ restates it.
   mirroring A1 / A5.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+
+## PR #54 — Document implementation decisions confirmed on 2026-09-25
+
+Link: [vger70/MedReminder#54](https://github.com/vger70/MedReminder/pull/54)
+Branch: `claude/festive-meitner-ppf0wb`
+**Status:** merged (2026-09-25)
+
+### Docs
+
+- **Website decisions recorded before the first implementation commit.**
+  New §14 in `docs/analysis/ANALYSIS-WEBSITE.md` closes the four items
+  that were still open: the site lives in the separate repository
+  `vger70/medreminder-website` (so this file does not track its PRs),
+  no roadmap teaser on the About page in v1, no dark mode in v1, and
+  screenshots are retaken only when a UI change materially alters what
+  a shot depicts.
+
+---
 
 ## PR #53 — Fix and expand user guides (6 corrections + A3/C3/stepped tapering)
 
