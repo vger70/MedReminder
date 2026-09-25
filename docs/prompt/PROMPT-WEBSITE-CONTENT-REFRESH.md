@@ -73,6 +73,12 @@ Each item cites where the site says it and what the app does.
    cloud-folder backup with **Restore from cloud folder…** is the
    second option. A raw `.db` backup is not the recommended migration
    path.
+5b. **Static version fallback** — `config/_default/config.toml`
+   `currentVersion = "v1.2.0"`. The app is at 2.4.1
+   (`Directory.Build.props` `VersionPrefix` in the app repo). The badge
+   shows the stale value whenever the GitHub API call fails. Set it to
+   the latest published release tag; confirm the tag with the
+   maintainer (see §5, item M6).
 
 ## 3. Incomplete or misleading claims — should fix
 
@@ -89,10 +95,13 @@ Each item cites where the site says it and what the app does.
    Keep "no account" and "your data stays on your PC", but make the
    privacy paragraph state these three points.
 7. **Website privacy section.** The site itself calls the GitHub
-   Releases API from the visitor's browser (`assets/js/version.js`)
-   and loads the Cloudflare Web Analytics beacon. Add one sentence
-   saying the page asks GitHub for the latest version number, so the
-   visitor's browser contacts GitHub.
+   Releases API from the visitor's browser (`assets/js/version.js`).
+   Add one sentence saying the page asks GitHub for the latest version
+   number, so the visitor's browser contacts GitHub. The analytics
+   paragraph describes Cloudflare Web Analytics, but
+   `cloudflareAnalyticsToken` is empty, so the beacon is not rendered
+   today; the paragraph must match whatever the maintainer decides in
+   §5, item M5.
 8. **"Email alerts"** — `data/features_<lang>.yaml`. Emails cover
    low stock and, if enabled per medicine, dose-time reminders. The
    optional caregiver address receives every email the user receives,
@@ -158,30 +167,110 @@ tablet"; soften to "a reminder at each scheduled dose time".
 Update the screenshot alt texts in `data/screenshots_<lang>.yaml`
 only if a new card makes an existing alt text misleading.
 
-## 5. Screenshots
+## 5. Inputs to request from the maintainer
 
-The six screenshot tiles are text placeholders
-(`layouts/index.html` renders `.alt` only). Out of scope for this
-prompt unless the maintainer supplies the images; if supplied, follow
-the refresh procedure in the website `README.md` and
-`ANALYSIS-WEBSITE.md` §7.3.
+Some changes cannot be made from the repositories alone. **Before
+the first commit**, ask the maintainer for the items below in a
+single message, grouped and numbered as here, and state for each one
+what you will do if no answer comes (the "Default" line). Do not
+invent any of these values. Record the answers in the PR
+description.
 
-## 6. Branch, PR, checks
+**Content and assets**
+
+- **M1 — Screenshots.** The six tiles are text placeholders
+  (`layouts/index.html` renders only `.alt`). Ask for the six shots
+  listed in `ANALYSIS-WEBSITE.md` §6.4 and in the website `README.md`
+  ("Screenshot refresh procedure"): main list, edit medicine,
+  settings / backup, dose-time toast, export / import dialog, profile
+  picker. Ask whether one set per language or English only for now,
+  and remind the maintainer of the rules: plausible non-personal
+  data, WebP plus JPEG fallback, files under `static/img/<lang>/`.
+  The app is WinForms and cannot be run in a Linux container, so the
+  shots must come from the maintainer's Windows machine.
+  Default: keep the placeholders; do not ship stock or generated
+  images.
+- **M2 — Logo, favicon and social preview.** The favicon set and
+  `static/img/social-preview.png` were added as placeholders
+  (website PR #4). Ask for the final app icon (the app ships
+  `assets/medreminder.ico` in the app repository; ask whether to
+  derive the web icons from it) and a 1200×630 social preview.
+  Default: keep the placeholders.
+- **M3 — About → Origin.** The text says the app "was written by a
+  family caregiver". This is a claim about the author that cannot be
+  verified from the repositories. Ask the maintainer to confirm or
+  rewrite it. Default: remove the sentence about the author and keep
+  the part about why local-first matters.
+
+**Contact and legal**
+
+- **M4 — Contact channel.** The site names GitHub Issues as the only
+  channel, including for privacy questions. Ask whether a contact
+  email address should appear in the Privacy section and in the
+  footer, and which address. A website that runs analytics
+  generally needs to name who operates it and how to reach them
+  `[INFERRED — GDPR art. 13; obtain qualified advice]`; ask also
+  whether an operator name (and, for German-speaking visitors, an
+  Impressum) is wanted. Default: keep GitHub Issues only and flag
+  the open question in the PR.
+- **M5 — Analytics.** `cloudflareAnalyticsToken` is empty. Ask for
+  the Cloudflare Web Analytics site token, or confirmation that
+  analytics stay off. Default: leave the token empty and rewrite the
+  privacy paragraph to say the site does not currently count visits.
+
+**Release and domain**
+
+- **M6 — Current release.** Ask for the latest published release tag
+  and confirm that the release carries `MedReminder-win-x64.zip`,
+  `MedReminder-win-x64-net10.zip` and `MedReminder-win-x64.msi`, so
+  item 4 and item 5b point to real files. Default: use the tag of
+  the latest GitHub release if you can read it; otherwise leave
+  `currentVersion` unchanged and flag it.
+- **M7 — Download size.** For item 9, ask for the extracted size of
+  the current self-contained ZIP, or permission to remove the size
+  line. Default: remove the line.
+- **M8 — Custom domain.** The site runs on
+  `https://medreminder26.pages.dev/`. Ask whether a custom domain is
+  planned; if yes, `baseURL`, `robots.txt` and the social preview
+  URLs change with it. Default: no change.
+
+**Translations**
+
+- **M9 — Native review.** Ask whether a native speaker will review
+  the it / fr / es / de text before merge. Default: ship the
+  translations and list the changed strings per language in the PR
+  so a reviewer can check them.
+
+Items whose answer is missing when the PR is ready go into a
+"Waiting for maintainer input" list in the PR description, with the
+default that was applied.
+
+## 6. Screenshots
+
+Covered by M1. If the maintainer supplies the images, follow the
+refresh procedure in the website `README.md` and
+`ANALYSIS-WEBSITE.md` §7.3, and update `data/screenshots_<lang>.yaml`
+alt texts to match.
+
+## 7. Branch, PR, checks
 
 - Branch `claude/<short-name>` or `feature/<short-name>` in the
   website repository; one PR.
 - `hugo --minify --gc` must build without warnings.
 - Check every language page renders the new cards and FAQ answers,
   and that the MSI link resolves.
-- PR description lists items 1–9 and every §4 feature with "done",
-  "needs maintainer input" (item 9 if the size cannot be measured)
-  or "skipped, because …".
+- PR description lists items 1–9 (including 5b) and every §4
+  feature with "done", "needs maintainer input" or "skipped,
+  because …", plus the answers to M1–M9 or the default applied.
 
-## 7. Acceptance criteria
+## 8. Acceptance criteria
 
 - No sentence on the site contradicts §2 above.
 - Every §4 feature appears on the site, as its own card or merged
   into an existing one; the intake log does not.
 - All five languages updated or marked `# TODO: translate`.
 - Privacy section states the app's startup update check and the
-  site's GitHub API call.
+  site's GitHub API call, and its analytics paragraph matches the
+  M5 decision.
+- The M1–M9 questions were sent to the maintainer before the first
+  commit.

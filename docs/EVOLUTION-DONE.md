@@ -257,7 +257,9 @@ implementation prompt `docs/prompt/PROMPT-WEBSITE-IMPLEMENTATION.md`.
   requirements, SmartScreen, download, donate, privacy) plus FAQ,
   About and Privacy pages.
 - Donation block opens Stripe or PayPal hosted Payment Links.
-- Cloudflare Web Analytics beacon (no cookies).
+- Cloudflare Web Analytics (no cookies) is wired in the base layout
+  but renders only when `cloudflareAnalyticsToken` is set; the token
+  is empty in v1, so no visits are counted yet.
 
 **Decisions resolved at implementation start** (`ANALYSIS-WEBSITE.md`
 §14): separate repository; no roadmap teaser; no dark mode in v1;
@@ -270,8 +272,10 @@ custom domain yet.
 - The former sketch stated "the site makes no network calls". v1
   fetches the latest release from the GitHub Releases API at page
   load (`assets/js/version.js`, PR #3) to fill the version badge and
-  download links, and loads the Cloudflare analytics beacon.
+  download links.
 - Screenshots ship as text placeholders; no images yet.
+- The static version fallback (`currentVersion`) still reads
+  `v1.2.0`; the app is at 2.4.1.
 
 **Known gaps.** The site's feature list and several factual claims
 no longer match the application. The corrections are listed in
