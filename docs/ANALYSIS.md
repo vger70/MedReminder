@@ -530,8 +530,13 @@ Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:
   today before the first catch-up moves the catch-up start past the
   earlier unmaterialized days, overstating stock. Addressed by PR #64.
 - **Cloud-folder snapshots cover the current profile only**; local raw
-  backups cover all profiles.
+  backups cover all profiles. Addressed by PR #65 (one snapshot per
+  profile; restore warns before applying another profile's archive).
 - **Export scope is the current profile**; the all-profiles export for
   administrators is deferred
   ([`ANALYSIS-C3-EXPORT-IMPORT.md`](analysis/ANALYSIS-C3-EXPORT-IMPORT.md)).
-- **Role and PIN are not enforced on disk** (§5.2).
+  Addressed by PR #66 (one single-profile archive per profile).
+- **Role and PIN are not enforced on disk** (§5.2). Accepted
+  limitation: within one Windows account no software-only mechanism
+  can enforce them. The user guides recommend separate Windows
+  accounts for real separation (PR #67).
