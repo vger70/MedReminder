@@ -30,11 +30,26 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #67 — Document that real profile separation needs separate Windows accounts
+
+Link: [vger70/MedReminder#67](https://github.com/vger70/MedReminder/pull/67)
+Branch: `claude/document-pin-role-limits`
+**Status:** open
+
+### Docs
+
+- User guides (5 languages): profiles inside one Windows account are
+  not a privacy boundary; separate Windows accounts are needed for real
+  separation, and the administrator's automatic backups include every
+  profile. PIN/role enforcement on disk stays an accepted limitation.
+
+---
+
 ## PR #66 — Let admin profiles export every profile in one step
 
 Link: [vger70/MedReminder#66](https://github.com/vger70/MedReminder/pull/66)
 Branch: `claude/export-all-profiles-admin`
-**Status:** open
+**Status:** merged (2026-09-25)
 
 ### Added
 

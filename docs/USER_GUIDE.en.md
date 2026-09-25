@@ -321,6 +321,14 @@ switches into the wrong profile, but it does **not** encrypt the
 data — anyone with access to this PC can still open the profile's
 files. Three wrong attempts close the prompt and the app.
 
+**Real separation needs separate Windows accounts.** Each Windows
+account has its own `%LOCALAPPDATA%\MedReminder\` folder, which other
+standard (non-administrator) Windows users cannot read. Profiles
+inside one Windows account are a convenience, not a privacy boundary:
+anyone using that account can read every profile's files, and the
+automatic backups configured by the administrator include every
+profile, PIN-protected ones too.
+
 If you forget a PIN, remove it manually from
 `%LOCALAPPDATA%\MedReminder\profiles.json` (delete the `PinHash`,
 `PinSalt` and set `PinIterations` to `0` for the affected entry).

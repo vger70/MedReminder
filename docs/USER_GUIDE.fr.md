@@ -352,6 +352,15 @@ données — quiconque a accès à ce PC peut toujours ouvrir les
 fichiers du profil. Trois tentatives incorrectes ferment la
 demande et l'application.
 
+**Une vraie séparation exige des comptes Windows distincts.** Chaque
+compte Windows a son propre dossier `%LOCALAPPDATA%\MedReminder\`, que
+les autres utilisateurs Windows standard (non administrateurs) ne
+peuvent pas lire. Les profils d'un même compte Windows sont une
+commodité, pas une barrière de confidentialité : quiconque utilise ce
+compte peut lire les fichiers de tous les profils, et les sauvegardes
+automatiques configurées par l'administrateur incluent tous les
+profils, y compris ceux protégés par un PIN.
+
 Si tu oublies un PIN, supprime-le à la main dans
 `%LOCALAPPDATA%\MedReminder\profiles.json` (efface `PinHash` et
 `PinSalt` et mets `PinIterations` à `0` pour l'entrée concernée).
