@@ -389,6 +389,19 @@ technical concern.
   wrong passphrase, corrupt archive, unsupported version — each
   surfaces its own localized message.
 
+### 4.7 Delivery behind `IArchiveStorage` (C.3++ Phase 1)
+
+The inline `File.Move` of §4.1 and the folder enumeration of §4.5
+are now behind the `IArchiveStorage` port
+(`ANALYSIS-C3PP-CLOUD-PROVIDERS` §7). The host still exports to a
+temp `.mrz`, then calls `IArchiveStorage.UploadAsync`;
+`PruneCloudFolderAsync` goes through `ListAsync` + `DeleteAsync`.
+The only implementation, `LocalFolderArchiveStorage`, keeps the
+temp-then-move discipline of §4.1, reads `CloudFolderDirectory`
+on every call, and signals a missing folder with
+`DirectoryNotFoundException`, which the host logs and skips as
+§4.3 / §4.6 require. User-visible behaviour is unchanged.
+
 ---
 
 ## 5. UI

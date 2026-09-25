@@ -30,6 +30,46 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #56 — C.3++ Phase 1: IArchiveStorage + LocalFolderArchiveStorage
+
+Link: [vger70/MedReminder#56](https://github.com/vger70/MedReminder/pull/56)
+Branch: `feature/archive-storage-abstraction`
+**Status:** in progress
+
+Internal refactor with no user-visible change. It puts delivery of the
+C.3+ cloud-folder snapshots behind a storage port, so native cloud
+backends (Phase 2, `docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md` §14)
+can be added without touching the export service, the `.mrz` format or
+the backup host.
+
+### Added
+
+- **`IArchiveStorage` port and `ArchiveInfo` record** in
+  `src/MedReminder.Application/Abstractions/`.
+- **`LocalFolderArchiveStorage`**
+  (`src/MedReminder.Infrastructure/Backup/`), the only implementation in
+  this phase. It keeps the C.3+ temp-then-move discipline and reads the
+  cloud folder from settings on every call.
+- **Contract test base** `ArchiveStorageContractTests` and
+  `LocalFolderArchiveStorageContractTests`
+  (`tests/MedReminder.Infrastructure.Tests/Backup/`).
+
+### Changed
+
+- **`AutomaticBackupHostedService`** uploads the cloud snapshot through
+  `IArchiveStorage` instead of calling `File.Move` itself.
+- **`IBackupService.PruneCloudFolderAsync`** takes the storage and
+  prunes through it. It keeps the same name pattern and the same
+  last-write-time age rule.
+
+### Docs
+
+- `ANALYSIS-C3PLUS-CLOUD-BACKUP.md` §4.7 records that delivery is now
+  behind `IArchiveStorage`. `ANALYSIS-C3PP-CLOUD-PROVIDERS.md` §7.3,
+  §7.5 and §10.1 record the implementation-time decisions.
+
+---
+
 ## PR #55 — C.3+ backup to a user-controlled cloud folder + explicit restore
 
 Link: [vger70/MedReminder#55](https://github.com/vger70/MedReminder/pull/55)

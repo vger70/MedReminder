@@ -665,6 +665,28 @@ discipline; `ANALYSIS-C3PLUS` §4.1). `DownloadAsync` opens a
 `FileStream`. `ListAsync` enumerates `*.mrz` in the folder.
 `DeleteAsync` calls `File.Delete`.
 
+Settled at implementation time (Phase 1):
+
+- **Folder read per call.** The folder comes from
+  `IOptionsMonitor<BackupSettings>.CurrentValue.CloudFolderDirectory`
+  on every call, not from a value captured at construction:
+  `backup.settings.json` reloads on change, and a captured value
+  would keep writing to the previous folder until restart.
+- **`CreatedAtUtc` = last-write time**, not creation time. C.3+
+  retention has always compared last-write time; copies
+  (cross-volume moves, sync agents materialising the file on
+  another device) reset the creation time but keep the
+  last-write time.
+- **Missing target.** `UploadAsync` throws
+  `DirectoryNotFoundException`; `ListAsync` returns an empty list.
+- **`DeleteAsync` on a missing archive is a no-op.** This matches
+  `File.Delete`, which never throws `FileNotFoundException`, and is
+  the natural contract for remote backends (a 404 on delete is
+  already the desired end state).
+- **Atomicity caveat.** The move is atomic only when `%TEMP%` and
+  the target folder share a volume; across volumes `File.Move`
+  copies then deletes. Unchanged from C.3+.
+
 ### 7.4 Future implementations
 
 When B.1 justifies native provider integration:
@@ -694,12 +716,20 @@ fallback when no provider is configured.
 instead calls:
 
 ```csharp
-using var archiveStream = await _exportService.ExportAsync(...);
+// ExportAsync writes the archive to tempPath (it returns a path,
+// not a stream); the storage disposes the stream it is handed.
+await _exportService.ExportAsync(
+    new ExportOptions { DestinationPath = tempPath, … }, passphrase, null, ct);
 await _archiveStorage.UploadAsync(
-    archiveStream,
-    $"medreminder-{profileId:N}-{timestamp:yyyyMMdd-HHmmss}.mrz",
+    File.OpenRead(tempPath),
+    $"medreminder-{currentProfile.Id}-{timestamp:yyyyMMdd-HHmmss}.mrz",
     ct);
+// finally: zero the passphrase, delete tempPath
 ```
+
+`currentProfile.Id` is a string (a `Guid` in `N` format, or the
+literal `default` from the V1→V2 migration), so the file name
+keeps the exact C.3+ shape that `PruneCloudFolderAsync` matches.
 
 `LocalFolderArchiveStorage.UploadAsync` implements the same
 atomic-move discipline as today. `OneDriveArchiveStorage.UploadAsync`
@@ -785,7 +815,16 @@ settings files and DPAPI-encrypted blobs.
 
 ## 10. Tests
 
-### 10.1 Abstraction layer — MedReminder.Application.Tests
+### 10.1 Abstraction layer — MedReminder.Infrastructure.Tests
+
+Placed in `MedReminder.Infrastructure.Tests/Backup/` rather than
+`MedReminder.Application.Tests`: every implementation is
+`internal` to Infrastructure (visible only to
+`MedReminder.Infrastructure.Tests`), and `Application.Tests`
+targets `net10.0`, so it cannot reference the `net10.0-windows`
+Infrastructure assembly. The contract base is
+`ArchiveStorageContractTests`; the first concrete suite is
+`LocalFolderArchiveStorageContractTests`.
 
 Tests that are relevant now (before any native provider ships):
 
@@ -1044,3 +1083,11 @@ premature dependency.
   changed relative to the original sketch; the document now
   provides the technical motivation and implementation detail
   required to proceed directly to code.
+- 2026-09-25 — Phase 1 implemented. §7.3 records the decisions
+  settled at implementation time (folder read per call,
+  `CreatedAtUtc` = last-write time, missing-target and
+  missing-archive semantics, cross-volume atomicity caveat). §7.5
+  snippet corrected: `ExportAsync` returns a path, not a stream,
+  and the file name uses `currentProfile.Id` (a string). §10.1
+  moved to `MedReminder.Infrastructure.Tests`, since the
+  implementations are internal to Infrastructure.

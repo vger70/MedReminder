@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using FluentAssertions;
 using MedReminder.Infrastructure.Backup;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
@@ -10,10 +11,12 @@ using Xunit;
 namespace MedReminder.Infrastructure.Tests.Backup;
 
 // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.3, §4.5):
-// PruneCloudFolderAsync must group by profileId, honour retentionDays,
-// and never touch the local raw-DB .db files — even when the user
-// configures the same folder for both targets. The .mrz regex and the
-// .db regex are asserted independent.
+// PruneCloudFolderAsync must honour retentionDays, leave archives that
+// do not follow the C.3+ naming alone, and never touch the local raw-DB
+// .db files — even when the user configures the same folder for both
+// targets. Since C.3++ it reaches the folder only through
+// IArchiveStorage (docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md §7.5).
+// The .mrz regex and the .db regex are asserted independent.
 [SupportedOSPlatform("windows")]
 public sealed class BackupServicePruneCloudTests : IDisposable
 {
@@ -43,7 +46,7 @@ public sealed class BackupServicePruneCloudTests : IDisposable
 
         var service = CreateService();
 
-        var deleted = await service.PruneCloudFolderAsync(_folder, retentionDays: 30, CancellationToken.None);
+        var deleted = await service.PruneCloudFolderAsync(CreateStorage(_folder), retentionDays: 30, CancellationToken.None);
 
         deleted.Should().Be(1);
         File.Exists(recentMrz).Should().BeTrue();
@@ -60,10 +63,21 @@ public sealed class BackupServicePruneCloudTests : IDisposable
             ageDays: 3650);
 
         var deleted = await CreateService()
-            .PruneCloudFolderAsync(_folder, retentionDays: 0, CancellationToken.None);
+            .PruneCloudFolderAsync(CreateStorage(_folder), retentionDays: 0, CancellationToken.None);
 
         deleted.Should().Be(0);
         File.Exists(oldMrz).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Missing_folder_prunes_nothing()
+    {
+        var deleted = await CreateService().PruneCloudFolderAsync(
+            CreateStorage(Path.Combine(_folder, "missing")),
+            retentionDays: 30,
+            CancellationToken.None);
+
+        deleted.Should().Be(0);
     }
 
     [Fact]
@@ -85,6 +99,9 @@ public sealed class BackupServicePruneCloudTests : IDisposable
         File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddDays(-ageDays));
         return path;
     }
+
+    private static LocalFolderArchiveStorage CreateStorage(string folder) =>
+        new(() => folder, Path.GetTempPath(), NullLogger<LocalFolderArchiveStorage>.Instance);
 
     // Minimal BackupService for the tests: PruneCloudFolderAsync does
     // not read the DbContext or the profile path, so we hand a
