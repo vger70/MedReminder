@@ -3,6 +3,7 @@ using System.Text.Json;
 using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Notifications;
 using MedReminder.Infrastructure;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Migration;
@@ -189,6 +190,7 @@ internal static class Program
         // First-run wizard: no profile exists yet (§12.3).
         if (profiles.Count == 0)
         {
+            ApplySystemLanguageOnFirstRun();
             using var wizard = new FirstRunWizardForm(registry, _bootstrapLoc);
             var result = wizard.ShowDialog();
             if (result != System.Windows.Forms.DialogResult.OK || wizard.CreatedProfile is null)
@@ -442,6 +444,35 @@ internal static class Program
         {
             // ignore
         }
+    }
+
+    // First run (empty registry, no user.settings.json): adopt the
+    // Windows UI language if it is supported (English otherwise) and
+    // persist it, so the wizard and the DI-built LocalizationService
+    // agree. Existing installs keep their current language because
+    // this only runs when no profile exists yet, and an existing
+    // user.settings.json is never overwritten.
+    private static void ApplySystemLanguageOnFirstRun()
+    {
+        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "user.settings.json");
+        if (File.Exists(path))
+        {
+            return;
+        }
+
+        var code = NotificationTexts.DetectSystemLanguageCode();
+        try
+        {
+            var payload = new { UI = new UserSettings { Language = code } };
+            File.WriteAllText(path, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Could not persist the first-run UI language.");
+        }
+
+        _bootstrapLoc = LocalizationService.CreateStandalone(code);
+        Log.Information("First run: UI language set to {Language} from the system culture.", code);
     }
 
     private static string? ReadUserLanguage()

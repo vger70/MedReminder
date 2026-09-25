@@ -28,8 +28,6 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         _loc = loc;
 
         Text = _loc.Get("Ui.FirstRunWizardForm.Title");
-        Width = 480;
-        Height = 380;
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -40,64 +38,81 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         // handles the flow; the Cancel button below exits the app.
         ControlBox = false;
         Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        // Layout panels + AutoSize instead of absolute coordinates:
+        // the form grows with the DPI scale and with the localized
+        // text length, so labels and buttons are never clipped.
+        AutoSize = true;
+        AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        Padding = new Padding(12);
+
+        var contentWidth = LogicalToDeviceUnits(440);
 
         var welcome = new Label
         {
             AutoSize = true,
-            Location = new System.Drawing.Point(16, 12),
-            MaximumSize = new System.Drawing.Size(440, 0),
+            MaximumSize = new System.Drawing.Size(contentWidth, 0),
             Font = new System.Drawing.Font("Segoe UI", 10.5F, System.Drawing.FontStyle.Bold),
             Text = _loc.Get("Ui.FirstRunWizardForm.Welcome"),
+            Margin = new Padding(3, 3, 3, 8),
         };
 
         var explanation = new Label
         {
             AutoSize = true,
-            Location = new System.Drawing.Point(16, 44),
-            MaximumSize = new System.Drawing.Size(440, 0),
+            MaximumSize = new System.Drawing.Size(contentWidth, 0),
             Text = _loc.Get("Ui.FirstRunWizardForm.Explanation"),
+            Margin = new Padding(3, 3, 3, 12),
         };
 
         var nameLabel = new Label
         {
             AutoSize = true,
-            Location = new System.Drawing.Point(16, 128),
             Text = _loc.Get("Ui.FirstRunWizardForm.Name"),
         };
         _nameBox = new TextBox
         {
-            Location = new System.Drawing.Point(16, 148),
-            Width = 440,
+            Width = contentWidth,
             MaxLength = 100,
+            Margin = new Padding(3, 3, 3, 12),
         };
 
         var pinLabel = new Label
         {
             AutoSize = true,
-            Location = new System.Drawing.Point(16, 184),
+            MaximumSize = new System.Drawing.Size(contentWidth, 0),
             Text = _loc.Get("Ui.FirstRunWizardForm.PinOptional"),
         };
+        var pinBoxWidth = (contentWidth - LogicalToDeviceUnits(6)) / 2;
         _pinBox = new TextBox
         {
-            Location = new System.Drawing.Point(16, 204),
-            Width = 210,
+            Width = pinBoxWidth,
             UseSystemPasswordChar = true,
             MaxLength = 32,
             PlaceholderText = _loc.Get("Ui.FirstRunWizardForm.PinPlaceholder"),
+            Margin = new Padding(0, 0, 3, 0),
         };
         _pinConfirmBox = new TextBox
         {
-            Location = new System.Drawing.Point(240, 204),
-            Width = 216,
+            Width = pinBoxWidth,
             UseSystemPasswordChar = true,
             MaxLength = 32,
             PlaceholderText = _loc.Get("Ui.FirstRunWizardForm.PinConfirmPlaceholder"),
+            Margin = new Padding(3, 0, 0, 0),
         };
+        var pinRow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Margin = new Padding(3, 3, 3, 8),
+        };
+        pinRow.Controls.Add(_pinBox);
+        pinRow.Controls.Add(_pinConfirmBox);
 
         _statusLabel = new Label
         {
             AutoSize = true,
-            Location = new System.Drawing.Point(16, 240),
+            MaximumSize = new System.Drawing.Size(contentWidth, 0),
             ForeColor = System.Drawing.Color.Firebrick,
             Text = string.Empty,
         };
@@ -105,33 +120,51 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         _createButton = new Button
         {
             Text = _loc.Get("Ui.FirstRunWizardForm.Create"),
-            Location = new System.Drawing.Point(280, 300),
-            Width = 100,
+            AutoSize = true,
+            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(110), LogicalToDeviceUnits(34)),
+            Padding = new Padding(8, 2, 8, 2),
         };
         var exitButton = new Button
         {
             Text = _loc.Get("Common.Exit"),
             DialogResult = DialogResult.Cancel,
-            Location = new System.Drawing.Point(388, 300),
-            Width = 68,
+            AutoSize = true,
+            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(110), LogicalToDeviceUnits(34)),
+            Padding = new Padding(8, 2, 8, 2),
         };
         _createButton.Click += (_, _) => TryCreate();
         AcceptButton = _createButton;
         CancelButton = exitButton;
 
+        // RightToLeft: the first control added sits on the far right,
+        // so Exit is added first to keep the [Create] [Exit] order.
+        var buttonRow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Anchor = AnchorStyles.Right,
+            Margin = new Padding(3, 12, 3, 3),
+        };
+        buttonRow.Controls.Add(exitButton);
+        buttonRow.Controls.Add(_createButton);
+
         var tooltip = new ToolTip { ShowAlways = true };
         tooltip.SetToolTip(_pinBox, _loc.Get("Ui.FirstRunWizardForm.Tooltip.PinRecommended"));
 
-        Controls.Add(welcome);
-        Controls.Add(explanation);
-        Controls.Add(nameLabel);
-        Controls.Add(_nameBox);
-        Controls.Add(pinLabel);
-        Controls.Add(_pinBox);
-        Controls.Add(_pinConfirmBox);
-        Controls.Add(_statusLabel);
-        Controls.Add(_createButton);
-        Controls.Add(exitButton);
+        var layout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+        };
+        foreach (var control in new Control[]
+                 { welcome, explanation, nameLabel, _nameBox, pinLabel, pinRow, _statusLabel, buttonRow })
+        {
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.Controls.Add(control);
+        }
+        Controls.Add(layout);
 
         Shown += (_, _) => _nameBox.Focus();
     }
