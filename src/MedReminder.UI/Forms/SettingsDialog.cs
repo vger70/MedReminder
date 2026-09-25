@@ -1000,17 +1000,17 @@ internal sealed class SettingsDialog : MedReminderFormBase
             ForeColor = System.Drawing.Color.DarkGray,
         };
 
-        // AutoScroll intentionally left off: the SettingsDialog is
-        // now sized so the Backup tab fits without any scrollbar,
-        // and enabling AutoScroll here would restore both vertical
-        // and horizontal scrollbars for edge cases we already
-        // handle via the MaximumSize wraps above.
+        // AutoScroll on: the admin view (Cloud Backup section, action
+        // buttons, localized notes) can be taller than the tab, in
+        // particular at DPI scales above 100%. Without a scrollbar
+        // the lower controls were cut off and unreachable.
         var container = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
             WrapContents = false,
+            AutoScroll = true,
         };
         container.Controls.Add(_dbPathLabel);
         container.Controls.Add(table);

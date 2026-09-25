@@ -31,29 +31,35 @@ internal sealed class PinPromptForm : MedReminderFormBase
         _loc = loc;
 
         Text = _loc.Get("Ui.PinPromptForm.Title", profile.DisplayName);
-        Width = 420;
-        Height = 240;
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
         Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        // Layout panels + AutoSize instead of absolute coordinates:
+        // the friction note wraps on two or three lines in some
+        // languages, and a fixed-height form cut the buttons off.
+        AutoSize = true;
+        AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        Padding = new Padding(12);
+
+        var contentWidth = LogicalToDeviceUnits(380);
 
         var prompt = new Label
         {
             AutoSize = true,
             Text = _loc.Get("Ui.PinPromptForm.Prompt", profile.DisplayName),
-            MaximumSize = new System.Drawing.Size(380, 0),
-            Location = new System.Drawing.Point(16, 12),
+            MaximumSize = new System.Drawing.Size(contentWidth, 0),
+            Margin = new Padding(3, 3, 3, 8),
         };
 
         _pinBox = new TextBox
         {
             UseSystemPasswordChar = true,
-            Width = 240,
-            Location = new System.Drawing.Point(16, 60),
+            Width = LogicalToDeviceUnits(240),
             MaxLength = 32,
+            Margin = new Padding(3, 3, 3, 8),
         };
 
         // "Friction, not security" note is always visible in the
@@ -62,17 +68,17 @@ internal sealed class PinPromptForm : MedReminderFormBase
         var frictionNote = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(380, 0),
+            MaximumSize = new System.Drawing.Size(contentWidth, 0),
             ForeColor = System.Drawing.Color.DarkGray,
-            Location = new System.Drawing.Point(16, 92),
             Text = _loc.Get("Ui.PinPromptForm.FrictionNote"),
+            Margin = new Padding(3, 3, 3, 8),
         };
 
         _statusLabel = new Label
         {
             AutoSize = true,
+            MaximumSize = new System.Drawing.Size(contentWidth, 0),
             ForeColor = System.Drawing.Color.Firebrick,
-            Location = new System.Drawing.Point(16, 130),
             Text = string.Empty,
         };
 
@@ -80,29 +86,51 @@ internal sealed class PinPromptForm : MedReminderFormBase
         {
             Text = _loc.Get("Common.Ok"),
             DialogResult = DialogResult.None,
-            Location = new System.Drawing.Point(216, 168),
-            Width = 80,
+            AutoSize = true,
+            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(96), LogicalToDeviceUnits(34)),
+            Padding = new Padding(8, 2, 8, 2),
         };
         _cancelButton = new Button
         {
             Text = _loc.Get("Common.Cancel"),
             DialogResult = DialogResult.Cancel,
-            Location = new System.Drawing.Point(304, 168),
-            Width = 80,
+            AutoSize = true,
+            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(96), LogicalToDeviceUnits(34)),
+            Padding = new Padding(8, 2, 8, 2),
         };
         _okButton.Click += (_, _) => Verify();
         AcceptButton = _okButton;
         CancelButton = _cancelButton;
 
+        // RightToLeft: the first control added sits on the far right,
+        // so Cancel is added first to keep the [OK] [Cancel] order.
+        var buttonRow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Anchor = AnchorStyles.Right,
+            Margin = new Padding(3, 12, 3, 3),
+        };
+        buttonRow.Controls.Add(_cancelButton);
+        buttonRow.Controls.Add(_okButton);
+
         var tooltip = new ToolTip { ShowAlways = true };
         tooltip.SetToolTip(_pinBox, _loc.Get("Ui.PinPromptForm.Tooltip.Friction"));
 
-        Controls.Add(prompt);
-        Controls.Add(_pinBox);
-        Controls.Add(frictionNote);
-        Controls.Add(_statusLabel);
-        Controls.Add(_okButton);
-        Controls.Add(_cancelButton);
+        var layout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+        };
+        foreach (var control in new Control[]
+                 { prompt, _pinBox, frictionNote, _statusLabel, buttonRow })
+        {
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.Controls.Add(control);
+        }
+        Controls.Add(layout);
 
         Shown += (_, _) => _pinBox.Focus();
     }
