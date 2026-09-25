@@ -33,6 +33,7 @@ namespace MedReminder.Infrastructure.Tests.Export;
 public sealed class ExportServiceTests : IDisposable
 {
     private readonly string _profileId;
+    private readonly string _otherProfileId = Guid.NewGuid().ToString("N");
     private readonly FakeCurrentProfile _profile;
     private readonly string _sharedDirectory;
     private readonly IArchiveCipher _cipher = new ArchiveCipher();
@@ -279,6 +280,104 @@ public sealed class ExportServiceTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task Export_of_another_profile_carries_that_profiles_data_and_id()
+    {
+        await SeedAsync();
+        await SeedAsync(OtherProfileDatabasePath, medicineName: "Warfarin");
+        var archivePath = NewArchivePath();
+        var export = CreateExportService(new FakeCredentialStore(), profileRegistry: TwoProfileRegistry());
+        try
+        {
+            await export.ExportAsync(
+                new ExportOptions { DestinationPath = archivePath, ProfileId = _otherProfileId },
+                Passphrase.ToCharArray(), null, CancellationToken.None);
+
+            var manifest = ReadManifest(archivePath);
+            manifest.Scope.Should().Be("profile");
+            manifest.ProfileId.Should().Be(_otherProfileId);
+
+            var payload = JsonSerializer.Deserialize<ExportPayload>(
+                DecryptPayload(archivePath, manifest), ExportJson.Options)!;
+            payload.Profile.Id.Should().Be(_otherProfileId);
+            payload.Profile.DisplayName.Should().Be("Other");
+            payload.Medicines.Should().ContainSingle().Which.Name.Should().Be("Warfarin");
+        }
+        finally
+        {
+            TryDeleteFile(archivePath);
+        }
+    }
+
+    [Fact]
+    public async Task Non_admin_cannot_export_another_profile()
+    {
+        await SeedAsync(OtherProfileDatabasePath, medicineName: "Warfarin");
+        var archivePath = NewArchivePath();
+        var export = CreateExportService(
+            new FakeCredentialStore(),
+            new FakeCurrentProfile(_profileId, isAdmin: false),
+            TwoProfileRegistry());
+
+        var act = () => export.ExportAsync(
+            new ExportOptions { DestinationPath = archivePath, ProfileId = _otherProfileId },
+            Passphrase.ToCharArray(), null, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ExportValidationException>();
+        ex.Which.Reason.Should().Be(ExportValidationReason.ScopeNotPermitted);
+        File.Exists(archivePath).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Automatic_backup_may_export_another_profile_from_a_non_admin_profile()
+    {
+        await SeedAsync(OtherProfileDatabasePath, medicineName: "Warfarin");
+        var archivePath = NewArchivePath();
+        var export = CreateExportService(
+            new FakeCredentialStore(),
+            new FakeCurrentProfile(_profileId, isAdmin: false),
+            TwoProfileRegistry());
+        try
+        {
+            await export.ExportAsync(
+                new ExportOptions
+                {
+                    DestinationPath = archivePath,
+                    ProfileId = _otherProfileId,
+                    AutomaticSource = true,
+                },
+                Passphrase.ToCharArray(), null, CancellationToken.None);
+
+            var manifest = ReadManifest(archivePath);
+            manifest.ProfileId.Should().Be(_otherProfileId);
+            manifest.Device!.ProfileId.Should().Be(_otherProfileId);
+        }
+        finally
+        {
+            TryDeleteFile(archivePath);
+        }
+    }
+
+    [Fact]
+    public async Task Export_of_an_unknown_profile_is_rejected()
+    {
+        await SeedAsync();
+        var archivePath = NewArchivePath();
+        var export = CreateExportService(new FakeCredentialStore(), profileRegistry: TwoProfileRegistry());
+
+        var act = () => export.ExportAsync(
+            new ExportOptions
+            {
+                DestinationPath = archivePath,
+                ProfileId = Guid.NewGuid().ToString("N"),
+            },
+            Passphrase.ToCharArray(), null, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<ExportValidationException>();
+        ex.Which.Reason.Should().Be(ExportValidationReason.ProfileNotFound);
+        File.Exists(archivePath).Should().BeFalse();
+    }
+
     // -------- helpers --------
 
     private static string NewArchivePath()
@@ -286,34 +385,46 @@ public sealed class ExportServiceTests : IDisposable
             Path.GetTempPath(),
             "mr-export-" + Guid.NewGuid().ToString("N") + ExportFormat.ArchiveExtension);
 
-    private ExportService CreateExportService(ISmtpCredentialStore credentialStore)
+    private ExportService CreateExportService(
+        ISmtpCredentialStore credentialStore,
+        ICurrentProfile? currentProfile = null,
+        IProfileRegistry? profileRegistry = null)
     {
         var backupContext = CreateProfileContext();
         var backupService = new BackupService(
             backupContext, TimeProvider.System, new DatabasePathProvider(_profile.DatabasePath));
         return new ExportService(
-            _profile, backupService, _cipher, credentialStore, TimeProvider.System,
-            NullLogger<ExportService>.Instance, _sharedDirectory);
+            currentProfile ?? _profile, backupService, _cipher, credentialStore, TimeProvider.System,
+            NullLogger<ExportService>.Instance, _sharedDirectory, profileRegistry);
     }
 
-    private MedReminderDbContext CreateProfileContext()
+    private IProfileRegistry TwoProfileRegistry() => new FakeProfileRegistry(
+        new Profile(_profileId, "Test Profile", ProfileRole.Admin,
+            DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, HasPin: false),
+        new Profile(_otherProfileId, "Other", ProfileRole.User,
+            DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, HasPin: true));
+
+    private string OtherProfileDatabasePath => Path.Combine(
+        AppDataPaths.GetProfileDataDirectory(_otherProfileId), AppDataPaths.DatabaseFileName);
+
+    private MedReminderDbContext CreateProfileContext(string? databasePath = null)
     {
         var options = new DbContextOptionsBuilder<MedReminderDbContext>()
-            .UseSqlite(AppDataPaths.BuildSqliteConnectionString(_profile.DatabasePath))
+            .UseSqlite(AppDataPaths.BuildSqliteConnectionString(databasePath ?? _profile.DatabasePath))
             .Options;
         return new MedReminderDbContext(options);
     }
 
-    private async Task SeedAsync()
+    private async Task SeedAsync(string? databasePath = null, string medicineName = "Metformin")
     {
-        await using var db = CreateProfileContext();
+        await using var db = CreateProfileContext(databasePath);
         await db.Database.EnsureCreatedAsync();
 
         var medicineId = Guid.NewGuid();
         db.Medicines.Add(new Medicine
         {
             Id = medicineId,
-            Name = "Metformin",
+            Name = medicineName,
             ActiveIngredient = "metformin hydrochloride",
             Unit = "tablets",
             DosePerAdministration = 1.5m,
@@ -471,6 +582,11 @@ public sealed class ExportServiceTests : IDisposable
             Directory.Delete(AppDataPaths.GetProfileDataDirectory(_profileId), recursive: true);
         }
         catch { /* best effort */ }
+        try
+        {
+            Directory.Delete(AppDataPaths.GetProfileDataDirectory(_otherProfileId), recursive: true);
+        }
+        catch { /* best effort */ }
         try { Directory.Delete(_sharedDirectory, recursive: true); } catch { /* best effort */ }
     }
 
@@ -489,10 +605,25 @@ public sealed class ExportServiceTests : IDisposable
         public void Clear() => Password = null;
     }
 
+    private sealed class FakeProfileRegistry(params Profile[] profiles) : IProfileRegistry
+    {
+        public IReadOnlyList<Profile> ListProfiles() => profiles;
+        public Profile? GetById(string id) => profiles.SingleOrDefault(p => p.Id == id);
+        public string? ActiveProfileIdHint => null;
+        public Profile Create(string displayName, ProfileRole role) => throw new NotSupportedException();
+        public void Rename(string id, string newDisplayName) => throw new NotSupportedException();
+        public void Delete(string id, bool deleteData) => throw new NotSupportedException();
+        public void SetActiveProfileHint(string id) => throw new NotSupportedException();
+        public void SetPin(string id, string? pin) => throw new NotSupportedException();
+        public bool VerifyPin(string id, string pin) => throw new NotSupportedException();
+        public bool HasPin(string id) => false;
+    }
+
     private sealed class FakeCurrentProfile : ICurrentProfile
     {
-        public FakeCurrentProfile(string id)
+        public FakeCurrentProfile(string id, bool isAdmin = true)
         {
+            IsAdmin = isAdmin;
             Id = id;
             DataDirectory = AppDataPaths.GetProfileDataDirectory(id);
             DatabasePath = Path.Combine(DataDirectory, AppDataPaths.DatabaseFileName);
@@ -501,8 +632,8 @@ public sealed class ExportServiceTests : IDisposable
 
         public string Id { get; }
         public string DisplayName => "Test Profile";
-        public ProfileRole Role => ProfileRole.Admin;
-        public bool IsAdmin => true;
+        public ProfileRole Role => IsAdmin ? ProfileRole.Admin : ProfileRole.User;
+        public bool IsAdmin { get; }
         public string DataDirectory { get; }
         public string DatabasePath { get; }
         public string NotificationSettingsPath { get; }

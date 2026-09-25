@@ -285,6 +285,15 @@ On scheduled tick:
 
 Design points:
 
+- **Every profile (2026-09-25).** The cloud target now exports one
+  `.mrz` per registered profile, like the raw-DB target, through
+  `ExportOptions.ProfileId`. All archives use the admin's
+  DPAPI-cached backup passphrase, so whoever knows it can read every
+  profile, PIN-protected ones included; the user guides say so. A
+  failure on one profile is recorded (`cloud <profileId>: …`) and does
+  not stop the others. Restore still overwrites the active profile:
+  the dialog preselects the active profile's newest snapshot and
+  asks for confirmation when another profile's archive is chosen.
 - **Two targets run independently.** A failure on the raw-DB
   target must not skip the cloud target and vice versa. Wrap
   each call in its own `try/catch`, log warnings, continue.
@@ -712,3 +721,6 @@ touches source (`CLAUDE.md` §8).
   targets (raw DB local + `.mrz` cloud folder) coexisting inside
   the existing daily-tick host (§4.1). No new `IHostedService`;
   no new transport (§4.2, §1.3).
+- 2026-09-25 — the cloud target covers every profile instead of the
+  active one only (§4.1); restore warns before applying another
+  profile's snapshot.

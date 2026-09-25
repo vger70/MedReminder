@@ -555,6 +555,9 @@ en lieu sûr.
   actuel — il n'y a pas de mode fusion. Une copie de sécurité de la
   base de données actuelle est conservée sous le nom
   `medreminder.db.bak-<horodatage>`.
+- Si le fichier a été exporté depuis un autre profil, MedReminder
+  demande une confirmation : l'importer remplace les données du profil
+  actif par celles de l'autre profil.
 - Clique sur **Importer**, puis **redémarre** MedReminder quand c'est
   demandé, afin que les données importées soient chargées proprement.
 
@@ -609,6 +612,12 @@ restaure sur l'autre que lorsque tu changes.
 est chiffré avec une clé dérivée de ta phrase de passe de
 sauvegarde ; le service cloud ne voit jamais tes données en clair.
 
+Un instantané est écrit pour **chaque profil** présent sur
+l'ordinateur, comme pour la sauvegarde locale, et tous sont chiffrés
+avec la même phrase de passe de sauvegarde. Quiconque connaît la
+phrase de passe peut donc lire les données de tous les profils, y
+compris ceux protégés par un PIN.
+
 ### Configuration sur le second appareil
 
 - Installe MedReminder.
@@ -627,11 +636,17 @@ sauvegarde ; le service cloud ne voit jamais tes données en clair.
 - Indique dans la fenêtre le dossier de synchronisation local (celui
   dans lequel écrit le premier appareil).
 - Choisis l'instantané le plus récent dans la liste. Chaque ligne
-  affiche la date, l'identifiant du profil et un court « hash de
-  l'appareil » pour distinguer les instantanés provenant de machines
-  différentes. Le hash de l'appareil est une empreinte SHA-256 du nom
-  d'hôte de la machine d'origine — assez pour regrouper les
-  instantanés par provenance, pas assez pour identifier la machine.
+  affiche la date, le nom du profil (ou son identifiant, si le profil
+  n'existe pas sur cet ordinateur) et un court « hash de l'appareil »
+  pour distinguer les instantanés provenant de machines différentes.
+  Le hash de l'appareil est une empreinte SHA-256 du nom d'hôte de la
+  machine d'origine — assez pour regrouper les instantanés par
+  provenance, pas assez pour identifier la machine.
+- L'instantané le plus récent du profil actif est présélectionné. La
+  restauration écrase toujours le profil **actif** : pour restaurer un
+  autre profil, bascule d'abord sur celui-ci. Si tu choisis
+  l'instantané d'un autre profil, MedReminder demande une confirmation
+  avant de remplacer par celui-ci les données du profil actif.
 - Coche **« Je comprends que cela écrasera les données du profil
   courant. »** — la restauration se fait uniquement par écrasement.
 - Clique sur **Restaurer**. MedReminder déchiffre l'instantané,

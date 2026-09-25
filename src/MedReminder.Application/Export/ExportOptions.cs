@@ -10,6 +10,13 @@ public sealed record ExportOptions
     // from a SaveFileDialog.
     public required string DestinationPath { get; init; }
 
+    // Profile to export. Null (default) means the active profile.
+    // Another profile may be exported only by an admin profile or by
+    // the automatic cloud-folder backup (AutomaticSource), which covers
+    // every profile like the local raw-DB backup does. Each archive
+    // still holds exactly one profile (scope "profile").
+    public string? ProfileId { get; init; }
+
     // Export scope (§3.5). The first cut ships "profile" only; the
     // admin-only "all-profiles" variant is deferred (§12 item 3).
     public ExportScope Scope { get; init; } = ExportScope.Profile;

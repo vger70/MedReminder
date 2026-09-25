@@ -657,5 +657,7 @@
   "Ui.ImportDialog.Error.NotConfirmed": "Cochez la case de confirmation pour continuer.",
   "Ui.Import.Error.WrongPassphrase": "La phrase secrète ne correspond pas à ce fichier.",
   "Ui.Import.Error.Corrupt": "Le fichier d'export est endommagé et ne peut pas être importé.",
-  "Ui.Import.Error.UnsupportedVersion": "Cet export a été produit par une version plus récente de MedReminder. Mettez l'application à jour et réessayez."
+  "Ui.Import.Error.UnsupportedVersion": "Cet export a été produit par une version plus récente de MedReminder. Mettez l'application à jour et réessayez.",
+  "Ui.Import.OtherProfile.Title": "Archive d'un autre profil",
+  "Ui.Import.OtherProfile.Body": "Cette archive appartient au profil « {0} ». L'importer remplace toutes les données du profil actif « {1} » par celles de « {0} ». Continuer ?"
 }

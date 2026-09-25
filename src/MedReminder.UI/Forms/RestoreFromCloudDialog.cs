@@ -19,6 +19,8 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
     private readonly ILocalizationService _loc;
     private readonly ICloudRestoreService _cloudRestore;
     private readonly ICloudBackupPassphraseStore _passStore;
+    private readonly ICurrentProfile _currentProfile;
+    private readonly IProfileRegistry _profileRegistry;
     private readonly string _defaultFolder;
 
     private readonly TextBox _folderBox;
@@ -42,11 +44,15 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         ILocalizationService loc,
         ICloudRestoreService cloudRestore,
         ICloudBackupPassphraseStore passStore,
+        ICurrentProfile currentProfile,
+        IProfileRegistry profileRegistry,
         string defaultFolder)
     {
         _loc = loc;
         _cloudRestore = cloudRestore;
         _passStore = passStore;
+        _currentProfile = currentProfile;
+        _profileRegistry = profileRegistry;
         _defaultFolder = defaultFolder ?? string.Empty;
 
         Text = _loc.Get("Ui.RestoreCloudDialog.Title");
@@ -285,7 +291,7 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
             var item = new ListViewItem(new[]
             {
                 s.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
-                s.ProfileId,
+                OtherProfileArchivePrompt.DisplayName(_profileRegistry, s.ProfileId),
                 s.DeviceHostHash.Length >= 12 ? s.DeviceHostHash[..12] : s.DeviceHostHash,
                 string.IsNullOrEmpty(s.Source) ? "user" : s.Source,
             })
@@ -295,9 +301,17 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
             _snapshotList.Items.Add(item);
         }
 
+        // Snapshots are newest first and now cover every profile:
+        // preselect the newest one of the active profile, so the default
+        // choice never overwrites this profile with another one's data.
         if (_snapshotList.Items.Count > 0)
         {
-            _snapshotList.Items[0].Selected = true;
+            var preselected = _snapshotList.Items.Cast<ListViewItem>()
+                .FirstOrDefault(i => i.Tag is CloudSnapshotInfo info
+                    && !OtherProfileArchivePrompt.IsOtherProfile(_currentProfile, info.ProfileId))
+                ?? _snapshotList.Items[0];
+            preselected.Selected = true;
+            preselected.EnsureVisible();
         }
         _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.Ready", _snapshots.Count);
     }
@@ -316,6 +330,12 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         if (!_confirmOverwriteBox.Checked)
         {
             _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Confirm.Overwrite.Required");
+            return;
+        }
+
+        if (!OtherProfileArchivePrompt.Confirm(
+                this, _loc, _currentProfile, _profileRegistry, selected.ProfileId))
+        {
             return;
         }
 

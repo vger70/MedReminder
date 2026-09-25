@@ -662,5 +662,7 @@
 
   "Ui.Import.Error.WrongPassphrase": "The passphrase does not match this file.",
   "Ui.Import.Error.Corrupt": "The export file is damaged and cannot be imported.",
-  "Ui.Import.Error.UnsupportedVersion": "This export was produced by a newer version of MedReminder. Update the app and try again."
+  "Ui.Import.Error.UnsupportedVersion": "This export was produced by a newer version of MedReminder. Update the app and try again.",
+  "Ui.Import.OtherProfile.Title": "Archive from another profile",
+  "Ui.Import.OtherProfile.Body": "This archive belongs to the profile \"{0}\". Importing it replaces all data of the active profile \"{1}\" with the data of \"{0}\". Continue?"
 }

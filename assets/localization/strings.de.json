@@ -657,5 +657,7 @@
   "Ui.ImportDialog.Error.NotConfirmed": "Aktivieren Sie das Bestätigungskästchen, um fortzufahren.",
   "Ui.Import.Error.WrongPassphrase": "Die Passphrase passt nicht zu dieser Datei.",
   "Ui.Import.Error.Corrupt": "Die Exportdatei ist beschädigt und kann nicht importiert werden.",
-  "Ui.Import.Error.UnsupportedVersion": "Dieser Export wurde mit einer neueren Version von MedReminder erstellt. Aktualisieren Sie die App und versuchen Sie es erneut."
+  "Ui.Import.Error.UnsupportedVersion": "Dieser Export wurde mit einer neueren Version von MedReminder erstellt. Aktualisieren Sie die App und versuchen Sie es erneut.",
+  "Ui.Import.OtherProfile.Title": "Archiv eines anderen Profils",
+  "Ui.Import.OtherProfile.Body": "Dieses Archiv gehört zum Profil „{0}“. Beim Import werden alle Daten des aktiven Profils „{1}“ durch die Daten von „{0}“ ersetzt. Möchten Sie fortfahren?"
 }

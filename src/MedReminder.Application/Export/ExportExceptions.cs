@@ -22,8 +22,12 @@ public enum ExportValidationReason
     PassphraseTooShort,
 
     // Scope requested that the current profile is not allowed to use
-    // (e.g. all-profiles from a non-admin profile).
+    // (e.g. all-profiles from a non-admin profile, or another profile's
+    // data from a non-admin profile).
     ScopeNotPermitted,
+
+    // ExportOptions.ProfileId does not match any registered profile.
+    ProfileNotFound,
 }
 
 // Raised by IImportService for every failure surface in §4.4. The UI
