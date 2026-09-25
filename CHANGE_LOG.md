@@ -30,6 +30,34 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #62 — Serialize consumption catch-up and monitor passes
+
+Link: [vger70/MedReminder#62](https://github.com/vger70/MedReminder/pull/62)
+Branch: `claude/serialize-consumption-catch-up`
+**Status:** open (draft)
+
+### Fixed
+
+- **Automatic consumption could be written twice.** The monitor tick
+  and "Check now" ran the consumption catch-up concurrently, each in
+  its own scope; overlapping runs wrote the same days twice and
+  understated stock. Overlapping monitor passes could also send the
+  same low-stock warning twice. Both passes now run under a
+  process-wide gate
+  (`src/MedReminder.Application/Monitoring/MonitoringGate.cs`).
+
+### Changed
+
+- Corrected the `ConsumptionCatchUp` comment that cited a database
+  unique constraint that does not exist.
+
+### Added
+
+- Regression test for concurrent catch-ups
+  (`tests/MedReminder.Application.Tests/Monitoring/ConsumptionCatchUpTests.cs`).
+
+---
+
 ## PR #59 — Fix clipped first-run/PIN dialogs, Backup tab scroll, system language on first run
 
 Link: [vger70/MedReminder#59](https://github.com/vger70/MedReminder/pull/59)
