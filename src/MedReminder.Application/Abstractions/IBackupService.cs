@@ -45,4 +45,15 @@ public interface IBackupService
         string profileId,
         string sourceFilePath,
         CancellationToken cancellationToken);
+
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.3, §4.5):
+    // retention pruning for the encrypted .mrz cloud-folder snapshots.
+    // Uses a distinct regex from PruneOldBackupsAsync so the two
+    // targets never cross-prune when the user configures the same
+    // folder for both. Groups by profileId: the most recent .mrz of
+    // profile A does not shield old .mrz files of profile B.
+    Task<int> PruneCloudFolderAsync(
+        string directory,
+        int retentionDays,
+        CancellationToken cancellationToken);
 }

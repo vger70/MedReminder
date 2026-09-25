@@ -200,6 +200,13 @@ public sealed class ExportedBackupSettings
     public string Directory { get; set; } = string.Empty;
     public string PreferredTime { get; set; } = "03:00";
     public int RetentionDays { get; set; } = 30;
+
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.1) —
+    // additive fields; older archives that omit them deserialize to
+    // the defaults.
+    public bool CloudFolderEnabled { get; set; }
+    public string CloudFolderDirectory { get; set; } = string.Empty;
+    public int CloudFolderRetention { get; set; } = 30;
 }
 
 public sealed class ExportedSmtpSettings

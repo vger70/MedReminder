@@ -30,6 +30,12 @@ public sealed record ExportOptions
     // Include user.settings.json — UI language + reference-catalogue
     // country (§3.4). Opt-in.
     public bool IncludeUserSettings { get; init; }
+
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.6, §4.1):
+    // marks the manifest as coming from the automatic scheduled cloud
+    // target instead of a user-triggered C.3 export. Defaults to false
+    // so a regular UI export never annotates itself as automatic.
+    public bool AutomaticSource { get; init; }
 }
 
 // Export scope discriminator (§3.5). Serialized as the lowercase

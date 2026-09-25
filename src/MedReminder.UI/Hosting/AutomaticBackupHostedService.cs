@@ -1,5 +1,6 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Export;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -88,10 +89,22 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         try
         {
             var settings = _settings.CurrentValue;
-            if (!settings.Enabled) return;
-            if (string.IsNullOrWhiteSpace(settings.Directory))
+            var localEnabled = settings.Enabled && !string.IsNullOrWhiteSpace(settings.Directory);
+            var cloudEnabled = settings.CloudFolderEnabled
+                && !string.IsNullOrWhiteSpace(settings.CloudFolderDirectory);
+
+            if (!localEnabled && !cloudEnabled)
             {
-                _log.LogWarning("Backup enabled but no folder configured; skip.");
+                if (settings.Enabled && string.IsNullOrWhiteSpace(settings.Directory))
+                {
+                    _log.LogWarning("Backup enabled but no folder configured; skip.");
+                }
+                if (settings.CloudFolderEnabled
+                    && string.IsNullOrWhiteSpace(settings.CloudFolderDirectory))
+                {
+                    _log.LogWarning(
+                        "Cloud-folder backup enabled but no folder configured; skip.");
+                }
                 return;
             }
 
@@ -117,8 +130,8 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             }
 
             _log.LogInformation(
-                "Starting automatic daily backup into {Directory}.",
-                settings.Directory);
+                "Starting automatic daily backup (local={LocalEnabled}, cloud={CloudEnabled}).",
+                localEnabled, cloudEnabled);
 
             await using var scope = _services.CreateAsyncScope();
             var backup = scope.ServiceProvider.GetRequiredService<IBackupService>();
@@ -132,26 +145,50 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 return;
             }
 
-            // Back up every profile. A failure on one profile is
-            // logged but does not stop the others: the daily backup
-            // is best-effort per profile. The overall tick is
-            // considered successful when at least one profile was
-            // exported; that way an unrecoverable failure on one
-            // profile does not silently mask days without any
-            // backup at all.
             var exportedFiles = new List<string>();
             var perProfileErrors = new List<string>();
-            foreach (var profile in profiles)
+
+            // Local raw-DB target: unchanged behaviour, per-profile
+            // isolation, best-effort.
+            if (localEnabled)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                foreach (var profile in profiles)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    try
+                    {
+                        var file = await backup.ExportProfileAsync(
+                            profile.Id, settings.Directory, cancellationToken);
+                        exportedFiles.Add(file);
+                        _log.LogInformation(
+                            "Automatic backup exported profile {Profile} to {File}.",
+                            profile.Id, file);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        var message = $"{profile.Id}: {ex.Message}";
+                        perProfileErrors.Add(message);
+                        _log.LogError(ex,
+                            "Automatic backup failed for profile {Profile}.", profile.Id);
+                    }
+                }
+            }
+
+            // C.3+ cloud target: independent try/catch per profile so a
+            // failure on the cloud path does not skip the local one and
+            // vice versa (§4.1). The current profile is the only one
+            // exported to the cloud folder — the export service reads
+            // from ICurrentProfile via the running scope; multi-profile
+            // cloud snapshots are out of scope for this cut.
+            if (cloudEnabled)
+            {
                 try
                 {
-                    var file = await backup.ExportProfileAsync(
-                        profile.Id, settings.Directory, cancellationToken);
-                    exportedFiles.Add(file);
-                    _log.LogInformation(
-                        "Automatic backup exported profile {Profile} to {File}.",
-                        profile.Id, file);
+                    await RunCloudTargetAsync(scope.ServiceProvider, settings, cancellationToken);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -159,15 +196,13 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    var message = $"{profile.Id}: {ex.Message}";
-                    perProfileErrors.Add(message);
-                    _log.LogError(ex,
-                        "Automatic backup failed for profile {Profile}.", profile.Id);
+                    perProfileErrors.Add($"cloud: {ex.Message}");
+                    _log.LogError(ex, "Automatic cloud-folder backup failed.");
                 }
             }
 
             var pruned = 0;
-            if (settings.RetentionDays > 0)
+            if (localEnabled && settings.RetentionDays > 0)
             {
                 try
                 {
@@ -177,6 +212,21 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 catch (Exception ex)
                 {
                     _log.LogWarning(ex, "Backup retention prune failed.");
+                }
+            }
+
+            if (cloudEnabled && settings.CloudFolderRetention > 0)
+            {
+                try
+                {
+                    await backup.PruneCloudFolderAsync(
+                        settings.CloudFolderDirectory,
+                        settings.CloudFolderRetention,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Cloud-folder retention prune failed.");
                 }
             }
 
@@ -225,6 +275,96 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             {
                 // If even the state store is broken, the log is the
                 // only source of truth for this cycle.
+            }
+        }
+    }
+
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §4.1):
+    // export the current profile to a fresh .mrz in a temp folder, then
+    // atomically move it into the user's cloud folder so a sync agent
+    // never picks up a torn write. Uses the DPAPI-cached backup
+    // passphrase; a missing passphrase logs a warning and skips (§4.6),
+    // it is not a failure of the whole tick.
+    private async Task RunCloudTargetAsync(
+        IServiceProvider scopedServices,
+        BackupSettings settings,
+        CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(settings.CloudFolderDirectory))
+        {
+            _log.LogWarning(
+                "Cloud-folder backup skipped: folder {Directory} does not exist.",
+                settings.CloudFolderDirectory);
+            return;
+        }
+
+        var passStore = scopedServices.GetService<ICloudBackupPassphraseStore>();
+        if (passStore is null || !passStore.HasPassphrase)
+        {
+            _log.LogWarning(
+                "Cloud-folder backup skipped: no backup passphrase configured on this machine.");
+            return;
+        }
+
+        var passphrase = passStore.GetPassphrase();
+        if (passphrase is null)
+        {
+            _log.LogWarning(
+                "Cloud-folder backup skipped: the stored backup passphrase could not be read.");
+            return;
+        }
+
+        var exportService = scopedServices.GetRequiredService<IExportService>();
+        var currentProfile = scopedServices.GetRequiredService<ICurrentProfile>();
+
+        var scratchDirectory = Path.Combine(
+            Path.GetTempPath(), "MedReminder-cloud-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratchDirectory);
+
+        var timestamp = _clock.GetUtcNow().ToString("yyyyMMdd-HHmmss");
+        var fileName = $"medreminder-{currentProfile.Id}-{timestamp}.mrz";
+        var tempPath = Path.Combine(scratchDirectory, fileName);
+        var finalPath = Path.Combine(settings.CloudFolderDirectory, fileName);
+
+        try
+        {
+            await exportService.ExportAsync(
+                new ExportOptions
+                {
+                    DestinationPath = tempPath,
+                    Scope = ExportScope.Profile,
+                    IncludeSmtpSettings = false,
+                    IncludeSmtpPassword = false,
+                    IncludeBackupSettings = false,
+                    IncludeUserSettings = false,
+                    AutomaticSource = true,
+                },
+                passphrase,
+                progress: null,
+                cancellationToken);
+
+            // Atomic move: sync agents watching the cloud folder see a
+            // complete file, never a torn one (§4.1).
+            File.Move(tempPath, finalPath, overwrite: false);
+            _log.LogInformation(
+                "Cloud-folder backup wrote {File}.", finalPath);
+        }
+        finally
+        {
+            Array.Clear(passphrase, 0, passphrase.Length);
+
+            try
+            {
+                if (File.Exists(tempPath)) File.Delete(tempPath);
+                if (Directory.Exists(scratchDirectory))
+                {
+                    Directory.Delete(scratchDirectory, recursive: true);
+                }
+            }
+            catch
+            {
+                // A leftover temp file in %TEMP% is harmless; do not
+                // fail the tick over it.
             }
         }
     }

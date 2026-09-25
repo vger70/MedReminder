@@ -36,6 +36,17 @@ internal sealed class BackupService : IBackupService
         @"^medreminder-(?<profileId>[0-9a-fA-F]{32}|default)-(?<timestamp>\d{8}-\d{6})\.db$",
         RegexOptions.Compiled);
 
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.3): sibling
+    // regex for the encrypted .mrz cloud snapshots. Distinct from
+    // BackupFileRegex so pruning of one target never touches the other,
+    // even when the user points both targets at the same folder.
+    private static readonly Regex CloudBackupFileRegex = new(
+        @"^medreminder-(?<profileId>[0-9a-fA-F]{32}|default)-(?<timestamp>\d{8}-\d{6})\.mrz$",
+        RegexOptions.Compiled);
+
+    internal static Regex CloudBackupFileRegexForTests => CloudBackupFileRegex;
+    internal static Regex BackupFileRegexForTests => BackupFileRegex;
+
     private readonly MedReminderDbContext _db;
     private readonly TimeProvider _clock;
     private readonly DatabasePathProvider _databasePathProvider;
@@ -121,6 +132,57 @@ internal sealed class BackupService : IBackupService
             cancellationToken.ThrowIfCancellationRequested();
             var name = Path.GetFileName(path);
             var match = BackupFileRegex.Match(name);
+            if (!match.Success) continue;
+            try
+            {
+                candidates.Add((path, match.Groups["profileId"].Value.ToLowerInvariant(),
+                    File.GetLastWriteTimeUtc(path)));
+            }
+            catch
+            {
+                // Locked / permission problem: skip.
+            }
+        }
+
+        var deleted = 0;
+        foreach (var candidate in candidates)
+        {
+            if (candidate.LastWriteUtc < cutoff)
+            {
+                try
+                {
+                    File.Delete(candidate.Path);
+                    deleted++;
+                }
+                catch
+                {
+                    // A locked file must not stop pruning the others.
+                }
+            }
+        }
+
+        return Task.FromResult(deleted);
+    }
+
+    public Task<int> PruneCloudFolderAsync(
+        string directory, int retentionDays, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        if (retentionDays <= 0) return Task.FromResult(0);
+        if (!Directory.Exists(directory)) return Task.FromResult(0);
+
+        var cutoff = _clock.GetUtcNow().UtcDateTime.AddDays(-retentionDays);
+
+        // Same per-profile grouping semantics as PruneOldBackupsAsync,
+        // but keyed on the C.3+ .mrz regex (§3.3). Files that do not
+        // match are left alone — a user's hand-copied archive with a
+        // different name must not be pruned.
+        var candidates = new List<(string Path, string ProfileId, DateTime LastWriteUtc)>();
+        foreach (var path in Directory.EnumerateFiles(directory, "medreminder-*.mrz"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var name = Path.GetFileName(path);
+            var match = CloudBackupFileRegex.Match(name);
             if (!match.Success) continue;
             try
             {

@@ -102,6 +102,12 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
 
+        // C.3+: DPAPI-cached backup passphrase for the unattended
+        // cloud-folder snapshot (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md
+        // §3.4, §3.5). Stateless, safe as a singleton — the file access
+        // itself is per-call.
+        services.TryAddSingleton<ICloudBackupPassphraseStore, DpapiCloudBackupPassphraseStore>();
+
         // ------- Encrypted export / import (C.3) -------
         // Argon2id + AES-GCM archive cipher (singleton, stateless) plus
         // the user-initiated export / import services. The import service
@@ -110,6 +116,10 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<IArchiveCipher, ArchiveCipher>();
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IImportService, ImportService>();
+
+        // C.3+: cloud-folder restore delegates to IImportService, so
+        // it lives in the same scope.
+        services.AddScoped<ICloudRestoreService, CloudRestoreService>();
 
         // IEmailNotificationService is the MailKit implementation
         // wrapped by the retry-with-back-off decorator (Increment 7

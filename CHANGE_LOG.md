@@ -30,6 +30,58 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR TBD — C.3+ backup to a user-controlled cloud folder + explicit restore
+
+Branch: `feature/cloud-folder-backup`
+**Status:** in progress
+
+Implements `docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md`. The automatic
+daily backup gains a second, independent target that writes encrypted
+`.mrz` snapshots (C.3's archive format) into a user-chosen local folder,
+which the user's OS-level sync agent (OneDrive, iCloud Drive, Dropbox,
+Google Drive Desktop, …) is free to upload. A new **Restore from cloud
+folder** dialog reads the most recent snapshot on a second device and
+applies it through the existing C.3 `IImportService`.
+
+The user model is single-writer / multiple-reader-on-demand: this is
+explicitly not real-time sync. The UI copy states it and the user guide
+restates it.
+
+### Added
+
+- **Cloud-folder target on the automatic backup.**
+  `BackupSettings.CloudFolderEnabled` / `CloudFolderDirectory` /
+  `CloudFolderRetention` (`src/MedReminder.Application/Abstractions/BackupSettings.cs`).
+  Independent from the existing raw-DB `Directory` — a user may run
+  either target, both, or neither.
+- **Backup passphrase, DPAPI-cached.** New
+  `ICloudBackupPassphraseStore` port with a DPAPI-`CurrentUser`
+  Infrastructure adapter backed by
+  `%LOCALAPPDATA%\MedReminder\cloud-backup.protected`. Distinct from the
+  user-typed C.3 export passphrase so a compromise of one does not
+  compromise the other.
+- **`ICloudRestoreService`.** Lists the `.mrz` archives in a folder,
+  reads each manifest without decrypting, and delegates the actual
+  restore to `IImportService`.
+- **Manifest additions.** Optional `source` (`"automatic"` for a
+  scheduled snapshot, absent for a user export) and hashed
+  `device.hostName` block (SHA-256 hex of the plain host name) —
+  additive, ignored by older readers.
+
+### Changed
+
+- **`AutomaticBackupHostedService`.** Same daily schedule, now runs
+  both targets with independent try/catch so a failure on one target
+  never skips the other. The cloud target uses temp-then-move to
+  publish an atomic `.mrz` into the user's folder; sync agents watching
+  the folder only see the finished file.
+- **`BackupService.PruneCloudFolderAsync`.** Separate regex for
+  `medreminder-<profileId>-YYYYMMDD-HHmmss.mrz`, distinct from the
+  `.db` regex, so the two retention windows never cross-prune when the
+  user points both targets at the same folder.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+
 ## PR #53 — Fix and expand user guides (6 corrections + A3/C3/stepped tapering)
 
 Link: [vger70/MedReminder#53](https://github.com/vger70/MedReminder/pull/53)
