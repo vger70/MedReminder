@@ -644,7 +644,8 @@ keeps running in background. To really exit: tray menu → **Exit**.
 ## Interface language
 
 **Settings → General**: pick the language from the dropdown
-(English or Italian) and click **Save language**. MedReminder
+(English, Italian, French, Spanish or
+German) and click **Save language**. MedReminder
 restarts automatically to apply the change.
 
 Notes:

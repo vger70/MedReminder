@@ -714,7 +714,7 @@ Pour quitter réellement : menu de la zone de notification →
 ## Langue de l'interface
 
 **Paramètres → Général** : choisis la langue dans la liste
-déroulante (français, anglais, italien ou espagnol) et clique sur
+déroulante (français, anglais, italien, espagnol ou allemand) et clique sur
 **Enregistrer la langue**. MedReminder redémarre automatiquement
 pour appliquer le changement.
 

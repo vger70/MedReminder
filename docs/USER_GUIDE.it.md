@@ -673,7 +673,8 @@ tray → **Esci**.
 ## Lingua interfaccia
 
 **Impostazioni → Generale**: scegli la lingua dal dropdown
-(Italiano o Inglese) e clicca **Salva lingua**. MedReminder si
+(italiano, inglese, francese, spagnolo o
+tedesco) e clicca **Salva lingua**. MedReminder si
 riavvia automaticamente per applicare la modifica.
 
 Note:
