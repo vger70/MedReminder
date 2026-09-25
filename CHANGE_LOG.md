@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #67 — Document that real profile separation needs separate Windows accounts
+
+Link: [vger70/MedReminder#67](https://github.com/vger70/MedReminder/pull/67)
+Branch: `claude/document-pin-role-limits`
+**Status:** open
+
+### Docs
+
+- User guides (5 languages): profiles inside one Windows account are
+  not a privacy boundary; separate Windows accounts are needed for real
+  separation, and the administrator's automatic backups include every
+  profile. PIN/role enforcement on disk stays an accepted limitation.
+
+---
+
 ## PR #59 — Fix clipped first-run/PIN dialogs, Backup tab scroll, system language on first run
 
 Link: [vger70/MedReminder#59](https://github.com/vger70/MedReminder/pull/59)
