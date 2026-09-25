@@ -75,11 +75,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <!-- Donation config TEMPLATE (A6). Placeholder public URLs only,
-         no secrets. Shipped to the output so the maintainer can copy
-         it to %LOCALAPPDATA%\MedReminder\donations.settings.json and
-         paste real Payment Links. The app does NOT read it from the
-         install directory; a missing file at the data-folder root
-         keeps the feature silently off. -->
+         no secrets, every Enabled flag false. Copied to the output but
+         NOT read at runtime: the app loads assets/donations.settings.json,
+         embedded in MedReminder.Infrastructure (JsonDonationOptionsProvider).
+         Kept as a reference shape and as the target of the
+         no-secrets test in JsonDonationOptionsProviderTests. -->
     <None Update="donations.settings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

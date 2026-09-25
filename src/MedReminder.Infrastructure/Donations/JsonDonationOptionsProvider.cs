@@ -5,15 +5,18 @@ using MedReminder.Infrastructure.Storage;
 
 namespace MedReminder.Infrastructure.Donations;
 
-// Reads the donation configuration from the shared, admin-managed
-// donations.settings.json at the %LOCALAPPDATA%\MedReminder\ root (A6,
-// docs/ANALYSIS-A6-DONATION-SUPPORT.md §3.2, §4.2). The file shape
-// mirrors the other shared settings — a single top-level "Donations"
-// object — and holds only public URLs, so it is plain JSON with no
-// DPAPI.
+// Reads the donation configuration from assets/donations.settings.json,
+// embedded in this assembly with the logical name
+// "donations.settings.json" (see MedReminder.Infrastructure.csproj).
+// Nothing is read from %LOCALAPPDATA%\MedReminder\ or from the install
+// directory, so changing the payment links requires a new build. The
+// original design (A6, docs/analysis/ANALYSIS-A6-DONATION-SUPPORT.md
+// §3.2, §4.2) read an admin-managed file from the data folder. The
+// file shape is a single top-level "Donations" object holding only
+// public URLs, so it is plain JSON with no DPAPI.
 //
-// Tolerant by design: a missing file, a missing "Donations" section,
-// an empty file or a corrupted file all bind to DonationOptions with
+// Tolerant by design: a missing resource, a missing "Donations"
+// section or corrupted JSON all bind to DonationOptions with
 // Enabled = false, which silently turns the whole feature off. Never
 // throws to the caller.
 public sealed class JsonDonationOptionsProvider
@@ -27,12 +30,13 @@ public sealed class JsonDonationOptionsProvider
         AllowTrailingCommas = true,
     };
 
-    // Loads from the standard shared location.
+    // Loads the embedded configuration.
     public static DonationOptions Load() =>
         Load(Path.Combine(AppDataPaths.GetAppDataDirectory(), SettingsFileName));
 
-    // Loads from an explicit path (used by tests). Any failure yields a
-    // disabled DonationOptions.
+    // The path argument is currently ignored: the configuration always
+    // comes from the embedded resource. Any failure yields a disabled
+    // DonationOptions.
     public static DonationOptions Load(string path)
     {
         try
