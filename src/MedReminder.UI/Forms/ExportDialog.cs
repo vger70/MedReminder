@@ -94,6 +94,7 @@ internal sealed class ExportDialog : MedReminderFormBase
             AutoSize = true,
             Text = _loc.Get("Ui.ExportDialog.Destination.Label"),
         };
+        _destinationBox = new TextBox { Width = 400, ReadOnly = true };
         _allProfilesBox.CheckedChanged += (_, _) =>
         {
             // The destination switches between a file and a folder.
@@ -103,7 +104,6 @@ internal sealed class ExportDialog : MedReminderFormBase
                 : "Ui.ExportDialog.Destination.Label");
             allProfilesHint.Visible = _allProfilesBox.Checked;
         };
-        _destinationBox = new TextBox { Width = 400, ReadOnly = true };
         var browseButton = new Button { Text = _loc.Get("Common.Browse"), AutoSize = true };
         browseButton.Click += (_, _) => BrowseDestination();
         var destinationRow = new FlowLayoutPanel
