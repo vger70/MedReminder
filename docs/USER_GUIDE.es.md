@@ -697,7 +697,7 @@ Para salir de verdad: menú del área de notificación → **Salir**.
 ## Idioma de la interfaz
 
 **Configuración → General**: elige el idioma del desplegable
-(español, inglés, italiano o francés) y haz clic en **Guardar
+(español, inglés, italiano, francés o alemán) y haz clic en **Guardar
 idioma**. MedReminder se reinicia automáticamente para aplicar el
 cambio.
 
