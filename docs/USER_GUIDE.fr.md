@@ -568,6 +568,95 @@ Le format de l'archive est documenté publiquement dans
 jamais enfermées — elles peuvent être déchiffrées avec des outils
 standards si nécessaire.
 
+## Sauvegarde vers un dossier cloud
+
+MedReminder peut aussi écrire la sauvegarde automatique quotidienne
+sous forme d'**instantané chiffré** dans un dossier local que ton
+système d'exploitation synchronise déjà (OneDrive, iCloud Drive,
+Dropbox, Google Drive Desktop, …). C'est le moyen peu coûteux de
+transférer tes données d'un « PC de la maison » vers un « PC du
+bureau » sans serveur, et cela garde une copie hors de la machine en
+cas de panne du disque.
+
+**Ce n'est pas une synchronisation en temps réel.** MedReminder écrit
+au plus un instantané par jour, et un seul ordinateur à la fois
+devrait écrire. Si tu modifies des médicaments sur deux appareils
+entre deux instantanés, les deux copies divergent — et la
+restauration suivante efface les données de la machine sur laquelle
+tu restaures. Décide à l'avance quel appareil est « actif » et ne
+restaure sur l'autre que lorsque tu changes.
+
+### Configuration sur le premier appareil
+
+**Paramètres → Sauvegarde → Sauvegarde vers un dossier synchronisé
+(chiffrée)** :
+
+- Coche la case.
+- Choisis un dossier à l'intérieur du dossier de synchronisation
+  local de ton service cloud (par exemple
+  `C:\Users\<nom>\OneDrive\MedReminder`). MedReminder ne communique
+  jamais lui-même avec OneDrive / iCloud / Dropbox — il écrit
+  seulement les fichiers à cet endroit, et l'agent de synchronisation
+  du système les envoie.
+- Indique le nombre d'instantanés à conserver (par défaut : 30).
+- Clique sur **Définir / changer…** à côté de Phrase de passe de
+  sauvegarde et choisis une phrase de passe (au moins 12 caractères).
+  Cette phrase de passe ne quitte jamais la machine.
+- Enregistre.
+
+À partir du passage quotidien suivant, MedReminder écrit
+`medreminder-<profileId>-<timestamp>.mrz` dans le dossier. Le fichier
+est chiffré avec une clé dérivée de ta phrase de passe de
+sauvegarde ; le service cloud ne voit jamais tes données en clair.
+
+### Configuration sur le second appareil
+
+- Installe MedReminder.
+- **Paramètres → Sauvegarde → Définir / changer…** et saisis la
+  **même** phrase de passe de sauvegarde que sur le premier appareil.
+  C'est la seule étape incontournable : sans la même phrase de passe,
+  la seconde machine ne peut pas déchiffrer ce que la première a
+  écrit.
+- L'instantané automatique quotidien reste désactivé sur le second
+  appareil — il n'est utile que sur une seule machine.
+
+### Restauration sur le second appareil
+
+**Paramètres → Sauvegarde → Restaurer depuis le dossier cloud…** :
+
+- Indique dans la fenêtre le dossier de synchronisation local (celui
+  dans lequel écrit le premier appareil).
+- Choisis l'instantané le plus récent dans la liste. Chaque ligne
+  affiche la date, l'identifiant du profil et un court « hash de
+  l'appareil » pour distinguer les instantanés provenant de machines
+  différentes. Le hash de l'appareil est une empreinte SHA-256 du nom
+  d'hôte de la machine d'origine — assez pour regrouper les
+  instantanés par provenance, pas assez pour identifier la machine.
+- Coche **« Je comprends que cela écrasera les données du profil
+  courant. »** — la restauration se fait uniquement par écrasement.
+- Clique sur **Restaurer**. MedReminder déchiffre l'instantané,
+  remplace la base de données du profil courant et te propose de
+  redémarrer.
+
+### Remarques
+
+- **Perdre la phrase de passe, c'est perdre les données.** Il n'y a
+  pas de réinitialisation. La phrase de passe est stockée localement,
+  chiffrée avec les identifiants de ton compte Windows ; elle ne
+  quitte jamais la machine et n'apparaît jamais dans le cloud.
+- L'instantané automatique quotidien n'inclut **pas** le mot de passe
+  SMTP ni tes préférences utilisateur — pour cela, utilise l'export
+  chiffré ponctuel décrit plus haut, avec les cases des paramètres
+  partagés.
+- La conservation de MedReminder supprime les anciens fichiers
+  uniquement du dossier visible. Ton service cloud conserve
+  probablement les fichiers supprimés dans sa propre corbeille
+  (OneDrive : 30 jours par défaut) — MedReminder ne peut pas la vider
+  à ta place, et n'essaie pas.
+- Ne place **pas** le fichier de base de données en cours
+  d'utilisation dans un dossier synchronisé. Seuls les instantanés
+  chiffrés `.mrz` y ont leur place.
+
 ## Vérifier maintenant
 
 Le moniteur s'exécute automatiquement toutes les 30 minutes

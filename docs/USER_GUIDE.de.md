@@ -581,6 +581,95 @@ Das Archivformat ist öffentlich dokumentiert in
 niemals eingesperrt und können bei Bedarf mit Standardwerkzeugen
 entschlüsselt werden.
 
+## Sicherung in einen Cloud-Ordner
+
+MedReminder kann die tägliche automatische Sicherung zusätzlich als
+**verschlüsselten Snapshot** in einen lokalen Ordner schreiben, den
+dein Betriebssystem bereits synchronisiert (OneDrive, iCloud Drive,
+Dropbox, Google Drive Desktop, …). So bringst du deine Daten ohne
+eigenen Server kostengünstig von einem „Heim-PC" auf einen
+„Arbeits-PC", und eine Kopie liegt außerhalb des Rechners, falls die
+Festplatte ausfällt.
+
+**Dies ist keine Echtzeit-Synchronisation.** MedReminder schreibt
+höchstens einen Snapshot pro Tag, und es sollte immer nur ein Rechner
+schreiben. Wenn du zwischen zwei Snapshots auf zwei Geräten
+Medikamente bearbeitest, laufen die beiden Kopien auseinander — und
+die nächste Wiederherstellung überschreibt die Daten des Rechners, auf
+dem du wiederherstellst. Lege vorab fest, welches Gerät das „aktive"
+ist, und stelle auf dem anderen nur wieder her, wenn du wechselst.
+
+### Einrichtung auf dem ersten Gerät
+
+**Einstellungen → Sicherung → Sicherung in synchronisierten Ordner
+(verschlüsselt)**:
+
+- Setze das Häkchen.
+- Wähle einen Ordner innerhalb des lokalen Synchronisationsordners
+  deines Cloud-Anbieters (zum Beispiel
+  `C:\Users\<Name>\OneDrive\MedReminder`). MedReminder kommuniziert
+  nie selbst mit OneDrive / iCloud / Dropbox — es schreibt nur die
+  Dateien dorthin, und der Synchronisationsdienst des Systems lädt
+  sie hoch.
+- Lege die Anzahl der zu behaltenden Snapshots fest (Standard: 30).
+- Klicke neben Backup-Passphrase auf **Festlegen / ändern…** und wähle
+  eine Passphrase (mindestens 12 Zeichen). Diese Passphrase verlässt
+  den Rechner nie.
+- Speichere.
+
+Ab dem nächsten täglichen Durchlauf schreibt MedReminder
+`medreminder-<profileId>-<timestamp>.mrz` in den Ordner. Die Datei ist
+mit einem aus deiner Backup-Passphrase abgeleiteten Schlüssel
+verschlüsselt; der Cloud-Anbieter sieht deine Daten nie im Klartext.
+
+### Einrichtung auf dem zweiten Gerät
+
+- Installiere MedReminder.
+- **Einstellungen → Sicherung → Festlegen / ändern…** und gib
+  **dieselbe** Backup-Passphrase ein wie auf dem ersten Gerät. Das ist
+  der einzige unverzichtbare Schritt: Ohne dieselbe Passphrase kann
+  der zweite Rechner nicht entschlüsseln, was der erste geschrieben
+  hat.
+- Der tägliche automatische Snapshot bleibt auf dem zweiten Gerät
+  ausgeschaltet — er wird nur auf einem Rechner gebraucht.
+
+### Wiederherstellung auf dem zweiten Gerät
+
+**Einstellungen → Sicherung → Aus Cloud-Ordner wiederherstellen…**:
+
+- Wähle im Dialog den lokalen Synchronisationsordner (denselben, in
+  den das erste Gerät schreibt).
+- Wähle den neuesten Snapshot aus der Liste. Jede Zeile zeigt das
+  Datum, die Profil-ID und einen kurzen „Geräte-Hash", damit du
+  Snapshots verschiedener Rechner unterscheiden kannst. Der
+  Geräte-Hash ist ein SHA-256-Fingerabdruck des Hostnamens des
+  Ursprungsrechners — genug, um Snapshots nach Herkunft zu gruppieren,
+  nicht genug, um den Rechner zu identifizieren.
+- Setze das Häkchen bei **„Ich verstehe, dass dies die Daten des
+  aktuellen Profils überschreibt."** — die Wiederherstellung
+  überschreibt immer.
+- Klicke auf **Wiederherstellen**. MedReminder entschlüsselt den
+  Snapshot, ersetzt die Datenbank des aktuellen Profils und fordert
+  dich zum Neustart auf.
+
+### Hinweise
+
+- **Passphrase verloren heißt Daten verloren.** Es gibt kein
+  Zurücksetzen. Die Passphrase wird lokal gespeichert, verschlüsselt
+  mit den Anmeldedaten deines Windows-Kontos; sie verlässt den Rechner
+  nie und erscheint nie in der Cloud.
+- Der tägliche automatische Snapshot enthält **nicht** das
+  SMTP-Passwort und nicht deine Benutzereinstellungen — dafür nutze
+  den oben beschriebenen einmaligen verschlüsselten Export mit den
+  Kästchen für gemeinsam genutzte Einstellungen.
+- Die Aufbewahrung von MedReminder löscht alte Dateien nur aus dem
+  sichtbaren Ordner. Dein Cloud-Anbieter behält gelöschte Dateien
+  wahrscheinlich in seinem eigenen Papierkorb (OneDrive: standardmäßig
+  30 Tage) — MedReminder kann diesen nicht für dich leeren und
+  versucht es auch nicht.
+- Lege die aktive Datenbankdatei **nicht** in einen synchronisierten
+  Ordner. Dorthin gehören nur die verschlüsselten `.mrz`-Snapshots.
+
 ## Jetzt prüfen
 
 Der Monitor läuft automatisch alle 30 Minuten (einstellbar in
