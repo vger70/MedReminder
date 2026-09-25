@@ -33,8 +33,8 @@ with the classification adapted to per-PR granularity: **Added**,
 ## PR #66 — Let admin profiles export every profile in one step
 
 Link: [vger70/MedReminder#66](https://github.com/vger70/MedReminder/pull/66)
-Branch: `claude/export-all-profiles-admin` (stacked on PR #65)
-**Status:** open (draft)
+Branch: `claude/export-all-profiles-admin`
+**Status:** open
 
 ### Added
 
@@ -55,7 +55,7 @@ Branch: `claude/export-all-profiles-admin` (stacked on PR #65)
 
 Link: [vger70/MedReminder#65](https://github.com/vger70/MedReminder/pull/65)
 Branch: `claude/export-every-profile`
-**Status:** open
+**Status:** merged (2026-09-25)
 
 ### Changed
 
