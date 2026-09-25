@@ -641,6 +641,12 @@
   "Ui.ExportDialog.Cancelled": "Export cancelled.",
   "Ui.ExportDialog.Success": "Exported to {0}. Store the passphrase safely — MedReminder has no way to recover it.",
   "Ui.ExportDialog.Error.NoDestination": "Choose a destination file first.",
+  "Ui.ExportDialog.AllProfiles": "Export every profile (one encrypted file per profile)",
+  "Ui.ExportDialog.AllProfiles.Hint": "Each profile is written to its own file in the chosen folder, all with this passphrase. To restore a profile, open it and import its file.",
+  "Ui.ExportDialog.DestinationFolder.Label": "Destination folder",
+  "Ui.ExportDialog.Error.NoDestinationFolder": "Choose a destination folder first.",
+  "Ui.ExportDialog.SuccessAll": "{0} profiles exported to {1}. Store the passphrase safely — MedReminder has no way to recover it.",
+  "Ui.ExportDialog.Error.ProfileFailed": "Export of profile \"{0}\" failed: {1} Files already written stay in the folder.",
   "Ui.ExportDialog.Error.PassphraseMismatch": "The two passphrases do not match.",
 
   "Ui.Export.Error.PassphraseTooShort": "The passphrase must be at least {0} characters.",
@@ -662,5 +668,7 @@
 
   "Ui.Import.Error.WrongPassphrase": "The passphrase does not match this file.",
   "Ui.Import.Error.Corrupt": "The export file is damaged and cannot be imported.",
-  "Ui.Import.Error.UnsupportedVersion": "This export was produced by a newer version of MedReminder. Update the app and try again."
+  "Ui.Import.Error.UnsupportedVersion": "This export was produced by a newer version of MedReminder. Update the app and try again.",
+  "Ui.Import.OtherProfile.Title": "Archive from another profile",
+  "Ui.Import.OtherProfile.Body": "This archive belongs to the profile \"{0}\". Importing it replaces all data of the active profile \"{1}\" with the data of \"{0}\". Continue?"
 }

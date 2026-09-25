@@ -1172,7 +1172,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
             ? _backupMonitor.CurrentValue.CloudFolderDirectory
             : _cloudDirectoryBox.Text;
         using var dialog = new RestoreFromCloudDialog(
-            _loc, _cloudRestore, _cloudPassStore, defaultFolder ?? string.Empty);
+            _loc, _cloudRestore, _cloudPassStore, _currentProfile, _profileRegistry,
+            defaultFolder ?? string.Empty);
         var result = dialog.ShowDialog(this);
         if (result == DialogResult.OK && dialog.RestartRequested)
         {
@@ -1443,7 +1444,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // SettingsDialog only opens it.
     private void ShowExportDialog()
     {
-        using var dialog = new ExportDialog(_loc, _exportService);
+        using var dialog = new ExportDialog(_loc, _exportService, _currentProfile, _profileRegistry);
         dialog.ShowDialog(this);
     }
 
@@ -1453,7 +1454,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // Core, so a restart into the same profile is the clean path.
     private void ShowImportDialog()
     {
-        using var dialog = new ImportDialog(_loc, _importService);
+        using var dialog = new ImportDialog(_loc, _importService, _currentProfile, _profileRegistry);
         var result = dialog.ShowDialog(this);
         if (result == DialogResult.OK && dialog.RestartRequested)
         {

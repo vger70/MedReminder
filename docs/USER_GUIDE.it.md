@@ -333,6 +333,15 @@ accidentali, ma **non** cifra i dati — chiunque abbia accesso a
 questo PC può comunque aprire i file del profilo. Tre tentativi
 errati chiudono la richiesta e l'app.
 
+**Una separazione reale richiede account Windows separati.** Ogni
+account Windows ha la propria cartella `%LOCALAPPDATA%\MedReminder\`,
+che gli altri utenti Windows standard (non amministratori) non possono
+leggere. I profili all'interno di uno stesso account Windows sono una
+comodità, non una barriera per la privacy: chiunque usi quell'account
+può leggere i file di tutti i profili, e i backup automatici
+configurati dall'amministratore includono tutti i profili, anche
+quelli protetti da PIN.
+
 Se dimentichi un PIN, rimuovilo a mano da
 `%LOCALAPPDATA%\MedReminder\profiles.json` (cancella `PinHash` e
 `PinSalt` e imposta `PinIterations` a `0` nella voce interessata).
@@ -508,6 +517,14 @@ spostare MedReminder su un nuovo computer.
   mai scritta in chiaro.
 - Clicca **Esporta**.
 
+**Amministratore: tutti i profili insieme.** Se esiste più di un
+profilo, un profilo amministratore vede anche **Esporta tutti i
+profili**. Scegli una cartella invece di un file: MedReminder scrive
+un file crittografato per profilo
+(`medreminder-export-<profileId>-<timestamp>.mrz`), tutti con la
+stessa passphrase. Per ripristinare un profilo, apri quel profilo e
+importa il suo file.
+
 **La passphrase non può essere recuperata.** Non esiste reset,
 backdoor né copia sul server. Se perdi la passphrase, il file non
 potrà mai più essere letto — conservala in un posto sicuro.
@@ -523,6 +540,9 @@ potrà mai più essere letto — conservala in un posto sicuro.
   profilo corrente — non esiste una modalità di fusione. Prima viene
   mantenuta una copia di sicurezza del database corrente come
   `medreminder.db.bak-<timestamp>`.
+- Se il file è stato esportato da un altro profilo, MedReminder chiede
+  conferma: importarlo sostituisce i dati del profilo attivo con
+  quelli dell'altro profilo.
 - Clicca **Importa**, poi **riavvia** MedReminder quando richiesto in
   modo che i dati importati vengano caricati in modo pulito.
 
@@ -574,6 +594,11 @@ Dal tick giornaliero successivo MedReminder scrive
 cifrato con una chiave derivata dalla tua passphrase di backup; il
 servizio cloud non vede mai i tuoi dati in chiaro.
 
+Viene scritto uno snapshot per **ogni profilo** presente sul computer,
+come per il backup locale, e tutti sono cifrati con la stessa
+passphrase di backup. Chi conosce la passphrase può quindi leggere i
+dati di tutti i profili, compresi quelli protetti da PIN.
+
 ### Configurazione sul secondo dispositivo
 
 - Installa MedReminder.
@@ -591,11 +616,17 @@ servizio cloud non vede mai i tuoi dati in chiaro.
 - Indica nella finestra la cartella di sincronizzazione locale (la
   stessa in cui scrive il primo dispositivo).
 - Scegli lo snapshot più recente dall'elenco. Ogni riga mostra la
-  data, l'id del profilo e un breve "hash del dispositivo" per
-  distinguere gli snapshot provenienti da computer diversi. L'hash
-  del dispositivo è un'impronta SHA-256 del nome host del computer di
-  origine — sufficiente a raggruppare gli snapshot per provenienza,
-  non a identificare il computer.
+  data, il nome del profilo (o il suo id, se il profilo non esiste su
+  questo computer) e un breve "hash del dispositivo" per distinguere
+  gli snapshot provenienti da computer diversi. L'hash del dispositivo
+  è un'impronta SHA-256 del nome host del computer di origine —
+  sufficiente a raggruppare gli snapshot per provenienza, non a
+  identificare il computer.
+- È preselezionato lo snapshot più recente del profilo attivo. Il
+  ripristino sovrascrive sempre il profilo **attivo**: per
+  ripristinare un altro profilo, passa prima a quel profilo. Se scegli
+  lo snapshot di un profilo diverso, MedReminder chiede conferma prima
+  di sostituire con esso i dati del profilo attivo.
 - Spunta **"Confermo che questa operazione sovrascriverà i dati del
   profilo corrente."** — il ripristino è solo in sovrascrittura.
 - Clicca **Ripristina**. MedReminder decifra lo snapshot, sostituisce

@@ -183,9 +183,23 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   movement; the new epoch restarts the warning cycle. Negative
   corrections do not change the epoch.
 - `ConsumptionCatchUp` materializes automatic consumption up to
-  **yesterday** inclusive, starting after the last recorded
-  consumption day, and skips days that already carry a
-  `MedicationIntake` of any status.
+  **yesterday** inclusive, starting after the last **automatic**
+  consumption day (or at `StartDate`), and skips every day that
+  already carries a `Consumption` movement or a `MedicationIntake` of
+  any status. A consumption day without an intake is automatic: only
+  the catch-up and `RegisterIntake` write `Consumption`, and
+  `RegisterIntake` always writes an intake alongside.
+- The first intake recorded for a day that already has automatic
+  consumption (a backdated intake) reverses it with a
+  `PositiveCorrection` before booking the intake; `StockEpoch` is not
+  incremented.
+- `ConsumptionCatchUp.RunAsync`, `MedicationMonitor.RunAsync` and
+  `RegisterIntake.ExecuteAsync` run under `MonitoringGate`, a
+  process-wide semaphore, because the hosted tick and the "Check now"
+  command start them from separate scopes. There is no database
+  unique constraint on consumption: several manual `Consumption`
+  rows per day are legitimate. One process per Windows session
+  (single-instance mutex) makes the in-process gate sufficient.
 - One low-stock notification per `(MedicineId, StockEpoch)` that
   succeeded on at least one channel; a failed attempt does not block a
   retry on the next tick.
@@ -282,7 +296,8 @@ ticks. A failing tick is logged and does not stop the service.
 
 The Application services (`MedicationMonitor`, `DoseReminderService`,
 `ConsumptionCatchUp`) have no scheduling code and are tested with a
-fake `TimeProvider`.
+fake `TimeProvider`. The monitor pass and the catch-up are serialized
+with the "Check now" command through `MonitoringGate` (§4.4).
 
 ---
 
@@ -357,24 +372,33 @@ replaces the database file after renaming the current one to
 ### 8.3 Encrypted export and cloud folder
 
 - **`.mrz` archive** (`ExportService` / `ImportService`): ZIP with
-  `manifest.json` and `payload.enc`. The payload (JSON of every
-  entity of the current profile, plus opt-in settings files and SMTP
+  `manifest.json` and `payload.enc`. Each archive holds one profile
+  (`scope: "profile"`): the active one, or `ExportOptions.ProfileId`
+  for an admin or for the automatic backup. The payload (JSON of every
+  entity of that profile, plus opt-in settings files and SMTP
   password) is encrypted with AES-GCM under a key derived by Argon2id
   from a passphrase of at least 12 characters, and hashed with
   SHA-256. Import is overwrite-only: it builds a new database in a
   temporary file, swaps it in with a `.bak-<timestamp>` safety copy,
-  and asks for a restart. The public format is specified in
-  [`EXPORT-FORMAT.md`](EXPORT-FORMAT.md).
+  and asks for a restart. Import always targets the **active**
+  profile; the Import and Restore dialogs ask for confirmation when
+  the archive comes from another profile. The public format is
+  specified in [`EXPORT-FORMAT.md`](EXPORT-FORMAT.md).
+- **Admin export of every profile**: the Export dialog of an admin
+  profile, when more than one profile exists, writes one
+  single-profile `.mrz` per profile into a chosen folder, all under
+  the same passphrase. The profile registry is never exported.
 - **Cloud folder**: when `Backup:CloudFolderEnabled` is set, the
-  automatic service also writes a `.mrz` snapshot of the current
+  automatic service also writes one `.mrz` snapshot per registered
   profile into `CloudFolderDirectory` (a folder synchronized by a
   third-party client), using the DPAPI-cached passphrase from
   `cloud-backup.protected`. Delivery goes through the `IArchiveStorage`
   port (`LocalFolderArchiveStorage`), so native cloud backends can be
   added without changing the export. A written snapshot counts as the
   day's backup; a missing folder or passphrase skips the run and
-  leaves the day open for retry. `ICloudRestoreService` lists and
-  restores snapshots from the folder.
+  leaves the day open for retry; a failure on one profile does not
+  stop the others. `ICloudRestoreService` lists and restores
+  snapshots; the dialog preselects the active profile's newest one.
 
 See [`analysis/ANALYSIS-C3-EXPORT-IMPORT.md`](analysis/ANALYSIS-C3-EXPORT-IMPORT.md),
 [`analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md`](analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md),
@@ -448,7 +472,11 @@ with the `--minimized` argument. Per-user, no elevation.
   dosage slots, the doctor name when set, and a generic prompt to
   renew the prescription. `Medicine.Notes` is never included.
 - The profile PIN and role are access conveniences, not a security
-  boundary against a user with file-system access (§5.2).
+  boundary against a user with file-system access (§5.2). The local
+  raw backups and the cloud snapshots include every profile; whoever
+  knows the cloud-backup passphrase can read every profile. Real
+  separation between people needs separate Windows accounts, as the
+  user guides state.
 - Serilog: `Information` level, daily files, 30 files retained, 10 MB
   per file.
 
@@ -512,31 +540,20 @@ Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:
 
 ---
 
-## 13. Known gaps
+## 13. Known limitations
 
-- **Concurrent catch-up can double automatic consumption.** The
-  monitor tick and the "Check now" command run `ConsumptionCatchUp`
-  and `MedicationMonitor` in separate scopes with no mutual
-  exclusion; overlapping runs can write the same consumption days
-  twice and send the same low-stock warning twice. The comment in
-  `ConsumptionCatchUp` cites a unique constraint that does not exist,
-  and one cannot be added as described because manual intakes write
-  several `Consumption` rows per day with the same `OccurredAt`.
-  Addressed by PR #62 (process-wide gate).
-- **Manual intakes and automatic consumption can disagree.** A
-  backdated intake for a day that already has the automatic
-  consumption adds to it (Taken) or leaves it in place
-  (Skipped/Cancelled), understating stock. An intake recorded for
-  today before the first catch-up moves the catch-up start past the
-  earlier unmaterialized days, overstating stock. Addressed by PR #64.
-- **Cloud-folder snapshots cover the current profile only**; local raw
-  backups cover all profiles. Addressed by PR #65 (one snapshot per
-  profile; restore warns before applying another profile's archive).
-- **Export scope is the current profile**; the all-profiles export for
-  administrators is deferred
+- **Role and PIN are not enforced on disk** (§5.2, §10). Accepted:
+  within one Windows account no software-only mechanism can enforce
+  them. Encrypting each profile with a PIN-derived key (SQLCipher)
+  was considered and not pursued: native dependency, data loss on a
+  forgotten PIN, rework of backup, export and restore.
+- **Import is overwrite-only and targets the active profile.** An
+  archive of another profile is applied to the active one after a
+  confirmation; restoring into a different profile requires switching
+  to it first. Merge mode is out of scope
   ([`ANALYSIS-C3-EXPORT-IMPORT.md`](analysis/ANALYSIS-C3-EXPORT-IMPORT.md)).
-  Addressed by PR #66 (one single-profile archive per profile).
-- **Role and PIN are not enforced on disk** (§5.2). Accepted
-  limitation: within one Windows account no software-only mechanism
-  can enforce them. The user guides recommend separate Windows
-  accounts for real separation (PR #67).
+- **Historical ledger anomalies are not repaired.** Days skipped or
+  double-counted by the catch-up behavior fixed in PR #64 before that
+  release stay as they are; only new days follow the corrected rules.
+- **`IStockMovementRepository.GetLastConsumptionDayAsync`** is no
+  longer used by production code (only by `RoundTripTests`).

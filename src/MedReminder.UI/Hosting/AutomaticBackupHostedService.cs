@@ -24,7 +24,8 @@ namespace MedReminder.UI.Hosting;
 //
 // Multi-profile (Increment 15c, docs/ANALYSIS-MULTI-USER.md §11.1):
 // each tick backs up EVERY profile in the registry, not only the
-// one the running process opened. Retention runs once at the end,
+// one the running process opened, on both the local raw-DB target
+// and the encrypted cloud-folder target. Retention runs once at the end,
 // on the shared folder, and applies per-profile (§11.1). A backup
 // error on one profile does not stop the others.
 internal sealed class AutomaticBackupHostedService : BackgroundService
@@ -182,34 +183,24 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 }
             }
 
-            // C.3+ cloud target: independent try/catch per profile so a
-            // failure on the cloud path does not skip the local one and
-            // vice versa (§4.1). The current profile is the only one
-            // exported to the cloud folder — the export service reads
-            // from ICurrentProfile via the running scope; multi-profile
-            // cloud snapshots are out of scope for this cut.
+            // C.3+ cloud target: every profile, with an independent
+            // try/catch per profile so a failure on the cloud path does
+            // not skip the local one and vice versa (§4.1).
             if (cloudEnabled)
             {
                 try
                 {
-                    var archiveId = await RunCloudTargetAsync(
-                        scope.ServiceProvider, archiveStorage, settings.CloudFolderDirectory, cancellationToken);
-                    if (archiveId is not null)
-                    {
-                        exportedFiles.Add(archiveId);
-                    }
+                    exportedFiles.AddRange(await RunCloudTargetAsync(
+                        scope.ServiceProvider,
+                        archiveStorage,
+                        settings.CloudFolderDirectory,
+                        profiles,
+                        perProfileErrors,
+                        cancellationToken));
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     throw;
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    // Folder removed while the export ran: skip this run,
-                    // not a failure of the tick (ANALYSIS-C3PLUS §4.3).
-                    _log.LogWarning(
-                        "Cloud-folder backup skipped: folder {Directory} does not exist.",
-                        settings.CloudFolderDirectory);
                 }
                 catch (Exception ex)
                 {
@@ -297,19 +288,25 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
     }
 
     // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §4.1):
-    // export the current profile to a fresh .mrz in a temp folder, then
-    // hand it to IArchiveStorage (C.3++,
+    // export every registered profile to a fresh .mrz in a temp folder,
+    // then hand each archive to IArchiveStorage (C.3++,
     // docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md §7.5), which owns
-    // delivery into the cloud folder. Uses the DPAPI-cached backup
-    // passphrase; a missing passphrase logs a warning and skips (§4.6),
-    // it is not a failure of the whole tick. Returns the stored archive
-    // id, or null when the run was skipped.
-    private async Task<string?> RunCloudTargetAsync(
+    // delivery into the cloud folder. All profiles are covered, like the
+    // local raw-DB target; every archive is encrypted with the admin's
+    // DPAPI-cached backup passphrase. A missing passphrase or folder
+    // logs a warning and skips (§4.6), it is not a failure of the tick.
+    // A failure on one profile is recorded in errors and does not stop
+    // the others. Returns the stored archive ids.
+    private async Task<IReadOnlyList<string>> RunCloudTargetAsync(
         IServiceProvider scopedServices,
         IArchiveStorage archiveStorage,
         string cloudFolderDirectory,
+        IReadOnlyList<Profile> profiles,
+        List<string> errors,
         CancellationToken cancellationToken)
     {
+        var archiveIds = new List<string>();
+
         // Cheap check before the Argon2id export: a missing folder keeps
         // the day open, so without it every 15-minute tick would pay for
         // an export that the upload then rejects. Specific to the local
@@ -320,7 +317,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             _log.LogWarning(
                 "Cloud-folder backup skipped: folder {Directory} does not exist.",
                 cloudFolderDirectory);
-            return null;
+            return archiveIds;
         }
 
         var passStore = scopedServices.GetService<ICloudBackupPassphraseStore>();
@@ -328,7 +325,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         {
             _log.LogWarning(
                 "Cloud-folder backup skipped: no backup passphrase configured on this machine.");
-            return null;
+            return archiveIds;
         }
 
         var passphrase = passStore.GetPassphrase();
@@ -336,18 +333,62 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         {
             _log.LogWarning(
                 "Cloud-folder backup skipped: the stored backup passphrase could not be read.");
-            return null;
+            return archiveIds;
         }
 
         var exportService = scopedServices.GetRequiredService<IExportService>();
-        var currentProfile = scopedServices.GetRequiredService<ICurrentProfile>();
+        try
+        {
+            foreach (var profile in profiles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    archiveIds.Add(await ExportProfileToCloudAsync(
+                        exportService, archiveStorage, profile.Id, passphrase, cancellationToken));
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // Folder removed while the export ran: skip the rest of
+                    // this run, not a failure of the tick (ANALYSIS-C3PLUS §4.3).
+                    _log.LogWarning(
+                        "Cloud-folder backup skipped: folder {Directory} does not exist.",
+                        cloudFolderDirectory);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"cloud {profile.Id}: {ex.Message}");
+                    _log.LogError(ex,
+                        "Automatic cloud-folder backup failed for profile {Profile}.", profile.Id);
+                }
+            }
+        }
+        finally
+        {
+            Array.Clear(passphrase, 0, passphrase.Length);
+        }
 
+        return archiveIds;
+    }
+
+    private async Task<string> ExportProfileToCloudAsync(
+        IExportService exportService,
+        IArchiveStorage archiveStorage,
+        string profileId,
+        char[] passphrase,
+        CancellationToken cancellationToken)
+    {
         var scratchDirectory = Path.Combine(
             Path.GetTempPath(), "MedReminder-cloud-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratchDirectory);
 
         var timestamp = _clock.GetUtcNow().ToString("yyyyMMdd-HHmmss");
-        var fileName = $"medreminder-{currentProfile.Id}-{timestamp}.mrz";
+        var fileName = $"medreminder-{profileId}-{timestamp}.mrz";
         var tempPath = Path.Combine(scratchDirectory, fileName);
 
         try
@@ -356,6 +397,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 new ExportOptions
                 {
                     DestinationPath = tempPath,
+                    ProfileId = profileId,
                     Scope = ExportScope.Profile,
                     IncludeSmtpSettings = false,
                     IncludeSmtpPassword = false,
@@ -372,13 +414,11 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             var archiveId = await archiveStorage.UploadAsync(
                 File.OpenRead(tempPath), fileName, cancellationToken);
             _log.LogInformation(
-                "Cloud-folder backup wrote {File}.", archiveId);
+                "Cloud-folder backup wrote {File} for profile {Profile}.", archiveId, profileId);
             return archiveId;
         }
         finally
         {
-            Array.Clear(passphrase, 0, passphrase.Length);
-
             try
             {
                 if (File.Exists(tempPath)) File.Delete(tempPath);
