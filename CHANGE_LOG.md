@@ -30,11 +30,32 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #61 — Rewrite ANALYSIS.md as the as-built architecture reference
+
+Link: [vger70/MedReminder#61](https://github.com/vger70/MedReminder/pull/61)
+Branch: `claude/review-analysis-md-43wfc3`
+**Status:** open
+
+### Docs
+
+- **`docs/ANALYSIS.md` now describes the current architecture.** It was
+  still the pre-implementation plan while being referenced as the
+  architecture document. The new version covers projects and layering,
+  dependencies, domain model, runtime data and profiles, configuration,
+  hosted services, boot flow, schema patching, backup and export,
+  notifications, security, the status of the original decisions, and
+  known limitations. It reflects PRs #62 to #67.
+- **Original plan preserved** unchanged at
+  `docs/analysis/ANALYSIS-MVP.md` with a historical banner, so code
+  comments citing `ANALYSIS §x.y` keep their numbering.
+
+---
+
 ## PR #67 — Document that real profile separation needs separate Windows accounts
 
 Link: [vger70/MedReminder#67](https://github.com/vger70/MedReminder/pull/67)
 Branch: `claude/document-pin-role-limits`
-**Status:** open
+**Status:** merged (2026-09-25)
 
 ### Docs
 

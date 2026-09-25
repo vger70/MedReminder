@@ -1,590 +1,559 @@
-# MedReminder — Technical Analysis and Architecture
+# MedReminder — Architecture
 
-Document produced during Phase 1 and Phase 2, as required by section 31
-of the specification. It contains no implementation code: its purpose is
-to lock down requirements, architectural choices and the incremental
-plan before implementation starts.
+This document describes the architecture of MedReminder **as built**
+(release line 2.4.x). It is the entry point for anyone changing the
+code: it states the layering rules, where each responsibility lives,
+how data is stored and how the background work is scheduled.
 
-Epistemic classification used: `[VERIFIED]` (established fact),
-`[INFERRED]` (deduction from verified facts), `[UNCERTAIN]` (fact I
-cannot confirm without tests or without user clarification).
+Feature-level design lives in the per-feature analyses under
+[`docs/analysis/`](analysis/) (§12). The original pre-implementation
+plan (Phase 1 and Phase 2, before Increment 0) is preserved unchanged
+in [`docs/analysis/ANALYSIS-MVP.md`](analysis/ANALYSIS-MVP.md). Code
+comments that cite `ANALYSIS §1.x` or `ANALYSIS §2.x` refer to the
+numbering of that file; §11 below summarizes which of its decisions
+still hold.
 
----
-
-## 1. Phase 1 — Analysis
-
-### 1.1 Ambiguous or incomplete requirements
-
-Only the points that affect the architecture or the data model are
-listed. For each one the proposed decision and the rationale are given.
-If any of these decisions is not acceptable, it must be corrected
-before Phase 3.
-
-1. **Definition of "daily consumption"**. The specification does not
-   state whether daily consumption is always computed from the schedule
-   (`dose × administrations`) or possibly estimated from the intake
-   history.
-   Decision: for the MVP, daily consumption is **derived from the
-   configured schedule**. Actual intakes (section 6 of the spec) stay
-   in the data model for a future empirical estimation, but they do
-   not influence the MVP calculation.
-
-2. **Daily administrations**. The specification says "number" (an
-   integer), not a list of times. Decision: an integer
-   `AdministrationsPerDay` in the MVP; a future
-   `AdministrationSchedule` with times is anticipated only as an
-   extension, not required now.
-
-3. **Warning threshold — single vs. multi-level**. Section 8 shows
-   examples 10/7/5/3, but does not clarify whether they are multiple
-   configurable levels for the same medicine or alternatives. MVP
-   decision: **a single integer threshold value (days)** per medicine.
-   The field can be extended later to an array of thresholds without
-   breaking the schema (new `MedicineThresholds` table, or JSON).
-
-4. **Notification-cycle reset**. The spec says "after a new refill the
-   cycle must be able to restart". What counts as a refill? Decision:
-   **every positive stock movement** of kind `NewPackage`, `ManualAdd`,
-   `PositiveCorrection` increments a `StockEpoch` counter on the
-   medicine. Notifications are keyed on the current epoch; a new epoch
-   automatically resets the cycle.
-
-5. **Temporary suspension**. The spec mentions it (section 5) but does
-   not define semantics. Decision: an entity `MedicationSuspension`
-   with `StartDate` and `EndDate?`. During suspended periods no
-   automatic consumption is generated; days remaining and estimated
-   run-out ETA are not computed while the medicine is suspended (or
-   they are computed skipping the suspended days, if the suspension
-   period is closed in the past).
-
-6. **Therapy end date**. If `EndDate` is set and falls before the
-   estimated run-out, does it still make sense to warn about "medicine
-   running out"? Decision: yes, the spec requires the reminder for the
-   prescription regardless of `EndDate`; but if
-   `EstimatedRunOutDate > EndDate` then the system **does not raise a
-   warning** (the residual is enough). Rule implemented in the domain,
-   tested.
-
-7. **Time zone and DST**. The application is a personal desktop app on
-   Windows 11. Decision: **local time via `TimeProvider`**. "Logical"
-   dates (therapy start, therapy end, suspensions, consumption day)
-   are `DateOnly`. "Event" timestamps (movements, notifications, log)
-   are `DateTimeOffset` with local offset, so they survive DST
-   transitions.
-
-8. **"Modern and clean" WinForms UI**. WinForms does not natively offer
-   the same look as WinUI/WPF. Decision: no third-party skin framework
-   in the MVP. Use Segoe UI Variable, `HighDpiMode.PerMonitorV2`,
-   double-buffered `DataGridView`, custom colors / renderers on
-   `ToolStrip`, owner-drawn where needed. If the user wants a full
-   Fluent look, a WinUI 3 port could be considered later — but the
-   spec has explicitly excluded that.
-
-9. **Windows notifications on an "unpackaged" app**. Interactive toasts
-   on Windows 11 require an AUMID and a Start Menu shortcut.
-   `[UNCERTAIN]` whether `CommunityToolkit.WinUI.Notifications` (or its
-   predecessor `Microsoft.Toolkit.Uwp.Notifications`) is immediately
-   compatible with `net10.0`: it will work, but the exact TFM string
-   and the COM activator will need to be verified at first
-   compilation. Plan B: `System.Windows.Forms.NotifyIcon.ShowBalloonTip`
-   (always works, less "modern" but no packaging constraints).
-   Decision: implementation behind `IWindowsNotificationService`, with
-   two adapters selectable via configuration. The first attempt will
-   be toast via `Microsoft.Toolkit.Uwp.Notifications`, with an
-   automatic fallback to `NotifyIcon` if initialization fails.
-
-10. **SMTP client**. `[VERIFIED]` `System.Net.Mail.SmtpClient` has been
-    marked as "obsoleted for new development" by Microsoft since .NET
-    6. Decision: dependency on **MailKit**
-    (`MailKit`/`MimeKit`, maintained, de facto standard). Wrapped
-    behind `IEmailNotificationService`, so the provider is
-    replaceable.
-
-11. **Email credential storage**. Decision: the SMTP password is
-    encrypted with **DPAPI**
-    (`System.Security.Cryptography.ProtectedData`, `CurrentUser`
-    scope) and saved as a base64 blob in the user's configuration
-    file. Alternative (Windows Credential Manager via `CredWrite`) is
-    formally more correct but requires P/Invoke or an extra NuGet;
-    DPAPI is sufficient for a single-user local application.
-
-12. **Auto-start with Windows**. Decision: registry key
-    `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (per-user,
-    does not require elevated privileges, reversible). No Windows
-    service in the MVP, consistent with section 11.
-
-13. **Data folder**. Decision: `%LOCALAPPDATA%\MedReminder\` for the
-    database, logs and settings. Reason: `LocalAppData` is appropriate
-    for local non-roaming data, does not require special permissions,
-    does not travel over the network like `AppData\Roaming`, and is
-    not inside the install directory (respects section 15).
-
-14. **Concurrency**. One process per user. Decision: no distributed
-    lock. At most a named mutex at startup to prevent multiple
-    instances, plus SQLite in WAL mode to survive abrupt shutdowns.
-
-### 1.2 Edge cases identified
-
-They must be tested in the domain (see section 5 of this document):
-
-- `dailyRate == 0` → no ETA, no automatic warning.
-- `currentStock < 0` (manual correction driving it below zero) → clamp
-  to 0, log warning, the app does not "recover" the debt.
-- Suspended medicine → no automatic consumption during the suspension;
-  the daily-consumption catch-up skips suspended days.
-- App not opened for N days → daily-consumption catch-up at the next
-  startup; missed notifications are generated only once (per epoch),
-  not N times.
-- Mid-therapy dose / frequency change → new entry in
-  `MedicationScheduleHistory` (versioned schedule), daily consumption
-  is recomputed forward from the change date.
-- Refill during the threshold period → new `StockEpoch`, the next
-  notification is allowed once the new epoch falls within the
-  threshold.
-- Leap year / DST change → covered by using `DateOnly` for day logic
-  and by injecting `TimeProvider` in tests.
-- Transient SMTP failure → retry with limited back-off (max 3
-  attempts, escalating 5s / 30s / 2m), then log a failed
-  `NotificationEvent`.
-- Read-only database or full disk → the application does not crash;
-  the UI shows an error banner, periodic checks continue but cannot
-  write.
-- Missing or plainly wrong SMTP configuration → the email sub-system
-  is marked "disabled"; Windows notifications keep working.
-
-### 1.3 Architectural decisions that need confirmation
-
-The decisions above are autonomous, motivated technical proposals.
-Explicit confirmation is requested only for the points that change
-the functional perimeter:
-
-- **Q1**: Single threshold per medicine in the MVP (§1.1 item 3),
-  multiple thresholds later. OK?
-- **Q2**: `EndDate` suppresses the notification when the ETA exceeds
-  it (§1.1 item 6). OK?
-- **Q3**: Windows toast via `Microsoft.Toolkit.Uwp.Notifications` with
-  fallback to `NotifyIcon` (§1.1 item 9). OK?
-- **Q4**: DPAPI (`CurrentUser`) for the SMTP password, not Credential
-  Manager (§1.1 item 11). OK?
-
-If no feedback is provided, the proposals above are followed.
+When a change alters anything described here (a project, a
+dependency, a table, a runtime file, a hosted service, a port), update
+this document in the same pull request.
 
 ---
 
-## 2. Phase 2 — Architecture
+## 1. Scope
 
-### 2.1 Solution structure
+- Windows desktop application (Windows 10 22H2 or Windows 11, x64),
+  single process per Windows user, WinForms UI.
+- Tracks medicine stock, estimates the run-out date from the therapy
+  schedule and warns the user (Windows notification and/or email)
+  before the medicine runs out. Optional reminder at each dose time.
+- Local data only: one SQLite database per profile under
+  `%LOCALAPPDATA%\MedReminder\`. No server component. The only
+  outbound network calls are SMTP (user-configured) and the passive
+  GitHub Releases update check (§9.5).
+- Not a medical device: the application reminds, it does not advise.
 
-```
-MedReminder.sln
-src/
-  MedReminder.Domain/            netstandard2.1 or net10.0
-  MedReminder.Application/       net10.0
-  MedReminder.Infrastructure/    net10.0-windows10.0.19041.0
-  MedReminder.UI/                net10.0-windows10.0.19041.0  (WinForms, exe output)
-tests/
-  MedReminder.Domain.Tests/      net10.0     xUnit
-  MedReminder.Application.Tests/ net10.0     xUnit
-  MedReminder.Infrastructure.Tests/ net10.0-windows10.0.19041.0 xUnit
-```
+---
 
-Rationale:
-- `Domain` on `netstandard2.1` (or pure `net10.0`) with no Windows
-  dependencies, 100% testable without the Windows SDK.
-- `Application` on `net10.0`, contains use cases, services,
-  infrastructure interfaces (ports). It does not reference EF Core,
-  MailKit or Toast.
-- `Infrastructure` on `net10.0-windows10.0.19041.0` so it can use
-  Windows APIs (registry, DPAPI, notifications, tray). Contains EF
-  Core, MailKit, file logger, DPAPI adapter, auto-start registration.
-- `UI` is the only exe. It references `Application` and
-  `Infrastructure`.
-- No "Shared" or "Common" project: not needed.
+## 2. Solution structure
 
-### 2.2 Proposed NuGet dependencies
+| Project | Target framework | Output | References |
+|---|---|---|---|
+| `MedReminder.Domain` | `net10.0` | library | — |
+| `MedReminder.Application` | `net10.0` | library | Domain |
+| `MedReminder.Infrastructure` | `net10.0-windows` (WinForms enabled) | library | Domain, Application |
+| `MedReminder.UI` | `net10.0-windows10.0.19041.0` | `WinExe` | Application, Infrastructure |
+| `MedReminder.DataImporter` | `net10.0` | console exe | — (standalone tool) |
 
-Deliberately minimal in number and motivation.
-
-| Package | Project | Reason |
+| Test project | Target framework | Under test |
 |---|---|---|
-| `Microsoft.Extensions.Hosting` | UI | Generic host: DI, config, logging, hosted services |
-| `Microsoft.Extensions.Configuration.Json` | UI | `appsettings.json` + user override |
-| `Microsoft.EntityFrameworkCore.Sqlite` | Infrastructure | Persistence + migrations |
-| `Microsoft.EntityFrameworkCore.Design` | Infrastructure (tool) | `dotnet ef migrations` |
-| `MailKit` | Infrastructure | Modern SMTP (replacement for `SmtpClient`) |
-| `Microsoft.Toolkit.Uwp.Notifications` | Infrastructure | Windows toast, unpackaged |
-| `Serilog.Extensions.Hosting` + `Serilog.Sinks.File` | Infrastructure | Structured rolling file log |
-| `xunit`, `xunit.runner.visualstudio`, `FluentAssertions` | Tests | Standard test framework |
+| `MedReminder.Domain.Tests` | `net10.0` | Domain |
+| `MedReminder.Application.Tests` | `net10.0` | Application (in-memory fakes) |
+| `MedReminder.Infrastructure.Tests` | `net10.0-windows` | Infrastructure (SQLite, DPAPI, registry — Windows only) |
+| `MedReminder.UI.Tests` | `net10.0-windows10.0.19041.0` | Hosted services, UI controls |
+| `MedReminder.DataImporter.Tests` | `net10.0` | AIFA CSV loader |
 
-No "skin" WinForms libraries, no AutoMapper, no MediatR. If a specific
-case justifies one, the rationale will be documented first.
+All test projects use xUnit and FluentAssertions.
 
-`[INFERRED]` The EF Core 10 stable tag is available and supports
-`net10.0` (EF Core releases align with the .NET major). If, at the
-first restore, it is not yet on the public feed, fall back to EF Core
-9 (compatible with `net10.0`) and flag it.
-
-### 2.3 Data model
-
-Names in English in code, consistent with section 16 of the spec.
-Names in Italian in the UI.
-
-**Medicine**
-- `Id: Guid`
-- `Name: string`  (required)
-- `ActiveIngredient: string?`
-- `Package: string?`
-- `Unit: string`  (unit code, e.g. "tablets", "ml", …)
-- `DosePerAdministration: decimal`  (units per single administration)
-- `AdministrationsPerDay: int`
-- `StartDate: DateOnly`
-- `EndDate: DateOnly?`
-- `ThresholdDays: int`
-- `DoctorName: string?`
-- `Notes: string?`
-- `IsActive: bool`
-- `StockEpoch: int`  (incremented on every positive movement)
-- `NotificationChannels: NotificationChannels`  (flags: Email, Windows)
-- `CreatedAt: DateTimeOffset`
-- `UpdatedAt: DateTimeOffset`
-
-**StockMovement**
-- `Id: Guid`
-- `MedicineId: Guid`
-- `OccurredAt: DateTimeOffset`
-- `Kind: StockMovementKind`  (`InitialLoad`, `NewPackage`, `ManualAdd`,
-  `Consumption`, `PositiveCorrection`, `NegativeCorrection`)
-- `QuantityDelta: decimal`  (sign consistent with `Kind`)
-- `StockEpoch: int`  (the epoch active at the time of the movement)
-- `Notes: string?`
-
-**MedicationSuspension**
-- `Id: Guid`
-- `MedicineId: Guid`
-- `StartDate: DateOnly`
-- `EndDate: DateOnly?`  (null = open suspension)
-- `Reason: string?`
-
-**MedicationScheduleHistory** (to handle mid-therapy dose / frequency
-changes without destroying the history)
-- `Id: Guid`
-- `MedicineId: Guid`
-- `EffectiveFrom: DateOnly`
-- `DosePerAdministration: decimal`
-- `AdministrationsPerDay: int`
-
-Note: `Medicine.Dose*` and `Medicine.AdministrationsPerDay` are the
-"current" state; `MedicationScheduleHistory` is the timeline. Daily
-consumption is computed from the history, not from the current state.
-
-**MedicationIntake** (planned but not used by the MVP; present so its
-future implementation is not blocked, section 6)
-- `Id: Guid`
-- `MedicineId: Guid`
-- `ScheduledAt: DateTimeOffset?`
-- `ActualAt: DateTimeOffset?`
-- `Quantity: decimal`
-- `Status: IntakeStatus`  (`Taken`, `Skipped`, `Cancelled`,
-  `ManualCorrection`)
-- `Notes: string?`
-
-**NotificationEvent**
-- `Id: Guid`
-- `MedicineId: Guid`
-- `StockEpoch: int`
-- `TriggeredAt: DateTimeOffset`
-- `Channel: NotificationChannels`
-- `DaysRemainingAtSend: int`
-- `Success: bool`
-- `ErrorMessage: string?`
-
-**ApplicationSetting** (key/value, for global settings)
-- `Key: string`  (PK)
-- `Value: string`
-
-SMTP settings and application preferences use `IOptions<T>` projected
-from this table (or from `appsettings.json` for non-sensitive values).
-
-### 2.4 Consistency rules
-
-- `CurrentStock(medicineId) = Σ StockMovement.QuantityDelta` for that
-  medicine. It is not persisted, it is a **function**. If it were
-  stored for performance, it would be a denormalized field with a
-  consistency test.
-- Current `StockEpoch` of the medicine = max epoch on the positive
-  movements. The field on `Medicine` is a cache; consistency test in
-  `NotificationCycleTests`.
-- Generating `StockMovement.Kind = Consumption` is the responsibility
-  of the `ConsumptionCatchUpService` (idempotent for
-  `(medicineId, date)` thanks to a unique constraint on
-  `(MedicineId, OccurredAt.Date, Kind)` for `Kind = Consumption`).
-- Suspension prevents consumption from being generated for days that
-  fall inside the suspended period.
-
-### 2.5 Main interfaces (ports)
-
-Declared in `MedReminder.Application` or `MedReminder.Domain`
-depending on the layer. Signatures only, no implementation — this is
-still Phase 2.
-
-- `IMedicineRepository` — CRUD on `Medicine` and its collections.
-- `IStockMovementRepository`
-- `INotificationEventRepository`
-- `IUnitOfWork` — transactions.
-- `IEmailNotificationService` — email sending; connection test.
-- `IWindowsNotificationService` — toast / tray.
-- `IAutoStartService` — register / remove the Run registry entry.
-- `ICredentialProtector` — DPAPI wrapping / unwrapping.
-- `IClock` ⇄ `TimeProvider` (use `TimeProvider` directly, standard on
-  .NET 8+; no custom wrapper).
-- `IMedicationMonitoringService` — periodic control cycle.
-- `IConsumptionCatchUpService` — daily-consumption materialization.
-- `IStockService` — application API to add / correct stock.
-- `IBackupService` — export / import the DB.
-- `IEmailComposer` — build the email payload from the medicine state
-  (separated from transport so it is testable).
-
-### 2.6 Scheduler / hosted service
-
-A single `IHostedService`: `MedicationMonitorHostedService`.
-
-- On `StartAsync`: consumption catch-up + first run of the check.
-- Periodic cycle configurable (default 30 minutes in
-  `appsettings.json`), implemented with `PeriodicTimer` +
-  `CancellationToken`.
-- On every run:
-  1. Reload active medicines.
-  2. Ask `IConsumptionCatchUpService` to materialize any consumption
-     days not yet recorded.
-  3. For each medicine compute `DaysRemaining` and check the warning
-     condition.
-  4. Query `NotificationEventRepository` with
-     `(MedicineId, StockEpoch)`: if no event exists yet for the
-     current epoch within the threshold, compose and send the
-     notification (channels configured for the medicine) and record a
-     `NotificationEvent`.
-  5. On email error, retry with back-off; a definitive failure is
-     recorded as a failed `NotificationEvent` (`Success = false`).
-- No critical section is needed: the service is single-threaded and no
-  other writer acts concurrently on the same DB.
-- On `StopAsync`: the `CancellationToken` breaks the cycle within a
-  couple of seconds. No pending write is abandoned (transactions are
-  per-operation).
-
-### 2.7 WinForms UI
-
-Form structure:
-
-- `MainForm`
-  - `DataGridView` for medicines (columns: Name, Remaining,
-    Consumption/day, Days, ETA, Status).
-  - Toolbar: "New", "Edit", "Add stock", "Register intake",
-    "Check now", "Settings".
-  - Row status colored: normal / warning (within threshold) /
-    depleted / suspended.
-- `MedicineEditDialog` — new / edit.
-- `StockAdjustmentDialog` — load, correction ±, manual consumption.
-- `SettingsDialog` — tabs: General, Notifications
-  (Email / Windows / Both / None), Email SMTP (host, port, TLS, user,
-  password), Backup, Auto-start.
-- `NotifyIcon` + menu (Open, Check now, Settings, Exit).
-- `LogViewerDialog` — tail of the current log file.
-
-The ViewModel is kept minimal. Each form receives from its
-constructors the application services it needs (DI via the root
-`IServiceProvider`). No full MVVM on WinForms: it would be
-over-engineering.
-
-### 2.8 Persistence and migrations
-
-- SQLite file `medreminder.db` in `%LOCALAPPDATA%\MedReminder\`.
-- EF Core code-first, migrations versioned in the repository under
-  `src/MedReminder.Infrastructure/Migrations/`.
-- `DbContext` calls `Database.Migrate()` at startup (idempotent).
-- WAL mode, `foreign_keys = ON`.
-- Backup: copy of the DB file after a `WAL checkpoint TRUNCATE`.
-  Import: overwrite of the DB file after confirmation and renaming of
-  the existing file to `medreminder.db.bak-yyyyMMddHHmmss`.
-
-### 2.9 Notifications
-
-- `IEmailNotificationService` (MailKit):
-  host / port / TLS / user / password / timeout / from / to;
-  `SendAsync(subject, body, CancellationToken)`;
-  `TestConnectionAsync()`.
-- `IEmailComposer`:
-  `Compose(medicine, remaining, daysRemaining, eta)` → `EmailMessage`.
-  Tested in isolation with a snapshot of the text.
-- `IWindowsNotificationService`: `NotifyAsync(title, body)` with toast
-  implementation + balloon fallback.
-- `NotificationChannels` is a `[Flags]` enum on `Medicine` that
-  decides which channels to use. The monitor deduplicates by
-  `(MedicineId, StockEpoch)`, not by channel: once an epoch has been
-  notified, it is not notified again.
-
-### 2.10 Logging
-
-- Serilog: daily rolling file, 30-day retention, in
-  `%LOCALAPPDATA%\MedReminder\logs\medreminder-.log`.
-- No email content, no password, no free-form medical note ever
-  reaches the log. Only: `MedicineId`, `Name`, quantity, days
-  remaining, operation outcome.
-- Level configurable in `appsettings.json`. Default `Information`.
-
-### 2.11 Security and privacy
-
-- SMTP password: DPAPI `CurrentUser`, base64, saved in
-  `smtp.protected` next to the DB (not in the repository, not in the
-  versioned `appsettings.json`).
-- The versioned `appsettings.json` contains only harmless defaults.
-- `.gitignore` must exclude `bin/`, `obj/`, `*.user`, `.vs/`, `*.db*`,
-  `smtp.protected`, `logs/`.
-- The email sent contains: medicine name, days remaining, quantity,
-  generic suggestion to request a prescription. No free-form clinical
-  information.
-
-### 2.12 Auto-start
-
-`IAutoStartService` with `IsEnabled`, `Enable()`, `Disable()`.
-Implemented by writing / removing the value
-`HKCU\Software\Microsoft\Windows\CurrentVersion\Run\MedReminder`,
-pointing to the executable with argument `--minimized`.
-
-### 2.13 Tray
-
-In `MainForm`:
-- On close, if the "close to tray" setting is on, `e.Cancel = true`
-  and `Hide()`.
-- Double-click on the icon → `Show()` + `WindowState = Normal`.
-- The "Exit" menu entry calls `Application.Exit()`, bypassing the
-  tray.
-- The CLI argument `--minimized` starts the app directly in the tray.
-
----
-
-## 3. Incremental implementation plan
-
-Every increment ends with: `dotnet build` OK, `dotnet test` OK, a
-descriptive commit, push. No PR is opened until the user explicitly
-requests one.
-
-**Increment 0 — Solution bootstrap**
-- Solution file + 4 projects + 3 test projects.
-- `Directory.Build.props` with `Nullable`, `ImplicitUsings`,
-  `TargetFramework`.
-- `.gitignore`, `.editorconfig`, updated `README.md`.
-- `dotnet build` green, one placeholder test green.
-
-**Increment 1 — Domain**
-- Pure entities: `Medicine`, `StockMovement`,
-  `MedicationSuspension`, `MedicationScheduleHistory`,
-  `MedicationIntake`, `NotificationEvent`.
-- Enumerations.
-- `MedicineStock` (value object) with the logic that sums the
-  movements, clamps to zero and recomputes the epoch.
-- `DailyConsumption` with a versioned schedule.
-- `RunOutForecast` that computes `DaysRemaining` and
-  `EstimatedRunOutDate` using `TimeProvider`.
-- `NotificationCycle` that decides "notify yes / no" given the
-  threshold and the existing `NotificationEvent` values for the
-  epoch.
-- Unit tests for every edge case in section 1.2.
-
-**Increment 2 — Application**
-- Repository interfaces, `IEmailNotificationService`,
-  `IWindowsNotificationService`, `IAutoStartService`,
-  `ICredentialProtector`.
-- Use cases: `AddMedicine`, `UpdateMedicine`, `DeactivateMedicine`,
-  `AddStock`, `RegisterConsumption`, `AdjustStock`,
-  `SuspendMedication`, `ResumeMedication`, `RunPeriodicCheck`.
-- `MedicationMonitor` implemented in Application (no scheduler).
-- `ConsumptionCatchUp` implemented with `TimeProvider`.
-- Tests with in-memory repositories (fakes for increments 1-2).
-
-**Increment 3 — Infrastructure: persistence**
-- EF Core Sqlite `DbContext`, entity configurations, initial
-  migration.
-- Repositories.
-- `IUnitOfWork` with an EF Core transaction.
-- Integration tests with SQLite in-memory (`:memory:`) or a temporary
-  file.
-- Base backup / import service.
-
-**Increment 4 — Infrastructure: notifications + credentials + auto-start**
-- MailKit adapter + `IEmailComposer`.
-- Toast adapter + `NotifyIcon` fallback.
-- `DpapiCredentialProtector`.
-- `RegistryAutoStartService`.
-- Unit tests where meaningful; the toast cannot be tested
-  automatically, so the manual test is documented.
-
-**Increment 5 — Hosted service**
-- `MedicationMonitorHostedService` + `PeriodicTimer`.
-- Composition root in `Program.cs` of `MedReminder.UI` with the
-  generic host.
-- Test: force a short period in an integration test.
-
-**Increment 6 — UI**
-- `MainForm`, edit dialog, stock dialog, settings, log viewer.
-- Tray + `--minimized` argument.
-- UI ↔ services bindings.
-
-**Increment 7 — Hardening**
-- SMTP retry with back-off.
-- Single-instance mutex.
-- Non-fatal DB errors (UI banner).
-- DST and day-change verification with dedicated tests.
-- Verification that notifications are not duplicated on restart.
-
-**Increment 8 — Packaging and documentation**
-- Publish `net10.0-windows` x64 self-contained.
-- Complete README (§28), non-medical-device disclaimer.
-- Minimal technical documentation in `docs/` (already started with
-  this file).
-- No installer in the MVP (outside the minimum scope).
-
----
-
-## 4. File layout (expected outcome after Increment 0)
+### 2.1 Layering rules
 
 ```
-MedReminder/
-  MedReminder.sln
-  Directory.Build.props
-  .gitignore
-  .editorconfig
-  README.md
-  LICENSE
-  docs/
-    ANALYSIS.md            (this file)
-  src/
-    MedReminder.Domain/
-      MedReminder.Domain.csproj
-    MedReminder.Application/
-      MedReminder.Application.csproj
-    MedReminder.Infrastructure/
-      MedReminder.Infrastructure.csproj
-    MedReminder.UI/
-      MedReminder.UI.csproj
-      Program.cs
-  tests/
-    MedReminder.Domain.Tests/
-    MedReminder.Application.Tests/
-    MedReminder.Infrastructure.Tests/
+UI  ──►  Application  ──►  Domain
+ │            ▲
+ └──►  Infrastructure (implements Application ports)
 ```
+
+- **Domain** contains entities and pure calculations. No I/O, no
+  logging, no Windows API, no reference to Application or
+  Infrastructure. Time is always passed in (`DateOnly today`), never
+  read.
+- **Application** contains use cases, the monitoring services and the
+  ports (`Abstractions/`) that Infrastructure implements. It
+  references only `Microsoft.Extensions.*.Abstractions`: no EF Core,
+  no MailKit, no Windows API.
+- **Infrastructure** implements the ports: EF Core / SQLite, MailKit,
+  DPAPI, registry, file-based stores, export cipher, catalogue
+  import, GitHub update check.
+- **UI** is the composition root (`Program.cs`) and the only process
+  entry point. It owns the WinForms forms, the tray icon, the toast
+  adapter and the four hosted services (§6).
+- **DataImporter** is a maintainer tool that loads AIFA CSV files into
+  PostgreSQL. It shares no code with the runtime and is not shipped.
+  See [`DATA_IMPORTER.md`](DATA_IMPORTER.md).
+
+### 2.2 Shared build settings
+
+`Directory.Build.props` sets `Nullable` (nullable warnings are
+errors), `ImplicitUsings`, `EnforceCodeStyleInBuild`, the centralized
+`VersionPrefix`, the assembly metadata, and the
+`StripReleaseDebugArtifacts` target that deletes `*.pdb` and `*.xml`
+from Release build and publish output. That target must not be
+removed or weakened. Publishing is described in
+[`PACKAGING.md`](PACKAGING.md).
 
 ---
 
-## 5. What must be approved before proceeding
+## 3. Dependencies
 
-1. The four decisions marked Q1–Q4 in §1.3.
-2. The solution structure in §2.1 and the NuGet dependency list in
-   §2.2.
-3. The data model in §2.3 (in particular the presence of
-   `MedicationScheduleHistory` and `MedicationSuspension`).
-4. The incremental plan in §3 and the order of the steps.
+| Package | Project | Purpose |
+|---|---|---|
+| `Microsoft.Extensions.Hosting` | UI, DataImporter | Generic host: DI, configuration, logging, hosted services |
+| `Microsoft.Extensions.Configuration.Json` | UI, DataImporter | JSON configuration chain (§5.3) |
+| `Microsoft.Extensions.Logging.Abstractions`, `DependencyInjection.Abstractions` | Application, Infrastructure | Logging and DI contracts without implementations |
+| `Microsoft.Extensions.Options.ConfigurationExtensions` | Infrastructure | `IOptions<T>` binding |
+| `Microsoft.EntityFrameworkCore.Sqlite` | Infrastructure | Persistence |
+| `Microsoft.EntityFrameworkCore.Design` | Infrastructure | Design-time only (`PrivateAssets`) |
+| `MailKit` | Infrastructure | SMTP. `System.Net.Mail.SmtpClient` must not be used |
+| `Konscious.Security.Cryptography.Argon2` | Infrastructure | Argon2id key derivation for `.mrz` archives |
+| `Microsoft.Toolkit.Uwp.Notifications` | UI | Windows toasts for an unpackaged app |
+| `Microsoft.Web.WebView2` | UI | Rendering of the embedded user guide |
+| `Markdig` | UI | Markdown to HTML for the embedded user guide |
+| `Serilog.Extensions.Hosting`, `Serilog.Sinks.File` | UI | Rolling file log |
+| `CsvHelper`, `Npgsql`, `Microsoft.Data.Sqlite`, `Serilog.Sinks.Console` | DataImporter | CSV streaming, PostgreSQL, SQLite export, console log |
+| `xunit`, `xunit.runner.visualstudio`, `FluentAssertions`, `Microsoft.NET.Test.Sdk` | Tests | Test framework |
 
-Once approval (or corrections) is received, implementation proceeds
-with **Increment 0** and then Increment 1, stopping at every
-increment with build + test green and a short report of what changed,
-as required by section 29 of the specification.
+AES-GCM, PBKDF2, SHA-256 and DPAPI (`ProtectedData`) come from the
+.NET base class library. No mapper, mediator or WinForms skin library
+is used.
+
+---
+
+## 4. Domain model
+
+### 4.1 Persisted entities (EF Core, one database per profile)
+
+| Entity (table) | Role | Key fields |
+|---|---|---|
+| `Medicine` (`Medicines`) | Aggregate root | `Name`, `Unit`, `DosePerAdministration`, `AdministrationsPerDay`, `StartDate`, `EndDate?`, `ThresholdDays`, `IsActive`, `StockEpoch`, `NotificationChannels`, `RemindOnDose`, catalogue link (`NationalCode`, `AtcCode`, `LinkedReferenceMedicineId`) |
+| `StockMovement` (`StockMovements`) | Immutable stock ledger | `Kind`, `QuantityDelta`, `OccurredAt`, `StockEpoch` |
+| `MedicationScheduleHistory` (`MedicationScheduleHistories`) | Versioned schedule | `EffectiveFrom`, legacy dose × frequency, `ScheduleKind`, `SchedulePayload` (JSON) |
+| `MedicationAdministrationSlot` (`MedicationAdministrationSlots`) | Individual daily intakes | `Dose`, `Time?`, `TimingLabel`, `Order` |
+| `MedicationSuspension` (`MedicationSuspensions`) | Therapy pause | `StartDate`, `EndDate?` (null = open) |
+| `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity` |
+| `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
+| `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
+
+`StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
+`Consumption`, `PositiveCorrection`, `NegativeCorrection`. Enum values
+are persisted as integers and must stay stable.
+
+Foreign keys to `Medicines` use `Restrict`: medicines are deactivated,
+not deleted.
+
+### 4.2 Reference catalogue (outside the EF model)
+
+`ReferenceMedicine` and `ReferenceActiveIngredient` are read models
+over three tables created by raw DDL (`reference_medicines`,
+`reference_active_ingredients`, `reference_medicine_ingredients`, see
+`Catalogue/CatalogueSchema.cs`). They are populated from snapshots
+embedded in the Infrastructure assembly (IT/AIFA, EU/EMA, ES/AEMPS,
+FR/BDPM) and are refreshed idempotently by snapshot version.
+`Medicine.LinkedReferenceMedicineId` is a weak reference: no physical
+foreign key, because catalogue rows are replaced on refresh. See
+[`analysis/ANALYSIS-DRUG-CATALOGUE.md`](analysis/ANALYSIS-DRUG-CATALOGUE.md)
+and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
+
+### 4.3 Calculations (`Domain/Calculations`)
+
+- **`MedicineStock`** — current stock = Σ `QuantityDelta`, clamped at
+  zero. Never stored.
+- **`DailyConsumption`** — daily rate for a given day, resolved in
+  this order:
+  1. if the medicine has administration slots: sum of slot doses;
+  2. otherwise the `MedicationScheduleHistory` entry with the latest
+     `EffectiveFrom <= day`, dispatched through `ScheduleCodec` to a
+     `Schedule` shape: `FixedDaily`, `Weekly`, `Cyclic`, `Tapering`,
+     `SteppedTapering`, `Prn` (PRN always yields zero);
+  3. no positive rate → 0 (no forecast).
+- **`ConsumptionMaterializer`** — plans automatic consumption days
+  within the therapy window, skipping suspended days.
+- **`RunOutForecast`** — days remaining and run-out date; `null` when
+  suspended today or when the rate is zero; `(0, today)` when stock is
+  zero.
+- **`NotificationCycle`** — decides whether a low-stock warning is
+  due: inside `ThresholdDays`, not suppressed by `EndDate` (therapy
+  ending before run-out), and no successful `NotificationEvent` on the
+  current `StockEpoch`.
+- **`SuspensionState`** — whether a date falls in a suspension.
+
+### 4.4 Invariants
+
+- Stock is a function of the movement ledger. Corrections are new
+  movements, never edits.
+- `AddStock` increments `Medicine.StockEpoch` on every positive
+  movement; the new epoch restarts the warning cycle. Negative
+  corrections do not change the epoch.
+- `ConsumptionCatchUp` materializes automatic consumption up to
+  **yesterday** inclusive, starting after the last **automatic**
+  consumption day (or at `StartDate`), and skips every day that
+  already carries a `Consumption` movement or a `MedicationIntake` of
+  any status. A consumption day without an intake is automatic: only
+  the catch-up and `RegisterIntake` write `Consumption`, and
+  `RegisterIntake` always writes an intake alongside.
+- The first intake recorded for a day that already has automatic
+  consumption (a backdated intake) reverses it with a
+  `PositiveCorrection` before booking the intake; `StockEpoch` is not
+  incremented.
+- `ConsumptionCatchUp.RunAsync`, `MedicationMonitor.RunAsync` and
+  `RegisterIntake.ExecuteAsync` run under `MonitoringGate`, a
+  process-wide semaphore, because the hosted tick and the "Check now"
+  command start them from separate scopes. There is no database
+  unique constraint on consumption: several manual `Consumption`
+  rows per day are legitimate. One process per Windows session
+  (single-instance mutex) makes the in-process gate sufficient.
+- One low-stock notification per `(MedicineId, StockEpoch)` that
+  succeeded on at least one channel; a failed attempt does not block a
+  retry on the next tick.
+- One dose reminder per `(MedicineId, SlotKey, LocalDate)`; slots
+  older than the grace window are dropped without a dedup row.
+- Logical dates are `DateOnly`; event timestamps are
+  `DateTimeOffset`. All time comes from an injected `TimeProvider`.
+
+---
+
+## 5. Runtime data and configuration
+
+### 5.1 On-disk layout
+
+Everything lives under `%LOCALAPPDATA%\MedReminder\`
+(`Storage/AppDataPaths.cs`):
+
+```
+%LOCALAPPDATA%\MedReminder\
+  profiles.json                  profile registry (roles, PIN hashes, active-profile hint)
+  smtp.settings.json             SMTP transport (admin-managed)
+  smtp.protected                 SMTP password, DPAPI CurrentUser, base64
+  cloud-backup.protected         cloud-backup passphrase, DPAPI CurrentUser, base64
+  backup.settings.json           automatic backup settings (admin-managed)
+  backup.state.json              last successful backup timestamp
+  user.settings.json             UI language, reference country, update check
+  localization\strings.<lang>.json   optional user overrides of the UI dictionaries
+  logs\medreminder-<date>.log    Serilog, daily files
+  backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
+  profiles\<profileId>\
+    medreminder.db               SQLite database of the profile (+ -wal, -shm)
+    notifications.settings.json  per-profile recipient and caregiver address
+```
+
+Backup files (§8) are written to the folders the administrator
+chooses in Settings, not under this root.
+
+No file is written to the installation directory. Nothing under this
+root is committed to the repository.
+
+### 5.2 Profiles
+
+- A profile has an immutable `Id` (GUID "N", or `default` for a
+  profile migrated from V1), a display name, a role and an optional
+  PIN (PBKDF2, 100 000 iterations, per-profile salt).
+- **Roles**: `User` manages its own medicines and recipient address;
+  `Admin` also manages SMTP, backup and the profile registry. The role
+  is enforced by the UI only: anyone with file-system access can edit
+  `profiles.json`. Unknown role values deserialize to `User`.
+- The profile is chosen once at boot (§7) and exposed as the
+  singleton `ICurrentProfile`. Switching profile restarts the process
+  (`IApplicationRestarter`).
+- `MigrationV1toV2` converts a pre-multi-profile install (database at
+  the root) into a single `default` admin profile, after a full
+  snapshot into `backups\`. It is idempotent and rolls back on
+  failure.
+
+See [`analysis/ANALYSIS-MULTI-USER.md`](analysis/ANALYSIS-MULTI-USER.md).
+
+### 5.3 Configuration chain
+
+`Program.BuildHost` layers, later sources winning:
+
+1. `appsettings.json` next to the executable (defaults only:
+   `Monitoring:IntervalMinutes` = 30, `DoseReminder:IntervalSeconds` =
+   60, `DoseReminder:GraceWindowMinutes` = 30, empty `Smtp`, `Backup`
+   disabled, `UI:Language` = `en`, `Catalogue:Enabled` = true);
+2. `smtp.settings.json`, `backup.settings.json`, `user.settings.json`
+   (shared);
+3. the profile's `notifications.settings.json`.
+
+Each file wraps a single section (`Smtp`, `Backup`, `UI`,
+`Notifications`) and is bound through `IOptions<T>`. Secrets are
+never stored in these files.
+
+The donation configuration is read from `assets/donations.settings.json`,
+embedded in the Infrastructure assembly; a missing or invalid section
+disables the feature.
+
+---
+
+## 6. Background processing
+
+Four `BackgroundService`s in `MedReminder.UI/Hosting`. Each tick opens
+its own DI scope, so the scoped `DbContext` is never shared between
+ticks. A failing tick is logged and does not stop the service.
+
+| Service | Cadence | Work |
+|---|---|---|
+| `MedicationMonitorHostedService` | `PeriodicTimer`, `Monitoring:IntervalMinutes` (default 30, min 1) | `MedicationMonitor`: consumption catch-up, forecast, `NotificationCycle`, dispatch per channel, `NotificationEvent` |
+| `DoseReminderHostedService` | `PeriodicTimer`, `DoseReminder:IntervalSeconds` (default 60, min 10) | `DoseReminderService`: fires due timed slots for medicines with `RemindOnDose`, positive stock and an active therapy; prunes dedup rows older than 30 days |
+| `AutomaticBackupHostedService` | 30 s initial delay, then every 15 min | Daily backup at or after `Backup:PreferredTime` (§8) |
+| `CatalogueRefreshHostedService` | Once at startup; registered only when `Catalogue:Enabled` is true | Imports each embedded catalogue snapshot whose version is newer, one transaction per country |
+
+The Application services (`MedicationMonitor`, `DoseReminderService`,
+`ConsumptionCatchUp`) have no scheduling code and are tested with a
+fake `TimeProvider`. The monitor pass and the catch-up are serialized
+with the "Check now" command through `MonitoringGate` (§4.4).
+
+---
+
+## 7. Process lifecycle
+
+`Program.Main`:
+
+1. Configure Serilog and a bootstrap `LocalizationService` (for
+   messages shown before the host exists).
+2. Acquire the single-instance mutex
+   `Local\MedReminder.SingleInstance.<guid>` (per Windows session). A
+   second instance shows a message and exits. The mutex must not be
+   bypassed.
+3. Run `MigrationV1toV2` if applicable.
+4. Choose the profile: first-run wizard when none exists (UI language
+   taken from the Windows UI culture), else `--profile <id>`, else the
+   active-profile hint when started with `--minimized`, else the only
+   profile, else the profile picker. A profile with a PIN requires
+   `PinPromptForm`.
+5. Build the host (§5.3, DI registration via
+   `AddMedReminderApplication` and `AddMedReminderInfrastructure`),
+   run `DatabaseInitializer` (§8.1), start the hosted services.
+6. Run `MainForm` on the WinForms message loop. `--minimized` starts
+   in the tray. Closing the window hides it to the tray; the tray
+   menu's Exit ends the process.
+7. Stop the host with a 5-second timeout and release the mutex.
+
+Unhandled UI-thread exceptions are logged and shown in a message box;
+print cancellations are reported as information, not errors.
+
+---
+
+## 8. Persistence and backup
+
+### 8.1 Schema management
+
+There are no EF Core migrations. `DatabaseInitializer` runs on every
+start:
+
+1. `EnsureCreatedAsync` creates the full schema **only** for a new,
+   empty database.
+2. On an existing database, `ApplyIdempotentSchemaPatchesAsync` adds
+   the objects introduced after the first release (`AddColumnIfMissing`
+   guarded by `PRAGMA table_info`, `CREATE TABLE/INDEX IF NOT
+   EXISTS`). Current patches: `MedicationIntakes.Day`,
+   `MedicationAdministrationSlots`, the three catalogue-link columns
+   on `Medicines`, `ScheduleKind` and `SchedulePayload` on
+   `MedicationScheduleHistories`, `Medicines.RemindOnDose`, and
+   `DoseReminderEvents` with its unique index.
+3. The catalogue DDL runs unconditionally (idempotent).
+4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
+   `synchronous = NORMAL`.
+
+Rules for a schema change: add the property to the entity and its
+`IEntityTypeConfiguration`, then append an idempotent patch with a
+default that preserves existing semantics. Never rely on
+`EnsureCreated` to upgrade an existing database, and never drop or
+rename a column. If the change affects exported data, bump
+`ExportFormat.CurrentSchemaVersion` (§8.3).
+
+### 8.2 Local backup (raw database copy)
+
+`BackupService` copies each profile's database through the SQLite
+online-backup API (consistent under concurrent writes) to
+`medreminder-<profileId>-<yyyyMMdd-HHmmss>.db` in `Backup:Directory`.
+The automatic service backs up **every** profile once per day at or
+after `PreferredTime`, catching up at the first tick if the app was
+off. Retention (`RetentionDays`) is applied per profile. Restore
+replaces the database file after renaming the current one to
+`<db>.bak-<timestamp>`.
+
+### 8.3 Encrypted export and cloud folder
+
+- **`.mrz` archive** (`ExportService` / `ImportService`): ZIP with
+  `manifest.json` and `payload.enc`. Each archive holds one profile
+  (`scope: "profile"`): the active one, or `ExportOptions.ProfileId`
+  for an admin or for the automatic backup. The payload (JSON of every
+  entity of that profile, plus opt-in settings files and SMTP
+  password) is encrypted with AES-GCM under a key derived by Argon2id
+  from a passphrase of at least 12 characters, and hashed with
+  SHA-256. Import is overwrite-only: it builds a new database in a
+  temporary file, swaps it in with a `.bak-<timestamp>` safety copy,
+  and asks for a restart. Import always targets the **active**
+  profile; the Import and Restore dialogs ask for confirmation when
+  the archive comes from another profile. The public format is
+  specified in [`EXPORT-FORMAT.md`](EXPORT-FORMAT.md).
+- **Admin export of every profile**: the Export dialog of an admin
+  profile, when more than one profile exists, writes one
+  single-profile `.mrz` per profile into a chosen folder, all under
+  the same passphrase. The profile registry is never exported.
+- **Cloud folder**: when `Backup:CloudFolderEnabled` is set, the
+  automatic service also writes one `.mrz` snapshot per registered
+  profile into `CloudFolderDirectory` (a folder synchronized by a
+  third-party client), using the DPAPI-cached passphrase from
+  `cloud-backup.protected`. Delivery goes through the `IArchiveStorage`
+  port (`LocalFolderArchiveStorage`), so native cloud backends can be
+  added without changing the export. A written snapshot counts as the
+  day's backup; a missing folder or passphrase skips the run and
+  leaves the day open for retry; a failure on one profile does not
+  stop the others. `ICloudRestoreService` lists and restores
+  snapshots; the dialog preselects the active profile's newest one.
+
+See [`analysis/ANALYSIS-C3-EXPORT-IMPORT.md`](analysis/ANALYSIS-C3-EXPORT-IMPORT.md),
+[`analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md`](analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md),
+[`analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md`](analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md).
+
+Force-closing SQLite connections (`ClearAllPools`) is allowed only in
+the restore and import paths.
+
+---
+
+## 9. Notifications and external services
+
+### 9.1 Windows notifications
+
+`IWindowsNotificationService` is implemented in the UI by
+`ToastWindowsNotificationService` (`Microsoft.Toolkit.Uwp.Notifications`;
+AUMID and Start Menu shortcut are registered at runtime). On any
+failure it falls back to `TrayBalloonNotificationService`, which
+reuses the main tray icon. `BalloonTipNotificationService` is the
+default registration in Infrastructure; the UI replaces it. Toast
+text uses the Windows UI language.
+
+### 9.2 Email
+
+`IEmailNotificationService` = `RetryingEmailNotificationService`
+wrapping `MailKitEmailNotificationService`. Transient failures (SMTP
+4xx, network) are retried after 5 s, 30 s and 2 min; permanent
+failures (5xx) are not retried. Mail goes to the profile's
+`ToAddress` and, when set, to `CaregiverAddress`. Email text uses the
+language selected in the application. Channels are chosen per
+medicine (`NotificationChannels` flags). A failure on one channel
+does not prevent the other.
+
+### 9.3 Localization
+
+UI strings are keyed dictionaries in `assets/localization/strings.<lang>.json`
+for `en`, `it`, `fr`, `es`, `de`, embedded in the UI assembly and
+copied next to the executable. Files under
+`%LOCALAPPDATA%\MedReminder\localization\` override single keys. The
+language is read once at startup; a change requires a restart. Every
+new key must be added to all five files.
+
+### 9.4 Auto-start
+
+`RegistryAutoStartService` writes
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run\MedReminder`
+with the `--minimized` argument. Per-user, no elevation.
+
+### 9.5 Update check and donations
+
+- `GitHubUpdateChecker` queries the GitHub Releases API (8 s timeout)
+  at startup when `UI:CheckForUpdatesOnStartup` is true, and on demand.
+  It only reports the release URL; nothing is downloaded or executed.
+- `DonationService` opens Stripe or PayPal payment links in the
+  default browser. See [`analysis/ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md).
+
+---
+
+## 10. Security and privacy
+
+- Secrets (SMTP password, cloud-backup passphrase) are stored only as
+  DPAPI `CurrentUser` blobs. Export archives carry them only inside
+  the encrypted payload.
+- Passphrases, derived keys and payload plaintext are never logged;
+  key buffers are zeroed after use.
+- Logs contain identifiers, medicine names, quantities and outcomes.
+  They never contain passwords, email bodies or free-text medical
+  notes.
+- Low-stock emails contain the medicine name and active ingredient,
+  remaining quantity, days remaining, estimated run-out date, the
+  dosage slots, the doctor name when set, and a generic prompt to
+  renew the prescription. `Medicine.Notes` is never included.
+- The profile PIN and role are access conveniences, not a security
+  boundary against a user with file-system access (§5.2). The local
+  raw backups and the cloud snapshots include every profile; whoever
+  knows the cloud-backup passphrase can read every profile. Real
+  separation between people needs separate Windows accounts, as the
+  user guides state.
+- Serilog: `Information` level, daily files, 30 files retained, 10 MB
+  per file.
+
+---
+
+## 11. Original design decisions (status)
+
+The pre-implementation plan ([`analysis/ANALYSIS-MVP.md`](analysis/ANALYSIS-MVP.md))
+asked for confirmation of four decisions. Their current status:
+
+| # | Decision | Status |
+|---|---|---|
+| Q1 | One warning threshold (days) per medicine | Kept: `Medicine.ThresholdDays` |
+| Q2 | No warning when the therapy `EndDate` precedes the estimated run-out | Kept: `NotificationCycle` |
+| Q3 | Toast via `Microsoft.Toolkit.Uwp.Notifications`, balloon fallback | Kept: §9.1 |
+| Q4 | DPAPI `CurrentUser` for the SMTP password | Kept, and extended to the cloud-backup passphrase |
+
+The other Phase 1 decisions (§1.1 of that file) still hold: daily
+consumption derived from the schedule, `StockEpoch` on positive
+movements, `MedicationSuspension` semantics, `DateOnly` for logical
+dates with `TimeProvider`, MailKit instead of `SmtpClient`, per-user
+`Run` key, `%LOCALAPPDATA%` data folder, single-instance mutex with
+SQLite WAL.
+
+Where the implementation departed from the plan:
+
+| Plan (ANALYSIS-MVP) | As built |
+|---|---|
+| `AdministrationsPerDay` integer only | Administration slots with times and labels, plus six schedule shapes (A1) |
+| `MedicationIntake` modelled but unused | Used: intakes recorded from the UI suppress automatic consumption for that day |
+| EF Core migrations, `Database.Migrate()` | `EnsureCreated` for new databases, idempotent boot patches otherwise (§8.1) |
+| One database at the data-folder root | One database per profile (§5.2) |
+| `ApplicationSetting` key/value table | JSON settings files bound through `IOptions<T>` (§5.3) |
+| Backup = file copy after WAL checkpoint | SQLite online-backup API, plus encrypted `.mrz` export and cloud folder (§8) |
+| One hosted service | Four hosted services (§6) |
+| Italian-only UI | Five UI languages (§9.3) |
+| 4 projects, 3 test projects | 5 projects, 5 test projects (§2) |
+
+---
+
+## 12. Feature analyses
+
+| Document | Topic |
+|---|---|
+| [`ANALYSIS-MVP.md`](analysis/ANALYSIS-MVP.md) | Original Phase 1 / Phase 2 plan (historical) |
+| [`ANALYSIS-MULTI-USER.md`](analysis/ANALYSIS-MULTI-USER.md) | Profiles, roles, PIN, V1→V2 migration |
+| [`ANALYSIS-A1-REGIMENS.md`](analysis/ANALYSIS-A1-REGIMENS.md) | Weekly, cyclic, tapering and PRN schedules |
+| [`ANALYSIS-A1-STEPPED-TAPER.md`](analysis/ANALYSIS-A1-STEPPED-TAPER.md) | Multi-stage tapering |
+| [`ANALYSIS-A2-BARCODE-WEBCAM.md`](analysis/ANALYSIS-A2-BARCODE-WEBCAM.md) | Barcode scanning (analysis only) |
+| [`ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`](analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md) | Caregiver email recipient |
+| [`ANALYSIS-A5-DOSE-TIME-REMINDER.md`](analysis/ANALYSIS-A5-DOSE-TIME-REMINDER.md) | Dose-time reminder |
+| [`ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md) | Donation links |
+| [`ANALYSIS-C3-EXPORT-IMPORT.md`](analysis/ANALYSIS-C3-EXPORT-IMPORT.md) | Encrypted export / import |
+| [`ANALYSIS-C3PLUS-CLOUD-BACKUP.md`](analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md) | Cloud-folder backup and restore |
+| [`ANALYSIS-C3PP-CLOUD-PROVIDERS.md`](analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md) | Storage abstraction and native cloud providers |
+| [`ANALYSIS-DRUG-CATALOGUE.md`](analysis/ANALYSIS-DRUG-CATALOGUE.md) | Reference medicine catalogue |
+| [`ANALYSIS-WEBSITE.md`](analysis/ANALYSIS-WEBSITE.md) | Public website |
+
+Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:
+[`EVOLUTION-DONE.md`](EVOLUTION-DONE.md).
+
+---
+
+## 13. Known limitations
+
+- **Role and PIN are not enforced on disk** (§5.2, §10). Accepted:
+  within one Windows account no software-only mechanism can enforce
+  them. Encrypting each profile with a PIN-derived key (SQLCipher)
+  was considered and not pursued: native dependency, data loss on a
+  forgotten PIN, rework of backup, export and restore.
+- **Import is overwrite-only and targets the active profile.** An
+  archive of another profile is applied to the active one after a
+  confirmation; restoring into a different profile requires switching
+  to it first. Merge mode is out of scope
+  ([`ANALYSIS-C3-EXPORT-IMPORT.md`](analysis/ANALYSIS-C3-EXPORT-IMPORT.md)).
+- **Historical ledger anomalies are not repaired.** Days skipped or
+  double-counted by the catch-up behavior fixed in PR #64 before that
+  release stay as they are; only new days follow the corrected rules.
+- **`IStockMovementRepository.GetLastConsumptionDayAsync`** is no
+  longer used by production code (only by `RoundTripTests`).
