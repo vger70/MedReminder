@@ -30,6 +30,31 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #64 — Stop manual intakes from hiding or doubling automatic consumption
+
+Link: [vger70/MedReminder#64](https://github.com/vger70/MedReminder/pull/64)
+Branch: `claude/consumption-day-coverage` (stacked on PR #62)
+**Status:** open (draft)
+
+### Fixed
+
+- **Backdated intakes counted twice.** Recording an intake for a past
+  day that already had the automatic consumption now reverses that
+  consumption (`PositiveCorrection`) before booking the intake
+  (`src/MedReminder.Application/UseCases/RegisterIntake.cs`).
+- **Manual intakes could hide unmaterialized days.** The catch-up now
+  starts after the last automatic consumption day instead of the last
+  consumption of any kind, and skips days that already have a
+  consumption or an intake
+  (`src/MedReminder.Application/Monitoring/ConsumptionCatchUp.cs`).
+
+### Added
+
+- Application tests for both cases and a SQLite integration test with
+  a non-UTC local zone.
+
+---
+
 ## PR #62 — Serialize consumption catch-up and monitor passes
 
 Link: [vger70/MedReminder#62](https://github.com/vger70/MedReminder/pull/62)
