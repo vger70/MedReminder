@@ -507,3 +507,24 @@ No CMS, no backend DB, no user accounts, no tracking cookies, no PWA, no dark mo
 * **Domain:** `*.pages.dev` default.
 * **Release Resolution:** Client-side GitHub API + static fallback (Point A).
 * **Localized Assets:** Language-specific screenshot bundles (Point D).
+
+---
+
+## 14. Decisions confirmed at implementation start (2026-09-25)
+
+The four items previously listed as open were confirmed by the
+product owner before the first commit of the implementation.
+
+* **Repository target.** `vger70/medreminder-website` — separate
+  repository, in agreement with §13. The `CHANGE_LOG.md` update
+  rule from `CLAUDE.md` §5 does not apply; the website repository
+  sets its own conventions.
+* **Roadmap teaser on the About page.** Omitted for v1. The About
+  page describes the current app and its philosophy; a "What's
+  coming" section is not shipped in the initial release.
+* **Dark mode.** Omitted for v1, matching the non-goal in §12. The
+  site ships light-only.
+* **Screenshot refresh cadence.** Screenshots are retaken only when
+  a UI change materially alters what a shot depicts, not on every
+  release. The refresh procedure is documented in the website
+  repository's `README.md`.
