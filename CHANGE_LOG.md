@@ -30,6 +30,26 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #71 — Extend A2 barcode analysis to the USB HID-scanner variant
+
+Link: [vger70/MedReminder#71](https://github.com/vger70/MedReminder/pull/71)
+Branch: `claude/barcode-webcam-hid-scanner-vlcsjo`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-A2-BARCODE-WEBCAM.md` renamed to
+  `ANALYSIS-A2-BARCODE-SCAN.md` and extended to the USB HID-scanner
+  (keyboard wedge) variant alongside the webcam one: shared parser and
+  catalogue lookup, scanner as default input mode, two-PR delivery
+  proposal.
+- Corrected first-draft facts: Italian AIC barcode is Code 32, not
+  EAN-13; FMD DataMatrix applies in Italy from February 2025; the
+  dialog has no national-code field and the link use case cannot
+  serve Create mode.
+- `docs/EVOLUTION.md` §2.0 and §3.2 updated to the new scope;
+  references in `docs/ANALYSIS.md` and
+  `docs/notes/EVOLUTION-PROPOSALS.md` follow the rename.
+
 ## PR #70 — List all five interface languages in the user guides
 
 Link: [vger70/MedReminder#70](https://github.com/vger70/MedReminder/pull/70)
