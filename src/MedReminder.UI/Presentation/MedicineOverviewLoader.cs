@@ -4,9 +4,9 @@ using MedReminder.Domain.Calculations;
 namespace MedReminder.UI.Presentation;
 
 // Builds the list of MedicineListItem for MainForm.
-// Reuses the pure domain functions (MedicineStock, DailyConsumption,
-// SuspensionState, RunOutForecast): the aggregate does not duplicate
-// logic, it only orchestrates the repositories and maps the view.
+// Reuses the pure domain functions (MedicineStock, MedicineForecast):
+// the aggregate does not duplicate logic, it only orchestrates the
+// repositories and maps the view.
 internal sealed class MedicineOverviewLoader
 {
     private readonly IMedicineRepository _medicines;
@@ -48,12 +48,14 @@ internal sealed class MedicineOverviewLoader
 
             var schedule = await _schedules.ListForMedicineAsync(m.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);
-            var rate = DailyConsumption.RateOn(today, schedule, slots);
-
             var suspensions = await _suspensions.ListForMedicineAsync(m.Id, cancellationToken);
-            var isSuspended = SuspensionState.IsSuspendedOn(today, suspensions);
 
-            var forecast = RunOutForecast.Compute(today, currentStock, rate, isSuspended);
+            // Shared with the therapy timeline so both views show the
+            // same run-out date.
+            var result = MedicineForecast.Compute(today, currentStock, schedule, slots, suspensions);
+            var rate = result.DailyRate;
+            var isSuspended = result.IsSuspendedToday;
+            var forecast = result.RunOut;
             var status = ComputeStatus(m.IsActive, isSuspended, currentStock, forecast.DaysRemaining, m.ThresholdDays);
 
             items.Add(new MedicineListItem

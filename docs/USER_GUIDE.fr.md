@@ -310,6 +310,47 @@ bloquée par une erreur.
   données historiques (mouvements, notifications) restent en base
   pour audit.
 
+## Chronologie du traitement
+
+**Traitement → Chronologie du traitement…** (Ctrl+T) ou le bouton
+**Chronologie** de la barre d'outils ouvre une vue en lecture seule
+avec une ligne par médicament et les jours sur l'axe horizontal. Par
+défaut, elle affiche 60 jours en arrière et 120 jours en avant.
+
+- **Barre pleine** : traitement actif, de la date de début à la date de
+  fin (ou jusqu'au bord de la vue s'il n'y a pas de date de fin).
+- **Barre hachurée à bordure pointillée** : suspension, prévue ou en
+  cours.
+- **Losange plein** : une nouvelle dose, fréquence ou posologie entre en
+  vigueur. **Losange vide** : palier suivant d'une décroissance par
+  paliers.
+- **Triangle sur une ligne verticale** : date d'épuisement estimée.
+  C'est la même estimation que la colonne *Épuisement* : stock actuel
+  divisé par la quantité quotidienne d'aujourd'hui. Elle ne tient pas
+  compte des suspensions ou changements de posologie futurs.
+- **Ligne verticale pointillée** : aujourd'hui.
+- Un médicament désactivé apparaît en gris ; sa barre s'arrête à
+  aujourd'hui car la date de désactivation n'est pas enregistrée.
+
+Commandes :
+
+- **Avant** / **Après** déplacent la période de 30 jours,
+  **Aujourd'hui** rétablit la période par défaut. Dans le graphique,
+  les flèches gauche et droite (ou Maj + molette de la souris) la
+  déplacent d'une semaine.
+- Les flèches haut et bas sélectionnent un médicament ; la zone
+  **Détails** sous le graphique donne les mêmes informations sous forme
+  de texte (posologie, stock, épuisement estimé, suspensions et
+  changements de posologie dans la période). Le survol d'un élément
+  affiche le même texte en info-bulle.
+- **Afficher dans la liste** (ou Entrée, ou un double clic) ferme la
+  chronologie et sélectionne le médicament dans la liste principale, où
+  s'appliquent les actions habituelles.
+
+La chronologie ne modifie aucune donnée. Les dates d'épuisement sont
+des estimations : elles servent à planifier les réapprovisionnements,
+pas d'avis clinique.
+
 ## Profils multiples et rôles administrateur/utilisateur
 
 MedReminder peut gérer les médicaments de **plusieurs personnes**

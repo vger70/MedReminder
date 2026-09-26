@@ -300,6 +300,46 @@ bloccata con un errore.
   controlli automatici e dagli avvisi, ma i dati storici (movimenti,
   notifiche) restano nel DB per audit.
 
+## Linea del tempo della terapia
+
+**Terapia → Linea del tempo terapia…** (Ctrl+T) o il pulsante **Linea
+del tempo** della barra strumenti apre una vista di sola lettura con
+una riga per medicina e i giorni sull'asse orizzontale. Per
+impostazione predefinita mostra 60 giorni indietro e 120 in avanti.
+
+- **Barra piena**: terapia attiva, dalla data di inizio alla data di
+  fine (o fino al bordo della vista se non c'è data di fine).
+- **Barra tratteggiata con bordo a trattini**: sospensione,
+  pianificata o in corso.
+- **Rombo pieno**: entra in vigore una nuova dose, frequenza o schema.
+  **Rombo vuoto**: fase successiva di uno scalaggio a fasi.
+- **Triangolo su una linea verticale**: data di esaurimento stimata. È
+  la stessa stima della colonna *Esaurimento*: scorta attuale divisa
+  per la quantità giornaliera di oggi. Non tiene conto di sospensioni
+  o cambi di dosaggio futuri.
+- **Linea verticale a trattini**: oggi.
+- Una medicina disattivata è mostrata in grigio; la sua barra si ferma
+  a oggi perché la data di disattivazione non è registrata.
+
+Comandi:
+
+- **Prima** / **Dopo** spostano il periodo di 30 giorni, **Oggi**
+  ripristina il periodo predefinito. Nel grafico le frecce sinistra e
+  destra (o Maiusc + rotellina del mouse) lo spostano di una
+  settimana.
+- Le frecce su e giù selezionano una medicina; il riquadro
+  **Dettagli** sotto il grafico riporta le stesse informazioni come
+  testo (dosaggio, scorta, esaurimento stimato, sospensioni e cambi di
+  dosaggio nel periodo). Passando il mouse su un elemento compare lo
+  stesso testo come suggerimento.
+- **Mostra nell'elenco** (oppure Invio o doppio clic) chiude la linea
+  del tempo e seleziona la medicina nell'elenco principale, dove si
+  usano le azioni consuete.
+
+La linea del tempo non modifica alcun dato. Le date di esaurimento sono
+stime: servono a pianificare i rifornimenti, non sono un consiglio
+clinico.
+
 ## Profili multipli e ruoli amministratore/utente
 
 MedReminder può gestire farmaci per **più persone** dallo stesso

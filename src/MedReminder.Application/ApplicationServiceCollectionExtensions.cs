@@ -1,6 +1,7 @@
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Timeline;
 using MedReminder.Application.UseCases;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +27,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();
         services.AddScoped<DoseReminderService>();
+
+        // Therapy timeline view (EVOLUTION-PROPOSALS §4.3): read-only.
+        services.AddScoped<TherapyTimelineQuery>();
 
         // Reference catalogue (M1). The country-profile provider owns
         // the "national ∪ EU" rule; use cases are cheap façades over

@@ -286,6 +286,42 @@ blocked with an error.
   from automatic checks and alerts, but historical data (movements,
   notifications) stays in the DB for audit.
 
+## Therapy timeline
+
+**Therapy → Therapy timeline…** (Ctrl+T) or the **Therapy timeline**
+toolbar button opens a read-only view with one row per medicine and
+the days on the horizontal axis. It shows by default 60 days back and
+120 days forward.
+
+- **Solid bar**: active therapy, from the start date to the end date
+  (or to the edge of the view when there is no end date).
+- **Hatched bar with dashed border**: suspension, planned or ongoing.
+- **Filled diamond**: a new dose, frequency or regimen takes effect.
+  **Hollow diamond**: next stage of a stepped taper.
+- **Triangle on a vertical line**: estimated run-out date. It is the
+  same estimate as the *Runs out* column: current stock divided by
+  today's daily quantity. It does not account for future suspensions
+  or dosage changes.
+- **Dashed vertical line**: today.
+- A deactivated medicine is shown in grey; its bar stops at today
+  because the deactivation date is not recorded.
+
+Controls:
+
+- **Earlier** / **Later** move the period by 30 days, **Today**
+  restores the default period. In the chart, the left and right arrow
+  keys (or Shift + mouse wheel) move it by one week.
+- Up and down arrows select a medicine; the **Details** box below the
+  chart shows the same information as text (dosage, stock, estimated
+  run-out, suspensions and dosage changes in the period). Hovering an
+  element shows the same text as a tooltip.
+- **Show in list** (or Enter, or a double click) closes the timeline
+  and selects the medicine in the main list, where the usual actions
+  apply.
+
+The timeline does not change any data. Run-out dates are estimates:
+use them to plan refills, not as clinical advice.
+
 ## Multiple profiles and admin/user roles
 
 MedReminder can manage medicines for **more than one person** from

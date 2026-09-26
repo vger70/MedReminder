@@ -4,6 +4,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Timeline;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
@@ -191,6 +192,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Report"),
             Mdl2Glyph.Glyphs.Document, Keys.Control | Keys.P,
             async () => await ShowTherapyReportAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Timeline"),
+            Mdl2Glyph.Glyphs.Calendar, Keys.Control | Keys.T,
+            () => { ShowTherapyTimeline(); return Task.CompletedTask; }));
 
         // Scorte
         var stockMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Stock"));
@@ -494,6 +498,9 @@ internal sealed class MainForm : MedReminderFormBase
         strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.TherapyReport"),
             Mdl2Glyph.Glyphs.Document,
             async () => await ShowTherapyReportAsync()));
+        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.TherapyTimeline"),
+            Mdl2Glyph.Glyphs.Calendar,
+            () => { ShowTherapyTimeline(); return Task.CompletedTask; }));
         return strip;
     }
 
@@ -544,6 +551,46 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.GenerateReport"), ex);
+        }
+    }
+
+    // Read-only timeline view (EVOLUTION-PROPOSALS §4.3). Each load
+    // runs in its own DI scope; "Show in list" selects the medicine in
+    // the grid so the existing actions apply to it.
+    private void ShowTherapyTimeline()
+    {
+        try
+        {
+            using var dialog = new TherapyTimelineForm(_loc, LoadTherapyTimelineAsync, GetSelectedRow()?.Id);
+            if (dialog.ShowDialog(this) == DialogResult.OK && dialog.SelectedMedicineId is { } id)
+            {
+                SelectGridRow(id);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenTimeline"), ex);
+        }
+    }
+
+    private async Task<TherapyTimeline> LoadTherapyTimelineAsync(TimelineWindow? window)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var query = scope.ServiceProvider.GetRequiredService<TherapyTimelineQuery>();
+        return await query.LoadAsync(window, CancellationToken.None);
+    }
+
+    private void SelectGridRow(Guid medicineId)
+    {
+        foreach (DataGridViewRow row in _grid.Rows)
+        {
+            if (row.DataBoundItem is not MedicineListItem item || item.Id != medicineId) continue;
+            _grid.ClearSelection();
+            var cell = row.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible);
+            if (cell is not null) _grid.CurrentCell = cell;
+            row.Selected = true;
+            _grid.Focus();
+            return;
         }
     }
 

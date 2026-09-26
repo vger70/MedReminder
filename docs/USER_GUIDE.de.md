@@ -319,6 +319,48 @@ Vorgang mit einer Fehlermeldung blockiert.
   Benachrichtigungen) bleiben aus Audit-Gründen in der
   Datenbank.
 
+## Therapieverlauf
+
+**Therapie → Therapieverlauf…** (Strg+T) oder die Schaltfläche
+**Therapieverlauf** in der Symbolleiste öffnet eine schreibgeschützte
+Ansicht mit einer Zeile pro Medikament und den Tagen auf der
+waagerechten Achse. Standardmäßig zeigt sie 60 Tage zurück und 120
+Tage voraus.
+
+- **Voller Balken**: aktive Therapie, vom Beginn bis zum Enddatum (oder
+  bis zum Rand der Ansicht, wenn es kein Enddatum gibt).
+- **Schraffierter Balken mit gestricheltem Rand**: Unterbrechung,
+  geplant oder laufend.
+- **Gefüllte Raute**: eine neue Dosis, Häufigkeit oder ein neues Schema
+  gilt ab diesem Tag. **Leere Raute**: nächste Stufe eines
+  stufenweisen Ausschleichens.
+- **Dreieck auf einer senkrechten Linie**: geschätztes Aufbrauchdatum.
+  Es ist dieselbe Schätzung wie in der Spalte *Aufgebraucht am*:
+  aktueller Vorrat geteilt durch die heutige Tagesmenge. Künftige
+  Unterbrechungen oder Dosisänderungen werden nicht berücksichtigt.
+- **Gestrichelte senkrechte Linie**: heute.
+- Ein deaktiviertes Medikament wird grau dargestellt; sein Balken endet
+  heute, weil das Deaktivierungsdatum nicht gespeichert wird.
+
+Bedienung:
+
+- **Früher** / **Später** verschieben den Zeitraum um 30 Tage,
+  **Heute** stellt den Standardzeitraum wieder her. Im Diagramm
+  verschieben ihn die Pfeiltasten links und rechts (oder Umschalt +
+  Mausrad) um eine Woche.
+- Die Pfeiltasten nach oben und unten wählen ein Medikament; das Feld
+  **Details** unter dem Diagramm zeigt dieselben Informationen als Text
+  (Dosierung, Vorrat, geschätzter Aufbrauch, Unterbrechungen und
+  Dosisänderungen im Zeitraum). Beim Überfahren eines Elements mit der
+  Maus erscheint derselbe Text als QuickInfo.
+- **In der Liste zeigen** (oder Eingabetaste bzw. Doppelklick) schließt
+  den Verlauf und wählt das Medikament in der Hauptliste aus, wo die
+  üblichen Aktionen gelten.
+
+Der Therapieverlauf ändert keine Daten. Die Aufbrauchdaten sind
+Schätzungen: Sie dienen zur Planung von Nachkäufen und sind keine
+medizinische Beratung.
+
 ## Mehrere Profile und Rollen Administrator/Benutzer
 
 MedReminder kann Medikamente für **mehrere Personen** aus demselben
