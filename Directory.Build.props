@@ -15,7 +15,7 @@
        AssemblyVersion / FileVersion / InformationalVersion generated
        by the SDK. Bump here for every release. -->
   <PropertyGroup Label="Versioning">
-    <VersionPrefix>2.5.2</VersionPrefix>
+    <VersionPrefix>2.6.0</VersionPrefix>
     <!-- Optional VersionSuffix: "beta", "rc1", "alpha.2" — produces
          for example 1.0.1-beta. Leave empty for a final release. -->
     <VersionSuffix>
