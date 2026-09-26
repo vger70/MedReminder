@@ -1,6 +1,7 @@
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UseCases;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +27,10 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();
         services.AddScoped<DoseReminderService>();
+
+        // Prescription request (EVOLUTION-PROPOSALS §3.4): interactive
+        // send only, resolved per dialog action.
+        services.AddScoped<SendPrescriptionRequest>();
 
         // Reference catalogue (M1). The country-profile provider owns
         // the "national ∪ EU" rule; use cases are cheap façades over

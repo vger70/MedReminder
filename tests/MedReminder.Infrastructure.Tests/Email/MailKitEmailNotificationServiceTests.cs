@@ -136,6 +136,59 @@ public class MailKitEmailNotificationServiceTests
         recipients.Should().ContainSingle().Which.Should().Be("user@example.org");
     }
 
+    // Prescription request: an explicit recipient replaces the profile
+    // recipients entirely; the caregiver is never copied.
+    [Fact]
+    public void BuildMimeMessage_sends_only_to_the_explicit_recipient()
+    {
+        var notifications = new NotificationSettings
+        {
+            ToAddress = "user@example.org",
+            CaregiverAddress = "caregiver@example.org",
+            DoctorAddress = "doctor@example.org",
+        };
+        var sut = BuildService(notifications);
+
+        var mime = sut.BuildMimeMessage(ValidSmtp(), notifications,
+            new EmailMessage("s", "b", " doctor@example.org "));
+
+        mime.To.Mailboxes.Select(m => m.Address).Should().Equal("doctor@example.org");
+        mime.Cc.Should().BeEmpty();
+        mime.Bcc.Should().BeEmpty();
+        mime.Subject.Should().Be("s");
+    }
+
+    [Fact]
+    public void BuildMimeMessage_rejects_a_malformed_explicit_recipient()
+    {
+        var notifications = new NotificationSettings { ToAddress = "user@example.org" };
+        var sut = BuildService(notifications);
+
+        // No fallback to the profile recipient: the user chose the
+        // address and must see the failure.
+        FluentActions.Invoking(() => sut.BuildMimeMessage(ValidSmtp(), notifications,
+                new EmailMessage("s", "b", "not-an-email")))
+            .Should().Throw<MimeKit.ParseException>();
+    }
+
+    [Fact]
+    public async Task Send_with_explicit_recipient_does_not_require_the_profile_recipient()
+    {
+        // Incomplete SMTP makes the send fail before any network I/O;
+        // the point is that the failure is the SMTP one, not the
+        // "recipient is not configured" guard.
+        var smtp = new StaticOptionsMonitor<SmtpSettings>(new SmtpSettings());
+        var notifications = new StaticOptionsMonitor<NotificationSettings>(new NotificationSettings());
+        var sut = new MailKitEmailNotificationService(
+            smtp, notifications, new StubCredentialStore(),
+            NullLogger<MailKitEmailNotificationService>.Instance);
+
+        await FluentActions.Awaiting(() =>
+                sut.SendAsync(new EmailMessage("s", "b", "doctor@example.org"), CancellationToken.None))
+            .Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("SMTP configuration is incomplete.");
+    }
+
     [Fact]
     public async Task TestConnection_returns_false_when_settings_incomplete()
     {

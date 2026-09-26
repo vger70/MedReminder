@@ -22,4 +22,11 @@ public sealed class NotificationSettings
     // MIME message. Empty (the default) means no caregiver configured
     // and the send path behaves exactly as before A3.
     public string CaregiverAddress { get; set; } = string.Empty;
+
+    // Optional address of the profile's doctor, used only as the
+    // recipient of a prescription request the user sends explicitly
+    // from PrescriptionRequestDialog. Never used by the automated
+    // notifications. Empty (the default, and the value for files
+    // written before the field existed) means no doctor configured.
+    public string DoctorAddress { get; set; } = string.Empty;
 }

@@ -60,6 +60,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // A3 (docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md §5): the
     // optional per-profile secondary recipient, on the Notifications tab.
     private TextBox _caregiverBox = null!;
+    // Prescription request (EVOLUTION-PROPOSALS §3.4): optional
+    // per-profile doctor address, recipient of the explicit send from
+    // PrescriptionRequestDialog only.
+    private TextBox _doctorBox = null!;
     private NumericUpDown _timeoutBox = null!;
     private Label _passwordStatusLabel = null!;
 
@@ -611,6 +615,16 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Text = _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Help"),
         };
 
+        _doctorBox = new TextBox { Dock = DockStyle.Fill, Text = current.DoctorAddress };
+
+        var doctorHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = System.Drawing.Color.DarkGray,
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Help"),
+        };
+
         var saveButton = new Button
         {
             Text = _loc.Get("Ui.SettingsDialog.Notifications.Save"),
@@ -632,6 +646,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var table = BuildFormTable();
         AddRow(table, _loc.Get("Ui.SettingsDialog.Email.To"), _toBox);
         AddRow(table, _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Label"), _caregiverBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Label"), _doctorBox);
 
         var buttons = new FlowLayoutPanel
         {
@@ -650,6 +665,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
         container.Controls.Add(table);
         container.Controls.Add(caregiverHelp);
+        container.Controls.Add(doctorHelp);
         container.Controls.Add(buttons);
         container.Controls.Add(explanation);
         container.Controls.Add(BuildMyPinSection());
@@ -734,6 +750,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             var toAddress = _toBox.Text.Trim();
             var caregiverAddress = _caregiverBox.Text.Trim();
+            var doctorAddress = _doctorBox.Text.Trim();
 
             // A3 (§5.2): a non-empty caregiver address must parse as a
             // well-formed mailbox and must not equal the primary
@@ -762,10 +779,23 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 }
             }
 
+            // Doctor address: same well-formedness rule as the
+            // caregiver (a full mailbox with a domain). Empty allowed.
+            if (doctorAddress.Length > 0
+                && !MimeKit.MailboxAddress.TryParse(_addressParserOptions, doctorAddress, out _))
+            {
+                MessageBox.Show(this,
+                    _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Invalid"),
+                    _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             var settings = new NotificationSettings
             {
                 ToAddress = toAddress,
                 CaregiverAddress = caregiverAddress,
+                DoctorAddress = doctorAddress,
             };
             WriteNotificationSettingsToDisk(settings, _currentProfile.NotificationSettingsPath);
             MessageBox.Show(this,

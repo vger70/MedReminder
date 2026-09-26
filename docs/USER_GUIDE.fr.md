@@ -539,6 +539,44 @@ message et les moments d'envoi sont exactement les mêmes qu'avant.
 Le réglage est par profil : le soignant d'un profil n'est pas le
 soignant d'un autre profil.
 
+## Demander une ordonnance au médecin
+
+Sélectionne un médicament et choisis **Traitement → Demander une
+ordonnance…** (ou le bouton **Demander ordonnance** de la barre
+d'outils). L'action est disponible pour chaque médicament, quel que
+soit son stock.
+
+MedReminder prépare un court message avec le nom du médicament, le
+conditionnement, le code produit (lorsque le médicament est lié au
+catalogue) et le nom du profil en signature. Si le médicament a un
+médecin de référence, la formule d'appel utilise ce nom. La posologie,
+les notes et les autres détails cliniques ne sont pas inclus. L'objet
+et le message sont modifiables avant l'envoi.
+
+Trois façons de transmettre le message :
+
+- **Copier** : l'objet et le message vont dans le presse-papiers, à
+  coller dans un webmail, une application de messagerie ou un portail
+  patient.
+- **Ouvrir dans la messagerie** : ouvre un nouvel e-mail déjà rempli
+  dans le logiciel de messagerie par défaut. Si le message est trop
+  long pour la messagerie, ou si aucune messagerie n'est configurée, il
+  est copié dans le presse-papiers à la place.
+- **Envoyer…** : envoie le message via le compte e-mail configuré dans
+  **Paramètres → E-mail SMTP**, après une confirmation explicite.
+  Disponible uniquement lorsque l'envoi SMTP est configuré et que
+  l'e-mail du médecin est défini.
+
+L'e-mail du médecin se définit dans **Paramètres → Notifications →
+E-mail du médecin (facultatif)**. Il est propre au profil, inclus dans
+l'export et l'importation, et utilisé uniquement pour les demandes que
+tu envoies toi-même : les notifications automatiques ne sont jamais
+envoyées à cette adresse.
+
+MedReminder n'envoie jamais une demande d'ordonnance de lui-même. Le
+contenu du message et le destinataire ne sont pas écrits dans les
+fichiers journaux.
+
 ## Configurer le démarrage automatique
 
 **Paramètres → Démarrage automatique** : coche la case. Une entrée
