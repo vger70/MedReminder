@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Throw-away prototype for spike S9 of
+    docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md: ledger derivation, merge
+    rules and a convergence simulation. Not part of MedReminder.sln and
+    never shipped. Production code re-implements it in Phases 2 and 3.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>MedReminder.Prototypes.Sync</RootNamespace>
+    <AssemblyName>MedReminder.Prototypes.Sync</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);IDE0011</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MedReminder.Domain\MedReminder.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

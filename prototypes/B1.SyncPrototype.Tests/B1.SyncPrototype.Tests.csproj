@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>MedReminder.Prototypes.Sync.Tests</RootNamespace>
+    <AssemblyName>MedReminder.Prototypes.Sync.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);IDE0011</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="8.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\B1.SyncPrototype\B1.SyncPrototype.csproj" />
+    <ProjectReference Include="..\..\src\MedReminder.Domain\MedReminder.Domain.csproj" />
+    <ProjectReference Include="..\..\src\MedReminder.Application\MedReminder.Application.csproj" />
+  </ItemGroup>
+
+  <!-- The real use cases run on the in-memory repositories of
+       MedReminder.Application.Tests: they are the parity oracle. -->
+  <ItemGroup>
+    <Compile Include="..\..\tests\MedReminder.Application.Tests\Support\ApplicationTestScope.cs" Link="Oracle\ApplicationTestScope.cs" />
+    <Compile Include="..\..\tests\MedReminder.Application.Tests\Support\FakeTimeProvider.cs" Link="Oracle\FakeTimeProvider.cs" />
+    <Compile Include="..\..\tests\MedReminder.Application.Tests\Support\InMemory*.cs" Link="Oracle\%(Filename)%(Extension)" />
+    <Compile Include="..\..\tests\MedReminder.Application.Tests\Support\RecordingNotificationServices.cs" Link="Oracle\RecordingNotificationServices.cs" />
+  </ItemGroup>
+
+</Project>
