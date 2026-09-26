@@ -274,6 +274,32 @@ If you notice that actual stock is less than the calculated one
 If the correction would bring stock below zero, the operation is
 blocked with an error.
 
+## Count stock
+
+When the tablets in the cabinet no longer match the stock shown by
+the app, count them and let the app record the correction:
+
+1. Select the medicine.
+2. Menu **Stock → Count stock…**.
+3. Type the quantity you counted. The dialog shows the expected
+   stock (with automatic consumption brought up to date), the stock
+   discrepancy with its sign, and the run-out date before and after
+   the correction.
+4. In **Already taken today**, enter how much of today's scheduled
+   quantity you had already taken when you counted. The app suggests
+   the doses whose time has passed; without set times it suggests 0.
+   If you enter part of today's quantity, the list shows the stock at
+   the start of the day until today's consumption is recorded.
+5. Optionally add a note (default: "Stock count") and confirm with
+   **Record count**.
+
+**Effect**: one positive or negative correction is recorded so that
+stock equals the counted quantity. A zero discrepancy records
+nothing. A positive correction that brings the stock above the
+warning threshold advances the epoch, so a new low-stock warning can
+be sent later; a negative correction never does. The discrepancy is a stock
+figure only: it is not interpreted as missed or extra doses.
+
 ## Edit or deactivate a medicine
 
 - **Edit**: double click on the row or toolbar → **Edit**.

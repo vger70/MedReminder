@@ -200,6 +200,9 @@ internal sealed class MainForm : MedReminderFormBase
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Warning, Keys.None,
             async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Count"),
+            Mdl2Glyph.Glyphs.Search, Keys.None,
+            async () => await ShowStockCountAsync()));
         stockMenu.DropDownItems.Add(new ToolStripSeparator());
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Refresh"),
             Mdl2Glyph.Glyphs.Refresh, Keys.F5,
@@ -1250,6 +1253,46 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.StockMovement"), ex);
+        }
+    }
+
+    private async Task ShowStockCountAsync()
+    {
+        var row = GetSelectedRow();
+        if (row is null) return;
+
+        StockCountSnapshot snapshot;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var reconcile = scope.ServiceProvider.GetRequiredService<ReconcileStock>();
+            snapshot = await reconcile.LoadAsync(row.Id, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.ReadMedicine"), ex);
+            return;
+        }
+
+        using var dialog = new StockCountDialog(row.Name, row.Unit, snapshot, _loc);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var reconcile = scope.ServiceProvider.GetRequiredService<ReconcileStock>();
+            var result = await reconcile.ExecuteAsync(
+                dialog.Result.ToCommand(row.Id, _loc.Get("Ui.StockCountDialog.DefaultNote")),
+                CancellationToken.None);
+            _log.LogInformation(
+                "Stock count for medicine {MedicineId}: gap {Gap}, correction {Correction} ({Kind}), epoch advanced {EpochAdvanced}, {Days} consumption days materialized",
+                row.Id, result.Gap, result.Correction, result.CorrectionKind?.ToString() ?? "none",
+                result.StockEpochAdvanced, result.ConsumptionDaysMaterialized);
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.StockCount"), ex);
         }
     }
 

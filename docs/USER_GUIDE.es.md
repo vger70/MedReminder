@@ -295,6 +295,35 @@ perdido, derramado, etc.):
 Si la corrección dejara el stock por debajo de cero, la operación se
 bloquea con un error.
 
+## Contar existencias
+
+Cuando los comprimidos del armario ya no coinciden con las
+existencias que muestra la aplicación, cuéntelos y deje que la
+aplicación registre la corrección:
+
+1. Seleccione el medicamento.
+2. Menú **Stock → Contar existencias…**.
+3. Escriba la cantidad contada. El diálogo muestra las existencias
+   esperadas (con los consumos automáticos al día), la diferencia de
+   existencias con su signo y la fecha de agotamiento antes y después
+   de la corrección.
+4. En **Ya tomado hoy**, indique qué parte de la cantidad prevista
+   para hoy ya había tomado al contar. La aplicación propone las dosis
+   cuya hora ya ha pasado; sin horas definidas propone 0. Si indica
+   solo una parte, la lista muestra las existencias al inicio del día
+   hasta que se registre el consumo de hoy.
+5. Añada una nota si lo desea (por defecto: «Recuento de
+   existencias») y confirme con **Registrar recuento**.
+
+**Efecto**: se registra una única corrección, positiva o negativa,
+para que las existencias sean iguales a la cantidad contada. Una
+diferencia nula no registra nada. Una corrección positiva que devuelve las existencias por encima del
+umbral de aviso hace avanzar la época, para que más adelante pueda
+enviarse un nuevo aviso de existencias bajas; una corrección negativa
+nunca la hace avanzar. La diferencia
+es solo un dato de existencias: no se interpreta como dosis omitidas
+o adicionales.
+
 ## Editar o desactivar un medicamento
 
 - **Editar**: doble clic en la fila o barra de herramientas →
