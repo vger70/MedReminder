@@ -666,7 +666,7 @@
   "Ui.ProfilesManagerForm.DeleteDialog.Confirm": "Löschen",
   "Ui.SettingsDialog.Tab.Notifications": "Benachrichtigungen",
   "Ui.SettingsDialog.Notifications.Save": "Empfänger speichern",
-  "Ui.SettingsDialog.Notifications.Saved": "Benachrichtigungsempfänger gespeichert.",
+  "Ui.SettingsDialog.Notifications.Saved": "Gespeicherte Benachrichtigungsempfänger.",
   "Ui.SettingsDialog.Notifications.SaveError": "Empfänger konnte nicht gespeichert werden.",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Label": "E-Mail der Betreuungsperson (optional)",
   "Ui.SettingsDialog.Notifications.CaregiverAddress.Help": "Wenn gesetzt, wird jede E-Mail an dieses Profil (niedriger Bestand und Erinnerungen zur Einnahmezeit) auch an diese Adresse gesendet. Zum Deaktivieren leer lassen.",

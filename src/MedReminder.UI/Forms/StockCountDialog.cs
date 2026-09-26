@@ -109,7 +109,7 @@ internal sealed class StockCountDialog : MedReminderFormBase
         AddRow(table, string.Empty, _infoLabel);
         AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Notes"), _notesBox);
 
-        var okButton = new Button { Text = _loc.Get("Ui.StockCountDialog.Apply"), DialogResult = DialogResult.OK, Width = 120, Height = 32 };
+        var okButton = new Button { Text = _loc.Get("Ui.StockCountDialog.Apply"), DialogResult = DialogResult.OK, AutoSize = true, Width = 120, Height = 32 };
         var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
         okButton.Click += (_, _) =>
         {

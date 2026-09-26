@@ -602,6 +602,7 @@ internal sealed class MainForm : MedReminderFormBase
             _grid.Focus();
             return;
         }
+    }
     // Prescription request draft for the selected medicine
     // (EVOLUTION-PROPOSALS §3.4). Available for any medicine, whatever
     // its stock status. Nothing is sent from here: the dialog owns the
