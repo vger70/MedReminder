@@ -45,7 +45,7 @@ Branch: `claude/b1-analysis-document-1r5r0v`
   per-class merge rules, per-device encrypted operation segments,
   pairing and key rotation, provider transports (absorbs C.3++
   Phase 2), notifications across devices, feature parity, phases 0–7
-  with entry and exit criteria, decisions D1–D14.
+  with entry and exit criteria, decisions D1–D15.
 - `docs/ANALYSIS.md` §12 and `docs/EVOLUTION.md` §7 link the new
   analysis.
 
