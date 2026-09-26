@@ -143,9 +143,8 @@ package barcode.
 
 **Status.** Already the next item in the decided sequence
 (`EVOLUTION.md` §2.0, §3.2). Approved design:
-`docs/analysis/ANALYSIS-A2-BARCODE-WEBCAM.md` (webcam variant). The
-USB HID-scanner variant in the first draft is out of scope of that
-analysis.
+`docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md`, covering both the USB
+HID-scanner and the webcam variant.
 
 **Notes.** Value is highest for users in Italy, where the AIC code
 maps to the local catalogue. Other countries depend on catalogue

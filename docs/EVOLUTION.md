@@ -72,8 +72,8 @@ C.3+ and C.3++ Phase 1 have shipped (see `EVOLUTION-DONE.md`).
 
 1. **A2 — AIC / barcode scan** (§3.2). Next Group A item in the
    decided sequence. Design in
-   `docs/analysis/ANALYSIS-A2-BARCODE-WEBCAM.md` (webcam variant).
-   No cross-item preconditions.
+   `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md` (USB HID scanner and
+   webcam variants). No cross-item preconditions.
 2. **B.1 — mobile companion client** (§7). Its precondition, C.3+,
    is met.
 3. **C.3++ Phase 2 — native cloud providers** (§6). Only once B.1 is
@@ -106,36 +106,56 @@ Shipped. See `EVOLUTION-DONE.md` §3.1.
 ### 3.2 A2 — AIC / barcode scan of medicine package
 
 **Status.** Open. Next item in the decided sequence (§2.0).
-Approved design: `docs/analysis/ANALYSIS-A2-BARCODE-WEBCAM.md`,
-which covers the **webcam** variant and leaves the USB HID-scanner
-variant sketched below out of scope. Where the two disagree, the
-analysis wins.
+Approved design: `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md`, which
+covers both desktop variants: USB HID scanner (keyboard wedge) and
+webcam. Where this section and the analysis disagree, the analysis
+wins.
 
 **Motivation.** Reduce data-entry errors and friction when adding a
 medicine. The Italian AIC code (Autorizzazione all'Immissione in
-Commercio) is printed as a barcode on every package sold in Italy
-and uniquely identifies the medicinal product.
+Commercio) is printed on every package sold in Italy, as a Code 32
+barcode, and uniquely identifies the medicinal product. The EU FMD
+GS1 DataMatrix is being phased in for Italy (transition from
+9 February 2025, mandatory from 9 February 2027).
 
 **Design sketch.**
 
-- On desktop: use the PC camera or a handheld USB barcode scanner
-  as HID keyboard input.
+- On desktop, two input variants feeding one parser and one catalogue
+  lookup:
+  - **USB HID scanner** as keyboard input, captured in a dedicated
+    field of a scan dialog. Default mode: no new dependency, no
+    camera permission. A 1D scanner covers Code 32; DataMatrix needs
+    a 2D imager.
+  - **Webcam**, decoded in-process with ZXing.Net, started only on
+    explicit request.
 - On the mobile companion (see §7): the phone camera is the
   natural scanner; `ZXing.Net.Maui` or equivalent handles the
   decode.
 - Once the AIC is captured, look it up in the local reference
   catalogue (see `ANALYSIS-DRUG-CATALOGUE.md` — the mechanism
-  already exists) and populate the medicine record.
+  already exists) and populate the medicine record as a manual
+  autocomplete pick does.
 
-**Effort.** 1–2 weeks for the desktop path. Mobile path lands
-together with §7. [INFERRED]
+**Flows.** (a) add a new medicine by scanning its package; (b) restock
+an existing medicine by scanning its package (medicine identified by
+AIC, kind "new package", quantity from the last new-package movement;
+no expiry/batch, which stock movements do not store).
+
+**Phases.** DECIDED 2026-09-26, one PR each:
+
+1. Shared core + USB HID scanner — flow (a).
+2. Webcam — flow (a).
+3. Flow (b) — only after flow (a) is complete and on explicit
+   product-owner request. Not scheduled.
+
+**Effort.** Phase 1 ~9–10 days, phase 2 ~6–7 days, phase 3 ~4–5 days.
+Mobile path lands together with §7. [INFERRED]
 
 **Risks.** Camera access adds a new permission surface on Windows;
-handheld scanners are the safer default for the desktop MVP.
-
-**Verdict.** Small, isolated, high user-visible value. No
-dependency on the multi-device track.
-
+handheld scanners are the safer default. HID scanners vary in suffix,
+GS1 separator and keyboard-layout configuration; the parser rejects
+garbled input by checksum. GTIN-only scans may not resolve to an AIC
+once Code 32 disappears from Italian packs [UNCERTAIN].
 
 ### 3.3 A3 — Caregiver notifications
 
@@ -483,3 +503,13 @@ application is prepared in
   A2 → B.1 → C.3++ Phase 2 → C.1. §6 narrowed to the deferred
   native-provider phases. §7.7 records that the C.3+ precondition
   is met. Section numbers kept, with pointers for moved sections.
+- 2026-09-25 — §2.0 and §3.2: A2 design now points to
+  `ANALYSIS-A2-BARCODE-SCAN.md` (renamed from
+  `ANALYSIS-A2-BARCODE-WEBCAM.md`), which covers both the USB HID
+  scanner and the webcam variant. §3.2 design sketch, effort and risks
+  updated accordingly; Code 32 named as the Italian AIC barcode and
+  the Italian FMD DataMatrix timeline added.
+- 2026-09-26 — §3.2: recorded the A2 flows (a: new medicine, b:
+  restock) and the decided phases HID → webcam → flow (b), the last
+  deferred until flow (a) is complete and the product owner requests
+  it. Effort split per phase.
