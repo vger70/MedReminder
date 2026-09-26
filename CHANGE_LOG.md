@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #76 — Add B.1 mobile companion analysis document
+
+Link: [vger70/MedReminder#76](https://github.com/vger70/MedReminder/pull/76)
+Branch: `claude/b1-analysis-document-1r5r0v`
+
+### Docs
+
+- New `docs/analysis/ANALYSIS-B1-MOBILE-COMPANION.md`: preconditions
+  audited against the tree, read-only replica model with a later
+  operation-journal phase, portable infrastructure split, phone
+  notification planning, phases 0–4 with entry and exit criteria,
+  spikes S1–S5, decisions D1–D12, corrections to `EVOLUTION.md` §7.2,
+  §7.6 and `ANALYSIS-C3PP-CLOUD-PROVIDERS.md` §6.1.
+- `docs/ANALYSIS.md` §12 and `docs/EVOLUTION.md` §7 link the new
+  analysis.
+
 ## PR #75 — Add read-only therapy timeline view
 
 Link: [vger70/MedReminder#75](https://github.com/vger70/MedReminder/pull/75)
