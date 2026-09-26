@@ -30,6 +30,36 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #75 — Add read-only therapy timeline view
+
+Link: [vger70/MedReminder#75](https://github.com/vger70/MedReminder/pull/75)
+Branch: `claude/prompt-therapy-timeline-c51i9d`
+
+### Added
+
+- Therapy timeline (Therapy menu, Ctrl+T, and toolbar): one row per
+  medicine over a movable date window (default 60 days back, 120
+  forward) showing active periods, suspensions, dosage changes,
+  stepped-taper stages, today and the estimated run-out date. Read-only;
+  "Show in list" selects the medicine in the main grid
+  (`src/MedReminder.UI/Forms/TherapyTimelineForm.cs`,
+  `src/MedReminder.UI/Controls/TherapyTimelineChart.cs`).
+- Pure `TherapyTimelineBuilder`, `TherapyTimelineQuery` and localized
+  `TherapyTimelineText` in `src/MedReminder.Application/Timeline/`.
+- Accessibility: elements differ by pattern and shape, keyboard
+  navigation, tooltips, a textual details pane, high-contrast palette,
+  sizes derived from the form font.
+
+### Changed
+
+- `MedicineOverviewLoader` computes the forecast through the new
+  `MedicineForecast` domain helper, shared with the timeline so both
+  views show the same run-out date.
+
+### Docs
+
+- Timeline section in the five `docs/USER_GUIDE.<lang>.md`.
+
 ## PR #71 — Extend A2 barcode analysis to the USB HID-scanner variant
 
 Link: [vger70/MedReminder#71](https://github.com/vger70/MedReminder/pull/71)
