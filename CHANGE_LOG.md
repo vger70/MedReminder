@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #71 — A2 barcode scan: analysis and phase 1 (USB HID scanner)
+## PR #71 — Extend A2 barcode analysis to the USB HID-scanner variant
 
 Link: [vger70/MedReminder#71](https://github.com/vger70/MedReminder/pull/71)
 Branch: `claude/barcode-webcam-hid-scanner-vlcsjo`

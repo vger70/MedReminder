@@ -56,8 +56,8 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         _defaultFolder = defaultFolder ?? string.Empty;
 
         Text = _loc.Get("Ui.RestoreCloudDialog.Title");
-        Width = 640;
-        Height = 620;
+        Width = 680;
+        Height = 590;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
