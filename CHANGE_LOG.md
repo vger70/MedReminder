@@ -52,6 +52,12 @@ Branch: `claude/b1-analysis-document-1r5r0v`
   spike S9 (convergence prototype) added as the first Phase 0 step.
   `docs/EVOLUTION.md` §2.0 sequence updated: B.1 with sync first, A2
   phase 2 independent, C.1 reduced to an optional hosted transport.
+- Spike S9 results recorded in §18.9 (prototype in PR #77): parity
+  with the current use cases and multi-device convergence over 10 000
+  seeds each. Design updated from its findings: count anchors
+  evaluated by recording order, dated slot history, register version
+  history and anchor horizon, checkpoint selection, resolved-value
+  hash, wider D6 scope.
 
 ## PR #75 — Add read-only therapy timeline view
 

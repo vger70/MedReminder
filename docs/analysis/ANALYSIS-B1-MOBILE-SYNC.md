@@ -189,15 +189,15 @@ desktop as a delta computed against a stale expected stock.
   result.
 
 The stock count becomes a fact, `StockCount(id, medicineId,
-countedAt, countDay, countedQuantity, takenToday)`: an **anchor**.
-`takenToday` is the user-entered quantity already taken on the count
-day, an input of today's `ReconcileStock` command `[VERIFIED —
-ReconcileStockCommand.TakenToday]`. The derived correction is computed
-with the **existing** `ReconcileStock` formula (moved to Domain
-unchanged), evaluated on the merged ledger as of `countedAt`, so a
-count taken on the phone is correct against whatever the desktop
-recorded before it, and facts dated after the count apply on top of
-it.
+countDay, countedQuantity, takenToday, thresholdAtCount)`, recorded
+with its HLC: an **anchor**. `takenToday` is the user-entered quantity
+already taken on the count day, an input of today's `ReconcileStock`
+command `[VERIFIED — ReconcileStockCommand.TakenToday]`. The derived
+correction is computed with the **existing** `ReconcileStock` formula
+(moved to Domain unchanged) on the facts recorded before the count
+(§4.3 rule 3), so a count taken on the phone is correct against
+whatever the desktop recorded before it, and facts recorded after the
+count apply on top of it.
 
 ### 3.5 Genesis cutoff: preserving existing data
 
@@ -242,7 +242,7 @@ receiving device shows a clock warning naming the peer device (§7.4).
 | `Medicine.StartDate` | Immutable | Set at creation; `UpdateMedicine` does not change it `[VERIFIED]` |
 | `Medicine` current schedule summary (`DosePerAdministration`, `AdministrationsPerDay`) | Derived | From the most recently **recorded** schedule row (highest HLC), whatever its `EffectiveFrom`: `ChangeMedicationSchedule` sets these fields from the new row even when it takes effect in the future `[VERIFIED]` |
 | `Medicine.StockEpoch`, `StockMovement.StockEpoch` | Derived | §4.4 |
-| Administration slots of a medicine | Set-valued register | LWW on the **whole set** per medicine (matches `UpdateMedicine`, which replaces the set) |
+| Administration slots of a medicine | Dated set history | Today slots have no date and apply to every day not yet booked `[VERIFIED — DailyConsumption comment "current retroactive"]`; a pure derivation would rewrite every past day after a slot change. Each slot-set change is recorded with `EffectiveFrom` = the day it is made (the set given at creation: from the beginning). On day d, the most recently recorded set among those in force wins, so a change made today also replaces a set whose start is still in the future `[VERIFIED — S9, §18]` |
 | `MedicationScheduleHistory` row | Keyed fact | Key `(MedicineId, EffectiveFrom)`; same key twice (one device or two) → higher HLC wins. The losing row enters the conflict list only when the two rows come from different devices. Behavior change, see §17 |
 | `MedicationSuspension` | Mutable record | Creation is a fact; `EndDate`, `Reason` LWW per field; overlaps resolved per §4.5 |
 | Stock entry facts (`NewPackage`, `ManualAdd`, `PositiveCorrection` from `AddStock`, `NegativeCorrection` from `AdjustStockDown`) | Append-only fact | Union by `Id` |
@@ -255,6 +255,11 @@ receiving device shows a clock warning naming the peer device (§7.4).
 | `NotificationEvent`, `DoseReminderEvent` | Device-local | Not replicated: they record what **this** device has notified |
 | Device notification preferences, language, sync schedule | Device-local | Not replicated |
 | Profile registry, PIN, role, SMTP, backup settings | Installation-local | Not replicated (§4.6) |
+
+Every last-writer-wins register keeps its versions, not only the
+winner: count anchors are evaluated "as of" their HLC (§4.3), and the
+conflict review restores a losing value. History can be pruned only
+behind the anchor horizon (§5.6).
 
 Deletion: medicines are deactivated, never deleted (P11). The only
 deletions are slot-set replacement (covered by the set register) and
@@ -298,19 +303,25 @@ Rules, in this order (each rule states its own day range):
    ConsumptionCatchUp]`. An intake day never gets automatic
    consumption, so today's backdated-intake reversal movement is no
    longer needed.
-3. **Stock-count anchors**: for each `StockCount`, the correction is the
-   `ReconcileStock` formula applied to the ledger as of `countedAt`:
-   expected = raw (unclamped, as today through `LedgerAlignment`)
-   ledger total as of `countedAt` (every fact and derived row up to
-   `countedAt`, which includes automatic consumption through the day
-   before the count day) minus `takenToday`; correction =
-   `counted - expected`. When `takenToday` equals the count day's whole
-   scheduled quantity, the count day's automatic consumption is derived
-   at the count (today's `MaterializesToday` branch) and rule 2 skips
-   that day afterwards, as the catch-up skips a day that already has a
-   `Consumption` today `[VERIFIED — ReconcileStock header comment]`;
-   otherwise the count day stays to rule 2. Parity tests (§11) must reproduce the
-   current `ReconcileStock` test cases exactly.
+3. **Stock-count anchors**: for each `StockCount`, in HLC order, the
+   correction is the `ReconcileStock` formula evaluated on a
+   **snapshot**: the facts **recorded** before the count (HLC order),
+   derived as they would have been at that moment, plus the earlier
+   anchors. Recording order, not `OccurredAt`: an intake's movement is
+   dated at midday of its day, not at the moment it was entered, and
+   today's `ReconcileStock` only sees what was entered before it
+   `[VERIFIED — S9, §18]`. expected = raw (unclamped, as today through
+   `LedgerAlignment`) total of that snapshot, which includes automatic
+   consumption through the day before the count day, minus
+   `takenToday`; correction = `counted - expected`. When `takenToday`
+   equals the count day's whole scheduled quantity, the count day's
+   consumption is booked with the quantity **fixed in the snapshot**
+   (today's `MaterializesToday` branch) and rule 2 skips that day; a
+   later intake for that day still removes it, as `RegisterIntake`
+   reverses it today. The epoch rule uses the threshold captured in the
+   fact (`thresholdAtCount`). Snapshot evaluation needs the value of
+   every register "as of" an HLC, so registers keep their version
+   history (§4.2).
 
 Derived movement ids are deterministic (a name-based GUID over
 `medicineId`, rule, day or anchor id), so a re-derivation replaces rows
@@ -486,6 +497,15 @@ operation ids, so re-downloading is harmless.
   versions and tombstones, LWW and retractions would break after a
   bootstrap. Derived rows, conflicts and device-local tables are not
   included.
+- **Anchor horizon**: count anchors older than the stale-device window
+  (90 days) are frozen with their computed correction; register
+  history older than the horizon can then be pruned from checkpoints.
+  Without a horizon, state size equals the full operation log (S9
+  finding) `[INFERRED — not exercised by S9]`.
+- A bootstrap picks the newest checkpoint that covers every folder's
+  first remaining segment, not simply the newest one: a checkpoint
+  written by a device that was still catching up may not cover
+  segments already deleted `[VERIFIED — S9]`.
 - A segment can be deleted when a checkpoint covers it **and** every
   active device's published applied vector covers it.
 - A device not seen for 90 days (configurable) is marked stale and no
@@ -645,6 +665,7 @@ Idempotent boot patches in `DatabaseInitializer` (`CLAUDE.md` §7):
 |---|---|
 | `StockMovements.Origin` column (`Legacy`, `User`, `Derived`) | Separate facts from derived rows |
 | `StockCounts` table | Count anchors |
+| Slot-set history (`MedicationAdministrationSlots.EffectiveFrom` plus recording HLC) | Dated slot sets (§4.2) |
 | `SyncOperations` table | Local outbox and applied-operation ids |
 | `SyncFieldVersions` table | HLC per `(entity, id, field)` for LWW |
 | `SyncPeers` table | Applied vector per remote device |
@@ -868,7 +889,7 @@ simulation harness covers the same properties empirically]`.
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Divergence bug in merge or derivation | Medium | High | Pure Domain rules; convergence simulation in CI; state-hash exchange between devices (each device publishes a hash of its **replicated** state per applied vector, derived rows excluded; mismatch raises an error and offers re-bootstrap) |
+| Divergence bug in merge or derivation | Medium | High | Pure Domain rules; convergence simulation in CI; state-hash exchange between devices (each device publishes, per applied vector, a hash of its replicated state **and** of the resolved current values, derived rows excluded; mismatch raises an error and offers re-bootstrap). A hash of the version sets alone does not detect a wrong winner selection `[VERIFIED — S9 negative control]` |
 | Ledger refactor changes existing numbers | Medium | High | Cutoff (§3.5); parity tests; refactor shipped (Phase 2) before sync |
 | Provider API limits, scope policies, OAuth verification | Medium `[UNCERTAIN]` | Blocking per provider | Spikes S6, S7; OneDrive first; `LocalFolder` fallback on desktop |
 | Background sync on mobile too infrequent | High | Stale data, duplicate reminders | Foreground sync on open; status always visible; accepted duplication (§8.3) |
@@ -1130,7 +1151,7 @@ D4, D7, D9, D11, D12, D13, D14.
 | D3 | Providers and order | OneDrive, Google Drive, Dropbox | **Decided 2026-09-26**: OneDrive, then Google Drive; Dropbox later | Phase 0 |
 | D4 | Notification defaults per device | Proposal in §8.3 | Dose on phone, low-stock everywhere | Phase 5 |
 | D5 | Relative order with A2 | A2 first; B.1 first | **Decided 2026-09-26**: A2 phase 1 has shipped (PR #72); A2 phase 2 (webcam) is independent and may run after B.1 or in parallel | Phase 0 |
-| D6 | Retroactive schedule changes after cutoff re-derive past days | Yes; no (freeze on first derivation) | **Decided 2026-09-26**: yes | Phase 2 |
+| D6 | Retroactive changes after cutoff (schedule rows, suspensions, therapy end date) re-derive past days; frozen days never change | Yes; no (freeze on first derivation) | **Decided 2026-09-26**: yes | Phase 2 |
 | D7 | Conflict review scope | Show all LWW losses; show only listed cases (§4.5) | §4.5 list | Phase 3 |
 | D8 | Retraction (delete a mistaken fact) | Add now; later | **Decided 2026-09-26**: add in Phase 2 | Phase 2 |
 | D9 | Portable project name, namespaces | `MedReminder.Infrastructure.Portable`, keep namespaces | As proposed | Phase 1 |
@@ -1178,8 +1199,67 @@ To apply in the Phase 1 PR:
 
 ## 18. Spike results
 
-Empty until Phase 0 runs. One subsection per spike: date, device / OS,
-result, decision.
+One subsection per spike: date, environment, result, decision. S1–S8
+pending.
+
+### 18.9 S9 — Convergence prototype (2026-09-26)
+
+**Environment**: Linux container, .NET SDK 10.0.112, code in
+`prototypes/B1.SyncPrototype*` (PR #77, draft, not to be merged). The
+prototype references `MedReminder.Domain` and reuses
+`ConsumptionMaterializer`, `DailyConsumption`, `SuspensionState` and
+`RunOutForecast` unchanged. The oracle is the real Application use
+cases over the in-memory repositories of
+`MedReminder.Application.Tests`.
+
+**Result: passed.**
+
+| Criterion | Run | Outcome |
+|---|---|---|
+| (a) Parity with today's behavior | 10 000 random 25-day scenarios (1–4 actions per day: add medicine, stock entries, corrections, intakes of every status including backdated, counts with every `takenToday` branch, schedule changes, suspend / resume, threshold, end date, slot changes, deactivation); one third apply the Phase 2 cutoff patch mid-way; plus 3 scripted cases | Stock and `StockEpoch` identical to the use cases after every action |
+| (b) Convergence | 10 000 random histories: 2–5 devices, 30 days, 2.6 M operations, clock skew up to 2 h, devices offline 1–20 days, random order and duplicate delivery, checkpoints and compaction, late joiners, retractions, concurrent edits of the same fields and schedule keys | Every device equal to the HLC-ordered fold of all operations; identical derived ledgers; no operation lost; `ANALYSIS.md` §4.4 invariants hold. Exercised: 12 423 bootstraps, 340 157 compacted segments, 325 237 duplicates ignored, 2 908 same-key schedule conflicts |
+| Negative controls | Broken winner selection; skipped bootstrap on compacted segments | Both detected (not committed) |
+
+Parity excludes, by design, the changes whose behavior D6 and D15
+change. `DocumentedDifferenceTests` pins them (50 units initial stock,
+1 unit/day unless stated):
+
+| Case | Today | Derived |
+|---|---|---|
+| Schedule changed on day 10 to 2/day from day 5 (D6) | 40 | 35 |
+| Deactivated day 1, reactivated day 8 (D15) | 42 | 49 |
+| Two changes for the same `EffectiveFrom` (1→2, then →3) | 45 (first row wins) | 43 (latest wins) |
+| End date on day 2 cleared on day 7, cutoff on day 5 (D6) | 43 (frozen days re-opened) | 46 (frozen days unchanged) |
+
+**Findings that changed this document**:
+
+1. Count anchors are evaluated on facts **recorded** before the count
+   (HLC), not dated before it; the count-day quantity is fixed in the
+   snapshot; the threshold travels in the fact (§4.3 rule 3).
+2. Slots have no date today; they need a dated history, with the
+   creation set in force from the beginning (§4.2). Without it the
+   derivation diverges from today's behavior and rewrites the past.
+3. Registers keep their version history; state size then equals the
+   operation log unless an anchor horizon allows pruning (§4.2, §5.6).
+4. D6 covers every dated change (schedule rows, suspensions, therapy
+   end date), and today even re-opens days before the cutoff; the
+   derivation keeps frozen days frozen.
+5. The convergence check must hash the resolved values, not only the
+   version sets (§12).
+6. Bootstrap must choose a checkpoint that covers the compacted
+   segments (§5.6).
+7. Parity with today holds only after a catch-up tick: `MedicationMonitor`
+   runs it every 30 minutes, so the difference is transient except for
+   the D6 / D15 cases.
+
+**Not covered**: time zones and DST (UTC only), encryption, EF Core
+persistence, generation reset, notification planning, field-diff
+emission from real dialogs, the anchor horizon, performance on a phone.
+Per-movement `StockEpoch` values (diagnostic only) were not compared;
+the medicine's epoch was.
+
+**Decision**: the model holds. Phase 1 may start once D9 is decided;
+Phase 2 implements the derivation from the prototype and its tests.
 
 ---
 
@@ -1232,3 +1312,8 @@ result, decision.
 - 2026-09-26 — product owner decided D1, D2, D3, D5, D6, D8, D10, D15
   as proposed. Added spike S9 (convergence prototype) as the first
   Phase 0 step, gating Phase 1.
+- 2026-09-26 — S9 passed (§18.9). Updated from its findings: §4.3
+  rule 3 (snapshot by recording order, fixed count-day quantity,
+  threshold in the fact), §4.2 (dated slot history, register history),
+  §5.6 (anchor horizon, checkpoint selection), §12 (resolved-value
+  hash), D6 scope.
