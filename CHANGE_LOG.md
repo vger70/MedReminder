@@ -30,6 +30,35 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #76 — Add B.1 mobile client and synchronization analysis
+
+Link: [vger70/MedReminder#76](https://github.com/vger70/MedReminder/pull/76)
+Branch: `claude/b1-analysis-document-1r5r0v`
+
+### Docs
+
+- New `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`: mobile full client
+  with mandatory, end-to-end encrypted synchronization with the desktop
+  through the user's cloud storage, no backend. Covers preconditions
+  audited against the tree, the facts / derived split of the stock
+  ledger (count anchors, derived stock epoch, genesis cutoff), HLC and
+  per-class merge rules, per-device encrypted operation segments,
+  pairing and key rotation, provider transports (absorbs C.3++
+  Phase 2), notifications across devices, feature parity, phases 0–7
+  with entry and exit criteria, decisions D1–D15.
+- `docs/ANALYSIS.md` §12 and `docs/EVOLUTION.md` §7 link the new
+  analysis.
+- Product-owner decisions D1, D2, D3, D5, D6, D8, D10, D15 recorded;
+  spike S9 (convergence prototype) added as the first Phase 0 step.
+  `docs/EVOLUTION.md` §2.0 sequence updated: B.1 with sync first, A2
+  phase 2 independent, C.1 reduced to an optional hosted transport.
+- Spike S9 results recorded in §18.9 (prototype in PR #77): parity
+  with the current use cases and multi-device convergence over 10 000
+  seeds each. Design updated from its findings: count anchors
+  evaluated by recording order, dated slot history, register version
+  history and anchor horizon, checkpoint selection, resolved-value
+  hash, wider D6 scope.
+
 ## PR #75 — Add read-only therapy timeline view
 
 Link: [vger70/MedReminder#75](https://github.com/vger70/MedReminder/pull/75)
