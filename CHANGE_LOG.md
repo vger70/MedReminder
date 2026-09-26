@@ -30,10 +30,37 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #78 — Revert the S9 prototype merged by mistake
+
+Link: [vger70/MedReminder#78](https://github.com/vger70/MedReminder/pull/78)
+Branch: `claude/revert-s9-prototype`
+
+### Removed
+
+- `prototypes/` (spike S9 code from PR #77). It was not meant for
+  `main`: outside `MedReminder.sln`, not built by CI, and linked to the
+  test support files of `MedReminder.Application.Tests`. The code
+  remains on branch `claude/b1-s9-convergence-prototype`.
+
+## PR #77 — Spike S9: B.1 ledger derivation and sync convergence prototype
+
+Link: [vger70/MedReminder#77](https://github.com/vger70/MedReminder/pull/77)
+Branch: `claude/b1-s9-convergence-prototype`
+**Status:** merged by mistake (2026-09-26), reverted in PR #78
+
+### Added
+
+- Throw-away prototype under `prototypes/` (outside `MedReminder.sln`)
+  for spike S9 of `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`: ledger
+  derivation, merge rules, convergence simulation. Parity with the real
+  use cases over 10 000 random scenarios; convergence over 10 000
+  random multi-device histories.
+
 ## PR #76 — Add B.1 mobile client and synchronization analysis
 
 Link: [vger70/MedReminder#76](https://github.com/vger70/MedReminder/pull/76)
 Branch: `claude/b1-analysis-document-1r5r0v`
+**Status:** merged (2026-09-26)
 
 ### Docs
 

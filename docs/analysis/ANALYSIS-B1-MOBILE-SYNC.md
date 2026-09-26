@@ -1205,7 +1205,9 @@ pending.
 ### 18.9 S9 — Convergence prototype (2026-09-26)
 
 **Environment**: Linux container, .NET SDK 10.0.112, code in
-`prototypes/B1.SyncPrototype*` (PR #77, draft, not to be merged). The
+`prototypes/B1.SyncPrototype*` on branch
+`claude/b1-s9-convergence-prototype` (PR #77; merged by mistake and
+reverted in PR #78, so the code is not on `main`). The
 prototype references `MedReminder.Domain` and reuses
 `ConsumptionMaterializer`, `DailyConsumption`, `SuspensionState` and
 `RunOutForecast` unchanged. The oracle is the real Application use
