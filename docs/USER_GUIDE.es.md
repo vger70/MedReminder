@@ -295,6 +295,35 @@ perdido, derramado, etc.):
 Si la corrección dejara el stock por debajo de cero, la operación se
 bloquea con un error.
 
+## Contar existencias
+
+Cuando los comprimidos del armario ya no coinciden con las
+existencias que muestra la aplicación, cuéntelos y deje que la
+aplicación registre la corrección:
+
+1. Seleccione el medicamento.
+2. Menú **Stock → Contar existencias…**.
+3. Escriba la cantidad contada. El diálogo muestra las existencias
+   esperadas (con los consumos automáticos al día), la diferencia de
+   existencias con su signo y la fecha de agotamiento antes y después
+   de la corrección.
+4. En **Ya tomado hoy**, indique qué parte de la cantidad prevista
+   para hoy ya había tomado al contar. La aplicación propone las dosis
+   cuya hora ya ha pasado; sin horas definidas propone 0. Si indica
+   solo una parte, la lista muestra las existencias al inicio del día
+   hasta que se registre el consumo de hoy.
+5. Añada una nota si lo desea (por defecto: «Recuento de
+   existencias») y confirme con **Registrar recuento**.
+
+**Efecto**: se registra una única corrección, positiva o negativa,
+para que las existencias sean iguales a la cantidad contada. Una
+diferencia nula no registra nada. Una corrección positiva que devuelve las existencias por encima del
+umbral de aviso hace avanzar la época, para que más adelante pueda
+enviarse un nuevo aviso de existencias bajas; una corrección negativa
+nunca la hace avanzar. La diferencia
+es solo un dato de existencias: no se interpreta como dosis omitidas
+o adicionales.
+
 ## Editar o desactivar un medicamento
 
 - **Editar**: doble clic en la fila o barra de herramientas →
@@ -574,6 +603,43 @@ momentos de envío son exactamente los mismos que antes.
 
 El ajuste es por perfil: el cuidador de un perfil no es el cuidador de
 otro perfil.
+
+## Solicitar una receta al médico
+
+Selecciona un medicamento y elige **Terapia → Solicitar receta…** (o
+el botón **Solicitar receta** de la barra de herramientas). La acción
+está disponible para cualquier medicamento, sea cual sea su
+existencia.
+
+MedReminder prepara un mensaje breve con el nombre del medicamento, el
+envase, el código del producto (cuando el medicamento está vinculado
+al catálogo) y el nombre del perfil como firma. Si el medicamento
+tiene un médico de referencia, el saludo usa ese nombre. La posología,
+las notas y otros detalles clínicos no se incluyen. El asunto y el
+mensaje se pueden modificar antes del envío.
+
+Tres formas de entregar el mensaje:
+
+- **Copiar**: el asunto y el mensaje van al portapapeles, para pegarlos
+  en un webmail, una aplicación de mensajería o un portal del paciente.
+- **Abrir en el programa de correo**: abre un nuevo e-mail ya
+  rellenado en el programa de correo predeterminado. Si el mensaje es
+  demasiado largo para el programa de correo, o no hay ninguno
+  configurado, se copia al portapapeles en su lugar.
+- **Enviar…**: envía el mensaje mediante la cuenta de e-mail
+  configurada en **Configuración → E-mail SMTP**, tras una
+  confirmación explícita. Disponible solo cuando el envío SMTP está
+  configurado y el e-mail del médico está definido.
+
+El e-mail del médico se define en **Configuración → Notificaciones →
+E-mail del médico (opcional)**. Es por perfil, se incluye en la
+exportación y la importación, y solo se usa para las solicitudes que
+envías tú: las notificaciones automáticas nunca se envían a esta
+dirección.
+
+MedReminder nunca envía una solicitud de receta por su cuenta. El
+contenido del mensaje y el destinatario no se escriben en los archivos
+de registro.
 
 ## Configurar el inicio automático
 

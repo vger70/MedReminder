@@ -41,6 +41,18 @@ internal sealed class RetryingEmailNotificationService : IEmailNotificationServi
 
     public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
+        // Interactive explicit-recipient sends (prescription request)
+        // are not retried: the user is waiting on the dialog and can
+        // retry by hand, and the back-off log entries below attach the
+        // exception, whose SMTP text can echo the recipient address.
+        if (message.ExplicitRecipient is not null)
+        {
+            await _inner.SendAsync(message, cancellationToken);
+            return;
+        }
+
         Exception? lastError = null;
         for (var attempt = 0; attempt <= Backoffs.Length; attempt++)
         {

@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.Monitoring;
@@ -64,69 +65,18 @@ public sealed class ConsumptionCatchUp
 
     private async Task<int> RunCoreAsync(CancellationToken cancellationToken)
     {
-        var today = LocalToday();
+        // Materialize up to "yesterday" inclusive: today's consumption
+        // will be written on the next run, once the day has closed.
+        // Avoids double-decrementing today if the user records a manual
+        // intake shortly after catch-up.
+        var rangeEnd = LocalToday().AddDays(-1);
         var medicines = await _medicines.ListActiveAsync(cancellationToken);
 
         var created = 0;
         foreach (var medicine in medicines)
         {
-            // Materialize up to "yesterday" inclusive: today's
-            // consumption will be written on the next run, once the
-            // day has closed. Avoids double-decrementing today if the
-            // user records a manual intake shortly after catch-up.
-            var rangeEnd = today.AddDays(-1);
-            if (medicine.StartDate > rangeEnd) continue;
-
-            // Days covered by a manual intake record (any status) do
-            // NOT generate an automatic consumption: the user has
-            // already declared the actual state of the day (Taken →
-            // movement created by the RegisterIntake use case;
-            // Skipped / Cancelled → no consumption). See spec §6.
-            var intakeDays = new HashSet<DateOnly>(await _intakes.ListManualIntakeDaysAsync(
-                medicine.Id, DateOnly.MinValue, DateOnly.MaxValue, cancellationToken));
-
             var ledger = await _stock.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var consumptionDays = new HashSet<DateOnly>(ledger
-                .Where(m => m.Kind == StockMovementKind.Consumption)
-                .Select(m => LocalDay(m.OccurredAt)));
-
-            DateOnly? lastAutomaticDay = null;
-            foreach (var day in consumptionDays)
-            {
-                if (intakeDays.Contains(day)) continue;
-                if (lastAutomaticDay is null || day > lastAutomaticDay) lastAutomaticDay = day;
-            }
-
-            var rangeStart = lastAutomaticDay is null
-                ? medicine.StartDate
-                : lastAutomaticDay.Value.AddDays(1);
-            if (rangeStart > rangeEnd) continue;
-
-            var schedule = await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
-
-            var plan = ConsumptionMaterializer.Plan(
-                medicine, rangeStart, rangeEnd, schedule, suspensions, slots);
-            if (plan.Count == 0) continue;
-
-            var movements = new List<StockMovement>(plan.Count);
-            foreach (var day in plan)
-            {
-                if (intakeDays.Contains(day.Day) || consumptionDays.Contains(day.Day))
-                {
-                    continue;
-                }
-                movements.Add(new StockMovement
-                {
-                    MedicineId = medicine.Id,
-                    OccurredAt = ToLocalMiddayOffset(day.Day),
-                    Kind = StockMovementKind.Consumption,
-                    QuantityDelta = -day.Quantity,
-                    StockEpoch = medicine.StockEpoch,
-                });
-            }
-
+            var movements = await PlanMissingAsync(medicine, ledger, rangeEnd, cancellationToken);
             if (movements.Count == 0) continue;
             await _stock.AddRangeAsync(movements, cancellationToken);
             created += movements.Count;
@@ -139,7 +89,70 @@ public sealed class ConsumptionCatchUp
         return created;
     }
 
-    private DateOnly LocalToday()
+    // Builds, without persisting them, the automatic Consumption
+    // movements missing from `ledger` for one medicine, up to rangeEnd
+    // inclusive. Shared with ReconcileStock, which needs the stock with
+    // consumption materialized up to the moment of a physical count.
+    // Callers that persist the result must hold MonitoringGate.
+    internal async Task<IReadOnlyList<StockMovement>> PlanMissingAsync(
+        Medicine medicine,
+        IReadOnlyList<StockMovement> ledger,
+        DateOnly rangeEnd,
+        CancellationToken cancellationToken)
+    {
+        if (medicine.StartDate > rangeEnd) return [];
+
+        // Days covered by a manual intake record (any status) do
+        // NOT generate an automatic consumption: the user has
+        // already declared the actual state of the day (Taken →
+        // movement created by the RegisterIntake use case;
+        // Skipped / Cancelled → no consumption). See spec §6.
+        var intakeDays = new HashSet<DateOnly>(await _intakes.ListManualIntakeDaysAsync(
+            medicine.Id, DateOnly.MinValue, DateOnly.MaxValue, cancellationToken));
+
+        var consumptionDays = new HashSet<DateOnly>(ledger
+            .Where(m => m.Kind == StockMovementKind.Consumption)
+            .Select(m => LocalDay(m.OccurredAt)));
+
+        DateOnly? lastAutomaticDay = null;
+        foreach (var day in consumptionDays)
+        {
+            if (intakeDays.Contains(day)) continue;
+            if (lastAutomaticDay is null || day > lastAutomaticDay) lastAutomaticDay = day;
+        }
+
+        var rangeStart = lastAutomaticDay is null
+            ? medicine.StartDate
+            : lastAutomaticDay.Value.AddDays(1);
+        if (rangeStart > rangeEnd) return [];
+
+        var schedule = await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
+        var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
+        var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
+
+        var plan = ConsumptionMaterializer.Plan(
+            medicine, rangeStart, rangeEnd, schedule, suspensions, slots);
+
+        var movements = new List<StockMovement>(plan.Count);
+        foreach (var day in plan)
+        {
+            if (intakeDays.Contains(day.Day) || consumptionDays.Contains(day.Day))
+            {
+                continue;
+            }
+            movements.Add(new StockMovement
+            {
+                MedicineId = medicine.Id,
+                OccurredAt = ToLocalMiddayOffset(day.Day),
+                Kind = StockMovementKind.Consumption,
+                QuantityDelta = -day.Quantity,
+                StockEpoch = medicine.StockEpoch,
+            });
+        }
+        return movements;
+    }
+
+    internal DateOnly LocalToday()
     {
         var now = _clock.GetUtcNow();
         var localTz = _clock.LocalTimeZone;

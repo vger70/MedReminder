@@ -30,6 +30,7 @@ internal sealed class ApplicationTestScope
     public ResumeMedication ResumeMedication { get; }
     public ChangeMedicationSchedule ChangeMedicationSchedule { get; }
     public RegisterIntake RegisterIntake { get; }
+    public ReconcileStock ReconcileStock { get; }
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
 
@@ -48,6 +49,8 @@ internal sealed class ApplicationTestScope
 
         ConsumptionCatchUp = new ConsumptionCatchUp(
             Medicines, Schedules, Suspensions, Slots, Stock, Intakes, Uow, Clock);
+        ReconcileStock = new ReconcileStock(
+            Medicines, Stock, Schedules, Suspensions, Slots, ConsumptionCatchUp, Uow, Clock);
 
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,

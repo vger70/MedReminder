@@ -296,6 +296,36 @@ Si tu constates que le stock réel est inférieur à celui calculé
 Si la correction ferait passer le stock sous zéro, l'opération est
 bloquée par une erreur.
 
+## Compter le stock
+
+Lorsque les comprimés dans l'armoire ne correspondent plus au stock
+affiché par l'application, comptez-les et laissez l'application
+enregistrer la correction :
+
+1. Sélectionnez le médicament.
+2. Menu **Stock → Compter le stock…**.
+3. Saisissez la quantité comptée. La boîte de dialogue affiche le
+   stock attendu (consommations automatiques mises à jour), l'écart
+   de stock avec son signe et la date d'épuisement avant et après la
+   correction.
+4. Dans **Déjà pris aujourd'hui**, indiquez la part de la quantité
+   prévue aujourd'hui déjà prise au moment du comptage. L'application
+   propose les doses dont l'heure est passée ; sans heures définies,
+   elle propose 0. Si vous indiquez une partie seulement, la liste
+   affiche le stock en début de journée jusqu'à l'enregistrement de la
+   consommation du jour.
+5. Ajoutez une note si besoin (par défaut : « Comptage du stock ») et
+   confirmez avec **Enregistrer le comptage**.
+
+**Effet** : une seule correction, positive ou négative, est
+enregistrée afin que le stock soit égal à la quantité comptée. Un
+écart nul n'enregistre rien. Une correction positive qui ramène le stock au-dessus du seuil
+d'alerte fait avancer l'époque, afin qu'une nouvelle alerte de stock
+bas puisse être envoyée plus tard ; une correction négative ne la
+fait jamais avancer. L'écart est une
+donnée de stock uniquement : il n'est pas interprété comme des doses
+oubliées ou supplémentaires.
+
 ## Modifier ou désactiver un médicament
 
 - **Modifier** : double-clic sur la ligne, ou barre d'outils →
@@ -579,6 +609,44 @@ message et les moments d'envoi sont exactement les mêmes qu'avant.
 
 Le réglage est par profil : le soignant d'un profil n'est pas le
 soignant d'un autre profil.
+
+## Demander une ordonnance au médecin
+
+Sélectionne un médicament et choisis **Traitement → Demander une
+ordonnance…** (ou le bouton **Demander ordonnance** de la barre
+d'outils). L'action est disponible pour chaque médicament, quel que
+soit son stock.
+
+MedReminder prépare un court message avec le nom du médicament, le
+conditionnement, le code produit (lorsque le médicament est lié au
+catalogue) et le nom du profil en signature. Si le médicament a un
+médecin de référence, la formule d'appel utilise ce nom. La posologie,
+les notes et les autres détails cliniques ne sont pas inclus. L'objet
+et le message sont modifiables avant l'envoi.
+
+Trois façons de transmettre le message :
+
+- **Copier** : l'objet et le message vont dans le presse-papiers, à
+  coller dans un webmail, une application de messagerie ou un portail
+  patient.
+- **Ouvrir dans la messagerie** : ouvre un nouvel e-mail déjà rempli
+  dans le logiciel de messagerie par défaut. Si le message est trop
+  long pour la messagerie, ou si aucune messagerie n'est configurée, il
+  est copié dans le presse-papiers à la place.
+- **Envoyer…** : envoie le message via le compte e-mail configuré dans
+  **Paramètres → E-mail SMTP**, après une confirmation explicite.
+  Disponible uniquement lorsque l'envoi SMTP est configuré et que
+  l'e-mail du médecin est défini.
+
+L'e-mail du médecin se définit dans **Paramètres → Notifications →
+E-mail du médecin (facultatif)**. Il est propre au profil, inclus dans
+l'export et l'importation, et utilisé uniquement pour les demandes que
+tu envoies toi-même : les notifications automatiques ne sont jamais
+envoyées à cette adresse.
+
+MedReminder n'envoie jamais une demande d'ordonnance de lui-même. Le
+contenu du message et le destinataire ne sont pas écrits dans les
+fichiers journaux.
 
 ## Configurer le démarrage automatique
 

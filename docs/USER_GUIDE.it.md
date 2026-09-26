@@ -289,6 +289,34 @@ Se ti accorgi che la scorta effettiva è minore di quella calcolata
 Se la correzione porterebbe la scorta sotto zero, l'operazione viene
 bloccata con un errore.
 
+## Contare le scorte
+
+Quando le compresse nell'armadietto non corrispondono più alla scorta
+mostrata dall'app, contale e lascia che l'app registri la correzione:
+
+1. Seleziona la medicina.
+2. Menu **Scorte → Conta scorte…**.
+3. Digita la quantità contata. Il dialogo mostra la scorta attesa
+   (con i consumi automatici aggiornati), la differenza di scorta con
+   il segno e la data di esaurimento prima e dopo la correzione.
+4. In **Già assunto oggi** indica quanto della quantità prevista per
+   oggi avevi già assunto al momento del conteggio. L'app propone le
+   dosi il cui orario è passato; senza orari impostati propone 0. Se
+   indichi solo una parte della quantità di oggi, l'elenco mostra la
+   scorta a inizio giornata finché il consumo di oggi non viene
+   registrato.
+5. Aggiungi una nota se vuoi (predefinita: "Conteggio scorte") e
+   conferma con **Registra conteggio**.
+
+**Effetto**: viene registrata una sola correzione, positiva o
+negativa, in modo che la scorta coincida con la quantità contata. Una
+differenza nulla non registra nulla. Una correzione positiva che riporta la scorta sopra la soglia di
+avviso fa avanzare l'epoca, così in seguito può partire un nuovo
+avviso di scorta bassa; una correzione negativa non la fa mai
+avanzare. La differenza
+è solo un dato di scorta: non viene interpretata come dosi saltate o
+in più.
+
 ## Modificare o disattivare una medicina
 
 - **Modifica**: doppio click sulla riga oppure toolbar → **Modifica**.
@@ -551,6 +579,41 @@ sono esattamente gli stessi di prima.
 
 L'impostazione è per profilo: il caregiver di un profilo non è il
 caregiver di un altro profilo.
+
+## Richiedere la ricetta al medico
+
+Seleziona un farmaco e scegli **Terapia → Richiedi ricetta…** (oppure
+il pulsante **Richiedi ricetta** della barra strumenti). L'azione è
+disponibile per ogni farmaco, qualunque sia la scorta.
+
+MedReminder prepara un breve messaggio con il nome del farmaco, la
+confezione, il codice AIC (quando il farmaco è collegato al catalogo)
+e il nome del profilo come firma. Se il farmaco ha un medico di
+riferimento, il saluto usa quel nome. Posologia, note e altri dettagli
+clinici non sono inclusi. Oggetto e messaggio sono modificabili prima
+dell'invio.
+
+Tre modi per recapitare il messaggio:
+
+- **Copia**: oggetto e messaggio vanno negli appunti, da incollare in
+  una webmail, in un'app di messaggistica o in un portale del medico.
+- **Apri nel programma di posta**: apre una nuova e-mail nel programma
+  di posta predefinito, già compilata. Se il messaggio è troppo lungo
+  per il programma di posta, o nessun programma di posta è
+  configurato, viene invece copiato negli appunti.
+- **Invia…**: invia il messaggio tramite l'account e-mail configurato
+  in **Impostazioni → Email SMTP**, dopo una conferma esplicita.
+  Disponibile solo quando l'invio SMTP è configurato e l'e-mail del
+  medico è impostata.
+
+L'e-mail del medico si imposta in **Impostazioni → Notifiche → E-mail
+del medico (facoltativa)**. È per profilo, è inclusa in esportazione e
+importazione, ed è usata solo per le richieste che invii tu: le
+notifiche automatiche non vengono mai inviate a questo indirizzo.
+
+MedReminder non invia mai una richiesta di ricetta da solo. Il
+contenuto del messaggio e il destinatario non vengono scritti nei file
+di log.
 
 ## Configurare l'avvio automatico
 

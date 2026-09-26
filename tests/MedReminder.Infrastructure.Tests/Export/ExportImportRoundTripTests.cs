@@ -351,6 +351,95 @@ public sealed class ExportImportRoundTripTests : IDisposable
         }
     }
 
+    // Prescription request: the per-profile doctor address travels in
+    // notificationSettings next to the caregiver and is restored.
+    [Fact]
+    public async Task Notification_settings_round_trip_including_the_doctor_address()
+    {
+        await SeedAsync();
+        WriteNotificationSettingsFile(new
+        {
+            ToAddress = "user@example.org",
+            CaregiverAddress = "caregiver@example.org",
+            DoctorAddress = "doctor@example.org",
+        });
+
+        var archivePath = NewArchivePath();
+        var export = CreateExportService(new FakeCredentialStore());
+        try
+        {
+            await export.ExportAsync(
+                new ExportOptions { DestinationPath = archivePath },
+                Passphrase.ToCharArray(), null, CancellationToken.None);
+
+            File.Delete(_profile.NotificationSettingsPath);
+            await WipeProfileDatabaseAsync();
+
+            await using (var live = CreateProfileContext())
+            {
+                var import = CreateImportService(live, new FakeCredentialProtector());
+                await import.ImportAsync(
+                    archivePath, Passphrase.ToCharArray(),
+                    new ImportOptions(), null, CancellationToken.None);
+            }
+
+            var restored = ReadNotificationSettingsFile();
+            restored.ToAddress.Should().Be("user@example.org");
+            restored.CaregiverAddress.Should().Be("caregiver@example.org");
+            restored.DoctorAddress.Should().Be("doctor@example.org");
+        }
+        finally
+        {
+            TryDeleteFile(archivePath);
+        }
+    }
+
+    // An archive produced before the doctor address existed lacks the
+    // field: it imports and the address takes its default (§5).
+    [Fact]
+    public async Task Import_of_notification_settings_without_doctor_address_takes_the_default()
+    {
+        await SeedAsync();
+        WriteNotificationSettingsFile(new
+        {
+            ToAddress = "user@example.org",
+            CaregiverAddress = "caregiver@example.org",
+            DoctorAddress = "doctor@example.org",
+        });
+
+        var archivePath = NewArchivePath();
+        var export = CreateExportService(new FakeCredentialStore());
+        try
+        {
+            await export.ExportAsync(
+                new ExportOptions { DestinationPath = archivePath },
+                Passphrase.ToCharArray(), null, CancellationToken.None);
+
+            RepackPayload(archivePath, payload =>
+                payload["notificationSettings"]!.AsObject().Remove("doctorAddress"));
+
+            File.Delete(_profile.NotificationSettingsPath);
+            await WipeProfileDatabaseAsync();
+
+            await using (var live = CreateProfileContext())
+            {
+                var import = CreateImportService(live, new FakeCredentialProtector());
+                await import.ImportAsync(
+                    archivePath, Passphrase.ToCharArray(),
+                    new ImportOptions(), null, CancellationToken.None);
+            }
+
+            var restored = ReadNotificationSettingsFile();
+            restored.ToAddress.Should().Be("user@example.org");
+            restored.CaregiverAddress.Should().Be("caregiver@example.org");
+            restored.DoctorAddress.Should().BeEmpty();
+        }
+        finally
+        {
+            TryDeleteFile(archivePath);
+        }
+    }
+
     [Fact]
     public async Task Export_refuses_a_passphrase_below_the_minimum_before_writing()
     {
@@ -664,6 +753,24 @@ public sealed class ExportImportRoundTripTests : IDisposable
         File.WriteAllText(
             Path.Combine(_sharedDirectory, "smtp.settings.json"),
             JsonSerializer.Serialize(payload));
+    }
+
+    private void WriteNotificationSettingsFile(object notifications)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_profile.NotificationSettingsPath)!);
+        File.WriteAllText(
+            _profile.NotificationSettingsPath,
+            JsonSerializer.Serialize(new { Notifications = notifications }));
+    }
+
+    // Reads the restored file the way IConfiguration binds it: the
+    // "Notifications" section, property names matched case-insensitively.
+    private NotificationSettings ReadNotificationSettingsFile()
+    {
+        File.Exists(_profile.NotificationSettingsPath).Should().BeTrue();
+        using var document = JsonDocument.Parse(File.ReadAllText(_profile.NotificationSettingsPath));
+        return document.RootElement.GetProperty("Notifications").Deserialize<NotificationSettings>(
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
     }
 
     // -------- archive manipulation helpers --------

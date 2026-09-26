@@ -104,5 +104,6 @@ internal static class Mdl2Glyph
         public const string Play = "";          // Play
         public const string StatusCircle = "";  // StatusCircleOuter
         public const string Package = "";       // Package
+        public const string Mail = "";          // Mail
     }
 }

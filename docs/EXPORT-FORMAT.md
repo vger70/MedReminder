@@ -272,6 +272,7 @@ numbers.
 |---|---|---|
 | `toAddress` | string | primary recipient (may be empty) |
 | `caregiverAddress` | string | optional secondary recipient (may be empty) |
+| `doctorAddress` | string | optional recipient of user-initiated prescription requests (may be empty). Added after `schemaVersion` 1 shipped, as an additive field (§5): archives without it import with `""`. |
 
 ### 3.10 `shared`
 

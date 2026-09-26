@@ -274,6 +274,32 @@ If you notice that actual stock is less than the calculated one
 If the correction would bring stock below zero, the operation is
 blocked with an error.
 
+## Count stock
+
+When the tablets in the cabinet no longer match the stock shown by
+the app, count them and let the app record the correction:
+
+1. Select the medicine.
+2. Menu **Stock → Count stock…**.
+3. Type the quantity you counted. The dialog shows the expected
+   stock (with automatic consumption brought up to date), the stock
+   discrepancy with its sign, and the run-out date before and after
+   the correction.
+4. In **Already taken today**, enter how much of today's scheduled
+   quantity you had already taken when you counted. The app suggests
+   the doses whose time has passed; without set times it suggests 0.
+   If you enter part of today's quantity, the list shows the stock at
+   the start of the day until today's consumption is recorded.
+5. Optionally add a note (default: "Stock count") and confirm with
+   **Record count**.
+
+**Effect**: one positive or negative correction is recorded so that
+stock equals the counted quantity. A zero discrepancy records
+nothing. A positive correction that brings the stock above the
+warning threshold advances the epoch, so a new low-stock warning can
+be sent later; a negative correction never does. The discrepancy is a stock
+figure only: it is not interpreted as missed or extra doses.
+
 ## Edit or deactivate a medicine
 
 - **Edit**: double click on the row or toolbar → **Edit**.
@@ -527,6 +553,40 @@ the e-mails are sent are exactly the same as before.
 
 The setting is per profile: one profile's caregiver is not
 another profile's caregiver.
+
+## Request a prescription from your doctor
+
+Select a medicine and choose **Therapy → Request prescription…**
+(or the **Request prescription** toolbar button). The action is
+available for every medicine, whatever its stock.
+
+MedReminder prepares a short message with the medicine name, the
+package, the product code (when the medicine is linked to the
+catalogue) and your profile name as signature. When the medicine has
+a reference doctor, the greeting uses that name. Dosage, notes and
+other clinical details are not included. Subject and message are
+editable before you deliver them.
+
+Three ways to deliver the message:
+
+- **Copy**: subject and message go to the clipboard, to paste into a
+  web mail, a messaging app or a patient portal.
+- **Open in mail client**: opens a new e-mail in your default mail
+  program, already filled in. If the message is too long for the mail
+  program, or no mail program is set up, it is copied to the
+  clipboard instead.
+- **Send…**: sends the message through the e-mail account configured
+  in **Settings → Email SMTP**, after an explicit confirmation.
+  Available only when SMTP sending is configured and a doctor e-mail
+  is set.
+
+The doctor e-mail is set in **Settings → Notifications → Doctor
+e-mail (optional)**. It is per profile, is included in export and
+import, and is used only for the requests you send yourself: the
+automatic notifications never go to this address.
+
+MedReminder never sends a prescription request on its own. The
+message content and the recipient are not written to the log files.
 
 ## Windows automatic startup
 

@@ -59,6 +59,68 @@ Branch: `claude/prompt-therapy-timeline-c51i9d`
 ### Docs
 
 - Timeline section in the five `docs/USER_GUIDE.<lang>.md`.
+## PR #74 — Add prescription request draft for the doctor
+
+Link: [vger70/MedReminder#74](https://github.com/vger70/MedReminder/pull/74)
+Branch: `claude/prompt-prescription-request-6foa34`
+
+### Added
+
+- "Request prescription…" action (Therapy menu and toolbar) opening a
+  dialog with an editable, localized request for the selected
+  medicine: name, package, national code, doctor name in the greeting,
+  profile name as signature. No clinical detail
+  (`src/MedReminder.Application/Prescriptions/`,
+  `src/MedReminder.UI/Forms/PrescriptionRequestDialog.cs`).
+- Delivery by clipboard, `mailto:` (length guard with clipboard
+  fallback) or SMTP send after explicit confirmation.
+- Optional per-profile doctor e-mail on Settings → Notifications,
+  included in export/import as the additive field
+  `notificationSettings.doctorAddress`.
+
+### Changed
+
+- `EmailMessage.ExplicitRecipient`: the MailKit adapter sends such a
+  message to that address only, the retry decorator does not back off,
+  and neither the address nor the message content is logged.
+
+### Docs
+
+- `docs/EXPORT-FORMAT.md` §3.9, `docs/ANALYSIS.md` §9.2, and a new
+  section in all five `docs/USER_GUIDE.<lang>.md`.
+## PR #73 — Add guided stock count with gap display
+
+Link: [vger70/MedReminder#73](https://github.com/vger70/MedReminder/pull/73)
+Branch: `claude/hopeful-curie-fpi6ej`
+
+### Added
+
+- "Stock > Count stock..." dialog: the user enters the counted
+  quantity and sees the expected stock, the signed stock discrepancy
+  and the run-out date before and after; one positive or negative
+  correction is recorded (`StockCountDialog`).
+- `ReconcileStock` use case: materializes pending automatic
+  consumption, computes the gap and writes the correction in one unit
+  of work under `MonitoringGate`. Zero gap writes no correction;
+  negative counts are rejected. "Already taken today" (suggested from
+  slot times) avoids decrementing today twice: the whole day taken
+  materializes today's consumption, a partial day keeps the
+  start-of-day stock for the next catch-up.
+- A positive count correction advances `StockEpoch` only when it lifts
+  the forecast above `ThresholdDays`, reopening the low-stock warning
+  cycle without an immediate duplicate warning.
+- When consumption has pushed the ledger below zero, the dialog states
+  the alignment included in the recorded correction.
+- Localized strings in all five dictionaries.
+
+### Changed
+
+- `ConsumptionCatchUp`: per-medicine planning extracted into
+  `PlanMissingAsync`, shared with `ReconcileStock`; behavior unchanged.
+
+### Docs
+
+- "Count stock" section in the five user guides.
 
 ## PR #71 — Extend A2 barcode analysis to the USB HID-scanner variant
 

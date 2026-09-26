@@ -5,6 +5,7 @@ using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Timeline;
+using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
@@ -195,6 +196,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Timeline"),
             Mdl2Glyph.Glyphs.Calendar, Keys.Control | Keys.T,
             () => { ShowTherapyTimeline(); return Task.CompletedTask; }));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RequestPrescription"),
+            Mdl2Glyph.Glyphs.Mail, Keys.None,
+            async () => await ShowPrescriptionRequestAsync()));
 
         // Scorte
         var stockMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Stock"));
@@ -204,6 +208,9 @@ internal sealed class MainForm : MedReminderFormBase
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Warning, Keys.None,
             async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Count"),
+            Mdl2Glyph.Glyphs.Search, Keys.None,
+            async () => await ShowStockCountAsync()));
         stockMenu.DropDownItems.Add(new ToolStripSeparator());
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Refresh"),
             Mdl2Glyph.Glyphs.Refresh, Keys.F5,
@@ -501,6 +508,9 @@ internal sealed class MainForm : MedReminderFormBase
         strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.TherapyTimeline"),
             Mdl2Glyph.Glyphs.Calendar,
             () => { ShowTherapyTimeline(); return Task.CompletedTask; }));
+        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.RequestPrescription"),
+            Mdl2Glyph.Glyphs.Mail,
+            async () => await ShowPrescriptionRequestAsync()));
         return strip;
     }
 
@@ -592,6 +602,48 @@ internal sealed class MainForm : MedReminderFormBase
             _grid.Focus();
             return;
         }
+    // Prescription request draft for the selected medicine
+    // (EVOLUTION-PROPOSALS §3.4). Available for any medicine, whatever
+    // its stock status. Nothing is sent from here: the dialog owns the
+    // explicit delivery actions.
+    private async Task ShowPrescriptionRequestAsync()
+    {
+        var row = GetSelectedRow();
+        if (row is null) return;
+
+        MedReminder.Application.Notifications.EmailMessage draft;
+        string doctorAddress;
+        bool smtpConfigured;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
+            var medicine = await repo.GetAsync(row.Id, CancellationToken.None);
+            if (medicine is null) return;
+
+            draft = PrescriptionRequestTexts.Build(medicine, _currentProfile.DisplayName, _loc);
+            doctorAddress = scope.ServiceProvider
+                .GetRequiredService<IOptionsMonitor<NotificationSettings>>().CurrentValue.DoctorAddress;
+            smtpConfigured = scope.ServiceProvider
+                .GetRequiredService<IOptionsMonitor<SmtpSettings>>().CurrentValue.IsConfigured;
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.ReadMedicine"), ex);
+            return;
+        }
+
+        using var dialog = new PrescriptionRequestDialog(
+            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc);
+        dialog.ShowDialog(this);
+    }
+
+    private async Task SendPrescriptionRequestAsync(
+        string recipient, string subject, string body, CancellationToken cancellationToken)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var usecase = scope.ServiceProvider.GetRequiredService<SendPrescriptionRequest>();
+        await usecase.ExecuteAsync(recipient, subject, body, cancellationToken);
     }
 
     private StatusStrip BuildStatusStrip()
@@ -1297,6 +1349,46 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.StockMovement"), ex);
+        }
+    }
+
+    private async Task ShowStockCountAsync()
+    {
+        var row = GetSelectedRow();
+        if (row is null) return;
+
+        StockCountSnapshot snapshot;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var reconcile = scope.ServiceProvider.GetRequiredService<ReconcileStock>();
+            snapshot = await reconcile.LoadAsync(row.Id, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.ReadMedicine"), ex);
+            return;
+        }
+
+        using var dialog = new StockCountDialog(row.Name, row.Unit, snapshot, _loc);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var reconcile = scope.ServiceProvider.GetRequiredService<ReconcileStock>();
+            var result = await reconcile.ExecuteAsync(
+                dialog.Result.ToCommand(row.Id, _loc.Get("Ui.StockCountDialog.DefaultNote")),
+                CancellationToken.None);
+            _log.LogInformation(
+                "Stock count for medicine {MedicineId}: gap {Gap}, correction {Correction} ({Kind}), epoch advanced {EpochAdvanced}, {Days} consumption days materialized",
+                row.Id, result.Gap, result.Correction, result.CorrectionKind?.ToString() ?? "none",
+                result.StockEpochAdvanced, result.ConsumptionDaysMaterialized);
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.StockCount"), ex);
         }
     }
 

@@ -61,7 +61,8 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         {
             throw new InvalidOperationException("SMTP configuration is incomplete.");
         }
-        if (string.IsNullOrWhiteSpace(notifications.ToAddress))
+        var isExplicit = message.ExplicitRecipient is not null;
+        if (!isExplicit && string.IsNullOrWhiteSpace(notifications.ToAddress))
         {
             throw new InvalidOperationException(
                 "Notification recipient is not configured for the current profile.");
@@ -88,9 +89,21 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
             await client.DisconnectAsync(quit: true, cancellationToken);
         }
 
-        _log.LogInformation(
-            "Email notification sent to {ToAddress} via {Host}:{Port}",
-            notifications.ToAddress, settings.Host, settings.Port);
+        // An explicit-recipient send (prescription request) carries
+        // health data addressed to a named person: the address is not
+        // logged (CLAUDE.md §7).
+        if (isExplicit)
+        {
+            _log.LogInformation(
+                "Email sent to an explicit recipient via {Host}:{Port}",
+                settings.Host, settings.Port);
+        }
+        else
+        {
+            _log.LogInformation(
+                "Email notification sent to {ToAddress} via {Host}:{Port}",
+                notifications.ToAddress, settings.Host, settings.Port);
+        }
     }
 
     public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken)
@@ -141,6 +154,20 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
     {
         var mime = new MimeMessage();
         mime.From.Add(new MailboxAddress(settings.FromDisplayName, settings.FromAddress));
+
+        // Explicit recipient (prescription request to the doctor): the
+        // message goes to that address only. The profile recipient and
+        // the caregiver are not copied: the user chose the recipient
+        // in the dialog. A malformed address fails the send (the user
+        // sees the error and can correct it), with no fallback.
+        if (message.ExplicitRecipient is { } explicitRecipient)
+        {
+            mime.To.Add(MailboxAddress.Parse(AddressParserOptions, explicitRecipient.Trim()));
+            mime.Subject = message.Subject;
+            mime.Body = new TextPart("plain") { Text = message.Body };
+            return mime;
+        }
+
         mime.To.Add(MailboxAddress.Parse(notifications.ToAddress));
 
         // A3 (docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md §4.2,

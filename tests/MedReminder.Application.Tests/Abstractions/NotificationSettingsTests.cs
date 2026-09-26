@@ -43,5 +43,23 @@ public class NotificationSettingsTests
         settings.Should().NotBeNull();
         settings!.ToAddress.Should().Be("user@example.com");
         settings.CaregiverAddress.Should().BeEmpty();
+        settings.DoctorAddress.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Deserializes_doctor_address_when_present()
+    {
+        const string json = """
+            {
+              "ToAddress": "user@example.com",
+              "DoctorAddress": "doctor@example.com"
+            }
+            """;
+
+        var settings = JsonSerializer.Deserialize<NotificationSettings>(json);
+
+        settings.Should().NotBeNull();
+        settings!.DoctorAddress.Should().Be("doctor@example.com");
+        settings.CaregiverAddress.Should().BeEmpty();
     }
 }
