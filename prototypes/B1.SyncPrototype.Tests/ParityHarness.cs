@@ -189,7 +189,6 @@ internal sealed class ParityHarness
         foreach (var id in _medicines)
         {
             var m = Oracle.Medicines.GetAsync(id, default).GetAwaiter().GetResult()!;
-            var old = Proto.Medicines[id];
             // Carry the non-ledger replicated facts (schedule, slots,
             // suspensions, fields, activity) as they are.
             foreach (var op in Proto.Log.Where(o => o.MedicineId == id
@@ -200,7 +199,6 @@ internal sealed class ParityHarness
             foreach (var i in Oracle.Intakes.ListForMedicineAsync(id, default).GetAwaiter().GetResult())
                 fresh.Apply(new LegacyIntake(Guid.NewGuid(), genesis, id, i.Id, i.Day, i.Status, i.Quantity));
             fresh.Apply(new LegacyBaseline(Guid.NewGuid(), genesis, id, cutoff, m.StockEpoch));
-            _ = old;
         }
         Proto = fresh;
         Trace.Add($"patch cutoff={cutoff}");
