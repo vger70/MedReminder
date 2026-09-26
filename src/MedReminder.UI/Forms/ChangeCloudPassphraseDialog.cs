@@ -27,7 +27,7 @@ internal sealed class ChangeCloudPassphraseDialog : MedReminderFormBase
 
         Text = _loc.Get("Ui.CloudBackup.Passphrase.SetTitle");
         Width = 480;
-        Height = 260;
+        Height = 280;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
