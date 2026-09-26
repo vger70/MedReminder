@@ -296,6 +296,30 @@ Si tu constates que le stock réel est inférieur à celui calculé
 Si la correction ferait passer le stock sous zéro, l'opération est
 bloquée par une erreur.
 
+## Compter le stock
+
+Lorsque les comprimés dans l'armoire ne correspondent plus au stock
+affiché par l'application, comptez-les et laissez l'application
+enregistrer la correction :
+
+1. Sélectionnez le médicament.
+2. Menu **Stock → Compter le stock…**.
+3. Saisissez la quantité comptée. La boîte de dialogue affiche le
+   stock attendu (consommations automatiques mises à jour), l'écart
+   de stock avec son signe et la date d'épuisement avant et après la
+   correction.
+4. Cochez **Compté après les doses prévues aujourd'hui** si vous avez
+   compté après avoir pris les doses du jour ; sinon laissez la case
+   décochée.
+5. Ajoutez une note si besoin (par défaut : « Comptage du stock ») et
+   confirmez avec **Enregistrer le comptage**.
+
+**Effet** : une seule correction, positive ou négative, est
+enregistrée afin que le stock soit égal à la quantité comptée. Un
+écart nul n'enregistre rien. L'époque n'avance pas. L'écart est une
+donnée de stock uniquement : il n'est pas interprété comme des doses
+oubliées ou supplémentaires.
+
 ## Modifier ou désactiver un médicament
 
 - **Modifier** : double-clic sur la ligne, ou barre d'outils →

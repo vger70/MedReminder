@@ -305,6 +305,30 @@ als der berechnete (verlorene Tablette, verschüttet usw.):
 Würde die Korrektur den Bestand unter null bringen, wird der
 Vorgang mit einer Fehlermeldung blockiert.
 
+## Bestand zählen
+
+Wenn die Tabletten im Schrank nicht mehr mit dem in der App
+angezeigten Bestand übereinstimmen, zählen Sie sie und lassen Sie die
+App die Korrektur erfassen:
+
+1. Wählen Sie das Medikament aus.
+2. Menü **Bestand → Bestand zählen…**.
+3. Geben Sie die gezählte Menge ein. Der Dialog zeigt den erwarteten
+   Bestand (mit aktualisiertem automatischem Verbrauch), die
+   Bestandsabweichung mit Vorzeichen und das voraussichtliche
+   Aufbrauchdatum vor und nach der Korrektur.
+4. Aktivieren Sie **Nach den heute geplanten Dosen gezählt**, wenn Sie
+   nach der Einnahme der heutigen Dosen gezählt haben; andernfalls
+   lassen Sie das Kästchen leer.
+5. Fügen Sie bei Bedarf eine Notiz hinzu (Standard:
+   „Bestandszählung") und bestätigen Sie mit **Zählung erfassen**.
+
+**Wirkung**: Es wird genau eine positive oder negative Korrektur
+erfasst, sodass der Bestand der gezählten Menge entspricht. Eine
+Abweichung von null erfasst nichts. Die Epoche wird nicht erhöht. Die
+Abweichung ist nur eine Bestandsangabe: Sie wird nicht als
+vergessene oder zusätzliche Dosen interpretiert.
+
 ## Ein Medikament bearbeiten oder deaktivieren
 
 - **Bearbeiten**: Doppelklick auf die Zeile oder Symbolleiste →

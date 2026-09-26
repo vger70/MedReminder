@@ -289,6 +289,28 @@ Se ti accorgi che la scorta effettiva è minore di quella calcolata
 Se la correzione porterebbe la scorta sotto zero, l'operazione viene
 bloccata con un errore.
 
+## Contare le scorte
+
+Quando le compresse nell'armadietto non corrispondono più alla scorta
+mostrata dall'app, contale e lascia che l'app registri la correzione:
+
+1. Seleziona la medicina.
+2. Menu **Scorte → Conta scorte…**.
+3. Digita la quantità contata. Il dialogo mostra la scorta attesa
+   (con i consumi automatici aggiornati), la differenza di scorta con
+   il segno e la data di esaurimento prima e dopo la correzione.
+4. Spunta **Contato dopo le dosi previste di oggi** se hai contato
+   dopo aver assunto le dosi di oggi; altrimenti lascia la casella
+   vuota.
+5. Aggiungi una nota se vuoi (predefinita: "Conteggio scorte") e
+   conferma con **Registra conteggio**.
+
+**Effetto**: viene registrata una sola correzione, positiva o
+negativa, in modo che la scorta coincida con la quantità contata. Una
+differenza nulla non registra nulla. L'epoca non avanza. La differenza
+è solo un dato di scorta: non viene interpretata come dosi saltate o
+in più.
+
 ## Modificare o disattivare una medicina
 
 - **Modifica**: doppio click sulla riga oppure toolbar → **Modifica**.
