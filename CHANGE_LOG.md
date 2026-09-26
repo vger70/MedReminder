@@ -30,6 +30,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #77 — Spike S9: B.1 ledger derivation and sync convergence prototype
+
+Link: [vger70/MedReminder#77](https://github.com/vger70/MedReminder/pull/77)
+Branch: `claude/b1-s9-convergence-prototype`
+**Status:** draft, not to be merged (spike evidence)
+
+### Added
+
+- Throw-away prototype under `prototypes/` (outside `MedReminder.sln`)
+  for spike S9 of `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`: ledger
+  derivation, merge rules, convergence simulation. Parity with the real
+  use cases over 10 000 random scenarios; convergence over 10 000
+  random multi-device histories.
+  
 ## PR #76 — Add B.1 mobile client and synchronization analysis
 
 Link: [vger70/MedReminder#76](https://github.com/vger70/MedReminder/pull/76)
