@@ -73,8 +73,5 @@ public static class AppDataPaths
     // per-machine default so every caller states which DB it is
     // opening.
     public static string BuildSqliteConnectionString(string databasePath)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
-        return $"Data Source={databasePath};Cache=Shared;Foreign Keys=True";
-    }
+        => Persistence.SqliteConnectionStrings.ForFile(databasePath);
 }

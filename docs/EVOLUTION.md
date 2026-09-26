@@ -224,6 +224,10 @@ has stabilized.
 **Verdict.** Do not start Phase 2 before B.1 creates a concrete
 requirement for it.
 
+**Update 2026-09-26.** B.1 with mandatory synchronization creates that
+requirement: Phase 2 (OneDrive, then Google Drive) is absorbed by B.1
+Phase 4 (`ANALYSIS-B1-MOBILE-SYNC.md` §5.8, §13).
+
 ---
 
 ## 7. B.1 — Mobile companion client
@@ -250,7 +254,7 @@ platform-bound adapters:
 | Current desktop adapter | Mobile substitute |
 |---|---|
 | DPAPI (`smtp.protected`) | iOS Keychain / Android Keystore via MAUI `SecureStorage` |
-| Toast (WinRT) | Local notifications (MAUI `LocalNotification`) or push (APNs/FCM) |
+| Toast (WinRT) | Local notifications through thin platform adapters (Android `AlarmManager`, iOS `UNUserNotificationCenter`); MAUI has no built-in local-notification API (correction, `ANALYSIS-B1-MOBILE-SYNC.md` §8.2) |
 | Tray icon | Not applicable |
 | Backup on filesystem | Sandboxed app storage (`FileSystem.AppDataDirectory`) |
 | Single-instance mutex | Not applicable — the OS enforces this |
@@ -295,12 +299,11 @@ clinical claims are made — the existing disclaimer wording
 
 ### 7.6 Localization
 
-Reuses `assets/localization/strings.<lang>.json` unchanged if the
-loader is a service exposed via a port from
-`MedReminder.Application`. If it currently lives in
-`MedReminder.UI` (WinForms-side), promote it to Application first.
-This move should be part of the B.1 preparation, not a duplicate
-translation effort.
+Reuses `assets/localization/strings.<lang>.json` unchanged. The
+loader was already behind the Application port `ILocalizationService`;
+its implementation lived in the Windows Infrastructure project (not in
+`MedReminder.UI`, as this section first assumed) and moved to
+`MedReminder.Infrastructure.Portable` in B.1 Phase 1.
 
 ### 7.7 Precondition
 
@@ -319,6 +322,12 @@ effort, it is a large investment (months) for uncertain reward.
 ---
 
 ## 8. C.1 — End-to-end encrypted sync with dedicated backend
+
+**Update 2026-09-26.** B.1 reaches the functional goal of C.1
+(end-to-end encrypted multi-device sync) without a backend, through
+the user's cloud storage (`ANALYSIS-B1-MOBILE-SYNC.md`). C.1 shrinks
+to an optional hosted relay, one more sync transport (§5.9 there);
+the rest of this section stays as background.
 
 ### 8.1 Rejection of C.2 (raw file-sync of the live SQLite DB)
 
@@ -519,6 +528,9 @@ application is prepared in
   restock) and the decided phases HID → webcam → flow (b), the last
   deferred until flow (a) is complete and the product owner requests
   it. Effort split per phase.
+- 2026-09-26 — B.1 Phase 1: §6 and §8 note that B.1 absorbs C.3++
+  Phase 2 and the functional goal of C.1; §7.2 and §7.6 corrected
+  (no built-in MAUI local notifications; localization loader location).
 - 2026-09-26 — §2.0: sequence updated after the B.1 decisions: B.1
   with mandatory sync first (absorbs C.3++ Phase 2), A2 phase 2
   independent, C.1 reduced to an optional hosted transport.

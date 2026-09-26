@@ -92,9 +92,9 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 | P2 | Argon2id + AES-GCM primitives behind a port | **Met** | `IArchiveCipher`, `ArchiveCipher` `[VERIFIED]` |
 | P3 | Storage port for remote files | **Partly met** | `IArchiveStorage` (upload, download, list, delete) `[VERIFIED]`; sync needs conditional writes and prefix listing (§5.8). Phase 3 (port and local folder), Phase 4 (providers) |
 | P4 | Domain and Application portable (`net10.0`) | **Met** | csproj targets `[VERIFIED]` |
-| P5 | Persistence usable outside Windows | **Not met** | EF Core model, repositories, `DatabaseInitializer` live in `MedReminder.Infrastructure` (`net10.0-windows`, `UseWindowsForms`) `[VERIFIED]`. Phase 1 |
-| P6 | Archive read path usable outside Windows | **Not met** | `ImportService`, `ExportService`, `CloudRestoreService` are `[SupportedOSPlatform("windows")]`; `ImportService` uses DPAPI through `ICredentialProtector` `[VERIFIED]`. Phase 1 |
-| P7 | View models outside WinForms | **Not met** | `MedicineOverviewLoader` is `internal` in `MedReminder.UI/Presentation` `[VERIFIED]`. Phase 1 |
+| P5 | Persistence usable outside Windows | **Met by Phase 1** | EF Core model, repositories, `DatabaseInitializer` moved to `MedReminder.Infrastructure.Portable` (`net10.0`); their tests run on Linux |
+| P6 | Archive read path usable outside Windows | **Met by Phase 1** | `ArchiveReader` (`IArchiveReader`) and `ProfileDatabaseBuilder` in the portable project; `ImportService` is the Windows shell (file swap, DPAPI rewrap, settings files). `ExportService` stays Windows-only (mobile export is Phase 7) |
+| P7 | View models outside WinForms | **Met by Phase 1** | `MedicineOverviewLoader` and `MedicineListItem` moved to `MedReminder.Application/Overview` |
 | P8 | Every data write goes through an Application use case | **Not met** | `MainForm` writes directly (for example `medicine.IsActive = false`, `MainForm.cs` ~l.1204) `[VERIFIED]`. Phase 2 audit |
 | P9 | Stock ledger is a deterministic function of user facts | **Not met** | Automatic consumption, backdated-intake reversals, stock-count corrections and `StockEpoch` are computed locally and depend on execution order (§3.4) `[VERIFIED — ANALYSIS.md §4.4]`. Phase 2 |
 | P10 | Stable GUID identity on every replicated entity | **Met** | All entities use `Guid Id` generated at creation `[VERIFIED — Domain entities]` |
@@ -1141,8 +1141,8 @@ iCloud transport; tablet-specific layouts; web client.
 
 ## 16. Decisions still to confirm
 
-Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D10, D15. Still open:
-D4, D7, D9, D11, D12, D13, D14.
+Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15. Still
+open: D4, D7, D11, D12, D13, D14.
 
 | # | Decision | Options | Proposal | Needed by |
 |---|---|---|---|---|
@@ -1154,7 +1154,7 @@ D4, D7, D9, D11, D12, D13, D14.
 | D6 | Retroactive changes after cutoff (schedule rows, suspensions, therapy end date) re-derive past days; frozen days never change | Yes; no (freeze on first derivation) | **Decided 2026-09-26**: yes | Phase 2 |
 | D7 | Conflict review scope | Show all LWW losses; show only listed cases (§4.5) | §4.5 list | Phase 3 |
 | D8 | Retraction (delete a mistaken fact) | Add now; later | **Decided 2026-09-26**: add in Phase 2 | Phase 2 |
-| D9 | Portable project name, namespaces | `MedReminder.Infrastructure.Portable`, keep namespaces | As proposed | Phase 1 |
+| D9 | Portable project name, namespaces | `MedReminder.Infrastructure.Portable`, keep namespaces | **Decided 2026-09-26**: as proposed | Phase 1 |
 | D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | **Decided 2026-09-26**: separate | Phase 3 |
 | D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | Decide on S4 evidence | Phase 5 |
 | D12 | iCloud transport | Plan; exclude | Exclude | Phase 0 |
@@ -1166,7 +1166,9 @@ D4, D7, D9, D11, D12, D13, D14.
 
 ## 17. Corrections to other documents
 
-To apply in the Phase 1 PR:
+The corrections to `EVOLUTION.md` and `ANALYSIS-C3PP-CLOUD-PROVIDERS.md`
+were applied in the Phase 1 PR. The `ANALYSIS.md` §4.4 change and the
+two behavior findings belong to Phase 2.
 
 - `EVOLUTION.md` §2.0, §6, §7, §8: B.1 now includes synchronization,
   C.3++ Phase 2 and the functional goal of C.1 without a backend; C.1
@@ -1319,3 +1321,9 @@ Phase 2 implements the derivation from the prototype and its tests.
   threshold in the fact), §4.2 (dated slot history, register history),
   §5.6 (anchor horizon, checkpoint selection), §12 (resolved-value
   hash), D6 scope.
+- 2026-09-26 — Phase 1 implemented: D9 decided; P5–P7 met; §17
+  corrections applied to `EVOLUTION.md` and `ANALYSIS-C3PP`. Deviation
+  from the Phase 1 actions: the reader tests build their archives with
+  a portable test writer that follows `EXPORT-FORMAT.md`, not a
+  desktop-produced fixture file; the Windows round-trip tests
+  (`ExportImportRoundTripTests`) keep covering the real `ExportService`.

@@ -1,9 +1,9 @@
-namespace MedReminder.UI.Presentation;
+namespace MedReminder.Application.Overview;
 
 // Row of the main grid (spec §13). Flat structure optimized for
 // DataGridView data binding; the status / color rules live in
 // MainForm, which formats the cell per row.
-internal sealed class MedicineListItem
+public sealed class MedicineListItem
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -28,7 +28,7 @@ internal sealed class MedicineListItem
     public string StatusDisplay { get; set; } = string.Empty;
 }
 
-internal enum MedicineRowStatus
+public enum MedicineRowStatus
 {
     Ok = 0,
     Warning = 1,

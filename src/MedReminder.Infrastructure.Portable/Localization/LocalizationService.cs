@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using MedReminder.Application.Abstractions;
-using MedReminder.Infrastructure.Storage;
 using Microsoft.Extensions.Options;
 
 namespace MedReminder.Infrastructure.Localization;
@@ -11,8 +10,9 @@ namespace MedReminder.Infrastructure.Localization;
 //
 // Loading strategy:
 //   1. For each supported language, try to read:
-//      %LOCALAPPDATA%\MedReminder\localization\strings.<lang>.json
-//      (optional user override). Corrupted file → silently ignored,
+//      <data directory>\localization\strings.<lang>.json (optional
+//      user override; on Windows the data directory is
+//      %LOCALAPPDATA%\MedReminder\, see IAppDataLocation). Corrupted file → silently ignored,
 //      exception implicitly logged and swallowed.
 //   2. Then read the embedded version from the assembly (resource
 //      name: "MedReminder.Infrastructure.Localization.strings.<lang>.json"
@@ -36,13 +36,13 @@ public sealed class LocalizationService : ILocalizationService
     private readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> _dictionaries;
     private readonly SupportedLanguage _current;
 
-    public LocalizationService(IOptions<UserSettings> settings)
-        : this(settings.Value.Language)
+    public LocalizationService(IOptions<UserSettings> settings, IAppDataLocation dataLocation)
+        : this(settings.Value.Language, dataLocation.DataDirectory)
     { }
 
-    private LocalizationService(string languageCode)
+    private LocalizationService(string languageCode, string? dataDirectory)
     {
-        _dictionaries = LoadAllDictionaries();
+        _dictionaries = LoadAllDictionaries(dataDirectory);
         _current = SupportedLanguages.Resolve(languageCode);
     }
 
@@ -51,8 +51,9 @@ public sealed class LocalizationService : ILocalizationService
     // mutex, ThreadException) are localizable too. Reads
     // user.settings.json by hand; if the file is missing or
     // corrupted, falls back to the default language (en).
-    public static ILocalizationService CreateStandalone(string? languageCode)
-        => new LocalizationService(languageCode ?? SupportedLanguages.Default);
+    // dataDirectory is the root of the user overrides; null skips them.
+    public static ILocalizationService CreateStandalone(string? languageCode, string? dataDirectory)
+        => new LocalizationService(languageCode ?? SupportedLanguages.Default, dataDirectory);
 
     public string CurrentLanguage => _current.Code;
 
@@ -101,7 +102,7 @@ public sealed class LocalizationService : ILocalizationService
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>
-        LoadAllDictionaries()
+        LoadAllDictionaries(string? dataDirectory)
     {
         var result = new Dictionary<string, IReadOnlyDictionary<string, string>>(
             StringComparer.OrdinalIgnoreCase);
@@ -109,7 +110,7 @@ public sealed class LocalizationService : ILocalizationService
         foreach (var lang in SupportedLanguages.All)
         {
             // Precedence order (strongest to weakest):
-            //   1. user override in %LOCALAPPDATA%\MedReminder\
+            //   1. user override in <data directory>\
             //      localization\strings.<lang>.json
             //   2. "distributed" files copied into
             //      <bin>\localization\strings.<lang>.json (csproj
@@ -120,7 +121,7 @@ public sealed class LocalizationService : ILocalizationService
             // Later maps are MERGED — user overrides win over the
             // defaults, but keys missing from the override fall
             // back to the defaults.
-            var overrides = LoadOverride(lang.Code);
+            var overrides = LoadOverride(dataDirectory, lang.Code);
             var baseDir = LoadFromBaseDirectory(lang.Code);
             var embedded = LoadEmbedded(lang.Code);
 
@@ -193,10 +194,11 @@ public sealed class LocalizationService : ILocalizationService
         return EmptyDictionary;
     }
 
-    private static IReadOnlyDictionary<string, string> LoadOverride(string languageCode)
+    private static IReadOnlyDictionary<string, string> LoadOverride(string? dataDirectory, string languageCode)
     {
+        if (dataDirectory is null) return EmptyDictionary;
         var path = Path.Combine(
-            AppDataPaths.GetAppDataDirectory(),
+            dataDirectory,
             OverrideSubdirectory,
             $"strings.{languageCode}.json");
         if (!File.Exists(path)) return EmptyDictionary;

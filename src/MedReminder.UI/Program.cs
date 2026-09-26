@@ -13,7 +13,7 @@ using MedReminder.Infrastructure.Storage;
 using MedReminder.UI.Forms;
 using MedReminder.UI.Hosting;
 using MedReminder.UI.Notifications;
-using MedReminder.UI.Presentation;
+using MedReminder.Application.Overview;
 using MedReminder.UI.Services;
 using MedReminder.UI.Tray;
 using Microsoft.Extensions.Configuration;
@@ -58,7 +58,7 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         Log.Logger = ConfigureSerilog();
 
-        _bootstrapLoc = LocalizationService.CreateStandalone(ReadUserLanguage());
+        _bootstrapLoc = LocalizationService.CreateStandalone(ReadUserLanguage(), AppDataPaths.GetAppDataDirectory());
 
         WinFormsApp.SetUnhandledExceptionMode(WinFormUnhandledExceptionMode.CatchException);
         WinFormsApp.ThreadException += OnUnhandledUiException;
@@ -471,7 +471,7 @@ internal static class Program
             Log.Warning(ex, "Could not persist the first-run UI language.");
         }
 
-        _bootstrapLoc = LocalizationService.CreateStandalone(code);
+        _bootstrapLoc = LocalizationService.CreateStandalone(code, AppDataPaths.GetAppDataDirectory());
         Log.Information("First run: UI language set to {Language} from the system culture.", code);
     }
 

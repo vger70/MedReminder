@@ -40,7 +40,8 @@ this document in the same pull request.
 |---|---|---|---|
 | `MedReminder.Domain` | `net10.0` | library | — |
 | `MedReminder.Application` | `net10.0` | library | Domain |
-| `MedReminder.Infrastructure` | `net10.0-windows` (WinForms enabled) | library | Domain, Application |
+| `MedReminder.Infrastructure.Portable` | `net10.0` | library | Domain, Application |
+| `MedReminder.Infrastructure` | `net10.0-windows` (WinForms enabled) | library | Domain, Application, Infrastructure.Portable |
 | `MedReminder.UI` | `net10.0-windows10.0.19041.0` | `WinExe` | Application, Infrastructure |
 | `MedReminder.DataImporter` | `net10.0` | console exe | — (standalone tool) |
 
@@ -48,7 +49,8 @@ this document in the same pull request.
 |---|---|---|
 | `MedReminder.Domain.Tests` | `net10.0` | Domain |
 | `MedReminder.Application.Tests` | `net10.0` | Application (in-memory fakes) |
-| `MedReminder.Infrastructure.Tests` | `net10.0-windows` | Infrastructure (SQLite, DPAPI, registry — Windows only) |
+| `MedReminder.Infrastructure.Portable.Tests` | `net10.0` | Infrastructure.Portable (SQLite persistence, archive cipher and reader, localization) — runs on any OS |
+| `MedReminder.Infrastructure.Tests` | `net10.0-windows` | Infrastructure (DPAPI, registry, catalogue import, export / import shells — Windows only) |
 | `MedReminder.UI.Tests` | `net10.0-windows10.0.19041.0` | Hosted services, UI controls |
 | `MedReminder.DataImporter.Tests` | `net10.0` | AIFA CSV loader |
 
@@ -59,7 +61,8 @@ All test projects use xUnit and FluentAssertions.
 ```
 UI  ──►  Application  ──►  Domain
  │            ▲
- └──►  Infrastructure (implements Application ports)
+ └──►  Infrastructure ──►  Infrastructure.Portable
+       (both implement Application ports)
 ```
 
 - **Domain** contains entities and pure calculations. No I/O, no
@@ -70,9 +73,20 @@ UI  ──►  Application  ──►  Domain
   ports (`Abstractions/`) that Infrastructure implements. It
   references only `Microsoft.Extensions.*.Abstractions`: no EF Core,
   no MailKit, no Windows API.
-- **Infrastructure** implements the ports: EF Core / SQLite, MailKit,
-  DPAPI, registry, file-based stores, export cipher, catalogue
-  import, GitHub update check.
+- **Infrastructure.Portable** implements the platform-neutral ports:
+  EF Core / SQLite persistence and `DatabaseInitializer`, the archive
+  cipher, `ArchiveReader` and `ProfileDatabaseBuilder` (read half of
+  the `.mrz` import), the localization loader. No Windows API, no
+  `%LOCALAPPDATA%`: paths come from `IAppDataLocation` or arguments.
+  `AddMedReminderPortableInfrastructure` registers it. Namespaces stay
+  `MedReminder.Infrastructure.*`. Introduced by Phase 1 of
+  [`analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md)
+  so a mobile host can reuse it.
+- **Infrastructure** implements the Windows-bound ports: MailKit,
+  DPAPI, registry, file-based stores under `%LOCALAPPDATA%`
+  (`AppDataPaths`, `AppDataLocation`), the export / import services
+  (Windows shells over the portable reader), catalogue import, GitHub
+  update check.
 - **UI** is the composition root (`Program.cs`) and the only process
   entry point. It owns the WinForms forms, the tray icon, the toast
   adapter and the four hosted services (§6).
@@ -98,12 +112,13 @@ removed or weakened. Publishing is described in
 |---|---|---|
 | `Microsoft.Extensions.Hosting` | UI, DataImporter | Generic host: DI, configuration, logging, hosted services |
 | `Microsoft.Extensions.Configuration.Json` | UI, DataImporter | JSON configuration chain (§5.3) |
-| `Microsoft.Extensions.Logging.Abstractions`, `DependencyInjection.Abstractions` | Application, Infrastructure | Logging and DI contracts without implementations |
+| `Microsoft.Extensions.Logging.Abstractions`, `DependencyInjection.Abstractions` | Application, Infrastructure, Infrastructure.Portable | Logging and DI contracts without implementations |
+| `Microsoft.Extensions.Options` | Infrastructure.Portable | `IOptions<T>` consumption |
 | `Microsoft.Extensions.Options.ConfigurationExtensions` | Infrastructure | `IOptions<T>` binding |
-| `Microsoft.EntityFrameworkCore.Sqlite` | Infrastructure | Persistence |
+| `Microsoft.EntityFrameworkCore.Sqlite` | Infrastructure.Portable | Persistence |
 | `Microsoft.EntityFrameworkCore.Design` | Infrastructure | Design-time only (`PrivateAssets`) |
 | `MailKit` | Infrastructure | SMTP. `System.Net.Mail.SmtpClient` must not be used |
-| `Konscious.Security.Cryptography.Argon2` | Infrastructure | Argon2id key derivation for `.mrz` archives |
+| `Konscious.Security.Cryptography.Argon2` | Infrastructure.Portable | Argon2id key derivation for `.mrz` archives |
 | `Microsoft.Toolkit.Uwp.Notifications` | UI | Windows toasts for an unpackaged app |
 | `Microsoft.Web.WebView2` | UI | Rendering of the embedded user guide |
 | `Markdig` | UI | Markdown to HTML for the embedded user guide |
@@ -455,8 +470,10 @@ are.
 
 UI strings are keyed dictionaries in `assets/localization/strings.<lang>.json`
 for `en`, `it`, `fr`, `es`, `de`, embedded in the UI assembly and
-copied next to the executable. Files under
-`%LOCALAPPDATA%\MedReminder\localization\` override single keys. The
+copied next to the executable. `LocalizationService`
+(Infrastructure.Portable) loads them. Files under
+`<data directory>\localization\` override single keys; on Windows the
+data directory is `%LOCALAPPDATA%\MedReminder\` (`IAppDataLocation`). The
 language is read once at startup; a change requires a restart. Every
 new key must be added to all five files.
 
