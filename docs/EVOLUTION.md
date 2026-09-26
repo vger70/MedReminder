@@ -70,16 +70,15 @@ C.3+ and C.3++ Phase 1 have shipped (see `EVOLUTION-DONE.md`).
 
 ### 2.0 Remaining sequence
 
-1. **A2 — AIC / barcode scan** (§3.2). Next Group A item in the
-   decided sequence. Design in
-   `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md` (USB HID scanner and
-   webcam variants). No cross-item preconditions.
-2. **B.1 — mobile companion client** (§7). Its precondition, C.3+,
-   is met.
-3. **C.3++ Phase 2 — native cloud providers** (§6). Only once B.1 is
-   approved; the `IArchiveStorage` port it plugs into already exists.
-4. **C.1 — end-to-end encrypted sync with a dedicated backend**
-   (§8). Only if the product owner accepts turning the app into a
+1. **B.1 — mobile client with desktop synchronization** (§7).
+   Approved 2026-09-26 with mandatory sync; design in
+   `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`. It absorbs C.3++ Phase 2
+   (native cloud providers) and reaches the functional goal of C.1
+   without a backend. First step: convergence prototype (spike S9).
+2. **A2 phase 2 — webcam** (§3.2). Phase 1 (USB HID scanner) shipped
+   in PR #72. Independent of B.1; may run after it or in parallel.
+3. **C.1 — hosted relay** (§8). Reduced to an optional extra transport
+   for B.1 sync; only if the product owner accepts operating a
    service.
 
 **C.2** (raw file-sync of the live SQLite database) stays **rejected**
@@ -520,5 +519,8 @@ application is prepared in
   restock) and the decided phases HID → webcam → flow (b), the last
   deferred until flow (a) is complete and the product owner requests
   it. Effort split per phase.
+- 2026-09-26 — §2.0: sequence updated after the B.1 decisions: B.1
+  with mandatory sync first (absorbs C.3++ Phase 2), A2 phase 2
+  independent, C.1 reduced to an optional hosted transport.
 - 2026-09-26 — §7: added pointer to the B.1 analysis
   `ANALYSIS-B1-MOBILE-SYNC.md` (mandatory mobile-desktop sync).

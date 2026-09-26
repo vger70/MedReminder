@@ -895,7 +895,8 @@ place relative to A2 (`EVOLUTION.md` §2.0).
 
 **Actions**
 
-1. Decide D1–D5, D9–D13; D6, D8, D15 before Phase 2 (§16).
+1. Decide the open items needed before Phase 1 (D9) and before Phase 5
+   (D4, D11, D13); D1–D3, D5, D6, D8, D10, D15 decided on 2026-09-26.
 2. Spikes (throw-away branches; results appended to §18):
    - S1 AES-GCM on Android (`AesGcm.IsSupported`, decrypt a desktop
      archive).
@@ -915,12 +916,26 @@ place relative to A2 (`EVOLUTION.md` §2.0).
      requirements for the chosen scope.
    - S8 Background sync: WorkManager and iOS background refresh
      frequency under battery saver.
+   - **S9 Convergence prototype (first spike, gates Phase 1)**: pure
+     `net10.0` prototype of `LedgerDeriver` (§4.3, §4.4, §4.4b), the
+     merge rules (§4.2, §4.5) and the convergence simulation harness
+     (§11). Acceptance: (a) the deriver reproduces the expected results
+     of the existing `ConsumptionCatchUp`, `RegisterIntake` and
+     `ReconcileStock` tests for days after the cutoff; (b) the
+     simulation converges (identical replicated-state hash, `ANALYSIS.md`
+     §4.4 invariants hold) over at least 10 000 random seeds with
+     2–5 devices, duplication, reordering and partitions. A failure is
+     fixed in this document first, then in the prototype. The
+     prototype is throw-away; Phases 2 and 3 re-implement it in
+     production code with its tests as the starting point.
+     Reason: this is the part verified only on paper, and two reviews
+     of this document already found errors in it.
 3. App registrations (Entra, Google Cloud), store accounts, macOS build
    host if iOS is in scope.
 
-**Exit**: S1, S3, S6 pass or have accepted mitigations; D1–D5 decided.
+**Exit**: S9 passes; S1, S3, S6 pass or have accepted mitigations; D9 decided.
 
-**Effort**: 8–12 days `[INFERRED]`.
+**Effort**: 8–12 days, plus 8–12 days for S9 `[INFERRED]`.
 
 ### Phase 1 — Portability refactor (desktop only, no behavior change)
 
@@ -1063,7 +1078,7 @@ accepted by the product owner.
 
 | Phase | Content | Depends on | Effort `[INFERRED]` |
 |---|---|---|---|
-| 0 | Decisions, spikes S1–S8, accounts | PO approval | 8–12 d |
+| 0 | Decisions, spikes S1–S9, accounts | PO approval | 16–24 d |
 | 1 | Portability refactor | 0 | 6–9 d |
 | 2 | Ledger derivation, write-path audit | 1, D6, D8, D15 | 12–18 d |
 | 3 | Sync engine, desktop-to-desktop | 2 released, D7, D10 | 30–45 d |
@@ -1072,7 +1087,7 @@ accepted by the product owner.
 | 6 | iOS | 5, macOS, Apple account | 15–25 d |
 | 7 | Completion (parity) | 5 / 6 | 20–30 d |
 
-Total: about 146–224 developer-days, roughly 7–11 developer-months.
+Total: about 154–236 developer-days, roughly 7–11 developer-months.
 `EVOLUTION.md` §7.4 estimated 2–4 months for a mobile MVP **without**
 sync; the difference is the sync engine, the ledger refactor and the
 provider transports.
@@ -1105,23 +1120,26 @@ iCloud transport; tablet-specific layouts; web client.
 
 ## 16. Decisions still to confirm
 
+Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D10, D15. Still open:
+D4, D7, D9, D11, D12, D13, D14.
+
 | # | Decision | Options | Proposal | Needed by |
 |---|---|---|---|---|
-| D1 | Platforms and order | Android then iOS; both; Android only | Android then iOS | Phase 0 |
-| D2 | UI framework | MAUI; Avalonia | MAUI | Phase 0 |
-| D3 | Providers and order | OneDrive, Google Drive, Dropbox | OneDrive, then Google Drive; Dropbox later | Phase 0 |
+| D1 | Platforms and order | Android then iOS; both; Android only | **Decided 2026-09-26**: Android, then iOS | Phase 0 |
+| D2 | UI framework | MAUI; Avalonia | **Decided 2026-09-26**: MAUI | Phase 0 |
+| D3 | Providers and order | OneDrive, Google Drive, Dropbox | **Decided 2026-09-26**: OneDrive, then Google Drive; Dropbox later | Phase 0 |
 | D4 | Notification defaults per device | Proposal in §8.3 | Dose on phone, low-stock everywhere | Phase 5 |
-| D5 | Relative order with A2 | A2 first; B.1 first | A2 phase 1 first (independent, smaller) | Phase 0 |
-| D6 | Retroactive schedule changes after cutoff re-derive past days | Yes; no (freeze on first derivation) | Yes (convergent and more correct) | Phase 2 |
+| D5 | Relative order with A2 | A2 first; B.1 first | **Decided 2026-09-26**: A2 phase 1 has shipped (PR #72); A2 phase 2 (webcam) is independent and may run after B.1 or in parallel | Phase 0 |
+| D6 | Retroactive schedule changes after cutoff re-derive past days | Yes; no (freeze on first derivation) | **Decided 2026-09-26**: yes | Phase 2 |
 | D7 | Conflict review scope | Show all LWW losses; show only listed cases (§4.5) | §4.5 list | Phase 3 |
-| D8 | Retraction (delete a mistaken fact) | Add now; later | Add in Phase 2 | Phase 2 |
+| D8 | Retraction (delete a mistaken fact) | Add now; later | **Decided 2026-09-26**: add in Phase 2 | Phase 2 |
 | D9 | Portable project name, namespaces | `MedReminder.Infrastructure.Portable`, keep namespaces | As proposed | Phase 1 |
-| D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | Separate, with an option to reuse | Phase 3 |
+| D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | **Decided 2026-09-26**: separate | Phase 3 |
 | D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | Decide on S4 evidence | Phase 5 |
 | D12 | iCloud transport | Plan; exclude | Exclude | Phase 0 |
 | D13 | Minimum OS versions | — | Android 8.0 (API 26), iOS 15 `[INFERRED — not measured]` | Phase 5 |
 | D14 | Donation links on iOS | Include; exclude | Exclude unless verified compliant | Phase 7 |
-| D15 | Automatic consumption for inactive periods | None on inactive days (activity history); today's catch-up on reactivation | None on inactive days | Phase 2 |
+| D15 | Automatic consumption for inactive periods | None on inactive days (activity history); today's catch-up on reactivation | **Decided 2026-09-26**: no automatic consumption on inactive days | Phase 2 |
 
 ---
 
@@ -1211,3 +1229,6 @@ result, decision.
   authenticated device revocation; QR secrecy; designated mail device
   failover; clock warning shown by the receiver; `Legacy` facts not
   retractable; phase dependencies (P3, Phase 4 entry on D3).
+- 2026-09-26 — product owner decided D1, D2, D3, D5, D6, D8, D10, D15
+  as proposed. Added spike S9 (convergence prototype) as the first
+  Phase 0 step, gating Phase 1.

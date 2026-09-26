@@ -48,6 +48,10 @@ Branch: `claude/b1-analysis-document-1r5r0v`
   with entry and exit criteria, decisions D1–D15.
 - `docs/ANALYSIS.md` §12 and `docs/EVOLUTION.md` §7 link the new
   analysis.
+- Product-owner decisions D1, D2, D3, D5, D6, D8, D10, D15 recorded;
+  spike S9 (convergence prototype) added as the first Phase 0 step.
+  `docs/EVOLUTION.md` §2.0 sequence updated: B.1 with sync first, A2
+  phase 2 independent, C.1 reduced to an optional hosted transport.
 
 ## PR #75 — Add read-only therapy timeline view
 
