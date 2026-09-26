@@ -308,15 +308,21 @@ enregistrer la correction :
    stock attendu (consommations automatiques mises à jour), l'écart
    de stock avec son signe et la date d'épuisement avant et après la
    correction.
-4. Cochez **Compté après les doses prévues aujourd'hui** si vous avez
-   compté après avoir pris les doses du jour ; sinon laissez la case
-   décochée.
+4. Dans **Déjà pris aujourd'hui**, indiquez la part de la quantité
+   prévue aujourd'hui déjà prise au moment du comptage. L'application
+   propose les doses dont l'heure est passée ; sans heures définies,
+   elle propose 0. Si vous indiquez une partie seulement, la liste
+   affiche le stock en début de journée jusqu'à l'enregistrement de la
+   consommation du jour.
 5. Ajoutez une note si besoin (par défaut : « Comptage du stock ») et
    confirmez avec **Enregistrer le comptage**.
 
 **Effet** : une seule correction, positive ou négative, est
 enregistrée afin que le stock soit égal à la quantité comptée. Un
-écart nul n'enregistre rien. L'époque n'avance pas. L'écart est une
+écart nul n'enregistre rien. Une correction positive qui ramène le stock au-dessus du seuil
+d'alerte fait avancer l'époque, afin qu'une nouvelle alerte de stock
+bas puisse être envoyée plus tard ; une correction négative ne la
+fait jamais avancer. L'écart est une
 donnée de stock uniquement : il n'est pas interprété comme des doses
 oubliées ou supplémentaires.
 

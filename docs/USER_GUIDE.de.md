@@ -317,15 +317,21 @@ App die Korrektur erfassen:
    Bestand (mit aktualisiertem automatischem Verbrauch), die
    Bestandsabweichung mit Vorzeichen und das voraussichtliche
    Aufbrauchdatum vor und nach der Korrektur.
-4. Aktivieren Sie **Nach den heute geplanten Dosen gezählt**, wenn Sie
-   nach der Einnahme der heutigen Dosen gezählt haben; andernfalls
-   lassen Sie das Kästchen leer.
+4. Geben Sie unter **Heute bereits eingenommen** an, wie viel der
+   heute geplanten Menge Sie beim Zählen bereits eingenommen hatten.
+   Die App schlägt die Dosen vor, deren Uhrzeit vorbei ist; ohne
+   festgelegte Uhrzeiten schlägt sie 0 vor. Bei einer Teilmenge zeigt
+   die Liste den Bestand zu Tagesbeginn, bis der heutige Verbrauch
+   erfasst ist.
 5. Fügen Sie bei Bedarf eine Notiz hinzu (Standard:
    „Bestandszählung") und bestätigen Sie mit **Zählung erfassen**.
 
 **Wirkung**: Es wird genau eine positive oder negative Korrektur
 erfasst, sodass der Bestand der gezählten Menge entspricht. Eine
-Abweichung von null erfasst nichts. Die Epoche wird nicht erhöht. Die
+Abweichung von null erfasst nichts. Eine positive Korrektur, die den Bestand über die
+Warnschwelle hebt, erhöht die Epoche, damit später eine neue Warnung
+bei niedrigem Bestand gesendet werden kann; eine negative Korrektur
+erhöht sie nie. Die
 Abweichung ist nur eine Bestandsangabe: Sie wird nicht als
 vergessene oder zusätzliche Dosen interpretiert.
 

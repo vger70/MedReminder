@@ -42,7 +42,7 @@ public class ReconcileStockTests
         var id = await SeedAsync(scope);
 
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 20m, CountedAfterTodaysDoses: false, Notes: " Stock count "),
+            new ReconcileStockCommand(id, 20m, TakenToday: 0m, Notes: " Stock count "),
             CancellationToken.None);
 
         result.ExpectedQuantity.Should().Be(24m);
@@ -66,7 +66,7 @@ public class ReconcileStockTests
         var id = await SeedAsync(scope);
 
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 26m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, 26m, TakenToday: 0m),
             CancellationToken.None);
 
         result.Gap.Should().Be(2m);
@@ -84,7 +84,7 @@ public class ReconcileStockTests
         var id = await SeedAsync(scope);
 
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 24m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, 24m, TakenToday: 0m),
             CancellationToken.None);
 
         result.Gap.Should().Be(0m);
@@ -106,7 +106,7 @@ public class ReconcileStockTests
 
         scope.Clock.SetUtcNow(FixedNow);
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 6m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, 6m, TakenToday: 0m),
             CancellationToken.None);
 
         // Days 5..12 materialized: 30 - 2 × 12 = 6.
@@ -126,20 +126,20 @@ public class ReconcileStockTests
         var before = scope.Uow.SaveChangesCalls;
 
         await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 20m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, 20m, TakenToday: 0m),
             CancellationToken.None);
 
         scope.Uow.SaveChangesCalls.Should().Be(before + 1);
     }
 
     [Fact]
-    public async Task Count_after_todays_doses_materializes_today_once()
+    public async Task Taking_all_of_todays_doses_materializes_today_once()
     {
         var scope = new ApplicationTestScope(FixedNow);
         var id = await SeedAsync(scope);
 
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 22m, CountedAfterTodaysDoses: true),
+            new ReconcileStockCommand(id, 22m, TakenToday: 2m),
             CancellationToken.None);
 
         result.ExpectedQuantity.Should().Be(22m);
@@ -159,7 +159,7 @@ public class ReconcileStockTests
         var id = await SeedAsync(scope, initialQuantity: 10.25m, dose: 0.5m, freq: 1);
 
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 9.5m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, 9.5m, TakenToday: 0m),
             CancellationToken.None);
 
         result.ExpectedQuantity.Should().Be(8.75m);
@@ -179,12 +179,12 @@ public class ReconcileStockTests
         var snapshot = await scope.ReconcileStock.LoadAsync(id, CancellationToken.None);
         snapshot.IsSuspendedToday.Should().BeTrue();
         snapshot.TodayScheduledQuantity.Should().Be(0m);
-        var preview = snapshot.Evaluate(25m, countedAfterTodaysDoses: false);
+        var preview = snapshot.Evaluate(25m, takenToday: 0m);
         preview.ExpectedQuantity.Should().Be(28m);   // only 2026-09-10 consumed
         preview.ForecastAfter.DaysRemaining.Should().BeNull();
 
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 25m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, 25m, TakenToday: 0m),
             CancellationToken.None);
 
         result.ExpectedQuantity.Should().Be(28m);
@@ -200,33 +200,135 @@ public class ReconcileStockTests
         var countBefore = scope.Stock.All.Count;
 
         var act = () => scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, -1m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, -1m, TakenToday: 0m),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentException>();
         scope.Stock.All.Should().HaveCount(countBefore);
 
         var snapshot = await scope.ReconcileStock.LoadAsync(id, CancellationToken.None);
-        var evaluate = () => snapshot.Evaluate(-1m, countedAfterTodaysDoses: false);
+        var evaluate = () => snapshot.Evaluate(-1m, takenToday: 0m);
         evaluate.Should().Throw<ArgumentOutOfRangeException>();
     }
 
-    [Theory]
-    [InlineData(10)]
-    [InlineData(40)]
-    public async Task Does_not_change_stock_epoch(int counted)
+    [Fact]
+    public async Task Negative_correction_does_not_change_stock_epoch()
     {
         var scope = new ApplicationTestScope(FixedNow);
         var id = await SeedAsync(scope);
 
-        await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, counted, CountedAfterTodaysDoses: false),
+        var result = await scope.ReconcileStock.ExecuteAsync(
+            new ReconcileStockCommand(id, 10m, TakenToday: 0m),
             CancellationToken.None);
 
+        result.StockEpochAdvanced.Should().BeFalse();
         var medicine = await scope.Medicines.GetAsync(id, CancellationToken.None);
         medicine!.StockEpoch.Should().Be(1);
         (await scope.Stock.ListForMedicineAsync(id, CancellationToken.None))
             .Should().OnlyContain(m => m.StockEpoch == 1);
+    }
+
+    [Fact]
+    public async Task Positive_correction_leaving_the_warning_window_advances_stock_epoch()
+    {
+        // 40 units at 2/day = 20 days, above the 7-day threshold.
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope);
+
+        var result = await scope.ReconcileStock.ExecuteAsync(
+            new ReconcileStockCommand(id, 40m, TakenToday: 0m),
+            CancellationToken.None);
+
+        result.StockEpochAdvanced.Should().BeTrue();
+        var medicine = await scope.Medicines.GetAsync(id, CancellationToken.None);
+        medicine!.StockEpoch.Should().Be(2);
+        var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
+        movements.Single(m => m.Kind == StockMovementKind.PositiveCorrection).StockEpoch.Should().Be(2);
+        movements.Where(m => m.Kind == StockMovementKind.Consumption)
+            .Should().OnlyContain(m => m.StockEpoch == 1);
+    }
+
+    [Fact]
+    public async Task Positive_correction_inside_the_warning_window_keeps_stock_epoch()
+    {
+        // 10 - 6 = 4 expected; counted 6 = 3 days, still within 7.
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope, initialQuantity: 10m);
+
+        var result = await scope.ReconcileStock.ExecuteAsync(
+            new ReconcileStockCommand(id, 6m, TakenToday: 0m),
+            CancellationToken.None);
+
+        result.CorrectionKind.Should().Be(StockMovementKind.PositiveCorrection);
+        result.StockEpochAdvanced.Should().BeFalse();
+        var medicine = await scope.Medicines.GetAsync(id, CancellationToken.None);
+        medicine!.StockEpoch.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Partial_intake_today_keeps_start_of_day_stock_in_the_ledger()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope);
+
+        var snapshot = await scope.ReconcileStock.LoadAsync(id, CancellationToken.None);
+        var preview = snapshot.Evaluate(20m, takenToday: 1m);
+        preview.ExpectedQuantity.Should().Be(23m);
+        preview.Gap.Should().Be(-3m);
+        preview.MaterializesToday.Should().BeFalse();
+        preview.StockShownAfter.Should().Be(21m);
+
+        var result = await scope.ReconcileStock.ExecuteAsync(
+            new ReconcileStockCommand(id, 20m, TakenToday: 1m),
+            CancellationToken.None);
+
+        result.Gap.Should().Be(-3m);
+        result.ConsumptionDaysMaterialized.Should().Be(3);
+        (await LedgerTotalAsync(scope, id)).Should().Be(21m);
+
+        // Next day the catch-up books today's 2 units: count minus the
+        // unit that was still due.
+        scope.Clock.SetUtcNow(FixedNow.AddDays(1));
+        (await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None)).Should().Be(1);
+        (await LedgerTotalAsync(scope, id)).Should().Be(19m);
+    }
+
+    [Fact]
+    public async Task Rejects_taken_today_above_scheduled_quantity()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope);
+        var countBefore = scope.Stock.All.Count;
+
+        var act = () => scope.ReconcileStock.ExecuteAsync(
+            new ReconcileStockCommand(id, 20m, TakenToday: 3m),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+        scope.Stock.All.Should().HaveCount(countBefore);
+    }
+
+    [Fact]
+    public async Task Suggests_taken_today_from_slots_whose_time_has_passed()
+    {
+        var scope = new ApplicationTestScope(FixedNow);   // 12:00 local
+        var id = await scope.AddMedicine.ExecuteAsync(
+            new AddMedicineCommand(
+                "Enalapril", "compresse", 1m, 2,
+                new DateOnly(2026, 9, 10), 7,
+                NotificationChannels.Windows,
+                InitialQuantity: 30m,
+                AdministrationSlots:
+                [
+                    new AdministrationSlotInput(1m, new TimeOnly(8, 0), null),
+                    new AdministrationSlotInput(1m, new TimeOnly(20, 0), null),
+                ]),
+            CancellationToken.None);
+
+        var snapshot = await scope.ReconcileStock.LoadAsync(id, CancellationToken.None);
+
+        snapshot.TodayScheduledQuantity.Should().Be(2m);
+        snapshot.DefaultTakenToday.Should().Be(1m);
     }
 
     [Fact]
@@ -244,14 +346,15 @@ public class ReconcileStockTests
         snapshot.Today.Should().Be(Today);
         snapshot.LedgerAtStartOfToday.Should().Be(24m);
         snapshot.TodayScheduledQuantity.Should().Be(2m);
+        snapshot.DefaultTakenToday.Should().Be(0m);
         snapshot.DailyRate.Should().Be(2m);
 
-        var preview = snapshot.Evaluate(19m, countedAfterTodaysDoses: true);
+        var preview = snapshot.Evaluate(19m, takenToday: 2m);
         preview.ExpectedQuantity.Should().Be(22m);
         preview.Gap.Should().Be(-3m);
 
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 19m, CountedAfterTodaysDoses: true),
+            new ReconcileStockCommand(id, 19m, TakenToday: 2m),
             CancellationToken.None);
         result.ExpectedQuantity.Should().Be(preview.ExpectedQuantity);
         result.Gap.Should().Be(preview.Gap);
@@ -263,10 +366,10 @@ public class ReconcileStockTests
         var scope = new ApplicationTestScope(FixedNow);
         var id = await SeedAsync(scope);
         var snapshot = await scope.ReconcileStock.LoadAsync(id, CancellationToken.None);
-        var preview = snapshot.Evaluate(15m, countedAfterTodaysDoses: false);
+        var preview = snapshot.Evaluate(15m, takenToday: 0m);
 
         await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 15m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, 15m, TakenToday: 0m),
             CancellationToken.None);
 
         var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
@@ -286,12 +389,20 @@ public class ReconcileStockTests
         var scope = new ApplicationTestScope(FixedNow);
         var id = await SeedAsync(scope, initialQuantity: 4m);
 
+        var preview = (await scope.ReconcileStock.LoadAsync(id, CancellationToken.None))
+            .Evaluate(0m, takenToday: 0m);
+        preview.Gap.Should().Be(0m);
+        preview.LedgerAlignment.Should().Be(2m);
+
         var result = await scope.ReconcileStock.ExecuteAsync(
-            new ReconcileStockCommand(id, 0m, CountedAfterTodaysDoses: false),
+            new ReconcileStockCommand(id, 0m, TakenToday: 0m),
             CancellationToken.None);
 
         result.ExpectedQuantity.Should().Be(0m);
         result.Gap.Should().Be(0m);
+        result.Correction.Should().Be(2m);
+        result.CorrectionKind.Should().Be(StockMovementKind.PositiveCorrection);
+        result.StockEpochAdvanced.Should().BeFalse();
         (await LedgerTotalAsync(scope, id)).Should().Be(0m);
     }
 }

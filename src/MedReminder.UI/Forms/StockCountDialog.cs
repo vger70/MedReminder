@@ -18,10 +18,11 @@ internal sealed class StockCountDialog : MedReminderFormBase
     private readonly StockCountSnapshot _snapshot;
     private readonly string _unit;
     private readonly NumericUpDown _countedBox;
-    private readonly CheckBox _afterTodayBox;
+    private readonly NumericUpDown _takenTodayBox;
     private readonly Label _expectedValue;
     private readonly Label _gapValue;
     private readonly Label _runOutValue;
+    private readonly Label _infoLabel;
     private readonly TextBox _notesBox;
 
     public StockCountDialog(string medicineName, string unit, StockCountSnapshot snapshot,
@@ -32,7 +33,7 @@ internal sealed class StockCountDialog : MedReminderFormBase
         _unit = unit;
         Text = _loc.Get("Ui.StockCountDialog.Title");
         Width = 520;
-        Height = 380;
+        Height = 440;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -46,7 +47,7 @@ internal sealed class StockCountDialog : MedReminderFormBase
             Font = new System.Drawing.Font(Font, System.Drawing.FontStyle.Bold),
         };
 
-        var initial = snapshot.Evaluate(0m, countedAfterTodaysDoses: false).ExpectedQuantity;
+        var initial = snapshot.Evaluate(0m, snapshot.DefaultTakenToday).ExpectedQuantity;
         _countedBox = new NumericUpDown
         {
             Minimum = 0m,
@@ -57,11 +58,15 @@ internal sealed class StockCountDialog : MedReminderFormBase
             Dock = DockStyle.Left,
             Width = 120,
         };
-        _afterTodayBox = new CheckBox
+        _takenTodayBox = new NumericUpDown
         {
-            Text = _loc.Get("Ui.StockCountDialog.Field.AfterToday",
-                snapshot.TodayScheduledQuantity.ToString("0.##"), unit),
-            AutoSize = true,
+            Minimum = 0m,
+            Maximum = snapshot.TodayScheduledQuantity,
+            DecimalPlaces = 2,
+            Increment = 0.5m,
+            Value = snapshot.DefaultTakenToday,
+            Dock = DockStyle.Left,
+            Width = 120,
             Enabled = snapshot.TodayScheduledQuantity > 0m,
         };
         _expectedValue = new Label { AutoSize = true, Margin = new Padding(4, 8, 4, 4) };
@@ -72,6 +77,7 @@ internal sealed class StockCountDialog : MedReminderFormBase
             Font = new System.Drawing.Font(Font, System.Drawing.FontStyle.Bold),
         };
         _runOutValue = new Label { AutoSize = true, Margin = new Padding(4, 8, 4, 4) };
+        _infoLabel = new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(310, 0), Margin = new Padding(4, 8, 4, 4) };
         _notesBox = new TextBox
         {
             Dock = DockStyle.Fill,
@@ -95,10 +101,12 @@ internal sealed class StockCountDialog : MedReminderFormBase
 
         AddRow(table, string.Empty, header);
         AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Counted"), _countedBox);
-        AddRow(table, string.Empty, _afterTodayBox);
+        AddRow(table, _loc.Get("Ui.StockCountDialog.Field.TakenToday",
+            snapshot.TodayScheduledQuantity.ToString("0.##"), unit), _takenTodayBox);
         AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Expected"), _expectedValue);
         AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Gap"), _gapValue);
         AddRow(table, _loc.Get("Ui.StockCountDialog.Field.RunOut"), _runOutValue);
+        AddRow(table, string.Empty, _infoLabel);
         AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Notes"), _notesBox);
 
         var okButton = new Button { Text = _loc.Get("Ui.StockCountDialog.Apply"), DialogResult = DialogResult.OK, Width = 120, Height = 32 };
@@ -107,7 +115,7 @@ internal sealed class StockCountDialog : MedReminderFormBase
         {
             Result = new StockCountResult(
                 _countedBox.Value,
-                _afterTodayBox.Checked,
+                _takenTodayBox.Value,
                 string.IsNullOrWhiteSpace(_notesBox.Text) ? null : _notesBox.Text.Trim());
         };
 
@@ -127,17 +135,34 @@ internal sealed class StockCountDialog : MedReminderFormBase
         CancelButton = cancelButton;
 
         _countedBox.ValueChanged += (_, _) => RefreshPreview();
-        _afterTodayBox.CheckedChanged += (_, _) => RefreshPreview();
+        _takenTodayBox.ValueChanged += (_, _) => RefreshPreview();
         RefreshPreview();
     }
 
     private void RefreshPreview()
     {
-        var preview = _snapshot.Evaluate(_countedBox.Value, _afterTodayBox.Checked);
+        var preview = _snapshot.Evaluate(_countedBox.Value, _takenTodayBox.Value);
         _expectedValue.Text = $"{preview.ExpectedQuantity:0.##} {_unit}";
-        _gapValue.Text = preview.Gap == 0m
+        _gapValue.Text = preview.Correction == 0m
             ? _loc.Get("Ui.StockCountDialog.NoGap")
-            : $"{preview.Gap.ToString("+0.##;-0.##")} {_unit}";
+            : $"{preview.Gap.ToString("+0.##;-0.##;0")} {_unit}";
+
+        // Explain what is written when it differs from what the user
+        // typed: a ledger alignment below zero, or the start-of-day
+        // stock the list keeps showing until today's consumption is
+        // recorded.
+        var notes = new List<string>(2);
+        if (preview.LedgerAlignment != 0m)
+        {
+            notes.Add(_loc.Get("Ui.StockCountDialog.Note.Alignment",
+                preview.Correction.ToString("+0.##;-0.##"), _unit));
+        }
+        if (preview.StockShownAfter != preview.CountedQuantity)
+        {
+            notes.Add(_loc.Get("Ui.StockCountDialog.Note.StartOfDay",
+                preview.StockShownAfter.ToString("0.##"), _unit));
+        }
+        _infoLabel.Text = string.Join(Environment.NewLine, notes);
         _runOutValue.Text = _loc.Get("Ui.StockCountDialog.RunOutChange",
             FormatRunOut(preview.ForecastBefore), FormatRunOut(preview.ForecastAfter));
     }
@@ -157,9 +182,9 @@ internal sealed class StockCountDialog : MedReminderFormBase
 
 internal sealed record StockCountResult(
     decimal CountedQuantity,
-    bool CountedAfterTodaysDoses,
+    decimal TakenToday,
     string? Notes)
 {
     public ReconcileStockCommand ToCommand(Guid medicineId, string defaultNote) =>
-        new(medicineId, CountedQuantity, CountedAfterTodaysDoses, Notes ?? defaultNote);
+        new(medicineId, CountedQuantity, TakenToday, Notes ?? defaultNote);
 }

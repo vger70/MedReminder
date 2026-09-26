@@ -308,7 +308,7 @@
   "Ui.StockAdjustmentDialog.Save": "Speichern",
   "Ui.StockCountDialog.Title": "Bestandszählung",
   "Ui.StockCountDialog.Field.Counted": "Gezählte Menge",
-  "Ui.StockCountDialog.Field.AfterToday": "Nach den heute geplanten Dosen gezählt ({0} {1})",
+  "Ui.StockCountDialog.Field.TakenToday": "Heute bereits eingenommen (geplant: {0} {1})",
   "Ui.StockCountDialog.Field.Expected": "Erwarteter Bestand",
   "Ui.StockCountDialog.Field.Gap": "Bestandsabweichung",
   "Ui.StockCountDialog.Field.RunOut": "Voraussichtlich aufgebraucht am",
@@ -316,6 +316,8 @@
   "Ui.StockCountDialog.RunOutChange": "{0} → {1}",
   "Ui.StockCountDialog.RunOutNone": "nicht verfügbar",
   "Ui.StockCountDialog.NoGap": "Keine: es wird nichts erfasst",
+  "Ui.StockCountDialog.Note.Alignment": "Der erfasste Bestand lag unter null: Die erfasste Korrektur beträgt {0} {1}.",
+  "Ui.StockCountDialog.Note.StartOfDay": "Bis der heutige Verbrauch erfasst ist, zeigt die Liste den Bestand zu Tagesbeginn: {0} {1}.",
   "Ui.StockCountDialog.Apply": "Zählung erfassen",
   "Ui.StockCountDialog.DefaultNote": "Bestandszählung",
 

@@ -309,7 +309,7 @@
   "Ui.StockAdjustmentDialog.Save": "Salva",
   "Ui.StockCountDialog.Title": "Conteggio scorte",
   "Ui.StockCountDialog.Field.Counted": "Quantità contata",
-  "Ui.StockCountDialog.Field.AfterToday": "Contato dopo le dosi previste di oggi ({0} {1})",
+  "Ui.StockCountDialog.Field.TakenToday": "Già assunto oggi (previsto: {0} {1})",
   "Ui.StockCountDialog.Field.Expected": "Scorta attesa",
   "Ui.StockCountDialog.Field.Gap": "Differenza di scorta",
   "Ui.StockCountDialog.Field.RunOut": "Data di esaurimento",
@@ -317,6 +317,8 @@
   "Ui.StockCountDialog.RunOutChange": "{0} → {1}",
   "Ui.StockCountDialog.RunOutNone": "non disponibile",
   "Ui.StockCountDialog.NoGap": "Nessuna: non verrà registrato nulla",
+  "Ui.StockCountDialog.Note.Alignment": "La scorta registrata era sotto zero: la correzione registrata è {0} {1}.",
+  "Ui.StockCountDialog.Note.StartOfDay": "Finché il consumo di oggi non viene registrato, l'elenco mostra la scorta a inizio giornata: {0} {1}.",
   "Ui.StockCountDialog.Apply": "Registra conteggio",
   "Ui.StockCountDialog.DefaultNote": "Conteggio scorte",
 

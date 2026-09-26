@@ -1285,8 +1285,9 @@ internal sealed class MainForm : MedReminderFormBase
                 dialog.Result.ToCommand(row.Id, _loc.Get("Ui.StockCountDialog.DefaultNote")),
                 CancellationToken.None);
             _log.LogInformation(
-                "Stock count for medicine {MedicineId}: gap {Gap}, correction {Kind}, {Days} consumption days materialized",
-                row.Id, result.Gap, result.CorrectionKind?.ToString() ?? "none", result.ConsumptionDaysMaterialized);
+                "Stock count for medicine {MedicineId}: gap {Gap}, correction {Correction} ({Kind}), epoch advanced {EpochAdvanced}, {Days} consumption days materialized",
+                row.Id, result.Gap, result.Correction, result.CorrectionKind?.ToString() ?? "none",
+                result.StockEpochAdvanced, result.ConsumptionDaysMaterialized);
             await ReloadAsync();
         }
         catch (Exception ex)

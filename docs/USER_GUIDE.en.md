@@ -285,14 +285,19 @@ the app, count them and let the app record the correction:
    stock (with automatic consumption brought up to date), the stock
    discrepancy with its sign, and the run-out date before and after
    the correction.
-4. Tick **Counted after today's scheduled doses** if you counted
-   after taking today's doses; otherwise leave it unticked.
+4. In **Already taken today**, enter how much of today's scheduled
+   quantity you had already taken when you counted. The app suggests
+   the doses whose time has passed; without set times it suggests 0.
+   If you enter part of today's quantity, the list shows the stock at
+   the start of the day until today's consumption is recorded.
 5. Optionally add a note (default: "Stock count") and confirm with
    **Record count**.
 
 **Effect**: one positive or negative correction is recorded so that
 stock equals the counted quantity. A zero discrepancy records
-nothing. The epoch does not advance. The discrepancy is a stock
+nothing. A positive correction that brings the stock above the
+warning threshold advances the epoch, so a new low-stock warning can
+be sent later; a negative correction never does. The discrepancy is a stock
 figure only: it is not interpreted as missed or extra doses.
 
 ## Edit or deactivate a medicine

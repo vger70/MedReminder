@@ -299,15 +299,21 @@ mostrata dall'app, contale e lascia che l'app registri la correzione:
 3. Digita la quantità contata. Il dialogo mostra la scorta attesa
    (con i consumi automatici aggiornati), la differenza di scorta con
    il segno e la data di esaurimento prima e dopo la correzione.
-4. Spunta **Contato dopo le dosi previste di oggi** se hai contato
-   dopo aver assunto le dosi di oggi; altrimenti lascia la casella
-   vuota.
+4. In **Già assunto oggi** indica quanto della quantità prevista per
+   oggi avevi già assunto al momento del conteggio. L'app propone le
+   dosi il cui orario è passato; senza orari impostati propone 0. Se
+   indichi solo una parte della quantità di oggi, l'elenco mostra la
+   scorta a inizio giornata finché il consumo di oggi non viene
+   registrato.
 5. Aggiungi una nota se vuoi (predefinita: "Conteggio scorte") e
    conferma con **Registra conteggio**.
 
 **Effetto**: viene registrata una sola correzione, positiva o
 negativa, in modo che la scorta coincida con la quantità contata. Una
-differenza nulla non registra nulla. L'epoca non avanza. La differenza
+differenza nulla non registra nulla. Una correzione positiva che riporta la scorta sopra la soglia di
+avviso fa avanzare l'epoca, così in seguito può partire un nuovo
+avviso di scorta bassa; una correzione negativa non la fa mai
+avanzare. La differenza
 è solo un dato di scorta: non viene interpretata come dosi saltate o
 in più.
 

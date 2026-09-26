@@ -308,7 +308,7 @@
   "Ui.StockAdjustmentDialog.Save": "Guardar",
   "Ui.StockCountDialog.Title": "Recuento de existencias",
   "Ui.StockCountDialog.Field.Counted": "Cantidad contada",
-  "Ui.StockCountDialog.Field.AfterToday": "Contado después de las dosis previstas de hoy ({0} {1})",
+  "Ui.StockCountDialog.Field.TakenToday": "Ya tomado hoy (previsto: {0} {1})",
   "Ui.StockCountDialog.Field.Expected": "Existencias esperadas",
   "Ui.StockCountDialog.Field.Gap": "Diferencia de existencias",
   "Ui.StockCountDialog.Field.RunOut": "Fecha de agotamiento",
@@ -316,6 +316,8 @@
   "Ui.StockCountDialog.RunOutChange": "{0} → {1}",
   "Ui.StockCountDialog.RunOutNone": "no disponible",
   "Ui.StockCountDialog.NoGap": "Ninguna: no se registrará nada",
+  "Ui.StockCountDialog.Note.Alignment": "Las existencias registradas eran inferiores a cero: la corrección registrada es {0} {1}.",
+  "Ui.StockCountDialog.Note.StartOfDay": "Hasta que se registre el consumo de hoy, la lista muestra las existencias al inicio del día: {0} {1}.",
   "Ui.StockCountDialog.Apply": "Registrar recuento",
   "Ui.StockCountDialog.DefaultNote": "Recuento de existencias",
 
