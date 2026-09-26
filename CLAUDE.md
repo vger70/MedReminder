@@ -8,7 +8,7 @@
 
 ---
 
-## 2. Language Policy (STRICT)
+## 2. Language Policy
 - **EN-ONLY**: Code, comments, logs, exceptions, Markdown docs, commit messages, PRs, build scripts.
 - **EXCEPTIONS**: 
   - Chat with user (Italian allowed).
@@ -28,13 +28,13 @@ dotnet test MedReminder.sln -c Release
 dotnet publish src/MedReminder.UI -c Release /p:PublishProfile=win-x64-framework-dependent
 dotnet publish src/MedReminder.UI -c Release /p:PublishProfile=win-x64-self-contained
 ```
-Note: Infra tests require Windows (DPAPI/Registry). Release build deletes .pdb and .xml via MSBuild target StripReleaseDebugArtifacts (DO NOT REMOVE).
+Note: Infra tests require Windows (DPAPI/Registry). Release build deletes .pdb and .xml via MSBuild target StripReleaseDebugArtifacts (see §7).
 
 ---
 
-## 4. Git, Branching & PR Workflow (MANDATORY)
+## 4. Git, Branching & PR Workflow
  * Base Branch: main. Ask before creating a feature branch.
- * Branch Naming: MUST reflect request. Prefixes allowed: claude/<name> or feature/<name>.
+ * Branch Naming: name reflects the request. Prefixes allowed: claude/<name> or feature/<name>.
  * Early PR Requirement: Open PR after the first commit of the session. Do not wait until the end.
  * Commit Messages: Imperative, English, explain "why". Never push to main directly.
  * Changelog: Update CHANGE_LOG.md when opening/updating a PR.
@@ -56,12 +56,12 @@ Note: Infra tests require Windows (DPAPI/Registry). Release build deletes .pdb a
 
 ---
 
-## 7. DONTs (Strictly Forbidden)
- * NEVER commit non-English text to code, logs, or docs (except authorized user guides/JSONs).
- * NEVER use System.Net.Mail.SmtpClient (use MailKit).
- * NEVER log plaintext passwords, email bodies, or medical notes.
- * NEVER use EnsureCreated() for schema updates (must be idempotent boot patches).
- * NEVER bypass single-instance mutex or force-close SQLite outside backup/restore paths.
- * NEVER weaken or remove StripReleaseDebugArtifacts in Directory.Build.props.
+## 7. Constraints
+ * Non-English text goes only where §2 allows it (user guides, UI dictionaries).
+ * Send email through MailKit, not System.Net.Mail.SmtpClient: Microsoft does not recommend SmtpClient for new development, and the email service is built on MailKit.
+ * Do not log plaintext passwords, email bodies, or medical notes; logs are plain files under %LOCALAPPDATA%\MedReminder\logs\.
+ * Schema changes are idempotent boot patches in DatabaseInitializer. EnsureCreated() only creates the schema of a new, empty database and cannot upgrade an existing one (docs/ANALYSIS.md §8.1).
+ * Keep the single-instance mutex, and close SQLite connections only in the backup/restore paths: the in-process database gate relies on one process owning each profile database (docs/ANALYSIS.md §7).
+ * Keep StripReleaseDebugArtifacts in Directory.Build.props intact; it removes *.pdb and *.xml from Release build and publish output (docs/ANALYSIS.md).
 
 

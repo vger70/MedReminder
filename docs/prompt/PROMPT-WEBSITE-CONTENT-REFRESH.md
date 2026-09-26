@@ -74,7 +74,7 @@ Each item cites where the site says it and what the app does.
    second option. A raw `.db` backup is not the recommended migration
    path.
 5b. **Static version fallback** — `config/_default/config.toml`
-   `currentVersion = "v1.2.0"`. The app is at 2.4.1
+   `currentVersion = "v1.2.0"`, behind the app's current version
    (`Directory.Build.props` `VersionPrefix` in the app repo). The badge
    shows the stale value whenever the GitHub API call fails. Set it to
    the latest published release tag; confirm the tag with the

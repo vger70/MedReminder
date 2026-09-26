@@ -132,7 +132,7 @@ Document what you find (brief notes in the commit message); update
 
 ## 3. Branch and PR
 
-Per `CLAUDE.md` §5:
+Per `CLAUDE.md` §4:
 
 - Branch name: **`feature/archive-storage-abstraction`**, based on
   `main`.
@@ -374,7 +374,7 @@ step.
   `Infrastructure`.
 - **Never bypass** the single-instance mutex or force-close SQLite
   connections outside of the documented backup / restore paths
-  (`CLAUDE.md` §9).
+  (`CLAUDE.md` §7).
 
 ---
 

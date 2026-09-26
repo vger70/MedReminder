@@ -103,7 +103,7 @@ be re-opened without the product owner's explicit sign-off:
 
 ## 4. Branch and PR
 
-Per `CLAUDE.md` §5 (co-located case only):
+Per `CLAUDE.md` §4 (co-located case only):
 
 - Branch name **MUST** be: **`feature/public-website`**, based on `main`.
 - Open a pull request **after the first commit**, not at the end.
