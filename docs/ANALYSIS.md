@@ -193,8 +193,19 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   consumption (a backdated intake) reverses it with a
   `PositiveCorrection` before booking the intake; `StockEpoch` is not
   incremented.
-- `ConsumptionCatchUp.RunAsync`, `MedicationMonitor.RunAsync` and
-  `RegisterIntake.ExecuteAsync` run under `MonitoringGate`, a
+- `ReconcileStock` (guided stock count) materializes pending automatic
+  consumption through the catch-up planner and writes one correction
+  of `counted - expected`, where expected is the start-of-day stock
+  minus the part of today's scheduled consumption already taken. When
+  all of today's quantity is taken, today's consumption is
+  materialized at once; otherwise the ledger keeps the start-of-day
+  stock and the next catch-up books today. A positive correction
+  advances `StockEpoch` unless the forecast after it is still within
+  `ThresholdDays` (reopens the warning cycle without an immediate
+  duplicate warning); a negative one never does.
+- `ConsumptionCatchUp.RunAsync`, `MedicationMonitor.RunAsync`,
+  `RegisterIntake.ExecuteAsync` and `ReconcileStock.ExecuteAsync` run
+  under `MonitoringGate`, a
   process-wide semaphore, because the hosted tick and the "Check now"
   command start them from separate scopes. There is no database
   unique constraint on consumption: several manual `Consumption`

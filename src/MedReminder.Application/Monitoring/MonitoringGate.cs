@@ -1,9 +1,11 @@
 namespace MedReminder.Application.Monitoring;
 
 // Process-wide gate that serializes ConsumptionCatchUp.RunAsync,
-// MedicationMonitor.RunAsync and RegisterIntake.ExecuteAsync (which
+// MedicationMonitor.RunAsync, RegisterIntake.ExecuteAsync (which
 // reverses the automatic consumption of a backdated day and must not
-// interleave with a catch-up writing that same day).
+// interleave with a catch-up writing that same day) and
+// ReconcileStock.ExecuteAsync (which materializes consumption before
+// computing the gap against a physical count).
 //
 // Both are started from two places: the MedicationMonitorHostedService
 // tick and the "Check now" command in MainForm. Each caller opens its
