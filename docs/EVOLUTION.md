@@ -136,10 +136,20 @@ GS1 DataMatrix is being phased in for Italy (transition from
   already exists) and populate the medicine record as a manual
   autocomplete pick does.
 
-**Effort.** Desktop path: ~9–10 days for the shared core plus the HID
-scanner variant, 15–17 days with the webcam variant. Proposed
-delivery in two PRs, HID first. Mobile path lands together with §7.
-[INFERRED]
+**Flows.** (a) add a new medicine by scanning its package; (b) restock
+an existing medicine by scanning its package (medicine identified by
+AIC, kind "new package", quantity from the last new-package movement;
+no expiry/batch, which stock movements do not store).
+
+**Phases.** DECIDED 2026-09-26, one PR each:
+
+1. Shared core + USB HID scanner — flow (a).
+2. Webcam — flow (a).
+3. Flow (b) — only after flow (a) is complete and on explicit
+   product-owner request. Not scheduled.
+
+**Effort.** Phase 1 ~9–10 days, phase 2 ~6–7 days, phase 3 ~4–5 days.
+Mobile path lands together with §7. [INFERRED]
 
 **Risks.** Camera access adds a new permission surface on Windows;
 handheld scanners are the safer default. HID scanners vary in suffix,
@@ -499,3 +509,7 @@ application is prepared in
   scanner and the webcam variant. §3.2 design sketch, effort and risks
   updated accordingly; Code 32 named as the Italian AIC barcode and
   the Italian FMD DataMatrix timeline added.
+- 2026-09-26 — §3.2: recorded the A2 flows (a: new medicine, b:
+  restock) and the decided phases HID → webcam → flow (b), the last
+  deferred until flow (a) is complete and the product owner requests
+  it. Effort split per phase.

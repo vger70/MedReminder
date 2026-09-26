@@ -11,6 +11,10 @@ variants:
   input ("keyboard wedge").
 
 Both variants feed the same parser and the same catalogue lookup.
+Two user flows are defined: **(a)** add a new medicine by scanning its
+package, and **(b)** restock an existing medicine by scanning its
+package. Delivery is phased (§1.6): HID scanner first, webcam second,
+flow (b) last and only on explicit product-owner request.
 Follows the structure of `ANALYSIS-A1-REGIMENS.md`. Previously named
 `ANALYSIS-A2-BARCODE-WEBCAM.md` (webcam only); §14 lists what changed.
 
@@ -97,6 +101,9 @@ autocomplete pick does.
 Preserve the keyboard-only path as the primary input method: scanning
 is an *accelerator*, never a precondition.
 
+This is flow (a). Flow (b), restock by scan, is specified in §5C and
+belongs to a later phase (§1.6).
+
 ### 1.4 Variant comparison
 
 | Aspect                      | W — webcam                                | H — USB HID scanner (keyboard wedge)              |
@@ -122,7 +129,35 @@ privacy prompt, no indicator LED unless the user asks for it;
 `EVOLUTION.md` §3.2 already names handheld scanners as the safer
 desktop default. See §12.6.
 
-### 1.5 What A2 is NOT
+### 1.6 Flows and delivery phases
+
+**DECIDED 2026-09-26** by the product owner.
+
+| Phase | Content                                                                 | Flow | Precondition                               |
+|-------|-------------------------------------------------------------------------|------|--------------------------------------------|
+| 1     | Shared core (parser, `BarcodeScanDialog`, catalogue lookup) + variant H  | (a)  | None                                       |
+| 2     | Variant W (webcam panel, `ICameraCaptureService`, ZXing.Net)             | (a)  | Phase 1 merged                             |
+| 3     | Flow (b) — restock by scan (§5C)                                         | (b)  | Flow (a) complete (phases 1 and 2 merged) **and** explicit product-owner request |
+
+Rationale for H before W:
+
+- The shared core is about half of the total effort. Validating it
+  with decoded, deterministic input (variant H) isolates parser and
+  lookup defects from camera-optics effects.
+- Phase 1 is useful without a scanner: the scanner input box also
+  accepts an AIC typed by hand from the package (§4.2), a path that
+  does not exist today.
+- All open technical risks sit in variant W (§5A.2 TFM, §6.1 binding
+  package, 1D decode quality on fixed-focus webcams, §10.2). Keeping
+  them out of phase 1 means they cannot block it.
+
+Phase 3 is **not** scheduled. It starts only when the product owner
+asks for it after flow (a) is complete. Until then no code for flow
+(b) is written; §5C records the design so that it is not re-derived.
+
+Each phase is a separate PR.
+
+### 1.7 What A2 is NOT
 
 - **Not authenticity verification.** MedReminder does not query the
   EU Hub / NMVS / Italian NMVO to confirm the FMD serial is
@@ -131,8 +166,9 @@ desktop default. See §12.6.
   product scope per `CLAUDE.md` §1.
 - **Not batch/expiry extraction into stock.** The parser MAY expose
   AI `10` (batch) and AI `17` (expiry) if trivially available, but
-  the initial slice writes only the national code / GTIN. Stock
-  seeding from the barcode is a follow-up (§12.2), not part of A2.
+  no phase stores them: `StockMovement` has no expiry or batch field
+  (§5C.2). Adding them is a separate feature with a schema patch
+  (§12.2), not part of A2 — not even of flow (b).
 - **Not a HID POS or serial-port driver integration.** Variant H uses
   the scanner in its keyboard-wedge mode only. The Windows
   `PointOfService` API, Raw Input device filtering and virtual COM
@@ -340,7 +376,8 @@ row, add a small button labelled by resource key
 non-null (same condition as autocomplete). `[VERIFIED against]`
 `CatalogueAutocompleteContext` in `MedicineEditDialog.cs`.
 
-Not present in the `MainForm` toolbar (§12.1).
+Phases 1–2 (flow a): not present in the `MainForm` toolbar. Phase 3
+adds a separate `MainForm` entry point for flow (b) (§5C.3, §12.1).
 
 ### 4.2 `BarcodeScanDialog`
 
@@ -615,6 +652,101 @@ Variant H does require code — the small amount described above.
 
 ---
 
+## 5C. Flow (b) — restock by scan (Phase 3, deferred)
+
+Design record only. Implemented after flow (a) is complete and only on
+explicit product-owner request (§1.6).
+
+### 5C.1 Goal
+
+The user holds a new package of a medicine already in the profile,
+scans it, and lands in the restock dialog with the medicine identified
+and the fields pre-filled as far as the data allows.
+
+### 5C.2 What the scan can and cannot fill
+
+`StockAdjustmentDialog` has three inputs: operation kind, quantity,
+notes. `StockMovement` has no expiry or batch field. `[VERIFIED]` —
+`src/MedReminder.UI/Forms/StockAdjustmentDialog.cs`,
+`src/MedReminder.Domain/Stock/StockMovement.cs`.
+
+| Field          | Source                                                                 |
+|----------------|------------------------------------------------------------------------|
+| Medicine       | Scan → `NationalCode` → medicine in the active profile with the same `Medicine.NationalCode` |
+| Operation kind | Fixed to `NewPackage`                                                  |
+| Quantity       | Quantity of the most recent `NewPackage` movement of that medicine, editable; empty if none |
+| Notes          | Left empty                                                             |
+| Expiry / batch | Not stored anywhere today → not filled (§12.2)                          |
+
+Why the quantity comes from history and not from the catalogue:
+`ReferenceMedicine` has no numeric units-per-package field; the pack
+size is only inside the free-text `Dosage` description (AIFA
+DESCRIZIONE). Extracting it would be a fragile text heuristic.
+`[VERIFIED]` — `src/MedReminder.Domain/Catalogue/ReferenceMedicine.cs`.
+The AIC identifies a specific pack, so the last `NewPackage` quantity
+for the same medicine is normally the right value. `[INFERRED]`
+
+No schema change. The history query uses the existing
+`IStockMovementRepository.ListForMedicineAsync`, or a dedicated
+`GetLastNewPackageQuantityAsync` if the list proves too large.
+`[VERIFIED]` — `src/MedReminder.Application/Abstractions/IStockMovementRepository.cs`.
+
+### 5C.3 Entry point
+
+A `MainForm` action "Restock from barcode", independent of the row
+selection. Today restocking starts from a selected row
+(`MainForm.ShowStockDialogAsync`); scanning after the user has already
+picked the row would only confirm what they know. The value of the
+scan is identifying the medicine. `[VERIFIED against]`
+`src/MedReminder.UI/Forms/MainForm.cs`.
+
+Flow:
+
+1. The action opens `BarcodeScanDialog` (same dialog, same input
+   modes as flow a).
+2. The parsed `NationalCode` is matched against the medicines of the
+   active profile.
+3. Outcomes:
+   - **One match** → `StockAdjustmentDialog` opens for that medicine,
+     kind `NewPackage`, quantity pre-filled per §5C.2. The user
+     confirms with OK; persistence goes through the existing
+     `AddStock` use case.
+   - **Several matches** (same product used in more than one therapy)
+     → the user picks one from a short list, then as above.
+   - **No match** → message offering (i) to link an existing,
+     unlinked medicine to this code, or (ii) to create a new medicine,
+     which opens flow (a) pre-filled from the scan.
+   - **Only a GTIN, no national code** → treated as no match; the
+     message explains that the package code is not in the catalogue.
+4. Suspended or ended medicines are included in the match (restocking
+   them is legitimate); archived ones are not. `[UNCERTAIN]` — to be
+   aligned with the medicine lifecycle states present at phase 3 time.
+
+### 5C.4 New types
+
+- Application: `FindMedicinesByNationalCodeUseCase` (or a repository
+  method `ListByNationalCodeAsync` on `IMedicineRepository`, which today
+  has no such lookup `[VERIFIED]`), and the last-quantity query.
+- UI: a `StockAdjustmentDialog` constructor overload taking an initial
+  quantity; the "Restock from barcode" action; the disambiguation
+  list.
+- No change to `BarcodeScanDialog`, the parser or the capture layer.
+
+### 5C.5 Tests
+
+- Application: match by national code (none / one / several),
+  last-`NewPackage` quantity (none, one, several movements, ignores
+  other kinds).
+- Manual: one, several, and no matching medicine; unlinked medicine
+  linked from the "no match" path; quantity edited before OK.
+
+### 5C.6 Effort
+
+`[INFERRED]`: ~4–5 developer-days, including localization and user
+guide updates in five languages.
+
+---
+
 ## 6. Barcode decoding — `ZXing.Net` integration (variant W)
 
 ### 6.1 Package
@@ -858,14 +990,19 @@ Variant W:
 | Manual acceptance (§9.5) + fixes                                | 1.5–2 |
 | `CHANGE_LOG.md`, release notes                                  | 0.5   |
 
-**Total: 15–17 developer-days** for both variants. Shared core +
-variant H alone: **~9–10 days**. Consistent with the `EVOLUTION.md`
-§3.2 range once both variants are counted.
+**Total for flow (a): 15–17 developer-days**, split by phase (§1.6):
 
-**Slicing.** Shared core + variant H is a shippable first slice: it
-delivers the full Italian use case with a cheap 1D scanner, with no
-new dependency and no privacy surface. Variant W can follow as a
-second PR without touching the parser or the dialog contract (§12.10).
+| Phase | Content                         | Days   |
+|-------|---------------------------------|--------|
+| 1     | Shared core + variant H         | ~9–10  |
+| 2     | Variant W                       | ~6–7   |
+| 3     | Flow (b), on request (§5C.6)    | ~4–5   |
+
+Phase 1 is a shippable slice on its own: it delivers the full Italian
+use case with a cheap 1D scanner or by typing the AIC, with no new
+dependency and no privacy surface. Phase 2 plugs into the dialog
+without touching the parser or the dialog contract. Phase 3 touches
+neither.
 
 ### 10.2 Risks
 
@@ -904,7 +1041,8 @@ second PR without touching the parser or the dialog contract (§12.10).
 ## 11. Non-goals — restated
 
 1. FMD authenticity check (NMVS/EMVS query).
-2. Stock seeding from batch/expiry.
+2. Storing batch/expiry in stock (no phase, §12.2). Flow (b) restocks
+   quantity only (§5C).
 3. HID POS, Raw Input, virtual COM port or global-hook scanner
    integrations (§5B.6).
 4. Scanning outside `BarcodeScanDialog` (§5B.5).
@@ -921,15 +1059,20 @@ second PR without touching the parser or the dialog contract (§12.10).
 
 ### 12.1 Placement of the scan button
 
-Proposal: single button in `MedicineEditDialog`, next to the
-commercial-name field. Alternative: also a `MainForm` toolbar action
-that opens a create dialog pre-populated from the scan. **Proposed
-default: `MedicineEditDialog` only.**
+Flow (a): single button in `MedicineEditDialog`, next to the
+commercial-name field. **Proposed default: `MedicineEditDialog` only.**
+
+Flow (b), phase 3: a `MainForm` action "Restock from barcode" (§5C.3).
+Toolbar button vs menu entry to decide at phase 3 time.
 
 ### 12.2 Expiry / batch capture
 
-- **A**: expose AI `10` / AI `17` in `BarcodeContent`, unused in A2.
-- **B**: also seed a stock movement with the expiry. Bigger scope.
+- **A**: expose AI `10` / AI `17` in `BarcodeContent`, unused in A2,
+  including flow (b).
+- **B**: add expiry/batch to `StockMovement` and fill them in flow
+  (b). Needs a boot schema patch, export/import format changes, UI,
+  and works only with DataMatrix (2D scanner or webcam). Separate
+  feature.
 
 **Proposed default: A.**
 
@@ -986,10 +1129,9 @@ the separator-free rule already covers A2's needs.
 
 ### 12.10 Delivery order
 
-- **A**: one PR with both variants.
-- **B**: PR 1 = shared core + variant H; PR 2 = variant W (proposed).
-
-**Proposed default: B** (§10.1 slicing).
+**DECIDED 2026-09-26.** Phase 1 = shared core + variant H; phase 2 =
+variant W; phase 3 = flow (b), only after flow (a) is complete and on
+explicit product-owner request. One PR per phase. See §1.6.
 
 ---
 
@@ -1037,3 +1179,10 @@ the separator-free rule already covers A2's needs.
     is shared by both variants in the dialog.
   - Infrastructure TFM lacks the Windows SDK version needed for WinRT
     projections; flagged in §5A.2.
+- 2026-09-26 — product-owner decisions recorded. New §1.6: delivery
+  phases HID (1) → webcam (2) → flow (b) (3, deferred, on explicit
+  request after flow a is complete); §12.10 marked DECIDED. New §5C:
+  flow (b) restock by scan — medicine match by national code, kind
+  `NewPackage`, quantity from the last `NewPackage` movement, no
+  expiry/batch (no field in `StockMovement`). §1.7 (was §1.5), §4.1,
+  §10.1, §11, §12.1, §12.2 aligned.

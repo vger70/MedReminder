@@ -49,6 +49,9 @@ Branch: `claude/barcode-webcam-hid-scanner-vlcsjo`
 - `docs/EVOLUTION.md` §2.0 and §3.2 updated to the new scope;
   references in `docs/ANALYSIS.md` and
   `docs/notes/EVOLUTION-PROPOSALS.md` follow the rename.
+- Recorded the decided delivery phases (HID scanner, then webcam,
+  then restock-by-scan) and the restock-by-scan flow design, deferred
+  until the new-medicine flow is complete and explicitly requested.
 
 ## PR #70 — List all five interface languages in the user guides
 
