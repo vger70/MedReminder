@@ -30,10 +30,47 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #79 — B.1 Phase 1: move platform-neutral infrastructure into a net10.0 project
+
+Link: [vger70/MedReminder#79](https://github.com/vger70/MedReminder/pull/79)
+Branch: `claude/b1-phase1-portability`
+
+### Changed
+
+- New `src/MedReminder.Infrastructure.Portable` (`net10.0`): EF Core
+  persistence, `DatabaseInitializer`, archive cipher, localization
+  loader, moved unchanged from the Windows Infrastructure project so a
+  mobile host can reuse them (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
+  Phase 1). No user-visible change.
+- `ArchiveReader` (`IArchiveReader`) and `ProfileDatabaseBuilder`
+  extracted from `ImportService`, which keeps the Windows-only steps.
+- `IAppDataLocation` port; `LocalizationService` reads its overrides
+  through it.
+- `MedicineOverviewLoader` moved from the UI to
+  `MedReminder.Application/Overview`.
+
+### Fixed
+
+- `MedReminder.Infrastructure.Tests` did not compile: ambiguous
+  `Should()` on MimeKit's `InternetAddressList`.
+
+### Build
+
+- New `tests/MedReminder.Infrastructure.Portable.Tests` (`net10.0`,
+  runs on any OS) with the persistence, cipher and schema tests, plus
+  new archive-reader, database-builder and localization tests.
+
+### Docs
+
+- `ANALYSIS.md`, `PACKAGING.md`, `CLAUDE.md` updated for the new
+  project; B.1 analysis (D9, P5–P7); corrections applied to
+  `EVOLUTION.md` and `ANALYSIS-C3PP-CLOUD-PROVIDERS.md`.
+
 ## PR #78 — Revert the S9 prototype merged by mistake
 
 Link: [vger70/MedReminder#78](https://github.com/vger70/MedReminder/pull/78)
 Branch: `claude/revert-s9-prototype`
+**Status:** merged (2026-09-26)
 
 ### Removed
 
