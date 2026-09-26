@@ -232,6 +232,39 @@ Licence Ouverte Etalab 2.0. La boîte de dialogue « À propos » et
 le fichier `THIRD-PARTY-NOTICES.md` à la racine de l'installation
 contiennent les attributions complètes.
 
+## Scanner le code-barres de la boîte
+
+Lorsque le catalogue de référence est activé, la fiche du médicament
+comporte un bouton **Scanner le code…** à côté du nom commercial. Il
+remplit le médicament à partir du catalogue en une seule étape.
+
+1. Cliquez sur **Scanner le code…**. Une petite fenêtre s'ouvre,
+   prête à recevoir le code.
+2. Scannez le code-barres de la boîte avec un lecteur de codes-barres
+   USB, ou saisissez le code imprimé sous le code-barres puis appuyez
+   sur **Entrée**.
+3. Si le code figure dans le catalogue, la fenêtre se ferme et la
+   fiche est remplie comme si vous aviez choisi la ligne dans la
+   liste déroulante. Sinon, un message affiche le code lu et rien
+   n'est modifié.
+
+Remarques :
+
+- Cliquez d'abord sur **Scanner le code…**, puis scannez. Un scan
+  effectué pendant que la fiche du médicament a le focus écrit le
+  code dans le champ actif.
+- Sur les boîtes italiennes, le lecteur lit le **code AIC** (le
+  code-barres portant le texte `A` suivi de 9 chiffres). Tout lecteur
+  USB de codes 1D convient ; si le code n'est pas reconnu, activez la
+  symbologie **Code 32** (Italian Pharmacode) dans les réglages du
+  lecteur. Le code carré 2D (DataMatrix) nécessite un lecteur 2D et
+  ne correspond souvent pas encore à une entrée du catalogue.
+- Le lecteur doit utiliser la même disposition de clavier que
+  Windows. Avec un clavier français (AZERTY), réglez le lecteur sur
+  cette disposition, sinon le code n'est pas reconnu.
+- Un lecteur qui n'envoie pas Entrée après le code fonctionne aussi :
+  le code est accepté un instant après le scan.
+
 ## Ajouter du stock (nouvelle boîte)
 
 1. Sélectionne le médicament dans la grille.

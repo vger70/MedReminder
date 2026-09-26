@@ -60,7 +60,7 @@ by AIC (Autorizzazione all'Immissione in Commercio, 9 digits).
 
 - **Code 32 (Italian Pharmacode)** — 1D symbology, a Code 39
   derivative that encodes the 9-digit AIC as 6 base-32 characters
-  (digits plus consonants; vowels excluded). This is the
+  (digits plus letters without the vowels A, E, I, O). This is the
   long-standing AIC barcode on Italian medicine packs. `[VERIFIED]` —
   AIFA, *The Italian drug traceability system*; Code 32 symbology
   references (BWIPP wiki, Seagull Scientific).
@@ -222,15 +222,18 @@ needs only the product code, so this loses nothing in scope.
 ### 2.2 Code 32 — layout
 
 - Symbology: Code 39 character set restricted to `0-9` and the 22
-  consonants `B C D F G H J K L M N P Q R S T U V W X Y Z`, 6
-  characters. `[VERIFIED]` — Code 32 references in §1.2.
+  letters `B C D F G H J K L M N P Q R S T U V W X Y Z` (A, E, I, O
+  excluded; U kept), 6 characters, in that order as base-32 digits.
+  `[VERIFIED]` — BWIPP `code32` encoder source.
 - Value: the 6 characters are a base-32 number; converted to decimal
   and left-padded, they give the 9-digit AIC, whose last digit is a
   check digit. The human-readable text printed under the bar is `A`
-  followed by the 9 digits. `[VERIFIED]` for the base-32 encoding;
-  `[UNCERTAIN]` for the exact check-digit algorithm, to be verified
-  against the BWIPP "Italian Pharmacode" specification during
-  implementation and covered by tests (§9.1).
+  followed by the 9 digits.
+- Check digit: over the first 8 digits, odd positions weight 1, even
+  positions weight 2 with the two digits of the product summed;
+  total mod 10. `[VERIFIED]` — BWIPP `code32` encoder source; holds
+  for 300,180 of the 300,193 AIC codes in the shipped AIFA snapshot
+  (`aifa-202609`). The 13 outliers are rejected by the parser.
 - A webcam decoder reports it as plain Code 39 with the raw 6-char
   text. ZXing.Net has no Code 32 converter. `[INFERRED]` from the
   open ZXing Code 32 feature request (zxing-js issue #308);
@@ -314,11 +317,15 @@ public interface IBarcodeParser
 }
 ```
 
-The implementation lives in `MedReminder.Application` (pure C#, the
+The implementation (`BarcodeParser`, with the AIC helpers in
+`ItalianPharmacode`) lives in `MedReminder.Application` (pure C#, the
 project targets `net10.0`). Before any rule runs, the payload is
-normalized: trim leading/trailing whitespace and CR/LF (scanner
-suffixes), map the configured `<GS>` substitute (§5B.3) back to
-`0x1D`. Rules:
+normalized: trim leading/trailing whitespace and CR/LF/Tab (scanner
+suffixes), map the visible glyph U+241D (§5B.2) and the configured
+`<GS>` substitute (§5B.3) back to `0x1D`. An AIM symbology
+identifier, if the scanner is configured to send one (`]d…`
+DataMatrix, `]A…` Code 39, `]E…` EAN-13), is stripped and overrides
+the reported symbology. Rules:
 
 1. **DataMatrix.** If `Symbology == DataMatrix`, or `Symbology ==
    Unknown` and the payload starts with `]d2` or with `01` followed by
@@ -339,10 +346,11 @@ suffixes), map the configured `<GS>` substitute (§5B.3) back to
 4. Rules are tried in the order 1 → 2 → 3 for `Unknown`; the first
    match wins. The shapes do not overlap (length and alphabet
    differ). `[INFERRED]`
-5. Never throw on malformed input. Return `Unrecognized`. Log the
-   symbology, the length and the matched rule, never the payload
-   (FMD serial numbers are pseudonymous identifiers of a physical
-   box — data minimization).
+5. Never throw on malformed input. Return `Unrecognized`. The parser
+   itself does not log; `BarcodeScanDialog` logs the length and
+   whether a national code / GTIN was found, never the payload (FMD
+   serial numbers are pseudonymous identifiers of a physical box —
+   data minimization).
 
 Unit-tested in isolation (§9.1).
 
@@ -381,8 +389,9 @@ adds a separate `MainForm` entry point for flow (b) (§5C.3, §12.1).
 
 ### 4.2 `BarcodeScanDialog`
 
-New form `BarcodeScanDialog : MedReminderFormBase`, modal, resizable,
-minimum size 480×360. It returns a `BarcodeContent` with
+New form `BarcodeScanDialog : MedReminderFormBase`, modal. Phase 1
+ships it as a small fixed-size dialog (scanner panel only); phase 2
+makes it resizable (minimum 480×360) for the webcam preview. It returns a `BarcodeContent` with
 `HasLookupKey == true`, or `DialogResult.Cancel`.
 
 Layout:
@@ -408,8 +417,9 @@ On a successful parse from either source:
 4. Hit → `ApplyReference(row)`; the dialog now looks exactly as after
    a manual autocomplete pick.
 5. Miss → a message (`MedicineEdit.ScanBarcode.NotInCatalogue`)
-   showing the code read, in a selectable text box so the user can
-   copy it, and stating that the details must be entered manually.
+   showing the code read and stating that the details must be entered
+   manually. A standard message box: Ctrl+C copies its text, so no
+   custom selectable box is needed.
    No field is modified and no linkage is cached. There is no
    national-code field to pre-fill (§1.1).
 
@@ -553,29 +563,37 @@ The scanner input box (§4.2) is a `TextBox` subclass,
 `ScannerInputBox`, in `MedReminder.UI/Controls/`:
 
 - `AcceptsReturn = false`, `AcceptsTab = false`, `MaxLength = 256`.
-- Overrides `ProcessCmdKey` / `OnKeyPress` to buffer characters
-  itself, **including control characters** that a plain `TextBox`
-  drops. In particular `0x1D` (GS), which a wedge scanner may emit as
-  the Ctrl+] chord. `[UNCERTAIN]` — whether WinForms delivers `0x1D`
-  through `KeyPress` for that chord on every keyboard layout; verified
-  during implementation, and the substitute mechanism of §5B.3 covers
-  the failure case.
-- **Terminator**: Enter or Tab ends the payload and raises
-  `PayloadCompleted(string)`. The dialog wraps it in
-  `RawBarcode(BarcodeSymbology.Unknown, payload)` and parses.
-- **Idle fallback**: if no terminator arrives, a payload is also
-  completed after `Capture:HidIdleCompleteMilliseconds` (default 300)
-  without keystrokes, provided it matches one of the parser shapes.
-  This covers scanners configured with no suffix. Manual typing is
-  slower than this interval between characters only in the final
-  pause, and a partial manual entry does not match a shape, so it is
-  not submitted prematurely. `[INFERRED]`
+- The text box content is the payload: what the user sees is what is
+  parsed, and manual editing or paste works as in any text box.
+- **Group separator.** `0x1D` (GS) has no glyph, so the control
+  inserts the visible stand-in U+241D (␝) instead, both when it
+  receives the raw control character in `OnKeyPress` and when it sees
+  the Ctrl+] chord (`Keys.OemCloseBrackets`, the US-layout key) in
+  `OnKeyDown`. The parser maps U+241D back to `0x1D`. `[UNCERTAIN]` —
+  whether every host keyboard layout delivers the scanner's chord this
+  way; not verifiable without hardware. The substitute mechanism of
+  §5B.3 and the separator-free rule of §2.1 cover the failure case.
+- **Terminator**: Enter, Tab, CR or LF ends the payload and raises
+  `PayloadCompleted(string)`. `IsInputKey` claims Enter and Tab so
+  they reach the box instead of dialog navigation. The dialog wraps
+  the payload in `RawBarcode(BarcodeSymbology.Unknown, payload)` and
+  parses.
+- **Idle fallback**: if no terminator arrives, the content is also
+  submitted after `Capture:HidIdleCompleteMilliseconds` (default 300)
+  without keystrokes, **only if** the keystrokes formed a scanner
+  burst and the content parses to a lookup key.
+- **Burst rule** (`ScanBurstDetector`, Application layer, pure): at
+  least 6 printable keystrokes (the shortest shape, raw Code 32) with
+  an average interval of at most
+  `Capture:HidBurstMaxAverageIntervalMilliseconds` (default 50).
+  Change from the first version of this section, which relied on
+  "a partial manual entry does not match a shape": that is false —
+  the first 6 digits of an AIC typed by hand form a valid raw Code 32
+  shape, and about one in ten such prefixes passes the check digit.
+  Timing is therefore required on the idle path. An explicit
+  Enter / Tab always submits, whatever the speed.
 - `BarcodeScanDialog` sets **no `AcceptButton`**, so the scanner's
   Enter suffix cannot trigger a default button.
-
-No inter-keystroke timing is used to tell scanner input from human
-typing: inside a dedicated box both are legitimate, and the parser
-decides.
 
 ### 5B.3 GS1 group separator
 
@@ -865,9 +883,13 @@ No EF model changes, no migration.
   "MaxDecodeFps": 10,                   // §5A.3 throttle
   "PreviewMaxWidthPixels": 640,         // §5A.3 initialization hint
   "HidIdleCompleteMilliseconds": 300,   // §5B.2
+  "HidBurstMaxAverageIntervalMilliseconds": 50, // §5B.2
   "HidGroupSeparatorSubstitute": ""     // §5B.3, empty = disabled
 }
 ```
+
+Phase 1 ships only the three `Hid*` keys (`BarcodeCaptureOptions`);
+the webcam keys arrive with phase 2.
 
 Loaded via the existing `Microsoft.Extensions.Configuration.Json`
 pipeline.
@@ -887,6 +909,11 @@ New keys, in all five `assets/localization/strings.<lang>.json`
 `.NoDevice`, `.PermissionDenied`, `.InitializationFailed`,
 `.OpenPrivacySettings`, `.CopyLogLocation`. Final key names follow
 the dictionaries' existing `Ui.<Form>.<Key>` convention.
+
+Phase 1 keys, as shipped: `Ui.MedicineEditDialog.ScanBarcode`,
+`Ui.MedicineEditDialog.ScanBarcode.Tooltip`, `.NotInCatalogue`,
+`.LookupError`; `Ui.BarcodeScanDialog.Title`, `.Prompt`,
+`.ScannerHint`, `.Waiting`, `.Unrecognized`.
 
 ---
 
@@ -916,24 +943,22 @@ Cross-platform (`net10.0`), runs on Linux CI.
   with `BarcodeSymbology.Unknown`.
 - **Robustness**: the fuzz corpus (§9.3) never throws.
 
-### 9.2 Unit — wedge buffering (variant H)
+### 9.2 Unit — burst detection (variant H)
 
-The buffering logic of `ScannerInputBox` is kept in a small pure class
-(`WedgeBuffer`: append char, terminator, idle tick → completed
-payload) in `MedReminder.Application`, unit-tested cross-platform:
-Enter / Tab terminators, idle completion only on a parser-shape match,
-`0x1D` retained, `MaxLength` enforced. The WinForms wiring
-(`ProcessCmdKey`, focus, no `AcceptButton`) goes in
-`MedReminder.UI.Tests` (Windows-only, `[VERIFIED]` — the project
-exists and targets `net10.0-windows10.0.19041.0`) where it can be
-driven without real key events, otherwise in the manual checklist
-(§9.5).
+`ScanBurstDetector` is pure and unit-tested cross-platform: fast and
+slow keystroke series, minimum count, the bound itself, reset. The
+WinForms wiring (`ScannerInputBox` key handling, focus, no
+`AcceptButton`) is covered by the manual checklist (§9.5): driving
+real key events in `MedReminder.UI.Tests` would test WinForms more
+than this code.
 
-### 9.3 Fuzz corpus
+### 9.3 Fuzz test
 
-256 random payloads (lengths 0..64, including control characters) in
-`tests/fixtures/barcode-fuzz/`, replayed in an xUnit theory. Objective:
-zero exceptions. Regenerated by a one-off script, not at CI time.
+A seeded pseudo-random generator (fixed seed, 2,000 payloads per
+symbology, lengths 0..64, control characters and AI-like fragments
+included) replays payloads against the parser. Objective: zero
+exceptions. Seeded in code rather than a fixture file: same
+determinism, nothing to regenerate.
 
 ### 9.4 Unit — Infrastructure (variant W, Windows-only)
 
@@ -981,7 +1006,7 @@ Variant W:
 |-----------------------------------------------------------------|-------|
 | Shared: `RawBarcode`, `BarcodeContent`, parser (incl. Code 32) + tests | 2.5 |
 | Shared: `BarcodeScanDialog` shell, `ApplyReference`, lookup wiring | 1.5 |
-| Variant H: `ScannerInputBox` / `WedgeBuffer` + tests            | 1.5   |
+| Variant H: `ScannerInputBox` / `ScanBurstDetector` + tests      | 1.5   |
 | Variant W: `ICameraCaptureService` + WinRT/ZXing adapter        | 3–4   |
 | Variant W: webcam panel, error states                           | 1     |
 | DI wire-up                                                      | 0.5   |
@@ -1081,7 +1106,8 @@ Toolbar button vs menu entry to decide at phase 3 time.
 **Proposed default:** a "Scanning a barcode" section in all five
 `USER_GUIDE.*.md` covering both variants: 1D vs 2D scanner, the
 scanner settings to check (suffix, Code 32 output, keyboard layout),
-"click Scan barcode first", webcam permission.
+"click Scan barcode first", webcam permission. Phase 1 adds the
+section for the scanner variant; phase 2 extends it for the webcam.
 
 ### 12.4 Reference-catalogue country restriction
 
@@ -1186,3 +1212,14 @@ explicit product-owner request. One PR per phase. See §1.6.
   `NewPackage`, quantity from the last `NewPackage` movement, no
   expiry/batch (no field in `StockMovement`). §1.7 (was §1.5), §4.1,
   §10.1, §11, §12.1, §12.2 aligned.
+- 2026-09-26 — phase 1 implemented (shared core + variant H). Design
+  changes found during implementation: AIC check digit and Code 32
+  alphabet verified against the BWIPP source and the AIFA snapshot
+  (§2.2; U is in the alphabet); AIM symbology identifiers stripped
+  (§3.3); logging moved from the parser to the dialog (§3.3); visible
+  glyph U+241D for the group separator (§5B.2); idle submission now
+  requires a scanner burst, because a hand-typed AIC prefix can form a
+  valid Code 32 shape (§5B.2); fixed-size dialog in phase 1 (§4.2);
+  not-found message as a standard message box (§4.2); burst detector
+  and seeded fuzz test replace `WedgeBuffer` and the fixture corpus
+  (§9.2, §9.3).

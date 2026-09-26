@@ -35,6 +35,25 @@ with the classification adapted to per-PR granularity: **Added**,
 Link: [vger70/MedReminder#71](https://github.com/vger70/MedReminder/pull/71)
 Branch: `claude/barcode-webcam-hid-scanner-vlcsjo`
 
+### Added
+
+- "Scan barcode…" button next to the commercial name in the medicine
+  form (shown when the reference catalogue is on). It opens a scan
+  dialog that accepts a USB barcode scanner in keyboard mode or a code
+  typed by hand, looks the code up in the catalogue and fills the form
+  as an autocomplete pick does; a code not in the catalogue changes
+  nothing. `src/MedReminder.UI/Forms/BarcodeScanDialog.cs`,
+  `src/MedReminder.UI/Controls/ScannerInputBox.cs`.
+- Barcode parser for Code 32 / AIC (raw, `A` + 9 digits, 9 digits),
+  GS1 DataMatrix (GTIN, and batch / expiry / serial only when
+  unambiguous) and EAN-13, with check-digit validation. Never logs the
+  payload. `src/MedReminder.Application/Catalogue/BarcodeParser.cs`,
+  `ItalianPharmacode.cs`.
+- `Capture` section in `appsettings.json` for the scanner timings and
+  the optional GS1 separator substitute.
+- New UI strings in all five dictionaries; "Scan the package barcode"
+  section in all five user guides.
+
 ### Docs
 
 - `docs/analysis/ANALYSIS-A2-BARCODE-WEBCAM.md` renamed to
@@ -52,6 +71,9 @@ Branch: `claude/barcode-webcam-hid-scanner-vlcsjo`
 - Recorded the decided delivery phases (HID scanner, then webcam,
   then restock-by-scan) and the restock-by-scan flow design, deferred
   until the new-medicine flow is complete and explicitly requested.
+- Analysis updated with the phase 1 implementation findings (Code 32
+  alphabet and AIC check digit verified, scanner-burst rule for idle
+  submission).
 
 ## PR #70 — List all five interface languages in the user guides
 

@@ -226,6 +226,40 @@ riutilizzato sotto Licence Ouverte Etalab 2.0. La finestra
 Informazioni e il file `THIRD-PARTY-NOTICES.md` nella radice
 dell'installazione riportano le attribuzioni complete.
 
+## Scansionare il codice a barre della confezione
+
+Con il catalogo di riferimento attivo, la scheda della medicina ha un
+pulsante **Scansiona codice…** accanto al nome commerciale. Compila
+la medicina dal catalogo in un solo passaggio.
+
+1. Fai clic su **Scansiona codice…**. Si apre una piccola finestra
+   pronta a ricevere il codice.
+2. Scansiona il codice a barre sulla scatola con un lettore di codici
+   a barre USB, oppure digita il codice stampato sotto il codice a
+   barre e premi **Invio**.
+3. Se il codice è nel catalogo, la finestra si chiude e la scheda
+   viene compilata come se avessi scelto la riga dal menu a tendina.
+   Altrimenti un messaggio mostra il codice letto e non viene
+   modificato nulla.
+
+Note:
+
+- Fai prima clic su **Scansiona codice…**, poi scansiona. Una
+  scansione fatta mentre è attiva la scheda della medicina scrive il
+  codice nel campo in cui ti trovi.
+- Sulle confezioni italiane il lettore legge il **codice AIC** (il
+  codice a barre con il testo `A` seguito da 9 cifre). Va bene
+  qualsiasi lettore USB per codici 1D; se il codice non viene
+  riconosciuto, abilita la simbologia **Code 32** (Italian
+  Pharmacode) nelle impostazioni del lettore. Il codice quadrato 2D
+  (DataMatrix) richiede un lettore 2D e spesso non corrisponde ancora
+  a una voce del catalogo.
+- Il lettore deve usare lo stesso layout di tastiera di Windows. Con
+  una tastiera francese (AZERTY) o tedesca (QWERTZ) imposta il
+  lettore su quel layout, altrimenti il codice non viene riconosciuto.
+- Funziona anche un lettore che non invia Invio dopo il codice: il
+  codice viene accettato un istante dopo la scansione.
+
 ## Aggiungere scorte (nuova confezione)
 
 1. Seleziona la medicina nella griglia.

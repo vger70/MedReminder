@@ -34,6 +34,12 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<SearchCatalogueUseCase>();
         services.AddScoped<LinkMedicineToReferenceUseCase>();
 
+        // Barcode scan (A2). Stateless and pure: one instance for the
+        // whole app. The "Capture" options instance is registered by
+        // the Infrastructure layer; defaults apply when it is absent.
+        services.AddSingleton<IBarcodeParser>(sp =>
+            BarcodeParser.FromOptions(sp.GetService<BarcodeCaptureOptions>()));
+
         // Donation / "Support Development" (A6). The orchestrator is a
         // stateless singleton; the provider adapters, the URL launcher
         // and the bound DonationOptions are registered by the

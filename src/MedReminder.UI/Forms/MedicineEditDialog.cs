@@ -1,11 +1,13 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.UI.Controls;
+using Microsoft.Extensions.Logging;
 
 namespace MedReminder.UI.Forms;
 
@@ -24,6 +26,15 @@ internal sealed record CatalogueAutocompleteContext(
     MedicineAutocompleteBox.ReferenceMedicineSearchAsync SearchActiveIngredient,
     ReferenceMedicineLookupAsync LookupByNationalCode,
     CountryCode Country);
+
+// Dependencies of the "Scan barcode" button (A2). Offered only
+// together with a CatalogueAutocompleteContext: a scan is useful only
+// when the code can be looked up in the reference catalogue.
+// See docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md §3.4 and §4.
+internal sealed record BarcodeScanContext(
+    IBarcodeParser Parser,
+    BarcodeCaptureOptions Options,
+    ILogger Logger);
 
 // Dialog used both for "new medicine" (Mode=Create) and for "edit"
 // (Mode=Edit). At the end it exposes Result: null if the user
@@ -100,16 +111,24 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private readonly LinkLabel? _spcLink;
     private string? _pendingSeedNationalCode;
 
+    // Barcode scan (A2). Both non-null only when the catalogue is on
+    // and the caller supplied a scan context.
+    private readonly CatalogueAutocompleteContext? _catalogueContext;
+    private readonly BarcodeScanContext? _barcodeContext;
+
     public MedicineEditDialog(
         EditMode mode,
         ILocalizationService localization,
         MedicineEditResult? seed = null,
         CatalogueAutocompleteContext? catalogueContext = null,
-        decimal currentStock = 0m)
+        decimal currentStock = 0m,
+        BarcodeScanContext? barcodeContext = null)
     {
         _loc = localization;
         _mode = mode;
         _currentStock = currentStock;
+        _catalogueContext = catalogueContext;
+        _barcodeContext = catalogueContext is null ? null : barcodeContext;
         Text = _loc.Get(mode == EditMode.Create
             ? "Ui.MedicineEditDialog.Title.New"
             : "Ui.MedicineEditDialog.Title.Edit");
@@ -249,7 +268,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Name"), _nameBox);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Name"), BuildNameRow());
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.ActiveIngredient"), _ingredientBox);
         if (_documentsRow is not null)
         {
@@ -496,9 +515,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // free-text fields (commercial name, active ingredient, package,
     // unit) and caches the reference linkage until the user diverges
     // by editing one of the two autocomplete boxes.
-    private void OnReferenceSelected(object? sender, ReferenceMedicineSelectedEventArgs e)
+    private void OnReferenceSelected(object? sender, ReferenceMedicineSelectedEventArgs e) =>
+        ApplyReference(e.Reference);
+
+    // Shared by the autocomplete pick and the barcode scan, so both
+    // leave the dialog in the same state.
+    private void ApplyReference(ReferenceMedicine reference)
     {
-        var reference = e.Reference;
 
         // Extend the commercial name with strength + pharmaceutical
         // form when we can compose them from the AIFA row — leaves
@@ -602,6 +625,92 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
         // Unknown FORMA: keep the AIFA text as-is so nothing is lost.
         return forma.Trim();
+    }
+
+    // Commercial-name box, plus the "Scan barcode" button when a scan
+    // context is available.
+    private Control BuildNameRow()
+    {
+        if (_barcodeContext is null) return _nameBox;
+
+        var scanButton = new Button
+        {
+            Text = _loc.Get("Ui.MedicineEditDialog.ScanBarcode"),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Anchor = AnchorStyles.Left | AnchorStyles.Top,
+            Margin = new Padding(6, 0, 0, 0),
+        };
+        new ToolTip().SetToolTip(scanButton, _loc.Get("Ui.MedicineEditDialog.ScanBarcode.Tooltip"));
+        scanButton.Click += OnScanBarcodeClick;
+
+        var row = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = new Padding(0),
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        row.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        row.Controls.Add(_nameBox, 0, 0);
+        row.Controls.Add(scanButton, 1, 0);
+        return row;
+    }
+
+    // Reads a barcode, looks the code up in the reference catalogue
+    // of the profile's country and, on a hit, fills the form exactly
+    // as an autocomplete pick does. A miss changes nothing.
+    // See docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md §4.2.
+    private async void OnScanBarcodeClick(object? sender, EventArgs e)
+    {
+        if (_barcodeContext is null || _catalogueContext is null) return;
+
+        BarcodeContent? content;
+        using (var dialog = new BarcodeScanDialog(
+            _loc, _barcodeContext.Parser, _barcodeContext.Options, _barcodeContext.Logger))
+        {
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+            content = dialog.Result;
+        }
+        var code = content?.LookupKey;
+        if (code is null) return;
+
+        ReferenceMedicine? reference;
+        try
+        {
+            reference = await _catalogueContext.LookupByNationalCode(
+                _catalogueContext.Country, code, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            // async void handler: never let the exception escape.
+            _barcodeContext.Logger.LogError(ex, "Catalogue lookup after a barcode scan failed.");
+            if (IsDisposed) return;
+            MessageBox.Show(this,
+                _loc.Get("Ui.MedicineEditDialog.ScanBarcode.LookupError"),
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+        if (IsDisposed) return;
+
+        if (reference is null)
+        {
+            _barcodeContext.Logger.LogInformation(
+                "Scanned code not found in the {Country} catalogue.", _catalogueContext.Country.Value);
+            // A MessageBox supports Ctrl+C, so the user can copy the code.
+            MessageBox.Show(this,
+                _loc.Get("Ui.MedicineEditDialog.ScanBarcode.NotInCatalogue", code),
+                _loc.Get("Common.Information"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        ApplyReference(reference);
     }
 
     private void ClearReferenceLinkage()

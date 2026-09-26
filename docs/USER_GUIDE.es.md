@@ -231,6 +231,40 @@ Etalab 2.0. El cuadro de diálogo Acerca de y el archivo
 `THIRD-PARTY-NOTICES.md` en la raíz de la instalación incluyen
 las atribuciones completas.
 
+## Escanear el código de barras del envase
+
+Con el catálogo de referencia activado, la ficha del medicamento
+tiene un botón **Escanear código…** junto al nombre comercial.
+Completa el medicamento desde el catálogo en un solo paso.
+
+1. Haga clic en **Escanear código…**. Se abre una pequeña ventana
+   lista para recibir el código.
+2. Escanee el código de barras de la caja con un lector de códigos de
+   barras USB, o escriba el código impreso bajo el código de barras y
+   pulse **Intro**.
+3. Si el código está en el catálogo, la ventana se cierra y la ficha
+   se completa como si hubiera elegido la fila en la lista
+   desplegable. Si no, un mensaje muestra el código leído y no se
+   modifica nada.
+
+Notas:
+
+- Haga clic primero en **Escanear código…** y después escanee. Un
+  escaneo realizado mientras la ficha del medicamento tiene el foco
+  escribe el código en el campo activo.
+- En los envases italianos el lector lee el **código AIC** (el código
+  de barras con el texto `A` seguido de 9 dígitos). Sirve cualquier
+  lector USB de códigos 1D; si el código no se reconoce, active la
+  simbología **Code 32** (Italian Pharmacode) en la configuración del
+  lector. El código cuadrado 2D (DataMatrix) requiere un lector 2D y a
+  menudo todavía no corresponde a una entrada del catálogo.
+- El lector debe usar la misma distribución de teclado que Windows.
+  Con un teclado francés (AZERTY) o alemán (QWERTZ), configure el
+  lector con esa distribución; de lo contrario, el código no se
+  reconoce.
+- También funciona un lector que no envía Intro después del código:
+  el código se acepta un instante después del escaneo.
+
 ## Añadir stock (nueva caja)
 
 1. Selecciona el medicamento en la cuadrícula.

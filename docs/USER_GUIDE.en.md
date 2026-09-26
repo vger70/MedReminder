@@ -215,6 +215,37 @@ under Licence Ouverte Etalab 2.0. The About dialog and
 `THIRD-PARTY-NOTICES.md` at the root of the installation carry the
 full attributions.
 
+## Scan the package barcode
+
+When the reference catalogue is on, the medicine form has a
+**Scan barcode…** button next to the commercial name. It fills in the
+medicine from the catalogue in one step.
+
+1. Click **Scan barcode…**. A small window opens, ready to receive
+   the code.
+2. Scan the barcode on the box with a USB barcode scanner, or type
+   the code printed under the barcode and press **Enter**.
+3. If the code is in the catalogue, the window closes and the form is
+   filled in as if you had picked the row from the dropdown. If it is
+   not, a message shows the code read and nothing is changed.
+
+Notes:
+
+- Click **Scan barcode…** first, then scan. A scan made while the
+  medicine form itself has the focus types the code into the field
+  you are on.
+- On Italian packages the scanner reads the **AIC code** (the
+  barcode with the text `A` followed by 9 digits). Any USB scanner
+  that reads 1D barcodes works; enable the **Code 32** (Italian
+  Pharmacode) symbology in the scanner settings if the code is not
+  recognized. The square 2D code (DataMatrix) needs a 2D scanner and
+  often does not resolve to a catalogue entry yet.
+- The scanner must use the same keyboard layout as Windows. With a
+  French (AZERTY) or German (QWERTZ) keyboard, set the scanner to
+  that layout, otherwise the code is not recognized.
+- A scanner that sends no Enter after the code also works: the code
+  is accepted a moment after the scan.
+
 ## Add stock (new package)
 
 1. Select the medicine in the grid.

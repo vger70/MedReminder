@@ -241,6 +241,39 @@ weiterverwendet unter Licence Ouverte Etalab 2.0. Der Info-Dialog
 und die Datei `THIRD-PARTY-NOTICES.md` im Installationsstamm
 enthalten die vollständigen Namensnennungen.
 
+## Den Barcode der Packung scannen
+
+Ist der Referenzkatalog aktiviert, hat das Medikamentenformular neben
+dem Handelsnamen die Schaltfläche **Barcode scannen…**. Sie füllt das
+Medikament in einem Schritt aus dem Katalog aus.
+
+1. Klicken Sie auf **Barcode scannen…**. Ein kleines Fenster öffnet
+   sich und wartet auf den Code.
+2. Scannen Sie den Barcode auf der Schachtel mit einem USB-
+   Barcodescanner, oder geben Sie den unter dem Barcode aufgedruckten
+   Code ein und drücken Sie die **Eingabetaste**.
+3. Ist der Code im Katalog, schließt sich das Fenster und das
+   Formular wird so ausgefüllt, als hätten Sie die Zeile in der
+   Auswahlliste gewählt. Andernfalls zeigt eine Meldung den gelesenen
+   Code an, und es wird nichts geändert.
+
+Hinweise:
+
+- Klicken Sie zuerst auf **Barcode scannen…** und scannen Sie dann.
+  Ein Scan, während das Medikamentenformular selbst den Fokus hat,
+  schreibt den Code in das aktive Feld.
+- Auf italienischen Packungen liest der Scanner den **AIC-Code** (den
+  Barcode mit dem Text `A` gefolgt von 9 Ziffern). Jeder USB-Scanner
+  für 1D-Codes ist geeignet; wird der Code nicht erkannt, aktivieren
+  Sie in den Scannereinstellungen die Symbologie **Code 32** (Italian
+  Pharmacode). Der quadratische 2D-Code (DataMatrix) erfordert einen
+  2D-Scanner und entspricht oft noch keinem Katalogeintrag.
+- Der Scanner muss dasselbe Tastaturlayout wie Windows verwenden. Bei
+  einer deutschen Tastatur (QWERTZ) stellen Sie den Scanner auf
+  dieses Layout ein, sonst wird der Code nicht erkannt.
+- Auch ein Scanner, der nach dem Code keine Eingabetaste sendet,
+  funktioniert: Der Code wird einen Moment nach dem Scan übernommen.
+
 ## Bestand hinzufügen (neue Packung)
 
 1. Wähle das Medikament in der Liste aus.
