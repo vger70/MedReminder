@@ -230,10 +230,11 @@ requirement for it.
 ## 7. B.1 — Mobile companion client
 
 **Authoritative analysis.**
-`docs/analysis/ANALYSIS-B1-MOBILE-COMPANION.md` (phases 0–4 with
-entry and exit criteria, decisions D1–D12). Where this section and the
-analysis disagree, the analysis wins; its §15 lists the corrections to
-§7.2 and §7.6.
+`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`. Synchronization between
+mobile and desktop is mandatory in the end state; the analysis absorbs
+C.3++ Phase 2 and the functional goal of C.1 without a backend
+(phases 0–7, decisions D1–D14). Where this section and the analysis
+disagree, the analysis wins; its §17 lists the corrections to apply.
 
 ### 7.1 Portable code already available
 
@@ -520,4 +521,4 @@ application is prepared in
   deferred until flow (a) is complete and the product owner requests
   it. Effort split per phase.
 - 2026-09-26 — §7: added pointer to the B.1 analysis
-  `ANALYSIS-B1-MOBILE-COMPANION.md`.
+  `ANALYSIS-B1-MOBILE-SYNC.md` (mandatory mobile-desktop sync).
