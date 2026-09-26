@@ -56,14 +56,14 @@ a proposal, and is not merged here.
 | # | Proposal | Tier | Effort | Primary beneficiary | Source |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Package expiry tracking | 1 | 2–3 weeks | All users | EV-2 |
-| 2 | Accessible "large text" mode | 1 | 1 week | Elderly, low-vision users | EV-2 |
+| **2** | Accessible "large text" mode | 1 | 1 week | Elderly, low-vision users | EV-2 |
 | 3 | A2 — AIC / barcode scan | 1 | 1–2 weeks | All users (Italy) | EV-1 |
-| 4 | Prescription request draft for the doctor | 1 | 2–3 days | Chronic patients, caregivers | EV-2 |
+| **4** | Prescription request draft for the doctor | 1 | 2–3 days | Chronic patients, caregivers | EV-2 |
 | 5 | Weekly pill-organizer preparation | 1 | 1 week | Elderly users, caregivers | EV-2 |
-| 6 | Guided stock count and reconciliation | 2 | 3–5 days | All users | EV-2 |
+| **6** | Guided stock count and reconciliation | 2 | 3–5 days | All users | EV-2 |
 | 7 | B.1 — Mobile companion (.NET MAUI) | 2 | 2–4 person-months | Users away from the PC | EV-1 |
-| 8 | Therapy calendar / timeline view | 2 | 1–2 weeks | All users | EV-2 |
-| 9 | Printable medication card (PDF) | 2 | 1 week | Patients seeing several clinicians | EV-2 |
+| **8** | Therapy calendar / timeline view | 2 | 1–2 weeks | All users | EV-2 |
+| **9** | Printable medication card (PDF) | 2 | 1 week | Patients seeing several clinicians | EV-2 |
 | 10 | Storage location per medicine | 3 | 1–2 days | Families, many medicines | EV-2 |
 | 11 | Shared household stock | 3 | 3–4 weeks | Families with several profiles | EV-2 |
 | 12 | Database encryption at rest | 3 | 1–2 weeks | Users on shared PCs | EV-2 |
