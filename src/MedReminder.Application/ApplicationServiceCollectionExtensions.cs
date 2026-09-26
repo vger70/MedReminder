@@ -1,6 +1,7 @@
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UseCases;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,8 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<MedicationMonitor>();
         services.AddScoped<DoseReminderService>();
 
+        // Therapy timeline view (EVOLUTION-PROPOSALS §4.3): read-only.
+        services.AddScoped<TherapyTimelineQuery>();
         // Prescription request (EVOLUTION-PROPOSALS §3.4): interactive
         // send only, resolved per dialog action.
         services.AddScoped<SendPrescriptionRequest>();

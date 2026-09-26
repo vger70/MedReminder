@@ -338,6 +338,46 @@ o adicionales.
   avisos, pero los datos históricos (movimientos, notificaciones)
   permanecen en la DB para auditoría.
 
+## Cronología de la terapia
+
+**Terapia → Cronología de la terapia…** (Ctrl+T) o el botón
+**Cronología** de la barra de herramientas abre una vista de solo
+lectura con una fila por medicamento y los días en el eje horizontal.
+De forma predeterminada muestra 60 días hacia atrás y 120 hacia
+delante.
+
+- **Barra llena**: terapia activa, desde la fecha de inicio hasta la de
+  fin (o hasta el borde de la vista si no hay fecha de fin).
+- **Barra rayada con borde discontinuo**: suspensión, prevista o en
+  curso.
+- **Rombo lleno**: entra en vigor una nueva dosis, frecuencia o pauta.
+  **Rombo vacío**: fase siguiente de una reducción por fases.
+- **Triángulo sobre una línea vertical**: fecha de agotamiento
+  estimada. Es la misma estimación que la columna *Agotamiento*:
+  existencias actuales divididas por la cantidad diaria de hoy. No
+  tiene en cuenta suspensiones ni cambios de dosis futuros.
+- **Línea vertical discontinua**: hoy.
+- Un medicamento desactivado se muestra en gris; su barra se detiene
+  en hoy porque la fecha de desactivación no se registra.
+
+Controles:
+
+- **Antes** / **Después** mueven el periodo 30 días, **Hoy** restablece
+  el periodo predeterminado. En el gráfico, las flechas izquierda y
+  derecha (o Mayús + rueda del ratón) lo mueven una semana.
+- Las flechas arriba y abajo seleccionan un medicamento; el cuadro
+  **Detalles** bajo el gráfico muestra la misma información como texto
+  (dosis, existencias, agotamiento estimado, suspensiones y cambios de
+  dosis en el periodo). Al pasar el ratón sobre un elemento aparece el
+  mismo texto como información sobre herramientas.
+- **Mostrar en la lista** (o Intro, o doble clic) cierra la cronología
+  y selecciona el medicamento en la lista principal, donde se aplican
+  las acciones habituales.
+
+La cronología no modifica ningún dato. Las fechas de agotamiento son
+estimaciones: sirven para planificar reposiciones, no son un consejo
+clínico.
+
 ## Perfiles múltiples y roles administrador/usuario
 
 MedReminder puede gestionar medicamentos para **varias personas**
