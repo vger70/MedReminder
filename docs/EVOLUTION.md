@@ -233,7 +233,7 @@ requirement for it.
 `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`. Synchronization between
 mobile and desktop is mandatory in the end state; the analysis absorbs
 C.3++ Phase 2 and the functional goal of C.1 without a backend
-(phases 0–7, decisions D1–D14). Where this section and the analysis
+(phases 0–7, decisions D1–D15). Where this section and the analysis
 disagree, the analysis wins; its §17 lists the corrections to apply.
 
 ### 7.1 Portable code already available
