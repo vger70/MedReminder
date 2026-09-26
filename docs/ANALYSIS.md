@@ -242,7 +242,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
-    notifications.settings.json  per-profile recipient and caregiver address
+    notifications.settings.json  per-profile recipient, caregiver and doctor address
 ```
 
 Backup files (§8) are written to the folders the administrator
@@ -442,6 +442,14 @@ failures (5xx) are not retried. Mail goes to the profile's
 language selected in the application. Channels are chosen per
 medicine (`NotificationChannels` flags). A failure on one channel
 does not prevent the other.
+
+The prescription request (`PrescriptionRequestDialog`,
+`SendPrescriptionRequest`) is the only user-initiated send. It sets
+`EmailMessage.ExplicitRecipient` to the profile's `DoctorAddress`:
+the adapter sends to that address only (no primary, no caregiver),
+the retry decorator does not back off, and the subject, body and
+recipient are never logged; only the outcome and the exception type
+are.
 
 ### 9.3 Localization
 

@@ -518,6 +518,40 @@ the e-mails are sent are exactly the same as before.
 The setting is per profile: one profile's caregiver is not
 another profile's caregiver.
 
+## Request a prescription from your doctor
+
+Select a medicine and choose **Therapy → Request prescription…**
+(or the **Request prescription** toolbar button). The action is
+available for every medicine, whatever its stock.
+
+MedReminder prepares a short message with the medicine name, the
+package, the product code (when the medicine is linked to the
+catalogue) and your profile name as signature. When the medicine has
+a reference doctor, the greeting uses that name. Dosage, notes and
+other clinical details are not included. Subject and message are
+editable before you deliver them.
+
+Three ways to deliver the message:
+
+- **Copy**: subject and message go to the clipboard, to paste into a
+  web mail, a messaging app or a patient portal.
+- **Open in mail client**: opens a new e-mail in your default mail
+  program, already filled in. If the message is too long for the mail
+  program, or no mail program is set up, it is copied to the
+  clipboard instead.
+- **Send…**: sends the message through the e-mail account configured
+  in **Settings → Email SMTP**, after an explicit confirmation.
+  Available only when SMTP sending is configured and a doctor e-mail
+  is set.
+
+The doctor e-mail is set in **Settings → Notifications → Doctor
+e-mail (optional)**. It is per profile, is included in export and
+import, and is used only for the requests you send yourself: the
+automatic notifications never go to this address.
+
+MedReminder never sends a prescription request on its own. The
+message content and the recipient are not written to the log files.
+
 ## Windows automatic startup
 
 **Settings → Automatic startup**: check the box. An entry is

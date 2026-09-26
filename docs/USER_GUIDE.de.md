@@ -582,6 +582,44 @@ Nachrichteninhalt und Sendezeitpunkte sind exakt wie bisher.
 Die Einstellung gilt pro Profil: die Pflegeperson eines Profils ist
 nicht die Pflegeperson eines anderen Profils.
 
+## Rezept beim Arzt anfordern
+
+Ein Medikament auswählen und **Therapie → Rezept anfordern…** wählen
+(oder die Schaltfläche **Rezept anfordern** in der Symbolleiste). Die
+Aktion steht für jedes Medikament zur Verfügung, unabhängig vom
+Bestand.
+
+MedReminder bereitet eine kurze Nachricht mit dem Namen des
+Medikaments, der Packung, dem Produktcode (wenn das Medikament mit dem
+Katalog verknüpft ist) und dem Profilnamen als Unterschrift vor. Hat
+das Medikament einen zuständigen Arzt, verwendet die Anrede diesen
+Namen. Dosierung, Notizen und andere klinische Angaben sind nicht
+enthalten. Betreff und Nachricht können vor dem Versand bearbeitet
+werden.
+
+Drei Wege, die Nachricht zu übermitteln:
+
+- **Kopieren**: Betreff und Nachricht landen in der Zwischenablage,
+  zum Einfügen in ein Webmail, eine Messaging-App oder ein
+  Patientenportal.
+- **Im E-Mail-Programm öffnen**: öffnet eine neue, bereits ausgefüllte
+  E-Mail im Standard-E-Mail-Programm. Ist die Nachricht für das
+  E-Mail-Programm zu lang oder ist kein E-Mail-Programm eingerichtet,
+  wird sie stattdessen in die Zwischenablage kopiert.
+- **Senden…**: sendet die Nachricht über das unter **Einstellungen →
+  E-Mail-SMTP** konfigurierte E-Mail-Konto, nach einer ausdrücklichen
+  Bestätigung. Nur verfügbar, wenn der SMTP-Versand konfiguriert und
+  die E-Mail des Arztes festgelegt ist.
+
+Die E-Mail des Arztes wird unter **Einstellungen → Benachrichtigungen
+→ E-Mail des Arztes (optional)** festgelegt. Sie gilt pro Profil, ist
+in Export und Import enthalten und wird nur für selbst gesendete
+Anfragen verwendet: Automatische Benachrichtigungen gehen nie an diese
+Adresse.
+
+MedReminder sendet eine Rezeptanfrage nie von selbst. Nachrichteninhalt
+und Empfänger werden nicht in die Protokolldateien geschrieben.
+
 ## Autostart konfigurieren
 
 **Einstellungen → Autostart**: aktiviere die Checkbox. In

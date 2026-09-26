@@ -564,6 +564,43 @@ momentos de envío son exactamente los mismos que antes.
 El ajuste es por perfil: el cuidador de un perfil no es el cuidador de
 otro perfil.
 
+## Solicitar una receta al médico
+
+Selecciona un medicamento y elige **Terapia → Solicitar receta…** (o
+el botón **Solicitar receta** de la barra de herramientas). La acción
+está disponible para cualquier medicamento, sea cual sea su
+existencia.
+
+MedReminder prepara un mensaje breve con el nombre del medicamento, el
+envase, el código del producto (cuando el medicamento está vinculado
+al catálogo) y el nombre del perfil como firma. Si el medicamento
+tiene un médico de referencia, el saludo usa ese nombre. La posología,
+las notas y otros detalles clínicos no se incluyen. El asunto y el
+mensaje se pueden modificar antes del envío.
+
+Tres formas de entregar el mensaje:
+
+- **Copiar**: el asunto y el mensaje van al portapapeles, para pegarlos
+  en un webmail, una aplicación de mensajería o un portal del paciente.
+- **Abrir en el programa de correo**: abre un nuevo e-mail ya
+  rellenado en el programa de correo predeterminado. Si el mensaje es
+  demasiado largo para el programa de correo, o no hay ninguno
+  configurado, se copia al portapapeles en su lugar.
+- **Enviar…**: envía el mensaje mediante la cuenta de e-mail
+  configurada en **Configuración → E-mail SMTP**, tras una
+  confirmación explícita. Disponible solo cuando el envío SMTP está
+  configurado y el e-mail del médico está definido.
+
+El e-mail del médico se define en **Configuración → Notificaciones →
+E-mail del médico (opcional)**. Es por perfil, se incluye en la
+exportación y la importación, y solo se usa para las solicitudes que
+envías tú: las notificaciones automáticas nunca se envían a esta
+dirección.
+
+MedReminder nunca envía una solicitud de receta por su cuenta. El
+contenido del mensaje y el destinatario no se escriben en los archivos
+de registro.
+
 ## Configurar el inicio automático
 
 **Configuración → Inicio automático**: marca la casilla. Se crea
