@@ -30,6 +30,34 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #73 — Add guided stock count with gap display
+
+Link: [vger70/MedReminder#73](https://github.com/vger70/MedReminder/pull/73)
+Branch: `claude/hopeful-curie-fpi6ej`
+
+### Added
+
+- "Stock > Count stock..." dialog: the user enters the counted
+  quantity and sees the expected stock, the signed stock discrepancy
+  and the run-out date before and after; one positive or negative
+  correction is recorded (`StockCountDialog`).
+- `ReconcileStock` use case: materializes pending automatic
+  consumption, computes the gap and writes the correction in one unit
+  of work under `MonitoringGate`. Zero gap writes no correction;
+  `StockEpoch` is unchanged; negative counts are rejected. Optional
+  "counted after today's scheduled doses" materializes today's
+  consumption so it is not decremented twice.
+- Localized strings in all five dictionaries.
+
+### Changed
+
+- `ConsumptionCatchUp`: per-medicine planning extracted into
+  `PlanMissingAsync`, shared with `ReconcileStock`; behavior unchanged.
+
+### Docs
+
+- "Count stock" section in the five user guides.
+
 ## PR #71 — Extend A2 barcode analysis to the USB HID-scanner variant
 
 Link: [vger70/MedReminder#71](https://github.com/vger70/MedReminder/pull/71)
