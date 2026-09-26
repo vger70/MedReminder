@@ -904,6 +904,19 @@ internal sealed class MainForm : MedReminderFormBase
             Country: country);
     }
 
+    // Dependencies of the "Scan barcode" button in MedicineEditDialog
+    // (A2). All singletons, so resolving them from a short-lived scope
+    // is safe. The dialog ignores it when the catalogue context is null.
+    private BarcodeScanContext BuildBarcodeScanContext()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var sp = scope.ServiceProvider;
+        return new BarcodeScanContext(
+            sp.GetRequiredService<IBarcodeParser>(),
+            sp.GetRequiredService<BarcodeCaptureOptions>(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger<BarcodeScanDialog>());
+    }
+
     private async Task<IReadOnlyList<MedReminder.Domain.Catalogue.ReferenceMedicine>> SearchCatalogueAsync(
         string prefix, CountryCode country, CancellationToken cancellationToken, bool byName)
     {
@@ -930,7 +943,8 @@ internal sealed class MainForm : MedReminderFormBase
     {
         using var dialog = new MedicineEditDialog(
             MedicineEditDialog.EditMode.Create, _loc,
-            catalogueContext: BuildCatalogueContext());
+            catalogueContext: BuildCatalogueContext(),
+            barcodeContext: BuildBarcodeScanContext());
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -1006,7 +1020,8 @@ internal sealed class MainForm : MedReminderFormBase
         using var dialog = new MedicineEditDialog(
             MedicineEditDialog.EditMode.Edit, _loc, seed,
             catalogueContext: BuildCatalogueContext(),
-            currentStock: row.CurrentStock);
+            currentStock: row.CurrentStock,
+            barcodeContext: BuildBarcodeScanContext());
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try

@@ -23,6 +23,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MedReminder.Infrastructure;
 
@@ -166,6 +167,15 @@ public static class InfrastructureServiceCollectionExtensions
             sp.GetRequiredService<MedReminderDbContext>(),
             sp.GetServices<IReferenceSnapshotParser>(),
             sp.GetRequiredService<TimeProvider>()));
+
+        // ------- Barcode scan (A2) -------
+        //
+        // Bound once at startup: the parser singleton reads it at
+        // construction, and the scan dialog reads the HID timings each
+        // time it opens.
+        services.Configure<BarcodeCaptureOptions>(
+            configuration.GetSection(BarcodeCaptureOptions.SectionName));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<BarcodeCaptureOptions>>().Value);
 
         // ------- Donation / "Support Development" (A6) -------
         //
