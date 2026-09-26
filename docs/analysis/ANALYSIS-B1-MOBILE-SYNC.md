@@ -118,8 +118,8 @@ foundation; skipping them makes convergence impossible.
 | # | Requirement |
 |---|---|
 | R1 | Every device can read and write while offline |
-| R2 | All devices that have received the same set of operations have identical replicated state (strong eventual consistency) |
-| R3 | No operation is lost or applied twice, whatever the delivery order, duplication or delay |
+| R2 | All devices that have received the same set of operations have identical replicated state (strong eventual consistency). Derived rows are a pure function of replicated state **and the local date**, so they are identical on devices that share the same date (§4.3) |
+| R3 | No operation is lost or applied twice, whatever the delivery order, duplication or delay. Only exception: pending operations discarded by an explicit, user-confirmed generation reset (§5.7) |
 | R4 | The transport stores only ciphertext; file names and sizes leak no medical content |
 | R5 | No file in the remote storage has more than one writer (sync clients cannot create conflict copies) |
 | R6 | Stock numbers after convergence are those a single device would compute from the merged facts |
@@ -188,11 +188,16 @@ desktop as a delta computed against a stale expected stock.
   device recomputes them after merging, and therefore gets the same
   result.
 
-The stock count becomes a fact, `StockCount(medicineId, countedAt,
-countedQuantity)`: an **anchor**. The derived correction is
-`counted - stock(countedAt)` evaluated on the merged ledger, so a count
-taken on the phone is correct against whatever the desktop recorded
-before it, and operations dated after the count apply on top of it.
+The stock count becomes a fact, `StockCount(id, medicineId,
+countedAt, countDay, countedQuantity, takenToday)`: an **anchor**.
+`takenToday` is the user-entered quantity already taken on the count
+day, an input of today's `ReconcileStock` command `[VERIFIED —
+ReconcileStockCommand.TakenToday]`. The derived correction is computed
+with the **existing** `ReconcileStock` formula (moved to Domain
+unchanged), evaluated on the merged ledger as of `countedAt`, so a
+count taken on the phone is correct against whatever the desktop
+recorded before it, and facts dated after the count apply on top of
+it.
 
 ### 3.5 Genesis cutoff: preserving existing data
 
@@ -201,15 +206,19 @@ derivation could change past numbers (for example, a retroactive
 schedule change that the catch-up never re-applied to days already
 materialized). To keep existing data unchanged:
 
-- When sync is first enabled on a profile, the device writes a
-  **genesis** snapshot. Every row existing at that moment, including
-  historical consumption, becomes a **frozen fact** (origin `Legacy`).
-- `LedgerDeriver` produces derived rows only for days after the
-  **cutoff day** C (the day before genesis). Up to C the ledger is
-  exactly today's.
+- The Phase 2 boot patch, on each existing profile database, marks
+  every stock movement existing at that moment, including historical
+  consumption and reversals, as a **frozen fact** (origin `Legacy`) and
+  stores the profile's **cutoff day** C (the day before the patch). A
+  profile created after the patch has no legacy rows and C = the day
+  before its `StartDate`.
+- `LedgerDeriver` produces derived rows only for days after C. Up to C
+  the ledger is exactly today's.
+- When sync is enabled later, the **genesis** snapshot (§5.5) carries
+  the frozen facts and C unchanged; enabling sync does not move C.
 - Consequence: a change dated on or before C does not rewrite frozen
   days, which is today's behavior. After C, retroactive changes are
-  applied consistently (D6).
+  re-derived consistently (D6), with or without sync.
 
 ---
 
@@ -228,11 +237,12 @@ a clock warning on the device that produced it (§7.4).
 
 | Data | Class | Merge rule |
 |---|---|---|
-| `Medicine` scalar fields (name, ingredient, package, unit, threshold, doctor, notes, channels, `RemindOnDose`, `IsActive`, catalogue link, start and end date) | Mutable record | Last-writer-wins **per field** by HLC |
-| `Medicine` current schedule summary (`DosePerAdministration`, `AdministrationsPerDay`) | Derived | From the latest effective schedule row |
+| `Medicine` scalar fields (name, ingredient, package, unit, threshold, doctor, notes, channels, `RemindOnDose`, `IsActive`, catalogue link, end date) | Mutable record | Last-writer-wins **per field** by HLC |
+| `Medicine.StartDate` | Immutable | Set at creation; `UpdateMedicine` does not change it `[VERIFIED]` |
+| `Medicine` current schedule summary (`DosePerAdministration`, `AdministrationsPerDay`) | Derived | From the most recently **recorded** schedule row (highest HLC), whatever its `EffectiveFrom`: `ChangeMedicationSchedule` sets these fields from the new row even when it takes effect in the future `[VERIFIED]` |
 | `Medicine.StockEpoch`, `StockMovement.StockEpoch` | Derived | §4.4 |
 | Administration slots of a medicine | Set-valued register | LWW on the **whole set** per medicine (matches `UpdateMedicine`, which replaces the set) |
-| `MedicationScheduleHistory` row | Keyed fact | Key `(MedicineId, EffectiveFrom)`; same key from two devices → higher HLC wins, the other is kept in the conflict list |
+| `MedicationScheduleHistory` row | Keyed fact | Key `(MedicineId, EffectiveFrom)`; same key twice (one device or two) → higher HLC wins, the other is kept in the conflict list. Behavior change, see §17 |
 | `MedicationSuspension` | Mutable record | Creation is a fact; `EndDate`, `Reason` LWW per field; overlaps resolved per §4.5 |
 | Stock entry facts (`NewPackage`, `ManualAdd`, `PositiveCorrection` from `AddStock`, `NegativeCorrection` from `AdjustStockDown`) | Append-only fact | Union by `Id` |
 | `StockCount` (new) | Append-only fact | Union by `Id`; anchor for derivation |
@@ -240,7 +250,7 @@ a clock warning on the device that produced it (§7.4).
 | Legacy rows at genesis | Frozen fact | Immutable |
 | Automatic and intake `Consumption`, backdated reversals, count corrections | Derived | `LedgerDeriver` |
 | Per-profile notification settings (`ToAddress`, `CaregiverAddress`, `DoctorAddress`) | Mutable record | LWW per field |
-| Profile display name | Mutable record | LWW; stored in the sync group metadata, not in the registry |
+| Profile display name | Mutable record | LWW operation, encrypted like every other operation; applied to the local registry entry of the joined profile. Never in `group.json` or in paths |
 | `NotificationEvent`, `DoseReminderEvent` | Device-local | Not replicated: they record what **this** device has notified |
 | Device notification preferences, language, sync schedule | Device-local | Not replicated |
 | Profile registry, PIN, role, SMTP, backup settings | Installation-local | Not replicated (§4.6) |
@@ -263,27 +273,47 @@ derive(facts for one medicine, cutoffDay, yesterday) -> derived movements
 
 Rules, in this order, per day `d` in `(cutoffDay, yesterday]`:
 
-1. If an intake fact exists for `d` (any status): derived consumption
-   is the sum of `Taken` quantities; no automatic consumption for `d`.
-   This replaces today's "reversal" movement: the reversal is no longer
-   needed because automatic consumption is never materialized for an
-   intake day.
-2. Else, if `d` is in the therapy window, not suspended, and the
-   schedule effective on `d` plans a quantity: derived automatic
-   consumption = `ConsumptionMaterializer` result for `d` (existing
-   Domain code, unchanged).
-3. Stock-count anchors: for each `StockCount` at instant `t`, derived
-   correction = `counted - stock(t)`, where `stock(t)` includes every
-   fact and derived row strictly before `t`. Today's partial-day rule
-   of `ReconcileStock` (today's scheduled quantity already taken) is
-   reproduced by evaluating `stock(t)` with the same planner.
+1. **Intake consumption, days in `(cutoffDay, today]`**: for every
+   intake with status `Taken`, one derived `Consumption` of its
+   quantity at the intake's instant. Today is included because
+   `RegisterIntake` books stock in real time today `[VERIFIED —
+   RegisterIntake header comment]`. Intakes on days up to the cutoff
+   that existed at the patch already have their `Legacy` movements and
+   derive nothing.
+1b. **Backdated intake on a frozen day**: an intake created after the
+   patch for a day `d <= cutoffDay` derives what `RegisterIntake` writes
+   today: a `PositiveCorrection` reversing that day's `Legacy`
+   automatic consumption (if the day has one and this is its first
+   intake), then the `Taken` quantity. Frozen rows are never edited.
+2. **Automatic consumption, days in `(cutoffDay, yesterday]`**: if no
+   intake of any status exists for `d`, and `d` is in the therapy
+   window and not suspended, derived automatic consumption =
+   `ConsumptionMaterializer` result for `d` (existing Domain code,
+   unchanged), at local midday of `d` as today `[VERIFIED —
+   ConsumptionCatchUp]`. An intake day never gets automatic
+   consumption, so today's backdated-intake reversal movement is no
+   longer needed.
+3. **Stock-count anchors**: for each `StockCount`, the correction is the
+   `ReconcileStock` formula applied to the ledger as of `countedAt`:
+   expected = raw (unclamped, as today through `LedgerAlignment`)
+   ledger total as of `countedAt` (every fact up to `countedAt`, plus
+   automatic consumption through the day before the count day) minus
+   `takenToday`; correction =
+   `counted - expected`. When `takenToday` equals the count day's whole
+   scheduled quantity, the count day's automatic consumption is derived
+   at the count (today's `MaterializesToday` branch); otherwise the
+   count day stays to rule 2. Parity tests (§11) must reproduce the
+   current `ReconcileStock` test cases exactly.
 
 Derived movement ids are deterministic (a name-based GUID over
 `medicineId`, rule, day or anchor id), so a re-derivation replaces rows
 idempotently.
 
-Today (day `yesterday + 1`) is never materialized, as today
-`[VERIFIED — ConsumptionCatchUp]`.
+Automatic consumption for today is never derived, as today
+`[VERIFIED — ConsumptionCatchUp]`, except through a count anchor
+(rule 3). Derived rows depend on the local date; devices on different
+dates (midnight, time zones) may differ until their dates agree. This
+is why the convergence check (§12) hashes replicated state only.
 
 `ConsumptionCatchUp` becomes a thin wrapper: "derive and replace
 derived rows for every active medicine". `MonitoringGate` still
@@ -297,7 +327,9 @@ facts (positive stock entries, and positive counts under today's
 number of advancing facts up to it. Two offline refills on two devices
 then yield epochs 5 and 6 on every device.
 
-Notification dedup (`NotificationEvent`, device-local) keys on the
+Epoch 1 is opened by the medicine's `InitialLoad` movement (or, when
+there is none, by the medicine id). Notification dedup
+(`NotificationEvent`, device-local) keys on the
 **id of the fact that opened the epoch** instead of the epoch number,
 so a re-numbering after a merge does not re-trigger an already sent
 warning. Additive column via idempotent patch (`CLAUDE.md` §7).
@@ -363,12 +395,17 @@ or hostname appears in any path or cleartext file (R4).
 - A segment holds the operations a device produced since its previous
   segment, in local order, with a header: `groupId`, `generation`,
   `deviceId`, `seq`, `opSchemaVersion`, `keyVersion`, and the device's
-  **dependency vector** (highest `seq` of every other device it had
-  applied when it wrote the first operation of the segment).
-- Encrypted with AES-256-GCM under the group key; the header is bound
-  as associated data, so a segment cannot be renamed, moved to another
-  device folder or replayed under another `seq` without failing
-  authentication.
+  **dependency vector**: its applied vector when the segment is sealed.
+  That over-approximates the dependencies of every operation in the
+  segment, which is safe.
+- Encrypted with AES-256-GCM under the group key with a random 96-bit
+  nonce per segment, far below the 2^32 messages per key that random
+  nonces allow `[VERIFIED — NIST SP 800-38D, training knowledge]`. The
+  header is bound as associated data, so a segment cannot be renamed,
+  moved to another device folder or replayed under another `seq`
+  without failing authentication. `IArchiveCipher.Encrypt` / `Decrypt`
+  have no associated-data parameter today `[VERIFIED]`; the port gains
+  overloads in Phase 3.
 - Immutable: written once under a temporary name, then renamed or
   committed; readers ignore temporary names. A partially synced file
   fails authentication and is retried later.
@@ -419,9 +456,13 @@ operation ids, so re-downloading is harmless.
 
 ### 5.6 Compaction and retention
 
-- A device writes a checkpoint (full state + applied vector) when more
-  than N operations (default 5 000) have accumulated since the last
-  checkpoint.
+- A device writes a checkpoint when more than N operations (default
+  5 000) have accumulated since the last checkpoint. A checkpoint holds
+  the replicated state only: facts, frozen facts and cutoff, per-field
+  HLC versions, tombstones and the applied vector. Without field
+  versions and tombstones, LWW and retractions would break after a
+  bootstrap. Derived rows, conflicts and device-local tables are not
+  included.
 - A segment can be deleted when a checkpoint covers it **and** every
   active device's published applied vector covers it.
 - A device not seen for 90 days (configurable) is marked stale and no
@@ -501,11 +542,16 @@ Two ways to give a new device the group key:
 ### 6.2 Revocation and key rotation
 
 Removing a device (lost phone): a paired device generates a new group
-key (`keyVersion + 1`), wraps it with the passphrase, and writes new
-segments with it. The user should change the passphrase in the same
-flow. Old segments stay readable by the revoked device if it still has
-local copies; this is inherent and stated in the UI. Remaining devices
-get the new key by unwrapping with the passphrase once, or by QR.
+key (`keyVersion + 1`) and writes new segments with it. The flow
+**requires a new sync passphrase** for the wrap: the lost device may
+still hold a signed-in provider session and could read the new wrap
+file with the old passphrase. The flow also tells the user to end the
+lost device's sessions in the provider account (Microsoft or Google
+account security page), which the app cannot do itself. Old segments
+stay readable by the revoked device if it still has local copies; this
+is inherent and stated in the UI. Remaining devices get the new key by
+unwrapping with the new passphrase once, or by QR from the revoking
+device.
 
 ### 6.3 Threat model
 
@@ -513,7 +559,7 @@ get the new key by unwrapping with the passphrase once, or by QR.
 |---|---|
 | Cloud provider or stolen cloud account reads data | End-to-end encryption; only ciphertext and random ids in storage |
 | Tampering or substitution of segments | AES-GCM with header as associated data |
-| Deletion or rollback of remote files | Detected as gaps (missing `seq`); the device stalls on that peer and reports it; no silent divergence |
+| Deletion or rollback of remote files | A missing middle segment is a gap: readers stall on that peer and report it. Deleting the **latest** segments is not visible to readers, so each author keeps its operations locally until every active peer's published vector covers them and re-publishes any of its segments found missing |
 | Stolen phone | Device lock; optional app lock; revocation (§6.2); data in app sandbox |
 | Passphrase loss | QR pairing from a surviving device; otherwise the remote data is unreadable (inherent, stated at setup); a printable recovery sheet is offered |
 | Health data leaking to OS backups | Android backup exclusion, iOS backup exclusion for the database directory (§9.2) |
@@ -588,9 +634,19 @@ user-chosen, as the C.3+ cloud folder already is.
 
 - **Desktop**: `SyncHostedService` (UI project, like the other four
   services, `ANALYSIS.md` §6): run at start, then every 5 minutes
-  (configurable), plus debounced after local writes. Serialized with the
-  catch-up and monitor under `MonitoringGate`, keeping one writer per
-  database inside the process (`CLAUDE.md` §7).
+  (configurable), plus debounced after local writes.
+- **Write gate**: today only the catch-up, the monitor, `RegisterIntake`
+  and `ReconcileStock` run under `MonitoringGate` `[VERIFIED —
+  ANALYSIS.md §4.4]`. With sync, **every** use case and the sync apply
+  step must run under one per-process write gate, because an apply can
+  change a medicine between a use case's read and its save. One process
+  per database stays the rule (`CLAUDE.md` §7).
+- **Stale forms**: an edit dialog opened before a sync must not write
+  back fields the user did not touch. Use cases receive the user's
+  changes as a diff against the values loaded when the dialog opened,
+  and emit operations only for changed fields. Otherwise every save
+  would stamp all fields with a new HLC and silently overwrite remote
+  edits. After an apply, open views refresh.
 - **Mobile**: sync on start, resume, after local writes, and in the
   background with Android WorkManager periodic work (minimum interval
   15 minutes `[VERIFIED — Android WorkManager documentation, training
@@ -642,7 +698,8 @@ change.
 - **Dose**: one per timed slot over a rolling window, skipping
   suspended days, days outside the therapy window, days with projected
   stock zero and **slots that already have an intake recorded on any
-  device** (known after sync). Budget per platform (iOS pending limit
+  device** (known after sync; an intake is matched to a slot by its
+  `ScheduledAt`). Budget per platform (iOS pending limit
   `[UNCERTAIN — 64 per app, Apple documentation, training knowledge;
   spike S5]`); a final "open MedReminder to keep reminders active"
   notification closes the window.
@@ -737,7 +794,7 @@ sections added to the five user guides.
 | Low-stock and dose notifications | Yes, local | 5 |
 | Timeline view (PR #75) | Yes | 7 |
 | Prescription request (PR #74) | Yes (`mailto:` / share) | 7 |
-| Reference catalogue search | Yes, snapshot for the selected reference country (snapshots are 0.5–4.6 MB each on disk `[VERIFIED — Assets/Catalogue]`) | 7 |
+| Reference catalogue search | Yes, snapshot for the selected reference country (0.5–4.6 MB of embedded snapshot files per country directory `[VERIFIED — Assets/Catalogue]`) | 7 |
 | Barcode scan (A2) | Yes, phone camera | 7 |
 | Email notifications | Only on the designated mail device | 7 |
 | Caregiver recipient (A3) | Via synced notification settings | 5 |
@@ -773,7 +830,7 @@ simulation harness covers the same properties empirically]`.
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Divergence bug in merge or derivation | Medium | High | Pure Domain rules; convergence simulation in CI; state-hash exchange between devices (each device publishes a state hash per applied vector; mismatch raises an error and offers re-bootstrap) |
+| Divergence bug in merge or derivation | Medium | High | Pure Domain rules; convergence simulation in CI; state-hash exchange between devices (each device publishes a hash of its **replicated** state per applied vector, derived rows excluded; mismatch raises an error and offers re-bootstrap) |
 | Ledger refactor changes existing numbers | Medium | High | Genesis cutoff (§3.5); parity tests; refactor shipped (Phase 2) before sync |
 | Provider API limits, scope policies, OAuth verification | Medium `[UNCERTAIN]` | Blocking per provider | Spikes S6, S7; OneDrive first; `LocalFolder` fallback on desktop |
 | Background sync on mobile too infrequent | High | Stale data, duplicate reminders | Foreground sync on open; status always visible; accepted duplication (§8.3) |
@@ -862,8 +919,8 @@ in the portable project.
    `ReconcileStock` produce facts and let the deriver produce derived
    rows.
 4. Derived `StockEpoch`; `NotificationEvents.EpochFactId`.
-5. Cutoff support (for non-synced profiles the cutoff is the day the
-   patch runs, so existing numbers never change).
+5. Cutoff support (§3.5): the patch freezes existing rows and stores
+   C, so numbers up to C never change.
 6. Schema patches in `DatabaseInitializer`; `ExportFormat` schema
    version bump; `docs/EXPORT-FORMAT.md` update; import of older
    archives mapped to `Legacy` rows.
@@ -986,8 +1043,11 @@ provider transports.
 
 ## 14. Retro-compatibility
 
-- Profiles that never enable sync keep today's behavior; Phase 2
-  changes storage (facts and derived rows) but not numbers (cutoff).
+- Phase 2 changes storage (facts and derived rows) for every profile,
+  synced or not. Numbers up to the cutoff never change. After the
+  cutoff, two behaviors change on purpose: retroactive schedule changes
+  are re-derived (D6), and two schedule rows with the same
+  `EffectiveFrom` resolve to the later one (§17).
 - `.mrz` archives of older schema versions import unchanged, mapped to
   `Legacy` rows.
 - Older desktop versions cannot join a sync group (no sync code). A
@@ -1042,7 +1102,17 @@ To apply in the Phase 1 PR:
   `[VERIFIED]`. §6.3 (file picker first on mobile) is superseded: sync
   needs provider APIs from the first mobile release.
 - `ANALYSIS.md` §4.4: invariants change in Phase 2 (facts and derived
-  rows, count anchors, derived epoch).
+  rows, count anchors, derived epoch, write gate on every use case).
+- Existing behavior found during this analysis:
+  `ChangeMedicationSchedule` always inserts a new row, even when one
+  with the same `EffectiveFrom` exists. `DailyConsumption` picks the
+  latest row with a strict `>` on `EffectiveFrom`, and the repository
+  orders by `EffectiveFrom` only, so among equal dates the **first
+  enumerated** row wins and a second change for the same date is
+  ignored `[VERIFIED — DailyConsumption.cs, MedicationScheduleHistoryRepository.cs]`
+  (which row SQLite returns first without a secondary sort key is
+  `[UNCERTAIN]`). Phase 2 fixes this independently of sync: the most
+  recently recorded row wins.
 
 ---
 
@@ -1083,3 +1153,12 @@ result, decision.
   per-device segments, causal delivery, compaction, generations;
   QR pairing and key rotation; provider transports (absorbs C.3++
   Phase 2); full-client feature parity; phases 0–7; decisions D1–D14.
+- 2026-09-26 — review against the code: stock-count anchor carries
+  `takenToday` and reuses the `ReconcileStock` formula; intake
+  consumption derived through today; one cutoff set by the Phase 2
+  patch; `StartDate` immutable and schedule summary from the latest
+  recorded row; checkpoint content; dependency vector at seal time;
+  associated data needs an `IArchiveCipher` extension; revocation
+  requires a new passphrase; tail-truncation mitigation; write gate on
+  every use case and field-diff operation emission; schedule tie
+  behavior recorded in §17.
