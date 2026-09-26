@@ -229,6 +229,12 @@ requirement for it.
 
 ## 7. B.1 — Mobile companion client
 
+**Authoritative analysis.**
+`docs/analysis/ANALYSIS-B1-MOBILE-COMPANION.md` (phases 0–4 with
+entry and exit criteria, decisions D1–D12). Where this section and the
+analysis disagree, the analysis wins; its §15 lists the corrections to
+§7.2 and §7.6.
+
 ### 7.1 Portable code already available
 
 The projects `MedReminder.Domain` and `MedReminder.Application`
@@ -513,3 +519,5 @@ application is prepared in
   restock) and the decided phases HID → webcam → flow (b), the last
   deferred until flow (a) is complete and the product owner requests
   it. Effort split per phase.
+- 2026-09-26 — §7: added pointer to the B.1 analysis
+  `ANALYSIS-B1-MOBILE-COMPANION.md`.
