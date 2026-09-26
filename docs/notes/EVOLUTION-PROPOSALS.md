@@ -57,12 +57,12 @@ a proposal, and is not merged here.
 | --- | --- | --- | --- | --- | --- |
 | 1 | Package expiry tracking | 1 | 2–3 weeks | All users | EV-2 |
 | **2** | Accessible "large text" mode | 1 | 1 week | Elderly, low-vision users | EV-2 |
-| 3 | A2 — AIC / barcode scan | 1 | 1–2 weeks | All users (Italy) | EV-1 |
-| **4** | Prescription request draft for the doctor | 1 | 2–3 days | Chronic patients, caregivers | EV-2 |
+| 3 | A2 — AIC / barcode scan **[DONE]** | 1 | 1–2 weeks | All users (Italy) | EV-1 |
+| **4** | Prescription request draft for the doctor **[DONE]** | 1 | 2–3 days | Chronic patients, caregivers | EV-2 |
 | 5 | Weekly pill-organizer preparation | 1 | 1 week | Elderly users, caregivers | EV-2 |
-| **6** | Guided stock count and reconciliation | 2 | 3–5 days | All users | EV-2 |
+| **6** | Guided stock count and reconciliation **[DONE]** | 2 | 3–5 days | All users | EV-2 |
 | 7 | B.1 — Mobile companion (.NET MAUI) | 2 | 2–4 person-months | Users away from the PC | EV-1 |
-| **8** | Therapy calendar / timeline view | 2 | 1–2 weeks | All users | EV-2 |
+| **8** | Therapy calendar / timeline view **[DONE]** | 2 | 1–2 weeks | All users | EV-2 |
 | **9** | Printable medication card (PDF) | 2 | 1 week | Patients seeing several clinicians | EV-2 |
 | 10 | Storage location per medicine | 3 | 1–2 days | Families, many medicines | EV-2 |
 | 11 | Shared household stock | 3 | 3–4 weeks | Families with several profiles | EV-2 |
@@ -136,7 +136,7 @@ increases button size and contrast, and simplifies navigation.
 - Every new UI string goes into all five
   `assets/localization/strings.<lang>.json` files.
 
-### 3.3 A2 — AIC / barcode scan
+### 3.3 A2 — AIC / barcode scan **[DONE]**
 
 **Goal.** Faster, error-free entry of a new medicine by scanning the
 package barcode.
@@ -150,7 +150,7 @@ HID-scanner and the webcam variant.
 maps to the local catalogue. Other countries depend on catalogue
 coverage (`ANALYSIS-DRUG-CATALOGUE.md`).
 
-### 3.4 Prescription request draft for the doctor
+### 3.4 Prescription request draft for the doctor **[DONE]**
 
 **Goal.** When a medicine is running low, help the user ask the GP for
 a new prescription.
@@ -188,7 +188,7 @@ design decision before implementation [INFERRED].
 
 ## 4. Tier 2 — broad value, lower frequency or higher cost
 
-### 4.1 Guided stock count and reconciliation
+### 4.1 Guided stock count and reconciliation **[DONE]**
 
 **Goal.** Keep the forecast accurate when the physical count drifts
 from the recorded stock.
@@ -216,7 +216,7 @@ through `.mrz` archives.
 **Why not Tier 1.** High value, but 2–4 person-months, and without
 live sync the phone and PC diverge between manual transfers.
 
-### 4.3 Therapy calendar / timeline view
+### 4.3 Therapy calendar / timeline view **[DONE]**
 
 **Goal.** See at a glance what the table view cannot show: planned
 suspensions, estimated run-out dates, dosage changes over time.
