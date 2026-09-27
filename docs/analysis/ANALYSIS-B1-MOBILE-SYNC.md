@@ -96,7 +96,7 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 | P6 | Archive read path usable outside Windows | **Met by Phase 1** | `ArchiveReader` (`IArchiveReader`) and `ProfileDatabaseBuilder` in the portable project; `ImportService` is the Windows shell (file swap, DPAPI rewrap, settings files). `ExportService` stays Windows-only (mobile export is Phase 7) |
 | P7 | View models outside WinForms | **Met by Phase 1** | `MedicineOverviewLoader` and `MedicineListItem` moved to `MedReminder.Application/Overview` |
 | P8 | Every data write goes through an Application use case | **Met by Phase 2a for the profile database** | The only direct UI write (`MainForm` deactivate: `medicine.IsActive = false` + `SaveChangesAsync`) moved to the `DeactivateMedicine` use case; `UiWritePathGuardTests` fails on any repository write, `SaveChangesAsync` or `DbContext` use under `src/MedReminder.UI` `[VERIFIED]`. Open: two replicated values (§4.2) are still written by the UI outside the database: per-profile notification settings (`SettingsDialog` writes `notifications.settings.json`) and the profile display name (`ProfilesManagerForm` calls `IProfileRegistry.Rename`). They need a use case before operation capture reaches them; the product owner deferred them out of Phase 2a (2026-09-27) |
-| P9 | Stock ledger is a deterministic function of user facts | **Not met** (Phase 2b: rows labeled by `Origin`, cutoff stored; derivation in Phase 2c) | Automatic consumption, backdated-intake reversals, stock-count corrections and `StockEpoch` are computed locally and depend on execution order (§3.4) `[VERIFIED — ANALYSIS.md §4.4]`. Phase 2 |
+| P9 | Stock ledger is a deterministic function of user facts | **Met by Phase 2c-2** (after the cutoff; counts carry their stored outcome until Phase 3) | `LedgerSynchronizer` derives consumption, reversals, count corrections and `StockEpoch` from the facts; the stored ledger equals a fresh derivation after every action of the random scenarios (`LedgerParityTests`) `[VERIFIED]` |
 | P10 | Stable GUID identity on every replicated entity | **Met** | All entities use `Guid Id` generated at creation `[VERIFIED — Domain entities]` |
 | P11 | Medicines are never hard-deleted | **Met** | Deactivation via `IsActive` `[VERIFIED]`; slots are no longer deleted: since Phase 2b `UpdateMedicine` appends a slot set `[VERIFIED]` |
 | P12 | AES-GCM on mobile | iOS 13+ on .NET 9+ **met**; Android `[UNCERTAIN]` | dotnet/runtime #91523 `[VERIFIED]`; spike S1 |
@@ -1041,9 +1041,18 @@ retraction UI only if D8 = yes.
 |---|---|---|
 | 2a | Action 1 (P8) | Merged (#80) |
 | 2b | Schema and export for actions 2, 5, 6: `Origin`, `StockCounts` table, dated slot sets, `Legacy` freeze and cutoff, export schema version 2. No behavior change: `ReconcileStock` does not record counts yet | Merged (#81) |
-| 2c-1 | Action 3, Domain part: `LedgerDeriver` and `EvaluateCount` in `MedReminder.Domain/Ledger`, S9 parity harness ported to the use cases. Not called by the application: no behavior change | #82 |
-| 2c-2 | Actions 2 (count recording), 3 (use cases write facts, derived rows replaced), 4; schema for activity history, recording instants, epoch baseline and `EpochFactId`; re-freeze | Not started |
-| 2d | Fact retraction (D8) | Not started |
+| 2c-1 | Action 3, Domain part: `LedgerDeriver` and `EvaluateCount` in `MedReminder.Domain/Ledger`, S9 parity harness ported to the use cases. Not called by the application: no behavior change | Merged (#82) |
+| 2c-2 | Actions 2 (count recording), 3 (use cases write facts, derived rows replaced), 4 without `EpochFactId`; schema for activity history, recording instants, epoch baseline; re-freeze at boot and on every import | #83 |
+| 2d | Fact retraction (D8) and `NotificationEvents.EpochFactId` | Not started |
+
+Phase 2c-2 decisions (product owner, 2026-09-27): `EpochFactId` moves
+to 2d, because without retraction or merge an epoch is never
+renumbered on one device and dedup by epoch number stays exact; derived
+rows are re-derived by the catch-up tick for every medicine and at once
+by `RegisterIntake` and `ReconcileStock`, as today; every `.mrz` import
+applies the same freeze as the boot patch (`LedgerFreeze`) instead of a
+new export schema version, so an imported profile keeps its numbers and
+its facts before the import are frozen.
 
 2c was split into 2c-1 and 2c-2 by the product owner (2026-09-27).
 
@@ -1173,9 +1182,16 @@ provider transports.
 
 - Phase 2 changes storage (facts and derived rows) for every profile,
   synced or not. Numbers up to the cutoff never change. After the
-  cutoff, two behaviors change on purpose: retroactive schedule changes
-  are re-derived (D6), and two schedule rows with the same
+  cutoff, three behaviors change on purpose: retroactive schedule
+  changes are re-derived (D6), the inactive days of a reactivated
+  medicine are not booked (D15), and two schedule rows with the same
   `EffectiveFrom` resolve to the later one (§17).
+- Since Phase 2c-2 the cutoff is the day before the 2c-2 boot patch (or
+  before an import), not the 2b one: the re-freeze moves it forward.
+  Schedule rows recorded before the patch have no recording instant;
+  two of them with the same `EffectiveFrom` resolve in the order the
+  database returns them, which SQLite does not guarantee
+  `[UNCERTAIN — rare: the UI does not prevent same-date rows]`.
 - `.mrz` archives of older schema versions import unchanged, mapped to
   `Legacy` rows.
 - Older desktop versions cannot join a sync group (no sync code). A
@@ -1401,6 +1417,11 @@ Phase 2 implements the derivation from the prototype and its tests.
   because columns on the slot rows cannot record an empty set. §3.5
   records the day-after-cutoff constraint for rule 1; §13 records the
   Phase 2 split and the cutoff constraint for 2c.
+- 2026-09-27 — Phase 2c-2 implemented: P9 met. Facts recorded by the
+  use cases (count with outcome, activity, recording instants, epoch
+  baseline); `LedgerSynchronizer` replaces derived rows; re-freeze at
+  boot and on import; §17 applied to `DailyConsumption` too.
+  `EpochFactId` moved to 2d (§13).
 - 2026-09-27 — Phase 2c-1 implemented: `LedgerDeriver` in the Domain,
   parity on 10 000 scenarios including mid-day patches. Decisions of
   the product owner: 2c split into 2c-1 / 2c-2; count outcome stored

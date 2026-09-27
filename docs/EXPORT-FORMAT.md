@@ -403,7 +403,17 @@ another machine).
 | `schemaVersion` | Change | Import of the older version |
 |---|---|---|
 | 1 | Initial entity model | — |
-| 2 | `stockMovements[].origin`, `medicationAdministrationSlots[].setId`, `medicationAdministrationSlotSets`, `stockCounts`, `ledgerCutoff` | Movements become `Legacy`; each medicine's slots become one set with `id` = the medicine id, `effectiveFrom` = its `startDate`, `recordedAt` = the import instant; `ledgerCutoff` = the day before the import, frozen at the import instant; no stock counts |
+| 2 | `stockMovements[].origin`, `medicationAdministrationSlotSets`, `medicationAdministrationSlots[].setId`, `stockCounts`, `ledgerCutoff` | Each medicine's slots become one set with `id` = the medicine id, `effectiveFrom` = its `startDate`, `recordedAt` = the import instant; no stock counts |
+
+Every import, whatever its version, freezes the imported profile as the
+application's boot patch does (B.1 Phase 2c-2): all stock movements
+become `Legacy` (their `origin` in the archive is not kept), the ledger
+cutoff becomes the day before the import (an archive's `ledgerCutoff`
+is replaced), each medicine's current `stockEpoch` becomes its epoch
+baseline, and inactive medicines are recorded as inactive from the
+import day. Stock counts in the archive are kept but, being older than
+the freeze, no longer produce rows. The imported stock is therefore
+exactly the exported one.
 
 ---
 
