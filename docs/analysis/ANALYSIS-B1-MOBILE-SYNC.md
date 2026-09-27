@@ -1040,8 +1040,7 @@ retraction UI only if D8 = yes.
 | PR | Scope | State |
 |---|---|---|
 | 2a | Action 1 (P8) | Merged (#80) |
-| 2b | Schema and export for actions 2, 5, 6: `Origin`, `StockCounts` table, dated slot sets, `Legacy` freeze and cutoff, export schema version 2. No behavior change: `ReconcileStock` does not record counts yet | #81 |
-| 2b | (see above) | Merged (#81) |
+| 2b | Schema and export for actions 2, 5, 6: `Origin`, `StockCounts` table, dated slot sets, `Legacy` freeze and cutoff, export schema version 2. No behavior change: `ReconcileStock` does not record counts yet | Merged (#81) |
 | 2c-1 | Action 3, Domain part: `LedgerDeriver` and `EvaluateCount` in `MedReminder.Domain/Ledger`, S9 parity harness ported to the use cases. Not called by the application: no behavior change | #82 |
 | 2c-2 | Actions 2 (count recording), 3 (use cases write facts, derived rows replaced), 4; schema for activity history, recording instants, epoch baseline and `EpochFactId`; re-freeze | Not started |
 | 2d | Fact retraction (D8) | Not started |
