@@ -18,6 +18,34 @@ public class BackupSettingsBindingTests
     };
 
     [Fact]
+    public void OneDrive_target_round_trips_with_the_provider_name()
+    {
+        var settings = new BackupSettings
+        {
+            CloudFolderEnabled = true,
+            CloudProvider = CloudProvider.OneDrive,
+            CloudAccountId = "home-account-id",
+        };
+
+        var json = JsonSerializer.Serialize(settings);
+        json.Should().Contain("\"CloudProvider\":\"OneDrive\"");
+        var back = JsonSerializer.Deserialize<BackupSettings>(json, _options)!;
+
+        back.CloudProvider.Should().Be(CloudProvider.OneDrive);
+        back.CloudAccountId.Should().Be("home-account-id");
+        back.IsCloudTargetConfigured().Should().BeTrue();
+    }
+
+    [Fact]
+    public void Cloud_target_needs_a_folder_or_an_account()
+    {
+        new BackupSettings().IsCloudTargetConfigured().Should().BeFalse();
+        new BackupSettings { CloudFolderDirectory = "C:/cloud" }.IsCloudTargetConfigured().Should().BeTrue();
+        new BackupSettings { CloudProvider = CloudProvider.OneDrive, CloudFolderDirectory = "C:/cloud" }
+            .IsCloudTargetConfigured().Should().BeFalse();
+    }
+
+    [Fact]
     public void Old_json_without_cloud_fields_binds_to_defaults()
     {
         var json = """
