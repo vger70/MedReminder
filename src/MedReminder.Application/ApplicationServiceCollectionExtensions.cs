@@ -25,6 +25,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();
+        // B.1 Phase 3b-2: count re-evaluation by HLC and genesis versions.
+        services.AddScoped<CountReevaluation>();
+        services.AddScoped<SyncGenesis>();
 
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();

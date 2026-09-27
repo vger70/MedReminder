@@ -286,6 +286,12 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   operation commits with its `SyncOperations` record, so re-delivery is
   idempotent; the touched medicines are then derived again. No
   transport calls it yet (Phase 3c).
+- Count re-evaluation (B.1 Phase 3b-2): with sync enabled,
+  `LedgerFactsLoader` evaluates every synced stock count again on the
+  facts recorded before it by HLC (`CountReevaluation`), with end dates
+  as of that instant; `SyncGenesis` writes the genesis register
+  versions when sync is enabled. With sync disabled the stored outcome
+  is used, as before.
 - `UpdateMedicine` takes an optional `Baseline` (the values the edit
   dialog loaded): with it, only the fields the user changed are written,
   and unchanged slots record no new slot set.

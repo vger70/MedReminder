@@ -20,5 +20,6 @@ internal sealed class SyncOperationConfiguration : IEntityTypeConfiguration<Sync
 
         builder.HasIndex(o => new { o.HlcPhysicalMs, o.HlcCounter });
         builder.HasIndex(o => o.SegmentSeq);
+        builder.HasIndex(o => o.MedicineId);
     }
 }

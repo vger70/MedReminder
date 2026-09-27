@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Stock;
@@ -26,6 +27,10 @@ public sealed class LedgerFactsLoader
     private readonly IMedicineActivityRepository _activity;
     private readonly IStockCountRepository _counts;
     private readonly ILedgerCutoffRepository _cutoff;
+    // B.1 Phase 3b-2: with sync enabled, counts are evaluated again on
+    // the facts recorded before them by HLC. Null in tests that do not
+    // exercise sync.
+    private readonly CountReevaluation? _reevaluation;
 
     public LedgerFactsLoader(
         IStockMovementRepository stock,
@@ -35,8 +40,10 @@ public sealed class LedgerFactsLoader
         IMedicationAdministrationSlotRepository slots,
         IMedicineActivityRepository activity,
         IStockCountRepository counts,
-        ILedgerCutoffRepository cutoff)
+        ILedgerCutoffRepository cutoff,
+        CountReevaluation? reevaluation = null)
     {
+        _reevaluation = reevaluation;
         _stock = stock;
         _intakes = intakes;
         _schedules = schedules;
@@ -70,14 +77,14 @@ public sealed class LedgerFactsLoader
         var ledgerActivity = activity
             .OrderBy(a => a.RecordedAt)
             .ThenBy(a => a.Id)
-            .Select(a => new LedgerActivity(a.Day, a.Active, a.RecordedAt))
+            .Select(a => new LedgerActivity(a.Day, a.Active, a.RecordedAt, a.Id))
             .ToList();
         if (ledgerActivity.Count == 0 && !medicine.IsActive)
         {
             ledgerActivity.Add(new LedgerActivity(cutoffDay.AddDays(1), false, DateTimeOffset.MinValue));
         }
 
-        return new LedgerFacts
+        var facts = new LedgerFacts
         {
             MedicineId = medicine.Id,
             StartDate = medicine.StartDate,
@@ -97,7 +104,7 @@ public sealed class LedgerFactsLoader
             SlotSets = sets
                 .OrderBy(e => e.Set.RecordedAt)
                 .ThenBy(e => e.Set.Id)
-                .Select(e => new LedgerSlotSet(e.Set.EffectiveFrom, e.Set.RecordedAt, e.Slots))
+                .Select(e => new LedgerSlotSet(e.Set.EffectiveFrom, e.Set.RecordedAt, e.Slots, e.Set.Id))
                 .ToList(),
             Activity = ledgerActivity,
             Counts = counts
@@ -107,6 +114,7 @@ public sealed class LedgerFactsLoader
                 .Select(ToAnchor)
                 .ToList(),
         };
+        return _reevaluation is null ? facts : await _reevaluation.ApplyAsync(facts, cancellationToken);
     }
 
     public static LedgerIntake ToLedger(MedicationIntake intake, DateTimeOffset? frozenAt)

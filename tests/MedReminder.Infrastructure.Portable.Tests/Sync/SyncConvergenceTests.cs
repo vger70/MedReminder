@@ -30,8 +30,10 @@ namespace MedReminder.Infrastructure.Tests.Sync;
 // After a full exchange every device must hold the same replicated
 // state, the same register conflicts, and the same derived ledger.
 //
-// Stock counts keep the outcome evaluated on the recording device
-// (Phase 3b-2 re-evaluates them), so equal derived stock is exact here.
+// Since Phase 3b-2 stock counts are evaluated again on the facts
+// recorded before them by HLC, so the equal derived stock also checks
+// that every device builds the same snapshots. The genesis carries the
+// genesis register versions (SyncGenesis).
 // The seed count is SYNC_CONVERGENCE_SEEDS (default 40).
 public sealed class SyncConvergenceTests : IDisposable
 {
@@ -41,6 +43,7 @@ public sealed class SyncConvergenceTests : IDisposable
     private readonly ITestOutputHelper _output;
     private int _conflicts;
     private int _retractions;
+    private int _reevaluated;
     private readonly string _root = Path.Combine(Path.GetTempPath(), "mr-conv-" + Guid.NewGuid().ToString("N"));
 
     public SyncConvergenceTests(ITestOutputHelper output)
@@ -65,13 +68,15 @@ public sealed class SyncConvergenceTests : IDisposable
             steps += await RunScenarioAsync(seed);
         }
         _output.WriteLine($"{seeds} scenarios, {steps} user actions applied, " +
-            $"{_conflicts} register conflicts, {_retractions} retractions in the converged states.");
+            $"{_conflicts} register conflicts, {_retractions} retractions in the converged states, " +
+            $"{_reevaluated} counts whose outcome the merge changed.");
         // Guard against a vacuous run: the workload must reach the merge
         // paths it is meant to test.
         if (seeds >= 20)
         {
             _conflicts.Should().BeGreaterThan(0);
             _retractions.Should().BeGreaterThan(0);
+            _reevaluated.Should().BeGreaterThan(0);
         }
     }
 
@@ -137,6 +142,7 @@ public sealed class SyncConvergenceTests : IDisposable
                 }
                 states[i].Should().Be(states[0], $"seed {seed}: {devices[i].Name} must converge with {devices[0].Name}");
             }
+            _reevaluated += await CountChangedOutcomesAsync(devices[0]);
             _conflicts += states[0].Split('\n').Count(l => l.StartsWith("X ", StringComparison.Ordinal));
             _retractions += states[0].Split('\n').Count(l => l.StartsWith("R ", StringComparison.Ordinal));
             return actions;
@@ -164,6 +170,7 @@ public sealed class SyncConvergenceTests : IDisposable
                 Notes: "genesis", InitialQuantity: 60m,
                 AdministrationSlots: [new AdministrationSlotInput(1m, new TimeOnly(8, 0), null),
                     new AdministrationSlotInput(1m, new TimeOnly(20, 0), null)]), CancellationToken.None));
+            await first.RunAsync(sp => sp.GetRequiredService<SyncGenesis>().RecordAsync(CancellationToken.None));
         }
         SqliteConnection.ClearAllPools();
 
@@ -187,6 +194,23 @@ public sealed class SyncConvergenceTests : IDisposable
         var result = await to.RunAsync(sp => sp.GetRequiredService<ApplyRemoteOperations>().ExecuteAsync(log, CancellationToken.None));
         result.Blocked.Should().BeNull();
     }
+
+    // Counts whose re-evaluated correction differs from the one stored
+    // on the device that recorded them.
+    private static Task<int> CountChangedOutcomesAsync(SyncDevice device)
+        => device.RunAsync(async sp =>
+        {
+            var changed = 0;
+            var ledger = sp.GetRequiredService<LedgerSynchronizer>();
+            var counts = sp.GetRequiredService<IStockCountRepository>();
+            foreach (var medicine in await sp.GetRequiredService<IMedicineRepository>().ListAllAsync(default))
+            {
+                var stored = (await counts.ListForMedicineAsync(medicine.Id, default)).ToDictionary(c => c.Id);
+                var facts = await ledger.LoadFactsAsync(medicine, default);
+                changed += facts.Counts.Count(c => stored[c.Id].Correction != c.Correction);
+            }
+            return changed;
+        });
 
     private static string Diff(string expected, string actual)
     {
@@ -226,7 +250,7 @@ public sealed class SyncConvergenceTests : IDisposable
                     break;
                 case 4:
                     await device.RunAsync(sp => sp.GetRequiredService<ReconcileStock>().ExecuteAsync(
-                        new ReconcileStockCommand(id, random.Next(0, 80), 0m), default));
+                        new ReconcileStockCommand(id, random.Next(0, 80), random.Next(0, 3)), default));
                     break;
                 case 5:
                     await device.RunAsync(sp => sp.GetRequiredService<SuspendMedication>().ExecuteAsync(

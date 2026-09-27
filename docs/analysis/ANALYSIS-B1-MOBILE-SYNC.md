@@ -292,8 +292,8 @@ Retraction and a concurrent count (product owner, 2026-09-27): a
 retracted fact never happened, on every device. It is left out of
 every count snapshot too, so a count recorded on another device that
 had included it is re-evaluated without it and the stock equals what
-was counted. Implemented with the count re-evaluation (Phase 3b-2); in
-3b-1 counts keep their stored outcome. When the same fact is retracted
+was counted. Implemented by Phase 3b-2: a retracted fact's row is
+removed, so no snapshot contains it. When the same fact is retracted
 on two devices, the earliest tombstone (recording instant, then id) is
 kept on every device.
 
@@ -357,7 +357,18 @@ Rules, in this order (each rule states its own day range):
    materialization, epoch advance) is evaluated when the count is
    recorded and stored with the fact. On one device this is exact;
    Phase 3 re-evaluates it when facts from other devices arrive
-   (product owner, 2026-09-27).
+   (product owner, 2026-09-27). Implemented by Phase 3b-2
+   (`CountReevaluation`, `LedgerDeriver.ReevaluateCount`): with sync
+   enabled, every count recorded after sync was enabled is evaluated
+   again, in HLC order, on the facts whose recording operation is older
+   than its own (`SyncOperations.EntityId`), with the therapy end date
+   and the suspensions' end dates as they were at its HLC (register
+   versions; `SyncGenesis` records the values from before sync at the
+   genesis timestamp) and with the earlier counts re-evaluated first.
+   Counts from before sync keep their stored outcome. The stored input
+   `takenToday` is capped by what the snapshot leaves due on the count
+   day, since a merged intake can already have booked it. On one device
+   the re-evaluated outcome equals the stored one (parity test).
 
 Derived movement ids are deterministic (a name-based GUID over
 `medicineId`, rule, day or anchor id), so a re-derivation replaces rows
@@ -1166,8 +1177,8 @@ checklist; no plaintext in the remote folder (inspection test).
 | PR | Scope | State |
 |---|---|---|
 | 3a | Action 1: HLC, operation catalogue, `IOperationLog` and the `SyncOperations` outbox, emission from every use case; one write gate for every use case; stale-form diff (§7.4). Operations recorded only when sync is enabled, so no behavior change until 3d | Merged (#85) |
-| 3b-1 | Action 2: apply of remote operations, register versions and LWW, tombstones, conflict list (§4.5), convergence harness on real databases; counts keep their stored outcome | #86 |
-| 3b-2 | Re-evaluation of count outcomes on the snapshot by HLC (facts and register values "as of"), retracted facts left out of every snapshot (§4.2); harness extended to concurrent counts | — |
+| 3b-1 | Action 2: apply of remote operations, register versions and LWW, tombstones, conflict list (§4.5), convergence harness on real databases; counts keep their stored outcome | Merged (#86) |
+| 3b-2 | Re-evaluation of count outcomes on the snapshot by HLC (facts and register values "as of"), retracted facts left out of every snapshot (§4.2); genesis register versions; harness extended to concurrent counts | #87 |
 | 3c | Actions 3, 4, 7: segment codec, group key, genesis, checkpoints, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md` | — |
 | 3d | Actions 5, 6: `SyncHostedService`, desktop UI, reset flow in import and restore, convergence simulation in CI, two-PC checklist | — |
 
@@ -1507,6 +1518,15 @@ Phase 2 implements the derivation from the prototype and its tests.
   with the fact until Phase 3 (§4.3 rule 3); 2c-2 re-freezes (§13).
   Rules 1b and 2 extended to days carrying `Legacy` consumption after
   the cutoff (§4.3).
+- 2026-09-27 — Phase 3b-2 implemented: count re-evaluation by HLC with
+  register values "as of" (§4.3 rule 3), `SyncGenesis` register
+  versions (§5.5), `SyncOperations.EntityId`. Known limits: the history
+  window still shows the stored correction of a count; the local
+  retraction rule of Phase 2d (no retraction before a later count) is
+  kept, though with sync enabled the re-evaluation would make it
+  unnecessary; a fact recorded on a device whose clock is behind the
+  profile's `FrozenAt` would read as `Legacy` on every device
+  (deterministic, not observed).
 - 2026-09-27 — Phase 3b split into 3b-1 and 3b-2 (§13). Decisions of
   the product owner: a retracted fact is left out of every count
   snapshot (§4.2); only concurrent writes are conflicts, detected with

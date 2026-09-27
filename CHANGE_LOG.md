@@ -30,10 +30,37 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #87 — B.1 Phase 3b-2: re-evaluate stock counts on the facts recorded before them by HLC
+
+Link: [vger70/MedReminder#87](https://github.com/vger70/MedReminder/pull/87)
+Branch: `claude/b1-phase3b2-count-reevaluation`
+
+### Added
+
+- `CountReevaluation`: with sync enabled, each synced stock count is
+  evaluated again on the facts recorded before it by HLC, with end
+  dates as of that instant; a retracted fact is in no snapshot.
+- `SyncGenesis`: genesis versions of every register, for the
+  enable-sync flow.
+- `SyncOperations.EntityId` (boot patch) and the per-medicine index.
+
+### Changed
+
+- `LedgerFactsLoader` applies the re-evaluation when sync is enabled;
+  with sync disabled the stored count outcome is used as before.
+
+### Docs
+
+- `ANALYSIS-B1-MOBILE-SYNC.md` §4.2, §4.3, §13, §20; `ANALYSIS.md`.
+
+---
+
 ## PR #86 — B.1 Phase 3b-1: apply operations from other devices, with LWW registers and conflicts
 
 Link: [vger70/MedReminder#86](https://github.com/vger70/MedReminder/pull/86)
 Branch: `claude/b1-phase3b-merge-apply`
+
+**Status:** merged (2026-09-27)
 
 ### Added
 

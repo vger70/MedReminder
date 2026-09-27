@@ -21,6 +21,8 @@ public class OperationEmissionGuardTests
         // The sync apply layer (§7.2): it writes what other devices
         // produced, which is already in their logs.
         "ApplyRemoteOperations",
+        // Genesis register versions: the values every device starts from.
+        "SyncGenesis",
     };
 
     [Fact]
