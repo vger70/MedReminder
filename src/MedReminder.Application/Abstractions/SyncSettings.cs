@@ -7,7 +7,15 @@ namespace MedReminder.Application.Abstractions;
 // owner 2026-09-27; the genesis snapshot carries everything written
 // before). DeviceId identifies this installation in the group and is
 // never copied to another one.
-public sealed record SyncSettings(Guid GroupId, Guid DeviceId, int Generation);
+//
+// Phase 3c: KeyVersion names the group key in use (key.<n>.wrap,
+// rotation is Phase 4) and Folder the root of a local-folder transport.
+public sealed record SyncSettings(
+    Guid GroupId,
+    Guid DeviceId,
+    int Generation,
+    int KeyVersion = 1,
+    string? Folder = null);
 
 public interface ISyncSettingsStore
 {

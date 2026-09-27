@@ -44,6 +44,13 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<ISyncOperationRepository, SyncOperationRepository>();
         services.AddScoped<ISyncFieldVersionRepository, SyncFieldVersionRepository>();
         services.AddScoped<ISyncConflictRepository, SyncConflictRepository>();
+        services.AddScoped<ISyncPeerRepository, SyncPeerRepository>();
+        services.AddScoped<ISyncSnapshotStore, SqliteSyncSnapshotStore>();
+        // The sync engine's transport: the folder of sync.settings.json
+        // (Phase 3c). Resolved only while sync is enabled.
+        services.TryAddScoped<ISyncTransport>(sp => new LocalFolderSyncTransport(
+            sp.GetRequiredService<ISyncSettingsStore>().Load()?.Folder
+            ?? throw new InvalidOperationException("No sync folder is configured for this profile.")));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<DatabaseInitializer>();
 

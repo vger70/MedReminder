@@ -34,18 +34,36 @@ internal sealed class StockMovementRepository : IStockMovementRepository
     }
 
     // Rows come from AsNoTracking reads: attach and mark them deleted /
-    // modified in the current unit of work.
+    // modified in the current unit of work. When the context already
+    // tracks the row (written earlier in the same scope, as when the sync
+    // engine applies several segments), the tracked instance is used.
     public Task RemoveRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
     {
-        _db.StockMovements.RemoveRange(movements);
+        foreach (var movement in movements)
+        {
+            _db.StockMovements.Remove(Tracked(movement) ?? movement);
+        }
         return Task.CompletedTask;
     }
 
     public Task UpdateRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
     {
-        _db.StockMovements.UpdateRange(movements);
+        foreach (var movement in movements)
+        {
+            if (Tracked(movement) is { } tracked)
+            {
+                if (!ReferenceEquals(tracked, movement)) _db.Entry(tracked).CurrentValues.SetValues(movement);
+            }
+            else
+            {
+                _db.StockMovements.Update(movement);
+            }
+        }
         return Task.CompletedTask;
     }
+
+    private StockMovement? Tracked(StockMovement movement)
+        => _db.StockMovements.Local.FirstOrDefault(m => m.Id == movement.Id);
 
     public async Task AddRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
     {

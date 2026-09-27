@@ -45,4 +45,25 @@ internal sealed class SyncOperationRepository : ISyncOperationRepository
             .ToListAsync(cancellationToken);
         return [.. rows.OrderBy(o => o.Timestamp)];
     }
+
+    public async Task<IReadOnlyList<SyncOperation>> ListPendingAsync(
+        Guid deviceId, int generation, CancellationToken cancellationToken)
+    {
+        var rows = await _db.SyncOperations.AsNoTracking()
+            .Where(o => o.DeviceId == deviceId && o.Generation == generation && o.SegmentSeq == null)
+            .ToListAsync(cancellationToken);
+        return [.. rows.OrderBy(o => o.Timestamp)];
+    }
+
+    public async Task MarkPublishedAsync(
+        IReadOnlyList<SyncOperation> operations, int segmentSeq, CancellationToken cancellationToken)
+    {
+        var ids = operations.Select(o => o.Id).ToList();
+        await _db.SyncOperations
+            .Where(o => ids.Contains(o.Id))
+            .ExecuteUpdateAsync(u => u.SetProperty(o => o.SegmentSeq, segmentSeq), cancellationToken);
+    }
+
+    public Task<long> CountAsync(int generation, CancellationToken cancellationToken)
+        => _db.SyncOperations.LongCountAsync(o => o.Generation == generation, cancellationToken);
 }

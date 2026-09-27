@@ -44,7 +44,14 @@ internal sealed class ArchiveCipher : IArchiveCipher
     }
 
     public (byte[] Nonce, byte[] Tag, byte[] Ciphertext) Encrypt(byte[] key, byte[] plaintext)
+        => Encrypt(key, plaintext, []);
+
+    public byte[] Decrypt(byte[] key, byte[] nonce, byte[] tag, byte[] ciphertext)
+        => Decrypt(key, nonce, tag, ciphertext, []);
+
+    public (byte[] Nonce, byte[] Tag, byte[] Ciphertext) Encrypt(byte[] key, byte[] plaintext, byte[] associatedData)
     {
+        ArgumentNullException.ThrowIfNull(associatedData);
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(plaintext);
 
@@ -53,12 +60,13 @@ internal sealed class ArchiveCipher : IArchiveCipher
         var ciphertext = new byte[plaintext.Length];
 
         using var aes = new AesGcm(key, ExportFormat.AesGcmTagSizeBytes);
-        aes.Encrypt(nonce, plaintext, ciphertext, tag);
+        aes.Encrypt(nonce, plaintext, ciphertext, tag, associatedData);
         return (nonce, tag, ciphertext);
     }
 
-    public byte[] Decrypt(byte[] key, byte[] nonce, byte[] tag, byte[] ciphertext)
+    public byte[] Decrypt(byte[] key, byte[] nonce, byte[] tag, byte[] ciphertext, byte[] associatedData)
     {
+        ArgumentNullException.ThrowIfNull(associatedData);
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(nonce);
         ArgumentNullException.ThrowIfNull(tag);
@@ -70,7 +78,7 @@ internal sealed class ArchiveCipher : IArchiveCipher
         // tampered data); the caller maps that to the wrong-passphrase
         // surface (§4.4).
         using var aes = new AesGcm(key, ExportFormat.AesGcmTagSizeBytes);
-        aes.Decrypt(nonce, ciphertext, tag, plaintext);
+        aes.Decrypt(nonce, ciphertext, tag, plaintext, associatedData);
         return plaintext;
     }
 }

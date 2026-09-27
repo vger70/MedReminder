@@ -35,6 +35,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<SyncOperation> SyncOperations => Set<SyncOperation>();
     public DbSet<SyncFieldVersion> SyncFieldVersions => Set<SyncFieldVersion>();
     public DbSet<SyncConflict> SyncConflicts => Set<SyncConflict>();
+    public DbSet<SyncPeer> SyncPeers => Set<SyncPeer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +56,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new SyncOperationConfiguration());
         modelBuilder.ApplyConfiguration(new SyncFieldVersionConfiguration());
         modelBuilder.ApplyConfiguration(new SyncConflictConfiguration());
+        modelBuilder.ApplyConfiguration(new SyncPeerConfiguration());
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

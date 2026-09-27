@@ -26,4 +26,19 @@ internal sealed class InMemorySyncOperationRepository : ISyncOperationRepository
 
     public Task<IReadOnlyList<SyncOperation>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyList<SyncOperation>>([.. _items.Where(o => o.MedicineId == medicineId).OrderBy(o => o.Timestamp)]);
+
+    public Task<IReadOnlyList<SyncOperation>> ListPendingAsync(Guid deviceId, int generation, CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyList<SyncOperation>>([.. _items
+            .Where(o => o.DeviceId == deviceId && o.Generation == generation && o.SegmentSeq is null)
+            .OrderBy(o => o.Timestamp)]);
+
+    public Task MarkPublishedAsync(IReadOnlyList<SyncOperation> operations, int segmentSeq, CancellationToken cancellationToken)
+    {
+        var ids = operations.Select(o => o.Id).ToHashSet();
+        foreach (var o in _items.Where(o => ids.Contains(o.Id))) o.SegmentSeq = segmentSeq;
+        return Task.CompletedTask;
+    }
+
+    public Task<long> CountAsync(int generation, CancellationToken cancellationToken)
+        => Task.FromResult((long)_items.Count(o => o.Generation == generation));
 }

@@ -156,6 +156,7 @@ is used.
 | `SyncOperation` (`SyncOperations`) | Local operation log for sync (B.1 Phase 3a); empty while sync is disabled. From Phase 3b it also records the operations applied from other devices | HLC (`HlcPhysicalMs`, `HlcCounter`, `DeviceId`), `Generation`, `Type`, `SchemaVersion`, `MedicineId`, `Payload` (JSON), `SegmentSeq?` |
 | `SyncFieldVersion` (`SyncFieldVersions`) | Every version of a last-writer-wins register (B.1 Phase 3b) | `EntityId`, `Register`, HLC, `Value`, base HLC |
 | `SyncConflict` (`SyncConflicts`) | Local conflict list, §4.5 cases only (B.1 Phase 3b) | `Kind`, `SubjectId`, `Register`, winning / losing value and device |
+| `SyncPeer` (`SyncPeers`) | Sync progress per device of the group (B.1 Phase 3c) | `DeviceId`, `Generation`, `Seq` (applied, or published for this device), checkpoint counters |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
@@ -292,6 +293,14 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   as of that instant; `SyncGenesis` writes the genesis register
   versions when sync is enabled. With sync disabled the stored outcome
   is used, as before.
+- Sync engine (B.1 Phase 3c, format in [`SYNC-FORMAT.md`](SYNC-FORMAT.md)):
+  `SyncEngine.RunAsync` publishes pending operations as an encrypted
+  segment, applies the other devices' segments in causal order,
+  writes the device record, checkpoints and deletes covered segments,
+  over `ISyncTransport` (`LocalFolderSyncTransport`). `CreateSyncGroup`,
+  `JoinSyncGroup` and `ResetSyncGeneration` create, join and restart a
+  group; genesis and checkpoints are database images
+  (`SqliteSyncSnapshotStore`). No UI or hosted service yet (Phase 3d).
 - `UpdateMedicine` takes an optional `Baseline` (the values the edit
   dialog loaded): with it, only the fields the user changed are written,
   and unchanged slots record no new slot set.
@@ -328,6 +337,8 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
+    sync.settings.json           sync group, device, generation, folder (B.1; absent while sync is off)
+    sync.protected               sync group key, DPAPI CurrentUser (B.1)
 ```
 
 Backup files (§8) are written to the folders the administrator
@@ -457,7 +468,7 @@ start:
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
    `NotificationEvents.EpochFactId`; then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
-   (B.1 Phase 3b).
+   (B.1 Phase 3b); then `SyncPeers` (B.1 Phase 3c).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.

@@ -90,6 +90,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
 
+        // B.1 Phase 3c: the sync group key, DPAPI-protected next to the
+        // profile database.
+        services.TryAddSingleton<ISyncKeyStore>(
+            new DpapiSyncKeyStore(Path.Combine(currentProfile.DataDirectory, DpapiSyncKeyStore.FileName)));
+
         // C.3+: DPAPI-cached backup passphrase for the unattended
         // cloud-folder snapshot (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md
         // §3.4, §3.5). Stateless, safe as a singleton — the file access
