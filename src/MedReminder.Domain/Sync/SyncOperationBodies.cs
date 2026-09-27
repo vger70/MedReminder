@@ -15,6 +15,14 @@ namespace MedReminder.Domain.Sync;
 // are those of the local rows, so replaying an operation is idempotent.
 // Wire names and field names are part of the sync format: renaming a
 // type, a property or an enum member is a format change.
+//
+// BaseVersion (Phase 3b): on the three operations whose register can
+// raise a conflict (a medicine field, the schedule row of a date, the
+// slot set), the version of that register the writing device held when
+// it wrote, null when it held none. The writer had seen every
+// version up to its base, so two writes are concurrent exactly when the
+// later one's base is older than the earlier one (RegisterMerge). Set by
+// the operation log, not by the use cases.
 public abstract record SyncOperationBody(Guid MedicineId);
 
 // A new medicine with the value of every replicated field
@@ -32,7 +40,8 @@ public sealed record MedicineFieldValue(string Field, string? Value);
 public sealed record MedicineFieldChanged(
     Guid MedicineId,
     string Field,
-    string? Value) : SyncOperationBody(MedicineId);
+    string? Value,
+    HybridTimestamp? BaseVersion = null) : SyncOperationBody(MedicineId);
 
 // A dated activation / deactivation (activity history, D15).
 public sealed record MedicineActivityChanged(
@@ -50,7 +59,8 @@ public sealed record ScheduleRowRecorded(
     int AdministrationsPerDay,
     ScheduleKind ScheduleKind,
     string? SchedulePayload,
-    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+    DateTimeOffset RecordedAt,
+    HybridTimestamp? BaseVersion = null) : SyncOperationBody(MedicineId);
 
 // A whole slot set; an empty list clears the slots from EffectiveFrom.
 public sealed record SlotSetRecorded(
@@ -58,7 +68,8 @@ public sealed record SlotSetRecorded(
     Guid SetId,
     DateOnly EffectiveFrom,
     DateTimeOffset RecordedAt,
-    IReadOnlyList<SlotValue> Slots) : SyncOperationBody(MedicineId);
+    IReadOnlyList<SlotValue> Slots,
+    HybridTimestamp? BaseVersion = null) : SyncOperationBody(MedicineId);
 
 public sealed record SlotValue(Guid SlotId, decimal Dose, TimeOnly? Time, string? TimingLabel, int Order);
 

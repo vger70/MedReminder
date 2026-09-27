@@ -41,6 +41,11 @@ public class WriteGateTests
         ["RegisterIntake"] = (s, id) => s.RegisterIntake.ExecuteAsync(
             new RegisterIntakeCommand(id, new DateOnly(2026, 9, 12), IntakeStatus.Taken, 1m), default),
         ["ReconcileStock"] = (s, id) => s.ReconcileStock.ExecuteAsync(new ReconcileStockCommand(id, 20m, 0m), default),
+        ["ApplyRemoteOperations"] = (s, _) =>
+        {
+            s.EnableSync();
+            return s.ApplyRemote.ExecuteAsync([], default);
+        },
         ["RetractFact"] = (s, id) => s.RetractFact.ExecuteAsync(new RetractFactCommand(
             id, FactKind.StockEntry, s.Stock.All.Single(m => m.Kind == StockMovementKind.InitialLoad).Id), default),
     };

@@ -5,7 +5,7 @@ namespace MedReminder.Domain.Ledger;
 
 // Name-based GUID (RFC 9562 version 5: SHA-1 over namespace + name).
 // Every device computes the same id for the same derived row.
-internal static class DeterministicGuid
+public static class DeterministicGuid
 {
     public static Guid Create(Guid namespaceId, string name)
     {

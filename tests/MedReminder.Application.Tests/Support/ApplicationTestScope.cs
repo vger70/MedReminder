@@ -30,6 +30,9 @@ internal sealed class ApplicationTestScope
     public InMemoryUnitOfWork Uow { get; } = new();
     public InMemorySyncSettingsStore SyncSettingsStore { get; } = new();
     public InMemorySyncOperationRepository SyncOperations { get; } = new();
+    public InMemorySyncFieldVersionRepository SyncVersions { get; } = new();
+    public InMemorySyncConflictRepository SyncConflicts { get; } = new();
+    public SyncRegisters Registers { get; }
     public OperationLog Operations { get; }
     public RecordingEmailNotificationService Email { get; } = new();
     public RecordingWindowsNotificationService Windows { get; } = new();
@@ -49,12 +52,14 @@ internal sealed class ApplicationTestScope
     public RetractFact RetractFact { get; }
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
+    public ApplyRemoteOperations ApplyRemote { get; }
 
     public ApplicationTestScope(DateTimeOffset? now = null)
     {
         Clock = new FakeTimeProvider(now ?? new DateTimeOffset(2026, 9, 13, 12, 0, 0, TimeSpan.Zero));
 
-        Operations = new OperationLog(SyncSettingsStore, SyncOperations, Clock);
+        Registers = new SyncRegisters(SyncVersions, SyncConflicts, Clock);
+        Operations = new OperationLog(SyncSettingsStore, SyncOperations, Registers, Clock);
 
         Ledger = new LedgerSynchronizer(
             new LedgerFactsLoader(Stock, Intakes, Schedules, Suspensions, Slots, Activity, Counts, Cutoff),
@@ -76,6 +81,10 @@ internal sealed class ApplicationTestScope
         ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow);
         ReconcileStock = new ReconcileStock(
             Medicines, Schedules, Suspensions, Slots, Counts, Ledger, Operations, Uow, Clock);
+
+        ApplyRemote = new ApplyRemoteOperations(
+            SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
+            Suspensions, Activity, Retractions, Ledger, Uow, Clock);
 
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,

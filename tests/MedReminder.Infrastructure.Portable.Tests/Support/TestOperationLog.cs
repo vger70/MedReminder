@@ -10,7 +10,9 @@ namespace MedReminder.Infrastructure.Tests.Support;
 internal static class TestOperationLog
 {
     public static OperationLog For(MedReminderDbContext ctx, TimeProvider? clock = null, SyncSettings? settings = null)
-        => new(new FixedSyncSettingsStore(settings), new SyncOperationRepository(ctx), clock ?? TimeProvider.System);
+        => new(new FixedSyncSettingsStore(settings), new SyncOperationRepository(ctx),
+            new SyncRegisters(new SyncFieldVersionRepository(ctx), new SyncConflictRepository(ctx), clock ?? TimeProvider.System),
+            clock ?? TimeProvider.System);
 
     private sealed class FixedSyncSettingsStore(SyncSettings? settings) : ISyncSettingsStore
     {

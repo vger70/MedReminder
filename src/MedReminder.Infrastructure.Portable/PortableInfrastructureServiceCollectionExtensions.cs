@@ -42,6 +42,8 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<ILedgerCutoffRepository, LedgerCutoffRepository>();
         services.AddScoped<IFactRetractionRepository, FactRetractionRepository>();
         services.AddScoped<ISyncOperationRepository, SyncOperationRepository>();
+        services.AddScoped<ISyncFieldVersionRepository, SyncFieldVersionRepository>();
+        services.AddScoped<ISyncConflictRepository, SyncConflictRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<DatabaseInitializer>();
 

@@ -16,6 +16,9 @@ internal sealed class SyncOperationRepository : ISyncOperationRepository
     public async Task AddAsync(SyncOperation operation, CancellationToken cancellationToken)
         => await _db.SyncOperations.AddAsync(operation, cancellationToken);
 
+    public Task<bool> ExistsAsync(Guid operationId, CancellationToken cancellationToken)
+        => _db.SyncOperations.AnyAsync(o => o.Id == operationId, cancellationToken);
+
     // The device-id tie-break does not matter here: the clock only needs
     // the greatest physical time and counter.
     public async Task<HybridTimestamp?> GetLatestTimestampAsync(CancellationToken cancellationToken)

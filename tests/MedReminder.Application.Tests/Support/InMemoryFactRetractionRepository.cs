@@ -21,4 +21,10 @@ internal sealed class InMemoryFactRetractionRepository : IFactRetractionReposito
         _items.Add(retraction);
         return Task.CompletedTask;
     }
+
+    public Task RemoveAsync(FactRetraction retraction, CancellationToken cancellationToken)
+    {
+        _items.RemoveAll(r => r.Id == retraction.Id);
+        return Task.CompletedTask;
+    }
 }

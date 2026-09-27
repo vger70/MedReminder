@@ -33,6 +33,8 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<MedicineActivityChange> MedicineActivityChanges => Set<MedicineActivityChange>();
     public DbSet<FactRetraction> FactRetractions => Set<FactRetraction>();
     public DbSet<SyncOperation> SyncOperations => Set<SyncOperation>();
+    public DbSet<SyncFieldVersion> SyncFieldVersions => Set<SyncFieldVersion>();
+    public DbSet<SyncConflict> SyncConflicts => Set<SyncConflict>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +53,8 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new MedicineActivityChangeConfiguration());
         modelBuilder.ApplyConfiguration(new FactRetractionConfiguration());
         modelBuilder.ApplyConfiguration(new SyncOperationConfiguration());
+        modelBuilder.ApplyConfiguration(new SyncFieldVersionConfiguration());
+        modelBuilder.ApplyConfiguration(new SyncConflictConfiguration());
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

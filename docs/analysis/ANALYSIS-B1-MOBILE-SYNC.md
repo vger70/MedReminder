@@ -286,8 +286,16 @@ stock off by its quantity (count 40 after a mistaken refill of 28:
 correction -28; retracting the refill would show 12). The count
 itself, when it is the latest, can be retracted. Locally the fact row
 is removed and a tombstone is kept in `FactRetractions`, keyed by fact
-id for Phase 3. How a retraction merges with a count recorded
-concurrently on another device is a Phase 3 question.
+id for Phase 3.
+
+Retraction and a concurrent count (product owner, 2026-09-27): a
+retracted fact never happened, on every device. It is left out of
+every count snapshot too, so a count recorded on another device that
+had included it is re-evaluated without it and the stock equals what
+was counted. Implemented with the count re-evaluation (Phase 3b-2); in
+3b-1 counts keep their stored outcome. When the same fact is retracted
+on two devices, the earliest tombstone (recording instant, then id) is
+kept on every device.
 
 ### 4.3 `LedgerDeriver`
 
@@ -418,6 +426,22 @@ depends on which device runs it.
 Rejected alternative: re-running use-case validation on merge. A
 rejection on one device and acceptance on another would break R2.
 Validation happens where the user acts; merge only applies.
+
+Which writes are conflicts (product owner, 2026-09-27): only concurrent
+ones. The three register operations that can conflict
+(`MedicineFieldChanged`, `ScheduleRowRecorded`, `SlotSetRecorded`)
+carry the version of the register their device held when it wrote
+(`BaseVersion`). A device writes only over what it has seen, and the
+HLC makes everything it has seen older than its write, so of two
+versions the later one did not see the earlier one exactly when its
+base is older (`RegisterMerge`, Domain). The listed register conflicts
+are the versions concurrent with the winner: a pure function of the
+versions, identical on every device that holds them. A later write by a
+device that had seen both clears them. The hints (overlapping
+suspensions, intakes over the schedule, retraction of an edited
+suspension) are raised when an incoming operation meets local state,
+so they are local notices and may differ between devices. Implemented
+by Phase 3b-1.
 
 ### 4.6 What is not synchronized, and why
 
@@ -725,11 +749,11 @@ Idempotent boot patches in `DatabaseInitializer` (`CLAUDE.md` §7):
 | `StockCounts` table | Count anchors. Table in Phase 2b; written from Phase 2c |
 | `MedicationAdministrationSlotSets` table (`EffectiveFrom`, `RecordedAt`, later the recording HLC) and `MedicationAdministrationSlots.SetId` | Dated slot sets (§4.2), including empty sets. Phase 2b |
 | `LedgerCutoff` table (`CutoffDay`, `FrozenAt`) | Cutoff C (§3.5). Phase 2b |
-| `SyncOperations` table | Local outbox and applied-operation ids. Phase 3a: outbox only (HLC, generation, type, schema version, JSON payload, `SegmentSeq` null while pending) |
-| `SyncFieldVersions` table | HLC per `(entity, id, field)` for LWW |
-| `SyncPeers` table | Applied vector per remote device |
-| `SyncConflicts` table | Conflict review list |
-| `SyncTombstones` table | Retractions |
+| `SyncOperations` table | Local outbox and applied-operation ids. Phase 3a: outbox (HLC, generation, type, schema version, JSON payload, `SegmentSeq` null while pending); Phase 3b-1: also the operations applied from other devices |
+| `SyncFieldVersions` table | HLC per `(entity, id, field)` for LWW. Phase 3b-1: every version of every register, with its base version |
+| `SyncPeers` table | Applied vector per remote device. Moved to Phase 3c: the vector counts segments |
+| `SyncConflicts` table | Conflict review list. Phase 3b-1 |
+| `SyncTombstones` table | Retractions. Not created: `FactRetractions` (Phase 2d) already is the tombstone table, keyed by fact id |
 | `NotificationEvents.EpochFactId` column | Dedup key stable across merges (§4.4) |
 
 Export format: `ExportFormat.CurrentSchemaVersion` bump for `Origin`
@@ -1141,8 +1165,9 @@ checklist; no plaintext in the remote folder (inspection test).
 
 | PR | Scope | State |
 |---|---|---|
-| 3a | Action 1: HLC, operation catalogue, `IOperationLog` and the `SyncOperations` outbox, emission from every use case; one write gate for every use case; stale-form diff (§7.4). Operations recorded only when sync is enabled, so no behavior change until 3d | Open |
-| 3b | Action 2: merge and apply (field versions, tombstones, conflicts, peers), re-evaluation of count outcomes, convergence harness on real databases, no transport | — |
+| 3a | Action 1: HLC, operation catalogue, `IOperationLog` and the `SyncOperations` outbox, emission from every use case; one write gate for every use case; stale-form diff (§7.4). Operations recorded only when sync is enabled, so no behavior change until 3d | Merged (#85) |
+| 3b-1 | Action 2: apply of remote operations, register versions and LWW, tombstones, conflict list (§4.5), convergence harness on real databases; counts keep their stored outcome | Open |
+| 3b-2 | Re-evaluation of count outcomes on the snapshot by HLC (facts and register values "as of"), retracted facts left out of every snapshot (§4.2); harness extended to concurrent counts | — |
 | 3c | Actions 3, 4, 7: segment codec, group key, genesis, checkpoints, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md` | — |
 | 3d | Actions 5, 6: `SyncHostedService`, desktop UI, reset flow in import and restore, convergence simulation in CI, two-PC checklist | — |
 
@@ -1482,6 +1507,15 @@ Phase 2 implements the derivation from the prototype and its tests.
   with the fact until Phase 3 (§4.3 rule 3); 2c-2 re-freezes (§13).
   Rules 1b and 2 extended to days carrying `Legacy` consumption after
   the cutoff (§4.3).
+- 2026-09-27 — Phase 3b split into 3b-1 and 3b-2 (§13). Decisions of
+  the product owner: a retracted fact is left out of every count
+  snapshot (§4.2); only concurrent writes are conflicts, detected with
+  a base version carried by the operation (§4.5). Phase 3b-1
+  implemented: `ApplyRemoteOperations`, `SyncRegisters`,
+  `RegisterMerge`, `SyncFieldVersions`, `SyncConflicts`. Deviations
+  from §7.3: `SyncPeers` moves to 3c, `FactRetractions` serves as the
+  tombstone table. The fact loader breaks recording-instant ties by id,
+  so devices derive the same ledger whatever order rows are read in.
 - 2026-09-27 — Phase 2 released in v2.7.0. D7 decided (§4.5 list).
   Phase 3 split into 3a–3d (§13). Phase 3a implemented: HLC, operation
   catalogue and outbox, emission from every use case, recorded only
