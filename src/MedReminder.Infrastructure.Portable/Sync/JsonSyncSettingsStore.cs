@@ -81,7 +81,8 @@ internal sealed class JsonSyncSettingsStore : ISyncSettingsStore
         {
             var settings = JsonSerializer.Deserialize<SyncSettings>(File.ReadAllText(_path), Options);
             if (settings is null || settings.GroupId == Guid.Empty || settings.DeviceId == Guid.Empty
-                || settings.Generation < 1)
+                || settings.Generation < 1
+                || (settings.Provider is not null && string.IsNullOrEmpty(settings.AccountId)))
             {
                 throw new InvalidDataException("Incomplete sync settings.");
             }

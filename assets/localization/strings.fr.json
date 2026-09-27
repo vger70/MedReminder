@@ -871,5 +871,17 @@
   "Ui.SyncDialog.Passphrase.Repeat": "Répéter la phrase secrète",
   "Ui.SyncDialog.Passphrase.Error.Name": "Saisissez un nom pour cet appareil.",
   "Ui.SyncDialog.Passphrase.Error.Short": "La phrase secrète doit comporter au moins {0} caractères.",
+  "Ui.SyncDialog.SignInAgain": "Se reconnecter à OneDrive",
+  "Ui.SyncDialog.Status.OneDrive": "Stockage : OneDrive ({0})",
+  "Ui.SyncDialog.Status.OneDriveSignedOut": "Stockage : OneDrive (non connecté sur ce PC)",
+  "Ui.SyncDialog.Status.NeedsSignIn": "La session OneDrive a expiré. Utilisez « Se reconnecter à OneDrive » ; les modifications faites entre-temps sont envoyées ensuite.",
+  "Ui.SyncDialog.Target.Heading": "Où conserver les données de synchronisation ?",
+  "Ui.SyncDialog.Target.OneDrive": "OneDrive",
+  "Ui.SyncDialog.Target.OneDriveNote": "Connectez-vous avec un compte Microsoft. MedReminder n'utilise que son propre dossier d'application dans OneDrive, et les données y sont chiffrées.",
+  "Ui.SyncDialog.Target.Folder": "Un dossier partagé",
+  "Ui.SyncDialog.Target.FolderNote": "Un dossier synchronisé entre les PC par un autre programme (par exemple Dropbox ou Google Drive), ou un partage réseau.",
+  "Ui.SyncDialog.SignIn.Failed": "La connexion à OneDrive n'a pas abouti : {0}",
+  "Ui.SyncDialog.SignIn.OtherAccount": "Il s'agit d'un autre compte Microsoft. Connectez-vous avec le compte utilisé lors de l'activation de la synchronisation.",
+  "Ui.SyncDialog.Join.NoGroupCloud": "Aucun groupe de synchronisation n'a été trouvé dans ce compte OneDrive.",
   "Ui.SyncDialog.Passphrase.Error.Mismatch": "Les deux phrases secrètes ne correspondent pas."
 }

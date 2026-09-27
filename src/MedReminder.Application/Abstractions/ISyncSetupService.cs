@@ -7,15 +7,15 @@ namespace MedReminder.Application.Abstractions;
 // caller restarts the application afterwards.
 public interface ISyncSetupService
 {
-    // Groups found in a sync folder.
-    Task<IReadOnlyList<Guid>> ListGroupsAsync(string folder, CancellationToken cancellationToken);
+    // Groups found in a sync folder or cloud account (Phase 4a).
+    Task<IReadOnlyList<Guid>> ListGroupsAsync(SyncTarget target, CancellationToken cancellationToken);
 
     // Enables sync with a new group created from this profile.
-    Task CreateAsync(string folder, char[] passphrase, string deviceName, CancellationToken cancellationToken);
+    Task CreateAsync(SyncTarget target, char[] passphrase, string deviceName, CancellationToken cancellationToken);
 
     // Joins a group: the profile's data is replaced by the group's.
     // Throws CryptographicException for a wrong passphrase.
-    Task JoinAsync(string folder, Guid groupId, char[] passphrase, string deviceName,
+    Task JoinAsync(SyncTarget target, Guid groupId, char[] passphrase, string deviceName,
         CancellationToken cancellationToken);
 
     // Rebuilds the profile from the group, with the stored key, after a

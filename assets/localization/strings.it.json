@@ -872,5 +872,17 @@
   "Ui.SyncDialog.Passphrase.Repeat": "Ripeti passphrase",
   "Ui.SyncDialog.Passphrase.Error.Name": "Inserisci un nome per questo dispositivo.",
   "Ui.SyncDialog.Passphrase.Error.Short": "La passphrase deve avere almeno {0} caratteri.",
+  "Ui.SyncDialog.SignInAgain": "Accedi di nuovo a OneDrive",
+  "Ui.SyncDialog.Status.OneDrive": "Archivio: OneDrive ({0})",
+  "Ui.SyncDialog.Status.OneDriveSignedOut": "Archivio: OneDrive (accesso non effettuato su questo PC)",
+  "Ui.SyncDialog.Status.NeedsSignIn": "La sessione OneDrive è scaduta. Usa \"Accedi di nuovo a OneDrive\"; le modifiche fatte nel frattempo vengono inviate dopo.",
+  "Ui.SyncDialog.Target.Heading": "Dove conservare i dati di sincronizzazione?",
+  "Ui.SyncDialog.Target.OneDrive": "OneDrive",
+  "Ui.SyncDialog.Target.OneDriveNote": "Accedi con un account Microsoft. MedReminder usa solo la propria cartella app in OneDrive, e i dati lì sono cifrati.",
+  "Ui.SyncDialog.Target.Folder": "Una cartella condivisa",
+  "Ui.SyncDialog.Target.FolderNote": "Una cartella tenuta sincronizzata tra i PC da un altro programma (per esempio Dropbox o Google Drive), o una cartella di rete.",
+  "Ui.SyncDialog.SignIn.Failed": "L'accesso a OneDrive non è stato completato: {0}",
+  "Ui.SyncDialog.SignIn.OtherAccount": "Questo è un altro account Microsoft. Accedi con l'account usato quando la sincronizzazione è stata attivata.",
+  "Ui.SyncDialog.Join.NoGroupCloud": "Nessun gruppo di sincronizzazione trovato in questo account OneDrive.",
   "Ui.SyncDialog.Passphrase.Error.Mismatch": "Le due passphrase non coincidono."
 }

@@ -54,7 +54,7 @@ public sealed class FolderSyncTests : IDisposable
             "Enalapril", "tablet", 1m, 2, new DateOnly(2026, 9, 1), 7, NotificationChannels.Windows,
             Notes: SecretNote, InitialQuantity: 60m), CancellationToken.None));
         await device.RunAsync(sp => sp.GetRequiredService<CreateSyncGroup>().ExecuteAsync(
-            new LocalFolderSyncTransport(Folder), Passphrase.ToCharArray(), Folder, CancellationToken.None,
+            new LocalFolderSyncTransport(Folder), Passphrase.ToCharArray(), SyncTarget.ForFolder(Folder), CancellationToken.None,
             SyncFileFormatTests.FastKdf));
         return device;
     }
@@ -65,7 +65,7 @@ public sealed class FolderSyncTests : IDisposable
         var path = Path.Combine(_root, $"{name}.db");
         var groupId = via.Settings.Load()!.GroupId;
         var joined = await via.RunAsync(sp => sp.GetRequiredService<JoinSyncGroup>().ExecuteAsync(
-            new LocalFolderSyncTransport(Folder), groupId, Passphrase.ToCharArray(), path, Folder, CancellationToken.None));
+            new LocalFolderSyncTransport(Folder), groupId, Passphrase.ToCharArray(), path, SyncTarget.ForFolder(Folder), CancellationToken.None));
         var device = Track(new SyncDevice(name, path, via.Clock.GetUtcNow(), joined.Settings, joined.Key,
             checkpointEvery, transport));
         await device.InitializeAsync();
@@ -137,7 +137,7 @@ public sealed class FolderSyncTests : IDisposable
 
         await FluentActions.Awaiting(() => a.RunAsync(sp => sp.GetRequiredService<JoinSyncGroup>().ExecuteAsync(
                 new LocalFolderSyncTransport(Folder), a.Settings.Load()!.GroupId, "wrong".ToCharArray(),
-                Path.Combine(_root, "X.db"), Folder, CancellationToken.None)))
+                Path.Combine(_root, "X.db"), SyncTarget.ForFolder(Folder), CancellationToken.None)))
             .Should().ThrowAsync<CryptographicException>();
     }
 

@@ -46,7 +46,7 @@ public sealed class CreateSyncGroup
     }
 
     public async Task<SyncSettings> ExecuteAsync(
-        ISyncTransport transport, char[] passphrase, string? folder, CancellationToken cancellationToken,
+        ISyncTransport transport, char[] passphrase, SyncTarget target, CancellationToken cancellationToken,
         Argon2Params? kdf = null, string? deviceName = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
@@ -56,7 +56,8 @@ public sealed class CreateSyncGroup
         await _genesis.RecordAsync(cancellationToken);
         return await WriteGate.RunExclusiveAsync(async ct =>
         {
-            var settings = new SyncSettings(Guid.NewGuid(), Guid.NewGuid(), 1, 1, folder, deviceName);
+            var settings = new SyncSettings(Guid.NewGuid(), Guid.NewGuid(), 1, 1, target.Folder, deviceName,
+                Provider: target.Provider, AccountId: target.AccountId);
             var key = RandomNumberGenerator.GetBytes(SyncKeyWrap.KeySize);
             try
             {
@@ -132,7 +133,7 @@ public sealed class JoinSyncGroup
 
     // Throws CryptographicException for a wrong passphrase.
     public async Task<SyncJoinResult> ExecuteAsync(ISyncTransport transport, Guid groupId, char[] passphrase,
-        string targetDatabasePath, string? folder, CancellationToken cancellationToken, string? deviceName = null)
+        string targetDatabasePath, SyncTarget target, CancellationToken cancellationToken, string? deviceName = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
         ArgumentNullException.ThrowIfNull(passphrase);
@@ -148,7 +149,8 @@ public sealed class JoinSyncGroup
         var key = wrap.Unwrap(_cipher, passphrase);
 
         var generation = await SyncEngine.LatestGenerationAsync(transport, groupId, cancellationToken);
-        var settings = new SyncSettings(groupId, Guid.NewGuid(), generation, keyVersion, folder, deviceName);
+        var settings = new SyncSettings(groupId, Guid.NewGuid(), generation, keyVersion, target.Folder, deviceName,
+            Provider: target.Provider, AccountId: target.AccountId);
         await BuildAsync(transport, settings, key, targetDatabasePath, cancellationToken);
         return new SyncJoinResult(settings, key);
     }

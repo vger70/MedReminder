@@ -14,6 +14,8 @@ namespace MedReminder.Application.Abstractions;
 // device record); ResetPending is set when an import or a restore
 // replaced the database, and the next sync run starts a new generation
 // before anything else (§5.7).
+// Phase 4a: Provider and AccountId name a cloud account reached through
+// the provider API; both null for a folder (Folder set).
 public sealed record SyncSettings(
     Guid GroupId,
     Guid DeviceId,
@@ -21,7 +23,9 @@ public sealed record SyncSettings(
     int KeyVersion = 1,
     string? Folder = null,
     string? DeviceName = null,
-    bool ResetPending = false);
+    bool ResetPending = false,
+    CloudProvider? Provider = null,
+    string? AccountId = null);
 
 public interface ISyncSettingsStore
 {

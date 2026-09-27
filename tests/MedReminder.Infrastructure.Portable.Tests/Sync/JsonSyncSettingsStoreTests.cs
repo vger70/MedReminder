@@ -29,6 +29,42 @@ public sealed class JsonSyncSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void A_OneDrive_target_is_stored_with_the_provider_name()
+    {
+        var settings = new SyncSettings(Guid.NewGuid(), Guid.NewGuid(), 1, DeviceName: "PC",
+            Provider: CloudProvider.OneDrive, AccountId: "home-account-id");
+        new JsonSyncSettingsStore(PathName).Save(settings);
+
+        File.ReadAllText(PathName).Should().Contain("\"Provider\": \"OneDrive\"");
+        new JsonSyncSettingsStore(PathName).Load().Should().Be(settings);
+    }
+
+    [Fact]
+    public void A_Phase_3_file_reads_as_a_folder_target()
+    {
+        var group = Guid.NewGuid();
+        var device = Guid.NewGuid();
+        File.WriteAllText(PathName, $$"""
+            { "GroupId": "{{group}}", "DeviceId": "{{device}}", "Generation": 1, "KeyVersion": 1,
+              "Folder": "C:\\Sync", "DeviceName": "PC", "ResetPending": false }
+            """);
+
+        var loaded = new JsonSyncSettingsStore(PathName).Load()!;
+        SyncTarget.Of(loaded).Should().Be(SyncTarget.ForFolder("C:\\Sync"));
+    }
+
+    [Fact]
+    public void A_cloud_target_without_an_account_is_unreadable()
+    {
+        File.WriteAllText(PathName, $$"""
+            { "GroupId": "{{Guid.NewGuid()}}", "DeviceId": "{{Guid.NewGuid()}}", "Generation": 1, "Provider": "OneDrive" }
+            """);
+
+        FluentActions.Invoking(() => new JsonSyncSettingsStore(PathName).Load())
+            .Should().Throw<InvalidDataException>();
+    }
+
+    [Fact]
     public void Saving_null_disables_sync()
     {
         var store = new JsonSyncSettingsStore(PathName);

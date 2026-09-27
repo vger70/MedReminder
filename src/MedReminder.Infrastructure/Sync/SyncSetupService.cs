@@ -19,6 +19,7 @@ internal sealed class SyncSetupService : ISyncSetupService
     private readonly JoinSyncGroup _join;
     private readonly ISyncSettingsStore _settings;
     private readonly ISyncKeyStore _keys;
+    private readonly ISyncTransportFactory _transports;
     private readonly TimeProvider _clock;
     private readonly ILogger<SyncSetupService> _log;
 
@@ -29,6 +30,7 @@ internal sealed class SyncSetupService : ISyncSetupService
         JoinSyncGroup join,
         ISyncSettingsStore settings,
         ISyncKeyStore keys,
+        ISyncTransportFactory transports,
         TimeProvider clock,
         ILogger<SyncSetupService> log)
     {
@@ -38,29 +40,30 @@ internal sealed class SyncSetupService : ISyncSetupService
         _join = join;
         _settings = settings;
         _keys = keys;
+        _transports = transports;
         _clock = clock;
         _log = log;
     }
 
-    public Task<IReadOnlyList<Guid>> ListGroupsAsync(string folder, CancellationToken cancellationToken)
-        => JoinSyncGroup.ListGroupsAsync(new LocalFolderSyncTransport(folder), cancellationToken);
+    public Task<IReadOnlyList<Guid>> ListGroupsAsync(SyncTarget target, CancellationToken cancellationToken)
+        => JoinSyncGroup.ListGroupsAsync(_transports.Create(target), cancellationToken);
 
-    public async Task CreateAsync(string folder, char[] passphrase, string deviceName, CancellationToken cancellationToken)
+    public async Task CreateAsync(SyncTarget target, char[] passphrase, string deviceName, CancellationToken cancellationToken)
     {
-        var settings = await _create.ExecuteAsync(new LocalFolderSyncTransport(folder), passphrase, folder,
+        var settings = await _create.ExecuteAsync(_transports.Create(target), passphrase, target,
             cancellationToken, deviceName: deviceName);
         _log.LogInformation("Sync enabled for profile {ProfileId} with group {GroupId}.", _profile.Id, settings.GroupId);
     }
 
-    public async Task JoinAsync(string folder, Guid groupId, char[] passphrase, string deviceName,
+    public async Task JoinAsync(SyncTarget target, Guid groupId, char[] passphrase, string deviceName,
         CancellationToken cancellationToken)
     {
         if (_settings.Load() is not null) throw new InvalidOperationException("Sync is already enabled.");
         var temp = TempPath();
         try
         {
-            var result = await _join.ExecuteAsync(new LocalFolderSyncTransport(folder), groupId, passphrase, temp,
-                folder, cancellationToken, deviceName);
+            var result = await _join.ExecuteAsync(_transports.Create(target), groupId, passphrase, temp,
+                target, cancellationToken, deviceName);
             try
             {
                 ProfileDatabaseSwap.Replace(_db, _profile.DatabasePath, temp, _clock);
@@ -82,13 +85,12 @@ internal sealed class SyncSetupService : ISyncSetupService
     public async Task RebuildAsync(CancellationToken cancellationToken)
     {
         var current = _settings.Load() ?? throw new InvalidOperationException("Sync is not enabled for this profile.");
-        var folder = current.Folder ?? throw new InvalidOperationException("No sync folder is configured.");
         var key = _keys.Load(current.GroupId, current.KeyVersion)
             ?? throw new InvalidOperationException("The group key is not stored on this device.");
         var temp = TempPath();
         try
         {
-            var rebuilt = await _join.RejoinAsync(new LocalFolderSyncTransport(folder), current, key, temp,
+            var rebuilt = await _join.RejoinAsync(_transports.Create(SyncTarget.Of(current)), current, key, temp,
                 cancellationToken);
             ProfileDatabaseSwap.Replace(_db, _profile.DatabasePath, temp, _clock);
             _settings.Save(rebuilt with { ResetPending = false });

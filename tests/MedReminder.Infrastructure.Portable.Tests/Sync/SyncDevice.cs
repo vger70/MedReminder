@@ -18,7 +18,8 @@ internal sealed class SyncDevice : IDisposable
     private readonly ServiceProvider _provider;
 
     public SyncDevice(string name, string databasePath, DateTimeOffset now, SyncSettings? settings,
-        byte[]? key = null, int checkpointEvery = 5000, Func<ISyncTransport, ISyncTransport>? transport = null)
+        byte[]? key = null, int checkpointEvery = 5000, Func<ISyncTransport, ISyncTransport>? transport = null,
+        Func<TimeProvider, ISyncTransport>? remote = null)
     {
         Name = name;
         DatabasePath = databasePath;
@@ -37,6 +38,11 @@ internal sealed class SyncDevice : IDisposable
         {
             services.AddScoped(sp => transport(new LocalFolderSyncTransport(
                 sp.GetRequiredService<ISyncSettingsStore>().Load()!.Folder!)));
+        }
+        if (remote is not null)
+        {
+            // A provider transport (Phase 4a), one per device like the app's.
+            services.AddSingleton(remote(Clock));
         }
         services.AddMedReminderPortableInfrastructure(databasePath);
         services.AddMedReminderApplication();

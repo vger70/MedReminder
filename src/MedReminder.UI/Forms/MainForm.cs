@@ -751,6 +751,7 @@ internal sealed class MainForm : MedReminderFormBase
                 sp.GetRequiredService<SyncHostedService>(),
                 sp.GetRequiredService<SyncStatus>(),
                 sp.GetRequiredService<ISyncSettingsStore>(),
+                sp.GetRequiredService<ICloudAccountService>(),
                 _currentProfile,
                 _loc,
                 _restarter);

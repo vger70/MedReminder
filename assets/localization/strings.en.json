@@ -876,5 +876,17 @@
   "Ui.SyncDialog.Passphrase.Repeat": "Repeat passphrase",
   "Ui.SyncDialog.Passphrase.Error.Name": "Enter a name for this device.",
   "Ui.SyncDialog.Passphrase.Error.Short": "The passphrase must have at least {0} characters.",
+  "Ui.SyncDialog.SignInAgain": "Sign in to OneDrive again",
+  "Ui.SyncDialog.Status.OneDrive": "Storage: OneDrive ({0})",
+  "Ui.SyncDialog.Status.OneDriveSignedOut": "Storage: OneDrive (not signed in on this PC)",
+  "Ui.SyncDialog.Status.NeedsSignIn": "The OneDrive session has ended. Use \"Sign in to OneDrive again\"; changes made meanwhile are sent afterwards.",
+  "Ui.SyncDialog.Target.Heading": "Where should the sync data be kept?",
+  "Ui.SyncDialog.Target.OneDrive": "OneDrive",
+  "Ui.SyncDialog.Target.OneDriveNote": "Sign in with a Microsoft account. MedReminder uses only its own app folder in OneDrive, and the data there is encrypted.",
+  "Ui.SyncDialog.Target.Folder": "A shared folder",
+  "Ui.SyncDialog.Target.FolderNote": "A folder kept in sync between the PCs by another program (for example Dropbox or Google Drive), or a network share.",
+  "Ui.SyncDialog.SignIn.Failed": "The sign-in to OneDrive did not complete: {0}",
+  "Ui.SyncDialog.SignIn.OtherAccount": "This is a different Microsoft account. Sign in with the account used when sync was enabled.",
+  "Ui.SyncDialog.Join.NoGroupCloud": "No sync group was found in this OneDrive account.",
   "Ui.SyncDialog.Passphrase.Error.Mismatch": "The two passphrases do not match."
 }

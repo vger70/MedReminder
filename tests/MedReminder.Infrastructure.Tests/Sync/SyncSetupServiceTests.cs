@@ -43,13 +43,13 @@ public sealed class SyncSetupServiceTests : IDisposable
     {
         var a = await CreateProfileAsync("Enalapril");
         await Run(a, sp => sp.GetRequiredService<ISyncSetupService>()
-            .CreateAsync(_folder, Passphrase.ToCharArray(), "PC A", CancellationToken.None));
+            .CreateAsync(SyncTarget.ForFolder(_folder), Passphrase.ToCharArray(), "PC A", CancellationToken.None));
 
         var b = await CreateProfileAsync("Local only");
-        var groups = await Run(b, sp => sp.GetRequiredService<ISyncSetupService>().ListGroupsAsync(_folder, CancellationToken.None));
+        var groups = await Run(b, sp => sp.GetRequiredService<ISyncSetupService>().ListGroupsAsync(SyncTarget.ForFolder(_folder), CancellationToken.None));
         groups.Should().ContainSingle();
         await Run(b, sp => sp.GetRequiredService<ISyncSetupService>()
-            .JoinAsync(_folder, groups[0], Passphrase.ToCharArray(), "PC B", CancellationToken.None));
+            .JoinAsync(SyncTarget.ForFolder(_folder), groups[0], Passphrase.ToCharArray(), "PC B", CancellationToken.None));
 
         var medicines = await Run(b, sp => sp.GetRequiredService<IMedicineRepository>().ListAllAsync(CancellationToken.None));
         medicines.Select(m => m.Name).Should().Equal("Enalapril");
