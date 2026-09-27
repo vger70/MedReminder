@@ -30,10 +30,40 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #89 — B.1 Phase 3d: desktop sync service and Tools → Sync… window
+
+Link: [vger70/MedReminder#89](https://github.com/vger70/MedReminder/pull/89)
+Branch: `claude/b1-phase3d-desktop-sync`
+
+### Added
+
+- Tools → Sync…: enable sync, join a group, sync now, devices list,
+  conflict review (restore a lost medicine field, dismiss), rebuild and
+  disable. Configuration is for the administrator only.
+- `SyncHostedService`: sync at start, every 5 minutes
+  (`Sync:IntervalMinutes`) and shortly after local changes.
+- Import and restore on a synced profile warn, publish pending changes
+  and start a new sync generation.
+- User guide section "Sync between PCs" (five languages) and
+  `docs/SYNC-TWO-PC-CHECKLIST.md`.
+
+### Changed
+
+- The database swap of the import is shared with the sync join and
+  rebuild (`ProfileDatabaseSwap`).
+
+### Docs
+
+- `ANALYSIS-B1-MOBILE-SYNC.md` §13, §20; `ANALYSIS.md` §6 and sync.
+
+---
+
 ## PR #88 — B.1 Phase 3c: encrypted segments, group key, checkpoints and a folder transport
 
 Link: [vger70/MedReminder#88](https://github.com/vger70/MedReminder/pull/88)
 Branch: `claude/b1-phase3c-segments-transport`
+
+**Status:** merged (2026-09-27)
 
 ### Added
 
