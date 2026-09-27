@@ -200,6 +200,12 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   ending before run-out), and no successful `NotificationEvent` on the
   current `StockEpoch`.
 - **`SuspensionState`** — whether a date falls in a suspension.
+- **`LedgerDeriver`** (`Domain/Ledger`, B.1 Phase 2c-1) — derives a
+  medicine's ledger from its facts (stock entries, intakes, counts,
+  schedule, slots, suspensions, activity) after the ledger cutoff.
+  Not used by the application yet; its parity with the use cases is
+  tested in `tests/MedReminder.Application.Tests/Ledger`
+  ([`analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md) §4.3).
 
 ### 4.4 Invariants
 

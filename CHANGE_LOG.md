@@ -30,10 +30,37 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #82 — B.1 Phase 2c-1: LedgerDeriver in the Domain, with parity against the use cases
+
+Link: [vger70/MedReminder#82](https://github.com/vger70/MedReminder/pull/82)
+Branch: `claude/b1-phase2c1-ledger-deriver`
+
+### Added
+
+- `MedReminder.Domain/Ledger`: `LedgerDeriver` derives a medicine's
+  stock ledger and `StockEpoch` from its facts; `EvaluateCount` applies
+  the `ReconcileStock` formula to a stock count. Not called by the
+  application yet: no user-visible change
+  (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` §4.3, §13).
+
+### Build
+
+- Parity tests (`tests/MedReminder.Application.Tests/Ledger`): the
+  spike S9 harness, ported to the production deriver, runs random
+  scenarios on the real use cases and compares stock and epoch after
+  every action. The documented D6 / D15 differences are pinned.
+
+### Docs
+
+- B.1 analysis: 2c split, count outcome stored with the fact until
+  Phase 3, re-freeze in 2c-2, rules 1b and 2 extended for mid-day
+  patches. `ANALYSIS.md` §4.3.
+
 ## PR #81 — B.1 Phase 2b: ledger schema (movement origin, slot sets, stock counts, cutoff)
 
 Link: [vger70/MedReminder#81](https://github.com/vger70/MedReminder/pull/81)
 Branch: `claude/b1-phase2b-schema`
+**Status:** merged (2026-09-27)
 
 ### Changed
 
