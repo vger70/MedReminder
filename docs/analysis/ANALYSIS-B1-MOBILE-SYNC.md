@@ -1035,7 +1035,7 @@ retraction UI only if D8 = yes.
 
 **Effort**: 12–18 days `[INFERRED]`.
 
-**Split into four pull requests** (product owner, 2026-09-27):
+**Split into pull requests** (product owner, 2026-09-27):
 
 | PR | Scope | State |
 |---|---|---|
