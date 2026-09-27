@@ -10,6 +10,21 @@ namespace MedReminder.Application.Sync;
 // writing the same kind of fact emits the same operation.
 internal static class Operations
 {
+    // SyncOperation.EntityId of an operation.
+    public static Guid EntityOf(SyncOperationBody body) => body switch
+    {
+        MedicineActivityChanged a => a.ChangeId,
+        ScheduleRowRecorded s => s.RowId,
+        SlotSetRecorded s => s.SetId,
+        StockEntryRecorded e => e.MovementId,
+        IntakeRecorded i => i.IntakeId,
+        StockCountRecorded c => c.CountId,
+        SuspensionRecorded s => s.SuspensionId,
+        SuspensionEndChanged s => s.SuspensionId,
+        FactRetracted r => r.RetractionId,
+        _ => body.MedicineId,
+    };
+
     public static MedicineCreated Created(Medicine medicine)
         => new(medicine.Id, medicine.StartDate, medicine.CreatedAt, MedicineFieldCodec.Snapshot(medicine));
 

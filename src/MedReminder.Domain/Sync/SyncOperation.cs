@@ -28,6 +28,12 @@ public sealed class SyncOperation
 
     public required Guid MedicineId { get; init; }
 
+    // The row the operation creates or writes (Phase 3b-2): the fact id,
+    // the medicine for medicine-level operations, the suspension for an
+    // end date. The HLC of a fact is that of the earliest operation with
+    // its id, which is the one that recorded it.
+    public Guid? EntityId { get; init; }
+
     public required string Payload { get; init; }
 
     // Sequence number of the segment that published the operation; null

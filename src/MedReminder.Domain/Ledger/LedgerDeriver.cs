@@ -129,6 +129,27 @@ public static class LedgerDeriver
             start, scheduled, correction, materializes, advances, notes);
     }
 
+    // Evaluates a recorded count again on `snapshot` (B.1 Phase 3b-2,
+    // docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.3 rule 3): the facts
+    // recorded before it by HLC, as the merged devices know them now.
+    // Unlike EvaluateCount it never rejects the stored inputs: a merge
+    // can leave less due on the count day than the user marked as taken
+    // (an intake from another device already booked it), and then only
+    // what is still due counts as taken.
+    public static StockCountAnchor ReevaluateCount(LedgerFacts snapshot, StockCountAnchor count, TimeZoneInfo zone)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(count);
+        ArgumentNullException.ThrowIfNull(zone);
+
+        var scheduled = CountDayScheduled(new FactView(snapshot, zone), count.CountDay, snapshot.Counts);
+        var evaluated = EvaluateCount(
+            snapshot, count.Id, count.CountDay, count.RecordedAt, count.CountedQuantity,
+            Math.Min(count.TakenToday, scheduled), count.ThresholdAtCount, zone, count.Notes);
+        // The stored input is kept: it is what the user entered.
+        return evaluated with { TakenToday = count.TakenToday };
+    }
+
     // Quantity still due on `day` that a count on that day can mark as
     // taken: zero when the day is inactive, has an intake, is already
     // booked by a frozen row or by an earlier count.

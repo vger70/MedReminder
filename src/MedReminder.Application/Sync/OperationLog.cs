@@ -66,6 +66,7 @@ public sealed class OperationLog : IOperationLog
                 Type = type,
                 SchemaVersion = OperationCodec.CurrentSchemaVersion,
                 MedicineId = body.MedicineId,
+                EntityId = Operations.EntityOf(body),
                 Payload = payload,
             }, cancellationToken);
             await _registers.RecordAsync(body.MedicineId, body, timestamp, cancellationToken);

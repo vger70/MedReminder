@@ -36,4 +36,13 @@ internal sealed class SyncOperationRepository : ISyncOperationRepository
         var rows = await _db.SyncOperations.AsNoTracking().ToListAsync(cancellationToken);
         return [.. rows.OrderBy(o => o.Timestamp)];
     }
+
+    public async Task<IReadOnlyList<SyncOperation>> ListForMedicineAsync(
+        Guid medicineId, CancellationToken cancellationToken)
+    {
+        var rows = await _db.SyncOperations.AsNoTracking()
+            .Where(o => o.MedicineId == medicineId)
+            .ToListAsync(cancellationToken);
+        return [.. rows.OrderBy(o => o.Timestamp)];
+    }
 }

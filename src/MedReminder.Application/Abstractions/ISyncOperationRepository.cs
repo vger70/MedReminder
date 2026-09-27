@@ -21,4 +21,7 @@ public interface ISyncOperationRepository
 
     // In HLC order.
     Task<IReadOnlyList<SyncOperation>> ListAllAsync(CancellationToken cancellationToken);
+
+    // The operations of one medicine, in HLC order.
+    Task<IReadOnlyList<SyncOperation>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken);
 }

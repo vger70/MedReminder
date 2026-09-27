@@ -69,7 +69,8 @@ public sealed record LedgerIntake(
 public sealed record LedgerSlotSet(
     DateOnly EffectiveFrom,
     DateTimeOffset RecordedAt,
-    IReadOnlyList<MedicationAdministrationSlot> Slots);
+    IReadOnlyList<MedicationAdministrationSlot> Slots,
+    Guid Id = default);
 
 // "From Day on the medicine is active / inactive", recorded at
 // RecordedAt. Among the changes with Day <= d, the latest recorded
@@ -77,7 +78,8 @@ public sealed record LedgerSlotSet(
 public sealed record LedgerActivity(
     DateOnly Day,
     bool Active,
-    DateTimeOffset RecordedAt);
+    DateTimeOffset RecordedAt,
+    Guid Id = default);
 
 // A stock count and its outcome, evaluated on the facts recorded
 // before it (§4.3 rule 3). The outcome is stored with the fact on a

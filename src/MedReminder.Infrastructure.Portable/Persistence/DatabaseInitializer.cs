@@ -176,6 +176,13 @@ public sealed class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_SegmentSeq""
                 ON ""SyncOperations"" (""SegmentSeq"");", cancellationToken);
 
+        // B.1 Phase 3b-2: the row an operation writes, for the HLC of
+        // facts, and the per-medicine lookup of the count re-evaluation.
+        await AddColumnIfMissingAsync("SyncOperations", "EntityId", "TEXT NULL", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_MedicineId""
+                ON ""SyncOperations"" (""MedicineId"");", cancellationToken);
+
         // B.1 Phase 3b: register versions and the conflict list.
         await ExecuteRawSqlAsync(@"
             CREATE TABLE IF NOT EXISTS ""SyncFieldVersions"" (
@@ -228,6 +235,7 @@ public sealed class DatabaseInitializer
             ""Type"" TEXT NOT NULL,
             ""SchemaVersion"" INTEGER NOT NULL,
             ""MedicineId"" TEXT NOT NULL,
+            ""EntityId"" TEXT NULL,
             ""Payload"" TEXT NOT NULL,
             ""SegmentSeq"" INTEGER NULL
         );";

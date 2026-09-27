@@ -53,6 +53,7 @@ internal sealed class ApplicationTestScope
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
     public ApplyRemoteOperations ApplyRemote { get; }
+    public SyncGenesis Genesis { get; }
 
     public ApplicationTestScope(DateTimeOffset? now = null)
     {
@@ -62,7 +63,8 @@ internal sealed class ApplicationTestScope
         Operations = new OperationLog(SyncSettingsStore, SyncOperations, Registers, Clock);
 
         Ledger = new LedgerSynchronizer(
-            new LedgerFactsLoader(Stock, Intakes, Schedules, Suspensions, Slots, Activity, Counts, Cutoff),
+            new LedgerFactsLoader(Stock, Intakes, Schedules, Suspensions, Slots, Activity, Counts, Cutoff,
+                new CountReevaluation(SyncSettingsStore, SyncOperations, SyncVersions, Clock)),
             Stock, Medicines, Notifications, Clock);
         FactHistory = new FactHistoryQuery(Medicines, Stock, Intakes, Counts, Suspensions, Cutoff, Clock);
         RetractFact = new RetractFact(
@@ -82,6 +84,7 @@ internal sealed class ApplicationTestScope
         ReconcileStock = new ReconcileStock(
             Medicines, Schedules, Suspensions, Slots, Counts, Ledger, Operations, Uow, Clock);
 
+        Genesis = new SyncGenesis(Medicines, Suspensions, SyncVersions, Uow);
         ApplyRemote = new ApplyRemoteOperations(
             SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
             Suspensions, Activity, Retractions, Ledger, Uow, Clock);

@@ -161,6 +161,7 @@ public sealed class ApplyRemoteOperations
                 Type = operation.Type,
                 SchemaVersion = operation.SchemaVersion,
                 MedicineId = operation.MedicineId,
+                EntityId = Operations.EntityOf(body),
                 Payload = operation.Payload,
             }, cancellationToken);
             if (_medicineCache.TryGetValue(body.MedicineId, out var changed))
