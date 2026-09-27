@@ -15,8 +15,12 @@ namespace MedReminder.Application.UseCases;
 //                    not touching them in this request).
 //   empty list     → clear the slots: the medicine goes back to the
 //                    legacy dose × frequency model.
-//   non-empty list → atomic replacement (delete + insert) of the
-//                    current slots.
+//   non-empty list → replace the current slots.
+// Both non-null cases record a new slot set, effective from today, that
+// becomes the current one; earlier sets stay as history (B.1 Phase 2b,
+// ANALYSIS-B1-MOBILE-SYNC.md §4.2). The set is recorded even when the
+// slots did not change, as the former delete + insert did: the new slot
+// ids are the dose-reminder dedup keys.
 // Catalogue linkage semantics (M2, ANALYSIS-DRUG-CATALOGUE.md §2.5):
 //   null       → do not touch the existing linkage.
 //   non-null   → replace the linkage with the given values. Pass a
@@ -101,30 +105,18 @@ public sealed class UpdateMedicine
 
         if (cmd.AdministrationSlots is not null)
         {
-            await _slots.DeleteForMedicineAsync(medicine.Id, cancellationToken);
-            if (cmd.AdministrationSlots.Count > 0)
+            var now = medicine.UpdatedAt;
+            var set = new MedicationAdministrationSlotSet
             {
-                await _slots.AddRangeAsync(BuildSlots(medicine.Id, cmd.AdministrationSlots), cancellationToken);
-            }
+                MedicineId = medicine.Id,
+                EffectiveFrom = DateOnly.FromDateTime(
+                    TimeZoneInfo.ConvertTime(now, _clock.LocalTimeZone).DateTime),
+                RecordedAt = now,
+            };
+            await _slots.AddSetAsync(
+                set, AdministrationSlotSetBuilder.BuildSlots(set, cmd.AdministrationSlots), cancellationToken);
         }
 
         await _uow.SaveChangesAsync(cancellationToken);
-    }
-
-    private static IEnumerable<MedicationAdministrationSlot> BuildSlots(
-        Guid medicineId, IReadOnlyList<AdministrationSlotInput> inputs)
-    {
-        for (var i = 0; i < inputs.Count; i++)
-        {
-            var input = inputs[i];
-            yield return new MedicationAdministrationSlot
-            {
-                MedicineId = medicineId,
-                Dose = input.Dose,
-                Time = input.Time,
-                TimingLabel = string.IsNullOrWhiteSpace(input.TimingLabel) ? null : input.TimingLabel.Trim(),
-                Order = i,
-            };
-        }
     }
 }

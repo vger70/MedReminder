@@ -55,6 +55,7 @@ public sealed class AdjustStockDown
             Kind = StockMovementKind.NegativeCorrection,
             QuantityDelta = -cmd.Quantity,
             StockEpoch = medicine.StockEpoch,
+            Origin = StockMovementOrigin.User,
             Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim(),
         };
 

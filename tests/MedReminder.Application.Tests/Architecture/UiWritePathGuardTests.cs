@@ -51,7 +51,7 @@ public class UiWritePathGuardTests
         var names = WriteMethodNames();
 
         names.Should().Contain(["AddAsync", "AddRangeAsync", "UpdateAsync",
-            "DeleteForMedicineAsync", "PruneOlderThanAsync", "SaveChangesAsync"]);
+            "AddSetAsync", "PruneOlderThanAsync", "SaveChangesAsync"]);
         names.Should().NotContain(["GetAsync", "ListAllAsync", "ExistsAsync"]);
     }
 

@@ -20,6 +20,10 @@ internal sealed class MedicationAdministrationSlotConfiguration
 
         builder.HasIndex(s => s.MedicineId);
         builder.HasIndex(s => new { s.MedicineId, s.Order });
+        // No FK towards the set: the B.1 boot patch adds SetId with
+        // ALTER TABLE, which cannot add a constraint, and fresh and
+        // patched databases must have the same shape.
+        builder.HasIndex(s => s.SetId);
 
         builder.HasOne<Medicine>()
             .WithMany()

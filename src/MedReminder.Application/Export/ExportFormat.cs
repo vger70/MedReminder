@@ -20,7 +20,10 @@ public static class ExportFormat
     // Entity-model version (payload.schemaVersion). Tracks the shape of
     // payload.json (§3.2). Moves independently of FormatVersion and
     // follows the additive SQLite patch discipline (ANALYSIS.md §2.8).
-    public const int CurrentSchemaVersion = 1;
+    //   1 -> initial C.3 shape.
+    //   2 -> B.1 Phase 2b: stock movement origin, slot sets, stock
+    //        counts, ledger cutoff (docs/EXPORT-FORMAT.md §5).
+    public const int CurrentSchemaVersion = 2;
 
     // Minimum passphrase length accepted at export time (§4.5, §12
     // item 7). No composition rules — the Argon2id cost dominates.

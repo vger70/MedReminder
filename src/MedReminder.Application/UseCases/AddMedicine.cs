@@ -123,37 +123,30 @@ public sealed class AddMedicine
                 Kind = StockMovementKind.InitialLoad,
                 QuantityDelta = cmd.InitialQuantity,
                 StockEpoch = 1,
+                Origin = StockMovementOrigin.User,
             }, cancellationToken);
         }
 
         // Optional administration slots (Increment 10). If provided
-        // they are materialized; if null / empty the medicine stays on
-        // the legacy dose × frequency model.
+        // they are materialized as the first slot set, in force from
+        // the start date (B.1 Phase 2b); if null / empty the medicine
+        // stays on the legacy dose × frequency model and has no set.
         if (cmd.AdministrationSlots is { Count: > 0 } slots)
         {
-            await _slots.AddRangeAsync(BuildSlots(medicine.Id, slots), cancellationToken);
+            var set = new MedicationAdministrationSlotSet
+            {
+                MedicineId = medicine.Id,
+                EffectiveFrom = cmd.StartDate,
+                RecordedAt = now,
+            };
+            await _slots.AddSetAsync(
+                set, AdministrationSlotSetBuilder.BuildSlots(set, slots), cancellationToken);
         }
 
         await _uow.SaveChangesAsync(cancellationToken);
         return medicine.Id;
     }
 
-    private static IEnumerable<MedicationAdministrationSlot> BuildSlots(
-        Guid medicineId, IReadOnlyList<AdministrationSlotInput> inputs)
-    {
-        for (var i = 0; i < inputs.Count; i++)
-        {
-            var input = inputs[i];
-            yield return new MedicationAdministrationSlot
-            {
-                MedicineId = medicineId,
-                Dose = input.Dose,
-                Time = input.Time,
-                TimingLabel = string.IsNullOrWhiteSpace(input.TimingLabel) ? null : input.TimingLabel.Trim(),
-                Order = i,
-            };
-        }
-    }
 
     private DateTimeOffset ToLocalMiddayOffset(DateOnly day)
     {

@@ -312,6 +312,15 @@ internal sealed class ExportService : IExportService
         payload.DoseReminderEvents = (await db.DoseReminderEvents.AsNoTracking()
             .OrderBy(e => e.Id).ToListAsync(cancellationToken))
             .Select(ExportMapper.ToDto).ToList();
+        payload.MedicationAdministrationSlotSets = (await db.MedicationAdministrationSlotSets.AsNoTracking()
+            .OrderBy(s => s.Id).ToListAsync(cancellationToken))
+            .Select(ExportMapper.ToDto).ToList();
+        payload.StockCounts = (await db.StockCounts.AsNoTracking()
+            .OrderBy(c => c.Id).ToListAsync(cancellationToken))
+            .Select(ExportMapper.ToDto).ToList();
+        var cutoff = await db.LedgerCutoffs.AsNoTracking()
+            .SingleOrDefaultAsync(cancellationToken);
+        payload.LedgerCutoff = cutoff is null ? null : ExportMapper.ToDto(cutoff);
 
         return payload;
     }

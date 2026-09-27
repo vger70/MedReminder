@@ -159,7 +159,7 @@ internal sealed class ImportService : IImportService
 
         try
         {
-            await ProfileDatabaseBuilder.BuildAsync(tempDbPath, payload, cancellationToken);
+            await ProfileDatabaseBuilder.BuildAsync(tempDbPath, payload, cancellationToken, _clock);
 
             // Release the temp DB and the live DB so the files can be
             // moved on Windows.

@@ -1,4 +1,6 @@
 using System.Data.Common;
+using System.Globalization;
+using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Catalogue;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,11 +20,16 @@ public sealed class DatabaseInitializer
 {
     private readonly MedReminderDbContext _db;
     private readonly ILogger<DatabaseInitializer> _log;
+    private readonly TimeProvider _clock;
 
-    public DatabaseInitializer(MedReminderDbContext db, ILogger<DatabaseInitializer> log)
+    public DatabaseInitializer(
+        MedReminderDbContext db,
+        ILogger<DatabaseInitializer> log,
+        TimeProvider? clock = null)
     {
         _db = db;
         _log = log;
+        _clock = clock ?? TimeProvider.System;
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
@@ -157,6 +164,134 @@ public sealed class DatabaseInitializer
             CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DoseReminderEvents_Dedup""
                 ON ""DoseReminderEvents"" (""MedicineId"", ""SlotKey"", ""LocalDate"");",
             cancellationToken);
+
+        await ApplyLedgerFactsPatchAsync(cancellationToken);
+    }
+
+    // B.1 Phase 2b (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §3.5, §4.2,
+    // §7.3): facts / derived split of the stock ledger and dated slot
+    // history. One transaction, so a crash cannot leave the movements
+    // marked Legacy without the cutoff, or slots without their set.
+    //
+    //   - StockCounts, LedgerCutoff, MedicationAdministrationSlotSets:
+    //     CREATE TABLE IF NOT EXISTS, same DDL as EnsureCreated.
+    //   - StockMovements.Origin: every row present before the patch
+    //     becomes Legacy (DEFAULT 1) and the cutoff is stored as the
+    //     day before the patch. Guarded by the column check, so it runs
+    //     once per database.
+    //   - MedicationAdministrationSlots.SetId: the slots present before
+    //     the patch become one set per medicine, in force from the
+    //     medicine's StartDate. The set reuses the medicine's Id, which
+    //     keeps the backfill in SQL and the Guid text format identical.
+    private async Task ApplyLedgerFactsPatchAsync(CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        var now = _clock.GetUtcNow();
+        var localToday = DateOnly.FromDateTime(
+            TimeZoneInfo.ConvertTime(now, _clock.LocalTimeZone).DateTime);
+        var cutoffDay = localToday.AddDays(-1);
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        await ExecuteAsync(connection, transaction, @"
+            CREATE TABLE IF NOT EXISTS ""StockCounts"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_StockCounts"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""CountDay"" TEXT NOT NULL,
+                ""CountedQuantity"" TEXT NOT NULL,
+                ""TakenToday"" TEXT NOT NULL,
+                ""ThresholdAtCount"" INTEGER NOT NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_StockCounts_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteAsync(connection, transaction, @"
+            CREATE INDEX IF NOT EXISTS ""IX_StockCounts_MedicineId""
+                ON ""StockCounts"" (""MedicineId"");", cancellationToken);
+
+        await ExecuteAsync(connection, transaction, @"
+            CREATE TABLE IF NOT EXISTS ""LedgerCutoff"" (
+                ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_LedgerCutoff"" PRIMARY KEY,
+                ""CutoffDay"" TEXT NOT NULL,
+                ""FrozenAt"" INTEGER NOT NULL
+            );", cancellationToken);
+
+        await ExecuteAsync(connection, transaction, @"
+            CREATE TABLE IF NOT EXISTS ""MedicationAdministrationSlotSets"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_MedicationAdministrationSlotSets"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""EffectiveFrom"" TEXT NOT NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_MedicationAdministrationSlotSets_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteAsync(connection, transaction, @"
+            CREATE INDEX IF NOT EXISTS ""IX_MedicationAdministrationSlotSets_MedicineId_RecordedAt""
+                ON ""MedicationAdministrationSlotSets"" (""MedicineId"", ""RecordedAt"");", cancellationToken);
+
+        if (!await ColumnExistsAsync(connection, transaction, "StockMovements", "Origin", cancellationToken))
+        {
+            await ExecuteAsync(connection, transaction,
+                $@"ALTER TABLE ""StockMovements"" ADD COLUMN ""Origin"" INTEGER NOT NULL DEFAULT {(int)StockMovementOrigin.Legacy};",
+                cancellationToken);
+            await ExecuteAsync(connection, transaction, @"
+                INSERT OR IGNORE INTO ""LedgerCutoff"" (""Id"", ""CutoffDay"", ""FrozenAt"")
+                VALUES ($id, $cutoffDay, $frozenAt);",
+                cancellationToken,
+                ("$id", LedgerCutoff.SingletonId),
+                ("$cutoffDay", cutoffDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                ("$frozenAt", now.UtcTicks));
+            _log.LogInformation(
+                "Stock movements frozen as Legacy; ledger cutoff set to {CutoffDay}.", cutoffDay);
+        }
+
+        if (!await ColumnExistsAsync(connection, transaction, "MedicationAdministrationSlots", "SetId", cancellationToken))
+        {
+            await ExecuteAsync(connection, transaction,
+                @"ALTER TABLE ""MedicationAdministrationSlots"" ADD COLUMN ""SetId"" TEXT NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';",
+                cancellationToken);
+            await ExecuteAsync(connection, transaction, @"
+                INSERT INTO ""MedicationAdministrationSlotSets"" (""Id"", ""MedicineId"", ""EffectiveFrom"", ""RecordedAt"")
+                SELECT m.""Id"", m.""Id"", m.""StartDate"", $recordedAt
+                FROM ""Medicines"" m
+                WHERE EXISTS (SELECT 1 FROM ""MedicationAdministrationSlots"" s WHERE s.""MedicineId"" = m.""Id"");",
+                cancellationToken,
+                ("$recordedAt", now.UtcTicks));
+            await ExecuteAsync(connection, transaction,
+                @"UPDATE ""MedicationAdministrationSlots"" SET ""SetId"" = ""MedicineId"";",
+                cancellationToken);
+            _log.LogInformation("Administration slots grouped into dated slot sets.");
+        }
+        await ExecuteAsync(connection, transaction, @"
+            CREATE INDEX IF NOT EXISTS ""IX_MedicationAdministrationSlots_SetId""
+                ON ""MedicationAdministrationSlots"" (""SetId"");", cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static async Task ExecuteAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        string sql,
+        CancellationToken cancellationToken,
+        params (string Name, object Value)[] parameters)
+    {
+        await using var cmd = connection.CreateCommand();
+        cmd.Transaction = transaction;
+        cmd.CommandText = sql;
+        foreach (var (name, value) in parameters)
+        {
+            var p = cmd.CreateParameter();
+            p.ParameterName = name;
+            p.Value = value;
+            cmd.Parameters.Add(p);
+        }
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private async Task ExecuteRawSqlAsync(string sql, CancellationToken cancellationToken)
@@ -187,8 +322,14 @@ public sealed class DatabaseInitializer
 
     private static async Task<bool> ColumnExistsAsync(
         DbConnection connection, string table, string column, CancellationToken cancellationToken)
+        => await ColumnExistsAsync(connection, transaction: null, table, column, cancellationToken);
+
+    private static async Task<bool> ColumnExistsAsync(
+        DbConnection connection, DbTransaction? transaction, string table, string column,
+        CancellationToken cancellationToken)
     {
         await using var cmd = connection.CreateCommand();
+        cmd.Transaction = transaction;
         cmd.CommandText = $"PRAGMA table_info(\"{table}\");";
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))

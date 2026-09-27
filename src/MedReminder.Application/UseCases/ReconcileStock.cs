@@ -198,6 +198,7 @@ public sealed class ReconcileStock
                 Kind = correctionKind,
                 QuantityDelta = preview.Correction,
                 StockEpoch = medicine.StockEpoch,
+                Origin = StockMovementOrigin.Derived,
                 Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim(),
             }, cancellationToken);
         }

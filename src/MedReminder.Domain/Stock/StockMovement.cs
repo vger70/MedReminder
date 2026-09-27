@@ -25,4 +25,8 @@ public sealed class StockMovement
     public required int StockEpoch { get; init; }
 
     public string? Notes { get; init; }
+
+    // Fact or derived row (StockMovementOrigin). Writers set it
+    // explicitly; the default only covers direct construction.
+    public StockMovementOrigin Origin { get; init; } = StockMovementOrigin.User;
 }

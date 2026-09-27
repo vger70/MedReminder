@@ -608,6 +608,9 @@ public sealed class ExportImportRoundTripTests : IDisposable
             await db.MedicationIntakes.ExecuteDeleteAsync();
             await db.MedicationSuspensions.ExecuteDeleteAsync();
             await db.MedicationAdministrationSlots.ExecuteDeleteAsync();
+            await db.MedicationAdministrationSlotSets.ExecuteDeleteAsync();
+            await db.StockCounts.ExecuteDeleteAsync();
+            await db.LedgerCutoffs.ExecuteDeleteAsync();
             await db.MedicationScheduleHistories.ExecuteDeleteAsync();
             await db.StockMovements.ExecuteDeleteAsync();
             await db.Medicines.ExecuteDeleteAsync();
@@ -685,10 +688,18 @@ public sealed class ExportImportRoundTripTests : IDisposable
             ScheduleKind = ScheduleKind.Weekly,
             SchedulePayload = "{\"days\":[1,3,5]}",
         });
+        var slotSet = new MedicationAdministrationSlotSet
+        {
+            MedicineId = medicineId,
+            EffectiveFrom = new DateOnly(2026, 1, 10),
+            RecordedAt = new DateTimeOffset(2026, 1, 10, 8, 0, 0, TimeSpan.Zero),
+        };
+        db.MedicationAdministrationSlotSets.Add(slotSet);
         db.MedicationAdministrationSlots.Add(new MedicationAdministrationSlot
         {
             Id = Guid.NewGuid(),
             MedicineId = medicineId,
+            SetId = slotSet.Id,
             Dose = 0.75m,
             Time = new TimeOnly(8, 30),
             TimingLabel = "after breakfast",
@@ -877,7 +888,7 @@ public sealed class ExportImportRoundTripTests : IDisposable
     }
 
     private sealed record CapturedCounts(
-        int Medicines, int StockMovements, int Schedules, int Slots,
+        int Medicines, int StockMovements, int Schedules, int Slots, int SlotSets,
         int Suspensions, int Intakes, int NotificationEvents, int DoseReminderEvents)
     {
         public static async Task<CapturedCounts> FromAsync(MedReminderDbContext db) => new(
@@ -885,6 +896,7 @@ public sealed class ExportImportRoundTripTests : IDisposable
             await db.StockMovements.CountAsync(),
             await db.MedicationScheduleHistories.CountAsync(),
             await db.MedicationAdministrationSlots.CountAsync(),
+            await db.MedicationAdministrationSlotSets.CountAsync(),
             await db.MedicationSuspensions.CountAsync(),
             await db.MedicationIntakes.CountAsync(),
             await db.NotificationEvents.CountAsync(),

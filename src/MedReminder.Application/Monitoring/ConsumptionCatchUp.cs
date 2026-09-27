@@ -147,6 +147,7 @@ public sealed class ConsumptionCatchUp
                 Kind = StockMovementKind.Consumption,
                 QuantityDelta = -day.Quantity,
                 StockEpoch = medicine.StockEpoch,
+                Origin = StockMovementOrigin.Derived,
             });
         }
         return movements;
