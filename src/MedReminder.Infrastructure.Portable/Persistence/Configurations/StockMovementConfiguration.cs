@@ -14,6 +14,7 @@ internal sealed class StockMovementConfiguration : IEntityTypeConfiguration<Stoc
         builder.Property(m => m.Kind).HasConversion<int>();
         builder.Property(m => m.QuantityDelta).HasConversion<string>();
         builder.Property(m => m.Notes).HasMaxLength(500);
+        builder.Property(m => m.Origin).HasConversion<int>();
 
         builder.HasIndex(m => m.MedicineId);
         builder.HasIndex(m => new { m.MedicineId, m.Kind, m.OccurredAt });

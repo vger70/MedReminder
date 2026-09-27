@@ -126,7 +126,7 @@ against `manifest.payload.sha256Base64` after decryption.
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "profile": { "id": "…", "displayName": "…", "role": "Admin", "createdAt": "…" },
   "medicines": [ … ],
   "stockMovements": [ … ],
@@ -136,6 +136,9 @@ against `manifest.payload.sha256Base64` after decryption.
   "medicationIntakes": [ … ],
   "notificationEvents": [ … ],
   "doseReminderEvents": [ … ],
+  "medicationAdministrationSlotSets": [ … ],
+  "stockCounts": [ … ],
+  "ledgerCutoff": { … },
   "notificationSettings": { … },
   "shared": { … }
 }
@@ -143,9 +146,9 @@ against `manifest.payload.sha256Base64` after decryption.
 
 - **`schemaVersion`** (int) tracks the entity model, independently of
   the manifest's `formatVersion`. A reader accepts
-  `schemaVersion <= currentSchemaVersion` (current: `1`) and rejects
+  `schemaVersion <= currentSchemaVersion` (current: `2`) and rejects
   newer. An **older** `schemaVersion` imports fine: fields absent from
-  the older archive take their defaults.
+  the older archive take their defaults, or the mapping of §5.1.
 - **`profile`** is a descriptive header (not restored as a database
   row): `id`, `displayName`, `role` (`"User"` / `"Admin"`), `createdAt`.
 - **`notificationSettings`** is this profile's per-profile recipient
@@ -195,6 +198,7 @@ numbers.
 | `quantityDelta` | decimal | |
 | `stockEpoch` | int | |
 | `notes` | string? | |
+| `origin` | string? | `Legacy` / `User` / `Derived` (schema 2). `Legacy`: written before the ledger patch or imported from a schema 1 archive; `User`: a stock fact the user entered; `Derived`: computed from other facts (consumption, reversals, count corrections). Absent in schema 1: imported as `Legacy` |
 
 ### 3.3 `medicationScheduleHistory[]`
 
@@ -214,6 +218,7 @@ numbers.
 |---|---|---|
 | `id` | Guid | |
 | `medicineId` | Guid | parent medicine |
+| `setId` | Guid? | parent slot set (§3.11, schema 2). Absent in schema 1 (§5.1) |
 | `dose` | decimal | |
 | `time` | TimeOnly? | |
 | `timingLabel` | string? | |
@@ -286,6 +291,44 @@ item into the export; otherwise it is omitted.
   archive key (§4), as `{ nonceBase64, tagBase64, ciphertextBase64 }`.
   Present only when the user opted the password in.
 
+### 3.11 `medicationAdministrationSlotSets[]` (schema 2)
+
+Every change of a medicine's slots records a set; the slots of §3.4
+point to their set. The current slots are those of the set with the
+latest `recordedAt`. A set may have no slots: the medicine then uses
+dose × frequency.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `medicineId` | Guid | parent medicine |
+| `effectiveFrom` | DateOnly | medicine start date for the first set, otherwise the day of the change |
+| `recordedAt` | DateTimeOffset | recording instant |
+
+### 3.12 `stockCounts[]` (schema 2)
+
+Stock counts entered by the user (the fact behind a count correction).
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `medicineId` | Guid | parent medicine |
+| `countDay` | DateOnly | |
+| `countedQuantity` | decimal | |
+| `takenToday` | decimal | quantity already taken on the count day |
+| `thresholdAtCount` | int | medicine threshold in days at the time of the count |
+| `recordedAt` | DateTimeOffset | recording instant |
+
+### 3.13 `ledgerCutoff` (schema 2)
+
+Present when the profile's data predates the ledger patch; `null`
+otherwise. Stock movements up to `cutoffDay` are frozen (`Legacy`).
+
+| Field | Type | Notes |
+|---|---|---|
+| `cutoffDay` | DateOnly | last frozen day |
+| `frozenAt` | DateTimeOffset | instant of the freeze |
+
 ---
 
 ## 4. Cryptography
@@ -354,6 +397,13 @@ another machine).
   defaults for fields that did not exist yet.
 - Existing field names, types and enum names are stable within a major
   format version.
+
+### 5.1 Schema version history
+
+| `schemaVersion` | Change | Import of the older version |
+|---|---|---|
+| 1 | Initial entity model | — |
+| 2 | `stockMovements[].origin`, `medicationAdministrationSlots[].setId`, `medicationAdministrationSlotSets`, `stockCounts`, `ledgerCutoff` | Movements become `Legacy`; each medicine's slots become one set with `id` = the medicine id, `effectiveFrom` = its `startDate`, `recordedAt` = the import instant; `ledgerCutoff` = the day before the import, frozen at the import instant; no stock counts |
 
 ---
 

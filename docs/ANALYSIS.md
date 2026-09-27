@@ -143,17 +143,24 @@ is used.
 | Entity (table) | Role | Key fields |
 |---|---|---|
 | `Medicine` (`Medicines`) | Aggregate root | `Name`, `Unit`, `DosePerAdministration`, `AdministrationsPerDay`, `StartDate`, `EndDate?`, `ThresholdDays`, `IsActive`, `StockEpoch`, `NotificationChannels`, `RemindOnDose`, catalogue link (`NationalCode`, `AtcCode`, `LinkedReferenceMedicineId`) |
-| `StockMovement` (`StockMovements`) | Immutable stock ledger | `Kind`, `QuantityDelta`, `OccurredAt`, `StockEpoch` |
+| `StockMovement` (`StockMovements`) | Immutable stock ledger | `Kind`, `QuantityDelta`, `OccurredAt`, `StockEpoch`, `Origin` |
 | `MedicationScheduleHistory` (`MedicationScheduleHistories`) | Versioned schedule | `EffectiveFrom`, legacy dose × frequency, `ScheduleKind`, `SchedulePayload` (JSON) |
-| `MedicationAdministrationSlot` (`MedicationAdministrationSlots`) | Individual daily intakes | `Dose`, `Time?`, `TimingLabel`, `Order` |
+| `MedicationAdministrationSlot` (`MedicationAdministrationSlots`) | Individual daily intakes | `SetId`, `Dose`, `Time?`, `TimingLabel`, `Order` |
+| `MedicationAdministrationSlotSet` (`MedicationAdministrationSlotSets`) | Recorded version of a medicine's slots | `EffectiveFrom`, `RecordedAt`; the current slots are those of the latest recorded set |
+| `StockCount` (`StockCounts`) | Stock-count fact (B.1; written from Phase 2c) | `CountDay`, `CountedQuantity`, `TakenToday`, `ThresholdAtCount`, `RecordedAt` |
+| `LedgerCutoff` (`LedgerCutoff`) | Single row: ledger freeze of a pre-B.1 database | `CutoffDay`, `FrozenAt` |
 | `MedicationSuspension` (`MedicationSuspensions`) | Therapy pause | `StartDate`, `EndDate?` (null = open) |
 | `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity` |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
-`Consumption`, `PositiveCorrection`, `NegativeCorrection`. Enum values
-are persisted as integers and must stay stable.
+`Consumption`, `PositiveCorrection`, `NegativeCorrection`.
+`StockMovementOrigin`: `Legacy` (written before the B.1 ledger patch),
+`User` (initial load, `AddStock`, `AdjustStockDown`), `Derived`
+(automatic and intake consumption, backdated reversals, count
+corrections). Enum values are persisted as integers and must stay
+stable.
 
 Foreign keys to `Medicines` use `Restrict`: medicines are deactivated,
 not deleted.
@@ -197,7 +204,10 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
 ### 4.4 Invariants
 
 - Stock is a function of the movement ledger. Corrections are new
-  movements, never edits.
+  movements, never edits. Every writer sets `Origin`; `Legacy` rows
+  are never rewritten.
+- Slot changes append a `MedicationAdministrationSlotSet`, never delete
+  slots; every calculation reads the latest recorded set.
 - `AddStock` increments `Medicine.StockEpoch` on every positive
   movement; the new epoch restarts the warning cycle. Negative
   corrections do not change the epoch.
@@ -375,8 +385,13 @@ start:
    EXISTS`). Current patches: `MedicationIntakes.Day`,
    `MedicationAdministrationSlots`, the three catalogue-link columns
    on `Medicines`, `ScheduleKind` and `SchedulePayload` on
-   `MedicationScheduleHistories`, `Medicines.RemindOnDose`, and
-   `DoseReminderEvents` with its unique index.
+   `MedicationScheduleHistories`, `Medicines.RemindOnDose`,
+   `DoseReminderEvents` with its unique index, and the B.1 ledger
+   patch (one transaction): `StockCounts`, `LedgerCutoff`,
+   `MedicationAdministrationSlotSets`, `StockMovements.Origin` (existing
+   rows become `Legacy` and the cutoff is set to the day before),
+   `MedicationAdministrationSlots.SetId` (existing slots become one set
+   per medicine).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.

@@ -75,8 +75,11 @@ internal static class ExportMapper
         QuantityDelta = m.QuantityDelta,
         StockEpoch = m.StockEpoch,
         Notes = m.Notes,
+        Origin = m.Origin.ToString(),
     };
 
+    // A missing origin (schema version 1) is Legacy: the row predates
+    // the facts / derived split (docs/EXPORT-FORMAT.md §5).
     public static StockMovement ToEntity(ExportedStockMovement d) => new()
     {
         Id = d.Id,
@@ -86,6 +89,9 @@ internal static class ExportMapper
         QuantityDelta = d.QuantityDelta,
         StockEpoch = d.StockEpoch,
         Notes = d.Notes,
+        Origin = d.Origin is null
+            ? StockMovementOrigin.Legacy
+            : ParseEnum<StockMovementOrigin>(d.Origin),
     };
 
     public static ExportedScheduleHistory ToDto(MedicationScheduleHistory s) => new()
@@ -114,20 +120,74 @@ internal static class ExportMapper
     {
         Id = s.Id,
         MedicineId = s.MedicineId,
+        SetId = s.SetId,
         Dose = s.Dose,
         Time = s.Time,
         TimingLabel = s.TimingLabel,
         Order = s.Order,
     };
 
+    // SetId is resolved by ExportPayloadUpgrader before mapping; a
+    // null here would be a bug, not a version 1 archive.
     public static MedicationAdministrationSlot ToEntity(ExportedAdministrationSlot d) => new()
     {
         Id = d.Id,
         MedicineId = d.MedicineId,
+        SetId = d.SetId ?? throw new InvalidOperationException($"Slot {d.Id} has no slot set."),
         Dose = d.Dose,
         Time = d.Time,
         TimingLabel = d.TimingLabel,
         Order = d.Order,
+    };
+
+    public static ExportedAdministrationSlotSet ToDto(MedicationAdministrationSlotSet s) => new()
+    {
+        Id = s.Id,
+        MedicineId = s.MedicineId,
+        EffectiveFrom = s.EffectiveFrom,
+        RecordedAt = s.RecordedAt,
+    };
+
+    public static MedicationAdministrationSlotSet ToEntity(ExportedAdministrationSlotSet d) => new()
+    {
+        Id = d.Id,
+        MedicineId = d.MedicineId,
+        EffectiveFrom = d.EffectiveFrom,
+        RecordedAt = d.RecordedAt,
+    };
+
+    public static ExportedStockCount ToDto(StockCount c) => new()
+    {
+        Id = c.Id,
+        MedicineId = c.MedicineId,
+        CountDay = c.CountDay,
+        CountedQuantity = c.CountedQuantity,
+        TakenToday = c.TakenToday,
+        ThresholdAtCount = c.ThresholdAtCount,
+        RecordedAt = c.RecordedAt,
+    };
+
+    public static StockCount ToEntity(ExportedStockCount d) => new()
+    {
+        Id = d.Id,
+        MedicineId = d.MedicineId,
+        CountDay = d.CountDay,
+        CountedQuantity = d.CountedQuantity,
+        TakenToday = d.TakenToday,
+        ThresholdAtCount = d.ThresholdAtCount,
+        RecordedAt = d.RecordedAt,
+    };
+
+    public static ExportedLedgerCutoff ToDto(LedgerCutoff c) => new()
+    {
+        CutoffDay = c.CutoffDay,
+        FrozenAt = c.FrozenAt,
+    };
+
+    public static LedgerCutoff ToEntity(ExportedLedgerCutoff d) => new()
+    {
+        CutoffDay = d.CutoffDay,
+        FrozenAt = d.FrozenAt,
     };
 
     public static ExportedSuspension ToDto(MedicationSuspension s) => new()

@@ -17,32 +17,36 @@ internal sealed class MedicationAdministrationSlotRepository
     public async Task<IReadOnlyList<MedicationAdministrationSlot>> ListForMedicineAsync(
         Guid medicineId, CancellationToken cancellationToken)
     {
+        // Latest set by recording instant; Id breaks an (unlikely) tie
+        // deterministically. SetId is compared column to column, so the
+        // stored Guid text format does not matter.
+        var latestSet = _db.MedicationAdministrationSlotSets
+            .Where(s => s.MedicineId == medicineId)
+            .OrderByDescending(s => s.RecordedAt)
+            .ThenByDescending(s => s.Id)
+            .Select(s => s.Id)
+            .Take(1);
+
         return await _db.MedicationAdministrationSlots
             .AsNoTracking()
-            .Where(s => s.MedicineId == medicineId)
+            .Where(s => latestSet.Contains(s.SetId))
             .OrderBy(s => s.Order)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task AddRangeAsync(
-        IEnumerable<MedicationAdministrationSlot> slots, CancellationToken cancellationToken)
+    public async Task AddSetAsync(
+        MedicationAdministrationSlotSet set,
+        IReadOnlyList<MedicationAdministrationSlot> slots,
+        CancellationToken cancellationToken)
     {
-        await _db.MedicationAdministrationSlots.AddRangeAsync(slots, cancellationToken);
-    }
-
-    public async Task DeleteForMedicineAsync(
-        Guid medicineId, CancellationToken cancellationToken)
-    {
-        // Do not use ExecuteDeleteAsync (EF Core 7+) so we stay
-        // inside the current unit of work: loading the slots and
-        // removing them through the change tracker ensures the use
-        // case's SaveChangesAsync commits delete + insert atomically.
-        var existing = await _db.MedicationAdministrationSlots
-            .Where(s => s.MedicineId == medicineId)
-            .ToListAsync(cancellationToken);
-        if (existing.Count > 0)
+        ArgumentNullException.ThrowIfNull(set);
+        ArgumentNullException.ThrowIfNull(slots);
+        if (slots.Any(s => s.SetId != set.Id || s.MedicineId != set.MedicineId))
         {
-            _db.MedicationAdministrationSlots.RemoveRange(existing);
+            throw new ArgumentException("Every slot must belong to the given set and medicine.", nameof(slots));
         }
+
+        await _db.MedicationAdministrationSlotSets.AddAsync(set, cancellationToken);
+        await _db.MedicationAdministrationSlots.AddRangeAsync(slots, cancellationToken);
     }
 }

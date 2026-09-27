@@ -114,6 +114,7 @@ public sealed class RegisterIntake
                 Kind = StockMovementKind.PositiveCorrection,
                 QuantityDelta = automaticQuantity,
                 StockEpoch = medicine.StockEpoch,
+                Origin = StockMovementOrigin.Derived,
             }, cancellationToken);
         }
 
@@ -126,6 +127,7 @@ public sealed class RegisterIntake
                 Kind = StockMovementKind.Consumption,
                 QuantityDelta = -cmd.Quantity,
                 StockEpoch = medicine.StockEpoch,
+                Origin = StockMovementOrigin.Derived,
                 Notes = intake.Notes,
             };
             await _stock.AddAsync(movement, cancellationToken);

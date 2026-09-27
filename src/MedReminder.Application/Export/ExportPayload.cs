@@ -28,6 +28,14 @@ public sealed class ExportPayload
     public IList<ExportedNotificationEvent> NotificationEvents { get; set; } = new List<ExportedNotificationEvent>();
     public IList<ExportedDoseReminderEvent> DoseReminderEvents { get; set; } = new List<ExportedDoseReminderEvent>();
 
+    // Schema version 2 (B.1 Phase 2b). Absent from version 1 archives,
+    // which the importer maps to Legacy rows (docs/EXPORT-FORMAT.md §5).
+    public IList<ExportedAdministrationSlotSet> MedicationAdministrationSlotSets { get; set; } = new List<ExportedAdministrationSlotSet>();
+    public IList<ExportedStockCount> StockCounts { get; set; } = new List<ExportedStockCount>();
+
+    // Null when the profile has no cutoff (created after the patch).
+    public ExportedLedgerCutoff? LedgerCutoff { get; set; }
+
     // Per-profile notification settings (§3.2). Travels implicitly
     // with the profile.
     public ExportedNotificationSettings? NotificationSettings { get; set; }
@@ -89,6 +97,10 @@ public sealed class ExportedStockMovement
     public decimal QuantityDelta { get; set; }
     public int StockEpoch { get; set; }
     public string? Notes { get; set; }
+
+    // StockMovementOrigin as its string form. Null in schema version 1
+    // archives: imported as Legacy.
+    public string? Origin { get; set; }
 }
 
 public sealed class ExportedScheduleHistory
@@ -109,10 +121,40 @@ public sealed class ExportedAdministrationSlot
 {
     public Guid Id { get; set; }
     public Guid MedicineId { get; set; }
+
+    // Slot set the row belongs to. Null in schema version 1 archives:
+    // the importer groups the medicine's slots into one set.
+    public Guid? SetId { get; set; }
+
     public decimal Dose { get; set; }
     public TimeOnly? Time { get; set; }
     public string? TimingLabel { get; set; }
     public int Order { get; set; }
+}
+
+public sealed class ExportedAdministrationSlotSet
+{
+    public Guid Id { get; set; }
+    public Guid MedicineId { get; set; }
+    public DateOnly EffectiveFrom { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+}
+
+public sealed class ExportedStockCount
+{
+    public Guid Id { get; set; }
+    public Guid MedicineId { get; set; }
+    public DateOnly CountDay { get; set; }
+    public decimal CountedQuantity { get; set; }
+    public decimal TakenToday { get; set; }
+    public int ThresholdAtCount { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+}
+
+public sealed class ExportedLedgerCutoff
+{
+    public DateOnly CutoffDay { get; set; }
+    public DateTimeOffset FrozenAt { get; set; }
 }
 
 public sealed class ExportedSuspension
