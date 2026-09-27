@@ -30,10 +30,56 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #91 — B.1 Phase 4a: OneDrive sync transport and cloud backups
+
+Link: [vger70/MedReminder#91](https://github.com/vger70/MedReminder/pull/91)
+Branch: `claude/b1-phase4a-onedrive`
+
+### Added
+
+- Sync through OneDrive: Tools → Sync… offers OneDrive (Microsoft
+  sign-in in the browser) or a shared folder when enabling or joining.
+  Files go to `sync/` in the app folder (`/Apps/MedReminder26`),
+  encrypted as before (`docs/SYNC-FORMAT.md`).
+- `OneDriveClient` and `OneDriveSyncTransport`
+  (`src/MedReminder.Infrastructure.Portable/Cloud/OneDrive/`): Graph REST,
+  create-only writes, temporary name plus rename for large files, a
+  change-feed index instead of folder walks.
+- `MsalCloudAccountService`: MSAL public client; token cache in
+  `%LOCALAPPDATA%\MedReminder\onedrive.protected` (DPAPI).
+- "Sign in to OneDrive again" in the sync window when the session ends.
+- Cloud backup to OneDrive (C.3++ Phase 2): Settings → Backup → storage
+  OneDrive; encrypted snapshots in `backups/` of the app folder;
+  restore lists them by name and downloads only the chosen one.
+- `IArchiveStorage` contract tests run against the OneDrive backend.
+
+### Changed
+
+- `SyncSettings` gains `Provider` and `AccountId`; existing files read
+  as folder targets. `ISyncSetupService` takes a `SyncTarget`.
+- `BackupSettings` gains `CloudProvider` and `CloudAccountId`; existing
+  files keep the folder target. A signed-out account skips the backup
+  run like a missing folder.
+
+### Docs
+
+- Spike S6 results (`ANALYSIS-B1-MOBILE-SYNC.md` §18.6); Phase 4 split
+  into 4a/4b/4c; `SYNC-FORMAT.md` sync root in a provider app folder;
+  OneDrive steps in `SYNC-TWO-PC-CHECKLIST.md`; `ANALYSIS.md`; user
+  guides (5 languages); `ANALYSIS-C3PP-CLOUD-PROVIDERS.md`.
+
+### Build
+
+- `Microsoft.Identity.Client` 4.90.1 in `MedReminder.Infrastructure`.
+
+---
+
 ## PR #89 — B.1 Phase 3d: desktop sync service and Tools → Sync… window
 
 Link: [vger70/MedReminder#89](https://github.com/vger70/MedReminder/pull/89)
 Branch: `claude/b1-phase3d-desktop-sync`
+
+**Status:** merged (2026-09-27)
 
 ### Added
 

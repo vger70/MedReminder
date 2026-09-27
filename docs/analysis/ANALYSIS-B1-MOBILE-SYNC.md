@@ -609,7 +609,7 @@ offers one. New Application port `ISyncTransport`, implemented by:
 | Transport | Desktop | Mobile | Phase |
 |---|---|---|---|
 | `LocalFolderSyncTransport` (a folder synced by a third-party client, or a NAS share) | Yes | No | 3 |
-| `OneDriveSyncTransport` (Microsoft Graph, MSAL public client) | Yes | Yes | 4 |
+| `OneDriveSyncTransport` (Microsoft Graph, MSAL public client) | Yes | Yes | 4a |
 | `GoogleDriveSyncTransport` (Drive REST API) | Yes | Yes | 4 |
 | iCloud | Only through `LocalFolder` on Windows | Native container | Not planned, D12 |
 
@@ -619,8 +619,12 @@ only files it created or the user opened with it, so files written by
 the Google Drive desktop client might be invisible to the phone app
 `[UNCERTAIN — spike S7]`. Using the same API on both sides avoids the
 issue. For OneDrive the app-folder permission (`Files.ReadWrite.AppFolder`)
-limits access to `/Apps/<app>` `[UNCERTAIN — spike S6 also checks that
-the Windows OneDrive client syncs it]`.
+limits access to `/Apps/<app>`; spike S6 confirmed the isolation and
+found that the Windows OneDrive client does not download that folder
+(§18.6), so the desktop uses the API for OneDrive as well.
+
+Layout inside a provider's app folder (Phase 4a): sync files under
+`sync/` (the root of `SYNC-FORMAT.md` §2), backups under `backups/`.
 
 `IArchiveStorage` gets matching provider implementations in the same
 phase (the C.3++ Phase 2 deliverable), so cloud backups can use the
@@ -1188,6 +1192,11 @@ checklist; no plaintext in the remote folder (inspection test).
 
 **Entry**: Phase 3 exit; S6 / S7 results; D3 decided.
 
+Split on 2026-09-27 (product owner): **4a** OneDrive sync transport,
+OneDrive backup storage and sign-in (after S6); **4b** Google Drive
+(after S7); **4c** QR pairing, device revocation and key rotation
+(§6.1, §6.2, moved out of Phase 3c).
+
 **Actions**: `OneDriveSyncTransport` and `OneDriveArchiveStorage`
 (MSAL, token cache under DPAPI on desktop); then Google Drive; provider
 selection and sign-in in settings; QR pairing generator on desktop;
@@ -1359,8 +1368,48 @@ two behavior findings belong to Phase 2.
 
 ## 18. Spike results
 
-One subsection per spike: date, environment, result, decision. S1–S8
-pending.
+One subsection per spike: date, environment, result, decision. S1–S5,
+S7, S8 pending; S6 done for Windows (its Android half runs with Phase 5).
+
+### 18.6 S6 — OneDrive app folder (2026-09-27)
+
+**Environment**: Windows 11 (NT 10.0.26200), .NET 10.0.12, MSAL 4.90.1,
+personal Microsoft account, app registration with personal accounts,
+`http://localhost` redirect, public client, delegated
+`Files.ReadWrite.AppFolder`. Tool in `spikes/S6-OneDrive/` on branch
+`claude/b1-spike-s6-onedrive` (draft PR #90, not merged); two rounds,
+reports in that folder's `results/`.
+
+**Results**
+
+| Check | Result |
+|---|---|
+| Sign-in in the system browser; silent refresh from a DPAPI-protected cache after a restart | Pass |
+| App folder `special/approot`: `/drive/root:/Apps/<registration name>` (`MedReminder26`) | Pass |
+| Scope isolation: the drive root lists 0 items, `special/documents` is 404 | Pass |
+| `PUT …/content` with `conflictBehavior=fail`: 201, then 409 on the same name; missing parents created | Pass |
+| `conflictBehavior=replace`: 201 then 200; read back equal; missing file 404; delete 204 then 404 | Pass |
+| Upload session (6 MiB, ~3 s); create-only session refused at `createUploadSession` (409) | Pass |
+| **An upload session's item is listed after its first chunk, size 0, content empty** | Fail |
+| `deferCommit`: the item is still listed before the commit | Fail |
+| Temporary name then `PATCH` rename; rename onto an existing name is 409 | Pass |
+| `delta` on the app folder: works, reports new files with parent ids (no paths) | Pass |
+| Latency: ~800 ms per small create, ~600 ms per listing call; no throttling over 20 creates | Measured |
+| **The Windows OneDrive client does not download `/Apps/<name>`** (no local `Apps` folder after 15 min) | Fail |
+
+**Decisions**
+
+- Files above the simple-upload limit are uploaded under a
+  `.`-prefixed temporary name and renamed with `conflictBehavior=fail`;
+  readers already ignore such names (`SYNC-FORMAT.md` §1). No format
+  change.
+- The OneDrive transport and backup storage use Graph on every device;
+  the folder transport of Phase 3 stays independent. §5.8's argument
+  for the API on the desktop now holds for OneDrive too.
+- Listing uses the `delta` feed kept in an index, with a full
+  enumeration when the cursor expires.
+- The app folder name is the registration's display name; the product
+  owner keeps `MedReminder26`.
 
 ### 18.9 S9 — Convergence prototype (2026-09-26)
 
@@ -1568,3 +1617,17 @@ Phase 2 implements the derivation from the prototype and its tests.
   catalogue and outbox, emission from every use case, recorded only
   while sync is enabled (§7.2); `WriteGate` on every use case and
   stale-form diff for the medicine edit dialog (§7.4).
+- 2026-09-27 — S6 done for Windows (§18.6). Phase 4 split into 4a
+  (OneDrive), 4b (Google Drive), 4c (QR pairing, revocation, key
+  rotation). Phase 4a implemented: `OneDriveClient` (Graph REST, no
+  SDK), `OneDriveSyncTransport` (sync files under `sync/` in the app
+  folder; `delta` index plus an overlay of the device's own writes),
+  `OneDriveArchiveStorage` (backups under `backups/`),
+  `MsalCloudAccountService` (one DPAPI-protected token cache for all
+  profiles, `onedrive.protected`), `SyncTarget` and
+  `ISyncTransportFactory`. A signed-out account is an unavailable
+  archive target, as a missing folder is. Deviation from the Phase 4
+  actions: no Graph SDK; the QR pairing generator moves to 4c; MSAL is
+  not added to `THIRD-PARTY-NOTICES.md`, which covers data sources
+  only (NuGet package licences are not listed there, MailKit
+  included).

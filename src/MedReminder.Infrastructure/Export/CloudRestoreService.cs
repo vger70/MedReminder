@@ -1,5 +1,9 @@
+using System.Globalization;
 using System.Runtime.Versioning;
+using System.Text.RegularExpressions;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Infrastructure.Export;
@@ -10,8 +14,12 @@ namespace MedReminder.Infrastructure.Export;
 // import pipeline: C.3+ reuses C.3's format and services verbatim so
 // user-triggered exports and automatic snapshots stay interchangeable.
 [SupportedOSPlatform("windows")]
-internal sealed class CloudRestoreService : ICloudRestoreService
+internal sealed partial class CloudRestoreService : ICloudRestoreService
 {
+    // medreminder-<profileId>-<yyyyMMdd-HHmmss>.mrz (C.3+ §3.3).
+    [GeneratedRegex(@"^medreminder-(?<profile>.+)-(?<stamp>\d{8}-\d{6})\.mrz$", RegexOptions.IgnoreCase)]
+    private static partial Regex SnapshotName();
+
     private readonly IImportService _importService;
     private readonly ILogger<CloudRestoreService> _log;
 
@@ -65,6 +73,63 @@ internal sealed class CloudRestoreService : ICloudRestoreService
 
         results.Sort((a, b) => b.CreatedAtUtc.CompareTo(a.CreatedAtUtc));
         return results;
+    }
+
+    public async Task<IReadOnlyList<CloudSnapshotInfo>> ListStoredSnapshotsAsync(
+        IArchiveStorage storage, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(storage);
+        var results = new List<CloudSnapshotInfo>();
+        foreach (var archive in await storage.ListAsync(cancellationToken))
+        {
+            var match = SnapshotName().Match(archive.Name);
+            var created = match.Success && DateTime.TryParseExact(match.Groups["stamp"].Value, "yyyyMMdd-HHmmss",
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var stamp)
+                ? new DateTimeOffset(stamp, TimeSpan.Zero)
+                : archive.CreatedAtUtc;
+            results.Add(new CloudSnapshotInfo
+            {
+                ArchivePath = archive.Id,
+                FileName = archive.Name,
+                CreatedAtUtc = created,
+                ProfileId = match.Success ? match.Groups["profile"].Value : string.Empty,
+            });
+        }
+        results.Sort((a, b) => b.CreatedAtUtc.CompareTo(a.CreatedAtUtc));
+        return results;
+    }
+
+    public async Task RestoreStoredAsync(
+        IArchiveStorage storage,
+        string archiveId,
+        char[] passphrase,
+        ImportOptions options,
+        IProgress<int>? progress,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(storage);
+        // Under %LOCALAPPDATA%\MedReminder (CLAUDE.md §5), deleted after use.
+        var temp = Path.Combine(AppDataPaths.GetAppDataDirectory(), $"restore-{Guid.NewGuid():N}.mrz");
+        try
+        {
+            await using (var source = await storage.DownloadAsync(archiveId, cancellationToken))
+            await using (var target = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                await source.CopyToAsync(target, cancellationToken);
+            }
+            await _importService.ImportAsync(temp, passphrase, options, progress, cancellationToken);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(temp)) File.Delete(temp);
+            }
+            catch (IOException ex)
+            {
+                _log.LogWarning(ex, "Could not delete the downloaded snapshot {Path}.", temp);
+            }
+        }
     }
 
     public Task RestoreAsync(

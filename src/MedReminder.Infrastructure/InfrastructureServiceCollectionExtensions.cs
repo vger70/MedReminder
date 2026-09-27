@@ -8,6 +8,8 @@ using MedReminder.Infrastructure.Catalogue;
 using MedReminder.Infrastructure.Donations;
 using MedReminder.Infrastructure.Catalogue.Parsers;
 using MedReminder.Infrastructure.Credentials;
+using MedReminder.Infrastructure.Cloud;
+using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Sync;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Export;
@@ -97,6 +99,12 @@ public static class InfrastructureServiceCollectionExtensions
             new DpapiSyncKeyStore(Path.Combine(currentProfile.DataDirectory, DpapiSyncKeyStore.FileName)));
         // B.1 Phase 3d: create, join and rebuild from the sync window.
         services.AddScoped<ISyncSetupService, SyncSetupService>();
+        // B.1 Phase 4a: OneDrive sign-in and access tokens, one MSAL
+        // client and token cache for the process. The portable
+        // SyncTransportFactory picks the token source up.
+        services.TryAddSingleton<MsalCloudAccountService>();
+        services.TryAddSingleton<ICloudAccountService>(sp => sp.GetRequiredService<MsalCloudAccountService>());
+        services.TryAddSingleton<IOneDriveAccessTokens>(sp => sp.GetRequiredService<MsalCloudAccountService>());
 
         // C.3+: DPAPI-cached backup passphrase for the unattended
         // cloud-folder snapshot (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md
@@ -107,7 +115,10 @@ public static class InfrastructureServiceCollectionExtensions
         // C.3++ Phase 1 (docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md
         // §7.3): delivery of the cloud-folder .mrz snapshots. Stateless;
         // reads BackupSettings.CloudFolderDirectory on every call.
-        services.TryAddSingleton<IArchiveStorage, LocalFolderArchiveStorage>();
+        // Phase 2 (B.1 Phase 4a): CloudArchiveStorage picks the folder or
+        // the OneDrive app folder from BackupSettings.CloudProvider.
+        services.TryAddSingleton<LocalFolderArchiveStorage>();
+        services.TryAddSingleton<IArchiveStorage, CloudArchiveStorage>();
 
         // ------- Encrypted export / import (C.3) -------
         // The archive cipher is registered by the portable extension;

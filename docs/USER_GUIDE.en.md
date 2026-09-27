@@ -770,6 +770,15 @@ of every profile, including profiles protected by a PIN.
 - Do **not** place the live database file into a cloud-synced folder.
   Only the encrypted `.mrz` snapshots belong there.
 
+### OneDrive instead of a folder
+
+In the same section, **Storage** can be set to **OneDrive (app
+folder)**: click **Sign in…**, sign in with a Microsoft account, set
+the backup passphrase and save. Snapshots go to `Apps/MedReminder26/backups`
+in OneDrive, encrypted as above; no local folder is needed. **Restore
+from cloud folder…** then lists the OneDrive snapshots by date and profile
+and downloads only the one you restore.
+
 ## Sync between PCs
 
 Several PCs can keep the same profile up to date: what you record on one
@@ -780,6 +789,23 @@ folder never contains readable data.
 
 Open **Tools → Sync…**. Enabling, joining, rebuilding and disabling are
 available to the administrator only.
+
+### OneDrive or a shared folder
+
+When you enable sync or join a group, MedReminder asks where the group
+lives:
+
+- **OneDrive**: sign in with a Microsoft account in the browser window
+  that opens. MedReminder can only use its own app folder
+  (`Apps/MedReminder26` in OneDrive); the data there is encrypted.
+  Every PC signs in with the **same** Microsoft account. The OneDrive
+  app on the PC is not needed.
+- **A shared folder**: a folder kept in sync by another program, or a
+  network share, as described below.
+
+If the OneDrive session ends (password change, long inactivity), the
+status says so and **Sign in to OneDrive again** resumes the sync;
+changes recorded meanwhile are sent afterwards.
 
 ### Enable on the first PC
 

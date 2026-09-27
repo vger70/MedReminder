@@ -14,12 +14,16 @@ namespace MedReminder.UI.Forms;
 // join, rebuild and disable for the administrator only (product owner,
 // 2026-09-27). Join and rebuild replace the profile database and restart
 // the application, like an import.
+// Phase 4a: the group lives in a OneDrive account (Microsoft sign-in in
+// the system browser) or in a folder; the choice is made when enabling or
+// joining.
 internal sealed class SyncDialog : MedReminderFormBase
 {
     private readonly IServiceScopeFactory _scopes;
     private readonly SyncHostedService _sync;
     private readonly SyncStatus _status;
     private readonly ISyncSettingsStore _settings;
+    private readonly ICloudAccountService _accounts;
     private readonly ICurrentProfile _profile;
     private readonly ILocalizationService _loc;
     private readonly IApplicationRestarter _restarter;
@@ -30,16 +34,19 @@ internal sealed class SyncDialog : MedReminderFormBase
     private readonly Button _syncNow;
     private readonly Button _rebuild;
     private readonly Button _disable;
+    private readonly Button _signIn;
     private readonly ListView _devices;
     private readonly ListView _conflicts;
     private readonly Button _restore;
     private readonly Button _dismiss;
+    private CloudAccount? _account;
 
     public SyncDialog(
         IServiceScopeFactory scopes,
         SyncHostedService sync,
         SyncStatus status,
         ISyncSettingsStore settings,
+        ICloudAccountService accounts,
         ICurrentProfile profile,
         ILocalizationService localization,
         IApplicationRestarter restarter)
@@ -48,6 +55,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         _sync = sync;
         _status = status;
         _settings = settings;
+        _accounts = accounts;
         _profile = profile;
         _loc = localization;
         _restarter = restarter;
@@ -69,8 +77,9 @@ internal sealed class SyncDialog : MedReminderFormBase
         _syncNow = Action("Ui.SyncDialog.SyncNow", async () => await SyncNowAsync());
         _rebuild = Action("Ui.SyncDialog.Rebuild", async () => await RebuildAsync());
         _disable = Action("Ui.SyncDialog.Disable", async () => await DisableAsync());
+        _signIn = Action("Ui.SyncDialog.SignInAgain", async () => await SignInAgainAsync());
         var statusButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
-        statusButtons.Controls.AddRange([_syncNow, _enable, _join, _rebuild, _disable]);
+        statusButtons.Controls.AddRange([_syncNow, _signIn, _enable, _join, _rebuild, _disable]);
         statusPage.Controls.Add(_statusText);
         statusPage.Controls.Add(statusButtons);
 
@@ -125,6 +134,7 @@ internal sealed class SyncDialog : MedReminderFormBase
 
     private async Task RefreshAllAsync()
     {
+        await RefreshAccountAsync();
         RefreshStatus();
         await RefreshDevicesAsync();
         await RefreshConflictsAsync();
@@ -139,6 +149,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         _disable.Visible = admin && settings is not null;
         _syncNow.Visible = settings is not null;
         _rebuild.Visible = admin && settings is not null && _status.NeedsRebuild;
+        _signIn.Visible = settings?.Provider is not null && (_status.NeedsSignIn || _account is null);
 
         if (settings is null)
         {
@@ -148,7 +159,12 @@ internal sealed class SyncDialog : MedReminderFormBase
 
         var lines = new List<string>
         {
-            _loc.Get("Ui.SyncDialog.Status.Folder", settings.Folder ?? string.Empty),
+            settings.Provider switch
+            {
+                null => _loc.Get("Ui.SyncDialog.Status.Folder", settings.Folder ?? string.Empty),
+                _ when _account is not null => _loc.Get("Ui.SyncDialog.Status.OneDrive", _account.UserName),
+                _ => _loc.Get("Ui.SyncDialog.Status.OneDriveSignedOut"),
+            },
             _loc.Get("Ui.SyncDialog.Status.Device", settings.DeviceName ?? Environment.MachineName),
             _loc.Get("Ui.SyncDialog.Status.Generation", settings.Generation),
             _status.LastRunAt is { } at
@@ -164,6 +180,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         if (_status.LastError is { } error) lines.Add(_loc.Get("Ui.SyncDialog.Status.Error", error));
         if (settings.ResetPending) lines.Add(_loc.Get("Ui.SyncDialog.Status.ResetPending"));
         if (_status.NeedsRebuild) lines.Add(_loc.Get("Ui.SyncDialog.Status.NeedsRebuild"));
+        if (_status.NeedsSignIn) lines.Add(_loc.Get("Ui.SyncDialog.Status.NeedsSignIn"));
         _statusText.Text = string.Join(Environment.NewLine, lines);
     }
 
@@ -228,8 +245,8 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task EnableAsync()
     {
         if (!_profile.IsAdmin || IsEnabled) return;
-        var folder = PickFolder();
-        if (folder is null) return;
+        var target = await ChooseTargetAsync();
+        if (target is null) return;
         using var dialog = new SyncPassphraseDialog(_loc, confirm: true, Environment.MachineName);
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         var passphrase = dialog.TakePassphrase();
@@ -237,7 +254,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         {
             await using var scope = _scopes.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<ISyncSetupService>()
-                .CreateAsync(folder, passphrase, dialog.DeviceName, CancellationToken.None);
+                .CreateAsync(target, passphrase, dialog.DeviceName, CancellationToken.None);
             Info(_loc.Get("Ui.SyncDialog.Enable.Done"));
             await _sync.RunNowAsync();
         }
@@ -255,18 +272,24 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task JoinAsync()
     {
         if (!_profile.IsAdmin || IsEnabled) return;
-        var folder = PickFolder();
-        if (folder is null) return;
+        var target = await ChooseTargetAsync();
+        if (target is null) return;
 
         IReadOnlyList<Guid> groups;
-        await using (var scope = _scopes.CreateAsyncScope())
+        try
         {
+            await using var scope = _scopes.CreateAsyncScope();
             groups = await scope.ServiceProvider.GetRequiredService<ISyncSetupService>()
-                .ListGroupsAsync(folder, CancellationToken.None);
+                .ListGroupsAsync(target, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Error(ex.Message);
+            return;
         }
         if (groups.Count == 0)
         {
-            Error(_loc.Get("Ui.SyncDialog.Join.NoGroup"));
+            Error(_loc.Get(target.Provider is null ? "Ui.SyncDialog.Join.NoGroup" : "Ui.SyncDialog.Join.NoGroupCloud"));
             return;
         }
         // One group per profile: a folder shared by several profiles has
@@ -291,7 +314,7 @@ internal sealed class SyncDialog : MedReminderFormBase
                 {
                     await using var scope = _scopes.CreateAsyncScope();
                     await scope.ServiceProvider.GetRequiredService<ISyncSetupService>()
-                        .JoinAsync(folder, group, passphrase, dialog.DeviceName, CancellationToken.None);
+                        .JoinAsync(target, group, passphrase, dialog.DeviceName, CancellationToken.None);
                     last = null;
                     break;
                 }
@@ -392,6 +415,83 @@ internal sealed class SyncDialog : MedReminderFormBase
             Error(ex.Message);
         }
         await RefreshConflictsAsync();
+    }
+
+    private async Task RefreshAccountAsync()
+    {
+        _account = null;
+        if (_settings.Load() is not { Provider: { } provider, AccountId: { } accountId }) return;
+        try
+        {
+            _account = await _accounts.FindAsync(provider, accountId, CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            // Shown as signed out; "Sign in again" repairs it.
+        }
+    }
+
+    // Where the group lives: OneDrive (sign-in now) or a folder. Null when
+    // the user cancels.
+    private async Task<SyncTarget?> ChooseTargetAsync()
+    {
+        if (!_accounts.IsAvailable(CloudProvider.OneDrive))
+        {
+            return PickFolder() is { } only ? SyncTarget.ForFolder(only) : null;
+        }
+
+        var oneDrive = new TaskDialogCommandLinkButton(
+            _loc.Get("Ui.SyncDialog.Target.OneDrive"), _loc.Get("Ui.SyncDialog.Target.OneDriveNote"));
+        var folder = new TaskDialogCommandLinkButton(
+            _loc.Get("Ui.SyncDialog.Target.Folder"), _loc.Get("Ui.SyncDialog.Target.FolderNote"));
+        var page = new TaskDialogPage
+        {
+            Caption = Text,
+            Heading = _loc.Get("Ui.SyncDialog.Target.Heading"),
+            Buttons = { oneDrive, folder, TaskDialogButton.Cancel },
+            AllowCancel = true,
+        };
+        var choice = TaskDialog.ShowDialog(this, page);
+        if (choice == folder) return PickFolder() is { } picked ? SyncTarget.ForFolder(picked) : null;
+        if (choice != oneDrive) return null;
+
+        var account = await SignInAsync(null);
+        return account is null ? null : SyncTarget.ForCloud(account.Provider, account.Id);
+    }
+
+    // Sign-in in the system browser; null when it fails or is cancelled.
+    private async Task<CloudAccount?> SignInAsync(string? accountId)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        UseWaitCursor = true;
+        try
+        {
+            return await _accounts.SignInAsync(CloudProvider.OneDrive, accountId, timeout.Token);
+        }
+        catch (Exception ex)
+        {
+            Error(_loc.Get("Ui.SyncDialog.SignIn.Failed", ex.Message));
+            return null;
+        }
+        finally
+        {
+            UseWaitCursor = false;
+        }
+    }
+
+    private async Task SignInAgainAsync()
+    {
+        if (_settings.Load() is not { Provider: not null, AccountId: { } accountId }) return;
+        var account = await SignInAsync(accountId);
+        if (account is null) return;
+        if (account.Id != accountId)
+        {
+            // Another Microsoft account holds another app folder, not this group.
+            Error(_loc.Get("Ui.SyncDialog.SignIn.OtherAccount"));
+            return;
+        }
+        await _sync.RunNowAsync();
+        await RefreshAllAsync();
     }
 
     private string? PickFolder()

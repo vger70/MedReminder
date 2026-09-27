@@ -834,6 +834,16 @@ nube…**:
 - **No** coloques el archivo de base de datos en uso en una carpeta
   sincronizada. Ahí solo deben ir las instantáneas cifradas `.mrz`.
 
+### OneDrive en lugar de una carpeta
+
+En la misma sección, **Almacenamiento** puede ser **OneDrive (carpeta de
+aplicación)**: haga clic en **Iniciar sesión…**, inicie sesión con una
+cuenta Microsoft, defina la frase de contraseña de las copias y guarde.
+Las copias van a `Apps/MedReminder26/backups` en OneDrive, cifradas como
+arriba; no hace falta una carpeta local. **Restaurar desde carpeta en la nube…**
+lista entonces las copias de OneDrive por fecha y perfil y descarga solo
+la que restaure.
+
 ## Sincronización entre PC
 
 Varios PC pueden mantener actualizado el mismo perfil: lo que registra en uno
@@ -844,6 +854,24 @@ interviene ningún servidor y la carpeta nunca contiene datos legibles.
 
 Abra **Herramientas → Sincronización…**. Activar, unirse, reconstruir y
 desactivar están reservados al administrador.
+
+### OneDrive o carpeta compartida
+
+Al activar la sincronización o unirse a un grupo, MedReminder pregunta
+dónde guardar el grupo:
+
+- **OneDrive**: inicie sesión con una cuenta Microsoft en la ventana del
+  navegador que se abre. MedReminder solo puede usar su propia carpeta de
+  aplicación (`Apps/MedReminder26` en OneDrive); los datos allí están
+  cifrados. Todos los PC inician sesión con la **misma** cuenta Microsoft.
+  No hace falta la aplicación OneDrive en el PC.
+- **Una carpeta compartida**: una carpeta que otro programa mantiene
+  sincronizada, o una carpeta de red, como se describe abajo.
+
+Si la sesión de OneDrive caduca (cambio de contraseña, larga
+inactividad), el estado lo indica y **Volver a iniciar sesión en
+OneDrive** reanuda la sincronización; los cambios registrados mientras
+tanto se envían después.
 
 ### Activar en el primer PC
 

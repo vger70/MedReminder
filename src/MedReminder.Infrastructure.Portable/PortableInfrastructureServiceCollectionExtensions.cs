@@ -46,11 +46,13 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<ISyncConflictRepository, SyncConflictRepository>();
         services.AddScoped<ISyncPeerRepository, SyncPeerRepository>();
         services.AddScoped<ISyncSnapshotStore, SqliteSyncSnapshotStore>();
-        // The sync engine's transport: the folder of sync.settings.json
-        // (Phase 3c). Resolved only while sync is enabled.
-        services.TryAddScoped<ISyncTransport>(sp => new LocalFolderSyncTransport(
-            sp.GetRequiredService<ISyncSettingsStore>().Load()?.Folder
-            ?? throw new InvalidOperationException("No sync folder is configured for this profile.")));
+        // The sync engine's transport: the target of sync.settings.json, a
+        // folder (Phase 3c) or a OneDrive account (Phase 4a, with the
+        // host's IOneDriveAccessTokens). Resolved only while sync is enabled.
+        services.TryAddSingleton<ISyncTransportFactory, SyncTransportFactory>();
+        services.TryAddScoped<ISyncTransport>(sp => sp.GetRequiredService<ISyncTransportFactory>().Create(
+            SyncTarget.Of(sp.GetRequiredService<ISyncSettingsStore>().Load()
+                ?? throw new InvalidOperationException("Sync is not enabled for this profile."))));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<DatabaseInitializer>();
 

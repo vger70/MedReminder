@@ -136,8 +136,33 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         state.LastError.Should().Be($"cloud {ProfileId}: export failed");
     }
 
+    [Fact]
+    public async Task OneDrive_tick_with_a_signed_in_account_uploads_without_a_folder()
+    {
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _storage.Uploads.Should().ContainSingle();
+        _state.Load().LastSuccessfulBackupAt.Should().Be(Now);
+    }
+
+    [Fact]
+    public async Task OneDrive_tick_with_a_signed_out_account_skips_before_the_export()
+    {
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: false);
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _storage.Uploads.Should().BeEmpty();
+        _state.Load().LastSuccessfulBackupAt.Should().BeNull();
+    }
+
     private AutomaticBackupHostedService CreateHost(
-        bool hasPassphrase, string? cloudFolder = null, string[]? profileIds = null)
+        bool hasPassphrase, string? cloudFolder = null, string[]? profileIds = null,
+        string? oneDriveAccount = null, bool signedIn = false)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IBackupService, LocalTargetUnusedBackupService>();
@@ -146,6 +171,7 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         services.AddSingleton<ICloudBackupPassphraseStore>(new FakePassphraseStore(hasPassphrase));
         services.AddSingleton<IExportService>(_export);
         services.AddSingleton<ICurrentProfile, FakeCurrentProfile>();
+        services.AddSingleton<ICloudAccountService>(new FakeAccounts(signedIn));
 
         var settings = new BackupSettings
         {
@@ -154,6 +180,8 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
             CloudFolderDirectory = cloudFolder ?? _cloudFolder,
             CloudFolderRetention = 30,
             PreferredTime = "03:00",
+            CloudProvider = oneDriveAccount is null ? null : CloudProvider.OneDrive,
+            CloudAccountId = oneDriveAccount ?? string.Empty,
         };
 
         return new AutomaticBackupHostedService(
@@ -166,6 +194,17 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
 
     private const string ProfileId = "0123456789abcdef0123456789abcdef";
     private const string OtherProfileId = "fedcba9876543210fedcba9876543210";
+
+    private sealed class FakeAccounts(bool signedIn) : ICloudAccountService
+    {
+        public bool IsAvailable(CloudProvider provider) => true;
+
+        public Task<CloudAccount> SignInAsync(CloudProvider provider, string? accountId, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<CloudAccount?> FindAsync(CloudProvider provider, string accountId, CancellationToken cancellationToken)
+            => Task.FromResult(signedIn ? new CloudAccount(provider, accountId, "user") : null);
+    }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {

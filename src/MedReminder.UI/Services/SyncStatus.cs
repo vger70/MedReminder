@@ -20,6 +20,10 @@ internal sealed class SyncStatus
     // profile must be rebuilt from the group (admin action).
     public bool NeedsRebuild { get; private set; }
 
+    // The cloud session ended (Phase 4a): sync resumes after an
+    // interactive sign-in from the sync window.
+    public bool NeedsSignIn { get; private set; }
+
     public event EventHandler? Changed;
 
     public event EventHandler? RemoteChangesApplied;
@@ -31,18 +35,20 @@ internal sealed class SyncStatus
             LastRunAt = at;
             LastResult = result;
             LastError = null;
+            NeedsSignIn = false;
             NeedsRebuild = result.NewerGeneration is not null || result.RebuildRequired;
         }
         Changed?.Invoke(this, EventArgs.Empty);
         if (result.OperationsApplied > 0) RemoteChangesApplied?.Invoke(this, EventArgs.Empty);
     }
 
-    public void ReportError(DateTimeOffset at, string message)
+    public void ReportError(DateTimeOffset at, string message, bool needsSignIn = false)
     {
         lock (_lock)
         {
             LastRunAt = at;
             LastError = message;
+            NeedsSignIn = needsSignIn;
         }
         Changed?.Invoke(this, EventArgs.Empty);
     }
@@ -55,6 +61,7 @@ internal sealed class SyncStatus
             LastResult = null;
             LastError = null;
             NeedsRebuild = false;
+            NeedsSignIn = false;
         }
         Changed?.Invoke(this, EventArgs.Empty);
     }

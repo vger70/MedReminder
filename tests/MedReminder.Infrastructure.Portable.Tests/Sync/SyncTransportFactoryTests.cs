@@ -1,0 +1,37 @@
+using FluentAssertions;
+using MedReminder.Application.Abstractions;
+using MedReminder.Infrastructure.Cloud.OneDrive;
+using MedReminder.Infrastructure.Sync;
+using Xunit;
+
+namespace MedReminder.Infrastructure.Tests.Sync;
+
+public sealed class SyncTransportFactoryTests
+{
+    private sealed class Tokens : IOneDriveAccessTokens
+    {
+        public Task<string> GetAccessTokenAsync(string accountId, bool forceRefresh, CancellationToken cancellationToken)
+            => Task.FromResult("token");
+    }
+
+    [Fact]
+    public void A_folder_target_gets_a_folder_transport()
+        => new SyncTransportFactory().Create(SyncTarget.ForFolder(Path.GetTempPath()))
+            .Should().BeOfType<LocalFolderSyncTransport>();
+
+    [Fact]
+    public void One_OneDrive_transport_is_kept_per_account()
+    {
+        var factory = new SyncTransportFactory(new Tokens());
+        var a1 = factory.Create(SyncTarget.ForCloud(CloudProvider.OneDrive, "a"));
+
+        a1.Should().BeOfType<OneDriveSyncTransport>();
+        factory.Create(SyncTarget.ForCloud(CloudProvider.OneDrive, "a")).Should().BeSameAs(a1);
+        factory.Create(SyncTarget.ForCloud(CloudProvider.OneDrive, "b")).Should().NotBeSameAs(a1);
+    }
+
+    [Fact]
+    public void OneDrive_needs_a_token_source_from_the_host()
+        => FluentActions.Invoking(() => new SyncTransportFactory().Create(SyncTarget.ForCloud(CloudProvider.OneDrive, "a")))
+            .Should().Throw<NotSupportedException>();
+}

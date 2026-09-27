@@ -146,9 +146,18 @@ internal sealed class SyncHostedService : BackgroundService
         {
             throw;
         }
+        catch (CloudSignInRequiredException ex)
+        {
+            // Runs keep failing until the user signs in again from the
+            // sync window; nothing is lost meanwhile (operations stay in
+            // the local log).
+            _status.ReportError(_clock.GetUtcNow(), ex.Message, needsSignIn: true);
+            _log.LogWarning("Sync run skipped: {Provider} needs a new sign-in.", ex.Provider);
+            return null;
+        }
         catch (Exception ex)
         {
-            // The folder may be offline; the next run retries.
+            // The folder or the provider may be offline; the next run retries.
             _status.ReportError(_clock.GetUtcNow(), ex.Message);
             _log.LogWarning(ex, "Sync run failed.");
             return null;

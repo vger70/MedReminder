@@ -1,8 +1,8 @@
 # Sync — Manual Two-PC Checklist
 
-Exit check of B.1 Phase 3 (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
+Exit check of B.1 Phase 3 and Phase 4a (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
 §13): two Windows PCs of the same user keep one profile in sync through
-a shared folder. Run it on a release build before a release that ships
+a shared folder, then through OneDrive. Run it on a release build before a release that ships
 or changes sync. Record the date, the build and the result of each step.
 
 ## Setup
@@ -30,3 +30,19 @@ or changes sync. Record the date, the build and the result of each step.
 | 11 | B: Tools → Sync… → Rebuild from the group… | Restart; B shows A's imported data |
 | 12 | B: Disable sync… | B keeps its data; A keeps syncing; B no longer changes the folder |
 | 13 | Logs (`%LOCALAPPDATA%\MedReminder\logs`) of both PCs | Sync runs logged with counters only; no medicine names, notes or passphrase |
+
+## OneDrive (Phase 4a)
+
+Same PCs, sync disabled on both first (Disable sync…), one Microsoft
+account used on both. The OneDrive content is checked at
+onedrive.live.com → My files → Apps → MedReminder26.
+
+| # | Step | Expected |
+|---|---|---|
+| O1 | A: Tools → Sync… → Enable sync… → OneDrive; sign in in the browser; name "PC A", passphrase | Status shows "Storage: OneDrive (<account>)"; `Apps/MedReminder26/sync/<group>/` holds `group.json`, `key.1.wrap`, `genesis/1.mrg`, `devices/…` |
+| O2 | B: Join a group… → OneDrive, same account, same passphrase, confirm | Restart; B shows A's data |
+| O3 | Repeat steps 5 to 9 above | Same results through OneDrive |
+| O4 | A: close MedReminder, rename `%LOCALAPPDATA%\MedReminder\onedrive.protected`, start again, wait for a sync | Status asks to sign in again; "Sign in to OneDrive again" resumes the sync; changes made meanwhile reach B |
+| O5 | A: Settings → Backup → cloud backup: storage OneDrive, sign in, backup passphrase set, save; next day or after the preferred time | `Apps/MedReminder26/backups/medreminder-<profile>-<timestamp>.mrz` |
+| O6 | B: Settings → Backup → Restore from cloud… | Lists the OneDrive snapshots; restore works; no `restore-*.mrz` left in `%LOCALAPPDATA%\MedReminder` |
+| O7 | Logs of both PCs | No token, account name, medicine name or note |

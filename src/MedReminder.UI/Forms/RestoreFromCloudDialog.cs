@@ -12,6 +12,10 @@ namespace MedReminder.UI.Forms;
 // to ICloudRestoreService — which itself delegates to IImportService,
 // reusing the same overwrite semantics the C.3 Import dialog uses.
 //
+// C.3++ Phase 2 (B.1 Phase 4a): with a provider storage (OneDrive), the
+// snapshots are listed through IArchiveStorage and the chosen one is
+// downloaded before the restore; the folder row is hidden.
+//
 // Passphrase handling mirrors ImportDialog: cleared and zeroed in
 // Dispose; the passphrase is never logged.
 internal sealed class RestoreFromCloudDialog : MedReminderFormBase
@@ -22,6 +26,7 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
     private readonly ICurrentProfile _currentProfile;
     private readonly IProfileRegistry _profileRegistry;
     private readonly string _defaultFolder;
+    private readonly IArchiveStorage? _storage;
 
     private readonly TextBox _folderBox;
     private readonly ListView _snapshotList;
@@ -46,7 +51,8 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         ICloudBackupPassphraseStore passStore,
         ICurrentProfile currentProfile,
         IProfileRegistry profileRegistry,
-        string defaultFolder)
+        string defaultFolder,
+        IArchiveStorage? storage = null)
     {
         _loc = loc;
         _cloudRestore = cloudRestore;
@@ -54,6 +60,7 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         _currentProfile = currentProfile;
         _profileRegistry = profileRegistry;
         _defaultFolder = defaultFolder ?? string.Empty;
+        _storage = storage;
 
         Text = _loc.Get("Ui.RestoreCloudDialog.Title");
         Width = 680;
@@ -100,6 +107,12 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         folderRow.Controls.Add(_folderBox);
         folderRow.Controls.Add(browseButton);
         folderRow.Controls.Add(refreshButton);
+        if (_storage is not null)
+        {
+            folderLabel.Text = _loc.Get("Ui.RestoreCloudDialog.OneDrive.Label");
+            _folderBox.Visible = false;
+            browseButton.Visible = false;
+        }
 
         _snapshotList = new ListView
         {
@@ -263,7 +276,7 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         _snapshotList.Items.Clear();
         _snapshots = Array.Empty<CloudSnapshotInfo>();
         var folder = _folderBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        if (_storage is null && (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)))
         {
             _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.NoFolder");
             return;
@@ -272,7 +285,9 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.Loading");
         try
         {
-            _snapshots = await _cloudRestore.ListSnapshotsAsync(folder, CancellationToken.None);
+            _snapshots = _storage is null
+                ? await _cloudRestore.ListSnapshotsAsync(folder, CancellationToken.None)
+                : await _cloudRestore.ListStoredSnapshotsAsync(_storage, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -376,12 +391,25 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
                 }
             });
 
-            await _cloudRestore.RestoreAsync(
-                selected.ArchivePath,
-                passphrase,
-                new ImportOptions(),
-                progress,
-                _cts.Token);
+            if (_storage is null)
+            {
+                await _cloudRestore.RestoreAsync(
+                    selected.ArchivePath,
+                    passphrase,
+                    new ImportOptions(),
+                    progress,
+                    _cts.Token);
+            }
+            else
+            {
+                await _cloudRestore.RestoreStoredAsync(
+                    _storage,
+                    selected.ArchivePath,
+                    passphrase,
+                    new ImportOptions(),
+                    progress,
+                    _cts.Token);
+            }
 
             _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Restore.Success");
             var restart = MessageBox.Show(

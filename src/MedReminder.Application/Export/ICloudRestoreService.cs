@@ -1,3 +1,5 @@
+using MedReminder.Application.Abstractions;
+
 namespace MedReminder.Application.Export;
 
 // Explicit restore from a C.3+ cloud-folder snapshot
@@ -25,6 +27,25 @@ public interface ICloudRestoreService
     // The caller owns passphrase and should zero it after the call.
     Task RestoreAsync(
         string archivePath,
+        char[] passphrase,
+        ImportOptions options,
+        IProgress<int>? progress,
+        CancellationToken cancellationToken);
+
+    // C.3++ Phase 2 (B.1 Phase 4a): snapshots held by a provider API
+    // (IArchiveStorage), most recent first. Reading every manifest would
+    // mean downloading every archive, so the profile and the date come
+    // from the C.3+ file name (§3.3); device, source and version stay
+    // empty. ArchivePath is the storage id.
+    Task<IReadOnlyList<CloudSnapshotInfo>> ListStoredSnapshotsAsync(
+        IArchiveStorage storage,
+        CancellationToken cancellationToken);
+
+    // Downloads the snapshot to a temporary file under the application
+    // data folder, restores it like RestoreAsync, and deletes the file.
+    Task RestoreStoredAsync(
+        IArchiveStorage storage,
+        string archiveId,
         char[] passphrase,
         ImportOptions options,
         IProgress<int>? progress,
