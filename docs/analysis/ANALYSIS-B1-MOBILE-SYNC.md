@@ -95,7 +95,7 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 | P5 | Persistence usable outside Windows | **Met by Phase 1** | EF Core model, repositories, `DatabaseInitializer` moved to `MedReminder.Infrastructure.Portable` (`net10.0`); their tests run on Linux |
 | P6 | Archive read path usable outside Windows | **Met by Phase 1** | `ArchiveReader` (`IArchiveReader`) and `ProfileDatabaseBuilder` in the portable project; `ImportService` is the Windows shell (file swap, DPAPI rewrap, settings files). `ExportService` stays Windows-only (mobile export is Phase 7) |
 | P7 | View models outside WinForms | **Met by Phase 1** | `MedicineOverviewLoader` and `MedicineListItem` moved to `MedReminder.Application/Overview` |
-| P8 | Every data write goes through an Application use case | **Met by Phase 2a for the profile database** | The only direct UI write (`MainForm` deactivate: `medicine.IsActive = false` + `SaveChangesAsync`) moved to the `DeactivateMedicine` use case; `UiWritePathGuardTests` fails on any repository write, `SaveChangesAsync` or `DbContext` use under `src/MedReminder.UI` `[VERIFIED]`. Open: two replicated values (§4.2) are still written by the UI outside the database: per-profile notification settings (`SettingsDialog` writes `notifications.settings.json`) and the profile display name (`ProfilesManagerForm` calls `IProfileRegistry.Rename`). They need a use case before operation capture reaches them |
+| P8 | Every data write goes through an Application use case | **Met by Phase 2a for the profile database** | The only direct UI write (`MainForm` deactivate: `medicine.IsActive = false` + `SaveChangesAsync`) moved to the `DeactivateMedicine` use case; `UiWritePathGuardTests` fails on any repository write, `SaveChangesAsync` or `DbContext` use under `src/MedReminder.UI` `[VERIFIED]`. Open: two replicated values (§4.2) are still written by the UI outside the database: per-profile notification settings (`SettingsDialog` writes `notifications.settings.json`) and the profile display name (`ProfilesManagerForm` calls `IProfileRegistry.Rename`). They need a use case before operation capture reaches them; the product owner deferred them out of Phase 2a (2026-09-27) |
 | P9 | Stock ledger is a deterministic function of user facts | **Not met** | Automatic consumption, backdated-intake reversals, stock-count corrections and `StockEpoch` are computed locally and depend on execution order (§3.4) `[VERIFIED — ANALYSIS.md §4.4]`. Phase 2 |
 | P10 | Stable GUID identity on every replicated entity | **Met** | All entities use `Guid Id` generated at creation `[VERIFIED — Domain entities]` |
 | P11 | Medicines are never hard-deleted | **Met** | Deactivation via `IsActive` `[VERIFIED]`; slots are replaced as a set by `UpdateMedicine` (`DeleteForMedicineAsync` + add) `[VERIFIED]` |
@@ -1344,6 +1344,7 @@ Phase 2 implements the derivation from the prototype and its tests.
   database for import), `DatabaseInitializer` (schema) and the
   reference-catalogue import (`CsvReferenceCatalogueImporter`, not
   profile data). Still open: the replicated values written outside the
-  database (notification settings file, profile display name), see P8.
+  database (notification settings file, profile display name), deferred
+  by the product owner, see P8.
   Phase 2 is split into 2a (write paths), 2b (schema patches), 2c
   (`LedgerDeriver`) and 2d (fact retraction, D8).
