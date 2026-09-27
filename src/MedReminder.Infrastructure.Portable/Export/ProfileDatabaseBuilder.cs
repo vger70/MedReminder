@@ -1,6 +1,7 @@
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace MedReminder.Infrastructure.Export;
 
@@ -60,6 +61,18 @@ internal static class ProfileDatabaseBuilder
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // An imported profile starts frozen, as the boot patch leaves an
+        // existing one (B.1 Phase 2c-2): the archive's numbers stay
+        // exactly as exported and the derivation starts after the import.
+        var importClock = clock ?? TimeProvider.System;
+        await LedgerFreeze.ApplyAsync(
+            db.Database.GetDbConnection(),
+            transaction.GetDbTransaction(),
+            importClock.GetUtcNow(),
+            importClock.LocalTimeZone,
+            cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
     }
 }

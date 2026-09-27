@@ -23,6 +23,24 @@ internal sealed class InMemoryStockMovementRepository : IStockMovementRepository
         return Task.CompletedTask;
     }
 
+    public Task RemoveRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
+    {
+        var ids = movements.Select(m => m.Id).ToHashSet();
+        _items.RemoveAll(m => ids.Contains(m.Id));
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
+    {
+        foreach (var movement in movements)
+        {
+            var index = _items.FindIndex(m => m.Id == movement.Id);
+            if (index < 0) throw new InvalidOperationException($"Movement {movement.Id} not found.");
+            _items[index] = movement;
+        }
+        return Task.CompletedTask;
+    }
+
     public Task AddRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
     {
         _items.AddRange(movements);

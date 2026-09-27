@@ -142,6 +142,20 @@ public class LedgerDeriverTests
     }
 
     [Fact]
+    public void DailyConsumption_takes_the_later_of_two_rows_with_the_same_date()
+    {
+        // §17: callers pass rows in recording order within a date.
+        MedicationScheduleHistory Row(int admins) => new()
+        {
+            MedicineId = MedicineId, EffectiveFrom = Start,
+            DosePerAdministration = 1m, AdministrationsPerDay = admins,
+        };
+
+        MedReminder.Domain.Calculations.DailyConsumption.RateOn(Start.AddDays(1), [Row(2), Row(3)])
+            .Should().Be(3m);
+    }
+
+    [Fact]
     public void Positive_user_entries_and_advancing_counts_raise_the_epoch()
     {
         var facts = Facts() with

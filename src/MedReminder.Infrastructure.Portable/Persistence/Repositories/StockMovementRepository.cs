@@ -33,6 +33,20 @@ internal sealed class StockMovementRepository : IStockMovementRepository
         await _db.StockMovements.AddAsync(movement, cancellationToken);
     }
 
+    // Rows come from AsNoTracking reads: attach and mark them deleted /
+    // modified in the current unit of work.
+    public Task RemoveRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
+    {
+        _db.StockMovements.RemoveRange(movements);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
+    {
+        _db.StockMovements.UpdateRange(movements);
+        return Task.CompletedTask;
+    }
+
     public async Task AddRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
     {
         await _db.StockMovements.AddRangeAsync(movements, cancellationToken);

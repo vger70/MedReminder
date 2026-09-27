@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
@@ -143,9 +144,11 @@ public class ConsumptionCatchUpTests
             new RegisterIntakeCommand(id, new DateOnly(2026, 9, 13), IntakeStatus.Taken, Quantity: 2m),
             CancellationToken.None);
 
+        // Since Phase 2c-2 the intake derives the whole ledger at once,
+        // so the tick finds nothing left.
         var created = await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
 
-        created.Should().Be(3);
+        created.Should().Be(0);
         var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
         MedicineStock.Current(movements).Should().Be(30m - (4 * 2m));
     }
@@ -182,8 +185,12 @@ public class ConsumptionCatchUpTests
         var stock = new BarrierStockMovementRepository(scope.Stock, TimeSpan.FromMilliseconds(300));
 
         ConsumptionCatchUp Build() => new(
-            scope.Medicines, scope.Schedules, scope.Suspensions, scope.Slots,
-            stock, scope.Intakes, scope.Uow, scope.Clock);
+            scope.Medicines,
+            new LedgerSynchronizer(
+                new LedgerFactsLoader(stock, scope.Intakes, scope.Schedules, scope.Suspensions,
+                    scope.Slots, scope.Activity, scope.Counts, scope.Cutoff),
+                stock, scope.Medicines, scope.Clock),
+            scope.Uow);
 
         var results = await Task.WhenAll(
             Task.Run(() => Build().RunAsync(CancellationToken.None)),
@@ -241,6 +248,24 @@ public class ConsumptionCatchUpTests
             lock (_sync)
             {
                 return _inner.AddRangeAsync(copy, cancellationToken);
+            }
+        }
+
+        public Task RemoveRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
+        {
+            var copy = movements.ToList();
+            lock (_sync)
+            {
+                return _inner.RemoveRangeAsync(copy, cancellationToken);
+            }
+        }
+
+        public Task UpdateRangeAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken)
+        {
+            var copy = movements.ToList();
+            lock (_sync)
+            {
+                return _inner.UpdateRangeAsync(copy, cancellationToken);
             }
         }
 

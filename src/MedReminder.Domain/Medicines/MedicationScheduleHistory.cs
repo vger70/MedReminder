@@ -34,4 +34,10 @@ public sealed class MedicationScheduleHistory
     // JSON payload matching ScheduleKind (see ScheduleCodec). Null
     // for FixedDaily.
     public string? SchedulePayload { get; init; }
+
+    // Recording instant (B.1 Phase 2c-2). Of two rows with the same
+    // EffectiveFrom the later recorded one wins (ANALYSIS-B1-MOBILE-
+    // SYNC.md §17). Rows recorded before the ledger patch read back as
+    // DateTimeOffset.MinValue.
+    public DateTimeOffset RecordedAt { get; init; }
 }

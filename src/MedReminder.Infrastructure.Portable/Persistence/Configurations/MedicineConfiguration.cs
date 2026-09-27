@@ -42,6 +42,8 @@ internal sealed class MedicineConfiguration : IEntityTypeConfiguration<Medicine>
         // consistent with the additive patch, so no reminder is ever "armed"
         // by the upgrade and legacy inserts that omit the column still succeed.
         builder.Property(m => m.RemindOnDose).HasDefaultValue(false);
+        // B.1 Phase 2c-2: same default as the boot patch column.
+        builder.Property(m => m.LedgerBaselineEpoch).HasDefaultValue(1);
 
         builder.HasIndex(m => m.IsActive);
         builder.HasIndex(m => m.Name);

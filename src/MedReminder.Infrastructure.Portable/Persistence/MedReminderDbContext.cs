@@ -28,6 +28,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<MedicationAdministrationSlotSet> MedicationAdministrationSlotSets => Set<MedicationAdministrationSlotSet>();
     public DbSet<StockCount> StockCounts => Set<StockCount>();
     public DbSet<LedgerCutoff> LedgerCutoffs => Set<LedgerCutoff>();
+    public DbSet<MedicineActivityChange> MedicineActivityChanges => Set<MedicineActivityChange>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new MedicationAdministrationSlotSetConfiguration());
         modelBuilder.ApplyConfiguration(new StockCountConfiguration());
         modelBuilder.ApplyConfiguration(new LedgerCutoffConfiguration());
+        modelBuilder.ApplyConfiguration(new MedicineActivityChangeConfiguration());
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

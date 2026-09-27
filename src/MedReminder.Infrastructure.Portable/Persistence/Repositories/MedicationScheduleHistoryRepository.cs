@@ -21,6 +21,7 @@ internal sealed class MedicationScheduleHistoryRepository
             .AsNoTracking()
             .Where(s => s.MedicineId == medicineId)
             .OrderBy(s => s.EffectiveFrom)
+            .ThenBy(s => s.RecordedAt)
             .ToListAsync(cancellationToken);
     }
 

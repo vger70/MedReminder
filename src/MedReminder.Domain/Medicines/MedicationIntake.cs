@@ -25,4 +25,10 @@ public sealed class MedicationIntake
     public required IntakeStatus Status { get; set; }
 
     public string? Notes { get; set; }
+
+    // Recording instant (B.1 Phase 2c-2). Intakes recorded before the
+    // ledger freeze (LedgerCutoff.FrozenAt) are Legacy: their stock
+    // movements are frozen rows. Older rows read back as
+    // DateTimeOffset.MinValue.
+    public DateTimeOffset RecordedAt { get; init; }
 }

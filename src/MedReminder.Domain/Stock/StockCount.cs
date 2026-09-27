@@ -8,8 +8,11 @@ namespace MedReminder.Domain.Stock;
 // medicine's threshold at the moment of the count, which the epoch
 // rule needs.
 //
-// Phase 2b only creates the table; ReconcileStock starts recording
-// counts in Phase 2c together with LedgerDeriver.
+// Written by ReconcileStock since Phase 2c-2, with the outcome
+// evaluated at that moment on the facts recorded before the count
+// (LedgerDeriver.EvaluateCount). The ledger derivation books the
+// stored outcome; Phase 3 re-evaluates it when facts from other devices
+// arrive.
 public sealed class StockCount
 {
     public Guid Id { get; init; } = Guid.NewGuid();
@@ -26,4 +29,17 @@ public sealed class StockCount
 
     // Recording instant. Phase 3 adds the hybrid logical clock.
     public required DateTimeOffset RecordedAt { get; init; }
+
+    public string? Notes { get; init; }
+
+    // Outcome at recording time (StockCountAnchor).
+    public decimal LedgerAtStartOfDay { get; init; }
+
+    public decimal CountDayScheduled { get; init; }
+
+    public decimal Correction { get; init; }
+
+    public bool MaterializesCountDay { get; init; }
+
+    public bool AdvancesEpoch { get; init; }
 }

@@ -38,9 +38,11 @@ public class RegisterIntakeTests
         intake.ActualAt.Should().NotBeNull();
 
         var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
-        var consumption = movements.Single(m => m.Kind == StockMovementKind.Consumption);
+        var consumption = movements.Single(m => m.Kind == StockMovementKind.Consumption && Day(m) == today);
         consumption.QuantityDelta.Should().Be(-1m);
     }
+
+    private static DateOnly Day(StockMovement m) => DateOnly.FromDateTime(m.OccurredAt.UtcDateTime);
 
     [Fact]
     public async Task Skipped_intake_records_row_but_no_stock_movement()
@@ -55,7 +57,7 @@ public class RegisterIntakeTests
 
         scope.Intakes.All.Single().Status.Should().Be(IntakeStatus.Skipped);
         var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
-        movements.Should().NotContain(m => m.Kind == StockMovementKind.Consumption);
+        movements.Should().NotContain(m => m.Kind == StockMovementKind.Consumption && Day(m) == today);
     }
 
     [Fact]
@@ -85,17 +87,18 @@ public class RegisterIntakeTests
             new RegisterIntakeCommand(id, new DateOnly(2026, 9, 11), IntakeStatus.Skipped, Quantity: 1m),
             CancellationToken.None);
 
+        // The intake already derived the ledger (Phase 2c-2); the tick
+        // has nothing left to write.
         var created = await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
-        // Range 1..12 settembre (StartDate 1/9), 12 giorni. Il 11/9 è
-        // saltato → 11 movimenti Consumption creati dal catch-up.
-        created.Should().Be(11);
+        created.Should().Be(0);
 
+        // Range 1..12 September (StartDate 1/9), 12 days, 11/9 skipped.
         var consumptionDays = (await scope.Stock.ListForMedicineAsync(id, CancellationToken.None))
             .Where(m => m.Kind == StockMovementKind.Consumption)
             .Select(m => DateOnly.FromDateTime(m.OccurredAt.DateTime))
             .OrderBy(d => d)
             .ToList();
-        consumptionDays.Should().NotContain(new DateOnly(2026, 9, 11));
+        consumptionDays.Should().HaveCount(11).And.NotContain(new DateOnly(2026, 9, 11));
     }
 
     [Fact]
@@ -110,9 +113,31 @@ public class RegisterIntakeTests
             new RegisterIntakeCommand(id, new DateOnly(2026, 9, 11), IntakeStatus.Taken, Quantity: 1m),
             CancellationToken.None);
 
+        // Day 11 is still derived: its automatic row is replaced by the
+        // intake, no reversal row is needed (Phase 2c-2).
+        var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
+        movements.Should().NotContain(m => m.Kind == StockMovementKind.PositiveCorrection);
+        movements.Where(m => Day(m) == new DateOnly(2026, 9, 11)).Should().ContainSingle()
+            .Which.QuantityDelta.Should().Be(-1m);
+        MedicineStock.Current(movements).Should().Be(30m - 24m + 2m - 1m);
+    }
+
+    [Fact]
+    public async Task Backdated_intake_on_a_frozen_day_reverses_the_legacy_consumption()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedAsync(scope);
+        await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+        scope.FreezeLedger();
+
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, new DateOnly(2026, 9, 11), IntakeStatus.Taken, Quantity: 1m),
+            CancellationToken.None);
+
         var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
         movements.Should().ContainSingle(m => m.Kind == StockMovementKind.PositiveCorrection)
             .Which.QuantityDelta.Should().Be(2m);
+        movements.Count(m => m.Origin == StockMovementOrigin.Legacy).Should().Be(13);
         MedicineStock.Current(movements).Should().Be(30m - 24m + 2m - 1m);
     }
 
@@ -147,7 +172,7 @@ public class RegisterIntakeTests
             CancellationToken.None);
 
         var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
-        movements.Count(m => m.Kind == StockMovementKind.PositiveCorrection).Should().Be(1);
+        movements.Count(m => m.Kind == StockMovementKind.PositiveCorrection).Should().Be(0);
         MedicineStock.Current(movements).Should().Be(30m - 24m + 2m - 1m - 1m);
     }
 

@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Ledger;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
@@ -51,17 +52,20 @@ public sealed class UpdateMedicine
 {
     private readonly IMedicineRepository _medicines;
     private readonly IMedicationAdministrationSlotRepository _slots;
+    private readonly IMedicineActivityRepository _activity;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
     public UpdateMedicine(
         IMedicineRepository medicines,
         IMedicationAdministrationSlotRepository slots,
+        IMedicineActivityRepository activity,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _slots = slots;
+        _activity = activity;
         _uow = uow;
         _clock = clock;
     }
@@ -91,6 +95,8 @@ public sealed class UpdateMedicine
         medicine.EndDate = cmd.EndDate;
         medicine.DoctorName = string.IsNullOrWhiteSpace(cmd.DoctorName) ? null : cmd.DoctorName.Trim();
         medicine.Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim();
+        await MedicineActivity.RecordAsync(
+            _activity, medicine, cmd.IsActive, _clock.GetUtcNow(), _clock.LocalTimeZone, cancellationToken);
         medicine.IsActive = cmd.IsActive;
         medicine.RemindOnDose = cmd.RemindOnDose;
         if (cmd.Catalogue is { } link)

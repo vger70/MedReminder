@@ -49,6 +49,11 @@ public sealed class Medicine
     // current cycle.
     public int StockEpoch { get; set; } = 1;
 
+    // StockEpoch at the ledger freeze (B.1 Phase 2c-2): the derived
+    // epoch counts refills and counts on top of it. 1 for a medicine
+    // created after the freeze.
+    public int LedgerBaselineEpoch { get; set; } = 1;
+
     public NotificationChannels NotificationChannels { get; set; }
         = NotificationChannels.Windows;
 

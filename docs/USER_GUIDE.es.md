@@ -106,6 +106,11 @@ selector Simple/Avanzado y surte efecto a partir de la *Fecha de
 vigencia* que elijas, de modo que el esquema anterior sigue siendo
 válido para los días previos.
 
+Si la *Fecha de vigencia* está en el pasado, en la siguiente
+comprobación el consumo automático ya registrado a partir de esa fecha
+se recalcula con la nueva pauta. Los movimientos de stock registrados
+antes de instalar esta versión nunca se recalculan.
+
 MedReminder no es un dispositivo médico: no comprueba dosis máximas
 diarias, no avisa de sobredosis y no verifica interacciones
 farmacológicas. Solo sigue la terapia que tu médico ha prescrito y
@@ -337,6 +342,8 @@ o adicionales.
   medicamento desaparece de las comprobaciones automáticas y de los
   avisos, pero los datos históricos (movimientos, notificaciones)
   permanecen en la DB para auditoría.
+- **Reactivar**: **Editar** → marca **Activo**. Los días en que el
+  medicamento estuvo desactivado no se cuentan como consumo.
 
 ## Cronología de la terapia
 

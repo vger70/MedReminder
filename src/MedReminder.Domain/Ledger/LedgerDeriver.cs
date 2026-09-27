@@ -29,8 +29,7 @@ namespace MedReminder.Domain.Ledger;
 // Epoch (§4.4): BaselineEpoch + positive user stock entries + counts
 // that advanced it.
 //
-// Not applied yet (Phase 2c-2 wires the deriver into the use cases);
-// Phase 2c-1 only proves parity with today's behavior.
+// Applied by the Application (LedgerSynchronizer) since Phase 2c-2.
 public static class LedgerDeriver
 {
     public static DerivedLedger Derive(LedgerFacts facts, DateOnly today, TimeZoneInfo zone)
@@ -42,11 +41,36 @@ public static class LedgerDeriver
         var rows = Build(view, autoThrough: today.AddDays(-1), facts.Counts);
         var raw = rows.Sum(r => r.Delta);
 
-        var epoch = facts.BaselineEpoch
-            + facts.UserEntries.Count(IsEpochAdvancingEntry)
-            + facts.Counts.Count(c => c.AdvancesEpoch);
+        // Epoch-advancing facts in time order: a derived row carries the
+        // epoch in force at its instant, the count's own advance
+        // included (ReconcileStock books the correction in the new
+        // epoch).
+        var advances = facts.UserEntries.Where(IsEpochAdvancingEntry).Select(e => e.OccurredAt)
+            .Concat(facts.Counts.Where(c => c.AdvancesEpoch).Select(c => c.RecordedAt))
+            .Order()
+            .ToList();
+        var epoch = facts.BaselineEpoch + advances.Count;
+        rows = rows
+            .Select(r => r.IsDerived
+                ? r with { Epoch = facts.BaselineEpoch + advances.Count(t => t <= r.OccurredAt) }
+                : r)
+            .ToList();
 
         return new DerivedLedger(rows, raw, raw < 0m ? 0m : raw, epoch);
+    }
+
+    // Raw ledger at the start of `day` (automatic consumption booked
+    // through the day before) and the quantity a count on that day can
+    // mark as taken: the two values the count dialog shows before the
+    // user types anything.
+    public static (decimal LedgerAtStartOfDay, decimal CountDayScheduled) CountBaseline(
+        LedgerFacts facts, DateOnly day, TimeZoneInfo zone)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        ArgumentNullException.ThrowIfNull(zone);
+        var view = new FactView(facts, zone);
+        var start = Build(view, autoThrough: day.AddDays(-1), facts.Counts).Sum(r => r.Delta);
+        return (start, CountDayScheduled(view, day, facts.Counts));
     }
 
     // Values of a stock count taken on countDay, evaluated on `facts`
@@ -60,7 +84,8 @@ public static class LedgerDeriver
         decimal countedQuantity,
         decimal takenToday,
         int thresholdAtCount,
-        TimeZoneInfo zone)
+        TimeZoneInfo zone,
+        string? notes = null)
     {
         ArgumentNullException.ThrowIfNull(facts);
         ArgumentNullException.ThrowIfNull(zone);
@@ -90,7 +115,7 @@ public static class LedgerDeriver
 
         return new StockCountAnchor(
             countId, countDay, recordedAt, countedQuantity, takenToday, thresholdAtCount,
-            start, scheduled, correction, materializes, advances);
+            start, scheduled, correction, materializes, advances, notes);
     }
 
     // Quantity still due on `day` that a count on that day can mark as
@@ -141,7 +166,7 @@ public static class LedgerDeriver
             if (intake.Status == IntakeStatus.Taken)
             {
                 rows.Add(view.Derived(DerivedRule.IntakeConsumption, $"intake:{intake.Id:N}",
-                    StockMovementKind.Consumption, -intake.Quantity, intake.Day));
+                    StockMovementKind.Consumption, -intake.Quantity, intake.Day) with { Notes = intake.Notes });
             }
         }
 
@@ -187,7 +212,7 @@ public static class LedgerDeriver
                 : StockMovementKind.NegativeCorrection;
             rows.Add(new LedgerRow(
                 DeterministicGuid.Create(facts.MedicineId, $"count:{a.Id:N}"),
-                DerivedRule.CountCorrection, kind, a.Correction, a.CountDay, a.RecordedAt));
+                DerivedRule.CountCorrection, kind, a.Correction, a.CountDay, a.RecordedAt, a.Notes));
         }
 
         return rows;

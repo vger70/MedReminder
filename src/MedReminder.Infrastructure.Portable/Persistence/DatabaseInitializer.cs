@@ -166,6 +166,86 @@ public sealed class DatabaseInitializer
             cancellationToken);
 
         await ApplyLedgerFactsPatchAsync(cancellationToken);
+        await ApplyLedgerDerivationPatchAsync(cancellationToken);
+    }
+
+    // B.1 Phase 2c-2 (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.2,
+    // §4.3, §13): the facts the ledger derivation reads, then a
+    // re-freeze. One transaction.
+    //
+    //   - MedicineActivityChanges: dated activation history (D15).
+    //   - StockCounts outcome columns and Notes: the count outcome is
+    //     stored with the fact until Phase 3.
+    //   - MedicationScheduleHistories.RecordedAt: same-date rows resolve
+    //     to the later recorded one (§17).
+    //   - Medicines.LedgerBaselineEpoch.
+    //   - MedicationIntakes.RecordedAt, the guard: when it is missing the
+    //     database predates 2c-2, so it is re-frozen (LedgerFreeze).
+    //     Rows written between the 2b patch and now include count
+    //     corrections without a count fact; freezing them keeps every
+    //     past number.
+    private async Task ApplyLedgerDerivationPatchAsync(CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        await ExecuteAsync(connection, transaction, @"
+            CREATE TABLE IF NOT EXISTS ""MedicineActivityChanges"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_MedicineActivityChanges"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""Day"" TEXT NOT NULL,
+                ""Active"" INTEGER NOT NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_MedicineActivityChanges_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteAsync(connection, transaction, @"
+            CREATE INDEX IF NOT EXISTS ""IX_MedicineActivityChanges_MedicineId_RecordedAt""
+                ON ""MedicineActivityChanges"" (""MedicineId"", ""RecordedAt"");", cancellationToken);
+
+        foreach (var (table, column, typeSpec) in new[]
+        {
+            ("StockCounts", "Notes", "TEXT NULL"),
+            ("StockCounts", "LedgerAtStartOfDay", "TEXT NOT NULL DEFAULT '0'"),
+            ("StockCounts", "CountDayScheduled", "TEXT NOT NULL DEFAULT '0'"),
+            ("StockCounts", "Correction", "TEXT NOT NULL DEFAULT '0'"),
+            ("StockCounts", "MaterializesCountDay", "INTEGER NOT NULL DEFAULT 0"),
+            ("StockCounts", "AdvancesEpoch", "INTEGER NOT NULL DEFAULT 0"),
+            ("MedicationScheduleHistories", "RecordedAt", "INTEGER NOT NULL DEFAULT 0"),
+            ("Medicines", "LedgerBaselineEpoch", "INTEGER NOT NULL DEFAULT 1"),
+        })
+        {
+            await AddColumnIfMissingAsync(connection, transaction, table, column, typeSpec, cancellationToken);
+        }
+
+        if (await AddColumnIfMissingAsync(connection, transaction,
+                "MedicationIntakes", "RecordedAt", "INTEGER NOT NULL DEFAULT 0", cancellationToken))
+        {
+            await LedgerFreeze.ApplyAsync(
+                connection, transaction, _clock.GetUtcNow(), _clock.LocalTimeZone, cancellationToken);
+            _log.LogInformation("Ledger re-frozen for the ledger derivation.");
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private async Task<bool> AddColumnIfMissingAsync(
+        DbConnection connection, DbTransaction transaction,
+        string table, string column, string typeSpec, CancellationToken cancellationToken)
+    {
+        if (await ColumnExistsAsync(connection, transaction, table, column, cancellationToken))
+        {
+            return false;
+        }
+        await ExecuteAsync(connection, transaction,
+            $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {typeSpec};", cancellationToken);
+        _log.LogInformation("Added missing column {Column} to {Table}.", column, table);
+        return true;
     }
 
     // B.1 Phase 2b (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §3.5, §4.2,
@@ -274,25 +354,13 @@ public sealed class DatabaseInitializer
         await transaction.CommitAsync(cancellationToken);
     }
 
-    private static async Task ExecuteAsync(
+    private static Task ExecuteAsync(
         DbConnection connection,
         DbTransaction transaction,
         string sql,
         CancellationToken cancellationToken,
         params (string Name, object Value)[] parameters)
-    {
-        await using var cmd = connection.CreateCommand();
-        cmd.Transaction = transaction;
-        cmd.CommandText = sql;
-        foreach (var (name, value) in parameters)
-        {
-            var p = cmd.CreateParameter();
-            p.ParameterName = name;
-            p.Value = value;
-            cmd.Parameters.Add(p);
-        }
-        await cmd.ExecuteNonQueryAsync(cancellationToken);
-    }
+        => LedgerFreeze.ExecuteAsync(connection, transaction, sql, cancellationToken, parameters);
 
     private async Task ExecuteRawSqlAsync(string sql, CancellationToken cancellationToken)
     {

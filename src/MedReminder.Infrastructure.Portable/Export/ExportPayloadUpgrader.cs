@@ -15,8 +15,9 @@ namespace MedReminder.Infrastructure.Export;
 //   - the slots of each medicine become one slot set, in force from
 //     the medicine's StartDate; the set reuses the medicine's Id, as
 //     the boot patch does;
-//   - the ledger cutoff is the day before the import, frozen at the
-//     import instant.
+// The ledger freeze itself (Legacy rows, cutoff, epoch baseline) is
+// applied to every import, whatever its version, by
+// ProfileDatabaseBuilder through LedgerFreeze (Phase 2c-2).
 internal static class ExportPayloadUpgrader
 {
     public static void UpgradeToCurrent(ExportPayload payload, TimeProvider clock)
@@ -30,8 +31,6 @@ internal static class ExportPayloadUpgrader
         }
 
         var now = clock.GetUtcNow();
-        var localToday = DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(now, clock.LocalTimeZone).DateTime);
 
         var startDates = payload.Medicines.ToDictionary(m => m.Id, m => m.StartDate);
         foreach (var medicineId in payload.MedicationAdministrationSlots
@@ -53,12 +52,6 @@ internal static class ExportPayloadUpgrader
         {
             slot.SetId = slot.MedicineId;
         }
-
-        payload.LedgerCutoff = new ExportedLedgerCutoff
-        {
-            CutoffDay = localToday.AddDays(-1),
-            FrozenAt = now,
-        };
 
         payload.SchemaVersion = ExportFormat.CurrentSchemaVersion;
     }

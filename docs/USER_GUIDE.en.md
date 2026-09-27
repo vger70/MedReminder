@@ -102,6 +102,11 @@ is available there and takes effect from the *Effective from* date
 you pick, so the previous schedule stays valid for the days before
 that date.
 
+If the *Effective from* date is in the past, the automatic consumption
+already booked from that date on is recalculated with the new schedule
+at the next check. Stock movements recorded before you installed this
+version are never recalculated.
+
 MedReminder is not a medical device: it does not check maximum
 daily doses, does not warn about overdoses and does not verify
 drug-drug interactions. It only follows the therapy your doctor
@@ -311,6 +316,8 @@ figure only: it is not interpreted as missed or extra doses.
 - **Deactivate**: toolbar → **Deactivate**. The medicine disappears
   from automatic checks and alerts, but historical data (movements,
   notifications) stays in the DB for audit.
+- **Reactivate**: **Edit** → tick **Active**. The days on which the
+  medicine was inactive are not counted as consumption.
 
 ## Therapy timeline
 

@@ -1,6 +1,8 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Stock;
 
@@ -10,12 +12,14 @@ namespace MedReminder.Application.UseCases;
 // the app compares it with the expected stock and records one
 // correction.
 //
-// Stock semantics. ConsumptionCatchUp materializes consumption up to
-// yesterday, so the ledger total is the stock at the start of today.
-// Expected stock = that total (pending days materialized through the
-// same planner as the catch-up, no second stock calculation) minus the
-// part of today's scheduled consumption the user has already taken
-// (TakenToday, 0..today's scheduled quantity).
+// Stock semantics. The derived ledger books automatic consumption up to
+// yesterday, so its total is the stock at the start of today.
+// Expected stock = that total (derived by LedgerDeriver from the facts,
+// no second stock calculation) minus the part of today's scheduled
+// consumption the user has already taken (TakenToday, 0..today's
+// scheduled quantity). Since B.1 Phase 2c-2 the count is stored as a
+// StockCount fact with its outcome, and the correction is a derived row
+// (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.3 rule 3).
 //
 // The correction is always counted - expected (raw). Where it lands:
 //  - TakenToday = today's whole scheduled quantity: today's automatic
@@ -110,45 +114,45 @@ public sealed record StockCountPreview(
 public sealed class ReconcileStock
 {
     private readonly IMedicineRepository _medicines;
-    private readonly IStockMovementRepository _stock;
     private readonly IMedicationScheduleHistoryRepository _schedules;
     private readonly IMedicationSuspensionRepository _suspensions;
     private readonly IMedicationAdministrationSlotRepository _slots;
-    private readonly ConsumptionCatchUp _catchUp;
+    private readonly IStockCountRepository _counts;
+    private readonly LedgerSynchronizer _ledger;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
     public ReconcileStock(
         IMedicineRepository medicines,
-        IStockMovementRepository stock,
         IMedicationScheduleHistoryRepository schedules,
         IMedicationSuspensionRepository suspensions,
         IMedicationAdministrationSlotRepository slots,
-        ConsumptionCatchUp catchUp,
+        IStockCountRepository counts,
+        LedgerSynchronizer ledger,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
-        _stock = stock;
         _schedules = schedules;
         _suspensions = suspensions;
         _slots = slots;
-        _catchUp = catchUp;
+        _counts = counts;
+        _ledger = ledger;
         _uow = uow;
         _clock = clock;
     }
 
-    // Writes nothing. The pending consumption is computed in memory.
+    // Writes nothing. The start-of-day ledger is derived in memory.
     public async Task<StockCountSnapshot> LoadAsync(Guid medicineId, CancellationToken cancellationToken)
     {
         var medicine = await GetMedicineAsync(medicineId, cancellationToken);
-        var ledger = await _stock.ListForMedicineAsync(medicineId, cancellationToken);
-        return (await BuildStateAsync(medicine, ledger, cancellationToken)).Snapshot;
+        var facts = await _ledger.LoadFactsAsync(medicine, cancellationToken);
+        return await BuildSnapshotAsync(medicine, facts, cancellationToken);
     }
 
     // Runs under MonitoringGate: a catch-up committing between the
-    // materialization below and the save would write the same days
-    // again (double decrement) and skew the gap.
+    // derivation below and the save would derive from facts that miss
+    // this count.
     public Task<ReconcileStockResult> ExecuteAsync(ReconcileStockCommand cmd, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cmd);
@@ -162,88 +166,76 @@ public sealed class ReconcileStock
     private async Task<ReconcileStockResult> ExecuteCoreAsync(ReconcileStockCommand cmd, CancellationToken cancellationToken)
     {
         var medicine = await GetMedicineAsync(cmd.MedicineId, cancellationToken);
-        var ledger = await _stock.ListForMedicineAsync(medicine.Id, cancellationToken);
-        var state = await BuildStateAsync(medicine, ledger, cancellationToken);
-        var preview = state.Snapshot.Evaluate(cmd.CountedQuantity, cmd.TakenToday);
+        var facts = await _ledger.LoadFactsAsync(medicine, cancellationToken);
+        var snapshot = await BuildSnapshotAsync(medicine, facts, cancellationToken);
+        var preview = snapshot.Evaluate(cmd.CountedQuantity, cmd.TakenToday);
 
-        var pending = preview.MaterializesToday ? state.PendingThroughToday : state.PendingBeforeToday;
+        // The count is a fact (B.1 Phase 2c-2); its outcome is evaluated
+        // now, on the facts recorded before it, and stored with it
+        // (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.3 rule 3).
+        var notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim();
+        var anchor = LedgerDeriver.EvaluateCount(
+            facts, Guid.NewGuid(), snapshot.Today, _clock.GetUtcNow(),
+            cmd.CountedQuantity, cmd.TakenToday, medicine.ThresholdDays, _ledger.Zone, notes);
 
-        StockMovementKind? kind = preview.Correction switch
+        await _counts.AddAsync(new StockCount
+        {
+            Id = anchor.Id,
+            MedicineId = medicine.Id,
+            CountDay = anchor.CountDay,
+            CountedQuantity = anchor.CountedQuantity,
+            TakenToday = anchor.TakenToday,
+            ThresholdAtCount = anchor.ThresholdAtCount,
+            RecordedAt = anchor.RecordedAt,
+            Notes = notes,
+            LedgerAtStartOfDay = anchor.LedgerAtStartOfDay,
+            CountDayScheduled = anchor.CountDayScheduled,
+            Correction = anchor.Correction,
+            MaterializesCountDay = anchor.MaterializesCountDay,
+            AdvancesEpoch = anchor.AdvancesEpoch,
+        }, cancellationToken);
+
+        var sync = await _ledger.ApplyAsync(
+            medicine, facts with { Counts = [.. facts.Counts, anchor] }, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+
+        StockMovementKind? kind = anchor.Correction switch
         {
             > 0m => StockMovementKind.PositiveCorrection,
             < 0m => StockMovementKind.NegativeCorrection,
             _ => null,
         };
-        var advanceEpoch = kind == StockMovementKind.PositiveCorrection
-            && !(preview.ForecastAfter.DaysRemaining is int days && days <= medicine.ThresholdDays);
-
-        // Pending consumption was planned with the current epoch; the
-        // correction belongs to the new one, as in AddStock.
-        if (pending.Count > 0)
-        {
-            await _stock.AddRangeAsync(pending, cancellationToken);
-        }
-        if (advanceEpoch)
-        {
-            medicine.StockEpoch += 1;
-            medicine.UpdatedAt = _clock.GetUtcNow();
-            await _medicines.UpdateAsync(medicine, cancellationToken);
-        }
-        if (kind is { } correctionKind)
-        {
-            await _stock.AddAsync(new StockMovement
-            {
-                MedicineId = medicine.Id,
-                OccurredAt = _clock.GetUtcNow(),
-                Kind = correctionKind,
-                QuantityDelta = preview.Correction,
-                StockEpoch = medicine.StockEpoch,
-                Origin = StockMovementOrigin.Derived,
-                Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim(),
-            }, cancellationToken);
-        }
-        if (pending.Count > 0 || kind is not null)
-        {
-            await _uow.SaveChangesAsync(cancellationToken);
-        }
+        // Rows the count added besides its own correction: the pending
+        // consumption days booked with it (diagnostic only).
+        var consumptionDays = sync.RowsAdded - (kind is null ? 0 : 1);
 
         return new ReconcileStockResult(
-            preview.ExpectedQuantity, preview.Gap, preview.Correction, kind, advanceEpoch, pending.Count);
+            preview.ExpectedQuantity, preview.Gap, preview.Correction, kind, anchor.AdvancesEpoch,
+            Math.Max(consumptionDays, 0));
     }
 
     private async Task<Medicine> GetMedicineAsync(Guid medicineId, CancellationToken cancellationToken)
         => await _medicines.GetAsync(medicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {medicineId} not found.");
 
-    private async Task<CountState> BuildStateAsync(
-        Medicine medicine, IReadOnlyList<StockMovement> ledger, CancellationToken cancellationToken)
+    private async Task<StockCountSnapshot> BuildSnapshotAsync(
+        Medicine medicine, LedgerFacts facts, CancellationToken cancellationToken)
     {
-        var today = _catchUp.LocalToday();
-
-        // Same scope as ConsumptionCatchUp.RunAsync: inactive medicines
-        // are not materialized.
-        IReadOnlyList<StockMovement> pendingBefore = [];
-        IReadOnlyList<StockMovement> pendingThrough = [];
-        if (medicine.IsActive)
-        {
-            pendingBefore = await _catchUp.PlanMissingAsync(medicine, ledger, today.AddDays(-1), cancellationToken);
-            pendingThrough = await _catchUp.PlanMissingAsync(medicine, ledger, today, cancellationToken);
-        }
-        var todayScheduled = pendingBefore.Sum(m => m.QuantityDelta) - pendingThrough.Sum(m => m.QuantityDelta);
+        var today = _ledger.LocalToday();
+        var (start, todayScheduled) = LedgerDeriver.CountBaseline(facts, today, _ledger.Zone);
 
         var schedule = await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
         var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
         var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
 
-        var snapshot = new StockCountSnapshot(
+        return new StockCountSnapshot(
             medicine.Id,
             today,
-            ledger.Sum(m => m.QuantityDelta) + pendingBefore.Sum(m => m.QuantityDelta),
+            start,
             todayScheduled,
             DefaultTakenToday(todayScheduled, slots),
             DailyConsumption.RateOn(today, schedule, slots),
             SuspensionState.IsSuspendedOn(today, suspensions));
-        return new CountState(snapshot, pendingBefore, pendingThrough);
     }
 
     // Sum of the doses of timed slots whose time has already passed,
@@ -257,9 +249,4 @@ public sealed class ReconcileStock
         var taken = slots.Where(s => s.Time is { } t && t <= now).Sum(s => s.Dose);
         return Math.Min(taken, todayScheduled);
     }
-
-    private sealed record CountState(
-        StockCountSnapshot Snapshot,
-        IReadOnlyList<StockMovement> PendingBeforeToday,
-        IReadOnlyList<StockMovement> PendingThroughToday);
 }

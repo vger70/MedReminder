@@ -103,6 +103,12 @@ lì e si applica a partire dalla *Data di decorrenza* che scegli, in
 modo che lo schema precedente resti valido per i giorni prima di
 quella data.
 
+Se la *Data di decorrenza* è nel passato, al controllo successivo il
+consumo automatico già registrato da quella data in poi viene
+ricalcolato con il nuovo schema. I movimenti di scorta registrati
+prima dell'installazione di questa versione non vengono mai
+ricalcolati.
+
 MedReminder non è un dispositivo medico: non controlla le dosi
 massime giornaliere, non avvisa di sovradosaggi e non verifica
 interazioni farmacologiche. Segue soltanto la terapia che il tuo
@@ -327,6 +333,8 @@ in più.
 - **Disattiva**: toolbar → **Disattiva**. La medicina scompare dai
   controlli automatici e dagli avvisi, ma i dati storici (movimenti,
   notifiche) restano nel DB per audit.
+- **Riattiva**: **Modifica** → spunta **Attiva**. I giorni in cui la
+  medicina era disattivata non vengono conteggiati come consumo.
 
 ## Linea del tempo della terapia
 
