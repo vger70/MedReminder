@@ -18,6 +18,7 @@ public static class ApplicationServiceCollectionExtensions
     {
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();
+        services.AddScoped<DeactivateMedicine>();
         services.AddScoped<AddStock>();
         services.AddScoped<AdjustStockDown>();
         services.AddScoped<ReconcileStock>();
