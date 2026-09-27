@@ -36,4 +36,13 @@ public interface IArchiveCipher
     // on a tag mismatch (wrong key or tampered data) — the caller
     // surfaces that as the "wrong passphrase" case (§4.4).
     byte[] Decrypt(byte[] key, byte[] nonce, byte[] tag, byte[] ciphertext);
+
+    // Overloads with associated data (B.1 Phase 3c, docs/analysis/
+    // ANALYSIS-B1-MOBILE-SYNC.md §5.2): the data is authenticated, not
+    // encrypted, so a sync file whose cleartext header was altered, or
+    // that was renamed or moved to another device's folder, fails the
+    // tag check.
+    (byte[] Nonce, byte[] Tag, byte[] Ciphertext) Encrypt(byte[] key, byte[] plaintext, byte[] associatedData);
+
+    byte[] Decrypt(byte[] key, byte[] nonce, byte[] tag, byte[] ciphertext, byte[] associatedData);
 }

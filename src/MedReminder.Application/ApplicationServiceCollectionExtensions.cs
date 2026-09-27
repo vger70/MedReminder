@@ -28,6 +28,13 @@ public static class ApplicationServiceCollectionExtensions
         // B.1 Phase 3b-2: count re-evaluation by HLC and genesis versions.
         services.AddScoped<CountReevaluation>();
         services.AddScoped<SyncGenesis>();
+        // B.1 Phase 3c: the sync engine and the group use cases. The
+        // engine takes the transport and key store the host registers
+        // (the folder comes from sync.settings.json).
+        services.AddScoped<SyncEngine>();
+        services.AddScoped<CreateSyncGroup>();
+        services.AddScoped<JoinSyncGroup>();
+        services.AddScoped<ResetSyncGeneration>();
 
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();

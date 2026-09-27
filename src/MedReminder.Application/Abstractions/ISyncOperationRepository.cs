@@ -24,4 +24,13 @@ public interface ISyncOperationRepository
 
     // The operations of one medicine, in HLC order.
     Task<IReadOnlyList<SyncOperation>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken);
+
+    // This device's operations of a generation not yet in a segment, in
+    // HLC order (Phase 3c).
+    Task<IReadOnlyList<SyncOperation>> ListPendingAsync(
+        Guid deviceId, int generation, CancellationToken cancellationToken);
+
+    Task MarkPublishedAsync(IReadOnlyList<SyncOperation> operations, int segmentSeq, CancellationToken cancellationToken);
+
+    Task<long> CountAsync(int generation, CancellationToken cancellationToken);
 }

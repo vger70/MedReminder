@@ -23,6 +23,10 @@ public class OperationEmissionGuardTests
         "ApplyRemoteOperations",
         // Genesis register versions: the values every device starts from.
         "SyncGenesis",
+        // Sync bookkeeping (Phase 3c): published marks and peer progress.
+        "SyncEngine",
+        "CreateSyncGroup",
+        "ResetSyncGeneration",
     };
 
     [Fact]

@@ -176,6 +176,16 @@ public sealed class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_SegmentSeq""
                 ON ""SyncOperations"" (""SegmentSeq"");", cancellationToken);
 
+        // B.1 Phase 3c: sync progress per device of the group.
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""SyncPeers"" (
+                ""DeviceId"" TEXT NOT NULL CONSTRAINT ""PK_SyncPeers"" PRIMARY KEY,
+                ""Generation"" INTEGER NOT NULL,
+                ""Seq"" INTEGER NOT NULL,
+                ""Checkpoints"" INTEGER NOT NULL,
+                ""CheckpointOperations"" INTEGER NOT NULL
+            );", cancellationToken);
+
         // B.1 Phase 3b-2: the row an operation writes, for the HLC of
         // facts, and the per-medicine lookup of the count re-evaluation.
         await AddColumnIfMissingAsync("SyncOperations", "EntityId", "TEXT NULL", cancellationToken);

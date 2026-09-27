@@ -1,5 +1,7 @@
 using MedReminder.Application;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
+using MedReminder.Infrastructure.Sync;
 using MedReminder.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,17 +17,27 @@ internal sealed class SyncDevice : IDisposable
 {
     private readonly ServiceProvider _provider;
 
-    public SyncDevice(string name, string databasePath, DateTimeOffset now, SyncSettings? settings)
+    public SyncDevice(string name, string databasePath, DateTimeOffset now, SyncSettings? settings,
+        byte[]? key = null, int checkpointEvery = 5000, Func<ISyncTransport, ISyncTransport>? transport = null)
     {
         Name = name;
         DatabasePath = databasePath;
         Clock = new SettableClock(now);
         Settings = new FixedSyncSettingsStore(settings);
+        Keys = new MemoryKeyStore();
+        if (settings is not null && key is not null) Keys.Save(settings.GroupId, settings.KeyVersion, key);
 
         var services = new ServiceCollection();
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         services.AddSingleton<TimeProvider>(Clock);
         services.AddSingleton<ISyncSettingsStore>(Settings);
+        services.AddSingleton<ISyncKeyStore>(Keys);
+        services.AddSingleton(new SyncEngineOptions { DeviceName = name, CheckpointEvery = checkpointEvery });
+        if (transport is not null)
+        {
+            services.AddScoped(sp => transport(new LocalFolderSyncTransport(
+                sp.GetRequiredService<ISyncSettingsStore>().Load()!.Folder!)));
+        }
         services.AddMedReminderPortableInfrastructure(databasePath);
         services.AddMedReminderApplication();
         _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
@@ -38,6 +50,11 @@ internal sealed class SyncDevice : IDisposable
     public SettableClock Clock { get; }
 
     public FixedSyncSettingsStore Settings { get; }
+
+    public MemoryKeyStore Keys { get; }
+
+    public Task<SyncRunResult> SyncAsync()
+        => RunAsync(sp => sp.GetRequiredService<SyncEngine>().RunAsync(CancellationToken.None));
 
     public async Task<T> RunAsync<T>(Func<IServiceProvider, Task<T>> action)
     {
@@ -68,6 +85,18 @@ internal sealed class SyncDevice : IDisposable
         public void Set(DateTimeOffset now) => _now = now.ToUniversalTime();
 
         public void Advance(TimeSpan delta) => _now += delta;
+    }
+
+    internal sealed class MemoryKeyStore : ISyncKeyStore
+    {
+        private readonly Dictionary<(Guid, int), byte[]> _keys = new();
+
+        public byte[]? Load(Guid groupId, int keyVersion)
+            => _keys.TryGetValue((groupId, keyVersion), out var key) ? [.. key] : null;
+
+        public void Save(Guid groupId, int keyVersion, byte[] key) => _keys[(groupId, keyVersion)] = [.. key];
+
+        public void Clear() => _keys.Clear();
     }
 
     internal sealed class FixedSyncSettingsStore(SyncSettings? settings) : ISyncSettingsStore

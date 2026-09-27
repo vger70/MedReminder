@@ -762,7 +762,7 @@ Idempotent boot patches in `DatabaseInitializer` (`CLAUDE.md` §7):
 | `LedgerCutoff` table (`CutoffDay`, `FrozenAt`) | Cutoff C (§3.5). Phase 2b |
 | `SyncOperations` table | Local outbox and applied-operation ids. Phase 3a: outbox (HLC, generation, type, schema version, JSON payload, `SegmentSeq` null while pending); Phase 3b-1: also the operations applied from other devices |
 | `SyncFieldVersions` table | HLC per `(entity, id, field)` for LWW. Phase 3b-1: every version of every register, with its base version |
-| `SyncPeers` table | Applied vector per remote device. Moved to Phase 3c: the vector counts segments |
+| `SyncPeers` table | Applied vector per remote device. Phase 3c: also this device's published segment and checkpoint counters |
 | `SyncConflicts` table | Conflict review list. Phase 3b-1 |
 | `SyncTombstones` table | Retractions. Not created: `FactRetractions` (Phase 2d) already is the tombstone table, keyed by fact id |
 | `NotificationEvents.EpochFactId` column | Dedup key stable across merges (§4.4) |
@@ -1178,7 +1178,8 @@ checklist; no plaintext in the remote folder (inspection test).
 |---|---|---|
 | 3a | Action 1: HLC, operation catalogue, `IOperationLog` and the `SyncOperations` outbox, emission from every use case; one write gate for every use case; stale-form diff (§7.4). Operations recorded only when sync is enabled, so no behavior change until 3d | Merged (#85) |
 | 3b-1 | Action 2: apply of remote operations, register versions and LWW, tombstones, conflict list (§4.5), convergence harness on real databases; counts keep their stored outcome | Merged (#86) |
-| 3b-2 | Re-evaluation of count outcomes on the snapshot by HLC (facts and register values "as of"), retracted facts left out of every snapshot (§4.2); genesis register versions; harness extended to concurrent counts | #87 |
+| 3b-2 | Re-evaluation of count outcomes on the snapshot by HLC (facts and register values "as of"), retracted facts left out of every snapshot (§4.2); genesis register versions; harness extended to concurrent counts | Merged (#87) |
+| 3c | Actions 3, 4, 7 in one PR (product owner, 2026-09-27): associated data on the cipher, key wrap, envelope, segments with dependency vectors, causal buffer, `SyncPeers`, device records, genesis and checkpoint images, join, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md`. Key rotation and revocation (§6.2) move to Phase 4 with QR pairing | #88 |
 | 3c | Actions 3, 4, 7: segment codec, group key, genesis, checkpoints, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md` | — |
 | 3d | Actions 5, 6: `SyncHostedService`, desktop UI, reset flow in import and restore, convergence simulation in CI, two-PC checklist | — |
 
@@ -1518,6 +1519,21 @@ Phase 2 implements the derivation from the prototype and its tests.
   with the fact until Phase 3 (§4.3 rule 3); 2c-2 re-freezes (§13).
   Rules 1b and 2 extended to days carrying `Legacy` consumption after
   the cutoff (§4.3).
+- 2026-09-27 — Phase 3c implemented in one PR (product owner); key
+  rotation and revocation moved to Phase 4 (§6.2). Decisions taken in
+  the implementation: genesis and checkpoints are SQLite images of the
+  profile database without non-replicated data (exact replicated
+  state, register versions and fact clocks included; older images are
+  upgraded by the boot patches; `SYNC-FORMAT.md` §5.3); the current
+  generation and key version are the highest genesis and wrap files, so
+  `group.json` is written once (R5); checkpoint headers carry their
+  vector in cleartext (ids and counters) so a device can choose one
+  without decrypting it; a device writes its record as soon as it takes
+  part (creation, join, new generation), otherwise the others would
+  delete segments it still needs (found by the folder harness); only a
+  device's newest checkpoint is kept. Not yet: the anchor horizon of
+  §5.6 (images carry the full operation log) and the re-publication of
+  own segments found missing (§6.3).
 - 2026-09-27 — Phase 3b-2 implemented: count re-evaluation by HLC with
   register values "as of" (§4.3 rule 3), `SyncGenesis` register
   versions (§5.5), `SyncOperations.EntityId`. Known limits: the history
