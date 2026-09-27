@@ -1,3 +1,4 @@
+using MedReminder.Application.Ledger;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Calculations;
@@ -165,6 +166,22 @@ internal sealed class LedgerParityHarness
     public void Resume(Guid id, DateOnly end)
         => Try($"resume {end}",
             () => Run(App.ResumeMedication.ExecuteAsync(new ResumeMedicationCommand(id, end), default)));
+
+    // Retracts a random retractable fact (B.1 Phase 2d) and mirrors it
+    // in the harness's own facts: intakes, stock entries and
+    // suspensions are read back from the store; count outcomes are
+    // tracked here.
+    public void RetractRandom(Guid id, Random rng)
+    {
+        var candidates = Run(App.FactHistory.LoadAsync(id, default)).Where(i => i.CanRetract).ToList();
+        if (candidates.Count == 0) return;
+        var item = candidates[rng.Next(candidates.Count)];
+        if (Try($"retract {item.Kind} {item.Day}",
+                () => Run(App.RetractFact.ExecuteAsync(new RetractFactCommand(id, item.Kind, item.FactId), default))))
+        {
+            _counts[id].RemoveAll(c => c.Id == item.FactId);
+        }
+    }
 
     public void Deactivate(Guid id)
     {

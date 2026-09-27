@@ -616,6 +616,7 @@ public sealed class ExportImportRoundTripTests : IDisposable
             await db.StockCounts.ExecuteDeleteAsync();
             await db.LedgerCutoffs.ExecuteDeleteAsync();
             await db.MedicineActivityChanges.ExecuteDeleteAsync();
+            await db.FactRetractions.ExecuteDeleteAsync();
             await db.MedicationScheduleHistories.ExecuteDeleteAsync();
             await db.StockMovements.ExecuteDeleteAsync();
             await db.Medicines.ExecuteDeleteAsync();

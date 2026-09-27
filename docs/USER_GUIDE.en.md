@@ -319,6 +319,20 @@ figure only: it is not interpreted as missed or extra doses.
 - **Reactivate**: **Edit** → tick **Active**. The days on which the
   medicine was inactive are not counted as consumption.
 
+## Stock history and deleting a mistaken entry
+
+**Stock → History…** (Ctrl+H) lists what you entered for the selected
+medicine, newest first: new packages and corrections, intakes, stock
+counts and suspensions.
+
+- **Delete** removes a mistaken entry; stock and consumption are
+  recalculated.
+- Only entries recorded after the latest stock count can be deleted:
+  a count already includes earlier mistakes, so to fix those count the
+  stock again.
+- Entries recorded before you installed this version cannot be
+  deleted: fix them with a correction.
+
 ## Therapy timeline
 
 **Therapy → Therapy timeline…** (Ctrl+T) or the **Therapy timeline**

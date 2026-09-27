@@ -30,10 +30,36 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #84 — B.1 Phase 2d: fact retraction and epoch fact id
+
+Link: [vger70/MedReminder#84](https://github.com/vger70/MedReminder/pull/84)
+Branch: `claude/b1-phase2d-fact-retraction`
+
+### Added
+
+- *Stock → History…* (Ctrl+H): the stock entries, intakes, stock counts
+  and suspensions of the selected medicine, newest first, with Delete
+  on the entries that can be retracted. Stock and consumption are
+  recalculated (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` §4.2, D8).
+  Only entries recorded after the latest stock count and after the
+  update can be deleted.
+
+### Changed
+
+- The low-stock warning dedup identifies the stock epoch by the fact
+  that opened it, so a deleted refill does not suppress the warning of
+  the next one (§4.4).
+
+### Docs
+
+- User guides (en, it, fr, es, de): history window. `ANALYSIS.md`
+  §4.1, §4.4, §8.1; B.1 analysis (§4.2, §4.4, §13, §20).
+
 ## PR #83 — B.1 Phase 2c-2: derive the stock ledger from facts in the use cases
 
 Link: [vger70/MedReminder#83](https://github.com/vger70/MedReminder/pull/83)
 Branch: `claude/b1-phase2c2-ledger-wiring`
+**Status:** merged (2026-09-27)
 
 ### Changed
 

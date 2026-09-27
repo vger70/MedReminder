@@ -25,4 +25,29 @@ internal sealed class InMemoryNotificationEventRepository
         _items.Add(evt);
         return Task.CompletedTask;
     }
+
+    // NotificationEvent is init-only: replace the instance.
+    public Task AssignEpochFactIdsAsync(
+        Guid medicineId, IReadOnlyDictionary<int, Guid> epochFactIds, CancellationToken cancellationToken)
+    {
+        for (var i = 0; i < _items.Count; i++)
+        {
+            var e = _items[i];
+            if (e.MedicineId != medicineId || e.EpochFactId is not null) continue;
+            if (!epochFactIds.TryGetValue(e.StockEpoch, out var factId)) continue;
+            _items[i] = new NotificationEvent
+            {
+                Id = e.Id,
+                MedicineId = e.MedicineId,
+                StockEpoch = e.StockEpoch,
+                TriggeredAt = e.TriggeredAt,
+                Channel = e.Channel,
+                DaysRemainingAtSend = e.DaysRemainingAtSend,
+                Success = e.Success,
+                ErrorMessage = e.ErrorMessage,
+                EpochFactId = factId,
+            };
+        }
+        return Task.CompletedTask;
+    }
 }

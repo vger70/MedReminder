@@ -37,4 +37,10 @@ internal sealed class InMemoryMedicationSuspensionRepository
         _ = suspension;
         return Task.CompletedTask;
     }
+
+    public Task RemoveAsync(MedicationSuspension suspension, CancellationToken cancellationToken)
+    {
+        _items.RemoveAll(s => s.Id == suspension.Id);
+        return Task.CompletedTask;
+    }
 }

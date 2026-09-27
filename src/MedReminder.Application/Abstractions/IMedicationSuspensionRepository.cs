@@ -16,4 +16,7 @@ public interface IMedicationSuspensionRepository
 
     Task AddAsync(MedicationSuspension suspension, CancellationToken cancellationToken);
     Task UpdateAsync(MedicationSuspension suspension, CancellationToken cancellationToken);
+
+    // Retraction of a mistaken suspension (RetractFact, B.1 Phase 2d).
+    Task RemoveAsync(MedicationSuspension suspension, CancellationToken cancellationToken);
 }

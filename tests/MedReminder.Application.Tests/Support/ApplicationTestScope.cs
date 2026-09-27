@@ -24,6 +24,7 @@ internal sealed class ApplicationTestScope
     public InMemoryMedicineActivityRepository Activity { get; } = new();
     public InMemoryStockCountRepository Counts { get; } = new();
     public InMemoryLedgerCutoffRepository Cutoff { get; } = new();
+    public InMemoryFactRetractionRepository Retractions { get; } = new();
     public InMemoryUnitOfWork Uow { get; } = new();
     public RecordingEmailNotificationService Email { get; } = new();
     public RecordingWindowsNotificationService Windows { get; } = new();
@@ -39,6 +40,8 @@ internal sealed class ApplicationTestScope
     public RegisterIntake RegisterIntake { get; }
     public ReconcileStock ReconcileStock { get; }
     public LedgerSynchronizer Ledger { get; }
+    public FactHistoryQuery FactHistory { get; }
+    public RetractFact RetractFact { get; }
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
 
@@ -48,7 +51,10 @@ internal sealed class ApplicationTestScope
 
         Ledger = new LedgerSynchronizer(
             new LedgerFactsLoader(Stock, Intakes, Schedules, Suspensions, Slots, Activity, Counts, Cutoff),
-            Stock, Medicines, Clock);
+            Stock, Medicines, Notifications, Clock);
+        FactHistory = new FactHistoryQuery(Medicines, Stock, Intakes, Counts, Suspensions, Cutoff, Clock);
+        RetractFact = new RetractFact(
+            FactHistory, Medicines, Stock, Intakes, Counts, Suspensions, Retractions, Ledger, Uow, Clock);
 
         AddMedicine = new AddMedicine(Medicines, Schedules, Slots, Stock, Uow, Clock);
         UpdateMedicine = new UpdateMedicine(Medicines, Slots, Activity, Uow, Clock);

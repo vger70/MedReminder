@@ -18,4 +18,7 @@ public interface IMedicationIntakeRepository
         CancellationToken cancellationToken);
 
     Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken);
+
+    // Retraction of a mistaken intake (RetractFact, B.1 Phase 2d).
+    Task RemoveAsync(MedicationIntake intake, CancellationToken cancellationToken);
 }

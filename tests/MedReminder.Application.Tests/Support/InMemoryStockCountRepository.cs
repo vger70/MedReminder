@@ -22,4 +22,10 @@ internal sealed class InMemoryStockCountRepository : IStockCountRepository
         _items.Add(count);
         return Task.CompletedTask;
     }
+
+    public Task RemoveAsync(StockCount count, CancellationToken cancellationToken)
+    {
+        _items.RemoveAll(c => c.Id == count.Id);
+        return Task.CompletedTask;
+    }
 }

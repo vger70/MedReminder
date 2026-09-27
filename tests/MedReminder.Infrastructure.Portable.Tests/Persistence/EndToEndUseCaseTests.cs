@@ -318,6 +318,7 @@ public class EndToEndUseCaseTests
                 new LedgerCutoffRepository(ctx)),
             stock,
             new MedicineRepository(ctx),
+            new NotificationEventRepository(ctx),
             clock);
     }
 

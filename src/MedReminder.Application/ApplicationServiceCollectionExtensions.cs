@@ -31,6 +31,8 @@ public static class ApplicationServiceCollectionExtensions
         // B.1 ledger derivation (Phase 2c-2).
         services.AddScoped<LedgerFactsLoader>();
         services.AddScoped<LedgerSynchronizer>();
+        services.AddScoped<FactHistoryQuery>();
+        services.AddScoped<RetractFact>();
 
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();

@@ -40,4 +40,10 @@ internal sealed class InMemoryMedicationIntakeRepository : IMedicationIntakeRepo
         _items.Add(intake);
         return Task.CompletedTask;
     }
+
+    public Task RemoveAsync(MedicationIntake intake, CancellationToken cancellationToken)
+    {
+        _items.RemoveAll(i => i.Id == intake.Id);
+        return Task.CompletedTask;
+    }
 }

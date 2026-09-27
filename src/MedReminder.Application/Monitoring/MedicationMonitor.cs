@@ -104,6 +104,7 @@ public sealed class MedicationMonitor
             {
                 MedicineId = medicine.Id,
                 StockEpoch = medicine.StockEpoch,
+                EpochFactId = medicine.StockEpochFactId,
                 TriggeredAt = _clock.GetUtcNow(),
                 Channel = dispatch.ChannelsAttempted,
                 DaysRemainingAtSend = daysRemaining,

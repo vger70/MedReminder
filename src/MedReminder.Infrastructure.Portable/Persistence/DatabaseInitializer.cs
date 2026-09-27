@@ -167,6 +167,58 @@ public sealed class DatabaseInitializer
 
         await ApplyLedgerFactsPatchAsync(cancellationToken);
         await ApplyLedgerDerivationPatchAsync(cancellationToken);
+        await ApplyFactRetractionPatchAsync(cancellationToken);
+    }
+
+    // B.1 Phase 2d (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.2, §4.4):
+    // fact retraction and epoch identity. Additive only, one
+    // transaction.
+    //
+    //   - FactRetractions: tombstones of retracted facts.
+    //   - MedicationSuspensions.RecordedAt: decides whether a suspension
+    //     can be retracted; older rows read as MinValue (Legacy after a
+    //     freeze).
+    //   - Medicines.StockEpochFactId, NotificationEvents.EpochFactId:
+    //     low-stock dedup keyed on the fact that opened the epoch. Filled
+    //     by the first derivation after the upgrade (LedgerSynchronizer).
+    private async Task ApplyFactRetractionPatchAsync(CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        await ExecuteAsync(connection, transaction, @"
+            CREATE TABLE IF NOT EXISTS ""FactRetractions"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_FactRetractions"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""FactId"" TEXT NOT NULL,
+                ""Kind"" INTEGER NOT NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_FactRetractions_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteAsync(connection, transaction, @"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_FactRetractions_FactId""
+                ON ""FactRetractions"" (""FactId"");", cancellationToken);
+        await ExecuteAsync(connection, transaction, @"
+            CREATE INDEX IF NOT EXISTS ""IX_FactRetractions_MedicineId""
+                ON ""FactRetractions"" (""MedicineId"");", cancellationToken);
+
+        foreach (var (table, column, typeSpec) in new[]
+        {
+            ("MedicationSuspensions", "RecordedAt", "INTEGER NOT NULL DEFAULT 0"),
+            ("Medicines", "StockEpochFactId", "TEXT NULL"),
+            ("NotificationEvents", "EpochFactId", "TEXT NULL"),
+        })
+        {
+            await AddColumnIfMissingAsync(connection, transaction, table, column, typeSpec, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     // B.1 Phase 2c-2 (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.2,

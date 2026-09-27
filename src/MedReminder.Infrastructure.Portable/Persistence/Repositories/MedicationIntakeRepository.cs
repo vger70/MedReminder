@@ -43,4 +43,10 @@ internal sealed class MedicationIntakeRepository : IMedicationIntakeRepository
     {
         await _db.MedicationIntakes.AddAsync(intake, cancellationToken);
     }
+
+    public Task RemoveAsync(MedicationIntake intake, CancellationToken cancellationToken)
+    {
+        _db.MedicationIntakes.Remove(intake);
+        return Task.CompletedTask;
+    }
 }
