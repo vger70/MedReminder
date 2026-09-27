@@ -30,20 +30,20 @@ public class FactRetractionPersistenceTests
 
         await using (var ctx = fixture.CreateContext())
         {
-            await new AddStock(new MedicineRepository(ctx), new StockMovementRepository(ctx, Clock), new UnitOfWork(ctx), Clock)
+            await new AddStock(new MedicineRepository(ctx), new StockMovementRepository(ctx, Clock), TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock)
                 .ExecuteAsync(new AddStockCommand(id, 28m, StockMovementKind.NewPackage), CancellationToken.None);
         }
         await using (var ctx = fixture.CreateContext())
         {
             await new RegisterIntake(new MedicineRepository(ctx), new MedicationIntakeRepository(ctx), LedgerFor(ctx),
-                    new UnitOfWork(ctx), Clock)
+                    TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock)
                 .ExecuteAsync(new RegisterIntakeCommand(id, new DateOnly(2026, 9, 10), IntakeStatus.Taken, 3m),
                     CancellationToken.None);
         }
         await using (var ctx = fixture.CreateContext())
         {
             await new SuspendMedication(new MedicineRepository(ctx), new MedicationSuspensionRepository(ctx),
-                    new UnitOfWork(ctx), Clock)
+                    TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock)
                 .ExecuteAsync(new SuspendMedicationCommand(id, new DateOnly(2026, 9, 20)), CancellationToken.None);
         }
 
@@ -139,7 +139,7 @@ public class FactRetractionPersistenceTests
                 new MedicationScheduleHistoryRepository(ctx),
                 new MedicationAdministrationSlotRepository(ctx),
                 new StockMovementRepository(ctx, Clock),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 Clock).ExecuteAsync(new AddMedicineCommand(
                     Name: "Enalapril", Unit: "compresse", DosePerAdministration: 1m, AdministrationsPerDay: 1,
                     StartDate: new DateOnly(2026, 9, 3), ThresholdDays: 7,
@@ -174,7 +174,7 @@ public class FactRetractionPersistenceTests
         new MedicationSuspensionRepository(ctx),
         new FactRetractionRepository(ctx),
         LedgerFor(ctx),
-        new UnitOfWork(ctx),
+        TestOperationLog.For(ctx), new UnitOfWork(ctx),
         Clock);
 
     private static LedgerSynchronizer LedgerFor(MedReminderDbContext ctx)

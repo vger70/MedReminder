@@ -4,6 +4,7 @@ using MedReminder.Infrastructure.Export;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
+using MedReminder.Infrastructure.Sync;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -40,8 +41,14 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<IStockCountRepository, StockCountRepository>();
         services.AddScoped<ILedgerCutoffRepository, LedgerCutoffRepository>();
         services.AddScoped<IFactRetractionRepository, FactRetractionRepository>();
+        services.AddScoped<ISyncOperationRepository, SyncOperationRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<DatabaseInitializer>();
+
+        // Per-profile sync state, next to the database (B.1 Phase 3a).
+        var profileDirectory = Path.GetDirectoryName(Path.GetFullPath(databasePath))!;
+        services.TryAddSingleton<ISyncSettingsStore>(
+            new JsonSyncSettingsStore(Path.Combine(profileDirectory, JsonSyncSettingsStore.FileName)));
 
         // Argon2id + AES-GCM archive cipher and the read half of the
         // import; both stateless.

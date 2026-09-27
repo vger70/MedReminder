@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Ledger;
+using MedReminder.Application.Sync;
 
 namespace MedReminder.Application.UseCases;
 
@@ -19,17 +20,20 @@ public sealed class DeactivateMedicine
 {
     private readonly IMedicineRepository _medicines;
     private readonly IMedicineActivityRepository _activity;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
     public DeactivateMedicine(
         IMedicineRepository medicines,
         IMedicineActivityRepository activity,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _activity = activity;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
@@ -37,17 +41,23 @@ public sealed class DeactivateMedicine
     public async Task<bool> ExecuteAsync(DeactivateMedicineCommand cmd, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cmd);
+        return await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
 
+    private async Task<bool> ExecuteCoreAsync(DeactivateMedicineCommand cmd, CancellationToken cancellationToken)
+    {
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken);
         if (medicine is null) return false;
 
         var now = _clock.GetUtcNow();
-        await MedicineActivity.RecordAsync(
+        var change = await MedicineActivity.RecordAsync(
             _activity, medicine, active: false, now, _clock.LocalTimeZone, cancellationToken);
         medicine.IsActive = false;
         medicine.UpdatedAt = now;
 
         await _medicines.UpdateAsync(medicine, cancellationToken);
+        if (change is not null)
+            await _operations.AppendAsync([Operations.Activity(change)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
         return true;
     }

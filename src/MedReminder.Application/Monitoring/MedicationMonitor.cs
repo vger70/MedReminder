@@ -65,10 +65,10 @@ public sealed class MedicationMonitor
 
     public sealed record RunResult(int MedicinesInspected, int NotificationsSent);
 
-    // Serialized with ConsumptionCatchUp through MonitoringGate, so two
+    // Serialized with ConsumptionCatchUp through WriteGate, so two
     // concurrent passes cannot both decide to notify the same epoch.
     public Task<RunResult> RunAsync(CancellationToken cancellationToken)
-        => MonitoringGate.RunExclusiveAsync(RunCoreAsync, cancellationToken);
+        => WriteGate.RunExclusiveAsync(RunCoreAsync, cancellationToken);
 
     private async Task<RunResult> RunCoreAsync(CancellationToken cancellationToken)
     {

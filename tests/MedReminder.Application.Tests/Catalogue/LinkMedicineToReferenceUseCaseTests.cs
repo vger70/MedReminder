@@ -1,6 +1,8 @@
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Sync;
+using MedReminder.Application.Tests.Support;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using Xunit;
@@ -15,7 +17,9 @@ public sealed class LinkMedicineToReferenceUseCaseTests
     private readonly TimeProvider _clock = TimeProvider.System;
 
     private LinkMedicineToReferenceUseCase Build() =>
-        new(_medicines, _query, _uow, _clock);
+        new(_medicines, _query,
+            new OperationLog(new InMemorySyncSettingsStore(), new InMemorySyncOperationRepository(), _clock),
+            _uow, _clock);
 
     [Fact]
     public async Task Links_medicine_and_populates_national_code_atc_and_reference_id()

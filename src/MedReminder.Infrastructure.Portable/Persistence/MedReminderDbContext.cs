@@ -2,6 +2,7 @@ using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
+using MedReminder.Domain.Sync;
 using MedReminder.Infrastructure.Persistence.Configurations;
 using MedReminder.Infrastructure.Persistence.ValueConverters;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<LedgerCutoff> LedgerCutoffs => Set<LedgerCutoff>();
     public DbSet<MedicineActivityChange> MedicineActivityChanges => Set<MedicineActivityChange>();
     public DbSet<FactRetraction> FactRetractions => Set<FactRetraction>();
+    public DbSet<SyncOperation> SyncOperations => Set<SyncOperation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +50,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new LedgerCutoffConfiguration());
         modelBuilder.ApplyConfiguration(new MedicineActivityChangeConfiguration());
         modelBuilder.ApplyConfiguration(new FactRetractionConfiguration());
+        modelBuilder.ApplyConfiguration(new SyncOperationConfiguration());
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

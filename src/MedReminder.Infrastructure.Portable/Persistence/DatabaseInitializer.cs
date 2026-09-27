@@ -168,7 +168,30 @@ public sealed class DatabaseInitializer
         await ApplyLedgerFactsPatchAsync(cancellationToken);
         await ApplyLedgerDerivationPatchAsync(cancellationToken);
         await ApplyFactRetractionPatchAsync(cancellationToken);
+        await ExecuteRawSqlAsync(SyncOperationsTableSql, cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_HlcPhysicalMs_HlcCounter""
+                ON ""SyncOperations"" (""HlcPhysicalMs"", ""HlcCounter"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_SegmentSeq""
+                ON ""SyncOperations"" (""SegmentSeq"");", cancellationToken);
     }
+
+    // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the
+    // local operation log. Empty until sync is enabled.
+    private const string SyncOperationsTableSql = @"
+        CREATE TABLE IF NOT EXISTS ""SyncOperations"" (
+            ""Id"" TEXT NOT NULL CONSTRAINT ""PK_SyncOperations"" PRIMARY KEY,
+            ""HlcPhysicalMs"" INTEGER NOT NULL,
+            ""HlcCounter"" INTEGER NOT NULL,
+            ""DeviceId"" TEXT NOT NULL,
+            ""Generation"" INTEGER NOT NULL,
+            ""Type"" TEXT NOT NULL,
+            ""SchemaVersion"" INTEGER NOT NULL,
+            ""MedicineId"" TEXT NOT NULL,
+            ""Payload"" TEXT NOT NULL,
+            ""SegmentSeq"" INTEGER NULL
+        );";
 
     // B.1 Phase 2d (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.2, §4.4):
     // fact retraction and epoch identity. Additive only, one

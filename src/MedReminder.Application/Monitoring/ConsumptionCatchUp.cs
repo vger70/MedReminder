@@ -16,7 +16,7 @@ namespace MedReminder.Application.Monitoring;
 //
 // Idempotency: derived rows have deterministic ids, so re-running
 // writes nothing when no fact changed. Against concurrent calls
-// (hosted-service tick and "Check now") RunAsync holds MonitoringGate.
+// (hosted-service tick and "Check now") RunAsync holds WriteGate.
 public sealed class ConsumptionCatchUp
 {
     private readonly IMedicineRepository _medicines;
@@ -35,7 +35,7 @@ public sealed class ConsumptionCatchUp
 
     // Returns the number of derived rows created.
     public Task<int> RunAsync(CancellationToken cancellationToken)
-        => MonitoringGate.RunExclusiveAsync(RunCoreAsync, cancellationToken);
+        => WriteGate.RunExclusiveAsync(RunCoreAsync, cancellationToken);
 
     private async Task<int> RunCoreAsync(CancellationToken cancellationToken)
     {

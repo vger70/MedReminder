@@ -365,7 +365,8 @@ is why the convergence check (§12) hashes replicated state only.
 derived rows". It must run on **every** medicine, active or not: today
 it only reads `ListActiveAsync` `[VERIFIED]`, and deriving only active
 medicines would leave derived rows depending on when each device last
-ran, which breaks R6. `MonitoringGate` still serializes it.
+ran, which breaks R6. The write gate (`WriteGate`, `MonitoringGate`
+before Phase 3a) still serializes it.
 
 ### 4.4 Stock epoch
 
@@ -695,6 +696,24 @@ reach it through an `IAppDataLocation` port.
   not use cases (`MedicationMonitor`, `ConsumptionCatchUp`,
   `DoseReminderService`) are not covered; they produce derived rows
   and notification events, which Phase 2c revisits.
+- Implemented by Phase 3a. `IOperationLog.AppendAsync` adds the
+  operations to `SyncOperations` in the use case's unit of work, each
+  with the next HLC (§4.1), and records nothing while sync is disabled
+  for the profile (product owner, 2026-09-27: the genesis carries what
+  was written before). The catalogue, schema version 1
+  (`Domain/Sync/SyncOperationBodies.cs`, JSON form in `OperationCodec`):
+  `MedicineCreated`, `MedicineFieldChanged` (one per replicated field,
+  text form in `MedicineFieldCodec`), `MedicineActivityChanged`,
+  `ScheduleRowRecorded`, `SlotSetRecorded`, `StockEntryRecorded`,
+  `IntakeRecorded`, `StockCountRecorded` (inputs and outcome),
+  `SuspensionRecorded`, `SuspensionEndChanged`, `FactRetracted`. Each
+  carries the ids of the rows written, so a replay is idempotent.
+  `OperationEmissionGuardTests` requires every Application service that
+  saves a unit of work to take `IOperationLog`, except the writers of
+  derived and device-local rows (`ConsumptionCatchUp`,
+  `MedicationMonitor`, `DoseReminderService`). Not covered yet: the
+  notification settings file and the profile display name (P8), which
+  have no use case.
 
 ### 7.3 New persistence objects
 
@@ -706,7 +725,7 @@ Idempotent boot patches in `DatabaseInitializer` (`CLAUDE.md` §7):
 | `StockCounts` table | Count anchors. Table in Phase 2b; written from Phase 2c |
 | `MedicationAdministrationSlotSets` table (`EffectiveFrom`, `RecordedAt`, later the recording HLC) and `MedicationAdministrationSlots.SetId` | Dated slot sets (§4.2), including empty sets. Phase 2b |
 | `LedgerCutoff` table (`CutoffDay`, `FrozenAt`) | Cutoff C (§3.5). Phase 2b |
-| `SyncOperations` table | Local outbox and applied-operation ids |
+| `SyncOperations` table | Local outbox and applied-operation ids. Phase 3a: outbox only (HLC, generation, type, schema version, JSON payload, `SegmentSeq` null while pending) |
 | `SyncFieldVersions` table | HLC per `(entity, id, field)` for LWW |
 | `SyncPeers` table | Applied vector per remote device |
 | `SyncConflicts` table | Conflict review list |
@@ -740,13 +759,21 @@ user-chosen, as the C.3+ cloud folder already is.
   ANALYSIS.md §4.4]`. With sync, **every** use case and the sync apply
   step must run under one per-process write gate, because an apply can
   change a medicine between a use case's read and its save. One process
-  per database stays the rule (`CLAUDE.md` §7).
+  per database stays the rule (`CLAUDE.md` §7). Implemented by Phase 3a
+  (`WriteGate`, the former `MonitoringGate`). Consequence
+  `[INFERRED]`: a user action now waits while a monitor pass sends a
+  low-stock email, since the monitor holds the gate during the send.
 - **Stale forms**: an edit dialog opened before a sync must not write
   back fields the user did not touch. Use cases receive the user's
   changes as a diff against the values loaded when the dialog opened,
   and emit operations only for changed fields. Otherwise every save
   would stamp all fields with a new HLC and silently overwrite remote
-  edits. After an apply, open views refresh.
+  edits. After an apply, open views refresh. Implemented by Phase 3a
+  for the medicine edit dialog, the only form that saves a whole record:
+  `UpdateMedicineCommand.Baseline` carries the values the dialog loaded,
+  and only the fields that differ from it are written (slots and
+  catalogue link included). Behavior change on one device: saving the
+  dialog without touching the slots no longer records a new slot set.
 - **Mobile**: sync on start, resume, after local writes, and in the
   background with Android WorkManager periodic work (minimum interval
   15 minutes `[VERIFIED — Android WorkManager documentation, training
@@ -1110,6 +1137,15 @@ checklist; no plaintext in the remote folder (inspection test).
 
 **Effort**: 30–45 days `[INFERRED]`.
 
+**Split into pull requests** (product owner, 2026-09-27):
+
+| PR | Scope | State |
+|---|---|---|
+| 3a | Action 1: HLC, operation catalogue, `IOperationLog` and the `SyncOperations` outbox, emission from every use case; one write gate for every use case; stale-form diff (§7.4). Operations recorded only when sync is enabled, so no behavior change until 3d | Open |
+| 3b | Action 2: merge and apply (field versions, tombstones, conflicts, peers), re-evaluation of count outcomes, convergence harness on real databases, no transport | — |
+| 3c | Actions 3, 4, 7: segment codec, group key, genesis, checkpoints, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md` | — |
+| 3d | Actions 5, 6: `SyncHostedService`, desktop UI, reset flow in import and restore, convergence simulation in CI, two-PC checklist | — |
+
 ### Phase 4 — Cloud provider transports (includes C.3++ Phase 2)
 
 **Entry**: Phase 3 exit; S6 / S7 results; D3 decided.
@@ -1225,8 +1261,8 @@ iCloud transport; tablet-specific layouts; web client.
 
 ## 16. Decisions still to confirm
 
-Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15. Still
-open: D4, D7, D11, D12, D13, D14.
+Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15; on
+2026-09-27: D7. Still open: D4, D11, D12, D13, D14.
 
 | # | Decision | Options | Proposal | Needed by |
 |---|---|---|---|---|
@@ -1236,7 +1272,7 @@ open: D4, D7, D11, D12, D13, D14.
 | D4 | Notification defaults per device | Proposal in §8.3 | Dose on phone, low-stock everywhere | Phase 5 |
 | D5 | Relative order with A2 | A2 first; B.1 first | **Decided 2026-09-26**: A2 phase 1 has shipped (PR #72); A2 phase 2 (webcam) is independent and may run after B.1 or in parallel | Phase 0 |
 | D6 | Retroactive changes after cutoff (schedule rows, suspensions, therapy end date) re-derive past days; frozen days never change | Yes; no (freeze on first derivation) | **Decided 2026-09-26**: yes | Phase 2 |
-| D7 | Conflict review scope | Show all LWW losses; show only listed cases (§4.5) | §4.5 list | Phase 3 |
+| D7 | Conflict review scope | Show all LWW losses; show only listed cases (§4.5) | **Decided 2026-09-27**: §4.5 list | Phase 3 |
 | D8 | Retraction (delete a mistaken fact) | Add now; later | **Decided 2026-09-26**: add in Phase 2 | Phase 2 |
 | D9 | Portable project name, namespaces | `MedReminder.Infrastructure.Portable`, keep namespaces | **Decided 2026-09-26**: as proposed | Phase 1 |
 | D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | **Decided 2026-09-26**: separate | Phase 3 |
@@ -1446,3 +1482,8 @@ Phase 2 implements the derivation from the prototype and its tests.
   with the fact until Phase 3 (§4.3 rule 3); 2c-2 re-freezes (§13).
   Rules 1b and 2 extended to days carrying `Legacy` consumption after
   the cutoff (§4.3).
+- 2026-09-27 — Phase 2 released in v2.7.0. D7 decided (§4.5 list).
+  Phase 3 split into 3a–3d (§13). Phase 3a implemented: HLC, operation
+  catalogue and outbox, emission from every use case, recorded only
+  while sync is enabled (§7.2); `WriteGate` on every use case and
+  stale-form diff for the medicine edit dialog (§7.4).

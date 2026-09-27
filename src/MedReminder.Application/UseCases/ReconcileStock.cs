@@ -1,6 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Ledger;
-using MedReminder.Application.Monitoring;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
@@ -119,6 +119,7 @@ public sealed class ReconcileStock
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IStockCountRepository _counts;
     private readonly LedgerSynchronizer _ledger;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
@@ -129,6 +130,7 @@ public sealed class ReconcileStock
         IMedicationAdministrationSlotRepository slots,
         IStockCountRepository counts,
         LedgerSynchronizer ledger,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
@@ -138,6 +140,7 @@ public sealed class ReconcileStock
         _slots = slots;
         _counts = counts;
         _ledger = ledger;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
@@ -150,7 +153,7 @@ public sealed class ReconcileStock
         return await BuildSnapshotAsync(medicine, facts, cancellationToken);
     }
 
-    // Runs under MonitoringGate: a catch-up committing between the
+    // Runs under WriteGate: a catch-up committing between the
     // derivation below and the save would derive from facts that miss
     // this count.
     public Task<ReconcileStockResult> ExecuteAsync(ReconcileStockCommand cmd, CancellationToken cancellationToken)
@@ -160,7 +163,7 @@ public sealed class ReconcileStock
             throw new ArgumentException("Counted quantity cannot be negative.", nameof(cmd));
         if (cmd.TakenToday < 0m)
             throw new ArgumentException("Quantity taken today cannot be negative.", nameof(cmd));
-        return MonitoringGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+        return WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
     }
 
     private async Task<ReconcileStockResult> ExecuteCoreAsync(ReconcileStockCommand cmd, CancellationToken cancellationToken)
@@ -178,7 +181,7 @@ public sealed class ReconcileStock
             facts, Guid.NewGuid(), snapshot.Today, _clock.GetUtcNow(),
             cmd.CountedQuantity, cmd.TakenToday, medicine.ThresholdDays, _ledger.Zone, notes);
 
-        await _counts.AddAsync(new StockCount
+        var count = new StockCount
         {
             Id = anchor.Id,
             MedicineId = medicine.Id,
@@ -193,10 +196,12 @@ public sealed class ReconcileStock
             Correction = anchor.Correction,
             MaterializesCountDay = anchor.MaterializesCountDay,
             AdvancesEpoch = anchor.AdvancesEpoch,
-        }, cancellationToken);
+        };
+        await _counts.AddAsync(count, cancellationToken);
 
         var sync = await _ledger.ApplyAsync(
             medicine, facts with { Counts = [.. facts.Counts, anchor] }, cancellationToken);
+        await _operations.AppendAsync([Operations.Count(count)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
 
         StockMovementKind? kind = anchor.Correction switch

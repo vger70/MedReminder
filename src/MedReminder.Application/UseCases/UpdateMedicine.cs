@@ -1,8 +1,10 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Ledger;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Sync;
 
 namespace MedReminder.Application.UseCases;
 
@@ -19,14 +21,26 @@ namespace MedReminder.Application.UseCases;
 //   non-empty list → replace the current slots.
 // Both non-null cases record a new slot set, effective from today, that
 // becomes the current one; earlier sets stay as history (B.1 Phase 2b,
-// ANALYSIS-B1-MOBILE-SYNC.md §4.2). The set is recorded even when the
-// slots did not change, as the former delete + insert did: the new slot
-// ids are the dose-reminder dedup keys.
+// ANALYSIS-B1-MOBILE-SYNC.md §4.2). Without a Baseline the set is
+// recorded even when the slots did not change, as the former delete +
+// insert did (the new slot ids are the dose-reminder dedup keys); with a
+// Baseline it is recorded only when the list differs from the
+// baseline's.
 // Catalogue linkage semantics (M2, ANALYSIS-DRUG-CATALOGUE.md §2.5):
 //   null       → do not touch the existing linkage.
 //   non-null   → replace the linkage with the given values. Pass a
 //                CatalogueLink with all-null fields to explicitly
 //                clear the linkage.
+//
+// Baseline (B.1 Phase 3a, docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md
+// §7.4, stale forms): the values the edit form loaded, expressed as the
+// command that would save them unchanged. When set, a field is written
+// only when the command's value differs from the baseline's, so a save
+// never overwrites a value the user did not touch (with sync, a value
+// another device changed after the form opened). The slots and the
+// catalogue linkage follow the same rule. Without a baseline every
+// field is written, as before. Operations are emitted only for fields
+// whose stored value changes.
 public sealed record UpdateMedicineCommand(
     Guid MedicineId,
     string Name,
@@ -41,7 +55,10 @@ public sealed record UpdateMedicineCommand(
     bool IsActive,
     bool RemindOnDose = false,
     IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null,
-    CatalogueLink? Catalogue = null);
+    CatalogueLink? Catalogue = null)
+{
+    public UpdateMedicineCommand? Baseline { get; init; }
+}
 
 public sealed record CatalogueLink(
     string? NationalCode,
@@ -53,6 +70,7 @@ public sealed class UpdateMedicine
     private readonly IMedicineRepository _medicines;
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IMedicineActivityRepository _activity;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
@@ -60,12 +78,14 @@ public sealed class UpdateMedicine
         IMedicineRepository medicines,
         IMedicationAdministrationSlotRepository slots,
         IMedicineActivityRepository activity,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _slots = slots;
         _activity = activity;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
@@ -79,39 +99,58 @@ public sealed class UpdateMedicine
             throw new ArgumentException("Unit of measure is required.", nameof(cmd));
         if (cmd.ThresholdDays < 0)
             throw new ArgumentException("Threshold in days cannot be negative.", nameof(cmd));
+        await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
 
+    private async Task ExecuteCoreAsync(UpdateMedicineCommand cmd, CancellationToken cancellationToken)
+    {
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         if (cmd.EndDate is { } end && end < medicine.StartDate)
             throw new ArgumentException("Therapy end date cannot precede start date.", nameof(cmd));
 
-        medicine.Name = cmd.Name.Trim();
-        medicine.ActiveIngredient = string.IsNullOrWhiteSpace(cmd.ActiveIngredient) ? null : cmd.ActiveIngredient.Trim();
-        medicine.Package = string.IsNullOrWhiteSpace(cmd.Package) ? null : cmd.Package.Trim();
-        medicine.Unit = cmd.Unit.Trim();
-        medicine.ThresholdDays = cmd.ThresholdDays;
-        medicine.NotificationChannels = cmd.NotificationChannels;
-        medicine.EndDate = cmd.EndDate;
-        medicine.DoctorName = string.IsNullOrWhiteSpace(cmd.DoctorName) ? null : cmd.DoctorName.Trim();
-        medicine.Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim();
-        await MedicineActivity.RecordAsync(
-            _activity, medicine, cmd.IsActive, _clock.GetUtcNow(), _clock.LocalTimeZone, cancellationToken);
-        medicine.IsActive = cmd.IsActive;
-        medicine.RemindOnDose = cmd.RemindOnDose;
+        var before = MedicineFieldCodec.Snapshot(medicine);
+        var baseline = cmd.Baseline;
+        bool Touched<T>(Func<UpdateMedicineCommand, T> value)
+            => baseline is null || !EqualityComparer<T>.Default.Equals(value(cmd), value(baseline));
+
+        if (Touched(c => Text(c.Name))) medicine.Name = cmd.Name.Trim();
+        if (Touched(c => Text(c.ActiveIngredient))) medicine.ActiveIngredient = Text(cmd.ActiveIngredient);
+        if (Touched(c => Text(c.Package))) medicine.Package = Text(cmd.Package);
+        if (Touched(c => Text(c.Unit))) medicine.Unit = cmd.Unit.Trim();
+        if (Touched(c => c.ThresholdDays)) medicine.ThresholdDays = cmd.ThresholdDays;
+        if (Touched(c => c.NotificationChannels)) medicine.NotificationChannels = cmd.NotificationChannels;
+        if (Touched(c => c.EndDate)) medicine.EndDate = cmd.EndDate;
+        if (Touched(c => Text(c.DoctorName))) medicine.DoctorName = Text(cmd.DoctorName);
+        if (Touched(c => Text(c.Notes))) medicine.Notes = Text(cmd.Notes);
+
+        var now = _clock.GetUtcNow();
+        MedicineActivityChange? activityChange = null;
+        if (Touched(c => c.IsActive))
+        {
+            activityChange = await MedicineActivity.RecordAsync(
+                _activity, medicine, cmd.IsActive, now, _clock.LocalTimeZone, cancellationToken);
+            medicine.IsActive = cmd.IsActive;
+        }
+        if (Touched(c => c.RemindOnDose)) medicine.RemindOnDose = cmd.RemindOnDose;
         if (cmd.Catalogue is { } link)
         {
-            medicine.NationalCode = string.IsNullOrWhiteSpace(link.NationalCode) ? null : link.NationalCode.Trim();
-            medicine.AtcCode = link.AtcCode;
-            medicine.LinkedReferenceMedicineId = link.LinkedReferenceMedicineId;
+            if (Touched(c => Text(c.Catalogue?.NationalCode))) medicine.NationalCode = Text(link.NationalCode);
+            if (Touched(c => c.Catalogue?.AtcCode)) medicine.AtcCode = link.AtcCode;
+            if (Touched(c => c.Catalogue?.LinkedReferenceMedicineId))
+                medicine.LinkedReferenceMedicineId = link.LinkedReferenceMedicineId;
         }
-        medicine.UpdatedAt = _clock.GetUtcNow();
+        medicine.UpdatedAt = now;
 
         await _medicines.UpdateAsync(medicine, cancellationToken);
 
-        if (cmd.AdministrationSlots is not null)
+        var operations = new List<SyncOperationBody>(Operations.FieldChanges(before, medicine));
+        if (activityChange is not null) operations.Add(Operations.Activity(activityChange));
+
+        if (cmd.AdministrationSlots is { } slotInputs
+            && (baseline?.AdministrationSlots is not { } baseSlots || !slotInputs.SequenceEqual(baseSlots)))
         {
-            var now = medicine.UpdatedAt;
             var set = new MedicationAdministrationSlotSet
             {
                 MedicineId = medicine.Id,
@@ -119,10 +158,15 @@ public sealed class UpdateMedicine
                     TimeZoneInfo.ConvertTime(now, _clock.LocalTimeZone).DateTime),
                 RecordedAt = now,
             };
-            await _slots.AddSetAsync(
-                set, AdministrationSlotSetBuilder.BuildSlots(set, cmd.AdministrationSlots), cancellationToken);
+            var built = AdministrationSlotSetBuilder.BuildSlots(set, slotInputs);
+            await _slots.AddSetAsync(set, built, cancellationToken);
+            operations.Add(Operations.SlotSet(set, built));
         }
 
+        await _operations.AppendAsync(operations, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
     }
+
+    private static string? Text(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

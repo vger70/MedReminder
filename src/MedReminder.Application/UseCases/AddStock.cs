@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.UseCases;
@@ -16,17 +17,20 @@ public sealed class AddStock
 {
     private readonly IMedicineRepository _medicines;
     private readonly IStockMovementRepository _stock;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
     public AddStock(
         IMedicineRepository medicines,
         IStockMovementRepository stock,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _stock = stock;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
@@ -38,6 +42,11 @@ public sealed class AddStock
             throw new ArgumentException("Quantity must be positive.", nameof(cmd));
         if (!IsPositiveKind(cmd.Kind))
             throw new ArgumentException($"Movement kind {cmd.Kind} is not allowed for a positive stock load.", nameof(cmd));
+        await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
+
+    private async Task ExecuteCoreAsync(AddStockCommand cmd, CancellationToken cancellationToken)
+    {
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
@@ -58,6 +67,7 @@ public sealed class AddStock
 
         await _medicines.UpdateAsync(medicine, cancellationToken);
         await _stock.AddAsync(movement, cancellationToken);
+        await _operations.AppendAsync([Operations.StockEntry(movement)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
     }
 
