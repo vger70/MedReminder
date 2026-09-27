@@ -350,6 +350,19 @@ internal static class Program
         builder.Services.AddHostedService<DoseReminderHostedService>();
         builder.Services.AddHostedService<AutomaticBackupHostedService>();
 
+        // B.1 Phase 3d: device sync. The service is a singleton so the
+        // sync window can run or suspend it; it stays idle while sync is
+        // not enabled for the profile.
+        builder.Services.AddSingleton(new MedReminder.Application.Sync.SyncEngineOptions
+        {
+            DeviceName = Environment.MachineName,
+            Platform = "desktop",
+            AppVersion = typeof(Program).Assembly.GetName().Version?.ToString() ?? string.Empty,
+        });
+        builder.Services.AddSingleton<MedReminder.UI.Services.SyncStatus>();
+        builder.Services.AddSingleton<SyncHostedService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<SyncHostedService>());
+
         var catalogueEnabledRaw = builder.Configuration[
             MedReminder.Application.Catalogue.CatalogueFeatureOptions.SectionName + ":Enabled"];
         if (bool.TryParse(catalogueEnabledRaw, out var catalogueEnabled) && catalogueEnabled)

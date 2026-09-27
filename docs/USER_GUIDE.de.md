@@ -867,6 +867,55 @@ die Daten aller Profile lesen, auch die von PIN-geschützten Profilen.
 - Lege die aktive Datenbankdatei **nicht** in einen synchronisierten
   Ordner. Dorthin gehören nur die verschlüsselten `.mrz`-Snapshots.
 
+## Synchronisierung zwischen PCs
+
+Mehrere PCs können dasselbe Profil aktuell halten: Was Sie auf einem
+erfassen, erscheint auf den anderen. Die PCs tauschen nur verschlüsselte
+Änderungen über einen gemeinsamen Ordner aus (einen OneDrive-, Google-Drive-
+oder Dropbox-Ordner, den dessen Desktop-App synchronisiert, oder eine
+Netzwerkfreigabe). Kein Server ist beteiligt, und der Ordner enthält nie
+lesbare Daten.
+
+Öffnen Sie **Extras → Synchronisierung…**. Aktivieren, Beitreten, Neuaufbau
+und Deaktivieren sind dem Administrator vorbehalten.
+
+### Auf dem ersten PC aktivieren
+
+1. **Synchronisierung aktivieren…**, wählen Sie den gemeinsamen Ordner.
+2. Geben Sie einen Namen für diesen PC und eine **Synchronisierungs-
+   Passphrase** ein (mindestens 10 Zeichen, zweimal eingegeben). Sie ist
+   nicht die Sicherungs-Passphrase. Bewahren Sie sie gut auf: Ohne sie sind
+   die Daten im Ordner nicht lesbar, und sie kann nicht wiederhergestellt
+   werden.
+
+### Von einem anderen PC beitreten
+
+1. Warten Sie, bis der Synchronisierungsclient den gemeinsamen Ordner
+   heruntergeladen hat.
+2. **Einer Gruppe beitreten…**, wählen Sie denselben Ordner, geben Sie einen
+   Namen für diesen PC und dieselbe Passphrase ein.
+3. Bestätigen Sie: **Die Daten dieses Profils auf diesem PC werden durch die
+   der Gruppe ersetzt** (eine Kopie bleibt neben der Datenbank erhalten).
+   MedReminder wird neu gestartet.
+
+### Im Alltag
+
+- MedReminder synchronisiert einige Sekunden nach jeder Änderung, alle 5
+  Minuten und mit **Jetzt synchronisieren**.
+- Die Registerkarte **Geräte** zeigt die PCs der Gruppe und wann sie zuletzt
+  gesehen wurden.
+- Ändern zwei PCs dasselbe, bevor sie die Änderung des anderen gesehen
+  haben, bleibt die neueste erhalten und der Fall erscheint unter
+  **Konflikte**. Für ein Medikamentenfeld stellt **Verlorenen Wert
+  wiederherstellen** den anderen Wert wieder her; **Verwerfen** entfernt den
+  Eintrag aus der Liste.
+- Ein Import oder eine Wiederherstellung auf einem synchronisierten Profil
+  startet eine neue **Generation**: Nach einer Warnung verwerfen die anderen
+  PCs, was sie noch nicht gesendet hatten, und müssen mit **Aus der Gruppe
+  neu aufbauen…** neu aufgebaut werden.
+- **Synchronisierung deaktivieren…** beendet die Synchronisierung auf diesem
+  PC und behält seine Daten.
+
 ## Jetzt prüfen
 
 Der Monitor läuft automatisch alle 30 Minuten (einstellbar in

@@ -834,6 +834,51 @@ nube…**:
 - **No** coloques el archivo de base de datos en uso en una carpeta
   sincronizada. Ahí solo deben ir las instantáneas cifradas `.mrz`.
 
+## Sincronización entre PC
+
+Varios PC pueden mantener actualizado el mismo perfil: lo que registra en uno
+aparece en los demás. Los PC solo intercambian cambios cifrados a través de
+una carpeta compartida (una carpeta de OneDrive, Google Drive o Dropbox
+sincronizada por su aplicación de escritorio, o un recurso de red). No
+interviene ningún servidor y la carpeta nunca contiene datos legibles.
+
+Abra **Herramientas → Sincronización…**. Activar, unirse, reconstruir y
+desactivar están reservados al administrador.
+
+### Activar en el primer PC
+
+1. **Activar sincronización…**, elija la carpeta compartida.
+2. Introduzca un nombre para este PC y una **frase de contraseña de
+   sincronización** (al menos 10 caracteres, escrita dos veces). No es la
+   frase de las copias de seguridad. Guárdela: sin ella los datos de la
+   carpeta no se pueden leer, y no se puede recuperar.
+
+### Unirse desde otro PC
+
+1. Espere a que el cliente de sincronización haya descargado la carpeta
+   compartida.
+2. **Unirse a un grupo…**, elija la misma carpeta, introduzca un nombre para
+   este PC y la misma frase de contraseña.
+3. Confirme: **los datos de este perfil en este PC se sustituyen** por los
+   del grupo (se conserva una copia junto a la base de datos). MedReminder
+   se reinicia.
+
+### Uso diario
+
+- MedReminder sincroniza unos segundos después de cada cambio, cada 5
+  minutos y con **Sincronizar ahora**.
+- La pestaña **Dispositivos** muestra los PC del grupo y su último contacto.
+- Si dos PC cambian lo mismo antes de ver el cambio del otro, se conserva el
+  más reciente y el caso aparece en **Conflictos**. Para un campo del
+  medicamento, **Restaurar valor perdido** recupera el otro valor;
+  **Descartar** quita la entrada de la lista.
+- Importar una exportación o restaurar una copia en un perfil sincronizado
+  inicia una nueva **generación**: tras un aviso, los demás PC descartan lo
+  que aún no habían enviado y deben reconstruirse con **Reconstruir desde el
+  grupo…**.
+- **Desactivar sincronización…** detiene la sincronización en este PC y
+  conserva sus datos.
+
 ## Comprobar ahora
 
 El monitor se ejecuta automáticamente cada 30 minutos (configurable

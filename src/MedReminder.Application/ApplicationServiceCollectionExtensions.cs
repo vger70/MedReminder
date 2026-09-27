@@ -35,6 +35,12 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<CreateSyncGroup>();
         services.AddScoped<JoinSyncGroup>();
         services.AddScoped<ResetSyncGeneration>();
+        // B.1 Phase 3d: the desktop's sync settings window.
+        services.AddSingleton<SyncActivity>();
+        services.AddScoped<SyncConflictsQuery>();
+        services.AddScoped<RestoreSyncConflict>();
+        services.AddScoped<DismissSyncConflict>();
+        services.AddScoped<DisableSync>();
 
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();

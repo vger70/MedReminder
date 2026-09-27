@@ -10,12 +10,18 @@ namespace MedReminder.Application.Abstractions;
 //
 // Phase 3c: KeyVersion names the group key in use (key.<n>.wrap,
 // rotation is Phase 4) and Folder the root of a local-folder transport.
+// Phase 3d: DeviceName is shown to the other devices (encrypted in the
+// device record); ResetPending is set when an import or a restore
+// replaced the database, and the next sync run starts a new generation
+// before anything else (§5.7).
 public sealed record SyncSettings(
     Guid GroupId,
     Guid DeviceId,
     int Generation,
     int KeyVersion = 1,
-    string? Folder = null);
+    string? Folder = null,
+    string? DeviceName = null,
+    bool ResetPending = false);
 
 public interface ISyncSettingsStore
 {

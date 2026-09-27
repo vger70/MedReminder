@@ -1179,7 +1179,8 @@ checklist; no plaintext in the remote folder (inspection test).
 | 3a | Action 1: HLC, operation catalogue, `IOperationLog` and the `SyncOperations` outbox, emission from every use case; one write gate for every use case; stale-form diff (§7.4). Operations recorded only when sync is enabled, so no behavior change until 3d | Merged (#85) |
 | 3b-1 | Action 2: apply of remote operations, register versions and LWW, tombstones, conflict list (§4.5), convergence harness on real databases; counts keep their stored outcome | Merged (#86) |
 | 3b-2 | Re-evaluation of count outcomes on the snapshot by HLC (facts and register values "as of"), retracted facts left out of every snapshot (§4.2); genesis register versions; harness extended to concurrent counts | Merged (#87) |
-| 3c | Actions 3, 4, 7 in one PR (product owner, 2026-09-27): associated data on the cipher, key wrap, envelope, segments with dependency vectors, causal buffer, `SyncPeers`, device records, genesis and checkpoint images, join, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md`. Key rotation and revocation (§6.2) move to Phase 4 with QR pairing | #88 |
+| 3c | Actions 3, 4, 7 in one PR (product owner, 2026-09-27): associated data on the cipher, key wrap, envelope, segments with dependency vectors, causal buffer, `SyncPeers`, device records, genesis and checkpoint images, join, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md`. Key rotation and revocation (§6.2) move to Phase 4 with QR pairing | Merged (#88) |
+| 3d | Actions 5, 6: `SyncHostedService`, Tools → Sync… (status, devices, conflict review with restore and dismiss; enable, join, rebuild, disable for the administrator), reset flow in import and restore, manual two-PC checklist (`docs/SYNC-TWO-PC-CHECKLIST.md`). No CI workflow (product owner): the convergence harness runs with the test suites | Open |
 | 3c | Actions 3, 4, 7: segment codec, group key, genesis, checkpoints, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md` | — |
 | 3d | Actions 5, 6: `SyncHostedService`, desktop UI, reset flow in import and restore, convergence simulation in CI, two-PC checklist | — |
 
@@ -1519,6 +1520,16 @@ Phase 2 implements the derivation from the prototype and its tests.
   with the fact until Phase 3 (§4.3 rule 3); 2c-2 re-freezes (§13).
   Rules 1b and 2 extended to days carrying `Legacy` consumption after
   the cutoff (§4.3).
+- 2026-09-27 — Phase 3d implemented. Decisions of the product owner:
+  sync under Tools → Sync…, configuration for the administrator only;
+  joining replaces the profile's data with a safety copy; conflict review
+  with restore (medicine fields) and dismiss; no CI workflow for pull
+  requests (the repository has none; the convergence harness runs with
+  the test suites). Implementation: a pending reset is marked in
+  `sync.settings.json` before an import or a restore swaps the database,
+  and the engine refuses to run until the new generation is started; the
+  sync service is suspended before those operations; the receiver warns
+  about a clock more than 24 hours ahead (§4.1).
 - 2026-09-27 — Phase 3c implemented in one PR (product owner); key
   rotation and revocation moved to Phase 4 (§6.2). Decisions taken in
   the implementation: genesis and checkpoints are SQLite images of the

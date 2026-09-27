@@ -8,6 +8,7 @@ using MedReminder.Infrastructure.Catalogue;
 using MedReminder.Infrastructure.Donations;
 using MedReminder.Infrastructure.Catalogue.Parsers;
 using MedReminder.Infrastructure.Credentials;
+using MedReminder.Infrastructure.Sync;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Export;
 using MedReminder.Infrastructure.Notifications;
@@ -94,6 +95,8 @@ public static class InfrastructureServiceCollectionExtensions
         // profile database.
         services.TryAddSingleton<ISyncKeyStore>(
             new DpapiSyncKeyStore(Path.Combine(currentProfile.DataDirectory, DpapiSyncKeyStore.FileName)));
+        // B.1 Phase 3d: create, join and rebuild from the sync window.
+        services.AddScoped<ISyncSetupService, SyncSetupService>();
 
         // C.3+: DPAPI-cached backup passphrase for the unattended
         // cloud-folder snapshot (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md

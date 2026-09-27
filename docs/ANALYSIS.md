@@ -89,7 +89,7 @@ UI  ──►  Application  ──►  Domain
   update check.
 - **UI** is the composition root (`Program.cs`) and the only process
   entry point. It owns the WinForms forms, the tray icon, the toast
-  adapter and the four hosted services (§6). It changes profile data
+  adapter and the five hosted services (§6). It changes profile data
   only through Application use cases, never through repository write
   methods, `IUnitOfWork` or the `DbContext`;
   `UiWritePathGuardTests` in `MedReminder.Application.Tests` enforces
@@ -300,7 +300,14 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   over `ISyncTransport` (`LocalFolderSyncTransport`). `CreateSyncGroup`,
   `JoinSyncGroup` and `ResetSyncGeneration` create, join and restart a
   group; genesis and checkpoints are database images
-  (`SqliteSyncSnapshotStore`). No UI or hosted service yet (Phase 3d).
+  (`SqliteSyncSnapshotStore`). Desktop (Phase 3d): `SyncHostedService`
+  runs the engine 15 s after start, every `Sync:IntervalMinutes`
+  (default 5) and 10 s after local changes; Tools → Sync… shows status,
+  devices and conflicts; `ISyncSetupService` (`SyncSetupService`)
+  creates, joins and rebuilds, swapping the database like an import
+  (`ProfileDatabaseSwap`). An import or a restore on a synced profile
+  marks a pending reset in `sync.settings.json` before the swap; the
+  next run starts a new generation (§5.7 of the B.1 analysis).
 - `UpdateMedicine` takes an optional `Baseline` (the values the edit
   dialog loaded): with it, only the fields the user changed are written,
   and unchanged slots record no new slot set.
@@ -390,7 +397,7 @@ disables the feature.
 
 ## 6. Background processing
 
-Four `BackgroundService`s in `MedReminder.UI/Hosting`. Each tick opens
+Five `BackgroundService`s in `MedReminder.UI/Hosting`. Each tick opens
 its own DI scope, so the scoped `DbContext` is never shared between
 ticks. A failing tick is logged and does not stop the service.
 
@@ -400,6 +407,7 @@ ticks. A failing tick is logged and does not stop the service.
 | `DoseReminderHostedService` | `PeriodicTimer`, `DoseReminder:IntervalSeconds` (default 60, min 10) | `DoseReminderService`: fires due timed slots for medicines with `RemindOnDose`, positive stock and an active therapy; prunes dedup rows older than 30 days |
 | `AutomaticBackupHostedService` | 30 s initial delay, then every 15 min | Daily backup at or after `Backup:PreferredTime` (§8) |
 | `CatalogueRefreshHostedService` | Once at startup; registered only when `Catalogue:Enabled` is true | Imports each embedded catalogue snapshot whose version is newer, one transaction per country |
+| `SyncHostedService` | 15 s initial delay, then every `Sync:IntervalMinutes` (default 5, min 1) and 10 s after local changes; idle while sync is off | Starts a pending new generation, then `SyncEngine.RunAsync` (B.1 Phase 3d) |
 
 The Application services (`MedicationMonitor`, `DoseReminderService`,
 `ConsumptionCatchUp`) have no scheduling code and are tested with a

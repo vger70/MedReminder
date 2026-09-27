@@ -302,6 +302,66 @@ public sealed class FolderSyncTests : IDisposable
         ShouldConverge(await StatesAsync([a, b, c]));
     }
 
+    [Fact]
+    public async Task The_devices_list_shows_every_device_by_name()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+        await SyncAllAsync([a, b], rounds: 1);
+
+        var devices = await a.RunAsync(sp => sp.GetRequiredService<SyncEngine>().ListDevicesAsync(CancellationToken.None));
+
+        devices.Select(d => d.Name).Should().BeEquivalentTo(["A", "B"]);
+        devices.Should().OnlyContain(d => d.Platform == "desktop");
+    }
+
+    [Fact]
+    public async Task A_pending_reset_blocks_the_engine_until_the_new_generation_starts()
+    {
+        var a = await CreateGroupAsync();
+        var settings = a.Settings.Load()!;
+        a.Settings.Save(settings with { ResetPending = true });
+
+        await FluentActions.Awaiting(() => a.SyncAsync()).Should().ThrowAsync<InvalidOperationException>();
+
+        var reset = await a.RunAsync(sp => sp.GetRequiredService<ResetSyncGeneration>().ExecuteAsync(
+            new LocalFolderSyncTransport(Folder), CancellationToken.None));
+        reset.ResetPending.Should().BeFalse();
+        reset.Generation.Should().Be(2);
+        (await a.SyncAsync()).Problems.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task A_clock_far_ahead_is_reported_and_its_changes_still_applied()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+        var id = (await a.RunAsync(sp => sp.GetRequiredService<IMedicineRepository>().ListAllAsync(default)))[0].Id;
+        b.Clock.Advance(TimeSpan.FromDays(2));
+        await b.RunAsync(sp => sp.GetRequiredService<AddStock>().ExecuteAsync(
+            new AddStockCommand(id, 10m, StockMovementKind.ManualAdd), default));
+        await b.SyncAsync();
+
+        var result = await a.SyncAsync();
+
+        result.OperationsApplied.Should().Be(1);
+        result.Problems.Should().ContainSingle(p => p.Contains("more than 24 hours ahead", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Disabling_sync_keeps_the_data_and_forgets_the_group()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+        var groupId = b.Settings.Load()!.GroupId;
+
+        await b.RunAsync(sp => sp.GetRequiredService<DisableSync>().ExecuteAsync(CancellationToken.None));
+
+        b.Settings.Load().Should().BeNull();
+        b.Keys.Load(groupId, 1).Should().BeNull();
+        (await b.RunAsync(sp => sp.GetRequiredService<IMedicineRepository>().ListAllAsync(default))).Should().ContainSingle();
+    }
+
     private static bool ContainsBytes(byte[] haystack, byte[] needle)
         => haystack.AsSpan().IndexOf(needle) >= 0;
 

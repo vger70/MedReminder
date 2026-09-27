@@ -47,7 +47,7 @@ public sealed class CreateSyncGroup
 
     public async Task<SyncSettings> ExecuteAsync(
         ISyncTransport transport, char[] passphrase, string? folder, CancellationToken cancellationToken,
-        Argon2Params? kdf = null)
+        Argon2Params? kdf = null, string? deviceName = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
         ArgumentNullException.ThrowIfNull(passphrase);
@@ -56,7 +56,7 @@ public sealed class CreateSyncGroup
         await _genesis.RecordAsync(cancellationToken);
         return await WriteGate.RunExclusiveAsync(async ct =>
         {
-            var settings = new SyncSettings(Guid.NewGuid(), Guid.NewGuid(), 1, 1, folder);
+            var settings = new SyncSettings(Guid.NewGuid(), Guid.NewGuid(), 1, 1, folder, deviceName);
             var key = RandomNumberGenerator.GetBytes(SyncKeyWrap.KeySize);
             try
             {
@@ -132,7 +132,7 @@ public sealed class JoinSyncGroup
 
     // Throws CryptographicException for a wrong passphrase.
     public async Task<SyncJoinResult> ExecuteAsync(ISyncTransport transport, Guid groupId, char[] passphrase,
-        string targetDatabasePath, string? folder, CancellationToken cancellationToken)
+        string targetDatabasePath, string? folder, CancellationToken cancellationToken, string? deviceName = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
         ArgumentNullException.ThrowIfNull(passphrase);
@@ -148,7 +148,7 @@ public sealed class JoinSyncGroup
         var key = wrap.Unwrap(_cipher, passphrase);
 
         var generation = await SyncEngine.LatestGenerationAsync(transport, groupId, cancellationToken);
-        var settings = new SyncSettings(groupId, Guid.NewGuid(), generation, keyVersion, folder);
+        var settings = new SyncSettings(groupId, Guid.NewGuid(), generation, keyVersion, folder, deviceName);
         await BuildAsync(transport, settings, key, targetDatabasePath, cancellationToken);
         return new SyncJoinResult(settings, key);
     }
@@ -270,7 +270,7 @@ public sealed class ResetSyncGeneration
             return await WriteGate.RunExclusiveAsync(async ct =>
             {
                 var generation = await SyncEngine.LatestGenerationAsync(transport, current.GroupId, ct) + 1;
-                var settings = current with { Generation = generation };
+                var settings = current with { Generation = generation, ResetPending = false };
                 await CreateSyncGroup.WriteGenesisAsync(transport, _cipher, _snapshots, settings, key, ct);
                 await SyncEngine.WriteRecordAsync(transport, _cipher, key, settings, _options, _clock, 0,
                     new Dictionary<Guid, int>(), ct);

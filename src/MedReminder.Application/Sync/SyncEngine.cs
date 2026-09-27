@@ -97,6 +97,12 @@ public sealed class SyncEngine
     {
         var settings = _settings.Load()
             ?? throw new InvalidOperationException("Sync is not enabled for this profile.");
+        if (settings.ResetPending)
+        {
+            // The database was replaced: applying the current generation to
+            // it would merge old data into the imported one (§5.7).
+            throw new InvalidOperationException("A new sync generation must be started first.");
+        }
         var key = _keys.Load(settings.GroupId, settings.KeyVersion)
             ?? throw new InvalidOperationException("The group key is not stored on this device.");
         try
@@ -243,6 +249,12 @@ public sealed class SyncEngine
                     d.Key == me ? ownSeq >= d.Value : applied.GetValueOrDefault(d.Key) >= d.Value);
                 if (!ready) continue;
 
+                // §4.1: a timestamp far ahead is applied (convergence wins)
+                // but the receiver names the device whose clock is wrong.
+                var ahead = _clock.GetUtcNow().AddHours(24).ToUnixTimeMilliseconds();
+                if (content.Operations.Any(o => o.PhysicalMs > ahead))
+                    problems.Add($"The clock of device {device:N} is more than 24 hours ahead.");
+
                 var result = await _apply.ExecuteAsync([.. content.Operations.Select(o => o.ToOperation(g))], ct);
                 if (result.Blocked is not null)
                 {
@@ -388,9 +400,45 @@ public sealed class SyncEngine
         => transport.WriteAsync(
             SyncLayout.Device(settings.GroupId, settings.DeviceId),
             SyncFileCodec.Seal(cipher, key, Header(SyncFileKind.Device, settings, settings.DeviceId, 0, 1),
-                new DeviceRecordContent(settings.DeviceId, options.DeviceName, options.Platform, options.AppVersion,
+                new DeviceRecordContent(settings.DeviceId, settings.DeviceName ?? options.DeviceName,
+                    options.Platform, options.AppVersion,
                     publishedSeq, applied, clock.GetUtcNow()).ToBytes()),
             ct);
+
+    // The device records of the current generation, this device's
+    // included (Phase 3d, the devices list).
+    public async Task<IReadOnlyList<DeviceRecordContent>> ListDevicesAsync(CancellationToken cancellationToken)
+    {
+        var settings = _settings.Load()
+            ?? throw new InvalidOperationException("Sync is not enabled for this profile.");
+        var key = _keys.Load(settings.GroupId, settings.KeyVersion)
+            ?? throw new InvalidOperationException("The group key is not stored on this device.");
+        try
+        {
+            var records = new List<DeviceRecordContent>();
+            foreach (var path in await _transport.ListAsync(SyncLayout.DevicesFolder(settings.GroupId), cancellationToken))
+            {
+                var file = await _transport.ReadAsync(path, cancellationToken);
+                if (file is null) continue;
+                try
+                {
+                    var (header, content) = SyncFileCodec.Open(_cipher, key, file);
+                    if (header.Kind == SyncFileKind.Device && header.Generation == settings.Generation)
+                        records.Add(DeviceRecordContent.Parse(content));
+                }
+                catch (Exception ex) when (ex is CryptographicException or InvalidDataException
+                                               or NotSupportedException or System.Text.Json.JsonException)
+                {
+                    // An unreadable record is left out of the list.
+                }
+            }
+            return [.. records.OrderByDescending(r => r.LastSeen)];
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
 
     internal static async Task<int> LatestGenerationAsync(ISyncTransport transport, Guid groupId, CancellationToken ct)
         => (await transport.ListAsync(SyncLayout.GenesisFolder(groupId), ct))

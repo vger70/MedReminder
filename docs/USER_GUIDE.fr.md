@@ -853,6 +853,52 @@ compris ceux protégés par un PIN.
   d'utilisation dans un dossier synchronisé. Seuls les instantanés
   chiffrés `.mrz` y ont leur place.
 
+## Synchronisation entre PC
+
+Plusieurs PC peuvent tenir le même profil à jour : ce que vous saisissez sur
+l'un apparaît sur les autres. Les PC n'échangent que des modifications
+chiffrées par un dossier partagé (un dossier OneDrive, Google Drive ou
+Dropbox synchronisé par son application de bureau, ou un partage réseau).
+Aucun serveur n'intervient et le dossier ne contient jamais de données
+lisibles.
+
+Ouvrez **Outils → Synchronisation…**. Activer, rejoindre, reconstruire et
+désactiver sont réservés à l'administrateur.
+
+### Activer sur le premier PC
+
+1. **Activer la synchronisation…**, choisissez le dossier partagé.
+2. Saisissez un nom pour ce PC et une **phrase secrète de synchronisation**
+   (au moins 10 caractères, saisie deux fois). Ce n'est pas la phrase
+   secrète des sauvegardes. Conservez-la : sans elle, les données du dossier
+   sont illisibles, et elle ne peut pas être récupérée.
+
+### Rejoindre depuis un autre PC
+
+1. Attendez que le client de synchronisation ait téléchargé le dossier
+   partagé.
+2. **Rejoindre un groupe…**, choisissez le même dossier, saisissez un nom
+   pour ce PC et la même phrase secrète.
+3. Confirmez : **les données de ce profil sur ce PC sont remplacées** par
+   celles du groupe (une copie est conservée à côté de la base).
+   MedReminder redémarre.
+
+### Utilisation courante
+
+- MedReminder synchronise quelques secondes après chaque modification,
+  toutes les 5 minutes et avec **Synchroniser maintenant**.
+- L'onglet **Appareils** liste les PC du groupe et leur dernier contact.
+- Si deux PC modifient la même chose avant d'avoir vu la modification de
+  l'autre, la plus récente est conservée et le cas apparaît dans
+  **Conflits**. Pour un champ de médicament, **Restaurer la valeur perdue**
+  remet l'autre valeur ; **Ignorer** retire l'entrée de la liste.
+- Importer un export ou restaurer une sauvegarde sur un profil synchronisé
+  démarre une nouvelle **génération** : après un avertissement, les autres
+  PC abandonnent ce qu'ils n'avaient pas encore envoyé et doivent être
+  reconstruits avec **Reconstruire depuis le groupe…**.
+- **Désactiver la synchronisation…** arrête la synchronisation sur ce PC et
+  conserve ses données.
+
 ## Vérifier maintenant
 
 Le moniteur s'exécute automatiquement toutes les 30 minutes
