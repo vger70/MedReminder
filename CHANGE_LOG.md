@@ -30,10 +30,44 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #88 — B.1 Phase 3c: encrypted segments, group key, checkpoints and a folder transport
+
+Link: [vger70/MedReminder#88](https://github.com/vger70/MedReminder/pull/88)
+Branch: `claude/b1-phase3c-segments-transport`
+
+### Added
+
+- Sync engine (`SyncEngine`): encrypted append-only segments per
+  device, causal apply with dependency vectors (`SyncPeers`), device
+  records, checkpoints and compaction, generation and gap detection.
+- Group key wrapped with the sync passphrase (Argon2id) and the `MRS1`
+  encrypted envelope with an authenticated cleartext header.
+- Genesis and checkpoint images of the profile database
+  (`SqliteSyncSnapshotStore`); `CreateSyncGroup`, `JoinSyncGroup`,
+  `ResetSyncGeneration`.
+- `ISyncTransport` with `LocalFolderSyncTransport` and contract tests;
+  DPAPI key store (`sync.protected`).
+- `docs/SYNC-FORMAT.md`: public contract of the sync files.
+
+### Changed
+
+- `IArchiveCipher` gains associated-data overloads.
+- Stock-movement and peer repositories reuse instances already tracked
+  in the unit of work.
+
+### Docs
+
+- `ANALYSIS-B1-MOBILE-SYNC.md` §7.3, §13, §20; `ANALYSIS.md` runtime
+  files and persistence.
+
+---
+
 ## PR #87 — B.1 Phase 3b-2: re-evaluate stock counts on the facts recorded before them by HLC
 
 Link: [vger70/MedReminder#87](https://github.com/vger70/MedReminder/pull/87)
 Branch: `claude/b1-phase3b2-count-reevaluation`
+
+**Status:** merged (2026-09-27)
 
 ### Added
 
