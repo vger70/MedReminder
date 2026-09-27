@@ -91,3 +91,28 @@ Round 2 command:
 ```powershell
 dotnet run -c Release -- --client-id <client-id> --wait-minutes 15 --write-local
 ```
+
+## Round 2 (2026-09-27) and conclusion
+
+Report in `results/round2-*.md`.
+
+- C4: the drive root lists **0 items** and `special/documents` is 404
+  under `Files.ReadWrite.AppFolder`: the 200 of round 1 was an empty
+  view. Isolation holds.
+- C10b: the item of an upload session is listed after the first chunk
+  with size 0 and empty content. C18: `deferCommit` does not hide it
+  either. C19: a temporary name then a rename works, and the rename
+  onto an existing name returns 409. Decision for 4a: files above the
+  simple-upload limit are uploaded under a `.`-prefixed temporary name
+  and renamed with `conflictBehavior=fail`; readers already ignore
+  names starting with `.` (`SYNC-FORMAT.md` §1). Simple PUTs are used
+  below the limit.
+- C16: no `Apps` folder exists in the local OneDrive folder after 15
+  minutes; the Windows client does not bring the app folder down on
+  this machine. Decision: the OneDrive transport uses Graph only; the
+  Phase 3 folder transport stays independent of it.
+- Listing costs about 600 ms a call and a create about 800 ms: 4a uses
+  `delta` as the change feed, with a full listing as fallback.
+
+S6 (Windows) passes with the mitigations above. The Android half runs
+with Phase 5.
