@@ -61,7 +61,10 @@ The current test projects include:
 ```text
 MedReminder.Domain.Tests
 MedReminder.Application.Tests
+MedReminder.Infrastructure.Portable.Tests
 MedReminder.Infrastructure.Tests
+MedReminder.UI.Tests
+MedReminder.DataImporter.Tests
 ```
 
 The release pipeline must stop if any test fails.

@@ -521,9 +521,12 @@ Advantages:
 
 - No OAuth integration in the mobile client.
 - Reuses the same `.mrz` archive format and passphrase verbatim.
-- Minimal incremental engineering — `ExportService` and
-  `ImportService` are already `net10.0` (no Windows dependency)
-  and can be reused directly in a MAUI host.
+- Minimal incremental engineering. **Correction (2026-09-26):**
+  `ExportService` and `ImportService` are not `net10.0`; they are
+  Windows-only (`[SupportedOSPlatform("windows")]`, DPAPI). Phase 1 of
+  `ANALYSIS-B1-MOBILE-SYNC.md` extracted their platform-neutral read
+  half (`ArchiveReader`, `ProfileDatabaseBuilder`) into
+  `MedReminder.Infrastructure.Portable` for reuse in a MAUI host.
 
 Disadvantages:
 
@@ -560,6 +563,11 @@ Disadvantages:
 - Substantially higher complexity in the first cut of B.1.
 
 ### 6.3 Recommended approach for B.1
+
+**Superseded (2026-09-26)** by `ANALYSIS-B1-MOBILE-SYNC.md` §5.8: B.1
+now includes synchronization, which needs provider APIs on the phone
+from the first mobile release; Phase 2 of this document is absorbed
+by B.1 Phase 4. The original recommendation follows for the record.
 
 Implement Scenario A (file picker) in B.1's first release.
 Introduce Scenario B (native provider) in a B.1 follow-on release
@@ -1065,6 +1073,10 @@ premature dependency.
 ---
 
 ## Change log for this document
+
+- 2026-09-26 — §6.1 corrected (export / import services are
+  Windows-only; their read half is now portable); §6.3 superseded by
+  `ANALYSIS-B1-MOBILE-SYNC.md` §5.8.
 
 - 2026-09-22 — full rewrite from the initial sketch. Added
   structured scope (§1), C.3 / C.3+ background (§2), detailed

@@ -153,8 +153,8 @@ public class MailKitEmailNotificationServiceTests
             new EmailMessage("s", "b", " doctor@example.org "));
 
         mime.To.Mailboxes.Select(m => m.Address).Should().Equal("doctor@example.org");
-        mime.Cc.Should().BeEmpty();
-        mime.Bcc.Should().BeEmpty();
+        mime.Cc.Mailboxes.Should().BeEmpty();
+        mime.Bcc.Mailboxes.Should().BeEmpty();
         mime.Subject.Should().Be("s");
     }
 

@@ -24,6 +24,11 @@
     <ProjectReference Include="..\..\src\MedReminder.Infrastructure\MedReminder.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- Shared with MedReminder.Infrastructure.Portable.Tests, where the
+       persistence tests live; the catalogue tests here still use it. -->
+  <ItemGroup>
+    <Compile Include="..\MedReminder.Infrastructure.Portable.Tests\Support\SqliteInMemoryFixture.cs" Link="Support\SqliteInMemoryFixture.cs" />
+  </ItemGroup>
   <ItemGroup>
     <Content Include="..\fixtures\catalogue\aifa-confezioni-sample.csv">
       <Link>fixtures\catalogue\aifa-confezioni-sample.csv</Link>

@@ -10,15 +10,12 @@ using MedReminder.Infrastructure.Catalogue.Parsers;
 using MedReminder.Infrastructure.Credentials;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Export;
-using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Notifications;
 using MedReminder.Infrastructure.Persistence;
-using MedReminder.Infrastructure.Persistence.Repositories;
 using MedReminder.Infrastructure.Profiles;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.Infrastructure.UpdateChecking;
 using MedReminder.Application.UpdateChecking;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -63,32 +60,22 @@ public static class InfrastructureServiceCollectionExtensions
         // singleton registered here so both the EF Core connection
         // and the backup export target the same file. In 15c the
         // path comes from ICurrentProfile.
-        var connectionString = AppDataPaths.BuildSqliteConnectionString(currentProfile.DatabasePath);
+        //
+        // DbContext, repositories, unit of work, DatabaseInitializer,
+        // archive cipher / reader and localization come from the
+        // platform-neutral project (MedReminder.Infrastructure.Portable).
         services.TryAddSingleton(new DatabasePathProvider(currentProfile.DatabasePath));
-        services.AddDbContext<MedReminderDbContext>(options =>
-        {
-            options.UseSqlite(connectionString);
-        });
-
-        services.AddScoped<IMedicineRepository, MedicineRepository>();
-        services.AddScoped<IStockMovementRepository, StockMovementRepository>();
-        services.AddScoped<IMedicationScheduleHistoryRepository, MedicationScheduleHistoryRepository>();
-        services.AddScoped<IMedicationSuspensionRepository, MedicationSuspensionRepository>();
-        services.AddScoped<INotificationEventRepository, NotificationEventRepository>();
-        services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
-        services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();
-        services.AddScoped<IDoseReminderEventRepository, DoseReminderEventRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.TryAddSingleton<IAppDataLocation, AppDataLocation>();
+        services.AddMedReminderPortableInfrastructure(currentProfile.DatabasePath);
         services.AddScoped<IBackupService, BackupService>();
-        services.AddScoped<DatabaseInitializer>();
 
         // ------- Automatic backup -------
         services.Configure<BackupSettings>(configuration.GetSection(BackupSettings.SectionName));
         services.TryAddSingleton<IBackupStateStore, BackupStateStore>();
 
         // ------- Localization (Increment 16) -------
+        // The service itself is registered by the portable extension.
         services.Configure<UserSettings>(configuration.GetSection(UserSettings.SectionName));
-        services.TryAddSingleton<ILocalizationService, LocalizationService>();
 
         // ------- Notifications + credentials + auto-start -------
         // Global SMTP transport (admin-managed, §7.1).
@@ -115,11 +102,10 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<IArchiveStorage, LocalFolderArchiveStorage>();
 
         // ------- Encrypted export / import (C.3) -------
-        // Argon2id + AES-GCM archive cipher (singleton, stateless) plus
-        // the user-initiated export / import services. The import service
+        // The archive cipher is registered by the portable extension;
+        // here the user-initiated export / import services. The import service
         // depends on the scoped DbContext to release the live connection
         // before swapping the DB, so both are scoped.
-        services.TryAddSingleton<IArchiveCipher, ArchiveCipher>();
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IImportService, ImportService>();
 

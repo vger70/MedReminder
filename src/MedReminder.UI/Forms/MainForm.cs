@@ -11,7 +11,7 @@ using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Infrastructure.Email;
-using MedReminder.UI.Presentation;
+using MedReminder.Application.Overview;
 using MedReminder.UI.Tray;
 using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.DependencyInjection;

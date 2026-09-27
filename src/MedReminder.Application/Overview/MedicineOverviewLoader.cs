@@ -1,13 +1,15 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Domain.Calculations;
 
-namespace MedReminder.UI.Presentation;
+namespace MedReminder.Application.Overview;
 
-// Builds the list of MedicineListItem for MainForm.
+// Builds the list of MedicineListItem for the medicine list (WinForms
+// MainForm today, the mobile list later; moved out of MedReminder.UI in
+// Phase 1 of docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md).
 // Reuses the pure domain functions (MedicineStock, MedicineForecast):
 // the aggregate does not duplicate logic, it only orchestrates the
 // repositories and maps the view.
-internal sealed class MedicineOverviewLoader
+public sealed class MedicineOverviewLoader
 {
     private readonly IMedicineRepository _medicines;
     private readonly IStockMovementRepository _stock;
