@@ -30,10 +30,44 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #85 — B.1 Phase 3a: operation log, hybrid clock and a write gate on every use case
+
+Link: [vger70/MedReminder#85](https://github.com/vger70/MedReminder/pull/85)
+Branch: `claude/b1-phase3a-operation-log`
+
+### Added
+
+- Local operation log for sync (`SyncOperations`, boot patch): every
+  use case records the facts it writes, in the same unit of work, with
+  a hybrid logical clock timestamp (`Domain/Sync`, `Application/Sync`).
+  Operation catalogue schema version 1, JSON form in `OperationCodec`.
+  Nothing is recorded until sync is enabled for the profile
+  (`sync.settings.json`, not created before Phase 3d).
+- Guard tests: every Application writer takes `IOperationLog`; every
+  use case waits on the write gate; the UI must not call
+  `IOperationLog`.
+
+### Changed
+
+- `MonitoringGate` renamed `WriteGate` and extended to every use case
+  (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` §7.4).
+- The medicine edit dialog writes only the fields the user changed
+  (`UpdateMedicineCommand.Baseline`); saving without touching the slots
+  no longer records a new slot set.
+
+### Docs
+
+- D7 decided (conflict review shows the §4.5 list); Phase 3 split into
+  3a–3d; `ANALYSIS.md` and the B.1 analysis updated.
+
+---
+
 ## PR #84 — B.1 Phase 2d: fact retraction and epoch fact id
 
 Link: [vger70/MedReminder#84](https://github.com/vger70/MedReminder/pull/84)
 Branch: `claude/b1-phase2d-fact-retraction`
+
+**Status:** merged (2026-09-27)
 
 ### Added
 
