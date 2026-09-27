@@ -45,18 +45,29 @@ public static class LedgerDeriver
         // epoch in force at its instant, the count's own advance
         // included (ReconcileStock books the correction in the new
         // epoch).
-        var advances = facts.UserEntries.Where(IsEpochAdvancingEntry).Select(e => e.OccurredAt)
-            .Concat(facts.Counts.Where(c => c.AdvancesEpoch).Select(c => c.RecordedAt))
-            .Order()
+        var advances = facts.UserEntries.Where(IsEpochAdvancingEntry).Select(e => (At: e.OccurredAt, e.Id))
+            .Concat(facts.Counts.Where(c => c.AdvancesEpoch).Select(c => (At: c.RecordedAt, c.Id)))
+            .OrderBy(a => a.At)
+            .ThenBy(a => a.Id)
             .ToList();
         var epoch = facts.BaselineEpoch + advances.Count;
         rows = rows
             .Select(r => r.IsDerived
-                ? r with { Epoch = facts.BaselineEpoch + advances.Count(t => t <= r.OccurredAt) }
+                ? r with { Epoch = facts.BaselineEpoch + advances.Count(a => a.At <= r.OccurredAt) }
                 : r)
             .ToList();
 
-        return new DerivedLedger(rows, raw, raw < 0m ? 0m : raw, epoch);
+        var epochFactIds = new Dictionary<int, Guid>
+        {
+            [facts.BaselineEpoch] = DeterministicGuid.Create(
+                facts.MedicineId, string.Create(CultureInfo.InvariantCulture, $"epoch-baseline:{facts.BaselineEpoch}")),
+        };
+        for (var i = 0; i < advances.Count; i++)
+        {
+            epochFactIds[facts.BaselineEpoch + i + 1] = advances[i].Id;
+        }
+
+        return new DerivedLedger(rows, raw, raw < 0m ? 0m : raw, epoch, epochFactIds);
     }
 
     // Raw ledger at the start of `day` (automatic consumption booked

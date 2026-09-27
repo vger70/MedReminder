@@ -1,3 +1,4 @@
+using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
@@ -29,6 +30,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<StockCount> StockCounts => Set<StockCount>();
     public DbSet<LedgerCutoff> LedgerCutoffs => Set<LedgerCutoff>();
     public DbSet<MedicineActivityChange> MedicineActivityChanges => Set<MedicineActivityChange>();
+    public DbSet<FactRetraction> FactRetractions => Set<FactRetraction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +47,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new StockCountConfiguration());
         modelBuilder.ApplyConfiguration(new LedgerCutoffConfiguration());
         modelBuilder.ApplyConfiguration(new MedicineActivityChangeConfiguration());
+        modelBuilder.ApplyConfiguration(new FactRetractionConfiguration());
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

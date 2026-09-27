@@ -48,4 +48,10 @@ internal sealed class MedicationSuspensionRepository
         _ = cancellationToken;
         return Task.CompletedTask;
     }
+
+    public Task RemoveAsync(MedicationSuspension suspension, CancellationToken cancellationToken)
+    {
+        _db.MedicationSuspensions.Remove(suspension);
+        return Task.CompletedTask;
+    }
 }

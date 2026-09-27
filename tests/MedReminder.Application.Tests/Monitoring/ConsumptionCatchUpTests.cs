@@ -189,7 +189,7 @@ public class ConsumptionCatchUpTests
             new LedgerSynchronizer(
                 new LedgerFactsLoader(stock, scope.Intakes, scope.Schedules, scope.Suspensions,
                     scope.Slots, scope.Activity, scope.Counts, scope.Cutoff),
-                stock, scope.Medicines, scope.Clock),
+                stock, scope.Medicines, scope.Notifications, scope.Clock),
             scope.Uow);
 
         var results = await Task.WhenAll(

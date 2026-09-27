@@ -348,6 +348,20 @@ oubliées ou supplémentaires.
 - **Réactiver** : **Modifier** → coche **Actif**. Les jours où le
   médicament était désactivé ne sont pas comptés comme consommation.
 
+## Historique du stock et suppression d'une entrée erronée
+
+**Stock → Historique…** (Ctrl+H) liste ce que tu as saisi pour le
+médicament sélectionné, du plus récent au plus ancien : nouvelles
+boîtes et corrections, prises, comptages et suspensions.
+
+- **Supprimer** retire une entrée erronée ; le stock et la
+  consommation sont recalculés.
+- Seules les entrées enregistrées après le dernier comptage peuvent
+  être supprimées : un comptage inclut déjà les erreurs antérieures,
+  donc pour les corriger compte à nouveau le stock.
+- Les entrées enregistrées avant l'installation de cette version ne
+  peuvent pas être supprimées : corrige-les avec une correction.
+
 ## Chronologie du traitement
 
 **Traitement → Chronologie du traitement…** (Ctrl+T) ou le bouton

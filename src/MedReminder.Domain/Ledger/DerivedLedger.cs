@@ -34,11 +34,16 @@ public sealed record LedgerRow(
 
 // RawTotal may be negative (consumption keeps running at zero stock);
 // Stock is clamped as MedicineStock.Current does.
+// EpochFactIds: the fact that opened each epoch from the baseline to the
+// current one (§4.4). The baseline epoch has a name-based id.
 public sealed record DerivedLedger(
     IReadOnlyList<LedgerRow> Rows,
     decimal RawTotal,
     decimal Stock,
-    int Epoch)
+    int Epoch,
+    IReadOnlyDictionary<int, Guid> EpochFactIds)
 {
+    public Guid EpochFactId => EpochFactIds[Epoch];
+
     public IEnumerable<LedgerRow> DerivedRows => Rows.Where(r => r.IsDerived);
 }

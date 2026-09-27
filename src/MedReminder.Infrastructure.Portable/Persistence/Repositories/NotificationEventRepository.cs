@@ -28,4 +28,23 @@ internal sealed class NotificationEventRepository
     {
         await _db.NotificationEvents.AddAsync(evt, cancellationToken);
     }
+
+    public async Task AssignEpochFactIdsAsync(
+        Guid medicineId,
+        IReadOnlyDictionary<int, Guid> epochFactIds,
+        CancellationToken cancellationToken)
+    {
+        // Tracked query: the values are written by the caller's
+        // SaveChangesAsync, in the same unit of work as the derivation.
+        var events = await _db.NotificationEvents
+            .Where(e => e.MedicineId == medicineId && e.EpochFactId == null)
+            .ToListAsync(cancellationToken);
+        foreach (var evt in events)
+        {
+            if (epochFactIds.TryGetValue(evt.StockEpoch, out var factId))
+            {
+                _db.Entry(evt).Property(e => e.EpochFactId).CurrentValue = factId;
+            }
+        }
+    }
 }

@@ -16,4 +16,8 @@ public sealed class MedicationSuspension
     public DateOnly? EndDate { get; set; }
 
     public string? Reason { get; set; }
+
+    // Recording instant (B.1 Phase 2d): decides whether the suspension
+    // can still be retracted. Older rows read back as MinValue.
+    public DateTimeOffset RecordedAt { get; init; }
 }

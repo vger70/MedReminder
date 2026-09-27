@@ -45,7 +45,7 @@ public static class NotificationCycle
         // the meantime) does not block: the cycle restarts with the
         // epoch.
         if (latestNotificationForMedicine is { } evt
-            && evt.StockEpoch == medicine.StockEpoch
+            && IsSameEpoch(evt, medicine)
             && evt.Success)
         {
             return false;
@@ -53,4 +53,12 @@ public static class NotificationCycle
 
         return true;
     }
+
+    // The epoch is identified by the fact that opened it when both sides
+    // know it (B.1 Phase 2d): epoch numbers can be reused after a
+    // retraction. Older events fall back to the number.
+    private static bool IsSameEpoch(NotificationEvent evt, Medicine medicine)
+        => evt.EpochFactId is { } eventFact && medicine.StockEpochFactId is { } currentFact
+            ? eventFact == currentFact
+            : evt.StockEpoch == medicine.StockEpoch;
 }

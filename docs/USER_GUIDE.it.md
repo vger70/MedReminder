@@ -336,6 +336,20 @@ in più.
 - **Riattiva**: **Modifica** → spunta **Attiva**. I giorni in cui la
   medicina era disattivata non vengono conteggiati come consumo.
 
+## Storico delle scorte ed eliminazione di una voce errata
+
+**Scorte → Storico…** (Ctrl+H) elenca ciò che hai registrato per la
+medicina selezionata, dalla voce più recente: nuove confezioni e
+correzioni, assunzioni, conteggi e sospensioni.
+
+- **Elimina** rimuove una voce errata; scorte e consumi vengono
+  ricalcolati.
+- Si possono eliminare solo le voci registrate dopo l'ultimo
+  conteggio: un conteggio include già gli errori precedenti, quindi
+  per correggerli conta di nuovo le scorte.
+- Le voci registrate prima dell'installazione di questa versione non
+  si possono eliminare: correggile con una rettifica.
+
 ## Linea del tempo della terapia
 
 **Terapia → Linea del tempo terapia…** (Ctrl+T) o il pulsante **Linea

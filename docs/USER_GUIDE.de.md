@@ -357,6 +357,20 @@ vergessene oder zusätzliche Dosen interpretiert.
 - **Reaktivieren**: **Bearbeiten** → **Aktiv** anhaken. Tage, an denen
   das Medikament deaktiviert war, zählen nicht als Verbrauch.
 
+## Bestandsverlauf und Löschen eines falschen Eintrags
+
+**Bestand → Verlauf…** (Strg+H) listet, was du für das ausgewählte
+Medikament erfasst hast, die neuesten Einträge zuerst: neue Packungen
+und Korrekturen, Einnahmen, Bestandszählungen und Unterbrechungen.
+
+- **Löschen** entfernt einen falschen Eintrag; Bestand und Verbrauch
+  werden neu berechnet.
+- Nur Einträge, die nach der letzten Bestandszählung erfasst wurden,
+  können gelöscht werden: Eine Zählung enthält frühere Fehler bereits,
+  zähle den Bestand also erneut, um sie zu korrigieren.
+- Einträge, die vor der Installation dieser Version erfasst wurden,
+  können nicht gelöscht werden: Korrigiere sie mit einer Korrektur.
+
 ## Therapieverlauf
 
 **Therapie → Therapieverlauf…** (Strg+T) oder die Schaltfläche

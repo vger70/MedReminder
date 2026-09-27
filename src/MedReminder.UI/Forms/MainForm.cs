@@ -3,6 +3,7 @@ using System.Reflection;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
+using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
@@ -211,6 +212,9 @@ internal sealed class MainForm : MedReminderFormBase
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Count"),
             Mdl2Glyph.Glyphs.Search, Keys.None,
             async () => await ShowStockCountAsync()));
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.History"),
+            Mdl2Glyph.Glyphs.History, Keys.Control | Keys.H,
+            async () => await ShowFactHistoryAsync()));
         stockMenu.DropDownItems.Add(new ToolStripSeparator());
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Refresh"),
             Mdl2Glyph.Glyphs.Refresh, Keys.F5,
@@ -1386,6 +1390,38 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.StockCount"), ex);
+        }
+    }
+
+    // History of the facts of the selected medicine, with retraction of
+    // mistaken entries (B.1 Phase 2d). Each call opens its own scope, as
+    // the other dialogs do.
+    private async Task ShowFactHistoryAsync()
+    {
+        var row = GetSelectedRow();
+        if (row is null) return;
+
+        async Task<IReadOnlyList<FactHistoryItem>> LoadAsync()
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<FactHistoryQuery>()
+                .LoadAsync(row.Id, CancellationToken.None);
+        }
+
+        async Task RetractAsync(FactHistoryItem item)
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<RetractFact>()
+                .ExecuteAsync(new RetractFactCommand(row.Id, item.Kind, item.FactId), CancellationToken.None);
+            _log.LogInformation("Retracted {Kind} fact {FactId} of medicine {MedicineId}",
+                item.Kind, item.FactId, row.Id);
+        }
+
+        using var dialog = new FactHistoryDialog(row.Name, row.Unit, LoadAsync, RetractAsync, _loc);
+        dialog.ShowDialog(this);
+        if (dialog.Changed)
+        {
+            await ReloadAsync();
         }
     }
 

@@ -23,17 +23,20 @@ public sealed class LedgerSynchronizer
     private readonly LedgerFactsLoader _loader;
     private readonly IStockMovementRepository _stock;
     private readonly IMedicineRepository _medicines;
+    private readonly INotificationEventRepository _notifications;
     private readonly TimeProvider _clock;
 
     public LedgerSynchronizer(
         LedgerFactsLoader loader,
         IStockMovementRepository stock,
         IMedicineRepository medicines,
+        INotificationEventRepository notifications,
         TimeProvider clock)
     {
         _loader = loader;
         _stock = stock;
         _medicines = medicines;
+        _notifications = notifications;
         _clock = clock;
     }
 
@@ -77,15 +80,32 @@ public sealed class LedgerSynchronizer
         if (toUpdate.Count > 0) await _stock.UpdateRangeAsync(toUpdate, cancellationToken);
         if (toAdd.Count > 0) await _stock.AddRangeAsync(toAdd, cancellationToken);
 
+        // First derivation after the upgrade to Phase 2d: older low-stock
+        // events get the id of the fact that opened their epoch, so the
+        // dedup keeps working when an epoch number is reused later.
+        if (medicine.StockEpochFactId is null)
+        {
+            await _notifications.AssignEpochFactIdsAsync(medicine.Id, ledger.EpochFactIds, cancellationToken);
+        }
+
         var epochChanged = medicine.StockEpoch != ledger.Epoch;
+        var epochFactChanged = medicine.StockEpochFactId != ledger.EpochFactId;
         if (epochChanged)
         {
             medicine.StockEpoch = ledger.Epoch;
             medicine.UpdatedAt = _clock.GetUtcNow();
+        }
+        if (epochFactChanged)
+        {
+            medicine.StockEpochFactId = ledger.EpochFactId;
+        }
+        if (epochChanged || epochFactChanged)
+        {
             await _medicines.UpdateAsync(medicine, cancellationToken);
         }
 
-        return new LedgerSyncResult(ledger, toAdd.Count, toUpdate.Count, toRemove.Count, epochChanged);
+        return new LedgerSyncResult(
+            ledger, toAdd.Count, toUpdate.Count, toRemove.Count, epochChanged || epochFactChanged);
     }
 
     private static StockMovement ToMovement(Guid medicineId, LedgerRow row) => new()

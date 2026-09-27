@@ -23,4 +23,10 @@ internal sealed class StockCountRepository : IStockCountRepository
 
     public async Task AddAsync(StockCount count, CancellationToken cancellationToken)
         => await _db.StockCounts.AddAsync(count, cancellationToken);
+
+    public Task RemoveAsync(StockCount count, CancellationToken cancellationToken)
+    {
+        _db.StockCounts.Remove(count);
+        return Task.CompletedTask;
+    }
 }

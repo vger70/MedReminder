@@ -180,6 +180,48 @@ public class LedgerDeriverTests
     }
 
     [Fact]
+    public void Each_epoch_is_identified_by_the_fact_that_opened_it()
+    {
+        var refill = Entry(StockMovementKind.NewPackage, 28m, Start.AddDays(2));
+        var facts = Facts() with
+        {
+            BaselineEpoch = 2,
+            UserEntries = [Entry(StockMovementKind.InitialLoad, 50m, Start), refill],
+        };
+
+        var ledger = LedgerDeriver.Derive(facts, Today, Utc);
+
+        ledger.Epoch.Should().Be(3);
+        ledger.EpochFactId.Should().Be(refill.Id);
+        ledger.EpochFactIds.Keys.Should().Equal(2, 3);
+        ledger.EpochFactIds[2].Should().Be(LedgerDeriver.Derive(Facts() with { BaselineEpoch = 2 }, Today, Utc).EpochFactId);
+    }
+
+    [Fact]
+    public void NotificationCycle_compares_epoch_fact_ids_when_both_are_known()
+    {
+        var medicine = new Medicine
+        {
+            Id = MedicineId, Name = "m", Unit = "u", StartDate = Start, ThresholdDays = 7,
+            StockEpoch = 2, StockEpochFactId = Guid.NewGuid(),
+            NotificationChannels = MedReminder.Domain.Notifications.NotificationChannels.Windows,
+        };
+        MedReminder.Domain.Notifications.NotificationEvent Event(Guid? factId) => new()
+        {
+            MedicineId = MedicineId, StockEpoch = 2, EpochFactId = factId, TriggeredAt = At(Today, 9),
+            Channel = MedReminder.Domain.Notifications.NotificationChannels.Windows,
+            DaysRemainingAtSend = 3, Success = true,
+        };
+
+        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 3, null, Event(Guid.NewGuid()))
+            .Should().BeTrue("same number, another epoch");
+        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 3, null, Event(medicine.StockEpochFactId))
+            .Should().BeFalse();
+        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 3, null, Event(null))
+            .Should().BeFalse("older events compare the number");
+    }
+
+    [Fact]
     public void EvaluateCount_applies_the_ReconcileStock_formula()
     {
         // Start of Today: 50 - 10 days. Counted 38, 1 of today's 1 taken:

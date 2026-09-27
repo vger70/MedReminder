@@ -44,6 +44,7 @@ public sealed class SuspendMedication
             StartDate = cmd.StartDate,
             EndDate = null,
             Reason = string.IsNullOrWhiteSpace(cmd.Reason) ? null : cmd.Reason.Trim(),
+            RecordedAt = _clock.GetUtcNow(),
         };
 
         medicine.UpdatedAt = _clock.GetUtcNow();

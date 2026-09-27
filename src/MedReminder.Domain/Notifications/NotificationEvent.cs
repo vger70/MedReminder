@@ -20,4 +20,9 @@ public sealed class NotificationEvent
     public required bool Success { get; init; }
 
     public string? ErrorMessage { get; init; }
+
+    // Medicine.StockEpochFactId when the event was recorded (B.1 Phase
+    // 2d). Null on events recorded before it: NotificationCycle then
+    // compares epoch numbers.
+    public Guid? EpochFactId { get; init; }
 }

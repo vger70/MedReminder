@@ -9,7 +9,8 @@ namespace MedReminder.Application.Tests.Ledger;
 // The ledger the application stores equals a derivation from the facts
 // recorded independently by the harness, after every action of random
 // scenarios (B.1 Phase 2c-2). Retroactive changes (D6, D15, same-date
-// schedule rows) are included: since 2c-2 the use cases derive too.
+// schedule rows) and fact retractions (Phase 2d) are included: since
+// 2c-2 the use cases derive too.
 // Phase 2c-1 ran these scenarios without them against the former use
 // cases and found parity on 10 000 seeds (ANALYSIS-B1-MOBILE-SYNC.md §13).
 //
@@ -117,6 +118,34 @@ public sealed class LedgerParityTests
     }
 
     [Fact]
+    public void Retractions_keep_the_stored_ledger_equal_to_the_derivation()
+    {
+        var h = new LedgerParityHarness();
+        h.StartDay(0);
+        h.AddMedicine(h.Today, 1m, 2, 30m, 5, null, null);
+        var id = h.Medicines[0];
+        h.StartDay(3);
+        h.AdvanceTo(TimeSpan.FromHours(9));
+        h.AddStock(id, 28m, StockMovementKind.NewPackage);
+        h.AdvanceTo(TimeSpan.FromHours(10));
+        h.Intake(id, h.Today.AddDays(-1), IntakeStatus.Taken, 1m);
+        h.AdvanceTo(TimeSpan.FromHours(11));
+        h.Count(id, 50m, _ => 0m);
+        h.Compare();
+
+        var rng = new Random(7);
+        for (var i = 0; i < 3; i++)
+        {
+            h.AdvanceTo(TimeSpan.FromHours(12 + i));
+            h.RetractRandom(id, rng);
+            h.Compare();
+        }
+        h.Trace.Should().Contain(t => t.Contains("retract"));
+        h.StartDay(4);
+        h.Compare();
+    }
+
+    [Fact]
     public void Deactivation_stops_automatic_consumption()
     {
         var h = new LedgerParityHarness();
@@ -171,8 +200,11 @@ public sealed class LedgerParityTests
         }
 
         var id = h.Medicines[rng.Next(h.Medicines.Count)];
-        switch (rng.Next(0, 12))
+        switch (rng.Next(0, 13))
         {
+            case 12:
+                h.RetractRandom(id, rng);
+                break;
             case 0:
                 var kinds = new[] { StockMovementKind.NewPackage, StockMovementKind.ManualAdd, StockMovementKind.PositiveCorrection };
                 h.AddStock(id, rng.Next(1, 31), kinds[rng.Next(kinds.Length)]);

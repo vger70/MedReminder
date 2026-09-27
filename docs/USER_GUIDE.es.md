@@ -345,6 +345,20 @@ o adicionales.
 - **Reactivar**: **Editar** → marca **Activo**. Los días en que el
   medicamento estuvo desactivado no se cuentan como consumo.
 
+## Historial del stock y eliminación de una entrada errónea
+
+**Stock → Historial…** (Ctrl+H) muestra lo que registraste para el
+medicamento seleccionado, de lo más reciente a lo más antiguo: cajas
+nuevas y correcciones, tomas, recuentos y suspensiones.
+
+- **Eliminar** quita una entrada errónea; el stock y el consumo se
+  recalculan.
+- Solo se pueden eliminar las entradas registradas después del último
+  recuento: un recuento ya incluye los errores anteriores, así que
+  para corregirlos vuelve a contar el stock.
+- Las entradas registradas antes de instalar esta versión no se pueden
+  eliminar: corrígelas con una corrección.
+
 ## Cronología de la terapia
 
 **Terapia → Cronología de la terapia…** (Ctrl+T) o el botón

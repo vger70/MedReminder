@@ -10,4 +10,7 @@ public interface IStockCountRepository
         Guid medicineId, CancellationToken cancellationToken);
 
     Task AddAsync(StockCount count, CancellationToken cancellationToken);
+
+    // Retraction of a mistaken count (RetractFact, B.1 Phase 2d).
+    Task RemoveAsync(StockCount count, CancellationToken cancellationToken);
 }

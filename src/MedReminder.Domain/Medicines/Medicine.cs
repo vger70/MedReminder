@@ -54,6 +54,13 @@ public sealed class Medicine
     // created after the freeze.
     public int LedgerBaselineEpoch { get; set; } = 1;
 
+    // Id of the fact that opened the current stock epoch (B.1 Phase 2d,
+    // ANALYSIS-B1-MOBILE-SYNC.md §4.4), kept by the ledger derivation.
+    // Low-stock dedup keys on it, so a renumbered epoch (after a
+    // retraction, later a merge) does not suppress a due warning. Null
+    // until the first derivation after the upgrade.
+    public Guid? StockEpochFactId { get; set; }
+
     public NotificationChannels NotificationChannels { get; set; }
         = NotificationChannels.Windows;
 
