@@ -16,7 +16,7 @@ internal sealed class JsonSyncSettingsStore : ISyncSettingsStore
 
     private readonly string _path;
     private readonly object _lock = new();
-    private bool _loaded;
+    private DateTime? _loadedStamp;
     private SyncSettings? _cached;
 
     public JsonSyncSettingsStore(string path)
@@ -29,10 +29,14 @@ internal sealed class JsonSyncSettingsStore : ISyncSettingsStore
     {
         lock (_lock)
         {
-            if (!_loaded)
+            // Read again when the file changed on disk: an import or a
+            // restore marks a pending reset through another instance
+            // (MarkResetPending), and no sync run may miss it.
+            var stamp = File.Exists(_path) ? File.GetLastWriteTimeUtc(_path) : DateTime.MinValue;
+            if (_loadedStamp != stamp)
             {
                 _cached = Read();
-                _loaded = true;
+                _loadedStamp = stamp;
             }
             return _cached;
         }
@@ -53,7 +57,20 @@ internal sealed class JsonSyncSettingsStore : ISyncSettingsStore
                 File.Move(tmp, _path, overwrite: true);
             }
             _cached = settings;
-            _loaded = true;
+            _loadedStamp = File.Exists(_path) ? File.GetLastWriteTimeUtc(_path) : DateTime.MinValue;
+        }
+    }
+
+    // Called before an import or a restore replaces the database of the
+    // profile in `profileDirectory` (§5.7): when that profile is synced,
+    // its next sync run starts a new generation from the new database
+    // instead of applying the current generation to it.
+    public static void MarkResetPending(string profileDirectory)
+    {
+        var store = new JsonSyncSettingsStore(Path.Combine(profileDirectory, FileName));
+        if (store.Load() is { ResetPending: false } settings)
+        {
+            store.Save(settings with { ResetPending = true });
         }
     }
 

@@ -46,6 +46,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // applies snapshots via the cloud-restore service.
     private readonly ICloudBackupPassphraseStore _cloudPassStore;
     private readonly ICloudRestoreService _cloudRestore;
+    private readonly MedReminder.UI.Hosting.SyncHostedService? _sync;
 
     // Email tab controls
     private TextBox _hostBox = null!;
@@ -146,8 +147,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
         IExportService exportService,
         IImportService importService,
         ICloudBackupPassphraseStore cloudPassStore,
-        ICloudRestoreService cloudRestore)
+        ICloudRestoreService cloudRestore,
+        MedReminder.UI.Hosting.SyncHostedService? sync = null)
     {
+        _sync = sync;
         _smtpMonitor = smtpMonitor;
         _notificationMonitor = notificationMonitor;
         _backupMonitor = backupMonitor;
@@ -949,7 +952,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
             Height = 30,
         };
-        importEncryptedButton.Click += (_, _) => ShowImportDialog();
+        importEncryptedButton.Click += async (_, _) => await ShowImportDialog();
 
         _backupStatusLabel = new Label { AutoSize = true };
         UpdateBackupStatusLabel();
@@ -1014,7 +1017,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
             Height = 30,
         };
-        restoreFromCloudButton.Click += (_, _) => ShowRestoreFromCloudDialog();
+        restoreFromCloudButton.Click += async (_, _) => await ShowRestoreFromCloudDialog();
         actionButtons.Controls.Add(restoreFromCloudButton);
 
         var cloudSection = BuildCloudBackupSection(isAdmin);
@@ -1196,8 +1199,38 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
     }
 
-    private void ShowRestoreFromCloudDialog()
+    // B.1 Phase 3d (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §5.7): an
+    // import or a restore on a synced profile starts a new sync
+    // generation; the other devices discard what they have not sent yet
+    // and rebuild. The user confirms, then the sync publishes what is
+    // pending and stops until the restart. False when the user declines.
+    private async Task<bool> ConfirmSyncResetAsync(string profileId)
     {
+        var synced = File.Exists(Path.Combine(AppDataPaths.GetProfileDataDirectory(profileId), "sync.settings.json"));
+        if (!synced) return true;
+        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.ResetWarning"), _loc.Get("Common.Warning"),
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            return false;
+        }
+        if (_sync is not null && string.Equals(profileId, _currentProfile.Id, StringComparison.Ordinal))
+        {
+            try
+            {
+                await _sync.SuspendAsync();
+            }
+            catch (Exception)
+            {
+                // Offline folder: what was not sent is discarded, as the
+                // warning says.
+            }
+        }
+        return true;
+    }
+
+    private async Task ShowRestoreFromCloudDialog()
+    {
+        if (!await ConfirmSyncResetAsync(_currentProfile.Id)) return;
         var defaultFolder = _cloudDirectoryBox is null
             ? _backupMonitor.CurrentValue.CloudFolderDirectory
             : _cloudDirectoryBox.Text;
@@ -1428,6 +1461,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirmTitle"),
             MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (confirm != DialogResult.Yes) return;
+        if (!await ConfirmSyncResetAsync(targetProfileId)) return;
 
         button.Enabled = false;
         try
@@ -1482,8 +1516,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // the dialog reports whether the user accepted the restart prompt
     // (§4.2 step 11); the profile DB has been swapped from under EF
     // Core, so a restart into the same profile is the clean path.
-    private void ShowImportDialog()
+    private async Task ShowImportDialog()
     {
+        if (!await ConfirmSyncResetAsync(_currentProfile.Id)) return;
         using var dialog = new ImportDialog(_loc, _importService, _currentProfile, _profileRegistry);
         var result = dialog.ShowDialog(this);
         if (result == DialogResult.OK && dialog.RestartRequested)

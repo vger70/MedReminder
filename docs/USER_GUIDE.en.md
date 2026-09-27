@@ -770,6 +770,48 @@ of every profile, including profiles protected by a PIN.
 - Do **not** place the live database file into a cloud-synced folder.
   Only the encrypted `.mrz` snapshots belong there.
 
+## Sync between PCs
+
+Several PCs can keep the same profile up to date: what you record on one
+appears on the others. The PCs exchange only encrypted changes through a
+folder they share (a OneDrive, Google Drive or Dropbox folder kept in sync
+by its desktop app, or a network share). No server is involved and the
+folder never contains readable data.
+
+Open **Tools → Sync…**. Enabling, joining, rebuilding and disabling are
+available to the administrator only.
+
+### Enable on the first PC
+
+1. **Enable sync…**, choose the shared folder.
+2. Enter a name for this PC and a **sync passphrase** (at least 10
+   characters, typed twice). It is not the backup passphrase. Keep it
+   safe: without it the data in the folder cannot be read, and it cannot
+   be recovered.
+
+### Join from another PC
+
+1. Wait until the sync client has downloaded the shared folder.
+2. **Join a group…**, choose the same folder, enter a name for this PC and
+   the same passphrase.
+3. Confirm: **the data of this profile on this PC is replaced** by the
+   group's (a copy is kept next to the database). MedReminder restarts.
+
+### Daily use
+
+- MedReminder syncs a few seconds after each change, every 5 minutes, and
+  with **Sync now**.
+- The **Devices** tab lists the PCs of the group and when each was last
+  seen.
+- If two PCs changed the same thing before seeing each other's change,
+  the most recent change is kept and the case is listed in **Conflicts**.
+  For a medicine field, **Restore lost value** brings back the other
+  value; **Dismiss** removes the entry from the list.
+- Importing an export or restoring a backup on a synced profile starts a
+  new **generation**: after a warning, the other PCs discard what they had
+  not sent yet and must be rebuilt with **Rebuild from the group…**.
+- **Disable sync…** stops syncing on this PC and keeps its data.
+
 ## Check now
 
 The monitor runs automatically every 30 minutes (configurable in

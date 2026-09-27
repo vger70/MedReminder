@@ -809,6 +809,52 @@ dati di tutti i profili, compresi quelli protetti da PIN.
 - **Non** mettere il file del database in uso in una cartella
   sincronizzata. Lì vanno solo gli snapshot cifrati `.mrz`.
 
+## Sincronizzazione tra PC
+
+Più PC possono tenere aggiornato lo stesso profilo: quello che registri su
+uno compare sugli altri. I PC si scambiano solo modifiche cifrate attraverso
+una cartella condivisa (una cartella OneDrive, Google Drive o Dropbox tenuta
+sincronizzata dalla sua app desktop, o una condivisione di rete). Non serve
+nessun server e la cartella non contiene mai dati leggibili.
+
+Apri **Strumenti → Sincronizzazione…**. Attivare, unirsi, ricostruire e
+disattivare sono riservati all'amministratore.
+
+### Attivare sul primo PC
+
+1. **Attiva sincronizzazione…**, scegli la cartella condivisa.
+2. Inserisci un nome per questo PC e una **passphrase di sincronizzazione**
+   (almeno 10 caratteri, da scrivere due volte). Non è la passphrase dei
+   backup. Conservala: senza di essa i dati nella cartella non si possono
+   leggere, e non si può recuperare.
+
+### Unirsi da un altro PC
+
+1. Attendi che il client di sincronizzazione abbia scaricato la cartella
+   condivisa.
+2. **Unisciti a un gruppo…**, scegli la stessa cartella, inserisci un nome
+   per questo PC e la stessa passphrase.
+3. Conferma: **i dati di questo profilo su questo PC vengono sostituiti**
+   da quelli del gruppo (una copia resta accanto al database). MedReminder
+   si riavvia.
+
+### Uso quotidiano
+
+- MedReminder sincronizza pochi secondi dopo ogni modifica, ogni 5 minuti
+  e con **Sincronizza ora**.
+- La scheda **Dispositivi** elenca i PC del gruppo e quando ciascuno si è
+  collegato l'ultima volta.
+- Se due PC cambiano la stessa cosa prima di vedere la modifica dell'altro,
+  resta la modifica più recente e il caso compare in **Conflitti**. Per un
+  campo del medicinale, **Ripristina valore perso** rimette l'altro valore;
+  **Ignora** toglie la voce dall'elenco.
+- Importare un'esportazione o ripristinare un backup su un profilo
+  sincronizzato avvia una nuova **generazione**: dopo un avviso, gli altri
+  PC scartano quello che non avevano ancora inviato e vanno ricostruiti con
+  **Ricostruisci dal gruppo…**.
+- **Disattiva sincronizzazione…** ferma la sincronizzazione su questo PC e
+  ne conserva i dati.
+
 ## Controlla ora
 
 Il monitor gira automaticamente ogni 30 minuti (configurabile in

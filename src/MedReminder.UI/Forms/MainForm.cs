@@ -15,6 +15,8 @@ using MedReminder.Infrastructure.Email;
 using MedReminder.Application.Overview;
 using MedReminder.UI.Tray;
 using MedReminder.UI.UiExtensions;
+using MedReminder.UI.Hosting;
+using MedReminder.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -112,6 +114,7 @@ internal sealed class MainForm : MedReminderFormBase
         WireTrayHandlers();
 
         Load += async (_, _) => await ReloadAsync();
+        Load += (_, _) => WireSyncRefresh();
         Load += (_, _) => TryStartPassiveUpdateCheck();
         FormClosing += OnFormClosing;
     }
@@ -225,6 +228,9 @@ internal sealed class MainForm : MedReminderFormBase
         toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.CheckNow"),
             Mdl2Glyph.Glyphs.Sync, Keys.Control | Keys.R,
             async () => await RunMonitorAsync()));
+        toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Sync"),
+            Mdl2Glyph.Glyphs.Sync, Keys.None,
+            () => { ShowSync(); return Task.CompletedTask; }));
         toolsMenu.DropDownItems.Add(new ToolStripSeparator());
         // Manage profiles… — admin only. The design (§12.2) is
         // clear: non-admin users must not see this entry at all,
@@ -716,6 +722,43 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.ChangeProfile"), ex);
+        }
+    }
+
+    // B.1 Phase 3d: after a sync applied changes from another device,
+    // the list shows them.
+    private void WireSyncRefresh()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var status = scope.ServiceProvider.GetRequiredService<SyncStatus>();
+        EventHandler handler = (_, _) =>
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            BeginInvoke(new Func<Task>(ReloadAsync));
+        };
+        status.RemoteChangesApplied += handler;
+        FormClosed += (_, _) => status.RemoteChangesApplied -= handler;
+    }
+
+    private void ShowSync()
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var sp = scope.ServiceProvider;
+            using var dialog = new SyncDialog(
+                _scopeFactory,
+                sp.GetRequiredService<SyncHostedService>(),
+                sp.GetRequiredService<SyncStatus>(),
+                sp.GetRequiredService<ISyncSettingsStore>(),
+                _currentProfile,
+                _loc,
+                _restarter);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Sync"), ex);
         }
     }
 
@@ -1473,7 +1516,8 @@ internal sealed class MainForm : MedReminderFormBase
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.IExportService>(),
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.IImportService>(),
                 scope.ServiceProvider.GetRequiredService<ICloudBackupPassphraseStore>(),
-                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.ICloudRestoreService>());
+                scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.ICloudRestoreService>(),
+                scope.ServiceProvider.GetRequiredService<SyncHostedService>());
             dialog.ShowDialog(this);
         }
         catch (Exception ex)

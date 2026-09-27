@@ -21,6 +21,7 @@ public sealed class OperationLog : IOperationLog
     private readonly ISyncOperationRepository _operations;
     private readonly SyncRegisters _registers;
     private readonly TimeProvider _clock;
+    private readonly SyncActivity? _activity;
     private HybridTimestamp? _last;
     private bool _loaded;
 
@@ -28,8 +29,10 @@ public sealed class OperationLog : IOperationLog
         ISyncSettingsStore settings,
         ISyncOperationRepository operations,
         SyncRegisters registers,
-        TimeProvider clock)
+        TimeProvider clock,
+        SyncActivity? activity = null)
     {
+        _activity = activity;
         _settings = settings;
         _operations = operations;
         _registers = registers;
@@ -71,5 +74,8 @@ public sealed class OperationLog : IOperationLog
             }, cancellationToken);
             await _registers.RecordAsync(body.MedicineId, body, timestamp, cancellationToken);
         }
+        // Raised before the caller saves: the listener only schedules a
+        // run a few seconds later.
+        _activity?.RaiseLocalOperationsRecorded();
     }
 }

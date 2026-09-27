@@ -27,6 +27,10 @@ public class OperationEmissionGuardTests
         "SyncEngine",
         "CreateSyncGroup",
         "ResetSyncGeneration",
+        // Local sync state only (Phase 3d): the peer table and this
+        // device's conflict list.
+        "DisableSync",
+        "DismissSyncConflict",
     };
 
     [Fact]

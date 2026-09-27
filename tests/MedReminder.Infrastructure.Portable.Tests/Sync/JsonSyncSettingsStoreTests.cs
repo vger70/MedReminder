@@ -50,4 +50,27 @@ public sealed class JsonSyncSettingsStoreTests : IDisposable
         FluentActions.Invoking(() => new JsonSyncSettingsStore(PathName).Load())
             .Should().Throw<InvalidDataException>();
     }
+
+    [Fact]
+    public void A_reset_marked_through_another_instance_is_seen()
+    {
+        var store = new JsonSyncSettingsStore(PathName);
+        store.Save(new SyncSettings(Guid.NewGuid(), Guid.NewGuid(), 1));
+        store.Load()!.ResetPending.Should().BeFalse();
+
+        // Keep the timestamps apart on file systems with coarse resolution.
+        File.SetLastWriteTimeUtc(PathName, DateTime.UtcNow.AddSeconds(-10));
+        store.Load();
+        JsonSyncSettingsStore.MarkResetPending(_dir);
+
+        store.Load()!.ResetPending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Marking_a_profile_without_sync_writes_nothing()
+    {
+        JsonSyncSettingsStore.MarkResetPending(_dir);
+
+        File.Exists(PathName).Should().BeFalse();
+    }
 }

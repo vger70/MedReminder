@@ -214,6 +214,10 @@ internal sealed class BackupService : IBackupService
         var target = ResolveProfileDatabasePath(profileId);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
 
+        // B.1 Phase 3d (§5.7): a restored synced profile starts a new
+        // sync generation; marked before the database is replaced.
+        MedReminder.Infrastructure.Sync.JsonSyncSettingsStore.MarkResetPending(Path.GetDirectoryName(target)!);
+
         SqliteConnection.ClearAllPools();
 
         // Also close the DbContext connection when the target belongs

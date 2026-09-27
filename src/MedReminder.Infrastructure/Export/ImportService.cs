@@ -7,6 +7,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
+using MedReminder.Infrastructure.Sync;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -161,34 +162,14 @@ internal sealed class ImportService : IImportService
         {
             await ProfileDatabaseBuilder.BuildAsync(tempDbPath, payload, cancellationToken, _clock);
 
-            // Release the temp DB and the live DB so the files can be
-            // moved on Windows.
-            SqliteConnection.ClearAllPools();
-            var conn = _db.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Closed)
-            {
-                conn.Close();
-            }
+            // B.1 Phase 3d (§5.7): on a synced profile the import starts a
+            // new sync generation. Marked before the swap, so no sync run
+            // applies the old generation to the imported data.
+            JsonSyncSettingsStore.MarkResetPending(Path.GetDirectoryName(target)!);
 
-            // Step 8: pre-import safety copy of the current DB.
-            if (File.Exists(target))
-            {
-                var backupName = $"{target}.bak-{_clock.GetUtcNow():yyyyMMddHHmmss}";
-                File.Move(target, backupName, overwrite: false);
-            }
-
-            File.Move(tempDbPath, target, overwrite: false);
-
-            // Drop any stale WAL / SHM side files from the old DB so the
-            // swapped-in database is not shadowed by them.
-            foreach (var suffix in new[] { "-wal", "-shm" })
-            {
-                var side = target + suffix;
-                if (File.Exists(side))
-                {
-                    try { File.Delete(side); } catch { /* best effort */ }
-                }
-            }
+            // Step 8: pre-import safety copy of the current DB, then the
+            // swap (ProfileDatabaseSwap).
+            ProfileDatabaseSwap.Replace(_db, target, tempDbPath, _clock);
         }
         finally
         {
