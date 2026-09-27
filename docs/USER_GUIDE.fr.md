@@ -853,6 +853,17 @@ compris ceux protégés par un PIN.
   d'utilisation dans un dossier synchronisé. Seuls les instantanés
   chiffrés `.mrz` y ont leur place.
 
+### OneDrive au lieu d'un dossier
+
+Dans la même section, **Stockage** peut être réglé sur **OneDrive
+(dossier d'application)** : cliquez sur **Se connecter…**, connectez-vous
+avec un compte Microsoft, définissez la phrase secrète de sauvegarde et
+enregistrez. Les sauvegardes vont dans `Apps/MedReminder26/backups` dans
+OneDrive, chiffrées comme ci-dessus ; aucun dossier local n'est
+nécessaire. **Restaurer depuis le dossier cloud…** liste alors les sauvegardes
+OneDrive par date et profil et ne télécharge que celle que vous
+restaurez.
+
 ## Synchronisation entre PC
 
 Plusieurs PC peuvent tenir le même profil à jour : ce que vous saisissez sur
@@ -864,6 +875,24 @@ lisibles.
 
 Ouvrez **Outils → Synchronisation…**. Activer, rejoindre, reconstruire et
 désactiver sont réservés à l'administrateur.
+
+### OneDrive ou dossier partagé
+
+Lorsque vous activez la synchronisation ou rejoignez un groupe,
+MedReminder demande où conserver le groupe :
+
+- **OneDrive** : connectez-vous avec un compte Microsoft dans la fenêtre
+  du navigateur qui s'ouvre. MedReminder ne peut utiliser que son propre
+  dossier d'application (`Apps/MedReminder26` dans OneDrive) ; les
+  données y sont chiffrées. Chaque PC se connecte avec le **même** compte
+  Microsoft. L'application OneDrive sur le PC n'est pas nécessaire.
+- **Un dossier partagé** : un dossier synchronisé par un autre programme,
+  ou un partage réseau, comme décrit ci-dessous.
+
+Si la session OneDrive expire (changement de mot de passe, longue
+inactivité), l'état l'indique et **Se reconnecter à OneDrive** reprend la
+synchronisation ; les modifications faites entre-temps sont envoyées
+ensuite.
 
 ### Activer sur le premier PC
 

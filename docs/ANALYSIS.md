@@ -122,6 +122,7 @@ removed or weakened. Publishing is described in
 | `Microsoft.EntityFrameworkCore.Sqlite` | Infrastructure.Portable | Persistence |
 | `Microsoft.EntityFrameworkCore.Design` | Infrastructure | Design-time only (`PrivateAssets`) |
 | `MailKit` | Infrastructure | SMTP. `System.Net.Mail.SmtpClient` must not be used |
+| `Microsoft.Identity.Client` (MSAL) | Infrastructure | OneDrive sign-in, public client, system browser (B.1 Phase 4a). Graph itself is called with plain `HttpClient` |
 | `Konscious.Security.Cryptography.Argon2` | Infrastructure.Portable | Argon2id key derivation for `.mrz` archives |
 | `Microsoft.Toolkit.Uwp.Notifications` | UI | Windows toasts for an unpackaged app |
 | `Microsoft.Web.WebView2` | UI | Rendering of the embedded user guide |
@@ -297,7 +298,11 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   `SyncEngine.RunAsync` publishes pending operations as an encrypted
   segment, applies the other devices' segments in causal order,
   writes the device record, checkpoints and deletes covered segments,
-  over `ISyncTransport` (`LocalFolderSyncTransport`). `CreateSyncGroup`,
+  over `ISyncTransport`: `LocalFolderSyncTransport`, or
+  `OneDriveSyncTransport` (Phase 4a: Graph REST under `sync/` in the
+  app folder, a `delta` index, MSAL tokens from
+  `MsalCloudAccountService`), built by `ISyncTransportFactory` from the
+  `SyncTarget` in `sync.settings.json`. `CreateSyncGroup`,
   `JoinSyncGroup` and `ResetSyncGeneration` create, join and restart a
   group; genesis and checkpoints are database images
   (`SqliteSyncSnapshotStore`). Desktop (Phase 3d): `SyncHostedService`
@@ -335,6 +340,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   smtp.settings.json             SMTP transport (admin-managed)
   smtp.protected                 SMTP password, DPAPI CurrentUser, base64
   cloud-backup.protected         cloud-backup passphrase, DPAPI CurrentUser, base64
+  onedrive.protected             MSAL token cache for OneDrive, DPAPI CurrentUser (B.1 Phase 4a)
   backup.settings.json           automatic backup settings (admin-managed)
   backup.state.json              last successful backup timestamp
   user.settings.json             UI language, reference country, update check
@@ -344,7 +350,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
-    sync.settings.json           sync group, device, generation, folder (B.1; absent while sync is off)
+    sync.settings.json           sync group, device, generation, folder or cloud account (B.1; absent while sync is off)
     sync.protected               sync group key, DPAPI CurrentUser (B.1)
 ```
 
@@ -523,12 +529,16 @@ replaces the database file after renaming the current one to
   profile into `CloudFolderDirectory` (a folder synchronized by a
   third-party client), using the DPAPI-cached passphrase from
   `cloud-backup.protected`. Delivery goes through the `IArchiveStorage`
-  port (`LocalFolderArchiveStorage`), so native cloud backends can be
-  added without changing the export. A written snapshot counts as the
+  port: `CloudArchiveStorage` picks `LocalFolderArchiveStorage` or,
+  with `Backup:CloudProvider` = `OneDrive` and `CloudAccountId`,
+  `OneDriveArchiveStorage` (`backups/` in the OneDrive app folder;
+  B.1 Phase 4a). A signed-out account counts as a missing folder. A written snapshot counts as the
   day's backup; a missing folder or passphrase skips the run and
   leaves the day open for retry; a failure on one profile does not
   stop the others. `ICloudRestoreService` lists and restores
   snapshots; the dialog preselects the active profile's newest one.
+  OneDrive snapshots are listed from their file names and downloaded
+  under `%LOCALAPPDATA%\MedReminder` only when restored.
 
 See [`analysis/ANALYSIS-C3-EXPORT-IMPORT.md`](analysis/ANALYSIS-C3-EXPORT-IMPORT.md),
 [`analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md`](analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md),

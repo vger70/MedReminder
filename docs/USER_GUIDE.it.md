@@ -809,6 +809,15 @@ dati di tutti i profili, compresi quelli protetti da PIN.
 - **Non** mettere il file del database in uso in una cartella
   sincronizzata. Lì vanno solo gli snapshot cifrati `.mrz`.
 
+### OneDrive al posto di una cartella
+
+Nella stessa sezione, **Archivio** può essere impostato su **OneDrive
+(cartella app)**: fai clic su **Accedi…**, accedi con un account
+Microsoft, imposta la passphrase dei backup e salva. Le copie vanno in
+`Apps/MedReminder26/backups` in OneDrive, cifrate come sopra; non serve
+una cartella locale. **Ripristina da cartella cloud…** elenca allora le copie in
+OneDrive per data e profilo e scarica solo quella che ripristini.
+
 ## Sincronizzazione tra PC
 
 Più PC possono tenere aggiornato lo stesso profilo: quello che registri su
@@ -819,6 +828,24 @@ nessun server e la cartella non contiene mai dati leggibili.
 
 Apri **Strumenti → Sincronizzazione…**. Attivare, unirsi, ricostruire e
 disattivare sono riservati all'amministratore.
+
+### OneDrive o cartella condivisa
+
+Quando attivi la sincronizzazione o ti unisci a un gruppo, MedReminder
+chiede dove tenere il gruppo:
+
+- **OneDrive**: accedi con un account Microsoft nella finestra del browser
+  che si apre. MedReminder può usare solo la propria cartella app
+  (`Apps/MedReminder26` in OneDrive); i dati lì sono cifrati. Ogni PC
+  accede con lo **stesso** account Microsoft. L'app OneDrive sul PC non
+  serve.
+- **Una cartella condivisa**: una cartella tenuta sincronizzata da un
+  altro programma, o una cartella di rete, come descritto sotto.
+
+Se la sessione OneDrive scade (cambio password, lunga inattività), lo
+stato lo segnala e **Accedi di nuovo a OneDrive** riprende la
+sincronizzazione; le modifiche registrate nel frattempo vengono inviate
+dopo.
 
 ### Attivare sul primo PC
 

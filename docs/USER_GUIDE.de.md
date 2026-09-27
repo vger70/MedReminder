@@ -867,6 +867,16 @@ die Daten aller Profile lesen, auch die von PIN-geschützten Profilen.
 - Lege die aktive Datenbankdatei **nicht** in einen synchronisierten
   Ordner. Dorthin gehören nur die verschlüsselten `.mrz`-Snapshots.
 
+### OneDrive statt eines Ordners
+
+Im selben Abschnitt kann **Speicherort** auf **OneDrive (App-Ordner)**
+gestellt werden: auf **Anmelden…** klicken, mit einem Microsoft-Konto
+anmelden, die Sicherungs-Passphrase festlegen und speichern. Die
+Sicherungen landen verschlüsselt wie oben in `Apps/MedReminder26/backups`
+in OneDrive; ein lokaler Ordner ist nicht nötig. **Aus Cloud-Ordner
+wiederherstellen…** listet dann die OneDrive-Sicherungen nach Datum und
+Profil und lädt nur die wiederhergestellte herunter.
+
 ## Synchronisierung zwischen PCs
 
 Mehrere PCs können dasselbe Profil aktuell halten: Was Sie auf einem
@@ -878,6 +888,24 @@ lesbare Daten.
 
 Öffnen Sie **Extras → Synchronisierung…**. Aktivieren, Beitreten, Neuaufbau
 und Deaktivieren sind dem Administrator vorbehalten.
+
+### OneDrive oder freigegebener Ordner
+
+Beim Aktivieren der Synchronisierung oder beim Beitreten zu einer Gruppe
+fragt MedReminder, wo die Gruppe liegen soll:
+
+- **OneDrive**: im sich öffnenden Browserfenster mit einem
+  Microsoft-Konto anmelden. MedReminder kann nur seinen eigenen App-Ordner
+  verwenden (`Apps/MedReminder26` in OneDrive); die Daten dort sind
+  verschlüsselt. Jeder PC meldet sich mit **demselben** Microsoft-Konto
+  an. Die OneDrive-App auf dem PC wird nicht benötigt.
+- **Ein freigegebener Ordner**: ein Ordner, den ein anderes Programm
+  synchron hält, oder eine Netzwerkfreigabe, wie unten beschrieben.
+
+Läuft die OneDrive-Sitzung ab (Kennwortänderung, lange Inaktivität),
+zeigt der Status das an, und **Erneut bei OneDrive anmelden** setzt die
+Synchronisierung fort; zwischenzeitliche Änderungen werden danach
+gesendet.
 
 ### Auf dem ersten PC aktivieren
 

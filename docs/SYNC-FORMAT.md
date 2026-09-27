@@ -23,7 +23,9 @@ Database image: schema version **1**.
   with the group key. File names contain random ids and counters only.
 - A file is complete or absent: writers use a temporary name starting
   with `.` and rename it when done. Readers ignore names starting with
-  `.`.
+  `.`. Through a provider API, small files are written in one request
+  and larger ones under a temporary name then renamed, because an
+  upload in progress is visible under its final name.
 
 ---
 
@@ -41,6 +43,11 @@ sync root chosen by the user:
   ops/<generation>/<deviceId>/<seq>.mrs       operation segments
   devices/<deviceId>.mrd                      device record
 ```
+
+The sync root is the folder chosen by the user, or, for a provider
+reached through its API, the `sync/` folder of the app's folder in the
+user's account (OneDrive: `/Apps/<app>/sync/`). The layout below that
+root is the same.
 
 - `groupId`, `deviceId`: GUIDs, 32 lowercase hexadecimal digits (`N`
   format).

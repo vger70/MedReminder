@@ -952,6 +952,11 @@ Deliver:
 - OAuth sign-in / sign-out flow.
 - Localization keys for the provider-selection UI.
 
+Status (2026-09-27): OneDrive delivered with B.1 Phase 4a
+(`ANALYSIS-B1-MOBILE-SYNC.md` §13, §18.6); Google Drive follows with
+B.1 Phase 4b. No sign-out button yet: the account stays in the token
+cache until the file is removed.
+
 ### Phase 3 — optional, after Phase 2 is stable
 
 Deliver:
@@ -1103,3 +1108,13 @@ premature dependency.
   and the file name uses `currentProfile.Id` (a string). §10.1
   moved to `MedReminder.Infrastructure.Tests`, since the
   implementations are internal to Infrastructure.
+- 2026-09-27 — Phase 2, OneDrive part, implemented with B.1 Phase 4a.
+  Decisions settled: `CloudProvider` and `CloudAccountId` in
+  `BackupSettings` (null provider = folder, §15 item 3); token cache
+  `onedrive.protected`, one for all profiles (§15 item 4); scope
+  `Files.ReadWrite.AppFolder`, confirmed isolated by spike S6 (§15
+  item 7). The storage is portable
+  (`MedReminder.Infrastructure.Portable/Cloud/OneDrive/`); archives go
+  to `backups/` in the app folder; a signed-out account is an
+  unavailable target. Restore lists OneDrive snapshots from their file
+  names instead of their manifests, to avoid one download per archive.
