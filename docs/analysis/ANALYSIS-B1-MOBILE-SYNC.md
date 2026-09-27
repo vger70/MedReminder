@@ -96,9 +96,9 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 | P6 | Archive read path usable outside Windows | **Met by Phase 1** | `ArchiveReader` (`IArchiveReader`) and `ProfileDatabaseBuilder` in the portable project; `ImportService` is the Windows shell (file swap, DPAPI rewrap, settings files). `ExportService` stays Windows-only (mobile export is Phase 7) |
 | P7 | View models outside WinForms | **Met by Phase 1** | `MedicineOverviewLoader` and `MedicineListItem` moved to `MedReminder.Application/Overview` |
 | P8 | Every data write goes through an Application use case | **Met by Phase 2a for the profile database** | The only direct UI write (`MainForm` deactivate: `medicine.IsActive = false` + `SaveChangesAsync`) moved to the `DeactivateMedicine` use case; `UiWritePathGuardTests` fails on any repository write, `SaveChangesAsync` or `DbContext` use under `src/MedReminder.UI` `[VERIFIED]`. Open: two replicated values (§4.2) are still written by the UI outside the database: per-profile notification settings (`SettingsDialog` writes `notifications.settings.json`) and the profile display name (`ProfilesManagerForm` calls `IProfileRegistry.Rename`). They need a use case before operation capture reaches them; the product owner deferred them out of Phase 2a (2026-09-27) |
-| P9 | Stock ledger is a deterministic function of user facts | **Not met** | Automatic consumption, backdated-intake reversals, stock-count corrections and `StockEpoch` are computed locally and depend on execution order (§3.4) `[VERIFIED — ANALYSIS.md §4.4]`. Phase 2 |
+| P9 | Stock ledger is a deterministic function of user facts | **Not met** (Phase 2b: rows labeled by `Origin`, cutoff stored; derivation in Phase 2c) | Automatic consumption, backdated-intake reversals, stock-count corrections and `StockEpoch` are computed locally and depend on execution order (§3.4) `[VERIFIED — ANALYSIS.md §4.4]`. Phase 2 |
 | P10 | Stable GUID identity on every replicated entity | **Met** | All entities use `Guid Id` generated at creation `[VERIFIED — Domain entities]` |
-| P11 | Medicines are never hard-deleted | **Met** | Deactivation via `IsActive` `[VERIFIED]`; slots are replaced as a set by `UpdateMedicine` (`DeleteForMedicineAsync` + add) `[VERIFIED]` |
+| P11 | Medicines are never hard-deleted | **Met** | Deactivation via `IsActive` `[VERIFIED]`; slots are no longer deleted: since Phase 2b `UpdateMedicine` appends a slot set `[VERIFIED]` |
 | P12 | AES-GCM on mobile | iOS 13+ on .NET 9+ **met**; Android `[UNCERTAIN]` | dotnet/runtime #91523 `[VERIFIED]`; spike S1 |
 | P13 | EF Core SQLite on Android / iOS AOT | `[UNCERTAIN]` | Spike S3 |
 | P14 | OAuth app registrations (Microsoft Entra public client, Google Cloud OAuth client) | **Not met** | Guide exists: `docs/notes/AZURE-ENTRA-PUBLIC-CLIENT-APPLICATION-GUIDE.md` `[VERIFIED]`. Phase 0 |
@@ -212,6 +212,14 @@ materialized). To keep existing data unchanged:
   stores the profile's **cutoff day** C (the day before the patch). A
   profile created after the patch has no legacy rows and C = the day
   before its `StartDate`.
+- Implemented by Phase 2b: single-row table `LedgerCutoff`
+  (`CutoffDay`, `FrozenAt`). A database created after the patch has no
+  row; the deriver then uses the day before each medicine's
+  `StartDate`. `FrozenAt` is stored because rows recorded on day C+1
+  before the patch are `Legacy` too: rule 1 (§4.3) must not derive
+  intake consumption for intakes recorded before `FrozenAt`, or C+1
+  would count them twice `[INFERRED — from §4.3 rule 1 and the patch
+  semantics]`.
 - `LedgerDeriver` produces derived rows only for days after C. Up to C
   the ledger is exactly today's.
 - When sync is enabled later, the **genesis** snapshot (§5.5) carries
@@ -242,7 +250,7 @@ receiving device shows a clock warning naming the peer device (§7.4).
 | `Medicine.StartDate` | Immutable | Set at creation; `UpdateMedicine` does not change it `[VERIFIED]` |
 | `Medicine` current schedule summary (`DosePerAdministration`, `AdministrationsPerDay`) | Derived | From the most recently **recorded** schedule row (highest HLC), whatever its `EffectiveFrom`: `ChangeMedicationSchedule` sets these fields from the new row even when it takes effect in the future `[VERIFIED]` |
 | `Medicine.StockEpoch`, `StockMovement.StockEpoch` | Derived | §4.4 |
-| Administration slots of a medicine | Dated set history | Today slots have no date and apply to every day not yet booked `[VERIFIED — DailyConsumption comment "current retroactive"]`; a pure derivation would rewrite every past day after a slot change. Each slot-set change is recorded with `EffectiveFrom` = the day it is made (the set given at creation: from the beginning). On day d, the most recently recorded set among those in force wins, so a change made today also replaces a set whose start is still in the future `[VERIFIED — S9, §18]` |
+| Administration slots of a medicine | Dated set history | Today slots have no date and apply to every day not yet booked `[VERIFIED — DailyConsumption comment "current retroactive"]`; a pure derivation would rewrite every past day after a slot change. Each slot-set change is recorded with `EffectiveFrom` = the day it is made (the set given at creation: from the beginning). On day d, the most recently recorded set among those in force wins, so a change made today also replaces a set whose start is still in the future `[VERIFIED — S9, §18]`. Stored since Phase 2b as `MedicationAdministrationSlotSets`; a set may be empty (slots cleared, back to dose × frequency), which is why the set is a row of its own and not columns on the slot rows |
 | `MedicationScheduleHistory` row | Keyed fact | Key `(MedicineId, EffectiveFrom)`; same key twice (one device or two) → higher HLC wins. The losing row enters the conflict list only when the two rows come from different devices. Behavior change, see §17 |
 | `MedicationSuspension` | Mutable record | Creation is a fact; `EndDate`, `Reason` LWW per field; overlaps resolved per §4.5 |
 | Stock entry facts (`NewPackage`, `ManualAdd`, `PositiveCorrection` from `AddStock`, `NegativeCorrection` from `AdjustStockDown`) | Append-only fact | Union by `Id` |
@@ -671,9 +679,10 @@ Idempotent boot patches in `DatabaseInitializer` (`CLAUDE.md` §7):
 
 | Object | Purpose |
 |---|---|
-| `StockMovements.Origin` column (`Legacy`, `User`, `Derived`) | Separate facts from derived rows |
-| `StockCounts` table | Count anchors |
-| Slot-set history (`MedicationAdministrationSlots.EffectiveFrom` plus recording HLC) | Dated slot sets (§4.2) |
+| `StockMovements.Origin` column (`Legacy`, `User`, `Derived`) | Separate facts from derived rows. Phase 2b |
+| `StockCounts` table | Count anchors. Table in Phase 2b; written from Phase 2c |
+| `MedicationAdministrationSlotSets` table (`EffectiveFrom`, `RecordedAt`, later the recording HLC) and `MedicationAdministrationSlots.SetId` | Dated slot sets (§4.2), including empty sets. Phase 2b |
+| `LedgerCutoff` table (`CutoffDay`, `FrozenAt`) | Cutoff C (§3.5). Phase 2b |
 | `SyncOperations` table | Local outbox and applied-operation ids |
 | `SyncFieldVersions` table | HLC per `(entity, id, field)` for LWW |
 | `SyncPeers` table | Applied vector per remote device |
@@ -686,7 +695,10 @@ and `StockCounts` (`ANALYSIS.md` §8.1 rule). The `.mrz` payload keeps
 the full ledger, derived rows included and tagged by `Origin`, so the
 exported stock stays readable; an importer of the new version drops
 derived rows and re-derives. Archives of the current schema version
-(no `Origin`) import as `Legacy` with the cutoff at the import day.
+(no `Origin`) import as `Legacy` with the cutoff at the day before the
+import, like the boot patch. Phase 2b implemented schema version 2
+(`docs/EXPORT-FORMAT.md` §5.1); dropping derived rows on import waits
+for the deriver (Phase 2c).
 Sync metadata tables are not exported in `.mrz`.
 
 Files: `profiles\<id>\sync.settings.json` (transport, group id, device
@@ -1013,6 +1025,21 @@ profile database (numbers before and after the patch identical);
 retraction UI only if D8 = yes.
 
 **Effort**: 12–18 days `[INFERRED]`.
+
+**Split into four pull requests** (product owner, 2026-09-27):
+
+| PR | Scope | State |
+|---|---|---|
+| 2a | Action 1 (P8) | Merged (#80) |
+| 2b | Schema and export for actions 2, 5, 6: `Origin`, `StockCounts` table, dated slot sets, `Legacy` freeze and cutoff, export schema version 2. No behavior change: `ReconcileStock` does not record counts yet | #81 |
+| 2c | Actions 2 (count recording), 3, 4 | Not started |
+| 2d | Fact retraction (D8) | Not started |
+
+Constraint for 2c `[INFERRED]`: rows written between the 2b patch and
+the 2c release carry `Derived` count corrections without a
+`StockCount` fact, so a deriver would lose them. If a release ships 2b
+without 2c, the 2c patch must move C forward to the day before its own
+patch and mark the rows written in between `Legacy`.
 
 ### Phase 3 — Sync engine and desktop-to-desktop sync
 
@@ -1348,3 +1375,10 @@ Phase 2 implements the derivation from the prototype and its tests.
   by the product owner, see P8.
   Phase 2 is split into 2a (write paths), 2b (schema patches), 2c
   (`LedgerDeriver`) and 2d (fact retraction, D8).
+- 2026-09-27 — Phase 2b implemented: `StockMovements.Origin`,
+  `LedgerCutoff` (with `FrozenAt`), `StockCounts` (not written yet),
+  export schema version 2. Deviation from §7.3, decided by the product
+  owner: slot history is a `MedicationAdministrationSlotSets` table,
+  because columns on the slot rows cannot record an empty set. §3.5
+  records the day-after-cutoff constraint for rule 1; §13 records the
+  Phase 2 split and the cutoff constraint for 2c.

@@ -30,10 +30,38 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #81 — B.1 Phase 2b: ledger schema (movement origin, slot sets, stock counts, cutoff)
+
+Link: [vger70/MedReminder#81](https://github.com/vger70/MedReminder/pull/81)
+Branch: `claude/b1-phase2b-schema`
+
+### Changed
+
+- Stock movements record their origin (`Legacy`, `User`, `Derived`).
+  The boot patch marks every existing movement `Legacy` and stores the
+  ledger cutoff (the day before the patch), so the future ledger
+  derivation never changes past numbers
+  (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` §3.5, §7.3).
+- Administration slot changes append a dated slot set instead of
+  replacing the rows; the current slots are those of the latest set.
+  The patch groups existing slots into one set per medicine. No
+  user-visible change.
+- New `StockCounts` table for stock-count facts; written from Phase 2c.
+- Export schema version 2: movement origin, slot sets, stock counts,
+  cutoff. Version 1 archives import with `Legacy` movements, one slot
+  set per medicine and a cutoff at the day before the import.
+
+### Docs
+
+- `EXPORT-FORMAT.md` schema version 2 and version history;
+  `ANALYSIS.md` entities, invariants and patch list; B.1 analysis
+  (slot-set table, `FrozenAt`, Phase 2 split, constraint for 2c).
+
 ## PR #80 — B.1 Phase 2a: route every UI data write through a use case
 
 Link: [vger70/MedReminder#80](https://github.com/vger70/MedReminder/pull/80)
 Branch: `claude/b1-phase2a-write-paths`
+**Status:** merged (2026-09-27)
 
 ### Changed
 
