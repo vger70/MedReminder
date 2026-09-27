@@ -24,6 +24,7 @@ internal sealed class ApplicationTestScope
 
     public AddMedicine AddMedicine { get; }
     public UpdateMedicine UpdateMedicine { get; }
+    public DeactivateMedicine DeactivateMedicine { get; }
     public AddStock AddStock { get; }
     public AdjustStockDown AdjustStockDown { get; }
     public SuspendMedication SuspendMedication { get; }
@@ -40,6 +41,7 @@ internal sealed class ApplicationTestScope
 
         AddMedicine = new AddMedicine(Medicines, Schedules, Slots, Stock, Uow, Clock);
         UpdateMedicine = new UpdateMedicine(Medicines, Slots, Uow, Clock);
+        DeactivateMedicine = new DeactivateMedicine(Medicines, Uow, Clock);
         AddStock = new AddStock(Medicines, Stock, Uow, Clock);
         AdjustStockDown = new AdjustStockDown(Medicines, Stock, Uow, Clock);
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Uow, Clock);

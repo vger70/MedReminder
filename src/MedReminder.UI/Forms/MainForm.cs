@@ -1197,14 +1197,10 @@ internal sealed class MainForm : MedReminderFormBase
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
-            var repo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
-            var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var medicine = await repo.GetAsync(row.Id, CancellationToken.None);
-            if (medicine is null) return;
-            medicine.IsActive = false;
-            medicine.UpdatedAt = DateTimeOffset.UtcNow;
-            await repo.UpdateAsync(medicine, CancellationToken.None);
-            await uow.SaveChangesAsync(CancellationToken.None);
+            var deactivate = scope.ServiceProvider.GetRequiredService<DeactivateMedicine>();
+            var found = await deactivate.ExecuteAsync(
+                new DeactivateMedicineCommand(row.Id), CancellationToken.None);
+            if (!found) return;
             await ReloadAsync();
         }
         catch (Exception ex)

@@ -89,7 +89,11 @@ UI  ──►  Application  ──►  Domain
   update check.
 - **UI** is the composition root (`Program.cs`) and the only process
   entry point. It owns the WinForms forms, the tray icon, the toast
-  adapter and the four hosted services (§6).
+  adapter and the four hosted services (§6). It changes profile data
+  only through Application use cases, never through repository write
+  methods, `IUnitOfWork` or the `DbContext`;
+  `UiWritePathGuardTests` in `MedReminder.Application.Tests` enforces
+  it (B.1 Phase 2a, precondition P8).
 - **DataImporter** is a maintainer tool that loads AIFA CSV files into
   PostgreSQL. It shares no code with the runtime and is not shipped.
   See [`DATA_IMPORTER.md`](DATA_IMPORTER.md).

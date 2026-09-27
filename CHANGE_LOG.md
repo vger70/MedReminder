@@ -30,10 +30,38 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #80 — B.1 Phase 2a: route every UI data write through a use case
+
+Link: [vger70/MedReminder#80](https://github.com/vger70/MedReminder/pull/80)
+Branch: `claude/b1-phase2a-write-paths`
+
+### Changed
+
+- The main window's Deactivate action now calls the new
+  `DeactivateMedicine` use case instead of writing through
+  `IMedicineRepository` and `IUnitOfWork`. Same fields changed
+  (`IsActive`, `UpdatedAt`), same messages; no user-visible change.
+  Needed so that sync can emit one operation per use case
+  (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` P8, §7.2).
+
+### Build
+
+- New `UiWritePathGuardTests` (`MedReminder.Application.Tests`): a
+  source scan that fails when a file under `src/MedReminder.UI` calls
+  a repository write method, `SaveChangesAsync` or the EF Core
+  context. Empty allow-list.
+
+### Docs
+
+- B.1 analysis: P8 met for the profile database; open items for the
+  replicated values written outside it. `ANALYSIS.md`: UI layering
+  rule.
+
 ## PR #79 — B.1 Phase 1: move platform-neutral infrastructure into a net10.0 project
 
 Link: [vger70/MedReminder#79](https://github.com/vger70/MedReminder/pull/79)
 Branch: `claude/b1-phase1-portability`
+**Status:** merged (2026-09-27)
 
 ### Changed
 
