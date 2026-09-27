@@ -1178,7 +1178,7 @@ checklist; no plaintext in the remote folder (inspection test).
 |---|---|---|
 | 3a | Action 1: HLC, operation catalogue, `IOperationLog` and the `SyncOperations` outbox, emission from every use case; one write gate for every use case; stale-form diff (§7.4). Operations recorded only when sync is enabled, so no behavior change until 3d | Merged (#85) |
 | 3b-1 | Action 2: apply of remote operations, register versions and LWW, tombstones, conflict list (§4.5), convergence harness on real databases; counts keep their stored outcome | Merged (#86) |
-| 3b-2 | Re-evaluation of count outcomes on the snapshot by HLC (facts and register values "as of"), retracted facts left out of every snapshot (§4.2); genesis register versions; harness extended to concurrent counts | Open |
+| 3b-2 | Re-evaluation of count outcomes on the snapshot by HLC (facts and register values "as of"), retracted facts left out of every snapshot (§4.2); genesis register versions; harness extended to concurrent counts | #87 |
 | 3c | Actions 3, 4, 7: segment codec, group key, genesis, checkpoints, compaction, generations, `ISyncTransport` with `LocalFolderSyncTransport` and contract tests, `SYNC-FORMAT.md` | — |
 | 3d | Actions 5, 6: `SyncHostedService`, desktop UI, reset flow in import and restore, convergence simulation in CI, two-PC checklist | — |
 
