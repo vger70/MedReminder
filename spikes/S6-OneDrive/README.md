@@ -66,5 +66,28 @@ never prints tokens, the account name or the drive id. Delete
 | C15 | `delta` on the app folder works and reports a new file | change cursor (§5.8) |
 | C16 | The Windows OneDrive client downloads `/Apps/<name>` | mixing the folder and API transports |
 | C17 | A file written in the local OneDrive folder becomes visible through Graph | same |
+| C18 | An upload session with `deferCommit` stays invisible until the explicit commit | large-file `CreateAsync` without partial files |
+| C19, C19b | Rename of a temporary file; rename onto an existing name returns 409 | alternative create-only pattern |
+
+## Round 1 (2026-09-27)
+
+Reports in `results/round1-*.md`, personal account, Windows 11. Findings
+that change the design, checked again in round 2:
+
+- C10b: a file uploaded through a session is **listed after the first
+  chunk**. Readers could see a partial checkpoint. Round 2 records its
+  listed size and whether its content is readable, and tests
+  `deferCommit` (C18) and a temporary name plus rename (C19).
+- C4: `/me/drive/root/children` answered 200 with only
+  `Files.ReadWrite.AppFolder` granted. Round 2 counts what is visible
+  outside `Apps` (without names) and tries to read one file.
+- C16: the run folder did not appear locally within 5 minutes. Round 2
+  reports where the chain stops (Apps folder, app folder, run folder).
 
 Paste the generated `report-*.md` into the PR or the chat.
+
+Round 2 command:
+
+```powershell
+dotnet run -c Release -- --client-id <client-id> --wait-minutes 15 --write-local
+```

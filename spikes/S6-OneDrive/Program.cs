@@ -119,10 +119,7 @@ internal static class Program
         report.Add("PASS", "C3 App folder (special/approot)",
             $"name `{appFolderName}`, parent `{appFolderParent}`, driveType `{driveType}`.");
 
-        var (outsideStatus, _) = await http.GetJsonAsync($"{Graph}/me/drive/root/children?$top=1");
-        report.Add(outsideStatus is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized or HttpStatusCode.NotFound ? "PASS" : "INFO",
-            "C4 Scope isolation: drive root is not readable",
-            $"GET /me/drive/root/children → HTTP {(int)outsideStatus}.");
+        await ScopeIsolationAsync(http, report);
 
         var run = $"s6-{DateTime.UtcNow:yyyyMMddHHmmss}";
         string Item(string relative) => $"{Graph}/me/drive/special/approot:/{run}/{relative}:";
@@ -153,6 +150,8 @@ internal static class Program
 
         // --- Large upload session -----------------------------------------
         await LargeUploadAsync(http, report, Item("checkpoints/1/aaaa-1.mrc"), Item("checkpoints/1"), options.LargeMiB);
+        await DeferredCommitAsync(http, report, Item("checkpoints/1/aaaa-2.mrc"), Item("checkpoints/1"), options.LargeMiB);
+        await RenameAsync(http, report, Item);
 
         // --- Listing and delta ---------------------------------------------
         await ListingAsync(http, report, run);
@@ -207,6 +206,8 @@ internal static class Program
         var sw = Stopwatch.StartNew();
         HttpStatusCode last = 0;
         var visibleWhilePartial = false;
+        long? partialSize = null;
+        var partialReadable = "not tried";
         for (var offset = 0; offset < content.Length; offset += chunk)
         {
             var length = Math.Min(chunk, content.Length - offset);
@@ -216,13 +217,21 @@ internal static class Program
                 // After the first chunk, before the last: the file must not
                 // be visible yet (a reader would see a partial checkpoint).
                 var (_, children) = await http.GetJsonAsync($"{folder}/children");
-                visibleWhilePartial = children?["value"]?.AsArray().Any(c => c?["name"]?.GetValue<string>() == "aaaa-1.mrc") ?? false;
+                var partial = children?["value"]?.AsArray().FirstOrDefault(c => c?["name"]?.GetValue<string>() == "aaaa-1.mrc");
+                visibleWhilePartial = partial is not null;
+                partialSize = partial?["size"]?.GetValue<long>();
+                if (partial is not null)
+                {
+                    var (readSt, readBody) = await http.GetBytesAsync($"{item}/content");
+                    partialReadable = $"HTTP {(int)readSt}, {readBody?.Length ?? 0} bytes";
+                }
             }
         }
         report.Add(last is HttpStatusCode.Created or HttpStatusCode.OK ? "PASS" : "FAIL", "C10 Large upload session",
             $"{mib} MiB in {sw.Elapsed.TotalSeconds:F1} s, final chunk → HTTP {(int)last}.");
         report.Add(visibleWhilePartial ? "FAIL" : "PASS", "C10b Partial upload is invisible",
-            $"Listed after the first chunk: visible = {visibleWhilePartial}.");
+            $"Listed after the first chunk: visible = {visibleWhilePartial}, listed size = {partialSize?.ToString() ?? "-"} of {content.Length}, "
+            + $"content read = {partialReadable}.");
 
         // Create-only through an upload session: where does the conflict show?
         var (st2, session2) = await http.PostJsonAsync($"{item}/createUploadSession", body);
@@ -242,6 +251,84 @@ internal static class Program
             last2 = await http.PutChunkAsync(url2, content, offset, Math.Min(chunk, content.Length - offset));
         report.Add(last2 == HttpStatusCode.Conflict ? "PASS" : "FAIL", "C11 Create-only upload session on an existing name",
             $"Session accepted (HTTP {(int)st2}); final chunk → HTTP {(int)last2} (expected 409 at commit).");
+    }
+
+    private static async Task ScopeIsolationAsync(GraphClient http, Report report)
+    {
+        // Names are not reported: they are the user's own folders.
+        var (st, page) = await http.GetJsonAsync($"{Graph}/me/drive/root/children?$top=200&$select=id,name,folder,file");
+        if (st != HttpStatusCode.OK || page is null)
+        {
+            report.Add("PASS", "C4 Scope isolation: drive root is not readable", $"GET /me/drive/root/children → HTTP {(int)st}.");
+            return;
+        }
+        var items = page["value"]!.AsArray();
+        var others = items.Where(i => i?["name"]?.GetValue<string>() != "Apps").ToList();
+        var firstFile = others.FirstOrDefault(i => i?["file"] is not null);
+        var fileRead = "no file at root level to try";
+        if (firstFile is not null)
+        {
+            var (fs, _) = await http.GetBytesAsync($"{Graph}/me/drive/items/{firstFile["id"]!.GetValue<string>()}/content");
+            fileRead = $"reading one of them → HTTP {(int)fs}";
+        }
+        var (docs, _) = await http.GetJsonAsync($"{Graph}/me/drive/special/documents");
+        report.Add(others.Count == 0 ? "PASS" : "FAIL", "C4 Scope isolation: drive root is not readable",
+            $"GET /me/drive/root/children → HTTP 200 with {items.Count} item(s), {others.Count} other than `Apps` "
+            + $"({others.Count(i => i?["file"] is not null)} files); {fileRead}; special/documents → HTTP {(int)docs}.");
+    }
+
+    private static async Task DeferredCommitAsync(GraphClient http, Report report, string item, string folder, int mib)
+    {
+        const int chunk = 320 * 1024 * 10;
+        var content = RandomNumberGenerator.GetBytes(mib * 1024 * 1024);
+        var body = new JsonObject
+        {
+            ["item"] = new JsonObject { ["@microsoft.graph.conflictBehavior"] = "fail" },
+            ["deferCommit"] = true,
+        };
+        var (st, session) = await http.PostJsonAsync($"{item}/createUploadSession", body);
+        var uploadUrl = session?["uploadUrl"]?.GetValue<string>();
+        if (st != HttpStatusCode.OK || uploadUrl is null)
+        {
+            report.Add("FAIL", "C18 Upload session with deferCommit", $"createUploadSession → HTTP {(int)st}");
+            return;
+        }
+        HttpStatusCode last = 0;
+        for (var offset = 0; offset < content.Length; offset += chunk)
+            last = await http.PutChunkAsync(uploadUrl, content, offset, Math.Min(chunk, content.Length - offset));
+
+        async Task<bool> Visible()
+        {
+            var (_, children) = await http.GetJsonAsync($"{folder}/children");
+            return children?["value"]?.AsArray().Any(c => c?["name"]?.GetValue<string>() == "aaaa-2.mrc") ?? false;
+        }
+        var visibleBeforeCommit = await Visible();
+        var commit = await http.PostEmptyAsync(uploadUrl);
+        var visibleAfterCommit = await Visible();
+        var (readSt, readBody) = await http.GetBytesAsync($"{item}/content");
+        var intact = readBody is not null && readBody.AsSpan().SequenceEqual(content);
+        report.Add(!visibleBeforeCommit && visibleAfterCommit && intact ? "PASS" : "FAIL", "C18 Upload session with deferCommit",
+            $"all chunks → last HTTP {(int)last}; visible before commit = {visibleBeforeCommit}; commit → HTTP {(int)commit}; "
+            + $"visible after = {visibleAfterCommit}; read back HTTP {(int)readSt}, intact = {intact}.");
+    }
+
+    private static async Task RenameAsync(GraphClient http, Report report, Func<string, string> item)
+    {
+        // Temporary name, then rename: the Phase 3 folder-transport pattern.
+        var t1 = await http.PutContentAsync($"{item("ops/1/cccc/.t-1")}/content?@microsoft.graph.conflictBehavior=fail", RandomNumberGenerator.GetBytes(256));
+        var (r1, n1) = await http.PatchJsonAsync(item("ops/1/cccc/.t-1"),
+            new JsonObject { ["name"] = "1.mrs", ["@microsoft.graph.conflictBehavior"] = "fail" });
+        report.Add(t1 == HttpStatusCode.Created && r1 == HttpStatusCode.OK ? "PASS" : "FAIL", "C19 Rename a temporary file to a free name",
+            $"PUT → HTTP {(int)t1}; PATCH name → HTTP {(int)r1}, name now `{n1?["name"]?.GetValue<string>() ?? "-"}`.");
+
+        await http.PutContentAsync($"{item("ops/1/cccc/.t-2")}/content?@microsoft.graph.conflictBehavior=fail", RandomNumberGenerator.GetBytes(256));
+        var (r2, n2) = await http.PatchJsonAsync(item("ops/1/cccc/.t-2"),
+            new JsonObject { ["name"] = "1.mrs", ["@microsoft.graph.conflictBehavior"] = "fail" });
+        var (r3, n3) = await http.PatchJsonAsync($"{item("ops/1/cccc/.t-2")}?@microsoft.graph.conflictBehavior=fail",
+            new JsonObject { ["name"] = "1.mrs" });
+        report.Add(r2 == HttpStatusCode.Conflict || r3 == HttpStatusCode.Conflict ? "PASS" : "FAIL", "C19b Rename onto an existing name",
+            $"annotation in body → HTTP {(int)r2} (name `{n2?["name"]?.GetValue<string>() ?? "-"}`); "
+            + $"annotation in query → HTTP {(int)r3} (name `{n3?["name"]?.GetValue<string>() ?? "-"}`). Expected 409.");
     }
 
     private static async Task ListingAsync(GraphClient http, Report report, string run)
@@ -339,8 +426,16 @@ internal static class Program
         }
         if (localRun is null)
         {
+            // Where the chain stops: the Apps folder, the app folder, or the run.
+            var appsDirs = roots.SelectMany(SafeDirectories)
+                .Where(d => Path.GetFileName(d).StartsWith("App", StringComparison.OrdinalIgnoreCase)).ToList();
+            var appDir = appsDirs.SelectMany(SafeDirectories)
+                .FirstOrDefault(d => string.Equals(Path.GetFileName(d), appFolderName, StringComparison.OrdinalIgnoreCase));
+            var appDirChildren = appDir is null ? 0 : SafeDirectories(appDir).Count();
             report.Add("FAIL", "C16 Windows OneDrive client syncs the app folder",
-                $"`{run}` did not appear under the OneDrive folder within {options.WaitMinutes} min.");
+                $"`{run}` did not appear within {options.WaitMinutes} min. OneDrive roots: {roots.Count}; "
+                + $"local folders named App*: {string.Join(", ", appsDirs.Select(d => $"`{Path.GetFileName(d)}`"))}; "
+                + $"`{appFolderName}` present locally: {appDir is not null} ({appDirChildren} subfolders).");
             return;
         }
 
@@ -457,6 +552,23 @@ internal sealed class GraphClient : IDisposable
             Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
         });
         return (response.StatusCode, response.IsSuccessStatusCode ? JsonNode.Parse(await response.Content.ReadAsStringAsync()) : null);
+    }
+
+    public async Task<(HttpStatusCode, JsonNode?)> PatchJsonAsync(string url, JsonNode body)
+    {
+        using var response = await SendAsync(() => new HttpRequestMessage(HttpMethod.Patch, url)
+        {
+            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+        });
+        return (response.StatusCode, response.IsSuccessStatusCode ? JsonNode.Parse(await response.Content.ReadAsStringAsync()) : null);
+    }
+
+    // Completes a deferCommit upload session (pre-authenticated URL).
+    public async Task<HttpStatusCode> PostEmptyAsync(string uploadUrl)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, uploadUrl) { Content = new ByteArrayContent([]) };
+        using var response = await _upload.SendAsync(request);
+        return response.StatusCode;
     }
 
     public async Task<HttpStatusCode> DeleteAsync(string url)
