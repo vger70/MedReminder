@@ -30,9 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — B.1 Phase 2a: route every UI data write through a use case
+## PR #80 — B.1 Phase 2a: route every UI data write through a use case
 
-Link: [vger70/MedReminder#TBD](https://github.com/vger70/MedReminder/pull/TBD)
+Link: [vger70/MedReminder#80](https://github.com/vger70/MedReminder/pull/80)
 Branch: `claude/b1-phase2a-write-paths`
 
 ### Changed
