@@ -278,6 +278,17 @@ arrival. Today the UI does not delete these facts; retraction is an
 addition (D8). `Legacy` facts cannot be retracted: a mistake before the
 cutoff is fixed with a correction, as today.
 
+Implemented by Phase 2d, with one more restriction (product owner,
+2026-09-27): a fact can be retracted only if no stock count was
+recorded after it. A count's outcome already includes the facts
+recorded before it: retracting one of them afterwards would leave the
+stock off by its quantity (count 40 after a mistaken refill of 28:
+correction -28; retracting the refill would show 12). The count
+itself, when it is the latest, can be retracted. Locally the fact row
+is removed and a tombstone is kept in `FactRetractions`, keyed by fact
+id for Phase 3. How a retraction merges with a count recorded
+concurrently on another device is a Phase 3 question.
+
 ### 4.3 `LedgerDeriver`
 
 Pure Domain function:
@@ -369,7 +380,10 @@ there is none, by the medicine id). Notification dedup
 (`NotificationEvent`, device-local) keys on the
 **id of the fact that opened the epoch** instead of the epoch number,
 so a re-numbering after a merge does not re-trigger an already sent
-warning. Additive column via idempotent patch (`CLAUDE.md` §7).
+warning. Implemented by Phase 2d (`Medicine.StockEpochFactId`,
+`NotificationEvents.EpochFactId`), because a retraction already
+renumbers epochs on one device; the baseline epoch at the freeze has a
+name-based id. Additive column via idempotent patch (`CLAUDE.md` §7).
 
 ### 4.4b Inactive medicines
 
@@ -1042,8 +1056,8 @@ retraction UI only if D8 = yes.
 | 2a | Action 1 (P8) | Merged (#80) |
 | 2b | Schema and export for actions 2, 5, 6: `Origin`, `StockCounts` table, dated slot sets, `Legacy` freeze and cutoff, export schema version 2. No behavior change: `ReconcileStock` does not record counts yet | Merged (#81) |
 | 2c-1 | Action 3, Domain part: `LedgerDeriver` and `EvaluateCount` in `MedReminder.Domain/Ledger`, S9 parity harness ported to the use cases. Not called by the application: no behavior change | Merged (#82) |
-| 2c-2 | Actions 2 (count recording), 3 (use cases write facts, derived rows replaced), 4 without `EpochFactId`; schema for activity history, recording instants, epoch baseline; re-freeze at boot and on every import | #83 |
-| 2d | Fact retraction (D8) and `NotificationEvents.EpochFactId` | Not started |
+| 2c-2 | Actions 2 (count recording), 3 (use cases write facts, derived rows replaced), 4 without `EpochFactId`; schema for activity history, recording instants, epoch baseline; re-freeze at boot and on every import | Merged (#83) |
+| 2d | Fact retraction (D8) with a history window, and `EpochFactId` | #84 |
 
 Phase 2c-2 decisions (product owner, 2026-09-27): `EpochFactId` moves
 to 2d, because without retraction or merge an epoch is never
@@ -1417,6 +1431,10 @@ Phase 2 implements the derivation from the prototype and its tests.
   because columns on the slot rows cannot record an empty set. §3.5
   records the day-after-cutoff constraint for rule 1; §13 records the
   Phase 2 split and the cutoff constraint for 2c.
+- 2026-09-27 — Phase 2d implemented: retraction of stock entries,
+  intakes, counts and suspensions (tombstones, history window),
+  restricted to facts recorded after the latest count (§4.2); epoch fact
+  id for the low-stock dedup (§4.4). Phase 2 complete.
 - 2026-09-27 — Phase 2c-2 implemented: P9 met. Facts recorded by the
   use cases (count with outcome, activity, recording instants, epoch
   baseline); `LedgerSynchronizer` replaces derived rows; re-freeze at

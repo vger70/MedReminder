@@ -152,6 +152,7 @@ is used.
 | `MedicationSuspension` (`MedicationSuspensions`) | Therapy pause | `StartDate`, `EndDate?` (null = open) |
 | `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity`, `RecordedAt` |
 | `MedicineActivityChange` (`MedicineActivityChanges`) | Dated activation / deactivation (B.1 Phase 2c-2) | `Day`, `Active`, `RecordedAt` |
+| `FactRetraction` (`FactRetractions`) | Tombstone of a retracted fact (B.1 Phase 2d) | `FactId` (unique), `Kind`, `RecordedAt` |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
@@ -244,8 +245,13 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   `ThresholdDays`; a negative one never does.
 - `StockEpoch` = the epoch baseline at the freeze + positive `User`
   entries + counts that advanced it; the synchronizer keeps
-  `Medicine.StockEpoch` equal to it. A new epoch restarts the warning
-  cycle.
+  `Medicine.StockEpoch` and `Medicine.StockEpochFactId` (the fact that
+  opened the epoch) equal to the derivation. A new epoch restarts the
+  warning cycle.
+- A fact (stock entry, intake, count, suspension) can be retracted
+  (`RetractFact`, *Stock → History*) only if it is not `Legacy` and no
+  stock count was recorded after it; the row is removed, a tombstone is
+  kept and the ledger is derived again.
 - Of two schedule rows with the same `EffectiveFrom`, the later
   recorded one wins (`DailyConsumption`, `LedgerDeriver`).
 - `ConsumptionCatchUp.RunAsync`, `MedicationMonitor.RunAsync`,
@@ -256,9 +262,10 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   unique constraint on consumption: several manual `Consumption`
   rows per day are legitimate. One process per Windows session
   (single-instance mutex) makes the in-process gate sufficient.
-- One low-stock notification per `(MedicineId, StockEpoch)` that
-  succeeded on at least one channel; a failed attempt does not block a
-  retry on the next tick.
+- One low-stock notification per epoch that succeeded on at least one
+  channel, the epoch identified by `EpochFactId` when the event has one
+  (B.1 Phase 2d), else by `StockEpoch`; a failed attempt does not block
+  a retry on the next tick.
 - One dose reminder per `(MedicineId, SlotKey, LocalDate)`; slots
   older than the grace window are dropped without a dedup row.
 - Logical dates are `DateOnly`; event timestamps are
@@ -412,7 +419,9 @@ start:
    `MedicationScheduleHistories.RecordedAt`,
    `Medicines.LedgerBaselineEpoch`, and `MedicationIntakes.RecordedAt`,
    whose absence triggers the re-freeze (`LedgerFreeze`, also applied
-   to every import).
+   to every import); then the B.1 Phase 2d patch: `FactRetractions`,
+   `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
+   `NotificationEvents.EpochFactId`.
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.
