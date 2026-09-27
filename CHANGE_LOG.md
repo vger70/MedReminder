@@ -30,10 +30,43 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #86 — B.1 Phase 3b-1: apply operations from other devices, with LWW registers and conflicts
+
+Link: [vger70/MedReminder#86](https://github.com/vger70/MedReminder/pull/86)
+Branch: `claude/b1-phase3b-merge-apply`
+
+### Added
+
+- `ApplyRemoteOperations`: merges operations recorded on other devices
+  (facts by id, retraction wins, last writer wins by HLC on registers),
+  idempotent on re-delivery, then derives the touched medicines again.
+  Not called by the app until the transport exists (Phase 3c).
+- `SyncFieldVersions` (every register version, with the version its
+  writer had seen) and `SyncConflicts` (the §4.5 list, concurrent
+  writes only), with their boot patch.
+- Convergence harness on real SQLite databases
+  (`SyncConvergenceTests`, `SYNC_CONVERGENCE_SEEDS`).
+
+### Changed
+
+- Register operations carry `BaseVersion`; the operation log records
+  register versions of local writes.
+- `LedgerFactsLoader` breaks recording-instant ties by id.
+
+### Docs
+
+- Phase 3b split into 3b-1 / 3b-2; retraction versus concurrent count
+  and conflict detection decided (`ANALYSIS-B1-MOBILE-SYNC.md` §4.2,
+  §4.5, §7.3, §13).
+
+---
+
 ## PR #85 — B.1 Phase 3a: operation log, hybrid clock and a write gate on every use case
 
 Link: [vger70/MedReminder#85](https://github.com/vger70/MedReminder/pull/85)
 Branch: `claude/b1-phase3a-operation-log`
+
+**Status:** merged (2026-09-27)
 
 ### Added
 

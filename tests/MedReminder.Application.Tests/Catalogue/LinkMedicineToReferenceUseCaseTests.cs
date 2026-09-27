@@ -18,7 +18,8 @@ public sealed class LinkMedicineToReferenceUseCaseTests
 
     private LinkMedicineToReferenceUseCase Build() =>
         new(_medicines, _query,
-            new OperationLog(new InMemorySyncSettingsStore(), new InMemorySyncOperationRepository(), _clock),
+            new OperationLog(new InMemorySyncSettingsStore(), new InMemorySyncOperationRepository(),
+                new SyncRegisters(new InMemorySyncFieldVersionRepository(), new InMemorySyncConflictRepository(), _clock), _clock),
             _uow, _clock);
 
     [Fact]

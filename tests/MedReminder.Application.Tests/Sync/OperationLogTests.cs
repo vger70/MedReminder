@@ -16,7 +16,8 @@ public class OperationLogTests
     private readonly InMemorySyncSettingsStore _settings = new();
     private readonly InMemorySyncOperationRepository _repo = new();
 
-    private OperationLog Log() => new(_settings, _repo, _clock);
+    private OperationLog Log() => new(_settings, _repo,
+        new SyncRegisters(new InMemorySyncFieldVersionRepository(), new InMemorySyncConflictRepository(), _clock), _clock);
 
     private static SyncOperationBody Op(string value) => new MedicineFieldChanged(M, "Notes", value);
 
@@ -46,7 +47,9 @@ public class OperationLogTests
             o.SchemaVersion.Should().Be(OperationCodec.CurrentSchemaVersion);
             o.SegmentSeq.Should().BeNull();
         });
-        OperationCodec.Deserialize(_repo.All[1].Type, 1, _repo.All[1].Payload).Should().Be(Op("b"));
+        // The second write of the register records the first as its base.
+        OperationCodec.Deserialize(_repo.All[1].Type, 1, _repo.All[1].Payload)
+            .Should().Be(new MedicineFieldChanged(M, "Notes", "b", new HybridTimestamp(ms, 0, Device)));
     }
 
     [Fact]

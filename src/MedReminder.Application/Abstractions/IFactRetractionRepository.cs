@@ -9,4 +9,8 @@ public interface IFactRetractionRepository
         Guid medicineId, CancellationToken cancellationToken);
 
     Task AddAsync(FactRetraction retraction, CancellationToken cancellationToken);
+
+    // Phase 3b: when two devices retracted the same fact, one tombstone
+    // replaces the other.
+    Task RemoveAsync(FactRetraction retraction, CancellationToken cancellationToken);
 }

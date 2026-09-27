@@ -175,6 +175,45 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_SegmentSeq""
                 ON ""SyncOperations"" (""SegmentSeq"");", cancellationToken);
+
+        // B.1 Phase 3b: register versions and the conflict list.
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""SyncFieldVersions"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_SyncFieldVersions"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""EntityId"" TEXT NOT NULL,
+                ""Register"" TEXT NOT NULL,
+                ""HlcPhysicalMs"" INTEGER NOT NULL,
+                ""HlcCounter"" INTEGER NOT NULL,
+                ""DeviceId"" TEXT NOT NULL,
+                ""Value"" TEXT NULL,
+                ""BasePhysicalMs"" INTEGER NULL,
+                ""BaseCounter"" INTEGER NULL,
+                ""BaseDeviceId"" TEXT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_SyncFieldVersions_EntityId""
+                ON ""SyncFieldVersions"" (""EntityId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""SyncConflicts"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_SyncConflicts"" PRIMARY KEY,
+                ""Kind"" INTEGER NOT NULL,
+                ""MedicineId"" TEXT NOT NULL,
+                ""SubjectId"" TEXT NOT NULL,
+                ""Register"" TEXT NULL,
+                ""WinningValue"" TEXT NULL,
+                ""LosingValue"" TEXT NULL,
+                ""WinningDeviceId"" TEXT NULL,
+                ""LosingDeviceId"" TEXT NULL,
+                ""OtherId"" TEXT NULL,
+                ""DetectedAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_SyncConflicts_SubjectId""
+                ON ""SyncConflicts"" (""SubjectId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_SyncConflicts_MedicineId""
+                ON ""SyncConflicts"" (""MedicineId"");", cancellationToken);
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the

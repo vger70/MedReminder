@@ -11,13 +11,16 @@ namespace MedReminder.Application.Tests.Architecture;
 // OperationEmissionTests checks what each one emits.
 public class OperationEmissionGuardTests
 {
-    // Writers of derived rows and device-local rows only (§3.4, §4.2):
-    // nothing they write is replicated.
+    // Writers of derived rows and device-local rows only (§3.4, §4.2),
+    // and the apply step: nothing they write is a new local operation.
     private static readonly HashSet<string> DeviceLocalWriters = new(StringComparer.Ordinal)
     {
         "ConsumptionCatchUp",  // derived ledger rows
         "MedicationMonitor",   // NotificationEvents
         "DoseReminderService", // DoseReminderEvents
+        // The sync apply layer (§7.2): it writes what other devices
+        // produced, which is already in their logs.
+        "ApplyRemoteOperations",
     };
 
     [Fact]

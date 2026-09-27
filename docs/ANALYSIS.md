@@ -153,7 +153,9 @@ is used.
 | `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity`, `RecordedAt` |
 | `MedicineActivityChange` (`MedicineActivityChanges`) | Dated activation / deactivation (B.1 Phase 2c-2) | `Day`, `Active`, `RecordedAt` |
 | `FactRetraction` (`FactRetractions`) | Tombstone of a retracted fact (B.1 Phase 2d) | `FactId` (unique), `Kind`, `RecordedAt` |
-| `SyncOperation` (`SyncOperations`) | Local operation log for sync (B.1 Phase 3a); empty while sync is disabled | HLC (`HlcPhysicalMs`, `HlcCounter`, `DeviceId`), `Generation`, `Type`, `SchemaVersion`, `MedicineId`, `Payload` (JSON), `SegmentSeq?` |
+| `SyncOperation` (`SyncOperations`) | Local operation log for sync (B.1 Phase 3a); empty while sync is disabled. From Phase 3b it also records the operations applied from other devices | HLC (`HlcPhysicalMs`, `HlcCounter`, `DeviceId`), `Generation`, `Type`, `SchemaVersion`, `MedicineId`, `Payload` (JSON), `SegmentSeq?` |
+| `SyncFieldVersion` (`SyncFieldVersions`) | Every version of a last-writer-wins register (B.1 Phase 3b) | `EntityId`, `Register`, HLC, `Value`, base HLC |
+| `SyncConflict` (`SyncConflicts`) | Local conflict list, §4.5 cases only (B.1 Phase 3b) | `Kind`, `SubjectId`, `Register`, winning / losing value and device |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
@@ -274,6 +276,16 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   sync is enabled for the profile (`sync.settings.json`, no UI yet);
   `OperationEmissionGuardTests` requires every Application service that
   saves user facts to take `IOperationLog`.
+- Merge (B.1 Phase 3b-1): `ApplyRemoteOperations` applies operations
+  from other devices under `WriteGate`, with merge rules only: facts
+  are a union by id, a retraction wins over its fact, registers (the
+  replicated medicine fields, `IsActive`, a suspension's `EndDate`, the
+  schedule summary, the slot set, the schedule row of a date) are last
+  writer wins by HLC (`SyncRegisters`, `RegisterMerge`). A write that
+  did not see the winning one is listed in `SyncConflicts`. Each
+  operation commits with its `SyncOperations` record, so re-delivery is
+  idempotent; the touched medicines are then derived again. No
+  transport calls it yet (Phase 3c).
 - `UpdateMedicine` takes an optional `Baseline` (the values the edit
   dialog loaded): with it, only the fields the user changed are written,
   and unchanged slots record no new slot set.
@@ -438,7 +450,8 @@ start:
    to every import); then the B.1 Phase 2d patch: `FactRetractions`,
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
    `NotificationEvents.EpochFactId`; then `SyncOperations` with its two
-   indexes (B.1 Phase 3a).
+   indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
+   (B.1 Phase 3b).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.

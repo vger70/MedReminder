@@ -15,6 +15,9 @@ internal sealed class InMemorySyncOperationRepository : ISyncOperationRepository
         return Task.CompletedTask;
     }
 
+    public Task<bool> ExistsAsync(Guid operationId, CancellationToken cancellationToken)
+        => Task.FromResult(_items.Any(o => o.Id == operationId));
+
     public Task<HybridTimestamp?> GetLatestTimestampAsync(CancellationToken cancellationToken)
         => Task.FromResult(_items.Count == 0 ? (HybridTimestamp?)null : _items.Max(o => o.Timestamp));
 

@@ -23,4 +23,10 @@ internal sealed class FactRetractionRepository : IFactRetractionRepository
 
     public async Task AddAsync(FactRetraction retraction, CancellationToken cancellationToken)
         => await _db.FactRetractions.AddAsync(retraction, cancellationToken);
+
+    public Task RemoveAsync(FactRetraction retraction, CancellationToken cancellationToken)
+    {
+        _db.FactRetractions.Remove(retraction);
+        return Task.CompletedTask;
+    }
 }

@@ -22,6 +22,9 @@ public static class ApplicationServiceCollectionExtensions
         // B.1 Phase 3a: operation capture. Records nothing until sync
         // is enabled for the profile (ISyncSettingsStore).
         services.AddScoped<IOperationLog, OperationLog>();
+        services.AddScoped<SyncRegisters>();
+        // B.1 Phase 3b: merge of operations from other devices.
+        services.AddScoped<ApplyRemoteOperations>();
 
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();

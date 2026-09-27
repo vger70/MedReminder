@@ -10,10 +10,16 @@ namespace MedReminder.Application.Sync;
 // and then advanced in memory, so several operations of one use case
 // get increasing timestamps before they are saved. Callers hold
 // WriteGate, so no other writer commits in between.
+//
+// From Phase 3b each operation also records its register versions
+// (SyncRegisters), stamped with the base version its writer held, so the
+// apply step on other devices can tell a concurrent write from a later
+// one.
 public sealed class OperationLog : IOperationLog
 {
     private readonly ISyncSettingsStore _settings;
     private readonly ISyncOperationRepository _operations;
+    private readonly SyncRegisters _registers;
     private readonly TimeProvider _clock;
     private HybridTimestamp? _last;
     private bool _loaded;
@@ -21,10 +27,12 @@ public sealed class OperationLog : IOperationLog
     public OperationLog(
         ISyncSettingsStore settings,
         ISyncOperationRepository operations,
+        SyncRegisters registers,
         TimeProvider clock)
     {
         _settings = settings;
         _operations = operations;
+        _registers = registers;
         _clock = clock;
     }
 
@@ -42,8 +50,9 @@ public sealed class OperationLog : IOperationLog
             _loaded = true;
         }
 
-        foreach (var body in operations)
+        foreach (var operation in operations)
         {
+            var body = await _registers.WithBaseAsync(operation, cancellationToken);
             var timestamp = HybridClock.Tick(_last, _clock.GetUtcNow().ToUnixTimeMilliseconds(), settings.DeviceId);
             _last = timestamp;
 
@@ -59,6 +68,7 @@ public sealed class OperationLog : IOperationLog
                 MedicineId = body.MedicineId,
                 Payload = payload,
             }, cancellationToken);
+            await _registers.RecordAsync(body.MedicineId, body, timestamp, cancellationToken);
         }
     }
 }

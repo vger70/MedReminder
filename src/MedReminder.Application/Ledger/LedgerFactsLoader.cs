@@ -64,8 +64,12 @@ public sealed class LedgerFactsLoader
         var activity = await _activity.ListForMedicineAsync(medicine.Id, cancellationToken);
         var counts = await _counts.ListForMedicineAsync(medicine.Id, cancellationToken);
 
+        // Every list is in recording order with the id as tie-break, so
+        // devices holding the same facts derive the same ledger whatever
+        // order the store returns rows in (B.1 Phase 3b).
         var ledgerActivity = activity
             .OrderBy(a => a.RecordedAt)
+            .ThenBy(a => a.Id)
             .Select(a => new LedgerActivity(a.Day, a.Active, a.RecordedAt))
             .ToList();
         if (ledgerActivity.Count == 0 && !medicine.IsActive)
@@ -81,20 +85,25 @@ public sealed class LedgerFactsLoader
             CutoffDay = cutoffDay,
             BaselineEpoch = frozen ? medicine.LedgerBaselineEpoch : 1,
             LegacyMovements = movements.Where(m => m.Origin == StockMovementOrigin.Legacy).ToList(),
-            UserEntries = movements.Where(m => m.Origin == StockMovementOrigin.User).ToList(),
+            UserEntries = movements.Where(m => m.Origin == StockMovementOrigin.User)
+                .OrderBy(m => m.OccurredAt).ThenBy(m => m.Id).ToList(),
             Intakes = intakes
                 .OrderBy(i => i.RecordedAt)
+                .ThenBy(i => i.Id)
                 .Select(i => ToLedger(i, frozenAt))
                 .ToList(),
-            Schedule = schedule.OrderBy(s => s.RecordedAt).ToList(),
-            Suspensions = suspensions,
+            Schedule = schedule.OrderBy(s => s.RecordedAt).ThenBy(s => s.Id).ToList(),
+            Suspensions = suspensions.OrderBy(s => s.StartDate).ThenBy(s => s.Id).ToList(),
             SlotSets = sets
+                .OrderBy(e => e.Set.RecordedAt)
+                .ThenBy(e => e.Set.Id)
                 .Select(e => new LedgerSlotSet(e.Set.EffectiveFrom, e.Set.RecordedAt, e.Slots))
                 .ToList(),
             Activity = ledgerActivity,
             Counts = counts
                 .Where(c => frozenAt is not { } f || c.RecordedAt >= f)
                 .OrderBy(c => c.RecordedAt)
+                .ThenBy(c => c.Id)
                 .Select(ToAnchor)
                 .ToList(),
         };

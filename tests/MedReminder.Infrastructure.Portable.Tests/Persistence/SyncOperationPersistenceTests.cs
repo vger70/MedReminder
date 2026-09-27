@@ -23,12 +23,14 @@ public class SyncOperationPersistenceTests
         Guid.Parse("0a0a0a0a-0000-0000-0000-000000000001"), Guid.Parse("0d0d0d0d-0000-0000-0000-000000000001"), 1);
 
     [Fact]
-    public async Task Boot_patch_adds_the_table_to_an_older_database_and_is_idempotent()
+    public async Task Boot_patch_adds_the_sync_tables_to_an_older_database_and_is_idempotent()
     {
         using var fixture = new SqliteInMemoryFixture();
         await using (var ctx = fixture.CreateContext())
         {
             await ctx.Database.ExecuteSqlRawAsync(@"DROP TABLE ""SyncOperations"";");
+            await ctx.Database.ExecuteSqlRawAsync(@"DROP TABLE ""SyncFieldVersions"";");
+            await ctx.Database.ExecuteSqlRawAsync(@"DROP TABLE ""SyncConflicts"";");
         }
 
         await InitializeAsync(fixture);
@@ -50,6 +52,8 @@ public class SyncOperationPersistenceTests
                 .SqlQueryRaw<string>(@"SELECT name AS ""Value"" FROM sqlite_master WHERE type = 'index' AND tbl_name = 'SyncOperations'")
                 .ToListAsync();
             indexes.Should().Contain(["IX_SyncOperations_HlcPhysicalMs_HlcCounter", "IX_SyncOperations_SegmentSeq"]);
+            (await ctx.SyncFieldVersions.CountAsync()).Should().Be(0);
+            (await ctx.SyncConflicts.CountAsync()).Should().Be(0);
         }
     }
 
