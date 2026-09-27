@@ -24,6 +24,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The IArchiveStorage contract lives with the Windows backends; the
+         portable OneDrive backend runs it here too. -->
+    <Compile Include="..\MedReminder.Infrastructure.Tests\Backup\ArchiveStorageContractTests.cs" Link="Backup\ArchiveStorageContractTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\MedReminder.Domain\MedReminder.Domain.csproj" />
     <ProjectReference Include="..\..\src\MedReminder.Application\MedReminder.Application.csproj" />
     <ProjectReference Include="..\..\src\MedReminder.Infrastructure.Portable\MedReminder.Infrastructure.Portable.csproj" />

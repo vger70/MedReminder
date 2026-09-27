@@ -42,4 +42,19 @@ public sealed class BackupSettings
     // folder. 0 = unlimited (not recommended). Independent from
     // RetentionDays, which governs the local raw-DB backups.
     public int CloudFolderRetention { get; set; } = 30;
+
+    // C.3++ Phase 2 / B.1 Phase 4a: where the encrypted snapshots go.
+    // Null: CloudFolderDirectory (C.3+). OneDrive: the backups/ folder of
+    // the app folder of CloudAccountId, through the provider API. Older
+    // files without these keys keep the folder target.
+    public CloudProvider? CloudProvider { get; set; }
+
+    public string CloudAccountId { get; set; } = string.Empty;
+
+    // Whether the selected cloud target has what it needs: a folder, or
+    // a signed-in account.
+    public bool IsCloudTargetConfigured()
+        => CloudProvider is null
+            ? !string.IsNullOrWhiteSpace(CloudFolderDirectory)
+            : !string.IsNullOrWhiteSpace(CloudAccountId);
 }

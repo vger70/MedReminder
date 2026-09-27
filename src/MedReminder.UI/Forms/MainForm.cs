@@ -1518,7 +1518,9 @@ internal sealed class MainForm : MedReminderFormBase
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.IImportService>(),
                 scope.ServiceProvider.GetRequiredService<ICloudBackupPassphraseStore>(),
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.ICloudRestoreService>(),
-                scope.ServiceProvider.GetRequiredService<SyncHostedService>());
+                scope.ServiceProvider.GetRequiredService<SyncHostedService>(),
+                scope.ServiceProvider.GetRequiredService<ICloudAccountService>(),
+                scope.ServiceProvider.GetRequiredService<IArchiveStorage>());
             dialog.ShowDialog(this);
         }
         catch (Exception ex)

@@ -46,6 +46,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // applies snapshots via the cloud-restore service.
     private readonly ICloudBackupPassphraseStore _cloudPassStore;
     private readonly ICloudRestoreService _cloudRestore;
+    private readonly ICloudAccountService? _cloudAccounts;
+    private readonly IArchiveStorage? _archiveStorage;
     private readonly MedReminder.UI.Hosting.SyncHostedService? _sync;
 
     // Email tab controls
@@ -91,6 +93,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private NumericUpDown _cloudRetentionBox = null!;
     private Label _cloudPassStatusLabel = null!;
     private Button _cloudPassChangeButton = null!;
+    // C.3++ Phase 2 (B.1 Phase 4a): folder or OneDrive target.
+    private ComboBox? _cloudProviderBox;
+    private Label? _cloudAccountLabel;
+    private Button? _cloudSignInButton;
+    private Button? _cloudBrowseButton;
+    private Label? _cloudNotSyncWarning;
+    private string _cloudAccountId = string.Empty;
 
     // Generale (Incremento 16b) — selezione lingua UI
     private ComboBox _languageCombo = null!;
@@ -148,9 +157,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
         IImportService importService,
         ICloudBackupPassphraseStore cloudPassStore,
         ICloudRestoreService cloudRestore,
-        MedReminder.UI.Hosting.SyncHostedService? sync = null)
+        MedReminder.UI.Hosting.SyncHostedService? sync = null,
+        ICloudAccountService? cloudAccounts = null,
+        IArchiveStorage? archiveStorage = null)
     {
         _sync = sync;
+        _cloudAccounts = cloudAccounts;
+        _archiveStorage = archiveStorage;
         _smtpMonitor = smtpMonitor;
         _notificationMonitor = notificationMonitor;
         _backupMonitor = backupMonitor;
@@ -1101,6 +1114,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
         };
         cloudBrowseButton.Click += (_, _) => BrowseCloudDirectory();
+        _cloudBrowseButton = cloudBrowseButton;
         var cloudDirectoryRow = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.LeftToRight,
@@ -1141,7 +1155,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         passRow.Controls.Add(_cloudPassStatusLabel);
         passRow.Controls.Add(_cloudPassChangeButton);
 
-        var notSyncWarning = new Label
+        var notSyncWarning = _cloudNotSyncWarning = new Label
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(600, 0),
@@ -1158,6 +1172,31 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
         var cloudTable = BuildFormTable();
         AddRow(cloudTable, string.Empty, _cloudEnabledBox);
+        if (_cloudAccounts?.IsAvailable(CloudProvider.OneDrive) == true)
+        {
+            _cloudAccountId = settings.CloudAccountId;
+            _cloudProviderBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+            _cloudProviderBox.Items.AddRange([
+                _loc.Get("Ui.SettingsDialog.CloudBackup.Provider.Folder"),
+                _loc.Get("Ui.SettingsDialog.CloudBackup.Provider.OneDrive"),
+            ]);
+            _cloudProviderBox.SelectedIndex = settings.CloudProvider == CloudProvider.OneDrive ? 1 : 0;
+            _cloudProviderBox.SelectedIndexChanged += (_, _) => UpdateCloudTargetControls();
+            _cloudAccountLabel = new Label { AutoSize = true, Margin = new Padding(0, 6, 8, 0) };
+            _cloudSignInButton = new Button { Text = _loc.Get("Ui.SettingsDialog.CloudBackup.SignIn"), AutoSize = true };
+            _cloudSignInButton.Click += async (_, _) => await SignInCloudBackupAsync();
+            var accountRow = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = false,
+            };
+            accountRow.Controls.Add(_cloudAccountLabel);
+            accountRow.Controls.Add(_cloudSignInButton);
+            AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Provider.Label"), _cloudProviderBox);
+            AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Account.Label"), accountRow);
+            _ = RefreshCloudAccountAsync();
+        }
         AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Directory.Label"), cloudDirectoryRow);
         AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Retention.Label"), _cloudRetentionBox);
         AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Label"), passRow);
@@ -1172,7 +1211,63 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
         wrapper.Controls.Add(groupTitle);
         wrapper.Controls.Add(cloudTable);
+        UpdateCloudTargetControls();
         return wrapper;
+    }
+
+    private bool CloudTargetIsOneDrive => _cloudProviderBox?.SelectedIndex == 1;
+
+    private void UpdateCloudTargetControls()
+    {
+        var oneDrive = CloudTargetIsOneDrive;
+        _cloudDirectoryBox.Enabled = !oneDrive;
+        if (_cloudBrowseButton is not null) _cloudBrowseButton.Enabled = !oneDrive;
+        if (_cloudNotSyncWarning is not null) _cloudNotSyncWarning.Visible = !oneDrive;
+        if (_cloudAccountLabel is not null) _cloudAccountLabel.Enabled = oneDrive;
+        if (_cloudSignInButton is not null) _cloudSignInButton.Enabled = oneDrive;
+    }
+
+    private async Task RefreshCloudAccountAsync()
+    {
+        if (_cloudAccountLabel is null || _cloudAccounts is null) return;
+        CloudAccount? account = null;
+        if (!string.IsNullOrEmpty(_cloudAccountId))
+        {
+            try
+            {
+                account = await _cloudAccounts.FindAsync(CloudProvider.OneDrive, _cloudAccountId, CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                // Shown as not signed in.
+            }
+        }
+        _cloudAccountLabel.Text = account?.UserName ?? _loc.Get("Ui.SettingsDialog.CloudBackup.Account.None");
+    }
+
+    private async Task SignInCloudBackupAsync()
+    {
+        if (_cloudAccounts is null || _cloudSignInButton is null) return;
+        _cloudSignInButton.Enabled = false;
+        UseWaitCursor = true;
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            var account = await _cloudAccounts.SignInAsync(CloudProvider.OneDrive,
+                string.IsNullOrEmpty(_cloudAccountId) ? null : _cloudAccountId, timeout.Token);
+            _cloudAccountId = account.Id;
+            await RefreshCloudAccountAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, _loc.Get("Ui.SyncDialog.SignIn.Failed", ex.Message),
+                _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            UseWaitCursor = false;
+            _cloudSignInButton.Enabled = CloudTargetIsOneDrive;
+        }
     }
 
     private void BrowseCloudDirectory()
@@ -1234,9 +1329,11 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var defaultFolder = _cloudDirectoryBox is null
             ? _backupMonitor.CurrentValue.CloudFolderDirectory
             : _cloudDirectoryBox.Text;
+        // The saved target decides: the storage reads the saved settings.
+        var storage = _backupMonitor.CurrentValue.CloudProvider is not null ? _archiveStorage : null;
         using var dialog = new RestoreFromCloudDialog(
             _loc, _cloudRestore, _cloudPassStore, _currentProfile, _profileRegistry,
-            defaultFolder ?? string.Empty);
+            defaultFolder ?? string.Empty, storage);
         var result = dialog.ShowDialog(this);
         if (result == DialogResult.OK && dialog.RestartRequested)
         {
@@ -1295,24 +1392,33 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 ? 30
                 : (int)_cloudRetentionBox.Value;
 
-            if (cloudEnabled)
+            var cloudOneDrive = CloudTargetIsOneDrive;
+            if (cloudEnabled && cloudOneDrive && string.IsNullOrEmpty(_cloudAccountId))
             {
-                if (string.IsNullOrWhiteSpace(cloudDirectory))
-                {
-                    MessageBox.Show(this,
-                        _loc.Get("Ui.CloudBackup.Error.FolderMissing"),
-                        _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                if (!_cloudPassStore.HasPassphrase)
-                {
-                    MessageBox.Show(this,
-                        _loc.Get("Ui.CloudBackup.Error.PassphraseMissing"),
-                        _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+                MessageBox.Show(this,
+                    _loc.Get("Ui.SettingsDialog.CloudBackup.SignInFirst"),
+                    _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (cloudEnabled && !cloudOneDrive && string.IsNullOrWhiteSpace(cloudDirectory))
+            {
+                MessageBox.Show(this,
+                    _loc.Get("Ui.CloudBackup.Error.FolderMissing"),
+                    _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (cloudEnabled && !_cloudPassStore.HasPassphrase)
+            {
+                MessageBox.Show(this,
+                    _loc.Get("Ui.CloudBackup.Error.PassphraseMissing"),
+                    _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (cloudEnabled && !cloudOneDrive)
+            {
                 try { Directory.CreateDirectory(cloudDirectory); }
                 catch (Exception ex)
                 {
@@ -1333,6 +1439,14 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 CloudFolderEnabled = cloudEnabled,
                 CloudFolderDirectory = cloudDirectory,
                 CloudFolderRetention = cloudRetention,
+                // Without the provider choice (no app registration, or a
+                // non-admin view) the saved target is kept.
+                CloudProvider = _cloudProviderBox is null
+                    ? _backupMonitor.CurrentValue.CloudProvider
+                    : cloudOneDrive ? CloudProvider.OneDrive : null,
+                CloudAccountId = _cloudProviderBox is null
+                    ? _backupMonitor.CurrentValue.CloudAccountId
+                    : cloudOneDrive ? _cloudAccountId : string.Empty,
             };
 
             WriteBackupSettingsToDisk(settings);

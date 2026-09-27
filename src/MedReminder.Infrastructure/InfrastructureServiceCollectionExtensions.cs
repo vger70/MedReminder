@@ -115,7 +115,10 @@ public static class InfrastructureServiceCollectionExtensions
         // C.3++ Phase 1 (docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md
         // §7.3): delivery of the cloud-folder .mrz snapshots. Stateless;
         // reads BackupSettings.CloudFolderDirectory on every call.
-        services.TryAddSingleton<IArchiveStorage, LocalFolderArchiveStorage>();
+        // Phase 2 (B.1 Phase 4a): CloudArchiveStorage picks the folder or
+        // the OneDrive app folder from BackupSettings.CloudProvider.
+        services.TryAddSingleton<LocalFolderArchiveStorage>();
+        services.TryAddSingleton<IArchiveStorage, CloudArchiveStorage>();
 
         // ------- Encrypted export / import (C.3) -------
         // The archive cipher is registered by the portable extension;

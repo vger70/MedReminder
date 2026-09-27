@@ -91,8 +91,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         {
             var settings = _settings.CurrentValue;
             var localEnabled = settings.Enabled && !string.IsNullOrWhiteSpace(settings.Directory);
-            var cloudEnabled = settings.CloudFolderEnabled
-                && !string.IsNullOrWhiteSpace(settings.CloudFolderDirectory);
+            var cloudEnabled = settings.CloudFolderEnabled && settings.IsCloudTargetConfigured();
 
             if (!localEnabled && !cloudEnabled)
             {
@@ -100,11 +99,10 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 {
                     _log.LogWarning("Backup enabled but no folder configured; skip.");
                 }
-                if (settings.CloudFolderEnabled
-                    && string.IsNullOrWhiteSpace(settings.CloudFolderDirectory))
+                if (settings.CloudFolderEnabled && !settings.IsCloudTargetConfigured())
                 {
                     _log.LogWarning(
-                        "Cloud-folder backup enabled but no folder configured; skip.");
+                        "Cloud-folder backup enabled but no folder or account configured; skip.");
                 }
                 return;
             }
@@ -193,7 +191,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                     exportedFiles.AddRange(await RunCloudTargetAsync(
                         scope.ServiceProvider,
                         archiveStorage,
-                        settings.CloudFolderDirectory,
+                        settings,
                         profiles,
                         perProfileErrors,
                         cancellationToken));
@@ -300,24 +298,34 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
     private async Task<IReadOnlyList<string>> RunCloudTargetAsync(
         IServiceProvider scopedServices,
         IArchiveStorage archiveStorage,
-        string cloudFolderDirectory,
+        BackupSettings settings,
         IReadOnlyList<Profile> profiles,
         List<string> errors,
         CancellationToken cancellationToken)
     {
         var archiveIds = new List<string>();
 
-        // Cheap check before the Argon2id export: a missing folder keeps
-        // the day open, so without it every 15-minute tick would pay for
-        // an export that the upload then rejects. Specific to the local
-        // folder, the only IArchiveStorage backend so far; a native
-        // provider will need its own availability check here.
-        if (!Directory.Exists(cloudFolderDirectory))
+        // Cheap check before the Argon2id export: a missing folder (or a
+        // signed-out OneDrive account) keeps the day open, so without it
+        // every 15-minute tick would pay for an export that the upload
+        // then rejects.
+        var cloudFolderDirectory = settings.CloudFolderDirectory;
+        if (settings.CloudProvider is null && !Directory.Exists(cloudFolderDirectory))
         {
             _log.LogWarning(
                 "Cloud-folder backup skipped: folder {Directory} does not exist.",
                 cloudFolderDirectory);
             return archiveIds;
+        }
+        if (settings.CloudProvider is { } provider)
+        {
+            var accounts = scopedServices.GetService<ICloudAccountService>();
+            if (accounts is null
+                || await accounts.FindAsync(provider, settings.CloudAccountId, cancellationToken) is null)
+            {
+                _log.LogWarning("Cloud backup skipped: {Provider} is not signed in on this machine.", provider);
+                return archiveIds;
+            }
         }
 
         var passStore = scopedServices.GetService<ICloudBackupPassphraseStore>();
@@ -353,11 +361,11 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 }
                 catch (DirectoryNotFoundException)
                 {
-                    // Folder removed while the export ran: skip the rest of
-                    // this run, not a failure of the tick (ANALYSIS-C3PLUS §4.3).
-                    _log.LogWarning(
-                        "Cloud-folder backup skipped: folder {Directory} does not exist.",
-                        cloudFolderDirectory);
+                    // Folder removed, or OneDrive signed out, while the
+                    // export ran: skip the rest of this run, not a failure
+                    // of the tick (ANALYSIS-C3PLUS §4.3).
+                    _log.LogWarning("Cloud backup skipped: the target ({Target}) is not available.",
+                        settings.CloudProvider?.ToString() ?? cloudFolderDirectory);
                     break;
                 }
                 catch (Exception ex)
