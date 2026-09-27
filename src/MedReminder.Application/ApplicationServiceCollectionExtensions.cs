@@ -1,5 +1,6 @@
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
+using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
@@ -26,6 +27,10 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ResumeMedication>();
         services.AddScoped<ChangeMedicationSchedule>();
         services.AddScoped<RegisterIntake>();
+
+        // B.1 ledger derivation (Phase 2c-2).
+        services.AddScoped<LedgerFactsLoader>();
+        services.AddScoped<LedgerSynchronizer>();
 
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();

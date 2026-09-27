@@ -112,6 +112,12 @@ Einfach/Erweitert-Selektor zur Verfügung und wirkt ab dem *Gültig
 ab*-Datum, das du wählst — das vorherige Schema bleibt für die
 Tage davor gültig.
 
+Liegt das *Gültig ab*-Datum in der Vergangenheit, wird der bereits
+gebuchte automatische Verbrauch ab diesem Datum bei der nächsten
+Prüfung mit dem neuen Schema neu berechnet. Bestandsbewegungen, die
+vor der Installation dieser Version erfasst wurden, werden nie neu
+berechnet.
+
 MedReminder ist kein Medizinprodukt: Es prüft keine maximalen
 Tagesdosen, warnt nicht vor Überdosierungen und kontrolliert
 keine Wechselwirkungen zwischen Medikamenten. Es folgt lediglich
@@ -348,6 +354,8 @@ vergessene oder zusätzliche Dosen interpretiert.
   Meldungen, die historischen Daten (Bewegungen,
   Benachrichtigungen) bleiben aus Audit-Gründen in der
   Datenbank.
+- **Reaktivieren**: **Bearbeiten** → **Aktiv** anhaken. Tage, an denen
+  das Medikament deaktiviert war, zählen nicht als Verbrauch.
 
 ## Therapieverlauf
 

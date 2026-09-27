@@ -147,10 +147,11 @@ is used.
 | `MedicationScheduleHistory` (`MedicationScheduleHistories`) | Versioned schedule | `EffectiveFrom`, legacy dose × frequency, `ScheduleKind`, `SchedulePayload` (JSON) |
 | `MedicationAdministrationSlot` (`MedicationAdministrationSlots`) | Individual daily intakes | `SetId`, `Dose`, `Time?`, `TimingLabel`, `Order` |
 | `MedicationAdministrationSlotSet` (`MedicationAdministrationSlotSets`) | Recorded version of a medicine's slots | `EffectiveFrom`, `RecordedAt`; the current slots are those of the latest recorded set |
-| `StockCount` (`StockCounts`) | Stock-count fact (B.1; written from Phase 2c) | `CountDay`, `CountedQuantity`, `TakenToday`, `ThresholdAtCount`, `RecordedAt` |
+| `StockCount` (`StockCounts`) | Stock-count fact written by `ReconcileStock` (B.1 Phase 2c-2) | `CountDay`, `CountedQuantity`, `TakenToday`, `ThresholdAtCount`, `RecordedAt`, stored outcome (`Correction`, `MaterializesCountDay`, `AdvancesEpoch`, ...) |
 | `LedgerCutoff` (`LedgerCutoff`) | Single row: ledger freeze of a pre-B.1 database | `CutoffDay`, `FrozenAt` |
 | `MedicationSuspension` (`MedicationSuspensions`) | Therapy pause | `StartDate`, `EndDate?` (null = open) |
-| `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity` |
+| `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity`, `RecordedAt` |
+| `MedicineActivityChange` (`MedicineActivityChanges`) | Dated activation / deactivation (B.1 Phase 2c-2) | `Day`, `Active`, `RecordedAt` |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
@@ -200,11 +201,12 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   ending before run-out), and no successful `NotificationEvent` on the
   current `StockEpoch`.
 - **`SuspensionState`** — whether a date falls in a suspension.
-- **`LedgerDeriver`** (`Domain/Ledger`, B.1 Phase 2c-1) — derives a
-  medicine's ledger from its facts (stock entries, intakes, counts,
-  schedule, slots, suspensions, activity) after the ledger cutoff.
-  Not used by the application yet; its parity with the use cases is
-  tested in `tests/MedReminder.Application.Tests/Ledger`
+- **`LedgerDeriver`** (`Domain/Ledger`, B.1 Phase 2c) — derives a
+  medicine's ledger and `StockEpoch` from its facts (stock entries,
+  intakes, counts, schedule, slots, suspensions, activity) after the
+  ledger cutoff. Used through `Application/Ledger/LedgerSynchronizer`;
+  tested against the use cases in
+  `tests/MedReminder.Application.Tests/Ledger`
   ([`analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md) §4.3).
 
 ### 4.4 Invariants
@@ -214,30 +216,38 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   are never rewritten.
 - Slot changes append a `MedicationAdministrationSlotSet`, never delete
   slots; every calculation reads the latest recorded set.
-- `AddStock` increments `Medicine.StockEpoch` on every positive
-  movement; the new epoch restarts the warning cycle. Negative
-  corrections do not change the epoch.
-- `ConsumptionCatchUp` materializes automatic consumption up to
-  **yesterday** inclusive, starting after the last **automatic**
-  consumption day (or at `StartDate`), and skips every day that
-  already carries a `Consumption` movement or a `MedicationIntake` of
-  any status. A consumption day without an intake is automatic: only
-  the catch-up and `RegisterIntake` write `Consumption`, and
-  `RegisterIntake` always writes an intake alongside.
-- The first intake recorded for a day that already has automatic
-  consumption (a backdated intake) reverses it with a
-  `PositiveCorrection` before booking the intake; `StockEpoch` is not
+- **Facts and derived rows** (B.1 Phase 2c-2,
+  [`analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md)
+  §4.3). Facts: `User` stock entries (initial load, `AddStock`,
+  `AdjustStockDown`), intakes, `StockCount`s, schedule rows,
+  suspensions, slot sets, activity changes. `Derived` rows
+  (consumption, reversals, count corrections) are produced only by
+  `LedgerDeriver` and written by `LedgerSynchronizer`, which replaces
+  them by deterministic id; `Legacy` rows (before the ledger freeze)
+  are never touched and days up to the cutoff are never derived.
+- `ConsumptionCatchUp` synchronizes every medicine, active or not:
+  automatic consumption up to **yesterday** on days with no intake of
+  any status, when the medicine is active on that day (activity
+  history), in the therapy window and not suspended. `RegisterIntake`
+  and `ReconcileStock` synchronize their medicine at once.
+- The first intake recorded for a day carrying `Legacy` consumption
+  reverses it with a `PositiveCorrection`; on a derived day the
+  automatic row is simply no longer produced. `StockEpoch` is not
   incremented.
-- `ReconcileStock` (guided stock count) materializes pending automatic
-  consumption through the catch-up planner and writes one correction
-  of `counted - expected`, where expected is the start-of-day stock
-  minus the part of today's scheduled consumption already taken. When
-  all of today's quantity is taken, today's consumption is
-  materialized at once; otherwise the ledger keeps the start-of-day
-  stock and the next catch-up books today. A positive correction
-  advances `StockEpoch` unless the forecast after it is still within
-  `ThresholdDays` (reopens the warning cycle without an immediate
-  duplicate warning); a negative one never does.
+- `ReconcileStock` (guided stock count) stores the count as a fact with
+  its outcome: correction `counted - expected`, where expected is the
+  derived start-of-day stock minus the part of today's scheduled
+  consumption already taken. When all of today's quantity is taken,
+  today's consumption is booked with the quantity fixed at count time;
+  a later intake for today removes it. A positive correction advances
+  the epoch unless the forecast after it is still within
+  `ThresholdDays`; a negative one never does.
+- `StockEpoch` = the epoch baseline at the freeze + positive `User`
+  entries + counts that advanced it; the synchronizer keeps
+  `Medicine.StockEpoch` equal to it. A new epoch restarts the warning
+  cycle.
+- Of two schedule rows with the same `EffectiveFrom`, the later
+  recorded one wins (`DailyConsumption`, `LedgerDeriver`).
 - `ConsumptionCatchUp.RunAsync`, `MedicationMonitor.RunAsync`,
   `RegisterIntake.ExecuteAsync` and `ReconcileStock.ExecuteAsync` run
   under `MonitoringGate`, a
@@ -397,7 +407,12 @@ start:
    `MedicationAdministrationSlotSets`, `StockMovements.Origin` (existing
    rows become `Legacy` and the cutoff is set to the day before),
    `MedicationAdministrationSlots.SetId` (existing slots become one set
-   per medicine).
+   per medicine); then the B.1 Phase 2c-2 patch (one transaction):
+   `MedicineActivityChanges`, `StockCounts` outcome columns,
+   `MedicationScheduleHistories.RecordedAt`,
+   `Medicines.LedgerBaselineEpoch`, and `MedicationIntakes.RecordedAt`,
+   whose absence triggers the re-freeze (`LedgerFreeze`, also applied
+   to every import).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.

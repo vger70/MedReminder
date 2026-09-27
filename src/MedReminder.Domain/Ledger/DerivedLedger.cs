@@ -17,14 +17,17 @@ public enum DerivedRule
 // One row of the derived ledger. Legacy and UserEntry rows are the
 // input facts passed through (their own ids); the others are derived
 // and carry a name-based id, so a re-derivation replaces them
-// idempotently.
+// idempotently. Epoch is the stock epoch in force at OccurredAt
+// (diagnostic, as StockMovement.StockEpoch); 0 on pass-through rows.
 public sealed record LedgerRow(
     Guid Id,
     DerivedRule Rule,
     StockMovementKind Kind,
     decimal Delta,
     DateOnly Day,
-    DateTimeOffset OccurredAt)
+    DateTimeOffset OccurredAt,
+    string? Notes = null,
+    int Epoch = 0)
 {
     public bool IsDerived => Rule is not (DerivedRule.Legacy or DerivedRule.UserEntry);
 }

@@ -6,15 +6,15 @@ using Xunit;
 
 namespace MedReminder.Infrastructure.Tests.Export;
 
-// Schema version 1 -> 2 (docs/EXPORT-FORMAT.md §5): an older archive is
-// mapped like a database the Phase 2b boot patch meets for the first
-// time.
+// Schema version 1 -> 2 (docs/EXPORT-FORMAT.md §5): slots of an older
+// archive are grouped into one set per medicine, as the Phase 2b boot
+// patch does.
 public class ExportPayloadUpgraderTests
 {
     private static readonly DateTimeOffset ImportInstant = new(2026, 9, 25, 9, 30, 0, TimeSpan.Zero);
 
     [Fact]
-    public void Version_1_payload_gets_slot_sets_and_a_cutoff()
+    public void Version_1_payload_gets_slot_sets()
     {
         var payload = VersionOnePayloadWithSlots(out var medicineId);
 
@@ -27,8 +27,8 @@ public class ExportPayloadUpgraderTests
         set.EffectiveFrom.Should().Be(new DateOnly(2026, 9, 1));
         set.RecordedAt.Should().Be(ImportInstant);
         payload.MedicationAdministrationSlots.Should().OnlyContain(s => s.SetId == medicineId);
-        payload.LedgerCutoff!.CutoffDay.Should().Be(new DateOnly(2026, 9, 24));
-        payload.LedgerCutoff.FrozenAt.Should().Be(ImportInstant);
+        // The freeze is applied by ProfileDatabaseBuilder to every import.
+        payload.LedgerCutoff.Should().BeNull();
     }
 
     [Fact]

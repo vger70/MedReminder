@@ -36,6 +36,9 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
         services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();
         services.AddScoped<IDoseReminderEventRepository, DoseReminderEventRepository>();
+        services.AddScoped<IMedicineActivityRepository, MedicineActivityRepository>();
+        services.AddScoped<IStockCountRepository, StockCountRepository>();
+        services.AddScoped<ILedgerCutoffRepository, LedgerCutoffRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<DatabaseInitializer>();
 

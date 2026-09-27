@@ -13,6 +13,8 @@ internal sealed class MedicationScheduleHistoryConfiguration
         builder.HasKey(s => s.Id);
 
         builder.Property(s => s.DosePerAdministration).HasConversion<string>();
+        // B.1 Phase 2c-2: same default as the boot patch column.
+        builder.Property(s => s.RecordedAt).HasDefaultValue(DateTimeOffset.MinValue);
         builder.HasIndex(s => new { s.MedicineId, s.EffectiveFrom });
 
         // A1: discriminated schedule shape carried alongside the

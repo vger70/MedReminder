@@ -62,7 +62,8 @@ public sealed record LedgerIntake(
     IntakeStatus Status,
     decimal Quantity,
     DateTimeOffset RecordedAt,
-    bool IsLegacy);
+    bool IsLegacy,
+    string? Notes = null);
 
 // One recorded slot set (MedicationAdministrationSlotSet and its rows).
 public sealed record LedgerSlotSet(
@@ -93,4 +94,5 @@ public sealed record StockCountAnchor(
     decimal CountDayScheduled,
     decimal Correction,
     bool MaterializesCountDay,
-    bool AdvancesEpoch);
+    bool AdvancesEpoch,
+    string? Notes = null);

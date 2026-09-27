@@ -131,8 +131,12 @@ public sealed class ExportImportRoundTripTests : IDisposable
 
             // Covers both a fully-populated row and one that leaves every
             // optional field null (schema fidelity, §8.1).
-            restoredRich.Should().BeEquivalentTo(originalRich);
-            restoredBare.Should().BeEquivalentTo(originalBare);
+            // The import freezes the ledger (B.1 Phase 2c-2): the epoch
+            // baseline becomes the imported StockEpoch.
+            restoredRich.Should().BeEquivalentTo(originalRich, o => o.Excluding(m => m.LedgerBaselineEpoch));
+            restoredBare.Should().BeEquivalentTo(originalBare, o => o.Excluding(m => m.LedgerBaselineEpoch));
+            restoredRich.LedgerBaselineEpoch.Should().Be(originalRich.StockEpoch);
+            restoredBare.LedgerBaselineEpoch.Should().Be(originalBare.StockEpoch);
         }
         finally
         {
@@ -611,6 +615,7 @@ public sealed class ExportImportRoundTripTests : IDisposable
             await db.MedicationAdministrationSlotSets.ExecuteDeleteAsync();
             await db.StockCounts.ExecuteDeleteAsync();
             await db.LedgerCutoffs.ExecuteDeleteAsync();
+            await db.MedicineActivityChanges.ExecuteDeleteAsync();
             await db.MedicationScheduleHistories.ExecuteDeleteAsync();
             await db.StockMovements.ExecuteDeleteAsync();
             await db.Medicines.ExecuteDeleteAsync();

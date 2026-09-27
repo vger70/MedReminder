@@ -34,6 +34,25 @@ internal sealed class MedicationAdministrationSlotRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<AdministrationSlotSetEntry>> ListSetsForMedicineAsync(
+        Guid medicineId, CancellationToken cancellationToken)
+    {
+        var sets = await _db.MedicationAdministrationSlotSets
+            .AsNoTracking()
+            .Where(s => s.MedicineId == medicineId)
+            .OrderBy(s => s.RecordedAt)
+            .ToListAsync(cancellationToken);
+        var slots = await _db.MedicationAdministrationSlots
+            .AsNoTracking()
+            .Where(s => s.MedicineId == medicineId)
+            .ToListAsync(cancellationToken);
+        return sets
+            .Select(set => new AdministrationSlotSetEntry(
+                set,
+                slots.Where(s => s.SetId == set.Id).OrderBy(s => s.Order).ToList()))
+            .ToList();
+    }
+
     public async Task AddSetAsync(
         MedicationAdministrationSlotSet set,
         IReadOnlyList<MedicationAdministrationSlot> slots,

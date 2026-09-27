@@ -14,6 +14,10 @@ internal sealed class StockCountConfiguration : IEntityTypeConfiguration<StockCo
 
         builder.Property(c => c.CountedQuantity).HasConversion<string>();
         builder.Property(c => c.TakenToday).HasConversion<string>();
+        builder.Property(c => c.LedgerAtStartOfDay).HasConversion<string>();
+        builder.Property(c => c.CountDayScheduled).HasConversion<string>();
+        builder.Property(c => c.Correction).HasConversion<string>();
+        builder.Property(c => c.Notes).HasMaxLength(500);
 
         builder.HasIndex(c => c.MedicineId);
 

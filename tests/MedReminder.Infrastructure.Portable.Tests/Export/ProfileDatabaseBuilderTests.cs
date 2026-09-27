@@ -59,8 +59,11 @@ public sealed class ProfileDatabaseBuilderTests : IDisposable
             .Should().HaveCount(2);
     }
 
+    // Every import is frozen at the import instant (B.1 Phase 2c-2):
+    // the archive's rows become Legacy and its cutoff is replaced; slot
+    // sets and stock counts are kept as they are.
     [Fact]
-    public async Task Version_2_archive_keeps_origins_sets_counts_and_cutoff()
+    public async Task Version_2_archive_is_frozen_at_the_import()
     {
         var payload = TestArchiveWriter.SamplePayload();
         var medicineId = payload.Medicines.Single().Id;
@@ -94,18 +97,21 @@ public sealed class ProfileDatabaseBuilderTests : IDisposable
             FrozenAt = new DateTimeOffset(2026, 9, 6, 8, 0, 0, TimeSpan.Zero),
         };
         var path = Path.Combine(_directory, "medreminder.db");
+        var importedAt = new DateTimeOffset(2026, 9, 25, 9, 30, 0, TimeSpan.Zero);
 
-        await ProfileDatabaseBuilder.BuildAsync(path, payload, default);
+        await ProfileDatabaseBuilder.BuildAsync(
+            path, payload, default, new ExportPayloadUpgraderTests.TestTime(importedAt));
 
         await using var db = Open(path);
-        (await db.StockMovements.Select(m => m.Origin).ToListAsync())
-            .Should().BeEquivalentTo([StockMovementOrigin.User, StockMovementOrigin.Derived]);
+        (await db.StockMovements.ToListAsync())
+            .Should().HaveCount(2).And.OnlyContain(m => m.Origin == StockMovementOrigin.Legacy);
         (await new MedicationAdministrationSlotRepository(db).ListForMedicineAsync(medicineId, default))
             .Should().ContainSingle(s => s.SetId == setId && s.Dose == 2m);
         (await db.StockCounts.SingleAsync()).TakenToday.Should().Be(1m);
         var cutoff = await db.LedgerCutoffs.SingleAsync();
-        cutoff.CutoffDay.Should().Be(new DateOnly(2026, 9, 5));
-        cutoff.FrozenAt.Should().Be(new DateTimeOffset(2026, 9, 6, 8, 0, 0, TimeSpan.Zero));
+        cutoff.CutoffDay.Should().Be(new DateOnly(2026, 9, 24));
+        cutoff.FrozenAt.Should().Be(importedAt);
+        (await db.Medicines.SingleAsync()).LedgerBaselineEpoch.Should().Be(2);
     }
 
     private static MedReminderDbContext Open(string path)

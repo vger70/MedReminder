@@ -82,6 +82,7 @@ public sealed class ChangeMedicationSchedule
             AdministrationsPerDay = cmd.NewAdministrationsPerDay,
             ScheduleKind = kind,
             SchedulePayload = payload,
+            RecordedAt = _clock.GetUtcNow(),
         };
 
         medicine.DosePerAdministration = cmd.NewDosePerAdministration;

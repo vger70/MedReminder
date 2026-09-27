@@ -28,6 +28,18 @@ internal sealed class InMemoryMedicationAdministrationSlotRepository
         return Task.FromResult(result);
     }
 
+    public Task<IReadOnlyList<AdministrationSlotSetEntry>> ListSetsForMedicineAsync(
+        Guid medicineId, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<AdministrationSlotSetEntry> result = _sets
+            .Where(s => s.MedicineId == medicineId)
+            .OrderBy(s => s.RecordedAt)
+            .Select(set => new AdministrationSlotSetEntry(
+                set, _items.Where(s => s.SetId == set.Id).OrderBy(s => s.Order).ToList()))
+            .ToList();
+        return Task.FromResult(result);
+    }
+
     public Task AddSetAsync(
         MedicationAdministrationSlotSet set,
         IReadOnlyList<MedicationAdministrationSlot> slots,

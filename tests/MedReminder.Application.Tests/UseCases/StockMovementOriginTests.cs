@@ -18,9 +18,9 @@ public class StockMovementOriginTests
 
     private async Task<IReadOnlyList<StockMovement>> NewRowsAsync(Func<Task> action)
     {
-        var before = _scope.Stock.All.Count;
+        var before = _scope.Stock.All.Select(m => m.Id).ToHashSet();
         await action();
-        return _scope.Stock.All.Skip(before).ToList();
+        return _scope.Stock.All.Where(m => !before.Contains(m.Id)).ToList();
     }
 
     private Task SeedAsync()
@@ -69,7 +69,7 @@ public class StockMovementOriginTests
     }
 
     [Fact]
-    public async Task Intake_consumption_and_backdated_reversal_are_derived()
+    public async Task Intake_consumption_is_derived()
     {
         await SeedAsync();
         await _scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
@@ -82,7 +82,7 @@ public class StockMovementOriginTests
             CancellationToken.None));
 
         today.Should().ContainSingle(m => m.Kind == StockMovementKind.Consumption);
-        backdated.Should().Contain(m => m.Kind == StockMovementKind.PositiveCorrection);
+        backdated.Should().ContainSingle(m => m.Kind == StockMovementKind.Consumption);
         today.Concat(backdated).Should().OnlyContain(m => m.Origin == StockMovementOrigin.Derived);
     }
 

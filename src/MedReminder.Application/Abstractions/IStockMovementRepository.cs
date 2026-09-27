@@ -10,6 +10,18 @@ public interface IStockMovementRepository
 
     Task AddAsync(StockMovement movement, CancellationToken cancellationToken);
 
+    // Removes derived rows that a re-derivation no longer produces
+    // (LedgerSynchronizer). Never called on Legacy or User rows.
+    Task RemoveRangeAsync(
+        IEnumerable<StockMovement> movements,
+        CancellationToken cancellationToken);
+
+    // Replaces derived rows whose content a re-derivation changed
+    // (same id, LedgerSynchronizer).
+    Task UpdateRangeAsync(
+        IEnumerable<StockMovement> movements,
+        CancellationToken cancellationToken);
+
     Task AddRangeAsync(
         IEnumerable<StockMovement> movements,
         CancellationToken cancellationToken);

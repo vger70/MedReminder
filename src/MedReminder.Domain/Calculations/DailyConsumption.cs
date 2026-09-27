@@ -54,7 +54,11 @@ public static class DailyConsumption
         foreach (var entry in scheduleHistory)
         {
             if (entry.EffectiveFrom > date) continue;
-            if (latest is null || entry.EffectiveFrom > latest.EffectiveFrom)
+            // '>=': of two rows with the same EffectiveFrom the later
+            // one in recording order wins, as in LedgerDeriver
+            // (ANALYSIS-B1-MOBILE-SYNC.md §17). Callers pass rows in
+            // recording order within a date.
+            if (latest is null || entry.EffectiveFrom >= latest.EffectiveFrom)
             {
                 latest = entry;
             }

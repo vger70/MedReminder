@@ -110,6 +110,7 @@ public sealed class AddMedicine
             AdministrationsPerDay = cmd.AdministrationsPerDay,
             ScheduleKind = kind,
             SchedulePayload = payload,
+            RecordedAt = now,
         }, cancellationToken);
 
         // Initial stock load (if > 0).

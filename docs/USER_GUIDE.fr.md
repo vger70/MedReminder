@@ -108,6 +108,12 @@ est disponible et s'applique à partir de la *Date d'effet* que tu
 choisis, de sorte que le schéma précédent reste valable pour les
 jours antérieurs à cette date.
 
+Si la *Date d'effet* est dans le passé, la consommation automatique
+déjà enregistrée à partir de cette date est recalculée avec le
+nouveau schéma lors du contrôle suivant. Les mouvements de stock
+enregistrés avant l'installation de cette version ne sont jamais
+recalculés.
+
 MedReminder n'est pas un dispositif médical : il ne vérifie pas les
 doses maximales journalières, n'alerte pas sur les surdosages et ne
 contrôle pas les interactions médicamenteuses. Il suit uniquement la
@@ -339,6 +345,8 @@ oubliées ou supplémentaires.
   disparaît des contrôles automatiques et des alertes, mais les
   données historiques (mouvements, notifications) restent en base
   pour audit.
+- **Réactiver** : **Modifier** → coche **Actif**. Les jours où le
+  médicament était désactivé ne sont pas comptés comme consommation.
 
 ## Chronologie du traitement
 

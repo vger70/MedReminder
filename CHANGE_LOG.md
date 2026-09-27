@@ -30,10 +30,38 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #83 — B.1 Phase 2c-2: derive the stock ledger from facts in the use cases
+
+Link: [vger70/MedReminder#83](https://github.com/vger70/MedReminder/pull/83)
+Branch: `claude/b1-phase2c2-ledger-wiring`
+
+### Changed
+
+- The stock ledger is derived from facts (`LedgerDeriver`) and kept up
+  to date by the catch-up, intakes and stock counts
+  (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` §4.3, P9). Stock counts
+  are stored as facts with their outcome; activation changes, intake
+  and schedule recording instants and the epoch baseline are recorded.
+- A schedule change dated in the past recalculates automatic
+  consumption from that date; the days a medicine was inactive are not
+  booked after a reactivation; of two schedule changes with the same
+  date the later one wins. Movements recorded before this version are
+  never recalculated (re-freeze at first start and on every import).
+- A backdated intake on a recalculated day replaces the automatic
+  consumption instead of adding a reversal movement.
+
+### Docs
+
+- User guides (en, it, fr, es, de): past *Effective from* dates and
+  reactivation. `ANALYSIS.md` §4.1, §4.3, §4.4, §8.1;
+  `EXPORT-FORMAT.md` §5.1 (import freeze); B.1 analysis (P9, §13, §14,
+  §20).
+
 ## PR #82 — B.1 Phase 2c-1: LedgerDeriver in the Domain, with parity against the use cases
 
 Link: [vger70/MedReminder#82](https://github.com/vger70/MedReminder/pull/82)
 Branch: `claude/b1-phase2c1-ledger-deriver`
+**Status:** merged (2026-09-27)
 
 ### Added
 

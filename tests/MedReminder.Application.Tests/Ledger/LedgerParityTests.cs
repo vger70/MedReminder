@@ -6,11 +6,12 @@ using Xunit;
 
 namespace MedReminder.Application.Tests.Ledger;
 
-// S9 acceptance (a) on the production LedgerDeriver: for every user
-// action that is not retroactive, the derived ledger reproduces
-// today's stock and StockEpoch exactly. Retroactive changes are
-// excluded on purpose: D6 and D15 change their behavior (see
-// LedgerDocumentedDifferenceTests).
+// The ledger the application stores equals a derivation from the facts
+// recorded independently by the harness, after every action of random
+// scenarios (B.1 Phase 2c-2). Retroactive changes (D6, D15, same-date
+// schedule rows) are included: since 2c-2 the use cases derive too.
+// Phase 2c-1 ran these scenarios without them against the former use
+// cases and found parity on 10 000 seeds (ANALYSIS-B1-MOBILE-SYNC.md §13).
 //
 // LEDGER_PARITY_SEEDS raises the number of random scenarios (default
 // 300); LEDGER_PARITY_FIRST_SEED replays one seed.
@@ -194,16 +195,13 @@ public sealed class LedgerParityTests
                 });
                 break;
             case 6:
-                var from = h.Today.AddDays(rng.Next(0, 6));
-                var existing = h.Oracle.Schedules.ListForMedicineAsync(id, default).GetAwaiter().GetResult();
-                if (existing.Any(r => r.EffectiveFrom == from)) break;
-                h.ChangeSchedule(id, from, rng.Next(1, 4) * 0.5m, rng.Next(1, 4));
+                h.ChangeSchedule(id, h.Today.AddDays(rng.Next(-5, 6)), rng.Next(1, 4) * 0.5m, rng.Next(1, 4));
                 break;
             case 7:
                 h.Suspend(id, h.Today.AddDays(rng.Next(0, 4)));
                 break;
             case 8:
-                var open = h.Oracle.Suspensions.GetOpenSuspensionAsync(id, default).GetAwaiter().GetResult();
+                var open = h.App.Suspensions.GetOpenSuspensionAsync(id, default).GetAwaiter().GetResult();
                 if (open is null) break;
                 var min = open.StartDate > h.Today ? open.StartDate : h.Today;
                 h.Resume(id, min.AddDays(rng.Next(0, 4)));
@@ -212,18 +210,16 @@ public sealed class LedgerParityTests
                 h.Update(id, threshold: rng.Next(0, 15));
                 break;
             case 10:
-                // Non-retroactive only: an end date already in the past
-                // re-opens closed days when moved (D6).
-                var current = h.Oracle.Medicines.GetAsync(id, default).GetAwaiter().GetResult()!.EndDate;
-                if (current is { } c && c < h.Today.AddDays(-1)) break;
-                h.Update(id, setEnd: true, end: rng.NextDouble() < 0.3 ? null : h.Today.AddDays(rng.Next(0, 20)));
+                h.Update(id, setEnd: true, end: rng.NextDouble() < 0.3 ? null : h.Today.AddDays(rng.Next(-5, 20)));
                 break;
             case 11:
-                // Deactivation only: reactivation is D15.
-                if (rng.NextDouble() < 0.5)
+                var roll = rng.NextDouble();
+                if (roll < 0.5)
                     h.Update(id, slots: rng.NextDouble() < 0.2 ? [] : RandomSlots(rng));
-                else if (rng.NextDouble() < 0.2)
+                else if (roll < 0.65)
                     h.Deactivate(id);
+                else if (roll < 0.8)
+                    h.Update(id, active: true);
                 break;
         }
     }
