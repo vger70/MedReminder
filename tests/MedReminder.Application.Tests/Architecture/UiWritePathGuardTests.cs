@@ -51,7 +51,7 @@ public class UiWritePathGuardTests
         var names = WriteMethodNames();
 
         names.Should().Contain(["AddAsync", "AddRangeAsync", "UpdateAsync",
-            "AddSetAsync", "PruneOlderThanAsync", "SaveChangesAsync"]);
+            "AddSetAsync", "PruneOlderThanAsync", "SaveChangesAsync", "AppendAsync"]);
         names.Should().NotContain(["GetAsync", "ListAllAsync", "ExistsAsync"]);
     }
 
@@ -113,7 +113,8 @@ public class UiWritePathGuardTests
         var ports = typeof(IUnitOfWork).Assembly.GetTypes()
             .Where(t => t.IsInterface
                 && t.Namespace == typeof(IUnitOfWork).Namespace
-                && (t.Name.EndsWith("Repository", StringComparison.Ordinal) || t == typeof(IUnitOfWork)));
+                && (t.Name.EndsWith("Repository", StringComparison.Ordinal)
+                    || t == typeof(IUnitOfWork) || t == typeof(IOperationLog)));
 
         return ports
             .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance))

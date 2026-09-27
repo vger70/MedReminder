@@ -1132,7 +1132,11 @@ internal sealed class MainForm : MedReminderFormBase
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var usecase = scope.ServiceProvider.GetRequiredService<UpdateMedicine>();
-            await usecase.ExecuteAsync(dialog.Result.ToUpdateCommand(row.Id), CancellationToken.None);
+            // Only the fields the user changed are written (B.1 Phase
+            // 3a, stale forms): the seed is the baseline.
+            await usecase.ExecuteAsync(
+                dialog.Result.ToUpdateCommand(row.Id) with { Baseline = seed.ToUpdateCommand(row.Id) },
+                CancellationToken.None);
 
             // If the user changed the schedule shape in the edit dialog,
             // record it as a new versioned schedule entry effective

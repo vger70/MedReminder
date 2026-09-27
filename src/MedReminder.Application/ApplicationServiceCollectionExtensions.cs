@@ -1,9 +1,11 @@
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
+using MedReminder.Application.Sync;
 using MedReminder.Application.UseCases;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +19,10 @@ public static class ApplicationServiceCollectionExtensions
 {
     public static IServiceCollection AddMedReminderApplication(this IServiceCollection services)
     {
+        // B.1 Phase 3a: operation capture. Records nothing until sync
+        // is enabled for the profile (ISyncSettingsStore).
+        services.AddScoped<IOperationLog, OperationLog>();
+
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();
         services.AddScoped<DeactivateMedicine>();

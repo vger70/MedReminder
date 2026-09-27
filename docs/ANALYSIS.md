@@ -153,6 +153,7 @@ is used.
 | `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity`, `RecordedAt` |
 | `MedicineActivityChange` (`MedicineActivityChanges`) | Dated activation / deactivation (B.1 Phase 2c-2) | `Day`, `Active`, `RecordedAt` |
 | `FactRetraction` (`FactRetractions`) | Tombstone of a retracted fact (B.1 Phase 2d) | `FactId` (unique), `Kind`, `RecordedAt` |
+| `SyncOperation` (`SyncOperations`) | Local operation log for sync (B.1 Phase 3a); empty while sync is disabled | HLC (`HlcPhysicalMs`, `HlcCounter`, `DeviceId`), `Generation`, `Type`, `SchemaVersion`, `MedicineId`, `Payload` (JSON), `SegmentSeq?` |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
@@ -254,14 +255,28 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   kept and the ledger is derived again.
 - Of two schedule rows with the same `EffectiveFrom`, the later
   recorded one wins (`DailyConsumption`, `LedgerDeriver`).
-- `ConsumptionCatchUp.RunAsync`, `MedicationMonitor.RunAsync`,
-  `RegisterIntake.ExecuteAsync` and `ReconcileStock.ExecuteAsync` run
-  under `MonitoringGate`, a
-  process-wide semaphore, because the hosted tick and the "Check now"
-  command start them from separate scopes. There is no database
-  unique constraint on consumption: several manual `Consumption`
-  rows per day are legitimate. One process per Windows session
-  (single-instance mutex) makes the in-process gate sufficient.
+- Every use case (`UseCases/`, `RetractFact`,
+  `LinkMedicineToReferenceUseCase`), `ConsumptionCatchUp.RunAsync` and
+  `MedicationMonitor.RunAsync` run under `WriteGate`, a process-wide
+  semaphore (named `MonitoringGate` before B.1 Phase 3a, when it covered
+  only the catch-up, the monitor and the ledger use cases). Each writer
+  reads, decides and saves in its own scope; the gate keeps another
+  commit from landing in between. There is no database unique
+  constraint on consumption: several manual `Consumption` rows per day
+  are legitimate. One process per Windows session (single-instance
+  mutex) makes the in-process gate sufficient. The gate is not
+  reentrant.
+- Operation capture (B.1 Phase 3a): each use case adds the facts it
+  writes to the local operation log (`IOperationLog`, table
+  `SyncOperations`) in the same unit of work, stamped with a hybrid
+  logical clock (`HybridTimestamp`, `HybridClock`). Derived rows and
+  notification bookkeeping are never logged. Nothing is recorded until
+  sync is enabled for the profile (`sync.settings.json`, no UI yet);
+  `OperationEmissionGuardTests` requires every Application service that
+  saves user facts to take `IOperationLog`.
+- `UpdateMedicine` takes an optional `Baseline` (the values the edit
+  dialog loaded): with it, only the fields the user changed are written,
+  and unchanged slots record no new slot set.
 - One low-stock notification per epoch that succeeded on at least one
   channel, the epoch identified by `EpochFactId` when the event has one
   (B.1 Phase 2d), else by `StockEpoch`; a failed attempt does not block
@@ -360,7 +375,8 @@ ticks. A failing tick is logged and does not stop the service.
 The Application services (`MedicationMonitor`, `DoseReminderService`,
 `ConsumptionCatchUp`) have no scheduling code and are tested with a
 fake `TimeProvider`. The monitor pass and the catch-up are serialized
-with the "Check now" command through `MonitoringGate` (§4.4).
+with the "Check now" command and with every use case through
+`WriteGate` (§4.4).
 
 ---
 
@@ -421,7 +437,8 @@ start:
    whose absence triggers the re-freeze (`LedgerFreeze`, also applied
    to every import); then the B.1 Phase 2d patch: `FactRetractions`,
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
-   `NotificationEvents.EpochFactId`.
+   `NotificationEvents.EpochFactId`; then `SyncOperations` with its two
+   indexes (B.1 Phase 3a).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.

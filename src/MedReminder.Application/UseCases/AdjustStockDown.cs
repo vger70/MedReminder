@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Stock;
 
@@ -16,17 +17,20 @@ public sealed class AdjustStockDown
 {
     private readonly IMedicineRepository _medicines;
     private readonly IStockMovementRepository _stock;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
     public AdjustStockDown(
         IMedicineRepository medicines,
         IStockMovementRepository stock,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _stock = stock;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
@@ -36,6 +40,11 @@ public sealed class AdjustStockDown
         ArgumentNullException.ThrowIfNull(cmd);
         if (cmd.Quantity <= 0m)
             throw new ArgumentException("Quantity to subtract must be positive.", nameof(cmd));
+        await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
+
+    private async Task ExecuteCoreAsync(AdjustStockDownCommand cmd, CancellationToken cancellationToken)
+    {
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
@@ -60,6 +69,7 @@ public sealed class AdjustStockDown
         };
 
         await _stock.AddAsync(movement, cancellationToken);
+        await _operations.AppendAsync([Operations.StockEntry(movement)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
     }
 }

@@ -1,5 +1,7 @@
 using MedReminder.Application.Ledger;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Sync;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Stock;
@@ -26,6 +28,9 @@ internal sealed class ApplicationTestScope
     public InMemoryLedgerCutoffRepository Cutoff { get; } = new();
     public InMemoryFactRetractionRepository Retractions { get; } = new();
     public InMemoryUnitOfWork Uow { get; } = new();
+    public InMemorySyncSettingsStore SyncSettingsStore { get; } = new();
+    public InMemorySyncOperationRepository SyncOperations { get; } = new();
+    public OperationLog Operations { get; }
     public RecordingEmailNotificationService Email { get; } = new();
     public RecordingWindowsNotificationService Windows { get; } = new();
 
@@ -49,31 +54,41 @@ internal sealed class ApplicationTestScope
     {
         Clock = new FakeTimeProvider(now ?? new DateTimeOffset(2026, 9, 13, 12, 0, 0, TimeSpan.Zero));
 
+        Operations = new OperationLog(SyncSettingsStore, SyncOperations, Clock);
+
         Ledger = new LedgerSynchronizer(
             new LedgerFactsLoader(Stock, Intakes, Schedules, Suspensions, Slots, Activity, Counts, Cutoff),
             Stock, Medicines, Notifications, Clock);
         FactHistory = new FactHistoryQuery(Medicines, Stock, Intakes, Counts, Suspensions, Cutoff, Clock);
         RetractFact = new RetractFact(
-            FactHistory, Medicines, Stock, Intakes, Counts, Suspensions, Retractions, Ledger, Uow, Clock);
+            FactHistory, Medicines, Stock, Intakes, Counts, Suspensions, Retractions, Ledger, Operations, Uow, Clock);
 
-        AddMedicine = new AddMedicine(Medicines, Schedules, Slots, Stock, Uow, Clock);
-        UpdateMedicine = new UpdateMedicine(Medicines, Slots, Activity, Uow, Clock);
-        DeactivateMedicine = new DeactivateMedicine(Medicines, Activity, Uow, Clock);
-        AddStock = new AddStock(Medicines, Stock, Uow, Clock);
-        AdjustStockDown = new AdjustStockDown(Medicines, Stock, Uow, Clock);
-        SuspendMedication = new SuspendMedication(Medicines, Suspensions, Uow, Clock);
-        ResumeMedication = new ResumeMedication(Medicines, Suspensions, Uow, Clock);
-        ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Uow, Clock);
-        RegisterIntake = new RegisterIntake(Medicines, Intakes, Ledger, Uow, Clock);
+        AddMedicine = new AddMedicine(Medicines, Schedules, Slots, Stock, Operations, Uow, Clock);
+        UpdateMedicine = new UpdateMedicine(Medicines, Slots, Activity, Operations, Uow, Clock);
+        DeactivateMedicine = new DeactivateMedicine(Medicines, Activity, Operations, Uow, Clock);
+        AddStock = new AddStock(Medicines, Stock, Operations, Uow, Clock);
+        AdjustStockDown = new AdjustStockDown(Medicines, Stock, Operations, Uow, Clock);
+        SuspendMedication = new SuspendMedication(Medicines, Suspensions, Operations, Uow, Clock);
+        ResumeMedication = new ResumeMedication(Medicines, Suspensions, Operations, Uow, Clock);
+        ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Operations, Uow, Clock);
+        RegisterIntake = new RegisterIntake(Medicines, Intakes, Ledger, Operations, Uow, Clock);
 
         ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow);
         ReconcileStock = new ReconcileStock(
-            Medicines, Schedules, Suspensions, Slots, Counts, Ledger, Uow, Clock);
+            Medicines, Schedules, Suspensions, Slots, Counts, Ledger, Operations, Uow, Clock);
 
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance);
+    }
+
+    // Turns operation capture on, as enabling sync will (Phase 3d).
+    public SyncSettings EnableSync(Guid? deviceId = null)
+    {
+        var settings = new SyncSettings(Guid.NewGuid(), deviceId ?? Guid.NewGuid(), 1);
+        SyncSettingsStore.Save(settings);
+        return settings;
     }
 
     // Mirrors LedgerFreeze (Infrastructure.Portable): what the B.1 boot

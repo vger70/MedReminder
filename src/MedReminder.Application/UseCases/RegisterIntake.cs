@@ -1,6 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Ledger;
-using MedReminder.Application.Monitoring;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
@@ -31,6 +31,7 @@ public sealed class RegisterIntake
     private readonly IMedicineRepository _medicines;
     private readonly IMedicationIntakeRepository _intakes;
     private readonly LedgerSynchronizer _ledger;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
@@ -38,23 +39,25 @@ public sealed class RegisterIntake
         IMedicineRepository medicines,
         IMedicationIntakeRepository intakes,
         LedgerSynchronizer ledger,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _intakes = intakes;
         _ledger = ledger;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
 
-    // Runs under MonitoringGate: a catch-up interleaved between the
+    // Runs under WriteGate: a catch-up interleaved between the
     // ledger read and the commit would derive from facts that miss this
     // intake.
     public Task<Guid> ExecuteAsync(RegisterIntakeCommand cmd, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cmd);
-        return MonitoringGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+        return WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
     }
 
     private async Task<Guid> ExecuteCoreAsync(RegisterIntakeCommand cmd, CancellationToken cancellationToken)
@@ -105,6 +108,7 @@ public sealed class RegisterIntake
 
         medicine.UpdatedAt = now;
         await _medicines.UpdateAsync(medicine, cancellationToken);
+        await _operations.AppendAsync([Operations.Intake(intake)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
         return intake.Id;
     }

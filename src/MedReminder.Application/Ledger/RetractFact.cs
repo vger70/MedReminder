@@ -1,5 +1,5 @@
 using MedReminder.Application.Abstractions;
-using MedReminder.Application.Monitoring;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Ledger;
 
 namespace MedReminder.Application.Ledger;
@@ -22,6 +22,7 @@ public sealed class RetractFact
     private readonly IMedicationSuspensionRepository _suspensions;
     private readonly IFactRetractionRepository _retractions;
     private readonly LedgerSynchronizer _ledger;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
@@ -34,6 +35,7 @@ public sealed class RetractFact
         IMedicationSuspensionRepository suspensions,
         IFactRetractionRepository retractions,
         LedgerSynchronizer ledger,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
@@ -45,16 +47,17 @@ public sealed class RetractFact
         _suspensions = suspensions;
         _retractions = retractions;
         _ledger = ledger;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
 
-    // Runs under MonitoringGate, like every ledger writer. Returns the
+    // Runs under WriteGate, like every ledger writer. Returns the
     // tombstone id.
     public Task<Guid> ExecuteAsync(RetractFactCommand cmd, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cmd);
-        return MonitoringGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+        return WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
     }
 
     private async Task<Guid> ExecuteCoreAsync(RetractFactCommand cmd, CancellationToken cancellationToken)
@@ -113,6 +116,7 @@ public sealed class RetractFact
         await _ledger.ApplyAsync(medicine, facts, cancellationToken);
         medicine.UpdatedAt = now;
         await _medicines.UpdateAsync(medicine, cancellationToken);
+        await _operations.AppendAsync([Operations.Retraction(tombstone)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
         return tombstone.Id;
     }

@@ -1,6 +1,8 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Sync;
 
 namespace MedReminder.Application.Catalogue;
 
@@ -14,17 +16,20 @@ public sealed class LinkMedicineToReferenceUseCase
 {
     private readonly IMedicineRepository _medicines;
     private readonly IReferenceCatalogueQueryService _query;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
     public LinkMedicineToReferenceUseCase(
         IMedicineRepository medicines,
         IReferenceCatalogueQueryService query,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _query = query;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
@@ -40,6 +45,17 @@ public sealed class LinkMedicineToReferenceUseCase
             throw new ArgumentException("National code is required.", nameof(nationalCode));
         }
 
+        return await WriteGate.RunExclusiveAsync(
+            ct => ExecuteCoreAsync(medicineId, referenceCountry, nationalCode, ct), cancellationToken);
+    }
+
+    private async Task<LinkResult> ExecuteCoreAsync(
+        Guid medicineId,
+        CountryCode referenceCountry,
+        string nationalCode,
+        CancellationToken cancellationToken)
+    {
+
         var medicine = await _medicines.GetAsync(medicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {medicineId} not found.");
 
@@ -49,6 +65,7 @@ public sealed class LinkMedicineToReferenceUseCase
             return LinkResult.ReferenceNotFound;
         }
 
+        var before = MedicineFieldCodec.Snapshot(medicine);
         medicine.NationalCode = reference.NationalCode;
         medicine.LinkedReferenceMedicineId = reference.Id;
 
@@ -68,6 +85,7 @@ public sealed class LinkMedicineToReferenceUseCase
         medicine.UpdatedAt = _clock.GetUtcNow();
 
         await _medicines.UpdateAsync(medicine, cancellationToken);
+        await _operations.AppendAsync([.. Operations.FieldChanges(before, medicine)], cancellationToken);
         _ = await _uow.SaveChangesAsync(cancellationToken);
 
         return LinkResult.Linked;

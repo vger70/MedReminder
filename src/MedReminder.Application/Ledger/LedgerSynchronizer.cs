@@ -17,7 +17,7 @@ public sealed record LedgerSyncResult(
 // ANALYSIS-B1-MOBILE-SYNC.md §4.3). Rows are compared by their
 // deterministic id, so an unchanged ledger writes nothing. Does not
 // call SaveChangesAsync: the caller owns the unit of work and must hold
-// MonitoringGate, like every other ledger writer.
+// WriteGate, like every other ledger writer.
 public sealed class LedgerSynchronizer
 {
     private readonly LedgerFactsLoader _loader;

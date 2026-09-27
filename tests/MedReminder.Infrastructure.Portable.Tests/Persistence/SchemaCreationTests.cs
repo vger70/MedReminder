@@ -23,5 +23,6 @@ public class SchemaCreationTests
         (await context.MedicationSuspensions.CountAsync()).Should().Be(0);
         (await context.MedicationIntakes.CountAsync()).Should().Be(0);
         (await context.NotificationEvents.CountAsync()).Should().Be(0);
+        (await context.SyncOperations.CountAsync()).Should().Be(0);
     }
 }

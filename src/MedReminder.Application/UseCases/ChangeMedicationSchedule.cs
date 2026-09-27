@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Application.UseCases;
@@ -26,17 +27,20 @@ public sealed class ChangeMedicationSchedule
 {
     private readonly IMedicineRepository _medicines;
     private readonly IMedicationScheduleHistoryRepository _schedules;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
     public ChangeMedicationSchedule(
         IMedicineRepository medicines,
         IMedicationScheduleHistoryRepository schedules,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _schedules = schedules;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
@@ -60,6 +64,11 @@ public sealed class ChangeMedicationSchedule
                 throw new ArgumentException("Display administrations per day cannot be negative.", nameof(cmd));
         }
 
+        await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
+
+    private async Task ExecuteCoreAsync(ChangeMedicationScheduleCommand cmd, CancellationToken cancellationToken)
+    {
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
@@ -91,6 +100,7 @@ public sealed class ChangeMedicationSchedule
 
         await _schedules.AddAsync(entry, cancellationToken);
         await _medicines.UpdateAsync(medicine, cancellationToken);
+        await _operations.AppendAsync([Operations.ScheduleRow(entry)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
     }
 }

@@ -37,7 +37,7 @@ public class EndToEndUseCaseTests
                 new MedicationScheduleHistoryRepository(ctx),
                 new MedicationAdministrationSlotRepository(ctx),
                 new StockMovementRepository(ctx),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 FixedClock);
 
             medicineId = await addMedicine.ExecuteAsync(new AddMedicineCommand(
@@ -56,7 +56,7 @@ public class EndToEndUseCaseTests
             var addStock = new AddStock(
                 new MedicineRepository(ctx),
                 new StockMovementRepository(ctx),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 FixedClock);
             await addStock.ExecuteAsync(
                 new AddStockCommand(medicineId, 30m, StockMovementKind.NewPackage),
@@ -92,7 +92,7 @@ public class EndToEndUseCaseTests
                 new MedicationScheduleHistoryRepository(ctx),
                 new MedicationAdministrationSlotRepository(ctx),
                 new StockMovementRepository(ctx),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 FixedClock);
             medicineId = await addMedicine.ExecuteAsync(new AddMedicineCommand(
                 Name: "Enalapril",
@@ -162,7 +162,7 @@ public class EndToEndUseCaseTests
                 new MedicationScheduleHistoryRepository(ctx),
                 new MedicationAdministrationSlotRepository(ctx),
                 new StockMovementRepository(ctx, clock),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 clock).ExecuteAsync(new AddMedicineCommand(
                     Name: "Enalapril",
                     Unit: "compresse",
@@ -189,7 +189,7 @@ public class EndToEndUseCaseTests
                 new MedicineRepository(ctx),
                 new MedicationIntakeRepository(ctx),
                 LedgerFor(ctx, clock),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 clock).ExecuteAsync(
                     new RegisterIntakeCommand(medicineId, new DateOnly(2026, 9, 11), IntakeStatus.Taken, 1m),
                     CancellationToken.None);
@@ -232,7 +232,7 @@ public class EndToEndUseCaseTests
                 new MedicationScheduleHistoryRepository(ctx),
                 new MedicationAdministrationSlotRepository(ctx),
                 new StockMovementRepository(ctx, clock),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 clock).ExecuteAsync(new AddMedicineCommand(
                     Name: "Enalapril",
                     Unit: "compresse",
@@ -265,7 +265,7 @@ public class EndToEndUseCaseTests
             await new ChangeMedicationSchedule(
                 new MedicineRepository(ctx),
                 new MedicationScheduleHistoryRepository(ctx),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 clock).ExecuteAsync(
                     new ChangeMedicationScheduleCommand(medicineId, 1m, 2, new DateOnly(2026, 9, 8)),
                     CancellationToken.None);
@@ -285,7 +285,7 @@ public class EndToEndUseCaseTests
                 new MedicationAdministrationSlotRepository(ctx),
                 new StockCountRepository(ctx),
                 LedgerFor(ctx, clock),
-                new UnitOfWork(ctx),
+                TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 clock);
             var result = await reconcile.ExecuteAsync(
                 new ReconcileStockCommand(medicineId, 30m, TakenToday: 0m, Notes: "count"), CancellationToken.None);

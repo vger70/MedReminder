@@ -1,8 +1,10 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
+using MedReminder.Domain.Sync;
 
 namespace MedReminder.Application.UseCases;
 
@@ -43,6 +45,7 @@ public sealed class AddMedicine
     private readonly IMedicationScheduleHistoryRepository _schedules;
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IStockMovementRepository _stock;
+    private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
 
@@ -51,6 +54,7 @@ public sealed class AddMedicine
         IMedicationScheduleHistoryRepository schedules,
         IMedicationAdministrationSlotRepository slots,
         IStockMovementRepository stock,
+        IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
@@ -58,6 +62,7 @@ public sealed class AddMedicine
         _schedules = schedules;
         _slots = slots;
         _stock = stock;
+        _operations = operations;
         _uow = uow;
         _clock = clock;
     }
@@ -66,7 +71,11 @@ public sealed class AddMedicine
     {
         ArgumentNullException.ThrowIfNull(cmd);
         Validate(cmd);
+        return await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
 
+    private async Task<Guid> ExecuteCoreAsync(AddMedicineCommand cmd, CancellationToken cancellationToken)
+    {
         var effectiveSchedule = cmd.InitialSchedule
             ?? new FixedDailySchedule(cmd.DosePerAdministration, cmd.AdministrationsPerDay);
 
@@ -96,13 +105,14 @@ public sealed class AddMedicine
         };
 
         await _medicines.AddAsync(medicine, cancellationToken);
+        var operations = new List<SyncOperationBody> { Operations.Created(medicine) };
 
         // First entry of the versioned schedule. The codec carries
         // the schedule shape; the legacy dose / administrations
         // columns are used by the codec as the FixedDaily fallback
         // and, for other kinds, as display-only values.
         var (kind, payload) = ScheduleCodec.Serialize(effectiveSchedule);
-        await _schedules.AddAsync(new MedicationScheduleHistory
+        var scheduleRow = new MedicationScheduleHistory
         {
             MedicineId = medicine.Id,
             EffectiveFrom = cmd.StartDate,
@@ -111,13 +121,15 @@ public sealed class AddMedicine
             ScheduleKind = kind,
             SchedulePayload = payload,
             RecordedAt = now,
-        }, cancellationToken);
+        };
+        await _schedules.AddAsync(scheduleRow, cancellationToken);
+        operations.Add(Operations.ScheduleRow(scheduleRow));
 
         // Initial stock load (if > 0).
         if (cmd.InitialQuantity > 0m)
         {
             var initialAt = ToLocalMiddayOffset(cmd.StartDate);
-            await _stock.AddAsync(new StockMovement
+            var initialLoad = new StockMovement
             {
                 MedicineId = medicine.Id,
                 OccurredAt = initialAt,
@@ -125,7 +137,9 @@ public sealed class AddMedicine
                 QuantityDelta = cmd.InitialQuantity,
                 StockEpoch = 1,
                 Origin = StockMovementOrigin.User,
-            }, cancellationToken);
+            };
+            await _stock.AddAsync(initialLoad, cancellationToken);
+            operations.Add(Operations.StockEntry(initialLoad));
         }
 
         // Optional administration slots (Increment 10). If provided
@@ -140,10 +154,12 @@ public sealed class AddMedicine
                 EffectiveFrom = cmd.StartDate,
                 RecordedAt = now,
             };
-            await _slots.AddSetAsync(
-                set, AdministrationSlotSetBuilder.BuildSlots(set, slots), cancellationToken);
+            var built = AdministrationSlotSetBuilder.BuildSlots(set, slots);
+            await _slots.AddSetAsync(set, built, cancellationToken);
+            operations.Add(Operations.SlotSet(set, built));
         }
 
+        await _operations.AppendAsync(operations, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
         return medicine.Id;
     }
