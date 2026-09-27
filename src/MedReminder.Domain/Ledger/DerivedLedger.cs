@@ -1,0 +1,41 @@
+using MedReminder.Domain.Stock;
+
+namespace MedReminder.Domain.Ledger;
+
+// Rule that produced a row, part of its deterministic id.
+public enum DerivedRule
+{
+    Legacy = 0,
+    UserEntry = 1,
+    IntakeConsumption = 2,
+    FrozenDayReversal = 3,
+    AutomaticConsumption = 4,
+    CountDayConsumption = 5,
+    CountCorrection = 6,
+}
+
+// One row of the derived ledger. Legacy and UserEntry rows are the
+// input facts passed through (their own ids); the others are derived
+// and carry a name-based id, so a re-derivation replaces them
+// idempotently.
+public sealed record LedgerRow(
+    Guid Id,
+    DerivedRule Rule,
+    StockMovementKind Kind,
+    decimal Delta,
+    DateOnly Day,
+    DateTimeOffset OccurredAt)
+{
+    public bool IsDerived => Rule is not (DerivedRule.Legacy or DerivedRule.UserEntry);
+}
+
+// RawTotal may be negative (consumption keeps running at zero stock);
+// Stock is clamped as MedicineStock.Current does.
+public sealed record DerivedLedger(
+    IReadOnlyList<LedgerRow> Rows,
+    decimal RawTotal,
+    decimal Stock,
+    int Epoch)
+{
+    public IEnumerable<LedgerRow> DerivedRows => Rows.Where(r => r.IsDerived);
+}

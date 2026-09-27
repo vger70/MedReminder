@@ -300,7 +300,10 @@ Rules, in this order (each rule states its own day range):
    `RegisterIntake` writes today: a `PositiveCorrection` reversing that
    day's `Legacy` automatic consumption (if the day has one and no
    other intake exists for it), then the `Taken` quantity if any.
-   Frozen rows are never edited.
+   Frozen rows are never edited. Implemented (Phase 2c-1) for any day
+   carrying `Legacy` consumption, not only days up to the cutoff: the
+   patch can run in the middle of day C+1 after a count materialized
+   it.
 2. **Automatic consumption, days in `(cutoffDay, yesterday]`**: if no
    intake of any status exists for `d`, no count anchor has already
    derived `d`'s consumption (rule 3), the medicine is active on `d`
@@ -308,7 +311,8 @@ Rules, in this order (each rule states its own day range):
    suspended, derived automatic consumption =
    `ConsumptionMaterializer` result for `d` (existing Domain code,
    unchanged), at local midday of `d` as today `[VERIFIED —
-   ConsumptionCatchUp]`. An intake day never gets automatic
+   ConsumptionCatchUp]`. A day that already carries `Legacy`
+   consumption is skipped too (Phase 2c-1, same reason as rule 1b). An intake day never gets automatic
    consumption, so today's backdated-intake reversal movement is no
    longer needed.
 3. **Stock-count anchors**: for each `StockCount`, in HLC order, the
@@ -329,7 +333,12 @@ Rules, in this order (each rule states its own day range):
    reverses it today. The epoch rule uses the threshold captured in the
    fact (`thresholdAtCount`). Snapshot evaluation needs the value of
    every register "as of" an HLC, so registers keep their version
-   history (§4.2).
+   history (§4.2). Until Phase 3 there is no version history: the
+   outcome (start-of-day ledger, count-day quantity, correction,
+   materialization, epoch advance) is evaluated when the count is
+   recorded and stored with the fact. On one device this is exact;
+   Phase 3 re-evaluates it when facts from other devices arrive
+   (product owner, 2026-09-27).
 
 Derived movement ids are deterministic (a name-based GUID over
 `medicineId`, rule, day or anchor id), so a re-derivation replaces rows
@@ -1026,20 +1035,30 @@ retraction UI only if D8 = yes.
 
 **Effort**: 12–18 days `[INFERRED]`.
 
-**Split into four pull requests** (product owner, 2026-09-27):
+**Split into pull requests** (product owner, 2026-09-27):
 
 | PR | Scope | State |
 |---|---|---|
 | 2a | Action 1 (P8) | Merged (#80) |
-| 2b | Schema and export for actions 2, 5, 6: `Origin`, `StockCounts` table, dated slot sets, `Legacy` freeze and cutoff, export schema version 2. No behavior change: `ReconcileStock` does not record counts yet | #81 |
-| 2c | Actions 2 (count recording), 3, 4 | Not started |
+| 2b | Schema and export for actions 2, 5, 6: `Origin`, `StockCounts` table, dated slot sets, `Legacy` freeze and cutoff, export schema version 2. No behavior change: `ReconcileStock` does not record counts yet | Merged (#81) |
+| 2c-1 | Action 3, Domain part: `LedgerDeriver` and `EvaluateCount` in `MedReminder.Domain/Ledger`, S9 parity harness ported to the use cases. Not called by the application: no behavior change | #82 |
+| 2c-2 | Actions 2 (count recording), 3 (use cases write facts, derived rows replaced), 4; schema for activity history, recording instants, epoch baseline and `EpochFactId`; re-freeze | Not started |
 | 2d | Fact retraction (D8) | Not started |
 
-Constraint for 2c `[INFERRED]`: rows written between the 2b patch and
-the 2c release carry `Derived` count corrections without a
-`StockCount` fact, so a deriver would lose them. If a release ships 2b
-without 2c, the 2c patch must move C forward to the day before its own
-patch and mark the rows written in between `Legacy`.
+2c was split into 2c-1 and 2c-2 by the product owner (2026-09-27).
+
+Constraint for 2c-2, decided (product owner, 2026-09-27): rows written
+between the 2b patch and 2c-2 carry `Derived` count corrections without
+a `StockCount` fact, and intakes have no recording instant. The 2c-2
+patch therefore re-freezes: every existing movement and intake becomes
+`Legacy`, C moves to the day before the 2c-2 patch, and each medicine's
+current `StockEpoch` is stored as its epoch baseline. No past number
+changes.
+
+Phase 2c-1 result: parity holds on 10 000 random 25-day scenarios (one
+third patched on day 12, at a random point of the day) plus scripted
+cases; the four differences of §18.9 are reproduced with the same
+figures.
 
 ### Phase 3 — Sync engine and desktop-to-desktop sync
 
@@ -1382,3 +1401,9 @@ Phase 2 implements the derivation from the prototype and its tests.
   because columns on the slot rows cannot record an empty set. §3.5
   records the day-after-cutoff constraint for rule 1; §13 records the
   Phase 2 split and the cutoff constraint for 2c.
+- 2026-09-27 — Phase 2c-1 implemented: `LedgerDeriver` in the Domain,
+  parity on 10 000 scenarios including mid-day patches. Decisions of
+  the product owner: 2c split into 2c-1 / 2c-2; count outcome stored
+  with the fact until Phase 3 (§4.3 rule 3); 2c-2 re-freezes (§13).
+  Rules 1b and 2 extended to days carrying `Legacy` consumption after
+  the cutoff (§4.3).
