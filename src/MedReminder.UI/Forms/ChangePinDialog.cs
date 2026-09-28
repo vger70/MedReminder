@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -69,7 +70,7 @@ internal sealed class ChangePinDialog : MedReminderFormBase
         _statusLabel = new Label
         {
             AutoSize = true,
-            ForeColor = System.Drawing.Color.Firebrick,
+            ForeColor = UiColors.Error,
             Location = new System.Drawing.Point(16, 128),
             Text = string.Empty,
         };

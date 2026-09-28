@@ -2,6 +2,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Medicines;
 using MedReminder.UI.Controls;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -96,7 +97,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(460, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.ChangeScheduleDialog.Note"),
         };
 

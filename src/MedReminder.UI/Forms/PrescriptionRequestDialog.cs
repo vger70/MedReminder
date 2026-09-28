@@ -3,6 +3,7 @@ using System.Diagnostics;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Notifications;
 using MedReminder.Application.Prescriptions;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -71,7 +72,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             Text = _doctorAddress.Length > 0
                 ? _doctorAddress
                 : _loc.Get("Ui.PrescriptionRequestDialog.Recipient.None"),
-            ForeColor = _doctorAddress.Length > 0 ? SystemColors.ControlText : Color.DimGray,
+            ForeColor = _doctorAddress.Length > 0 ? SystemColors.ControlText : UiColors.Hint,
         };
 
         _subjectBox = new TextBox { Dock = DockStyle.Fill, Text = draft.Subject };
@@ -89,7 +90,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new Size(580, 0),
-            ForeColor = Color.DimGray,
+            ForeColor = UiColors.Hint,
             Margin = new Padding(3, 6, 3, 3),
             Text = _loc.Get(_canSend
                 ? "Ui.PrescriptionRequestDialog.Hint"

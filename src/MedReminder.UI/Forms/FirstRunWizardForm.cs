@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -113,7 +114,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(contentWidth, 0),
-            ForeColor = System.Drawing.Color.Firebrick,
+            ForeColor = UiColors.Error,
             Text = string.Empty,
         };
 

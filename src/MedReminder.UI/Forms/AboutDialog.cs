@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.UpdateChecking;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.Logging;
 
 namespace MedReminder.UI.Forms;
@@ -83,7 +84,7 @@ internal sealed class AboutDialog : MedReminderFormBase
         {
             AutoSize = true,
             Text = _loc.Get("Ui.AboutDialog.Version", version),
-            ForeColor = Color.DarkGray,
+            ForeColor = UiColors.Hint,
         };
 
         var authorLabel = new Label
@@ -138,7 +139,7 @@ internal sealed class AboutDialog : MedReminderFormBase
             // that value to leave room for the vertical scrollbar
             // WinForms reserves on high-DPI displays.
             MaximumSize = new Size(620, 0),
-            ForeColor = Color.DimGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.AboutDialog.Disclaimer"),
         };
 
@@ -183,7 +184,7 @@ internal sealed class AboutDialog : MedReminderFormBase
         _updateStatusLabel = new Label
         {
             AutoSize = true,
-            ForeColor = Color.DimGray,
+            ForeColor = UiColors.Hint,
             MaximumSize = new Size(480, 0),
             Text = string.Empty,
         };
@@ -339,7 +340,7 @@ internal sealed class AboutDialog : MedReminderFormBase
     private async Task RunUpdateCheckAsync()
     {
         _checkUpdatesButton.Enabled = false;
-        _updateStatusLabel.ForeColor = Color.DimGray;
+        _updateStatusLabel.ForeColor = UiColors.Hint;
         _updateStatusLabel.Text = _loc.Get("Ui.AboutDialog.CheckingForUpdates");
 
         try
@@ -351,12 +352,12 @@ internal sealed class AboutDialog : MedReminderFormBase
             switch (result.Status)
             {
                 case UpdateCheckStatus.UpToDate:
-                    _updateStatusLabel.ForeColor = Color.DarkGreen;
+                    _updateStatusLabel.ForeColor = UiColors.Success;
                     _updateStatusLabel.Text = _loc.Get("Ui.UpdateCheck.UpToDate");
                     break;
 
                 case UpdateCheckStatus.NewVersionAvailable:
-                    _updateStatusLabel.ForeColor = Color.DarkOrange;
+                    _updateStatusLabel.ForeColor = UiColors.Warning;
                     _updateStatusLabel.Text = _loc.Get(
                         "Ui.UpdateCheck.NewVersion", result.LatestTag ?? "?");
                     UpdateCheckPrompt.Show(this, _loc, result);
@@ -364,7 +365,7 @@ internal sealed class AboutDialog : MedReminderFormBase
 
                 case UpdateCheckStatus.Error:
                 default:
-                    _updateStatusLabel.ForeColor = Color.Firebrick;
+                    _updateStatusLabel.ForeColor = UiColors.Error;
                     _updateStatusLabel.Text = _loc.Get(
                         "Ui.UpdateCheck.Error", result.ErrorMessage ?? string.Empty);
                     break;
@@ -373,7 +374,7 @@ internal sealed class AboutDialog : MedReminderFormBase
         catch (Exception ex)
         {
             _log.LogWarning(ex, "Update check from the About dialog failed unexpectedly.");
-            _updateStatusLabel.ForeColor = Color.Firebrick;
+            _updateStatusLabel.ForeColor = UiColors.Error;
             _updateStatusLabel.Text = _loc.Get("Ui.UpdateCheck.Error", ex.Message);
         }
         finally

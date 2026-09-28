@@ -44,13 +44,15 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         StartPosition = FormStartPosition.CenterParent;
         MinimumSize = new System.Drawing.Size(560, 400);
 
-        _webView = new WebView2 { Dock = DockStyle.Fill };
+        // The guide follows the profile's text size; ZoomFactor scales
+        // the page content, which the form font does not reach.
+        _webView = new WebView2 { Dock = DockStyle.Fill, ZoomFactor = TextScale };
         _fallbackLabel = new Label
         {
             Dock = DockStyle.Fill,
             Text = _loc.Get("Ui.HelpViewer.Loading"),
             TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Visible = true,
         };
 
@@ -137,7 +139,7 @@ internal sealed class HelpViewerForm : MedReminderFormBase
     {
         _webView.Visible = false;
         _fallbackLabel.Text = message;
-        _fallbackLabel.ForeColor = System.Drawing.Color.Firebrick;
+        _fallbackLabel.ForeColor = UiColors.Error;
         _fallbackLabel.Visible = true;
     }
 

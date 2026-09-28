@@ -94,6 +94,11 @@ UI  ──►  Application  ──►  Domain
   methods, `IUnitOfWork` or the `DbContext`;
   `UiWritePathGuardTests` in `MedReminder.Application.Tests` enforces
   it (B.1 Phase 2a, precondition P8).
+  Every form derives from `MedReminderFormBase`, which on load scales
+  fonts by the profile's text size and bounds, grid rows and list
+  columns by text size times display DPI / 96: the forms are built in
+  96-DPI pixels and do not set `AutoScaleMode`. Text colours come from
+  `UiColors`, which yields to the Windows high-contrast theme.
 - **DataImporter** is a maintainer tool that loads AIFA CSV files into
   PostgreSQL. It shares no code with the runtime and is not shipped.
   See [`DATA_IMPORTER.md`](DATA_IMPORTER.md).
@@ -365,6 +370,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
+    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal)
     sync.settings.json           sync group, device, generation, folder or cloud account (B.1; absent while sync is off)
     sync.protected               sync group key, DPAPI CurrentUser (B.1)
 ```
@@ -410,6 +416,11 @@ Each file wraps a single section (`Smtp`, `Backup`, `UI`,
 `Notifications`) and is bound through `IOptions<T>`. Secrets are
 never stored in these files.
 
+The profile's `ui.settings.json` is not part of this chain: it is read
+once by `Program`, after the profile is chosen and before the main
+window exists (`ProfileUiSettingsFile`, Infrastructure.Portable). A
+missing, unreadable or unknown value reads as Normal.
+
 The donation configuration is read from `assets/donations.settings.json`,
 embedded in the Infrastructure assembly; a missing or invalid section
 disables the feature.
@@ -454,13 +465,15 @@ with the "Check now" command and with every use case through
    active-profile hint when started with `--minimized`, else the only
    profile, else the profile picker. A profile with a PIN requires
    `PinPromptForm`.
-5. Build the host (§5.3, DI registration via
+5. Read the profile's text size (`ui.settings.json`) into
+   `MedReminderFormBase.TextScale`; the windows of step 4 use Normal.
+6. Build the host (§5.3, DI registration via
    `AddMedReminderApplication` and `AddMedReminderInfrastructure`),
    run `DatabaseInitializer` (§8.1), start the hosted services.
-6. Run `MainForm` on the WinForms message loop. `--minimized` starts
+7. Run `MainForm` on the WinForms message loop. `--minimized` starts
    in the tray. Closing the window hides it to the tray; the tray
    menu's Exit ends the process.
-7. Stop the host with a 5-second timeout and release the mutex.
+8. Stop the host with a 5-second timeout and release the mutex.
 
 Unhandled UI-thread exceptions are logged and shown in a message box;
 print cancellations are reported as information, not errors.

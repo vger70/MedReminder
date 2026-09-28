@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -84,7 +85,7 @@ internal sealed class ExportDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new Size(520, 0),
-            ForeColor = Color.DimGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.ExportDialog.AllProfiles.Hint"),
             Visible = false,
         };
@@ -144,7 +145,7 @@ internal sealed class ExportDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new Size(520, 0),
-            ForeColor = Color.DarkOrange,
+            ForeColor = UiColors.Warning,
             Text = _loc.Get("Ui.ExportDialog.Warning.LostPassphrase"),
         };
 
@@ -163,7 +164,7 @@ internal sealed class ExportDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new Size(520, 0),
-            ForeColor = Color.DarkOrange,
+            ForeColor = UiColors.Warning,
             Text = _loc.Get("Ui.ExportDialog.Warning.SmtpPasswordIncluded"),
             Visible = false,
         };
@@ -360,7 +361,7 @@ internal sealed class ExportDialog : MedReminderFormBase
         }
         catch (ProfileExportFailedException ex)
         {
-            _statusLabel.ForeColor = Color.Firebrick;
+            _statusLabel.ForeColor = UiColors.Error;
             _statusLabel.Text = _loc.Get(
                 "Ui.ExportDialog.Error.ProfileFailed", ex.ProfileName, ex.InnerException?.Message ?? string.Empty);
         }
@@ -375,7 +376,7 @@ internal sealed class ExportDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            _statusLabel.ForeColor = Color.Firebrick;
+            _statusLabel.ForeColor = UiColors.Error;
             _statusLabel.Text = ex.Message;
         }
         finally
@@ -458,7 +459,7 @@ internal sealed class ExportDialog : MedReminderFormBase
 
     private void ShowValidation(string message)
     {
-        _statusLabel.ForeColor = Color.Firebrick;
+        _statusLabel.ForeColor = UiColors.Error;
         _statusLabel.Text = message;
     }
 

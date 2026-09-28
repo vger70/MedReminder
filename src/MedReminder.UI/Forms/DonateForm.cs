@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Donations;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.Logging;
 
 namespace MedReminder.UI.Forms;
@@ -108,7 +109,7 @@ internal sealed class DonateForm : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new Size(408, 0),
-            ForeColor = Color.DimGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.Donate.CustomAmount.Help"),
             Margin = new Padding(18, 0, 0, 0),
             Visible = false,

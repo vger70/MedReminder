@@ -8,6 +8,7 @@ using MedReminder.Infrastructure;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Migration;
 using MedReminder.Infrastructure.Persistence;
+using MedReminder.Infrastructure.Settings;
 using MedReminder.Infrastructure.Profiles;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.UI.Forms;
@@ -121,6 +122,13 @@ internal static class Program
             {
                 Log.Warning(ex, "Failed to update ActiveProfileIdHint for {Profile}.", current.Id);
             }
+
+            // Per-profile text size (EVOLUTION-PROPOSALS.md §3.2). Read
+            // here, after the profile is known and before the main
+            // window exists; every MedReminderFormBase applies it on load.
+            var textSize = ProfileUiSettingsFile.ReadTextSize(current.DataDirectory);
+            MedReminderFormBase.TextScale = TextSizes.ScaleOf(textSize);
+            Log.Information("Text size for this profile: {TextSize}.", textSize);
 
             using var host = BuildHost(args, current);
             InitializeDatabase(host);

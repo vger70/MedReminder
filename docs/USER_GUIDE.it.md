@@ -528,7 +528,8 @@ non è sicurezza.
 └── profiles\
     ├── <id-profilo>\                    ← una cartella per profilo
     │   ├── medreminder.db (+ -wal, -shm)
-    │   └── notifications.settings.json  ← ToAddress di questo profilo
+    │   ├── notifications.settings.json  ← ToAddress di questo profilo
+    │   └── ui.settings.json             ← dimensione del testo di questo profilo
     └── …
 ```
 
@@ -997,14 +998,34 @@ tray → **Esci**.
 
 **Impostazioni → Generale**: scegli la lingua dal dropdown
 (italiano, inglese, francese, spagnolo o
-tedesco) e clicca **Salva lingua**. MedReminder si
-riavvia automaticamente per applicare la modifica.
+tedesco) e clicca **Salva**. MedReminder chiede di
+riavviarsi per applicare la modifica.
 
 Note:
 - Le notifiche toast di Windows usano la lingua qui scelta, come il
   resto dell'app.
 - Le notifiche email e la scheda terapia usano la lingua
   selezionata qui.
+
+## Dimensione del testo
+
+**Impostazioni → Generale → Dimensione del testo (questo profilo)**:
+scegli **Normale**, **Grande** o **Molto grande** e clicca **Salva**.
+MedReminder chiede di riavviarsi; dopo il riavvio tutte le finestre
+di questo profilo mostrano testo, pulsanti e righe degli elenchi più
+grandi. Anche la guida viene ingrandita.
+
+Note:
+- La dimensione appartiene al profilo: su un PC condiviso ogni
+  persona mantiene la propria. La scelta del profilo e la richiesta
+  del PIN, mostrate prima di aprire un profilo, usano sempre Normale.
+- MedReminder segue anche il ridimensionamento dello schermo e i
+  temi a contrasto di Windows. Con un tema a contrasto l'elenco dei
+  farmaci non usa le righe colorate ma i colori del tema; la colonna
+  **Stato** indica comunque la condizione di ogni farmaco.
+- Su uno schermo piccolo una finestra in **Molto grande** viene
+  ridotta alla dimensione dello schermo e una parte potrebbe non
+  essere visibile; in quel caso scegli **Grande**.
 
 ## Sostieni lo sviluppo
 

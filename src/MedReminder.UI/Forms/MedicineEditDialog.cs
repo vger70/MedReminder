@@ -7,6 +7,7 @@ using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.UI.Controls;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.Logging;
 
 namespace MedReminder.UI.Forms;
@@ -228,7 +229,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _channelWindows = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.NotifyWindowsShort"), AutoSize = true, Checked = true };
         _channelEmail = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.NotifyEmailShort"), AutoSize = true, Checked = false };
         _remindOnDose = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.RemindOnDose"), AutoSize = true, Checked = false };
-        _remindOnDoseHelp = new Label { AutoSize = true, ForeColor = System.Drawing.Color.DarkGray, Text = string.Empty, Margin = new Padding(20, 0, 4, 4) };
+        _remindOnDoseHelp = new Label { AutoSize = true, ForeColor = UiColors.Hint, Text = string.Empty, Margin = new Padding(20, 0, 4, 4) };
         _remindOnDoseTip = new ToolTip();
         _isActiveBox = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.IsActive"), AutoSize = true, Checked = true };
 
@@ -248,7 +249,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _slotsSummary = new Label
         {
             AutoSize = true,
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = string.Empty,
         };
 
