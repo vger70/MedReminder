@@ -92,7 +92,9 @@ UI  ──►  Application  ──►  Domain
   update check.
 - **UI** is the composition root (`Program.cs`) and the only process
   entry point. It owns the WinForms forms, the tray icon, the toast
-  adapter and the five hosted services (§6). It changes profile data
+  adapter, the webcam capture adapter (`WindowsCameraCaptureService`,
+  the only project whose TFM carries the WinRT projections it needs)
+  and the five hosted services (§6). It changes profile data
   only through Application use cases, never through repository write
   methods, `IUnitOfWork` or the `DbContext`;
   `UiWritePathGuardTests` in `MedReminder.Application.Tests` enforces
@@ -136,6 +138,7 @@ removed or weakened. Publishing is described in
 | `Microsoft.Web.WebView2` | UI | Rendering of the embedded user guide |
 | `Markdig` | UI | Markdown to HTML for the embedded user guide |
 | `QRCoder` (MIT) | UI | Sync pairing QR code (B.1 Phase 4c), rendered as PNG bytes without System.Drawing |
+| `ZXing.Net` (Apache 2.0) | UI | Webcam barcode decoding (A2 phase 2); frames reach it as BGRA bytes, no Bitmap binding |
 | `Serilog.Extensions.Hosting`, `Serilog.Sinks.File` | UI | Rolling file log |
 | `CsvHelper`, `Npgsql`, `Microsoft.Data.Sqlite`, `Serilog.Sinks.Console` | DataImporter | CSV streaming, PostgreSQL, SQLite export, console log |
 | `xunit`, `xunit.runner.visualstudio`, `FluentAssertions`, `Microsoft.NET.Test.Sdk` | Tests | Test framework |
@@ -680,6 +683,11 @@ PDF package is used. Medicine notes are included only on request.
   the encrypted payload.
 - Passphrases, derived keys and payload plaintext are never logged;
   key buffers are zeroed after use.
+- The webcam is opened only while the barcode dialog shows its webcam
+  panel and is released as soon as a code is read, the user switches
+  back, the timeout fires or the dialog closes. Frames stay in memory;
+  they are never written to disk or logged, and neither is a barcode
+  payload (it may carry an FMD serial number).
 - Logs contain identifiers, medicine names, quantities and outcomes.
   They never contain passwords, email bodies or free-text medical
   notes.
@@ -741,7 +749,7 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-MULTI-USER.md`](analysis/ANALYSIS-MULTI-USER.md) | Profiles, roles, PIN, V1→V2 migration |
 | [`ANALYSIS-A1-REGIMENS.md`](analysis/ANALYSIS-A1-REGIMENS.md) | Weekly, cyclic, tapering and PRN schedules |
 | [`ANALYSIS-A1-STEPPED-TAPER.md`](analysis/ANALYSIS-A1-STEPPED-TAPER.md) | Multi-stage tapering |
-| [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning: USB HID scanner shipped (phase 1), webcam and restock by scan open |
+| [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning: USB HID scanner (phase 1) and webcam (phase 2); restock by scan open |
 | [`ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md) | Mobile client with desktop synchronization: desktop side shipped (phases 1–4), mobile open |
 | [`ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`](analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md) | Caregiver email recipient |
 | [`ANALYSIS-A5-DOSE-TIME-REMINDER.md`](analysis/ANALYSIS-A5-DOSE-TIME-REMINDER.md) | Dose-time reminder |

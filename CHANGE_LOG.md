@@ -30,6 +30,49 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #110 — Scan medicine barcodes with the webcam (A2 phase 2)
+
+Link: [vger70/MedReminder#110](https://github.com/vger70/MedReminder/pull/110)
+Branch: `claude/a2-webcam-scan`
+
+### Added
+
+- Scan barcode window: **Use webcam** reads the package with the PC
+  camera (preview with a framing guide), through the same parser and
+  catalogue lookup as the USB scanner. The camera starts only on
+  request and is released when a code is read, on **Use scanner**, on
+  close, or after 30 s without a code (`Capture:ScanTimeoutSeconds`).
+- Camera error states in the window: no camera, blocked by the Windows
+  privacy settings (opens `ms-settings:privacy-webcam`), start-up
+  failure (copies the log folder path); **Try again** in each.
+- `ICameraCaptureService` (Application), `WindowsCameraCaptureService`
+  and `FrameBarcodeDecoder` (`src/MedReminder.UI/Camera/`); new
+  `Capture` keys `MaxDecodeFps` and `CameraMaxWidthPixels`.
+- `FrameBarcodeDecoderTests`: Code 32, EAN-13 and GS1 DataMatrix
+  rendered with ZXing and decoded from BGRA pixels.
+
+### Changed
+
+- The scan window is resizable and grows for the webcam preview; the
+  scan button tooltip mentions the webcam.
+
+### Security
+
+- Camera frames stay in memory; frames and barcode payloads are never
+  saved or logged.
+
+### Build
+
+- `ZXing.Net` 0.16.11 (Apache 2.0) in the UI project; no Bitmap
+  binding package.
+
+### Docs
+
+- 12 new UI keys in the five dictionaries; "With the webcam" section
+  in the five user guides; `ANALYSIS-A2-BARCODE-SCAN.md` (design as
+  built, acceptance result), `ANALYSIS.md`, `STATUS.md`,
+  `EVOLUTION.md`, `README.md`.
+
 ## PR #109 — Align STATUS, EVOLUTION and ANALYSIS with v2.9.1
 
 Link: [vger70/MedReminder#109](https://github.com/vger70/MedReminder/pull/109)

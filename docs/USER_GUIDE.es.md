@@ -270,6 +270,24 @@ Notas:
 - También funciona un lector que no envía Intro después del código:
   el código se acepta un instante después del escaneo.
 
+### Con la webcam
+
+¿No tiene lector? En la ventana de escaneo haga clic en **Usar la
+webcam**. La cámara se enciende solo entonces y se apaga en cuanto se
+lee un código, hace clic en **Usar el lector**, cierra la ventana o
+pasan 30 segundos sin código.
+
+- Sostenga el envase a 10–20 cm de la cámara, con el código de barras
+  dentro del marco discontinuo, bien iluminado y enfocado. Las webcams
+  de portátil con enfoque fijo suelen tener dificultades con el fino
+  código AIC; un lector USB es más fiable.
+- Si Windows bloquea la cámara, la ventana lo indica y ofrece **Abrir
+  configuración de privacidad**: active **Permitir que las
+  aplicaciones de escritorio accedan a la cámara** en Configuración →
+  Privacidad y seguridad → Cámara y luego haga clic en **Reintentar**.
+- Las imágenes de la cámara nunca se guardan ni se envían; solo se usa
+  el código leído.
+
 ## Añadir stock (nueva caja)
 
 1. Selecciona el medicamento en la cuadrícula.

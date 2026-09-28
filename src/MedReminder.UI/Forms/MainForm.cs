@@ -1118,6 +1118,7 @@ internal sealed class MainForm : MedReminderFormBase
         var sp = scope.ServiceProvider;
         return new BarcodeScanContext(
             sp.GetRequiredService<IBarcodeParser>(),
+            sp.GetRequiredService<ICameraCaptureService>(),
             sp.GetRequiredService<BarcodeCaptureOptions>(),
             sp.GetRequiredService<ILoggerFactory>().CreateLogger<BarcodeScanDialog>());
     }

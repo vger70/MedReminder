@@ -280,6 +280,25 @@ Hinweise:
 - Auch ein Scanner, der nach dem Code keine Eingabetaste sendet,
   funktioniert: Der Code wird einen Moment nach dem Scan übernommen.
 
+### Mit der Webcam
+
+Kein Scanner? Klicken Sie im Scanfenster auf **Webcam verwenden**. Die
+Kamera schaltet sich erst dann ein und wieder aus, sobald ein Code
+gelesen wurde, Sie auf **Scanner verwenden** klicken, das Fenster
+schließen oder 30 Sekunden ohne Code vergehen.
+
+- Halten Sie die Packung 10–20 cm vor die Kamera, mit dem Barcode im
+  gestrichelten Rahmen, gut beleuchtet und scharf. Laptop-Webcams mit
+  Fixfokus tun sich mit dem schmalen AIC-Barcode oft schwer; ein
+  USB-Scanner ist zuverlässiger.
+- Blockiert Windows die Kamera, meldet das Fenster dies und bietet
+  **Datenschutzeinstellungen öffnen** an: Aktivieren Sie unter
+  Einstellungen → Datenschutz und Sicherheit → Kamera die Option
+  **Desktop-Apps den Zugriff auf Ihre Kamera erlauben** und klicken
+  Sie dann auf **Erneut versuchen**.
+- Kamerabilder werden nie gespeichert oder gesendet; verwendet wird
+  nur der gelesene Code.
+
 ## Bestand hinzufügen (neue Packung)
 
 1. Wähle das Medikament in der Liste aus.

@@ -271,6 +271,25 @@ Remarques :
 - Un lecteur qui n'envoie pas Entrée après le code fonctionne aussi :
   le code est accepté un instant après le scan.
 
+### Avec la webcam
+
+Pas de lecteur ? Dans la fenêtre de scan, cliquez sur **Utiliser la
+webcam**. La caméra ne s'allume qu'à ce moment et s'éteint dès qu'un
+code est lu, que vous cliquez sur **Utiliser le lecteur**, que vous
+fermez la fenêtre ou après 30 secondes sans code.
+
+- Tenez la boîte à 10–20 cm de la caméra, avec le code-barres dans le
+  cadre en pointillés, bien éclairé et net. Les webcams d'ordinateur
+  portable à mise au point fixe lisent souvent mal le fin code AIC ;
+  un lecteur USB est plus fiable.
+- Si Windows bloque la caméra, la fenêtre l'indique et propose
+  **Ouvrir les paramètres de confidentialité** : activez **Autoriser
+  les applications de bureau à accéder à votre caméra** dans
+  Paramètres → Confidentialité et sécurité → Caméra, puis cliquez sur
+  **Réessayer**.
+- Les images de la caméra ne sont jamais enregistrées ni envoyées ;
+  seul le code lu est utilisé.
+
 ## Ajouter du stock (nouvelle boîte)
 
 1. Sélectionne le médicament dans la grille.

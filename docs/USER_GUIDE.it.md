@@ -266,6 +266,24 @@ Note:
 - Funziona anche un lettore che non invia Invio dopo il codice: il
   codice viene accettato un istante dopo la scansione.
 
+### Con la webcam
+
+Non hai un lettore? Nella finestra di scansione fai clic su **Usa la
+webcam**. La webcam si accende solo in quel momento e si spegne appena
+viene letto un codice, quando fai clic su **Usa il lettore**, quando
+chiudi la finestra o dopo 30 secondi senza codice.
+
+- Tieni la confezione a 10–20 cm dalla webcam, con il codice a barre
+  dentro la cornice tratteggiata, ben illuminato e a fuoco. Le webcam
+  dei portatili a fuoco fisso faticano spesso con il sottile codice
+  AIC; un lettore USB è più affidabile.
+- Se Windows blocca la fotocamera, la finestra lo segnala e propone
+  **Apri impostazioni privacy**: attiva **Consenti alle app desktop di
+  accedere alla fotocamera** in Impostazioni → Privacy e sicurezza →
+  Fotocamera, poi fai clic su **Riprova**.
+- Le immagini della webcam non vengono mai salvate né inviate; viene
+  usato solo il codice letto.
+
 ## Aggiungere scorte (nuova confezione)
 
 1. Seleziona la medicina nella griglia.

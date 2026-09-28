@@ -115,12 +115,13 @@ scheduled dose time.
 | Auto-start | Registry `HKCU\...\Run` |
 | Local notifications | Modern Windows toast via CommunityToolkit + tray balloon fallback |
 | In-app help | WebView2 + Markdig (MD → HTML) |
+| Barcode scan | USB scanner as keyboard input; webcam via Windows.Media.Capture + ZXing.Net |
 | Localization | JSON dictionaries per language, hot-reloadable from disk |
 | Logging | Serilog + daily rolling file |
 | Tests | xUnit + FluentAssertions |
 | Hosting | `Microsoft.Extensions.Hosting` (generic host + BackgroundService) |
 
-5 projects + 5 test projects — details in
+6 projects + 6 test projects — details in
 [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
 
 ## Repository layout

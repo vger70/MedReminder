@@ -351,6 +351,9 @@ internal static class Program
         builder.Services.AddSingleton<TrayBalloonNotificationService>();
         builder.Services.AddSingleton<IWindowsNotificationService, ToastWindowsNotificationService>();
         builder.Services.AddSingleton<ApplicationTrayIcon>();
+        // Webcam barcode scan (A2 phase 2). Singleton: it serializes
+        // camera sessions; each session releases the camera on exit.
+        builder.Services.AddSingleton<ICameraCaptureService, MedReminder.UI.Camera.WindowsCameraCaptureService>();
 
         builder.Services.AddScoped<MedicineOverviewLoader>();
 
