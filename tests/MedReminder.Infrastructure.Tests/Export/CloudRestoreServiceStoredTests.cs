@@ -53,22 +53,28 @@ public sealed class CloudRestoreServiceStoredTests
     [Fact]
     public async Task Snapshots_are_listed_from_their_names_newest_first()
     {
+        var profile = new string('a', 32);
         var storage = new MemoryStorage(new()
         {
-            ["medreminder-abc-def-20260920-080000.mrz"] = ([1], Stored),
-            ["medreminder-abc-def-20260921-080000.mrz"] = ([2], Stored),
+            [$"medreminder-{profile}-20260920-080000.mrz"] = ([1], Stored),
+            [$"medreminder-{profile}-20260921-080000.mrz"] = ([2], Stored),
             ["copied-by-hand.mrz"] = ([3], Stored),
+            [$"medreminder-export-{profile}-20260922-080000.mrz"] = ([4], Stored.AddDays(-1)),
         });
         var service = new CloudRestoreService(new RecordingImport(), NullLogger<CloudRestoreService>.Instance);
 
         var list = await service.ListStoredSnapshotsAsync(storage, CancellationToken.None);
 
         list.Select(s => s.FileName).Should().Equal(
-            "medreminder-abc-def-20260921-080000.mrz", "medreminder-abc-def-20260920-080000.mrz", "copied-by-hand.mrz");
-        list[0].ProfileId.Should().Be("abc-def");
+            $"medreminder-{profile}-20260921-080000.mrz", $"medreminder-{profile}-20260920-080000.mrz",
+            "copied-by-hand.mrz", $"medreminder-export-{profile}-20260922-080000.mrz");
+        list[0].ProfileId.Should().Be(profile);
         list[0].CreatedAtUtc.Should().Be(new DateTimeOffset(2026, 9, 21, 8, 0, 0, TimeSpan.Zero));
         list[2].ProfileId.Should().BeEmpty();
         list[2].CreatedAtUtc.Should().Be(Stored);
+        // A manual C.3 export is not a C.3+ snapshot name: no profile
+        // guessed from it ("export-…"), as retention does not prune it.
+        list[3].ProfileId.Should().BeEmpty();
     }
 
     [Fact]

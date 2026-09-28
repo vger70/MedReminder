@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Runtime.Versioning;
-using System.Text.RegularExpressions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Storage;
@@ -14,12 +12,8 @@ namespace MedReminder.Infrastructure.Export;
 // import pipeline: C.3+ reuses C.3's format and services verbatim so
 // user-triggered exports and automatic snapshots stay interchangeable.
 [SupportedOSPlatform("windows")]
-internal sealed partial class CloudRestoreService : ICloudRestoreService
+internal sealed class CloudRestoreService : ICloudRestoreService
 {
-    // medreminder-<profileId>-<yyyyMMdd-HHmmss>.mrz (C.3+ §3.3).
-    [GeneratedRegex(@"^medreminder-(?<profile>.+)-(?<stamp>\d{8}-\d{6})\.mrz$", RegexOptions.IgnoreCase)]
-    private static partial Regex SnapshotName();
-
     private readonly IImportService _importService;
     private readonly ILogger<CloudRestoreService> _log;
 
@@ -82,17 +76,13 @@ internal sealed partial class CloudRestoreService : ICloudRestoreService
         var results = new List<CloudSnapshotInfo>();
         foreach (var archive in await storage.ListAsync(cancellationToken))
         {
-            var match = SnapshotName().Match(archive.Name);
-            var created = match.Success && DateTime.TryParseExact(match.Groups["stamp"].Value, "yyyyMMdd-HHmmss",
-                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var stamp)
-                ? new DateTimeOffset(stamp, TimeSpan.Zero)
-                : archive.CreatedAtUtc;
+            var named = CloudSnapshotName.TryParse(archive.Name, out var profileId, out var created);
             results.Add(new CloudSnapshotInfo
             {
                 ArchivePath = archive.Id,
                 FileName = archive.Name,
-                CreatedAtUtc = created,
-                ProfileId = match.Success ? match.Groups["profile"].Value : string.Empty,
+                CreatedAtUtc = named ? created : archive.CreatedAtUtc,
+                ProfileId = profileId,
             });
         }
         results.Sort((a, b) => b.CreatedAtUtc.CompareTo(a.CreatedAtUtc));

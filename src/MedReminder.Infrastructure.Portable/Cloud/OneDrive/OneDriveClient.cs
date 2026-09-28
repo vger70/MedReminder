@@ -60,10 +60,30 @@ public sealed class OneDriveClient
         return await response.Content.ReadAsByteArrayAsync(ct);
     }
 
+    // Null when the file does not exist. Streams the content instead of
+    // buffering it, so an archive of any size is not held in memory; the
+    // HttpClient timeout covers the response headers only, not the body,
+    // so a slow link can still finish a large download. The caller
+    // disposes the stream, which releases the response.
     public async Task<Stream?> OpenReadAsync(string path, CancellationToken ct)
     {
-        var bytes = await ReadAsync(path, ct);
-        return bytes is null ? null : new MemoryStream(bytes, writable: false);
+        var response = await SendAsync(() => new HttpRequestMessage(HttpMethod.Get, $"{Item(path)}/content"), ct,
+            completion: HttpCompletionOption.ResponseHeadersRead);
+        try
+        {
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                response.Dispose();
+                return null;
+            }
+            await EnsureAsync(response, ct);
+            return new ResponseStream(response, await response.Content.ReadAsStreamAsync(ct));
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
     }
 
     // Null when the name exists already (nothing is written).
@@ -221,7 +241,8 @@ public sealed class OneDriveClient
 
     // Retries throttling and transient server errors (Retry-After or
     // exponential back-off), and a rejected token once with a refresh.
-    private async Task<HttpResponseMessage> SendAsync(Func<HttpRequestMessage> build, CancellationToken ct, bool authorize = true)
+    private async Task<HttpResponseMessage> SendAsync(Func<HttpRequestMessage> build, CancellationToken ct,
+        bool authorize = true, HttpCompletionOption completion = HttpCompletionOption.ResponseContentRead)
     {
         var refreshed = false;
         for (var attempt = 1; ; attempt++)
@@ -231,7 +252,7 @@ public sealed class OneDriveClient
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _token(refreshed, ct));
             }
-            var response = await _http.SendAsync(request, ct);
+            var response = await _http.SendAsync(request, completion, ct);
             if (authorize && response.StatusCode == HttpStatusCode.Unauthorized && !refreshed)
             {
                 response.Dispose();
@@ -290,6 +311,51 @@ public sealed class OneDriveClient
     {
         ValidatePath(path);
         return $"{Drive}/special/approot:/{string.Join('/', path.Split('/').Select(Uri.EscapeDataString))}:";
+    }
+
+    // Read-only content stream that owns its response.
+    private sealed class ResponseStream(HttpResponseMessage response, Stream content) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => content.Read(buffer, offset, count);
+
+        public override int Read(Span<byte> buffer) => content.Read(buffer);
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => content.ReadAsync(buffer, offset, count, cancellationToken);
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            => content.ReadAsync(buffer, cancellationToken);
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                content.Dispose();
+                response.Dispose();
+            }
+            base.Dispose(disposing);
+        }
     }
 
     // Relative, '/'-separated, no empty, '.' or '..' segment.

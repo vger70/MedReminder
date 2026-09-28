@@ -416,10 +416,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             Path.GetTempPath(), "MedReminder-cloud-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratchDirectory);
 
-        // Invariant culture: the restore list parses this stamp back with
-        // the Gregorian calendar (CloudRestoreService).
-        var timestamp = _clock.GetUtcNow().ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-        var fileName = $"medreminder-{profileId}-{timestamp}.mrz";
+        var fileName = CloudSnapshotName.Create(profileId, _clock.GetUtcNow());
         var tempPath = Path.Combine(scratchDirectory, fileName);
 
         try

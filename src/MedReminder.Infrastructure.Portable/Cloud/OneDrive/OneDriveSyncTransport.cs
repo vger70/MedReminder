@@ -13,6 +13,11 @@ namespace MedReminder.Infrastructure.Cloud.OneDrive;
 // is kept for the application's lifetime (SyncTransportFactory), so the
 // index survives across sync runs.
 //
+// The feed covers the whole app folder, backups/ included: the approot
+// delta is what spike S6 measured. The files under sync/ are resolved
+// once per change of the index, not on every ListAsync, so the backup
+// items cost nothing while nothing changes.
+//
 // The delta feed can lag behind this device's own writes, so the
 // transport also remembers what it created or deleted itself until the
 // feed agrees (or ten minutes pass): a device always lists its own files.
@@ -34,6 +39,8 @@ public sealed class OneDriveSyncTransport : ISyncTransport
     private readonly Dictionary<string, (bool Present, DateTimeOffset At)> _overlay = new(StringComparer.Ordinal);
     private string? _rootId;
     private string? _deltaLink;
+    // Paths under sync/ (without the prefix), rebuilt when the index changes.
+    private HashSet<string>? _syncFiles;
     private DateTimeOffset _refreshedAt = DateTimeOffset.MinValue;
 
     public OneDriveSyncTransport(OneDriveClient client, TimeProvider? clock = null)
@@ -50,15 +57,8 @@ public sealed class OneDriveSyncTransport : ISyncTransport
         {
             if (_clock.GetUtcNow() - _refreshedAt >= RefreshInterval) await RefreshAsync(cancellationToken);
 
-            var files = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var (id, node) in _nodes)
-            {
-                if (node.IsFolder || node.Name.StartsWith('.')) continue;
-                if (PathOf(id) is { } path && path.StartsWith(RootFolder + "/", StringComparison.Ordinal))
-                {
-                    files.Add(path[(RootFolder.Length + 1)..]);
-                }
-            }
+            _syncFiles ??= ResolveSyncFiles();
+            var files = new HashSet<string>(_syncFiles, StringComparer.Ordinal);
 
             var now = _clock.GetUtcNow();
             foreach (var (path, (present, at)) in _overlay.ToList())
@@ -128,6 +128,7 @@ public sealed class OneDriveSyncTransport : ISyncTransport
         {
             // The cursor is too old: enumerate everything again.
             _nodes.Clear();
+            _syncFiles = null;
             _deltaLink = null;
             await ApplyDeltaAsync(ct);
         }
@@ -144,6 +145,8 @@ public sealed class OneDriveSyncTransport : ISyncTransport
             {
                 if (item.Deleted) _nodes.Remove(item.Id);
                 else if (item.Name is not null) _nodes[item.Id] = new Node(item.Name, item.ParentId, item.IsFolder);
+                else continue;
+                _syncFiles = null;
             }
             if (page.NextLink is not null)
             {
@@ -156,24 +159,40 @@ public sealed class OneDriveSyncTransport : ISyncTransport
         }
     }
 
-    // Path relative to the app folder; null when the chain is broken (an
-    // item whose parent was deleted, or outside the app folder).
-    private string? PathOf(string id)
+    // Files under sync/, relative to it. Folder paths are memoized, so the
+    // pass is linear in the index size; temporary ('.') files are skipped.
+    private HashSet<string> ResolveSyncFiles()
     {
-        var segments = new List<string>();
-        var current = id;
-        for (var depth = 0; depth < 32; depth++)
+        var folders = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var files = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (_, node) in _nodes)
         {
-            if (current == _rootId)
+            if (node.IsFolder || node.Name.StartsWith('.') || node.ParentId is null) continue;
+            if (FolderPathOf(node.ParentId, folders, depth: 0) is { } folder
+                && (folder + "/").StartsWith(RootFolder + "/", StringComparison.Ordinal))
             {
-                segments.Reverse();
-                return string.Join('/', segments);
+                var path = $"{folder}/{node.Name}";
+                files.Add(path[(RootFolder.Length + 1)..]);
             }
-            if (!_nodes.TryGetValue(current, out var node) || node.ParentId is null) return null;
-            segments.Add(node.Name);
-            current = node.ParentId;
         }
-        return null;
+        return files;
+    }
+
+    // Path of a folder relative to the app folder ("" for the app folder
+    // itself); null when the chain is broken (a parent that was deleted,
+    // or outside the app folder).
+    private string? FolderPathOf(string id, Dictionary<string, string?> memo, int depth)
+    {
+        if (id == _rootId) return string.Empty;
+        if (memo.TryGetValue(id, out var known)) return known;
+        string? path = null;
+        if (depth < 32 && _nodes.TryGetValue(id, out var node) && node.ParentId is not null
+            && FolderPathOf(node.ParentId, memo, depth + 1) is { } parent)
+        {
+            path = parent.Length == 0 ? node.Name : $"{parent}/{node.Name}";
+        }
+        memo[id] = path;
+        return path;
     }
 
     private static string Remote(string path)

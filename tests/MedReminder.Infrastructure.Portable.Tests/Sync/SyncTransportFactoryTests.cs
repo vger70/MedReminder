@@ -22,7 +22,7 @@ public sealed class SyncTransportFactoryTests
     [Fact]
     public void One_OneDrive_transport_is_kept_per_account()
     {
-        var factory = new SyncTransportFactory(new Tokens());
+        var factory = new SyncTransportFactory(new OneDriveClientFactory(new Tokens()));
         var a1 = factory.Create(SyncTarget.ForCloud(CloudProvider.OneDrive, "a"));
 
         a1.Should().BeOfType<OneDriveSyncTransport>();
@@ -30,8 +30,20 @@ public sealed class SyncTransportFactoryTests
         factory.Create(SyncTarget.ForCloud(CloudProvider.OneDrive, "b")).Should().NotBeSameAs(a1);
     }
 
-    [Fact]
-    public void OneDrive_needs_a_token_source_from_the_host()
-        => FluentActions.Invoking(() => new SyncTransportFactory().Create(SyncTarget.ForCloud(CloudProvider.OneDrive, "a")))
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OneDrive_needs_a_token_source_from_the_host(bool withClientFactory)
+        => FluentActions.Invoking(() => new SyncTransportFactory(withClientFactory ? new OneDriveClientFactory() : null)
+                .Create(SyncTarget.ForCloud(CloudProvider.OneDrive, "a")))
             .Should().Throw<NotSupportedException>();
+
+    [Fact]
+    public void One_OneDrive_client_is_kept_per_account_for_sync_and_backup_alike()
+    {
+        var clients = new OneDriveClientFactory(new Tokens());
+
+        clients.Get("a").Should().BeSameAs(clients.Get("a"));
+        clients.Get("b").Should().NotBeSameAs(clients.Get("a"));
+    }
 }

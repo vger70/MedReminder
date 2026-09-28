@@ -1,5 +1,6 @@
 using System.Runtime.Versioning;
 using FluentAssertions;
+using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Backup;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -86,8 +87,8 @@ public sealed class BackupServicePruneCloudTests : IDisposable
         var mrz = "medreminder-" + new string('c', 32) + "-20260101-120000.mrz";
         var db = "medreminder-" + new string('c', 32) + "-20260101-120000.db";
 
-        BackupService.CloudBackupFileRegexForTests.IsMatch(mrz).Should().BeTrue();
-        BackupService.CloudBackupFileRegexForTests.IsMatch(db).Should().BeFalse();
+        CloudSnapshotName.IsMatch(mrz).Should().BeTrue();
+        CloudSnapshotName.IsMatch(db).Should().BeFalse();
         BackupService.BackupFileRegexForTests.IsMatch(db).Should().BeTrue();
         BackupService.BackupFileRegexForTests.IsMatch(mrz).Should().BeFalse();
     }

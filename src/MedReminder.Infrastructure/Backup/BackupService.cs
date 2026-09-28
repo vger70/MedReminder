@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.RegularExpressions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.Data.Sqlite;
@@ -36,15 +37,11 @@ internal sealed class BackupService : IBackupService
         @"^medreminder-(?<profileId>[0-9a-fA-F]{32}|default)-(?<timestamp>\d{8}-\d{6})\.db$",
         RegexOptions.Compiled);
 
-    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.3): sibling
-    // regex for the encrypted .mrz cloud snapshots. Distinct from
-    // BackupFileRegex so pruning of one target never touches the other,
-    // even when the user points both targets at the same folder.
-    private static readonly Regex CloudBackupFileRegex = new(
-        @"^medreminder-(?<profileId>[0-9a-fA-F]{32}|default)-(?<timestamp>\d{8}-\d{6})\.mrz$",
-        RegexOptions.Compiled);
+    // The encrypted .mrz cloud snapshots follow CloudSnapshotName
+    // (C.3+ §3.3), distinct from BackupFileRegex so pruning of one target
+    // never touches the other, even when the user points both targets at
+    // the same folder.
 
-    internal static Regex CloudBackupFileRegexForTests => CloudBackupFileRegex;
     internal static Regex BackupFileRegexForTests => BackupFileRegex;
 
     private readonly MedReminderDbContext _db;
@@ -180,7 +177,7 @@ internal sealed class BackupService : IBackupService
 
             // Only the C.3+ .mrz naming (§3.3) is eligible: a user's
             // hand-copied archive with a different name is left alone.
-            if (!CloudBackupFileRegex.IsMatch(archive.Name)) continue;
+            if (!CloudSnapshotName.IsMatch(archive.Name)) continue;
             if (archive.CreatedAtUtc >= cutoff) continue;
 
             try

@@ -30,7 +30,37 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #94 — Stream OneDrive downloads, fix hidden-provider validation, share snapshot naming
+
+Link: [vger70/MedReminder#94](https://github.com/vger70/MedReminder/pull/94)
+Branch: `claude/code-review-followup`
+
+### Fixed
+
+- OneDrive archive downloads are streamed to the restore file instead
+  of buffered in memory, so a large snapshot is no longer cut off by the
+  2-minute HTTP timeout on a slow link.
+- Settings no longer asks for (and creates) an unused cloud folder when
+  the provider choice is hidden and the saved target is OneDrive.
+
+### Changed
+
+- One definition of the C.3+ snapshot name (`CloudSnapshotName` in
+  `MedReminder.Application/Export/`) for the backup host, retention and
+  the restore list; names outside it (manual exports, renamed files)
+  are listed without a profile and never pruned.
+- `OneDriveClientFactory` (portable) keeps one OneDrive client per
+  account for both sync and the cloud backup; `CloudArchiveStorage` no
+  longer builds its own clients over a hard-coded HTTP client and clock.
+- `OneDriveSyncTransport` resolves the files under `sync/` once per
+  change of its change-feed index, with memoized folder paths, instead
+  of walking every node's parent chain on each listing.
+
+---
+
 ## PR #93 — Surface ended OneDrive sessions and verify restored archive profiles
+
+**Status:** merged (2026-09-28)
 
 Link: [vger70/MedReminder#93](https://github.com/vger70/MedReminder/pull/93)
 Branch: `claude/code-review-rjy7oe`
