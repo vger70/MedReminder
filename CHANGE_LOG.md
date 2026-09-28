@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #114 — Add analysis of device provisioning from an existing sync group
+
+Link: [vger70/MedReminder#114](https://github.com/vger70/MedReminder/pull/114)
+Branch: `claude/medreminder-sync-analysis-fquf7h`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-DEVICE-PROVISIONING.md`: analysis of adding a
+  PC or a phone to an existing installation through sync, settings
+  included. Separates one-time provisioning from continuous sync,
+  classifies every setting, records blockers found in code (duplicate
+  email from two SMTP-enabled devices, one join per profile, passphrase
+  join picking the first group that opens), proposes a multi-group
+  pairing code with a settings seed, and lists open decisions.
+- `docs/ANALYSIS.md` §12: index entry for the new analysis.
+
 ## PR #113 — Align STATUS, EVOLUTION and ANALYSIS with v2.10.0
 
 Link: [vger70/MedReminder#113](https://github.com/vger70/MedReminder/pull/113)
