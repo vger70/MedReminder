@@ -59,6 +59,54 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #99 — B.1 Phase 4c: key rotation, device removal and pairing codes
+
+Link: [vger70/MedReminder#99](https://github.com/vger70/MedReminder/pull/99)
+Branch: `claude/b1-phase-4c-t44dis`
+
+### Added
+
+- Tools → Sync… → Pair a device…: a QR code and the same code as text,
+  valid 10 minutes and only while the window is open; the window is
+  excluded from screen capture. Join with a pairing code… joins a
+  group with it instead of the passphrase (`SyncPairingOffers`,
+  `SyncPairingCode`, `SyncPairingDialog`).
+- Change key and passphrase… and Devices → Remove device…: a new group
+  key under a new passphrase; a removed device never gets it and reads
+  nothing written afterwards (`RotateSyncKey`).
+- Enter the new key…: after a rotation elsewhere, with the new
+  passphrase or a pairing code; the profile is rebuilt and this
+  device's own changes are carried over (`JoinSyncGroup.RekeyAsync`,
+  `ApplyRemoteOperations.ApplyCarriedAsync`,
+  `ISyncSetupService.RekeyAsync`).
+
+### Changed
+
+- A rotation starts a new sync generation sealed with the new key.
+  Devices that see it publish nothing more until they have the new key
+  (`SyncRunResult.NewKeyRequired`), so none of their changes is sealed
+  with a key the removed device holds.
+
+### Security
+
+- The pairing code carries a secret that opens an ephemeral pairing
+  file, not the group key: once the offer ends a photographed code
+  opens nothing (`docs/SYNC-FORMAT.md` §4.4).
+- A newer generation sealed with an older key is ignored; device
+  records and checkpoints sealed with another key are skipped, so they
+  no longer block compaction or a join.
+
+### Build
+
+- `QRCoder` 1.8.0 (MIT) in the UI project for the QR code.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md` (§2, §4.4, §7), `ANALYSIS-B1-MOBILE-SYNC.md`
+  (§6.1, §6.2 as implemented, Phase 4 split table),
+  `docs/SYNC-TWO-PC-CHECKLIST.md` (K1–K11), `docs/STATUS.md`,
+  `docs/ANALYSIS.md` (dependencies), user guides (5 languages).
+
 ## PR #98 — Add a development status report
 
 Link: [vger70/MedReminder#98](https://github.com/vger70/MedReminder/pull/98)

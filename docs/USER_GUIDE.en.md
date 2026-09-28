@@ -804,8 +804,8 @@ folder they share (a OneDrive, Google Drive or Dropbox folder kept in sync
 by its desktop app, or a network share). No server is involved and the
 folder never contains readable data.
 
-Open **Tools → Sync…**. Enabling, joining, rebuilding and disabling are
-available to the administrator only.
+Open **Tools → Sync…**. Enabling, joining, rebuilding, disabling,
+pairing codes and key changes are available to the administrator only.
 
 ### OneDrive or a shared folder
 
@@ -859,6 +859,36 @@ meanwhile are sent afterwards.
   new **generation**: after a warning, the other PCs discard what they had
   not sent yet and must be rebuilt with **Rebuild from the group…**.
 - **Disable sync…** stops syncing on this PC and keeps its data.
+
+### Pairing codes
+
+A PC already in the group can show a **pairing code**: **Pair a
+device…** displays a QR code (for the future phone app) and the same
+code as text. On another PC, **Join with a pairing code…** takes that
+code instead of the passphrase; the PC still needs access to the same
+account or folder.
+
+- The code is valid for 10 minutes and only while its window is open.
+  Closing the window withdraws it.
+- Whoever reads the code while it is valid can read the group's data:
+  show it only to your own devices, do not send it by message or email.
+  The window is hidden from screenshots.
+
+### Changing the key, removing a lost PC
+
+- **Devices** tab → select a PC → **Remove device…**: for a lost or
+  stolen PC. **Change key and passphrase…** does the same without
+  naming a PC, for example when the passphrase became known to someone.
+- You choose a **new sync passphrase**. The group gets a new key; the
+  removed PC never receives it and cannot read anything written from
+  then on. What it already held stays readable to it.
+- Also end the sessions of the lost PC in the Microsoft or Google
+  account security settings: until then it can still reach the storage.
+- Every other PC stops sending changes and shows that the key was
+  changed. Use **Enter the new key…** there, with the new passphrase or
+  a pairing code from a PC that has the new key. The profile is rebuilt
+  from the group and **the changes made on that PC are kept**, also
+  those recorded while it waited. MedReminder restarts.
 
 ## Check now
 

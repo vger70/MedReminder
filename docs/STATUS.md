@@ -94,7 +94,7 @@ backend. Public format: `docs/SYNC-FORMAT.md`; manual exit check:
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 4c | QR pairing, device revocation, group key rotation (§6.1, §6.2) | not estimated separately | none recorded |
+| 4c | QR pairing, device revocation, group key rotation (§6.1, §6.2) | implemented in #99 (not merged at the time of writing) | manual checklist K1–K11 on Windows |
 | 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | spikes S1, S3 (and S2, S4, S5, S8); D4, D11, D13; Play Console account |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | Feature parity on mobile (timeline, prescription request, catalogue and camera scan, mail device, `.mrz` export, PDF share, state-hash check) | 20–30 d | Phase 5 / 6; D14 |
@@ -176,9 +176,9 @@ WebDAV target, command palette, CLI).
 
 ## 4. Suggested next steps `[INFERRED]`
 
-1. Phase 4c (QR pairing, revocation, key rotation): last desktop-only
-   piece before mobile; revocation is a security gap while sync is
-   shipped.
+1. Phase 4c (QR pairing, revocation, key rotation): implemented in
+   #99; run `docs/SYNC-TWO-PC-CHECKLIST.md` K1–K11 on Windows before
+   release.
 2. Close the P8 residue, so notification settings and profile names
    replicate before a second device type exists.
 3. Run S1, S3 and S4 on Android before committing to Phase 5; they are
