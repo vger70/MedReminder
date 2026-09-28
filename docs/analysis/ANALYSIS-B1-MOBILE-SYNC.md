@@ -1129,7 +1129,9 @@ place relative to A2 (`EVOLUTION.md` §2.0).
 3. App registrations (Entra, Google Cloud), store accounts, macOS build
    host if iOS is in scope.
 
-**Exit**: S9 passes; S1, S3, S6 pass or have accepted mitigations; D9 decided.
+**Exit**: S9 passes; S1, S3 pass or have accepted mitigations; S6
+passes for Windows; D9 decided. The Android halves of S6 and S7 need
+the Android OAuth clients (P14) and run with Phase 5 (§18).
 
 **Effort**: 8–12 days, plus 8–12 days for S9 `[INFERRED]`.
 
@@ -1286,7 +1288,8 @@ libraries.
 decided; Play Console account.
 
 **Actions**: MAUI project; composition root; screens §9.1 items 1–5, 8–10;
-QR pairing scanner; provider sign-in; `NotificationPlanner` + Android
+QR pairing scanner; provider sign-in, after the Android halves of S6
+and S7; `NotificationPlanner` + Android
 adapter, boot receiver, WorkManager sync; secure storage; app lock;
 backup exclusion; localization; CI Android job; signing outside the
 repository; internal testing track; `docs/PACKAGING.md` mobile section;
@@ -1778,3 +1781,6 @@ Phase 2 implements the derivation from the prototype and its tests.
   removal are also open to every profile. A sync group belongs to one
   profile, so they reach only that profile's devices and data. No sync
   action depends on the profile role any more.
+- 2026-09-28 — §13 Phase 0 exit aligned with §18: S6 is required for
+  Windows only; the Android halves of S6 and S7 run with Phase 5,
+  before provider sign-in on Android.
