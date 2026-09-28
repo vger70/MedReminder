@@ -299,6 +299,28 @@ schließen oder 30 Sekunden ohne Code vergehen.
 - Kamerabilder werden nie gespeichert oder gesendet; verwendet wird
   nur der gelesene Code.
 
+### Per Scan auffüllen
+
+Wenn Sie eine neue Packung eines Medikaments kaufen, das schon in
+Ihrer Liste steht, verwenden Sie **Bestand → Per Barcode auffüllen…**.
+Sie müssen das Medikament nicht vorher auswählen: Der Scan findet es.
+
+1. Scannen Sie die Packung wie oben mit dem Scanner oder der Webcam.
+2. Das Medikament mit diesem Code wird ausgewählt und das Fenster
+   **Bestandsbewegung** öffnet sich, eingestellt auf neue Packung, mit der Menge seiner letzten
+   neuen Packung bereits eingetragen. Prüfen und bestätigen Sie sie.
+
+- Haben mehrere Medikamente denselben Code, wählen Sie das
+  aufzufüllende aus.
+- Hat kein Medikament den Code, kennt der Katalog ihn aber, können Sie
+  es als neues Medikament hinzufügen oder den Code mit einem
+  Medikament Ihrer Liste verknüpfen, das noch keinen Code hat (zum
+  Beispiel ein von Hand eingegebenes); die Packung wird dann diesem
+  Medikament hinzugefügt.
+- Das Medikament wird über seinen AIC-Code gefunden. Eine Packung, die
+  nur den quadratischen 2D-Code (DataMatrix) trägt, wird nicht
+  erkannt: Verwenden Sie **Bestand → Packung hinzufügen**.
+
 ## Bestand hinzufügen (neue Packung)
 
 1. Wähle das Medikament in der Liste aus.

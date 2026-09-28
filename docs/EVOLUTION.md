@@ -111,8 +111,8 @@ Shipped. See `EVOLUTION-DONE.md` §3.1.
 
 ### 3.2 A2 — AIC / barcode scan of medicine package
 
-**Status.** Phase 1 shipped (PR #72). Phase 2 (webcam) implemented,
-not released. Phase 3 open, next on the desktop (§2.0). Approved design: `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md`, which
+**Status.** Phase 1 shipped (PR #72). Phase 2 (webcam, PR #110) and
+phase 3 (restock by scan) implemented, not released. Approved design: `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md`, which
 covers both desktop variants: USB HID scanner (keyboard wedge) and
 webcam. Where this section and the analysis disagree, the analysis
 wins.
@@ -562,3 +562,4 @@ v2.7–v2.9 (sync, cloud providers, therapy card PDF, text size)
   as shipped; the multi-user non-goals stay unplanned until a need
   emerges; §10 notes the website refresh gap.
 - 2026-09-28 — §3.2: A2 phase 2 (webcam) implemented.
+- 2026-09-28 — §3.2: A2 phase 3 (restock by scan) implemented.

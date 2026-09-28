@@ -749,7 +749,7 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-MULTI-USER.md`](analysis/ANALYSIS-MULTI-USER.md) | Profiles, roles, PIN, V1→V2 migration |
 | [`ANALYSIS-A1-REGIMENS.md`](analysis/ANALYSIS-A1-REGIMENS.md) | Weekly, cyclic, tapering and PRN schedules |
 | [`ANALYSIS-A1-STEPPED-TAPER.md`](analysis/ANALYSIS-A1-STEPPED-TAPER.md) | Multi-stage tapering |
-| [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning: USB HID scanner (phase 1) and webcam (phase 2); restock by scan open |
+| [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning: USB HID scanner (phase 1), webcam (phase 2), restock by scan (phase 3) |
 | [`ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md) | Mobile client with desktop synchronization: desktop side shipped (phases 1–4), mobile open |
 | [`ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`](analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md) | Caregiver email recipient |
 | [`ANALYSIS-A5-DOSE-TIME-REMINDER.md`](analysis/ANALYSIS-A5-DOSE-TIME-REMINDER.md) | Dose-time reminder |

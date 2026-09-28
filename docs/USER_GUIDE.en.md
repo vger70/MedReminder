@@ -269,6 +269,26 @@ code.
 - Images from the camera are never saved or sent anywhere; only the
   code read is used.
 
+### Restock by scanning
+
+When you buy a new package of a medicine already in your list, use
+**Stock → Restock from barcode…**. You do not need to select the
+medicine first: the scan finds it.
+
+1. Scan the package with the scanner or the webcam, as above.
+2. The medicine with that code is selected and the **Stock movement**
+   window opens, set to **New package**, with the quantity of its last new package already
+   filled in. Check it and confirm.
+
+- If several medicines have the same code, choose the one to restock.
+- If no medicine has the code but the catalogue knows it, you can add
+  it as a new medicine, or link the code to a medicine in your list
+  that has no code yet (for example one entered by hand); the package
+  is then added to that medicine.
+- The medicine is found by its AIC code. A package that carries only
+  the square 2D code (DataMatrix) is not matched; use
+  **Stock → Add package** instead.
+
 ## Add stock (new package)
 
 1. Select the medicine in the grid.

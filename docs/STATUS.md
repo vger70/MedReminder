@@ -136,7 +136,7 @@ developer-days `[INFERRED — from the §13.1 estimates]`.
 | Item | Status | Effort `[INFERRED]` |
 |---|---|---|
 | A2 phase 2 — webcam scan (ZXing.Net) | Implemented, not released. Manual acceptance (`ANALYSIS-A2-BARCODE-SCAN.md` §9.5): camera start, stop and error states work; decoding (item 7) not confirmed, the test webcam's resolution was too low to read the code | — |
-| A2 phase 3 — restock by scan (flow b) | Planned after phase 2 (product owner, 2026-09-28) | 4–5 d |
+| A2 phase 3 — restock by scan (flow b) | Implemented, not released; manual acceptance pending (`ANALYSIS-A2-BARCODE-SCAN.md` §5C.5) | — |
 | C.1 — hosted relay | Optional extra sync transport; only if the product owner accepts operating a service | months + running cost |
 | C.3++ Phase 3 — Dropbox, enterprise REST providers | Optional | not estimated |
 
@@ -185,8 +185,8 @@ release cannot be verified from this repository `[UNCERTAIN]`. Every
 device must run v2.9.0 or later before anyone changes a group key or
 records a replicated profile setting (an app ≤ 2.8.x cannot follow).
 
-1. Desktop: A2 phase 2 (webcam), then A2 phase 3 (restock by scan),
-   one PR each (`ANALYSIS-A2-BARCODE-SCAN.md` §1.6).
+1. Desktop: release A2 phases 2 and 3 (webcam, restock by scan)
+   after the manual checks of `ANALYSIS-A2-BARCODE-SCAN.md` §5C.5.
 2. Mobile: build and run the S1–S4 spike app of draft PR #106 on
    Android before committing to Phase 5; S1 and S3 are the go / no-go
    risks for MAUI. Independent of item 1.

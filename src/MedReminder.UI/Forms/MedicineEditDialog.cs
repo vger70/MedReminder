@@ -117,6 +117,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // and the caller supplied a scan context.
     private readonly CatalogueAutocompleteContext? _catalogueContext;
     private readonly BarcodeScanContext? _barcodeContext;
+    // Create mode only: a catalogue row to apply on load, as if the
+    // user had picked it (restock by scan, "Add as a new medicine").
+    private readonly ReferenceMedicine? _initialReference;
 
     public MedicineEditDialog(
         EditMode mode,
@@ -124,8 +127,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         MedicineEditResult? seed = null,
         CatalogueAutocompleteContext? catalogueContext = null,
         decimal currentStock = 0m,
-        BarcodeScanContext? barcodeContext = null)
+        BarcodeScanContext? barcodeContext = null,
+        ReferenceMedicine? initialReference = null)
     {
+        _initialReference = mode == EditMode.Create ? initialReference : null;
         _loc = localization;
         _mode = mode;
         _currentStock = currentStock;
@@ -377,6 +382,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             SyncSimpleControlsEnabled();
         }
         _ = HydrateSeededDocumentsAsync();
+        if (_initialReference is not null) ApplyReference(_initialReference);
     }
 
     private void ApplySeed(MedicineEditResult seed)

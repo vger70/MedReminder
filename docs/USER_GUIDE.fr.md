@@ -290,6 +290,27 @@ fermez la fenêtre ou après 30 secondes sans code.
 - Les images de la caméra ne sont jamais enregistrées ni envoyées ;
   seul le code lu est utilisé.
 
+### Réapprovisionner en scannant
+
+Quand vous achetez une nouvelle boîte d'un médicament déjà dans votre
+liste, utilisez **Stock → Réapprovisionner par code-barres…**. Inutile
+de sélectionner le médicament avant : le scan le trouve.
+
+1. Scannez la boîte avec le lecteur ou la webcam, comme ci-dessus.
+2. Le médicament qui a ce code est sélectionné et la fenêtre
+   **Mouvement de stock** s'ouvre, réglée sur nouvelle boîte, avec la quantité de sa dernière nouvelle
+   boîte déjà remplie. Vérifiez-la et confirmez.
+
+- Si plusieurs médicaments ont le même code, choisissez celui à
+  réapprovisionner.
+- Si aucun médicament n'a ce code mais que le catalogue le connaît,
+  vous pouvez l'ajouter comme nouveau médicament, ou lier le code à un
+  médicament de votre liste qui n'a pas encore de code (par exemple
+  saisi à la main) ; la boîte est alors ajoutée à ce médicament.
+- Le médicament est trouvé par son code AIC. Une boîte qui ne porte
+  que le code 2D carré (DataMatrix) n'est pas reconnue : utilisez
+  **Stock → Ajouter boîte**.
+
 ## Ajouter du stock (nouvelle boîte)
 
 1. Sélectionne le médicament dans la grille.

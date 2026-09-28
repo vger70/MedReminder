@@ -73,6 +73,7 @@ public static class ApplicationServiceCollectionExtensions
 
         // Therapy timeline view (EVOLUTION-PROPOSALS §4.3): read-only.
         services.AddScoped<TherapyTimelineQuery>();
+        services.AddScoped<RestockByScanQuery>();
         // Prescription request (EVOLUTION-PROPOSALS §3.4): interactive
         // send only, resolved per dialog action.
         services.AddScoped<SendPrescriptionRequest>();

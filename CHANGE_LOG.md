@@ -30,6 +30,36 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #111 — Restock a medicine by scanning its package (A2 phase 3)
+
+Link: [vger70/MedReminder#111](https://github.com/vger70/MedReminder/pull/111)
+Branch: `claude/a2-restock-by-scan`
+
+### Added
+
+- Stock → **Restock from barcode…**: the scanned national code
+  identifies the medicine, with no row selected; the new-package
+  dialog opens with the quantity of its last new package. Several
+  matches are resolved with a pick list (inactive medicines marked).
+- A code no medicine carries, when the catalogue knows it, can be
+  added as a new medicine (form filled in from the catalogue) or
+  linked to a medicine without a code, which is then restocked.
+- `RestockByScanQuery` (`src/MedReminder.Application/Catalogue/`),
+  `MedicinePickerDialog`; `RestockByScanQueryTests`.
+
+### Changed
+
+- `StockAdjustmentDialog` accepts an initial quantity;
+  `MedicineEditDialog` accepts an initial catalogue row in Create
+  mode.
+
+### Docs
+
+- 16 new UI keys in the five dictionaries; "Restock by scanning"
+  section in the five user guides; `ANALYSIS-A2-BARCODE-SCAN.md`
+  (§5C.7 as implemented, §12.1 settled), `ANALYSIS.md`, `STATUS.md`,
+  `EVOLUTION.md`.
+
 ## PR #110 — Scan medicine barcodes with the webcam (A2 phase 2)
 
 Link: [vger70/MedReminder#110](https://github.com/vger70/MedReminder/pull/110)
