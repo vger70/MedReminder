@@ -59,6 +59,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #98 — Add a development status report
+
+Link: [vger70/MedReminder#98](https://github.com/vger70/MedReminder/pull/98)
+Branch: `claude/report-stato-arte-sviluppi-h9s7ks`
+
+### Docs
+
+- `docs/STATUS.md`: snapshot at v2.8.1 of what has shipped (MVP,
+  evolution items, B.1 phases 1–4b) and what remains open (B.1 phases
+  4c–7 with spikes and decisions, A2 webcam, proposals, automatic
+  update, issue #11), with suggested next steps.
+
 ## PR #96 — Align the repeat-passphrase label in the sync passphrase dialog
 
 Link: [vger70/MedReminder#96](https://github.com/vger70/MedReminder/pull/96)
