@@ -5,12 +5,9 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-28: analysis only. Revision 3 adds the setup wizard
-(§6) and per-device profile keys (§4.4). Revision 2 of this document:
-revision 1 (`ANALYSIS-DEVICE-PROVISIONING.md`, same PR) proposed a
-one-time settings seed; the product owner's requirements (§1) need
-continuous replication, so revision 1 is replaced. Nothing here is
-planned until the decisions in §15 are confirmed.
+Status on 2026-09-28: analysis only, revision 4 (§18 lists the
+revisions). Nothing here is planned until the decisions in §15 are
+confirmed.
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 topics below, this document wins once approved. §16 lists the
@@ -48,7 +45,7 @@ proposals.
 | C4 | **The master sends email for every profile of the installation**, not only for the profile open on it | Today only the active profile notifies (`ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md` §2.2) `[VERIFIED]`. With R5, a profile never opened on the master would never get email |
 | C5 | **A non-master device keeps user-initiated email through the user's mail client** (`mailto:`), not through SMTP | R5 would otherwise remove the prescription request from every non-master device. `MailtoLink` exists `[VERIFIED — Application/Prescriptions/MailtoLink.cs]` |
 | C6 | **Planned handover leaves a gap rather than a duplicate**: the outgoing master stops sending as soon as it learns of the election; the new master starts after its wizard. A lease stops a master that has not synchronized for 24 h | Sync is eventually consistent; two masters for a while are otherwise unavoidable (§7.4) |
-| C7 | **A device may hold a subset of the profiles** (a family member's phone holds only their profile), and cannot read the others. The master holds all of them (§4.4) | Privacy in a household (revision 1, §3.6); C4 needs every profile on the master |
+| C7 | **A device may hold a subset of the profiles** (a family member's phone holds only their profile), and cannot read the others. The master holds all of them (§4.4) | Profiles are often different people; one pairing should not hand every person's health data to every device. C4 needs every profile on the master |
 | C8 | **Recommend a PC as master.** A phone may be master, with a warning | Background execution on phones is at the OS's discretion; email and backup timing become unreliable `[INFERRED — iOS BGAppRefreshTask is discretionary; spike S8 not run]` |
 
 ---
@@ -64,6 +61,9 @@ proposals.
 | Email deduplication | `NotificationCycle.ShouldNotify` checks the latest `NotificationEvent` of the medicine for the current stock epoch; `NotificationEvent` is device-local |
 | Consequence | Two synced devices with SMTP both send the same low-stock email; a device that starts sending after another has sent re-sends for the current epoch `[INFERRED from the two rows above]` |
 | Notifications scope | Only the profile open in the process |
+| Automatic backup | Every profile of the registry, local raw copy and encrypted cloud snapshot, on each device where it is enabled (`UI/Hosting/AutomaticBackupHostedService.cs`) |
+| Settings gating | Email, Startup (auto-start) and the automatic-backup part of Backup are admin-only; General (language, reference country, update check, text size) and Notifications (recipients) are open to every profile (`UI/Forms/SettingsDialog.cs`) |
+| Single instance | Mutex `Local\MedReminder.SingleInstance.<guid>`, per Windows session (`ANALYSIS.md` §7) |
 | Roles | `profiles.json`, UI-gated; no mutator for an existing profile's role; not a security boundary (`ANALYSIS.md` §10) |
 | Join by passphrase | Tries every group of the storage, joins the first that opens (`SyncDialog.cs`) |
 | Old apps and group listing | `ListGroupsAsync` keeps paths ending in `/group.json` |
@@ -104,25 +104,29 @@ that must happen once (email, cloud backup).
 | SMTP transport | Household | Admin, any device | Master only |
 | SMTP password | Household (secret, §5.4) | Admin, any device | Master only |
 | Scheduled cloud backup: policy, storage account | Household | Admin, any device | Master only (C3) |
-| Local raw database backup: folder, time, retention | Device | Admin on that device | That device |
-| Reference country | Household | Admin | Every device |
-| Language | Device | Any user on the device | That device |
-| Update check on start | Device | Admin on that PC | That PC |
-| Auto-start, tray | Device | Any user | That PC |
+| Local raw database backup: enabled, folder, time, retention | Device | Admin on that device (as today) | That device |
+| Reference country | Household | Admin (change: today any profile, D-14) | Every device |
+| Language | Device | Any user on the device (as today) | That device |
+| Update check on start | Device | Any user on the PC (as today) | That PC |
+| Auto-start | Device | Admin on that PC (as today) | That PC |
 | Profiles: list, removal | Household | Admin | Every device |
 | Role of a profile | Household | Admin (the last admin cannot be demoted) | Every device |
-| PIN of a profile | Household (hash) | Admin for any profile; a user for their own | Every device |
-| Display name of a profile | Profile group (today) | Admin for any profile; a user for their own | Every device holding it |
-| Recipients (`To`, caregiver, doctor) | Profile group (today) | Admin for any profile; a user for their own | Master (email) |
+| PIN of a profile | Household (hash) | Admin for any profile (Manage profiles); a user for their own (Settings) (as today) | Every device |
+| Display name of a profile | Profile group (today) and household (§4.4) | Admin, from Manage profiles (as today) | Every device |
+| Recipients (`To`, caregiver, doctor) | Profile group (today) | Each profile for itself (as today) | Master (email) |
 | Medicine data | Profile group (today) | The profile's user; an admin | Every device holding it |
 | Text size | Device × profile | The profile's user | That device |
 | Device notifications (toast, dose reminder) per kind | Device | Any user on the device | That device |
 | Profiles held by a device | Household | Admin | That device |
-| Devices: pair, remove | Household | Admin | Every device |
+| Devices: pair, remove; join an installation | Household | Admin (change: today Tools → Sync… is open to every profile) | Every device |
 | Master election | Household | Admin | Every device |
 | Storage account sign-in, tokens, DPAPI blobs, paths | Device | — | Never replicated |
 
 "Edited by" is enforced by the app on every device, as today (§8).
+Rows marked "as today" keep the current gating; the others are new.
+`backup.settings.json` holds both local and cloud fields today
+`[VERIFIED — BackupSettings]`: the projection (§5.3) writes only the
+cloud fields and never touches the local ones.
 
 ### 4.4 Profile subsets per device
 
@@ -135,38 +139,57 @@ not granted, the device:
 - raises no notification for it.
 
 The barrier holds against the users of that device. It does not hold
-against an admin, who can grant any profile to any device, consistent
-with §8. It does not hold against someone who extracts the keys from a
+against an admin, who can grant any profile to any device, nor against
+anyone who knows the household passphrase (point 4), consistent with
+§8. It does not hold against someone who extracts the keys from a
 device that holds the profile; that is the threat model of B.1 §6.3.
 
-Mechanism (revision 2 of this section; the first draft put every
-profile key in the household state, readable by every device, which
-made the subset cosmetic):
+Mechanism:
 
-1. Each device creates a key pair when it joins the household and
-   publishes the public key in its device record (encrypted with the
-   household key, like the rest of the record). The private key stays
-   in DPAPI or `SecureStorage`.
-2. Granting profile P to device D: an admin device wraps P's group key
-   for D's public key and records `ProfileKeyGranted(deviceId,
-   groupId, keyVersion, wrappedKey)`. Only D can unwrap it.
-3. Revoking P from D: `ProfileKeyRevoked(deviceId, groupId)`, then a
-   rotation of P's group key, granted again to the devices that keep
-   P. D keeps what it had already downloaded; it cannot read anything
-   written afterwards (same limit as B.1 §6.2).
-4. The master holds every profile (C4): an election makes the admin
-   grant the missing profiles to the target (§7.2).
+1. **Device key pair.** Each device creates a key pair when it joins
+   the household and publishes the public key in its device record
+   (encrypted with the household key). The private key stays in DPAPI
+   or `SecureStorage`.
+2. **Grant.** Giving profile P to device D: a device that holds P's
+   key wraps it for D's public key and records `ProfileKeyGranted`.
+   Only D can unwrap it.
+3. **Revocation.** `ProfileKeyRevoked`, then a rotation of P's group
+   key, granted again to the devices that keep P. D keeps what it had
+   already downloaded and cannot read what is written afterwards (same
+   limit as B.1 §6.2).
+4. **Recovery key.** A random recovery key, distinct from the household
+   key, is wrapped with the household passphrase
+   (`recovery.<v>.wrap`, §5.1). Every profile key is also recorded
+   wrapped with the recovery key (`ProfileKeyEscrowed`). Devices do not
+   store the recovery key. Whoever types the household passphrase can
+   therefore open every profile, which is what an admin needs on a new
+   device when no other device is at hand (§6.3 page 5), and what
+   recovers the data when every device is lost. Without it, losing the
+   devices that hold a profile would lose the profile. The household
+   passphrase is therefore an **admin secret** (D-13).
+5. **Master.** The master holds every profile (C4): an election grants
+   the missing profiles to the target (§7.2).
 
-Algorithm: ECDH on P-256 with HKDF and AES-GCM for the wrap.
-`ECDiffieHellman` is in .NET on Windows `[VERIFIED — training
-knowledge, not tested in this repository]`; on Android and iOS
-`[UNCERTAIN — add to spike S1]`. X25519 is not in the .NET base
-library `[UNCERTAIN — training knowledge]`.
+Residual risk: every device holding the household key can write any
+household operation and any device record, because a record is
+authenticated with the shared household key only. A technically
+capable user of a household device could publish a forged public key
+for another device and receive the grants made for it afterwards; it
+cannot read grants already made. The barrier therefore holds against
+users acting through the app, not against a technical insider, the
+same limit as roles (§8). Having the admin confirm a fingerprint of
+the new device's public key at join would narrow it; left out of
+scope.
+
+Algorithm: ECDH on P-256 with HKDF-SHA256 and AES-GCM for the wrap.
+`ECDiffieHellman` is available in .NET on Windows `[UNCERTAIN —
+training knowledge, not exercised in this repository]`; on Android and
+iOS `[UNCERTAIN — add to spike S1]`.
 
 Profile display names are replicated in the household state as well as
 in the profile group, so a device can list profiles it cannot read.
-The name is the only profile information visible to every device of
-the household.
+Name and role are the only profile information visible to every device
+of the household.
 
 ---
 
@@ -178,6 +201,7 @@ the household.
 <householdId>/
   household.json                cleartext: { "format": "MedReminder.Household", "formatVersion": 1, "householdId": "…" }
   key.<keyVersion>.wrap         household key wrapped with the household passphrase
+  recovery.<keyVersion>.wrap    recovery key wrapped with the household passphrase (§4.4)
   genesis/<generation>.mrg      household image
   checkpoints/…, ops/…, devices/…, pairing/…   as SYNC-FORMAT.md §2
 ```
@@ -194,6 +218,7 @@ header keep `formatVersion` 1.
 | `ProfileRegistered` | `profileId`, `groupId`, `displayName`, `role`, `createdAt` | new profile; `displayName` LWW, mirrored from the profile group (§4.4) |
 | `ProfileKeyGranted` | `deviceId`, `groupId`, `keyVersion`, `wrappedKey` (for the device's public key) | latest key version per device and group wins |
 | `ProfileKeyRevoked` | `deviceId`, `groupId` | wins over earlier grants of that key version |
+| `ProfileKeyEscrowed` | `groupId`, `keyVersion`, `wrappedKey` (for the recovery key) | latest key version wins |
 | `ProfileRoleChanged` | `profileId`, `role` | LWW; refused on apply if it would leave no admin (§7.5 rule for concurrency) |
 | `ProfilePinChanged` | `profileId`, `hash`, `salt`, `iterations` or `null` | LWW |
 | `ProfileRemoved` | `profileId` | tombstone, wins |
@@ -265,16 +290,20 @@ become a port with two implementations (profile, household)
 An admin opens Devices → Add a device on any device of the household
 and:
 
-1. selects the profiles the new device will hold (none preselected;
-   the admin's own profile is suggested);
+1. selects the profiles the new device will hold (none preselected);
 2. gets a pairing code (`mrpair2`, QR and text, 10 minutes, only while
    the window is open, as `SYNC-FORMAT.md` §4.4).
 
-The code carries the household key; the offer file names the selected
-profiles. Creating the code is the admin's approval: the new device
-then needs no admin PIN. Without a device at hand, the household
-passphrase replaces the code and the admin approves on the new device
-(§6.3 step 5).
+As with `mrpair1`, the code holds a random secret, not a key; the
+offer file `pairing/<deviceId>.mrp`, encrypted with that secret, holds
+the household key and the keys of the selected profiles, and is
+deleted when the window closes (`SYNC-FORMAT.md` §4.4) `[VERIFIED —
+format of version 1]`. The new device has no public key yet when the
+code is made, so it records the grants for itself from the offer
+(`ProfileKeyGranted` for its own public key). Creating the code is the
+admin's approval: the new device then needs no admin PIN. Without a
+device at hand, the household passphrase replaces the code (§6.3
+page 5).
 
 ### 6.3 Pages of the join wizard
 
@@ -284,7 +313,7 @@ passphrase replaces the code and the admin approves on the new device
 | 2 | Choice | New installation / Join an existing installation | — |
 | 3 | Storage | OneDrive, Google Drive, shared folder (PC only); sign-in in the browser | No household in the storage → "No MedReminder installation found in this storage" |
 | 4 | Key | Pairing code (text; phone: camera; PC: webcam after H6) or household passphrase. The passphrase is tried on every household of the storage; if it opens more than one, the wizard lists them by household name | Code expired or window closed; wrong passphrase; household written by a newer app → "Update MedReminder to join this installation" |
-| 5 | Admin approval | Only on the passphrase path: choose an admin profile of the household, enter its PIN, then select the profiles for this device (as §6.2 step 1) | Wrong PIN; no PIN on the admin profile → warning, continue |
+| 5 | Admin approval | Only on the passphrase path. The passphrase opened the recovery key (§4.4); choose an admin profile, enter its PIN, then select the profiles for this device; the device grants them to itself from the escrow | Wrong PIN; no PIN on the admin profile → warning, continue |
 | 6 | This device | Device name (default: computer name); notifications on this device per kind (low stock, dose reminder; D4 of B.1); start with Windows (PC) | — |
 | 7 | Summary | Household name, storage account, profiles to download, current master and its last-seen time; the note "This device will not send email; the master does". Option **Make this device the master after joining** | — |
 | 8 | Join | Progress per profile: download, build, first sync | A profile that fails is shown with Retry; the others stay joined. Cancel before this page leaves nothing on the device |
@@ -313,6 +342,10 @@ lists each local profile with two choices:
   `[VERIFIED — SYNC-TWO-PC-CHECKLIST.md step 4]`.
 - **Add to the installation**: the profile becomes a new household
   profile with a new group (as enabling sync does today).
+
+A local profile already synced with a group of the household (a
+v2.8–v2.10 profile group adopted by the household, §11) is matched by
+its group id and kept: no choice, no download.
 
 Its local installation settings (SMTP, backup, roles) are replaced by
 the household's; the summary page lists what changes. A device that is
@@ -348,29 +381,44 @@ The device that creates the household records `MasterElected` +
    - the profiles missing on this device are granted by the admin
      (key wrapped for this device, §4.4) and joined (C4, C7);
    - confirm → `MasterActivated`.
-4. Activation is allowed when the outgoing master's published applied
-   vector covers the election (it has stopped), or when the outgoing
-   master's lease has expired (§7.4). The wizard shows which one it
+4. Activation follows the rule of §7.4. The wizard shows what it
    waits for.
 
 Between election and activation no device sends email: a gap, stated
-on every device ("No active master").
+on every device ("No active master"). An admin cancels a pending
+election by electing the previous master again; that device confirms
+with one click, since nothing bound to it changed.
 
 ### 7.3 Takeover
 
 Master lost or broken: admin elects a device with `kind = Takeover`.
-Same wizard; activation waits only for the lease of the old master.
-If the old master comes back, it applies the election and stays
-silent.
+Same wizard and same activation rule (§7.4); in practice the lease
+decides, since the old master does not answer. If the old master
+comes back, it applies the election and stays silent. `kind` only
+changes the wording of the wizard and the log.
 
 ### 7.4 Lease and fencing
 
 A master sends email and runs cloud backup only while its last
-successful sync run is less than 24 h old (configurable). An isolated
+successful household sync run (listing and applying the household
+group) is less than 24 h old (the lease, configurable). An isolated
 master (storage unreachable, SMTP reachable) therefore stops within
-24 h, and a takeover can activate safely after that time. Without the
-lease, a master that cannot sync but can send would keep sending next
-to the new one `[INFERRED]`.
+24 h. Without the lease, a master that cannot sync but can send would
+keep sending next to the new one `[INFERRED]`.
+
+Activation rule for an elected device, planned or takeover: activate
+when either
+
+- the outgoing master's device record shows an applied vector that
+  covers the election (it has applied it and stopped), or
+- the outgoing master's `lastSeen` (written after each of its sync
+  runs) is older than lease + 1 h. The margin absorbs clock skew
+  between the two devices; a larger skew is reported by the HLC clock
+  warning (B.1 §4.1) `[INFERRED — margin not measured]`.
+
+A master that keeps syncing but has not yet listed the election keeps
+renewing its `lastSeen`, so the second condition waits; it soon lists
+the election and the first one holds.
 
 ### 7.5 Concurrency
 
@@ -388,16 +436,22 @@ to the new one `[INFERRED]`.
   master records `EmailNotificationSent(medicineId, epochFactId,
   sentAt)` in the profile group (profile operation schema version 4).
   `ShouldNotify` for the email channel consults it; toasts keep the
-  device-local `NotificationEvent`. A new master then does not resend
-  what the old one sent (§3, last rows).
+  device-local `NotificationEvent`, which today records every channel
+  attempted in one row `[VERIFIED — MedicationMonitor]` and must be
+  split per channel. The epoch fact id is derived from replicated
+  facts, so every device computes the same one `[INFERRED — ledger
+  derivation is deterministic, B.1 P9]`. A new master then does not
+  resend what the old one sent.
 - **All profiles** (C4): the master evaluates every profile it holds,
   not only the open one. Needs, for a profile not open: schema patches
   (`DatabaseInitializer` runs for the current profile only) and the
   ledger catch-up (`ConsumptionCatchUp`) `[VERIFIED — both limits in
-  ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md §1]`. The single-instance mutex
-  keeps one process per installation, so opening another profile's
-  database from the monitor stays inside the in-process gate
-  `[INFERRED — to confirm against ANALYSIS.md §7]`.
+  ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md §1]`. Reading every profile
+  from one process has a precedent: the automatic backup copies every
+  profile's database `[VERIFIED — AutomaticBackupHostedService]`.
+  Writing derived rows and notification events into a profile that is
+  not open is new and must go through the in-process database gate
+  (`CLAUDE.md` §7) `[INFERRED]`.
 - **Non-master**: `IEmailNotificationService` is gated on "this device
   is the active master"; the SMTP tab stays editable by an admin (R6)
   and shows where mail is sent from. The connection test runs only on
@@ -419,22 +473,40 @@ to the new one `[INFERRED]`.
 - Replicating the PIN hash is required: otherwise an admin profile
   arrives on a new device without a PIN and anyone at that device is
   an admin. Correction of revision 1, which proposed not to replicate
-  it.
+  it. Consequence: a short numeric PIN hashed with PBKDF2 (100 000
+  iterations, `ANALYSIS.md` §5.2) `[VERIFIED]` can be brute-forced
+  offline by anyone holding the household key `[INFERRED]`. This does
+  not lower today's protection, since the hash already sits in a plain
+  `profiles.json`, but the user guide must keep saying that the PIN is
+  not a security measure.
 - Phones gain roles and PIN (B.1 §9.1 lists an app lock only).
 
 ---
 
 ## 9. Device removal
 
-Removing a device rotates the household key and the key of every
-profile group the device held (B.1 Phase 4c rotation, per group). The
-new profile keys are granted again to the remaining devices that hold
-each profile (`ProfileKeyGranted`, §4.4); only the household
-passphrase is asked for again. The wraps of the new profile keys use a
-random passphrase never shown: recovery goes through the household
-passphrase and an admin grant `[INFERRED — keeps key.<n>.wrap valid
-for the format]`. Profiles the removed device never held are not
-rotated. Removing the master is a removal plus a takeover (§7.3).
+An admin removes device D:
+
+1. New household key, new household passphrase, new recovery key
+   (the removed device holds the old household key; B.1 §6.2 explains
+   why the passphrase changes).
+2. Rotation of the key of every profile group D held (B.1 Phase 4c,
+   per group); profiles D never held are not rotated.
+3. The new profile keys are granted to the remaining devices that hold
+   each profile (`ProfileKeyGranted`) and escrowed with the new
+   recovery key.
+4. The remaining devices receive the new household key. Option A
+   (as B.1 today): each asks for the new passphrase or a pairing code.
+   Option B (proposed): the removing device writes the new household
+   key wrapped for each remaining device's public key, in a file
+   outside the household envelope, so the others continue without
+   typing anything `[INFERRED — new file kind; the forged-key risk of
+   §4.4 applies]`. D-15.
+5. The profile-group wraps of the new keys (`key.<n>.wrap`) use a
+   random passphrase never shown; recovery goes through the recovery
+   key (§4.4).
+
+Removing the master is a removal plus a takeover (§7.3).
 
 ---
 
@@ -462,8 +534,8 @@ rotated. Removing the master is a removal plus a takeover (§7.3).
   storage change until an admin publishes the household.
 - Publishing the household adopts the existing profile groups
   (`ProfileRegistered` with the existing `groupId`, `ProfileKeyGranted`
-  for itself)
-  and records `HouseholdLinked(householdId)` in each adopted profile
+  for itself, `ProfileKeyEscrowed`; the admin sets the household
+  passphrase at this point) and records `HouseholdLinked(householdId)` in each adopted profile
   group (profile operation schema version 4).
 - Another device of those groups, on applying `HouseholdLinked`, is
   asked to join the household (pairing code or household passphrase)
@@ -496,15 +568,17 @@ app consistent; later steps depend on earlier ones.
 | Step | Content | Depends on | Effort `[INFERRED — not measured]` |
 |---|---|---|---|
 | H0 | Join waits for its own device record; join by passphrase asks which group when more than one opens; user guide: "configure SMTP on one device only" until H4 | — | 2–4 d |
-| H1 | `EmailNotificationSent` in profile groups; email dedup on replicated facts (profile schema 4) | H0 | 4–6 d |
+| H1 | `EmailNotificationSent` in profile groups; email dedup on replicated facts (profile schema 4) | — | 4–6 d |
 | H2 | Household local store, projection, use cases for every installation setting, permission matrix (§4.3), role change and PIN as household state; single device, no storage | — | 10–15 d |
-| H3 | Household group on storage: create, pairing `mrpair2`, setup wizard (§6), profile subsets with per-device key grants (§4.4), adoption of existing groups (§11), engine port (§5.5) | H1, H2 | 25–38 d |
+| H3 | Household group on storage: create, pairing `mrpair2`, setup wizard (§6), profile subsets with per-device key grants and recovery escrow (§4.4), adoption of existing groups (§11), engine port (§5.5) | H1, H2 | 25–38 d |
 | H4 | Master: election, handover wizard, takeover, lease, email and cloud backup gated on master, all-profile monitoring, `mailto:` on non-master | H3 | 15–25 d |
 | H5 | Device removal at household level (§9) | H3 | 8–12 d |
 | H6 | Mobile: household creation and join on the phone, roles and PIN (B.1 Phase 5); phone as master with email (B.1 Phase 7); QR decode on the PC webcam | H3, H4, B.1 Phase 5 | inside B.1 Phases 5 and 7, plus 5–8 d |
 
-H0 and H1 also fix today's two-PC setups (duplicate email) and can
-ship before any household code. Desktop total H0–H5: about 64–100
+H0 and H1 can ship before any household code. H1 reduces, not
+removes, duplicate email in today's two-PC setups: two devices can
+still send before either sees the other's record; only the master
+(H4) removes it. Desktop total H0–H5: about 64–100
 developer-days.
 
 ---
@@ -528,7 +602,12 @@ developer-days.
   already set up (replace / add), add device with a profile subset, admin edit on non-master, planned
   handover with wizard, takeover with lease, no duplicate email, no
   email from a non-master).
-- Logs: no household key, pairing code, SMTP password, PIN hash,
+- Recovery: every device lost, a new device with the household
+  passphrase recovers every profile; a device joined by pairing code
+  cannot open a profile it was not granted.
+- Lease: activation with clocks skewed by less and by more than the
+  margin.
+- Logs: no household key, recovery key, pairing code, SMTP password, PIN hash,
   profile name, address or medicine data (`CLAUDE.md` §7).
 
 ---
@@ -549,6 +628,9 @@ developer-days.
 | D-10 | Single-group join without household kept until the next major version (§11) | Yes |
 | D-11 | Profile names visible to every device of the household (§4.4) | Yes: needed to manage a profile a device does not hold |
 | D-12 | Profiles for a new device chosen by the admin when creating the pairing code; no admin PIN on the new device on that path (§6.2) | Yes |
+| D-13 | Recovery key escrow: the household passphrase opens every profile and is an admin secret (§4.4) | Yes: otherwise losing the devices loses the data |
+| D-14 | Reference country becomes household-wide and admin-only (§4.3) | Yes |
+| D-15 | After a device removal, remaining devices receive the new household key without typing it (§9 option B) | Yes, after H5 tests |
 
 ---
 
@@ -563,6 +645,12 @@ developer-days.
 - `ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`: item G is absorbed by H2.
 - `SYNC-FORMAT.md`: household layout and catalogue; profile operation
   schema version 4.
+- `ANALYSIS-MULTI-USER.md` §9.1: the master notifies for every
+  profile.
+- `SYNC-TWO-PC-CHECKLIST.md`: household section (§14).
+- `docs/USER_GUIDE.<lang>.md` (five languages): setup wizard, master,
+  household passphrase as an admin secret.
+- `CLAUDE.md` §5: `household\` directory in the runtime data.
 - `EVOLUTION.md`, `STATUS.md`: new item and ranking.
 
 ---
@@ -581,4 +669,18 @@ developer-days.
   `Application/Sync/ProfileSettingsProjection.cs`,
   `Application/Sync/SyncGroupUseCases.cs`,
   `Application/Prescriptions/MailtoLink.cs`,
-  `UI/Forms/SyncDialog.cs`, `UI/Camera/FrameBarcodeDecoder.cs`.
+  `UI/Forms/SyncDialog.cs`, `UI/Forms/SettingsDialog.cs`,
+  `UI/Forms/FirstRunWizardForm.cs`,
+  `UI/Hosting/AutomaticBackupHostedService.cs`,
+  `UI/Camera/FrameBarcodeDecoder.cs`.
+
+---
+
+## 18. Revisions
+
+| Rev. | Change |
+|---|---|
+| 1 | `ANALYSIS-DEVICE-PROVISIONING.md`: one-time settings seed by a multi-group pairing code |
+| 2 | Replaced by this document: household group, master role, continuous replication (product owner requirements §1) |
+| 3 | Setup wizard (§6); per-device profile keys (§4.4), because keys in the household state made the profile subset ineffective |
+| 4 | Review against the code: recovery key escrow (without it, losing every device lost the profiles, and the passphrase path of the wizard could not open any profile); offer file carries the profile keys (the new device has no public key when the code is made); one activation rule with clock margin; permission matrix aligned with today's gating (auto-start admin-only, update check open); forged-key residual risk; PIN hash brute force; H1 reduces duplicates, does not remove them |
