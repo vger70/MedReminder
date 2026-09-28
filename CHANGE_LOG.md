@@ -30,6 +30,38 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #105 — Replicate the profile name and notification recipients (P8)
+
+Link: [vger70/MedReminder#105](https://github.com/vger70/MedReminder/pull/105)
+Branch: `claude/b1-phase-4c-t44dis`
+
+### Added
+
+- Sync operation `ProfileSettingChanged` (operation schema version 3):
+  the profile's display name and its notification recipients (to,
+  caregiver, doctor) reach every device of the profile's sync group,
+  last writer wins per setting; a device that joins takes the group's
+  values (`UpdateNotificationSettings`, `RenameProfile`,
+  `ProfileSettingsProjection`, `ProfileSettingsStore`).
+
+### Changed
+
+- Settings → Notifications and Manage profiles → Rename go through use
+  cases instead of writing the files directly. Renaming another profile
+  that is synced asks to open that profile first.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md` §6 and current versions in its header;
+  `docs/SYNC-TWO-PC-CHECKLIST.md` P1–P4; user guides (5 languages);
+  `ANALYSIS-B1-MOBILE-SYNC.md` (P8 closed); `docs/STATUS.md` updated
+  for Phase 4c, P8 and the published Google Cloud project.
+
+### Fixed
+
+- `CHANGE_LOG.md`: the #97 entry was inside the maintenance notes; #99
+  and #100 were out of order.
+
 ## PR #103 — Open key rotation and device removal to every profile
 
 Link: [vger70/MedReminder#103](https://github.com/vger70/MedReminder/pull/103)

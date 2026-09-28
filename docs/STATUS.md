@@ -8,7 +8,7 @@ Snapshot of what has shipped and what remains open, taken at
 Where this file and those documents disagree, they win; this file is
 not maintained as a living document.
 
-Updated on 2026-09-28 after #99–#104 (Phase 4c, sync for every
+Updated on 2026-09-28 after #99, #101–#103 and #105 (Phase 4c, sync for every
 profile, P8 residue closed, Google Cloud project published): §2.4,
 §3.1, §4.
 
@@ -77,7 +77,7 @@ verified against the tree or the tracker.
 | 4a | OneDrive sync transport and cloud backups (Graph REST, MSAL, DPAPI token cache) | #91, #93, #94 | v2.8.0 |
 | 4b | Google Drive sync transport and cloud backups (Drive REST v3, loopback + PKCE) | #95 | v2.8.0 |
 | 4c | Pairing codes and QR, key rotation, device removal, rekey with carry-over; sync available to every profile | #99, #101–#103 | not released |
-| P8 residue | Profile display name and notification recipients replicated (`ProfileSettingChanged`, operation schema 3) | #104 | not released |
+| P8 residue | Profile display name and notification recipients replicated (`ProfileSettingChanged`, operation schema 3) | #105 | not released |
 
 Result: two Windows PCs of the same user stay in sync through a shared
 folder, OneDrive or Google Drive, end-to-end encrypted, without a
