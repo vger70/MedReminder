@@ -1,5 +1,6 @@
 using System.Runtime.Versioning;
 using FluentAssertions;
+using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Backup;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
