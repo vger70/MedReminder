@@ -56,7 +56,7 @@ a proposal, and is not merged here.
 | # | Proposal | Tier | Effort | Primary beneficiary | Source |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Package expiry tracking | 1 | 2–3 weeks | All users | EV-2 |
-| **2** | Accessible "large text" mode | 1 | 1 week | Elderly, low-vision users | EV-2 |
+| **2** | Accessible "large text" mode **[DONE]** | 1 | 1 week | Elderly, low-vision users | EV-2 |
 | 3 | A2 — AIC / barcode scan **[DONE]** | 1 | 1–2 weeks | All users (Italy) | EV-1 |
 | **4** | Prescription request draft for the doctor **[DONE]** | 1 | 2–3 days | Chronic patients, caregivers | EV-2 |
 | 5 | Weekly pill-organizer preparation | 1 | 1 week | Elderly users, caregivers | EV-2 |
@@ -117,7 +117,10 @@ no chronic therapy.
 - Schema change needs an idempotent boot patch (no `EnsureCreated()`)
   and export format coverage (`docs/EXPORT-FORMAT.md`).
 
-### 3.2 Accessible "large text" mode
+### 3.2 Accessible "large text" mode **[DONE]**
+
+Shipped in PR #108 (v2.9.1): per-profile text size (Normal / Large /
+Extra large), display-DPI scaling and high-contrast colours.
 
 **Goal.** Make the WinForms UI usable by elderly and low-vision users,
 the main audience for chronic-therapy management.

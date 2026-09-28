@@ -151,9 +151,10 @@ Rationale for H before W:
   package, 1D decode quality on fixed-focus webcams, §10.2). Keeping
   them out of phase 1 means they cannot block it.
 
-Phase 3 is **not** scheduled. It starts only when the product owner
-asks for it after flow (a) is complete. Until then no code for flow
-(b) is written; §5C records the design so that it is not re-derived.
+Phase 3 starts only when the product owner asks for it after flow
+(a) is complete; §5C records the design so that it is not re-derived.
+**Update 2026-09-28**: the product owner requested it, planned right
+after phase 2.
 
 Each phase is a separate PR.
 
@@ -1223,3 +1224,5 @@ explicit product-owner request. One PR per phase. See §1.6.
   not-found message as a standard message box (§4.2); burst detector
   and seeded fuzz test replace `WedgeBuffer` and the fixture corpus
   (§9.2, §9.3).
+- 2026-09-28 — §1.6: phase 3 requested by the product owner, planned
+  right after phase 2.

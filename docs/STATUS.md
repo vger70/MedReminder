@@ -1,7 +1,7 @@
 # Development status — 2026-09-28
 
 Snapshot of what has shipped and what remains open, taken at
-`main` = v2.8.1 (commit `788f885`). Sources: `CHANGE_LOG.md`,
+`main` = v2.9.1 (commit `087c25d`). Sources: `CHANGE_LOG.md`,
 `docs/EVOLUTION.md`, `docs/EVOLUTION-DONE.md`,
 `docs/notes/EVOLUTION-PROPOSALS.md`,
 `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`, the GitHub tracker.
@@ -12,6 +12,9 @@ Updated on 2026-09-28 after #99, #101–#103 and #105 (Phase 4c, sync for every
 profile, P8 residue closed, Google Cloud project published): §2.4,
 §3.1, §4.
 
+Reviewed on 2026-09-28 at v2.9.1, after #100, #104, #106 (draft),
+#107 and #108 (therapy card PDF, text size): all sections.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -21,11 +24,11 @@ verified against the tree or the tracker.
 
 | Item | Value |
 |---|---|
-| Latest release | v2.8.1 (2026-09-28) |
+| Latest release | v2.9.1 (2026-09-28) |
 | Projects | Domain, Application, Infrastructure.Portable (`net10.0`); Infrastructure (`net10.0-windows`); UI (WinForms); DataImporter |
-| Source files | 350 `.cs` under `src/` |
-| Test projects | 6 (one per project, plus UI and DataImporter); 158 `.cs` files, 861 `[Fact]`/`[Theory]` attributes |
-| Open pull requests | none |
+| Source files | 365 `.cs` under `src/` |
+| Test projects | 6 (one per project, plus UI and DataImporter); 166 `.cs` files, 910 `[Fact]`/`[Theory]` attributes |
+| Open pull requests | #106 — Android spikes S1–S4 (draft, not to be merged) |
 | Open issues | #11 — Simplified Chinese localization (catalogue search disabled) |
 | UI languages | en, it, fr, es, de |
 
@@ -61,6 +64,7 @@ verified against the tree or the tracker.
 
 | Rank | Proposal | PR |
 |---|---|---|
+| 2 | Per-profile text size (Normal / Large / Extra large), display scaling, high contrast | #108 |
 | 3 | A2 phase 1 — barcode scan with a USB HID scanner (Code 32 / DataMatrix parser, catalogue lookup) | #72 |
 | 4 | Prescription request draft for the doctor | #74 |
 | 6 | Guided stock count with gap display | #73 |
@@ -77,21 +81,22 @@ verified against the tree or the tracker.
 | 3a–3d | HLC and operation log; apply with LWW and conflicts; count re-evaluation by HLC; encrypted segments, group key, checkpoints, compaction; folder transport; `SyncHostedService`; Tools → Sync… | #85–#89 | v2.8.0 |
 | 4a | OneDrive sync transport and cloud backups (Graph REST, MSAL, DPAPI token cache) | #91, #93, #94 | v2.8.0 |
 | 4b | Google Drive sync transport and cloud backups (Drive REST v3, loopback + PKCE) | #95 | v2.8.0 |
-| 4c | Pairing codes and QR, key rotation, device removal, rekey with carry-over; sync available to every profile | #99, #101–#103 | not released |
-| P8 residue | Profile display name and notification recipients replicated (`ProfileSettingChanged`, operation schema 3) | #105 | not released |
+| 4c | Pairing codes and QR, key rotation, device removal, rekey with carry-over; sync available to every profile | #99, #101–#103 | v2.9.0 |
+| P8 residue | Profile display name and notification recipients replicated (`ProfileSettingChanged`, operation schema 3) | #105 | v2.9.0 |
 
 Result: two Windows PCs of the same user stay in sync through a shared
 folder, OneDrive or Google Drive, end-to-end encrypted, without a
 backend. Public format: `docs/SYNC-FORMAT.md`; manual exit check:
 `docs/SYNC-TWO-PC-CHECKLIST.md`.
 
-### 2.5 Latest changes (v2.8.1)
+### 2.5 Latest changes (v2.9.0, v2.9.1)
 
-- Delete a medicine that has no recorded facts; `MedicineDeleted`
-  sync operation (operation schema version 2) (#97).
-- Inactive medicines hidden by default, Therapy → Show inactive
-  medicines (#97).
-- Sync passphrase dialog layout fix (#96).
+- v2.9.0: B.1 Phase 4c and P8 (§2.4); toasts and the dose-reminder
+  email follow the application language, not the Windows language
+  (#100).
+- v2.9.1: therapy card printed as a paginated table and saved as PDF
+  through "Microsoft Print to PDF" (#107); per-profile text size,
+  display-DPI scaling and high-contrast colours (#108).
 
 ---
 
@@ -111,6 +116,8 @@ Open prerequisites and debts inside B.1:
   low-end phone, S3 EF Core SQLite with trimming / AOT, S4
   `StripReleaseDebugArtifacts` on an Android build, S5 local
   notifications, S8 background sync. S6 and S7 lack their Android half.
+  The spike app for S1–S4 is in draft PR #106 (not built yet, not to be
+  merged; only its results go into §18 of the B.1 analysis).
 - **Decisions open**: D4 (notification defaults per device), D11
   (strip-target exclusion for mobile, depends on S4), D13 (minimum OS
   versions), D14 (donation links on iOS).
@@ -128,19 +135,15 @@ developer-days `[INFERRED — from the §13.1 estimates]`.
 
 | Item | Status | Effort `[INFERRED]` |
 |---|---|---|
-| A2 phase 2 — webcam scan (ZXing.Net) | Not started; independent of B.1 | 6–7 d |
-| A2 phase 3 — restock by scan (flow b) | Not scheduled; only on product-owner request | 4–5 d |
+| A2 phase 2 — webcam scan (ZXing.Net) | Not started; independent of B.1; next in the planned order | 6–7 d |
+| A2 phase 3 — restock by scan (flow b) | Planned after phase 2 (product owner, 2026-09-28) | 4–5 d |
 | C.1 — hosted relay | Optional extra sync transport; only if the product owner accepts operating a service | months + running cost |
 | C.3++ Phase 3 — Dropbox, enterprise REST providers | Optional | not estimated |
 
 ### 3.3 Proposals with an implementation prompt ready
 
-| Rank | Proposal | Prompt |
-|---|---|---|
-| 2 | Accessible "large text" mode | `docs/prompt/PROMPT-LARGE-TEXT-MODE.md` |
-| 9 | Printable medication card (PDF) | `docs/prompt/PROMPT-MEDICATION-CARD-PDF.md` |
-
-No code for either exists in `src/`.
+None. The last two (large text mode, medication card PDF) shipped in
+v2.9.1; their prompts are in `docs/prompt/Completed/`.
 
 ### 3.4 Proposals without design
 
@@ -158,10 +161,12 @@ WebDAV target, command palette, CLI).
 - **Issue #11**: Simplified Chinese localization.
 - **Website**: `PROMPT-WEBSITE-CONTENT-REFRESH.md` is live on the site;
   whether `PROMPT-WEBSITE-V2.6-REFRESH.md` has been applied cannot be
-  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.8
-  (sync, cloud providers) `[INFERRED]`.
+  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.9
+  (sync, cloud providers, therapy card PDF, text size) `[INFERRED]`.
 - **Multi-user non-goals** (`ANALYSIS-MULTI-USER.md` §16): profile
-  promote / demote and the consolidated admin view, deferred.
+  promote / demote and the consolidated admin view. Not planned; to be
+  picked up only if a concrete need emerges (product owner,
+  2026-09-28).
 
 ### 3.6 Excluded by decision
 
@@ -174,12 +179,15 @@ WebDAV target, command palette, CLI).
 
 ## 4. Suggested next steps `[INFERRED]`
 
-1. Release the next version with Phase 4c and P8: run
-   `docs/SYNC-TWO-PC-CHECKLIST.md` (K1–K11, P1–P4) on Windows first;
-   every device must be updated before anyone changes a group key or
-   records a replicated profile setting (an app ≤ 2.8.x cannot follow).
-2. Run S1, S3 and S4 on Android before committing to Phase 5; they are
-   the go / no-go risks for MAUI.
-3. In parallel, small user-visible items with prompts ready: large
-   text mode, medication card PDF; A2 webcam if HID scanners prove
-   uncommon.
+Phase 4c and P8 shipped in v2.9.0. Whether
+`docs/SYNC-TWO-PC-CHECKLIST.md` (K1–K11, P1–P4) was run before that
+release cannot be verified from this repository `[UNCERTAIN]`. Every
+device must run v2.9.0 or later before anyone changes a group key or
+records a replicated profile setting (an app ≤ 2.8.x cannot follow).
+
+1. Desktop: A2 phase 2 (webcam), then A2 phase 3 (restock by scan),
+   one PR each (`ANALYSIS-A2-BARCODE-SCAN.md` §1.6).
+2. Mobile: build and run the S1–S4 spike app of draft PR #106 on
+   Android before committing to Phase 5; S1 and S3 are the go / no-go
+   risks for MAUI. Independent of item 1.
+3. Website content refresh for v2.7–v2.9.

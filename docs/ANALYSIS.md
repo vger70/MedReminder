@@ -1,7 +1,7 @@
 # MedReminder — Architecture
 
 This document describes the architecture of MedReminder **as built**
-(release line 2.4.x). It is the entry point for anyone changing the
+(release line 2.9.x). It is the entry point for anyone changing the
 code: it states the layering rules, where each responsibility lives,
 how data is stored and how the background work is scheduled.
 
@@ -26,10 +26,13 @@ this document in the same pull request.
 - Tracks medicine stock, estimates the run-out date from the therapy
   schedule and warns the user (Windows notification and/or email)
   before the medicine runs out. Optional reminder at each dose time.
-- Local data only: one SQLite database per profile under
+- Local-first: one SQLite database per profile under
   `%LOCALAPPDATA%\MedReminder\`. No server component. The only
-  outbound network calls are SMTP (user-configured) and the passive
-  GitHub Releases update check (§9.5).
+  outbound network calls are SMTP (user-configured), the passive
+  GitHub Releases update check (§9.5) and, only when the user signs
+  in to one, the OneDrive (Microsoft Graph) or Google Drive APIs for
+  cloud backups and sync (§8.3, §4.4). Sync data leaves the device
+  encrypted end to end.
 - Not a medical device: the application reminds, it does not advise.
 
 ---
@@ -292,7 +295,7 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   `SyncOperations`) in the same unit of work, stamped with a hybrid
   logical clock (`HybridTimestamp`, `HybridClock`). Derived rows and
   notification bookkeeping are never logged. Nothing is recorded until
-  sync is enabled for the profile (`sync.settings.json`, no UI yet);
+  sync is enabled for the profile (`sync.settings.json`, Tools → Sync…);
   `OperationEmissionGuardTests` requires every Application service that
   saves user facts to take `IOperationLog`.
 - Merge (B.1 Phase 3b-1): `ApplyRemoteOperations` applies operations
@@ -303,8 +306,8 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   writer wins by HLC (`SyncRegisters`, `RegisterMerge`). A write that
   did not see the winning one is listed in `SyncConflicts`. Each
   operation commits with its `SyncOperations` record, so re-delivery is
-  idempotent; the touched medicines are then derived again. No
-  transport calls it yet (Phase 3c).
+  idempotent; the touched medicines are then derived again. The sync
+  engine (below) calls it for the segments of the other devices.
 - Count re-evaluation (B.1 Phase 3b-2): with sync enabled,
   `LedgerFactsLoader` evaluates every synced stock count again on the
   facts recorded before it by HLC (`CountReevaluation`), with end dates
@@ -332,6 +335,23 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   (`ProfileDatabaseSwap`). An import or a restore on a synced profile
   marks a pending reset in `sync.settings.json` before the swap; the
   next run starts a new generation (§5.7 of the B.1 analysis).
+  Every profile manages the sync of its own data; no sync action
+  depends on the role.
+- Pairing and key rotation (B.1 Phase 4c): *Pair a device…* shows a
+  pairing code and QR, valid 10 minutes while the window is open; the
+  code opens an ephemeral pairing file, not the group key
+  (`SyncPairingOffers`, `SyncPairingCode`). `RotateSyncKey` (*Change key
+  and passphrase…*, *Remove device…*) starts a new generation sealed
+  with a new group key; devices that see it publish nothing until they
+  enter the new key, and `JoinSyncGroup.RekeyAsync` carries their own
+  changes over.
+- Profile settings (P8): the profile display name and the notification
+  recipients (to, caregiver, doctor) are replicated as
+  `ProfileSettingChanged` operations, last writer wins per setting
+  (`RenameProfile`, `UpdateNotificationSettings`,
+  `ProfileSettingsProjection`); a joining device takes the group's
+  values. Operation schema versions are listed in
+  [`SYNC-FORMAT.md`](SYNC-FORMAT.md).
 - `UpdateMedicine` takes an optional `Baseline` (the values the edit
   dialog loaded): with it, only the fields the user changed are written,
   and unchanged slots record no new slot set.
@@ -510,7 +530,8 @@ start:
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
    `NotificationEvents.EpochFactId`; then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
-   (B.1 Phase 3b); then `SyncPeers` (B.1 Phase 3c).
+   (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);
+   then `SyncPeers` (B.1 Phase 3c).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.
@@ -594,7 +615,8 @@ AUMID and Start Menu shortcut are registered at runtime). On any
 failure it falls back to `TrayBalloonNotificationService`, which
 reuses the main tray icon. `BalloonTipNotificationService` is the
 default registration in Infrastructure; the UI replaces it. Toast
-text uses the Windows UI language.
+text uses the language selected in the application (`NotificationTexts`),
+not the Windows UI language.
 
 ### 9.2 Email
 
@@ -640,12 +662,21 @@ with the `--minimized` argument. Per-user, no elevation.
 - `DonationService` opens Stripe or PayPal payment links in the
   default browser. See [`analysis/ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md).
 
+### 9.6 Therapy card (print and PDF)
+
+`TherapyCardBuilder` (`Application/Reporting`) builds the localized
+card model of the active profile; `TherapyReport` renders it as plain
+text and `TherapyCardPrintDocument` (UI) as a paginated table. *Save
+as PDF…* prints to the built-in "Microsoft Print to PDF" printer; no
+PDF package is used. Medicine notes are included only on request.
+
 ---
 
 ## 10. Security and privacy
 
-- Secrets (SMTP password, cloud-backup passphrase) are stored only as
-  DPAPI `CurrentUser` blobs. Export archives carry them only inside
+- Secrets (SMTP password, cloud-backup passphrase, OneDrive and Google
+  Drive tokens, sync group key) are stored only as DPAPI `CurrentUser`
+  blobs (§5.1). Export archives carry them only inside
   the encrypted payload.
 - Passphrases, derived keys and payload plaintext are never logged;
   key buffers are zeroed after use.
@@ -696,9 +727,9 @@ Where the implementation departed from the plan:
 | One database at the data-folder root | One database per profile (§5.2) |
 | `ApplicationSetting` key/value table | JSON settings files bound through `IOptions<T>` (§5.3) |
 | Backup = file copy after WAL checkpoint | SQLite online-backup API, plus encrypted `.mrz` export and cloud folder (§8) |
-| One hosted service | Four hosted services (§6) |
+| One hosted service | Five hosted services (§6) |
 | Italian-only UI | Five UI languages (§9.3) |
-| 4 projects, 3 test projects | 5 projects, 5 test projects (§2) |
+| 4 projects, 3 test projects | 6 projects, 6 test projects (§2) |
 
 ---
 
@@ -710,8 +741,8 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-MULTI-USER.md`](analysis/ANALYSIS-MULTI-USER.md) | Profiles, roles, PIN, V1→V2 migration |
 | [`ANALYSIS-A1-REGIMENS.md`](analysis/ANALYSIS-A1-REGIMENS.md) | Weekly, cyclic, tapering and PRN schedules |
 | [`ANALYSIS-A1-STEPPED-TAPER.md`](analysis/ANALYSIS-A1-STEPPED-TAPER.md) | Multi-stage tapering |
-| [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning, USB HID scanner and webcam (analysis only) |
-| [`ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md) | Mobile client with desktop synchronization (analysis only) |
+| [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning: USB HID scanner shipped (phase 1), webcam and restock by scan open |
+| [`ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md) | Mobile client with desktop synchronization: desktop side shipped (phases 1–4), mobile open |
 | [`ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`](analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md) | Caregiver email recipient |
 | [`ANALYSIS-A5-DOSE-TIME-REMINDER.md`](analysis/ANALYSIS-A5-DOSE-TIME-REMINDER.md) | Dose-time reminder |
 | [`ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md) | Donation links |
@@ -743,3 +774,7 @@ Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:
   release stay as they are; only new days follow the corrected rules.
 - **`IStockMovementRepository.GetLastConsumptionDayAsync`** is no
   longer used by production code (only by `RoundTripTests`).
+- **Sync join during a lagging listing.** A device that joins while
+  the cloud listing lags behind another device's compaction ends in
+  `RebuildRequired`; *Rebuild from the group* repairs it
+  ([`analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md)).
