@@ -774,6 +774,7 @@
   "Ui.RestoreCloudDialog.Status.Running": "Ripristino in corso…",
   "Ui.RestoreCloudDialog.Status.Cancelled": "Ripristino annullato.",
   "Ui.RestoreCloudDialog.Status.Error": "Errore: {0}",
+  "Ui.RestoreCloudDialog.Status.SignInRequired": "La sessione OneDrive è scaduta. Usa \"Accedi…\" in Impostazioni → Backup / Ripristino, poi riapri questa finestra.",
   "Ui.ExportDialog.Title": "Esporta tutti i dati",
   "Ui.ExportDialog.Intro": "Scrive un unico file crittografato con i dati di questo profilo. Il file è portabile tra account e computer, quindi serve anche a spostare MedReminder su un nuovo PC.",
   "Ui.ExportDialog.Destination.Label": "File di destinazione",

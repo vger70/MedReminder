@@ -532,13 +532,18 @@ replaces the database file after renaming the current one to
   port: `CloudArchiveStorage` picks `LocalFolderArchiveStorage` or,
   with `Backup:CloudProvider` = `OneDrive` and `CloudAccountId`,
   `OneDriveArchiveStorage` (`backups/` in the OneDrive app folder;
-  B.1 Phase 4a). A signed-out account counts as a missing folder. A written snapshot counts as the
+  B.1 Phase 4a). A OneDrive session that needs a new sign-in is
+  checked with a silent token before the export and recorded as the
+  run's error, so Settings shows it; the restore dialog asks for a new
+  sign-in. A written snapshot counts as the
   day's backup; a missing folder or passphrase skips the run and
   leaves the day open for retry; a failure on one profile does not
   stop the others. `ICloudRestoreService` lists and restores
   snapshots; the dialog preselects the active profile's newest one.
   OneDrive snapshots are listed from their file names and downloaded
-  under `%LOCALAPPDATA%\MedReminder` only when restored.
+  under `%LOCALAPPDATA%\MedReminder` only when restored; the
+  other-profile confirmation then uses the downloaded manifest, not
+  the file name.
 
 See [`analysis/ANALYSIS-C3-EXPORT-IMPORT.md`](analysis/ANALYSIS-C3-EXPORT-IMPORT.md),
 [`analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md`](analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md),

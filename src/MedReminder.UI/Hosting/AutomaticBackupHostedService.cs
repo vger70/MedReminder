@@ -306,9 +306,11 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         var archiveIds = new List<string>();
 
         // Cheap check before the Argon2id export: a missing folder (or a
-        // signed-out OneDrive account) keeps the day open, so without it
-        // every 15-minute tick would pay for an export that the upload
-        // then rejects.
+        // OneDrive session that needs a new sign-in) keeps the day open,
+        // so without it every 15-minute tick would pay for an export that
+        // the upload then rejects. The OneDrive check acquires a token
+        // silently, so an expired or revoked session is caught here, not
+        // only an account missing from the cache.
         var cloudFolderDirectory = settings.CloudFolderDirectory;
         if (settings.CloudProvider is null && !Directory.Exists(cloudFolderDirectory))
         {
@@ -320,10 +322,16 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         if (settings.CloudProvider is { } provider)
         {
             var accounts = scopedServices.GetService<ICloudAccountService>();
-            if (accounts is null
-                || await accounts.FindAsync(provider, settings.CloudAccountId, cancellationToken) is null)
+            if (accounts is null)
             {
-                _log.LogWarning("Cloud backup skipped: {Provider} is not signed in on this machine.", provider);
+                _log.LogWarning("Cloud backup skipped: no {Provider} account service is registered.", provider);
+                return archiveIds;
+            }
+            if (!await accounts.HasSessionAsync(provider, settings.CloudAccountId, cancellationToken))
+            {
+                // Recorded as the tick's error, so Settings shows that a
+                // new sign-in is needed instead of a silent skip.
+                RecordSignInRequired(new CloudSignInRequiredException(provider), errors);
                 return archiveIds;
             }
         }
@@ -359,11 +367,18 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 {
                     throw;
                 }
+                catch (CloudSignInRequiredException ex)
+                {
+                    // The session ended while the export ran: the other
+                    // profiles would fail the same way.
+                    RecordSignInRequired(ex, errors);
+                    break;
+                }
                 catch (DirectoryNotFoundException)
                 {
-                    // Folder removed, or OneDrive signed out, while the
-                    // export ran: skip the rest of this run, not a failure
-                    // of the tick (ANALYSIS-C3PLUS §4.3).
+                    // Folder removed while the export ran: skip the rest
+                    // of this run, not a failure of the tick
+                    // (ANALYSIS-C3PLUS §4.3).
                     _log.LogWarning("Cloud backup skipped: the target ({Target}) is not available.",
                         settings.CloudProvider?.ToString() ?? cloudFolderDirectory);
                     break;
@@ -384,6 +399,12 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         return archiveIds;
     }
 
+    private void RecordSignInRequired(CloudSignInRequiredException ex, List<string> errors)
+    {
+        errors.Add($"cloud: {ex.Message}");
+        _log.LogWarning("Cloud backup skipped: {Provider} needs a new sign-in.", ex.Provider);
+    }
+
     private async Task<string> ExportProfileToCloudAsync(
         IExportService exportService,
         IArchiveStorage archiveStorage,
@@ -395,7 +416,9 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             Path.GetTempPath(), "MedReminder-cloud-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratchDirectory);
 
-        var timestamp = _clock.GetUtcNow().ToString("yyyyMMdd-HHmmss");
+        // Invariant culture: the restore list parses this stamp back with
+        // the Gregorian calendar (CloudRestoreService).
+        var timestamp = _clock.GetUtcNow().ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
         var fileName = $"medreminder-{profileId}-{timestamp}.mrz";
         var tempPath = Path.Combine(scratchDirectory, fileName);
 

@@ -11,11 +11,11 @@ namespace MedReminder.Infrastructure.Tests.Backup;
 // the retention pruning rely on.
 public abstract class ArchiveStorageContractTests
 {
-    // Storage over an available, initially empty target.
+    // Storage over an available, initially empty target. What an
+    // unavailable target means depends on the backend (a missing folder,
+    // a provider session that needs a new sign-in), so each backend
+    // tests it in its own class.
     protected abstract IArchiveStorage CreateStorage();
-
-    // Storage whose target does not exist.
-    protected abstract IArchiveStorage CreateUnavailableStorage();
 
     [Fact]
     public async Task Upload_list_download_delete_round_trips()
@@ -63,18 +63,6 @@ public abstract class ArchiveStorageContractTests
             new FailingStream(bytesBeforeFailure: 512), ArchiveName(0), CancellationToken.None);
 
         await act.Should().ThrowAsync<IOException>();
-        (await storage.ListAsync(CancellationToken.None)).Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task Upload_to_an_unavailable_target_throws_DirectoryNotFoundException()
-    {
-        var storage = CreateUnavailableStorage();
-
-        var act = () => storage.UploadAsync(
-            new MemoryStream(RandomBytes(16)), ArchiveName(0), CancellationToken.None);
-
-        await act.Should().ThrowAsync<DirectoryNotFoundException>();
         (await storage.ListAsync(CancellationToken.None)).Should().BeEmpty();
     }
 

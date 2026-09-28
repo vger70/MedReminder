@@ -9,8 +9,8 @@ namespace MedReminder.Infrastructure.Tests.Backup;
 // The IArchiveStorage contract against OneDriveArchiveStorage over an
 // in-memory Graph app folder (C.3++ Phase 2, B.1 Phase 4a), plus the
 // OneDrive specifics: the backups/ folder, large archives through an
-// upload session under a temporary name, and a signed-out account as the
-// unavailable target.
+// upload session under a temporary name, and a session that needs a new
+// sign-in reaching the caller instead of looking like a missing folder.
 public sealed class OneDriveArchiveStorageContractTests : ArchiveStorageContractTests
 {
     private readonly FakeOneDrive _drive = new();
@@ -18,9 +18,29 @@ public sealed class OneDriveArchiveStorageContractTests : ArchiveStorageContract
     protected override IArchiveStorage CreateStorage()
         => new OneDriveArchiveStorage(new OneDriveClient(_drive.CreateClient(), (_, _) => Task.FromResult("token")));
 
-    protected override IArchiveStorage CreateUnavailableStorage()
+    private IArchiveStorage CreateSignedOutStorage()
         => new OneDriveArchiveStorage(new OneDriveClient(_drive.CreateClient(),
             (_, _) => throw new CloudSignInRequiredException(CloudProvider.OneDrive)));
+
+    [Fact]
+    public async Task Upload_with_an_ended_session_throws_CloudSignInRequiredException()
+    {
+        var act = () => CreateSignedOutStorage().UploadAsync(
+            new MemoryStream(RandomBytes(16)), ArchiveName(0), CancellationToken.None);
+
+        await act.Should().ThrowAsync<CloudSignInRequiredException>();
+        _drive.Files().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task List_with_an_ended_session_throws_CloudSignInRequiredException()
+    {
+        _drive.Put($"backups/{ArchiveName(0)}", [1]);
+
+        var act = () => CreateSignedOutStorage().ListAsync(CancellationToken.None);
+
+        await act.Should().ThrowAsync<CloudSignInRequiredException>();
+    }
 
     [Fact]
     public async Task Archives_live_in_the_backups_folder_next_to_sync()

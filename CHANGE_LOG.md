@@ -30,6 +30,26 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #93 — Surface ended OneDrive sessions and verify restored archive profiles
+
+Link: [vger70/MedReminder#93](https://github.com/vger70/MedReminder/pull/93)
+Branch: `claude/code-review-rjy7oe`
+
+### Fixed
+
+- Automatic cloud backups no longer stop silently when the OneDrive
+  session ends: a silent token check runs before the export, and a
+  needed sign-in is recorded as the run's error, shown in Settings.
+- `OneDriveArchiveStorage` lets `CloudSignInRequiredException` reach the
+  caller instead of reporting a missing folder; the restore dialog asks
+  for a new sign-in instead of listing no snapshots.
+- OneDrive snapshot restore checks the other-profile confirmation
+  against the downloaded manifest, not the file name.
+- An `onedrive.protected` cache that decrypts but cannot be read starts
+  empty instead of breaking every MSAL call.
+- Snapshot file names use an invariant-culture timestamp, so dates
+  parse correctly on non-Gregorian calendars.
+
 ## PR #91 — B.1 Phase 4a: OneDrive sync transport and cloud backups
 
 Link: [vger70/MedReminder#91](https://github.com/vger70/MedReminder/pull/91)

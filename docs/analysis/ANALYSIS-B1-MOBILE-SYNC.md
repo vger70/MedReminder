@@ -1625,8 +1625,9 @@ Phase 2 implements the derivation from the prototype and its tests.
   `OneDriveArchiveStorage` (backups under `backups/`),
   `MsalCloudAccountService` (one DPAPI-protected token cache for all
   profiles, `onedrive.protected`), `SyncTarget` and
-  `ISyncTransportFactory`. A signed-out account is an unavailable
-  archive target, as a missing folder is. Deviation from the Phase 4
+  `ISyncTransportFactory`. A session that needs a new sign-in reaches
+  the archive caller as `CloudSignInRequiredException`, not as a
+  missing folder. Deviation from the Phase 4
   actions: no Graph SDK; the QR pairing generator moves to 4c; MSAL is
   not added to `THIRD-PARTY-NOTICES.md`, which covers data sources
   only (NuGet package licences are not listed there, MailKit

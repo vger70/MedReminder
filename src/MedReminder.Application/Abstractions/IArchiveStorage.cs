@@ -19,6 +19,10 @@ public interface IArchiveStorage
     /// The storage target is not available; callers treat this as
     /// "skip this run", not as a failure.
     /// </exception>
+    /// <exception cref="CloudSignInRequiredException">
+    /// A provider account needs an interactive sign-in (any operation);
+    /// callers surface it to the user instead of skipping silently.
+    /// </exception>
     Task<string> UploadAsync(
         Stream archive,
         string suggestedName,

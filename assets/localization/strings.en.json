@@ -774,6 +774,7 @@
   "Ui.RestoreCloudDialog.Status.Running": "Restoring…",
   "Ui.RestoreCloudDialog.Status.Cancelled": "Restore cancelled.",
   "Ui.RestoreCloudDialog.Status.Error": "Error: {0}",
+  "Ui.RestoreCloudDialog.Status.SignInRequired": "The OneDrive session has ended. Use \"Sign in…\" in Settings → Backup / Restore, then open this window again.",
 
   "Ui.ExportDialog.Title": "Export all data",
   "Ui.ExportDialog.Intro": "Writes a single encrypted file with this profile's data. The file is portable across accounts and computers, so it also serves as a way to move MedReminder to a new PC.",
