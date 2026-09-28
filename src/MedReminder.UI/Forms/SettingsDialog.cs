@@ -1175,8 +1175,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
         var cloudTable = BuildFormTable();
         AddRow(cloudTable, string.Empty, _cloudEnabledBox);
+        // The saved provider stays a choice even when this build does not
+        // offer it (no client id), so a save does not switch it silently.
         var providers = new[] { CloudProvider.OneDrive, CloudProvider.GoogleDrive }
-            .Where(p => _cloudAccounts?.IsAvailable(p) == true).ToList();
+            .Where(p => _cloudAccounts?.IsAvailable(p) == true || p == settings.CloudProvider).ToList();
         if (providers.Count > 0)
         {
             if (settings.CloudProvider is { } saved && !string.IsNullOrEmpty(settings.CloudAccountId))
