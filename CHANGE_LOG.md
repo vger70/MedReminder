@@ -59,6 +59,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #101 — Keep the sync window open while one of its actions runs
+
+Link: [vger70/MedReminder#101](https://github.com/vger70/MedReminder/pull/101)
+Branch: `claude/b1-phase-4c-t44dis`
+
+### Fixed
+
+- Closing Tools → Sync… while an action was running (for example
+  Enable sync…) reported "Cannot access a disposed object" although the
+  action succeeded. While an action runs, the window now stays open,
+  Close is disabled and the wait cursor shows; if the application
+  closes the window anyway, the action's messages are dropped
+  (`src/MedReminder.UI/Forms/SyncDialog.cs`).
+
 ## PR #99 — B.1 Phase 4c: key rotation, device removal and pairing codes
 
 Link: [vger70/MedReminder#99](https://github.com/vger70/MedReminder/pull/99)

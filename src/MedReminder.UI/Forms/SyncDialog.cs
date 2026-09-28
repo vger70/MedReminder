@@ -49,7 +49,12 @@ internal sealed class SyncDialog : MedReminderFormBase
     private readonly ListView _conflicts;
     private readonly Button _restore;
     private readonly Button _dismiss;
+    private readonly Button _close;
     private CloudAccount? _account;
+    // Actions in progress. While one runs, the window cannot be closed by
+    // the user: the action would carry on against a disposed window, and
+    // its outcome (a message, a restart) would be lost.
+    private int _busy;
 
     public SyncDialog(
         IServiceScopeFactory scopes,
@@ -130,7 +135,7 @@ internal sealed class SyncDialog : MedReminderFormBase
 
         tabs.TabPages.AddRange([statusPage, devicesPage, conflictsPage]);
 
-        var close = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, AutoSize = true, Height = 32 };
+        var close = _close = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, AutoSize = true, Height = 32 };
         var bottom = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.RightToLeft,
@@ -145,7 +150,21 @@ internal sealed class SyncDialog : MedReminderFormBase
 
         _status.Changed += OnStatusChanged;
         FormClosed += (_, _) => _status.Changed -= OnStatusChanged;
-        Shown += async (_, _) => await RefreshAllAsync();
+        FormClosing += (_, e) =>
+        {
+            if (_busy > 0 && e.CloseReason is CloseReason.UserClosing or CloseReason.None) e.Cancel = true;
+        };
+        Shown += async (_, _) =>
+        {
+            try
+            {
+                await RefreshAllAsync();
+            }
+            catch (ObjectDisposedException) when (IsDisposed)
+            {
+                // Closed while the lists were loading.
+            }
+        };
     }
 
     private bool IsEnabled => _settings.Load() is not null;
@@ -730,7 +749,6 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task<CloudAccount?> SignInAsync(CloudProvider provider, string? accountId)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-        UseWaitCursor = true;
         try
         {
             return await _accounts.SignInAsync(provider, accountId, timeout.Token);
@@ -739,10 +757,6 @@ internal sealed class SyncDialog : MedReminderFormBase
         {
             Error(_loc.Get(ProviderKey("Ui.SyncDialog.SignIn.Failed", provider), ex.Message));
             return null;
-        }
-        finally
-        {
-            UseWaitCursor = false;
         }
     }
 
@@ -784,18 +798,36 @@ internal sealed class SyncDialog : MedReminderFormBase
         button.Click += async (_, _) =>
         {
             button.Enabled = false;
+            _busy++;
+            UpdateBusy();
             try
             {
                 await action();
             }
+            catch (ObjectDisposedException) when (IsDisposed)
+            {
+                // Closed by the application (exit, restart) while the
+                // action ran: there is nothing left to update.
+            }
             finally
             {
-                button.Enabled = true;
-                UpdateConflictButtons();
-                UpdateDeviceButtons();
+                _busy--;
+                if (!IsDisposed)
+                {
+                    button.Enabled = true;
+                    UpdateBusy();
+                    UpdateConflictButtons();
+                    UpdateDeviceButtons();
+                }
             }
         };
         return button;
+    }
+
+    private void UpdateBusy()
+    {
+        _close.Enabled = _busy == 0;
+        UseWaitCursor = _busy > 0;
     }
 
     private ListView List(params (string Key, int Width)[] columns)
@@ -812,9 +844,15 @@ internal sealed class SyncDialog : MedReminderFormBase
         return list;
     }
 
+    // No owner once the window is gone (application exit while an action
+    // ran): the message is dropped rather than thrown from the action.
     private void Info(string message)
-        => MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+    {
+        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
 
     private void Error(string message)
-        => MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+    {
+        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
 }
