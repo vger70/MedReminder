@@ -871,8 +871,9 @@ una carpeta compartida (una carpeta de OneDrive, Google Drive o Dropbox
 sincronizada por su aplicación de escritorio, o un recurso de red). No
 interviene ningún servidor y la carpeta nunca contiene datos legibles.
 
-Abra **Herramientas → Sincronización…**. Activar, unirse, reconstruir y
-desactivar están reservados al administrador.
+Abra **Herramientas → Sincronización…**. Activar, unirse, reconstruir,
+desactivar, los códigos de vinculación y el cambio de clave están
+reservados al administrador.
 
 ### OneDrive o carpeta compartida
 
@@ -931,6 +932,42 @@ después.
   grupo…**.
 - **Desactivar sincronización…** detiene la sincronización en este PC y
   conserva sus datos.
+
+### Códigos de vinculación
+
+Un PC que ya está en el grupo puede mostrar un **código de
+vinculación**: **Vincular un dispositivo…** muestra un código QR (para
+la futura aplicación móvil) y el mismo código como texto. En otro PC,
+**Unirse con un código de vinculación…** usa ese código en lugar de la
+frase de contraseña; el PC igualmente necesita acceso a la misma cuenta
+o carpeta.
+
+- El código vale 10 minutos y solo mientras su ventana siga abierta. Al
+  cerrar la ventana se retira.
+- Quien lea el código mientras es válido puede leer los datos del
+  grupo: muéstrelo solo a sus propios dispositivos y no lo envíe por
+  mensaje ni por correo. La ventana no aparece en las capturas de
+  pantalla.
+
+### Cambiar la clave, quitar un PC perdido
+
+- Pestaña **Dispositivos** → seleccione un PC → **Quitar
+  dispositivo…**: para un PC perdido o robado. **Cambiar clave y frase
+  de contraseña…** hace lo mismo sin indicar un PC, por ejemplo si
+  alguien conoce la frase de contraseña.
+- Usted elige una **nueva frase de contraseña de sincronización**. El
+  grupo recibe una nueva clave; el PC quitado no la recibe y no puede
+  leer nada de lo que se escriba a partir de entonces. Lo que ya tenía
+  sigue siendo legible para él.
+- Cierre también las sesiones del PC perdido en la configuración de
+  seguridad de la cuenta de Microsoft o Google: hasta entonces aún
+  puede acceder al almacenamiento.
+- Cada uno de los demás PC deja de enviar cambios e indica que la clave
+  cambió. Use allí **Introducir la nueva clave…**, con la nueva frase de
+  contraseña o un código de vinculación de un PC que ya tenga la nueva
+  clave. El perfil se reconstruye a partir del grupo y **los cambios
+  hechos en ese PC se conservan**, también los registrados durante la
+  espera. MedReminder se reinicia.
 
 ## Comprobar ahora
 

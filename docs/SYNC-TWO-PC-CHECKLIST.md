@@ -1,6 +1,6 @@
 # Sync — Manual Two-PC Checklist
 
-Exit check of B.1 Phase 3, Phase 4a and Phase 4b (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
+Exit check of B.1 Phase 3, Phase 4a, Phase 4b and Phase 4c (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
 §13): two Windows PCs of the same user keep one profile in sync through
 a shared folder, then through OneDrive and Google Drive. Run it on a release build before a release that ships
 or changes sync. Record the date, the build and the result of each step.
@@ -64,3 +64,22 @@ My Drive → MedReminder → backups.
 | G5 | A: Settings → Backup → cloud backup: storage Google Drive, sign in, backup passphrase set, save; after the preferred time | My Drive → MedReminder → backups holds `medreminder-<profile>-<timestamp>.mrz` |
 | G6 | B: Settings → Backup → Restore from cloud folder… | Lists the Google Drive snapshots; restore works; no `restore-*.mrz` left in `%LOCALAPPDATA%\MedReminder` |
 | G7 | Logs of both PCs | No token, client secret, account e-mail, medicine name or note |
+
+## Pairing codes, key change and device removal (Phase 4c)
+
+Three PCs (A, B, C) in one group through any storage above; C plays the
+lost device. Run it once with a folder and once with a cloud account.
+
+| # | Step | Expected |
+|---|---|---|
+| K1 | A: Tools → Sync… → Pair a device… | QR code, the same code as text, a countdown from 10:00 and the secrecy note; the storage holds `<group>/pairing/<A's device id>.mrp` |
+| K2 | A: take a screenshot (Win+Shift+S) of the pairing window | The window is black or missing in the capture |
+| K3 | D (a fourth profile or PC, sync off): Join with a pairing code…, paste the code, same storage | Restart; D shows the group's data without typing the passphrase |
+| K4 | A: close the pairing window; D2: Join with a pairing code… with the same code | "The pairing code has expired or its window was closed"; the `.mrp` file is gone |
+| K5 | B: record a package, do not sync. A: Devices tab → select C → Remove device…; confirm, new passphrase twice | Confirmation names C and asks to end its account sessions; status shows generation + 1; `key.2.wrap` and a new `genesis/<n>.mrg` exist |
+| K6 | B: Sync now | Status says the group key was changed; nothing is sent (the log shows "needs the new key"); Enter the new key… is offered |
+| K7 | B: Enter the new key… → Enter the new passphrase, type the old passphrase | "The passphrase does not open the new group key"; B keeps syncing state unchanged |
+| K8 | B: Enter the new key… → Enter the new passphrase, the new one | Message with the count of kept changes; restart; after a sync, A shows B's package from K5 |
+| K9 | C: Sync now; then Enter the new key… with the old passphrase | New-key status; the old passphrase is refused; C cannot read anything A or B write from now on |
+| K10 | A: Change key and passphrase… (no device removed). B: Enter the new key… → Use a pairing code, with the code of A's Pair a device… | B takes the new key and rebuilds without the passphrase; its changes are kept |
+| K11 | Logs of all PCs | No pairing code, passphrase, key, medicine name or note |

@@ -132,38 +132,75 @@ public sealed class JoinSyncGroup
             .Where(id => id != Guid.Empty)];
 
     // Throws CryptographicException for a wrong passphrase.
-    public async Task<SyncJoinResult> ExecuteAsync(ISyncTransport transport, Guid groupId, char[] passphrase,
+    public Task<SyncJoinResult> ExecuteAsync(ISyncTransport transport, Guid groupId, char[] passphrase,
+        string targetDatabasePath, SyncTarget target, CancellationToken cancellationToken, string? deviceName = null)
+    {
+        ArgumentNullException.ThrowIfNull(passphrase);
+        return ExecuteAsync(transport, groupId, new SyncKeySource.Passphrase(passphrase), targetDatabasePath, target,
+            cancellationToken, deviceName);
+    }
+
+    // Phase 4c: with the passphrase or a pairing code (SyncKeys.ObtainAsync
+    // lists what each throws). The device joins the generation sealed with
+    // the key it obtained.
+    public async Task<SyncJoinResult> ExecuteAsync(ISyncTransport transport, Guid groupId, SyncKeySource source,
         string targetDatabasePath, SyncTarget target, CancellationToken cancellationToken, string? deviceName = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
-        ArgumentNullException.ThrowIfNull(passphrase);
+        ArgumentNullException.ThrowIfNull(source);
         SyncGroupFile.Parse(await transport.ReadAsync(SyncLayout.GroupFile(groupId), cancellationToken)
             ?? throw new InvalidOperationException("Sync group not found."));
 
-        var keyVersion = (await transport.ListAsync(SyncLayout.Group(groupId) + "/", cancellationToken))
-            .Select(p => SyncLayout.TryParseNumber(p, "key.", ".wrap", out var v) ? v : 0)
-            .DefaultIfEmpty(0).Max();
-        if (keyVersion == 0) throw new InvalidOperationException("The sync group has no key.");
-        var wrap = SyncKeyWrap.Parse(await transport.ReadAsync(SyncLayout.KeyWrap(groupId, keyVersion), cancellationToken)
-            ?? throw new InvalidOperationException("The group key is missing."));
-        var key = wrap.Unwrap(_cipher, passphrase);
-
-        var generation = await SyncEngine.LatestGenerationAsync(transport, groupId, cancellationToken);
-        var settings = new SyncSettings(groupId, Guid.NewGuid(), generation, keyVersion, target.Folder, deviceName,
+        var group = await SyncKeys.ObtainAsync(transport, _cipher, groupId, source, _clock, cancellationToken);
+        var settings = new SyncSettings(groupId, Guid.NewGuid(), group.Generation, group.KeyVersion, target.Folder, deviceName,
             Provider: target.Provider, AccountId: target.AccountId);
-        await BuildAsync(transport, settings, key, targetDatabasePath, cancellationToken);
-        return new SyncJoinResult(settings, key);
+        await BuildOrZeroAsync(transport, settings, group.Key, targetDatabasePath, cancellationToken);
+        return new SyncJoinResult(settings, group.Key);
     }
 
-    // After a new generation (§5.7): same group, device and key.
+    // After a new generation (§5.7): same group, device and key. The
+    // generation is the newest one sealed with that key.
     public async Task<SyncSettings> RejoinAsync(ISyncTransport transport, SyncSettings current, byte[] key,
         string targetDatabasePath, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(current);
-        var generation = await SyncEngine.LatestGenerationAsync(transport, current.GroupId, cancellationToken);
+        var generation = await SyncKeys.CurrentGenerationAsync(transport, current.GroupId, current.KeyVersion, cancellationToken);
+        if (generation == 0) throw new InvalidOperationException("No generation of the sync group uses the stored key.");
         var settings = current with { Generation = generation };
         await BuildAsync(transport, settings, key, targetDatabasePath, cancellationToken);
         return settings;
+    }
+
+    // After a key rotation on another device (Phase 4c, §6.2): the new key
+    // from the new passphrase or a pairing code, and a new database built
+    // from the generation sealed with it. Same group and device. The
+    // caller swaps the database in, saves the returned settings and key,
+    // then carries this device's own operations over
+    // (ApplyRemoteOperations.ApplyCarriedAsync).
+    public async Task<SyncJoinResult> RekeyAsync(ISyncTransport transport, SyncSettings current, SyncKeySource source,
+        string targetDatabasePath, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(transport);
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(source);
+        var group = await SyncKeys.ObtainAsync(transport, _cipher, current.GroupId, source, _clock, cancellationToken);
+        var settings = current with { Generation = group.Generation, KeyVersion = group.KeyVersion, ResetPending = false };
+        await BuildOrZeroAsync(transport, settings, group.Key, targetDatabasePath, cancellationToken);
+        return new SyncJoinResult(settings, group.Key);
+    }
+
+    private async Task BuildOrZeroAsync(ISyncTransport transport, SyncSettings settings, byte[] key,
+        string targetDatabasePath, CancellationToken ct)
+    {
+        try
+        {
+            await BuildAsync(transport, settings, key, targetDatabasePath, ct);
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(key);
+            throw;
+        }
     }
 
     private async Task BuildAsync(ISyncTransport transport, SyncSettings settings, byte[] key,
@@ -201,7 +238,19 @@ public sealed class JoinSyncGroup
         foreach (var path in await transport.ListAsync(SyncLayout.CheckpointFolder(settings.GroupId, settings.Generation), ct))
         {
             var file = await transport.ReadAsync(path, ct);
-            if (file is not null) candidates.Add((path, SyncFileCodec.ReadHeader(file)));
+            if (file is null) continue;
+            SyncFileHeader header;
+            try
+            {
+                header = SyncFileCodec.ReadHeader(file);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or System.Text.Json.JsonException)
+            {
+                continue;
+            }
+            // Phase 4c: a generation has one key; a checkpoint sealed
+            // with another one was not written by a device of it.
+            if (header.KeyVersion == settings.KeyVersion) candidates.Add((path, header));
         }
         candidates.Add((SyncLayout.Genesis(settings.GroupId, settings.Generation),
             new SyncFileHeader(SyncFileKind.Genesis, 1, settings.GroupId, settings.Generation, Guid.Empty, 0, 0, 0,
@@ -213,7 +262,15 @@ public sealed class JoinSyncGroup
             if (!first.All(f => vector.GetValueOrDefault(f.Key) >= f.Value - 1)) continue;
             var file = await transport.ReadAsync(path, ct)
                 ?? throw new InvalidOperationException("The sync image disappeared; try again.");
-            return SyncFileCodec.Open(_cipher, key, file);
+            if (header.Kind == SyncFileKind.Genesis) return SyncFileCodec.Open(_cipher, key, file);
+            try
+            {
+                return SyncFileCodec.Open(_cipher, key, file);
+            }
+            catch (CryptographicException)
+            {
+                // A damaged or forged checkpoint: an older image will do.
+            }
         }
         throw new InvalidOperationException("No image of the sync group can be used yet; try again later.");
     }

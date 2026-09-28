@@ -8,7 +8,8 @@ namespace MedReminder.Infrastructure.Credentials;
 // Group key of the current profile's sync group, protected with DPAPI
 // CurrentUser in profiles\<id>\sync.protected (B.1 Phase 3c,
 // docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §5.4, §7.3). Only the key of
-// the version in use is kept; rotation is Phase 4.
+// the version in use is kept: a key rotation starts a new generation
+// (Phase 4c), so older keys open nothing this device still reads.
 [SupportedOSPlatform("windows")]
 internal sealed class DpapiSyncKeyStore : ISyncKeyStore
 {

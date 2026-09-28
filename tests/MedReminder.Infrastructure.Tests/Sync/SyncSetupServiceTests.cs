@@ -2,8 +2,10 @@ using System.Runtime.Versioning;
 using FluentAssertions;
 using MedReminder.Application;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.Infrastructure.Sync;
@@ -59,6 +61,40 @@ public sealed class SyncSetupServiceTests : IDisposable
         b.Provider.GetRequiredService<ISyncKeyStore>().Load(settings.GroupId, 1).Should().NotBeNull();
         Directory.EnumerateFiles(AppDataPaths.GetProfileDataDirectory(b.ProfileId), "medreminder.db.bak-*")
             .Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Taking_a_new_key_rebuilds_the_profile_and_keeps_its_own_changes()
+    {
+        const string NewPassphrase = "a different sync passphrase";
+        var a = await CreateProfileAsync("Enalapril");
+        await Run(a, sp => sp.GetRequiredService<ISyncSetupService>()
+            .CreateAsync(SyncTarget.ForFolder(_folder), Passphrase.ToCharArray(), "PC A", CancellationToken.None));
+        var b = await CreateProfileAsync("Local only");
+        var groups = await Run(b, sp => sp.GetRequiredService<ISyncSetupService>().ListGroupsAsync(SyncTarget.ForFolder(_folder), CancellationToken.None));
+        await Run(b, sp => sp.GetRequiredService<ISyncSetupService>()
+            .JoinAsync(SyncTarget.ForFolder(_folder), groups[0], Passphrase.ToCharArray(), "PC B", CancellationToken.None));
+
+        await Run(a, sp => sp.GetRequiredService<RotateSyncKey>().ExecuteAsync(
+            sp.GetRequiredService<ISyncTransport>(), NewPassphrase.ToCharArray(), CancellationToken.None));
+        var id = (await Run(b, sp => sp.GetRequiredService<IMedicineRepository>().ListAllAsync(CancellationToken.None)))[0].Id;
+        await Run(b, sp => sp.GetRequiredService<AddStock>().ExecuteAsync(
+            new AddStockCommand(id, 5m, StockMovementKind.ManualAdd, "recorded while A rotated"), CancellationToken.None));
+
+        var (carried, dropped) = await Run(b, sp => sp.GetRequiredService<ISyncSetupService>()
+            .RekeyAsync(new SyncKeySource.Passphrase(NewPassphrase.ToCharArray()), CancellationToken.None));
+
+        carried.Should().Be(1);
+        dropped.Should().Be(0);
+        var settings = b.Provider.GetRequiredService<ISyncSettingsStore>().Load()!;
+        settings.KeyVersion.Should().Be(2);
+        settings.Generation.Should().Be(2);
+        b.Provider.GetRequiredService<ISyncKeyStore>().Load(settings.GroupId, 2).Should().NotBeNull();
+        (await Run(b, sp => sp.GetRequiredService<IStockMovementRepository>().ListForMedicineAsync(id, CancellationToken.None)))
+            .Should().Contain(m => m.Notes == "recorded while A rotated");
+        (await Run(b, sp => sp.GetRequiredService<ISyncOperationRepository>().ListPendingAsync(
+                settings.DeviceId, 2, CancellationToken.None)))
+            .Should().ContainSingle("the carried change is sent in the new generation");
     }
 
     private async Task<(ServiceProvider Provider, string ProfileId)> CreateProfileAsync(string medicine)

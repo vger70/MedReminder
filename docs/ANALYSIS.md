@@ -127,6 +127,7 @@ removed or weakened. Publishing is described in
 | `Microsoft.Toolkit.Uwp.Notifications` | UI | Windows toasts for an unpackaged app |
 | `Microsoft.Web.WebView2` | UI | Rendering of the embedded user guide |
 | `Markdig` | UI | Markdown to HTML for the embedded user guide |
+| `QRCoder` (MIT) | UI | Sync pairing QR code (B.1 Phase 4c), rendered as PNG bytes without System.Drawing |
 | `Serilog.Extensions.Hosting`, `Serilog.Sinks.File` | UI | Rolling file log |
 | `CsvHelper`, `Npgsql`, `Microsoft.Data.Sqlite`, `Serilog.Sinks.Console` | DataImporter | CSV streaming, PostgreSQL, SQLite export, console log |
 | `xunit`, `xunit.runner.visualstudio`, `FluentAssertions`, `Microsoft.NET.Test.Sdk` | Tests | Test framework |

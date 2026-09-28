@@ -893,8 +893,9 @@ Dropbox synchronisé par son application de bureau, ou un partage réseau).
 Aucun serveur n'intervient et le dossier ne contient jamais de données
 lisibles.
 
-Ouvrez **Outils → Synchronisation…**. Activer, rejoindre, reconstruire et
-désactiver sont réservés à l'administrateur.
+Ouvrez **Outils → Synchronisation…**. Activer, rejoindre, reconstruire,
+désactiver, les codes d'association et le changement de clé sont
+réservés à l'administrateur.
 
 ### OneDrive ou dossier partagé
 
@@ -953,6 +954,42 @@ ensuite.
   reconstruits avec **Reconstruire depuis le groupe…**.
 - **Désactiver la synchronisation…** arrête la synchronisation sur ce PC et
   conserve ses données.
+
+### Codes d'association
+
+Un PC déjà dans le groupe peut afficher un **code d'association** :
+**Associer un appareil…** affiche un code QR (pour la future application
+mobile) et le même code sous forme de texte. Sur un autre PC,
+**Rejoindre avec un code d'association…** utilise ce code à la place de
+la phrase secrète ; le PC doit tout de même accéder au même compte ou
+au même dossier.
+
+- Le code est valable 10 minutes et seulement tant que sa fenêtre reste
+  ouverte. Fermer la fenêtre le retire.
+- Quiconque lit le code pendant sa validité peut lire les données du
+  groupe : ne le montrez qu'à vos propres appareils, ne l'envoyez ni par
+  message ni par e-mail. La fenêtre n'apparaît pas dans les captures
+  d'écran.
+
+### Changer la clé, retirer un PC perdu
+
+- Onglet **Appareils** → sélectionnez un PC → **Retirer l'appareil…** :
+  pour un PC perdu ou volé. **Changer la clé et la phrase secrète…** fait
+  de même sans désigner de PC, par exemple si la phrase secrète est
+  connue de quelqu'un.
+- Vous choisissez une **nouvelle phrase secrète de synchronisation**. Le
+  groupe reçoit une nouvelle clé ; le PC retiré ne la reçoit pas et ne
+  peut rien lire de ce qui est écrit ensuite. Ce qu'il détenait déjà lui
+  reste lisible.
+- Fermez aussi les sessions du PC perdu dans les paramètres de sécurité
+  du compte Microsoft ou Google : jusque-là, il peut encore accéder au
+  stockage.
+- Chaque autre PC cesse d'envoyer des modifications et indique que la
+  clé a changé. Utilisez-y **Saisir la nouvelle clé…**, avec la nouvelle
+  phrase secrète ou un code d'association d'un PC qui a déjà la nouvelle
+  clé. Le profil est reconstruit à partir du groupe et **les
+  modifications faites sur ce PC sont conservées**, y compris celles
+  enregistrées pendant l'attente. MedReminder redémarre.
 
 ## Vérifier maintenant
 

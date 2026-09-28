@@ -81,6 +81,23 @@ internal sealed class SyncHostedService : BackgroundService
         }
     }
 
+    // Runs an action while no sync run is in progress (Phase 4c): a key
+    // rotation or a rekey must not overlap a run that still uses the old
+    // key and generation.
+    public async Task<T> WhileIdleAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        await _run.WaitAsync(cancellationToken);
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            _run.Release();
+        }
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
@@ -136,7 +153,9 @@ internal sealed class SyncHostedService : BackgroundService
                 result.OperationsPublished, result.SegmentsApplied, result.OperationsApplied,
                 result.CheckpointWritten, result.SegmentsDeleted, result.Problems.Count);
             foreach (var problem in result.Problems) _log.LogWarning("Sync: {Problem}", problem);
-            if (result.NewerGeneration is { } generation)
+            if (result.NewKeyRequired)
+                _log.LogWarning("Sync: the group key was changed on another device; this device needs the new key.");
+            else if (result.NewerGeneration is { } generation)
                 _log.LogWarning("Sync: generation {Generation} exists; this profile must be rebuilt.", generation);
             if (result.RebuildRequired)
                 _log.LogWarning("Sync: segments needed by this device were deleted; this profile must be rebuilt.");

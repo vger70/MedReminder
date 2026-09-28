@@ -671,6 +671,20 @@ Two ways to give a new device the group key:
    is a secret: the dialog says so, and its window is excluded from
    screen capture where the platform allows it `[UNCERTAIN — WinForms
    support, SetWindowDisplayAffinity]`.
+
+   As implemented (Phase 4c): the code holds `groupId`, the showing
+   device's id, the provider and a 32-byte random secret, **not the
+   group key**. The key lies in `pairing/<deviceId>.mrp`, encrypted with
+   that secret, with the expiry inside the ciphertext; the file is
+   deleted when the dialog closes. "Only while the dialog is open" is
+   thus enforced, not advisory: a photo of the code opens nothing once
+   the offer ended, unless the storage file was also copied during the
+   offer. The same code is shown as text, so a PC can join or take a new
+   key with it (Join with a pairing code). The window uses
+   `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`, falling back to
+   `WDA_MONITOR` before Windows 10 2004 `[VERIFIED — Win32 API
+   documentation, training knowledge; not exercised on a device]`.
+   Format: `docs/SYNC-FORMAT.md` §4.4.
 2. **Passphrase**: the device signs in to the provider, finds the group,
    and unwraps the key with the sync passphrase. Needed when no paired
    device is at hand (lost PC).
@@ -694,6 +708,39 @@ lastAcceptedSeq)` operation, encrypted with the new key. Every device
 then ignores segments of the revoked device after `lastAcceptedSeq`,
 because the lost device can still write to its own folder while its
 provider session lasts.
+
+**As implemented (Phase 4c), a rotation starts a new generation**
+(`RotateSyncKey`): `key.<v+1>.wrap` with the new passphrase, then a
+genesis of the rotating device's database sealed with key `v+1`. A
+generation has exactly one key version, the one its genesis is sealed
+with. Differences from the design above, and why:
+
+- No `DeviceRevoked` operation and no key chain. Within one generation,
+  a revoked device holding the old key could forge old-key segments in
+  any device's folder, and a rule accepting old-key segments from
+  lagging honest devices cannot tell them apart. With one key per
+  generation the new key is the capability: files the removed device
+  can write are sealed with an older key and are ignored.
+- Remaining devices stop **before publishing** when a newer generation
+  is sealed with a newer key (`SyncRunResult.NewKeyRequired`), so none
+  of their later operations is sealed with a key the removed device
+  holds. After the new passphrase or a pairing code
+  (`JoinSyncGroup.RekeyAsync`) they rebuild from the new genesis and
+  **carry over** their own operations of the old generation that the
+  genesis lacks (`ApplyRemoteOperations.ApplyCarriedAsync`: same ids and
+  timestamps, pending in the new generation). Unlike a reset (§5.7),
+  nothing an honest device recorded is lost, except operations for a
+  medicine the new generation does not have (it came from a device the
+  rotating device had not heard from); these are counted and reported.
+  Operations of the removed device not yet applied by the rotating
+  device are lost, by intent.
+- A newer genesis sealed with an older key version is ignored; device
+  records and checkpoints sealed with another key version are skipped.
+- Residual risk while the removed device keeps a provider session: it
+  cannot read anything new, but it can write files that disturb sync
+  (a forged wrap and genesis with a key of its own make the others ask
+  for a passphrase that does not open it). Ending its sessions, as the
+  UI asks, closes this.
 
 ### 6.3 Threat model
 
@@ -1216,6 +1263,12 @@ OneDrive backup storage and sign-in (after S6); **4b** Google Drive
 (after S7); **4c** QR pairing, device revocation and key rotation
 (§6.1, §6.2, moved out of Phase 3c).
 
+| PR | Scope | State |
+|---|---|---|
+| 4a | OneDrive sync transport, backup storage, sign-in | Merged (#91) |
+| 4b | Google Drive | Merged (#95) |
+| 4c | Pairing codes and QR generator on desktop (QRCoder), key rotation as a new generation, device removal, rekey with carry-over, Tools → Sync… actions, `SYNC-FORMAT.md` §4.4 and §7 | #99 |
+
 **Actions**: `OneDriveSyncTransport` and `OneDriveArchiveStorage`
 (MSAL, token cache under DPAPI on desktop); then Google Drive; provider
 selection and sign-in in settings; QR pairing generator on desktop;
@@ -1708,3 +1761,10 @@ Phase 2 implements the derivation from the prototype and its tests.
   device finds a gap, reports `RebuildRequired`, and "Rebuild from the
   group" repairs it. Closing it needs the join to wait until its own
   device record is listed.
+- 2026-09-28 — Phase 4c implemented (#99): pairing codes naming an
+  ephemeral encrypted pairing file instead of carrying the group key
+  (§6.1), QR rendering with QRCoder; key rotation as a new generation
+  sealed with the new key, without a `DeviceRevoked` operation (§6.2,
+  reasons there); remaining devices stop publishing until they take the
+  new key, then rebuild and carry their own operations over; newer
+  generations sealed with an older key ignored.

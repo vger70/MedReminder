@@ -42,6 +42,7 @@ sync root chosen by the user:
   checkpoints/<generation>/<deviceId>-<n>.mrc database image and applied vector
   ops/<generation>/<deviceId>/<seq>.mrs       operation segments
   devices/<deviceId>.mrd                      device record
+  pairing/<deviceId>.mrp                      pairing offer, while one is shown
 ```
 
 The sync root is the folder chosen by the user, or, for a provider
@@ -61,8 +62,14 @@ the smaller file id); the writer of the other one deletes it.
   format).
 - `generation`, `keyVersion`, `seq`, `n`: decimal integers starting at
   1.
-- The current generation is the highest `genesis/<generation>.mrg`.
-  The current key version is the highest `key.<keyVersion>.wrap`.
+- The current key version is the highest `key.<keyVersion>.wrap` that
+  has a generation sealed with it (a wrap without one is left by an
+  interrupted rotation and is ignored).
+- A generation has one key version: the `keyVersion` in the header of
+  its genesis. The current generation is the highest genesis sealed
+  with the current key version. A newer genesis sealed with an older
+  key version is ignored (§7). Files of a generation sealed with
+  another key version are ignored.
 - Segments of one device are numbered `1, 2, 3, …` with no reuse. A
   missing number below the highest one means the segment was deleted
   after a checkpoint, or has not been synced by the storage client yet.
@@ -103,7 +110,7 @@ string `MedReminder.Sync.Key|<groupId N format>|<keyVersion>`.
 The sync passphrase is separate from the backup passphrase. A wrong
 passphrase fails the AES-GCM tag check.
 
-### 4.2 Encrypted file envelope
+### 4.2 Encrypted file envelope (see also §4.4)
 
 Segments, checkpoints, genesis images and device records share one
 binary envelope:
@@ -138,6 +145,41 @@ path.
 The header is cleartext: ids and counters only.
 
 ---
+
+### 4.4 Pairing code and pairing file
+
+A device of the group can offer the group key to a new device without
+the passphrase. It shows a **pairing code** (as a QR code, and as text
+for a PC), valid for 10 minutes and only while its window is open:
+
+```
+mrpair1.<groupId>.<deviceId>.<provider>.<secret>
+```
+
+| Part | Meaning |
+|---|---|
+| `mrpair1` | format of the code |
+| `groupId`, `deviceId` | N format; `deviceId` is the device showing the code |
+| `provider` | `folder`, `OneDrive` or `GoogleDrive`: where the joining device looks for the group |
+| `secret` | 32 random bytes, base64url without padding |
+
+The code does not hold the group key. It names
+`pairing/<deviceId>.mrp`, written by the showing device (one offer per
+device, a new offer replaces the file) and deleted when the offer
+ends. UTF-8 JSON:
+
+| Field | Meaning |
+|---|---|
+| `formatVersion` | 1 |
+| `groupId`, `deviceId` | as in the path |
+| `nonce`, `tag`, `ciphertext` | AES-256-GCM, key: the `secret` of the code |
+
+Associated data: the UTF-8 string
+`MedReminder.Sync.Pairing|<groupId N format>|<deviceId N format>`. The
+plaintext is JSON `{ "keyVersion", "key" (base64), "expiresAt" }`. A
+reader refuses the file after `expiresAt`, and when it is absent. A
+code photographed during the offer opens nothing once the file is
+gone.
 
 ## 5. Content
 
@@ -269,16 +311,35 @@ the later one's `baseVersion` is older than the earlier one.
   device keeps its newest one only); delete the device's own segments
   that a checkpoint covers and every device seen in the last 90 days
   has applied.
-- **Join**: unwrap the key with the passphrase, build a new database
-  from an image (§5.3), write the device record, then sync.
+- **Join**: obtain the key with the passphrase (the wrap of the
+  current key version) or a pairing code (§4.4), build a new database
+  from an image of the current generation (§5.3), write the device
+  record, then sync.
 - **New generation**: after an import or a restore on a synced device,
   that device writes `genesis/<generation + 1>.mrg`. The other devices
   publish their pending operations of the old generation, stop, and
   rebuild from the new genesis; those operations are not applied.
 - Files of an old generation are not read again.
+- **Key rotation** (to remove a device, or after the passphrase
+  leaked): the rotating device writes `key.<v + 1>.wrap` with a new
+  passphrase, then `genesis/<generation + 1>.mrg` sealed with key
+  `v + 1`. A removed device is simply not given the new key. Any other
+  device that finds a newer genesis sealed with a key version above
+  its own publishes nothing more (its old key may be held by the
+  removed device) until it obtains the new key, by the new passphrase
+  or a pairing code. It then builds a new database from the new
+  generation and publishes again, in that generation, its own
+  operations of the old generation that the new genesis does not hold
+  (same ids, same timestamps). Operations for a medicine absent from
+  the new generation are not carried over.
+- A newer genesis sealed with an **older** key version than the
+  reader's is ignored: a removed device still holds the older key.
 
-Not in format version 1: key rotation and device revocation (a new
-`keyVersion`), planned with QR pairing.
+Key rotation and pairing files keep format version 1: the envelope, the
+header and the existing files are unchanged, and older readers ignore
+`pairing/`. An app without key rotation (MedReminder 2.8.x and earlier)
+cannot follow a rotation: it sees a newer generation it cannot open and
+must be updated before it can take the new key.
 
 ---
 

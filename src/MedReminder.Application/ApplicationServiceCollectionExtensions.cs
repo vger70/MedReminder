@@ -41,6 +41,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<RestoreSyncConflict>();
         services.AddScoped<DismissSyncConflict>();
         services.AddScoped<DisableSync>();
+        // B.1 Phase 4c: key rotation (device removal) and pairing offers.
+        services.AddScoped<RotateSyncKey>();
+        services.AddScoped<SyncPairingOffers>();
 
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();

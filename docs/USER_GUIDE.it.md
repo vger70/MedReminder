@@ -844,8 +844,9 @@ una cartella condivisa (una cartella OneDrive, Google Drive o Dropbox tenuta
 sincronizzata dalla sua app desktop, o una condivisione di rete). Non serve
 nessun server e la cartella non contiene mai dati leggibili.
 
-Apri **Strumenti → Sincronizzazione…**. Attivare, unirsi, ricostruire e
-disattivare sono riservati all'amministratore.
+Apri **Strumenti → Sincronizzazione…**. Attivare, unirsi, ricostruire,
+disattivare, i codici di abbinamento e il cambio di chiave sono riservati
+all'amministratore.
 
 ### OneDrive o cartella condivisa
 
@@ -903,6 +904,41 @@ modifiche registrate nel frattempo vengono inviate dopo.
   **Ricostruisci dal gruppo…**.
 - **Disattiva sincronizzazione…** ferma la sincronizzazione su questo PC e
   ne conserva i dati.
+
+### Codici di abbinamento
+
+Un PC già nel gruppo può mostrare un **codice di abbinamento**:
+**Abbina un dispositivo…** mostra un codice QR (per la futura app per
+telefono) e lo stesso codice come testo. Su un altro PC, **Unisciti con
+un codice di abbinamento…** usa quel codice al posto della passphrase;
+il PC deve comunque accedere allo stesso account o alla stessa
+cartella.
+
+- Il codice vale 10 minuti e solo finché la sua finestra resta aperta.
+  Chiudendo la finestra viene ritirato.
+- Chi legge il codice mentre è valido può leggere i dati del gruppo:
+  mostralo solo ai tuoi dispositivi, non inviarlo per messaggio o
+  email. La finestra non compare nelle schermate catturate.
+
+### Cambiare la chiave, rimuovere un PC perso
+
+- Scheda **Dispositivi** → seleziona un PC → **Rimuovi dispositivo…**:
+  per un PC perso o rubato. **Cambia chiave e passphrase…** fa lo stesso
+  senza indicare un PC, per esempio quando la passphrase è diventata
+  nota a qualcuno.
+- Scegli una **nuova passphrase di sincronizzazione**. Il gruppo riceve
+  una nuova chiave; il PC rimosso non la riceve e non può leggere nulla
+  di ciò che viene scritto da quel momento. Ciò che aveva già resta
+  leggibile per lui.
+- Chiudi anche le sessioni del PC perso nelle impostazioni di sicurezza
+  dell'account Microsoft o Google: fino ad allora può ancora raggiungere
+  l'archiviazione.
+- Ogni altro PC smette di inviare modifiche e segnala che la chiave è
+  cambiata. Lì usa **Inserisci la nuova chiave…**, con la nuova
+  passphrase o un codice di abbinamento di un PC che ha già la nuova
+  chiave. Il profilo viene ricostruito dal gruppo e **le modifiche fatte
+  su quel PC vengono conservate**, anche quelle registrate durante
+  l'attesa. MedReminder si riavvia.
 
 ## Controlla ora
 

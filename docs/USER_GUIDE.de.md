@@ -905,8 +905,9 @@ oder Dropbox-Ordner, den dessen Desktop-App synchronisiert, oder eine
 Netzwerkfreigabe). Kein Server ist beteiligt, und der Ordner enthält nie
 lesbare Daten.
 
-Öffnen Sie **Extras → Synchronisierung…**. Aktivieren, Beitreten, Neuaufbau
-und Deaktivieren sind dem Administrator vorbehalten.
+Öffnen Sie **Extras → Synchronisierung…**. Aktivieren, Beitreten, Neuaufbau,
+Deaktivieren, Kopplungscodes und Schlüsseländerungen sind dem
+Administrator vorbehalten.
 
 ### OneDrive oder freigegebener Ordner
 
@@ -968,6 +969,43 @@ gesendet.
   neu aufbauen…** neu aufgebaut werden.
 - **Synchronisierung deaktivieren…** beendet die Synchronisierung auf diesem
   PC und behält seine Daten.
+
+### Kopplungscodes
+
+Ein PC, der bereits in der Gruppe ist, kann einen **Kopplungscode**
+anzeigen: **Gerät koppeln…** zeigt einen QR-Code (für die künftige
+Smartphone-App) und denselben Code als Text. Auf einem anderen PC
+verwendet **Mit einem Kopplungscode beitreten…** diesen Code statt der
+Passphrase; der PC braucht trotzdem Zugriff auf dasselbe Konto oder
+denselben Ordner.
+
+- Der Code gilt 10 Minuten und nur, solange sein Fenster geöffnet ist.
+  Beim Schließen des Fensters wird er zurückgezogen.
+- Wer den Code liest, solange er gültig ist, kann die Daten der Gruppe
+  lesen: Zeigen Sie ihn nur Ihren eigenen Geräten und senden Sie ihn
+  nicht per Nachricht oder E-Mail. Das Fenster erscheint nicht auf
+  Bildschirmfotos.
+
+### Schlüssel ändern, einen verlorenen PC entfernen
+
+- Registerkarte **Geräte** → einen PC auswählen → **Gerät
+  entfernen…**: für einen verlorenen oder gestohlenen PC. **Schlüssel
+  und Passphrase ändern…** tut dasselbe, ohne einen PC zu nennen, zum
+  Beispiel wenn jemand die Passphrase kennt.
+- Sie wählen eine **neue Synchronisierungs-Passphrase**. Die Gruppe
+  erhält einen neuen Schlüssel; der entfernte PC erhält ihn nicht und
+  kann nichts lesen, was danach geschrieben wird. Was er bereits hatte,
+  bleibt für ihn lesbar.
+- Beenden Sie außerdem die Sitzungen des verlorenen PCs in den
+  Sicherheitseinstellungen des Microsoft- oder Google-Kontos: Bis dahin
+  kann er den Speicher noch erreichen.
+- Jeder andere PC sendet keine Änderungen mehr und meldet, dass der
+  Schlüssel geändert wurde. Verwenden Sie dort **Neuen Schlüssel
+  eingeben…**, mit der neuen Passphrase oder einem Kopplungscode eines
+  PCs, der den neuen Schlüssel bereits hat. Das Profil wird aus der
+  Gruppe neu aufgebaut und **die auf diesem PC gemachten Änderungen
+  bleiben erhalten**, auch die während der Wartezeit erfassten.
+  MedReminder wird neu gestartet.
 
 ## Jetzt prüfen
 
