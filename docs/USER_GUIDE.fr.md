@@ -417,6 +417,36 @@ La chronologie ne modifie aucune donnée. Les dates d'épuisement sont
 des estimations : elles servent à planifier les réapprovisionnements,
 pas d'avis clinique.
 
+## Fiche de traitement (impression et PDF)
+
+**Traitement → Fiche de traitement…** (Ctrl+P) ou le bouton **Fiche
+traitement** de la barre d'outils ouvre une fiche des médicaments
+actifs à remettre au médecin traitant, aux urgences ou au pharmacien.
+Pour chaque médicament actif, elle indique le principe actif, la
+posologie (créneaux de prise, ou dose × fois par jour), la période de
+traitement et le médecin. Les médicaments désactivés n'y figurent pas.
+
+- **Inclure les notes** : désactivé par défaut. Les notes sont du
+  texte libre et peuvent être privées ; cochez la case seulement si la
+  fiche doit les contenir.
+- **Papier** : A4 ou Letter (US), présélectionné selon la région de
+  Windows.
+- **Imprimer…** ouvre l'aperçu du tableau. Les listes longues
+  continuent sur la page suivante, avec l'en-tête et les titres de
+  colonnes répétés.
+- **Enregistrer en PDF…** demande où enregistrer le fichier et écrit
+  le même tableau en PDF via l'imprimante Windows « Microsoft Print to
+  PDF ». Si cette imprimante a été supprimée, la boîte de dialogue
+  explique comment la rajouter (Panneau de configuration → Programmes
+  → Activer ou désactiver des fonctionnalités Windows).
+- **Enregistrer dans un fichier…** et **Copier dans le presse-papiers**
+  conservent la version texte.
+
+Le PDF et le fichier texte sont écrits uniquement à l'endroit que vous
+choisissez ; MedReminder n'en garde aucune copie. Chaque page porte la
+mention que MedReminder est un rappel organisationnel, pas un
+dispositif médical.
+
 ## Profils multiples et rôles administrateur/utilisateur
 
 MedReminder peut gérer les médicaments de **plusieurs personnes**

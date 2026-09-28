@@ -413,6 +413,35 @@ La cronología no modifica ningún dato. Las fechas de agotamiento son
 estimaciones: sirven para planificar reposiciones, no son un consejo
 clínico.
 
+## Ficha de terapia (impresión y PDF)
+
+**Terapia → Ficha de terapia…** (Ctrl+P) o el botón **Ficha terapia**
+de la barra de herramientas abre una ficha de los medicamentos activos
+para entregar al médico de cabecera, a urgencias o al farmacéutico.
+Para cada medicamento activo indica el principio activo, la posología
+(franjas de toma, o dosis × veces al día), el periodo de terapia y el
+médico. Los medicamentos desactivados no aparecen.
+
+- **Incluir las notas**: desactivado por defecto. Las notas son texto
+  libre y pueden ser privadas; marca la casilla solo si la ficha debe
+  incluirlas.
+- **Papel**: A4 o Carta (EE. UU.), preseleccionado según la región de
+  Windows.
+- **Imprimir…** abre la vista previa de la tabla. Las listas largas
+  continúan en la página siguiente, con el encabezado y los títulos de
+  columna repetidos.
+- **Guardar como PDF…** pregunta dónde guardar el archivo y escribe la
+  misma tabla en PDF mediante la impresora de Windows "Microsoft Print
+  to PDF". Si esa impresora se ha eliminado, el diálogo explica cómo
+  volver a añadirla (Panel de control → Programas → Activar o
+  desactivar las características de Windows).
+- **Guardar en archivo…** y **Copiar al portapapeles** mantienen la
+  versión en texto plano.
+
+El PDF y el archivo de texto se escriben solo donde tú elijas;
+MedReminder no guarda ninguna copia. Cada página lleva el aviso de que
+MedReminder es un recordatorio organizativo, no un dispositivo médico.
+
 ## Perfiles múltiples y roles administrador/usuario
 
 MedReminder puede gestionar medicamentos para **varias personas**

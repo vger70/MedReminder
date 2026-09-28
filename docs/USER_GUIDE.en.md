@@ -381,6 +381,31 @@ Controls:
 The timeline does not change any data. Run-out dates are estimates:
 use them to plan refills, not as clinical advice.
 
+## Therapy report (print and PDF)
+
+**Therapy → Therapy report…** (Ctrl+P) or the **Therapy report**
+toolbar button opens a card of the active medicines to hand to a GP,
+an emergency room or a pharmacist. It lists, for each active medicine,
+the active ingredient, the dosage (administration slots, or dose ×
+times a day), the therapy period and the doctor. Inactive medicines
+are not listed.
+
+- **Include notes**: off by default. Notes are free text and may be
+  private; tick the box only if the card should carry them.
+- **Paper**: A4 or Letter, preselected from the Windows region.
+- **Print…** opens a preview of the table. Long lists continue on the
+  next page with the heading and the column titles repeated.
+- **Save as PDF…** asks where to save the file and writes the same
+  table as a PDF through the Windows "Microsoft Print to PDF" printer.
+  If that printer has been removed, the dialog explains how to add it
+  back (Control Panel → Programs → Turn Windows features on or off).
+- **Save to file…** and **Copy to clipboard** keep the plain-text
+  version.
+
+The PDF and the text file are written only where you choose;
+MedReminder keeps no copy. Every page carries the notice that
+MedReminder is an organizational reminder, not a medical device.
+
 ## Multiple profiles and admin/user roles
 
 MedReminder can manage medicines for **more than one person** from
