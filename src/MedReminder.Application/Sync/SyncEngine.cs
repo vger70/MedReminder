@@ -76,6 +76,8 @@ public sealed class SyncEngine
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
     private readonly SyncEngineOptions _options;
+    private readonly SyncRegisters? _registers;
+    private readonly IProfileSettingsStore? _profileSettings;
 
     public SyncEngine(
         ISyncSettingsStore settings,
@@ -88,8 +90,12 @@ public sealed class SyncEngine
         ApplyRemoteOperations apply,
         IUnitOfWork uow,
         TimeProvider clock,
-        SyncEngineOptions? options = null)
+        SyncEngineOptions? options = null,
+        SyncRegisters? registers = null,
+        IProfileSettingsStore? profileSettings = null)
     {
+        _registers = registers;
+        _profileSettings = profileSettings;
         _settings = settings;
         _keys = keys;
         _transport = transport;
@@ -152,6 +158,14 @@ public sealed class SyncEngine
         var published = await WriteGate.RunExclusiveAsync(c => PublishAsync(settings, key, c), ct);
 
         var (segmentsApplied, operationsApplied, rebuild) = await PullAsync(settings, key, problems, ct);
+
+        // P8: the profile settings of a joined or rebuilt image, and any
+        // copy an interrupted apply left behind.
+        if (_registers is not null && _profileSettings is not null)
+        {
+            await WriteGate.RunExclusiveAsync(
+                c => ProfileSettingsProjection.ProjectAsync(_registers, _profileSettings, c), ct);
+        }
 
         var peers = await PeersAsync(g, ct);
         var self = peers.GetValueOrDefault(me);

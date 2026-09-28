@@ -8,6 +8,10 @@ Snapshot of what has shipped and what remains open, taken at
 Where this file and those documents disagree, they win; this file is
 not maintained as a living document.
 
+Updated on 2026-09-28 after #99, #101–#103 and #105 (Phase 4c, sync for every
+profile, P8 residue closed, Google Cloud project published): §2.4,
+§3.1, §4.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -72,6 +76,8 @@ verified against the tree or the tracker.
 | 3a–3d | HLC and operation log; apply with LWW and conflicts; count re-evaluation by HLC; encrypted segments, group key, checkpoints, compaction; folder transport; `SyncHostedService`; Tools → Sync… | #85–#89 | v2.8.0 |
 | 4a | OneDrive sync transport and cloud backups (Graph REST, MSAL, DPAPI token cache) | #91, #93, #94 | v2.8.0 |
 | 4b | Google Drive sync transport and cloud backups (Drive REST v3, loopback + PKCE) | #95 | v2.8.0 |
+| 4c | Pairing codes and QR, key rotation, device removal, rekey with carry-over; sync available to every profile | #99, #101–#103 | not released |
+| P8 residue | Profile display name and notification recipients replicated (`ProfileSettingChanged`, operation schema 3) | #105 | not released |
 
 Result: two Windows PCs of the same user stay in sync through a shared
 folder, OneDrive or Google Drive, end-to-end encrypted, without a
@@ -94,7 +100,6 @@ backend. Public format: `docs/SYNC-FORMAT.md`; manual exit check:
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 4c | QR pairing, device revocation, group key rotation (§6.1, §6.2) | implemented in #99 (not merged at the time of writing) | manual checklist K1–K11 on Windows |
 | 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | spikes S1, S3 (and S2, S4, S5, S8); D4, D11, D13; Play Console account |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | Feature parity on mobile (timeline, prescription request, catalogue and camera scan, mail device, `.mrz` export, PDF share, state-hash check) | 20–30 d | Phase 5 / 6; D14 |
@@ -108,18 +113,10 @@ Open prerequisites and debts inside B.1:
 - **Decisions open**: D4 (notification defaults per device), D11
   (strip-target exclusion for mobile, depends on S4), D13 (minimum OS
   versions), D14 (donation links on iOS).
-- **P8 residue**: per-profile notification settings
-  (`SettingsDialog` → `notifications.settings.json`) and the profile
-  display name (`ProfilesManagerForm` → `IProfileRegistry.Rename`) are
-  still written by the UI outside a use case, so they are not
-  replicated. Deferred by the product owner on 2026-09-27.
 - **Known sync limit** (shared by OneDrive and Google Drive): a device
   that joins while the listing lags, while another device compacts,
   ends in `RebuildRequired`; "Rebuild from the group" repairs it. A
   fix needs the join to wait until its own device record is listed.
-- **Release prerequisite**: the Google Cloud project is in *Testing*;
-  refresh tokens expire after 7 days until it is published and the
-  OAuth consent screen is verified for the requested scopes.
 - **P15**: store accounts and macOS build host are product-owner
   actions.
 
@@ -176,15 +173,12 @@ WebDAV target, command palette, CLI).
 
 ## 4. Suggested next steps `[INFERRED]`
 
-1. Phase 4c (QR pairing, revocation, key rotation): implemented in
-   #99; run `docs/SYNC-TWO-PC-CHECKLIST.md` K1–K11 on Windows before
-   release.
-2. Close the P8 residue, so notification settings and profile names
-   replicate before a second device type exists.
-3. Run S1, S3 and S4 on Android before committing to Phase 5; they are
+1. Release the next version with Phase 4c and P8: run
+   `docs/SYNC-TWO-PC-CHECKLIST.md` (K1–K11, P1–P4) on Windows first;
+   every device must be updated before anyone changes a group key or
+   records a replicated profile setting (an app ≤ 2.8.x cannot follow).
+2. Run S1, S3 and S4 on Android before committing to Phase 5; they are
    the go / no-go risks for MAUI.
-4. Publish the Google Cloud project before promoting Google Drive sync
-   to users.
-5. In parallel, small user-visible items with prompts ready: large
+3. In parallel, small user-visible items with prompts ready: large
    text mode, medication card PDF; A2 webcam if HID scanners prove
    uncommon.

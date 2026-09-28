@@ -902,6 +902,10 @@ modifiche registrate nel frattempo vengono inviate dopo.
   sincronizzato avvia una nuova **generazione**: dopo un avviso, gli altri
   PC scartano quello che non avevano ancora inviato e vanno ricostruiti con
   **Ricostruisci dal gruppo…**.
+- Il **nome del profilo** e i **destinatari delle notifiche**
+  (Impostazioni → Notifiche) appartengono al gruppo: una modifica su un
+  PC arriva agli altri, e un PC che si unisce prende quelli del gruppo.
+  Per rinominare un altro profilo sincronizzato, apri prima quel profilo.
 - **Disattiva sincronizzazione…** ferma la sincronizzazione su questo PC e
   ne conserva i dati.
 

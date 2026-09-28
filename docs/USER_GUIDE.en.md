@@ -858,6 +858,10 @@ meanwhile are sent afterwards.
 - Importing an export or restoring a backup on a synced profile starts a
   new **generation**: after a warning, the other PCs discard what they had
   not sent yet and must be rebuilt with **Rebuild from the group…**.
+- The **profile name** and the **notification recipients** (Settings →
+  Notifications) belong to the group: a change on one PC reaches the
+  others, and a PC that joins takes the group's. To rename another
+  profile that is synced, open that profile first.
 - **Disable sync…** stops syncing on this PC and keeps its data.
 
 ### Pairing codes

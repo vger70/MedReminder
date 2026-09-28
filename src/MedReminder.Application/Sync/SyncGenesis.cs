@@ -14,6 +14,13 @@ namespace MedReminder.Application.Sync;
 //
 // Idempotent: nothing is written when genesis versions already exist.
 // Called by the enable-sync flow (Phase 3d).
+//
+// P8: the replicated profile settings (display name, notification
+// recipients) get genesis versions too, when the profile has no version
+// of them yet, so a device that joins takes the values of the device
+// that wrote the genesis. Only a device writing a genesis image records
+// them (create, new generation, key rotation): every other device builds
+// from that image, so the genesis values agree everywhere.
 public sealed class SyncGenesis
 {
     public static readonly HybridTimestamp Timestamp = new(0, 0, Guid.Empty);
@@ -22,13 +29,16 @@ public sealed class SyncGenesis
     private readonly IMedicationSuspensionRepository _suspensions;
     private readonly ISyncFieldVersionRepository _versions;
     private readonly IUnitOfWork _uow;
+    private readonly IProfileSettingsStore? _profileSettings;
 
     public SyncGenesis(
         IMedicineRepository medicines,
         IMedicationSuspensionRepository suspensions,
         ISyncFieldVersionRepository versions,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        IProfileSettingsStore? profileSettings = null)
     {
+        _profileSettings = profileSettings;
         _medicines = medicines;
         _suspensions = suspensions;
         _versions = versions;
@@ -41,9 +51,25 @@ public sealed class SyncGenesis
 
     private async Task<int> RecordCoreAsync(CancellationToken cancellationToken)
     {
-        if ((await _versions.ListAllAsync(cancellationToken)).Any(v => v.DeviceId == Guid.Empty)) return 0;
-
+        var existing = await _versions.ListAllAsync(cancellationToken);
         var written = 0;
+        if (_profileSettings is not null && existing.All(v => v.EntityId != ProfileSettingsProjection.Entity))
+        {
+            var values = _profileSettings.Read();
+            foreach (var setting in ProfileSetting.All)
+            {
+                await AddAsync(ProfileSettingsProjection.Entity, ProfileSettingsProjection.Entity,
+                    ProfileSettingsProjection.Register(setting), values.GetValueOrDefault(setting) ?? string.Empty,
+                    cancellationToken);
+                written++;
+            }
+        }
+        if (existing.Any(v => v.DeviceId == Guid.Empty && v.EntityId != ProfileSettingsProjection.Entity))
+        {
+            if (written > 0) await _uow.SaveChangesAsync(cancellationToken);
+            return written;
+        }
+
         foreach (var medicine in await _medicines.ListAllAsync(cancellationToken))
         {
             foreach (var field in MedicineFieldCodec.Snapshot(medicine))

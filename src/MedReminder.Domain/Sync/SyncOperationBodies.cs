@@ -4,14 +4,16 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Domain.Sync;
 
-// Operation catalogue, schema versions 1 and 2 (B.1 Phase 3a,
+// Operation catalogue, schema versions 1 to 3 (B.1 Phase 3a,
 // docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.2, §7.2). One operation
 // per user fact or per changed register, never a derived row:
 // consumption, count corrections, StockEpoch and the schedule summary on
 // Medicine are recomputed by every device (§3.4).
 //
 // Every operation carries the medicine it touches, so the apply step
-// re-derives only the medicines an incoming segment changed. The ids
+// re-derives only the medicines an incoming segment changed. A
+// profile-level operation (ProfileSettingChanged) carries Guid.Empty:
+// it touches no medicine. The ids
 // are those of the local rows, so replaying an operation is idempotent.
 // Wire names and field names are part of the sync format: renaming a
 // type, a property or an enum member is a format change.
@@ -143,3 +145,23 @@ public sealed record FactRetracted(
 public sealed record MedicineDeleted(
     Guid MedicineId,
     DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+
+// A replicated setting of the profile (operation schema version 3,
+// closing P8 of docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §2, §4.2):
+// its display name and the notification recipients. Last writer wins
+// per setting, without a conflict entry. MedicineId is Guid.Empty.
+public sealed record ProfileSettingChanged(
+    string Setting,
+    string? Value) : SyncOperationBody(Guid.Empty);
+
+// Names of the replicated profile settings (ProfileSettingChanged.Setting).
+// Part of the sync format.
+public static class ProfileSetting
+{
+    public const string DisplayName = "DisplayName";
+    public const string ToAddress = "ToAddress";
+    public const string CaregiverAddress = "CaregiverAddress";
+    public const string DoctorAddress = "DoctorAddress";
+
+    public static readonly IReadOnlyList<string> All = [DisplayName, ToAddress, CaregiverAddress, DoctorAddress];
+}

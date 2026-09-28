@@ -32,6 +32,17 @@ or changes sync. Record the date, the build and the result of each step.
 | 13 | Logs (`%LOCALAPPDATA%\MedReminder\logs`) of both PCs | Sync runs logged with counters only; no medicine names, notes or passphrase |
 | 14 | A second profile with the user role on A: Tools → Sync… | Enable, join and join with a pairing code are offered and work on that profile's data; once synced, Change key and passphrase… and Remove device… are offered and act only on that profile's group |
 
+## Profile name and notification recipients (P8)
+
+PC A and PC B synced as above, both updated to the same build.
+
+| # | Step | Expected |
+|---|---|---|
+| P1 | A: Settings → Notifications: set the recipient, caregiver and doctor addresses, Save; sync both | B shows the same three addresses in Settings → Notifications |
+| P2 | B: Tools → Manage profiles → Rename the current profile; sync both | A's profile has the new name (profile picker, Manage profiles) |
+| P3 | A (admin): Manage profiles → rename another profile that has sync enabled | Message: open that profile to rename it; the name does not change |
+| P4 | A third PC joins the group | After its first sync it shows the group's profile name and recipients |
+
 ## OneDrive (Phase 4a)
 
 Same PCs, sync disabled on both first (Disable sync…), one Microsoft
