@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #106 — Spikes S1-S4: B.1 Android spike app (do not merge)
+
+Link: [vger70/MedReminder#106](https://github.com/vger70/MedReminder/pull/106)
+Branch: `claude/nifty-galileo-vfepsw`
+**Status:** draft, not to be merged (spike tool; results go to
+`ANALYSIS-B1-MOBILE-SYNC.md` §18)
+
+### Added
+
+- `spikes/Android/`: MAUI Android app for S1 (AES-GCM, known answers,
+  desktop archive decryption), S2 (Argon2id cost with the default
+  parameters) and S3 (EF Core SQLite and reflection JSON in a Release
+  build), on the production portable projects; `run-s4.ps1` for S4
+  (`StripReleaseDebugArtifacts` on an Android Release publish). Written
+  without an Android toolchain; not built yet.
+
 ## PR #104 — Align the B.1 Phase 0 exit with the S6 result
 
 Link: [vger70/MedReminder#104](https://github.com/vger70/MedReminder/pull/104)
