@@ -9,6 +9,7 @@ using MedReminder.Infrastructure.Donations;
 using MedReminder.Infrastructure.Catalogue.Parsers;
 using MedReminder.Infrastructure.Credentials;
 using MedReminder.Infrastructure.Cloud;
+using MedReminder.Infrastructure.Cloud.GoogleDrive;
 using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Sync;
 using MedReminder.Infrastructure.Email;
@@ -103,8 +104,12 @@ public static class InfrastructureServiceCollectionExtensions
         // client and token cache for the process. The portable
         // SyncTransportFactory picks the token source up.
         services.TryAddSingleton<MsalCloudAccountService>();
-        services.TryAddSingleton<ICloudAccountService>(sp => sp.GetRequiredService<MsalCloudAccountService>());
         services.TryAddSingleton<IOneDriveAccessTokens>(sp => sp.GetRequiredService<MsalCloudAccountService>());
+        // B.1 Phase 4b: Google Drive sign-in (loopback + PKCE) and access
+        // tokens; CloudAccountService routes by provider.
+        services.TryAddSingleton<GoogleCloudAccountService>();
+        services.TryAddSingleton<IGoogleDriveAccessTokens>(sp => sp.GetRequiredService<GoogleCloudAccountService>());
+        services.TryAddSingleton<ICloudAccountService, CloudAccountService>();
 
         // C.3+: DPAPI-cached backup passphrase for the unattended
         // cloud-folder snapshot (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md

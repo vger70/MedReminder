@@ -29,6 +29,20 @@
          it today; other parsers stay on UTF-8. -->
   </ItemGroup>
 
+  <!--
+    Google Drive (B.1 Phase 4b): the Desktop OAuth client's id and secret
+    are not in the repository. Set MEDREMINDER_GOOGLE_CLIENT_ID and
+    MEDREMINDER_GOOGLE_CLIENT_SECRET in the environment of a release build
+    (docs/PACKAGING.md); they are stamped into this assembly and read by
+    GoogleCloudAccountService. GoogleDrive:ClientId / ClientSecret in
+    configuration override them. Without either, Google Drive is not
+    offered.
+  -->
+  <ItemGroup Condition="'$(MEDREMINDER_GOOGLE_CLIENT_ID)' != '' and '$(MEDREMINDER_GOOGLE_CLIENT_SECRET)' != ''">
+    <AssemblyMetadata Include="GoogleDriveClientId" Value="$(MEDREMINDER_GOOGLE_CLIENT_ID)" />
+    <AssemblyMetadata Include="GoogleDriveClientSecret" Value="$(MEDREMINDER_GOOGLE_CLIENT_SECRET)" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\MedReminder.Domain\MedReminder.Domain.csproj" />
     <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
