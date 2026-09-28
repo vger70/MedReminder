@@ -30,6 +30,25 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #109 — Align STATUS, EVOLUTION and ANALYSIS with v2.9.1
+
+Link: [vger70/MedReminder#109](https://github.com/vger70/MedReminder/pull/109)
+Branch: `claude/docs-review-v2.9`
+
+### Docs
+
+- `docs/STATUS.md`: snapshot at v2.9.1; Phase 4c and P8 released in
+  v2.9.0; #107 and #108 shipped; draft spike PR #106; next steps A2
+  phase 2 then phase 3, and the Android spikes.
+- `docs/EVOLUTION.md`: shipped desktop side of B.1, OneDrive and
+  Google Drive; A2 phase 2 then phase 3 planned as the next desktop
+  work; multi-user non-goals left unplanned until a need emerges.
+- `docs/ANALYSIS.md`: release line, network calls, sync UI, Phase 4c
+  pairing and key rotation, P8, toast language, secrets, therapy card
+  (§9.6), hosted-service and project counts, known sync join limit.
+- `ANALYSIS-A2-BARCODE-SCAN.md` §1.6 and `EVOLUTION-PROPOSALS.md`
+  aligned.
+
 ## PR #108 — Add a per-profile text size and honour display scaling and high contrast
 
 Link: [vger70/MedReminder#108](https://github.com/vger70/MedReminder/pull/108)
