@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #96 — Align the repeat-passphrase label in the sync passphrase dialog
+
+Link: [vger70/MedReminder#96](https://github.com/vger70/MedReminder/pull/96)
+Branch: `claude/bold-lamport-eru3jp`
+
+### Fixed
+
+- Sync passphrase dialog: the "Repeat passphrase" label sat below its
+  text box because the layout gave the leftover height to the last
+  row. Content rows now size to fit and a filler row takes the rest
+  (`src/MedReminder.UI/Forms/SyncPassphraseDialog.cs`).
+
 ## PR #95 — B.1 Phase 4b: Google Drive sync transport and cloud backups
 
 Link: [vger70/MedReminder#95](https://github.com/vger70/MedReminder/pull/95)
