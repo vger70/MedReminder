@@ -30,7 +30,7 @@ or changes sync. Record the date, the build and the result of each step.
 | 11 | B: Tools → Sync… → Rebuild from the group… | Restart; B shows A's imported data |
 | 12 | B: Disable sync… | B keeps its data; A keeps syncing; B no longer changes the folder |
 | 13 | Logs (`%LOCALAPPDATA%\MedReminder\logs`) of both PCs | Sync runs logged with counters only; no medicine names, notes or passphrase |
-| 14 | A second profile with the user role on A: Tools → Sync… | Enable, join and join with a pairing code are offered and work on that profile's data; once synced, Change key and passphrase… and Remove device… are not shown |
+| 14 | A second profile with the user role on A: Tools → Sync… | Enable, join and join with a pairing code are offered and work on that profile's data; once synced, Change key and passphrase… and Remove device… are offered and act only on that profile's group |
 
 ## OneDrive (Phase 4a)
 

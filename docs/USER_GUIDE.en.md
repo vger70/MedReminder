@@ -804,9 +804,8 @@ folder they share (a OneDrive, Google Drive or Dropbox folder kept in sync
 by its desktop app, or a network share). No server is involved and the
 folder never contains readable data.
 
-Open **Tools → Sync…**. Every profile manages the sync of its own data.
-Changing the key and removing a device are available to the administrator
-only.
+Open **Tools → Sync…**. Every profile manages the sync of its own data,
+including changing the key and removing a device.
 
 ### OneDrive or a shared folder
 

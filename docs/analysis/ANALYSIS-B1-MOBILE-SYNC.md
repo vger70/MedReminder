@@ -1774,3 +1774,7 @@ Phase 2 implements the derivation from the prototype and its tests.
   Key rotation and device removal stay with the administrator. Reason:
   the dialog acts on the current profile only, so a profile with the
   user role could never be synced by anyone.
+- 2026-09-28 — Decision of the product owner: key rotation and device
+  removal are also open to every profile. A sync group belongs to one
+  profile, so they reach only that profile's devices and data. No sync
+  action depends on the profile role any more.

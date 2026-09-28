@@ -906,8 +906,8 @@ Netzwerkfreigabe). Kein Server ist beteiligt, und der Ordner enthält nie
 lesbare Daten.
 
 Öffnen Sie **Extras → Synchronisierung…**. Jedes Profil verwaltet die Synchronisierung
-seiner eigenen Daten. Schlüssel ändern und Geräte entfernen sind dem
-Administrator vorbehalten.
+seiner eigenen Daten, einschließlich Schlüssel ändern und Geräte
+entfernen.
 
 ### OneDrive oder freigegebener Ordner
 

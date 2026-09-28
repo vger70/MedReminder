@@ -59,6 +59,25 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #103 — Open key rotation and device removal to every profile
+
+Link: [vger70/MedReminder#103](https://github.com/vger70/MedReminder/pull/103)
+Branch: `claude/b1-phase-4c-t44dis`
+
+### Changed
+
+- Tools → Sync…: Change key and passphrase… and Remove device… are
+  available to every profile. A sync group belongs to one profile, so
+  they reach only that profile's devices and data; no sync action
+  depends on the profile role any more
+  (`src/MedReminder.UI/Forms/SyncDialog.cs`; product owner,
+  2026-09-28).
+
+### Docs
+
+- User guides (5 languages), `docs/SYNC-TWO-PC-CHECKLIST.md` step 14,
+  `ANALYSIS-B1-MOBILE-SYNC.md` change log.
+
 ## PR #102 — Let every profile manage the sync of its own data
 
 Link: [vger70/MedReminder#102](https://github.com/vger70/MedReminder/pull/102)

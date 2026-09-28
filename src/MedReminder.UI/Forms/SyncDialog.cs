@@ -20,11 +20,11 @@ namespace MedReminder.UI.Forms;
 // (sign-in in
 // the system browser) or in a folder; the choice is made when enabling or
 // joining.
-// Phase 4c: pairing codes (show one, join or take a new key with one)
-// and the new key after a rotation on another device, for every
-// profile; key rotation and device removal for the administrator only,
-// since they cut every other device of the group off until it takes the
-// new key.
+// Phase 4c: pairing codes (show one, join or take a new key with one),
+// key rotation, device removal and the new key after a rotation on
+// another device, for every profile as well: a sync group belongs to one
+// profile, so these reach only that profile's devices and data (product
+// owner, 2026-09-28).
 internal sealed class SyncDialog : MedReminderFormBase
 {
     private readonly IServiceScopeFactory _scopes;
@@ -189,15 +189,14 @@ internal sealed class SyncDialog : MedReminderFormBase
     private void RefreshStatus()
     {
         var settings = _settings.Load();
-        var admin = _profile.IsAdmin;
         _enable.Visible = settings is null;
         _join.Visible = settings is null;
         _disable.Visible = settings is not null;
         _joinCode.Visible = settings is null;
         _pair.Visible = settings is not null && !_status.NeedsNewKey;
-        _rotate.Visible = admin && settings is not null && !_status.NeedsNewKey;
+        _rotate.Visible = settings is not null && !_status.NeedsNewKey;
         _newKey.Visible = settings is not null && _status.NeedsNewKey;
-        _removeDevice.Visible = admin && settings is not null;
+        _removeDevice.Visible = settings is not null;
         UpdateDeviceButtons();
         _syncNow.Visible = settings is not null;
         _rebuild.Visible = settings is not null && _status.NeedsRebuild;
@@ -550,7 +549,7 @@ internal sealed class SyncDialog : MedReminderFormBase
     // that device is being removed: it is not given the new key.
     private async Task RotateAsync(string? removedDevice)
     {
-        if (!_profile.IsAdmin || !IsEnabled) return;
+        if (!IsEnabled) return;
         var confirm = removedDevice is null
             ? _loc.Get("Ui.SyncDialog.Rotate.Confirm")
             : _loc.Get("Ui.SyncDialog.RemoveDevice.Confirm", removedDevice);
