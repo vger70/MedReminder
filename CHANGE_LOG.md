@@ -33,7 +33,7 @@ with the classification adapted to per-PR granularity: **Added**,
 ## PR #NEW — Stream OneDrive downloads, fix hidden-provider validation, share snapshot naming
 
 Link: [vger70/MedReminder#NEW](https://github.com/vger70/MedReminder/pull/NEW)
-Branch: `claude/code-review-rjy7oe`
+Branch: `claude/code-review-followup`
 
 ### Fixed
 
