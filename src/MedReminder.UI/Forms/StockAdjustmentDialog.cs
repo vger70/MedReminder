@@ -6,6 +6,8 @@ namespace MedReminder.UI.Forms;
 // One dialog for: new package, manual addition, positive or
 // negative correction. The caller picks the default
 // StockOperationKind; the user can change it before confirming.
+// initialQuantity pre-fills the quantity (restock by scan: the size of
+// the medicine's last new package); the user can edit it.
 internal sealed class StockAdjustmentDialog : MedReminderFormBase
 {
     public StockAdjustmentResult? Result { get; private set; }
@@ -16,7 +18,8 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
     private readonly TextBox _notesBox;
 
     public StockAdjustmentDialog(string medicineName, decimal currentStock, string unit,
-        StockOperationKind defaultKind, ILocalizationService localization)
+        StockOperationKind defaultKind, ILocalizationService localization,
+        decimal? initialQuantity = null)
     {
         _loc = localization;
         Text = _loc.Get("Ui.StockAdjustmentDialog.Title");
@@ -59,6 +62,10 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
             Dock = DockStyle.Left,
             Width = 120,
         };
+        if (initialQuantity is { } quantity)
+        {
+            _quantityBox.Value = Math.Clamp(quantity, _quantityBox.Minimum, _quantityBox.Maximum);
+        }
         _notesBox = new TextBox
         {
             Dock = DockStyle.Fill,

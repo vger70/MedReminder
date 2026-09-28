@@ -288,6 +288,28 @@ pasan 30 segundos sin código.
 - Las imágenes de la cámara nunca se guardan ni se envían; solo se usa
   el código leído.
 
+### Reponer escaneando
+
+Cuando compre una caja nueva de un medicamento que ya está en su lista,
+use **Stock → Reponer por código de barras…**. No hace falta
+seleccionar antes el medicamento: el escaneo lo encuentra.
+
+1. Escanee el envase con el lector o con la webcam, como se indica
+   arriba.
+2. Se selecciona el medicamento con ese código y se abre la ventana
+   **Movimiento de stock**, ajustada a caja nueva, con la cantidad de su última caja nueva ya
+   rellenada. Revísela y confirme.
+
+- Si varios medicamentos tienen el mismo código, elija el que desea
+  reponer.
+- Si ningún medicamento tiene el código pero el catálogo lo conoce,
+  puede añadirlo como medicamento nuevo o vincular el código a un
+  medicamento de su lista que aún no tenga código (por ejemplo, uno
+  introducido a mano); la caja se añade entonces a ese medicamento.
+- El medicamento se encuentra por su código AIC. Un envase que solo
+  lleva el código 2D cuadrado (DataMatrix) no se reconoce: use
+  **Stock → Añadir caja**.
+
 ## Añadir stock (nueva caja)
 
 1. Selecciona el medicamento en la cuadrícula.

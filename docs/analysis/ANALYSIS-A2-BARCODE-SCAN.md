@@ -699,10 +699,11 @@ Variant H does require code — the small amount described above.
 
 ---
 
-## 5C. Flow (b) — restock by scan (Phase 3, deferred)
+## 5C. Flow (b) — restock by scan (Phase 3)
 
-Design record only. Implemented after flow (a) is complete and only on
-explicit product-owner request (§1.6).
+Implemented in phase 3 (2026-09-28), after flow (a), on the product
+owner's request (§1.6). §5C.7 lists where the implementation departs
+from the design below.
 
 ### 5C.1 Goal
 
@@ -791,6 +792,43 @@ Flow:
 
 `[INFERRED]`: ~4–5 developer-days, including localization and user
 guide updates in five languages.
+
+### 5C.7 As implemented
+
+- **Entry point** (§12.1): menu entry *Stock → Restock from barcode…*,
+  no toolbar button, no shortcut. It works with no row selected.
+- **Lookups**: `RestockByScanQuery` (Application/Catalogue), a
+  read-only query over `IMedicineRepository.ListAllAsync` and
+  `IStockMovementRepository.ListForMedicineAsync`; no repository
+  method and no use case were added. `FindByNationalCodeAsync`
+  returns the matches, active first; `ListUnlinkedAsync` the
+  medicines without a national code. Each `RestockCandidate` carries
+  the quantity of the latest `NewPackage` movement, or null.
+- **Lifecycle** (§5C.3 point 4): the only states today are active and
+  inactive (deactivated). Both are matched, since restocking an
+  inactive medicine is legitimate; the pick list marks inactive ones.
+  Selecting an inactive medicine turns on *Show inactive medicines*.
+- **One match**: the medicine's row is selected in the main grid and
+  the existing *Add package* path runs (`ShowStockDialogAsync`), with
+  `StockAdjustmentDialog` pre-filled with the last new-package
+  quantity. Persistence goes through `AddStock`, as before.
+- **Several matches**: `MedicinePickerDialog`, then as above.
+- **No match**: offered only when the profile's catalogue knows the
+  code, because `LinkMedicineToReferenceUseCase` links to a catalogue
+  row. A task dialog offers *Add as a new medicine* (the new-medicine
+  form opens filled in from the catalogue row; its own initial
+  quantity replaces the restock, so none follows) or *Link to a
+  medicine in my list* (pick among medicines without a code, link,
+  then restock it). A code the catalogue does not know shows a
+  message only.
+- **GTIN only**: a message explains that the package carries no AIC
+  code and points to *Stock → Add package*.
+- `BarcodeScanDialog`, the parser and the capture layer are unchanged,
+  as planned (§5C.4).
+
+Tests: `RestockByScanQueryTests` (no, one, several matches; inactive
+ordering; quantity absent, latest new package, other kinds ignored;
+unlinked list). The UI paths are manual (§5C.5).
 
 ---
 
@@ -1141,7 +1179,7 @@ Flow (a): single button in `MedicineEditDialog`, next to the
 commercial-name field. **Proposed default: `MedicineEditDialog` only.**
 
 Flow (b), phase 3: a `MainForm` action "Restock from barcode" (§5C.3).
-Toolbar button vs menu entry to decide at phase 3 time.
+**Settled in phase 3:** a *Stock* menu entry, no toolbar button.
 
 ### 12.2 Expiry / batch capture
 
@@ -1286,3 +1324,8 @@ explicit product-owner request. One PR per phase. See §1.6.
   `CameraMaxWidthPixels` = 1280 replaces `PreviewMaxWidthPixels`
   (§8.5); phase 2 keys (§8.6); decoder tests replace the camera tests
   (§9.4).
+- 2026-09-28 — phase 3 implemented (flow b). §5C header and new
+  §5C.7 record the implementation: `RestockByScanQuery` instead of a
+  repository method or use case; inactive medicines matched and
+  marked; the no-match choices offered only for codes the catalogue
+  knows; menu entry settled (§12.1).

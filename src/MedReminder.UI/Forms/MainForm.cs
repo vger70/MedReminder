@@ -230,6 +230,10 @@ internal sealed class MainForm : MedReminderFormBase
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.AddPackage"),
             Mdl2Glyph.Glyphs.Package, Keys.Control | Keys.Shift | Keys.A,
             async () => await ShowStockDialogAsync(StockOperationKind.NewPackage)));
+        // Independent of the selected row: the scan identifies the medicine.
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.RestockFromBarcode"),
+            Mdl2Glyph.Glyphs.Package, Keys.None,
+            async () => await RestockFromBarcodeAsync()));
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Warning, Keys.None,
             async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
@@ -1145,12 +1149,13 @@ internal sealed class MainForm : MedReminderFormBase
         return await query.GetByNationalCodeAsync(country, nationalCode, cancellationToken);
     }
 
-    private async Task ShowNewMedicineAsync()
+    private async Task ShowNewMedicineAsync(ReferenceMedicine? initialReference = null)
     {
         using var dialog = new MedicineEditDialog(
             MedicineEditDialog.EditMode.Create, _loc,
             catalogueContext: BuildCatalogueContext(),
-            barcodeContext: BuildBarcodeScanContext());
+            barcodeContext: BuildBarcodeScanContext(),
+            initialReference: initialReference);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -1481,12 +1486,13 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    private async Task ShowStockDialogAsync(StockOperationKind defaultKind)
+    private async Task ShowStockDialogAsync(StockOperationKind defaultKind, decimal? initialQuantity = null)
     {
         var row = GetSelectedRow();
         if (row is null) return;
 
-        using var dialog = new StockAdjustmentDialog(row.Name, row.CurrentStock, row.Unit, defaultKind, _loc);
+        using var dialog = new StockAdjustmentDialog(
+            row.Name, row.CurrentStock, row.Unit, defaultKind, _loc, initialQuantity);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -1512,6 +1518,142 @@ internal sealed class MainForm : MedReminderFormBase
         {
             ShowError(_loc.Get("Ui.MainForm.Error.StockMovement"), ex);
         }
+    }
+
+    // Restock by scan (A2 phase 3, flow b): the scanned national code
+    // identifies the medicine, then the usual new-package dialog opens
+    // with the quantity of its last new package. A code that matches no
+    // medicine can be linked to an existing one or added as a new one.
+    // See docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md §5C.
+    private async Task RestockFromBarcodeAsync()
+    {
+        var barcode = BuildBarcodeScanContext();
+        BarcodeContent? content;
+        using (var dialog = new BarcodeScanDialog(
+            _loc, barcode.Parser, barcode.Camera, barcode.Options, barcode.Logger))
+        {
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+            content = dialog.Result;
+        }
+        if (content?.LookupKey is not { } code) return;
+
+        // A GTIN alone does not identify a medicine of the profile:
+        // medicines carry the national code only (§5C.3).
+        if (content.NationalCode is not { } nationalCode)
+        {
+            MessageBox.Show(this,
+                _loc.Get("Ui.MainForm.RestockScan.NoNationalCode", code),
+                _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        try
+        {
+            IReadOnlyList<RestockCandidate> candidates;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                candidates = await scope.ServiceProvider.GetRequiredService<RestockByScanQuery>()
+                    .FindByNationalCodeAsync(nationalCode, CancellationToken.None);
+            }
+            _log.LogInformation("Restock by scan: {Count} medicine(s) match the scanned code.", candidates.Count);
+
+            var candidate = candidates.Count switch
+            {
+                0 => await ResolveUnmatchedCodeAsync(nationalCode),
+                1 => candidates[0],
+                _ => PickMedicine(
+                    _loc.Get("Ui.MainForm.RestockScan.PickTitle"),
+                    _loc.Get("Ui.MainForm.RestockScan.PickPrompt", nationalCode),
+                    candidates),
+            };
+            if (candidate is null) return;
+
+            SelectGridRow(candidate.MedicineId);
+            if (GetSelectedRow()?.Id != candidate.MedicineId) return;
+            await ShowStockDialogAsync(StockOperationKind.NewPackage, candidate.LastNewPackageQuantity);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.RestockScan"), ex);
+        }
+    }
+
+    // No medicine carries the code. When the catalogue knows it, offer
+    // to add it as a new medicine (the edit dialog opens filled in from
+    // the catalogue, with its own initial quantity, so no restock
+    // follows) or to link it to a medicine that has no code yet, which
+    // is then restocked. Returns the medicine to restock, or null.
+    private async Task<RestockCandidate?> ResolveUnmatchedCodeAsync(string nationalCode)
+    {
+        var catalogue = BuildCatalogueContext();
+        var reference = catalogue is null
+            ? null
+            : await LookupReferenceByNationalCodeAsync(catalogue.Country, nationalCode, CancellationToken.None);
+        if (catalogue is null || reference is null)
+        {
+            MessageBox.Show(this,
+                _loc.Get("Ui.MainForm.RestockScan.NotFound", nationalCode),
+                _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return null;
+        }
+
+        var addNew = new TaskDialogCommandLinkButton(
+            _loc.Get("Ui.MainForm.RestockScan.AddNew"), _loc.Get("Ui.MainForm.RestockScan.AddNew.Description"));
+        var link = new TaskDialogCommandLinkButton(
+            _loc.Get("Ui.MainForm.RestockScan.Link"), _loc.Get("Ui.MainForm.RestockScan.Link.Description"));
+        var page = new TaskDialogPage
+        {
+            Caption = _loc.Get("Ui.MainForm.RestockScan.PickTitle"),
+            Heading = _loc.Get("Ui.MainForm.RestockScan.NoMatch.Heading", nationalCode),
+            Text = _loc.Get("Ui.MainForm.RestockScan.NoMatch.Text", reference.CommercialName),
+            Icon = TaskDialogIcon.Information,
+            Buttons = { addNew, link, TaskDialogButton.Cancel },
+        };
+        var choice = TaskDialog.ShowDialog(this, page);
+
+        if (choice == addNew)
+        {
+            await ShowNewMedicineAsync(reference);
+            return null;
+        }
+        if (choice != link) return null;
+
+        IReadOnlyList<RestockCandidate> unlinked;
+        await using (var scope = _scopeFactory.CreateAsyncScope())
+        {
+            unlinked = await scope.ServiceProvider.GetRequiredService<RestockByScanQuery>()
+                .ListUnlinkedAsync(CancellationToken.None);
+        }
+        if (unlinked.Count == 0)
+        {
+            MessageBox.Show(this,
+                _loc.Get("Ui.MainForm.RestockScan.NoUnlinked"),
+                _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return null;
+        }
+
+        var picked = PickMedicine(
+            _loc.Get("Ui.MainForm.RestockScan.LinkTitle"),
+            _loc.Get("Ui.MainForm.RestockScan.LinkPrompt", reference.CommercialName),
+            unlinked);
+        if (picked is null) return null;
+
+        await using (var scope = _scopeFactory.CreateAsyncScope())
+        {
+            var linkUseCase = scope.ServiceProvider.GetRequiredService<LinkMedicineToReferenceUseCase>();
+            var result = await linkUseCase.ExecuteAsync(
+                picked.MedicineId, catalogue.Country, nationalCode, CancellationToken.None);
+            if (result != LinkResult.Linked) return null;
+        }
+        _log.LogInformation("Restock by scan: medicine {MedicineId} linked to the scanned code.", picked.MedicineId);
+        await ReloadAsync();
+        return picked;
+    }
+
+    private RestockCandidate? PickMedicine(string title, string prompt, IReadOnlyList<RestockCandidate> candidates)
+    {
+        using var picker = new MedicinePickerDialog(title, prompt, candidates, _loc);
+        return picker.ShowDialog(this) == DialogResult.OK ? picker.Result : null;
     }
 
     private async Task ShowStockCountAsync()

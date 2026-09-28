@@ -284,6 +284,26 @@ chiudi la finestra o dopo 30 secondi senza codice.
 - Le immagini della webcam non vengono mai salvate né inviate; viene
   usato solo il codice letto.
 
+### Rifornire con la scansione
+
+Quando compri una nuova confezione di un farmaco già nel tuo elenco,
+usa **Scorte → Rifornisci da codice a barre…**. Non serve selezionare
+prima il farmaco: lo trova la scansione.
+
+1. Scansiona la confezione con il lettore o con la webcam, come sopra.
+2. Il farmaco con quel codice viene selezionato e si apre la finestra
+   **Movimento di magazzino**, impostata su nuova confezione, con già inserita la quantità della sua
+   ultima nuova confezione. Controllala e conferma.
+
+- Se più farmaci hanno lo stesso codice, scegli quello da rifornire.
+- Se nessun farmaco ha il codice ma il catalogo lo conosce, puoi
+  aggiungerlo come nuovo farmaco, oppure collegare il codice a un
+  farmaco del tuo elenco che non ha ancora un codice (per esempio uno
+  inserito a mano); la confezione viene poi aggiunta a quel farmaco.
+- Il farmaco viene trovato tramite il codice AIC. Una confezione con
+  il solo codice 2D quadrato (DataMatrix) non viene riconosciuta: usa
+  **Scorte → Aggiungi confezione**.
+
 ## Aggiungere scorte (nuova confezione)
 
 1. Seleziona la medicina nella griglia.
