@@ -30,20 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #114 — Add analysis of device provisioning from an existing sync group
+## PR #114 — Add analysis of a household of devices with a master device
 
 Link: [vger70/MedReminder#114](https://github.com/vger70/MedReminder/pull/114)
 Branch: `claude/medreminder-sync-analysis-fquf7h`
 
 ### Docs
 
-- `docs/analysis/ANALYSIS-DEVICE-PROVISIONING.md`: analysis of adding a
-  PC or a phone to an existing installation through sync, settings
-  included. Separates one-time provisioning from continuous sync,
-  classifies every setting, records blockers found in code (duplicate
-  email from two SMTP-enabled devices, one join per profile, passphrase
-  join picking the first group that opens), proposes a multi-group
-  pairing code with a settings seed, and lists open decisions.
+- `docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`: analysis of one
+  installation spread over several devices (PC, later phone). The
+  first device is master; later devices join through a household sync
+  group that replicates profiles, roles, PIN hashes and installation
+  settings; an admin can elect another master, confirmed by a handover
+  wizard; only the master sends email and runs the scheduled cloud
+  backup. Records the duplicate-email defect of today's two-PC setups,
+  proposes changes to the requirements, and splits the work into steps
+  H0 to H6 with open decisions.
 - `docs/ANALYSIS.md` §12: index entry for the new analysis.
 
 ## PR #113 — Align STATUS, EVOLUTION and ANALYSIS with v2.10.0
