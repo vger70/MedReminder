@@ -1798,3 +1798,16 @@ Phase 2 implements the derivation from the prototype and its tests.
   device takes the group's name and recipients. A synced profile other
   than the current one cannot be renamed from Manage profiles: its
   database is not open, so the rename could not be recorded.
+- 2026-09-28 — Known limit of Phase 4b closed. A provider transport
+  lists its own writes from memory, so "the join waits until its own
+  record is listed" has to ask the provider:
+  `IProviderListing.IsListedByProviderAsync`, implemented by the
+  OneDrive and Google Drive transports. The join writes its record as
+  soon as it picks an image, waits until the provider lists the record
+  (`SyncEngineOptions.JoinListingTimeout`, 60 s), then checks with the
+  listing it just fetched that the image still covers every device's
+  first remaining segment, and picks again if not (up to
+  `JoinAttempts`, 3). The database is built once, from the last image
+  picked. A join by passphrase that opens several groups of the
+  storage now asks which one (`JoinSyncGroup.FindGroupsAsync`) instead
+  of joining the first.

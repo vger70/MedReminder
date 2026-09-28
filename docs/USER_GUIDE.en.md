@@ -909,6 +909,14 @@ meanwhile are sent afterwards.
 3. Confirm: **the data of this profile on this PC is replaced** by the
    group's (a copy is kept next to the database). MedReminder restarts.
 
+If the passphrase opens more than one group in the folder or account
+(several synced profiles with the same passphrase), MedReminder asks
+which one to join and shows each group with its devices.
+
+With OneDrive or Google Drive the join can take up to a minute:
+MedReminder waits until the account lists the new PC, so that the other
+PCs keep the changes it still needs.
+
 ### Daily use
 
 - MedReminder syncs a few seconds after each change, every 5 minutes, and
@@ -926,6 +934,10 @@ meanwhile are sent afterwards.
   Notifications) belong to the group: a change on one PC reaches the
   others, and a PC that joins takes the group's. To rename another
   profile that is synced, open that profile first.
+- **Email**: every PC with email configured (Settings → Email SMTP)
+  sends its own low-stock and caregiver messages, so with two synced PCs
+  the same message arrives twice. Configure email on one PC of the group
+  only.
 - **Disable sync…** stops syncing on this PC and keeps its data.
 
 ### Pairing codes

@@ -126,6 +126,23 @@ public sealed class OneDriveSyncTransportTests : SyncTransportContractTests
     }
 
     [Fact]
+    public async Task An_own_write_is_listed_by_the_provider_only_once_the_feed_reports_it()
+    {
+        var transport = new OneDriveSyncTransport(Client(), _clock);
+        await transport.WriteAsync("g/devices/a.mrd", Bytes(3), default);
+        Later();
+        (await transport.ListAsync("g/", default)).Should().Equal("g/devices/a.mrd");
+        _drive.DeltaReportsChanges = false;
+        await transport.WriteAsync("g/devices/c.mrd", Bytes(3), default);
+
+        (await transport.ListAsync("g/", default)).Should().Equal("g/devices/a.mrd", "g/devices/c.mrd");
+        (await transport.IsListedByProviderAsync("g/devices/c.mrd", default)).Should().BeFalse();
+
+        _drive.DeltaReportsChanges = true;
+        (await transport.IsListedByProviderAsync("g/devices/c.mrd", default)).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Children_of_a_deleted_folder_disappear()
     {
         var transport = CreateTransport();

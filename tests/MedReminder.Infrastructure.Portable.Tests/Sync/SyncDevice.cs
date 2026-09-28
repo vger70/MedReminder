@@ -36,7 +36,12 @@ internal sealed class SyncDevice : IDisposable
         services.AddSingleton<ISyncSettingsStore>(Settings);
         services.AddSingleton<ISyncKeyStore>(Keys);
         services.AddSingleton<IProfileSettingsStore>(ProfileSettings);
-        services.AddSingleton(new SyncEngineOptions { DeviceName = name, CheckpointEvery = checkpointEvery });
+        // A join waits for its record to be listed (JoinSyncGroup); JoinDelay
+        // stands for the seconds between two listings.
+        services.AddSingleton(new SyncEngineOptions
+        {
+            DeviceName = name, CheckpointEvery = checkpointEvery, Delay = (t, ct) => JoinDelay(t, ct),
+        });
         if (transport is not null)
         {
             services.AddScoped(sp => transport(new LocalFolderSyncTransport(
@@ -63,6 +68,10 @@ internal sealed class SyncDevice : IDisposable
     public MemoryKeyStore Keys { get; }
 
     public MemoryProfileSettingsStore ProfileSettings { get; }
+
+    // What happens while a join run on this device waits between two
+    // listings. Immediate by default.
+    public Func<TimeSpan, CancellationToken, Task> JoinDelay { get; set; } = (_, _) => Task.CompletedTask;
 
     public Task<SyncRunResult> SyncAsync()
         => RunAsync(sp => sp.GetRequiredService<SyncEngine>().RunAsync(CancellationToken.None));

@@ -783,7 +783,3 @@ Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:
   release stay as they are; only new days follow the corrected rules.
 - **`IStockMovementRepository.GetLastConsumptionDayAsync`** is no
   longer used by production code (only by `RoundTripTests`).
-- **Sync join during a lagging listing.** A device that joins while
-  the cloud listing lags behind another device's compaction ends in
-  `RebuildRequired`; *Rebuild from the group* repairs it
-  ([`analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md)).

@@ -58,6 +58,10 @@ internal sealed class SyncSetupService : ISyncSetupService
     public Task<IReadOnlyList<Guid>> ListGroupsAsync(SyncTarget target, CancellationToken cancellationToken)
         => JoinSyncGroup.ListGroupsAsync(_transports.Create(target), cancellationToken);
 
+    public Task<IReadOnlyList<SyncGroupCandidate>> FindGroupsAsync(SyncTarget target, char[] passphrase,
+        CancellationToken cancellationToken)
+        => _join.FindGroupsAsync(_transports.Create(target), passphrase, cancellationToken);
+
     public async Task CreateAsync(SyncTarget target, char[] passphrase, string deviceName, CancellationToken cancellationToken)
     {
         var settings = await _create.ExecuteAsync(_transports.Create(target), passphrase, target,

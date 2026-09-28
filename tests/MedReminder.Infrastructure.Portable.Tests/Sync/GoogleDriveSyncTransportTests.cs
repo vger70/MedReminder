@@ -132,6 +132,20 @@ public sealed class GoogleDriveSyncTransportTests : SyncTransportContractTests
     }
 
     [Fact]
+    public async Task An_own_write_is_listed_by_the_provider_only_once_the_listing_catches_up()
+    {
+        var transport = new GoogleDriveSyncTransport(Client(), _clock);
+        _drive.ListingLags = true;
+        await transport.WriteAsync("g/devices/c.mrd", Bytes(3), default);
+
+        (await transport.ListAsync("g/", default)).Should().Equal("g/devices/c.mrd");
+        (await transport.IsListedByProviderAsync("g/devices/c.mrd", default)).Should().BeFalse();
+
+        _drive.ListingLags = false;
+        (await transport.IsListedByProviderAsync("g/devices/c.mrd", default)).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task A_create_retried_after_a_lost_response_is_recognised()
     {
         var transport = CreateTransport();

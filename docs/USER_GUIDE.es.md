@@ -986,6 +986,14 @@ después.
    del grupo (se conserva una copia junto a la base de datos). MedReminder
    se reinicia.
 
+Si la frase de contraseña abre más de un grupo en la carpeta o la cuenta
+(varios perfiles sincronizados con la misma frase), MedReminder pregunta
+a cuál unirse y muestra cada grupo con sus dispositivos.
+
+Con OneDrive o Google Drive la unión puede tardar hasta un minuto:
+MedReminder espera a que la cuenta liste el nuevo PC, para que los demás
+PC conserven los cambios que aún necesita.
+
 ### Uso diario
 
 - MedReminder sincroniza unos segundos después de cada cambio, cada 5
@@ -1004,6 +1012,10 @@ después.
   grupo: un cambio en un PC llega a los demás, y un PC que se une toma
   los del grupo. Para cambiar el nombre de otro perfil sincronizado,
   abra primero ese perfil.
+- **E-mail**: cada PC con el e-mail configurado (Configuración → E-mail
+  SMTP) envía sus propios mensajes de stock bajo y al cuidador, así que
+  con dos PC sincronizados el mismo mensaje llega dos veces. Configure
+  el e-mail en un solo PC del grupo.
 - **Desactivar sincronización…** detiene la sincronización en este PC y
   conserva sus datos.
 
