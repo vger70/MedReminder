@@ -18,7 +18,8 @@ moved keeps a one-line pointer here.
 The two open non-goals from `ANALYSIS-MULTI-USER.md` §16 (profile
 promote/demote and the consolidated admin view) remain deferred and
 are **not** covered here — this document looks past the multi-user
-baseline that landed with PRs #22–#26.
+baseline that landed with PRs #22–#26. **DECIDED 2026-09-28**: they
+are not planned and are picked up only if a concrete need emerges.
 
 ---
 
@@ -66,7 +67,9 @@ Deliberately excluded from this document:
 
 **DECIDED 2026-09-20 — sequence.** The product owner set the order
 A6 → A5 → remaining items. As of 2026-09-25 A1, A3, A5, A6, C.3,
-C.3+ and C.3++ Phase 1 have shipped (see `EVOLUTION-DONE.md`).
+C.3+ and C.3++ Phase 1 have shipped (see `EVOLUTION-DONE.md`). As of
+2026-09-28 (v2.9.1) the desktop side of B.1 (phases 1–4c) and A2
+phase 1 have shipped too; current state in `docs/STATUS.md`.
 
 ### 2.0 Remaining sequence
 
@@ -74,9 +77,13 @@ C.3+ and C.3++ Phase 1 have shipped (see `EVOLUTION-DONE.md`).
    Approved 2026-09-26 with mandatory sync; design in
    `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`. It absorbs C.3++ Phase 2
    (native cloud providers) and reaches the functional goal of C.1
-   without a backend. First step: convergence prototype (spike S9).
-2. **A2 phase 2 — webcam** (§3.2). Phase 1 (USB HID scanner) shipped
-   in PR #72. Independent of B.1; may run after it or in parallel.
+   without a backend. Desktop phases 1–4c shipped in v2.7.0–v2.9.0;
+   the mobile phases 5–7 wait for the Android spikes S1–S4 (draft
+   PR #106).
+2. **A2 phase 2 — webcam, then A2 phase 3 — restock by scan** (§3.2).
+   Phase 1 (USB HID scanner) shipped in PR #72. Independent of B.1;
+   **DECIDED 2026-09-28** as the next desktop work, while the Android
+   spikes are pending.
 3. **C.1 — hosted relay** (§8). Reduced to an optional extra transport
    for B.1 sync; only if the product owner accepts operating a
    service.
@@ -104,8 +111,8 @@ Shipped. See `EVOLUTION-DONE.md` §3.1.
 
 ### 3.2 A2 — AIC / barcode scan of medicine package
 
-**Status.** Open. Next item in the decided sequence (§2.0).
-Approved design: `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md`, which
+**Status.** Phase 1 shipped (PR #72). Phases 2 and 3 open, next on
+the desktop (§2.0). Approved design: `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md`, which
 covers both desktop variants: USB HID scanner (keyboard wedge) and
 webcam. Where this section and the analysis disagree, the analysis
 wins.
@@ -144,8 +151,8 @@ no expiry/batch, which stock movements do not store).
 
 1. Shared core + USB HID scanner — flow (a).
 2. Webcam — flow (a).
-3. Flow (b) — only after flow (a) is complete and on explicit
-   product-owner request. Not scheduled.
+3. Flow (b) — only after flow (a) is complete. Requested by the
+   product owner on 2026-09-28; planned right after phase 2.
 
 **Effort.** Phase 1 ~9–10 days, phase 2 ~6–7 days, phase 3 ~4–5 days.
 Mobile path lands together with §7. [INFERRED]
@@ -228,6 +235,10 @@ requirement for it.
 requirement: Phase 2 (OneDrive, then Google Drive) is absorbed by B.1
 Phase 4 (`ANALYSIS-B1-MOBILE-SYNC.md` §5.8, §13).
 
+**Update 2026-09-28.** Shipped: OneDrive (B.1 Phase 4a) and Google
+Drive (Phase 4b), for both cloud backups and sync, in v2.8.0. Only
+the optional Phase 3 providers remain.
+
 ---
 
 ## 7. B.1 — Mobile companion client
@@ -238,6 +249,12 @@ mobile and desktop is mandatory in the end state; the analysis absorbs
 C.3++ Phase 2 and the functional goal of C.1 without a backend
 (phases 0–7, decisions D1–D15). Where this section and the analysis
 disagree, the analysis wins; its §17 lists the corrections to apply.
+
+**Status 2026-09-28.** Desktop side shipped: portable infrastructure,
+fact ledger, operation log and merge, encrypted sync over a folder,
+OneDrive or Google Drive, pairing and key rotation (phases 1–4c,
+v2.7.0–v2.9.0). Open: Android (Phase 5), iOS (Phase 6), mobile feature
+parity (Phase 7). Phase 5 starts after spikes S1–S4 on Android.
 
 ### 7.1 Portable code already available
 
@@ -463,7 +480,9 @@ v1 shipped on 2026-09-25 in `vger70/medreminder-website`. See
 `EVOLUTION-DONE.md` §10 for what was built and how it deviates from
 the design. A content refresh to align the site with the current
 application is prepared in
-`docs/prompt/PROMPT-WEBSITE-CONTENT-REFRESH.md`.
+`docs/prompt/PROMPT-WEBSITE-CONTENT-REFRESH.md`; it does not cover
+v2.7–v2.9 (sync, cloud providers, therapy card PDF, text size)
+[INFERRED].
 
 ---
 
@@ -536,3 +555,9 @@ application is prepared in
   independent, C.1 reduced to an optional hosted transport.
 - 2026-09-26 — §7: added pointer to the B.1 analysis
   `ANALYSIS-B1-MOBILE-SYNC.md` (mandatory mobile-desktop sync).
+- 2026-09-28 — review at v2.9.1: §2 and §7 record the shipped desktop
+  side of B.1 (phases 1–4c) and the pending Android spikes (draft
+  PR #106); §2.0 and §3.2 plan A2 phase 2 then phase 3 as the next
+  desktop work (product owner); §6 records OneDrive and Google Drive
+  as shipped; the multi-user non-goals stay unplanned until a need
+  emerges; §10 notes the website refresh gap.
