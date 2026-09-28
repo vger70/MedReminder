@@ -1,6 +1,4 @@
-using System.Collections.Concurrent;
 using MedReminder.Application.Abstractions;
-using MedReminder.Infrastructure.Cloud;
 using MedReminder.Infrastructure.Cloud.OneDrive;
 using Microsoft.Extensions.Options;
 
@@ -15,17 +13,16 @@ internal sealed class CloudArchiveStorage : IArchiveStorage
 {
     private readonly IOptionsMonitor<BackupSettings> _settings;
     private readonly LocalFolderArchiveStorage _folder;
-    private readonly IOneDriveAccessTokens _tokens;
-    private readonly ConcurrentDictionary<string, OneDriveArchiveStorage> _oneDrive = new(StringComparer.Ordinal);
+    private readonly OneDriveClientFactory _oneDrive;
 
     public CloudArchiveStorage(
         IOptionsMonitor<BackupSettings> settings,
         LocalFolderArchiveStorage folder,
-        IOneDriveAccessTokens tokens)
+        OneDriveClientFactory oneDrive)
     {
         _settings = settings;
         _folder = folder;
-        _tokens = tokens;
+        _oneDrive = oneDrive;
     }
 
     public Task<string> UploadAsync(Stream archive, string suggestedName, CancellationToken ct)
@@ -49,7 +46,7 @@ internal sealed class CloudArchiveStorage : IArchiveStorage
         {
             throw new InvalidOperationException("No OneDrive account is configured for the cloud backup.");
         }
-        return _oneDrive.GetOrAdd(settings.CloudAccountId, id => new OneDriveArchiveStorage(new OneDriveClient(
-            CloudHttp.Shared.Client, (force, token) => _tokens.GetAccessTokenAsync(id, force, token))));
+        // Stateless over the shared per-account client (OneDriveClientFactory).
+        return new OneDriveArchiveStorage(_oneDrive.Get(settings.CloudAccountId));
     }
 }

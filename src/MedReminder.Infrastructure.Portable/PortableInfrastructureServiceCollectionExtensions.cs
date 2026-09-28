@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Export;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Persistence;
@@ -49,6 +50,9 @@ public static class PortableInfrastructureServiceCollectionExtensions
         // The sync engine's transport: the target of sync.settings.json, a
         // folder (Phase 3c) or a OneDrive account (Phase 4a, with the
         // host's IOneDriveAccessTokens). Resolved only while sync is enabled.
+        // One OneDrive client per account, shared with the cloud backup.
+        services.TryAddSingleton(sp => new OneDriveClientFactory(
+            sp.GetService<IOneDriveAccessTokens>(), clock: sp.GetService<TimeProvider>()));
         services.TryAddSingleton<ISyncTransportFactory, SyncTransportFactory>();
         services.TryAddScoped<ISyncTransport>(sp => sp.GetRequiredService<ISyncTransportFactory>().Create(
             SyncTarget.Of(sp.GetRequiredService<ISyncSettingsStore>().Load()

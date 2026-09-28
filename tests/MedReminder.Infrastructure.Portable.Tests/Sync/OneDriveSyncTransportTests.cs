@@ -79,6 +79,25 @@ public sealed class OneDriveSyncTransportTests : SyncTransportContractTests
     }
 
     [Fact]
+    public async Task Only_the_sync_folder_is_listed_and_the_list_follows_later_changes()
+    {
+        var transport = CreateTransport();
+        _drive.Put("sync/g/group.json", Bytes(5));
+        _drive.Put("sync-old/g/group.json", Bytes(5));
+        _drive.Put("group.json", Bytes(5));
+        (await transport.ListAsync(string.Empty, default)).Should().Equal("g/group.json");
+
+        // A backup-only change, then a sync change: the resolved list is
+        // rebuilt from the index each time the feed changes it.
+        _drive.Put("backups/x.mrz", Bytes(5));
+        Later();
+        (await transport.ListAsync(string.Empty, default)).Should().Equal("g/group.json");
+        _drive.Put("sync/g/devices/b.mrd", Bytes(5));
+        Later();
+        (await transport.ListAsync(string.Empty, default)).Should().Equal("g/devices/b.mrd", "g/group.json");
+    }
+
+    [Fact]
     public async Task Temporary_and_in_progress_files_are_not_listed()
     {
         var transport = CreateTransport();

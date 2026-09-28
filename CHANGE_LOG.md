@@ -49,6 +49,12 @@ Branch: `claude/code-review-followup`
   `MedReminder.Application/Export/`) for the backup host, retention and
   the restore list; names outside it (manual exports, renamed files)
   are listed without a profile and never pruned.
+- `OneDriveClientFactory` (portable) keeps one OneDrive client per
+  account for both sync and the cloud backup; `CloudArchiveStorage` no
+  longer builds its own clients over a hard-coded HTTP client and clock.
+- `OneDriveSyncTransport` resolves the files under `sync/` once per
+  change of its change-feed index, with memoized folder paths, instead
+  of walking every node's parent chain on each listing.
 
 ---
 
