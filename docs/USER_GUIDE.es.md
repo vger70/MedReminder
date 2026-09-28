@@ -871,8 +871,8 @@ una carpeta compartida (una carpeta de OneDrive, Google Drive o Dropbox
 sincronizada por su aplicación de escritorio, o un recurso de red). No
 interviene ningún servidor y la carpeta nunca contiene datos legibles.
 
-Abra **Herramientas → Sincronización…**. Activar, unirse, reconstruir,
-desactivar, los códigos de vinculación y el cambio de clave están
+Abra **Herramientas → Sincronización…**. Cada perfil gestiona la sincronización de sus
+propios datos. El cambio de clave y quitar un dispositivo están
 reservados al administrador.
 
 ### OneDrive o carpeta compartida

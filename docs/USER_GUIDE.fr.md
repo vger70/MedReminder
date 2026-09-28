@@ -893,8 +893,8 @@ Dropbox synchronisé par son application de bureau, ou un partage réseau).
 Aucun serveur n'intervient et le dossier ne contient jamais de données
 lisibles.
 
-Ouvrez **Outils → Synchronisation…**. Activer, rejoindre, reconstruire,
-désactiver, les codes d'association et le changement de clé sont
+Ouvrez **Outils → Synchronisation…**. Chaque profil gère la synchronisation de ses
+propres données. Le changement de clé et le retrait d'un appareil sont
 réservés à l'administrateur.
 
 ### OneDrive ou dossier partagé

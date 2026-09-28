@@ -905,8 +905,8 @@ oder Dropbox-Ordner, den dessen Desktop-App synchronisiert, oder eine
 Netzwerkfreigabe). Kein Server ist beteiligt, und der Ordner enthält nie
 lesbare Daten.
 
-Öffnen Sie **Extras → Synchronisierung…**. Aktivieren, Beitreten, Neuaufbau,
-Deaktivieren, Kopplungscodes und Schlüsseländerungen sind dem
+Öffnen Sie **Extras → Synchronisierung…**. Jedes Profil verwaltet die Synchronisierung
+seiner eigenen Daten. Schlüssel ändern und Geräte entfernen sind dem
 Administrator vorbehalten.
 
 ### OneDrive oder freigegebener Ordner
