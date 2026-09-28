@@ -68,6 +68,14 @@ Branch: `claude/b1-phase4b-google-drive`
   at build time, or `GoogleDrive:ClientId` / `ClientSecret` in
   configuration (`docs/PACKAGING.md` §24). Without them Google Drive is
   not offered.
+- `.github/workflows/dotnet-desktop.yml`: both `dotnet publish` steps
+  receive the two values from repository secrets of the same names.
+
+### Fixed
+
+- `docs/PACKAGING.md` §12–§14 described a `release.yml` workflow with a
+  test step and a single ZIP; they now describe `dotnet-desktop.yml` as
+  it is (no test step, two ZIPs and an MSI).
 
 ### Docs
 
