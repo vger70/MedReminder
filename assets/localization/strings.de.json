@@ -672,6 +672,7 @@
   "Ui.ProfilesManagerForm.Pin.None": "—",
   "Ui.ProfilesManagerForm.New": "Neues Profil",
   "Ui.ProfilesManagerForm.Rename": "Umbenennen",
+  "Ui.ProfilesManagerForm.Rename.Synced": "„{0}“ wird mit anderen Geräten synchronisiert. Öffnen Sie dieses Profil, um es umzubenennen, damit der neue Name auch seine Geräte erreicht.",
   "Ui.ProfilesManagerForm.ChangePin": "PIN ändern",
   "Ui.ProfilesManagerForm.Delete": "Löschen",
   "Ui.ProfilesManagerForm.Delete.Title": "Profil löschen",

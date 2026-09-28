@@ -801,7 +801,7 @@ internal sealed class MainForm : MedReminderFormBase
         try
         {
             using var dialog = new ProfilesManagerForm(
-                _profileRegistry, _currentProfile, _loc);
+                _profileRegistry, _currentProfile, _loc, _scopeFactory);
             dialog.ShowDialog(this);
         }
         catch (Exception ex)
@@ -1613,7 +1613,8 @@ internal sealed class MainForm : MedReminderFormBase
                 scope.ServiceProvider.GetRequiredService<MedReminder.Application.Export.ICloudRestoreService>(),
                 scope.ServiceProvider.GetRequiredService<SyncHostedService>(),
                 scope.ServiceProvider.GetRequiredService<ICloudAccountService>(),
-                scope.ServiceProvider.GetRequiredService<IArchiveStorage>());
+                scope.ServiceProvider.GetRequiredService<IArchiveStorage>(),
+                _scopeFactory);
             dialog.ShowDialog(this);
         }
         catch (Exception ex)

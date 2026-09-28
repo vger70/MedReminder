@@ -1,5 +1,7 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.UseCases;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MedReminder.UI.Forms;
 
@@ -25,6 +27,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
     private readonly IProfileRegistry _registry;
     private readonly ICurrentProfile _currentProfile;
     private readonly ILocalizationService _loc;
+    private readonly IServiceScopeFactory _scopes;
 
     private ListView _list = null!;
     private Button _newButton = null!;
@@ -37,8 +40,10 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
     public ProfilesManagerForm(
         IProfileRegistry registry,
         ICurrentProfile currentProfile,
-        ILocalizationService loc)
+        ILocalizationService loc,
+        IServiceScopeFactory scopes)
     {
+        _scopes = scopes;
         _registry = registry;
         _currentProfile = currentProfile;
         _loc = loc;
@@ -119,7 +124,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             Height = 30,
         };
         _newButton.Click += (_, _) => AddNew();
-        _renameButton.Click += (_, _) => RenameSelected();
+        _renameButton.Click += async (_, _) => await RenameSelectedAsync();
         _pinButton.Click += (_, _) => ChangePinSelected();
         _deleteButton.Click += (_, _) => DeleteSelected();
         CancelButton = closeButton;
@@ -243,7 +248,10 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
 
     // ---- Rename ----
 
-    private void RenameSelected()
+    // B.1, P8: through RenameProfile, so the name of a synced profile
+    // reaches its other devices; another synced profile must be opened
+    // to be renamed.
+    private async Task RenameSelectedAsync()
     {
         var selected = SelectedProfile();
         if (selected is null) return;
@@ -251,12 +259,24 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try
         {
-            _registry.Rename(selected.Id, dialog.NewName);
-            Reload();
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<RenameProfile>()
+                    .ExecuteAsync(selected.Id, dialog.NewName, CancellationToken.None);
+            }
+            if (!IsDisposed) Reload();
+        }
+        catch (SyncedProfileRenameException)
+        {
+            if (!IsDisposed)
+            {
+                MessageBox.Show(this, _loc.Get("Ui.ProfilesManagerForm.Rename.Synced", selected.DisplayName),
+                    _loc.Get("Ui.ProfilesManagerForm.Rename"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
         catch (Exception ex)
         {
-            ShowError(ex);
+            if (!IsDisposed) ShowError(ex);
         }
     }
 

@@ -6,8 +6,8 @@ describes the on-disk format only. The design rationale (merge rules,
 security model, phases) is in
 [`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md).
 
-Format version: **1**. Operation catalogue: schema version **1**.
-Database image: schema version **1**.
+Format version: **1**. Operation catalogue: schema version **3**.
+Database image: schema version **2**.
 
 ---
 
@@ -263,11 +263,13 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 and 2)
+## 6. Operation catalogue (schema versions 1 to 3)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
-the medicine) are never operations. Every payload has `medicineId`.
+the medicine) are never operations. Every payload has `medicineId`;
+it is the empty GUID (`00000000-0000-0000-0000-000000000000`) on a
+profile-level operation.
 Ids are those of the rows written, so replaying an operation changes
 nothing.
 
@@ -285,8 +287,19 @@ nothing.
 | `SuspensionEndChanged` | `suspensionId`, `endDate` | last writer wins |
 | `FactRetracted` | `retractionId`, `kind`, `factId`, `recordedAt` | the fact is removed whatever the order of arrival |
 | `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
+| `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
 
-Every type is schema version 1 except `MedicineDeleted`, version 2.
+Every type is schema version 1 except `MedicineDeleted`, version 2, and
+`ProfileSettingChanged`, version 3.
+
+Profile settings (`ProfileSettingChanged.setting`): `DisplayName` (the
+profile's name, never empty), `ToAddress`, `CaregiverAddress`,
+`DoctorAddress` (notification recipients, `""` for none). They are
+registers of the profile in the image's `SyncFieldVersions`
+(`MedicineId` and `EntityId` empty, register `Profile.<setting>`); the
+device that writes a genesis records the values it holds as genesis
+versions when the profile has none. Each device copies the winning
+values into its own profile name and notification settings.
 
 Medicine fields (`MedicineFieldChanged.field`): `Name`,
 `ActiveIngredient`, `Package`, `Unit`, `ThresholdDays`, `DoctorName`,

@@ -673,6 +673,7 @@
   "Ui.ProfilesManagerForm.Pin.None": "—",
   "Ui.ProfilesManagerForm.New": "Nuovo profilo",
   "Ui.ProfilesManagerForm.Rename": "Rinomina",
+  "Ui.ProfilesManagerForm.Rename.Synced": "\"{0}\" è sincronizzato con altri dispositivi. Apri quel profilo per rinominarlo, così il nuovo nome arriva anche ai suoi dispositivi.",
   "Ui.ProfilesManagerForm.ChangePin": "Cambia PIN",
   "Ui.ProfilesManagerForm.Delete": "Elimina",
   "Ui.ProfilesManagerForm.Delete.Title": "Elimina profilo",

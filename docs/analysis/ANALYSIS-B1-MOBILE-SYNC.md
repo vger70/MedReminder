@@ -95,7 +95,7 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 | P5 | Persistence usable outside Windows | **Met by Phase 1** | EF Core model, repositories, `DatabaseInitializer` moved to `MedReminder.Infrastructure.Portable` (`net10.0`); their tests run on Linux |
 | P6 | Archive read path usable outside Windows | **Met by Phase 1** | `ArchiveReader` (`IArchiveReader`) and `ProfileDatabaseBuilder` in the portable project; `ImportService` is the Windows shell (file swap, DPAPI rewrap, settings files). `ExportService` stays Windows-only (mobile export is Phase 7) |
 | P7 | View models outside WinForms | **Met by Phase 1** | `MedicineOverviewLoader` and `MedicineListItem` moved to `MedReminder.Application/Overview` |
-| P8 | Every data write goes through an Application use case | **Met by Phase 2a for the profile database** | The only direct UI write (`MainForm` deactivate: `medicine.IsActive = false` + `SaveChangesAsync`) moved to the `DeactivateMedicine` use case; `UiWritePathGuardTests` fails on any repository write, `SaveChangesAsync` or `DbContext` use under `src/MedReminder.UI` `[VERIFIED]`. Open: two replicated values (§4.2) are still written by the UI outside the database: per-profile notification settings (`SettingsDialog` writes `notifications.settings.json`) and the profile display name (`ProfilesManagerForm` calls `IProfileRegistry.Rename`). They need a use case before operation capture reaches them; the product owner deferred them out of Phase 2a (2026-09-27) |
+| P8 | Every data write goes through an Application use case | **Met by Phase 2a for the profile database** | The only direct UI write (`MainForm` deactivate: `medicine.IsActive = false` + `SaveChangesAsync`) moved to the `DeactivateMedicine` use case; `UiWritePathGuardTests` fails on any repository write, `SaveChangesAsync` or `DbContext` use under `src/MedReminder.UI` `[VERIFIED]`. Open: two replicated values (§4.2) are still written by the UI outside the database: per-profile notification settings (`SettingsDialog` writes `notifications.settings.json`) and the profile display name (`ProfilesManagerForm` calls `IProfileRegistry.Rename`). They needed a use case before operation capture reached them; the product owner deferred them out of Phase 2a (2026-09-27). **Closed on 2026-09-28**: `UpdateNotificationSettings` and `RenameProfile` record `ProfileSettingChanged`; `UiWritePathGuardTests` forbids the direct writes in the UI |
 | P9 | Stock ledger is a deterministic function of user facts | **Met by Phase 2c-2** (after the cutoff; counts carry their stored outcome until Phase 3) | `LedgerSynchronizer` derives consumption, reversals, count corrections and `StockEpoch` from the facts; the stored ledger equals a fresh derivation after every action of the random scenarios (`LedgerParityTests`) `[VERIFIED]` |
 | P10 | Stable GUID identity on every replicated entity | **Met** | All entities use `Guid Id` generated at creation `[VERIFIED — Domain entities]` |
 | P11 | Medicines are never hard-deleted | **Met, with one exception (2026-09-28)** | Deactivation via `IsActive` `[VERIFIED]`; slots are no longer deleted: since Phase 2b `UpdateMedicine` appends a slot set `[VERIFIED]`. A medicine without recorded facts can be deleted: `MedicineDeleted` operation, §4.2 |
@@ -816,9 +816,10 @@ reach it through an `IAppDataLocation` port.
   `OperationEmissionGuardTests` requires every Application service that
   saves a unit of work to take `IOperationLog`, except the writers of
   derived and device-local rows (`ConsumptionCatchUp`,
-  `MedicationMonitor`, `DoseReminderService`). Not covered yet: the
-  notification settings file and the profile display name (P8), which
-  have no use case.
+  `MedicationMonitor`, `DoseReminderService`). The notification
+  recipients and the profile display name (P8) are covered since
+  2026-09-28 by `ProfileSettingChanged` (operation schema 3), recorded
+  by `UpdateNotificationSettings` and `RenameProfile`.
 
 ### 7.3 New persistence objects
 
@@ -1778,3 +1779,16 @@ Phase 2 implements the derivation from the prototype and its tests.
   removal are also open to every profile. A sync group belongs to one
   profile, so they reach only that profile's devices and data. No sync
   action depends on the profile role any more.
+- 2026-09-28 — P8 residue closed. The profile's display name and the
+  notification recipients (`ToAddress`, `CaregiverAddress`,
+  `DoctorAddress`) are `ProfileSettingChanged` operations (schema 3),
+  last writer wins per setting without a conflict entry, stored as
+  registers of the profile pseudo-entity (empty id) in
+  `SyncFieldVersions`. The profile registry and
+  `notifications.settings.json` are a local copy: the apply step and
+  every sync run write the winners into it (`ProfileSettingsProjection`
+  via `IProfileSettingsStore`). The genesis records the writing
+  device's values when the profile has no version yet, so a joining
+  device takes the group's name and recipients. A synced profile other
+  than the current one cannot be renamed from Manage profiles: its
+  database is not open, so the rename could not be recorded.

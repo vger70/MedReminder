@@ -31,6 +31,7 @@ public class OperationCodecTests
         new SuspensionEndChanged(M, F, new DateOnly(2026, 10, 3)),
         new FactRetracted(M, F, FactKind.StockCount, Guid.Parse("0c0c0c0c-0000-0000-0000-000000000004"), At),
         new MedicineDeleted(M, At),
+        new ProfileSettingChanged(ProfileSetting.CaregiverAddress, "carer@example.org"),
     };
 
     [Theory]
@@ -73,13 +74,18 @@ public class OperationCodecTests
             "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}");
     }
 
-    // Only the type added in version 2 is written with it, so an older
+    // Only the type added in a version is written with it, so an older
     // app keeps reading every other operation.
     [Theory]
     [MemberData(nameof(Samples))]
     public void Operations_are_written_with_the_lowest_schema_version_that_carries_them(SyncOperationBody body)
     {
-        var expected = body is MedicineDeleted ? 2 : 1;
+        var expected = body switch
+        {
+            MedicineDeleted => 2,
+            ProfileSettingChanged => 3,
+            _ => 1,
+        };
 
         OperationCodec.SchemaVersionOf(body).Should().Be(expected);
         var (type, payload) = OperationCodec.Serialize(body);

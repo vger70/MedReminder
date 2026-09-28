@@ -952,6 +952,11 @@ ensuite.
   démarre une nouvelle **génération** : après un avertissement, les autres
   PC abandonnent ce qu'ils n'avaient pas encore envoyé et doivent être
   reconstruits avec **Reconstruire depuis le groupe…**.
+- Le **nom du profil** et les **destinataires des notifications**
+  (Paramètres → Notifications) appartiennent au groupe : une
+  modification sur un PC parvient aux autres, et un PC qui rejoint le
+  groupe prend ceux du groupe. Pour renommer un autre profil
+  synchronisé, ouvrez d'abord ce profil.
 - **Désactiver la synchronisation…** arrête la synchronisation sur ce PC et
   conserve ses données.
 

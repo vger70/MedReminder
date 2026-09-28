@@ -56,6 +56,10 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ResumeMedication>();
         services.AddScoped<ChangeMedicationSchedule>();
         services.AddScoped<RegisterIntake>();
+        // B.1, P8: replicated profile settings. The host registers
+        // IProfileSettingsStore and ISyncProfileStatus.
+        services.AddScoped<UpdateNotificationSettings>();
+        services.AddScoped<RenameProfile>();
 
         // B.1 ledger derivation (Phase 2c-2).
         services.AddScoped<LedgerFactsLoader>();

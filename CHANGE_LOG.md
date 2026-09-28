@@ -9,36 +9,7 @@ updated only if the PR's scope changes materially before it merges.
 - Every time a new pull request is created for this repository, an
   entry is prepended below in reverse-chronological order (newest
   first).
-- The entry title is `## PR #97 — Allow deleting a medicine without history and hide inactive medicines
-
-Link: [vger70/MedReminder#97](https://github.com/vger70/MedReminder/pull/97)
-Branch: `claude/medicine-delete-hide-inactive`
-
-### Added
-
-- Therapy → Delete… removes a medicine entered by mistake, with its
-  schedule, while no stock entry, intake, count or suspension was
-  recorded for it; otherwise the user is told to deactivate it or
-  retract the entries first (`DeleteMedicine`,
-  `MedicineDeletionRepository`).
-- Sync operation `MedicineDeleted` (operation schema version 2): it
-  wins over every operation for the medicine, and later ones are
-  logged but not applied. Other operations keep version 1; sync
-  images move to schema version 2 (`docs/SYNC-FORMAT.md`).
-- Therapy → Show inactive medicines, and an *Inactive* status in the
-  list.
-
-### Changed
-
-- The main list hides deactivated medicines by default; the status
-  bar counts the hidden ones.
-
-### Docs
-
-- User guides (5 languages), `docs/ANALYSIS.md`,
-  `docs/SYNC-FORMAT.md`, `ANALYSIS-B1-MOBILE-SYNC.md` (P11, §4.2).
-
-## PR #<number> — <one-line summary>` and links
+- The entry title is `## PR #<number> — <one-line summary>` and links
   back to the PR on GitHub.
 - The body lists the observable changes as terse bullet points,
   focused on **what changed** and **why**, not on implementation
@@ -112,6 +83,23 @@ Branch: `claude/b1-phase-4c-t44dis`
   closes the window anyway, the action's messages are dropped
   (`src/MedReminder.UI/Forms/SyncDialog.cs`).
 
+## PR #100 — Show toasts in the app language instead of the Windows language
+
+Link: [vger70/MedReminder#100](https://github.com/vger70/MedReminder/pull/100)
+Branch: `claude/stoic-ride-3st4kz`
+
+### Fixed
+
+- Dose-reminder and low-stock toasts use the language chosen in the
+  app instead of the Windows UI language. The dose-reminder email,
+  built by the same composer, now also follows the user's language
+  (`NotificationTexts`).
+
+### Docs
+
+- User guides (5 languages): toasts follow the language chosen in the
+  app.
+
 ## PR #99 — B.1 Phase 4c: key rotation, device removal and pairing codes
 
 Link: [vger70/MedReminder#99](https://github.com/vger70/MedReminder/pull/99)
@@ -159,23 +147,6 @@ Branch: `claude/b1-phase-4c-t44dis`
   (§6.1, §6.2 as implemented, Phase 4 split table),
   `docs/SYNC-TWO-PC-CHECKLIST.md` (K1–K11), `docs/STATUS.md`,
   `docs/ANALYSIS.md` (dependencies), user guides (5 languages).
-## PR #100 — Show toasts in the app language instead of the Windows language
-
-Link: [vger70/MedReminder#100](https://github.com/vger70/MedReminder/pull/100)
-Branch: `claude/stoic-ride-3st4kz`
-
-### Fixed
-
-- Dose-reminder and low-stock toasts use the language chosen in the
-  app instead of the Windows UI language. The dose-reminder email,
-  built by the same composer, now also follows the user's language
-  (`NotificationTexts`).
-
-### Docs
-
-- User guides (5 languages): toasts follow the language chosen in the
-  app.
-
 ## PR #98 — Add a development status report
 
 Link: [vger70/MedReminder#98](https://github.com/vger70/MedReminder/pull/98)
@@ -187,6 +158,35 @@ Branch: `claude/report-stato-arte-sviluppi-h9s7ks`
   evolution items, B.1 phases 1–4b) and what remains open (B.1 phases
   4c–7 with spikes and decisions, A2 webcam, proposals, automatic
   update, issue #11), with suggested next steps.
+
+## PR #97 — Allow deleting a medicine without history and hide inactive medicines
+
+Link: [vger70/MedReminder#97](https://github.com/vger70/MedReminder/pull/97)
+Branch: `claude/medicine-delete-hide-inactive`
+
+### Added
+
+- Therapy → Delete… removes a medicine entered by mistake, with its
+  schedule, while no stock entry, intake, count or suspension was
+  recorded for it; otherwise the user is told to deactivate it or
+  retract the entries first (`DeleteMedicine`,
+  `MedicineDeletionRepository`).
+- Sync operation `MedicineDeleted` (operation schema version 2): it
+  wins over every operation for the medicine, and later ones are
+  logged but not applied. Other operations keep version 1; sync
+  images move to schema version 2 (`docs/SYNC-FORMAT.md`).
+- Therapy → Show inactive medicines, and an *Inactive* status in the
+  list.
+
+### Changed
+
+- The main list hides deactivated medicines by default; the status
+  bar counts the hidden ones.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`,
+  `docs/SYNC-FORMAT.md`, `ANALYSIS-B1-MOBILE-SYNC.md` (P11, §4.2).
 
 ## PR #96 — Align the repeat-passphrase label in the sync passphrase dialog
 
