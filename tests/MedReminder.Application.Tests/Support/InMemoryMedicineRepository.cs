@@ -39,4 +39,10 @@ internal sealed class InMemoryMedicineRepository : IMedicineRepository
         _items[medicine.Id] = medicine;
         return Task.CompletedTask;
     }
+
+    // Test double of IMedicineDeletionRepository (InMemoryMedicineDeletionRepository).
+    public void RemoveForMedicine(Guid medicineId)
+    {
+        _items.Remove(medicineId);
+    }
 }

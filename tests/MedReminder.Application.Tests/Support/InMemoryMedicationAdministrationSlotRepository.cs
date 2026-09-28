@@ -53,4 +53,11 @@ internal sealed class InMemoryMedicationAdministrationSlotRepository
         _items.AddRange(slots);
         return Task.CompletedTask;
     }
+
+    // Test double of IMedicineDeletionRepository (InMemoryMedicineDeletionRepository).
+    public void RemoveForMedicine(Guid medicineId)
+    {
+        _items.RemoveAll(x => x.MedicineId == medicineId);
+        _sets.RemoveAll(x => x.MedicineId == medicineId);
+    }
 }

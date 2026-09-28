@@ -272,4 +272,78 @@ public class ApplyRemoteOperationsTests
         await FluentActions.Awaiting(() => scope.ApplyRemote.ExecuteAsync([], default))
             .Should().ThrowAsync<InvalidOperationException>();
     }
+
+    private async Task<Guid> SeedWithoutStockOnAAsync()
+    {
+        var id = await _a.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Mistake", "compresse", 1m, 1, Start, 7, NotificationChannels.Windows,
+            AdministrationSlots: [new AdministrationSlotInput(1m, new TimeOnly(8, 0), null)]), default);
+        await PullAsync(_a, _b);
+        return id;
+    }
+
+    [Fact]
+    public async Task A_deleted_medicine_is_removed_on_the_other_device()
+    {
+        var id = await SeedWithoutStockOnAAsync();
+        await _b.ConsumptionCatchUp.RunAsync(default);
+
+        await _a.DeleteMedicine.ExecuteAsync(new DeleteMedicineCommand(id), default);
+        var result = await PullAsync(_a, _b);
+
+        result.TouchedMedicines.Should().NotContain(id);
+        (await _b.Medicines.GetAsync(id, default)).Should().BeNull();
+        _b.Stock.All.Should().NotContain(m => m.MedicineId == id);
+        _b.Slots.All.Should().NotContain(s => s.MedicineId == id);
+        (await _b.Schedules.ListForMedicineAsync(id, default)).Should().BeEmpty();
+        _b.SyncVersions.All.Should().NotContain(v => v.MedicineId == id);
+    }
+
+    [Fact]
+    public async Task A_deletion_wins_over_facts_recorded_concurrently_on_the_other_device()
+    {
+        var id = await SeedWithoutStockOnAAsync();
+        await _b.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, new DateOnly(2026, 9, 12), IntakeStatus.Taken, 1m), default);
+        await _b.AddStock.ExecuteAsync(new AddStockCommand(id, 28m, StockMovementKind.NewPackage), default);
+        await _a.DeleteMedicine.ExecuteAsync(new DeleteMedicineCommand(id), default);
+
+        var onA = await PullAsync(_b, _a);
+        var onB = await PullAsync(_a, _b);
+
+        var fromB = _b.SyncOperations.All.Where(o => o.DeviceId != _a.SyncSettingsStore.Load()!.DeviceId).ToList();
+        fromB.Should().HaveCount(2);
+        onA.Applied.Should().Be(0);
+        onA.TouchedMedicines.Should().BeEmpty();
+        onB.TouchedMedicines.Should().NotContain(id);
+        foreach (var scope in new[] { _a, _b })
+        {
+            (await scope.Medicines.GetAsync(id, default)).Should().BeNull();
+            scope.Intakes.All.Should().BeEmpty();
+            scope.Stock.All.Should().NotContain(m => m.MedicineId == id);
+        }
+        // The operations of the deleted medicine are logged, so they are
+        // not applied again, and both logs hold the same operations.
+        foreach (var op in fromB)
+        {
+            (await _a.SyncOperations.ExistsAsync(op.Id, default)).Should().BeTrue();
+        }
+        (await PullAsync(_b, _a)).Applied.Should().Be(0);
+        _a.SyncOperations.All.Select(o => o.Id).Should().BeEquivalentTo(_b.SyncOperations.All.Select(o => o.Id));
+    }
+
+    [Fact]
+    public async Task A_device_that_receives_creation_and_deletion_together_ends_without_the_medicine()
+    {
+        var id = await _a.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Mistake", "compresse", 1m, 1, Start, 7, NotificationChannels.Windows), default);
+        await _a.DeleteMedicine.ExecuteAsync(new DeleteMedicineCommand(id), default);
+
+        var result = await PullAsync(_a, _b);
+
+        result.TouchedMedicines.Should().BeEmpty();
+        (await _b.Medicines.GetAsync(id, default)).Should().BeNull();
+        (await _b.Schedules.ListForMedicineAsync(id, default)).Should().BeEmpty();
+        _b.SyncVersions.All.Should().NotContain(v => v.MedicineId == id);
+    }
 }

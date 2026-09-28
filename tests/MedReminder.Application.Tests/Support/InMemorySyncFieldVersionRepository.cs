@@ -20,4 +20,10 @@ internal sealed class InMemorySyncFieldVersionRepository : ISyncFieldVersionRepo
         _items.Add(version);
         return Task.CompletedTask;
     }
+
+    // Test double of IMedicineDeletionRepository (InMemoryMedicineDeletionRepository).
+    public void RemoveForMedicine(Guid medicineId)
+    {
+        _items.RemoveAll(x => x.MedicineId == medicineId);
+    }
 }

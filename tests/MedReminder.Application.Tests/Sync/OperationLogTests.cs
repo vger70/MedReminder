@@ -44,7 +44,7 @@ public class OperationLogTests
             o.Generation.Should().Be(3);
             o.MedicineId.Should().Be(M);
             o.Type.Should().Be("MedicineFieldChanged");
-            o.SchemaVersion.Should().Be(OperationCodec.CurrentSchemaVersion);
+            o.SchemaVersion.Should().Be(1);
             o.SegmentSeq.Should().BeNull();
         });
         // The second write of the register records the first as its base.

@@ -72,6 +72,7 @@ public sealed class MedicineOverviewLoader
                 EstimatedRunOutDate = forecast.EstimatedRunOutDate,
                 ThresholdDays = m.ThresholdDays,
                 IsSuspended = isSuspended,
+                IsActive = m.IsActive,
                 Status = status,
                 StatusDisplay = LocalizeStatus(status),
             });
@@ -84,7 +85,7 @@ public sealed class MedicineOverviewLoader
         bool isActive, bool isSuspended, decimal currentStock,
         int? daysRemaining, int thresholdDays)
     {
-        if (!isActive) return MedicineRowStatus.Suspended;
+        if (!isActive) return MedicineRowStatus.Inactive;
         if (isSuspended) return MedicineRowStatus.Suspended;
         if (currentStock <= 0m) return MedicineRowStatus.Empty;
         if (daysRemaining is int d && d <= thresholdDays) return MedicineRowStatus.Warning;
@@ -93,6 +94,7 @@ public sealed class MedicineOverviewLoader
 
     private string LocalizeStatus(MedicineRowStatus status) => status switch
     {
+        MedicineRowStatus.Inactive => _loc.Get("Domain.Medicine.Status.Inactive"),
         MedicineRowStatus.Suspended => _loc.Get("Domain.Medicine.Status.Suspended"),
         MedicineRowStatus.Empty => _loc.Get("Domain.Medicine.Status.Empty"),
         MedicineRowStatus.Warning => _loc.Get("Domain.Medicine.Status.Warning"),

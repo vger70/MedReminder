@@ -354,8 +354,22 @@ vergessene oder zusätzliche Dosen interpretiert.
   Meldungen, die historischen Daten (Bewegungen,
   Benachrichtigungen) bleiben aus Audit-Gründen in der
   Datenbank.
-- **Reaktivieren**: **Bearbeiten** → **Aktiv** anhaken. Tage, an denen
-  das Medikament deaktiviert war, zählen nicht als Verbrauch.
+- **Deaktivierte Medikamente anzeigen**: Deaktivierte Medikamente
+  sind in der Liste ausgeblendet. **Therapie → Deaktivierte
+  Medikamente anzeigen** zeigt sie wieder an, mit dem Status
+  *Deaktiviert*, bis die App geschlossen wird. Die Statusleiste nennt,
+  wie viele ausgeblendet sind.
+- **Reaktivieren**: deaktivierte Medikamente anzeigen, dann
+  **Bearbeiten** → **Aktiv** anhaken. Tage, an denen das Medikament
+  deaktiviert war, zählen nicht als Verbrauch.
+- **Löschen**: **Therapie → Löschen…** entfernt ein versehentlich
+  angelegtes Medikament samt Dosierungsschema endgültig. Das geht nur,
+  solange nichts dafür erfasst wurde: kein Bestandseintrag (auch nicht
+  die Anfangsmenge), keine Einnahme, Zählung oder Aussetzung. Sonst
+  deaktiviere es oder lösche diese Einträge zuerst unter **Bestand →
+  Verlauf…**. Bei aktiver Synchronisierung wird das Medikament auch
+  auf den anderen Geräten entfernt, mit allem, was dort inzwischen
+  erfasst wurde.
 
 ## Bestandsverlauf und Löschen eines falschen Eintrags
 

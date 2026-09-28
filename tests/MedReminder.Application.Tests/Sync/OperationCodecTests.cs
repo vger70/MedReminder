@@ -30,6 +30,7 @@ public class OperationCodecTests
         new SuspensionRecorded(M, F, new DateOnly(2026, 9, 28), null, "trip", At),
         new SuspensionEndChanged(M, F, new DateOnly(2026, 10, 3)),
         new FactRetracted(M, F, FactKind.StockCount, Guid.Parse("0c0c0c0c-0000-0000-0000-000000000004"), At),
+        new MedicineDeleted(M, At),
     };
 
     [Theory]
@@ -70,6 +71,19 @@ public class OperationCodecTests
             "\"kind\":\"NewPackage\",\"quantityDelta\":28," +
             "\"occurredAt\":\"2026-09-27T10:15:30+02:00\",\"notes\":null," +
             "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}");
+    }
+
+    // Only the type added in version 2 is written with it, so an older
+    // app keeps reading every other operation.
+    [Theory]
+    [MemberData(nameof(Samples))]
+    public void Operations_are_written_with_the_lowest_schema_version_that_carries_them(SyncOperationBody body)
+    {
+        var expected = body is MedicineDeleted ? 2 : 1;
+
+        OperationCodec.SchemaVersionOf(body).Should().Be(expected);
+        var (type, payload) = OperationCodec.Serialize(body);
+        OperationCodec.Deserialize(type, expected, payload).Should().BeOfType(body.GetType());
     }
 
     [Fact]

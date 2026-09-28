@@ -342,8 +342,22 @@ o adicionales.
   medicamento desaparece de las comprobaciones automáticas y de los
   avisos, pero los datos históricos (movimientos, notificaciones)
   permanecen en la DB para auditoría.
-- **Reactivar**: **Editar** → marca **Activo**. Los días en que el
-  medicamento estuvo desactivado no se cuentan como consumo.
+- **Mostrar los medicamentos desactivados**: los medicamentos
+  desactivados se ocultan en la lista. **Terapia → Mostrar
+  medicamentos desactivados** los muestra de nuevo, con estado
+  *Desactivado*, hasta que se cierra la aplicación. La barra de estado
+  indica cuántos están ocultos.
+- **Reactivar**: muestra los medicamentos desactivados y luego
+  **Editar** → marca **Activo**. Los días en que el medicamento estuvo
+  desactivado no se cuentan como consumo.
+- **Eliminar**: **Terapia → Eliminar…** elimina de forma definitiva un
+  medicamento introducido por error, con su pauta. Solo es posible
+  mientras no se haya registrado nada: ninguna entrada de stock
+  (incluida la cantidad inicial), toma, recuento o suspensión. Si no,
+  desactívalo, o elimina antes esas entradas en **Stock →
+  Historial…**. Con la sincronización activada el medicamento también
+  se elimina de los demás dispositivos, junto con lo que se haya
+  registrado en ellos entretanto.
 
 ## Historial del stock y eliminación de una entrada errónea
 

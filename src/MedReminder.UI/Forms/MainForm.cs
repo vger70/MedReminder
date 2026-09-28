@@ -59,6 +59,11 @@ internal sealed class MainForm : MedReminderFormBase
 
     private DataGridView _grid = null!;
     private BindingList<MedicineListItem> _rows = [];
+    // Every row of the last load; _rows is the part shown, without the
+    // deactivated medicines unless _showInactive (session only).
+    private List<MedicineListItem> _allRows = [];
+    private bool _showInactive;
+    private ToolStripMenuItem _showInactiveItem = null!;
     private ToolStripStatusLabel _statusLabel = null!;
     private ToolStripStatusLabel _lastCheckLabel = null!;
     private Panel _errorBanner = null!;
@@ -189,6 +194,22 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deactivate"),
             Mdl2Glyph.Glyphs.Cancel, Keys.None,
             async () => await DeactivateSelectedAsync()));
+        // No shortcut: a deletion is only ever started from the menu.
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Delete"),
+            Mdl2Glyph.Glyphs.Delete, Keys.None,
+            async () => await DeleteSelectedAsync()));
+        var showInactive = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.ShowInactive"))
+        {
+            CheckOnClick = true,
+            Checked = _showInactive,
+        };
+        showInactive.CheckedChanged += (_, _) =>
+        {
+            _showInactive = showInactive.Checked;
+            ApplyInactiveFilter();
+        };
+        _showInactiveItem = showInactive;
+        therapyMenu.DropDownItems.Add(showInactive);
         therapyMenu.DropDownItems.Add(new ToolStripSeparator());
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RegisterIntake"),
             Mdl2Glyph.Glyphs.CheckMark, Keys.Control | Keys.I,
@@ -602,6 +623,11 @@ internal sealed class MainForm : MedReminderFormBase
 
     private void SelectGridRow(Guid medicineId)
     {
+        if (!_showInactive && _allRows.Any(r => r.Id == medicineId && !r.IsActive))
+        {
+            // Raises CheckedChanged, which shows the inactive rows.
+            _showInactiveItem.Checked = true;
+        }
         foreach (DataGridViewRow row in _grid.Rows)
         {
             if (row.DataBoundItem is not MedicineListItem item || item.Id != medicineId) continue;
@@ -946,7 +972,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             MedicineRowStatus.Warning => WarningColor,
             MedicineRowStatus.Empty => EmptyColor,
-            MedicineRowStatus.Suspended => SuspendedColor,
+            MedicineRowStatus.Suspended or MedicineRowStatus.Inactive => SuspendedColor,
             _ => SystemColors.Window,
         };
 
@@ -959,7 +985,8 @@ internal sealed class MainForm : MedReminderFormBase
             MedicineRowStatus.Ok        => (StatusOkBack,      StatusOkFore),
             MedicineRowStatus.Warning   => (StatusWarnBack,    StatusWarnFore),
             MedicineRowStatus.Empty     => (StatusEmptyBack,   StatusEmptyFore),
-            MedicineRowStatus.Suspended => (StatusSuspendBack, StatusSuspendFore),
+            MedicineRowStatus.Suspended
+                or MedicineRowStatus.Inactive => (StatusSuspendBack, StatusSuspendFore),
             _                           => (SystemColors.Window, SystemColors.ControlText),
         };
         var cell = row.Cells[_statusColumnIndex];
@@ -1008,9 +1035,8 @@ internal sealed class MainForm : MedReminderFormBase
             var loader = scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>();
             var items = await loader.LoadAsync(CancellationToken.None);
 
-            _rows = new BindingList<MedicineListItem>(items.ToList());
-            _grid.DataSource = _rows;
-            SetStatus(_loc.Get("Ui.MainForm.Status.MedicinesLoaded", items.Count));
+            _allRows = items.ToList();
+            ApplyInactiveFilter();
             HideErrorBanner();
         }
         catch (Exception ex)
@@ -1019,6 +1045,18 @@ internal sealed class MainForm : MedReminderFormBase
             SetStatus(_loc.Get("Ui.MainForm.Status.LoadError"));
             ShowErrorBanner(_loc.Get("Ui.MainForm.LoadBanner.Failure", ex.Message));
         }
+    }
+
+    // Rebuilds the shown rows from the last load, in load order.
+    private void ApplyInactiveFilter()
+    {
+        _rows = new BindingList<MedicineListItem>(
+            _showInactive ? _allRows : _allRows.Where(r => r.IsActive).ToList());
+        _grid.DataSource = _rows;
+        var hidden = _allRows.Count - _rows.Count;
+        SetStatus(hidden > 0
+            ? _loc.Get("Ui.MainForm.Status.MedicinesLoadedHidden", _rows.Count, hidden)
+            : _loc.Get("Ui.MainForm.Status.MedicinesLoaded", _rows.Count));
     }
 
     private MedicineListItem? GetSelectedRow()
@@ -1260,6 +1298,61 @@ internal sealed class MainForm : MedReminderFormBase
             ShowError(_loc.Get("Ui.MainForm.Error.DeactivateMedicine"), ex);
         }
     }
+
+    // Deletion of a medicine entered by mistake (DeleteMedicine). A
+    // medicine with recorded facts is refused before the confirmation,
+    // with the two ways out: deactivate, or retract the facts first.
+    private async Task DeleteSelectedAsync()
+    {
+        var row = GetSelectedRow();
+        if (row is null) return;
+
+        try
+        {
+            DeleteMedicineOutcome check;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                check = await scope.ServiceProvider.GetRequiredService<DeleteMedicine>()
+                    .CheckAsync(row.Id, CancellationToken.None);
+            }
+            if (check == DeleteMedicineOutcome.HasRecordedFacts)
+            {
+                ShowDeleteRefused(row.Name);
+                return;
+            }
+            if (check == DeleteMedicineOutcome.NotFound)
+            {
+                await ReloadAsync();
+                return;
+            }
+
+            var confirm = MessageBox.Show(this,
+                _loc.Get("Ui.MainForm.Delete.Confirm", row.Name),
+                _loc.Get("Ui.MainForm.Delete.Title"),
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+            if (confirm != DialogResult.Yes) return;
+
+            DeleteMedicineOutcome outcome;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                outcome = await scope.ServiceProvider.GetRequiredService<DeleteMedicine>()
+                    .ExecuteAsync(new DeleteMedicineCommand(row.Id), CancellationToken.None);
+            }
+            // A fact recorded meanwhile (a sync run, a reminder) wins.
+            if (outcome == DeleteMedicineOutcome.HasRecordedFacts) ShowDeleteRefused(row.Name);
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.DeleteMedicine"), ex);
+        }
+    }
+
+    private void ShowDeleteRefused(string name)
+        => MessageBox.Show(this,
+            _loc.Get("Ui.MainForm.Delete.HasFacts", name),
+            _loc.Get("Ui.MainForm.Delete.Title"),
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
 
     private async Task ShowChangeScheduleAsync()
     {

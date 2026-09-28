@@ -67,6 +67,9 @@ internal static class Operations
     public static SuspensionEndChanged SuspensionEnd(MedicationSuspension suspension)
         => new(suspension.MedicineId, suspension.Id, suspension.EndDate);
 
+    public static MedicineDeleted Deleted(Guid medicineId, DateTimeOffset recordedAt)
+        => new(medicineId, recordedAt);
+
     public static FactRetracted Retraction(FactRetraction retraction)
         => new(retraction.MedicineId, retraction.Id, retraction.Kind, retraction.FactId, retraction.RecordedAt);
 }

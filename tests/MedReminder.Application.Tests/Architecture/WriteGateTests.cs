@@ -26,6 +26,7 @@ public class WriteGateTests
         ["UpdateMedicine"] = (s, id) => s.UpdateMedicine.ExecuteAsync(new UpdateMedicineCommand(
             id, "Enalapril", null, null, "compresse", 7, NotificationChannels.Windows, null, null, "x", true), default),
         ["DeactivateMedicine"] = (s, id) => s.DeactivateMedicine.ExecuteAsync(new DeactivateMedicineCommand(id), default),
+        ["DeleteMedicine"] = (s, id) => s.DeleteMedicine.ExecuteAsync(new DeleteMedicineCommand(id), default),
         ["AddStock"] = (s, id) => s.AddStock.ExecuteAsync(new AddStockCommand(id, 28m, StockMovementKind.NewPackage), default),
         ["AdjustStockDown"] = (s, id) => s.AdjustStockDown.ExecuteAsync(new AdjustStockDownCommand(id, 1m), default),
         ["ChangeMedicationSchedule"] = (s, id) => s.ChangeMedicationSchedule.ExecuteAsync(

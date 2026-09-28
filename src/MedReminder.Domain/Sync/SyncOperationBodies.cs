@@ -4,7 +4,7 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Domain.Sync;
 
-// Operation catalogue, schema version 1 (B.1 Phase 3a,
+// Operation catalogue, schema versions 1 and 2 (B.1 Phase 3a,
 // docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.2, §7.2). One operation
 // per user fact or per changed register, never a derived row:
 // consumption, count corrections, StockEpoch and the schedule summary on
@@ -133,4 +133,13 @@ public sealed record FactRetracted(
     Guid RetractionId,
     FactKind Kind,
     Guid FactId,
+    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+
+// Tombstone of a deleted medicine (operation schema version 2). The
+// medicine and every row that refers to it are removed; it wins over any
+// operation for the medicine whatever the order of arrival, including
+// facts recorded concurrently on another device. The local use case
+// deletes only a medicine without recorded facts.
+public sealed record MedicineDeleted(
+    Guid MedicineId,
     DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);

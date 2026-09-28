@@ -345,8 +345,22 @@ oubliées ou supplémentaires.
   disparaît des contrôles automatiques et des alertes, mais les
   données historiques (mouvements, notifications) restent en base
   pour audit.
-- **Réactiver** : **Modifier** → coche **Actif**. Les jours où le
-  médicament était désactivé ne sont pas comptés comme consommation.
+- **Afficher les médicaments désactivés** : les médicaments
+  désactivés sont masqués dans la liste. **Traitement → Afficher les
+  médicaments désactivés** les affiche de nouveau, avec l'état
+  *Désactivé*, jusqu'à la fermeture de l'application. La barre d'état
+  indique combien sont masqués.
+- **Réactiver** : affiche les médicaments désactivés, puis
+  **Modifier** → coche **Actif**. Les jours où le médicament était
+  désactivé ne sont pas comptés comme consommation.
+- **Supprimer** : **Traitement → Supprimer…** supprime définitivement
+  un médicament saisi par erreur, avec sa posologie. C'est possible
+  seulement tant que rien n'a été enregistré : aucune entrée de stock
+  (quantité initiale comprise), prise, comptage ou suspension. Sinon,
+  désactive-le, ou supprime d'abord ces entrées dans
+  **Stock → Historique…**. Si la synchronisation est activée, le
+  médicament est aussi supprimé des autres appareils, avec ce qui y a
+  été enregistré entre-temps.
 
 ## Historique du stock et suppression d'une entrée erronée
 

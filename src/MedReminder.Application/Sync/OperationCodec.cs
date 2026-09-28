@@ -13,9 +13,14 @@ namespace MedReminder.Application.Sync;
 // Payload rules: camelCase property names, enums by member name,
 // DateOnly as "yyyy-MM-dd", TimeOnly as "HH:mm:ss[.fffffff]",
 // DateTimeOffset as ISO 8601 with offset, decimals as JSON numbers.
+//
+// Schema versions: 1 is the original catalogue; 2 adds MedicineDeleted.
+// Each operation is written with the lowest version that can carry it,
+// so the operations an older app understands keep version 1 and only the
+// new type stops it (R7).
 public static class OperationCodec
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     private static readonly (string Name, Type Type)[] Catalogue =
     [
@@ -30,6 +35,7 @@ public static class OperationCodec
         ("SuspensionRecorded", typeof(SuspensionRecorded)),
         ("SuspensionEndChanged", typeof(SuspensionEndChanged)),
         ("FactRetracted", typeof(FactRetracted)),
+        ("MedicineDeleted", typeof(MedicineDeleted)),
     ];
 
     private static readonly Dictionary<Type, string> NameByType =
@@ -46,6 +52,13 @@ public static class OperationCodec
     };
 
     public static IReadOnlyCollection<string> TypeNames => TypeByName.Keys;
+
+    // The schema version an operation is written with.
+    public static int SchemaVersionOf(SyncOperationBody body) => body switch
+    {
+        MedicineDeleted => 2,
+        _ => 1,
+    };
 
     public static (string Type, string Payload) Serialize(SyncOperationBody body)
     {

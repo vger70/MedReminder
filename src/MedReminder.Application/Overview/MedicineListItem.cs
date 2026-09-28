@@ -14,6 +14,9 @@ public sealed class MedicineListItem
     public DateOnly? EstimatedRunOutDate { get; set; }
     public int ThresholdDays { get; set; }
     public bool IsSuspended { get; set; }
+    // False for a deactivated medicine; the main window hides these
+    // unless the user asks to see them.
+    public bool IsActive { get; set; } = true;
     public MedicineRowStatus Status { get; set; }
 
     // Pre-formatted values for the grid — avoid replicating the
@@ -34,4 +37,5 @@ public enum MedicineRowStatus
     Warning = 1,
     Empty = 2,
     Suspended = 3,
+    Inactive = 4,
 }

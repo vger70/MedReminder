@@ -333,8 +333,21 @@ in più.
 - **Disattiva**: toolbar → **Disattiva**. La medicina scompare dai
   controlli automatici e dagli avvisi, ma i dati storici (movimenti,
   notifiche) restano nel DB per audit.
-- **Riattiva**: **Modifica** → spunta **Attiva**. I giorni in cui la
-  medicina era disattivata non vengono conteggiati come consumo.
+- **Mostrare le medicine inattive**: le medicine disattivate sono
+  nascoste dall'elenco. **Terapia → Mostra medicine inattive** le
+  mostra di nuovo, con stato *Inattiva*, fino alla chiusura dell'app.
+  La barra di stato indica quante sono nascoste.
+- **Riattiva**: mostra le medicine inattive, poi **Modifica** → spunta
+  **Attiva**. I giorni in cui la medicina era disattivata non vengono
+  conteggiati come consumo.
+- **Elimina**: **Terapia → Elimina…** rimuove definitivamente una
+  medicina inserita per errore, con il suo schema posologico. È
+  possibile solo finché non è stato registrato nulla: nessun carico di
+  scorta (compresa la quantità iniziale), assunzione, conteggio o
+  sospensione. Altrimenti disattivala, oppure elimina prima quelle voci
+  da **Scorte → Storico…**. Con la sincronizzazione attiva la medicina
+  viene rimossa anche dagli altri dispositivi, insieme a quanto vi è
+  stato registrato nel frattempo.
 
 ## Storico delle scorte ed eliminazione di una voce errata
 

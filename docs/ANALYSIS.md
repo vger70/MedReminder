@@ -169,8 +169,14 @@ is used.
 corrections). Enum values are persisted as integers and must stay
 stable.
 
-Foreign keys to `Medicines` use `Restrict`: medicines are deactivated,
-not deleted.
+Foreign keys to `Medicines` use `Restrict`: a medicine with history is
+deactivated, not deleted. `DeleteMedicine` removes a medicine only
+while no fact was recorded for it (no `User` or `Legacy` stock entry,
+intake, count or suspension); `MedicineDeletionRepository` then
+removes the medicine and every row that refers to it in one unit of
+work, and keeps its `SyncOperations` rows. The main window hides
+deactivated medicines unless *Therapy → Show inactive medicines* is
+checked (session only).
 
 ### 4.2 Reference catalogue (outside the EF model)
 
@@ -257,6 +263,11 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   (`RetractFact`, *Stock → History*) only if it is not `Legacy` and no
   stock count was recorded after it; the row is removed, a tombstone is
   kept and the ledger is derived again.
+- A medicine can be deleted (`DeleteMedicine`, *Therapy → Delete*)
+  only while it has no recorded fact; schedule rows, slot sets,
+  activity changes and derived rows go with it. With sync enabled the
+  deletion is a `MedicineDeleted` operation that wins over any
+  operation for the medicine (`docs/SYNC-FORMAT.md` §6).
 - Of two schedule rows with the same `EffectiveFrom`, the later
   recorded one wins (`DailyConsumption`, `LedgerDeriver`).
 - Every use case (`UseCases/`, `RetractFact`,

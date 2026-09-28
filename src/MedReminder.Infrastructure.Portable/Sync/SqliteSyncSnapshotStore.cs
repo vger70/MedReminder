@@ -26,7 +26,11 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
 {
     // Bump when a schema patch adds replicated data, so an older app
     // refuses an image it would read incompletely (R7).
-    public const int CurrentSchemaVersion = 1;
+    //   1: original image.
+    //   2: the log may hold MedicineDeleted: a medicine absent from the
+    //      image whose later operations must be skipped, which an app
+    //      without that operation cannot do.
+    public const int CurrentSchemaVersion = 2;
 
     private static readonly string[] NotReplicated =
     [
