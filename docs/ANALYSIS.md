@@ -122,7 +122,7 @@ removed or weakened. Publishing is described in
 | `Microsoft.EntityFrameworkCore.Sqlite` | Infrastructure.Portable | Persistence |
 | `Microsoft.EntityFrameworkCore.Design` | Infrastructure | Design-time only (`PrivateAssets`) |
 | `MailKit` | Infrastructure | SMTP. `System.Net.Mail.SmtpClient` must not be used |
-| `Microsoft.Identity.Client` (MSAL) | Infrastructure | OneDrive sign-in, public client, system browser (B.1 Phase 4a). Graph itself is called with plain `HttpClient` |
+| `Microsoft.Identity.Client` (MSAL) | Infrastructure | OneDrive sign-in, public client, system browser (B.1 Phase 4a). Graph itself is called with plain `HttpClient`. Google Drive (Phase 4b) uses no package: its OAuth flow and the Drive REST API are plain `HttpClient` too |
 | `Konscious.Security.Cryptography.Argon2` | Infrastructure.Portable | Argon2id key derivation for `.mrz` archives |
 | `Microsoft.Toolkit.Uwp.Notifications` | UI | Windows toasts for an unpackaged app |
 | `Microsoft.Web.WebView2` | UI | Rendering of the embedded user guide |
@@ -301,7 +301,9 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   over `ISyncTransport`: `LocalFolderSyncTransport`, or
   `OneDriveSyncTransport` (Phase 4a: Graph REST under `sync/` in the
   app folder, a `delta` index, MSAL tokens from
-  `MsalCloudAccountService`), built by `ISyncTransportFactory` from the
+  `MsalCloudAccountService`), or `GoogleDriveSyncTransport` (Phase 4b:
+  Drive REST v3, files flat in the app data folder tagged by a property,
+  tokens from `GoogleCloudAccountService`), built by `ISyncTransportFactory` from the
   `SyncTarget` in `sync.settings.json`. `CreateSyncGroup`,
   `JoinSyncGroup` and `ResetSyncGeneration` create, join and restart a
   group; genesis and checkpoints are database images
@@ -341,6 +343,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   smtp.protected                 SMTP password, DPAPI CurrentUser, base64
   cloud-backup.protected         cloud-backup passphrase, DPAPI CurrentUser, base64
   onedrive.protected             MSAL token cache for OneDrive, DPAPI CurrentUser (B.1 Phase 4a)
+  googledrive.protected          Google refresh tokens per account, DPAPI CurrentUser (B.1 Phase 4b)
   backup.settings.json           automatic backup settings (admin-managed)
   backup.state.json              last successful backup timestamp
   user.settings.json             UI language, reference country, update check
@@ -532,7 +535,9 @@ replaces the database file after renaming the current one to
   port: `CloudArchiveStorage` picks `LocalFolderArchiveStorage` or,
   with `Backup:CloudProvider` = `OneDrive` and `CloudAccountId`,
   `OneDriveArchiveStorage` (`backups/` in the OneDrive app folder;
-  B.1 Phase 4a). A OneDrive session that needs a new sign-in is
+  B.1 Phase 4a) or, with `GoogleDrive`, `GoogleDriveArchiveStorage` (a
+  visible `MedReminder/backups` folder in My Drive; Phase 4b). A
+  provider session that needs a new sign-in is
   checked with a silent token before the export and recorded as the
   run's error, so Settings shows it; the restore dialog asks for a new
   sign-in. A written snapshot counts as the

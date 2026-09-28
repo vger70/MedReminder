@@ -672,3 +672,40 @@ product/price per tier:
 Do not embed any API credential — only the hosted button URL belongs in
 the file. After editing, restart MedReminder; the menu entry appears
 once `Enabled` is `true` and at least one provider has valid links.
+
+## 24. Cloud provider clients (maintainer)
+
+Sync and cloud backup can use OneDrive and Google Drive (B.1 Phase 4a,
+4b). Each needs an app registration owned by the maintainer.
+
+**OneDrive**: the Microsoft Entra public client id is in the code
+(`MsalCloudAccountService`); a public client has no secret. A different
+registration can be set with `OneDrive:ClientId` in `appsettings.json`.
+
+**Google Drive**: a Google Cloud OAuth client of type **Desktop app**,
+with the Drive API enabled and the scopes `drive.file` and
+`drive.appdata` on the consent screen. Google requires the client
+secret in the token request even for installed apps and does not treat
+it as confidential, but it is kept **out of the repository**:
+
+1. Set two environment variables before `dotnet build` / `dotnet publish`:
+
+   ```powershell
+   $env:MEDREMINDER_GOOGLE_CLIENT_ID = "<client id>.apps.googleusercontent.com"
+   $env:MEDREMINDER_GOOGLE_CLIENT_SECRET = "<client secret>"
+   ```
+
+   `MedReminder.Infrastructure.csproj` stamps them into the assembly
+   (`AssemblyMetadata`). A build without them does not offer Google
+   Drive.
+2. For the GitHub release workflow, store them as repository secrets
+   with the same names and pass them to the build step as environment
+   variables.
+3. For a local test without rebuilding, `GoogleDrive:ClientId` and
+   `GoogleDrive:ClientSecret` in `appsettings.json` override the stamped
+   values. Do not commit that file with real values.
+
+Before a release that offers Google Drive, publish the consent screen
+(Google Auth Platform → Audience → **In production**): while it is in
+Testing, refresh tokens expire after 7 days and users would have to sign
+in again every week (spike S7, `ANALYSIS-B1-MOBILE-SYNC.md` §18.7).

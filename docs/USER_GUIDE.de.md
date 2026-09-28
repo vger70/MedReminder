@@ -877,6 +877,11 @@ in OneDrive; ein lokaler Ordner ist nicht nötig. **Aus Cloud-Ordner
 wiederherstellen…** listet dann die OneDrive-Sicherungen nach Datum und
 Profil und lädt nur die wiederhergestellte herunter.
 
+**Google Drive (Ordner MedReminder/backups)** funktioniert ebenso mit
+einem Google-Konto: Die Sicherungen landen verschlüsselt wie oben in
+einem sichtbaren Ordner **MedReminder → backups** in Ihrer Ablage, und
+**Aus Cloud-Ordner wiederherstellen…** listet sie von dort.
+
 ## Synchronisierung zwischen PCs
 
 Mehrere PCs können dasselbe Profil aktuell halten: Was Sie auf einem
@@ -899,11 +904,17 @@ fragt MedReminder, wo die Gruppe liegen soll:
   verwenden (`Apps/MedReminder26` in OneDrive); die Daten dort sind
   verschlüsselt. Jeder PC meldet sich mit **demselben** Microsoft-Konto
   an. Die OneDrive-App auf dem PC wird nicht benötigt.
+- **Google Drive**: im sich öffnenden Browserfenster mit einem
+  Google-Konto anmelden. Die Synchronisierungsdaten liegen verschlüsselt
+  im ausgeblendeten App-Datenordner von MedReminder in Google Drive (er
+  erscheint nicht in Ihrer Ablage). Jeder PC meldet sich mit
+  **demselben** Google-Konto an.
 - **Ein freigegebener Ordner**: ein Ordner, den ein anderes Programm
   synchron hält, oder eine Netzwerkfreigabe, wie unten beschrieben.
 
-Läuft die OneDrive-Sitzung ab (Kennwortänderung, lange Inaktivität),
-zeigt der Status das an, und **Erneut bei OneDrive anmelden** setzt die
+Läuft die OneDrive- oder Google-Drive-Sitzung ab (Kennwortänderung,
+lange Inaktivität), zeigt der Status das an, und **Erneut bei OneDrive
+anmelden** (bzw. **Erneut bei Google Drive anmelden**) setzt die
 Synchronisierung fort; zwischenzeitliche Änderungen werden danach
 gesendet.
 

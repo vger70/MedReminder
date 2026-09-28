@@ -49,6 +49,14 @@ reached through its API, the `sync/` folder of the app's folder in the
 user's account (OneDrive: `/Apps/<app>/sync/`). The layout below that
 root is the same.
 
+Google Drive has file ids, not paths, and allows two files with one
+name. There the files lie flat in the app data folder (`appDataFolder`):
+each file's name is its relative path below (for example
+`<groupId>/ops/1/<deviceId>/7.mrs`), and it carries the public property
+`mrsync` = `1`. Files without that property are not sync files. When
+two files have the same name, readers use the one created first (then
+the smaller file id); the writer of the other one deletes it.
+
 - `groupId`, `deviceId`: GUIDs, 32 lowercase hexadecimal digits (`N`
   format).
 - `generation`, `keyVersion`, `seq`, `n`: decimal integers starting at

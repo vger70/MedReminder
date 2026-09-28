@@ -610,21 +610,26 @@ offers one. New Application port `ISyncTransport`, implemented by:
 |---|---|---|---|
 | `LocalFolderSyncTransport` (a folder synced by a third-party client, or a NAS share) | Yes | No | 3 |
 | `OneDriveSyncTransport` (Microsoft Graph, MSAL public client) | Yes | Yes | 4a |
-| `GoogleDriveSyncTransport` (Drive REST API) | Yes | Yes | 4 |
+| `GoogleDriveSyncTransport` (Drive REST API) | Yes | Yes | 4b |
 | iCloud | Only through `LocalFolder` on Windows | Native container | Not planned, D12 |
 
 Why desktop also uses the provider API rather than only the synced
 folder: with Google Drive the narrow `drive.file` scope lets an app see
 only files it created or the user opened with it, so files written by
-the Google Drive desktop client might be invisible to the phone app
-`[UNCERTAIN — spike S7]`. Using the same API on both sides avoids the
-issue. For OneDrive the app-folder permission (`Files.ReadWrite.AppFolder`)
+the Google Drive desktop client would be invisible to the phone app.
+Using the same API on both sides avoids the issue; spike S7 confirmed
+that files created by one OAuth client of the project are visible to
+another (§18.7). For OneDrive the app-folder permission (`Files.ReadWrite.AppFolder`)
 limits access to `/Apps/<app>`; spike S6 confirmed the isolation and
 found that the Windows OneDrive client does not download that folder
 (§18.6), so the desktop uses the API for OneDrive as well.
 
 Layout inside a provider's app folder (Phase 4a): sync files under
 `sync/` (the root of `SYNC-FORMAT.md` §2), backups under `backups/`.
+Google Drive (Phase 4b): sync files flat in the hidden app data folder,
+named by their relative path and tagged with a public property; backups
+in a visible `MedReminder/backups` folder of My Drive (product owner,
+2026-09-28).
 
 `IArchiveStorage` gets matching provider implementations in the same
 phase (the C.3++ Phase 2 deliverable), so cloud backups can use the
@@ -1369,7 +1374,8 @@ two behavior findings belong to Phase 2.
 ## 18. Spike results
 
 One subsection per spike: date, environment, result, decision. S1–S5,
-S7, S8 pending; S6 done for Windows (its Android half runs with Phase 5).
+S8 pending; S6 and S7 done for Windows (their Android halves run with
+Phase 5).
 
 ### 18.6 S6 — OneDrive app folder (2026-09-27)
 
@@ -1410,6 +1416,46 @@ reports in that folder's `results/`.
   enumeration when the cursor expires.
 - The app folder name is the registration's display name; the product
   owner keeps `MedReminder26`.
+
+### 18.7 S7 — Google Drive (2026-09-28)
+
+**Environment**: Windows 11 (NT 10.0.26200), .NET 10.0.12, one Cloud
+project with the Drive API, consent screen External in Testing, scopes
+`drive.file` and `drive.appdata`, two OAuth clients of type Desktop (A
+and B) standing in for the desktop and the Android client. Hand-written
+OAuth (system browser, loopback on `127.0.0.1`, PKCE), Drive REST v3.
+Tool in `spikes/S7-GoogleDrive/` on branch
+`claude/b1-spike-s7-google-drive` (draft PR #92, not merged); two
+rounds, reports in that folder's `results/`.
+
+**Results**
+
+| Check | Result |
+|---|---|
+| Sign-in (loopback + PKCE) for A and B; refresh from a cached refresh token after a restart | Pass |
+| `refresh_token_expires_in` = 604 799 s (7 days) with the consent screen in Testing | Measured |
+| **Client B finds, lists, reads and writes into the files client A created (`drive.file`)** | Pass |
+| **Client B sees client A's `appDataFolder` file** | Pass |
+| A query on a public `properties` tag finds the file from either client (~0.4 s); `appProperties` also visible to B | Pass |
+| Same name twice in one folder: both creates succeed | Fail (duplicates allowed) |
+| Create with a pre-generated id, twice: 200 then 409 | Pass |
+| Resumable upload (6 MiB, ~2 s); a partial upload is not listed | Pass |
+| Replace content; delete 204 then 404 | Pass |
+| `changes` feed reports a new file after 4–7 s, also to the other client | Pass (with lag) |
+| Latency: ~1.2 s per small create, ~0.3 s per listing query, ~1 s per folder created; no throttling over 20 creates | Measured |
+
+**Decisions**
+
+- Sync in the hidden app data folder, backups in a visible folder
+  (product owner). Both scopes are requested.
+- No folders for sync: files flat, named by path, one query by property
+  lists them.
+- Create-only is emulated: check, create with a pre-generated id, check
+  again; among duplicates the oldest (then smallest id) wins on every
+  device.
+- Own writes are remembered until the listing shows them (lag).
+- Before release the Cloud project must be published: in Testing the
+  refresh token lasts 7 days.
 
 ### 18.9 S9 — Convergence prototype (2026-09-26)
 
@@ -1632,3 +1678,19 @@ Phase 2 implements the derivation from the prototype and its tests.
   not added to `THIRD-PARTY-NOTICES.md`, which covers data sources
   only (NuGet package licences are not listed there, MailKit
   included).
+- 2026-09-28 — S7 done for Windows (§18.7). Phase 4b implemented:
+  `GoogleDriveClient` (Drive REST v3, no Google library),
+  `GoogleDriveSyncTransport` (flat files in the app data folder tagged
+  by a property, create-only emulated with a pre-generated id and an
+  oldest-wins rule), `GoogleDriveArchiveStorage` (visible
+  `MedReminder/backups` folder found by property), `GoogleOAuthClient`
+  and `GoogleCloudAccountService` (loopback + PKCE, refresh tokens in
+  `googledrive.protected`), `CloudAccountService` routing by provider.
+  The Desktop client's id and secret are not in the repository: they
+  come from configuration or are stamped at build time
+  (`docs/PACKAGING.md`). Known limit, found by the listing-lag harness
+  and shared with OneDrive (delta lag): when a device joins while the
+  listing lags and another device compacts in those seconds, the new
+  device finds a gap, reports `RebuildRequired`, and "Rebuild from the
+  group" repairs it. Closing it needs the join to wait until its own
+  device record is listed.

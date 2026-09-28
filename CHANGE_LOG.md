@@ -30,10 +30,61 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #95 — B.1 Phase 4b: Google Drive sync transport and cloud backups
+
+Link: [vger70/MedReminder#95](https://github.com/vger70/MedReminder/pull/95)
+Branch: `claude/b1-phase4b-google-drive`
+
+### Added
+
+- Sync through Google Drive: Tools → Sync… offers Google Drive next to
+  OneDrive and a shared folder. Sync files go to the hidden app data
+  folder of the Google account, encrypted as before
+  (`docs/SYNC-FORMAT.md`).
+- Cloud backup to Google Drive: Settings → Backup → storage Google
+  Drive; encrypted snapshots in a visible `MedReminder/backups` folder
+  of My Drive; restore lists them and downloads only the chosen one.
+- `GoogleDriveClient`, `GoogleDriveSyncTransport`,
+  `GoogleDriveArchiveStorage`, `GoogleOAuthClient`
+  (`src/MedReminder.Infrastructure.Portable/Cloud/GoogleDrive/`): Drive
+  REST v3 and OAuth for installed apps over `HttpClient`, no Google
+  library. Duplicate names allowed by Drive are resolved by an
+  oldest-wins rule; retried creates are recognised by a pre-generated
+  id.
+- `GoogleCloudAccountService`: sign-in in the browser with a loopback
+  redirect and PKCE; refresh tokens in
+  `%LOCALAPPDATA%\MedReminder\googledrive.protected` (DPAPI).
+  `CloudAccountService` routes between OneDrive and Google Drive.
+
+### Changed
+
+- `CloudProvider` gains `GoogleDrive`. `CloudStorageException` names
+  its provider.
+
+### Build
+
+- The Google OAuth client id and secret are not in the repository:
+  `MEDREMINDER_GOOGLE_CLIENT_ID` / `MEDREMINDER_GOOGLE_CLIENT_SECRET`
+  at build time, or `GoogleDrive:ClientId` / `ClientSecret` in
+  configuration (`docs/PACKAGING.md` §24). Without them Google Drive is
+  not offered.
+
+### Docs
+
+- Spike S7 results (`ANALYSIS-B1-MOBILE-SYNC.md` §18.7) and a known
+  limit in §20 (a device joining during a listing lag can be told to
+  rebuild); `SYNC-FORMAT.md` Google Drive layout; Google Drive steps in
+  `SYNC-TWO-PC-CHECKLIST.md`; `ANALYSIS.md`; `PACKAGING.md` §24;
+  `ANALYSIS-C3PP-CLOUD-PROVIDERS.md`; user guides (5 languages).
+
+---
+
 ## PR #94 — Stream OneDrive downloads, fix hidden-provider validation, share snapshot naming
 
 Link: [vger70/MedReminder#94](https://github.com/vger70/MedReminder/pull/94)
 Branch: `claude/code-review-followup`
+
+**Status:** merged (2026-09-28)
 
 ### Fixed
 
@@ -84,6 +135,8 @@ Branch: `claude/code-review-rjy7oe`
 
 Link: [vger70/MedReminder#91](https://github.com/vger70/MedReminder/pull/91)
 Branch: `claude/b1-phase4a-onedrive`
+
+**Status:** merged (2026-09-27)
 
 ### Added
 

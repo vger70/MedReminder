@@ -952,9 +952,9 @@ Deliver:
 - OAuth sign-in / sign-out flow.
 - Localization keys for the provider-selection UI.
 
-Status (2026-09-27): OneDrive delivered with B.1 Phase 4a
-(`ANALYSIS-B1-MOBILE-SYNC.md` §13, §18.6); Google Drive follows with
-B.1 Phase 4b. No sign-out button yet: the account stays in the token
+Status (2026-09-28): OneDrive delivered with B.1 Phase 4a
+(`ANALYSIS-B1-MOBILE-SYNC.md` §13, §18.6), Google Drive with B.1 Phase
+4b (§18.7). No sign-out button yet: the account stays in the token
 cache until the file is removed.
 
 ### Phase 3 — optional, after Phase 2 is stable
@@ -1122,3 +1122,12 @@ premature dependency.
   file names instead of their manifests, to avoid one download per
   archive; the other-profile check reads the manifest of the downloaded
   archive before the import.
+- 2026-09-28 — Phase 2, Google Drive part, implemented with B.1 Phase
+  4b (spike S7). Backups go to a visible `MedReminder/backups` folder in
+  My Drive (product owner), found by a public property so a user's own
+  folder of that name is never used; scope `drive.file` (plus
+  `drive.appdata` for sync); refresh tokens in `googledrive.protected`,
+  one file for all profiles. No Google client library: the OAuth flow
+  (loopback + PKCE) and the Drive REST API are plain HTTP. The Desktop
+  client's id and secret are not in the repository (`docs/PACKAGING.md`
+  §24).
