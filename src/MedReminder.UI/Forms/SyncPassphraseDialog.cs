@@ -61,6 +61,15 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
             AddRow(layout, 3, _loc.Get("Ui.SyncDialog.Passphrase.Repeat"), _repeat);
         }
 
+        // The panel fills the form and hands leftover height to its last row,
+        // where a Left-anchored label would sit vertically centred away from
+        // its text box. Size the content rows to fit and let an empty filler
+        // row absorb the remaining space.
+        var contentRows = confirm ? 4 : 3;
+        layout.RowCount = contentRows + 1;
+        for (var i = 0; i < contentRows; i++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
         var ok = new Button { Text = _loc.Get("Common.Ok"), AutoSize = true, Height = 32 };
         ok.Click += (_, _) => Accept();
         var cancel = new Button
