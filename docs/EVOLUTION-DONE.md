@@ -13,6 +13,7 @@ read this file instead.
 | Former `EVOLUTION.md` section | Item | Shipped in |
 |---|---|---|
 | §3.1 | A1 — Complex therapy regimens | PR #31, PR #40 |
+| §3.2 | A2 — AIC / barcode scan | PR #72 (v2.5.2), PR #110, PR #111 (v2.10.0) |
 | §3.3 | A3 — Caregiver notifications | PR #47 |
 | §3.4 | A4 — Data export/import | Merged into C.3 (§4) |
 | §3.5 | A5 — Dose-time reminder | PR #37 |
@@ -54,6 +55,43 @@ PR #40 (2026-09-21).
 **Not done / deferred.** Slot × schedule combinations are deferred
 (see `ANALYSIS-A1-REGIMENS.md`). No clinical checks of any kind, by
 design.
+
+## 3.2 A2 — AIC / barcode scan of medicine package
+
+**Status.** Shipped in three phases: PR #72 (USB HID scanner, v2.5.2),
+PR #110 (webcam) and PR #111 (restock by scan), both in v2.10.0.
+
+**Authoritative analysis.** `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md`
+(§5A, §5B, §5C, with "as implemented" notes and change log).
+
+**As implemented.**
+
+- **Parser** (`BarcodeParser`, `ItalianPharmacode`, Application):
+  Code 32 (Italian AIC, as Code 39), GS1 DataMatrix and EAN-13, with
+  check digits; never logs the payload, which may carry an FMD serial
+  number.
+- **Scan dialog** (`BarcodeScanDialog`): a USB HID scanner in
+  keyboard-wedge mode or a code typed by hand, by default; the webcam
+  on request (`WindowsCameraCaptureService` over
+  Windows.Media.Capture, decoded with ZXing.Net). The camera is
+  released as soon as a code is read, the user switches back, the
+  30-second timeout fires or the dialog closes.
+- **Flow (a), new medicine**: *Scan barcode…* in the medicine form
+  looks the code up in the reference catalogue and fills the form as
+  an autocomplete pick does.
+- **Flow (b), restock**: *Stock → Restock from barcode…* finds the
+  medicine by its AIC code (`RestockByScanQuery`) and opens the
+  new-package dialog with the quantity of its last new package. A
+  code no medicine carries can be added as a new medicine or linked
+  to a medicine without a code, when the catalogue knows it.
+- No schema change; expiry and batch are not stored.
+
+**Deviations from the sketch.** The mobile path (phone camera) stays
+with B.1 Phase 7. The webcam decode on a real pack was not confirmed
+at acceptance: the test webcam's resolution was too low
+(`ANALYSIS-A2-BARCODE-SCAN.md` §10.2). A GTIN-only DataMatrix does not
+resolve to an AIC; revisit before Code 32 disappears from Italian
+packs (§10.2 risk 3).
 
 ## 3.3 A3 — Caregiver notifications
 
@@ -288,3 +326,4 @@ no longer match the application. The corrections are listed in
 - 2026-09-25 — created by splitting `EVOLUTION.md`. Moved A1, A3, A4
   (pointer), A5, A6, C.3, C.3+, C.3++ Phase 1 and website v1 here and
   rewrote each item to match what shipped.
+- 2026-09-28 — added A2 (§3.2), shipped in full with v2.10.0.

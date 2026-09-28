@@ -9,8 +9,8 @@ dedicated analysis document (see `ANALYSIS-MULTI-USER.md` for the
 pattern) or a GitHub issue.
 
 **Split on 2026-09-25.** This file now holds only the open items.
-Shipped items (A1, A3, A5, A6, C.3, C.3+, C.3++ Phase 1, website v1)
-moved to `EVOLUTION-DONE.md`, rewritten to match what was
+Shipped items (A1, A3, A5, A6, C.3, C.3+, C.3++ Phase 1, website v1;
+A2 since 2026-09-28) moved to `EVOLUTION-DONE.md`, rewritten to match what was
 implemented. Section numbers are unchanged, so existing
 `EVOLUTION.md §<n>` references elsewhere stay valid: a section that
 moved keeps a one-line pointer here.
@@ -20,6 +20,11 @@ promote/demote and the consolidated admin view) remain deferred and
 are **not** covered here — this document looks past the multi-user
 baseline that landed with PRs #22–#26. **DECIDED 2026-09-28**: they
 are not planned and are picked up only if a concrete need emerges.
+**Update 2026-09-28:** on the product owner's request a design and an
+implementation brief now exist
+(`docs/analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`,
+`docs/prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md`, PR #112); work
+starts only after its decisions D1–D7 are confirmed.
 
 ---
 
@@ -68,8 +73,9 @@ Deliberately excluded from this document:
 **DECIDED 2026-09-20 — sequence.** The product owner set the order
 A6 → A5 → remaining items. As of 2026-09-25 A1, A3, A5, A6, C.3,
 C.3+ and C.3++ Phase 1 have shipped (see `EVOLUTION-DONE.md`). As of
-2026-09-28 (v2.9.1) the desktop side of B.1 (phases 1–4c) and A2
-phase 1 have shipped too; current state in `docs/STATUS.md`.
+2026-09-28 the desktop side of B.1 (phases 1–4c, v2.7.0–v2.9.0) and
+every A2 phase (v2.5.2 and v2.10.0) have shipped too; current state
+in `docs/STATUS.md`.
 
 ### 2.0 Remaining sequence
 
@@ -80,11 +86,7 @@ phase 1 have shipped too; current state in `docs/STATUS.md`.
    without a backend. Desktop phases 1–4c shipped in v2.7.0–v2.9.0;
    the mobile phases 5–7 wait for the Android spikes S1–S4 (draft
    PR #106).
-2. **A2 phase 2 — webcam, then A2 phase 3 — restock by scan** (§3.2).
-   Phase 1 (USB HID scanner) shipped in PR #72. Independent of B.1;
-   **DECIDED 2026-09-28** as the next desktop work, while the Android
-   spikes are pending.
-3. **C.1 — hosted relay** (§8). Reduced to an optional extra transport
+2. **C.1 — hosted relay** (§8). Reduced to an optional extra transport
    for B.1 sync; only if the product owner accepts operating a
    service.
 
@@ -92,8 +94,10 @@ phase 1 have shipped too; current state in `docs/STATUS.md`.
 — see §8.1.
 
 Rules that still apply: do not ship B.1 without the C.3 / C.3+
-foundation (met), and do not decide on C.1 before B.1. A2 is
-independent of the multi-device track and can be reordered freely.
+foundation (met), and do not decide on C.1 before B.1.
+
+A2 (§3.2) left the sequence on 2026-09-28: all three phases shipped,
+the last two in v2.10.0.
 
 ---
 
@@ -111,57 +115,7 @@ Shipped. See `EVOLUTION-DONE.md` §3.1.
 
 ### 3.2 A2 — AIC / barcode scan of medicine package
 
-**Status.** Phase 1 shipped (PR #72). Phase 2 (webcam, PR #110) and
-phase 3 (restock by scan) implemented, not released. Approved design: `docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md`, which
-covers both desktop variants: USB HID scanner (keyboard wedge) and
-webcam. Where this section and the analysis disagree, the analysis
-wins.
-
-**Motivation.** Reduce data-entry errors and friction when adding a
-medicine. The Italian AIC code (Autorizzazione all'Immissione in
-Commercio) is printed on every package sold in Italy, as a Code 32
-barcode, and uniquely identifies the medicinal product. The EU FMD
-GS1 DataMatrix is being phased in for Italy (transition from
-9 February 2025, mandatory from 9 February 2027).
-
-**Design sketch.**
-
-- On desktop, two input variants feeding one parser and one catalogue
-  lookup:
-  - **USB HID scanner** as keyboard input, captured in a dedicated
-    field of a scan dialog. Default mode: no new dependency, no
-    camera permission. A 1D scanner covers Code 32; DataMatrix needs
-    a 2D imager.
-  - **Webcam**, decoded in-process with ZXing.Net, started only on
-    explicit request.
-- On the mobile companion (see §7): the phone camera is the
-  natural scanner; `ZXing.Net.Maui` or equivalent handles the
-  decode.
-- Once the AIC is captured, look it up in the local reference
-  catalogue (see `ANALYSIS-DRUG-CATALOGUE.md` — the mechanism
-  already exists) and populate the medicine record as a manual
-  autocomplete pick does.
-
-**Flows.** (a) add a new medicine by scanning its package; (b) restock
-an existing medicine by scanning its package (medicine identified by
-AIC, kind "new package", quantity from the last new-package movement;
-no expiry/batch, which stock movements do not store).
-
-**Phases.** DECIDED 2026-09-26, one PR each:
-
-1. Shared core + USB HID scanner — flow (a).
-2. Webcam — flow (a).
-3. Flow (b) — only after flow (a) is complete. Requested by the
-   product owner on 2026-09-28; planned right after phase 2.
-
-**Effort.** Phase 1 ~9–10 days, phase 2 ~6–7 days, phase 3 ~4–5 days.
-Mobile path lands together with §7. [INFERRED]
-
-**Risks.** Camera access adds a new permission surface on Windows;
-handheld scanners are the safer default. HID scanners vary in suffix,
-GS1 separator and keyboard-layout configuration; the parser rejects
-garbled input by checksum. GTIN-only scans may not resolve to an AIC
-once Code 32 disappears from Italian packs [UNCERTAIN].
+Shipped. See `EVOLUTION-DONE.md` §3.2.
 
 ### 3.3 A3 — Caregiver notifications
 
@@ -481,8 +435,8 @@ v1 shipped on 2026-09-25 in `vger70/medreminder-website`. See
 the design. A content refresh to align the site with the current
 application is prepared in
 `docs/prompt/PROMPT-WEBSITE-CONTENT-REFRESH.md`; it does not cover
-v2.7–v2.9 (sync, cloud providers, therapy card PDF, text size)
-[INFERRED].
+v2.7–v2.10 (sync, cloud providers, therapy card PDF, text size,
+webcam scan, restock by scan) [INFERRED].
 
 ---
 
@@ -563,3 +517,8 @@ v2.7–v2.9 (sync, cloud providers, therapy card PDF, text size)
   emerges; §10 notes the website refresh gap.
 - 2026-09-28 — §3.2: A2 phase 2 (webcam) implemented.
 - 2026-09-28 — §3.2: A2 phase 3 (restock by scan) implemented.
+- 2026-09-28 — review at v2.10.0: A2 shipped in full (phases 2 and 3
+  in v2.10.0, PRs #110, #111) and moved to `EVOLUTION-DONE.md` §3.2,
+  with a pointer here; §2.0 sequence without A2; multi-user G/I design
+  recorded (PR #112, decisions pending); §10 website gap extended to
+  v2.10.
