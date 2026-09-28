@@ -59,6 +59,26 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #102 — Let every profile manage the sync of its own data
+
+Link: [vger70/MedReminder#102](https://github.com/vger70/MedReminder/pull/102)
+Branch: `claude/b1-phase-4c-t44dis`
+
+### Changed
+
+- Tools → Sync…: every profile can enable, join (passphrase or pairing
+  code), pair a device, rebuild, enter the new key and disable sync
+  for its own data. Before, only the administrator could, which left
+  profiles with the user role with no way to sync. Changing the key
+  and removing a device stay with the administrator
+  (`src/MedReminder.UI/Forms/SyncDialog.cs`; product owner,
+  2026-09-28).
+
+### Docs
+
+- User guides (5 languages), `docs/SYNC-TWO-PC-CHECKLIST.md` step 14,
+  `ANALYSIS-B1-MOBILE-SYNC.md` change log.
+
 ## PR #101 — Keep the sync window open while one of its actions runs
 
 Link: [vger70/MedReminder#101](https://github.com/vger70/MedReminder/pull/101)
