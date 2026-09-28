@@ -864,6 +864,12 @@ nécessaire. **Restaurer depuis le dossier cloud…** liste alors les sauvegarde
 OneDrive par date et profil et ne télécharge que celle que vous
 restaurez.
 
+**Google Drive (dossier MedReminder/backups)** fonctionne de la même
+façon avec un compte Google : les sauvegardes vont dans un dossier
+visible **MedReminder → backups** de votre Mon Drive, chiffrées comme
+ci-dessus, et **Restaurer depuis le dossier cloud…** les liste depuis
+cet emplacement.
+
 ## Synchronisation entre PC
 
 Plusieurs PC peuvent tenir le même profil à jour : ce que vous saisissez sur
@@ -886,11 +892,17 @@ MedReminder demande où conserver le groupe :
   dossier d'application (`Apps/MedReminder26` dans OneDrive) ; les
   données y sont chiffrées. Chaque PC se connecte avec le **même** compte
   Microsoft. L'application OneDrive sur le PC n'est pas nécessaire.
+- **Google Drive** : connectez-vous avec un compte Google dans la fenêtre
+  du navigateur qui s'ouvre. Les données de synchronisation vont dans le
+  dossier de données masqué de MedReminder dans Google Drive (il
+  n'apparaît pas dans Mon Drive), chiffrées. Chaque PC se connecte avec
+  le **même** compte Google.
 - **Un dossier partagé** : un dossier synchronisé par un autre programme,
   ou un partage réseau, comme décrit ci-dessous.
 
-Si la session OneDrive expire (changement de mot de passe, longue
-inactivité), l'état l'indique et **Se reconnecter à OneDrive** reprend la
+Si la session OneDrive ou Google Drive expire (changement de mot de
+passe, longue inactivité), l'état l'indique et **Se reconnecter à
+OneDrive** (ou **Se reconnecter à Google Drive**) reprend la
 synchronisation ; les modifications faites entre-temps sont envoyées
 ensuite.
 

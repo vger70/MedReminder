@@ -156,8 +156,16 @@ jobs:
       # .NET separately.
       #
       # The release version comes from the Git tag.
+      #
+      # The Google Drive OAuth client id and secret come from the
+      # repository secrets of the same names and are stamped into
+      # MedReminder.Infrastructure (docs/PACKAGING.md §24). If the
+      # secrets are missing, the release is built without Google Drive.
       # ------------------------------------------------------------
       - name: Publish self-contained
+        env:
+          MEDREMINDER_GOOGLE_CLIENT_ID: ${{ secrets.MEDREMINDER_GOOGLE_CLIENT_ID }}
+          MEDREMINDER_GOOGLE_CLIENT_SECRET: ${{ secrets.MEDREMINDER_GOOGLE_CLIENT_SECRET }}
         run: >
           dotnet publish
           src/MedReminder.UI/MedReminder.UI.csproj
@@ -186,8 +194,12 @@ jobs:
       #
       # Framework-dependent means the target machine must
       # already have the required .NET runtime installed.
+      # Same Google Drive client secrets as the self-contained publish.
       # ------------------------------------------------------------
       - name: Publish framework-dependent
+        env:
+          MEDREMINDER_GOOGLE_CLIENT_ID: ${{ secrets.MEDREMINDER_GOOGLE_CLIENT_ID }}
+          MEDREMINDER_GOOGLE_CLIENT_SECRET: ${{ secrets.MEDREMINDER_GOOGLE_CLIENT_SECRET }}
         run: >
           dotnet publish
           src/MedReminder.UI/MedReminder.UI.csproj

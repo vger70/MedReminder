@@ -844,6 +844,11 @@ arriba; no hace falta una carpeta local. **Restaurar desde carpeta en la nube…
 lista entonces las copias de OneDrive por fecha y perfil y descarga solo
 la que restaure.
 
+**Google Drive (carpeta MedReminder/backups)** funciona igual con una
+cuenta de Google: las copias van a una carpeta visible **MedReminder →
+backups** de su Mi unidad, cifradas como arriba, y **Restaurar desde
+carpeta en la nube…** las lista desde allí.
+
 ## Sincronización entre PC
 
 Varios PC pueden mantener actualizado el mismo perfil: lo que registra en uno
@@ -865,13 +870,19 @@ dónde guardar el grupo:
   aplicación (`Apps/MedReminder26` en OneDrive); los datos allí están
   cifrados. Todos los PC inician sesión con la **misma** cuenta Microsoft.
   No hace falta la aplicación OneDrive en el PC.
+- **Google Drive**: inicie sesión con una cuenta de Google en la ventana
+  del navegador que se abre. Los datos de sincronización van a la
+  carpeta de datos oculta de MedReminder en Google Drive (no aparece en
+  Mi unidad), cifrados. Todos los PC inician sesión con la **misma**
+  cuenta de Google.
 - **Una carpeta compartida**: una carpeta que otro programa mantiene
   sincronizada, o una carpeta de red, como se describe abajo.
 
-Si la sesión de OneDrive caduca (cambio de contraseña, larga
-inactividad), el estado lo indica y **Volver a iniciar sesión en
-OneDrive** reanuda la sincronización; los cambios registrados mientras
-tanto se envían después.
+Si la sesión de OneDrive o Google Drive caduca (cambio de contraseña,
+larga inactividad), el estado lo indica y **Volver a iniciar sesión en
+OneDrive** (o **Volver a iniciar sesión en Google Drive**) reanuda la
+sincronización; los cambios registrados mientras tanto se envían
+después.
 
 ### Activar en el primer PC
 

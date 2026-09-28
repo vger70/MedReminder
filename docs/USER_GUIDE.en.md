@@ -779,6 +779,11 @@ in OneDrive, encrypted as above; no local folder is needed. **Restore
 from cloud folder…** then lists the OneDrive snapshots by date and profile
 and downloads only the one you restore.
 
+**Google Drive (MedReminder/backups folder)** works the same way with a
+Google account: the snapshots go to a visible **MedReminder → backups**
+folder in your My Drive, encrypted as above, and **Restore from cloud
+folder…** lists them from there.
+
 ## Sync between PCs
 
 Several PCs can keep the same profile up to date: what you record on one
@@ -800,12 +805,17 @@ lives:
   (`Apps/MedReminder26` in OneDrive); the data there is encrypted.
   Every PC signs in with the **same** Microsoft account. The OneDrive
   app on the PC is not needed.
+- **Google Drive**: sign in with a Google account in the browser window
+  that opens. The sync data goes to MedReminder's hidden app data folder
+  in Google Drive (it does not appear in My Drive), encrypted. Every PC
+  signs in with the **same** Google account.
 - **A shared folder**: a folder kept in sync by another program, or a
   network share, as described below.
 
-If the OneDrive session ends (password change, long inactivity), the
-status says so and **Sign in to OneDrive again** resumes the sync;
-changes recorded meanwhile are sent afterwards.
+If the OneDrive or Google Drive session ends (password change, long
+inactivity), the status says so and **Sign in to OneDrive again** (or
+**Sign in to Google Drive again**) resumes the sync; changes recorded
+meanwhile are sent afterwards.
 
 ### Enable on the first PC
 

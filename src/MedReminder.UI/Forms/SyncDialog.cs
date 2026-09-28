@@ -14,7 +14,8 @@ namespace MedReminder.UI.Forms;
 // join, rebuild and disable for the administrator only (product owner,
 // 2026-09-27). Join and rebuild replace the profile database and restart
 // the application, like an import.
-// Phase 4a: the group lives in a OneDrive account (Microsoft sign-in in
+// Phase 4a, 4b: the group lives in a OneDrive or Google Drive account
+// (sign-in in
 // the system browser) or in a folder; the choice is made when enabling or
 // joining.
 internal sealed class SyncDialog : MedReminderFormBase
@@ -150,6 +151,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         _syncNow.Visible = settings is not null;
         _rebuild.Visible = admin && settings is not null && _status.NeedsRebuild;
         _signIn.Visible = settings?.Provider is not null && (_status.NeedsSignIn || _account is null);
+        if (settings?.Provider is { } signInProvider) _signIn.Text = _loc.Get(ProviderKey("Ui.SyncDialog.SignInAgain", signInProvider));
 
         if (settings is null)
         {
@@ -162,6 +164,8 @@ internal sealed class SyncDialog : MedReminderFormBase
             settings.Provider switch
             {
                 null => _loc.Get("Ui.SyncDialog.Status.Folder", settings.Folder ?? string.Empty),
+                CloudProvider.GoogleDrive when _account is not null => _loc.Get("Ui.SyncDialog.Status.GoogleDrive", _account.UserName),
+                CloudProvider.GoogleDrive => _loc.Get("Ui.SyncDialog.Status.GoogleDriveSignedOut"),
                 _ when _account is not null => _loc.Get("Ui.SyncDialog.Status.OneDrive", _account.UserName),
                 _ => _loc.Get("Ui.SyncDialog.Status.OneDriveSignedOut"),
             },
@@ -180,7 +184,10 @@ internal sealed class SyncDialog : MedReminderFormBase
         if (_status.LastError is { } error) lines.Add(_loc.Get("Ui.SyncDialog.Status.Error", error));
         if (settings.ResetPending) lines.Add(_loc.Get("Ui.SyncDialog.Status.ResetPending"));
         if (_status.NeedsRebuild) lines.Add(_loc.Get("Ui.SyncDialog.Status.NeedsRebuild"));
-        if (_status.NeedsSignIn) lines.Add(_loc.Get("Ui.SyncDialog.Status.NeedsSignIn"));
+        if (_status.NeedsSignIn)
+        {
+            lines.Add(_loc.Get(ProviderKey("Ui.SyncDialog.Status.NeedsSignIn", settings.Provider ?? CloudProvider.OneDrive)));
+        }
         _statusText.Text = string.Join(Environment.NewLine, lines);
     }
 
@@ -289,7 +296,9 @@ internal sealed class SyncDialog : MedReminderFormBase
         }
         if (groups.Count == 0)
         {
-            Error(_loc.Get(target.Provider is null ? "Ui.SyncDialog.Join.NoGroup" : "Ui.SyncDialog.Join.NoGroupCloud"));
+            Error(_loc.Get(target.Provider is { } cloud
+                ? ProviderKey("Ui.SyncDialog.Join.NoGroupCloud", cloud)
+                : "Ui.SyncDialog.Join.NoGroup"));
             return;
         }
         // One group per profile: a folder shared by several profiles has
@@ -431,46 +440,52 @@ internal sealed class SyncDialog : MedReminderFormBase
         }
     }
 
-    // Where the group lives: OneDrive (sign-in now) or a folder. Null when
-    // the user cancels.
+    // Where the group lives: a provider account (sign-in now) or a folder.
+    // Null when the user cancels.
     private async Task<SyncTarget?> ChooseTargetAsync()
     {
-        if (!_accounts.IsAvailable(CloudProvider.OneDrive))
+        var providers = new[] { CloudProvider.OneDrive, CloudProvider.GoogleDrive }.Where(_accounts.IsAvailable).ToList();
+        if (providers.Count == 0)
         {
             return PickFolder() is { } only ? SyncTarget.ForFolder(only) : null;
         }
 
-        var oneDrive = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.SyncDialog.Target.OneDrive"), _loc.Get("Ui.SyncDialog.Target.OneDriveNote"));
+        var buttons = providers.ToDictionary(p => p, p => new TaskDialogCommandLinkButton(
+            _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true)),
+            _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true) + "Note")));
         var folder = new TaskDialogCommandLinkButton(
             _loc.Get("Ui.SyncDialog.Target.Folder"), _loc.Get("Ui.SyncDialog.Target.FolderNote"));
         var page = new TaskDialogPage
         {
             Caption = Text,
             Heading = _loc.Get("Ui.SyncDialog.Target.Heading"),
-            Buttons = { oneDrive, folder, TaskDialogButton.Cancel },
             AllowCancel = true,
         };
+        foreach (var button in buttons.Values) page.Buttons.Add(button);
+        page.Buttons.Add(folder);
+        page.Buttons.Add(TaskDialogButton.Cancel);
+
         var choice = TaskDialog.ShowDialog(this, page);
         if (choice == folder) return PickFolder() is { } picked ? SyncTarget.ForFolder(picked) : null;
-        if (choice != oneDrive) return null;
+        var chosen = buttons.FirstOrDefault(b => b.Value == choice);
+        if (chosen.Value is null) return null;
 
-        var account = await SignInAsync(null);
+        var account = await SignInAsync(chosen.Key, null);
         return account is null ? null : SyncTarget.ForCloud(account.Provider, account.Id);
     }
 
     // Sign-in in the system browser; null when it fails or is cancelled.
-    private async Task<CloudAccount?> SignInAsync(string? accountId)
+    private async Task<CloudAccount?> SignInAsync(CloudProvider provider, string? accountId)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
         UseWaitCursor = true;
         try
         {
-            return await _accounts.SignInAsync(CloudProvider.OneDrive, accountId, timeout.Token);
+            return await _accounts.SignInAsync(provider, accountId, timeout.Token);
         }
         catch (Exception ex)
         {
-            Error(_loc.Get("Ui.SyncDialog.SignIn.Failed", ex.Message));
+            Error(_loc.Get(ProviderKey("Ui.SyncDialog.SignIn.Failed", provider), ex.Message));
             return null;
         }
         finally
@@ -481,18 +496,25 @@ internal sealed class SyncDialog : MedReminderFormBase
 
     private async Task SignInAgainAsync()
     {
-        if (_settings.Load() is not { Provider: not null, AccountId: { } accountId }) return;
-        var account = await SignInAsync(accountId);
+        if (_settings.Load() is not { Provider: { } provider, AccountId: { } accountId }) return;
+        var account = await SignInAsync(provider, accountId);
         if (account is null) return;
         if (account.Id != accountId)
         {
-            // Another Microsoft account holds another app folder, not this group.
-            Error(_loc.Get("Ui.SyncDialog.SignIn.OtherAccount"));
+            // Another account holds another folder, not this group.
+            Error(_loc.Get(ProviderKey("Ui.SyncDialog.SignIn.OtherAccount", provider)));
             return;
         }
         await _sync.RunNowAsync();
         await RefreshAllAsync();
     }
+
+    // The OneDrive keys of Phase 4a are the unsuffixed ones; Google Drive
+    // adds ".GoogleDrive". Target keys are named after the provider.
+    private static string ProviderKey(string key, CloudProvider provider, bool suffixOnly = false)
+        => suffixOnly
+            ? $"{key}.{provider}"
+            : provider == CloudProvider.GoogleDrive ? $"{key}.GoogleDrive" : key;
 
     private string? PickFolder()
     {

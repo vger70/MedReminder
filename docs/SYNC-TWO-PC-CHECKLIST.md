@@ -1,8 +1,8 @@
 # Sync — Manual Two-PC Checklist
 
-Exit check of B.1 Phase 3 and Phase 4a (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
+Exit check of B.1 Phase 3, Phase 4a and Phase 4b (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
 §13): two Windows PCs of the same user keep one profile in sync through
-a shared folder, then through OneDrive. Run it on a release build before a release that ships
+a shared folder, then through OneDrive and Google Drive. Run it on a release build before a release that ships
 or changes sync. Record the date, the build and the result of each step.
 
 ## Setup
@@ -46,3 +46,21 @@ onedrive.live.com → My files → Apps → MedReminder26.
 | O5 | A: Settings → Backup → cloud backup: storage OneDrive, sign in, backup passphrase set, save; next day or after the preferred time | `Apps/MedReminder26/backups/medreminder-<profile>-<timestamp>.mrz` |
 | O6 | B: Settings → Backup → Restore from cloud… | Lists the OneDrive snapshots; restore works; no `restore-*.mrz` left in `%LOCALAPPDATA%\MedReminder` |
 | O7 | Logs of both PCs | No token, account name, medicine name or note |
+
+## Google Drive (Phase 4b)
+
+A build with the Google client id and secret (`docs/PACKAGING.md`),
+sync disabled on both PCs first, one Google account used on both. The
+sync files are hidden (drive.google.com → Settings → Manage apps →
+MedReminder shows the size of its hidden data); backups are visible in
+My Drive → MedReminder → backups.
+
+| # | Step | Expected |
+|---|---|---|
+| G1 | A: Tools → Sync… → Enable sync… → Google Drive; sign in in the browser; name "PC A", passphrase | Status shows "Storage: Google Drive (<account>)"; nothing new is visible in My Drive |
+| G2 | B: Join a group… → Google Drive, same account, same passphrase, confirm | Restart; B shows A's data |
+| G3 | Repeat steps 5 to 9 above | Same results through Google Drive (changes can take a few seconds longer to show) |
+| G4 | A: close MedReminder, rename `%LOCALAPPDATA%\MedReminder\googledrive.protected`, start again, wait for a sync | Status asks to sign in again; "Sign in to Google Drive again" resumes the sync; changes made meanwhile reach B |
+| G5 | A: Settings → Backup → cloud backup: storage Google Drive, sign in, backup passphrase set, save; after the preferred time | My Drive → MedReminder → backups holds `medreminder-<profile>-<timestamp>.mrz` |
+| G6 | B: Settings → Backup → Restore from cloud folder… | Lists the Google Drive snapshots; restore works; no `restore-*.mrz` left in `%LOCALAPPDATA%\MedReminder` |
+| G7 | Logs of both PCs | No token, client secret, account e-mail, medicine name or note |

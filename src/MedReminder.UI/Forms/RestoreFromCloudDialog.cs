@@ -27,6 +27,7 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
     private readonly IProfileRegistry _profileRegistry;
     private readonly string _defaultFolder;
     private readonly IArchiveStorage? _storage;
+    private readonly CloudProvider _provider;
 
     private readonly TextBox _folderBox;
     private readonly ListView _snapshotList;
@@ -52,7 +53,8 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         ICurrentProfile currentProfile,
         IProfileRegistry profileRegistry,
         string defaultFolder,
-        IArchiveStorage? storage = null)
+        IArchiveStorage? storage = null,
+        CloudProvider provider = CloudProvider.OneDrive)
     {
         _loc = loc;
         _cloudRestore = cloudRestore;
@@ -61,6 +63,7 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         _profileRegistry = profileRegistry;
         _defaultFolder = defaultFolder ?? string.Empty;
         _storage = storage;
+        _provider = provider;
 
         Text = _loc.Get("Ui.RestoreCloudDialog.Title");
         Width = 680;
@@ -109,7 +112,9 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         folderRow.Controls.Add(refreshButton);
         if (_storage is not null)
         {
-            folderLabel.Text = _loc.Get("Ui.RestoreCloudDialog.OneDrive.Label");
+            folderLabel.Text = _loc.Get(_provider == CloudProvider.GoogleDrive
+                ? "Ui.RestoreCloudDialog.GoogleDrive.Label"
+                : "Ui.RestoreCloudDialog.OneDrive.Label");
             _folderBox.Visible = false;
             browseButton.Visible = false;
         }
@@ -289,9 +294,11 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
                 ? await _cloudRestore.ListSnapshotsAsync(folder, CancellationToken.None)
                 : await _cloudRestore.ListStoredSnapshotsAsync(_storage, CancellationToken.None);
         }
-        catch (CloudSignInRequiredException)
+        catch (CloudSignInRequiredException ex)
         {
-            _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.SignInRequired");
+            _statusLabel.Text = _loc.Get(ex.Provider == CloudProvider.GoogleDrive
+                ? "Ui.RestoreCloudDialog.Status.SignInRequired.GoogleDrive"
+                : "Ui.RestoreCloudDialog.Status.SignInRequired");
             return;
         }
         catch (Exception ex)
@@ -449,9 +456,11 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
                 _ => _loc.Get("Ui.Import.Error.Corrupt"),
             };
         }
-        catch (CloudSignInRequiredException)
+        catch (CloudSignInRequiredException ex)
         {
-            _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.SignInRequired");
+            _statusLabel.Text = _loc.Get(ex.Provider == CloudProvider.GoogleDrive
+                ? "Ui.RestoreCloudDialog.Status.SignInRequired.GoogleDrive"
+                : "Ui.RestoreCloudDialog.Status.SignInRequired");
         }
         catch (Exception ex)
         {

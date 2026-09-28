@@ -11,6 +11,7 @@ namespace MedReminder.Application.Abstractions;
 public enum CloudProvider
 {
     OneDrive = 1,
+    GoogleDrive = 2,
 }
 
 // Id: the provider's stable account identifier (MSAL home account id).

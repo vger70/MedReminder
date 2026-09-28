@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.Infrastructure.Cloud.GoogleDrive;
 using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Export;
 using MedReminder.Infrastructure.Localization;
@@ -53,6 +54,9 @@ public static class PortableInfrastructureServiceCollectionExtensions
         // One OneDrive client per account, shared with the cloud backup.
         services.TryAddSingleton(sp => new OneDriveClientFactory(
             sp.GetService<IOneDriveAccessTokens>(), clock: sp.GetService<TimeProvider>()));
+        // Phase 4b: the same for Google Drive (IGoogleDriveAccessTokens).
+        services.TryAddSingleton(sp => new GoogleDriveClientFactory(
+            sp.GetService<IGoogleDriveAccessTokens>(), clock: sp.GetService<TimeProvider>()));
         services.TryAddSingleton<ISyncTransportFactory, SyncTransportFactory>();
         services.TryAddScoped<ISyncTransport>(sp => sp.GetRequiredService<ISyncTransportFactory>().Create(
             SyncTarget.Of(sp.GetRequiredService<ISyncSettingsStore>().Load()

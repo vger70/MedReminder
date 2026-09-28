@@ -266,10 +266,11 @@ The tag push starts the GitHub Actions release workflow.
 The release workflow is located at:
 
 ```text
-.github/workflows/release.yml
+.github/workflows/dotnet-desktop.yml
 ```
 
-It is triggered when a tag beginning with `v` is pushed.
+It is triggered when a tag of the form `vX.Y.Z` is pushed; any other
+`v*` tag fails at the version check.
 
 Examples:
 
@@ -282,94 +283,47 @@ v2.0.0
 The release pipeline performs the following steps:
 
 ```text
-Git tag
+Git tag vX.Y.Z
    |
    v
-Checkout repository
+Checkout repository, install .NET 10
    |
    v
-Install .NET 10
+Extract X.Y.Z from the tag (Version, AssemblyVersion, FileVersion, ...)
    |
    v
-dotnet restore
+dotnet restore (solution and WiX project)
    |
    v
-dotnet test
-   |
-   +---- FAIL ----> workflow terminated
+dotnet publish, self-contained      --> MedReminder-win-x64-net10.zip
    |
    v
-dotnet publish
+dotnet publish, framework-dependent --> MedReminder-win-x64.zip
    |
    v
-Create ZIP
+WiX build over the framework-dependent output --> MedReminder-win-x64.msi
    |
    v
-Create GitHub Release
-   |
-   v
-Upload MedReminder-win-x64.zip
+Create the GitHub Release with the three assets
 ```
 
-The GitHub Release must not be created if the test stage fails.
+The workflow does not run the tests: run `dotnet test` (section 4)
+before pushing the tag. The two `dotnet publish` steps receive the
+Google Drive client id and secret from repository secrets (section 24).
 
 ## 13. Release Workflow
 
-The `.github/workflows/release.yml` workflow should implement the following logic:
+The file itself is the reference; its comments explain each step. The
+points that matter when editing it:
 
-```yaml
-name: Build and Release MedReminder
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
-
-jobs:
-  release:
-    name: Build Windows Release
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Restore
-        run: dotnet restore MedReminder.sln
-
-      - name: Test
-        run: dotnet test MedReminder.sln -c Release --no-restore
-
-      - name: Publish
-        run: >
-          dotnet publish
-          src/MedReminder.UI/MedReminder.UI.csproj
-          -c Release
-          -r win-x64
-          --self-contained true
-          -o publish
-
-      - name: Create ZIP
-        shell: pwsh
-        run: |
-          Compress-Archive `
-            -Path publish\* `
-            -DestinationPath MedReminder-win-x64.zip
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: MedReminder-win-x64.zip
-          generate_release_notes: true
-```
+- The version comes only from the tag, through MSBuild properties;
+  nothing is committed back.
+- `MEDREMINDER_GOOGLE_CLIENT_ID` and `MEDREMINDER_GOOGLE_CLIENT_SECRET`
+  are set with `env:` on both `dotnet publish` steps, from the
+  repository secrets of the same names. A new step that compiles the
+  application needs them too, or its output has no Google Drive.
+- The MSI is built from the framework-dependent publish folder, so the
+  MSI and `MedReminder-win-x64.zip` contain the same binaries.
 
 ## 14. GitHub Release
 
@@ -381,10 +335,12 @@ For example:
 v1.1.0
 ```
 
-The release asset should include:
+The release assets are:
 
 ```text
-MedReminder-win-x64.zip
+MedReminder-win-x64-net10.zip   self-contained (includes the .NET runtime)
+MedReminder-win-x64.zip         framework-dependent (.NET 10 Desktop Runtime required)
+MedReminder-win-x64.msi         installer, framework-dependent
 ```
 
 GitHub may additionally provide its automatically generated source archives.
@@ -672,3 +628,54 @@ product/price per tier:
 Do not embed any API credential — only the hosted button URL belongs in
 the file. After editing, restart MedReminder; the menu entry appears
 once `Enabled` is `true` and at least one provider has valid links.
+
+## 24. Cloud provider clients (maintainer)
+
+Sync and cloud backup can use OneDrive and Google Drive (B.1 Phase 4a,
+4b). Each needs an app registration owned by the maintainer.
+
+**OneDrive**: the Microsoft Entra public client id is in the code
+(`MsalCloudAccountService`); a public client has no secret. A different
+registration can be set with `OneDrive:ClientId` in `appsettings.json`.
+
+**Google Drive**: a Google Cloud OAuth client of type **Desktop app**,
+with the Drive API enabled and the scopes `drive.file` and
+`drive.appdata` on the consent screen. Google requires the client
+secret in the token request even for installed apps and does not treat
+it as confidential, but it is kept **out of the repository**:
+
+1. **Local builds**: set two environment variables in the PowerShell
+   session that runs `dotnet build` / `dotnet publish`:
+
+   ```powershell
+   $env:MEDREMINDER_GOOGLE_CLIENT_ID = "<client id>.apps.googleusercontent.com"
+   $env:MEDREMINDER_GOOGLE_CLIENT_SECRET = "<client secret>"
+   ```
+
+   To keep them for new sessions and for Visual Studio, set them as user
+   variables (`[Environment]::SetEnvironmentVariable(..., "User")`) and
+   restart the terminal or the IDE. `MedReminder.Infrastructure.csproj`
+   stamps them into the assembly (`AssemblyMetadata`) only when both are
+   set; a build without them does not offer Google Drive. Check the
+   result in the app (Tools → Sync… → Enable sync… lists Google Drive),
+   not by printing the assembly attributes, which would show the secret.
+2. **Releases**: in GitHub → Settings → Secrets and variables →
+   Actions, create the repository secrets `MEDREMINDER_GOOGLE_CLIENT_ID`
+   and `MEDREMINDER_GOOGLE_CLIENT_SECRET`.
+   `.github/workflows/dotnet-desktop.yml` passes them to both
+   `dotnet publish` steps (section 13). With the secrets missing the
+   workflow still succeeds, and the release has no Google Drive.
+3. **Local test without rebuilding**: `GoogleDrive:ClientId` and
+   `GoogleDrive:ClientSecret` in the `appsettings.json` of the output
+   folder (not `src/MedReminder.UI/appsettings.json`) override the
+   stamped values.
+
+The secret ends up inside the shipped assembly, where anyone can read
+it: that is inherent to a desktop app, and Google does not treat the
+secret of a Desktop client as confidential. Keeping it out of the
+repository keeps it out of git history and secret scanners.
+
+Before a release that offers Google Drive, publish the consent screen
+(Google Auth Platform → Audience → **In production**): while it is in
+Testing, refresh tokens expire after 7 days and users would have to sign
+in again every week (spike S7, `ANALYSIS-B1-MOBILE-SYNC.md` §18.7).

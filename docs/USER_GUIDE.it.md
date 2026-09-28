@@ -818,6 +818,11 @@ Microsoft, imposta la passphrase dei backup e salva. Le copie vanno in
 una cartella locale. **Ripristina da cartella cloud…** elenca allora le copie in
 OneDrive per data e profilo e scarica solo quella che ripristini.
 
+**Google Drive (cartella MedReminder/backups)** funziona allo stesso modo
+con un account Google: le copie vanno in una cartella visibile
+**MedReminder → backups** del tuo Il mio Drive, cifrate come sopra, e
+**Ripristina da cartella cloud…** le elenca da lì.
+
 ## Sincronizzazione tra PC
 
 Più PC possono tenere aggiornato lo stesso profilo: quello che registri su
@@ -839,13 +844,17 @@ chiede dove tenere il gruppo:
   (`Apps/MedReminder26` in OneDrive); i dati lì sono cifrati. Ogni PC
   accede con lo **stesso** account Microsoft. L'app OneDrive sul PC non
   serve.
+- **Google Drive**: accedi con un account Google nella finestra del
+  browser che si apre. I dati di sincronizzazione vanno nella cartella
+  dati nascosta di MedReminder in Google Drive (non compare in Il mio
+  Drive), cifrati. Ogni PC accede con lo **stesso** account Google.
 - **Una cartella condivisa**: una cartella tenuta sincronizzata da un
   altro programma, o una cartella di rete, come descritto sotto.
 
-Se la sessione OneDrive scade (cambio password, lunga inattività), lo
-stato lo segnala e **Accedi di nuovo a OneDrive** riprende la
-sincronizzazione; le modifiche registrate nel frattempo vengono inviate
-dopo.
+Se la sessione OneDrive o Google Drive scade (cambio password, lunga
+inattività), lo stato lo segnala e **Accedi di nuovo a OneDrive** (o
+**Accedi di nuovo a Google Drive**) riprende la sincronizzazione; le
+modifiche registrate nel frattempo vengono inviate dopo.
 
 ### Attivare sul primo PC
 
