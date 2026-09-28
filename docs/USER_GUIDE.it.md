@@ -403,6 +403,35 @@ La linea del tempo non modifica alcun dato. Le date di esaurimento sono
 stime: servono a pianificare i rifornimenti, non sono un consiglio
 clinico.
 
+## Scheda terapia (stampa e PDF)
+
+**Terapia → Scheda terapia…** (Ctrl+P) o il pulsante **Scheda
+terapia** della barra strumenti apre una scheda delle medicine attive
+da consegnare al medico di base, al pronto soccorso o al farmacista.
+Per ogni medicina attiva riporta il principio attivo, il dosaggio
+(fasce di somministrazione, oppure dose × volte al giorno), il periodo
+di terapia e il medico. Le medicine disattivate non compaiono.
+
+- **Includi le note**: disattivato per impostazione predefinita. Le
+  note sono testo libero e possono essere private; spunta la casella
+  solo se la scheda deve riportarle.
+- **Carta**: A4 o Letter (USA), preselezionata in base alla regione di
+  Windows.
+- **Stampa…** apre l'anteprima della tabella. Gli elenchi lunghi
+  proseguono nella pagina successiva, con intestazione e titoli delle
+  colonne ripetuti.
+- **Salva come PDF…** chiede dove salvare il file e scrive la stessa
+  tabella in PDF tramite la stampante di Windows "Microsoft Print to
+  PDF". Se quella stampante è stata rimossa, il dialogo spiega come
+  aggiungerla di nuovo (Pannello di controllo → Programmi → Attiva o
+  disattiva funzionalità di Windows).
+- **Salva su file…** e **Copia negli appunti** restano sulla versione
+  in testo semplice.
+
+Il PDF e il file di testo vengono scritti solo dove scegli tu;
+MedReminder non ne conserva copia. Ogni pagina riporta l'avviso che
+MedReminder è un promemoria organizzativo, non un dispositivo medico.
+
 ## Profili multipli e ruoli amministratore/utente
 
 MedReminder può gestire farmaci per **più persone** dallo stesso

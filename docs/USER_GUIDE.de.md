@@ -427,6 +427,36 @@ Der Therapieverlauf ändert keine Daten. Die Aufbrauchdaten sind
 Schätzungen: Sie dienen zur Planung von Nachkäufen und sind keine
 medizinische Beratung.
 
+## Therapieplan (Druck und PDF)
+
+**Therapie → Therapieplan…** (Strg+P) oder die Schaltfläche
+**Therapieplan** in der Symbolleiste öffnet eine Übersicht der aktiven
+Medikamente für Hausarzt, Notaufnahme oder Apotheke. Für jedes aktive
+Medikament zeigt sie den Wirkstoff, die Dosierung (Einnahmezeiten oder
+Dosis × Mal am Tag), den Therapiezeitraum und den Arzt. Deaktivierte
+Medikamente erscheinen nicht.
+
+- **Notizen einbeziehen**: standardmäßig aus. Notizen sind Freitext
+  und können privat sein; setz das Häkchen nur, wenn der Plan sie
+  enthalten soll.
+- **Papier**: A4 oder Letter (US), vorausgewählt nach der
+  Windows-Region.
+- **Drucken…** öffnet die Vorschau der Tabelle. Lange Listen werden
+  auf der nächsten Seite fortgesetzt, mit wiederholter Kopfzeile und
+  Spaltenüberschriften.
+- **Als PDF speichern…** fragt nach dem Speicherort und schreibt
+  dieselbe Tabelle als PDF über den Windows-Drucker „Microsoft Print
+  to PDF“. Wurde dieser Drucker entfernt, erklärt der Dialog, wie er
+  wieder hinzugefügt wird (Systemsteuerung → Programme →
+  Windows-Features aktivieren oder deaktivieren).
+- **In Datei speichern…** und **In Zwischenablage kopieren**
+  bleiben bei der Textfassung.
+
+PDF und Textdatei werden nur dort gespeichert, wo du es wählst;
+MedReminder behält keine Kopie. Jede Seite trägt den Hinweis, dass
+MedReminder eine organisatorische Erinnerung und kein Medizinprodukt
+ist.
+
 ## Mehrere Profile und Rollen Administrator/Benutzer
 
 MedReminder kann Medikamente für **mehrere Personen** aus demselben

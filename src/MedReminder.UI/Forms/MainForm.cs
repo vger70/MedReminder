@@ -585,8 +585,11 @@ internal sealed class MainForm : MedReminderFormBase
                     TimeZoneInfo.ConvertTime(clock.GetUtcNow(), clock.LocalTimeZone).DateTime);
             }
 
-            var reportText = MedReminder.Application.Reporting.TherapyReport.Build(entries, today, _loc.CurrentCulture, _loc);
-            using var dialog = new TherapyReportDialog(reportText, _loc);
+            var profileName = _currentProfile.DisplayName;
+            using var dialog = new TherapyReportDialog(
+                options => MedReminder.Application.Reporting.TherapyCardBuilder.Build(
+                    entries, today, options, profileName, _loc.CurrentCulture, _loc),
+                _loc);
             dialog.ShowDialog(this);
         }
         catch (Exception ex)
