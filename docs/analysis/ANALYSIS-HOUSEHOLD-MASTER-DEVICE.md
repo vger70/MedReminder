@@ -574,9 +574,9 @@ Branching (product owner, 2026-09-28):
   rebase: the branch is shared) whenever `main` receives a release or
   a sync fix, so the final merge stays small. Conflicts in
   `CHANGE_LOG.md` are resolved by keeping both sides' entries.
-- Only after the last step, one PR merges `feature/master-slave` into
-  `main`. Which step is last is D-16; whether H0 goes to `main` first
-  is D-17.
+- Only after H5 (D-16), one PR merges `feature/master-slave` into
+  `main`. Exception: H0 targets `main` and reaches the integration
+  branch through the next merge of `main` (D-17).
 - Releases from `main` in the meantime ship none of this work. A
   preview build of the integration branch, if needed, follows
   `docs/PACKAGING.md` with a pre-release version.
@@ -647,8 +647,8 @@ developer-days.
 | D-13 | Recovery key escrow: the household passphrase opens every profile and is an admin secret (§4.4) | Yes: otherwise losing the devices loses the data |
 | D-14 | Reference country becomes household-wide and admin-only (§4.3) | Yes |
 | D-15 | After a device removal, remaining devices receive the new household key without typing it (§9 option B) | Yes, after H5 tests |
-| D-16 | Last step before merging `feature/master-slave` into `main`: H5 (desktop complete) or H6 (mobile) | H5: H6 lives inside B.1 Phases 5 and 7, months away; holding the desktop work that long makes the final merge large and leaves `main` users without the fix for duplicate email |
-| D-17 | H0 (join fixes, no format change) merged into `main` directly and then into `feature/master-slave` | Yes: it fixes today's two-PC setups and changes no format |
+| D-16 | Last step before merging `feature/master-slave` into `main` | **Decided 2026-09-28**: H5 (desktop complete); H6 follows with B.1 Phases 5 and 7 |
+| D-17 | H0 (join fixes, no format change) merged into `main` directly, then `main` into `feature/master-slave` | **Decided 2026-09-28**: yes |
 
 ---
 

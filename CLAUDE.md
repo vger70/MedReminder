@@ -34,7 +34,7 @@ Note: Infra tests require Windows (DPAPI/Registry). Release build deletes .pdb a
 
 ## 4. Git, Branching & PR Workflow
  * Base Branch: main. Ask before creating a feature branch.
- * Exception, household / master device feature (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md): every PR of that feature targets the integration branch `feature/master-slave`, not main. Only the final PR merges `feature/master-slave` into main.
+ * Exception, household / master device feature (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md): every PR of that feature targets the integration branch `feature/master-slave`, not main. Only the final PR (after step H5) merges `feature/master-slave` into main. Step H0 is the one exception and targets main.
  * Branch Naming: name MUST reflects the request. Prefixes allowed: claude/<name> or feature/<name>.
  * Early PR Requirement: Open PR after the first commit of the session. Don't ask to follow the PR. Do not wait until the end.
  * Commit Messages: Imperative, English, explain "why". Never push to main directly.
