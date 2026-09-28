@@ -73,3 +73,25 @@ returns 409 on a retry (C4b); a partial resumable upload is not listed
 in Testing (C0). Open: C8, the changes feed did not report a file
 created ~0.5 s earlier; round 2 polls up to 90 s, adds the
 cross-client feed (C17) and a one-query listing by property (C16, C18).
+
+## Round 2 (2026-09-28) and conclusion
+
+Report in `results/round2-*.md`. Cached refresh tokens worked for both
+clients (C1A, C1B).
+
+- C8, C17: the `changes` feed reports a new file after 4–7 s, also to
+  the other client. The feed lags: the transport remembers its own
+  writes until the feed reports them, as for OneDrive.
+- C16, C18: one query by a public `properties` tag finds a group's
+  files from either client (~0.4 s); `appProperties` were also visible
+  to the other client of the same project. Drive queries on properties
+  are equality only, so the tag is the group and the path is filtered
+  on the client.
+- Create-only: duplicates are allowed by Drive (C4); retries are made
+  safe with pre-generated ids (C4b); two writers of the same name (only
+  `group.json` or a genesis in this layout) need a deterministic winner.
+- The refresh token lasts 7 days while the consent screen is in Testing:
+  publish the app before release.
+
+S7 (Windows, two Desktop clients) passes with the mitigations above.
+The check with a real Android client runs with Phase 5.
