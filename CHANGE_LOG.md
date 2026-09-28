@@ -59,6 +59,17 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #104 — Align the B.1 Phase 0 exit with the S6 result
+
+Link: [vger70/MedReminder#104](https://github.com/vger70/MedReminder/pull/104)
+Branch: `claude/nifty-galileo-vfepsw`
+
+### Docs
+
+- `ANALYSIS-B1-MOBILE-SYNC.md` §13: the Phase 0 exit requires S6 for
+  Windows only, since §18 defers its Android half to Phase 5; Phase 5
+  runs the Android halves of S6 and S7 before provider sign-in.
+
 ## PR #103 — Open key rotation and device removal to every profile
 
 Link: [vger70/MedReminder#103](https://github.com/vger70/MedReminder/pull/103)
