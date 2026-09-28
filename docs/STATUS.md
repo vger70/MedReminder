@@ -167,6 +167,9 @@ WebDAV target, command palette, CLI).
   promote / demote and the consolidated admin view. Not planned; to be
   picked up only if a concrete need emerges (product owner,
   2026-09-28).
+  Design drafted on request, awaiting confirmation of its decisions:
+  `analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`, implementation
+  brief `prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md`.
 
 ### 3.6 Excluded by decision
 
