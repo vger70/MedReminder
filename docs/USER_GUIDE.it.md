@@ -844,9 +844,9 @@ una cartella condivisa (una cartella OneDrive, Google Drive o Dropbox tenuta
 sincronizzata dalla sua app desktop, o una condivisione di rete). Non serve
 nessun server e la cartella non contiene mai dati leggibili.
 
-Apri **Strumenti → Sincronizzazione…**. Attivare, unirsi, ricostruire,
-disattivare, i codici di abbinamento e il cambio di chiave sono riservati
-all'amministratore.
+Apri **Strumenti → Sincronizzazione…**. Ogni profilo gestisce la sincronizzazione dei
+propri dati. Il cambio di chiave e la rimozione di un dispositivo sono
+riservati all'amministratore.
 
 ### OneDrive o cartella condivisa
 

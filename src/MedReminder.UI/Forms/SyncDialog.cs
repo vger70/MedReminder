@@ -11,17 +11,20 @@ using Microsoft.Extensions.DependencyInjection;
 namespace MedReminder.UI.Forms;
 
 // Tools → Sync… (B.1 Phase 3d, docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md
-// §7.4, §4.5): status, devices and conflict review for everyone; enable,
-// join, rebuild and disable for the administrator only (product owner,
-// 2026-09-27). Join and rebuild replace the profile database and restart
-// the application, like an import.
+// §7.4, §4.5): status, devices, conflict review, enable, join, rebuild
+// and disable for every profile, each on its own data (product owner,
+// 2026-09-28; until then the administrator only, which left user
+// profiles with no way to sync). Join and rebuild replace the profile
+// database and restart the application, like an import.
 // Phase 4a, 4b: the group lives in a OneDrive or Google Drive account
 // (sign-in in
 // the system browser) or in a folder; the choice is made when enabling or
 // joining.
-// Phase 4c: pairing codes (show one, join or take a new key with one),
-// key rotation and device removal, and the new key after a rotation on
-// another device; all for the administrator.
+// Phase 4c: pairing codes (show one, join or take a new key with one)
+// and the new key after a rotation on another device, for every
+// profile; key rotation and device removal for the administrator only,
+// since they cut every other device of the group off until it takes the
+// new key.
 internal sealed class SyncDialog : MedReminderFormBase
 {
     private readonly IServiceScopeFactory _scopes;
@@ -187,17 +190,17 @@ internal sealed class SyncDialog : MedReminderFormBase
     {
         var settings = _settings.Load();
         var admin = _profile.IsAdmin;
-        _enable.Visible = admin && settings is null;
-        _join.Visible = admin && settings is null;
-        _disable.Visible = admin && settings is not null;
-        _joinCode.Visible = admin && settings is null;
-        _pair.Visible = admin && settings is not null && !_status.NeedsNewKey;
+        _enable.Visible = settings is null;
+        _join.Visible = settings is null;
+        _disable.Visible = settings is not null;
+        _joinCode.Visible = settings is null;
+        _pair.Visible = settings is not null && !_status.NeedsNewKey;
         _rotate.Visible = admin && settings is not null && !_status.NeedsNewKey;
-        _newKey.Visible = admin && settings is not null && _status.NeedsNewKey;
+        _newKey.Visible = settings is not null && _status.NeedsNewKey;
         _removeDevice.Visible = admin && settings is not null;
         UpdateDeviceButtons();
         _syncNow.Visible = settings is not null;
-        _rebuild.Visible = admin && settings is not null && _status.NeedsRebuild;
+        _rebuild.Visible = settings is not null && _status.NeedsRebuild;
         _signIn.Visible = settings?.Provider is not null && (_status.NeedsSignIn || _account is null);
         if (settings?.Provider is { } signInProvider) _signIn.Text = _loc.Get(ProviderKey("Ui.SyncDialog.SignInAgain", signInProvider));
 
@@ -307,7 +310,7 @@ internal sealed class SyncDialog : MedReminderFormBase
 
     private async Task EnableAsync()
     {
-        if (!_profile.IsAdmin || IsEnabled) return;
+        if (IsEnabled) return;
         var target = await ChooseTargetAsync();
         if (target is null) return;
         using var dialog = new SyncPassphraseDialog(_loc, confirm: true, Environment.MachineName);
@@ -334,7 +337,7 @@ internal sealed class SyncDialog : MedReminderFormBase
 
     private async Task JoinAsync()
     {
-        if (!_profile.IsAdmin || IsEnabled) return;
+        if (IsEnabled) return;
         var target = await ChooseTargetAsync();
         if (target is null) return;
 
@@ -408,7 +411,7 @@ internal sealed class SyncDialog : MedReminderFormBase
 
     private async Task RebuildAsync()
     {
-        if (!_profile.IsAdmin || !IsEnabled) return;
+        if (!IsEnabled) return;
         if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Rebuild.Confirm"), _loc.Get("Ui.SyncDialog.Rebuild"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
@@ -430,7 +433,7 @@ internal sealed class SyncDialog : MedReminderFormBase
 
     private async Task DisableAsync()
     {
-        if (!_profile.IsAdmin || !IsEnabled) return;
+        if (!IsEnabled) return;
         if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Disable.Confirm"), _loc.Get("Ui.SyncDialog.Disable"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
@@ -454,7 +457,7 @@ internal sealed class SyncDialog : MedReminderFormBase
     // code names the storage kind; a cloud account is signed in to here.
     private async Task JoinWithCodeAsync()
     {
-        if (!_profile.IsAdmin || IsEnabled) return;
+        if (IsEnabled) return;
         using var dialog = new SyncPairingCodeDialog(_loc, Environment.MachineName);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Code is not { } code) return;
 
@@ -503,7 +506,7 @@ internal sealed class SyncDialog : MedReminderFormBase
     // (its file is deleted) when the dialog closes.
     private async Task PairAsync()
     {
-        if (!_profile.IsAdmin || !IsEnabled) return;
+        if (!IsEnabled) return;
         await using var scope = _scopes.CreateAsyncScope();
         var transport = scope.ServiceProvider.GetRequiredService<ISyncTransport>();
         var offers = scope.ServiceProvider.GetRequiredService<SyncPairingOffers>();
@@ -591,7 +594,7 @@ internal sealed class SyncDialog : MedReminderFormBase
     // from the new generation and this device's changes are kept.
     private async Task NewKeyAsync()
     {
-        if (!_profile.IsAdmin || !IsEnabled) return;
+        if (!IsEnabled) return;
         var passphraseChoice = new TaskDialogCommandLinkButton(
             _loc.Get("Ui.SyncDialog.NewKey.Passphrase"), _loc.Get("Ui.SyncDialog.NewKey.PassphraseNote"));
         var codeChoice = new TaskDialogCommandLinkButton(

@@ -1768,3 +1768,9 @@ Phase 2 implements the derivation from the prototype and its tests.
   reasons there); remaining devices stop publishing until they take the
   new key, then rebuild and carry their own operations over; newer
   generations sealed with an older key ignored.
+- 2026-09-28 — Decision of the product owner, replacing the Phase 3d
+  one: every profile manages the sync of its own data (enable, join,
+  join with a pairing code, pair a device, rebuild, new key, disable).
+  Key rotation and device removal stay with the administrator. Reason:
+  the dialog acts on the current profile only, so a profile with the
+  user role could never be synced by anyone.
