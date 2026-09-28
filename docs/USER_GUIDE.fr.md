@@ -894,8 +894,8 @@ Aucun serveur n'intervient et le dossier ne contient jamais de données
 lisibles.
 
 Ouvrez **Outils → Synchronisation…**. Chaque profil gère la synchronisation de ses
-propres données. Le changement de clé et le retrait d'un appareil sont
-réservés à l'administrateur.
+propres données, y compris le changement de clé et le retrait d'un
+appareil.
 
 ### OneDrive ou dossier partagé
 

@@ -872,8 +872,7 @@ sincronizada por su aplicación de escritorio, o un recurso de red). No
 interviene ningún servidor y la carpeta nunca contiene datos legibles.
 
 Abra **Herramientas → Sincronización…**. Cada perfil gestiona la sincronización de sus
-propios datos. El cambio de clave y quitar un dispositivo están
-reservados al administrador.
+propios datos, incluidos el cambio de clave y quitar un dispositivo.
 
 ### OneDrive o carpeta compartida
 

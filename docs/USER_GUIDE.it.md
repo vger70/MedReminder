@@ -845,8 +845,8 @@ sincronizzata dalla sua app desktop, o una condivisione di rete). Non serve
 nessun server e la cartella non contiene mai dati leggibili.
 
 Apri **Strumenti → Sincronizzazione…**. Ogni profilo gestisce la sincronizzazione dei
-propri dati. Il cambio di chiave e la rimozione di un dispositivo sono
-riservati all'amministratore.
+propri dati, compresi il cambio di chiave e la rimozione di un
+dispositivo.
 
 ### OneDrive o cartella condivisa
 
