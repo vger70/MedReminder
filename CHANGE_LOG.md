@@ -30,6 +30,24 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #112 — Design role change and all-profiles view (multi-user G/I)
+
+Link: [vger70/MedReminder#112](https://github.com/vger70/MedReminder/pull/112)
+Branch: `claude/sweet-ritchie-ft5498`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`: design for
+  changing a profile's role (admin only, never the open profile or the
+  last admin) and a read-only all-profiles view for the admin, built on
+  a snapshot copy of each profile with schema patches and consumption
+  catch-up applied to the copy. Decisions D1–D7 still open.
+- `docs/prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md`: implementation
+  brief (steps G1, I1, I2, D).
+- `docs/STATUS.md` §3.5: pointer to the new design.
+
+---
+
 ## PR #111 — Restock a medicine by scanning its package (A2 phase 3)
 
 Link: [vger70/MedReminder#111](https://github.com/vger70/MedReminder/pull/111)
