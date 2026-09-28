@@ -119,8 +119,60 @@ public sealed class ApplyRemoteOperations
         return WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(operations, ct), cancellationToken);
     }
 
+    // Phase 4c (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §6.2): after a key
+    // rotation on another device, this device rebuilt from the genesis of
+    // the new generation, which holds what the rotating device had
+    // applied. This device's own operations of the previous generation
+    // that are not in it (recorded offline, or published but not yet
+    // applied there) are applied again under the new generation and stay
+    // pending (SegmentSeq null), so the next run publishes them and
+    // nothing recorded here is lost. Operations already in the new log
+    // are skipped by id. An operation for a medicine the new generation
+    // does not have (it came from a device the rotating device had not
+    // heard from) cannot be applied and is dropped; the count is returned.
+    public Task<(int Applied, int Dropped)> ApplyCarriedAsync(
+        IReadOnlyList<SyncOperation> own, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(own);
+        return WriteGate.RunExclusiveAsync(async ct =>
+        {
+            var settings = _settings.Load()
+                ?? throw new InvalidOperationException("Sync is not enabled for this profile.");
+            var known = (await _medicines.ListAllAsync(ct)).Select(m => m.Id).ToHashSet();
+            var batch = new List<SyncOperation>();
+            var dropped = 0;
+            foreach (var operation in own.Where(o => o.DeviceId == settings.DeviceId).OrderBy(o => o.Timestamp))
+            {
+                if (operation.Type == nameof(MedicineCreated))
+                {
+                    known.Add(operation.MedicineId);
+                }
+                else if (!known.Contains(operation.MedicineId) && !await IsDeletedAsync(operation.MedicineId, ct))
+                {
+                    dropped++;
+                    continue;
+                }
+                batch.Add(new SyncOperation
+                {
+                    Id = operation.Id,
+                    HlcPhysicalMs = operation.HlcPhysicalMs,
+                    HlcCounter = operation.HlcCounter,
+                    DeviceId = operation.DeviceId,
+                    Generation = settings.Generation,
+                    Type = operation.Type,
+                    SchemaVersion = operation.SchemaVersion,
+                    MedicineId = operation.MedicineId,
+                    EntityId = operation.EntityId,
+                    Payload = operation.Payload,
+                });
+            }
+            var result = await ExecuteCoreAsync(batch, ct, carried: true);
+            return (result.Applied, dropped);
+        }, cancellationToken);
+    }
+
     private async Task<ApplyRemoteResult> ExecuteCoreAsync(
-        IReadOnlyList<SyncOperation> operations, CancellationToken cancellationToken)
+        IReadOnlyList<SyncOperation> operations, CancellationToken cancellationToken, bool carried = false)
     {
         var settings = _settings.Load()
             ?? throw new InvalidOperationException("Sync is not enabled for this profile.");
@@ -140,7 +192,7 @@ public sealed class ApplyRemoteOperations
                     $"Operation {operation.Id} belongs to generation {operation.Generation}, " +
                     $"this device is on generation {settings.Generation}.");
             }
-            if (operation.DeviceId == settings.DeviceId
+            if ((operation.DeviceId == settings.DeviceId && !carried)
                 || !seen.Add(operation.Id)
                 || await _operations.ExistsAsync(operation.Id, cancellationToken))
             {

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
+using MedReminder.Application.Sync.Remote;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,9 @@ namespace MedReminder.Infrastructure.Sync;
 // build the group's database next to the profile database, then swap it
 // in like an import (ProfileDatabaseSwap); the UI restarts the
 // application. Nothing is logged about the passphrase or the key.
+// Phase 4c: join with a pairing code, and the rekey after a key rotation
+// on another device (rebuild plus carry-over of this device's own
+// operations, applied to the new database before the restart).
 internal sealed class SyncSetupService : ISyncSetupService
 {
     private readonly ICurrentProfile _profile;
@@ -20,6 +24,8 @@ internal sealed class SyncSetupService : ISyncSetupService
     private readonly ISyncSettingsStore _settings;
     private readonly ISyncKeyStore _keys;
     private readonly ISyncTransportFactory _transports;
+    private readonly ISyncOperationRepository _operations;
+    private readonly ApplyRemoteOperations _apply;
     private readonly TimeProvider _clock;
     private readonly ILogger<SyncSetupService> _log;
 
@@ -31,6 +37,8 @@ internal sealed class SyncSetupService : ISyncSetupService
         ISyncSettingsStore settings,
         ISyncKeyStore keys,
         ISyncTransportFactory transports,
+        ISyncOperationRepository operations,
+        ApplyRemoteOperations apply,
         TimeProvider clock,
         ILogger<SyncSetupService> log)
     {
@@ -41,6 +49,8 @@ internal sealed class SyncSetupService : ISyncSetupService
         _settings = settings;
         _keys = keys;
         _transports = transports;
+        _operations = operations;
+        _apply = apply;
         _clock = clock;
         _log = log;
     }
@@ -55,14 +65,25 @@ internal sealed class SyncSetupService : ISyncSetupService
         _log.LogInformation("Sync enabled for profile {ProfileId} with group {GroupId}.", _profile.Id, settings.GroupId);
     }
 
-    public async Task JoinAsync(SyncTarget target, Guid groupId, char[] passphrase, string deviceName,
+    public Task JoinAsync(SyncTarget target, Guid groupId, char[] passphrase, string deviceName,
+        CancellationToken cancellationToken)
+        => JoinCoreAsync(target, groupId, new SyncKeySource.Passphrase(passphrase), deviceName, cancellationToken);
+
+    public Task JoinWithPairingAsync(SyncTarget target, SyncPairingCode code, string deviceName,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(code);
+        return JoinCoreAsync(target, code.GroupId, new SyncKeySource.Pairing(code), deviceName, cancellationToken);
+    }
+
+    private async Task JoinCoreAsync(SyncTarget target, Guid groupId, SyncKeySource source, string deviceName,
         CancellationToken cancellationToken)
     {
         if (_settings.Load() is not null) throw new InvalidOperationException("Sync is already enabled.");
         var temp = TempPath();
         try
         {
-            var result = await _join.ExecuteAsync(_transports.Create(target), groupId, passphrase, temp,
+            var result = await _join.ExecuteAsync(_transports.Create(target), groupId, source, temp,
                 target, cancellationToken, deviceName);
             try
             {
@@ -100,6 +121,44 @@ internal sealed class SyncSetupService : ISyncSetupService
         finally
         {
             CryptographicOperations.ZeroMemory(key);
+            DeleteIfPresent(temp);
+        }
+    }
+
+    public async Task<(int Carried, int Dropped)> RekeyAsync(SyncKeySource source, CancellationToken cancellationToken)
+    {
+        var current = _settings.Load() ?? throw new InvalidOperationException("Sync is not enabled for this profile.");
+        // Read before the swap: the new database holds only what the
+        // rotating device had.
+        var own = (await _operations.ListAllAsync(cancellationToken))
+            .Where(o => o.DeviceId == current.DeviceId && o.Generation == current.Generation)
+            .ToList();
+        var temp = TempPath();
+        try
+        {
+            var result = await _join.RekeyAsync(_transports.Create(SyncTarget.Of(current)), current, source, temp,
+                cancellationToken);
+            try
+            {
+                ProfileDatabaseSwap.Replace(_db, _profile.DatabasePath, temp, _clock);
+                // Nothing read from the replaced file may be written back.
+                _db.ChangeTracker.Clear();
+                _keys.Save(result.Settings.GroupId, result.Settings.KeyVersion, result.Key);
+                _settings.Save(result.Settings);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(result.Key);
+            }
+            var (carried, dropped) = await _apply.ApplyCarriedAsync(own, cancellationToken);
+            _log.LogInformation(
+                "Profile {ProfileId} took key version {KeyVersion} and generation {Generation}: " +
+                "{Carried} own operations carried over, {Dropped} dropped.",
+                _profile.Id, result.Settings.KeyVersion, result.Settings.Generation, carried, dropped);
+            return (carried, dropped);
+        }
+        finally
+        {
             DeleteIfPresent(temp);
         }
     }

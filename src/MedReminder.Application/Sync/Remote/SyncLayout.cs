@@ -12,10 +12,13 @@ namespace MedReminder.Application.Sync.Remote;
 //   <groupId>/checkpoints/<generation>/<deviceId>-<n>.mrc
 //   <groupId>/ops/<generation>/<deviceId>/<seq>.mrs
 //   <groupId>/devices/<deviceId>.mrd
+//   <groupId>/pairing/<deviceId>.mrp
 //
 // The current generation is the highest genesis present and the current
 // key version the highest wrap present: each of those files has one
-// writer, so group.json never changes after it is created (R5).
+// writer, so group.json never changes after it is created (R5). Phase
+// 4c: a generation has one key version, the one its genesis is sealed
+// with (SyncKeys); a key rotation starts a new generation.
 public static class SyncLayout
 {
     public static string Group(Guid groupId) => Id(groupId);
@@ -41,6 +44,10 @@ public static class SyncLayout
     public static string DevicesFolder(Guid groupId) => $"{Id(groupId)}/devices/";
 
     public static string Device(Guid groupId, Guid deviceId) => $"{DevicesFolder(groupId)}{Id(deviceId)}.mrd";
+
+    // Phase 4c: the pairing offer a device shows as a QR code, one per
+    // device, removed when the offer ends.
+    public static string Pairing(Guid groupId, Guid deviceId) => $"{Id(groupId)}/pairing/{Id(deviceId)}.mrp";
 
     // "<groupId>/ops/<g>/<deviceId>/<seq>.mrs" -> (deviceId, seq).
     public static bool TryParseSegment(string path, out Guid deviceId, out int seq)

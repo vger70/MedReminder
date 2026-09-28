@@ -35,7 +35,11 @@ public sealed record SyncRunResult(
     // this device was away too long and must rebuild (§5.6).
     bool RebuildRequired,
     // Device-level problems (ids and counters only, never content).
-    IReadOnlyList<string> Problems);
+    IReadOnlyList<string> Problems,
+    // Phase 4c: the newer generation is sealed with a newer group key
+    // (a rotation, §6.2). Nothing was published: this device needs the
+    // new passphrase or a pairing code (JoinSyncGroup.RekeyAsync).
+    bool NewKeyRequired = false);
 
 // One sync run (B.1 Phase 3c, docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md
 // §5.3, §5.6; docs/SYNC-FORMAT.md):
@@ -49,6 +53,12 @@ public sealed record SyncRunResult(
 //   5. write a checkpoint when enough operations accumulated;
 //   6. delete this device's own segments that a checkpoint covers and
 //      every active device has applied.
+//
+// Phase 4c: a newer generation sealed with a newer key is a key rotation
+// (§6.2). The run stops before publishing: the old key may be held by
+// the removed device, so this device's operations wait in the local log
+// until it has the new key. A newer generation sealed with an older key
+// was not written by a device of the group and is ignored.
 //
 // Each file has one writer (R5); only this device's own files are
 // written or deleted. Unreadable files are skipped and reported, and
@@ -121,13 +131,25 @@ public sealed class SyncEngine
         var me = settings.DeviceId;
         var g = settings.Generation;
 
-        var published = await WriteGate.RunExclusiveAsync(c => PublishAsync(settings, key, c), ct);
-
         var latest = await LatestGenerationAsync(_transport, settings.GroupId, ct);
         if (latest > g)
         {
-            return new SyncRunResult(published, 0, 0, false, 0, latest, false, problems);
+            if ((await SyncKeys.KeyVersionsAsync(_transport, settings.GroupId, ct)).FirstOrDefault() > settings.KeyVersion)
+            {
+                return new SyncRunResult(0, 0, 0, false, 0, latest, false, problems, NewKeyRequired: true);
+            }
+            var sealedWith = await SyncKeys.GenesisKeyVersionAsync(_transport, settings.GroupId, latest, ct);
+            if (sealedWith == settings.KeyVersion)
+            {
+                // §5.7: pending operations of this generation go up for
+                // audit; the device then rebuilds from the new genesis.
+                var pending = await WriteGate.RunExclusiveAsync(c => PublishAsync(settings, key, c), ct);
+                return new SyncRunResult(pending, 0, 0, false, 0, latest, false, problems);
+            }
+            problems.Add($"Generation {latest} is not sealed with the group key of this device and is ignored.");
         }
+
+        var published = await WriteGate.RunExclusiveAsync(c => PublishAsync(settings, key, c), ct);
 
         var (segmentsApplied, operationsApplied, rebuild) = await PullAsync(settings, key, problems, ct);
 
@@ -354,6 +376,10 @@ public sealed class SyncEngine
             DeviceRecordContent record;
             try
             {
+                // Records of another generation, left by devices that have
+                // not rebuilt yet, are sealed with an older key after a
+                // rotation (Phase 4c): skipped unopened.
+                if (!IsCurrentRecord(SyncFileCodec.ReadHeader(file), settings)) continue;
                 var (header, content) = SyncFileCodec.Open(_cipher, key, file);
                 if (header.Kind != SyncFileKind.Device || header.Generation != g) continue;
                 record = DeviceRecordContent.Parse(content);
@@ -422,6 +448,7 @@ public sealed class SyncEngine
                 if (file is null) continue;
                 try
                 {
+                    if (!IsCurrentRecord(SyncFileCodec.ReadHeader(file), settings)) continue;
                     var (header, content) = SyncFileCodec.Open(_cipher, key, file);
                     if (header.Kind == SyncFileKind.Device && header.Generation == settings.Generation)
                         records.Add(DeviceRecordContent.Parse(content));
@@ -439,6 +466,10 @@ public sealed class SyncEngine
             CryptographicOperations.ZeroMemory(key);
         }
     }
+
+    private static bool IsCurrentRecord(SyncFileHeader header, SyncSettings settings)
+        => header.Kind == SyncFileKind.Device && header.Generation == settings.Generation
+            && header.KeyVersion == settings.KeyVersion;
 
     internal static async Task<int> LatestGenerationAsync(ISyncTransport transport, Guid groupId, CancellationToken ct)
         => (await transport.ListAsync(SyncLayout.GenesisFolder(groupId), ct))

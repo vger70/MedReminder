@@ -27,6 +27,8 @@ public class OperationEmissionGuardTests
         "SyncEngine",
         "CreateSyncGroup",
         "ResetSyncGeneration",
+        // Key rotation (Phase 4c): a new generation, like a reset.
+        "RotateSyncKey",
         // Local sync state only (Phase 3d): the peer table and this
         // device's conflict list.
         "DisableSync",
