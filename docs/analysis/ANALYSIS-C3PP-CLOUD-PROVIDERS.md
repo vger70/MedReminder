@@ -1115,6 +1115,10 @@ premature dependency.
   `Files.ReadWrite.AppFolder`, confirmed isolated by spike S6 (§15
   item 7). The storage is portable
   (`MedReminder.Infrastructure.Portable/Cloud/OneDrive/`); archives go
-  to `backups/` in the app folder; a signed-out account is an
-  unavailable target. Restore lists OneDrive snapshots from their file
-  names instead of their manifests, to avoid one download per archive.
+  to `backups/` in the app folder; a session that needs a new sign-in
+  throws `CloudSignInRequiredException` from every operation (not an
+  unavailable target), so the backup host records it and the restore
+  dialog asks for a sign-in. Restore lists OneDrive snapshots from their
+  file names instead of their manifests, to avoid one download per
+  archive; the other-profile check reads the manifest of the downloaded
+  archive before the import.

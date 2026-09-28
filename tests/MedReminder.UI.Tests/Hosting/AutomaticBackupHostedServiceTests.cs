@@ -149,20 +149,54 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task OneDrive_tick_with_a_signed_out_account_skips_before_the_export()
+    public async Task OneDrive_tick_with_a_signed_out_account_records_it_before_the_export()
     {
         var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
             signedIn: false);
 
         await host.TryRunAsync(CancellationToken.None);
 
+        _export.Calls.Should().Be(0);
         _storage.Uploads.Should().BeEmpty();
-        _state.Load().LastSuccessfulBackupAt.Should().BeNull();
+        var state = _state.Load();
+        state.LastSuccessfulBackupAt.Should().BeNull();
+        state.LastError.Should().Contain("Sign in to OneDrive again");
+    }
+
+    [Fact]
+    public async Task OneDrive_tick_with_an_expired_session_records_it_before_the_export()
+    {
+        // The account is still in the token cache, but the refresh token
+        // was revoked (password change): FindAsync alone would not notice.
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: true, hasSession: false);
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _export.Calls.Should().Be(0, "an ended session must not cost an Argon2id export");
+        var state = _state.Load();
+        state.LastSuccessfulBackupAt.Should().BeNull();
+        state.LastError.Should().Be("cloud: Sign in to OneDrive again to continue.");
+    }
+
+    [Fact]
+    public async Task OneDrive_session_ending_during_the_export_is_recorded_and_stops_the_run()
+    {
+        _storage.UploadFailure = new CloudSignInRequiredException(CloudProvider.OneDrive);
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: true, profileIds: new[] { ProfileId, OtherProfileId });
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _export.Calls.Should().Be(1, "the other profiles would fail the same way");
+        var state = _state.Load();
+        state.LastSuccessfulBackupAt.Should().BeNull();
+        state.LastError.Should().Be("cloud: Sign in to OneDrive again to continue.");
     }
 
     private AutomaticBackupHostedService CreateHost(
         bool hasPassphrase, string? cloudFolder = null, string[]? profileIds = null,
-        string? oneDriveAccount = null, bool signedIn = false)
+        string? oneDriveAccount = null, bool signedIn = false, bool? hasSession = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IBackupService, LocalTargetUnusedBackupService>();
@@ -171,7 +205,7 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         services.AddSingleton<ICloudBackupPassphraseStore>(new FakePassphraseStore(hasPassphrase));
         services.AddSingleton<IExportService>(_export);
         services.AddSingleton<ICurrentProfile, FakeCurrentProfile>();
-        services.AddSingleton<ICloudAccountService>(new FakeAccounts(signedIn));
+        services.AddSingleton<ICloudAccountService>(new FakeAccounts(signedIn, hasSession ?? signedIn));
 
         var settings = new BackupSettings
         {
@@ -195,7 +229,7 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     private const string ProfileId = "0123456789abcdef0123456789abcdef";
     private const string OtherProfileId = "fedcba9876543210fedcba9876543210";
 
-    private sealed class FakeAccounts(bool signedIn) : ICloudAccountService
+    private sealed class FakeAccounts(bool signedIn, bool hasSession) : ICloudAccountService
     {
         public bool IsAvailable(CloudProvider provider) => true;
 
@@ -204,6 +238,9 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
 
         public Task<CloudAccount?> FindAsync(CloudProvider provider, string accountId, CancellationToken cancellationToken)
             => Task.FromResult(signedIn ? new CloudAccount(provider, accountId, "user") : null);
+
+        public Task<bool> HasSessionAsync(CloudProvider provider, string accountId, CancellationToken cancellationToken)
+            => Task.FromResult(signedIn && hasSession);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

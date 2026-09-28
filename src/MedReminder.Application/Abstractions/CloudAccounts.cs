@@ -28,6 +28,12 @@ public interface ICloudAccountService
 
     // The account if it is still signed in on this device.
     Task<CloudAccount?> FindAsync(CloudProvider provider, string accountId, CancellationToken cancellationToken);
+
+    // True when the account can make a request without an interactive
+    // sign-in: it is cached on this device and a token is obtained
+    // silently. False for an expired or revoked session. Network errors
+    // during the silent refresh are thrown, not reported as false.
+    Task<bool> HasSessionAsync(CloudProvider provider, string accountId, CancellationToken cancellationToken);
 }
 
 // The provider session ended (password change, revoked consent, long

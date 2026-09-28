@@ -43,11 +43,16 @@ public interface ICloudRestoreService
 
     // Downloads the snapshot to a temporary file under the application
     // data folder, restores it like RestoreAsync, and deletes the file.
-    Task RestoreStoredAsync(
+    // The profile listed by ListStoredSnapshotsAsync comes from the file
+    // name, which anyone can rename, so confirmManifest is called with
+    // the downloaded archive's own manifest before the import; returning
+    // false stops the restore. Returns false when it was stopped.
+    Task<bool> RestoreStoredAsync(
         IArchiveStorage storage,
         string archiveId,
         char[] passphrase,
         ImportOptions options,
+        Func<ExportManifest, bool>? confirmManifest,
         IProgress<int>? progress,
         CancellationToken cancellationToken);
 }

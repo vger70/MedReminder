@@ -32,7 +32,7 @@ public sealed class LocalFolderArchiveStorageContractTests : ArchiveStorageContr
 
     protected override IArchiveStorage CreateStorage() => CreateLocalStorage();
 
-    protected override IArchiveStorage CreateUnavailableStorage() =>
+    private IArchiveStorage CreateUnavailableStorage() =>
         new LocalFolderArchiveStorage(
             () => Path.Combine(_root, "missing"),
             _tempDirectory,
@@ -90,6 +90,18 @@ public sealed class LocalFolderArchiveStorageContractTests : ArchiveStorageContr
         var listed = await storage.ListAsync(CancellationToken.None);
 
         listed.Select(a => a.Name).Should().Equal(ArchiveName(0));
+    }
+
+    [Fact]
+    public async Task Upload_to_a_missing_folder_throws_DirectoryNotFoundException()
+    {
+        var storage = CreateUnavailableStorage();
+
+        var act = () => storage.UploadAsync(
+            new MemoryStream(RandomBytes(16)), ArchiveName(0), CancellationToken.None);
+
+        await act.Should().ThrowAsync<DirectoryNotFoundException>();
+        (await storage.ListAsync(CancellationToken.None)).Should().BeEmpty();
     }
 
     [Fact]

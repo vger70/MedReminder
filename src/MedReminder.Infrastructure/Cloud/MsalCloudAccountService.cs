@@ -82,6 +82,20 @@ internal sealed class MsalCloudAccountService : ICloudAccountService, IOneDriveA
         return account is null ? null : new CloudAccount(CloudProvider.OneDrive, accountId, account.Username);
     }
 
+    public async Task<bool> HasSessionAsync(CloudProvider provider, string accountId, CancellationToken cancellationToken)
+    {
+        EnsureOneDrive(provider);
+        try
+        {
+            await GetAccessTokenAsync(accountId, forceRefresh: false, cancellationToken);
+            return true;
+        }
+        catch (CloudSignInRequiredException)
+        {
+            return false;
+        }
+    }
+
     public async Task<string> GetAccessTokenAsync(string accountId, bool forceRefresh, CancellationToken cancellationToken)
     {
         var account = await _app.Value.GetAccountAsync(accountId)
@@ -123,11 +137,15 @@ internal sealed class MsalCloudAccountService : ICloudAccountService, IOneDriveA
                     args.TokenCache.DeserializeMsalV3(ProtectedData.Unprotect(
                         File.ReadAllBytes(_cachePath), optionalEntropy: null, DataProtectionScope.CurrentUser));
                 }
-                catch (CryptographicException)
+                catch (Exception ex)
                 {
-                    // Copied from another Windows account or machine: start
-                    // empty; the user signs in again.
-                    _log.LogWarning("OneDrive token cache could not be read; a new sign-in is needed.");
+                    // Copied from another Windows account or machine
+                    // (CryptographicException), or decrypted but not
+                    // readable by this MSAL version (corrupt or
+                    // incompatible content): start empty; the user signs
+                    // in again and the next write replaces the file.
+                    _log.LogWarning("OneDrive token cache could not be read ({Error}); a new sign-in is needed.",
+                        ex.GetType().Name);
                 }
             }
         });

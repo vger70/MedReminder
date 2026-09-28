@@ -11,8 +11,8 @@ namespace MedReminder.Infrastructure.Tests.Export;
 
 // Restore from snapshots held by a provider API (C.3++ Phase 2, B.1
 // Phase 4a): the list comes from the C.3+ file names, and the chosen
-// archive is downloaded under %LOCALAPPDATA%\MedReminder, imported, then
-// deleted.
+// archive is downloaded under %LOCALAPPDATA%\MedReminder, checked
+// against its own manifest, imported, then deleted.
 [SupportedOSPlatform("windows")]
 public sealed class CloudRestoreServiceStoredTests
 {
@@ -34,9 +34,10 @@ public sealed class CloudRestoreServiceStoredTests
     {
         public string? Path { get; private set; }
         public byte[]? Content { get; private set; }
+        public string? ManifestProfileId { get; init; }
 
         public Task<ExportManifest> ReadManifestAsync(string archivePath, CancellationToken cancellationToken)
-            => throw new NotSupportedException();
+            => Task.FromResult(new ExportManifest { ProfileId = ManifestProfileId });
 
         public Task ImportAsync(string archivePath, char[] passphrase, ImportOptions options, IProgress<int>? progress,
             CancellationToken cancellationToken)
@@ -78,10 +79,32 @@ public sealed class CloudRestoreServiceStoredTests
         var service = new CloudRestoreService(import, NullLogger<CloudRestoreService>.Instance);
 
         await service.RestoreStoredAsync(storage, "medreminder-p-20260921-080000.mrz", "x".ToCharArray(),
-            new ImportOptions(), null, CancellationToken.None);
+            new ImportOptions(), confirmManifest: null, null, CancellationToken.None);
 
         import.Content.Should().Equal(7, 8, 9);
         import.Path.Should().StartWith(AppDataPaths.GetAppDataDirectory());
         File.Exists(import.Path).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task The_downloaded_manifest_decides_the_profile_not_the_file_name()
+    {
+        // A renamed archive of another profile: the name says nothing
+        // about its content, so the confirmation sees the manifest.
+        var storage = new MemoryStorage(new() { ["profileB-backup.mrz"] = ([1], Stored) });
+        var import = new RecordingImport { ManifestProfileId = "profile-b" };
+        var service = new CloudRestoreService(import, NullLogger<CloudRestoreService>.Instance);
+        string? confirmedProfile = null;
+
+        var restored = await service.RestoreStoredAsync(storage, "profileB-backup.mrz", "x".ToCharArray(),
+            new ImportOptions(), manifest =>
+            {
+                confirmedProfile = manifest.ProfileId;
+                return false;
+            }, null, CancellationToken.None);
+
+        restored.Should().BeFalse();
+        confirmedProfile.Should().Be("profile-b");
+        import.Path.Should().BeNull("a declined confirmation must not import");
     }
 }

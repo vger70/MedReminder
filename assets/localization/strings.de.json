@@ -773,6 +773,7 @@
   "Ui.RestoreCloudDialog.Status.Running": "Wiederherstellung läuft…",
   "Ui.RestoreCloudDialog.Status.Cancelled": "Wiederherstellung abgebrochen.",
   "Ui.RestoreCloudDialog.Status.Error": "Fehler: {0}",
+  "Ui.RestoreCloudDialog.Status.SignInRequired": "Die OneDrive-Sitzung ist abgelaufen. Verwenden Sie „Anmelden…“ unter Einstellungen → Sicherung / Wiederherstellung und öffnen Sie dieses Fenster erneut.",
   "Ui.ExportDialog.Title": "Alle Daten exportieren",
   "Ui.ExportDialog.Intro": "Schreibt eine einzelne verschlüsselte Datei mit den Daten dieses Profils. Die Datei ist über Konten und Computer hinweg portierbar und dient daher auch dazu, MedReminder auf einen neuen PC zu übertragen.",
   "Ui.ExportDialog.Destination.Label": "Zieldatei",

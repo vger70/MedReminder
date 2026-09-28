@@ -10,10 +10,10 @@ namespace MedReminder.Infrastructure.Cloud.OneDrive;
 // session under a temporary name, then a rename (spike S6 C10b), so a
 // partial archive is never listed.
 //
-// "Target not available" (IArchiveStorage contract) is a signed-out
-// account here: uploads throw DirectoryNotFoundException, listing is
-// empty, so the backup host skips the run as it does for a missing
-// folder.
+// A signed-out account or an ended session is not "target not
+// available": CloudSignInRequiredException reaches the caller from every
+// operation, so the backup host records it and the restore dialog asks
+// for a new sign-in instead of showing an empty list.
 public sealed class OneDriveArchiveStorage : IArchiveStorage
 {
     public const string Folder = "backups";
@@ -48,15 +48,7 @@ public sealed class OneDriveArchiveStorage : IArchiveStorage
             try
             {
                 var length = source.Length - source.Position;
-                DriveItem? stored;
-                try
-                {
-                    stored = await _client.UploadAsync($"{Folder}/{suggestedName}", source, length, replace: false, ct);
-                }
-                catch (CloudSignInRequiredException ex)
-                {
-                    throw new DirectoryNotFoundException("OneDrive is not signed in on this device.", ex);
-                }
+                var stored = await _client.UploadAsync($"{Folder}/{suggestedName}", source, length, replace: false, ct);
                 if (stored is null)
                 {
                     throw new IOException($"An archive named '{suggestedName}' already exists.");
@@ -79,15 +71,7 @@ public sealed class OneDriveArchiveStorage : IArchiveStorage
 
     public async Task<IReadOnlyList<ArchiveInfo>> ListAsync(CancellationToken ct)
     {
-        IReadOnlyList<DriveItem> children;
-        try
-        {
-            children = await _client.ListChildrenAsync(Folder, ct);
-        }
-        catch (CloudSignInRequiredException)
-        {
-            return [];
-        }
+        var children = await _client.ListChildrenAsync(Folder, ct);
         var archives = children
             .Where(i => !i.IsFolder && i.Name is { } name && !name.StartsWith('.')
                 && name.EndsWith(ExportFormat.ArchiveExtension, StringComparison.OrdinalIgnoreCase))

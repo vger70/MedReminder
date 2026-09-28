@@ -99,11 +99,12 @@ internal sealed partial class CloudRestoreService : ICloudRestoreService
         return results;
     }
 
-    public async Task RestoreStoredAsync(
+    public async Task<bool> RestoreStoredAsync(
         IArchiveStorage storage,
         string archiveId,
         char[] passphrase,
         ImportOptions options,
+        Func<ExportManifest, bool>? confirmManifest,
         IProgress<int>? progress,
         CancellationToken cancellationToken)
     {
@@ -117,7 +118,13 @@ internal sealed partial class CloudRestoreService : ICloudRestoreService
             {
                 await source.CopyToAsync(target, cancellationToken);
             }
+            if (confirmManifest is not null)
+            {
+                var manifest = await _importService.ReadManifestAsync(temp, cancellationToken);
+                if (!confirmManifest(manifest)) return false;
+            }
             await _importService.ImportAsync(temp, passphrase, options, progress, cancellationToken);
+            return true;
         }
         finally
         {

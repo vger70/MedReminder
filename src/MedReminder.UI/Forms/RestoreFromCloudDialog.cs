@@ -289,6 +289,11 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
                 ? await _cloudRestore.ListSnapshotsAsync(folder, CancellationToken.None)
                 : await _cloudRestore.ListStoredSnapshotsAsync(_storage, CancellationToken.None);
         }
+        catch (CloudSignInRequiredException)
+        {
+            _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.SignInRequired");
+            return;
+        }
         catch (Exception ex)
         {
             _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.Error", ex.Message);
@@ -348,7 +353,11 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
             return;
         }
 
-        if (!OtherProfileArchivePrompt.Confirm(
+        // A folder snapshot's profile comes from its manifest, so it is
+        // checked now. A stored snapshot's profile comes from its file
+        // name only: it is checked against the downloaded manifest
+        // instead (RestoreStoredAsync).
+        if (_storage is null && !OtherProfileArchivePrompt.Confirm(
                 this, _loc, _currentProfile, _profileRegistry, selected.ProfileId))
         {
             return;
@@ -400,15 +409,18 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
                     progress,
                     _cts.Token);
             }
-            else
-            {
-                await _cloudRestore.RestoreStoredAsync(
+            else if (!await _cloudRestore.RestoreStoredAsync(
                     _storage,
                     selected.ArchivePath,
                     passphrase,
                     new ImportOptions(),
+                    manifest => OtherProfileArchivePrompt.Confirm(
+                        this, _loc, _currentProfile, _profileRegistry, manifest.ProfileId),
                     progress,
-                    _cts.Token);
+                    _cts.Token))
+            {
+                _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.Cancelled");
+                return;
             }
 
             _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Restore.Success");
@@ -436,6 +448,10 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
                     _loc.Get("Ui.Import.Error.UnsupportedVersion"),
                 _ => _loc.Get("Ui.Import.Error.Corrupt"),
             };
+        }
+        catch (CloudSignInRequiredException)
+        {
+            _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Status.SignInRequired");
         }
         catch (Exception ex)
         {
