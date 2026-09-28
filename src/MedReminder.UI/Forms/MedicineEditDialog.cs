@@ -34,6 +34,7 @@ internal sealed record CatalogueAutocompleteContext(
 // See docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md §3.4 and §4.
 internal sealed record BarcodeScanContext(
     IBarcodeParser Parser,
+    ICameraCaptureService Camera,
     BarcodeCaptureOptions Options,
     ILogger Logger);
 
@@ -672,7 +673,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
         BarcodeContent? content;
         using (var dialog = new BarcodeScanDialog(
-            _loc, _barcodeContext.Parser, _barcodeContext.Options, _barcodeContext.Logger))
+            _loc, _barcodeContext.Parser, _barcodeContext.Camera, _barcodeContext.Options, _barcodeContext.Logger))
         {
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
             content = dialog.Result;

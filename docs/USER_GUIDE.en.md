@@ -251,6 +251,24 @@ Notes:
 - A scanner that sends no Enter after the code also works: the code
   is accepted a moment after the scan.
 
+### With the webcam
+
+No scanner? In the scan window click **Use webcam**. The camera turns
+on only then, and turns off as soon as a code is read, you click
+**Use scanner**, you close the window, or 30 seconds pass without a
+code.
+
+- Hold the package 10–20 cm from the camera, with the barcode inside
+  the dashed frame, in good light and in focus. Laptop webcams with
+  fixed focus often struggle with the thin AIC barcode; a USB scanner
+  is more reliable.
+- If Windows blocks the camera, the window says so and offers
+  **Open privacy settings**: turn on **Let desktop apps access your
+  camera** under Settings → Privacy & security → Camera, then click
+  **Try again**.
+- Images from the camera are never saved or sent anywhere; only the
+  code read is used.
+
 ## Add stock (new package)
 
 1. Select the medicine in the grid.

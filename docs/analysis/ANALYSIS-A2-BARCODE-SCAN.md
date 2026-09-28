@@ -457,16 +457,20 @@ fourth) via Serilog, never with PII or medical detail (`CLAUDE.md`
 ### 5A.1 Port — `MedReminder.Application/Abstractions/ICameraCaptureService.cs`
 
 Hides `MediaCapture`, `SoftwareBitmap` and ZXing types from the UI.
+As implemented in phase 2:
 
 ```csharp
 public interface ICameraCaptureService
 {
-    Task<CameraAvailability> ProbeAsync(CancellationToken ct);
-
-    Task<RawBarcode?> ScanAsync(
-        IProgress<CameraFrameStatus>? progress,
-        CancellationToken ct);
+    Task<CameraScanResult> ScanAsync(
+        Func<RawBarcode, bool> accept,
+        Action<CameraFrameStatus>? onFrame,
+        CancellationToken cancellationToken);
 }
+
+public sealed record CameraScanResult(CameraAvailability Availability, RawBarcode? Barcode);
+public sealed record CameraFrameStatus(int FramesDecoded, CameraPreviewFrame Preview);
+public sealed record CameraPreviewFrame(int Width, int Height, byte[] Bgra32);
 
 public enum CameraAvailability : int
 {
@@ -476,17 +480,31 @@ public enum CameraAvailability : int
     InitializationFailed = 3,   // driver / hardware fault
 }
 
-public sealed record CameraFrameStatus(
-    int FramesProcessed,
-    bool DecoderActive);
 ```
 
 Change from the first draft: `ScanAsync` returns the `RawBarcode`,
-not a `BarcodeContent`. Parsing moves to the dialog, so both variants
+not a `BarcodeContent`. Parsing stays in the dialog, so both variants
 go through the same `IBarcodeParser` call and the service stays a
-pure acquisition adapter. The dialog calls `ScanAsync` in a loop until
-a result parses to `HasLookupKey`, the timeout fires, or the user
-cancels. Cancellation returns `null`.
+pure acquisition adapter.
+
+Changes made in phase 2:
+
+- **No `ProbeAsync`.** Telling "no permission" from "driver fault"
+  needs a `MediaCapture` initialization, so a separate probe would
+  turn the camera on twice. `ScanAsync` reports the terminal state in
+  `CameraScanResult.Availability` instead and never throws for a
+  camera fault.
+- **`accept` instead of a loop.** The dialog passes the parser as
+  `accept`; a decoded code the parser rejects (an unrelated Code 39 on
+  the box) keeps the same session scanning. Looping over `ScanAsync`
+  would have restarted the camera after every rejected code.
+- **Preview through `onFrame`.** The first draft had no way to get
+  frames to the `PictureBox`. `onFrame` runs on the caller's
+  synchronization context with at most one call pending; the pixel
+  buffer is reused, so it is valid only during the call. Pixels are
+  plain BGRA bytes, so the Application port carries no Windows type.
+- Cancellation returns `Availability = Available` with no barcode;
+  the dialog tells its own timeout from a user cancel.
 
 ### 5A.2 API surface choice
 
@@ -497,27 +515,37 @@ XAML-in-WinForms interop problem. `[VERIFIED]` — reachable from
 `net10.0-windows10.0.19041.0`, which the UI project already targets
 (`src/MedReminder.UI/MedReminder.UI.csproj`).
 
-`[UNCERTAIN]` — the Infrastructure project targets `net10.0-windows`
-without a Windows SDK version, so the WinRT projections are not
-available there today. Two options, to settle at implementation time:
-raise the Infrastructure TFM to `net10.0-windows10.0.19041.0`, or
-place `WindowsCameraCaptureService` in the UI project behind the same
-port. The port is unaffected either way.
+The Infrastructure project targets `net10.0-windows` without a
+Windows SDK version, so the WinRT projections are not available there.
+**Settled in phase 2:** `WindowsCameraCaptureService` and
+`FrameBarcodeDecoder` live in the UI project
+(`src/MedReminder.UI/Camera/`), behind the Application port, as the
+toast adapter already does. Raising the Infrastructure TFM would have
+changed every Infrastructure consumer for one adapter.
 
 ### 5A.3 Frame pipeline
 
 1. Enumerate video devices via `MediaFrameSourceGroup.FindAllAsync`;
-   pick the first source of kind `Color`. Log group names only, never
-   device ids.
+   pick the first colour source, preferring the preview stream.
+   Device names and ids are not logged.
 2. Initialize `MediaCapture` with `SharingMode = ExclusiveControl`,
-   `MemoryPreference = Cpu`, `StreamingCaptureMode = Video`.
-3. Create a `MediaFrameReader` bound to the picked source.
-4. On `FrameArrived`, convert the `SoftwareBitmap` to a `Bitmap` via
-   `CopyToBuffer` (no XAML `SoftwareBitmapSource`).
-5. Feed every third frame to ZXing.Net (§6).
-6. First decoded result with a mapped symbology (§6.3) completes
-   `ScanAsync`.
-7. Report a `CameraFrameStatus` via `IProgress<T>` on the UI thread.
+   `MemoryPreference = Cpu`, `StreamingCaptureMode = Video`. An
+   `UnauthorizedAccessException` is `PermissionDenied`; any other
+   failure is `InitializationFailed`.
+3. Pick the widest format not wider than `CameraMaxWidthPixels`
+   (default 1280), then the highest frame rate.
+4. Create a `MediaFrameReader` for subtype `Bgra8`, so the reader
+   converts NV12 / YUY2 / MJPG; mode `Realtime` drops frames while a
+   decode runs.
+5. On `FrameArrived`, copy the `SoftwareBitmap` into a reused byte
+   buffer with `CopyToBuffer` (no `Bitmap`, no XAML
+   `SoftwareBitmapSource`).
+6. Decode at most `MaxDecodeFps` frames per second with ZXing.Net
+   (§6); the first result `accept` takes completes `ScanAsync`.
+7. Post a preview copy to the caller about 20 times per second, never
+   more than one pending.
+8. `MediaCapture.Failed` (camera unplugged mid-scan) and any exception
+   in the frame handler end the session as `InitializationFailed`.
 
 ### 5A.4 Disposal
 
@@ -770,10 +798,11 @@ guide updates in five languages.
 
 ### 6.1 Package
 
-- NuGet: `ZXing.Net` (Apache 2.0). `[VERIFIED]` license.
-- Companion binding for `Bitmap` → `LuminanceSource` under
-  `net10.0-windows`. `[UNCERTAIN]` on the exact package; validated
-  against current NuGet metadata at implementation time.
+- NuGet: `ZXing.Net` 0.16.11 (Apache 2.0). `[VERIFIED]` license.
+- **No binding package.** Frames reach ZXing as BGRA bytes through
+  `RGBLuminanceSource` (`BitmapFormat.BGRA32`) and
+  `BarcodeReaderGeneric`, so neither `System.Drawing.Common` nor a
+  `Bitmap` binding is needed (settled in phase 2).
 
 No commercial libraries. IronBarcode / Dynamsoft ruled out on
 licensing grounds — the project is Apache 2.0. `[VERIFIED against
@@ -882,7 +911,7 @@ No EF model changes, no migration.
 "Capture": {
   "ScanTimeoutSeconds": 30,             // §4.2, webcam only
   "MaxDecodeFps": 10,                   // §5A.3 throttle
-  "PreviewMaxWidthPixels": 640,         // §5A.3 initialization hint
+  "CameraMaxWidthPixels": 1280,         // §5A.3 format choice
   "HidIdleCompleteMilliseconds": 300,   // §5B.2
   "HidBurstMaxAverageIntervalMilliseconds": 50, // §5B.2
   "HidGroupSeparatorSubstitute": ""     // §5B.3, empty = disabled
@@ -890,7 +919,11 @@ No EF model changes, no migration.
 ```
 
 Phase 1 ships only the three `Hid*` keys (`BarcodeCaptureOptions`);
-the webcam keys arrive with phase 2.
+phase 2 adds the three webcam keys to the same class. The draft's
+`PreviewMaxWidthPixels` = 640 became `CameraMaxWidthPixels` = 1280:
+the value bounds the camera format used for decoding as well as the
+preview, and 640 pixels leave too few pixels per bar for a Code 32 at
+a comfortable distance `[INFERRED]`.
 
 Loaded via the existing `Microsoft.Extensions.Configuration.Json`
 pipeline.
@@ -915,6 +948,13 @@ Phase 1 keys, as shipped: `Ui.MedicineEditDialog.ScanBarcode`,
 `Ui.MedicineEditDialog.ScanBarcode.Tooltip`, `.NotInCatalogue`,
 `.LookupError`; `Ui.BarcodeScanDialog.Title`, `.Prompt`,
 `.ScannerHint`, `.Waiting`, `.Unrecognized`.
+
+Phase 2 keys, as shipped: `Ui.BarcodeScanDialog.UseWebcam`,
+`.UseScanner`, `.TryAgain`, `.WebcamHint`, `.WebcamStarting`,
+`.WebcamScanning`, `.NoBarcodeDetected`, `.NoDevice`,
+`.PermissionDenied`, `.InitializationFailed`, `.OpenPrivacySettings`,
+`.CopyLogLocation`; the tooltip of the scan button now mentions the
+webcam.
 
 ---
 
@@ -961,11 +1001,18 @@ included) replays payloads against the parser. Objective: zero
 exceptions. Seeded in code rather than a fixture file: same
 determinism, nothing to regenerate.
 
-### 9.4 Unit — Infrastructure (variant W, Windows-only)
+### 9.4 Unit — decoder (variant W, Windows-only)
 
-- `ProbeAsync` on a machine with no camera → `NoDeviceFound`.
-- After `ScanAsync` cancellation no `MediaCapture` instance is
-  retained (`WeakReference` + forced GC).
+As implemented in phase 2 (`MedReminder.UI.Tests/Camera`): the ZXing
+writer renders a Code 32 (as Code 39), an EAN-13 and a GS1 DataMatrix;
+`FrameBarcodeDecoder` reads each from BGRA pixels, as a camera frame
+arrives, and the parser gets the expected lookup key. A QR code and a
+blank frame yield nothing; the symbology mapping is checked.
+
+The two tests of the first draft were dropped: `NoDeviceFound` holds
+only on a machine without a camera, and the `WeakReference` check
+depends on WinRT object lifetimes outside the test's control. Both
+behaviors are in the manual checklist (items 10 and 11).
 
 ### 9.5 Manual acceptance checklist
 
@@ -1035,6 +1082,11 @@ neither.
 1. **Webcam DataMatrix / Code 32 decode on cheap laptop webcams.**
    Untested until acceptance. Mitigations: throttle, `TryHarder`,
    framing overlay, timeout knob. Variant H is the fallback.
+   **Phase 2 acceptance (2026-09-28):** on the product owner's webcam
+   the camera starts, previews and stops as designed, but its
+   resolution is too low to decode the pack's barcode. Decoding on a
+   real webcam stays unconfirmed; the rendered-barcode tests (§9.4)
+   cover the decoder itself.
 2. **Scanner configuration diversity (variant H).** Suffix, GS
    handling, Code 32 conversion and keyboard layout are all
    per-model settings. Mitigation: the parser accepts every known
@@ -1226,3 +1278,11 @@ explicit product-owner request. One PR per phase. See §1.6.
   (§9.2, §9.3).
 - 2026-09-28 — §1.6: phase 3 requested by the product owner, planned
   right after phase 2.
+- 2026-09-28 — phase 2 implemented (variant W). Design changes found
+  during implementation: `ICameraCaptureService` has one `ScanAsync`
+  with an `accept` predicate and an `onFrame` preview callback, and no
+  `ProbeAsync` (§5A.1); the adapter lives in the UI project (§5A.2);
+  frame pipeline as built (§5A.3); no ZXing binding package (§6.1);
+  `CameraMaxWidthPixels` = 1280 replaces `PreviewMaxWidthPixels`
+  (§8.5); phase 2 keys (§8.6); decoder tests replace the camera tests
+  (§9.4).

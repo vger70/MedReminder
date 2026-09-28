@@ -135,7 +135,7 @@ developer-days `[INFERRED — from the §13.1 estimates]`.
 
 | Item | Status | Effort `[INFERRED]` |
 |---|---|---|
-| A2 phase 2 — webcam scan (ZXing.Net) | Not started; independent of B.1; next in the planned order | 6–7 d |
+| A2 phase 2 — webcam scan (ZXing.Net) | Implemented, not released. Manual acceptance (`ANALYSIS-A2-BARCODE-SCAN.md` §9.5): camera start, stop and error states work; decoding (item 7) not confirmed, the test webcam's resolution was too low to read the code | — |
 | A2 phase 3 — restock by scan (flow b) | Planned after phase 2 (product owner, 2026-09-28) | 4–5 d |
 | C.1 — hosted relay | Optional extra sync transport; only if the product owner accepts operating a service | months + running cost |
 | C.3++ Phase 3 — Dropbox, enterprise REST providers | Optional | not estimated |

@@ -38,6 +38,10 @@
     <!-- Pairing QR code (B.1 Phase 4c). MIT. PngByteQRCode renders
          without System.Drawing; WinForms loads the PNG. -->
     <PackageReference Include="QRCoder" Version="1.8.0" />
+    <!-- Webcam barcode decoding (A2 phase 2). Apache 2.0, pure managed.
+         Only the core package: frames reach the decoder as BGRA bytes
+         through RGBLuminanceSource, so no Bitmap binding is needed. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
   </ItemGroup>
 
   <ItemGroup>
