@@ -1021,8 +1021,8 @@ déroulante (français, anglais, italien, espagnol ou allemand) et clique sur
 pour appliquer le changement.
 
 Notes :
-- Les notifications toast Windows suivent toujours la langue du
-  système (Windows), indépendamment de la langue choisie ici.
+- Les notifications toast Windows utilisent la langue choisie ici,
+  comme le reste de l'application.
 - Les notifications e-mail et la fiche de traitement utilisent la
   langue sélectionnée ici.
 

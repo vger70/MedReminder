@@ -1034,9 +1034,8 @@ Dropdown-Menü und klicke auf **Sprache speichern**. MedReminder
 startet automatisch neu, um die Änderung zu übernehmen.
 
 Hinweise:
-- Windows-Toast-Benachrichtigungen folgen immer der
-  Systemsprache (Windows), unabhängig von der hier gewählten
-  Sprache.
+- Windows-Toast-Benachrichtigungen verwenden die hier gewählte
+  Sprache, wie der Rest der App.
 - E-Mail-Benachrichtigungen und der Therapieplan verwenden die
   hier gewählte Sprache.
 

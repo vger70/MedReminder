@@ -917,8 +917,8 @@ German) and click **Save language**. MedReminder
 restarts automatically to apply the change.
 
 Notes:
-- Windows toast notifications always follow the system language
-  (Windows), independently from the language chosen here.
+- Windows toast notifications use the language chosen here, like
+  the rest of the app.
 - Email notifications and the therapy report use the language
   selected here.
 

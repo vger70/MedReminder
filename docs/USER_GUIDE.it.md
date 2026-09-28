@@ -968,8 +968,8 @@ tedesco) e clicca **Salva lingua**. MedReminder si
 riavvia automaticamente per applicare la modifica.
 
 Note:
-- Le notifiche toast di Windows seguono sempre la lingua di
-  sistema (Windows), indipendentemente dalla lingua qui scelta.
+- Le notifiche toast di Windows usano la lingua qui scelta, come il
+  resto dell'app.
 - Le notifiche email e la scheda terapia usano la lingua
   selezionata qui.
 
