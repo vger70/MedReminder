@@ -49,6 +49,18 @@ Branch: `claude/code-review-rjy7oe`
   empty instead of breaking every MSAL call.
 - Snapshot file names use an invariant-culture timestamp, so dates
   parse correctly on non-Gregorian calendars.
+- OneDrive archive downloads are streamed to the restore file instead
+  of buffered in memory, so a large snapshot is no longer cut off by the
+  2-minute HTTP timeout on a slow link.
+- Settings no longer asks for (and creates) an unused cloud folder when
+  the provider choice is hidden and the saved target is OneDrive.
+
+### Changed
+
+- One definition of the C.3+ snapshot name (`CloudSnapshotName` in
+  `MedReminder.Application/Export/`) for the backup host, retention and
+  the restore list; names outside it (manual exports, renamed files)
+  are listed without a profile and never pruned.
 
 ## PR #91 — B.1 Phase 4a: OneDrive sync transport and cloud backups
 

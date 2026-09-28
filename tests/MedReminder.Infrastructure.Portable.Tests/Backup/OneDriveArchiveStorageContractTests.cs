@@ -67,6 +67,29 @@ public sealed class OneDriveArchiveStorageContractTests : ArchiveStorageContract
     }
 
     [Fact]
+    public async Task A_download_is_streamed_not_buffered()
+    {
+        var storage = CreateStorage();
+        var payload = RandomBytes(OneDriveClient.SimpleUploadLimit + 2_000_000);
+        var id = await storage.UploadAsync(new MemoryStream(payload), ArchiveName(0), CancellationToken.None);
+
+        await using var downloaded = await storage.DownloadAsync(id, CancellationToken.None);
+        var copy = new MemoryStream();
+        await downloaded.CopyToAsync(copy);
+
+        downloaded.CanSeek.Should().BeFalse("the response body is read as it arrives, not held in memory first");
+        copy.ToArray().Should().Equal(payload);
+    }
+
+    [Fact]
+    public async Task Downloading_a_missing_archive_throws_FileNotFoundException()
+    {
+        var act = () => CreateStorage().DownloadAsync(ArchiveName(0), CancellationToken.None);
+
+        await act.Should().ThrowAsync<FileNotFoundException>();
+    }
+
+    [Fact]
     public async Task Temporary_and_foreign_files_are_not_listed()
     {
         _drive.Put("backups/.tmp-123", []);

@@ -1215,7 +1215,16 @@ internal sealed class SettingsDialog : MedReminderFormBase
         return wrapper;
     }
 
-    private bool CloudTargetIsOneDrive => _cloudProviderBox?.SelectedIndex == 1;
+    // Without the provider choice (no app registration, or a non-admin
+    // view) the saved target applies, so validation and the folder row
+    // follow what the save keeps.
+    private bool CloudTargetIsOneDrive => _cloudProviderBox is null
+        ? _backupMonitor.CurrentValue.CloudProvider == CloudProvider.OneDrive
+        : _cloudProviderBox.SelectedIndex == 1;
+
+    private string CloudTargetAccountId => _cloudProviderBox is null
+        ? _backupMonitor.CurrentValue.CloudAccountId
+        : _cloudAccountId;
 
     private void UpdateCloudTargetControls()
     {
@@ -1393,7 +1402,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 : (int)_cloudRetentionBox.Value;
 
             var cloudOneDrive = CloudTargetIsOneDrive;
-            if (cloudEnabled && cloudOneDrive && string.IsNullOrEmpty(_cloudAccountId))
+            var cloudAccountId = CloudTargetAccountId;
+            if (cloudEnabled && cloudOneDrive && string.IsNullOrEmpty(cloudAccountId))
             {
                 MessageBox.Show(this,
                     _loc.Get("Ui.SettingsDialog.CloudBackup.SignInFirst"),
@@ -1439,14 +1449,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 CloudFolderEnabled = cloudEnabled,
                 CloudFolderDirectory = cloudDirectory,
                 CloudFolderRetention = cloudRetention,
-                // Without the provider choice (no app registration, or a
-                // non-admin view) the saved target is kept.
-                CloudProvider = _cloudProviderBox is null
-                    ? _backupMonitor.CurrentValue.CloudProvider
-                    : cloudOneDrive ? CloudProvider.OneDrive : null,
-                CloudAccountId = _cloudProviderBox is null
-                    ? _backupMonitor.CurrentValue.CloudAccountId
-                    : cloudOneDrive ? _cloudAccountId : string.Empty,
+                // Without the provider choice the saved target is kept
+                // (CloudTargetIsOneDrive, CloudTargetAccountId).
+                CloudProvider = cloudOneDrive ? CloudProvider.OneDrive : null,
+                CloudAccountId = cloudOneDrive ? cloudAccountId : string.Empty,
             };
 
             WriteBackupSettingsToDisk(settings);
