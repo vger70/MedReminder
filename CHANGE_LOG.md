@@ -30,6 +30,32 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #108 — Add a per-profile text size and honour display scaling and high contrast
+
+Link: [vger70/MedReminder#108](https://github.com/vger70/MedReminder/pull/108)
+Branch: `claude/large-text-mode-prompt-us0vm4`
+
+### Added
+
+- Settings → General: **Text size** (Normal / Large / Extra large),
+  stored per profile in `profiles\<id>\ui.settings.json`
+  (`ProfileUiSettingsFile`). Applied at startup to every window of the
+  profile, including grid rows, list columns and the help viewer.
+
+### Changed
+
+- `MedReminderFormBase` scales forms by display DPI / 96 on load, so
+  fixed-pixel dialogs no longer clip text above 100 % display scaling.
+- Hint text uses `SystemColors.GrayText` instead of `DarkGray` (about
+  2:1 contrast); status colours and the medicine list palette yield to
+  Windows contrast themes (`UiColors`).
+- The General tab button is now **Save**, since it saves the whole tab.
+
+### Docs
+
+- Text-size section in the five user guides; `ANALYSIS.md` and
+  `CLAUDE.md` list `ui.settings.json`.
+
 ## PR #107 — Print the therapy card as a table and save it as PDF
 
 Link: [vger70/MedReminder#107](https://github.com/vger70/MedReminder/pull/107)
