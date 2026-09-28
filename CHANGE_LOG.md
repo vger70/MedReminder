@@ -30,6 +30,38 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #107 — Print the therapy card as a table and save it as PDF
+
+Link: [vger70/MedReminder#107](https://github.com/vger70/MedReminder/pull/107)
+Branch: `claude/medication-card-pdf-prompt-jxu0ft`
+
+### Added
+
+- Therapy report dialog: **Save as PDF…** through the built-in
+  "Microsoft Print to PDF" printer, to a path chosen in a save dialog;
+  a clear message when that printer is not installed. No new package.
+- **Include notes** option (off by default: notes may be private) and
+  **Paper** choice (A4 / Letter, preselected from the Windows region).
+- `TherapyCardBuilder` / `TherapyCard`: structured, localized content
+  of the card, with the active profile's name
+  (`src/MedReminder.Application/Reporting/`).
+- `TherapyCardPagination` and tests on the model, the text renderer
+  and pagination (`tests/MedReminder.Application.Tests/Reporting/`).
+
+### Changed
+
+- **Print…** draws a paginated table (header and column titles on
+  every page, disclaimer and page number in the footer) instead of
+  monospace text (`src/MedReminder.UI/Printing/TherapyCardPrintDocument.cs`).
+- `TherapyReport` renders the plain text from the card model; the
+  output of `TherapyReport.Build` is unchanged.
+
+### Docs
+
+- New UI and report keys in the five dictionaries; new "Therapy
+  report (print and PDF)" section in the five user guides.
+- `EVOLUTION-PROPOSALS.md` §4.4 and `STATUS.md` updated.
+
 ## PR #104 — Align the B.1 Phase 0 exit with the S6 result
 
 Link: [vger70/MedReminder#104](https://github.com/vger70/MedReminder/pull/104)

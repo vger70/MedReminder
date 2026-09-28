@@ -65,6 +65,7 @@ verified against the tree or the tracker.
 | 4 | Prescription request draft for the doctor | #74 |
 | 6 | Guided stock count with gap display | #73 |
 | 8 | Read-only therapy timeline | #75 |
+| 9 | Printable therapy card: table layout, PDF via Microsoft Print to PDF | #107 |
 
 ### 2.4 B.1 — synchronization track (desktop side)
 

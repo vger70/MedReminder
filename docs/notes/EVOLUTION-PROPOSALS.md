@@ -63,7 +63,7 @@ a proposal, and is not merged here.
 | **6** | Guided stock count and reconciliation **[DONE]** | 2 | 3–5 days | All users | EV-2 |
 | 7 | B.1 — Mobile companion (.NET MAUI) | 2 | 2–4 person-months | Users away from the PC | EV-1 |
 | **8** | Therapy calendar / timeline view **[DONE]** | 2 | 1–2 weeks | All users | EV-2 |
-| **9** | Printable medication card (PDF) | 2 | 1 week | Patients seeing several clinicians | EV-2 |
+| **9** | Printable medication card (PDF) **[DONE]** | 2 | 1 week | Patients seeing several clinicians | EV-2 |
 | 10 | Storage location per medicine | 3 | 1–2 days | Families, many medicines | EV-2 |
 | 11 | Shared household stock | 3 | 3–4 weeks | Families with several profiles | EV-2 |
 | 12 | Database encryption at rest | 3 | 1–2 weeks | Users on shared PCs | EV-2 |
@@ -225,7 +225,7 @@ suspensions, estimated run-out dates, dosage changes over time.
 `MedicationSuspension`, the stock forecast and
 `MedicationScheduleHistory`.
 
-### 4.4 Printable medication card (PDF)
+### 4.4 Printable medication card (PDF) **[DONE]**
 
 **Goal.** A compact list of active medicines and daily dosages to hand
 to a GP, emergency room or pharmacist.
@@ -238,6 +238,10 @@ to a GP, emergency room or pharmacist.
   as an explicit opt-in or dropped [INFERRED].
 - Requires a PDF generation library; licence must be checked and added
   to `THIRD-PARTY-NOTICES.md`.
+
+**Outcome (PR #107).** Printed as a paginated table and saved as PDF
+through the built-in "Microsoft Print to PDF" printer, so no PDF
+library was added. Notes are opt-in. The QR code was not implemented.
 
 ---
 
