@@ -561,7 +561,8 @@ kein Fehler, weil die PIN keine Sicherheit ist.
 └── profiles\
     ├── <profil-id>\                     ← ein Ordner pro Profil
     │   ├── medreminder.db (+ -wal, -shm)
-    │   └── notifications.settings.json  ← ToAddress dieses Profils
+    │   ├── notifications.settings.json  ← ToAddress dieses Profils
+    │   └── ui.settings.json             ← Textgröße dieses Profils
     └── …
 ```
 
@@ -1065,14 +1066,36 @@ wirklichen Beenden: Menü im Infobereich → **Beenden**.
 ## Oberflächensprache
 
 **Einstellungen → Allgemein**: wähle die Sprache aus dem
-Dropdown-Menü und klicke auf **Sprache speichern**. MedReminder
-startet automatisch neu, um die Änderung zu übernehmen.
+Dropdown-Menü und klicke auf **Speichern**. MedReminder
+fragt nach einem Neustart, um die Änderung zu übernehmen.
 
 Hinweise:
 - Windows-Toast-Benachrichtigungen verwenden die hier gewählte
   Sprache, wie der Rest der App.
 - E-Mail-Benachrichtigungen und der Therapieplan verwenden die
   hier gewählte Sprache.
+
+## Textgröße
+
+**Einstellungen → Allgemein → Textgröße (dieses Profil)**: wähle
+**Normal**, **Groß** oder **Sehr groß** und klicke auf **Speichern**.
+MedReminder fragt nach einem Neustart; danach zeigen alle Fenster
+dieses Profils größeren Text, größere Schaltflächen und höhere
+Listenzeilen. Auch das Benutzerhandbuch wird vergrößert.
+
+Hinweise:
+- Die Größe gehört zum Profil: Auf einem gemeinsam genutzten PC
+  behält jede Person ihre eigene. Die Profilauswahl und die
+  PIN-Abfrage, die vor dem Öffnen eines Profils erscheinen, verwenden
+  immer Normal.
+- MedReminder folgt auch der Anzeigeskalierung und den
+  Kontrastdesigns von Windows. Mit einem Kontrastdesign verzichtet die
+  Medikamentenliste auf farbige Zeilen und verwendet die Farben des
+  Designs; die Spalte **Status** nennt weiterhin den Zustand jedes
+  Medikaments.
+- Auf einem kleinen Bildschirm wird ein Fenster in **Sehr groß** auf
+  die Bildschirmgröße verkleinert, und ein Teil ist möglicherweise
+  nicht sichtbar; wähle dann **Groß**.
 
 ## Entwicklung unterstützen
 

@@ -468,7 +468,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            BackColor = Color.FromArgb(255, 220, 220),
+            BackColor = UiColors.HighContrast ? SystemColors.Info : Color.FromArgb(255, 220, 220),
             Padding = new Padding(12, 8, 12, 8),
             Visible = false,
         };
@@ -477,7 +477,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             AutoSize = true,
             Dock = DockStyle.Left,
-            ForeColor = Color.FromArgb(120, 0, 0),
+            ForeColor = UiColors.HighContrast ? SystemColors.InfoText : Color.FromArgb(120, 0, 0),
             Font = new Font(Font, FontStyle.Bold),
             Text = _loc.Get("Ui.MainForm.ErrorBanner.Load"),
         };
@@ -699,8 +699,8 @@ internal sealed class MainForm : MedReminderFormBase
         {
             TextAlign = ContentAlignment.MiddleLeft,
             ForeColor = _currentProfile.IsAdmin
-                ? System.Drawing.Color.DarkBlue
-                : System.Drawing.Color.Black,
+                ? UiColors.Themed(System.Drawing.Color.DarkBlue)
+                : SystemColors.ControlText,
             Font = new Font("Segoe UI", 9.75F,
                 _currentProfile.IsAdmin ? FontStyle.Bold : FontStyle.Regular),
         };
@@ -969,6 +969,22 @@ internal sealed class MainForm : MedReminderFormBase
         if (e.RowIndex < 0 || e.RowIndex >= _rows.Count) return;
         var row = _grid.Rows[e.RowIndex];
         if (row.DataBoundItem is not MedicineListItem item) return;
+
+        // High-contrast theme: keep the theme's colours; the Status
+        // column still states the condition in words.
+        if (UiColors.HighContrast)
+        {
+            row.DefaultCellStyle.BackColor = Color.Empty;
+            if (_statusColumnIndex >= 0 && _statusColumnIndex < row.Cells.Count)
+            {
+                var style = row.Cells[_statusColumnIndex].Style;
+                style.BackColor = Color.Empty;
+                style.ForeColor = Color.Empty;
+                style.SelectionBackColor = Color.Empty;
+                style.SelectionForeColor = Color.Empty;
+            }
+            return;
+        }
 
         // Layer 1 — atmosphere across the whole row (soft colors).
         row.DefaultCellStyle.BackColor = item.Status switch

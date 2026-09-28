@@ -3,6 +3,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Domain.Catalogue;
 using MedReminder.UI.Controls;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.Logging;
 
 namespace MedReminder.UI.Forms;
@@ -67,7 +68,7 @@ internal sealed class BarcodeScanDialog : MedReminderFormBase
             Text = _loc.Get("Ui.BarcodeScanDialog.ScannerHint"),
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(470, 0),
-            ForeColor = System.Drawing.Color.DimGray,
+            ForeColor = UiColors.Hint,
             Margin = new Padding(4, 0, 4, 8),
         };
         _input = new ScannerInputBox { Dock = DockStyle.Fill, Margin = new Padding(4, 0, 4, 8) };

@@ -1,6 +1,7 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -87,7 +88,7 @@ internal sealed class ImportDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(520, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.ImportDialog.NoFileSelected"),
         };
 
@@ -203,19 +204,19 @@ internal sealed class ImportDialog : MedReminderFormBase
         {
             var manifest = await _importService.ReadManifestAsync(
                 archivePath, CancellationToken.None);
-            _infoLabel.ForeColor = System.Drawing.Color.DarkGray;
+            _infoLabel.ForeColor = UiColors.Hint;
             _infoLabel.Text = FormatManifest(manifest);
             _manifestProfileId = manifest.ProfileId;
             _manifestLoaded = true;
         }
         catch (ImportFailedException ex)
         {
-            _infoLabel.ForeColor = System.Drawing.Color.Firebrick;
+            _infoLabel.ForeColor = UiColors.Error;
             _infoLabel.Text = MapError(ex);
         }
         catch (Exception ex)
         {
-            _infoLabel.ForeColor = System.Drawing.Color.Firebrick;
+            _infoLabel.ForeColor = UiColors.Error;
             _infoLabel.Text = ex.Message;
         }
         UpdateImportEnabled();
@@ -344,7 +345,7 @@ internal sealed class ImportDialog : MedReminderFormBase
 
     private void ShowValidation(string message)
     {
-        _statusLabel.ForeColor = System.Drawing.Color.Firebrick;
+        _statusLabel.ForeColor = UiColors.Error;
         _statusLabel.Text = message;
     }
 

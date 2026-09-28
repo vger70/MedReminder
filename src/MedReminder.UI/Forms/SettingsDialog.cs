@@ -5,7 +5,9 @@ using MedReminder.Application.Catalogue;
 using MedReminder.Application.Export;
 using MedReminder.Application.UseCases;
 using MedReminder.Infrastructure.Email;
+using MedReminder.Infrastructure.Settings;
 using MedReminder.Infrastructure.Storage;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -116,6 +118,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // Passive update check opt-in — surfaces new GitHub releases at
     // startup without downloading anything.
     private CheckBox _checkUpdatesBox = null!;
+    // Per-profile text size (EVOLUTION-PROPOSALS.md §3.2), saved to
+    // profiles\<id>\ui.settings.json with the rest of the General tab.
+    private ComboBox _textSizeCombo = null!;
 
     // Shared component for the explanatory tooltips on the technical fields.
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
@@ -294,7 +299,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("settings.referenceCountry.help"),
         };
 
@@ -306,6 +311,26 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
         _tooltips.SetToolTip(_checkUpdatesBox,
             _loc.Get("Ui.SettingsDialog.Tooltip.CheckUpdates"));
+
+        var textSizeLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.TextSize"),
+        };
+        _textSizeCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        PopulateTextSizeCombo();
+        var textSizeHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.General.TextSize.Help"),
+        };
+        _tooltips.SetToolTip(_textSizeCombo, textSizeHelp.Text);
 
         var saveButton = new Button
         {
@@ -319,7 +344,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.SettingsDialog.General.Note"),
         };
 
@@ -335,11 +360,37 @@ internal sealed class SettingsDialog : MedReminderFormBase
         panel.Controls.Add(_referenceCountryCombo);
         panel.Controls.Add(referenceCountryHelp);
         panel.Controls.Add(_checkUpdatesBox);
+        panel.Controls.Add(textSizeLabel);
+        panel.Controls.Add(_textSizeCombo);
+        panel.Controls.Add(textSizeHelp);
         panel.Controls.Add(saveButton);
         panel.Controls.Add(note);
         page.Controls.Add(panel);
         return page;
     }
+
+    // The selection shows the saved value, which differs from the size
+    // in use when the user saved without restarting.
+    private void PopulateTextSizeCombo()
+    {
+        var saved = ProfileUiSettingsFile.ReadTextSize(_currentProfile.DataDirectory);
+        foreach (var size in Enum.GetValues<TextSize>())
+        {
+            _textSizeCombo.Items.Add(new TextSizeChoice(size, _loc.Get(TextSizeDisplayKey(size))));
+            if (size == saved)
+            {
+                _textSizeCombo.SelectedIndex = _textSizeCombo.Items.Count - 1;
+            }
+        }
+        _textSizeCombo.DisplayMember = nameof(TextSizeChoice.DisplayName);
+    }
+
+    private static string TextSizeDisplayKey(TextSize size) => size switch
+    {
+        TextSize.Large => "Ui.SettingsDialog.General.TextSize.Large",
+        TextSize.ExtraLarge => "Ui.SettingsDialog.General.TextSize.ExtraLarge",
+        _ => "Ui.SettingsDialog.General.TextSize.Normal",
+    };
 
     // Fill the reference-country dropdown with the distinct countries
     // present in the local catalogue plus the synthetic "EU" entry
@@ -392,9 +443,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
             CheckForUpdatesOnStartup = _checkUpdatesBox.Checked,
         };
 
+        var textSize = (_textSizeCombo.SelectedItem as TextSizeChoice)?.Size ?? TextSize.Normal;
+
         try
         {
             WriteUserSettingsToDisk(settings);
+            ProfileUiSettingsFile.WriteTextSize(_currentProfile.DataDirectory, textSize);
         }
         catch (Exception ex)
         {
@@ -404,11 +458,15 @@ internal sealed class SettingsDialog : MedReminderFormBase
             return;
         }
 
-        // If the language did not change, no restart needed. A
-        // ReferenceCountry change alone is picked up at the next
-        // opening of the medicine form via IOptionsMonitor
+        // If neither the language nor the text size changed, no
+        // restart needed. A ReferenceCountry change alone is picked up
+        // at the next opening of the medicine form via IOptionsMonitor
         // (user.settings.json is watched with reloadOnChange=true).
-        if (string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+        // The text size is applied when each window loads, and the
+        // main window is already open, hence the restart.
+        var languageChanged = !string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase);
+        var textSizeChanged = TextSizes.ScaleOf(textSize) != MedReminderFormBase.TextScale;
+        if (!languageChanged && !textSizeChanged)
         {
             MessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.General.Saved"),
@@ -418,10 +476,20 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
 
         var confirm = MessageBox.Show(this,
-            _loc.Get("Ui.SettingsDialog.General.RestartPrompt"),
+            _loc.Get(textSizeChanged
+                ? "Ui.SettingsDialog.General.RestartPrompt.Changes"
+                : "Ui.SettingsDialog.General.RestartPrompt"),
             _loc.Get("Ui.SettingsDialog.General.RestartPrompt.Title"),
             MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-        if (confirm == DialogResult.Yes)
+        if (confirm != DialogResult.Yes) return;
+
+        if (textSizeChanged)
+        {
+            // The text size belongs to this profile: reopen it rather
+            // than the picker.
+            _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
+        }
+        else
         {
             _restarter.RestartAndExit();
         }
@@ -436,6 +504,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
     }
 
     private sealed record LanguageChoice(string Code, string DisplayName);
+
+    private sealed record TextSizeChoice(TextSize Size, string DisplayName);
 
     // Mappa un codice ISO 639-1 sulla chiave JSON che restituisce il
     // the language name in the current UI language. Unknown codes
@@ -482,7 +552,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _passwordStatusLabel = new Label
         {
             AutoSize = true,
-            ForeColor = _credentialStore.HasPassword ? System.Drawing.Color.DarkGreen : System.Drawing.Color.DarkGray,
+            ForeColor = _credentialStore.HasPassword ? UiColors.Success : UiColors.Hint,
             Text = _loc.Get(_credentialStore.HasPassword
                 ? "Ui.SettingsDialog.Email.PasswordStored"
                 : "Ui.SettingsDialog.Email.PasswordEmpty"),
@@ -623,7 +693,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Help"),
         };
 
@@ -633,7 +703,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Help"),
         };
 
@@ -649,7 +719,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get(_currentProfile.IsAdmin
                 ? "Ui.SettingsDialog.Notifications.NoteAdmin"
                 : "Ui.SettingsDialog.Notifications.NoteUser"),
@@ -865,7 +935,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             Text = _loc.Get("Ui.SettingsDialog.Startup.Note"),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
         };
 
         var panel = new FlowLayoutPanel
@@ -892,7 +962,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(560, 0),
             Text = _loc.Get("Ui.SettingsDialog.Backup.DbPath", _backup.DatabasePath),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
         };
 
         _backupEnabledBox = new CheckBox
@@ -985,7 +1055,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             // so the localized warning text wraps within the tab
             // instead of forcing an horizontal scrollbar.
             MaximumSize = new System.Drawing.Size(540, 0),
-            ForeColor = System.Drawing.Color.DarkOrange,
+            ForeColor = UiColors.Warning,
             Text = string.Empty,
             Visible = false,
         };
@@ -1050,7 +1120,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             MaximumSize = new System.Drawing.Size(700, 0),
             AutoEllipsis = false,
             Text = _loc.Get("Ui.SettingsDialog.Backup.Note"),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
         };
 
         // AutoScroll on: the admin view (Cloud Backup section, action
@@ -1166,14 +1236,14 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(600, 0),
-            ForeColor = System.Drawing.Color.DarkOrange,
+            ForeColor = UiColors.Warning,
             Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Warning.NotSync"),
         };
         var lostPassWarning = new Label
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(600, 0),
-            ForeColor = System.Drawing.Color.DarkOrange,
+            ForeColor = UiColors.Warning,
             Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Warning.LostPassphrase"),
         };
 
@@ -1766,7 +1836,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(420, 0),
                 Location = new System.Drawing.Point(16, 96),
-                ForeColor = System.Drawing.Color.DarkGray,
+                ForeColor = UiColors.Hint,
                 Text = string.IsNullOrWhiteSpace(filenameProfileId)
                     ? loc.Get("Ui.SettingsDialog.Backup.RestoreInto.NoFilenameHint")
                     : loc.Get("Ui.SettingsDialog.Backup.RestoreInto.FilenameHint", filenameProfileId),
@@ -1817,7 +1887,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var state = _backupState.Load();
         if (state.LastSuccessfulBackupAt is null && state.LastAttemptAt is null)
         {
-            _backupStatusLabel.ForeColor = System.Drawing.Color.DarkGray;
+            _backupStatusLabel.ForeColor = UiColors.Hint;
             _backupStatusLabel.Text = _loc.Get("Ui.SettingsDialog.Backup.NoBackupsYet");
             return;
         }
@@ -1830,14 +1900,14 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 ? _loc.Get("Ui.SettingsDialog.Backup.LastError", state.LastError)
                 : string.Empty;
             _backupStatusLabel.ForeColor = state.LastError is null
-                ? System.Drawing.Color.DarkGreen
-                : System.Drawing.Color.DarkOrange;
+                ? UiColors.Success
+                : UiColors.Warning;
             _backupStatusLabel.Text =
                 _loc.Get("Ui.SettingsDialog.Backup.LastOk", timestamp) + errorSuffix;
             return;
         }
 
-        _backupStatusLabel.ForeColor = System.Drawing.Color.Firebrick;
+        _backupStatusLabel.ForeColor = UiColors.Error;
         _backupStatusLabel.Text = state.LastError is not null
             ? _loc.Get("Ui.SettingsDialog.Backup.LastFailedWithMessage", state.LastError)
             : _loc.Get("Ui.SettingsDialog.Backup.LastFailedGeneric");

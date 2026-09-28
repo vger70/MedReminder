@@ -546,7 +546,8 @@ porque el PIN no es seguridad.
 └── profiles\
     ├── <id-perfil>\                     ← una carpeta por perfil
     │   ├── medreminder.db (+ -wal, -shm)
-    │   └── notifications.settings.json  ← ToAddress de este perfil
+    │   ├── notifications.settings.json  ← ToAddress de este perfil
+    │   └── ui.settings.json             ← tamaño del texto de este perfil
     └── …
 ```
 
@@ -1026,15 +1027,35 @@ Para salir de verdad: menú del área de notificación → **Salir**.
 ## Idioma de la interfaz
 
 **Configuración → General**: elige el idioma del desplegable
-(español, inglés, italiano, francés o alemán) y haz clic en **Guardar
-idioma**. MedReminder se reinicia automáticamente para aplicar el
-cambio.
+(español, inglés, italiano, francés o alemán) y haz clic en **Guardar**.
+MedReminder pide reiniciarse para aplicar el cambio.
 
 Notas:
 - Las notificaciones toast de Windows usan el idioma elegido aquí,
   como el resto de la aplicación.
 - Las notificaciones e-mail y la ficha de terapia usan el idioma
   seleccionado aquí.
+
+## Tamaño del texto
+
+**Configuración → General → Tamaño del texto (este perfil)**: elige
+**Normal**, **Grande** o **Muy grande** y haz clic en **Guardar**.
+MedReminder pide reiniciarse; tras el reinicio, todas las ventanas de
+este perfil muestran texto, botones y filas de las listas más
+grandes. La guía también se amplía.
+
+Notas:
+- El tamaño pertenece al perfil: en un PC compartido cada persona
+  conserva el suyo. La selección de perfil y la solicitud del PIN,
+  que aparecen antes de abrir un perfil, usan siempre Normal.
+- MedReminder también sigue el escalado de pantalla y los temas de
+  contraste de Windows. Con un tema de contraste, la lista de
+  medicamentos no usa las filas de color sino los colores del tema;
+  la columna **Estado** sigue indicando la situación de cada
+  medicamento.
+- En una pantalla pequeña, una ventana en **Muy grande** se reduce al
+  tamaño de la pantalla y parte de ella puede no verse; en ese caso
+  elige **Grande**.
 
 ## Apoyar el desarrollo
 

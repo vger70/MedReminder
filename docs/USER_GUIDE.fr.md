@@ -551,7 +551,8 @@ bug, parce que le PIN n'est pas une sécurité.
 └── profiles\
     ├── <id-profil>\                     ← un dossier par profil
     │   ├── medreminder.db (+ -wal, -shm)
-    │   └── notifications.settings.json  ← ToAddress de ce profil
+    │   ├── notifications.settings.json  ← ToAddress de ce profil
+    │   └── ui.settings.json             ← taille du texte de ce profil
     └── …
 ```
 
@@ -1052,14 +1053,36 @@ Pour quitter réellement : menu de la zone de notification →
 
 **Paramètres → Général** : choisis la langue dans la liste
 déroulante (français, anglais, italien, espagnol ou allemand) et clique sur
-**Enregistrer la langue**. MedReminder redémarre automatiquement
-pour appliquer le changement.
+**Enregistrer**. MedReminder propose de redémarrer pour appliquer
+le changement.
 
 Notes :
 - Les notifications toast Windows utilisent la langue choisie ici,
   comme le reste de l'application.
 - Les notifications e-mail et la fiche de traitement utilisent la
   langue sélectionnée ici.
+
+## Taille du texte
+
+**Paramètres → Général → Taille du texte (ce profil)** : choisis
+**Normale**, **Grande** ou **Très grande** et clique sur
+**Enregistrer**. MedReminder propose de redémarrer ; après le
+redémarrage, toutes les fenêtres de ce profil affichent un texte, des
+boutons et des lignes de liste plus grands. Le guide est aussi
+agrandi.
+
+Notes :
+- La taille appartient au profil : sur un PC partagé, chaque personne
+  garde la sienne. Le choix du profil et la demande de PIN, affichés
+  avant l'ouverture d'un profil, utilisent toujours Normale.
+- MedReminder suit aussi la mise à l'échelle de l'affichage et les
+  thèmes de contraste de Windows. Avec un thème de contraste, la liste
+  des médicaments n'utilise plus les lignes colorées mais les couleurs
+  du thème ; la colonne **État** indique toujours la situation de
+  chaque médicament.
+- Sur un petit écran, une fenêtre en **Très grande** est réduite à la
+  taille de l'écran et une partie peut ne pas être visible ; choisis
+  alors **Grande**.
 
 ## Soutenir le développement
 

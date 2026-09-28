@@ -2,6 +2,7 @@ using System.ComponentModel;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Domain.Catalogue;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Controls;
 
@@ -341,7 +342,7 @@ public sealed class MedicineAutocompleteBox : UserControl
             const string BadgeGlyph = "●"; // ●
             using var badgeFont = new Font(e.Font ?? _dropdown.Font, FontStyle.Bold);
             var badgeSize = e.Graphics.MeasureString(BadgeGlyph, badgeFont);
-            var badgeColor = Color.FromArgb(198, 40, 40); // Material red 700
+            var badgeColor = UiColors.Themed(Color.FromArgb(198, 40, 40)); // Material red 700
             e.Graphics.DrawString(BadgeGlyph, badgeFont, new SolidBrush(badgeColor),
                 e.Bounds.X + 2, e.Bounds.Y + 2);
             textBounds = new Rectangle(
@@ -388,6 +389,10 @@ public sealed class MedicineAutocompleteBox : UserControl
         {
             form.Controls.Add(_dropdown);
             _dropdown.BringToFront();
+            // The list joins the form after it has loaded, so the text
+            // size and display scaling of MedReminderFormBase reach it
+            // only through the ambient font: size the rows from it.
+            _dropdown.ItemHeight = Math.Max(_dropdown.ItemHeight, _dropdown.Font.Height + 5);
         }
 
         // Vertical anchor stays under the input; horizontal anchor

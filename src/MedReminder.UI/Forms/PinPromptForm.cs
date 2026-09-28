@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -69,7 +70,7 @@ internal sealed class PinPromptForm : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(contentWidth, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.PinPromptForm.FrictionNote"),
             Margin = new Padding(3, 3, 3, 8),
         };
@@ -78,7 +79,7 @@ internal sealed class PinPromptForm : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(contentWidth, 0),
-            ForeColor = System.Drawing.Color.Firebrick,
+            ForeColor = UiColors.Error,
             Text = string.Empty,
         };
 

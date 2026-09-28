@@ -1,6 +1,7 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MedReminder.UI.Forms;
@@ -133,7 +134,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         {
             AutoSize = true,
             Location = new System.Drawing.Point(16, 400),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             MaximumSize = new System.Drawing.Size(600, 0),
             Text = _loc.Get("Ui.ProfilesManagerForm.Hint.ImmutableRole"),
         };
@@ -396,7 +397,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(420, 0),
                 Location = new System.Drawing.Point(16, 112),
-                ForeColor = System.Drawing.Color.DarkGray,
+                ForeColor = UiColors.Hint,
                 Text = _loc.Get("Ui.ProfilesManagerForm.NewDialog.RoleNote"),
             };
 
@@ -426,7 +427,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             _statusLabel = new Label
             {
                 AutoSize = true,
-                ForeColor = System.Drawing.Color.Firebrick,
+                ForeColor = UiColors.Error,
                 Location = new System.Drawing.Point(16, 224),
                 Text = string.Empty,
             };
@@ -589,7 +590,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(440, 0),
                 Location = new System.Drawing.Point(16, 12),
-                ForeColor = System.Drawing.Color.Firebrick,
+                ForeColor = UiColors.Error,
                 Text = _loc.Get("Ui.ProfilesManagerForm.DeleteDialog.Warning", profileName),
             };
             var typePrompt = new Label
@@ -619,7 +620,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(440, 0),
                 Location = new System.Drawing.Point(36, 176),
-                ForeColor = System.Drawing.Color.DarkGray,
+                ForeColor = UiColors.Hint,
                 Text = _loc.Get("Ui.ProfilesManagerForm.DeleteDialog.AlsoDeleteDataNote"),
             };
 

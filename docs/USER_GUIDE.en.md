@@ -499,7 +499,8 @@ purpose: recovery is not a bug, because the PIN is not security.
 └── profiles\
     ├── <profile-id>\                    ← one folder per profile
     │   ├── medreminder.db (+ -wal, -shm)
-    │   └── notifications.settings.json  ← this profile's ToAddress
+    │   ├── notifications.settings.json  ← this profile's ToAddress
+    │   └── ui.settings.json             ← this profile's text size
     └── …
 ```
 
@@ -942,14 +943,33 @@ keeps running in background. To really exit: tray menu → **Exit**.
 
 **Settings → General**: pick the language from the dropdown
 (English, Italian, French, Spanish or
-German) and click **Save language**. MedReminder
-restarts automatically to apply the change.
+German) and click **Save**. MedReminder asks to
+restart to apply the change.
 
 Notes:
 - Windows toast notifications use the language chosen here, like
   the rest of the app.
 - Email notifications and the therapy report use the language
   selected here.
+
+## Text size
+
+**Settings → General → Text size (this profile)**: choose **Normal**,
+**Large** or **Extra large** and click **Save**. MedReminder asks to
+restart; after the restart every window of this profile shows larger
+text, buttons and list rows. The user guide is enlarged too.
+
+Notes:
+- The size belongs to the profile: on a shared PC each person keeps
+  their own. The profile picker and the PIN prompt, shown before a
+  profile is open, always use Normal.
+- MedReminder also follows the Windows display scaling and the
+  Windows contrast themes. Under a contrast theme the medicine list
+  drops its coloured rows and uses the theme colours; the **Status**
+  column still states each medicine's condition.
+- On a small screen a window at **Extra large** is reduced to the
+  screen size and part of it may not be visible; choose **Large** in
+  that case.
 
 ## Support Development
 

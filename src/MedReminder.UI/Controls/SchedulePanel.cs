@@ -1,6 +1,7 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Domain.Medicines;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Controls;
 
@@ -108,7 +109,7 @@ internal sealed class SchedulePanel
         _cyclicSummary = new Label
         {
             AutoSize = true,
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
         };
         _cyclicOn.ValueChanged += (_, _) => UpdateCyclicSummary();
         _cyclicOff.ValueChanged += (_, _) => UpdateCyclicSummary();
@@ -123,7 +124,7 @@ internal sealed class SchedulePanel
         _taperingSummary = new Label
         {
             AutoSize = true,
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
         };
         _taperingStart.ValueChanged += (_, _) => UpdateTaperingSummary();
         _taperingEnd.ValueChanged += (_, _) => UpdateTaperingSummary();
@@ -169,7 +170,7 @@ internal sealed class SchedulePanel
         _steppedPreview = new Label
         {
             AutoSize = true,
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             Margin = new Padding(0, 4, 0, 0),
         };
 
@@ -762,7 +763,7 @@ internal sealed class SchedulePanel
             Text = _loc.Get("Ui.Schedule.Prn.Help"),
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(600, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
         });
         return panel;
     }

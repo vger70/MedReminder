@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -187,7 +188,7 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(600, 0),
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
         };
 
         _progressBar = new ProgressBar

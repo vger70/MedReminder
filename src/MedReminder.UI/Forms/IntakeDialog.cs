@@ -1,6 +1,7 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Medicines;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -85,7 +86,7 @@ internal sealed class IntakeDialog : MedReminderFormBase
         var note = new Label
         {
             AutoSize = true,
-            ForeColor = System.Drawing.Color.DarkGray,
+            ForeColor = UiColors.Hint,
             MaximumSize = new System.Drawing.Size(420, 0),
             Text = _loc.Get("Ui.IntakeDialog.Note"),
         };
