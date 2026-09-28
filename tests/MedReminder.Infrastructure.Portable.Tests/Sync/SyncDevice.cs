@@ -1,6 +1,7 @@
 using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
+using MedReminder.Domain.Sync;
 using MedReminder.Infrastructure.Sync;
 using MedReminder.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
@@ -26,6 +27,7 @@ internal sealed class SyncDevice : IDisposable
         Clock = new SettableClock(now);
         Settings = new FixedSyncSettingsStore(settings);
         Keys = new MemoryKeyStore();
+        ProfileSettings = new MemoryProfileSettingsStore(name);
         if (settings is not null && key is not null) Keys.Save(settings.GroupId, settings.KeyVersion, key);
 
         var services = new ServiceCollection();
@@ -33,6 +35,7 @@ internal sealed class SyncDevice : IDisposable
         services.AddSingleton<TimeProvider>(Clock);
         services.AddSingleton<ISyncSettingsStore>(Settings);
         services.AddSingleton<ISyncKeyStore>(Keys);
+        services.AddSingleton<IProfileSettingsStore>(ProfileSettings);
         services.AddSingleton(new SyncEngineOptions { DeviceName = name, CheckpointEvery = checkpointEvery });
         if (transport is not null)
         {
@@ -58,6 +61,8 @@ internal sealed class SyncDevice : IDisposable
     public FixedSyncSettingsStore Settings { get; }
 
     public MemoryKeyStore Keys { get; }
+
+    public MemoryProfileSettingsStore ProfileSettings { get; }
 
     public Task<SyncRunResult> SyncAsync()
         => RunAsync(sp => sp.GetRequiredService<SyncEngine>().RunAsync(CancellationToken.None));
@@ -103,6 +108,25 @@ internal sealed class SyncDevice : IDisposable
         public void Save(Guid groupId, int keyVersion, byte[] key) => _keys[(groupId, keyVersion)] = [.. key];
 
         public void Clear() => _keys.Clear();
+    }
+
+    // The profile registry and notifications.settings.json of the device.
+    internal sealed class MemoryProfileSettingsStore(string displayName) : IProfileSettingsStore
+    {
+        private readonly Dictionary<string, string?> _values = new(StringComparer.Ordinal)
+        {
+            [ProfileSetting.DisplayName] = displayName,
+            [ProfileSetting.ToAddress] = string.Empty,
+            [ProfileSetting.CaregiverAddress] = string.Empty,
+            [ProfileSetting.DoctorAddress] = string.Empty,
+        };
+
+        public IReadOnlyDictionary<string, string?> Read() => new Dictionary<string, string?>(_values, StringComparer.Ordinal);
+
+        public void Write(IReadOnlyDictionary<string, string?> changes)
+        {
+            foreach (var (key, value) in changes) _values[key] = value;
+        }
     }
 
     internal sealed class FixedSyncSettingsStore(SyncSettings? settings) : ISyncSettingsStore

@@ -97,6 +97,32 @@ public class UiWritePathGuardTests
             "IUnitOfWork or the DbContext (ANALYSIS-B1-MOBILE-SYNC.md §7.2)");
     }
 
+    // P8: the replicated profile settings (display name, notification
+    // recipients) are written by RenameProfile and
+    // UpdateNotificationSettings, never by the UI. Program.cs only adds
+    // notifications.settings.json to the configuration it reads.
+    [Fact]
+    public void Ui_sources_do_not_write_replicated_profile_settings()
+    {
+        var root = FindRepositoryRoot();
+        var uiDir = Path.Combine(root, "src", "MedReminder.UI");
+        var pattern = new Regex(@"\.\s*Rename\s*\(|\bNotificationSettingsPath\b", RegexOptions.CultureInvariant);
+        var violations = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(uiDir, "*.cs", SearchOption.AllDirectories)
+                     .Where(f => !IsBuildOutput(uiDir, f)))
+        {
+            var relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+            if (relative == "src/MedReminder.UI/Program.cs") continue;
+            foreach (var (line, text) in FindViolations(File.ReadAllText(file), pattern))
+            {
+                violations.Add($"{relative}:{line}: {text}");
+            }
+        }
+
+        violations.Should().BeEmpty(
+            "the profile name and the notification recipients are replicated settings (ANALYSIS-B1-MOBILE-SYNC.md P8)");
+    }
+
     [Fact]
     public void Allow_list_entries_point_to_existing_files()
     {

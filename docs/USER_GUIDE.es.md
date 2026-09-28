@@ -929,6 +929,11 @@ después.
   inicia una nueva **generación**: tras un aviso, los demás PC descartan lo
   que aún no habían enviado y deben reconstruirse con **Reconstruir desde el
   grupo…**.
+- El **nombre del perfil** y los **destinatarios de las
+  notificaciones** (Configuración → Notificaciones) pertenecen al
+  grupo: un cambio en un PC llega a los demás, y un PC que se une toma
+  los del grupo. Para cambiar el nombre de otro perfil sincronizado,
+  abra primero ese perfil.
 - **Desactivar sincronización…** detiene la sincronización en este PC y
   conserva sus datos.
 

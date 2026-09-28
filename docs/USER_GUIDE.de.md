@@ -967,6 +967,11 @@ gesendet.
   startet eine neue **Generation**: Nach einer Warnung verwerfen die anderen
   PCs, was sie noch nicht gesendet hatten, und müssen mit **Aus der Gruppe
   neu aufbauen…** neu aufgebaut werden.
+- Der **Profilname** und die **Benachrichtigungsempfänger**
+  (Einstellungen → Benachrichtigungen) gehören zur Gruppe: Eine
+  Änderung auf einem PC erreicht die anderen, und ein PC, der beitritt,
+  übernimmt die der Gruppe. Um ein anderes synchronisiertes Profil
+  umzubenennen, öffnen Sie zuerst dieses Profil.
 - **Synchronisierung deaktivieren…** beendet die Synchronisierung auf diesem
   PC und behält seine Daten.
 

@@ -67,6 +67,8 @@ public sealed class SyncRegisters
             [new RegisterWrite(s.SuspensionId, EndDate, Date(s.EndDate), null)],
         SuspensionEndChanged s =>
             [new RegisterWrite(s.SuspensionId, EndDate, Date(s.EndDate), null)],
+        ProfileSettingChanged p =>
+            [new RegisterWrite(ProfileSettingsProjection.Entity, ProfileSettingsProjection.Register(p.Setting), p.Value, null)],
         _ => [],
     };
 

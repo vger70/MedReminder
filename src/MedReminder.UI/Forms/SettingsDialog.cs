@@ -3,8 +3,10 @@ using System.Text.Json;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Export;
+using MedReminder.Application.UseCases;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace MedReminder.UI.Forms;
@@ -49,6 +51,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private readonly ICloudAccountService? _cloudAccounts;
     private readonly IArchiveStorage? _archiveStorage;
     private readonly MedReminder.UI.Hosting.SyncHostedService? _sync;
+    private readonly IServiceScopeFactory? _scopes;
 
     // Email tab controls
     private TextBox _hostBox = null!;
@@ -162,8 +165,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
         ICloudRestoreService cloudRestore,
         MedReminder.UI.Hosting.SyncHostedService? sync = null,
         ICloudAccountService? cloudAccounts = null,
-        IArchiveStorage? archiveStorage = null)
+        IArchiveStorage? archiveStorage = null,
+        IServiceScopeFactory? scopes = null)
     {
+        _scopes = scopes;
         _sync = sync;
         _cloudAccounts = cloudAccounts;
         _archiveStorage = archiveStorage;
@@ -598,18 +603,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
         File.WriteAllText(path, json);
     }
 
-    // Writes the per-profile notifications.settings.json. Introduced
-    // in Increment 15c (docs/ANALYSIS-MULTI-USER.md §7.1) alongside
-    // the SmtpSettings.ToAddress removal.
-    private static void WriteNotificationSettingsToDisk(
-        NotificationSettings settings, string path)
-    {
-        var payload = new { Notifications = settings };
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
-        File.WriteAllText(path, json);
-    }
-
     // ------------------ Notifications tab (Increment 15d) ------------------
     // Per-profile "where do the emails go" tab (§7.4). Visible to
     // every profile: an admin sees it in addition to the Email tab
@@ -650,7 +643,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
             Height = 28,
         };
-        saveButton.Click += (_, _) => SaveNotificationSettings();
+        saveButton.Click += async (_, _) => await SaveNotificationSettingsAsync(saveButton);
 
         var explanation = new Label
         {
@@ -763,8 +756,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
     }
 
-    private void SaveNotificationSettings()
+    // B.1, P8: through UpdateNotificationSettings, which records the
+    // change for the other devices of a synced profile and writes
+    // notifications.settings.json.
+    private async Task SaveNotificationSettingsAsync(Button saveButton)
     {
+        saveButton.Enabled = false;
         try
         {
             var toAddress = _toBox.Text.Trim();
@@ -810,13 +807,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 return;
             }
 
-            var settings = new NotificationSettings
+            if (_scopes is null) throw new InvalidOperationException("The settings dialog has no service scope.");
+            await using (var scope = _scopes.CreateAsyncScope())
             {
-                ToAddress = toAddress,
-                CaregiverAddress = caregiverAddress,
-                DoctorAddress = doctorAddress,
-            };
-            WriteNotificationSettingsToDisk(settings, _currentProfile.NotificationSettingsPath);
+                await scope.ServiceProvider.GetRequiredService<UpdateNotificationSettings>()
+                    .ExecuteAsync(toAddress, caregiverAddress, doctorAddress, CancellationToken.None);
+            }
+            if (IsDisposed) return;
             MessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Notifications.Saved"),
                 _loc.Get("Common.Ok"),
@@ -824,9 +821,16 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
-                _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (!IsDisposed)
+            {
+                MessageBox.Show(this, ex.Message,
+                    _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        finally
+        {
+            if (!IsDisposed) saveButton.Enabled = true;
         }
     }
 

@@ -90,6 +90,10 @@ public static class InfrastructureServiceCollectionExtensions
         // this extension.
         services.Configure<NotificationSettings>(
             configuration.GetSection(NotificationSettings.SectionName));
+        // B.1, P8: the replicated profile settings (display name,
+        // notification recipients) and the sync state of other profiles.
+        services.TryAddSingleton<IProfileSettingsStore, ProfileSettingsStore>();
+        services.TryAddSingleton<ISyncProfileStatus, SyncProfileStatus>();
 
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();

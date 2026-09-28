@@ -65,6 +65,7 @@ public sealed class ApplyRemoteOperations
     private readonly LedgerSynchronizer _ledger;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
+    private readonly IProfileSettingsStore? _profileSettings;
 
     // Facts added or updated in this batch, by id: the context tracks
     // these instances, so a later update or removal in the batch must use
@@ -92,8 +93,10 @@ public sealed class ApplyRemoteOperations
         IMedicineDeletionRepository deletion,
         LedgerSynchronizer ledger,
         IUnitOfWork uow,
-        TimeProvider clock)
+        TimeProvider clock,
+        IProfileSettingsStore? profileSettings = null)
     {
+        _profileSettings = profileSettings;
         _settings = settings;
         _operations = operations;
         _registers = registers;
@@ -147,7 +150,8 @@ public sealed class ApplyRemoteOperations
                 {
                     known.Add(operation.MedicineId);
                 }
-                else if (!known.Contains(operation.MedicineId) && !await IsDeletedAsync(operation.MedicineId, ct))
+                else if (operation.MedicineId != ProfileSettingsProjection.Entity
+                         && !known.Contains(operation.MedicineId) && !await IsDeletedAsync(operation.MedicineId, ct))
                 {
                     dropped++;
                     continue;
@@ -183,6 +187,7 @@ public sealed class ApplyRemoteOperations
         string? blockReason = null;
         var seen = new HashSet<Guid>();
         var touched = new HashSet<Guid>();
+        var profileTouched = false;
 
         foreach (var operation in operations)
         {
@@ -238,7 +243,8 @@ public sealed class ApplyRemoteOperations
                 skipped++;
                 continue;
             }
-            if (body is MedicineDeleted) touched.Remove(body.MedicineId);
+            if (body is ProfileSettingChanged) profileTouched = true;
+            else if (body is MedicineDeleted) touched.Remove(body.MedicineId);
             else touched.Add(body.MedicineId);
             applied++;
         }
@@ -250,6 +256,10 @@ public sealed class ApplyRemoteOperations
         if (touched.Count > 0)
         {
             await _uow.SaveChangesAsync(cancellationToken);
+        }
+        if (profileTouched && _profileSettings is not null)
+        {
+            await ProfileSettingsProjection.ProjectAsync(_registers, _profileSettings, cancellationToken);
         }
         return new ApplyRemoteResult(applied, skipped, blocked, blockReason, touched);
     }
@@ -309,6 +319,11 @@ public sealed class ApplyRemoteOperations
                 return;
             case MedicineDeleted deleted:
                 await ApplyDeletionAsync(deleted, ct);
+                return;
+            case ProfileSettingChanged:
+                // P8: a register of the profile; the local copy is
+                // written after the batch (ProfileSettingsProjection).
+                await RecordRegistersAsync(body, timestamp, ct);
                 return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");
