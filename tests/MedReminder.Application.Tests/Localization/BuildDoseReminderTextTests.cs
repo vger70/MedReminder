@@ -1,4 +1,6 @@
+using System.Globalization;
 using FluentAssertions;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Notifications;
 using MedReminder.Domain.Medicines;
 using Xunit;
@@ -29,5 +31,39 @@ public class BuildDoseReminderTextTests
             NewMedicine("Metformina"), new TimeOnly(20, 30));
 
         body.Should().Be("Metformina — scheduled dose at 20:30");
+    }
+
+    [Fact]
+    public void Dose_reminder_uses_the_user_language_not_a_forced_one()
+    {
+        var (title, body) = NotificationTexts.BuildDoseReminder(
+            NewMedicine("Enalapril"), new TimeOnly(9, 0), new UserLanguageOnlyLocalization());
+
+        title.Should().Be("user:Notifications.DoseReminder.Title");
+        body.Should().Be("user:Notifications.DoseReminder.Body");
+    }
+
+    [Fact]
+    public void Low_stock_toast_uses_the_user_language_not_a_forced_one()
+    {
+        var (title, body) = NotificationTexts.BuildToast(
+            NewMedicine("Enalapril"), 5, localization: new UserLanguageOnlyLocalization());
+
+        title.Should().Be("user:Notifications.Toast.Title");
+        body.Should().Be("user:Notifications.Toast.Body");
+    }
+
+    // Distinguishes Get (user language) from GetIn (forced language),
+    // so the test fails if a builder bypasses the user's choice.
+    private sealed class UserLanguageOnlyLocalization : ILocalizationService
+    {
+        public string CurrentLanguage => "en";
+
+        public CultureInfo CurrentCulture => CultureInfo.InvariantCulture;
+
+        public string Get(string key, params object?[] args) => $"user:{key}";
+
+        public string GetIn(string languageCode, string key, params object?[] args)
+            => $"forced-{languageCode}:{key}";
     }
 }

@@ -961,8 +961,8 @@ idioma**. MedReminder se reinicia automáticamente para aplicar el
 cambio.
 
 Notas:
-- Las notificaciones toast de Windows siguen siempre el idioma del
-  sistema (Windows), independientemente del idioma elegido aquí.
+- Las notificaciones toast de Windows usan el idioma elegido aquí,
+  como el resto de la aplicación.
 - Las notificaciones e-mail y la ficha de terapia usan el idioma
   seleccionado aquí.
 
