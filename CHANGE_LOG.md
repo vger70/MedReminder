@@ -59,6 +59,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #100 — Show toasts in the app language instead of the Windows language
+
+Link: [vger70/MedReminder#100](https://github.com/vger70/MedReminder/pull/100)
+Branch: `claude/stoic-ride-3st4kz`
+
+### Fixed
+
+- Dose-reminder and low-stock toasts use the language chosen in the
+  app instead of the Windows UI language. The dose-reminder email,
+  built by the same composer, now also follows the user's language
+  (`NotificationTexts`).
+
+### Docs
+
+- User guides (5 languages): toasts follow the language chosen in the
+  app.
+
 ## PR #98 — Add a development status report
 
 Link: [vger70/MedReminder#98](https://github.com/vger70/MedReminder/pull/98)

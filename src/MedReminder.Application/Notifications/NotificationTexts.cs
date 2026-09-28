@@ -8,12 +8,11 @@ namespace MedReminder.Application.Notifications;
 // toast) from the medicine state. No clinical information (spec §22):
 // only medicine identification + invitation to request a prescription.
 //
-// Localization (Increment 16d):
-//   - BuildEmail uses the USER language (loc.CurrentLanguage), so it
-//     calls loc.Get(...) directly.
-//   - BuildToast uses the SYSTEM language
-//     (CultureInfo.CurrentUICulture), so it calls
-//     loc.GetIn(systemLanguageCode, ...).
+// Localization: every text (email, low-stock toast, dose reminder)
+// uses the language chosen by the user in the app
+// (loc.CurrentLanguage) through loc.Get(...). Toasts used to follow
+// the Windows UI language, which showed them in a different language
+// than the rest of the app whenever the two differed.
 // If `loc` is null (older tests), the hardcoded English texts are used
 // — backwards compatibility.
 public static class NotificationTexts
@@ -121,26 +120,21 @@ public static class NotificationTexts
         return sb.ToString();
     }
 
-    // Windows toast: uses the SYSTEM language (systemLanguageCode).
-    // The caller (MedicationMonitor) detects the system language with
-    // DetectSystemLanguageCode() and passes it here; the service uses
-    // GetIn(languageCode, key) to bypass the user language.
+    // Windows low-stock toast, in the user's app language.
     public static (string Title, string Body) BuildToast(
         Medicine medicine,
         int daysRemaining,
         CultureInfo? culture = null,
-        ILocalizationService? localization = null,
-        string? systemLanguageCode = null)
+        ILocalizationService? localization = null)
     {
         ArgumentNullException.ThrowIfNull(medicine);
         _ = culture;
 
         if (localization is not null)
         {
-            var langCode = systemLanguageCode ?? DetectSystemLanguageCode();
-            var title = localization.GetIn(langCode, "Notifications.Toast.Title",
+            var title = localization.Get("Notifications.Toast.Title",
                 medicine.Name, daysRemaining);
-            var body = localization.GetIn(langCode, "Notifications.Toast.Body", daysRemaining);
+            var body = localization.Get("Notifications.Toast.Body", daysRemaining);
             return (title, body);
         }
 
@@ -152,23 +146,20 @@ public static class NotificationTexts
     }
 
     // Dose-time reminder: fired once per (medicine, slot, local-day)
-    // at the slot's wall-clock time. Uses the SYSTEM language exactly
-    // as BuildToast does — the reminder appears in the system's UI
-    // language, not the app's user-chosen language.
+    // at the slot's wall-clock time. Used for both the toast and the
+    // email, in the user's app language like BuildToast.
     public static (string Title, string Body) BuildDoseReminder(
         Medicine medicine,
         TimeOnly slotTime,
-        ILocalizationService? localization = null,
-        string? systemLanguageCode = null)
+        ILocalizationService? localization = null)
     {
         ArgumentNullException.ThrowIfNull(medicine);
 
         if (localization is not null)
         {
-            var langCode = systemLanguageCode ?? DetectSystemLanguageCode();
-            var title = localization.GetIn(langCode,
+            var title = localization.Get(
                 "Notifications.DoseReminder.Title", medicine.Name);
-            var body = localization.GetIn(langCode,
+            var body = localization.Get(
                 "Notifications.DoseReminder.Body",
                 medicine.Name,
                 slotTime.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture));
@@ -183,8 +174,9 @@ public static class NotificationTexts
 
     // Returns the ISO 639-1 language code matching the user's Windows
     // language (CultureInfo.CurrentUICulture); falls back to "en" if
-    // the language is not among the app's supported ones. Must stay
-    // aligned with SupportedLanguages.All.
+    // the language is not among the app's supported ones. Used only to
+    // pick the initial app language on first run. Must stay aligned
+    // with SupportedLanguages.All.
     public static string DetectSystemLanguageCode()
     {
         var twoLetter = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();

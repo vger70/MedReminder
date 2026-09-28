@@ -26,10 +26,8 @@ public interface ILocalizationService
     // to string.Format with the CultureInfo of the current language.
     string Get(string key, params object?[] args);
 
-    // Overload that forces a specific language. Used by
-    // MedicationMonitor:
-    //   - email → GetIn(userLang, key)   (user's chosen language)
-    //   - toast → GetIn(systemLang, key) (Windows system language)
+    // Overload that forces a specific language, regardless of the
+    // user's choice.
     string GetIn(string languageCode, string key, params object?[] args);
 
     // CultureInfo of the current language. Used to format numbers

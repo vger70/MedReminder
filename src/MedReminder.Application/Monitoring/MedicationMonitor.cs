@@ -136,10 +136,7 @@ public sealed class MedicationMonitor
 
         if ((channels & NotificationChannels.Windows) != 0)
         {
-            // Toast: SYSTEM language (Windows), not the one chosen by
-            // the user in the app. NotificationTexts.BuildToast
-            // detects the system language internally via
-            // CultureInfo.CurrentUICulture.
+            // Toast: USER language (chosen in the app), like the email.
             var (title, body) = NotificationTexts.BuildToast(
                 medicine, daysRemaining, localization: _localization);
             try

@@ -149,9 +149,7 @@ screenshots-src/<lang>/<slug>.png
 
 `screenshots-src/` is at the repository root, outside `static/`,
 `content/` and `assets/`, so Hugo never publishes it. English is
-required; other languages are optional and fall back to English. The
-toast (`dose-reminder`) follows the Windows display language, not the
-app language, so it may exist in English only.
+required; other languages are optional and fall back to English.
 
 If `screenshots-src/` is missing or incomplete when you start, do the
 text work in §2–§3, keep the placeholders for the missing shots, and
