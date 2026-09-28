@@ -562,8 +562,24 @@ Removing the master is a removal plus a takeover (§7.3).
 
 ## 13. Phases
 
-Decision: **implement in steps**. Each step ships alone and leaves the
-app consistent; later steps depend on earlier ones.
+Decision: **implement in steps**. Each step leaves the app consistent;
+later steps depend on earlier ones.
+
+Branching (product owner, 2026-09-28):
+
+- Integration branch `feature/master-slave`, created from `main` at
+  `7c26328`. Every step branch starts from it and every step PR
+  targets it, never `main`.
+- `main` is merged into `feature/master-slave` (merge commit, no
+  rebase: the branch is shared) whenever `main` receives a release or
+  a sync fix, so the final merge stays small. Conflicts in
+  `CHANGE_LOG.md` are resolved by keeping both sides' entries.
+- Only after the last step, one PR merges `feature/master-slave` into
+  `main`. Which step is last is D-16; whether H0 goes to `main` first
+  is D-17.
+- Releases from `main` in the meantime ship none of this work. A
+  preview build of the integration branch, if needed, follows
+  `docs/PACKAGING.md` with a pre-release version.
 
 | Step | Content | Depends on | Effort `[INFERRED — not measured]` |
 |---|---|---|---|
@@ -631,6 +647,8 @@ developer-days.
 | D-13 | Recovery key escrow: the household passphrase opens every profile and is an admin secret (§4.4) | Yes: otherwise losing the devices loses the data |
 | D-14 | Reference country becomes household-wide and admin-only (§4.3) | Yes |
 | D-15 | After a device removal, remaining devices receive the new household key without typing it (§9 option B) | Yes, after H5 tests |
+| D-16 | Last step before merging `feature/master-slave` into `main`: H5 (desktop complete) or H6 (mobile) | H5: H6 lives inside B.1 Phases 5 and 7, months away; holding the desktop work that long makes the final merge large and leaves `main` users without the fix for duplicate email |
+| D-17 | H0 (join fixes, no format change) merged into `main` directly and then into `feature/master-slave` | Yes: it fixes today's two-PC setups and changes no format |
 
 ---
 
@@ -684,3 +702,4 @@ developer-days.
 | 2 | Replaced by this document: household group, master role, continuous replication (product owner requirements §1) |
 | 3 | Setup wizard (§6); per-device profile keys (§4.4), because keys in the household state made the profile subset ineffective |
 | 4 | Review against the code: recovery key escrow (without it, losing every device lost the profiles, and the passphrase path of the wizard could not open any profile); offer file carries the profile keys (the new device has no public key when the code is made); one activation rule with clock margin; permission matrix aligned with today's gating (auto-start admin-only, update check open); forged-key residual risk; PIN hash brute force; H1 reduces duplicates, does not remove them |
+| 5 | Branching policy (§13): integration branch `feature/master-slave`; decisions D-16, D-17 |

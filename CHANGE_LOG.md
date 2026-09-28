@@ -50,6 +50,8 @@ Branch: `claude/medreminder-sync-analysis-fquf7h`
   proposes changes to the requirements, and splits the work into steps
   H0 to H6 with open decisions.
 - `docs/ANALYSIS.md` §12: index entry for the new analysis.
+- `CLAUDE.md` §4: PRs of this feature target the integration branch
+  `feature/master-slave`; only the final PR merges it into main.
 
 ## PR #113 — Align STATUS, EVOLUTION and ANALYSIS with v2.10.0
 
