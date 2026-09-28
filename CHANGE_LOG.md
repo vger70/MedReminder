@@ -43,7 +43,10 @@ Branch: `claude/medreminder-sync-analysis-fquf7h`
   group that replicates profiles, roles, PIN hashes and installation
   settings; an admin can elect another master, confirmed by a handover
   wizard; only the master sends email and runs the scheduled cloud
-  backup. Records the duplicate-email defect of today's two-PC setups,
+  backup. A setup wizard lets a new device join an existing
+  installation; each device holds only the profiles an admin grants
+  it, enforced by per-device key wrapping. Records the duplicate-email
+  defect of today's two-PC setups,
   proposes changes to the requirements, and splits the work into steps
   H0 to H6 with open decisions.
 - `docs/ANALYSIS.md` §12: index entry for the new analysis.
