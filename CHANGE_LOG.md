@@ -30,9 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #NEW — Stream OneDrive downloads, fix hidden-provider validation, share snapshot naming
+## PR #94 — Stream OneDrive downloads, fix hidden-provider validation, share snapshot naming
 
-Link: [vger70/MedReminder#NEW](https://github.com/vger70/MedReminder/pull/NEW)
+Link: [vger70/MedReminder#94](https://github.com/vger70/MedReminder/pull/94)
 Branch: `claude/code-review-followup`
 
 ### Fixed
