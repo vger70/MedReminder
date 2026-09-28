@@ -1,7 +1,7 @@
 # Development status — 2026-09-28
 
 Snapshot of what has shipped and what remains open, taken at
-`main` = v2.9.1 (commit `087c25d`). Sources: `CHANGE_LOG.md`,
+`main` = v2.10.0 plus #112 (commit `c7092de`). Sources: `CHANGE_LOG.md`,
 `docs/EVOLUTION.md`, `docs/EVOLUTION-DONE.md`,
 `docs/notes/EVOLUTION-PROPOSALS.md`,
 `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`, the GitHub tracker.
@@ -15,6 +15,9 @@ profile, P8 residue closed, Google Cloud project published): §2.4,
 Reviewed on 2026-09-28 at v2.9.1, after #100, #104, #106 (draft),
 #107 and #108 (therapy card PDF, text size): all sections.
 
+Reviewed again on 2026-09-28 at v2.10.0, after #109–#112 (A2 webcam
+and restock by scan shipped, multi-user G/I design): all sections.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -24,10 +27,10 @@ verified against the tree or the tracker.
 
 | Item | Value |
 |---|---|
-| Latest release | v2.9.1 (2026-09-28) |
+| Latest release | v2.10.0 (2026-09-28) |
 | Projects | Domain, Application, Infrastructure.Portable (`net10.0`); Infrastructure (`net10.0-windows`); UI (WinForms); DataImporter |
-| Source files | 365 `.cs` under `src/` |
-| Test projects | 6 (one per project, plus UI and DataImporter); 166 `.cs` files, 910 `[Fact]`/`[Theory]` attributes |
+| Source files | 370 `.cs` under `src/` |
+| Test projects | 6 (one per project, plus UI and DataImporter); 168 `.cs` files, 923 `[Fact]`/`[Theory]` attributes |
 | Open pull requests | #106 — Android spikes S1–S4 (draft, not to be merged) |
 | Open issues | #11 — Simplified Chinese localization (catalogue search disabled) |
 | UI languages | en, it, fr, es, de |
@@ -66,6 +69,8 @@ verified against the tree or the tracker.
 |---|---|---|
 | 2 | Per-profile text size (Normal / Large / Extra large), display scaling, high contrast | #108 |
 | 3 | A2 phase 1 — barcode scan with a USB HID scanner (Code 32 / DataMatrix parser, catalogue lookup) | #72 |
+| 3 | A2 phase 2 — barcode scan with the webcam (Windows.Media.Capture, ZXing.Net) | #110 |
+| 3 | A2 phase 3 — restock by scan: Stock → Restock from barcode | #111 |
 | 4 | Prescription request draft for the doctor | #74 |
 | 6 | Guided stock count with gap display | #73 |
 | 8 | Read-only therapy timeline | #75 |
@@ -89,7 +94,7 @@ folder, OneDrive or Google Drive, end-to-end encrypted, without a
 backend. Public format: `docs/SYNC-FORMAT.md`; manual exit check:
 `docs/SYNC-TWO-PC-CHECKLIST.md`.
 
-### 2.5 Latest changes (v2.9.0, v2.9.1)
+### 2.5 Latest changes (v2.9.0 – v2.10.0)
 
 - v2.9.0: B.1 Phase 4c and P8 (§2.4); toasts and the dose-reminder
   email follow the application language, not the Windows language
@@ -97,6 +102,16 @@ backend. Public format: `docs/SYNC-FORMAT.md`; manual exit check:
 - v2.9.1: therapy card printed as a paginated table and saved as PDF
   through "Microsoft Print to PDF" (#107); per-profile text size,
   display-DPI scaling and high-contrast colours (#108).
+- v2.10.0: barcode scan with the webcam (#110); Stock → Restock from
+  barcode, which identifies the medicine by its AIC code and pre-fills
+  the quantity of its last new package (#111). With A2 phase 3, every
+  A2 phase has shipped.
+- Manual acceptance of the webcam (`ANALYSIS-A2-BARCODE-SCAN.md`
+  §9.5): camera start, stop and error states work; decoding a real
+  pack (item 7) is not confirmed, the test webcam's resolution was too
+  low `[UNCERTAIN]`. Whether the restock checks of §5C.5 were run
+  before the release cannot be verified from this repository
+  `[UNCERTAIN]`.
 
 ---
 
@@ -135,15 +150,15 @@ developer-days `[INFERRED — from the §13.1 estimates]`.
 
 | Item | Status | Effort `[INFERRED]` |
 |---|---|---|
-| A2 phase 2 — webcam scan (ZXing.Net) | Implemented, not released. Manual acceptance (`ANALYSIS-A2-BARCODE-SCAN.md` §9.5): camera start, stop and error states work; decoding (item 7) not confirmed, the test webcam's resolution was too low to read the code | — |
-| A2 phase 3 — restock by scan (flow b) | Implemented, not released; manual acceptance pending (`ANALYSIS-A2-BARCODE-SCAN.md` §5C.5) | — |
 | C.1 — hosted relay | Optional extra sync transport; only if the product owner accepts operating a service | months + running cost |
 | C.3++ Phase 3 — Dropbox, enterprise REST providers | Optional | not estimated |
 
 ### 3.3 Proposals with an implementation prompt ready
 
-None. The last two (large text mode, medication card PDF) shipped in
-v2.9.1; their prompts are in `docs/prompt/Completed/`.
+`docs/prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md` (multi-user G and
+I, §3.5), gated on decisions D1–D7. The earlier prompts (large text
+mode, medication card PDF) shipped in v2.9.1 and are in
+`docs/prompt/Completed/`.
 
 ### 3.4 Proposals without design
 
@@ -161,15 +176,16 @@ WebDAV target, command palette, CLI).
 - **Issue #11**: Simplified Chinese localization.
 - **Website**: `PROMPT-WEBSITE-CONTENT-REFRESH.md` is live on the site;
   whether `PROMPT-WEBSITE-V2.6-REFRESH.md` has been applied cannot be
-  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.9
-  (sync, cloud providers, therapy card PDF, text size) `[INFERRED]`.
-- **Multi-user non-goals** (`ANALYSIS-MULTI-USER.md` §16): profile
-  promote / demote and the consolidated admin view. Not planned; to be
-  picked up only if a concrete need emerges (product owner,
-  2026-09-28).
-  Design drafted on request, awaiting confirmation of its decisions:
-  `analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`, implementation
-  brief `prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md`.
+  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.10
+  (sync, cloud providers, therapy card PDF, text size, webcam scan,
+  restock by scan) `[INFERRED]`.
+- **Multi-user G and I** (`ANALYSIS-MULTI-USER.md` §14a, §16): profile
+  role change (promote / demote) and a read-only "All profiles" view
+  for an admin. Design and implementation brief ready (#112):
+  `analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`,
+  `prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md`. Not scheduled: work
+  starts only after the product owner confirms decisions D1–D7 of that
+  analysis (§9). Effort not estimated there `[UNCERTAIN]`.
 
 ### 3.6 Excluded by decision
 
@@ -188,9 +204,12 @@ release cannot be verified from this repository `[UNCERTAIN]`. Every
 device must run v2.9.0 or later before anyone changes a group key or
 records a replicated profile setting (an app ≤ 2.8.x cannot follow).
 
-1. Desktop: release A2 phases 2 and 3 (webcam, restock by scan)
-   after the manual checks of `ANALYSIS-A2-BARCODE-SCAN.md` §5C.5.
+1. Desktop: confirm webcam decoding on a real pack with a webcam of
+   sufficient resolution (A2 checklist item 7); run the restock
+   checks of `ANALYSIS-A2-BARCODE-SCAN.md` §5C.5 if they were not run
+   before v2.10.0. Then decide D1–D7 of
+   `ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md` if G and I are wanted.
 2. Mobile: build and run the S1–S4 spike app of draft PR #106 on
    Android before committing to Phase 5; S1 and S3 are the go / no-go
    risks for MAUI. Independent of item 1.
-3. Website content refresh for v2.7–v2.9.
+3. Website content refresh for v2.7–v2.10.

@@ -1,7 +1,7 @@
 # MedReminder — Architecture
 
 This document describes the architecture of MedReminder **as built**
-(release line 2.9.x). It is the entry point for anyone changing the
+(release line 2.10.x). It is the entry point for anyone changing the
 code: it states the layering rules, where each responsibility lives,
 how data is stored and how the background work is scheduled.
 
@@ -747,6 +747,7 @@ Where the implementation departed from the plan:
 |---|---|
 | [`ANALYSIS-MVP.md`](analysis/ANALYSIS-MVP.md) | Original Phase 1 / Phase 2 plan (historical) |
 | [`ANALYSIS-MULTI-USER.md`](analysis/ANALYSIS-MULTI-USER.md) | Profiles, roles, PIN, V1→V2 migration |
+| [`ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`](analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md) | Profile role change and read-only all-profiles view (analysis only, decisions pending) |
 | [`ANALYSIS-A1-REGIMENS.md`](analysis/ANALYSIS-A1-REGIMENS.md) | Weekly, cyclic, tapering and PRN schedules |
 | [`ANALYSIS-A1-STEPPED-TAPER.md`](analysis/ANALYSIS-A1-STEPPED-TAPER.md) | Multi-stage tapering |
 | [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning: USB HID scanner (phase 1), webcam (phase 2), restock by scan (phase 3) |
