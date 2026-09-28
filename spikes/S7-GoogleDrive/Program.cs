@@ -171,6 +171,31 @@ internal static class Program
             var appB = await driveB.ListAsync($"name = '{run}-app.mrs'", "appDataFolder");
             report.Add(appB.Count == 1 ? "PASS" : "FAIL", "C15 appDataFolder: client B sees client A's file",
                 $"found {appB.Count}.");
+
+            // Round 2: one query for a whole group, by a property set at creation.
+            var props = new JsonObject { ["mrgroup"] = run };
+            await driveA.CreateFileAsync("tagged.mrs", ops, RandomNumberGenerator.GetBytes(32), properties: props);
+            var byPropA = await driveA.ListAsync($"properties has {{ key='mrgroup' and value='{run}' }} and trashed = false", "drive");
+            var byPropB = await driveB.ListAsync($"properties has {{ key='mrgroup' and value='{run}' }} and trashed = false", "drive");
+            var byAppPropA = await driveA.ListAsync($"appProperties has {{ key='mrgroup' and value='{run}' }} and trashed = false", "drive");
+            var byAppPropB = await driveB.ListAsync($"appProperties has {{ key='mrgroup' and value='{run}' }} and trashed = false", "drive");
+            report.Add(byPropB.Count == 1 ? "PASS" : "FAIL", "C16 Query by public property across clients",
+                $"properties: A finds {byPropA.Count}, B finds {byPropB.Count}; appProperties: A finds {byAppPropA.Count}, B finds {byAppPropB.Count}.");
+
+            // Round 2: does client B's changes feed report client A's new file?
+            var tokenB = await driveB.StartPageTokenAsync();
+            if (tokenB is not null)
+            {
+                await driveA.CreateFileAsync("cross.mrs", ops, RandomNumberGenerator.GetBytes(32));
+                var (seenB, afterB, _, _) = await PollChangesAsync(driveB, tokenB, "cross.mrs", TimeSpan.FromSeconds(90));
+                report.Add(seenB ? "PASS" : "FAIL", "C17 Changes feed across clients (B sees A's new file)",
+                    seenB ? $"after {afterB.TotalSeconds:F0} s." : "not within 90 s.");
+            }
+
+            // Round 2: list a whole tree with one query per folder level vs by property: timing.
+            var swAll = Stopwatch.StartNew();
+            var all = await driveB.ListAsync($"properties has {{ key='mrgroup' and value='{run}' }}", "drive");
+            report.Add("INFO", "C18 Group listing by property", $"{all.Count} file(s) in {swAll.ElapsedMilliseconds} ms (one paged query).");
         }
         else
         {
@@ -227,13 +252,26 @@ internal static class Program
             return;
         }
         await drive.CreateFileAsync("changed.mrs", parent, RandomNumberGenerator.GetBytes(64));
+        var (seen, after, names, hasParents) = await PollChangesAsync(drive, token, "changed.mrs", TimeSpan.FromSeconds(90));
+        report.Add(seen ? "PASS" : "FAIL", "C8 Changes feed (drive space), same client",
+            $"new file reported after {after.TotalSeconds:F0} s (polled every 3 s, up to 90 s); "
+            + $"names in the last poll: {string.Join(", ", names.Distinct().Take(5))}; parents included: {hasParents}.");
+    }
+
+    // Polls the feed from a fixed cursor until `name` appears.
+    internal static async Task<(bool Seen, TimeSpan After, List<string> Names, bool HasParents)> PollChangesAsync(
+        Drive drive, string token, string name, TimeSpan limit)
+    {
         var sw = Stopwatch.StartNew();
-        var (names, newToken, hasParents) = await drive.ChangesAsync(token, "drive");
-        var seen = names.Contains("changed.mrs");
-        var (appNames, _, _) = await drive.ChangesAsync(token, "appDataFolder");
-        report.Add(seen ? "PASS" : "FAIL", "C8 Changes feed (drive space)",
-            $"{names.Count} change(s) in {sw.ElapsedMilliseconds} ms, new file present: {seen}, parents included: {hasParents}, "
-            + $"next cursor: {newToken is not null}; appDataFolder space: {appNames.Count} change(s).");
+        List<string> names = [];
+        var hasParents = false;
+        while (sw.Elapsed < limit)
+        {
+            (names, _, hasParents) = await drive.ChangesAsync(token, "drive");
+            if (names.Contains(name)) return (true, sw.Elapsed, names, hasParents);
+            await Task.Delay(TimeSpan.FromSeconds(3));
+        }
+        return (false, sw.Elapsed, names, hasParents);
     }
 
     internal static string Short(string text) => text.Length <= 200 ? text : text[..200] + "…";
@@ -385,10 +423,16 @@ internal sealed class Drive(HttpClient http, OAuthClient auth, Report report)
         return response.IsSuccessStatusCode ? JsonNode.Parse(await response.Content.ReadAsStringAsync())!["id"]!.GetValue<string>() : null;
     }
 
-    public async Task<(HttpStatusCode, string?)> CreateFileAsync(string name, string parent, byte[] content, string? id = null)
+    public async Task<(HttpStatusCode, string?)> CreateFileAsync(string name, string parent, byte[] content, string? id = null,
+        JsonObject? properties = null)
     {
         var meta = new JsonObject { ["name"] = name, ["parents"] = new JsonArray(parent) };
         if (id is not null) meta["id"] = id;
+        if (properties is not null)
+        {
+            meta["properties"] = properties.DeepClone();
+            meta["appProperties"] = properties.DeepClone();
+        }
         using var response = await SendAsync(() =>
         {
             var multipart = new MultipartContent("related");

@@ -57,5 +57,19 @@ access if you want.
 | C11 | `appDataFolder` create and list | hidden-folder option |
 | C12–C14 | `drive.file`: client B finds, reads and writes into client A's files | whether `drive.file` works for desktop + phone |
 | C15 | `appDataFolder`: client B sees client A's file | whether `appDataFolder` works for desktop + phone |
+| C16, C18 | One query finds every file of a group by a public `properties` tag, from either client; `appProperties` compared | listing without walking folders |
+| C17 | Client B's `changes` feed reports a file client A created, and after how long | change cursor across devices |
 
 Paste the generated `report-*.md` into the chat.
+
+## Round 1 (2026-09-28)
+
+Report in `results/round1-*.md`. Client B (a second Desktop client of
+the same project) finds, lists, reads and writes into the files client
+A created with `drive.file`, and sees A's `appDataFolder` file (C12–C15).
+Drive allows duplicate names (C4); a create with a pre-generated id
+returns 409 on a retry (C4b); a partial resumable upload is not listed
+(C6b); the refresh token expires in 7 days while the consent screen is
+in Testing (C0). Open: C8, the changes feed did not report a file
+created ~0.5 s earlier; round 2 polls up to 90 s, adds the
+cross-client feed (C17) and a one-query listing by property (C16, C18).
