@@ -5,6 +5,9 @@ namespace MedReminder.UI.Forms;
 // Device name and sync passphrase (B.1 Phase 3d). When creating a group
 // the passphrase is typed twice; when joining once. The passphrase is
 // returned as a char array the caller zeroes after use.
+// Phase 4c: also the new passphrase of a key rotation (typed twice) and
+// the new passphrase after a rotation elsewhere (typed once); neither
+// asks for the device name.
 internal sealed class SyncPassphraseDialog : MedReminderFormBase
 {
     // Long enough to resist guessing on a stolen copy of the folder: the
@@ -13,18 +16,20 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
 
     private readonly ILocalizationService _loc;
     private readonly bool _confirm;
-    private readonly TextBox _name;
+    private readonly TextBox? _name;
     private readonly TextBox _passphrase;
     private readonly TextBox? _repeat;
 
-    public SyncPassphraseDialog(ILocalizationService localization, bool confirm, string defaultDeviceName)
+    public SyncPassphraseDialog(ILocalizationService localization, bool confirm, string? defaultDeviceName,
+        string? titleKey = null, string? hintKey = null)
     {
         _loc = localization;
         _confirm = confirm;
+        var askName = defaultDeviceName is not null;
 
-        Text = _loc.Get(confirm ? "Ui.SyncDialog.Passphrase.CreateTitle" : "Ui.SyncDialog.Passphrase.JoinTitle");
+        Text = _loc.Get(titleKey ?? (confirm ? "Ui.SyncDialog.Passphrase.CreateTitle" : "Ui.SyncDialog.Passphrase.JoinTitle"));
         Width = 520;
-        Height = confirm ? 340 : 290;
+        Height = (confirm ? 340 : 290) - (askName ? 0 : 40);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -43,7 +48,7 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
 
         var hint = new Label
         {
-            Text = _loc.Get(confirm ? "Ui.SyncDialog.Passphrase.CreateHint" : "Ui.SyncDialog.Passphrase.JoinHint"),
+            Text = _loc.Get(hintKey ?? (confirm ? "Ui.SyncDialog.Passphrase.CreateHint" : "Ui.SyncDialog.Passphrase.JoinHint")),
             AutoSize = true,
             MaximumSize = new Size(470, 0),
             Margin = new Padding(0, 0, 0, 10),
@@ -51,21 +56,25 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
         layout.Controls.Add(hint, 0, 0);
         layout.SetColumnSpan(hint, 2);
 
-        _name = new TextBox { Text = defaultDeviceName, Dock = DockStyle.Fill, MaxLength = 60 };
-        AddRow(layout, 1, _loc.Get("Ui.SyncDialog.Passphrase.DeviceName"), _name);
+        var row = 1;
+        if (askName)
+        {
+            _name = new TextBox { Text = defaultDeviceName, Dock = DockStyle.Fill, MaxLength = 60 };
+            AddRow(layout, row++, _loc.Get("Ui.SyncDialog.Passphrase.DeviceName"), _name);
+        }
         _passphrase = new TextBox { UseSystemPasswordChar = true, Dock = DockStyle.Fill };
-        AddRow(layout, 2, _loc.Get("Ui.SyncDialog.Passphrase.Passphrase"), _passphrase);
+        AddRow(layout, row++, _loc.Get("Ui.SyncDialog.Passphrase.Passphrase"), _passphrase);
         if (confirm)
         {
             _repeat = new TextBox { UseSystemPasswordChar = true, Dock = DockStyle.Fill };
-            AddRow(layout, 3, _loc.Get("Ui.SyncDialog.Passphrase.Repeat"), _repeat);
+            AddRow(layout, row++, _loc.Get("Ui.SyncDialog.Passphrase.Repeat"), _repeat);
         }
 
         // The panel fills the form and hands leftover height to its last row,
         // where a Left-anchored label would sit vertically centred away from
         // its text box. Size the content rows to fit and let an empty filler
         // row absorb the remaining space.
-        var contentRows = confirm ? 4 : 3;
+        var contentRows = row;
         layout.RowCount = contentRows + 1;
         for (var i = 0; i < contentRows; i++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -92,7 +101,7 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
         CancelButton = cancel;
     }
 
-    public string DeviceName => _name.Text.Trim();
+    public string DeviceName => _name?.Text.Trim() ?? string.Empty;
 
     public char[] TakePassphrase()
     {
@@ -105,7 +114,7 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
     private void Accept()
     {
         string? error = null;
-        if (DeviceName.Length == 0) error = _loc.Get("Ui.SyncDialog.Passphrase.Error.Name");
+        if (_name is not null && DeviceName.Length == 0) error = _loc.Get("Ui.SyncDialog.Passphrase.Error.Name");
         else if (_passphrase.TextLength < MinimumLength)
             error = _loc.Get("Ui.SyncDialog.Passphrase.Error.Short", MinimumLength);
         else if (_confirm && _repeat!.Text != _passphrase.Text)

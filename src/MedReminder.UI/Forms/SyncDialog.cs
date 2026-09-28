@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
+using MedReminder.Application.Sync.Remote;
 using MedReminder.Domain.Sync;
 using MedReminder.UI.Hosting;
 using MedReminder.UI.Services;
@@ -18,6 +19,9 @@ namespace MedReminder.UI.Forms;
 // (sign-in in
 // the system browser) or in a folder; the choice is made when enabling or
 // joining.
+// Phase 4c: pairing codes (show one, join or take a new key with one),
+// key rotation and device removal, and the new key after a rotation on
+// another device; all for the administrator.
 internal sealed class SyncDialog : MedReminderFormBase
 {
     private readonly IServiceScopeFactory _scopes;
@@ -36,6 +40,11 @@ internal sealed class SyncDialog : MedReminderFormBase
     private readonly Button _rebuild;
     private readonly Button _disable;
     private readonly Button _signIn;
+    private readonly Button _joinCode;
+    private readonly Button _pair;
+    private readonly Button _rotate;
+    private readonly Button _newKey;
+    private readonly Button _removeDevice;
     private readonly ListView _devices;
     private readonly ListView _conflicts;
     private readonly Button _restore;
@@ -79,8 +88,17 @@ internal sealed class SyncDialog : MedReminderFormBase
         _rebuild = Action("Ui.SyncDialog.Rebuild", async () => await RebuildAsync());
         _disable = Action("Ui.SyncDialog.Disable", async () => await DisableAsync());
         _signIn = Action("Ui.SyncDialog.SignInAgain", async () => await SignInAgainAsync());
-        var statusButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
-        statusButtons.Controls.AddRange([_syncNow, _signIn, _enable, _join, _rebuild, _disable]);
+        _joinCode = Action("Ui.SyncDialog.JoinCode", async () => await JoinWithCodeAsync());
+        _pair = Action("Ui.SyncDialog.Pair", async () => await PairAsync());
+        _rotate = Action("Ui.SyncDialog.Rotate", async () => await RotateAsync(null));
+        _newKey = Action("Ui.SyncDialog.NewKey", async () => await NewKeyAsync());
+        var statusButtons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        };
+        statusButtons.Controls.AddRange([_syncNow, _signIn, _newKey, _enable, _join, _joinCode, _pair, _rotate, _rebuild, _disable]);
         statusPage.Controls.Add(_statusText);
         statusPage.Controls.Add(statusButtons);
 
@@ -89,7 +107,12 @@ internal sealed class SyncDialog : MedReminderFormBase
         _devices = List(
             ("Ui.SyncDialog.Devices.Name", 220), ("Ui.SyncDialog.Devices.Platform", 110),
             ("Ui.SyncDialog.Devices.Version", 110), ("Ui.SyncDialog.Devices.LastSeen", 170));
+        _devices.SelectedIndexChanged += (_, _) => UpdateDeviceButtons();
+        _removeDevice = Action("Ui.SyncDialog.RemoveDevice", async () => await RemoveDeviceAsync());
+        var deviceButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
+        deviceButtons.Controls.Add(_removeDevice);
         devicesPage.Controls.Add(_devices);
+        devicesPage.Controls.Add(deviceButtons);
 
         // Conflicts
         var conflictsPage = new TabPage(_loc.Get("Ui.SyncDialog.Tab.Conflicts")) { Padding = new Padding(12) };
@@ -148,6 +171,12 @@ internal sealed class SyncDialog : MedReminderFormBase
         _enable.Visible = admin && settings is null;
         _join.Visible = admin && settings is null;
         _disable.Visible = admin && settings is not null;
+        _joinCode.Visible = admin && settings is null;
+        _pair.Visible = admin && settings is not null && !_status.NeedsNewKey;
+        _rotate.Visible = admin && settings is not null && !_status.NeedsNewKey;
+        _newKey.Visible = admin && settings is not null && _status.NeedsNewKey;
+        _removeDevice.Visible = admin && settings is not null;
+        UpdateDeviceButtons();
         _syncNow.Visible = settings is not null;
         _rebuild.Visible = admin && settings is not null && _status.NeedsRebuild;
         _signIn.Visible = settings?.Provider is not null && (_status.NeedsSignIn || _account is null);
@@ -184,6 +213,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         if (_status.LastError is { } error) lines.Add(_loc.Get("Ui.SyncDialog.Status.Error", error));
         if (settings.ResetPending) lines.Add(_loc.Get("Ui.SyncDialog.Status.ResetPending"));
         if (_status.NeedsRebuild) lines.Add(_loc.Get("Ui.SyncDialog.Status.NeedsRebuild"));
+        if (_status.NeedsNewKey) lines.Add(_loc.Get("Ui.SyncDialog.Status.NeedsNewKey"));
         if (_status.NeedsSignIn)
         {
             lines.Add(_loc.Get(ProviderKey("Ui.SyncDialog.Status.NeedsSignIn", settings.Provider ?? CloudProvider.OneDrive)));
@@ -203,7 +233,7 @@ internal sealed class SyncDialog : MedReminderFormBase
             foreach (var record in records)
             {
                 var name = record.DeviceId == me ? _loc.Get("Ui.SyncDialog.Devices.ThisDevice", record.Name) : record.Name;
-                var row = new ListViewItem(name);
+                var row = new ListViewItem(name) { Tag = record };
                 row.SubItems.Add(record.Platform);
                 row.SubItems.Add(record.AppVersion);
                 row.SubItems.Add(record.LastSeen.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
@@ -233,6 +263,13 @@ internal sealed class SyncDialog : MedReminderFormBase
         }
         UpdateConflictButtons();
     }
+
+    private DeviceRecordContent? SelectedDevice
+        => _devices.SelectedItems.Count == 1 ? _devices.SelectedItems[0].Tag as DeviceRecordContent : null;
+
+    // Another device only: this one is removed by disabling sync.
+    private void UpdateDeviceButtons()
+        => _removeDevice.Enabled = SelectedDevice is { } device && device.DeviceId != _settings.Load()?.DeviceId;
 
     private SyncConflictItem? SelectedConflict
         => _conflicts.SelectedItems.Count == 1 ? _conflicts.SelectedItems[0].Tag as SyncConflictItem : null;
@@ -394,6 +431,221 @@ internal sealed class SyncDialog : MedReminderFormBase
         await RefreshAllAsync();
     }
 
+    // Phase 4c: joins with a pairing code shown by a paired device. The
+    // code names the storage kind; a cloud account is signed in to here.
+    private async Task JoinWithCodeAsync()
+    {
+        if (!_profile.IsAdmin || IsEnabled) return;
+        using var dialog = new SyncPairingCodeDialog(_loc, Environment.MachineName);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Code is not { } code) return;
+
+        SyncTarget? target;
+        if (code.Provider is { } provider)
+        {
+            if (!_accounts.IsAvailable(provider))
+            {
+                Error(_loc.Get(ProviderKey("Ui.SyncDialog.PairingCode.ProviderUnavailable", provider)));
+                return;
+            }
+            var account = await SignInAsync(provider, null);
+            target = account is null ? null : SyncTarget.ForCloud(account.Provider, account.Id);
+        }
+        else
+        {
+            target = PickFolder() is { } folder ? SyncTarget.ForFolder(folder) : null;
+        }
+        if (target is null) return;
+        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
+                _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var scope = _scopes.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<ISyncSetupService>()
+                .JoinWithPairingAsync(target, code, dialog.DeviceName, CancellationToken.None);
+            Info(_loc.Get("Ui.SyncDialog.Restart"));
+            _restarter.RestartAndExit(["--profile", _profile.Id]);
+        }
+        catch (Exception ex)
+        {
+            Error(PairingError(ex));
+        }
+        finally
+        {
+            Array.Clear(code.Secret);
+        }
+    }
+
+    // Phase 4c: shows a pairing code for another device. The offer ends
+    // (its file is deleted) when the dialog closes.
+    private async Task PairAsync()
+    {
+        if (!_profile.IsAdmin || !IsEnabled) return;
+        await using var scope = _scopes.CreateAsyncScope();
+        var transport = scope.ServiceProvider.GetRequiredService<ISyncTransport>();
+        var offers = scope.ServiceProvider.GetRequiredService<SyncPairingOffers>();
+        SyncPairingOffer offer;
+        try
+        {
+            offer = await offers.StartAsync(transport, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Error(ex.Message);
+            return;
+        }
+
+        try
+        {
+            using var dialog = new SyncPairingDialog(_loc, offer, TimeProvider.System);
+            dialog.ShowDialog(this);
+        }
+        finally
+        {
+            Array.Clear(offer.Code.Secret);
+            try
+            {
+                await offers.EndAsync(transport, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Error(_loc.Get("Ui.SyncDialog.Pair.EndFailed", ex.Message));
+            }
+        }
+    }
+
+    private async Task RemoveDeviceAsync()
+    {
+        if (SelectedDevice is { } device && device.DeviceId != _settings.Load()?.DeviceId)
+            await RotateAsync(device.Name);
+    }
+
+    // Phase 4c (§6.2): a new group key and passphrase. With a device name,
+    // that device is being removed: it is not given the new key.
+    private async Task RotateAsync(string? removedDevice)
+    {
+        if (!_profile.IsAdmin || !IsEnabled) return;
+        var confirm = removedDevice is null
+            ? _loc.Get("Ui.SyncDialog.Rotate.Confirm")
+            : _loc.Get("Ui.SyncDialog.RemoveDevice.Confirm", removedDevice);
+        if (MessageBox.Show(this, confirm, _loc.Get(removedDevice is null ? "Ui.SyncDialog.Rotate" : "Ui.SyncDialog.RemoveDevice"),
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            return;
+        }
+        using var dialog = new SyncPassphraseDialog(_loc, confirm: true, defaultDeviceName: null,
+            "Ui.SyncDialog.Rotate.Title", "Ui.SyncDialog.Rotate.Hint");
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+        var passphrase = dialog.TakePassphrase();
+        try
+        {
+            // The genesis of the new generation must hold the latest
+            // changes of every device.
+            await _sync.RunNowAsync();
+            await _sync.WhileIdleAsync(async () =>
+            {
+                await using var scope = _scopes.CreateAsyncScope();
+                return await scope.ServiceProvider.GetRequiredService<RotateSyncKey>().ExecuteAsync(
+                    scope.ServiceProvider.GetRequiredService<ISyncTransport>(), passphrase, CancellationToken.None);
+            });
+            Info(_loc.Get("Ui.SyncDialog.Rotate.Done"));
+            await _sync.RunNowAsync();
+        }
+        catch (Exception ex)
+        {
+            Error(ex.Message);
+        }
+        finally
+        {
+            Array.Clear(passphrase);
+        }
+        await RefreshAllAsync();
+    }
+
+    // Phase 4c: the key was changed on another device. The new key comes
+    // from the new passphrase or a pairing code; the profile is rebuilt
+    // from the new generation and this device's changes are kept.
+    private async Task NewKeyAsync()
+    {
+        if (!_profile.IsAdmin || !IsEnabled) return;
+        var passphraseChoice = new TaskDialogCommandLinkButton(
+            _loc.Get("Ui.SyncDialog.NewKey.Passphrase"), _loc.Get("Ui.SyncDialog.NewKey.PassphraseNote"));
+        var codeChoice = new TaskDialogCommandLinkButton(
+            _loc.Get("Ui.SyncDialog.NewKey.Code"), _loc.Get("Ui.SyncDialog.NewKey.CodeNote"));
+        var page = new TaskDialogPage
+        {
+            Caption = Text,
+            Heading = _loc.Get("Ui.SyncDialog.NewKey.Heading"),
+            Text = _loc.Get("Ui.SyncDialog.NewKey.Text"),
+            AllowCancel = true,
+        };
+        page.Buttons.Add(passphraseChoice);
+        page.Buttons.Add(codeChoice);
+        page.Buttons.Add(TaskDialogButton.Cancel);
+        var choice = TaskDialog.ShowDialog(this, page);
+
+        SyncKeySource source;
+        if (choice == passphraseChoice)
+        {
+            using var dialog = new SyncPassphraseDialog(_loc, confirm: false, defaultDeviceName: null,
+                "Ui.SyncDialog.NewKey.Title", "Ui.SyncDialog.NewKey.PassphraseHint");
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+            source = new SyncKeySource.Passphrase(dialog.TakePassphrase());
+        }
+        else if (choice == codeChoice)
+        {
+            using var dialog = new SyncPairingCodeDialog(_loc, defaultDeviceName: null);
+            if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Code is not { } code) return;
+            if (code.GroupId != _settings.Load()?.GroupId)
+            {
+                Error(_loc.Get("Ui.SyncDialog.PairingCode.OtherGroup"));
+                return;
+            }
+            source = new SyncKeySource.Pairing(code);
+        }
+        else
+        {
+            return;
+        }
+
+        try
+        {
+            var (carried, dropped) = await _sync.WhileIdleAsync(async () =>
+            {
+                await using var scope = _scopes.CreateAsyncScope();
+                return await scope.ServiceProvider.GetRequiredService<ISyncSetupService>()
+                    .RekeyAsync(source, CancellationToken.None);
+            });
+            Info(_loc.Get(dropped == 0 ? "Ui.SyncDialog.NewKey.Done" : "Ui.SyncDialog.NewKey.DoneDropped", carried, dropped));
+            _restarter.RestartAndExit(["--profile", _profile.Id]);
+        }
+        catch (CryptographicException) when (source is SyncKeySource.Passphrase)
+        {
+            Error(_loc.Get("Ui.SyncDialog.NewKey.WrongPassphrase"));
+        }
+        catch (Exception ex)
+        {
+            Error(PairingError(ex));
+        }
+        finally
+        {
+            if (source is SyncKeySource.Passphrase p) Array.Clear(p.Value);
+            if (source is SyncKeySource.Pairing c) Array.Clear(c.Code.Secret);
+        }
+    }
+
+    private string PairingError(Exception ex) => ex switch
+    {
+        SyncPairingExpiredException => _loc.Get("Ui.SyncDialog.PairingCode.Expired"),
+        CryptographicException => _loc.Get("Ui.SyncDialog.PairingCode.Rejected"),
+        _ => ex.Message,
+    };
+
     private async Task RestoreAsync()
     {
         if (SelectedConflict is not { CanRestore: true } item) return;
@@ -540,6 +792,7 @@ internal sealed class SyncDialog : MedReminderFormBase
             {
                 button.Enabled = true;
                 UpdateConflictButtons();
+                UpdateDeviceButtons();
             }
         };
         return button;

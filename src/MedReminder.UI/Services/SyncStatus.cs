@@ -20,6 +20,10 @@ internal sealed class SyncStatus
     // profile must be rebuilt from the group (admin action).
     public bool NeedsRebuild { get; private set; }
 
+    // The group key was changed on another device (Phase 4c): sync
+    // resumes after the new passphrase or a pairing code (admin action).
+    public bool NeedsNewKey { get; private set; }
+
     // The cloud session ended (Phase 4a): sync resumes after an
     // interactive sign-in from the sync window.
     public bool NeedsSignIn { get; private set; }
@@ -36,7 +40,8 @@ internal sealed class SyncStatus
             LastResult = result;
             LastError = null;
             NeedsSignIn = false;
-            NeedsRebuild = result.NewerGeneration is not null || result.RebuildRequired;
+            NeedsNewKey = result.NewKeyRequired;
+            NeedsRebuild = (result.NewerGeneration is not null && !result.NewKeyRequired) || result.RebuildRequired;
         }
         Changed?.Invoke(this, EventArgs.Empty);
         if (result.OperationsApplied > 0) RemoteChangesApplied?.Invoke(this, EventArgs.Empty);
@@ -61,6 +66,7 @@ internal sealed class SyncStatus
             LastResult = null;
             LastError = null;
             NeedsRebuild = false;
+            NeedsNewKey = false;
             NeedsSignIn = false;
         }
         Changed?.Invoke(this, EventArgs.Empty);
