@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #113 — Align STATUS, EVOLUTION and ANALYSIS with v2.10.0
+
+Link: [vger70/MedReminder#113](https://github.com/vger70/MedReminder/pull/113)
+Branch: `claude/docs-status-v2.10`
+
+### Docs
+
+- `docs/STATUS.md`: snapshot at v2.10.0; A2 phases 2 and 3 shipped
+  (#110, #111), webcam decode on a real pack still unconfirmed;
+  multi-user G/I design ready, gated on decisions D1–D7; next steps.
+- `docs/EVOLUTION.md` / `docs/EVOLUTION-DONE.md`: A2 moved to the
+  shipped items (§3.2); sequence and multi-user note updated.
+- `docs/ANALYSIS.md`: release line 2.10.x;
+  `ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md` listed.
+
 ## PR #112 — Design role change and all-profiles view (multi-user G/I)
 
 Link: [vger70/MedReminder#112](https://github.com/vger70/MedReminder/pull/112)
