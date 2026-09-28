@@ -27,6 +27,11 @@ public sealed record ApplyRemoteResult(
 //     schedule summary) are last writer wins by HLC (SyncRegisters); an
 //     older write is kept as a version and may be listed as a conflict.
 //   - A retraction wins over its fact whatever the order of arrival.
+//   - A deleted medicine (MedicineDeleted) wins over every operation for
+//     it: its rows are removed, and a later operation for it, from a
+//     device that had not seen the deletion, is logged but not applied.
+//     The tombstone is the MedicineDeleted entry of the operation log,
+//     which is never pruned and travels in checkpoint images.
 //
 // Each operation commits on its own, together with its record in
 // SyncOperations, so an interrupted batch resumes by re-delivery (the
@@ -56,6 +61,7 @@ public sealed class ApplyRemoteOperations
     private readonly IMedicationSuspensionRepository _suspensions;
     private readonly IMedicineActivityRepository _activity;
     private readonly IFactRetractionRepository _retractions;
+    private readonly IMedicineDeletionRepository _deletion;
     private readonly LedgerSynchronizer _ledger;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
@@ -67,6 +73,8 @@ public sealed class ApplyRemoteOperations
     // Tombstones added in this batch, by fact id (tracked instances).
     private readonly Dictionary<Guid, FactRetraction> _tombstones = new();
     private readonly Dictionary<Guid, Medicine> _medicineCache = new();
+    // Whether a medicine has a MedicineDeleted in the log, by id.
+    private readonly Dictionary<Guid, bool> _deleted = new();
 
     public ApplyRemoteOperations(
         ISyncSettingsStore settings,
@@ -81,6 +89,7 @@ public sealed class ApplyRemoteOperations
         IMedicationSuspensionRepository suspensions,
         IMedicineActivityRepository activity,
         IFactRetractionRepository retractions,
+        IMedicineDeletionRepository deletion,
         LedgerSynchronizer ledger,
         IUnitOfWork uow,
         TimeProvider clock)
@@ -97,6 +106,7 @@ public sealed class ApplyRemoteOperations
         _suspensions = suspensions;
         _activity = activity;
         _retractions = retractions;
+        _deletion = deletion;
         _ledger = ledger;
         _uow = uow;
         _clock = clock;
@@ -150,7 +160,8 @@ public sealed class ApplyRemoteOperations
                 break;
             }
 
-            await ApplyAsync(body, operation.Timestamp, cancellationToken);
+            var ofDeleted = await IsDeletedAsync(body.MedicineId, cancellationToken);
+            if (!ofDeleted) await ApplyAsync(body, operation.Timestamp, cancellationToken);
             await _operations.AddAsync(new SyncOperation
             {
                 Id = operation.Id,
@@ -170,7 +181,13 @@ public sealed class ApplyRemoteOperations
                 await _medicines.UpdateAsync(changed, cancellationToken);
             }
             await _uow.SaveChangesAsync(cancellationToken);
-            touched.Add(body.MedicineId);
+            if (ofDeleted)
+            {
+                skipped++;
+                continue;
+            }
+            if (body is MedicineDeleted) touched.Remove(body.MedicineId);
+            else touched.Add(body.MedicineId);
             applied++;
         }
 
@@ -237,6 +254,9 @@ public sealed class ApplyRemoteOperations
                 return;
             case FactRetracted retraction:
                 await ApplyRetractionAsync(retraction, timestamp, ct);
+                return;
+            case MedicineDeleted deleted:
+                await ApplyDeletionAsync(deleted, ct);
                 return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");
@@ -521,6 +541,22 @@ public sealed class ApplyRemoteOperations
                 break;
         }
         _trackedFacts.Remove(retraction.FactId);
+    }
+
+    private async Task ApplyDeletionAsync(MedicineDeleted deleted, CancellationToken ct)
+    {
+        await _deletion.RemoveAsync(deleted.MedicineId, ct);
+        _medicineCache.Remove(deleted.MedicineId);
+        _deleted[deleted.MedicineId] = true;
+    }
+
+    private async Task<bool> IsDeletedAsync(Guid medicineId, CancellationToken ct)
+    {
+        if (_deleted.TryGetValue(medicineId, out var deleted)) return deleted;
+        deleted = (await _operations.ListForMedicineAsync(medicineId, ct))
+            .Any(o => o.Type == nameof(MedicineDeleted));
+        _deleted[medicineId] = deleted;
+        return deleted;
     }
 
     private async Task AddTombstoneAsync(FactRetracted retraction, CancellationToken ct)

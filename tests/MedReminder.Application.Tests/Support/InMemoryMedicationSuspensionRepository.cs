@@ -43,4 +43,10 @@ internal sealed class InMemoryMedicationSuspensionRepository
         _items.RemoveAll(s => s.Id == suspension.Id);
         return Task.CompletedTask;
     }
+
+    // Test double of IMedicineDeletionRepository (InMemoryMedicineDeletionRepository).
+    public void RemoveForMedicine(Guid medicineId)
+    {
+        _items.RemoveAll(x => x.MedicineId == medicineId);
+    }
 }

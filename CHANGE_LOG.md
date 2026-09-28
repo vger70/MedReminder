@@ -9,7 +9,36 @@ updated only if the PR's scope changes materially before it merges.
 - Every time a new pull request is created for this repository, an
   entry is prepended below in reverse-chronological order (newest
   first).
-- The entry title is `## PR #<number> — <one-line summary>` and links
+- The entry title is `## PR #97 — Allow deleting a medicine without history and hide inactive medicines
+
+Link: [vger70/MedReminder#97](https://github.com/vger70/MedReminder/pull/97)
+Branch: `claude/medicine-delete-hide-inactive`
+
+### Added
+
+- Therapy → Delete… removes a medicine entered by mistake, with its
+  schedule, while no stock entry, intake, count or suspension was
+  recorded for it; otherwise the user is told to deactivate it or
+  retract the entries first (`DeleteMedicine`,
+  `MedicineDeletionRepository`).
+- Sync operation `MedicineDeleted` (operation schema version 2): it
+  wins over every operation for the medicine, and later ones are
+  logged but not applied. Other operations keep version 1; sync
+  images move to schema version 2 (`docs/SYNC-FORMAT.md`).
+- Therapy → Show inactive medicines, and an *Inactive* status in the
+  list.
+
+### Changed
+
+- The main list hides deactivated medicines by default; the status
+  bar counts the hidden ones.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`,
+  `docs/SYNC-FORMAT.md`, `ANALYSIS-B1-MOBILE-SYNC.md` (P11, §4.2).
+
+## PR #<number> — <one-line summary>` and links
   back to the PR on GitHub.
 - The body lists the observable changes as terse bullet points,
   focused on **what changed** and **why**, not on implementation

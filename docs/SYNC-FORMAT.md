@@ -172,6 +172,10 @@ ISO 8601 with offset, decimals are JSON numbers.
 
 An operation of an unknown `type` or `schemaVersion` stops the reader
 at that segment; nothing after it is applied until the app is updated.
+Each operation is written with the lowest schema version that carries
+it (§6), so an older app stops only at an operation it cannot read.
+The segment header's `contentVersion` is the writer's highest schema
+version.
 
 ### 5.2 Device record
 
@@ -205,6 +209,10 @@ movements and the cutoff, the register versions (`SyncFieldVersions`),
 the tombstones (`FactRetractions`), the register conflicts and the
 operation log (`SyncOperations`).
 
+Image schema versions: 1, the original image; 2, the operation log may
+hold `MedicineDeleted`, so a medicine can be absent from the image
+while later operations for it exist (they are skipped, §6).
+
 A device joins from the newest checkpoint whose `vector` covers every
 device folder's first remaining segment (`vector[d] >= first − 1`), or
 from the genesis when no segment was deleted. It then applies the
@@ -213,7 +221,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema version 1)
+## 6. Operation catalogue (schema versions 1 and 2)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -234,6 +242,9 @@ nothing.
 | `SuspensionRecorded` | `suspensionId`, `startDate`, `endDate`, `reason`, `recordedAt` | fact |
 | `SuspensionEndChanged` | `suspensionId`, `endDate` | last writer wins |
 | `FactRetracted` | `retractionId`, `kind`, `factId`, `recordedAt` | the fact is removed whatever the order of arrival |
+| `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
+
+Every type is schema version 1 except `MedicineDeleted`, version 2.
 
 Medicine fields (`MedicineFieldChanged.field`): `Name`,
 `ActiveIngredient`, `Package`, `Unit`, `ThresholdDays`, `DoctorName`,

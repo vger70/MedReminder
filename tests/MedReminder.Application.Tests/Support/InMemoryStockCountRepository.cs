@@ -28,4 +28,10 @@ internal sealed class InMemoryStockCountRepository : IStockCountRepository
         _items.RemoveAll(c => c.Id == count.Id);
         return Task.CompletedTask;
     }
+
+    // Test double of IMedicineDeletionRepository (InMemoryMedicineDeletionRepository).
+    public void RemoveForMedicine(Guid medicineId)
+    {
+        _items.RemoveAll(x => x.MedicineId == medicineId);
+    }
 }

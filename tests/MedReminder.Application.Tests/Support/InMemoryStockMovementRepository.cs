@@ -57,4 +57,10 @@ internal sealed class InMemoryStockMovementRepository : IStockMovementRepository
         DateOnly? last = days.Count == 0 ? null : days.Max();
         return Task.FromResult(last);
     }
+
+    // Test double of IMedicineDeletionRepository (InMemoryMedicineDeletionRepository).
+    public void RemoveForMedicine(Guid medicineId)
+    {
+        _items.RemoveAll(x => x.MedicineId == medicineId);
+    }
 }

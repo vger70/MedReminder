@@ -44,6 +44,7 @@ public sealed class SyncConvergenceTests : IDisposable
     private int _conflicts;
     private int _retractions;
     private int _reevaluated;
+    private int _deletions;
     private readonly string _root = Path.Combine(Path.GetTempPath(), "mr-conv-" + Guid.NewGuid().ToString("N"));
 
     public SyncConvergenceTests(ITestOutputHelper output)
@@ -69,7 +70,7 @@ public sealed class SyncConvergenceTests : IDisposable
         }
         _output.WriteLine($"{seeds} scenarios, {steps} user actions applied, " +
             $"{_conflicts} register conflicts, {_retractions} retractions in the converged states, " +
-            $"{_reevaluated} counts whose outcome the merge changed.");
+            $"{_reevaluated} counts whose outcome the merge changed, {_deletions} medicines deleted.");
         // Guard against a vacuous run: the workload must reach the merge
         // paths it is meant to test.
         if (seeds >= 20)
@@ -77,6 +78,7 @@ public sealed class SyncConvergenceTests : IDisposable
             _conflicts.Should().BeGreaterThan(0);
             _retractions.Should().BeGreaterThan(0);
             _reevaluated.Should().BeGreaterThan(0);
+            _deletions.Should().BeGreaterThan(0);
         }
     }
 
@@ -145,6 +147,9 @@ public sealed class SyncConvergenceTests : IDisposable
             _reevaluated += await CountChangedOutcomesAsync(devices[0]);
             _conflicts += states[0].Split('\n').Count(l => l.StartsWith("X ", StringComparison.Ordinal));
             _retractions += states[0].Split('\n').Count(l => l.StartsWith("R ", StringComparison.Ordinal));
+            var log = await devices[0].RunAsync(sp => sp.GetRequiredService<ISyncOperationRepository>()
+                .ListAllAsync(CancellationToken.None));
+            _deletions += log.Count(o => o.Type == "MedicineDeleted");
             return actions;
         }
         finally
@@ -224,6 +229,11 @@ public sealed class SyncConvergenceTests : IDisposable
     internal static async Task<bool> ActAsync(SyncDevice device, Random random)
     {
         var medicines = await device.RunAsync(sp => sp.GetRequiredService<IMedicineRepository>().ListAllAsync(CancellationToken.None));
+        if (medicines.Count == 0)
+        {
+            await AddRandomMedicineAsync(device, random, DateOnly.FromDateTime(device.Clock.GetUtcNow().UtcDateTime));
+            return true;
+        }
         var medicine = medicines[random.Next(medicines.Count)];
         var id = medicine.Id;
         var today = DateOnly.FromDateTime(device.Clock.GetUtcNow().UtcDateTime);
@@ -232,7 +242,7 @@ public sealed class SyncConvergenceTests : IDisposable
 
         try
         {
-            switch (random.Next(13))
+            switch (random.Next(14))
             {
                 case 0:
                     await device.RunAsync(sp => sp.GetRequiredService<AddStock>().ExecuteAsync(
@@ -281,10 +291,13 @@ public sealed class SyncConvergenceTests : IDisposable
                     await device.RunAsync(sp => sp.GetRequiredService<RetractFact>().ExecuteAsync(
                         new RetractFactCommand(id, pick.Kind, pick.FactId), default));
                     break;
+                case 12:
+                    var outcome = await device.RunAsync(sp => sp.GetRequiredService<DeleteMedicine>().ExecuteAsync(
+                        new DeleteMedicineCommand(id), default));
+                    if (outcome != DeleteMedicineOutcome.Deleted) return false;
+                    break;
                 default:
-                    await device.RunAsync(sp => sp.GetRequiredService<AddMedicine>().ExecuteAsync(new AddMedicineCommand(
-                        $"Medicine {random.Next(1000)}", "tablet", 1m, 1, today.AddDays(-random.Next(0, 5)), 5,
-                        NotificationChannels.Windows, InitialQuantity: random.Next(0, 50)), default));
+                    await AddRandomMedicineAsync(device, random, today);
                     break;
             }
             return true;
@@ -294,6 +307,12 @@ public sealed class SyncConvergenceTests : IDisposable
             return false;
         }
     }
+
+    // Half of them without initial stock, so some can be deleted.
+    private static Task AddRandomMedicineAsync(SyncDevice device, Random random, DateOnly today)
+        => device.RunAsync(sp => sp.GetRequiredService<AddMedicine>().ExecuteAsync(new AddMedicineCommand(
+            $"Medicine {random.Next(1000)}", "tablet", 1m, 1, today.AddDays(-random.Next(0, 5)), 5,
+            NotificationChannels.Windows, InitialQuantity: random.Next(2) == 0 ? 0 : random.Next(1, 50)), default));
 
     // The edit dialog path: the stored values as baseline, a few changes.
     private static async Task EditAsync(SyncDevice device, Medicine medicine, Random random)

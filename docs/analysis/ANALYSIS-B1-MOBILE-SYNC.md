@@ -98,7 +98,7 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 | P8 | Every data write goes through an Application use case | **Met by Phase 2a for the profile database** | The only direct UI write (`MainForm` deactivate: `medicine.IsActive = false` + `SaveChangesAsync`) moved to the `DeactivateMedicine` use case; `UiWritePathGuardTests` fails on any repository write, `SaveChangesAsync` or `DbContext` use under `src/MedReminder.UI` `[VERIFIED]`. Open: two replicated values (§4.2) are still written by the UI outside the database: per-profile notification settings (`SettingsDialog` writes `notifications.settings.json`) and the profile display name (`ProfilesManagerForm` calls `IProfileRegistry.Rename`). They need a use case before operation capture reaches them; the product owner deferred them out of Phase 2a (2026-09-27) |
 | P9 | Stock ledger is a deterministic function of user facts | **Met by Phase 2c-2** (after the cutoff; counts carry their stored outcome until Phase 3) | `LedgerSynchronizer` derives consumption, reversals, count corrections and `StockEpoch` from the facts; the stored ledger equals a fresh derivation after every action of the random scenarios (`LedgerParityTests`) `[VERIFIED]` |
 | P10 | Stable GUID identity on every replicated entity | **Met** | All entities use `Guid Id` generated at creation `[VERIFIED — Domain entities]` |
-| P11 | Medicines are never hard-deleted | **Met** | Deactivation via `IsActive` `[VERIFIED]`; slots are no longer deleted: since Phase 2b `UpdateMedicine` appends a slot set `[VERIFIED]` |
+| P11 | Medicines are never hard-deleted | **Met, with one exception (2026-09-28)** | Deactivation via `IsActive` `[VERIFIED]`; slots are no longer deleted: since Phase 2b `UpdateMedicine` appends a slot set `[VERIFIED]`. A medicine without recorded facts can be deleted: `MedicineDeleted` operation, §4.2 |
 | P12 | AES-GCM on mobile | iOS 13+ on .NET 9+ **met**; Android `[UNCERTAIN]` | dotnet/runtime #91523 `[VERIFIED]`; spike S1 |
 | P13 | EF Core SQLite on Android / iOS AOT | `[UNCERTAIN]` | Spike S3 |
 | P14 | OAuth app registrations (Microsoft Entra public client, Google Cloud OAuth client) | **Not met** | Guide exists: `docs/notes/AZURE-ENTRA-PUBLIC-CLIENT-APPLICATION-GUIDE.md` `[VERIFIED]`. Phase 0 |
@@ -269,10 +269,11 @@ winner: count anchors are evaluated "as of" their HLC (§4.3), and the
 conflict review restores a losing value. History can be pruned only
 behind the anchor horizon (§5.6).
 
-Deletion: medicines are deactivated, never deleted (P11). The only
-deletions are slot-set replacement (covered by the set register) and
-the user deleting a mistaken fact (stock entry, count, intake,
-suspension). That becomes a **retraction** operation: a tombstone keyed
+Deletion: medicines with history are deactivated, never deleted (P11).
+The only deletions are slot-set replacement (covered by the set
+register), the user deleting a mistaken fact (stock entry, count,
+intake, suspension), and the deletion of a medicine without recorded
+facts (below). That becomes a **retraction** operation: a tombstone keyed
 by the fact `Id`, which wins over the fact whatever the order of
 arrival. Today the UI does not delete these facts; retraction is an
 addition (D8). `Legacy` facts cannot be retracted: a mistake before the
@@ -296,6 +297,19 @@ was counted. Implemented by Phase 3b-2: a retracted fact's row is
 removed, so no snapshot contains it. When the same fact is retracted
 on two devices, the earliest tombstone (recording instant, then id) is
 kept on every device.
+
+Deletion of a medicine (product owner, 2026-09-28): a medicine entered
+by mistake can be deleted while no fact was recorded for it on the
+deleting device (no `User` or `Legacy` stock entry, intake, count or
+suspension). The deletion is a `MedicineDeleted` operation (operation
+schema version 2) and wins over every operation for the medicine,
+whatever the order of arrival: the receiving device removes the
+medicine and every row that refers to it, facts recorded there
+concurrently included, and logs without applying any later operation
+for it. The tombstone is the `MedicineDeleted` row of the operation
+log, which is never pruned and travels in checkpoint images, so a
+device that joins from an image skips the late operations too. Images
+moved to schema version 2, since an older app cannot skip them.
 
 ### 4.3 `LedgerDeriver`
 

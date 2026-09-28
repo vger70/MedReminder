@@ -67,7 +67,7 @@ public sealed class OperationLog : IOperationLog
                 DeviceId = timestamp.DeviceId,
                 Generation = settings.Generation,
                 Type = type,
-                SchemaVersion = OperationCodec.CurrentSchemaVersion,
+                SchemaVersion = OperationCodec.SchemaVersionOf(body),
                 MedicineId = body.MedicineId,
                 EntityId = Operations.EntityOf(body),
                 Payload = payload,

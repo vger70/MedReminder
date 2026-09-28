@@ -40,6 +40,8 @@ internal sealed class ApplicationTestScope
     public AddMedicine AddMedicine { get; }
     public UpdateMedicine UpdateMedicine { get; }
     public DeactivateMedicine DeactivateMedicine { get; }
+    public DeleteMedicine DeleteMedicine { get; }
+    public InMemoryMedicineDeletionRepository Deletion { get; }
     public AddStock AddStock { get; }
     public AdjustStockDown AdjustStockDown { get; }
     public SuspendMedication SuspendMedication { get; }
@@ -73,6 +75,9 @@ internal sealed class ApplicationTestScope
         AddMedicine = new AddMedicine(Medicines, Schedules, Slots, Stock, Operations, Uow, Clock);
         UpdateMedicine = new UpdateMedicine(Medicines, Slots, Activity, Operations, Uow, Clock);
         DeactivateMedicine = new DeactivateMedicine(Medicines, Activity, Operations, Uow, Clock);
+        Deletion = new InMemoryMedicineDeletionRepository(this);
+        DeleteMedicine = new DeleteMedicine(
+            Medicines, Stock, Intakes, Counts, Suspensions, Deletion, Operations, Uow, Clock);
         AddStock = new AddStock(Medicines, Stock, Operations, Uow, Clock);
         AdjustStockDown = new AdjustStockDown(Medicines, Stock, Operations, Uow, Clock);
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Operations, Uow, Clock);
@@ -87,7 +92,7 @@ internal sealed class ApplicationTestScope
         Genesis = new SyncGenesis(Medicines, Suspensions, SyncVersions, Uow);
         ApplyRemote = new ApplyRemoteOperations(
             SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
-            Suspensions, Activity, Retractions, Ledger, Uow, Clock);
+            Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock);
 
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,

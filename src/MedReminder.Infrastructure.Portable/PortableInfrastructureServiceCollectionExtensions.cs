@@ -32,6 +32,7 @@ public static class PortableInfrastructureServiceCollectionExtensions
         });
 
         services.AddScoped<IMedicineRepository, MedicineRepository>();
+        services.AddScoped<IMedicineDeletionRepository, MedicineDeletionRepository>();
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();
         services.AddScoped<IMedicationScheduleHistoryRepository, MedicationScheduleHistoryRepository>();
         services.AddScoped<IMedicationSuspensionRepository, MedicationSuspensionRepository>();

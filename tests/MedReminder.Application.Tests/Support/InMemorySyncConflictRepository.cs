@@ -26,4 +26,10 @@ internal sealed class InMemorySyncConflictRepository : ISyncConflictRepository
         _items.RemoveAll(c => c.Id == conflict.Id);
         return Task.CompletedTask;
     }
+
+    // Test double of IMedicineDeletionRepository (InMemoryMedicineDeletionRepository).
+    public void RemoveForMedicine(Guid medicineId)
+    {
+        _items.RemoveAll(x => x.MedicineId == medicineId);
+    }
 }

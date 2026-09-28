@@ -316,8 +316,20 @@ figure only: it is not interpreted as missed or extra doses.
 - **Deactivate**: toolbar → **Deactivate**. The medicine disappears
   from automatic checks and alerts, but historical data (movements,
   notifications) stays in the DB for audit.
-- **Reactivate**: **Edit** → tick **Active**. The days on which the
-  medicine was inactive are not counted as consumption.
+- **Show inactive medicines**: deactivated medicines are hidden from
+  the list. **Therapy → Show inactive medicines** shows them again,
+  marked *Inactive*, until the app is closed. The status bar says how
+  many are hidden.
+- **Reactivate**: show the inactive medicines, then **Edit** → tick
+  **Active**. The days on which the medicine was inactive are not
+  counted as consumption.
+- **Delete**: **Therapy → Delete…** removes a medicine entered by
+  mistake, with its schedule, permanently. It is allowed only while
+  nothing was recorded for it: no stock entry (the initial quantity
+  included), intake, stock count or suspension. Otherwise deactivate
+  it, or first delete those entries from **Stock → History…**. With
+  sync enabled the medicine is removed from the other devices too,
+  together with anything recorded there in the meantime.
 
 ## Stock history and deleting a mistaken entry
 
