@@ -134,6 +134,103 @@ public sealed class HouseholdSyncTests : IDisposable
         (await c.Log.ProfilesAsync(CancellationToken.None)).Should().BeEmpty();
     }
 
+    // Step H3b: keys.
+    private static readonly ProfileGroupKey UserGroup =
+        new(Guid.Parse("0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"), 2, RandomNumberGenerator.GetBytes(32));
+
+    private async Task<(Installation A, Installation B)> PublishedWithASyncedProfileAsync()
+    {
+        var a = Create("A");
+        a.Registry.Add("admin", "Anna", ProfileRole.Admin);
+        a.Registry.Add("user", "Bruno", ProfileRole.User);
+        a.GroupKeys.Keys["user"] = UserGroup;
+        await a.ReconcileAsync();
+        await a.Sync.PublishAsync(SyncTarget.ForFolder(Folder), Passphrase.ToCharArray(), "PC A", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+        var b = Create("B");
+        var householdId = (await a.Store.EnsureCreatedAsync(CancellationToken.None)).HouseholdId;
+        await b.Sync.JoinAsync(SyncTarget.ForFolder(Folder), householdId, Passphrase.ToCharArray(), "PC B",
+            CancellationToken.None);
+        return (a, b);
+    }
+
+    [Fact]
+    public async Task Publishing_adopts_the_synced_profiles_with_a_grant_to_itself_and_an_escrow()
+    {
+        var (a, _) = await PublishedWithASyncedProfileAsync();
+
+        (await a.Keyring.OpenGrantAsync("user", CancellationToken.None))!.Key.Should().Equal(UserGroup.Key);
+        (await a.Keyring.OpenGrantAsync("admin", CancellationToken.None)).Should().BeNull("the profile is not synced");
+        var keys = await a.Keyring.KeysAsync(CancellationToken.None);
+        keys.Escrows.Should().ContainKey("user");
+        keys.RecoveryPublicKey.Should().NotBeNull();
+        (await a.Keyring.AdoptProfileGroupsAsync(CancellationToken.None)).Should().Be(0, "already adopted");
+    }
+
+    [Fact]
+    public async Task A_granted_device_opens_the_profile_key_and_loses_it_when_revoked()
+    {
+        var (a, b) = await PublishedWithASyncedProfileAsync();
+        var deviceB = (await b.Store.EnsureCreatedAsync(CancellationToken.None)).DeviceId;
+        (await b.Keyring.OpenGrantAsync("user", CancellationToken.None)).Should().BeNull();
+
+        await a.Sync.RunAsync(CancellationToken.None);
+        await a.Keyring.GrantAsync("user", deviceB, CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+
+        var opened = await b.Keyring.OpenGrantAsync("user", CancellationToken.None);
+        opened!.Key.Should().Equal(UserGroup.Key);
+        opened.GroupId.Should().Be(UserGroup.GroupId);
+        opened.KeyVersion.Should().Be(2);
+
+        await a.Keyring.RevokeAsync("user", deviceB, CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+        (await b.Keyring.OpenGrantAsync("user", CancellationToken.None)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task The_household_passphrase_recovers_a_profile_key_from_its_escrow()
+    {
+        var (_, b) = await PublishedWithASyncedProfileAsync();
+
+        (await b.Sync.RecoverProfileKeyAsync("user", Passphrase.ToCharArray(), CancellationToken.None))!
+            .Key.Should().Equal(UserGroup.Key);
+        (await b.Sync.RecoverProfileKeyAsync("admin", Passphrase.ToCharArray(), CancellationToken.None))
+            .Should().BeNull();
+        var wrong = () => b.Sync.RecoverProfileKeyAsync("user", "wrong words".ToCharArray(), CancellationToken.None);
+        await wrong.Should().ThrowAsync<CryptographicException>();
+    }
+
+    [Fact]
+    public async Task A_device_that_joins_publishes_its_key_once()
+    {
+        var (a, b) = await PublishedWithASyncedProfileAsync();
+        var deviceB = (await b.Store.EnsureCreatedAsync(CancellationToken.None)).DeviceId;
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        (await a.Keyring.KeysAsync(CancellationToken.None)).DevicePublicKeys.Should().ContainKey(deviceB);
+        (await b.Sync.RunAsync(CancellationToken.None)).OperationsPublished.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task No_profile_key_appears_in_clear_in_the_storage_or_the_household_files()
+    {
+        var (a, b) = await PublishedWithASyncedProfileAsync();
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        var base64 = System.Text.Encoding.ASCII.GetBytes(Convert.ToBase64String(UserGroup.Key));
+        foreach (var file in Directory.EnumerateFiles(Folder, "*", SearchOption.AllDirectories)
+                     .Concat(Directory.EnumerateFiles(a.Directory, "*", SearchOption.AllDirectories))
+                     .Concat(Directory.EnumerateFiles(b.Directory, "*", SearchOption.AllDirectories)))
+        {
+            var bytes = File.ReadAllBytes(file);
+            bytes.AsSpan().IndexOf(UserGroup.Key).Should().Be(-1, file);
+            bytes.AsSpan().IndexOf(base64).Should().Be(-1, file);
+        }
+    }
+
     [Fact]
     public async Task A_household_is_published_once()
     {
@@ -165,8 +262,10 @@ public sealed class HouseholdSyncTests : IDisposable
             Store = new SqliteHouseholdStore(household);
             Log = new HouseholdLog(Store, TimeProvider.System);
             var projection = new HouseholdProjection(Log, Registry, Settings, Credentials, Protector);
+            Keyring = new HouseholdKeyring(Log, Store, new ProtectedDeviceKeyStore(Protector, household), GroupKeys,
+                Registry, new ArchiveCipher());
             Sync = new HouseholdSync(Store, new ProtectedHouseholdKeyStore(Protector, household), new FolderTransports(),
-                new ArchiveCipher(), Protector, projection, TimeProvider.System,
+                new ArchiveCipher(), Protector, projection, Keyring, TimeProvider.System,
                 new MedReminder.Application.Sync.SyncEngineOptions { DeviceName = name });
         }
 
@@ -174,6 +273,8 @@ public sealed class HouseholdSyncTests : IDisposable
         public SqliteHouseholdStore Store { get; }
         public HouseholdLog Log { get; }
         public HouseholdSync Sync { get; }
+        public HouseholdKeyring Keyring { get; }
+        public FakeGroupKeys GroupKeys { get; } = new();
         public FakeRegistry Registry { get; } = new();
         public FakeSettings Settings { get; } = new();
         public FakeCredentials Credentials { get; } = new();
@@ -189,6 +290,15 @@ public sealed class HouseholdSyncTests : IDisposable
 
         public UpdateGeneralSettings General(ICurrentProfile? current = null)
             => new(Settings, current ?? As("admin", ProfileRole.Admin), Log);
+    }
+
+    // profiles\<id>\sync.protected of each synced profile.
+    private sealed class FakeGroupKeys : IProfileGroupKeys
+    {
+        public Dictionary<string, ProfileGroupKey> Keys { get; } = new(StringComparer.Ordinal);
+
+        public ProfileGroupKey? Load(string profileId)
+            => Keys.TryGetValue(profileId, out var key) ? key with { Key = [.. key.Key] } : null;
     }
 
     private sealed class FolderTransports : ISyncTransportFactory

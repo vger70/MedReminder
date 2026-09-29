@@ -13,6 +13,16 @@ public static class HouseholdRegisters
     // The entity of the installation settings: no profile has this id.
     public const string Installation = "";
 
+    // Step H3b: entities of the keys (never a profile id, which is
+    // "default" or 32 hex digits).
+    public const string Recovery = "recovery";
+    public const string PublicKey = "PublicKey";
+    public const string Escrow = "Escrow";
+
+    public static string DeviceEntity(Guid deviceId) => "device:" + deviceId.ToString("N");
+
+    public static string GrantRegister(Guid deviceId) => "Grant:" + deviceId.ToString("N");
+
     public const string Registered = "Registered";
     public const string Name = "Name";
     public const string Role = "Role";
@@ -32,6 +42,11 @@ public static class HouseholdRegisters
         ProfilePinChanged p => [(Pin, PinValue(p.Hash, p.Salt, p.Iterations))],
         ProfileRemoved => [(Removed, "true")],
         HouseholdSettingChanged s => [(s.Setting, s.Value)],
+        DeviceKeyPublished d => [(PublicKey, d.PublicKey)],
+        RecoveryKeyPublished r => [(PublicKey, Wrapped(r.KeyVersion, Guid.Empty, r.PublicKey))],
+        ProfileKeyGranted g => [(GrantRegister(g.DeviceId), Wrapped(g.KeyVersion, g.GroupId, g.WrappedKey))],
+        ProfileKeyRevoked r => [(GrantRegister(r.DeviceId), null)],
+        ProfileKeyEscrowed e => [(Escrow, Wrapped(e.KeyVersion, e.GroupId, e.WrappedKey))],
         _ => throw new NotSupportedException($"No registers for {body.GetType().Name}."),
     };
 
@@ -57,6 +72,56 @@ public static class HouseholdRegisters
         salt = parts[1];
         hash = parts[2];
         return true;
+    }
+
+    // "<groupId>:<keyVersion>:<wrapped>" (no colon in a wrapped key).
+    private static string Wrapped(int keyVersion, Guid groupId, string wrapped)
+        => $"{groupId:N}:{keyVersion.ToString(CultureInfo.InvariantCulture)}:{wrapped}";
+
+    private static HouseholdWrappedKey? ParseWrapped(string? value)
+    {
+        var parts = value?.Split(':');
+        return parts is { Length: 3 } && Guid.TryParseExact(parts[0], "N", out var group)
+            && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var version)
+            ? new HouseholdWrappedKey(group, version, parts[2])
+            : null;
+    }
+
+    // Step H3b: the keys the winning versions describe.
+    public static HouseholdKeys Keys(
+        IEnumerable<(string ProfileId, string Register, HybridTimestamp Version, string? Value)> versions)
+    {
+        var winners = versions
+            .GroupBy(v => (v.ProfileId, v.Register))
+            .ToDictionary(g => g.Key, g => g.MaxBy(v => v.Version).Value);
+        var devices = new Dictionary<Guid, string>();
+        HouseholdWrappedKey? recovery = null;
+        var escrows = new Dictionary<string, HouseholdWrappedKey>(StringComparer.Ordinal);
+        var grants = new Dictionary<(string ProfileId, Guid DeviceId), HouseholdWrappedKey>();
+        foreach (var ((entity, register), value) in winners)
+        {
+            if (value is null) continue;
+            if (entity.StartsWith("device:", StringComparison.Ordinal) && register == PublicKey
+                && Guid.TryParseExact(entity["device:".Length..], "N", out var device))
+            {
+                devices[device] = value;
+            }
+            else if (entity == Recovery && register == PublicKey)
+            {
+                recovery = ParseWrapped(value);
+            }
+            else if (register == Escrow && ParseWrapped(value) is { } escrow)
+            {
+                escrows[entity] = escrow;
+            }
+            else if (register.StartsWith("Grant:", StringComparison.Ordinal)
+                     && Guid.TryParseExact(register["Grant:".Length..], "N", out var grantee)
+                     && ParseWrapped(value) is { } grant)
+            {
+                grants[(entity, grantee)] = grant;
+            }
+        }
+        return new HouseholdKeys(devices, recovery, escrows, grants);
     }
 
     // The winning value of each installation setting that has a version.
@@ -90,3 +155,13 @@ public static class HouseholdRegisters
 // A profile as the household holds it. Pin is the register value of
 // HouseholdRegisters.PinValue, null without a PIN.
 public sealed record HouseholdProfile(string ProfileId, string DisplayName, string Role, string? Pin);
+
+// Step H3b. For RecoveryKeyPublished, GroupId is empty and Wrapped is the
+// recovery public key.
+public sealed record HouseholdWrappedKey(Guid GroupId, int KeyVersion, string Wrapped);
+
+public sealed record HouseholdKeys(
+    IReadOnlyDictionary<Guid, string> DevicePublicKeys,
+    HouseholdWrappedKey? RecoveryPublicKey,
+    IReadOnlyDictionary<string, HouseholdWrappedKey> Escrows,
+    IReadOnlyDictionary<(string ProfileId, Guid DeviceId), HouseholdWrappedKey> Grants);

@@ -398,6 +398,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
     household.db                 household operation log and registers (household feature, step H2)
     household.settings.json      household id, device id, generation, storage once published
     household.protected          household key, DPAPI CurrentUser (step H3a)
+    device.protected             this device's household private key, DPAPI CurrentUser (step H3b)
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
@@ -453,6 +454,13 @@ root is committed to the repository.
   role and PIN of the profiles this installation already has; it never
   creates or deletes one) and into the settings files. Not yet wired to
   the UI or the background service (step H3d).
+- **Household keys** (step H3b): each device has an ECDH P-256 key pair
+  (`device.protected`); `HouseholdKeyring` wraps the group key of each
+  synced profile for the devices that hold it (grants) and for a
+  recovery key pair whose private key only the household passphrase
+  opens (escrow). Publishing, and every run, adopts the synced profiles
+  of the installation (grant to itself, escrow). Format:
+  `docs/SYNC-FORMAT.md` §9.4.
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).

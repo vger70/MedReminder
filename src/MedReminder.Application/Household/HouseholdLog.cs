@@ -58,6 +58,11 @@ public sealed class HouseholdLog
         => HouseholdRegisters.Settings((await _store.ListRegistersAsync(cancellationToken))
             .Select(v => (v.ProfileId, v.Register, v.Version, v.Value)));
 
+    // Step H3b: device public keys, recovery public key, grants, escrows.
+    public async Task<HouseholdKeys> KeysAsync(CancellationToken cancellationToken)
+        => HouseholdRegisters.Keys((await _store.ListRegistersAsync(cancellationToken))
+            .Select(v => (v.ProfileId, v.Register, v.Version, v.Value)));
+
     // The profiles of the household, from the winning register versions.
     public async Task<IReadOnlyList<HouseholdProfile>> ProfilesAsync(CancellationToken cancellationToken)
         => HouseholdRegisters.Profiles((await _store.ListRegistersAsync(cancellationToken))

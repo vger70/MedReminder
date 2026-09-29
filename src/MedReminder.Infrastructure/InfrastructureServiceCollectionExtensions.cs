@@ -106,6 +106,9 @@ public static class InfrastructureServiceCollectionExtensions
         // profile database.
         services.TryAddSingleton<ISyncKeyStore>(
             new DpapiSyncKeyStore(Path.Combine(currentProfile.DataDirectory, DpapiSyncKeyStore.FileName)));
+        // Household step H3b: the group key of any profile, for grants and
+        // escrows.
+        services.TryAddSingleton<IProfileGroupKeys, ProfileGroupKeys>();
         // B.1 Phase 3d: create, join and rebuild from the sync window.
         services.AddScoped<ISyncSetupService, SyncSetupService>();
         // B.1 Phase 4a: OneDrive sign-in and access tokens, one MSAL

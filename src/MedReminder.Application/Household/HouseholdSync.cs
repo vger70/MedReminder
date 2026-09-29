@@ -42,13 +42,15 @@ public sealed class HouseholdSync
     private readonly IArchiveCipher _cipher;
     private readonly ICredentialProtector _protector;
     private readonly HouseholdProjection _projection;
+    private readonly HouseholdKeyring _keyring;
     private readonly TimeProvider _clock;
     private readonly SyncEngineOptions _options;
 
     public HouseholdSync(IHouseholdStore store, IHouseholdKeyStore keys, ISyncTransportFactory transports,
-        IArchiveCipher cipher, ICredentialProtector protector, HouseholdProjection projection, TimeProvider clock,
-        SyncEngineOptions? options = null)
+        IArchiveCipher cipher, ICredentialProtector protector, HouseholdProjection projection, HouseholdKeyring keyring,
+        TimeProvider clock, SyncEngineOptions? options = null)
     {
+        _keyring = keyring;
         _store = store;
         _keys = keys;
         _transports = transports;
@@ -82,6 +84,22 @@ public sealed class HouseholdSync
             await transport.CreateAsync(SyncLayout.KeyWrap(identity.HouseholdId, 1),
                 SyncKeyWrap.Wrap(_cipher, identity.HouseholdId, 1, key, passphrase, kdf ?? Argon2Params.Default).ToBytes(),
                 cancellationToken);
+
+            // Step H3b: this device's key, the recovery key and the
+            // existing profile groups go into the genesis.
+            await _keyring.EnsureDeviceKeyAsync(cancellationToken);
+            var recovery = Convert.FromBase64String(await _keyring.CreateRecoveryKeyAsync(1, cancellationToken));
+            try
+            {
+                await transport.CreateAsync(RecoveryWrapPath(identity.HouseholdId, 1),
+                    SyncKeyWrap.Wrap(_cipher, identity.HouseholdId, 1, recovery, passphrase, kdf ?? Argon2Params.Default,
+                        RecoveryPurpose).ToBytes(), cancellationToken);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(recovery);
+            }
+            await _keyring.AdoptProfileGroupsAsync(cancellationToken);
 
             var log = await _store.ListOperationsAsync(cancellationToken);
             var image = new HouseholdSegmentContent(new Dictionary<Guid, int>(), [.. log.Select(Outgoing)]);
@@ -142,6 +160,8 @@ public sealed class HouseholdSync
             }
             await _store.MarkPublishedAsync([.. image.Operations.Select(o => o.Id)], 0, cancellationToken);
             _keys.Save(householdId, obtained.KeyVersion, obtained.Key);
+            // Step H3b: this device's public key goes up with the first run.
+            await _keyring.EnsureDeviceKeyAsync(cancellationToken);
             await WriteRecordAsync(transport, obtained.Key, identity, new Dictionary<Guid, int>(), cancellationToken);
         }
         finally
@@ -164,6 +184,9 @@ public sealed class HouseholdSync
         {
             var transport = _transports.Create(identity.Storage);
             var problems = new List<string>();
+            // Step H3b: a profile synced since the last run joins the household.
+            await _keyring.EnsureDeviceKeyAsync(cancellationToken);
+            await _keyring.AdoptProfileGroupsAsync(cancellationToken);
             var (published, identityAfter) = await PublishPendingAsync(transport, key, identity, cancellationToken);
             var (segments, operations) = await PullAsync(transport, key, identityAfter, problems, cancellationToken);
             problems.AddRange(await _projection.ProjectAsync(cancellationToken));
@@ -176,6 +199,37 @@ public sealed class HouseholdSync
             CryptographicOperations.ZeroMemory(key);
         }
     }
+
+    // Step H3b: the group key of a profile from its escrow, when no device
+    // that holds it is at hand. The household passphrase opens the recovery
+    // private key (recovery.<v>.wrap); CryptographicException for a wrong
+    // passphrase. Null when the household holds no escrow for the profile.
+    public async Task<ProfileGroupKey?> RecoverProfileKeyAsync(string profileId, char[] passphrase,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(passphrase);
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) throw new InvalidOperationException("The household is not published.");
+        var keys = await _keyring.KeysAsync(cancellationToken);
+        if (keys.RecoveryPublicKey is not { } recovery) return null;
+        var file = await _transports.Create(identity.Storage)
+            .ReadAsync(RecoveryWrapPath(identity.HouseholdId, recovery.KeyVersion), cancellationToken)
+            ?? throw new InvalidOperationException("The recovery key is missing from the storage.");
+        var privateKey = SyncKeyWrap.Parse(file).Unwrap(_cipher, passphrase, RecoveryPurpose);
+        try
+        {
+            return await _keyring.OpenEscrowAsync(profileId, Convert.ToBase64String(privateKey), cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(privateKey);
+        }
+    }
+
+    public const string RecoveryPurpose = "Recovery";
+
+    // recovery.<v>.wrap next to key.<v>.wrap (§9.1 of docs/SYNC-FORMAT.md).
+    public static string RecoveryWrapPath(Guid householdId, int keyVersion) => $"{householdId:N}/recovery.{keyVersion}.wrap";
 
     private async Task<(int Published, HouseholdIdentity Identity)> PublishPendingAsync(ISyncTransport transport,
         byte[] key, HouseholdIdentity identity, CancellationToken ct)
