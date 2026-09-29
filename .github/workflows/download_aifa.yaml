@@ -2,7 +2,7 @@ name: Download AIFA CSV
 
 on:
   schedule:
-    - cron: '0 3 2 * *'
+    - cron: '0 3 2 * *'  
   workflow_dispatch:
 
 permissions:
@@ -10,12 +10,12 @@ permissions:
 
 jobs:
   download:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -25,7 +25,7 @@ jobs:
 
       - name: Generate files
         run: |
-          python scarica_aifa.py
+          python scripts/download_aifa.py
 
       - name: Commit changes
         run: |
