@@ -468,7 +468,13 @@ root is committed to the repository.
   then builds each granted profile from its group in
   `profiles\.join-<guid>\` and moves it to `profiles\<id>\`
   (`IHouseholdProfileInstaller`) before adding it to `profiles.json`
-  under its household id. Not yet wired to the UI (step H3d).
+  under its household id.
+- **Installation window** (step H3d-1): Tools → Installation…
+  (administrators only; so is Tools → Sync…) publishes the household,
+  lists its devices, shows `mrpair2` codes and joins an existing
+  installation. `HouseholdHostedService` runs the household sync every
+  15 minutes (`Household:IntervalMinutes`). The first-run wizard does
+  not offer the join yet (step H3d-2).
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).

@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Household.Remote;
 using MedReminder.Application.Sync.Remote;
 
 namespace MedReminder.UI.Forms;
@@ -7,15 +8,19 @@ namespace MedReminder.UI.Forms;
 // docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §6.1): to join a group without
 // the passphrase, or to take the new key after a rotation. The device
 // name is asked only when joining.
+// Household step H3d: with household set, it takes an installation code
+// (mrpair2) instead of a group code.
 internal sealed class SyncPairingCodeDialog : MedReminderFormBase
 {
     private readonly ILocalizationService _loc;
+    private readonly bool _household;
     private readonly TextBox _code;
     private readonly TextBox? _name;
 
-    public SyncPairingCodeDialog(ILocalizationService localization, string? defaultDeviceName)
+    public SyncPairingCodeDialog(ILocalizationService localization, string? defaultDeviceName, bool household = false)
     {
         _loc = localization;
+        _household = household;
 
         Text = _loc.Get("Ui.SyncDialog.PairingCode.Title");
         Width = 560;
@@ -37,7 +42,7 @@ internal sealed class SyncPairingCodeDialog : MedReminderFormBase
 
         var hint = new Label
         {
-            Text = _loc.Get("Ui.SyncDialog.PairingCode.Hint"),
+            Text = _loc.Get(household ? "Ui.HouseholdDialog.Code.Hint" : "Ui.SyncDialog.PairingCode.Hint"),
             AutoSize = true,
             MaximumSize = new Size(510, 0),
             Margin = new Padding(0, 0, 0, 10),
@@ -88,12 +93,19 @@ internal sealed class SyncPairingCodeDialog : MedReminderFormBase
 
     public SyncPairingCode? Code { get; private set; }
 
+    public HouseholdPairingCode? HouseholdCode { get; private set; }
+
     public string DeviceName => _name?.Text.Trim() ?? string.Empty;
 
     private void Accept()
     {
         string? error = null;
         if (_name is not null && DeviceName.Length == 0) error = _loc.Get("Ui.SyncDialog.Passphrase.Error.Name");
+        else if (_household)
+        {
+            if (HouseholdPairingCode.TryParse(_code.Text, out var household)) HouseholdCode = household;
+            else error = _loc.Get("Ui.HouseholdDialog.Code.Invalid");
+        }
         else if (!SyncPairingCode.TryParse(_code.Text, out var code)) error = _loc.Get("Ui.SyncDialog.PairingCode.Invalid");
         else Code = code;
 

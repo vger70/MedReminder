@@ -310,6 +310,29 @@ public sealed class HouseholdSync
         }
     }
 
+    // Step H3d: the device records of the household, for the Devices list.
+    // Empty while the household is not on a storage.
+    public async Task<IReadOnlyList<DeviceRecordContent>> ListDevicesAsync(CancellationToken cancellationToken)
+    {
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) return [];
+        var key = _keys.Load(identity.HouseholdId, identity.KeyVersion)
+            ?? throw new InvalidOperationException("The household key is not stored on this device.");
+        try
+        {
+            return await SyncEngine.ReadRecordsAsync(_transports.Create(identity.Storage), _cipher, key, AsGroup(identity),
+                cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    // Step H3d: the households of a storage, for the join.
+    public Task<IReadOnlyList<Guid>> ListHouseholdsAsync(SyncTarget target, CancellationToken cancellationToken)
+        => HouseholdFile.ListAsync(_transports.Create(target), cancellationToken);
+
     public const string RecoveryPurpose = "Recovery";
 
     // recovery.<v>.wrap next to key.<v>.wrap (§9.1 of docs/SYNC-FORMAT.md).

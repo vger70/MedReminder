@@ -872,8 +872,9 @@ folder they share (a OneDrive, Google Drive or Dropbox folder kept in sync
 by its desktop app, or a network share). No server is involved and the
 folder never contains readable data.
 
-Open **Tools → Sync…**. Every profile manages the sync of its own data,
-including changing the key and removing a device.
+Open **Tools → Sync…** from an administrator profile (other profiles do
+not see it). Each synced profile has its own group, key and devices;
+the window manages the group of the profile that is open.
 
 ### OneDrive or a shared folder
 
@@ -973,6 +974,31 @@ account or folder.
   a pairing code from a PC that has the new key. The profile is rebuilt
   from the group and **the changes made on that PC are kept**, also
   those recorded while it waited. MedReminder restarts.
+
+### Installation: several devices
+
+**Tools → Installation…** (administrators only) shares the whole
+installation between devices: profiles, roles and PINs, email settings,
+cloud backup settings and the reference country.
+
+- **Publish the installation…** on the first device: choose the storage
+  that already holds the profiles' sync groups and an installation
+  passphrase. The passphrase is an administrator's secret: it can add a
+  device and recover every profile when no other device is at hand.
+- **Devices → Add a device…**: select the profiles the new device will
+  hold, then enter the code shown on the new device. The code lasts 10
+  minutes, or until the window closes. The new device receives only the
+  selected profiles.
+- **Join an existing installation…** on the new device: with the code,
+  or with the installation passphrase and the PIN of an administrator
+  of the installation. Its settings replace this device's, and the
+  profiles already on this device are added to the installation.
+  MedReminder restarts with the new profiles.
+
+The email settings are shared too, so every device of the installation
+can send email reminders until a later version names one device for
+that. A low-stock email already sent by a synced device is not sent
+again.
 
 ## Check now
 

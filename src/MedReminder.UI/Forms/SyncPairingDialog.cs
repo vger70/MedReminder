@@ -21,15 +21,22 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
     private const uint WdaMonitor = 0x01;
 
     private readonly ILocalizationService _loc;
-    private readonly SyncPairingOffer _offer;
+    private readonly DateTimeOffset _expiresAt;
     private readonly TimeProvider _clock;
     private readonly Label _remaining;
     private readonly System.Windows.Forms.Timer _timer;
 
     public SyncPairingDialog(ILocalizationService localization, SyncPairingOffer offer, TimeProvider clock)
+        : this(localization, offer.Code.Text, offer.ExpiresAt, clock, "Ui.SyncDialog.Pair.Hint")
+    {
+    }
+
+    // Household step H3d: an installation code (mrpair2) and its hint.
+    public SyncPairingDialog(ILocalizationService localization, string codeText, DateTimeOffset expiresAt,
+        TimeProvider clock, string hintKey)
     {
         _loc = localization;
-        _offer = offer;
+        _expiresAt = expiresAt;
         _clock = clock;
 
         Text = _loc.Get("Ui.SyncDialog.Pair.Title");
@@ -44,7 +51,7 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, Padding = new Padding(12) };
         layout.Controls.Add(new Label
         {
-            Text = _loc.Get("Ui.SyncDialog.Pair.Hint"),
+            Text = _loc.Get(hintKey),
             AutoSize = true,
             MaximumSize = new Size(510, 0),
             Margin = new Padding(0, 0, 0, 8),
@@ -52,7 +59,7 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
 
         var qr = new PictureBox
         {
-            Image = RenderQr(offer.Code.Text),
+            Image = RenderQr(codeText),
             SizeMode = PictureBoxSizeMode.Zoom,
             Width = 320,
             Height = 320,
@@ -69,7 +76,7 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
         });
         layout.Controls.Add(new TextBox
         {
-            Text = offer.Code.Text,
+            Text = codeText,
             ReadOnly = true,
             Multiline = true,
             WordWrap = true,
@@ -126,7 +133,7 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
 
     private void Tick()
     {
-        var left = _offer.ExpiresAt - _clock.GetUtcNow();
+        var left = _expiresAt - _clock.GetUtcNow();
         if (left <= TimeSpan.Zero)
         {
             _timer.Stop();

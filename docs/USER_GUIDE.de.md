@@ -980,9 +980,10 @@ oder Dropbox-Ordner, den dessen Desktop-App synchronisiert, oder eine
 Netzwerkfreigabe). Kein Server ist beteiligt, und der Ordner enthält nie
 lesbare Daten.
 
-Öffnen Sie **Extras → Synchronisierung…**. Jedes Profil verwaltet die Synchronisierung
-seiner eigenen Daten, einschließlich Schlüssel ändern und Geräte
-entfernen.
+Öffnen Sie **Extras → Synchronisierung…** in einem Administratorprofil (andere Profile
+sehen den Eintrag nicht). Jedes synchronisierte Profil hat eine eigene
+Gruppe, einen eigenen Schlüssel und eigene Geräte; das Fenster verwaltet
+die Gruppe des geöffneten Profils.
 
 ### OneDrive oder freigegebener Ordner
 
@@ -1100,6 +1101,33 @@ denselben Ordner.
   Gruppe neu aufgebaut und **die auf diesem PC gemachten Änderungen
   bleiben erhalten**, auch die während der Wartezeit erfassten.
   MedReminder wird neu gestartet.
+
+### Installation: mehrere Geräte
+
+**Extras → Installation…** (nur Administratoren) teilt die gesamte
+Installation zwischen Geräten: Profile, Rollen und PINs,
+E-Mail-Einstellungen, Einstellungen der Cloud-Sicherung und das
+Referenzland.
+
+- **Installation veröffentlichen…** auf dem ersten Gerät: Wählen Sie den
+  Speicher, der bereits die Synchronisationsgruppen der Profile enthält,
+  und eine Passphrase der Installation. Die Passphrase ist ein Geheimnis
+  der Administratoren: Mit ihr lässt sich ein Gerät hinzufügen und jedes
+  Profil wiederherstellen, wenn kein anderes Gerät verfügbar ist.
+- **Geräte → Gerät hinzufügen…**: Wählen Sie die Profile für das neue
+  Gerät und geben Sie dort den angezeigten Code ein. Der Code gilt 10
+  Minuten oder bis das Fenster geschlossen wird. Das neue Gerät erhält
+  nur die gewählten Profile.
+- **Einer bestehenden Installation beitreten…** auf dem neuen Gerät: mit
+  dem Code oder mit der Passphrase der Installation und der PIN eines
+  Administrators der Installation. Ihre Einstellungen ersetzen die dieses
+  Geräts, und die bereits vorhandenen Profile werden der Installation
+  hinzugefügt. MedReminder startet mit den neuen Profilen neu.
+
+Die E-Mail-Einstellungen werden ebenfalls geteilt: Jedes Gerät der
+Installation kann E-Mail-Erinnerungen senden, bis eine spätere Version
+dafür ein Gerät festlegt. Eine E-Mail zu niedrigem Bestand, die ein
+synchronisiertes Gerät bereits gesendet hat, wird nicht erneut gesendet.
 
 ## Jetzt prüfen
 

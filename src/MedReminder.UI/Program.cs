@@ -374,6 +374,10 @@ internal static class Program
         builder.Services.AddSingleton<MedReminder.UI.Services.SyncStatus>();
         builder.Services.AddSingleton<SyncHostedService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<SyncHostedService>());
+        // Household step H3d: the household group, idle until the
+        // installation is published or joined.
+        builder.Services.AddSingleton<HouseholdHostedService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<HouseholdHostedService>());
 
         var catalogueEnabledRaw = builder.Configuration[
             MedReminder.Application.Catalogue.CatalogueFeatureOptions.SectionName + ":Enabled"];
