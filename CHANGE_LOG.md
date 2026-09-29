@@ -30,6 +30,24 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #130 — Add analysis and implementation prompt for the remote AIFA feed
+
+Link: [vger70/MedReminder#130](https://github.com/vger70/MedReminder/pull/130)
+Branch: `claude/aifa-catalog-auto-update-jrkles`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`: startup download
+  and import of the monthly AIFA snapshot published in `data/` by
+  `download_aifa.yaml`, for the open profile only, staged under
+  `%LOCALAPPDATA%\MedReminder\catalogue\staging\` and deleted after
+  use. Records two importer defects the feature would trigger (downgrade
+  by the embedded snapshot, catalogue wipe on a header-only snapshot).
+- `docs/prompt/PROMPT-CATALOGUE-REMOTE-FEED.md`: implementation
+  briefing.
+
+---
+
 ## PR #115 — Close the join-during-listing-lag limit and ask which group a passphrase opens
 
 Link: [vger70/MedReminder#115](https://github.com/vger70/MedReminder/pull/115)
