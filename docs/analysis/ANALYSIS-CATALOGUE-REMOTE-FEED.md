@@ -550,10 +550,11 @@ What this confirms:
 - The next start recognises the stored label and downloads nothing.
 
 The Windows test suites (`MedReminder.Infrastructure.Tests`,
-`MedReminder.UI.Tests`) pass (product owner, 2026-09-29). Not yet
-checked by hand: an empty `catalogue\staging\` after the run, and a
-backup restore or archive import started within the first minute after
-launch (connection-lifetime fix, §11.1).
+`MedReminder.UI.Tests`) pass (product owner, 2026-09-29). The
+`catalogue\staging\` folder is empty after the run (product owner).
+Not yet checked by hand: a backup restore or archive import started
+within the first minute after launch (connection-lifetime fix, §11.1).
+PR #131 merged on 2026-09-29.
 
 ### 11.4 Per-country publication path (2026-09-29)
 
