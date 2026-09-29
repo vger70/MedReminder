@@ -74,6 +74,29 @@ internal static class CatalogueFixtures
         return buffer;
     }
 
+    // AIFA snapshot with the two CSV entries reduced to their header
+    // line: parses without error and yields zero rows.
+    public static Stream BuildAifaHeaderOnlySnapshotStream()
+    {
+        var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            AddHeaderOnlyEntry(archive, "confezioni_fornitura.csv", ConfezioniCsv);
+            AddHeaderOnlyEntry(archive, "PA_confezioni.csv", PaCsv);
+        }
+        buffer.Position = 0;
+        return buffer;
+    }
+
+    private static void AddHeaderOnlyEntry(ZipArchive archive, string logicalName, string fixtureName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, FixtureDirectory, fixtureName);
+        var header = File.ReadLines(path).First();
+        var entry = archive.CreateEntry(logicalName, CompressionLevel.NoCompression);
+        using var writer = new StreamWriter(entry.Open());
+        writer.WriteLine(header);
+    }
+
     private static void AddEntry(ZipArchive archive, string logicalName, string fixtureName)
     {
         var entry = archive.CreateEntry(logicalName, CompressionLevel.NoCompression);
