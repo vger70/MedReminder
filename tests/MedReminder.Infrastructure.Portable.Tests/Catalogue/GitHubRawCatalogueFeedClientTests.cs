@@ -83,6 +83,15 @@ public sealed class GitHubRawCatalogueFeedClientTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLatestAsync_returns_null_when_the_body_read_fails()
+    {
+        using var client = Build(new Endpoint(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new FailingStream()) }));
+
+        (await client.GetLatestAsync(CancellationToken.None)).Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetLatestAsync_returns_null_on_timeout()
     {
         using var client = Build(new SlowEndpoint(), o => o.ManifestTimeoutSeconds = 1);
@@ -232,6 +241,21 @@ public sealed class GitHubRawCatalogueFeedClientTests : IDisposable
         public CatalogueFeedOptions Get(string? name) => value;
 
         public IDisposable? OnChange(Action<CatalogueFeedOptions, string?> listener) => null;
+    }
+
+    // Simulates a connection reset after the headers arrived.
+    private sealed class FailingStream : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count) => throw new IOException("connection reset");
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private sealed class NonSeekableStream(byte[] data) : Stream

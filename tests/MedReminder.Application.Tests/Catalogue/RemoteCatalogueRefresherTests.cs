@@ -5,7 +5,9 @@ using FluentAssertions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Tests.Support;
+using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Notifications;
 using Xunit;
 
 namespace MedReminder.Application.Tests.Catalogue;
@@ -165,18 +167,72 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         Directory.EnumerateFiles(Staging).Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task Removes_leftovers_of_an_interrupted_run()
+    [Theory]
+    [InlineData("offline")]
+    [InlineData("up to date")]
+    [InlineData("newer")]
+    public async Task Removes_leftovers_of_an_interrupted_run_on_every_start(string situation)
     {
         Directory.CreateDirectory(Staging);
-        var leftover = Path.Combine(Staging, "aifa-202609.zip.part");
-        await File.WriteAllTextAsync(leftover, "partial");
-        var feed = new FakeFeed(Manifest("202610"), BuildArchive());
-        var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
+        var leftovers = new[]
+        {
+            Path.Combine(Staging, "aifa-202609.zip.part"),
+            Path.Combine(Staging, "aifa-202609.zip"),
+        };
+        foreach (var leftover in leftovers)
+        {
+            await File.WriteAllTextAsync(leftover, "partial");
+        }
+
+        var feed = new FakeFeed(situation == "offline" ? null : Manifest("202610"), BuildArchive());
+        var importer = new FakeImporter(new CatalogueImportState(situation == "up to date" ? "202610" : "202609", 1000));
 
         await Build(feed, importer).RunAsync(CancellationToken.None);
 
-        File.Exists(leftover).Should().BeFalse();
+        leftovers.Should().OnlyContain(path => !File.Exists(path));
+    }
+
+    [Fact]
+    public async Task A_feed_that_throws_while_reading_the_manifest_is_reported_as_unavailable()
+    {
+        var feed = new FakeFeed(Manifest("202610"), BuildArchive())
+        {
+            ManifestFailure = new IOException("connection reset"),
+        };
+        var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
+
+        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.ManifestUnavailable);
+        importer.Imports.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task The_import_holds_WriteGate_so_use_cases_wait_for_it()
+    {
+        var feed = new FakeFeed(Manifest("202610"), BuildArchive());
+        var importer = new FakeImporter(new CatalogueImportState("202609", 1000)) { BlockImport = true };
+        var refresh = Build(feed, importer).RunAsync(CancellationToken.None);
+        await importer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        var scope = new ApplicationTestScope();
+        Task action;
+        Task early;
+        try
+        {
+            action = scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+                "Enalapril", "compresse", 1m, 1, new DateOnly(2026, 9, 1), 7, NotificationChannels.Windows), default);
+            early = await Task.WhenAny(action, Task.Delay(200));
+        }
+        finally
+        {
+            // The gate is process-wide: always release it.
+            importer.Release.TrySetResult();
+        }
+
+        early.Should().NotBeSameAs(action, "a use case must not commit while the catalogue import runs");
+        await action.WaitAsync(TimeSpan.FromSeconds(10));
+        (await refresh).Should().Be(RemoteCatalogueRefreshOutcome.Imported);
     }
 
     [Fact]
@@ -262,8 +318,10 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
 
         public Exception? DownloadFailure { get; init; }
 
+        public Exception? ManifestFailure { get; init; }
+
         public Task<CatalogueFeedManifest?> GetLatestAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(manifest);
+            ManifestFailure is null ? Task.FromResult(manifest) : Task.FromException<CatalogueFeedManifest?>(ManifestFailure);
 
         public async Task<CatalogueFeedDownload> DownloadAsync(
             CatalogueFeedManifest m, string destinationPath, CancellationToken cancellationToken)
@@ -286,6 +344,12 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
 
         public Exception? ImportFailure { get; init; }
 
+        public bool BlockImport { get; init; }
+
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public Task<ImportReport> ImportAsync(
             Stream snapshot, CountryCode expectedCountry, string snapshotVersion, CancellationToken cancellationToken) =>
             ImportAsync(snapshot, expectedCountry, snapshotVersion, 1, cancellationToken);
@@ -297,6 +361,12 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
             if (ImportFailure is not null)
             {
                 throw ImportFailure;
+            }
+
+            if (BlockImport)
+            {
+                Entered.TrySetResult();
+                await Release.Task;
             }
 
             using var copy = new MemoryStream();

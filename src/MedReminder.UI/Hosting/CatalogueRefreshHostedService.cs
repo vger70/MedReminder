@@ -89,12 +89,27 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
 
     private async Task RunOnceAsync(CancellationToken cancellationToken)
     {
+        if (!await ImportEmbeddedSnapshotsAsync(cancellationToken))
+        {
+            return;
+        }
+
+        await RefreshFromRemoteFeedAsync(cancellationToken);
+    }
+
+    // Returns false when the catalogue feature is off. The scope, and
+    // with it the SQLite connection the importer opened, is disposed
+    // before the remote step starts: backup restore, archive import and
+    // sync join move the database file and fail on Windows while
+    // another handle is open (CLAUDE.md §7).
+    private async Task<bool> ImportEmbeddedSnapshotsAsync(CancellationToken cancellationToken)
+    {
         await using var scope = _services.CreateAsyncScope();
 
         var options = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<CatalogueFeatureOptions>>();
         if (!options.CurrentValue.Enabled)
         {
-            return;
+            return false;
         }
 
         var provider = scope.ServiceProvider.GetRequiredService<EmbeddedSnapshotProvider>();
@@ -106,32 +121,35 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             await ImportCountryAsync(provider, importer, country, cancellationToken);
         }
 
-        await RefreshFromRemoteFeedAsync(cancellationToken);
+        return true;
     }
 
     private async Task RefreshFromRemoteFeedAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var signal = _services.GetRequiredService<StartupUpdateCheckSignal>();
-            await signal.WaitAsync(RemoteFeedSignalTimeout, cancellationToken);
-
-            await using var scope = _services.CreateAsyncScope();
-
-            var feedOptions = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<CatalogueFeedOptions>>().CurrentValue;
+            // Gates first, so a disabled step neither waits for the
+            // update-check signal nor holds anything while it waits.
+            var feedOptions = _services.GetRequiredService<IOptionsMonitor<CatalogueFeedOptions>>().CurrentValue;
             if (!feedOptions.Enabled)
             {
                 _log.LogInformation("Remote AIFA feed disabled by configuration; skipping.");
                 return;
             }
 
-            var userSettings = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue;
+            var userSettings = _services.GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue;
             if (!userSettings.CheckForUpdatesOnStartup)
             {
                 _log.LogInformation("Remote AIFA feed skipped: checking for updates at startup is off.");
                 return;
             }
 
+            var signal = _services.GetRequiredService<StartupUpdateCheckSignal>();
+            await signal.WaitAsync(RemoteFeedSignalTimeout, cancellationToken);
+
+            // Own scope, opened only now and disposed as soon as the
+            // refresh ends, for the same reason as above.
+            await using var scope = _services.CreateAsyncScope();
             var refresher = scope.ServiceProvider.GetRequiredService<RemoteCatalogueRefresher>();
             await refresher.RunAsync(cancellationToken);
         }

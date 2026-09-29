@@ -121,6 +121,13 @@ public sealed class GitHubRawCatalogueFeedClient : ICatalogueFeedClient, IDispos
             _log.LogInformation("Remote AIFA feed: network error reading the manifest: {Message}", ex.Message);
             return null;
         }
+        catch (IOException ex)
+        {
+            // HttpIOException and friends: the connection dropped while
+            // the body was being read.
+            _log.LogInformation("Remote AIFA feed: the manifest body could not be read: {Message}", ex.Message);
+            return null;
+        }
     }
 
     public async Task<CatalogueFeedDownload> DownloadAsync(

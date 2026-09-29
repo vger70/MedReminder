@@ -31,8 +31,14 @@ public enum RemoteCatalogueRefreshOutcome
 //
 // The archive is staged under <app data>\catalogue\staging\ and
 // deleted in every outcome; leftovers of an interrupted run are removed
-// at the start of the next one. Every failure is logged and reported
-// through the outcome, never thrown: the app must stay usable offline.
+// at the start of every run, before the network is touched. Every
+// failure is logged and reported through the outcome, never thrown:
+// the app must stay usable offline.
+//
+// The import runs under WriteGate: its transaction replaces the whole
+// Italian catalogue and holds the SQLite write lock meanwhile, so the
+// use cases wait for it instead of failing with SQLITE_BUSY after the
+// busy timeout.
 // Only the open profile is updated; other profiles refresh at their own
 // next start (§4.4).
 public sealed class RemoteCatalogueRefresher
@@ -68,7 +74,22 @@ public sealed class RemoteCatalogueRefresher
 
     public async Task<RemoteCatalogueRefreshOutcome> RunAsync(CancellationToken cancellationToken)
     {
-        var manifest = await _feed.GetLatestAsync(cancellationToken);
+        var staging = GetStagingDirectory(_appData.DataDirectory);
+        ClearStaging(staging);
+
+        CatalogueFeedManifest? manifest;
+        try
+        {
+            manifest = await _feed.GetLatestAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            // The port promises not to throw; guard anyway so a transport
+            // bug still ends as a logged outcome.
+            _log.LogWarning(ex, "Remote AIFA feed: reading the manifest failed.");
+            manifest = null;
+        }
+
         if (manifest is null)
         {
             _log.LogInformation("Remote AIFA feed: manifest unavailable; catalogue left as is.");
@@ -98,12 +119,10 @@ public sealed class RemoteCatalogueRefresher
             "Remote AIFA feed: newer snapshot available (local={Local}, remote={Remote}).",
             state.Version ?? "none", manifest.Version);
 
-        var staging = GetStagingDirectory(_appData.DataDirectory);
         var target = Path.Combine(staging, manifest.ExpectedFileName);
         try
         {
             Directory.CreateDirectory(staging);
-            ClearStaging(staging);
             return await DownloadAndImportAsync(manifest, state, target, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -168,8 +187,9 @@ public sealed class RemoteCatalogueRefresher
         // not data (decision D4).
         var minimumRowCount = Math.Max(1, state.RowCount / 2);
         stopwatch.Restart();
-        var report = await _importer.ImportAsync(
-            snapshot, Italy, manifest.Version, minimumRowCount, cancellationToken);
+        var report = await WriteGate.RunExclusiveAsync(
+            ct => _importer.ImportAsync(snapshot, Italy, manifest.Version, minimumRowCount, ct),
+            cancellationToken);
 
         _log.LogInformation(
             "Reference-catalogue import for {Country} complete: inserted={Inserted}, deleted={Deleted}, skipped={Skipped}, version={Version}, completedAt={CompletedAt}, source=remote feed, elapsedMs={Elapsed}.",
@@ -211,9 +231,21 @@ public sealed class RemoteCatalogueRefresher
 
     private void ClearStaging(string staging)
     {
-        foreach (var file in Directory.EnumerateFiles(staging))
+        try
         {
-            TryDelete(file);
+            if (!Directory.Exists(staging))
+            {
+                return;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(staging))
+            {
+                TryDelete(file);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.LogWarning(ex, "Remote AIFA feed: could not list the staging folder; the next start retries.");
         }
     }
 
