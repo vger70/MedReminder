@@ -30,9 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — Implementation prompt for the EU, ES and FR catalogue feeds
+## PR #134 — Add the implementation prompt for the EU, ES and FR catalogue feeds
 
-Link: pending
+Link: [vger70/MedReminder#134](https://github.com/vger70/MedReminder/pull/134)
 Branch: `claude/aifa-catalog-auto-update-jrkles`
 
 ### Docs
