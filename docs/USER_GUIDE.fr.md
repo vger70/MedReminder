@@ -969,9 +969,10 @@ Dropbox synchronisé par son application de bureau, ou un partage réseau).
 Aucun serveur n'intervient et le dossier ne contient jamais de données
 lisibles.
 
-Ouvrez **Outils → Synchronisation…**. Chaque profil gère la synchronisation de ses
-propres données, y compris le changement de clé et le retrait d'un
-appareil.
+Ouvrez **Outils → Synchronisation…** depuis un profil administrateur (les autres
+profils ne la voient pas). Chaque profil synchronisé a son propre
+groupe, sa clé et ses appareils ; la fenêtre gère le groupe du profil
+ouvert.
 
 ### OneDrive ou dossier partagé
 
@@ -1084,6 +1085,32 @@ au même dossier.
   clé. Le profil est reconstruit à partir du groupe et **les
   modifications faites sur ce PC sont conservées**, y compris celles
   enregistrées pendant l'attente. MedReminder redémarre.
+
+### Installation : plusieurs appareils
+
+**Outils → Installation…** (administrateurs uniquement) partage toute
+l'installation entre appareils : profils, rôles et codes PIN, paramètres
+e-mail, paramètres de sauvegarde cloud et pays de référence.
+
+- **Publier l'installation…** sur le premier appareil : choisissez le
+  stockage qui contient déjà les groupes de synchronisation des profils
+  et une phrase secrète de l'installation. Cette phrase secrète est un
+  secret d'administrateur : elle permet d'ajouter un appareil et de
+  récupérer chaque profil quand aucun autre appareil n'est disponible.
+- **Appareils → Ajouter un appareil…** : sélectionnez les profils que le
+  nouvel appareil contiendra, puis saisissez sur le nouvel appareil le
+  code affiché. Le code dure 10 minutes, ou jusqu'à la fermeture de la
+  fenêtre. Le nouvel appareil ne reçoit que les profils sélectionnés.
+- **Rejoindre une installation existante…** sur le nouvel appareil : avec
+  le code, ou avec la phrase secrète de l'installation et le code PIN
+  d'un administrateur de l'installation. Ses paramètres remplacent ceux
+  de cet appareil, et les profils déjà présents y sont ajoutés.
+  MedReminder redémarre avec les nouveaux profils.
+
+Les paramètres e-mail sont aussi partagés : chaque appareil de
+l'installation peut envoyer les rappels par e-mail jusqu'à ce qu'une
+version ultérieure désigne un seul appareil. Un e-mail de stock bas déjà
+envoyé par un appareil synchronisé n'est pas renvoyé.
 
 ## Vérifier maintenant
 

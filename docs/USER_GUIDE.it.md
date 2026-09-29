@@ -916,9 +916,9 @@ una cartella condivisa (una cartella OneDrive, Google Drive o Dropbox tenuta
 sincronizzata dalla sua app desktop, o una condivisione di rete). Non serve
 nessun server e la cartella non contiene mai dati leggibili.
 
-Apri **Strumenti → Sincronizzazione…**. Ogni profilo gestisce la sincronizzazione dei
-propri dati, compresi il cambio di chiave e la rimozione di un
-dispositivo.
+Apri **Strumenti → Sincronizzazione…** da un profilo amministratore (gli altri profili
+non la vedono). Ogni profilo sincronizzato ha il proprio gruppo,
+chiave e dispositivi; la finestra gestisce il gruppo del profilo aperto.
 
 ### OneDrive o cartella condivisa
 
@@ -1027,6 +1027,32 @@ cartella.
   chiave. Il profilo viene ricostruito dal gruppo e **le modifiche fatte
   su quel PC vengono conservate**, anche quelle registrate durante
   l'attesa. MedReminder si riavvia.
+
+### Installazione: più dispositivi
+
+**Strumenti → Installazione…** (solo amministratori) condivide l'intera
+installazione tra dispositivi: profili, ruoli e PIN, impostazioni email,
+impostazioni del backup cloud e paese di riferimento.
+
+- **Pubblica l'installazione…** sul primo dispositivo: scegli l'archivio
+  che contiene già i gruppi di sincronizzazione dei profili e una
+  passphrase dell'installazione. La passphrase è un segreto degli
+  amministratori: permette di aggiungere un dispositivo e di recuperare
+  ogni profilo quando nessun altro dispositivo è disponibile.
+- **Dispositivi → Aggiungi un dispositivo…**: seleziona i profili che il
+  nuovo dispositivo conterrà, poi inserisci sul nuovo dispositivo il
+  codice mostrato. Il codice vale 10 minuti, o finché la finestra resta
+  aperta. Il nuovo dispositivo riceve solo i profili selezionati.
+- **Unisciti a un'installazione esistente…** sul nuovo dispositivo: con il
+  codice, oppure con la passphrase dell'installazione e il PIN di un
+  amministratore dell'installazione. Le sue impostazioni sostituiscono
+  quelle di questo dispositivo, e i profili già presenti vengono aggiunti
+  all'installazione. MedReminder si riavvia con i nuovi profili.
+
+Anche le impostazioni email sono condivise, quindi ogni dispositivo
+dell'installazione può inviare i promemoria email finché una versione
+successiva non designerà un solo dispositivo. Un'email di scorte basse
+già inviata da un dispositivo sincronizzato non viene inviata di nuovo.
 
 ## Controlla ora
 

@@ -253,9 +253,18 @@ internal sealed class MainForm : MedReminderFormBase
         toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.CheckNow"),
             Mdl2Glyph.Glyphs.Sync, Keys.Control | Keys.R,
             async () => await RunMonitorAsync()));
-        toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Sync"),
-            Mdl2Glyph.Glyphs.Sync, Keys.None,
-            () => { ShowSync(); return Task.CompletedTask; }));
+        // Household step H3d (ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §4.3):
+        // sync and the installation are administrators' tools, hidden from
+        // other profiles like Manage profiles.
+        if (_currentProfile.IsAdmin)
+        {
+            toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Sync"),
+                Mdl2Glyph.Glyphs.Sync, Keys.None,
+                () => { ShowSync(); return Task.CompletedTask; }));
+            toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Household"),
+                Mdl2Glyph.Glyphs.Sync, Keys.None,
+                () => { ShowHousehold(); return Task.CompletedTask; }));
+        }
         toolsMenu.DropDownItems.Add(new ToolStripSeparator());
         // Manage profiles… — admin only. The design (§12.2) is
         // clear: non-admin users must not see this entry at all,
@@ -775,6 +784,7 @@ internal sealed class MainForm : MedReminderFormBase
 
     private void ShowSync()
     {
+        if (!_currentProfile.IsAdmin) return;
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -793,6 +803,28 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.Sync"), ex);
+        }
+    }
+
+    private void ShowHousehold()
+    {
+        if (!_currentProfile.IsAdmin) return;
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var sp = scope.ServiceProvider;
+            using var dialog = new HouseholdDialog(
+                _scopeFactory,
+                sp.GetRequiredService<HouseholdHostedService>(),
+                sp.GetRequiredService<ICloudAccountService>(),
+                _currentProfile,
+                _loc,
+                _restarter);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
         }
     }
 

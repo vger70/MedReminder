@@ -5,8 +5,8 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-29: revision 8 (§18 lists the revisions). Steps H0
-to H3b are implemented; H3c is in progress (§13).
+Status on 2026-09-29: revision 9 (§18 lists the revisions). Steps H0
+to H3c are implemented; H3d is in progress (§13).
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 topics below, this document wins once approved. §16 lists the
@@ -601,7 +601,7 @@ Step H3 is split into four PRs, each merged into
 | H3a | Household group on a storage: creation with the household passphrase, a dedicated engine (publish, pull in causal order, apply, device records) reusing the envelope and header of `SYNC-FORMAT.md`, the household image as the full operation log (no checkpoints: the log stays small, §5.5), projection of remote changes into `profiles.json` and the settings files, the SMTP password carried in clear only inside the encrypted segment |
 | H3b | Device key pairs, `ProfileKeyGranted` / `Revoked` / `Escrowed`, recovery key; adoption of existing profile groups (grant to self, escrow) |
 | H3c | `mrpair2` offers with the profile selection; the join-installation use case (household, then each granted profile group, staged); `HouseholdLinked` in adopted profile groups (profile operation schema 5) to detect two households claiming one group (§11) |
-| H3d | UI: first-run choice and join wizard (§6), Devices → Add a device, household sync in the background service, Tools → Sync… admin-only |
+| H3d | UI, in two PRs. H3d-1: Tools → Installation… (publish, devices, Add a device, join an existing installation from a device already set up), household sync in the background service, Tools → Sync… admin-only. H3d-2: first-run choice and join wizard (§6.1), which needs a start without a profile |
 
 H0 and H1 can ship before any household code. H1 reduces, not
 removes, duplicate email in today's two-PC setups: two devices can
@@ -719,3 +719,4 @@ developer-days.
 | 6 | D-18 (cloud-backup passphrase asked in the handover wizard); H3 split into H3a–H3d (§13) |
 | 7 | Recovery key as a key pair (§4.4 point 4), so escrow needs no passphrase; `HouseholdLinked` moved from H3b to H3c |
 | 8 | `HouseholdLinked` is profile schema version 5, not 4 (§11, §12). H3c as built: the household join replaces the local household store and is not staged, only the profiles are (§6.3); profile groups are read from the household's storage |
+| 9 | H3d split into H3d-1 and H3d-2 (§13). Until H4, the email settings are household settings, so every device of an installation can send email; the H1 deduplication limits repeats (user guides say so) |

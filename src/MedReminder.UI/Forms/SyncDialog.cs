@@ -470,21 +470,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         using var dialog = new SyncPairingCodeDialog(_loc, Environment.MachineName);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Code is not { } code) return;
 
-        SyncTarget? target;
-        if (code.Provider is { } provider)
-        {
-            if (!_accounts.IsAvailable(provider))
-            {
-                Error(_loc.Get(ProviderKey("Ui.SyncDialog.PairingCode.ProviderUnavailable", provider)));
-                return;
-            }
-            var account = await SignInAsync(provider, null);
-            target = account is null ? null : SyncTarget.ForCloud(account.Provider, account.Id);
-        }
-        else
-        {
-            target = PickFolder() is { } folder ? SyncTarget.ForFolder(folder) : null;
-        }
+        var target = await Picker.ForCodeAsync(code.Provider);
         if (target is null) return;
         if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
                 _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
@@ -723,54 +709,12 @@ internal sealed class SyncDialog : MedReminderFormBase
         }
     }
 
-    // Where the group lives: a provider account (sign-in now) or a folder.
-    // Null when the user cancels.
-    private async Task<SyncTarget?> ChooseTargetAsync()
-    {
-        var providers = new[] { CloudProvider.OneDrive, CloudProvider.GoogleDrive }.Where(_accounts.IsAvailable).ToList();
-        if (providers.Count == 0)
-        {
-            return PickFolder() is { } only ? SyncTarget.ForFolder(only) : null;
-        }
+    private StorageTargetPicker Picker => new(this, _accounts, _loc, Text);
 
-        var buttons = providers.ToDictionary(p => p, p => new TaskDialogCommandLinkButton(
-            _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true)),
-            _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true) + "Note")));
-        var folder = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.SyncDialog.Target.Folder"), _loc.Get("Ui.SyncDialog.Target.FolderNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = Text,
-            Heading = _loc.Get("Ui.SyncDialog.Target.Heading"),
-            AllowCancel = true,
-        };
-        foreach (var button in buttons.Values) page.Buttons.Add(button);
-        page.Buttons.Add(folder);
-        page.Buttons.Add(TaskDialogButton.Cancel);
+    private Task<SyncTarget?> ChooseTargetAsync() => Picker.ChooseAsync();
 
-        var choice = TaskDialog.ShowDialog(this, page);
-        if (choice == folder) return PickFolder() is { } picked ? SyncTarget.ForFolder(picked) : null;
-        var chosen = buttons.FirstOrDefault(b => b.Value == choice);
-        if (chosen.Value is null) return null;
-
-        var account = await SignInAsync(chosen.Key, null);
-        return account is null ? null : SyncTarget.ForCloud(account.Provider, account.Id);
-    }
-
-    // Sign-in in the system browser; null when it fails or is cancelled.
-    private async Task<CloudAccount?> SignInAsync(CloudProvider provider, string? accountId)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-        try
-        {
-            return await _accounts.SignInAsync(provider, accountId, timeout.Token);
-        }
-        catch (Exception ex)
-        {
-            Error(_loc.Get(ProviderKey("Ui.SyncDialog.SignIn.Failed", provider), ex.Message));
-            return null;
-        }
-    }
+    private Task<CloudAccount?> SignInAsync(CloudProvider provider, string? accountId)
+        => Picker.SignInAsync(provider, accountId);
 
     private async Task SignInAgainAsync()
     {
@@ -787,22 +731,8 @@ internal sealed class SyncDialog : MedReminderFormBase
         await RefreshAllAsync();
     }
 
-    // The OneDrive keys of Phase 4a are the unsuffixed ones; Google Drive
-    // adds ".GoogleDrive". Target keys are named after the provider.
-    private static string ProviderKey(string key, CloudProvider provider, bool suffixOnly = false)
-        => suffixOnly
-            ? $"{key}.{provider}"
-            : provider == CloudProvider.GoogleDrive ? $"{key}.GoogleDrive" : key;
-
-    private string? PickFolder()
-    {
-        using var browser = new FolderBrowserDialog
-        {
-            Description = _loc.Get("Ui.SyncDialog.Folder"),
-            UseDescriptionForTitle = true,
-        };
-        return browser.ShowDialog(this) == DialogResult.OK ? browser.SelectedPath : null;
-    }
+    private static string ProviderKey(string key, CloudProvider provider)
+        => StorageTargetPicker.ProviderKey(key, provider);
 
     private Button Action(string key, Func<Task> action)
     {

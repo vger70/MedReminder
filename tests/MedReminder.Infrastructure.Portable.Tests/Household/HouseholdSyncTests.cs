@@ -232,6 +232,20 @@ public sealed class HouseholdSyncTests : IDisposable
         }
     }
 
+    // Step H3d: the Devices list and the households of a storage.
+    [Fact]
+    public async Task The_devices_and_the_households_of_a_storage_are_listed()
+    {
+        var (a, b) = await PublishedAndJoinedAsync();
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        var devices = await a.Sync.ListDevicesAsync(CancellationToken.None);
+        devices.Select(d => d.Name).Should().BeEquivalentTo("PC A", "PC B");
+        (await Create("C").Sync.ListDevicesAsync(CancellationToken.None)).Should().BeEmpty("not published");
+        (await b.Sync.ListHouseholdsAsync(SyncTarget.ForFolder(Folder), CancellationToken.None))
+            .Should().Equal((await a.Store.EnsureCreatedAsync(CancellationToken.None)).HouseholdId);
+    }
+
     [Fact]
     public async Task A_household_is_published_once()
     {

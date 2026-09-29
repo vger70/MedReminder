@@ -30,6 +30,33 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #122 — Manage the installation from Tools → Installation (household H3d-1)
+
+Link: [vger70/MedReminder#122](https://github.com/vger70/MedReminder/pull/122)
+Branch: `claude/household-h3d-ui` → `feature/master-slave`
+
+### Added
+
+- Tools → Installation… (administrators only): publish the
+  installation, list its devices, add a device with a code for the
+  selected profiles, join an existing installation with a code or with
+  the installation passphrase and an administrator's PIN.
+- The household syncs in the background every 15 minutes.
+
+### Changed
+
+- Tools → Sync… is shown to administrators only.
+- The storage choice and the pairing dialogs are shared by the sync and
+  installation windows.
+
+### Docs
+
+- User guides (5 languages): the installation section; email settings
+  are shared by every device until the master device arrives.
+- `docs/ANALYSIS.md`; analysis revision 9.
+
+---
+
 ## PR #121 — Join an existing installation with a household pairing code (household H3c)
 
 Link: [vger70/MedReminder#121](https://github.com/vger70/MedReminder/pull/121)
