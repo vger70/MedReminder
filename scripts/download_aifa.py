@@ -7,8 +7,11 @@ from urllib.parse import urljoin
 from pathlib import Path
 import json
 import shutil
+import sys
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 PAGE_URL = "https://www.aifa.gov.it/liste-dei-farmaci"
 OUTPUT_DIR = "aifa_csv"
@@ -19,7 +22,44 @@ RUN_TIME = datetime.now(timezone.utc)
 VERSION = f"{RUN_TIME:%Y%m}"
 ZIP_NAME = f"aifa-{VERSION}.zip"
 
+# The workflow runs daily from the 2nd to the 7th of the month so that
+# an AIFA outage on one day is retried the next. Once this month's
+# version is published the remaining runs stop here, which also avoids
+# republishing the same version (clients would not re-import it).
+# FORCE_REFRESH=true (workflow_dispatch input) bypasses the check.
+FORCE_REFRESH = os.getenv("FORCE_REFRESH", "").strip().lower() == "true"
+try:
+    with open("data/latest.json", encoding="utf-8") as fh:
+        published_version = json.load(fh).get("version")
+except (OSError, ValueError):
+    published_version = None
+
+if published_version == VERSION and not FORCE_REFRESH:
+    print(f"Version {VERSION} is already published; nothing to do.")
+    sys.exit(0)
+
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Transient AIFA errors (502 Bad Gateway, 503, timeouts, resets) are
+# retried up to 5 times with exponential back-off (urllib3 waits 0, 30,
+# 60, 120 and 120 s: about 5.5 minutes in total). Retry-After is
+# honoured when the server sends it. A persistent error still fails the
+# run, and the next day's scheduled run tries again.
+RETRY = Retry(
+    total=5,
+    connect=5,
+    read=5,
+    status=5,
+    backoff_factor=15,
+    backoff_max=120,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=frozenset({"GET"}),
+    respect_retry_after_header=True,
+    raise_on_status=False,
+)
+session = requests.Session()
+session.mount("https://", HTTPAdapter(max_retries=RETRY))
+session.mount("http://", HTTPAdapter(max_retries=RETRY))
 
 headers = {
     "User-Agent": (
@@ -31,7 +71,7 @@ headers = {
 
 print(f"Leggo {PAGE_URL}")
 
-resp = requests.get(PAGE_URL, headers=headers, timeout=60)
+resp = session.get(PAGE_URL, headers=headers, timeout=60)
 resp.raise_for_status()
 
 soup = BeautifulSoup(resp.text, "html.parser")
@@ -66,7 +106,7 @@ for url in csv_links:
 
     print(f"\nDownload {filename}")
 
-    r = requests.get(
+    r = session.get(
         url,
         headers=headers,
         timeout=120,

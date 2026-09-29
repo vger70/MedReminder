@@ -45,9 +45,15 @@ country never blocks the others.
 The Italian catalogue has two delivery paths:
 
 - **Remote feed (monthly, no release needed).** The workflow
-  `.github/workflows/download_aifa.yaml` runs on day 2 of each month
-  (and on demand), builds `data/aifa-<yyyymm>.zip` and rewrites
-  `data/latest.json`. The app downloads it at startup (§2.1). No
+  `.github/workflows/download_aifa.yaml` runs daily from day 2 to day
+  7 of each month (and on demand), builds `data/aifa-<yyyymm>.zip` and
+  rewrites `data/latest.json`. The first successful run of the month
+  publishes; later runs find the month's version in `latest.json` and
+  exit without changes. HTTP errors from AIFA (429, 5xx, timeouts,
+  resets) are retried five times over about 5.5 minutes before a run
+  fails; a failed run is retried by the next day's schedule. A manual
+  run with the `force` input rebuilds an already published month
+  (see the same-month limitation below). The app downloads it at startup (§2.1). No
   manual step.
 - **Embedded snapshot (per release, optional).** The ZIP embedded in
   the Infrastructure assembly is the baseline for a first run without

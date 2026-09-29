@@ -69,6 +69,10 @@ Implements `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`.
   rows or below 90% of the previous run, and publishes `sha256`,
   `size` and `rows` in `latest.json`. One timestamp drives the archive
   name and the manifest version.
+- The AIFA download retries transient HTTP errors (a 502 from the AIFA
+  site used to fail the month's only run), and the workflow now runs
+  daily from day 2 to day 7, skipping once the month is published;
+  `workflow_dispatch` gains a `force` input.
 
 ### Docs
 
