@@ -17,6 +17,7 @@ using MedReminder.Infrastructure.Export;
 using MedReminder.Infrastructure.Notifications;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Profiles;
+using MedReminder.Infrastructure.Settings;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.Infrastructure.UpdateChecking;
 using MedReminder.Application.UpdateChecking;
@@ -97,6 +98,9 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
+        // Household step H2b: the shared settings files behind the
+        // installation-settings use cases.
+        services.TryAddSingleton<IInstallationSettingsStore, InstallationSettingsStore>();
 
         // B.1 Phase 3c: the sync group key, DPAPI-protected next to the
         // profile database.

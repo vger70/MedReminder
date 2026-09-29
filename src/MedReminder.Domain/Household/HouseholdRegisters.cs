@@ -10,6 +10,9 @@ namespace MedReminder.Domain.Household;
 // whatever the order they arrived in.
 public static class HouseholdRegisters
 {
+    // The entity of the installation settings: no profile has this id.
+    public const string Installation = "";
+
     public const string Registered = "Registered";
     public const string Name = "Name";
     public const string Role = "Role";
@@ -28,6 +31,7 @@ public static class HouseholdRegisters
         ProfileRoleChanged r => [(Role, r.Role)],
         ProfilePinChanged p => [(Pin, PinValue(p.Hash, p.Salt, p.Iterations))],
         ProfileRemoved => [(Removed, "true")],
+        HouseholdSettingChanged s => [(s.Setting, s.Value)],
         _ => throw new NotSupportedException($"No registers for {body.GetType().Name}."),
     };
 
@@ -36,6 +40,14 @@ public static class HouseholdRegisters
         => string.IsNullOrEmpty(hash) || string.IsNullOrEmpty(salt) || iterations <= 0
             ? null
             : $"{iterations.ToString(CultureInfo.InvariantCulture)}:{salt}:{hash}";
+
+    // The winning value of each installation setting that has a version.
+    public static IReadOnlyDictionary<string, string?> Settings(
+        IEnumerable<(string ProfileId, string Register, HybridTimestamp Version, string? Value)> versions)
+        => versions
+            .Where(v => v.ProfileId == Installation)
+            .GroupBy(v => v.Register, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.MaxBy(v => v.Version).Value, StringComparer.Ordinal);
 
     // The profiles the winning versions describe. A profile exists once it
     // is registered and until it is removed; a removed profile never comes

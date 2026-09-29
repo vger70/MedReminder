@@ -166,7 +166,8 @@ catalogue and uses them to autocomplete the medicine form.
   exactly as before.
 - The **reference country** is picked from *Settings → General →
   Reference country*. Default is Italy; a change takes effect at the
-  next opening of the medicine form.
+  next opening of the medicine form. The country applies to the whole
+  installation: only an administrator can change it.
 
 ### EU centrally authorised medicines
 

@@ -50,6 +50,22 @@ public class HouseholdRegistersTests
     }
 
     [Fact]
+    public void Installation_settings_are_not_a_profile_and_the_latest_value_wins()
+    {
+        var versions = Versions(
+            (new HouseholdSettingChanged(HouseholdSetting.SmtpHost, "old.example.org"), new HybridTimestamp(1, 0, DeviceA)),
+            (new HouseholdSettingChanged(HouseholdSetting.SmtpHost, "new.example.org"), new HybridTimestamp(2, 0, DeviceB)),
+            (new HouseholdSettingChanged(HouseholdSetting.SmtpPassword, null), new HybridTimestamp(3, 0, DeviceA))).ToList();
+
+        HouseholdRegisters.Profiles(versions).Should().BeEmpty();
+        HouseholdRegisters.Settings(versions).Should().BeEquivalentTo(new Dictionary<string, string?>
+        {
+            [HouseholdSetting.SmtpHost] = "new.example.org",
+            [HouseholdSetting.SmtpPassword] = null,
+        });
+    }
+
+    [Fact]
     public void A_pin_value_needs_hash_salt_and_iterations()
     {
         HouseholdRegisters.PinValue("h", "s", 100_000).Should().Be("100000:s:h");
