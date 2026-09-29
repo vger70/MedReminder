@@ -19,6 +19,12 @@ public static class HouseholdRegisters
     public const string PublicKey = "PublicKey";
     public const string Escrow = "Escrow";
 
+    // Step H4a: the entity of the master registers.
+    public const string MasterEntity = "master";
+    public const string Election = "Election";
+    public const string Activation = "Activation";
+    public const string Release = "Release";
+
     public static string DeviceEntity(Guid deviceId) => "device:" + deviceId.ToString("N");
 
     public static string GrantRegister(Guid deviceId) => "Grant:" + deviceId.ToString("N");
@@ -47,6 +53,9 @@ public static class HouseholdRegisters
         ProfileKeyGranted g => [(GrantRegister(g.DeviceId), Wrapped(g.KeyVersion, g.GroupId, g.WrappedKey))],
         ProfileKeyRevoked r => [(GrantRegister(r.DeviceId), null)],
         ProfileKeyEscrowed e => [(Escrow, Wrapped(e.KeyVersion, e.GroupId, e.WrappedKey))],
+        MasterElected m => [(Election, $"{m.ElectionId:N}:{m.DeviceId:N}:{m.Kind}")],
+        MasterActivated a => [(Activation, $"{a.ElectionId:N}:{a.DeviceId:N}")],
+        MasterReleased r => [(Release, r.ElectionId.ToString("N"))],
         _ => throw new NotSupportedException($"No registers for {body.GetType().Name}."),
     };
 
@@ -124,6 +133,30 @@ public static class HouseholdRegisters
         return new HouseholdKeys(devices, recovery, escrows, grants);
     }
 
+    // Step H4a: the master registers.
+    public static HouseholdMaster Master(
+        IEnumerable<(string ProfileId, string Register, HybridTimestamp Version, string? Value)> versions)
+    {
+        var winners = versions
+            .Where(v => v.ProfileId == MasterEntity)
+            .GroupBy(v => v.Register, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.MaxBy(v => v.Version).Value, StringComparer.Ordinal);
+        MasterElection? election = null;
+        if (winners.GetValueOrDefault(Election)?.Split(':') is [var e, var d, var kind]
+            && Guid.TryParseExact(e, "N", out var electionId) && Guid.TryParseExact(d, "N", out var device))
+        {
+            election = new MasterElection(electionId, device, kind);
+        }
+        MasterActivation? activation = null;
+        if (winners.GetValueOrDefault(Activation)?.Split(':') is [var ae, var ad]
+            && Guid.TryParseExact(ae, "N", out var activated) && Guid.TryParseExact(ad, "N", out var activeDevice))
+        {
+            activation = new MasterActivation(activated, activeDevice);
+        }
+        Guid? released = Guid.TryParseExact(winners.GetValueOrDefault(Release), "N", out var r) ? r : null;
+        return new HouseholdMaster(election, activation, released);
+    }
+
     // The winning value of each installation setting that has a version.
     public static IReadOnlyDictionary<string, string?> Settings(
         IEnumerable<(string ProfileId, string Register, HybridTimestamp Version, string? Value)> versions)
@@ -155,6 +188,28 @@ public static class HouseholdRegisters
 // A profile as the household holds it. Pin is the register value of
 // HouseholdRegisters.PinValue, null without a PIN.
 public sealed record HouseholdProfile(string ProfileId, string DisplayName, string Role, string? Pin);
+
+// Step H4a. Election: the current one (last by HLC). Activation: the last
+// one recorded, possibly of an older election. Released: the last election
+// an outgoing master released.
+public sealed record HouseholdMaster(MasterElection? Election, MasterActivation? Activation, Guid? Released)
+{
+    public static readonly HouseholdMaster None = new(null, null, null);
+
+    // The active master: the device of the current election once activated.
+    public Guid? ActiveDevice => Election is { } e && Activation?.ElectionId == e.ElectionId ? e.DeviceId : null;
+
+    // The device still active under an older election, while the current
+    // one waits for activation.
+    public Guid? OutgoingDevice
+        => Election is { } e && Activation is { } a && a.ElectionId != e.ElectionId ? a.DeviceId : null;
+
+    public bool Pending => Election is { } e && Activation?.ElectionId != e.ElectionId;
+}
+
+public sealed record MasterElection(Guid ElectionId, Guid DeviceId, string Kind);
+
+public sealed record MasterActivation(Guid ElectionId, Guid DeviceId);
 
 // Step H3b. For RecoveryKeyPublished, GroupId is empty and Wrapped is the
 // recovery public key.

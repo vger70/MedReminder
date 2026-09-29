@@ -42,6 +42,10 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<HouseholdPairingOffers>();
         services.AddScoped<JoinInstallation>();
         services.AddScoped<HouseholdLinks>();
+        // Step H4a: the master role and the election.
+        services.AddScoped<HouseholdMasterRole>();
+        services.AddScoped<IMasterRole>(sp => sp.GetRequiredService<HouseholdMasterRole>());
+        services.AddScoped<ElectMaster>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();

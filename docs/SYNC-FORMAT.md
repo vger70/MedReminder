@@ -433,6 +433,9 @@ published, with empty dependencies. Header `contentVersion` is 1.
 | `ProfileKeyGranted` | `deviceId`, `groupId`, `keyVersion`, `wrappedKey` | last writer wins per profile and device |
 | `ProfileKeyRevoked` | `deviceId` | clears the grant of that device |
 | `ProfileKeyEscrowed` | `groupId`, `keyVersion`, `wrappedKey` | last writer wins per profile |
+| `MasterElected` | `electionId`, `deviceId`, `electedBy`, `kind` (`Creation`, `Planned`, `Takeover`) | last writer wins; `profileId` is `master` |
+| `MasterActivated` | `electionId`, `deviceId` | last writer wins; counts only for the current election |
+| `MasterReleased` | `electionId` | last writer wins; the outgoing master stopped for that election |
 
 Settings: `Smtp.Host`, `Smtp.Port`, `Smtp.UseStartTls`,
 `Smtp.Username`, `Smtp.FromAddress`, `Smtp.FromDisplayName`,

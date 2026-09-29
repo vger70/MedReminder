@@ -1084,10 +1084,17 @@ correo, configuración de la copia en la nube y país de referencia.
   nuevo, la ventana de bienvenida del primer inicio ofrece lo mismo con
   **Unirse a una instalación existente…**.
 
-La configuración de correo también se comparte, así que cada dispositivo
-de la instalación puede enviar los recordatorios por correo hasta que una
-versión posterior designe un solo dispositivo. Un correo de existencias
-bajas ya enviado por un dispositivo sincronizado no se vuelve a enviar.
+**Dispositivo principal.** Un solo dispositivo, el principal, envía
+los recordatorios por correo y ejecuta la copia en la nube; los demás
+muestran sus recordatorios en pantalla. El dispositivo que publica la
+instalación es el principal. Para cambiar la función, seleccione un
+dispositivo en **Dispositivos** y elija **Hacer principal…**: el
+principal actual cede el relevo en su próxima sincronización, y
+mientras tanto ningún dispositivo envía correo. Un principal que no
+sincroniza la instalación desde hace 24 horas deja de enviar correo; si
+se pierde, el dispositivo elegido en su lugar toma el relevo una hora
+después. Las instalaciones publicadas antes de esta versión no tienen
+principal hasta que un administrador designe uno.
 
 ## Comprobar ahora
 

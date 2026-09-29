@@ -237,6 +237,24 @@ public class MedicationMonitorTests
         scope.Windows.Sent.Should().BeEmpty();
     }
 
+    // Household step H4a: a device that is not the master shows the toast
+    // and leaves the email to the master; the epoch's cycle is closed here.
+    [Fact]
+    public async Task A_device_that_is_not_the_master_does_not_send_email()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        scope.Master.SendsEmail = false;
+        _ = await SeedAsync(scope, initialQuantity: 6m, channels: NotificationChannels.Both);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Windows.Sent.Should().HaveCount(1);
+        scope.Email.Sent.Should().BeEmpty();
+        scope.SentEmails.All.Should().BeEmpty("nothing was sent from here");
+        scope.Notifications.All.Should().ContainSingle().Which.Success.Should().BeTrue();
+    }
+
     [Fact]
     public async Task Dispatches_to_both_channels_when_configured()
     {

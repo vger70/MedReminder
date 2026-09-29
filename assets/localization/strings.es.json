@@ -1067,5 +1067,16 @@
   "Ui.HouseholdDialog.Profiles": "Perfiles",
   "Ui.HouseholdDialog.Profiles.NoneSelected": "Seleccione al menos un perfil.",
   "Ui.FirstRunWizardForm.Join": "Unirse a una instalación existente…",
-  "Ui.HouseholdDialog.Status.Setup": "Únase a una instalación ya usada en otro dispositivo. Este dispositivo recibe los perfiles que un administrador le asigna y la configuración de la instalación."
+  "Ui.HouseholdDialog.Status.Setup": "Únase a una instalación ya usada en otro dispositivo. Este dispositivo recibe los perfiles que un administrador le asigna y la configuración de la instalación.",
+  "Ui.HouseholdDialog.Devices.Role": "Función",
+  "Ui.HouseholdDialog.Devices.Master": "Principal",
+  "Ui.HouseholdDialog.Devices.Elected": "Principal elegido",
+  "Ui.HouseholdDialog.MakeMaster": "Hacer principal…",
+  "Ui.HouseholdDialog.MakeMaster.Confirm": "¿Hacer de {0} el dispositivo principal? El correo y la copia en la nube pasan a ese dispositivo. Hasta que tome el relevo, ningún dispositivo envía correo.",
+  "Ui.HouseholdDialog.Master.None": "Ningún dispositivo principal: cada dispositivo envía correo y ejecuta la copia en la nube. Haga principal un dispositivo en la pestaña Dispositivos.",
+  "Ui.HouseholdDialog.Master.ThisDevice": "Este dispositivo es el principal: envía el correo y ejecuta la copia en la nube.",
+  "Ui.HouseholdDialog.Master.Other": "Principal: {0}. Este dispositivo no envía correo.",
+  "Ui.HouseholdDialog.Master.Pending": "{0} ha sido elegido principal y espera el relevo de {1}. Mientras tanto ningún dispositivo envía correo.",
+  "Ui.HouseholdDialog.Master.PendingNoOutgoing": "{0} ha sido elegido principal y toma el relevo en su próxima sincronización. Mientras tanto ningún dispositivo envía correo.",
+  "Ui.HouseholdDialog.Master.LeaseExpired": "Este dispositivo es el principal pero no sincroniza la instalación desde hace más de 24 horas: no envía correo hasta que vuelva a sincronizar."
 }

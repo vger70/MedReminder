@@ -37,6 +37,8 @@ internal sealed class ApplicationTestScope
     public OperationLog Operations { get; }
     public RecordingEmailNotificationService Email { get; } = new();
     public RecordingWindowsNotificationService Windows { get; } = new();
+    // Household step H4a: this device is the master unless a test says not.
+    public FakeMasterRole Master { get; } = new();
 
     public AddMedicine AddMedicine { get; }
     public UpdateMedicine UpdateMedicine { get; }
@@ -99,7 +101,7 @@ internal sealed class ApplicationTestScope
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance,
-            sentEmails: SentEmails, operationLog: Operations);
+            sentEmails: SentEmails, operationLog: Operations, master: Master);
     }
 
     // Turns operation capture on, as enabling sync will (Phase 3d).

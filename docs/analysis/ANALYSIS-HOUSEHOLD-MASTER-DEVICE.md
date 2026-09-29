@@ -5,8 +5,8 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-29: revision 10 (§18 lists the revisions). Steps H0
-to H3 are implemented; H4 is next (§13).
+Status on 2026-09-29: revision 11 (§18 lists the revisions). Steps H0
+to H3 are implemented; H4a is in progress (§13).
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 topics below, this document wins once approved. §16 lists the
@@ -224,8 +224,9 @@ header keep `formatVersion` 1.
 | `ProfilePinChanged` | `profileId`, `hash`, `salt`, `iterations` or `null` | LWW |
 | `ProfileRemoved` | `profileId` | tombstone, wins |
 | `HouseholdSettingChanged` | `setting`, `value` | LWW per setting |
-| `MasterElected` | `electionId`, `deviceId`, `electedBy` (profile id), `kind` (`Planned`, `Takeover`) | LWW register `Master` |
-| `MasterActivated` | `electionId` | valid only for the current election |
+| `MasterElected` | `electionId`, `deviceId`, `electedBy` (profile id), `kind` (`Creation`, `Planned`, `Takeover`) | LWW register `Master` |
+| `MasterActivated` | `electionId`, `deviceId` | valid only for the current election |
+| `MasterReleased` | `electionId` | recorded by the outgoing master when it applies an election naming another device (§7.4) |
 
 `HouseholdSettingChanged.setting` values: the `SmtpSettings` fields,
 `SmtpPassword`, the cloud-backup fields of `BackupSettings` except the
@@ -589,7 +590,7 @@ Branching (product owner, 2026-09-28):
 | H1 | `EmailNotificationSent` in profile groups; email dedup on replicated facts (profile schema 4) | — | 4–6 d |
 | H2 | Household local store, projection, use cases for every installation setting, permission matrix (§4.3), role change and PIN as household state; single device, no storage | — | 10–15 d |
 | H3 | Household group on storage: create, pairing `mrpair2`, setup wizard (§6), profile subsets with per-device key grants and recovery escrow (§4.4), adoption of existing groups (§11), engine port (§5.5) | H1, H2 | 25–38 d |
-| H4 | Master: election, handover wizard, takeover, lease, email and cloud backup gated on master, all-profile monitoring, `mailto:` on non-master | H3 | 15–25 d |
+| H4 | Master: election, handover wizard, takeover, lease, email and cloud backup gated on master, all-profile monitoring, `mailto:` on non-master. Three PRs: H4a (master state, election, activation rule, lease, gating of email and cloud backup, Make master in the installation window, activation without wizard); H4b (handover wizard before activation, takeover wording, cloud-backup passphrase, grants of missing profiles); H4c (all-profile monitoring, `mailto:` and SMTP test on non-master) | H3 | 15–25 d |
 | H5 | Device removal at household level (§9) | H3 | 8–12 d |
 | H6 | Mobile: household creation and join on the phone, roles and PIN (B.1 Phase 5); phone as master with email (B.1 Phase 7); QR decode on the PC webcam | H3, H4, B.1 Phase 5 | inside B.1 Phases 5 and 7, plus 5–8 d |
 
@@ -721,3 +722,4 @@ developer-days.
 | 8 | `HouseholdLinked` is profile schema version 5, not 4 (§11, §12). H3c as built: the household join replaces the local household store and is not staged, only the profiles are (§6.3); profile groups are read from the household's storage |
 | 9 | H3d split into H3d-1 and H3d-2 (§13). Until H4, the email settings are household settings, so every device of an installation can send email; the H1 deduplication limits repeats (user guides say so) |
 | 10 | H3d-2 as built: the first-run wizard keeps its single page and adds "Join an existing installation…" (§6.1); the join runs in a host never started, with a placeholder profile. Pages 1, 6 and 7 of §6.3 (language, notifications per device, summary with the master) are not separate pages: the language is the system's, per-device notifications keep their defaults, the master arrives with H4. A failed first-run join leaves this device in the installation with no profile; a profile then created in the wizard joins that installation |
+| 11 | H4 split into H4a–H4c (§13). `MasterActivated` carries the device id; `MasterReleased` added (§5.2): the first activation condition of §7.4 is the outgoing master's explicit release instead of its applied vector, which does not say in which segment the election travelled. A household with no election (never published, or published before H4) keeps every device sending; the device that publishes elects itself (`Creation`). Until H4b the elected device activates without the handover wizard |

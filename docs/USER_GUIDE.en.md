@@ -997,10 +997,15 @@ cloud backup settings and the reference country.
   window of the first start offers the same with **Join an existing
   installation…**.
 
-The email settings are shared too, so every device of the installation
-can send email reminders until a later version names one device for
-that. A low-stock email already sent by a synced device is not sent
-again.
+**Master device.** Only one device, the master, sends the email
+reminders and runs the cloud backup; the others show their reminders
+on screen. The device that publishes the installation is the master.
+To move the role, select a device in **Devices** and choose **Make
+master…**: the current master hands over at its next sync, and no device
+sends email in between. A master that has not synced the installation
+for 24 hours stops sending email; if it is lost, the device elected in
+its place takes over one hour after that. Installations published before
+this version have no master until an administrator makes one.
 
 ## Check now
 

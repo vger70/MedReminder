@@ -85,6 +85,32 @@ public sealed record ProfileKeyEscrowed(
     int KeyVersion,
     string WrappedKey) : HouseholdOperationBody(ProfileId);
 
+// Step H4a: the master device (docs/analysis/
+// ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §7). An administrator elects a device;
+// the elected device activates the election when the outgoing master has
+// released it or has not synced for longer than the lease and a margin
+// (MasterRules). Only the active master sends email and runs the cloud
+// backup. The last election by HLC wins; an activation counts only for the
+// current election.
+public sealed record MasterElected(Guid ElectionId, Guid DeviceId, string ElectedBy, string Kind)
+    : HouseholdOperationBody(HouseholdRegisters.MasterEntity);
+
+public sealed record MasterActivated(Guid ElectionId, Guid DeviceId)
+    : HouseholdOperationBody(HouseholdRegisters.MasterEntity);
+
+// Recorded by the active master when it applies an election naming another
+// device: it has stopped, and the elected device may activate.
+public sealed record MasterReleased(Guid ElectionId) : HouseholdOperationBody(HouseholdRegisters.MasterEntity);
+
+// MasterElected.Kind on the wire.
+public static class MasterElectionKind
+{
+    // The device that publishes the household (R1).
+    public const string Creation = "Creation";
+    public const string Planned = "Planned";
+    public const string Takeover = "Takeover";
+}
+
 // Names of the installation settings (HouseholdSettingChanged.Setting).
 // Part of the format. Values are invariant text: booleans "true" /
 // "false", integers in decimal, the cloud provider by enum member name.

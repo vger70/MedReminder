@@ -23,6 +23,9 @@ public static class HouseholdOperationCodec
         ("ProfileKeyGranted", typeof(ProfileKeyGranted)),
         ("ProfileKeyRevoked", typeof(ProfileKeyRevoked)),
         ("ProfileKeyEscrowed", typeof(ProfileKeyEscrowed)),
+        ("MasterElected", typeof(MasterElected)),
+        ("MasterActivated", typeof(MasterActivated)),
+        ("MasterReleased", typeof(MasterReleased)),
     ];
 
     private static readonly Dictionary<Type, string> NameByType =

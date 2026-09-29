@@ -397,7 +397,8 @@ internal static class Program
                 sp.GetRequiredService<TimeProvider>(),
                 sp.GetRequiredService<ILogger<DoseReminderService>>(),
                 sp.GetService<ILocalizationService>(),
-                graceWindow);
+                graceWindow,
+                sp.GetService<IMasterRole>());
         });
 
         builder.Services.RemoveAll<IWindowsNotificationService>();
