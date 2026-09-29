@@ -30,6 +30,31 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #120 — Grant profile keys per device and escrow them for recovery (household H3b)
+
+Link: [vger70/MedReminder#120](https://github.com/vger70/MedReminder/pull/120)
+Branch: `claude/household-h3b-profile-keys` → `feature/master-slave`
+
+### Added
+
+- Each device has a household key pair (`household/device.protected`,
+  DPAPI); its public key is published in the household.
+- The household has a recovery key pair: the private key is stored on
+  the storage wrapped with the household passphrase
+  (`recovery.<v>.wrap`), so any device can escrow a profile key
+  without knowing the passphrase.
+- Profile group keys are granted per device and escrowed for recovery
+  (`ProfileKeyGranted`, `ProfileKeyRevoked`, `ProfileKeyEscrowed`);
+  publishing and every household run adopt the installation's synced
+  profiles.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md` §9.4, `docs/ANALYSIS.md`, `CLAUDE.md` §5,
+  analysis revision 7.
+
+---
+
 ## PR #119 — Replicate the household through a household group (household H3a)
 
 Link: [vger70/MedReminder#119](https://github.com/vger70/MedReminder/pull/119)
