@@ -11,9 +11,10 @@ Epistemic classification, aligned with the sibling documents:
 `[VERIFIED]` (checked against the tree at `6bc2a35`, or measured on the
 embedded snapshots), `[SEARCH]` (found through a web search result on
 2026-09-29 but not fetched: this session's network blocks
-`www.ema.europa.eu`, `cima.aemps.es`, `www.aemps.gob.es` and
-`base-donnees-publique.medicaments.gouv.fr`), `[INFERRED]`,
-`[UNCERTAIN]`.
+`www.ema.europa.eu`, `cima.aemps.es`, `www.aemps.gob.es`,
+`listadomedicamentos.aemps.gob.es` and
+`base-donnees-publique.medicaments.gouv.fr`), `[OWNER]` (supplied by the
+product owner), `[INFERRED]`, `[UNCERTAIN]`.
 
 ---
 
@@ -140,20 +141,30 @@ row floor, per-country state), `GitHubRawCatalogueFeedClient`,
 
 ### 3.2 ES — AEMPS CIMA "Medicamentos"
 
-- **URL: not established** [UNCERTAIN]. The CIMA site is a JavaScript
-  application; the search results do not expose the direct link behind
-  "Nomenclátor / Descargas → Medicamentos". Before implementing, the
-  link must be captured once from a browser (DevTools → Network while
-  clicking the download) and checked with `curl -I` from a GitHub
-  runner (AEMPS may block cloud IP ranges; untested).
-  Alternatives if no stable link exists:
-  - the CIMA REST API (documented, paginated JSON) [SEARCH], with the
-    XLSX rebuilt by the script. More work, and the result must match
-    the parser's fixed 15-column header exactly;
-  - keeping ES on the embedded, per-release path.
+- **URL.** `https://listadomedicamentos.aemps.gob.es/Medicamentos.xls`
+  [OWNER]. The host is AEMPS's static download server: it also serves
+  the XML Nomenclátor `prescripcion.zip` and `prescripcionvet.zip`
+  [SEARCH]. It is a stable direct link, so no scraping and no CIMA
+  JavaScript page are involved. Not fetched from this session (egress
+  blocked); still to check from a GitHub runner, since AEMPS may
+  filter cloud IP ranges [UNCERTAIN]:
+  `curl -sSI https://listadomedicamentos.aemps.gob.es/Medicamentos.xls`
+  (expected: `200`, a spreadsheet content type, a few MB).
+- **Content check before use.** The file is labelled `.xls` but the
+  embedded snapshot built from it is an XLSX (§2.2). The script must
+  not trust the extension: it checks the first bytes (`PK\x03\x04`,
+  ZIP container) and rejects a legacy BIFF `.xls` (`D0 CF 11 E0`) or
+  an HTML error page, so a change of upstream format fails the run
+  instead of publishing a file the parser cannot read. If AEMPS ever
+  switches to real BIFF, the script can convert it (`xlrd` +
+  `openpyxl`), which is out of scope until it happens.
+- **Fallbacks, only if the runner cannot reach the host:** the CIMA
+  REST API (documented, paginated JSON) [SEARCH] with the XLSX rebuilt
+  by the script, or keeping ES on the embedded, per-release path.
 - **Transformation.** None beyond renaming: the download is already an
-  XLSX with the expected layout. Rename to `aemps.xlsx`, zip as
-  `aemps-<v>.zip`.
+  XLSX with the expected layout. Save it as `aemps.xlsx` (bytes
+  unchanged), zip as `aemps-<v>.zip`. Compression gains little (the
+  XLSX is already a ZIP): about 2.8 MB per month (§2.2).
 - **Validation.** Opens as a ZIP with `xl/workbook.xml`; the header
   row of the first sheet matches the 15 names of `CATALOGUE-DATA.md`
   §5 (the script reads it with `openpyxl`); data rows ≥ 20 000 (today
@@ -257,7 +268,7 @@ scripts/feeds/
                  manifest writer (sha256, size, rows, generated from one
                  UTC timestamp), retention (3 archives), ZIP writer
   ema.py         download + XLSX→CSV + validation
-  aemps.py       download + validation (+ URL discovery, §3.2)
+  aemps.py       download + magic-byte and header validation (§3.2)
   bdpm.py        scrape + download ×3 + validation
 download_aifa.py later moved onto common.py; not in the first step, so
                  the tested AIFA script is not touched (only its output
@@ -338,7 +349,8 @@ new one. Per-feed `Enabled` flags let an admin override.
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| AEMPS has no stable direct link, or blocks runner IPs | ES feed not feasible as designed | Capture the link first (§3.2); fall back to REST API or keep ES embedded |
+| AEMPS blocks runner IPs | ES feed cannot download | `curl -I` from a runner before implementing (§3.2); fall back to REST API or keep ES embedded |
+| AEMPS changes `Medicamentos.xls` to real BIFF or to another layout | Parser cannot read it | Magic-byte check and header check in the script; nothing is published |
 | EMA changes column names | Parser rejects the snapshot | Script validation fails first, nothing is published |
 | EMA XLSX has multi-line cells | Parser splits records | Collapse `\r\n\t`; re-read the CSV to check column counts |
 | BDPM column order changes | Parser rejects (invariant check) | Script applies the same invariant before publishing |
@@ -356,9 +368,9 @@ new one. Per-feed `Enabled` flags let an admin override.
 | D2 | Branch | Dedicated data branch with periodic reset, decided before the first release of PR #131 |
 | D3 | Timing of the AIFA move | Together with D1/D2, before that release; otherwise keep writing `main/data/latest.json` for old clients |
 | D4 | Feeds per client | Reference country + EU; per-feed flags for admins |
-| D5 | AEMPS source | Capture the direct link first; if none, keep ES embedded (REST rebuild only if needed) |
+| D5 | AEMPS source | `https://listadomedicamentos.aemps.gob.es/Medicamentos.xls` (product owner); confirm reachability from a GitHub runner; REST rebuild or embedded-only as fallbacks |
 | D6 | Thresholds | As in §3.4 |
-| D7 | Order of work | EU and FR first (URLs known), ES after D5 |
+| D7 | Order of work | EU, FR, ES: all three URLs are now known; ES has the simplest transformation, EU the most complex |
 
 ---
 
@@ -372,7 +384,8 @@ new one. Per-feed `Enabled` flags let an admin override.
 3. `scripts/feeds/common.py` + EMA feed + workflow; enable `EU` in the
    client.
 4. BDPM feed + workflow; enable `FR`.
-5. AEMPS: link discovery (D5), then feed + workflow; enable `ES`.
+5. AEMPS feed + workflow (URL from D5, runner reachability checked
+   first); enable `ES`.
 6. Move `download_aifa.py` onto `common.py`.
 7. Docs: `CATALOGUE-DATA.md` §3, §5, §6 rewritten like §2;
    `THIRD-PARTY-NOTICES.md` notes that the snapshots are also
@@ -387,5 +400,10 @@ new one. Per-feed `Enabled` flags let an admin override.
 - §3 URLs: from web search results only (the four source domains are
   blocked by this environment's egress proxy); every URL must be
   checked with `curl -I` from a GitHub runner before implementation.
-- Not verified: AEMPS download link, EMA and BDPM download behaviour
-  from GitHub runners, EMA Human share of rows, BDPM update frequency.
+- AEMPS URL supplied by the product owner (2026-09-29); the host is
+  confirmed as AEMPS's static download server by search results. Not
+  fetched: this session's egress proxy returns 403 for it.
+- Not verified: download behaviour of the three sources from GitHub
+  runners, actual format of the current `Medicamentos.xls` (XLSX
+  assumed from the embedded snapshot), EMA Human share of rows, BDPM
+  update frequency.
