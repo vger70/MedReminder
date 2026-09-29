@@ -1010,6 +1010,15 @@ ensuite.
    celles du groupe (une copie est conservée à côté de la base).
    MedReminder redémarre.
 
+Si la phrase secrète ouvre plus d'un groupe dans le dossier ou le compte
+(plusieurs profils synchronisés avec la même phrase secrète),
+MedReminder demande lequel rejoindre et affiche chaque groupe avec ses
+appareils.
+
+Avec OneDrive ou Google Drive, l'opération peut prendre jusqu'à une
+minute : MedReminder attend que le compte liste le nouveau PC, afin que
+les autres PC conservent les modifications dont il a encore besoin.
+
 ### Utilisation courante
 
 - MedReminder synchronise quelques secondes après chaque modification,
@@ -1028,6 +1037,10 @@ ensuite.
   modification sur un PC parvient aux autres, et un PC qui rejoint le
   groupe prend ceux du groupe. Pour renommer un autre profil
   synchronisé, ouvrez d'abord ce profil.
+- **E-mail** : chaque PC où l'e-mail est configuré (Paramètres → E-mail
+  SMTP) envoie ses propres messages de stock bas et au soignant ; avec
+  deux PC synchronisés, le même message arrive donc deux fois.
+  Configurez l'e-mail sur un seul PC du groupe.
 - **Désactiver la synchronisation…** arrête la synchronisation sur ce PC et
   conserve ses données.
 

@@ -102,6 +102,12 @@ public sealed class CreateSyncGroup
 
 public sealed record SyncJoinResult(SyncSettings Settings, byte[] Key);
 
+// A group a passphrase opens, told apart by its devices: the profile name
+// is encrypted in the operations and only known after a join.
+public sealed record SyncGroupCandidate(Guid GroupId, IReadOnlyList<SyncGroupDevice> Devices);
+
+public sealed record SyncGroupDevice(string Name, DateTimeOffset LastSeen);
+
 // Joins an existing group on another device (§5.5): unwrap the group key
 // with the sync passphrase, pick the newest image usable for a bootstrap
 // and build a new profile database from it. The device never uploads the
@@ -131,6 +137,42 @@ public sealed class JoinSyncGroup
             .Select(p => Guid.TryParseExact(p[..p.IndexOf('/')], "N", out var id) ? id : Guid.Empty)
             .Where(id => id != Guid.Empty)];
 
+    // The groups of the storage that the passphrase opens (one group per
+    // profile: a storage shared by several profiles has several, and the
+    // same passphrase may open more than one). Each key is used only to
+    // read the device records, then zeroed.
+    public async Task<IReadOnlyList<SyncGroupCandidate>> FindGroupsAsync(ISyncTransport transport, char[] passphrase,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(transport);
+        ArgumentNullException.ThrowIfNull(passphrase);
+        var found = new List<SyncGroupCandidate>();
+        foreach (var groupId in await ListGroupsAsync(transport, cancellationToken))
+        {
+            SyncGroupKey group;
+            try
+            {
+                group = await SyncKeys.ObtainAsync(transport, _cipher, groupId, new SyncKeySource.Passphrase(passphrase),
+                    _clock, cancellationToken);
+            }
+            catch (CryptographicException)
+            {
+                continue;
+            }
+            try
+            {
+                var settings = new SyncSettings(groupId, Guid.Empty, group.Generation, group.KeyVersion);
+                var devices = await SyncEngine.ReadRecordsAsync(transport, _cipher, group.Key, settings, cancellationToken);
+                found.Add(new SyncGroupCandidate(groupId, [.. devices.Select(d => new SyncGroupDevice(d.Name, d.LastSeen))]));
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(group.Key);
+            }
+        }
+        return found;
+    }
+
     // Throws CryptographicException for a wrong passphrase.
     public Task<SyncJoinResult> ExecuteAsync(ISyncTransport transport, Guid groupId, char[] passphrase,
         string targetDatabasePath, SyncTarget target, CancellationToken cancellationToken, string? deviceName = null)
@@ -154,7 +196,7 @@ public sealed class JoinSyncGroup
         var group = await SyncKeys.ObtainAsync(transport, _cipher, groupId, source, _clock, cancellationToken);
         var settings = new SyncSettings(groupId, Guid.NewGuid(), group.Generation, group.KeyVersion, target.Folder, deviceName,
             Provider: target.Provider, AccountId: target.AccountId);
-        await BuildOrZeroAsync(transport, settings, group.Key, targetDatabasePath, cancellationToken);
+        await BuildOrZeroAsync(transport, settings, group.Key, targetDatabasePath, cancellationToken, newDevice: true);
         return new SyncJoinResult(settings, group.Key);
     }
 
@@ -190,11 +232,11 @@ public sealed class JoinSyncGroup
     }
 
     private async Task BuildOrZeroAsync(ISyncTransport transport, SyncSettings settings, byte[] key,
-        string targetDatabasePath, CancellationToken ct)
+        string targetDatabasePath, CancellationToken ct, bool newDevice = false)
     {
         try
         {
-            await BuildAsync(transport, settings, key, targetDatabasePath, ct);
+            await BuildAsync(transport, settings, key, targetDatabasePath, ct, newDevice);
         }
         catch
         {
@@ -203,29 +245,92 @@ public sealed class JoinSyncGroup
         }
     }
 
+    // newDevice: a first join, whose record exists only because of this
+    // call. If the join fails after the record went up (while waiting, or
+    // in the build), the record is removed again, or the other devices would keep their segments for a
+    // device that never syncs until it counts as stale (§5.6). A device
+    // that rebuilds keeps its record: it was in the group before.
     private async Task BuildAsync(ISyncTransport transport, SyncSettings settings, byte[] key,
-        string targetDatabasePath, CancellationToken ct)
+        string targetDatabasePath, CancellationToken ct, bool newDevice = false)
     {
-        var (header, content) = await PickImageAsync(transport, settings, key, ct);
-        var snapshot = SnapshotContent.Parse(content);
-        if (snapshot.SnapshotSchema > _snapshots.SchemaVersion)
-            throw new NotSupportedException("The sync group was written by a newer version of the app.");
-
-        var vector = header.Vector ?? new Dictionary<Guid, int>();
-        await _snapshots.BuildDatabaseAsync(targetDatabasePath, snapshot.Image, settings.Generation, vector, ct);
-
-        // The record goes up at once: the other devices keep the segments
-        // after this image until this device has applied them (§5.6).
-        // Segments deleted between the image choice and this write make
-        // the first run report RebuildRequired.
-        await SyncEngine.WriteRecordAsync(transport, _cipher, key, settings, _options, _clock, 0,
-            vector.Where(v => v.Key != settings.DeviceId).ToDictionary(v => v.Key, v => v.Value), ct);
+        try
+        {
+            var (header, snapshot) = await PickAndAnnounceAsync(transport, settings, key, ct);
+            var vector = header.Vector ?? new Dictionary<Guid, int>();
+            await _snapshots.BuildDatabaseAsync(targetDatabasePath, snapshot.Image, settings.Generation, vector, ct);
+        }
+        catch when (newDevice)
+        {
+            await RemoveRecordAsync(transport, settings);
+            throw;
+        }
     }
 
-    // §5.6: the newest checkpoint that covers every device folder's first
-    // remaining segment, or the genesis when nothing was deleted yet.
-    private async Task<(SyncFileHeader Header, byte[] Content)> PickImageAsync(
+    // Best effort: the build error is the one reported.
+    private static async Task RemoveRecordAsync(ISyncTransport transport, SyncSettings settings)
+    {
+        try
+        {
+            await transport.DeleteAsync(SyncLayout.Device(settings.GroupId, settings.DeviceId), CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is IOException or HttpRequestException or InvalidOperationException
+                                       or UnauthorizedAccessException)
+        {
+            // Left for the stale-device rule (§5.6).
+        }
+    }
+
+    // The record goes up as soon as the image is chosen: the other devices
+    // keep the segments after this image until this device has applied
+    // them (§5.6). While a provider's listing lags, that is not enough: a
+    // device compacting in those seconds does not list the new record and
+    // deletes segments the image does not cover. So the join waits until
+    // the provider lists its record, then checks with the listing it just
+    // fetched that the image still covers every device's first remaining
+    // segment, and picks again if it does not. After JoinAttempts, or when
+    // the record is not listed within JoinListingTimeout, the join goes on
+    // and the first run reports RebuildRequired as before. An image from a
+    // newer app is refused before the record goes up.
+    private async Task<(SyncFileHeader Header, SnapshotContent Snapshot)> PickAndAnnounceAsync(
         ISyncTransport transport, SyncSettings settings, byte[] key, CancellationToken ct)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            var (header, content) = await PickImageAsync(transport, settings, key, ct);
+            var snapshot = SnapshotContent.Parse(content);
+            if (snapshot.SnapshotSchema > _snapshots.SchemaVersion)
+                throw new NotSupportedException("The sync group was written by a newer version of the app.");
+
+            var vector = header.Vector ?? new Dictionary<Guid, int>();
+            await SyncEngine.WriteRecordAsync(transport, _cipher, key, settings, _options, _clock, 0,
+                vector.Where(v => v.Key != settings.DeviceId).ToDictionary(v => v.Key, v => v.Value), ct);
+            await WaitUntilListedAsync(transport, settings, ct);
+            if (attempt >= _options.JoinAttempts
+                || Covers(vector, await FirstSegmentsAsync(transport, settings, ct)))
+            {
+                return (header, snapshot);
+            }
+        }
+    }
+
+    // A provider transport lists its own writes at once, from memory; the
+    // other devices see the record only when the provider lists it. A
+    // folder transport has no such delay.
+    private async Task WaitUntilListedAsync(ISyncTransport transport, SyncSettings settings, CancellationToken ct)
+    {
+        if (transport is not IProviderListing provider) return;
+        var record = SyncLayout.Device(settings.GroupId, settings.DeviceId);
+        var polls = Math.Max(1, (int)Math.Ceiling(_options.JoinListingTimeout / _options.JoinListingPoll));
+        for (var poll = 0; poll < polls; poll++)
+        {
+            if (await provider.IsListedByProviderAsync(record, ct)) return;
+            await _options.Delay(_options.JoinListingPoll, ct);
+        }
+    }
+
+    // First remaining segment of each device folder of the generation.
+    private static async Task<Dictionary<Guid, int>> FirstSegmentsAsync(ISyncTransport transport,
+        SyncSettings settings, CancellationToken ct)
     {
         var first = new Dictionary<Guid, int>();
         foreach (var path in await transport.ListAsync(SyncLayout.OpsFolder(settings.GroupId, settings.Generation), ct))
@@ -233,6 +338,19 @@ public sealed class JoinSyncGroup
             if (!SyncLayout.TryParseSegment(path, out var device, out var seq)) continue;
             first[device] = first.TryGetValue(device, out var known) ? Math.Min(known, seq) : seq;
         }
+        return first;
+    }
+
+    // An image covers the folders when no segment after its vector is gone.
+    private static bool Covers(IReadOnlyDictionary<Guid, int> vector, Dictionary<Guid, int> first)
+        => first.All(f => vector.GetValueOrDefault(f.Key) >= f.Value - 1);
+
+    // §5.6: the newest checkpoint that covers every device folder's first
+    // remaining segment, or the genesis when nothing was deleted yet.
+    private async Task<(SyncFileHeader Header, byte[] Content)> PickImageAsync(
+        ISyncTransport transport, SyncSettings settings, byte[] key, CancellationToken ct)
+    {
+        var first = await FirstSegmentsAsync(transport, settings, ct);
 
         var candidates = new List<(string Path, SyncFileHeader Header)>();
         foreach (var path in await transport.ListAsync(SyncLayout.CheckpointFolder(settings.GroupId, settings.Generation), ct))
@@ -258,8 +376,7 @@ public sealed class JoinSyncGroup
 
         foreach (var (path, header) in candidates.OrderByDescending(c => c.Header.Vector?.Values.Sum() ?? 0))
         {
-            var vector = header.Vector ?? new Dictionary<Guid, int>();
-            if (!first.All(f => vector.GetValueOrDefault(f.Key) >= f.Value - 1)) continue;
+            if (!Covers(header.Vector ?? new Dictionary<Guid, int>(), first)) continue;
             var file = await transport.ReadAsync(path, ct)
                 ?? throw new InvalidOperationException("The sync image disappeared; try again.");
             if (header.Kind == SyncFileKind.Genesis) return SyncFileCodec.Open(_cipher, key, file);

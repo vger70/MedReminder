@@ -13,6 +13,12 @@ public interface ISyncSetupService
     // Groups found in a sync folder or cloud account (Phase 4a).
     Task<IReadOnlyList<Guid>> ListGroupsAsync(SyncTarget target, CancellationToken cancellationToken);
 
+    // The groups the passphrase opens, so a join asks which one when there
+    // are several instead of joining the first (a storage shared by
+    // several profiles holds one group per profile).
+    Task<IReadOnlyList<SyncGroupCandidate>> FindGroupsAsync(SyncTarget target, char[] passphrase,
+        CancellationToken cancellationToken);
+
     // Enables sync with a new group created from this profile.
     Task CreateAsync(SyncTarget target, char[] passphrase, string deviceName, CancellationToken cancellationToken);
 

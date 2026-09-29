@@ -136,10 +136,11 @@ Open prerequisites and debts inside B.1:
 - **Decisions open**: D4 (notification defaults per device), D11
   (strip-target exclusion for mobile, depends on S4), D13 (minimum OS
   versions), D14 (donation links on iOS).
-- **Known sync limit** (shared by OneDrive and Google Drive): a device
-  that joins while the listing lags, while another device compacts,
-  ends in `RebuildRequired`; "Rebuild from the group" repairs it. A
-  fix needs the join to wait until its own device record is listed.
+- **Known sync limit closed** (shared by OneDrive and Google Drive): a
+  device that joined while the listing lagged, while another device
+  compacted, ended in `RebuildRequired`. The join now waits until the
+  provider lists its record and picks another image if segments were
+  deleted meanwhile (B.1 analysis §20, 2026-09-28).
 - **P15**: store accounts and macOS build host are product-owner
   actions.
 

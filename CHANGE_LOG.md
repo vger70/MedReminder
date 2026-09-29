@@ -30,6 +30,37 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #115 — Close the join-during-listing-lag limit and ask which group a passphrase opens
+
+Link: [vger70/MedReminder#115](https://github.com/vger70/MedReminder/pull/115)
+Branch: `claude/household-h0-join-fixes`
+
+Step H0 of the household / master device feature; targets `main`
+(decision D-17).
+
+### Fixed
+
+- A device joining through OneDrive or Google Drive while the listing
+  lagged could end in `RebuildRequired`. The join now waits until the
+  provider itself lists its record (`IProviderListing`), rechecks that
+  the chosen image still covers the remaining segments and picks again
+  if not.
+- A failed first join removes its device record, so it does not hold
+  back compaction on the other devices.
+
+### Changed
+
+- A join by passphrase that opens several groups asks which one, showing
+  each group's devices (`SyncGroupChoiceDialog`), instead of joining the
+  first.
+
+### Docs
+
+- User guides (5 languages): configure email on one PC of a synced group
+  only; group choice; join time with a cloud account.
+- `STATUS.md`, `ANALYSIS.md`, `ANALYSIS-B1-MOBILE-SYNC.md` §20: the known
+  limit is closed.
+
 ## PR #113 — Align STATUS, EVOLUTION and ANALYSIS with v2.10.0
 
 Link: [vger70/MedReminder#113](https://github.com/vger70/MedReminder/pull/113)

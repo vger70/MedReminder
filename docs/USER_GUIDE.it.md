@@ -956,6 +956,14 @@ modifiche registrate nel frattempo vengono inviate dopo.
    da quelli del gruppo (una copia resta accanto al database). MedReminder
    si riavvia.
 
+Se la passphrase apre più di un gruppo nella cartella o nell'account
+(più profili sincronizzati con la stessa passphrase), MedReminder chiede
+a quale unirsi e mostra ogni gruppo con i suoi dispositivi.
+
+Con OneDrive o Google Drive l'unione può richiedere fino a un minuto:
+MedReminder attende che l'account elenchi il nuovo PC, così gli altri PC
+conservano le modifiche che gli servono ancora.
+
 ### Uso quotidiano
 
 - MedReminder sincronizza pochi secondi dopo ogni modifica, ogni 5 minuti
@@ -974,6 +982,10 @@ modifiche registrate nel frattempo vengono inviate dopo.
   (Impostazioni → Notifiche) appartengono al gruppo: una modifica su un
   PC arriva agli altri, e un PC che si unisce prende quelli del gruppo.
   Per rinominare un altro profilo sincronizzato, apri prima quel profilo.
+- **Email**: ogni PC con l'email configurata (Impostazioni → Email SMTP)
+  invia i propri messaggi di scorta bassa e al caregiver, quindi con due
+  PC sincronizzati lo stesso messaggio arriva due volte. Configura
+  l'email su un solo PC del gruppo.
 - **Disattiva sincronizzazione…** ferma la sincronizzazione su questo PC e
   ne conserva i dati.
 
