@@ -1,0 +1,51 @@
+name: Download AIFA CSV
+
+on:
+  schedule:
+    - cron: '0 3 2 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Generate archive
+        id: generate
+        run: |
+          python scripts/download_aifa.py
+
+      - name: Create tag
+        id: tag
+        run: |
+          echo "value=aifa-$(date +'%Y%m')" >> $GITHUB_OUTPUT
+
+      - name: Check release existence
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view ${{ steps.tag.outputs.value }} >/dev/null 2>&1 \
+            && echo "exists=true" >> $GITHUB_OUTPUT \
+            || echo "exists=false" >> $GITHUB_OUTPUT
+
+      - name: Publish release
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: ${{ steps.tag.outputs.value }}
+          files: ${{ steps.generate.outputs.zip_name }}
