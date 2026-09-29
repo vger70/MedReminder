@@ -100,7 +100,9 @@ public class UiWritePathGuardTests
     // P8: the replicated profile settings (display name, notification
     // recipients) are written by RenameProfile and
     // UpdateNotificationSettings, never by the UI. Program.cs only adds
-    // notifications.settings.json to the configuration it reads.
+    // notifications.settings.json to the configuration it reads;
+    // SetupProfile (household step H3d-2) only implements
+    // ICurrentProfile.NotificationSettingsPath for the first-run join host.
     [Fact]
     public void Ui_sources_do_not_write_replicated_profile_settings()
     {
@@ -112,7 +114,7 @@ public class UiWritePathGuardTests
                      .Where(f => !IsBuildOutput(uiDir, f)))
         {
             var relative = Path.GetRelativePath(root, file).Replace('\\', '/');
-            if (relative == "src/MedReminder.UI/Program.cs") continue;
+            if (relative is "src/MedReminder.UI/Program.cs" or "src/MedReminder.UI/Services/SetupProfile.cs") continue;
             foreach (var (line, text) in FindViolations(File.ReadAllText(file), pattern))
             {
                 violations.Add($"{relative}:{line}: {text}");

@@ -473,8 +473,13 @@ root is committed to the repository.
   (administrators only; so is Tools → Sync…) publishes the household,
   lists its devices, shows `mrpair2` codes and joins an existing
   installation. `HouseholdHostedService` runs the household sync every
-  15 minutes (`Household:IntervalMinutes`). The first-run wizard does
-  not offer the join yet (step H3d-2).
+  15 minutes (`Household:IntervalMinutes`).
+- **First-run join** (step H3d-2): the first-run wizard offers "Join an
+  existing installation…". The boot flow then builds a host it never
+  starts, with a placeholder profile (`SetupProfile`,
+  `%LOCALAPPDATA%\MedReminder\setup\`, removed afterwards, its
+  database never opened), and shows the installation window in setup
+  mode; the start goes on with the profiles the join brought.
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).

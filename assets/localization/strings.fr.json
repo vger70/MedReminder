@@ -1065,5 +1065,7 @@
   "Ui.HouseholdDialog.Approve.NotAdmin": "Ce profil n'est pas administrateur de l'installation.",
   "Ui.HouseholdDialog.Approve.Cancelled": "Cet appareil a rejoint l'installation sans profil. Pour recevoir des profils, un administrateur affiche un code sur un autre appareil de l'installation.",
   "Ui.HouseholdDialog.Profiles": "Profils",
-  "Ui.HouseholdDialog.Profiles.NoneSelected": "Sélectionnez au moins un profil."
+  "Ui.HouseholdDialog.Profiles.NoneSelected": "Sélectionnez au moins un profil.",
+  "Ui.FirstRunWizardForm.Join": "Rejoindre une installation existante…",
+  "Ui.HouseholdDialog.Status.Setup": "Rejoignez une installation déjà utilisée sur un autre appareil. Cet appareil reçoit les profils qu'un administrateur lui attribue et les paramètres de l'installation."
 }

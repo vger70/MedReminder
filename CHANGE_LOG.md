@@ -30,6 +30,24 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #123 — Join an existing installation from the first-run wizard (household H3d-2)
+
+Link: [vger70/MedReminder#123](https://github.com/vger70/MedReminder/pull/123)
+Branch: `claude/household-h3d2-first-run-join` → `feature/master-slave`
+
+### Added
+
+- The first-run wizard offers "Join an existing installation…": a new
+  PC joins with a code or with the installation passphrase and an
+  administrator's PIN, and starts with the profiles it received.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`, `CLAUDE.md` §5
+  (`setup\` folder), analysis revision 10.
+
+---
+
 ## PR #122 — Manage the installation from Tools → Installation (household H3d-1)
 
 Link: [vger70/MedReminder#122](https://github.com/vger70/MedReminder/pull/122)
