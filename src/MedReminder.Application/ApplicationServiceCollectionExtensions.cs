@@ -41,6 +41,7 @@ public static class ApplicationServiceCollectionExtensions
         // Step H3c: pairing offers (mrpair2) and the installation join.
         services.AddScoped<HouseholdPairingOffers>();
         services.AddScoped<JoinInstallation>();
+        services.AddScoped<HouseholdLinks>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();

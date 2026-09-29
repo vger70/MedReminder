@@ -24,6 +24,9 @@ internal sealed class InMemorySyncOperationRepository : ISyncOperationRepository
     public Task<IReadOnlyList<SyncOperation>> ListAllAsync(CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyList<SyncOperation>>([.. _items.OrderBy(o => o.Timestamp)]);
 
+    public Task<IReadOnlyList<SyncOperation>> ListOfTypeAsync(string type, CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyList<SyncOperation>>([.. _items.Where(o => o.Type == type).OrderBy(o => o.Timestamp)]);
+
     public Task<IReadOnlyList<SyncOperation>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyList<SyncOperation>>([.. _items.Where(o => o.MedicineId == medicineId).OrderBy(o => o.Timestamp)]);
 

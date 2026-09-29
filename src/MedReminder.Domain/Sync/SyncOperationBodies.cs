@@ -4,7 +4,7 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Domain.Sync;
 
-// Operation catalogue, schema versions 1 to 4 (B.1 Phase 3a,
+// Operation catalogue, schema versions 1 to 5 (B.1 Phase 3a,
 // docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.2, §7.2). One operation
 // per user fact or per changed register, never a derived row:
 // consumption, count corrections, StockEpoch and the schedule summary on
@@ -155,6 +155,16 @@ public sealed record EmailNotificationSent(
     int StockEpoch,
     Guid? EpochFactId,
     DateTimeOffset SentAt) : SyncOperationBody(MedicineId);
+
+// Household step H3c (operation schema version 5; docs/analysis/
+// ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §11): the household that adopted
+// this profile group. A device of the group that is not in that household
+// is asked to join it instead of publishing its own. When two households
+// claim the group, the earliest claim by HLC wins. Touches no medicine;
+// the operation log is the state (it is part of every image).
+public sealed record HouseholdLinked(
+    Guid HouseholdId,
+    DateTimeOffset LinkedAt) : SyncOperationBody(Guid.Empty);
 
 // A replicated setting of the profile (operation schema version 3,
 // closing P8 of docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §2, §4.2):

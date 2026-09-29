@@ -265,7 +265,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 4)
+## 6. Operation catalogue (schema versions 1 to 5)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -291,10 +291,11 @@ nothing.
 | `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
 | `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
 | `EmailNotificationSent` (version 4) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt` | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`): the receiving device does not send it again |
+| `HouseholdLinked` (version 5) | `householdId`, `linkedAt` | fact; the household that adopted the group (§9); the earliest by HLC wins; profile-level (`medicineId` empty) |
 
 Every type is schema version 1 except `MedicineDeleted`, version 2,
-`ProfileSettingChanged`, version 3, and `EmailNotificationSent`,
-version 4.
+`ProfileSettingChanged`, version 3, `EmailNotificationSent`, version 4,
+and `HouseholdLinked`, version 5.
 
 Profile settings (`ProfileSettingChanged.setting`): `DisplayName` (the
 profile's name, never empty), `ToAddress`, `CaregiverAddress`,
