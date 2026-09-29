@@ -1051,10 +1051,17 @@ impostazioni del backup cloud e paese di riferimento.
   nuovo PC la finestra di benvenuto del primo avvio offre la stessa
   funzione con **Unisciti a un'installazione esistente…**.
 
-Anche le impostazioni email sono condivise, quindi ogni dispositivo
-dell'installazione può inviare i promemoria email finché una versione
-successiva non designerà un solo dispositivo. Un'email di scorte basse
-già inviata da un dispositivo sincronizzato non viene inviata di nuovo.
+**Dispositivo master.** Un solo dispositivo, il master, invia i
+promemoria email ed esegue il backup cloud; gli altri mostrano i
+promemoria a schermo. Il dispositivo che pubblica l'installazione è il
+master. Per spostare il ruolo, seleziona un dispositivo in
+**Dispositivi** e scegli **Rendi master…**: il master attuale cede il
+ruolo alla sua prossima sincronizzazione e nel frattempo nessun
+dispositivo invia email. Un master che non sincronizza l'installazione
+da 24 ore smette di inviare email; se è perso, il dispositivo eletto al
+suo posto subentra un'ora dopo. Le installazioni pubblicate prima di
+questa versione non hanno un master finché un amministratore non ne
+designa uno.
 
 ## Controlla ora
 

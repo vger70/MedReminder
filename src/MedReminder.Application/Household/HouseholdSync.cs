@@ -43,14 +43,16 @@ public sealed class HouseholdSync
     private readonly ICredentialProtector _protector;
     private readonly HouseholdProjection _projection;
     private readonly HouseholdKeyring _keyring;
+    private readonly HouseholdLog _household;
     private readonly TimeProvider _clock;
     private readonly SyncEngineOptions _options;
 
     public HouseholdSync(IHouseholdStore store, IHouseholdKeyStore keys, ISyncTransportFactory transports,
         IArchiveCipher cipher, ICredentialProtector protector, HouseholdProjection projection, HouseholdKeyring keyring,
-        TimeProvider clock, SyncEngineOptions? options = null)
+        HouseholdLog household, TimeProvider clock, SyncEngineOptions? options = null)
     {
         _keyring = keyring;
+        _household = household;
         _store = store;
         _keys = keys;
         _transports = transports;
@@ -100,6 +102,17 @@ public sealed class HouseholdSync
                 CryptographicOperations.ZeroMemory(recovery);
             }
             await _keyring.AdoptProfileGroupsAsync(cancellationToken);
+            // Step H4a (R1): the device that publishes is the master, unless
+            // the household already has one.
+            if ((await _household.MasterAsync(cancellationToken)).Election is null)
+            {
+                var electionId = Guid.NewGuid();
+                await _household.AppendAsync(
+                [
+                    new MasterElected(electionId, identity.DeviceId, string.Empty, MasterElectionKind.Creation),
+                    new MasterActivated(electionId, identity.DeviceId),
+                ], cancellationToken);
+            }
 
             var log = await _store.ListOperationsAsync(cancellationToken);
             var image = new HouseholdSegmentContent(new Dictionary<Guid, int>(), [.. log.Select(Outgoing)]);
@@ -265,6 +278,16 @@ public sealed class HouseholdSync
             await _keyring.AdoptProfileGroupsAsync(cancellationToken);
             var (published, identityAfter) = await PublishPendingAsync(transport, key, identity, cancellationToken);
             var (segments, operations) = await PullAsync(transport, key, identityAfter, problems, cancellationToken);
+            // Step H4a: the lease counts from here; then the master
+            // bookkeeping, published in the same run.
+            identityAfter = identityAfter with { LastSyncedAt = _clock.GetUtcNow() };
+            await _store.SaveIdentityAsync(identityAfter, cancellationToken);
+            if (await UpdateMasterAsync(transport, key, identityAfter, cancellationToken))
+            {
+                var (more, afterMaster) = await PublishPendingAsync(transport, key, identityAfter, cancellationToken);
+                published += more;
+                identityAfter = afterMaster;
+            }
             problems.AddRange(await _projection.ProjectAsync(cancellationToken));
             await WriteRecordAsync(transport, key, identityAfter, await _store.GetAppliedAsync(cancellationToken),
                 cancellationToken);
@@ -308,6 +331,37 @@ public sealed class HouseholdSync
         {
             CryptographicOperations.ZeroMemory(privateKey);
         }
+    }
+
+    // Step H4a (§7.2, §7.4): an outgoing master releases the election that
+    // replaced it; an elected device activates when MasterRules allows it,
+    // reading the outgoing master's last-seen time from its device record
+    // only when that decides. True when an operation was recorded.
+    private async Task<bool> UpdateMasterAsync(ISyncTransport transport, byte[] key, HouseholdIdentity identity,
+        CancellationToken ct)
+    {
+        var master = await _household.MasterAsync(ct);
+        var me = identity.DeviceId;
+        if (MasterRules.ShouldRelease(me, master))
+        {
+            await _household.AppendAsync([new MasterReleased(master.Election!.ElectionId)], ct);
+            return true;
+        }
+        if (master.Election is not { } election || election.DeviceId != me || !master.Pending) return false;
+
+        DateTimeOffset? outgoingSeen = null;
+        if (master.OutgoingDevice is { } outgoing && outgoing != me && master.Released != election.ElectionId)
+        {
+            outgoingSeen = (await SyncEngine.ReadRecordsAsync(transport, _cipher, key, AsGroup(identity), ct))
+                .FirstOrDefault(r => r.DeviceId == outgoing)?.LastSeen;
+        }
+        if (!MasterRules.ShouldActivate(me, master, outgoingSeen, _clock.GetUtcNow(), _options.MasterLease,
+                _options.MasterMargin))
+        {
+            return false;
+        }
+        await _household.AppendAsync([new MasterActivated(election.ElectionId, me)], ct);
+        return true;
     }
 
     // Step H3d: the device records of the household, for the Devices list.

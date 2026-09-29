@@ -42,6 +42,10 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private readonly Button _join;
     private readonly Button _syncNow;
     private readonly Button _addDevice;
+    private readonly Button _makeMaster;
+    // Step H4a: device names from the last device list, for the master line.
+    private Dictionary<Guid, string> _deviceNames = [];
+    private MasterView? _master;
     private readonly ListView _devices;
     private readonly Button _close;
     private readonly bool _setup;
@@ -87,6 +91,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
                  {
                      ("Ui.SyncDialog.Devices.Name", 240), ("Ui.SyncDialog.Devices.Platform", 110),
                      ("Ui.SyncDialog.Devices.Version", 110), ("Ui.SyncDialog.Devices.LastSeen", 170),
+                     ("Ui.HouseholdDialog.Devices.Role", 140),
                  })
         {
             _devices.Columns.Add(_loc.Get(key), width);
@@ -94,6 +99,9 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         _addDevice = Action("Ui.HouseholdDialog.AddDevice", AddDeviceAsync);
         var deviceButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
         deviceButtons.Controls.Add(_addDevice);
+        _makeMaster = Action("Ui.HouseholdDialog.MakeMaster", MakeMasterAsync);
+        deviceButtons.Controls.Add(_makeMaster);
+        _devices.SelectedIndexChanged += (_, _) => UpdateDeviceButtons();
         devicesPage.Controls.Add(_devices);
         devicesPage.Controls.Add(deviceButtons);
 
@@ -151,7 +159,14 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     {
         await RefreshStatusAsync();
         await RefreshDevicesAsync();
+        await RefreshStatusAsync();
     }
+
+    private Guid? SelectedDevice => _devices.SelectedItems.Count == 1 ? _devices.SelectedItems[0].Tag as Guid? : null;
+
+    private void UpdateDeviceButtons()
+        => _makeMaster.Enabled = IsPublished && SelectedDevice is { } device
+            && _master?.Master.Election?.DeviceId != device;
 
     private async Task RefreshStatusAsync()
     {
@@ -161,6 +176,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         var link = _setup
             ? new HouseholdLinkStatus(HouseholdLinkState.None, null)
             : await scope.ServiceProvider.GetRequiredService<HouseholdLinks>().StatusAsync(CancellationToken.None);
+        _master = await scope.ServiceProvider.GetRequiredService<HouseholdMasterRole>().DescribeAsync(CancellationToken.None);
         if (IsDisposed) return;
 
         _publish.Visible = !IsPublished && !_setup;
@@ -191,10 +207,57 @@ internal sealed class HouseholdDialog : MedReminderFormBase
                 lines.AddRange(result.Problems);
             }
             if (_household.LastError is { } error) lines.Add(_loc.Get("Ui.SyncDialog.Status.Error", error));
+            lines.Add(string.Empty);
+            lines.Add(MasterLine(_master));
         }
         // §11: this profile's group was claimed first by another installation.
         if (link.State == HouseholdLinkState.OtherHousehold) lines.Add(_loc.Get("Ui.HouseholdDialog.Status.LinkedElsewhere"));
         _statusText.Text = string.Join(Environment.NewLine, lines);
+        UpdateDeviceButtons();
+    }
+
+    // Step H4a (§7.2): who sends email, and why nobody does meanwhile.
+    private string MasterLine(MasterView view)
+    {
+        var master = view.Master;
+        if (master.Election is not { } election) return _loc.Get("Ui.HouseholdDialog.Master.None");
+        if (master.Pending)
+        {
+            return master.OutgoingDevice is { } outgoing
+                ? _loc.Get("Ui.HouseholdDialog.Master.Pending", NameOf(election.DeviceId), NameOf(outgoing))
+                : _loc.Get("Ui.HouseholdDialog.Master.PendingNoOutgoing", NameOf(election.DeviceId));
+        }
+        if (view.LeaseExpired) return _loc.Get("Ui.HouseholdDialog.Master.LeaseExpired");
+        return election.DeviceId == view.ThisDevice
+            ? _loc.Get("Ui.HouseholdDialog.Master.ThisDevice")
+            : _loc.Get("Ui.HouseholdDialog.Master.Other", NameOf(election.DeviceId));
+    }
+
+    private string NameOf(Guid device)
+        => _deviceNames.TryGetValue(device, out var name) ? name : device.ToString("N")[..8];
+
+    private async Task MakeMasterAsync()
+    {
+        if (SelectedDevice is not { } device) return;
+        if (MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.MakeMaster.Confirm", NameOf(device)),
+                _loc.Get("Ui.HouseholdDialog.MakeMaster"), MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            return;
+        }
+        try
+        {
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<ElectMaster>().ExecuteAsync(device, CancellationToken.None);
+            }
+            await _household.RunNowAsync();
+        }
+        catch (Exception ex)
+        {
+            Error(ex.Message);
+        }
+        await RefreshAllAsync();
     }
 
     private async Task RefreshDevicesAsync()
@@ -205,15 +268,22 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         {
             await using var scope = _scopes.CreateAsyncScope();
             var records = await scope.ServiceProvider.GetRequiredService<HouseholdSync>().ListDevicesAsync(CancellationToken.None);
+            _deviceNames = records.ToDictionary(r => r.DeviceId, r => r.Name);
             foreach (var record in records)
             {
                 var name = record.DeviceId == _identity?.DeviceId
                     ? _loc.Get("Ui.SyncDialog.Devices.ThisDevice", record.Name)
                     : record.Name;
-                var row = new ListViewItem(name);
+                var row = new ListViewItem(name) { Tag = record.DeviceId };
                 row.SubItems.Add(record.Platform);
                 row.SubItems.Add(record.AppVersion);
                 row.SubItems.Add(record.LastSeen.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
+                row.SubItems.Add(_master?.Master switch
+                {
+                    { ActiveDevice: { } active } when active == record.DeviceId => _loc.Get("Ui.HouseholdDialog.Devices.Master"),
+                    { Pending: true, Election: { } e } when e.DeviceId == record.DeviceId => _loc.Get("Ui.HouseholdDialog.Devices.Elected"),
+                    _ => string.Empty,
+                });
                 _devices.Items.Add(row);
             }
         }
@@ -547,6 +617,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
                     button.Enabled = true;
                     UpdateBusy();
                     _addDevice.Enabled = IsPublished;
+                    UpdateDeviceButtons();
                 }
             }
         };

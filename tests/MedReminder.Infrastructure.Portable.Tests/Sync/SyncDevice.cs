@@ -38,6 +38,10 @@ internal sealed class SyncDevice : IDisposable
         services.AddSingleton<IProfileSettingsStore>(ProfileSettings);
         services.AddSingleton<IEmailNotificationService>(Emails);
         services.AddSingleton<IWindowsNotificationService>(Toasts);
+        // Household step H4a: the master role reads the installation's
+        // household, a household of one here (every device sends).
+        services.AddSingleton<IAppDataLocation>(new DataLocation(
+            Path.Combine(Path.GetDirectoryName(Path.GetFullPath(databasePath))!, name + "-appdata")));
         // A join waits for its record to be listed (JoinSyncGroup); JoinDelay
         // stands for the seconds between two listings.
         services.AddSingleton(new SyncEngineOptions
@@ -102,6 +106,11 @@ internal sealed class SyncDevice : IDisposable
     {
         _provider.Dispose();
         SqliteConnection.ClearAllPools();
+    }
+
+    private sealed class DataLocation(string directory) : IAppDataLocation
+    {
+        public string DataDirectory => directory;
     }
 
     private sealed class KeyLocalization : ILocalizationService

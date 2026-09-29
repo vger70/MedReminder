@@ -30,6 +30,28 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #124 — Send email and run the cloud backup from the master device only (household H4a)
+
+Link: [vger70/MedReminder#124](https://github.com/vger70/MedReminder/pull/124)
+Branch: `claude/household-h4a-master` → `feature/master-slave`
+
+### Added
+
+- Master device: the device that publishes the installation is the
+  master; an administrator moves the role from Tools → Installation →
+  Devices → Make master…. The outgoing master releases at its next sync;
+  a master not seen for 25 hours is taken over.
+- Only the master sends email reminders (low stock, dose) and runs the
+  cloud backup, and only while it has synced the installation in the
+  last 24 hours. Without a master, every device sends as before.
+
+### Docs
+
+- User guides (5 languages), `docs/SYNC-FORMAT.md` §9.3,
+  `docs/ANALYSIS.md`, analysis revision 11.
+
+---
+
 ## PR #123 — Join an existing installation from the first-run wizard (household H3d-2)
 
 Link: [vger70/MedReminder#123](https://github.com/vger70/MedReminder/pull/123)

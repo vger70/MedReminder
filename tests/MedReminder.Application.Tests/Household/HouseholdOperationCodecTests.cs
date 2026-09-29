@@ -24,6 +24,10 @@ public class HouseholdOperationCodecTests
             Guid.Parse("0a0a0a0a000000000000000000000003"), 1, "1.a.b.c.d"),
         new ProfileKeyRevoked("default", Guid.Parse("0a0a0a0a000000000000000000000002")),
         new ProfileKeyEscrowed("default", Guid.Parse("0a0a0a0a000000000000000000000003"), 1, "1.a.b.c.d"),
+        new MasterElected(Guid.Parse("0e0e0e0e000000000000000000000001"), Guid.Parse("0a0a0a0a000000000000000000000002"),
+            "default", MasterElectionKind.Planned),
+        new MasterActivated(Guid.Parse("0e0e0e0e000000000000000000000001"), Guid.Parse("0a0a0a0a000000000000000000000002")),
+        new MasterReleased(Guid.Parse("0e0e0e0e000000000000000000000001")),
     };
 
     [Theory]
@@ -56,7 +60,7 @@ public class HouseholdOperationCodecTests
     [Fact]
     public void Unknown_type_or_newer_schema_is_not_supported()
     {
-        FluentActions.Invoking(() => HouseholdOperationCodec.Deserialize("MasterElected", 1, "{}"))
+        FluentActions.Invoking(() => HouseholdOperationCodec.Deserialize("SomethingNew", 1, "{}"))
             .Should().Throw<NotSupportedException>();
         FluentActions.Invoking(() => HouseholdOperationCodec.Deserialize("ProfileRemoved", 2, "{\"profileId\":\"x\"}"))
             .Should().Throw<NotSupportedException>();

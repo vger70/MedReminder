@@ -58,7 +58,10 @@ public sealed record HouseholdIdentity(
     int KeyVersion = 1,
     SyncTarget? Storage = null,
     string? DeviceName = null,
-    int SegmentSeq = 0);
+    int SegmentSeq = 0,
+    // Step H4a: the end of the last household run that listed and applied
+    // the household group; the master's lease counts from it.
+    DateTimeOffset? LastSyncedAt = null);
 
 public sealed record HouseholdOperationRecord(
     Guid Id,

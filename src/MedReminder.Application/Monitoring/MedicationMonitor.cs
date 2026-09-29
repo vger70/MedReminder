@@ -45,6 +45,7 @@ public sealed class MedicationMonitor
     private readonly ILocalizationService? _localization;
     private readonly ISentEmailNotificationRepository? _sentEmails;
     private readonly IOperationLog? _operationLog;
+    private readonly IMasterRole? _master;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -60,8 +61,10 @@ public sealed class MedicationMonitor
         ILogger<MedicationMonitor> log,
         ILocalizationService? localization = null,
         ISentEmailNotificationRepository? sentEmails = null,
-        IOperationLog? operationLog = null)
+        IOperationLog? operationLog = null,
+        IMasterRole? master = null)
     {
+        _master = master;
         _sentEmails = sentEmails;
         _operationLog = operationLog;
         _medicines = medicines;
@@ -90,6 +93,8 @@ public sealed class MedicationMonitor
         var today = LocalToday();
         var medicines = await _medicines.ListActiveAsync(cancellationToken);
         var sent = 0;
+        // Household step H4a: only the master sends email.
+        var sendsEmail = _master is null || await _master.SendsEmailAsync(cancellationToken);
 
         foreach (var medicine in medicines)
         {
@@ -122,6 +127,12 @@ public sealed class MedicationMonitor
                 channels &= ~NotificationChannels.Email;
                 emailSentElsewhere = true;
             }
+            else if ((channels & NotificationChannels.Email) != 0 && !sendsEmail)
+            {
+                // The master sends it: for this device the channel is done.
+                channels &= ~NotificationChannels.Email;
+                emailSentElsewhere = true;
+            }
             var dispatch = await DispatchAsync(medicine, channels, currentStock, daysRemaining, eta, slots,
                 cancellationToken);
             if (dispatch.EmailSucceeded) await RecordEmailSentAsync(medicine, cancellationToken);
@@ -134,8 +145,9 @@ public sealed class MedicationMonitor
                 TriggeredAt = _clock.GetUtcNow(),
                 Channel = dispatch.ChannelsAttempted,
                 DaysRemainingAtSend = daysRemaining,
-                // An email another device sent closes this epoch's cycle
-                // like a successful channel of this device.
+                // An email another device sent, or left to the master,
+                // closes this epoch's cycle like a successful channel of
+                // this device.
                 Success = dispatch.AnyChannelSucceeded || emailSentElsewhere,
                 ErrorMessage = dispatch.CombinedError,
             };

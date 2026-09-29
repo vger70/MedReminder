@@ -1109,10 +1109,17 @@ e-mail, paramètres de sauvegarde cloud et pays de référence.
   fenêtre d'accueil du premier démarrage propose la même chose avec
   **Rejoindre une installation existante…**.
 
-Les paramètres e-mail sont aussi partagés : chaque appareil de
-l'installation peut envoyer les rappels par e-mail jusqu'à ce qu'une
-version ultérieure désigne un seul appareil. Un e-mail de stock bas déjà
-envoyé par un appareil synchronisé n'est pas renvoyé.
+**Appareil maître.** Un seul appareil, le maître, envoie les rappels
+par e-mail et exécute la sauvegarde cloud ; les autres affichent leurs
+rappels à l'écran. L'appareil qui publie l'installation est le maître.
+Pour transférer le rôle, sélectionnez un appareil dans **Appareils** et
+choisissez **Définir comme maître…** : le maître actuel passe le relais
+à sa prochaine synchronisation, et aucun appareil n'envoie d'e-mail
+entre-temps. Un maître qui n'a pas synchronisé l'installation depuis 24
+heures cesse d'envoyer des e-mails ; s'il est perdu, l'appareil élu à sa
+place prend le relais une heure plus tard. Les installations publiées
+avant cette version n'ont pas de maître tant qu'un administrateur n'en
+désigne pas un.
 
 ## Vérifier maintenant
 

@@ -1072,5 +1072,16 @@
   "Ui.HouseholdDialog.Profiles": "Profiles",
   "Ui.HouseholdDialog.Profiles.NoneSelected": "Select at least one profile.",
   "Ui.FirstRunWizardForm.Join": "Join an existing installation…",
-  "Ui.HouseholdDialog.Status.Setup": "Join an installation already used on another device. This device receives the profiles an administrator gives it, and the installation's settings."
+  "Ui.HouseholdDialog.Status.Setup": "Join an installation already used on another device. This device receives the profiles an administrator gives it, and the installation's settings.",
+  "Ui.HouseholdDialog.Devices.Role": "Role",
+  "Ui.HouseholdDialog.Devices.Master": "Master",
+  "Ui.HouseholdDialog.Devices.Elected": "Elected master",
+  "Ui.HouseholdDialog.MakeMaster": "Make master…",
+  "Ui.HouseholdDialog.MakeMaster.Confirm": "Make {0} the master? Email and the cloud backup move to that device. Until it takes over, no device sends email.",
+  "Ui.HouseholdDialog.Master.None": "No master device: every device sends email and runs the cloud backup. Make one device the master in the Devices tab.",
+  "Ui.HouseholdDialog.Master.ThisDevice": "This device is the master: it sends email and runs the cloud backup.",
+  "Ui.HouseholdDialog.Master.Other": "Master: {0}. This device does not send email.",
+  "Ui.HouseholdDialog.Master.Pending": "{0} is elected master and waits for {1} to hand over. No device sends email meanwhile.",
+  "Ui.HouseholdDialog.Master.PendingNoOutgoing": "{0} is elected master and takes over at its next sync. No device sends email meanwhile.",
+  "Ui.HouseholdDialog.Master.LeaseExpired": "This device is the master but has not synced the installation for more than 24 hours: it sends no email until it syncs again."
 }

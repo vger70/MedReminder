@@ -474,6 +474,13 @@ root is committed to the repository.
   lists its devices, shows `mrpair2` codes and joins an existing
   installation. `HouseholdHostedService` runs the household sync every
   15 minutes (`Household:IntervalMinutes`).
+- **Master device** (step H4a): the household records `MasterElected`,
+  `MasterActivated` and `MasterReleased`; `MasterRules` decide who
+  sends email and runs the cloud backup (`IMasterRole`, used by
+  `MedicationMonitor`, `DoseReminderService` and the backup scheduler):
+  the active master within a 24-hour lease counted from its last
+  household sync, or every device while no master is elected. Each
+  household run releases (outgoing master) or activates (elected device).
 - **First-run join** (step H3d-2): the first-run wizard offers "Join an
   existing installation…". The boot flow then builds a host it never
   starts, with a placeholder profile (`SetupProfile`,

@@ -246,6 +246,79 @@ public sealed class HouseholdSyncTests : IDisposable
             .Should().Equal((await a.Store.EnsureCreatedAsync(CancellationToken.None)).HouseholdId);
     }
 
+    // Step H4a: the master.
+    private static async Task<Guid> DeviceOf(Installation installation)
+        => (await installation.Store.EnsureCreatedAsync(CancellationToken.None)).DeviceId;
+
+    [Fact]
+    public async Task The_device_that_publishes_is_the_master()
+    {
+        var (a, b) = await PublishedAndJoinedAsync();
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+
+        (await a.Master.DescribeAsync(CancellationToken.None)).Master.ActiveDevice.Should().Be(await DeviceOf(a));
+        (await a.Master.SendsEmailAsync(CancellationToken.None)).Should().BeTrue();
+        (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task A_planned_handover_waits_for_the_outgoing_master_to_release()
+    {
+        var (a, b) = await PublishedAndJoinedAsync();
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        // An admin on B elects B; A is still the master and has not seen it.
+        await b.Elect(b.As("admin", ProfileRole.Admin)).ExecuteAsync(await DeviceOf(b), CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+        (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeFalse("A has not released yet");
+
+        await a.Sync.RunAsync(CancellationToken.None);
+        (await a.Master.SendsEmailAsync(CancellationToken.None)).Should().BeFalse("A stops as soon as it applies the election");
+        await b.Sync.RunAsync(CancellationToken.None);
+
+        (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeTrue();
+        await a.Sync.RunAsync(CancellationToken.None);
+        (await a.Master.SendsEmailAsync(CancellationToken.None)).Should().BeFalse();
+        (await a.Master.DescribeAsync(CancellationToken.None)).Master.ActiveDevice.Should().Be(await DeviceOf(b));
+    }
+
+    [Fact]
+    public async Task A_silent_master_is_taken_over_after_the_lease_and_stops_on_its_own()
+    {
+        var (a, b) = await PublishedAndJoinedAsync();
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        await b.Elect(b.As("admin", ProfileRole.Admin))
+            .ExecuteAsync(await DeviceOf(b), CancellationToken.None, MasterElectionKind.Takeover);
+        await b.Sync.RunAsync(CancellationToken.None);
+        (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeFalse("A was seen a moment ago");
+
+        b.Clock.Shift = TimeSpan.FromHours(26);
+        await b.Sync.RunAsync(CancellationToken.None);
+        (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeTrue();
+
+        // A never synced again: its lease is over, it does not send either.
+        a.Clock.Shift = TimeSpan.FromHours(25);
+        var view = await a.Master.DescribeAsync(CancellationToken.None);
+        view.SendsEmail.Should().BeFalse();
+        view.LeaseExpired.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Only_an_admin_elects_and_only_a_device_of_the_household()
+    {
+        var (a, _) = await PublishedAndJoinedAsync();
+
+        var deviceA = await DeviceOf(a);
+        var asUser = () => a.Elect(a.As("user", ProfileRole.User)).ExecuteAsync(deviceA, CancellationToken.None);
+        await asUser.Should().ThrowAsync<ProfileAdministrationException>();
+        var stranger = () => a.Elect().ExecuteAsync(Guid.NewGuid(), CancellationToken.None);
+        await stranger.Should().ThrowAsync<InvalidOperationException>();
+    }
+
     [Fact]
     public async Task A_household_is_published_once()
     {
@@ -430,9 +503,17 @@ public sealed class HouseholdSyncTests : IDisposable
             Keyring = new HouseholdKeyring(Log, Store, new ProtectedDeviceKeyStore(Protector, household), GroupKeys,
                 Registry, new ArchiveCipher());
             Sync = new HouseholdSync(Store, new ProtectedHouseholdKeyStore(Protector, household), new FolderTransports(),
-                new ArchiveCipher(), Protector, projection, Keyring, TimeProvider.System,
+                new ArchiveCipher(), Protector, projection, Keyring, Log, Clock,
                 new MedReminder.Application.Sync.SyncEngineOptions { DeviceName = name });
         }
+
+        // Step H4a: the system time, moved forward by the lease tests.
+        public ShiftedClock Clock { get; } = new();
+
+        public HouseholdMasterRole Master => new(Store, Log, Clock);
+
+        public ElectMaster Elect(ICurrentProfile? current = null)
+            => new(Store, Log, current ?? As("admin", ProfileRole.Admin), NullLogger<ElectMaster>.Instance);
 
         public string Directory { get; }
         public SqliteHouseholdStore Store { get; }
@@ -474,6 +555,13 @@ public sealed class HouseholdSyncTests : IDisposable
                     return keys;
                 }),
                 join, new FolderTransports(), NullLogger<JoinInstallation>.Instance);
+    }
+
+    private sealed class ShiftedClock : TimeProvider
+    {
+        public TimeSpan Shift { get; set; }
+
+        public override DateTimeOffset GetUtcNow() => base.GetUtcNow() + Shift;
     }
 
     // profiles\<id>\sync.protected of each synced profile.

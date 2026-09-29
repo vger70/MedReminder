@@ -1126,10 +1126,17 @@ Referenzland.
   neuen PC bietet das Willkommensfenster des ersten Starts dasselbe mit
   **Einer bestehenden Installation beitreten…** an.
 
-Die E-Mail-Einstellungen werden ebenfalls geteilt: Jedes Gerät der
-Installation kann E-Mail-Erinnerungen senden, bis eine spätere Version
-dafür ein Gerät festlegt. Eine E-Mail zu niedrigem Bestand, die ein
-synchronisiertes Gerät bereits gesendet hat, wird nicht erneut gesendet.
+**Master-Gerät.** Nur ein Gerät, der Master, sendet die
+E-Mail-Erinnerungen und führt die Cloud-Sicherung aus; die anderen
+zeigen ihre Erinnerungen auf dem Bildschirm. Das Gerät, das die
+Installation veröffentlicht, ist der Master. Um die Rolle zu übertragen,
+wählen Sie unter **Geräte** ein Gerät und dann **Zum Master machen…**:
+Der bisherige Master übergibt bei seiner nächsten Synchronisierung, und
+bis dahin sendet kein Gerät E-Mails. Ein Master, der die Installation
+seit 24 Stunden nicht synchronisiert hat, sendet keine E-Mails mehr; ist
+er verloren, übernimmt das an seiner Stelle gewählte Gerät eine Stunde
+später. Installationen, die vor dieser Version veröffentlicht wurden,
+haben keinen Master, bis ein Administrator einen festlegt.
 
 ## Jetzt prüfen
 
