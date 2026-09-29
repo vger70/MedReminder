@@ -109,7 +109,10 @@ internal sealed class MasterProfilesHostedService : BackgroundService
         var current = new CurrentProfile(profile);
         if (!File.Exists(current.DatabasePath)) return;
 
-        await using var provider = BuildServices(current);
+        await using var provider = ProfileServices.Build(_services, current);
+        // Step H5b: a group rotated after a device removal; the new key comes
+        // from the household grant.
+        await ProfileServices.AdoptRotatedKeyAsync(provider, current, _log, ct);
         await Scoped(provider, sp => sp.GetRequiredService<DatabaseInitializer>().InitializeAsync(ct));
         var synced = provider.GetRequiredService<ISyncSettingsStore>().Load() is not null;
         if (synced) await SyncAsync(provider, profile, ct);
@@ -136,35 +139,6 @@ internal sealed class MasterProfilesHostedService : BackgroundService
         }
     }
 
-    // The profile's services, as Program.BuildHost registers them for the
-    // open profile, without hosted services or forms. The cloud accounts,
-    // the profile registry and the household store are this process's
-    // single instances, taken from the application.
-    private ServiceProvider BuildServices(ICurrentProfile profile)
-    {
-        var builder = new ConfigurationBuilder();
-        Program.AddProfileConfiguration(builder, profile, reloadOnChange: false);
-        var configuration = builder.Build();
-
-        var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(configuration);
-        services.AddSingleton(_services.GetRequiredService<ILoggerFactory>());
-        services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
-        services.AddSingleton(_clock);
-        services.AddSingleton(_services.GetRequiredService<SyncEngineOptions>());
-        services.AddSingleton(_services.GetRequiredService<IProfileRegistry>());
-        services.AddSingleton(_services.GetRequiredService<IHouseholdStore>());
-        services.AddSingleton(_services.GetRequiredService<ICloudAccountService>());
-        services.AddSingleton(_services.GetRequiredService<IOneDriveAccessTokens>());
-        services.AddSingleton(_services.GetRequiredService<IGoogleDriveAccessTokens>());
-
-        services.AddMedReminderApplication();
-        services.AddMedReminderInfrastructure(configuration, profile);
-        services.RemoveAll<IWindowsNotificationService>();
-        services.AddSingleton<IWindowsNotificationService, SilentWindowsNotifications>();
-        return services.BuildServiceProvider();
-    }
-
     private static async Task<T> Scoped<T>(IServiceProvider provider, Func<IServiceProvider, Task<T>> action)
     {
         await using var scope = provider.CreateAsyncScope();
@@ -173,10 +147,4 @@ internal sealed class MasterProfilesHostedService : BackgroundService
 
     private static Task Scoped(IServiceProvider provider, Func<IServiceProvider, Task> action)
         => Scoped<bool>(provider, async sp => { await action(sp); return true; });
-
-    // Email only for a profile that is not open.
-    private sealed class SilentWindowsNotifications : IWindowsNotificationService
-    {
-        public Task ShowAsync(string title, string body, CancellationToken cancellationToken) => Task.CompletedTask;
-    }
 }

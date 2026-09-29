@@ -7,8 +7,7 @@ the merge rules and the use cases on Linux and Windows; these tests
 cover what they cannot: the WinForms windows, DPAPI, the real storages
 (folder, OneDrive, Google Drive), MailKit and several real PCs.
 
-Status on 2026-09-29: H1–H5a written; the H5b section is completed with
-step H5b.
+Status on 2026-09-29: H1–H5 written.
 
 ## Setup
 
@@ -203,9 +202,30 @@ after entering the new key, sees PC1 as master.
 
 ### H5b — Profile keys after a removal
 
-Added with step H5b: rotation of the profile groups the removed device
-held, adoption of the new keys by the remaining devices, recovery of a
-profile with the new passphrase.
+1. PC1 (master) holds profiles A and B; PC2 holds A; PC3 holds A and B.
+   Remove PC3 from PC2.
+2. Remove PC3 from PC1.
+3. On PC2, enter the new installation key. Keep MedReminder open with
+   profile A, then restart it.
+4. On PC1, wait up to 15 minutes with profile A open (profile B not
+   open).
+5. On a new PC4, join with the new installation passphrase and recover
+   profile B through the approval window.
+6. On PC3, record a change in profile A and sync.
+
+**Expected**:
+
+- step 1: PC2 refuses the removal and names profile B;
+- step 2: the storage of each profile group has `key.<v+1>.wrap` and
+  a new generation;
+- step 3: PC2 offers to restart ("this profile has a new key"); after
+  the restart profile A syncs again without typing anything, and its
+  changes made meanwhile are kept;
+- step 4: PC1 takes the new key of profile B in the background (log:
+  "took key version … from the household");
+- step 5: PC4 receives profile B;
+- step 6: PC3's change never reaches the others; PC3 can still read what
+  it had.
 
 ## Cross-cutting checks
 

@@ -499,7 +499,13 @@ root is committed to the repository.
   key, passphrase, recovery key and generation (`HouseholdSync.
   RemoveDeviceAsync`), and each remaining device takes the new key with
   the new passphrase or a code (`RekeyAsync`), carrying its own pending
-  operations over. `docs/SYNC-FORMAT.md` §9.3.
+  operations over. `docs/SYNC-FORMAT.md` §9.3. Step H5b (`RemoveDevice`):
+  the profile groups the removed device held are rotated with a random
+  passphrase never shown (`IProfileGroupRotation`, `ProfileServices`),
+  the new keys are granted to the other holders, and each remaining
+  device takes them from its grant (`ProfileServices.
+  AdoptRotatedKeyAsync`: at start for the open profile, in the master's
+  background checks for the others).
 - **First-run join** (step H3d-2): the first-run wizard offers "Join an
   existing installation…". The boot flow then builds a host it never
   starts, with a placeholder profile (`SetupProfile`,

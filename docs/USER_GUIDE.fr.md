@@ -1135,7 +1135,10 @@ qu'il a déjà mais ne reçoit plus rien. Chaque autre appareil s'arrête
 jusqu'à ce qu'un administrateur y ouvre **Outils → Installation… →
 Saisir la nouvelle clé…** et saisisse la nouvelle phrase secrète, ou un
 code affiché par l'appareil qui a effectué le retrait. Les
-modifications faites entre-temps sur ces appareils sont conservées.
+modifications faites entre-temps sur ces appareils sont conservées. Les profils que l'appareil retiré contenait reçoivent aussi de
+nouvelles clés : retirez-le depuis un appareil qui les contient tous (le
+maître les contient). Les autres appareils prennent ces clés d'eux-mêmes ;
+un profil ouvert à ce moment demande de redémarrer MedReminder.
 
 Sur le nouveau maître, un administrateur termine le passage de relais :
 la fenêtre s'ouvre d'elle-même, ou depuis **Outils → Installation… →

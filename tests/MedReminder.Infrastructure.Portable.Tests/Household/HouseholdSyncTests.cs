@@ -460,6 +460,48 @@ public sealed class HouseholdSyncTests : IDisposable
         (await a.Master.DescribeAsync(CancellationToken.None)).Master.ActiveDevice.Should().Be(await DeviceOf(b));
     }
 
+    // Step H5b: the profile groups of the removed device get new keys.
+    [Fact]
+    public async Task Removing_a_device_rotates_its_profile_groups_and_grants_the_new_keys_to_the_others()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        await a.Keyring.GrantAsync("user", await DeviceOf(b), CancellationToken.None);
+        await a.Keyring.GrantAsync("user", await DeviceOf(c), CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        (await a.Remove().ExecuteAsync(await DeviceOf(c), NewPassphrase.ToCharArray(), CancellationToken.None,
+            SyncFileFormatTests.FastKdf)).Should().Be(1);
+        await b.Sync.RekeyAsync(new HouseholdKeySource.Passphrase(NewPassphrase.ToCharArray()), CancellationToken.None);
+
+        var rotated = a.GroupKeys.Keys["user"];
+        rotated.KeyVersion.Should().Be(UserGroup.KeyVersion + 1);
+        (await b.Keyring.NewerGrantAsync("user", UserGroup.GroupId, UserGroup.KeyVersion, CancellationToken.None))!
+            .Key.Should().Equal(rotated.Key);
+        (await b.Keyring.NewerGrantAsync("user", UserGroup.GroupId, rotated.KeyVersion, CancellationToken.None))
+            .Should().BeNull("B already uses that key");
+        var keys = await a.Keyring.KeysAsync(CancellationToken.None);
+        keys.Grants.Should().NotContainKey(("user", await DeviceOf(c)));
+        keys.Escrows["user"].KeyVersion.Should().Be(rotated.KeyVersion);
+        (await b.Sync.RecoverProfileKeyAsync("user", NewPassphrase.ToCharArray(), CancellationToken.None))!
+            .Key.Should().Equal(rotated.Key);
+    }
+
+    [Fact]
+    public async Task A_device_that_lacks_a_profile_of_the_removed_device_cannot_remove_it()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        await a.Keyring.GrantAsync("user", await DeviceOf(c), CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+
+        var deviceC = await DeviceOf(c);
+        var act = () => b.Remove(b.As("admin", ProfileRole.Admin))
+            .ExecuteAsync(deviceC, NewPassphrase.ToCharArray(), CancellationToken.None, SyncFileFormatTests.FastKdf);
+
+        (await act.Should().ThrowAsync<ProfilesNotHeldException>()).Which.ProfileIds.Should().Equal("user");
+        (await a.Sync.RunAsync(CancellationToken.None)).NewKeyRequired.Should().BeFalse("nothing changed");
+    }
+
     [Fact]
     public async Task A_household_is_published_once()
     {
@@ -661,6 +703,11 @@ public sealed class HouseholdSyncTests : IDisposable
             => new(Store, Log, Keyring, Registry, current ?? As("admin", ProfileRole.Admin),
                 NullLogger<MasterHandover>.Instance);
 
+        // Step H5b.
+        public RemoveDevice Remove(ICurrentProfile? current = null)
+            => new(Sync, Keyring, GroupKeys, new FakeRotation(GroupKeys), current ?? As("admin", ProfileRole.Admin),
+                NullLogger<RemoveDevice>.Instance);
+
         public async Task ConfirmHandoverAsync()
         {
             var pending = await Handover().PendingAsync(CancellationToken.None);
@@ -707,6 +754,18 @@ public sealed class HouseholdSyncTests : IDisposable
                     return keys;
                 }),
                 join, new FolderTransports(), NullLogger<JoinInstallation>.Instance);
+    }
+
+    // Stands for RotateSyncKey: the same group with the next key version.
+    private sealed class FakeRotation(FakeGroupKeys keys) : IProfileGroupRotation
+    {
+        public Task<ProfileGroupKey> RotateAsync(string profileId, CancellationToken cancellationToken)
+        {
+            var old = keys.Keys[profileId];
+            var rotated = new ProfileGroupKey(old.GroupId, old.KeyVersion + 1, RandomNumberGenerator.GetBytes(32));
+            keys.Keys[profileId] = rotated;
+            return Task.FromResult(rotated with { Key = [.. rotated.Key] });
+        }
     }
 
     private sealed class ShiftedClock : TimeProvider

@@ -293,13 +293,20 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         var passphrase = dialog.TakePassphrase();
         try
         {
+            // Step H5b: the profile groups the device held are rotated too.
             await _household.WhileIdleAsync(async () =>
             {
                 await using var scope = _scopes.CreateAsyncScope();
-                await scope.ServiceProvider.GetRequiredService<HouseholdSync>()
-                    .RemoveDeviceAsync(device, passphrase, _profile.Id, CancellationToken.None);
-                return true;
+                return await scope.ServiceProvider.GetRequiredService<RemoveDevice>()
+                    .ExecuteAsync(device, passphrase, CancellationToken.None);
             });
+        }
+        catch (ProfilesNotHeldException ex)
+        {
+            var names = await ProfileNamesAsync();
+            Error(_loc.Get("Ui.HouseholdDialog.RemoveDevice.NotHeld",
+                string.Join(", ", ex.ProfileIds.Select(id => names.GetValueOrDefault(id, id)))));
+            return;
         }
         catch (Exception ex)
         {

@@ -47,6 +47,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IMasterRole>(sp => sp.GetRequiredService<HouseholdMasterRole>());
         services.AddScoped<ElectMaster>();
         services.AddScoped<MasterHandover>();
+        // Step H5b: device removal with the rotation of its profile groups
+        // (IProfileGroupRotation comes from the host).
+        services.AddScoped<RemoveDevice>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();

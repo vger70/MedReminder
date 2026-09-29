@@ -1128,5 +1128,7 @@
   "Ui.HouseholdDialog.NewKey.PassphraseHint": "Introduzca la nueva frase de contraseña de la instalación.",
   "Ui.HouseholdDialog.NewKey.CodeHint": "En cada otro dispositivo, abra Herramientas → Instalación → Introducir la nueva clave → Con un código, e introduzca este código.",
   "Ui.HouseholdDialog.NewKey.Done": "Hecho: este dispositivo vuelve a sincronizar la instalación. Los cambios hechos aquí mientras tanto se conservan.",
-  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "La frase no abre la nueva clave de la instalación."
+  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "La frase no abre la nueva clave de la instalación.",
+  "Ui.HouseholdDialog.RemoveDevice.NotHeld": "Este dispositivo no tiene todos los perfiles del dispositivo que se quiere quitar ({0}): sus claves no podrían cambiarse. Quítelo desde el dispositivo principal, que tiene todos los perfiles.",
+  "Ui.MainForm.RotatedKey.Prompt": "Se quitó un dispositivo de la instalación y este perfil tiene una nueva clave. MedReminder la toma al reiniciarse; hasta entonces este perfil no se sincroniza. ¿Reiniciar ahora?"
 }

@@ -1018,7 +1018,10 @@ master. You choose a new installation passphrase: the removed device
 keeps what it already has but receives nothing new. Every other device
 stops until an administrator opens **Tools → Installation… → Enter the
 new key…** on it and types the new passphrase, or a code the removing
-device shows. Changes made on those devices meanwhile are kept.
+device shows. Changes made on those devices meanwhile are kept. The profiles the removed device held also get new keys: remove it from
+a device that holds all of them (the master does). The other devices
+take those keys by themselves; a profile open at that moment asks to
+restart MedReminder.
 
 On the new master, an administrator completes the handover: the window
 opens by itself, or from **Tools → Installation… → Complete the

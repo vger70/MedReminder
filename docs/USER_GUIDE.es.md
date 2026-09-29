@@ -1110,7 +1110,10 @@ ya tiene pero no recibe nada nuevo. Cada otro dispositivo se detiene
 hasta que un administrador abra en él **Herramientas → Instalación… →
 Introducir la nueva clave…** y escriba la nueva frase, o un código que
 muestra el dispositivo que realizó la operación. Los cambios hechos
-mientras tanto en esos dispositivos se conservan.
+mientras tanto en esos dispositivos se conservan. Los perfiles que tenía el dispositivo quitado también reciben nuevas
+claves: quítelo desde un dispositivo que los tenga todos (el principal
+los tiene). Los demás dispositivos toman esas claves por sí mismos; un
+perfil abierto en ese momento pide reiniciar MedReminder.
 
 En el nuevo principal, un administrador completa el relevo: la ventana
 se abre sola, o desde **Herramientas → Instalación… → Completar el

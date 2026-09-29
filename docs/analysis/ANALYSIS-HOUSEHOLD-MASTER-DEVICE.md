@@ -5,8 +5,9 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-29: revision 14 (§18 lists the revisions). Steps H0
-to H4 are implemented; H5a is in progress (§13). Manual tests:
+Status on 2026-09-29: revision 15 (§18 lists the revisions). Steps H0
+to H5a are implemented; H5b is in progress, then the merge into `main`
+(D-16). Manual tests:
 `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`.
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
@@ -526,6 +527,19 @@ active or elected master, the removing device takes over at once; when
 it was only elected, the master still active is elected again. Points 2,
 3 and 5 (profile group rotation) are step H5b.
 
+As built (step H5b): the removal runs on a device that holds every
+profile the removed device held (the master holds them all); otherwise
+it is refused before anything changes. After the household moves, each
+of those profile groups is rotated with a random passphrase never shown
+(`IProfileGroupRotation`: the open profile in the application's
+services, another one in its own), and the new key is granted to the
+other devices that held the profile; the next household run grants it
+to the removing device and escrows it for the new recovery key. A
+remaining device takes the new key from its grant without typing:
+before the open profile's database is used at start, in the background
+for the profiles the master does not have open, and it is asked to
+restart when the key arrives while the profile is open.
+
 ---
 
 ## 10. First installation on a phone (R8)
@@ -741,3 +755,4 @@ developer-days.
 | 12 | H4b as built: the election itself grants the elected device the profiles the electing device holds (§4.4 point 5); the wizard recovers the others with the household passphrase. The inherited settings are shown in the wizard and edited in Settings as usual, not in the wizard. The confirmation is local to the elected device (`ConfirmedElection`), not a household operation. Electing the active master again needs no wizard (§7.2: nothing bound to it changes). A takeover is the election made while the current master has not been seen for longer than the lease; it changes the wording only (§7.3) |
 | 13 | H4c as built: the master checks the profiles that are not open by email only (an on-screen reminder for a profile nobody opened would reach the wrong person) and syncs each of them before and after, since a profile not open is not synced by its own service. Sync problems of those profiles are logged; they are repaired from the sync window when the profile is opened. The SMTP tab stays editable on every device (R6); the test is refused on a device that is not the master |
 | 14 | D-15 decided: option A. Correction to §9 point 4: option B needs a signed key file. H5 split into H5a and H5b (§13); §9 records what H5a builds |
+| 15 | §9 records what H5b builds: removal from a device holding every profile of the removed device, rotation with a random passphrase, adoption of the new profile keys from the grants without typing |
