@@ -133,7 +133,7 @@ public sealed class GitHubRawCatalogueFeedClientTests : IDisposable
         (await File.ReadAllBytesAsync(Destination)).Should().Equal(payload);
         File.Exists(Destination + ".part").Should().BeFalse();
         handler.Urls.Should().Equal(
-            "https://raw.githubusercontent.com/vger70/MedReminder/main/data/aifa-202610.zip");
+            "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/aifa-202610.zip");
     }
 
     [Theory]

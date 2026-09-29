@@ -9,10 +9,10 @@ public sealed class CatalogueFeedOptions
     public const string SectionName = "Catalogue:RemoteFeed";
 
     public const string DefaultManifestUrl =
-        "https://raw.githubusercontent.com/vger70/MedReminder/main/data/latest.json";
+        "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/latest.json";
 
     public const string DefaultSnapshotUrlTemplate =
-        "https://raw.githubusercontent.com/vger70/MedReminder/main/data/aifa-{version}.zip";
+        "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/aifa-{version}.zip";
 
     public bool Enabled { get; set; }
 

@@ -19,6 +19,12 @@ OUTPUT_DIR = "aifa_csv"
 # version and "generated" must agree even when a run crosses a month
 # boundary, otherwise every client rejects the manifest.
 RUN_TIME = datetime.now(timezone.utc)
+# Each catalogue feed publishes under data/<country>/ (latest.json and
+# its archives), so feeds for other countries never touch these files
+# (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §4.1).
+COUNTRY = "IT"
+DATA_DIR = "data/it"
+MANIFEST_PATH = f"{DATA_DIR}/latest.json"
 VERSION = f"{RUN_TIME:%Y%m}"
 ZIP_NAME = f"aifa-{VERSION}.zip"
 
@@ -31,7 +37,7 @@ ZIP_NAME = f"aifa-{VERSION}.zip"
 # §11.2).
 FORCE_REFRESH = os.getenv("FORCE_REFRESH", "").strip().lower() == "true"
 try:
-    with open("data/latest.json", encoding="utf-8") as fh:
+    with open(MANIFEST_PATH, encoding="utf-8") as fh:
         published_version = json.load(fh).get("version")
 except (OSError, ValueError):
     published_version = None
@@ -155,13 +161,13 @@ MIN_DATA_ROWS = {
     "PA_confezioni.csv": 200_000,
 }
 # A file may not shrink below this share of the previous published run
-# (the row counts recorded in data/latest.json).
+# (the row counts recorded in data/it/latest.json).
 MIN_SHARE_OF_PREVIOUS = 0.9
 
 
 def previous_row_counts():
     try:
-        with open("data/latest.json", encoding="utf-8") as fh:
+        with open(MANIFEST_PATH, encoding="utf-8") as fh:
             rows = json.load(fh).get("rows", {})
     except (OSError, ValueError):
         return {}
@@ -230,6 +236,7 @@ with open(ZIP_NAME, "rb") as fh:
         sha256.update(chunk)
 
 latest_info = {
+    "country": COUNTRY,
     "version": VERSION,
     "file": ZIP_NAME,
     "generated": RUN_TIME.isoformat(),
@@ -239,16 +246,16 @@ latest_info = {
     "rows": row_counts,
 }
 
-os.makedirs("data", exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
-with open("data/latest.json", "w", encoding="utf-8") as f:
+with open(MANIFEST_PATH, "w", encoding="utf-8") as f:
     json.dump(latest_info, f, indent=2)
 
 # sposta lo zip nella cartella data
-shutil.move(ZIP_NAME, f"data/{ZIP_NAME}")
-ZIP_NAME = f"data/{ZIP_NAME}"
+shutil.move(ZIP_NAME, f"{DATA_DIR}/{ZIP_NAME}")
+ZIP_NAME = f"{DATA_DIR}/{ZIP_NAME}"
 
-archives = sorted(Path("data").glob("aifa-*.zip"))
+archives = sorted(Path(DATA_DIR).glob("aifa-*.zip"))
 
 while len(archives) > 3:
     archives[0].unlink()

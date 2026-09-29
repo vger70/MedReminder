@@ -96,6 +96,17 @@ public sealed class RemoteCatalogueRefresher
             return RemoteCatalogueRefreshOutcome.ManifestUnavailable;
         }
 
+        // A manifest served for another country (a misconfigured URL
+        // pointing at another feed's folder) must never replace the
+        // Italian catalogue.
+        if (manifest.Country is { } country && !string.Equals(country, Italy.Value, StringComparison.Ordinal))
+        {
+            _log.LogWarning(
+                "Remote AIFA feed: the manifest is for {ManifestCountry}, not {Country}; ignored.",
+                country, Italy.Value);
+            return RemoteCatalogueRefreshOutcome.Rejected;
+        }
+
         CatalogueImportState state;
         try
         {

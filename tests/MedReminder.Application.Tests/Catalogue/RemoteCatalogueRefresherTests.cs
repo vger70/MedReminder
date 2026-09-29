@@ -133,6 +133,30 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
     }
 
     [Fact]
+    public async Task Ignores_a_manifest_published_for_another_country()
+    {
+        var feed = new FakeFeed(Manifest("202610") with { Country = "FR" }, BuildArchive());
+        var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
+
+        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.Rejected);
+        feed.Downloads.Should().Be(0);
+        importer.Imports.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Imports_a_manifest_published_for_Italy()
+    {
+        var feed = new FakeFeed(Manifest("202610") with { Country = "IT" }, BuildArchive());
+        var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
+
+        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
+    }
+
+    [Fact]
     public async Task Reports_an_unavailable_manifest()
     {
         var feed = new FakeFeed(manifest: null, BuildArchive());

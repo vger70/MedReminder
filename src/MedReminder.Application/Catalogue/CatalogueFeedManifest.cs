@@ -1,12 +1,14 @@
 using System.Globalization;
 using System.Text.Json;
+using MedReminder.Domain.Catalogue;
 
 namespace MedReminder.Application.Catalogue;
 
 // The `latest.json` manifest published by .github/workflows/
-// download_aifa.yaml next to the monthly AIFA archive
-// (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md §2.1). `Sha256` and
-// `Size` are optional: the client verifies them when present.
+// download_aifa.yaml next to the monthly AIFA archive, under
+// data/<country>/ (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md §2.1,
+// ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §4.1). `Sha256`, `Size`
+// and `Country` are optional: the client checks them when present.
 public sealed record CatalogueFeedManifest(
     string Version,
     string? File,
@@ -14,6 +16,10 @@ public sealed record CatalogueFeedManifest(
     string? Sha256,
     long? Size)
 {
+    // Country the feed publishes for (for example "IT"); null in
+    // manifests written before the per-country layout.
+    public string? Country { get; init; }
+
     public string ExpectedFileName => CatalogueFeedManifestParser.FileNameFor(Version);
 }
 
@@ -96,7 +102,19 @@ public static class CatalogueFeedManifestParser
                 size = value;
             }
 
-            manifest = new CatalogueFeedManifest(version!, file, generated, sha256, size);
+            string? country = null;
+            if (root.TryGetProperty("country", out var countryElement) && countryElement.ValueKind != JsonValueKind.Null)
+            {
+                if (countryElement.ValueKind != JsonValueKind.String
+                    || !CountryCode.TryParse(countryElement.GetString(), out var parsedCountry))
+                {
+                    error = "The manifest 'country' is not a country code.";
+                    return false;
+                }
+                country = parsedCountry.Value;
+            }
+
+            manifest = new CatalogueFeedManifest(version!, file, generated, sha256, size) { Country = country };
             error = null;
             return true;
         }

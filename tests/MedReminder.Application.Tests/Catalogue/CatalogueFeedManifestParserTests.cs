@@ -55,6 +55,8 @@ public class CatalogueFeedManifestParserTests
     [InlineData("""{"version":"202609","sha256":"abc"}""")]
     [InlineData("""{"version":"202609","size":0}""")]
     [InlineData("""{"version":"202609","size":"5016171"}""")]
+    [InlineData("""{"version":"202609","country":7}""")]
+    [InlineData("""{"version":"202609","country":"Narnia"}""")]
     public void Rejects_invalid_manifests(string json)
     {
         CatalogueFeedManifestParser.TryParse(json, out var manifest, out var error).Should().BeFalse();
@@ -71,5 +73,23 @@ public class CatalogueFeedManifestParserTests
         CatalogueFeedManifestParser.TryParse(json, out var manifest, out _).Should().BeTrue();
 
         manifest!.Generated.Should().BeNull();
+    }
+
+    [Fact]
+    public void Parses_the_country_of_the_per_country_layout()
+    {
+        const string json = """{"country":"IT","version":"202609","file":"aifa-202609.zip"}""";
+
+        CatalogueFeedManifestParser.TryParse(json, out var manifest, out var error).Should().BeTrue(error);
+
+        manifest!.Country.Should().Be("IT");
+    }
+
+    [Fact]
+    public void A_manifest_without_country_has_no_country()
+    {
+        CatalogueFeedManifestParser.TryParse("""{"version":"202609"}""", out var manifest, out _).Should().BeTrue();
+
+        manifest!.Country.Should().BeNull();
     }
 }
