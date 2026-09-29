@@ -77,3 +77,6 @@ node_modules/
 
 # Python bytecode (scripts/feeds tests)
 __pycache__/
+
+# caveman:compress backups
+*.original.md
