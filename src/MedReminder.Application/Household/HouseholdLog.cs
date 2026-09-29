@@ -11,7 +11,9 @@ namespace MedReminder.Application.Household;
 // timestamp.
 public sealed class HouseholdLog
 {
-    private static readonly SemaphoreSlim Gate = new(1, 1);
+    // Also taken by HouseholdSync while it adds remote operations, so a
+    // local timestamp is issued after every timestamp already received.
+    internal static readonly SemaphoreSlim Gate = new(1, 1);
 
     private readonly IHouseholdStore _store;
     private readonly TimeProvider _clock;

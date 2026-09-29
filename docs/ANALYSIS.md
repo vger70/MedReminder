@@ -396,7 +396,8 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
   household\
     household.db                 household operation log and registers (household feature, step H2)
-    household.settings.json      household id, device id, generation
+    household.settings.json      household id, device id, generation, storage once published
+    household.protected          household key, DPAPI CurrentUser (step H3a)
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
@@ -444,6 +445,14 @@ root is committed to the repository.
   by an administrator only. The start-up reconciliation also records
   settings changed outside the use cases (an import restores the
   files).
+- **Household replication** (step H3a): `HouseholdSync` publishes the
+  household on a storage (a household group, `docs/SYNC-FORMAT.md` §9)
+  or joins one with the household passphrase, then publishes and
+  applies segments like a profile group, without checkpoints.
+  `HouseholdProjection` writes the winners into `profiles.json` (name,
+  role and PIN of the profiles this installation already has; it never
+  creates or deletes one) and into the settings files. Not yet wired to
+  the UI or the background service (step H3d).
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).

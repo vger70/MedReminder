@@ -376,6 +376,20 @@ public sealed class ProfileRegistry : IProfileRegistry
         }
     }
 
+    public void SetPinHash(string id, ProfilePinHash? pin)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        lock (_sync)
+        {
+            var doc = LoadOrEmpty();
+            var entry = FindOrThrow(doc, id);
+            entry.PinHash = pin?.Hash;
+            entry.PinSalt = pin?.Salt;
+            entry.PinIterations = pin?.Iterations ?? 0;
+            Save(doc);
+        }
+    }
+
     public bool HasPin(string id)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);

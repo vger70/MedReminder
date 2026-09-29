@@ -618,6 +618,7 @@ public sealed class ExportServiceTests : IDisposable
         public bool VerifyPin(string id, string pin) => throw new NotSupportedException();
         public void SetRole(string id, ProfileRole role) => throw new NotSupportedException();
         public ProfilePinHash? GetPinHash(string id) => null;
+        public void SetPinHash(string id, ProfilePinHash? pin) => throw new NotSupportedException();
         public bool HasPin(string id) => false;
     }
 

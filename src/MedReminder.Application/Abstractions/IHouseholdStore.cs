@@ -24,9 +24,41 @@ public interface IHouseholdStore
     Task<IReadOnlyList<HouseholdRegisterVersion>> ListRegistersAsync(CancellationToken cancellationToken);
 
     Task<IReadOnlyList<HouseholdOperationRecord>> ListOperationsAsync(CancellationToken cancellationToken);
+
+    // Step H3a: replication of the household.
+
+    // False when an operation with that id is already in the log.
+    Task<bool> ExistsAsync(Guid operationId, CancellationToken cancellationToken);
+
+    // This device's operations not yet in a published segment.
+    Task<IReadOnlyList<HouseholdOperationRecord>> ListPendingAsync(Guid deviceId, CancellationToken cancellationToken);
+
+    // Marks operations as published in segment seq (0: in the genesis).
+    Task MarkPublishedAsync(IReadOnlyList<Guid> operationIds, int seq, CancellationToken cancellationToken);
+
+    // Applied vector: the last segment applied from each other device.
+    Task<IReadOnlyDictionary<Guid, int>> GetAppliedAsync(CancellationToken cancellationToken);
+
+    Task SetAppliedAsync(Guid deviceId, int seq, CancellationToken cancellationToken);
+
+    Task SaveIdentityAsync(HouseholdIdentity identity, CancellationToken cancellationToken);
+
+    // Joining another household: the log, the registers and the applied
+    // vector are emptied and the identity replaced.
+    Task ResetAsync(HouseholdIdentity identity, CancellationToken cancellationToken);
 }
 
-public sealed record HouseholdIdentity(Guid HouseholdId, Guid DeviceId, int Generation);
+// Step H3a: Storage is where the household group lives once published
+// (null for a household of one that was never published); KeyVersion the
+// household key in use; SegmentSeq the last segment this device published.
+public sealed record HouseholdIdentity(
+    Guid HouseholdId,
+    Guid DeviceId,
+    int Generation,
+    int KeyVersion = 1,
+    SyncTarget? Storage = null,
+    string? DeviceName = null,
+    int SegmentSeq = 0);
 
 public sealed record HouseholdOperationRecord(
     Guid Id,

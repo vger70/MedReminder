@@ -84,6 +84,11 @@ public static class PortableInfrastructureServiceCollectionExtensions
         // the profiles. Requires IAppDataLocation from the host.
         services.TryAddSingleton<IHouseholdStore>(sp => new SqliteHouseholdStore(
             Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
+        // Step H3a: the household key, protected by the host's credential
+        // protector (DPAPI on Windows).
+        services.TryAddSingleton<IHouseholdKeyStore>(sp => new ProtectedHouseholdKeyStore(
+            sp.GetRequiredService<ICredentialProtector>(),
+            Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
 
         return services;
     }

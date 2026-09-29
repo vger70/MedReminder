@@ -368,3 +368,72 @@ must be updated before it can take the new key.
   version.
 - A change to the envelope, the layout or the header raises
   `formatVersion`.
+
+---
+
+## 9. Household group
+
+A household (the installation spread over several devices, household
+feature, `docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`) is a group
+of its own next to the profile groups, under the same sync root.
+
+### 9.1 Layout
+
+```
+<householdId>/
+  household.json                               cleartext, written once
+  key.<keyVersion>.wrap                        household key, wrapped with the household passphrase (§4.1)
+  genesis/<generation>.mrg                     household image
+  ops/<generation>/<deviceId>/<seq>.mrs        household segments
+  devices/<deviceId>.mrd                       device record (§5.2)
+```
+
+`household.json` is `{ "format": "MedReminder.Household",
+"formatVersion": 1, "householdId": "…" }`. There is no `group.json`: a
+reader that lists `group.json` files never takes a household for a
+profile group. Key wrap, envelope, header and device record are those
+of §4 and §5.2, with the household id in the place of the group id.
+There are no checkpoints.
+
+### 9.2 Content
+
+Segments and the genesis hold the same JSON:
+
+```json
+{
+  "dependencies": { "<deviceId>": 3 },
+  "operations": [
+    {
+      "id": "…", "physicalMs": 1790000000000, "counter": 0, "deviceId": "…",
+      "type": "ProfileRoleChanged", "schemaVersion": 1,
+      "profileId": "default", "payload": "{…}"
+    }
+  ]
+}
+```
+
+The genesis holds every operation of the household when it was
+published, with empty dependencies. Header `contentVersion` is 1.
+
+### 9.3 Operation catalogue (household schema version 1)
+
+| `type` | Payload fields | Merge rule |
+|---|---|---|
+| `ProfileRegistered` | `displayName`, `role`, `createdAt` | the profile exists from then on; name and role are registers |
+| `ProfileRenamed` | `displayName` | last writer wins |
+| `ProfileRoleChanged` | `role` (`admin`, `user`) | last writer wins |
+| `ProfilePinChanged` | `hash`, `salt`, `iterations` (PBKDF2-HMAC-SHA256, base64; `null`, `null`, `0` when cleared) | last writer wins |
+| `ProfileRemoved` | — | tombstone: the profile never comes back |
+| `HouseholdSettingChanged` | `setting`, `value` | last writer wins per setting; `profileId` empty |
+
+Settings: `Smtp.Host`, `Smtp.Port`, `Smtp.UseStartTls`,
+`Smtp.Username`, `Smtp.FromAddress`, `Smtp.FromDisplayName`,
+`Smtp.TimeoutSeconds`, `Smtp.Password`, `CloudBackup.Enabled`,
+`CloudBackup.Retention`, `CloudBackup.Provider`,
+`CloudBackup.AccountId`, `ReferenceCountry`. Values are invariant text
+(`true` / `false`, decimal integers, the provider by name). Every
+payload also carries `profileId`.
+
+`Smtp.Password` is the only secret: it is in clear inside the encrypted
+segment and nowhere else; each device keeps it protected with its own
+credential protector.
