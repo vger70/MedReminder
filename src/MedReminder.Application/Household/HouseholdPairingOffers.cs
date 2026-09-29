@@ -55,6 +55,12 @@ public sealed class HouseholdPairingOffers
         ProfileAdministration.RequireAdmin(_current);
         var identity = await _store.EnsureCreatedAsync(cancellationToken);
         if (identity.Storage is null) throw new InvalidOperationException("The household is not published.");
+        // Step H5a: a device waiting for the new key would hand out the old one.
+        if ((await SyncKeys.KeyVersionsAsync(_transports.Create(identity.Storage), identity.HouseholdId, cancellationToken))
+                .FirstOrDefault() > identity.KeyVersion)
+        {
+            throw new InvalidOperationException("The household key was changed on another device; this device needs the new key first.");
+        }
 
         var known = (await _household.ProfilesAsync(cancellationToken)).Select(p => p.ProfileId).ToHashSet(StringComparer.Ordinal);
         var profiles = new List<HouseholdOfferedProfile>();

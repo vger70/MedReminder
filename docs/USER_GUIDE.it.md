@@ -1069,6 +1069,16 @@ profilo. Sugli altri dispositivi la richiesta di ricetta si apre nel
 programma di posta, e la verifica della connessione email è disponibile
 solo sul master.
 
+**Rimuovere un dispositivo.** Quando un dispositivo viene perso,
+venduto o ceduto, selezionalo in **Dispositivi** e scegli **Rimuovi
+dispositivo…**, preferibilmente dal master. Scegli una nuova
+passphrase dell'installazione: il dispositivo rimosso conserva ciò che
+ha già ma non riceve più nulla. Ogni altro dispositivo si ferma finché
+un amministratore non apre su di esso **Strumenti → Installazione… →
+Inserisci la nuova chiave…** e digita la nuova passphrase, oppure un
+codice mostrato dal dispositivo che ha eseguito la rimozione. Le
+modifiche fatte nel frattempo su quei dispositivi sono conservate.
+
 Sul nuovo master un amministratore completa il passaggio: la finestra
 si apre da sola, oppure da **Strumenti → Installazione… → Completa il
 passaggio…**. Mostra le impostazioni dell'installazione, verifica la

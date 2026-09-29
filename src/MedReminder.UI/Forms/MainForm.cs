@@ -791,12 +791,15 @@ internal sealed class MainForm : MedReminderFormBase
     // an administrator is asked, once per election and session, to run the
     // handover wizard. Later leaves it in Tools → Installation.
     private readonly HashSet<Guid> _handoverAsked = [];
+    private bool _newKeyAsked;
+    private HouseholdHostedService? _householdService;
 
     private void WireHandoverPrompt()
     {
         if (!_currentProfile.IsAdmin) return;
         using var scope = _scopeFactory.CreateScope();
         var household = scope.ServiceProvider.GetRequiredService<HouseholdHostedService>();
+        _householdService = household;
         EventHandler handler = (_, _) =>
         {
             if (IsDisposed || !IsHandleCreated) return;
@@ -815,6 +818,14 @@ internal sealed class MainForm : MedReminderFormBase
             {
                 view = await scope.ServiceProvider.GetRequiredService<MedReminder.Application.Household.MasterHandover>()
                     .PendingAsync(CancellationToken.None);
+            }
+            // Step H5a: a device was removed elsewhere; an administrator
+            // enters the new key in the installation window.
+            if (!_newKeyAsked && _householdService?.LastResult?.NewKeyRequired == true)
+            {
+                _newKeyAsked = true;
+                MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.Status.NewKey"), _loc.Get("Ui.HouseholdDialog.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             if (view is null || !_handoverAsked.Add(view.Election.ElectionId)) return;
             if (MessageBox.Show(this, _loc.Get("Ui.HandoverWizard.Prompt"), _loc.Get("Ui.HandoverWizard.Title"),

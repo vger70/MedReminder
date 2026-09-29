@@ -1127,6 +1127,16 @@ de chaque profil. Sur les autres appareils, une demande d'ordonnance
 s'ouvre dans le client de messagerie, et le test de la connexion e-mail
 n'est disponible que sur le maître.
 
+**Retirer un appareil.** Quand un appareil est perdu, vendu ou donné,
+sélectionnez-le dans **Appareils** et choisissez **Retirer
+l'appareil…**, de préférence sur le maître. Vous choisissez une
+nouvelle phrase secrète de l'installation : l'appareil retiré garde ce
+qu'il a déjà mais ne reçoit plus rien. Chaque autre appareil s'arrête
+jusqu'à ce qu'un administrateur y ouvre **Outils → Installation… →
+Saisir la nouvelle clé…** et saisisse la nouvelle phrase secrète, ou un
+code affiché par l'appareil qui a effectué le retrait. Les
+modifications faites entre-temps sur ces appareils sont conservées.
+
 Sur le nouveau maître, un administrateur termine le passage de relais :
 la fenêtre s'ouvre d'elle-même, ou depuis **Outils → Installation… →
 Terminer le passage de relais…**. Elle montre les paramètres de

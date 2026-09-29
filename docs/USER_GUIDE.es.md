@@ -1102,6 +1102,16 @@ destinatarios de cada perfil. En los demás dispositivos, la solicitud de
 receta se abre en el programa de correo, y la prueba de la conexión de
 correo solo está disponible en el principal.
 
+**Quitar un dispositivo.** Cuando un dispositivo se pierde, se vende o
+se regala, selecciónelo en **Dispositivos** y elija **Quitar
+dispositivo…**, preferiblemente en el principal. Elija una nueva frase
+de contraseña de la instalación: el dispositivo quitado conserva lo que
+ya tiene pero no recibe nada nuevo. Cada otro dispositivo se detiene
+hasta que un administrador abra en él **Herramientas → Instalación… →
+Introducir la nueva clave…** y escriba la nueva frase, o un código que
+muestra el dispositivo que realizó la operación. Los cambios hechos
+mientras tanto en esos dispositivos se conservan.
+
 En el nuevo principal, un administrador completa el relevo: la ventana
 se abre sola, o desde **Herramientas → Instalación… → Completar el
 relevo…**. Muestra la configuración de la instalación, prueba la

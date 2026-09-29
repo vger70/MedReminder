@@ -109,3 +109,28 @@ public class MasterRulesTests
         concurrent.Election!.DeviceId.Should().Be(B);
     }
 }
+
+// Household step H5a: a removed device keeps no public key to grant to.
+public class DeviceRemovalRegistersTests
+{
+    private static readonly Guid A = Guid.Parse("0a000000-0000-0000-0000-000000000000");
+    private static readonly Guid C = Guid.Parse("0c000000-0000-0000-0000-000000000000");
+
+    [Fact]
+    public void A_removed_device_has_no_public_key_and_is_listed_as_removed()
+    {
+        var operations = new HouseholdOperationBody[]
+        {
+            new DeviceKeyPublished(A, "a-key"),
+            new DeviceKeyPublished(C, "c-key"),
+            new DeviceRemoved(C),
+        };
+        var ms = 0L;
+        var keys = HouseholdRegisters.Keys(operations.SelectMany(o => HouseholdRegisters.WritesOf(o)
+            .Select(w => (o.ProfileId, w.Register, new HybridTimestamp(++ms, 0, A), w.Value))));
+
+        keys.DevicePublicKeys.Should().ContainKey(A).And.NotContainKey(C);
+        keys.IsRemoved(C).Should().BeTrue();
+        keys.IsRemoved(A).Should().BeFalse();
+    }
+}

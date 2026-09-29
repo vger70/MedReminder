@@ -1116,5 +1116,22 @@
   "Ui.HandoverWizard.Later": "Later",
   "Ui.HandoverWizard.Done": "Confirmed. This device becomes the master once the current master has handed over. New profiles appear at the next start.",
   "Ui.SettingsDialog.Email.NotMaster": "The settings are saved and reach every device. Email is sent by the master device only: test the connection there (Tools → Installation shows which device it is).",
-  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "This device is not the master device, which sends the email of the installation: open the request in your mail client to send it from here."
+  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "This device is not the master device, which sends the email of the installation: open the request in your mail client to send it from here.",
+  "Ui.HouseholdDialog.RemoveDevice": "Remove device…",
+  "Ui.HouseholdDialog.RemoveDevice.Confirm": "Remove {0} from the installation? It keeps what it already has but receives nothing new. The installation gets a new key and a new passphrase: every other device then needs the new passphrase, or a code shown by this device, once.",
+  "Ui.HouseholdDialog.RemoveDevice.Title": "New installation passphrase",
+  "Ui.HouseholdDialog.RemoveDevice.Hint": "Choose a new passphrase for the installation. The removed device must not learn it. Keep it for administrators: it adds devices and recovers the profiles. It cannot be recovered.",
+  "Ui.HouseholdDialog.RemoveDevice.Done": "The device is removed. The other devices stop until they get the new key. Show a code now, to enter on each of them?",
+  "Ui.HouseholdDialog.Status.NewKey": "The installation key was changed on another device (a device was removed). This device sends and receives nothing until an administrator enters the new key: Tools → Installation → Enter the new key.",
+  "Ui.HouseholdDialog.Status.Removed": "This device was removed from the installation. It keeps its data but receives nothing new.",
+  "Ui.HouseholdDialog.NewKey": "Enter the new key…",
+  "Ui.HouseholdDialog.NewKey.Heading": "How do you want to enter the new key?",
+  "Ui.HouseholdDialog.NewKey.Passphrase": "With the new installation passphrase",
+  "Ui.HouseholdDialog.NewKey.PassphraseNote": "The passphrase chosen when the device was removed.",
+  "Ui.HouseholdDialog.NewKey.Code": "With a code",
+  "Ui.HouseholdDialog.NewKey.CodeNote": "Shown by a device that has the new key: Tools → Installation → Devices → Add a device, or after a removal.",
+  "Ui.HouseholdDialog.NewKey.PassphraseHint": "Enter the new installation passphrase.",
+  "Ui.HouseholdDialog.NewKey.CodeHint": "On each other device, open Tools → Installation → Enter the new key → With a code, then enter this code.",
+  "Ui.HouseholdDialog.NewKey.Done": "Done: this device syncs the installation again. Changes made here meanwhile are kept.",
+  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "The passphrase does not open the new installation key."
 }

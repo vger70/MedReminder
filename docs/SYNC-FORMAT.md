@@ -436,6 +436,15 @@ published, with empty dependencies. Header `contentVersion` is 1.
 | `MasterElected` | `electionId`, `deviceId`, `electedBy`, `kind` (`Creation`, `Planned`, `Takeover`) | last writer wins; `profileId` is `master` |
 | `MasterActivated` | `electionId`, `deviceId` | last writer wins; counts only for the current election |
 | `MasterReleased` | `electionId` | last writer wins; the outgoing master stopped for that election |
+| `DeviceRemoved` | `deviceId` | the device's public key no longer counts; `profileId` is `device:<deviceId>` |
+
+A removal changes the household key: `key.<v+1>.wrap` and
+`recovery.<v+1>.wrap` with the new household passphrase, then the
+genesis of a new generation, sealed with the new key, holding the whole
+log. A device holding an older key publishes nothing more and takes the
+new key with the new passphrase or a code; its own operations the new
+genesis lacks are published again in the new generation, where receivers
+skip those they have by id.
 
 Settings: `Smtp.Host`, `Smtp.Port`, `Smtp.UseStartTls`,
 `Smtp.Username`, `Smtp.FromAddress`, `Smtp.FromDisplayName`,

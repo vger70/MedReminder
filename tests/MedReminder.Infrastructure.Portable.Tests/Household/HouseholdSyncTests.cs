@@ -368,6 +368,98 @@ public sealed class HouseholdSyncTests : IDisposable
         await stranger.Should().ThrowAsync<InvalidOperationException>();
     }
 
+    // Step H5a: removal of a device (D-15 option A).
+    private const string NewPassphrase = "new household words";
+
+    private async Task<(Installation A, Installation B, Installation C)> ThreeDevicesAsync()
+    {
+        var (a, b) = await PublishedWithASyncedProfileAsync();
+        var c = Create("C");
+        var householdId = (await a.Store.EnsureCreatedAsync(CancellationToken.None)).HouseholdId;
+        await c.Sync.JoinAsync(SyncTarget.ForFolder(Folder), householdId, Passphrase.ToCharArray(), "PC C",
+            CancellationToken.None);
+        foreach (var installation in new[] { a, b, c, a }) await installation.Sync.RunAsync(CancellationToken.None);
+        return (a, b, c);
+    }
+
+    [Fact]
+    public async Task A_removed_device_gets_no_new_key_and_the_others_take_it_with_the_new_passphrase()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        var deviceC = await DeviceOf(c);
+        await a.Keyring.GrantAsync("user", deviceC, CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.General(b.As("user", ProfileRole.Admin)).ExecuteAsync(new UserSettings { ReferenceCountry = "IT" },
+            CancellationToken.None);
+
+        await a.Sync.RemoveDeviceAsync(deviceC, NewPassphrase.ToCharArray(), "admin", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+
+        (await a.Keyring.KeysAsync(CancellationToken.None)).Grants.Should().NotContainKey(("user", deviceC));
+        (await a.Sync.RunAsync(CancellationToken.None)).NewKeyRequired.Should().BeFalse();
+        var stopped = await b.Sync.RunAsync(CancellationToken.None);
+        stopped.NewKeyRequired.Should().BeTrue();
+        stopped.OperationsPublished.Should().Be(0, "nothing goes to the old generation");
+
+        var wrongOld = () => b.Sync.RekeyAsync(new HouseholdKeySource.Passphrase(Passphrase.ToCharArray()), CancellationToken.None);
+        await wrongOld.Should().ThrowAsync<CryptographicException>("the old passphrase opens nothing new");
+        (await b.Sync.RekeyAsync(new HouseholdKeySource.Passphrase(NewPassphrase.ToCharArray()), CancellationToken.None))
+            .NewKeyRequired.Should().BeFalse();
+        await a.Sync.RunAsync(CancellationToken.None);
+        a.Settings.User.ReferenceCountry.Should().Be("IT", "B's change made before its rekey is carried over");
+
+        var removed = () => c.Sync.RekeyAsync(new HouseholdKeySource.Passphrase(NewPassphrase.ToCharArray()), CancellationToken.None);
+        await removed.Should().ThrowAsync<HouseholdDeviceRemovedException>();
+        (await c.Sync.RunAsync(CancellationToken.None)).NewKeyRequired.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task A_device_takes_the_new_key_with_a_code_from_the_removing_device()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        await a.Sync.RemoveDeviceAsync(await DeviceOf(c), NewPassphrase.ToCharArray(), "admin", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+
+        var staleOffer = () => b.Offers().StartAsync([], CancellationToken.None);
+        await staleOffer.Should().ThrowAsync<InvalidOperationException>("B would hand out the old key");
+        var offer = await a.Offers().StartAsync([], CancellationToken.None);
+
+        (await b.Sync.RekeyAsync(new HouseholdKeySource.Code(offer.Code), CancellationToken.None)).NewKeyRequired.Should().BeFalse();
+        (await b.Keyring.KeysAsync(CancellationToken.None)).IsRemoved(await DeviceOf(c)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task The_new_passphrase_recovers_the_profiles_through_the_new_recovery_key()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        await a.Sync.RemoveDeviceAsync(await DeviceOf(c), NewPassphrase.ToCharArray(), "admin", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+        await b.Sync.RekeyAsync(new HouseholdKeySource.Passphrase(NewPassphrase.ToCharArray()), CancellationToken.None);
+
+        (await b.Sync.RecoverProfileKeyAsync("user", NewPassphrase.ToCharArray(), CancellationToken.None))!
+            .Key.Should().Equal(UserGroup.Key);
+        var old = () => b.Sync.RecoverProfileKeyAsync("user", Passphrase.ToCharArray(), CancellationToken.None);
+        await old.Should().ThrowAsync<CryptographicException>();
+    }
+
+    [Fact]
+    public async Task Removing_the_master_makes_the_removing_device_the_master()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        await a.Elect().ExecuteAsync(await DeviceOf(c), CancellationToken.None);
+        foreach (var installation in new[] { a, c }) await installation.Sync.RunAsync(CancellationToken.None);
+        await c.ConfirmHandoverAsync();
+        foreach (var installation in new[] { c, a }) await installation.Sync.RunAsync(CancellationToken.None);
+        (await a.Master.DescribeAsync(CancellationToken.None)).Master.ActiveDevice.Should().Be(await DeviceOf(c));
+
+        await b.Sync.RemoveDeviceAsync(await DeviceOf(c), NewPassphrase.ToCharArray(), "admin", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+
+        (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeTrue();
+        await a.Sync.RekeyAsync(new HouseholdKeySource.Passphrase(NewPassphrase.ToCharArray()), CancellationToken.None);
+        (await a.Master.DescribeAsync(CancellationToken.None)).Master.ActiveDevice.Should().Be(await DeviceOf(b));
+    }
+
     [Fact]
     public async Task A_household_is_published_once()
     {
