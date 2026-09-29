@@ -62,5 +62,9 @@ public interface IProfileRegistry
     // when the profile has no PIN. Throws for an unknown id.
     ProfilePinHash? GetPinHash(string id);
 
+    // Step H3a: stores a PIN hash received from another device of the
+    // household (null clears the PIN). The PIN itself never travels.
+    void SetPinHash(string id, ProfilePinHash? pin);
+
     bool HasPin(string id);
 }

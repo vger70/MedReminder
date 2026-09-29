@@ -60,6 +60,12 @@ internal sealed class InMemoryProfileRegistry : IProfileRegistry
     public ProfilePinHash? GetPinHash(string id)
         => Find(id).Pin is { } pin ? new ProfilePinHash("hash-of-" + pin, "salt", 100_000) : null;
 
+    // A hash from another device: the fake keeps the PIN as "hash-of-<pin>".
+    public void SetPinHash(string id, ProfilePinHash? pin)
+        => Find(id).Pin = pin?.Hash is { } hash && hash.StartsWith("hash-of-", StringComparison.Ordinal)
+            ? hash["hash-of-".Length..]
+            : null;
+
     public bool HasPin(string id) => Find(id).Pin is not null;
 
     private Entry Find(string id)

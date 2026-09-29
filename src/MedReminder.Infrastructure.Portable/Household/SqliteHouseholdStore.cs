@@ -47,9 +47,17 @@ public sealed class SqliteHouseholdStore : IHouseholdStore
             ""Value"" TEXT NULL
         );
         CREATE INDEX IF NOT EXISTS ""IX_HouseholdRegisters_ProfileId_Register""
-            ON ""HouseholdRegisters"" (""ProfileId"", ""Register"");";
+            ON ""HouseholdRegisters"" (""ProfileId"", ""Register"");
+        CREATE TABLE IF NOT EXISTS ""HouseholdPeers"" (
+            ""DeviceId"" TEXT NOT NULL CONSTRAINT ""PK_HouseholdPeers"" PRIMARY KEY,
+            ""Seq"" INTEGER NOT NULL
+        );";
 
-    private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions Json = new()
+    {
+        WriteIndented = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
 
     private readonly string _directory;
 
@@ -78,10 +86,89 @@ public sealed class SqliteHouseholdStore : IHouseholdStore
         }
         // A household of one: this device, generation 1.
         var identity = new HouseholdIdentity(Guid.NewGuid(), Guid.NewGuid(), 1);
+        await SaveIdentityAsync(identity, cancellationToken);
+        return identity;
+    }
+
+    public async Task SaveIdentityAsync(HouseholdIdentity identity, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        Directory.CreateDirectory(_directory);
         var temporary = SettingsPath + ".tmp";
         await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(identity, Json), cancellationToken);
         File.Move(temporary, SettingsPath, overwrite: true);
-        return identity;
+    }
+
+    public async Task ResetAsync(HouseholdIdentity identity, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        await using (var connection = await OpenAsync(cancellationToken))
+        {
+            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+            await using var clear = connection.CreateCommand();
+            clear.Transaction = transaction;
+            clear.CommandText = @"DELETE FROM ""HouseholdOperations""; DELETE FROM ""HouseholdRegisters"";
+                DELETE FROM ""HouseholdPeers"";";
+            await clear.ExecuteNonQueryAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        await SaveIdentityAsync(identity, cancellationToken);
+    }
+
+    public async Task<bool> ExistsAsync(Guid operationId, CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = @"SELECT COUNT(*) FROM ""HouseholdOperations"" WHERE ""Id"" = $id";
+        command.Parameters.AddWithValue("$id", operationId.ToString("N"));
+        return Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken), CultureInfo.InvariantCulture) > 0;
+    }
+
+    public Task<IReadOnlyList<HouseholdOperationRecord>> ListPendingAsync(Guid deviceId,
+        CancellationToken cancellationToken)
+    {
+        var device = deviceId.ToString("N");
+        return ListAsync(@"WHERE ""SegmentSeq"" IS NULL AND ""DeviceId"" = $device",
+            c => c.Parameters.AddWithValue("$device", device), cancellationToken);
+    }
+
+    public async Task MarkPublishedAsync(IReadOnlyList<Guid> operationIds, int seq, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(operationIds);
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        foreach (var id in operationIds)
+        {
+            await using var update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = @"UPDATE ""HouseholdOperations"" SET ""SegmentSeq"" = $seq WHERE ""Id"" = $id";
+            update.Parameters.AddWithValue("$seq", seq);
+            update.Parameters.AddWithValue("$id", id.ToString("N"));
+            await update.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, int>> GetAppliedAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = @"SELECT ""DeviceId"", ""Seq"" FROM ""HouseholdPeers""";
+        var applied = new Dictionary<Guid, int>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) applied[Guid.Parse(reader.GetString(0))] = reader.GetInt32(1);
+        return applied;
+    }
+
+    public async Task SetAppliedAsync(Guid deviceId, int seq, CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = @"INSERT INTO ""HouseholdPeers"" (""DeviceId"", ""Seq"") VALUES ($device, $seq)
+            ON CONFLICT (""DeviceId"") DO UPDATE SET ""Seq"" = excluded.""Seq""";
+        command.Parameters.AddWithValue("$device", deviceId.ToString("N"));
+        command.Parameters.AddWithValue("$seq", seq);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task<HybridTimestamp?> GetLatestTimestampAsync(CancellationToken cancellationToken)
@@ -168,12 +255,17 @@ public sealed class SqliteHouseholdStore : IHouseholdStore
         return versions;
     }
 
-    public async Task<IReadOnlyList<HouseholdOperationRecord>> ListOperationsAsync(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<HouseholdOperationRecord>> ListOperationsAsync(CancellationToken cancellationToken)
+        => ListAsync(string.Empty, _ => { }, cancellationToken);
+
+    private async Task<IReadOnlyList<HouseholdOperationRecord>> ListAsync(string where, Action<SqliteCommand> bind,
+        CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = @"SELECT ""Id"", ""HlcPhysicalMs"", ""HlcCounter"", ""DeviceId"", ""Generation"", ""Type"",
-            ""SchemaVersion"", ""ProfileId"", ""Payload"" FROM ""HouseholdOperations""";
+            ""SchemaVersion"", ""ProfileId"", ""Payload"" FROM ""HouseholdOperations"" " + where;
+        bind(command);
         var operations = new List<HouseholdOperationRecord>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))

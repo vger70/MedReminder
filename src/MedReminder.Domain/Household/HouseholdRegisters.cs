@@ -41,6 +41,24 @@ public static class HouseholdRegisters
             ? null
             : $"{iterations.ToString(CultureInfo.InvariantCulture)}:{salt}:{hash}";
 
+    // The parts of a PinValue; false for null or a malformed value.
+    public static bool TryParsePin(string? value, out string hash, out string salt, out int iterations)
+    {
+        hash = salt = string.Empty;
+        iterations = 0;
+        var parts = value?.Split(':');
+        if (parts is not { Length: 3 }
+            || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out iterations)
+            || iterations <= 0 || parts[1].Length == 0 || parts[2].Length == 0)
+        {
+            iterations = 0;
+            return false;
+        }
+        salt = parts[1];
+        hash = parts[2];
+        return true;
+    }
+
     // The winning value of each installation setting that has a version.
     public static IReadOnlyDictionary<string, string?> Settings(
         IEnumerable<(string ProfileId, string Register, HybridTimestamp Version, string? Value)> versions)

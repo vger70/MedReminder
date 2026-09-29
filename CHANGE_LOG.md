@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #119 — Replicate the household through a household group (household H3a)
+
+Link: [vger70/MedReminder#119](https://github.com/vger70/MedReminder/pull/119)
+Branch: `claude/household-h3a-household-sync` → `feature/master-slave`
+
+### Added
+
+- The household can be published on a sync storage as a household group
+  and joined with a household passphrase; segments carry profile and
+  settings changes both ways, and a projection writes them into
+  `profiles.json` and the settings files. The SMTP password is in clear
+  only inside the encrypted segments. Not yet reachable from the UI.
+
+### Docs
+
+- `SYNC-FORMAT.md` §9 (household group), `ANALYSIS.md` §5, `CLAUDE.md` §5.
+
 ## PR #114 — Add analysis of a household of devices with a master device
 
 Link: [vger70/MedReminder#114](https://github.com/vger70/MedReminder/pull/114)

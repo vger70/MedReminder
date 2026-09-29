@@ -56,6 +56,23 @@ public sealed class ProfileRegistryTests : IDisposable
         NewRegistry().GetById(user.Id)!.Role.Should().Be(ProfileRole.Admin);
     }
 
+    // Household step H3a: a hash received from another device.
+    [Fact]
+    public void SetPinHash_stores_a_hash_that_verifies_the_same_pin()
+    {
+        var source = NewRegistry();
+        var profile = source.Create("Anna", ProfileRole.Admin);
+        source.SetPin(profile.Id, "4321");
+        var hash = source.GetPinHash(profile.Id);
+        source.SetPin(profile.Id, null);
+
+        source.SetPinHash(profile.Id, hash);
+
+        NewRegistry().VerifyPin(profile.Id, "4321").Should().BeTrue();
+        source.SetPinHash(profile.Id, null);
+        NewRegistry().HasPin(profile.Id).Should().BeFalse();
+    }
+
     [Fact]
     public void GetPinHash_returns_the_stored_hash_or_null()
     {
