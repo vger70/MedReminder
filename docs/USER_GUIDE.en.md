@@ -167,6 +167,12 @@ catalogue and uses them to autocomplete the medicine form.
 - The **reference country** is picked from *Settings → General →
   Reference country*. Default is Italy; a change takes effect at the
   next opening of the medicine form.
+- The **Italian catalogue updates itself**: at startup, when
+  *Settings → General → Check for updates on startup (GitHub)* is
+  on, MedReminder downloads the latest monthly AIFA list if it is
+  newer than the one it has, and uses it from the next opening of
+  the medicine form. Without a connection nothing changes. With
+  several profiles, each one is updated the first time it is opened.
 
 ### EU centrally authorised medicines
 

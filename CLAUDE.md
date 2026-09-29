@@ -42,7 +42,7 @@ Note: Infra tests require Windows (DPAPI/Registry). Release build deletes .pdb a
 ---
 
 ## 5. Runtime Data (%LOCALAPPDATA%\MedReminder\)
- * Shared: profiles.json, smtp.settings.json, smtp.protected (DPAPI), backup.*.json, user.settings.json, logs/*.log.
+ * Shared: profiles.json, smtp.settings.json, smtp.protected (DPAPI), backup.*.json, user.settings.json, logs/*.log, catalogue\staging\ (transient remote AIFA archive, deleted after each run).
  * Per-Profile (profiles\<id>\): medreminder.db (SQLite), notifications.settings.json, ui.settings.json.
  * Constraint: Never write outside %LOCALAPPDATA%\MedReminder\. Never log secrets/PII.
 

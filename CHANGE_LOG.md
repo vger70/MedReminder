@@ -30,10 +30,54 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #131 — Refresh the Italian catalogue from the remote AIFA feed at startup
+
+Link: [vger70/MedReminder#131](https://github.com/vger70/MedReminder/pull/131)
+Branch: `claude/aifa-catalog-auto-update-jrkles`
+
+Implements `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`.
+
+### Added
+
+- At startup, after the passive update check, the app reads
+  `data/latest.json` from the repository and, when its version is newer
+  than the open profile's Italian catalogue, downloads
+  `aifa-<yyyymm>.zip` into `%LOCALAPPDATA%\MedReminder\catalogue\staging\`,
+  verifies it, imports it and deletes it. Gated by
+  `Catalogue:RemoteFeed:Enabled` and *Check for updates on startup*
+  (`RemoteCatalogueRefresher`, `GitHubRawCatalogueFeedClient`,
+  `StartupUpdateCheckSignal`).
+
+### Fixed
+
+- The catalogue importer replaced a country on any version change, so
+  an older embedded snapshot would overwrite a newer one; it now
+  imports only newer versions.
+- A snapshot that parsed to zero rows emptied the country; the
+  importer now rejects snapshots below a minimum row count before
+  deleting anything.
+
+### Build
+
+- `scripts/download_aifa.py` fails before touching `data/` when a CSV
+  is missing, lacks a required column or has fewer than 1 000 rows,
+  and publishes `sha256` and `size` in `latest.json`.
+
+### Docs
+
+- `CATALOGUE-DATA.md` §2 rewritten around the remote feed; the
+  embedded refresh becomes optional. `ANALYSIS.md`, `CLAUDE.md` §5,
+  `ANALYSIS-DRUG-CATALOGUE.md` §3.6 and the five user guides updated.
+  Prompt moved to `docs/prompt/Completed/`.
+
+---
+
 ## PR #130 — Add analysis and implementation prompt for the remote AIFA feed
 
 Link: [vger70/MedReminder#130](https://github.com/vger70/MedReminder/pull/130)
 Branch: `claude/aifa-catalog-auto-update-jrkles`
+
+**Status:** merged (2026-09-29)
 
 ### Docs
 

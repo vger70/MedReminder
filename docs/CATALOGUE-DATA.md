@@ -42,23 +42,66 @@ country never blocks the others.
 
 ## 2. Refresh procedure (Italy)
 
-Cadence: monthly, aligned to a MedReminder release
-(`docs/ANALYSIS-DRUG-CATALOGUE.md` §12 point 2).
+The Italian catalogue has two delivery paths:
 
-1. **Download the two CSV files from AIFA open data.**
-   - Portal: <https://www.aifa.gov.it/opendata>
-   - Files needed:
-     - `confezioni_fornitura.csv` (one row per package;
-       ~80 MB, ASCII, `;` delimiter)
-     - `PA_confezioni.csv` (one row per package × active
-       ingredient; ~11 MB, same encoding and delimiter)
-   - Do not fetch `atc.csv` — `confezioni_fornitura.csv` already
-     carries `CODICE_ATC` for every row.
+- **Remote feed (monthly, no release needed).** The workflow
+  `.github/workflows/download_aifa.yaml` runs on day 2 of each month
+  (and on demand), builds `data/aifa-<yyyymm>.zip` and rewrites
+  `data/latest.json`. The app downloads it at startup (§2.1). No
+  manual step.
+- **Embedded snapshot (per release, optional).** The ZIP embedded in
+  the Infrastructure assembly is the baseline for a first run without
+  network. Refreshing it at each release keeps that baseline recent;
+  skipping it is harmless, because a newer remote import is never
+  overwritten by an older embedded one.
 
-2. **Build the ZIP.** Place the two CSV files at the **root** of the
-   archive (no sub-directory). Both file names must be preserved
-   verbatim (`AifaSnapshotParser` looks them up by name,
-   case-insensitive):
+### 2.1 Remote feed
+
+`data/latest.json`, written by `scripts/download_aifa.py`:
+
+```json
+{
+  "version": "202610",
+  "file": "aifa-202610.zip",
+  "generated": "2026-10-02T03:00:12.345678+00:00",
+  "csv_count": 2,
+  "sha256": "<64 hex characters>",
+  "size": 5016171
+}
+```
+
+- `version` is the **download month** (`datetime.now()` in the
+  script), not an AIFA release date. With the cron on day 2 the two
+  usually coincide.
+- The script fails, leaving `data/` untouched, when either CSV is
+  missing, lacks a column `AifaSnapshotParser` requires, or has fewer
+  than 1 000 data rows.
+- `data/` keeps the 3 newest archives.
+- A second run in the same month overwrites `aifa-<yyyymm>.zip` with
+  the same version. Clients that already imported that version do not
+  pick up the new content (version equality short-circuits). If a
+  month must be republished, wait for the next month's run.
+
+Client behaviour (`RemoteCatalogueRefresher`,
+`docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`):
+
+- Runs once at startup, after the passive update check, when
+  `Catalogue:RemoteFeed:Enabled` and the user's *Check for updates on
+  startup* setting are both on.
+- Downloads only when `version` is newer than the open profile's
+  Italian catalogue; other profiles update at their own next start.
+- Stages the file in `%LOCALAPPDATA%\MedReminder\catalogue\staging\`,
+  checks size and SHA-256 (when present) and the two CSV entries,
+  imports it, and deletes it in every outcome.
+- Rejects a snapshot with fewer than half the rows of the current
+  catalogue, leaving the catalogue unchanged.
+
+### 2.2 Embedded snapshot
+
+1. **Take the archive published by the workflow**:
+   `data/aifa-<yyyymm>.zip` from `main`. It already has the layout the
+   parser expects (both CSV files at the root; an extra `atc.csv` in
+   older archives is ignored):
 
    ```
    aifa-<yyyymm>.zip
@@ -66,40 +109,38 @@ Cadence: monthly, aligned to a MedReminder release
    └── PA_confezioni.csv
    ```
 
-   Any standard tool works (`zip`, 7-Zip, Windows Explorer's
-   "Send to → Compressed folder"). Expected compressed size is
-   ~4–20 MB depending on the raw text redundancy.
+   To build one by hand instead, download `confezioni_fornitura.csv`
+   and `PA_confezioni.csv` from <https://www.aifa.gov.it/liste-dei-farmaci>,
+   keep the file names verbatim (`AifaSnapshotParser` looks them up by
+   name, case-insensitive) and zip them at the archive root.
 
-3. **Name the archive** `aifa-<yyyymm>.zip` where `<yyyymm>` is the
-   AIFA release date, e.g. `aifa-202609.zip`. This suffix ends up in
-   the `snapshot_version` column of every imported row.
-
-4. **Drop it into the repo** at
+2. **Copy it into the repo** at
    `src/MedReminder.Infrastructure/Assets/Catalogue/it/aifa-<yyyymm>.zip`.
    The `<EmbeddedResource>` glob in
    `src/MedReminder.Infrastructure/MedReminder.Infrastructure.csproj`
    picks it up automatically — no csproj edit needed.
 
-5. **Delete the previous month's ZIP** in the same folder. Only one
-   AIFA snapshot must ship at a time; leaving two behind would let
+3. **Delete the previous ZIP** in the same folder. Only one AIFA
+   snapshot must ship at a time; leaving two behind would let
    `EmbeddedSnapshotProvider.TryOpen` pick the wrong one (it takes
    the first resource matching the country prefix).
 
-6. **Commit** with an imperative English message, e.g.
-   `Refresh AIFA snapshot to 202609`.
+4. **Commit** with an imperative English message, e.g.
+   `Refresh AIFA snapshot to 202610`.
 
-7. **Verify** locally on Windows:
+5. **Verify** locally on Windows:
    ```powershell
    dotnet restore MedReminder.sln
    dotnet build   MedReminder.sln -c Release
    dotnet test    MedReminder.sln -c Release
    ```
-   Then run the app once: the `CatalogueRefreshHostedService` logs
-   `Reference-catalogue import for IT complete: inserted=… version=<yyyymm>`
-   in `%LOCALAPPDATA%\MedReminder\logs\medreminder-*.log` on the
-   first boot after the version changed. Subsequent boots log
-   nothing because the importer short-circuits when the recorded
-   `snapshot_version` already matches.
+   Then run the app once and check
+   `%LOCALAPPDATA%\MedReminder\logs\medreminder-*.log`. On the first
+   boot after the version changed, `CatalogueRefreshHostedService` logs
+   `Reference-catalogue import for IT complete: inserted=<n> … version=<yyyymm>`.
+   On later boots the same line reports `inserted=0` and the version
+   stored in the database, which may be newer than the embedded one
+   when the remote feed already delivered a later month.
 
 ---
 

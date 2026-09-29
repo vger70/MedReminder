@@ -1,11 +1,12 @@
 # ANALYSIS — Remote AIFA catalogue feed (M5-lite)
 
-Design document, **prior** to implementation. Work proceeds on branch
+Design document, written before implementation; §11 records how the
+implementation departs from it. Work proceeds on branch
 `claude/aifa-catalog-auto-update-jrkles`. It implements a reduced form
 of `ANALYSIS-DRUG-CATALOGUE.md` §3.6 (M5 "Snapshot online updater"),
 limited to Italy (AIFA), using the monthly archive produced by
 `.github/workflows/download_aifa.yaml`. The implementation briefing is
-`docs/prompt/PROMPT-CATALOGUE-REMOTE-FEED.md`.
+`docs/prompt/Completed/PROMPT-CATALOGUE-REMOTE-FEED.md`.
 
 Epistemic classification, aligned with the sibling documents:
 `[VERIFIED]` (checked against the tree at commit `891ec94`, or against
@@ -255,7 +256,7 @@ SELECT "snapshot_version", COUNT(*)
 One group is the normal case (the importer writes one version per
 country, F5/F6). Zero rows → `Version = null`, `RowCount = 0`. More
 than one group is not produced by the importer; if seen, take the
-highest version and the total count, and log a Warning.
+highest version and the total count.
 
 ### 5.2 Version ordering and import guard
 
@@ -429,3 +430,37 @@ after writing:
 - Not verified: SQLite busy behaviour during a long import (§4.5), the
   exact `Load` timing when the app starts minimized (the 60 s signal
   timeout covers it either way).
+
+---
+
+## 11. Implementation notes (2026-09-29)
+
+Decisions D1–D6 were applied as recommended. Departures from §4.3:
+
+- `RemoteCatalogueRefresher` (orchestration, archive validation) lives
+  in `MedReminder.Application/Catalogue/`, not in the UI hosted
+  service. It depends only on ports (`ICatalogueFeedClient`,
+  `IReferenceCatalogueImporter`, `IAppDataLocation`), so its tests run
+  on any platform. The hosted service keeps the gate (D1) and the wait
+  on `StartupUpdateCheckSignal`.
+- `GitHubRawCatalogueFeedClient` lives in
+  `MedReminder.Infrastructure.Portable/Catalogue/`, not in
+  `MedReminder.Infrastructure`: it has no Windows dependency, and the
+  Windows-only Infrastructure test project cannot run on Linux.
+- The staging path is
+  `RemoteCatalogueRefresher.GetStagingDirectory(IAppDataLocation.DataDirectory)`;
+  no `AppDataPaths` getter was added.
+- `IReferenceCatalogueImporter` gained a second `ImportAsync` overload
+  with `minimumRowCount` instead of an optional parameter, so existing
+  call sites are unchanged.
+- The remote import logs the same "Reference-catalogue import for IT
+  complete" line, with `source=remote feed` and the elapsed time
+  appended (§4.5 asks for the duration).
+
+Verification in this session (Linux, .NET SDK 10.0.112): the solution
+builds with `EnableWindowsTargeting=true`; Domain, Application,
+Infrastructure.Portable and DataImporter tests pass. The new
+`CsvReferenceCatalogueImporterTests` cases compile but need Windows to
+run (the test project requires the WindowsDesktop runtime). The
+workflow's CSV validation was run against the real
+`data/aifa-202609.zip` content (160 024 and 338 722 data rows).
