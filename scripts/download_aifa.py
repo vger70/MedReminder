@@ -24,9 +24,11 @@ ZIP_NAME = f"aifa-{VERSION}.zip"
 
 # The workflow runs daily from the 2nd to the 7th of the month so that
 # an AIFA outage on one day is retried the next. Once this month's
-# version is published the remaining runs stop here, which also avoids
-# republishing the same version (clients would not re-import it).
-# FORCE_REFRESH=true (workflow_dispatch input) bypasses the check.
+# version is published the remaining runs stop here, so each month is
+# published once. FORCE_REFRESH=true (workflow_dispatch input) rebuilds
+# the month; clients re-import it because the new "generated" and
+# "sha256" make it a later build (ANALYSIS-CATALOGUE-REMOTE-FEED.md
+# §11.2).
 FORCE_REFRESH = os.getenv("FORCE_REFRESH", "").strip().lower() == "true"
 try:
     with open("data/latest.json", encoding="utf-8") as fh:

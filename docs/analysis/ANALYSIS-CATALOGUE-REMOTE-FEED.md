@@ -103,8 +103,8 @@ At application start, after the passive application update check:
 - **W4 — same-month re-runs overwrite the same version.** A
   `workflow_dispatch` in the same month rewrites `aifa-<yyyymm>.zip`
   with the same version; a client that already imported that version
-  will not pick up the new content (F5 short-circuit). Accepted
-  limitation; documented.
+  will not pick up the new content (F5 short-circuit). Resolved in
+  §11.2 with a build-time suffix on the stored version.
 - **W5 — `atc.csv` inside the current ZIP** (`csv_count: 3`). Harmless
   (F8). Commit `2315008` removed it from the link filter, so the next
   run produces 2 entries [INFERRED].
@@ -487,8 +487,28 @@ Fixes applied after the code review of PR #131:
   rows and at least 90% of the previous run's counts, recorded in
   `latest.json` under `rows`.
 
-Accepted limitation, unchanged: a snapshot republished in the same
-month keeps the same version and is not re-imported by clients that
-already hold it, and a bad month cannot be rolled back by publishing
-an older label (§2.2 W4). The stricter workflow checks above reduce
-the chance of publishing a bad month.
+The same-month limitation (§2.2 W4) was first accepted here and then
+resolved in §11.2.
+
+### 11.2 Same-month republish (2026-09-29)
+
+- Remote imports store `snapshot_version` as
+  `yyyymm+yyyyMMddTHHmmssZ`, the suffix being the manifest's
+  `generated` in UTC, truncated to seconds
+  (`RemoteCatalogueRefresher.LabelFor`, `SnapshotVersion.Compose`).
+  Embedded snapshots keep the bare month. The column is TEXT and no UI
+  shows it, so no schema change is needed.
+- `SnapshotVersion.IsNewer` orders by month, then by suffix; a bare
+  month is older than any suffixed label of the same month. Examples:
+  embedded `202609` < `202610+…`; `202610+20261005…` >
+  `202610+20261002…`; embedded `202610` < remote `202610+…` (one
+  extra import when the release and the feed carry the same month).
+- The suffix is used only when the manifest also has `sha256`.
+  `raw.githubusercontent.com` caches for five minutes, so right after a
+  republish a client can get the new manifest with the old archive; the
+  hash mismatch rejects that pair and the next start retries. Without a
+  hash the old content would be stored under the new label for good.
+- The workflow publishes once per month (first successful run from
+  day 2 to day 7); a republish is a manual run with `force`.
+- Still not possible: rolling back to an older build. A bad month is
+  corrected by publishing good data, which carries a later `generated`.

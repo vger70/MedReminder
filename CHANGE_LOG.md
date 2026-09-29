@@ -73,6 +73,10 @@ Implements `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`.
   site used to fail the month's only run), and the workflow now runs
   daily from day 2 to day 7, skipping once the month is published;
   `workflow_dispatch` gains a `force` input.
+- A month republished with `force` is re-imported by clients: remote
+  imports store `yyyymm+<generated, UTC>` as the snapshot version when
+  the manifest has a SHA-256, and a later build of the same month is
+  newer.
 
 ### Docs
 

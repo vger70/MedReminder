@@ -52,9 +52,9 @@ The Italian catalogue has two delivery paths:
   exit without changes. HTTP errors from AIFA (429, 5xx, timeouts,
   resets) are retried five times over about 5.5 minutes before a run
   fails; a failed run is retried by the next day's schedule. A manual
-  run with the `force` input rebuilds an already published month
-  (see the same-month limitation below). The app downloads it at startup (§2.1). No
-  manual step.
+  run with the `force` input rebuilds an already published month;
+  clients re-import it (see "Republishing a month" below). The app
+  downloads it at startup (§2.1). No manual step.
 - **Embedded snapshot (per release, optional).** The ZIP embedded in
   the Infrastructure assembly is the baseline for a first run without
   network. Refreshing it at each release keeps that baseline recent;
@@ -92,10 +92,13 @@ The Italian catalogue has two delivery paths:
   a file by more than 10%, lower the previous count in
   `data/latest.json` by hand and re-run.
 - `data/` keeps the 3 newest archives.
-- A second run in the same month overwrites `aifa-<yyyymm>.zip` with
-  the same version. Clients that already imported that version do not
-  pick up the new content (version equality short-circuits). If a
-  month must be republished, wait for the next month's run.
+- **Republishing a month.** A forced run in the same month overwrites
+  `aifa-<yyyymm>.zip` and writes a new `generated` and `sha256`. Clients
+  store remote imports as `yyyymm+<generated, UTC>` (for example
+  `202610+20261005T030012Z`), so the later build replaces the earlier
+  one at their next start. This needs `sha256` in the manifest: without
+  it clients store the bare month and do not re-import. A month cannot
+  be rolled back to an older build; publish corrected data instead.
 
 Client behaviour (`RemoteCatalogueRefresher`,
 `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`):

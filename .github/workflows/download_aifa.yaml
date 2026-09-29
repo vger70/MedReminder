@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: 'Rebuild even if this month is already published (clients that already imported it will not re-import it)'
+        description: 'Rebuild and republish this month even if already published (clients re-import it at next start)'
         type: boolean
         default: false
 
