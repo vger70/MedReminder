@@ -47,6 +47,28 @@ Branch: `claude/household-h3a-household-sync` → `feature/master-slave`
 
 - `SYNC-FORMAT.md` §9 (household group), `ANALYSIS.md` §5, `CLAUDE.md` §5.
 
+## PR #114 — Add analysis of a household of devices with a master device
+
+Link: [vger70/MedReminder#114](https://github.com/vger70/MedReminder/pull/114)
+Branch: `claude/medreminder-sync-analysis-fquf7h`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`: analysis of one
+  installation spread over several devices (PC, later phone). The
+  first device is master; later devices join through a household sync
+  group that replicates profiles, roles, PIN hashes and installation
+  settings; an admin can elect another master, confirmed by a handover
+  wizard; only the master sends email and runs the scheduled cloud
+  backup. A setup wizard lets a new device join an existing
+  installation; each device holds only the profiles an admin grants
+  it, enforced by per-device key wrapping. Records the duplicate-email
+  defect of today's two-PC setups,
+  proposes changes to the requirements, and splits the work into steps
+  H0 to H6 with open decisions.
+- `docs/ANALYSIS.md` §12: index entry for the new analysis.
+- `CLAUDE.md` §4: PRs of this feature target the integration branch
+  `feature/master-slave`; only the final PR merges it into main.
 ## PR #118 — Record installation settings in the household (household H2b)
 
 Link: [vger70/MedReminder#118](https://github.com/vger70/MedReminder/pull/118)
