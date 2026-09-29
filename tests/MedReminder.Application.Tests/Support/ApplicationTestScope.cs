@@ -22,6 +22,7 @@ internal sealed class ApplicationTestScope
     public InMemoryMedicationIntakeRepository Intakes { get; } = new();
     public InMemoryMedicationAdministrationSlotRepository Slots { get; } = new();
     public InMemoryNotificationEventRepository Notifications { get; } = new();
+    public InMemorySentEmailNotificationRepository SentEmails { get; } = new();
     public InMemoryDoseReminderEventRepository DoseEvents { get; } = new();
     public InMemoryMedicineActivityRepository Activity { get; } = new();
     public InMemoryStockCountRepository Counts { get; } = new();
@@ -92,12 +93,13 @@ internal sealed class ApplicationTestScope
         Genesis = new SyncGenesis(Medicines, Suspensions, SyncVersions, Uow);
         ApplyRemote = new ApplyRemoteOperations(
             SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
-            Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock);
+            Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock, sentEmails: SentEmails);
 
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,
             Email, Windows, Uow, Clock,
-            NullLogger<MedicationMonitor>.Instance);
+            NullLogger<MedicationMonitor>.Instance,
+            sentEmails: SentEmails, operationLog: Operations);
     }
 
     // Turns operation capture on, as enabling sync will (Phase 3d).

@@ -171,6 +171,7 @@ is used.
 | `SyncConflict` (`SyncConflicts`) | Local conflict list, §4.5 cases only (B.1 Phase 3b) | `Kind`, `SubjectId`, `Register`, winning / losing value and device |
 | `SyncPeer` (`SyncPeers`) | Sync progress per device of the group (B.1 Phase 3c) | `DeviceId`, `Generation`, `Seq` (applied, or published for this device), checkpoint counters |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
+| `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
@@ -223,7 +224,10 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
 - **`NotificationCycle`** — decides whether a low-stock warning is
   due: inside `ThresholdDays`, not suppressed by `EndDate` (therapy
   ending before run-out), and no successful `NotificationEvent` on the
-  current `StockEpoch`.
+  current `StockEpoch`. `EmailAlreadySent` tells whether any device of
+  the sync group already emailed for the current epoch
+  (`SentEmailNotification`): the monitor then leaves the email channel
+  out and still shows its toast.
 - **`SuspensionState`** — whether a date falls in a suspension.
 - **`LedgerDeriver`** (`Domain/Ledger`, B.1 Phase 2c) — derives a
   medicine's ledger and `StockEpoch` from its facts (stock entries,
@@ -531,7 +535,8 @@ start:
    whose absence triggers the re-freeze (`LedgerFreeze`, also applied
    to every import); then the B.1 Phase 2d patch: `FactRetractions`,
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
-   `NotificationEvents.EpochFactId`; then `SyncOperations` with its two
+   `NotificationEvents.EpochFactId`; then `SentEmailNotifications`
+   (household step H1); then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);
    then `SyncPeers` (B.1 Phase 3c).

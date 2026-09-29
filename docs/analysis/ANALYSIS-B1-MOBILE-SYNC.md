@@ -1811,3 +1811,13 @@ Phase 2 implements the derivation from the prototype and its tests.
   picked. A join by passphrase that opens several groups of the
   storage now asks which one (`JoinSyncGroup.FindGroupsAsync`) instead
   of joining the first.
+- 2026-09-29 — Low-stock email deduplicated across devices (household
+  step H1). A successful email is recorded as a `SentEmailNotification`
+  and replicated as `EmailNotificationSent` (operation schema 4); the
+  table travels in images (image schema 3). A device about to notify an
+  epoch another device already emailed for leaves the email channel out
+  and still shows its toast. §4.2 "`NotificationEvent` device-local" is
+  unchanged: toasts stay per device. Two devices that notify before
+  either has synced still both send; the master device of the
+  household feature (step H4) takes the place of the designated mail
+  device (§8.4) and removes that case.
