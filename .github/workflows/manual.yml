@@ -49,10 +49,11 @@ jobs:
       - name: 5 - XLSX sheet list and header row
         run: |
           if [ "$(head -c 4 Medicamentos.xls 2>/dev/null | xxd -p)" = "504b0304" ]; then
+            cp Medicamentos.xls aemps.xlsx   # openpyxl checks the extension, not the content
             pip install -q openpyxl
             python - <<'EOF'
           import openpyxl
-          wb = openpyxl.load_workbook("Medicamentos.xls", read_only=True)
+          wb = openpyxl.load_workbook("aemps.xlsx", read_only=True)
           print("Sheets:", wb.sheetnames)
           ws = wb.worksheets[0]
           rows = ws.iter_rows(values_only=True)
