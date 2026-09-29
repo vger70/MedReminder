@@ -30,6 +30,29 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #126 — Check every profile on the master device (household H4c)
+
+Link: [vger70/MedReminder#126](https://github.com/vger70/MedReminder/pull/126)
+Branch: `claude/household-h4c-master-profiles` → `feature/master-slave`
+
+### Added
+
+- The master device checks every profile it holds, also those not open:
+  it syncs them, and sends their low-stock and dose emails to each
+  profile's recipients.
+
+### Changed
+
+- On a device that is not the master, a prescription request opens in
+  the mail client only, and the email connection test is refused with an
+  explanation.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`, analysis revision 13.
+
+---
+
 ## PR #125 — Confirm the master handover with a wizard on the elected device (household H4b)
 
 Link: [vger70/MedReminder#125](https://github.com/vger70/MedReminder/pull/125)

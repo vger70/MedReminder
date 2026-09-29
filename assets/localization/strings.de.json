@@ -1109,5 +1109,7 @@
   "Ui.HandoverWizard.Recover": "Um Profile zu holen, die kein verfügbares Gerät hat, geben Sie die Passphrase der Installation ein (optional). Ein nie synchronisiertes Profil kann nicht geholt werden.",
   "Ui.HandoverWizard.Confirm": "Bestätigen",
   "Ui.HandoverWizard.Later": "Später",
-  "Ui.HandoverWizard.Done": "Bestätigt. Dieses Gerät wird Master, sobald der bisherige Master übergeben hat. Neue Profile erscheinen beim nächsten Start."
+  "Ui.HandoverWizard.Done": "Bestätigt. Dieses Gerät wird Master, sobald der bisherige Master übergeben hat. Neue Profile erscheinen beim nächsten Start.",
+  "Ui.SettingsDialog.Email.NotMaster": "Die Einstellungen sind gespeichert und erreichen jedes Gerät. E-Mails sendet nur das Master-Gerät: Testen Sie die Verbindung dort (Extras → Installation zeigt, welches Gerät es ist).",
+  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Dieses Gerät ist nicht das Master-Gerät, das die E-Mails der Installation sendet: Öffnen Sie die Anfrage in Ihrem E-Mail-Programm, um sie von hier zu senden."
 }

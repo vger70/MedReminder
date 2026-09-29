@@ -1109,5 +1109,7 @@
   "Ui.HandoverWizard.Recover": "Pour apporter les profils qu'aucun appareil disponible ne contient, saisissez la phrase secrète de l'installation (facultatif). Un profil jamais synchronisé ne peut pas être apporté.",
   "Ui.HandoverWizard.Confirm": "Confirmer",
   "Ui.HandoverWizard.Later": "Plus tard",
-  "Ui.HandoverWizard.Done": "Confirmé. Cet appareil devient maître dès que le maître actuel a passé le relais. Les nouveaux profils apparaissent au prochain démarrage."
+  "Ui.HandoverWizard.Done": "Confirmé. Cet appareil devient maître dès que le maître actuel a passé le relais. Les nouveaux profils apparaissent au prochain démarrage.",
+  "Ui.SettingsDialog.Email.NotMaster": "Les paramètres sont enregistrés et atteignent chaque appareil. Seul l'appareil maître envoie les e-mails : testez la connexion sur celui-ci (Outils → Installation indique lequel).",
+  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Cet appareil n'est pas l'appareil maître, qui envoie les e-mails de l'installation : ouvrez la demande dans votre client de messagerie pour l'envoyer d'ici."
 }

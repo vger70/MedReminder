@@ -1114,5 +1114,7 @@
   "Ui.HandoverWizard.Recover": "To bring the profiles no device at hand holds, type the installation passphrase (optional). A profile never synced cannot be brought.",
   "Ui.HandoverWizard.Confirm": "Confirm",
   "Ui.HandoverWizard.Later": "Later",
-  "Ui.HandoverWizard.Done": "Confirmed. This device becomes the master once the current master has handed over. New profiles appear at the next start."
+  "Ui.HandoverWizard.Done": "Confirmed. This device becomes the master once the current master has handed over. New profiles appear at the next start.",
+  "Ui.SettingsDialog.Email.NotMaster": "The settings are saved and reach every device. Email is sent by the master device only: test the connection there (Tools → Installation shows which device it is).",
+  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "This device is not the master device, which sends the email of the installation: open the request in your mail client to send it from here."
 }

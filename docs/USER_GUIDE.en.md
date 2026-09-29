@@ -1007,6 +1007,11 @@ for 24 hours stops sending email; if it is lost, the device elected in
 its place takes over one hour after that. Installations published before
 this version have no master until an administrator makes one.
 
+The master checks every profile it holds, also those not open, and
+sends their email reminders to each profile's recipients. On the other
+devices, a prescription request opens in the mail client, and the email
+connection test is available on the master only.
+
 On the new master, an administrator completes the handover: the window
 opens by itself, or from **Tools → Installation… → Complete the
 handover…**. It shows the installation's settings, tests the email

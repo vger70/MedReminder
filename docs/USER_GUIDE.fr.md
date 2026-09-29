@@ -1121,6 +1121,12 @@ place prend le relais une heure plus tard. Les installations publiées
 avant cette version n'ont pas de maître tant qu'un administrateur n'en
 désigne pas un.
 
+Le maître contrôle tous les profils qu'il contient, même ceux qui ne
+sont pas ouverts, et envoie leurs rappels par e-mail aux destinataires
+de chaque profil. Sur les autres appareils, une demande d'ordonnance
+s'ouvre dans le client de messagerie, et le test de la connexion e-mail
+n'est disponible que sur le maître.
+
 Sur le nouveau maître, un administrateur termine le passage de relais :
 la fenêtre s'ouvre d'elle-même, ou depuis **Outils → Installation… →
 Terminer le passage de relais…**. Elle montre les paramètres de

@@ -350,26 +350,29 @@ internal static class Program
         }
     }
 
+    // The configuration files a profile's services read: the installation
+    // settings and the profile's notifications file (§7.1; absent on a
+    // fresh install, the settings dialog writes it the first time the user
+    // saves a ToAddress). Also used for the profiles the master checks
+    // (household step H4c, MasterProfilesHostedService), without reload.
+    internal static void AddProfileConfiguration(IConfigurationBuilder configuration, ICurrentProfile profile,
+        bool reloadOnChange)
+    {
+        var appDataDir = AppDataPaths.GetAppDataDirectory();
+        configuration
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+            .AddJsonFile(Path.Combine(appDataDir, "smtp.settings.json"), optional: true, reloadOnChange: reloadOnChange)
+            .AddJsonFile(Path.Combine(appDataDir, "backup.settings.json"), optional: true, reloadOnChange: reloadOnChange)
+            .AddJsonFile(Path.Combine(appDataDir, "user.settings.json"), optional: true, reloadOnChange: reloadOnChange)
+            .AddJsonFile(profile.NotificationSettingsPath, optional: true, reloadOnChange: reloadOnChange);
+    }
+
     private static IHost BuildHost(string[] args, ICurrentProfile currentProfile)
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        var appDataDir = AppDataPaths.GetAppDataDirectory();
-        var userSmtpSettingsFile = Path.Combine(appDataDir, "smtp.settings.json");
-        var userBackupSettingsFile = Path.Combine(appDataDir, "backup.settings.json");
-        var userSettingsFile = Path.Combine(appDataDir, "user.settings.json");
-        // Per-profile notifications file (§7.1). Absent on a fresh
-        // install; the settings dialog materialises it the first time
-        // the user saves a ToAddress.
-        var notificationSettingsFile = currentProfile.NotificationSettingsPath;
-
-        builder.Configuration
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-            .AddJsonFile(userSmtpSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(userBackupSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(userSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(notificationSettingsFile, optional: true, reloadOnChange: true);
+        AddProfileConfiguration(builder.Configuration, currentProfile, reloadOnChange: true);
 
         builder.Services.AddSingleton(TimeProvider.System);
 
@@ -431,6 +434,8 @@ internal static class Program
         // installation is published or joined.
         builder.Services.AddSingleton<HouseholdHostedService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<HouseholdHostedService>());
+        // Step H4c: the master checks every profile of this device.
+        builder.Services.AddHostedService<MasterProfilesHostedService>();
 
         var catalogueEnabledRaw = builder.Configuration[
             MedReminder.Application.Catalogue.CatalogueFeatureOptions.SectionName + ":Enabled"];

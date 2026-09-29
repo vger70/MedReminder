@@ -486,6 +486,14 @@ root is committed to the repository.
   administrator confirmed the handover wizard there (`MasterHandover`,
   `ConfirmedElection` in `household.settings.json`), except for the
   publishing device and the active master elected again.
+  Step H4c: on the active master, `MasterProfilesHostedService` builds
+  the services of each other profile of the device (its database, sync
+  state and notification recipients; the process's cloud accounts,
+  registry and household store) every 15 minutes, applies the schema
+  patches, syncs the profile, runs the catch-up and the low-stock and
+  dose checks by email only, and syncs again. On a device that is not the
+  master, a prescription request offers the mail client only and the
+  SMTP test is refused.
 - **First-run join** (step H3d-2): the first-run wizard offers "Join an
   existing installation…". The boot flow then builds a host it never
   starts, with a placeholder profile (`SetupProfile`,
