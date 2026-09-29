@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import zipfile
 from urllib.parse import urljoin
 from pathlib import Path
+import json
 import shutil
 import requests
 from bs4 import BeautifulSoup
 
 PAGE_URL = "https://www.aifa.gov.it/liste-dei-farmaci"
 OUTPUT_DIR = "aifa_csv"
-ZIP_NAME = f"aifa-{datetime.now():%Y%m}.zip"
+# One timestamp for the whole run: the archive name, the manifest
+# version and "generated" must agree even when a run crosses a month
+# boundary, otherwise every client rejects the manifest.
+RUN_TIME = datetime.now(timezone.utc)
+VERSION = f"{RUN_TIME:%Y%m}"
+ZIP_NAME = f"aifa-{VERSION}.zip"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -100,10 +106,27 @@ REQUIRED_COLUMNS = {
     ],
     "PA_confezioni.csv": ["CODICE_AIC", "PRINCIPIO_ATTIVO"],
 }
-MIN_DATA_ROWS = 1000
+# Absolute floors, well below the real sizes (September 2026: 160,024
+# and 338,722 data rows) but far above a truncated download.
+MIN_DATA_ROWS = {
+    "confezioni_fornitura.csv": 100_000,
+    "PA_confezioni.csv": 200_000,
+}
+# A file may not shrink below this share of the previous published run
+# (the row counts recorded in data/latest.json).
+MIN_SHARE_OF_PREVIOUS = 0.9
 
 
-def validate_csv(path, required):
+def previous_row_counts():
+    try:
+        with open("data/latest.json", encoding="utf-8") as fh:
+            rows = json.load(fh).get("rows", {})
+    except (OSError, ValueError):
+        return {}
+    return rows if isinstance(rows, dict) else {}
+
+
+def validate_csv(path, required, minimum):
     with open(path, encoding="latin-1", newline="") as fh:
         header = fh.readline().strip()
         columns = {c.strip().strip('"').upper() for c in header.split(";")}
@@ -113,20 +136,27 @@ def validate_csv(path, required):
                 f"{os.path.basename(path)}: missing columns {missing}"
             )
         rows = sum(1 for line in fh if line.strip())
-    if rows < MIN_DATA_ROWS:
+    if rows < minimum:
         raise RuntimeError(
             f"{os.path.basename(path)}: {rows} data rows, "
-            f"at least {MIN_DATA_ROWS} required"
+            f"at least {minimum} required"
         )
     print(f"Validated {os.path.basename(path)}: {rows:,} data rows")
+    return rows
 
 
+previous_rows = previous_row_counts()
+row_counts = {}
 by_name = {os.path.basename(f).lower(): f for f in downloaded_files}
 for name, required in REQUIRED_COLUMNS.items():
     path = by_name.get(name.lower())
     if path is None:
         raise RuntimeError(f"{name} was not downloaded")
-    validate_csv(path, required)
+    minimum = MIN_DATA_ROWS[name]
+    previous = previous_rows.get(name)
+    if isinstance(previous, int) and previous > 0:
+        minimum = max(minimum, int(previous * MIN_SHARE_OF_PREVIOUS))
+    row_counts[name] = validate_csv(path, required, minimum)
 
 print("\nCreazione ZIP")
 
@@ -149,8 +179,6 @@ for f in downloaded_files:
     )
     
 import hashlib
-import json
-from datetime import datetime, timezone
 
 # sha256 and size let the app verify the archive it downloads
 # (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md §5.3).
@@ -160,12 +188,13 @@ with open(ZIP_NAME, "rb") as fh:
         sha256.update(chunk)
 
 latest_info = {
-    "version": datetime.now().strftime("%Y%m"),
+    "version": VERSION,
     "file": ZIP_NAME,
-    "generated": datetime.now(timezone.utc).isoformat(),
+    "generated": RUN_TIME.isoformat(),
     "csv_count": len(csv_links),
     "sha256": sha256.hexdigest(),
     "size": os.path.getsize(ZIP_NAME),
+    "rows": row_counts,
 }
 
 os.makedirs("data", exist_ok=True)
