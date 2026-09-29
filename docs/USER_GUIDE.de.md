@@ -1152,7 +1152,11 @@ hat, erhält aber nichts Neues. Jedes andere Gerät hält an, bis ein
 Administrator darauf **Extras → Installation… → Neuen Schlüssel
 eingeben…** öffnet und die neue Passphrase eingibt oder einen Code,
 den das entfernende Gerät anzeigt. Zwischenzeitliche Änderungen auf
-diesen Geräten bleiben erhalten.
+diesen Geräten bleiben erhalten. Auch die Profile, die das entfernte Gerät hatte, erhalten neue
+Schlüssel: Entfernen Sie es von einem Gerät aus, das alle hat (der
+Master hat sie). Die anderen Geräte übernehmen diese Schlüssel selbst;
+ein in diesem Moment geöffnetes Profil bittet um einen Neustart von
+MedReminder.
 
 Auf dem neuen Master schließt ein Administrator die Übergabe ab: Das
 Fenster öffnet sich von selbst oder über **Extras → Installation… →

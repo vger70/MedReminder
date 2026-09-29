@@ -1077,7 +1077,10 @@ ha già ma non riceve più nulla. Ogni altro dispositivo si ferma finché
 un amministratore non apre su di esso **Strumenti → Installazione… →
 Inserisci la nuova chiave…** e digita la nuova passphrase, oppure un
 codice mostrato dal dispositivo che ha eseguito la rimozione. Le
-modifiche fatte nel frattempo su quei dispositivi sono conservate.
+modifiche fatte nel frattempo su quei dispositivi sono conservate. Anche i profili che il dispositivo rimosso conteneva ricevono nuove
+chiavi: rimuovilo da un dispositivo che li contiene tutti (il master li
+contiene). Gli altri dispositivi prendono quelle chiavi da soli; un
+profilo aperto in quel momento chiede di riavviare MedReminder.
 
 Sul nuovo master un amministratore completa il passaggio: la finestra
 si apre da sola, oppure da **Strumenti → Installazione… → Completa il
