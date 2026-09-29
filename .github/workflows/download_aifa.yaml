@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -23,29 +23,17 @@ jobs:
         run: |
           pip install requests beautifulsoup4
 
-      - name: Generate archive
-        id: generate
+      - name: Generate files
         run: |
-          python scripts/download_aifa.py
+          python scarica_aifa.py
 
-      - name: Create tag
-        id: tag
+      - name: Commit changes
         run: |
-          echo "value=aifa-$(date +'%Y%m')" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Check release existence
-        id: check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release view ${{ steps.tag.outputs.value }} >/dev/null 2>&1 \
-            && echo "exists=true" >> $GITHUB_OUTPUT \
-            || echo "exists=false" >> $GITHUB_OUTPUT
+          git add data/
 
-      - name: Publish release
-        if: steps.check.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.value }}
-          name: ${{ steps.tag.outputs.value }}
-          files: ${{ steps.generate.outputs.zip_name }}
+          git diff --staged --quiet || git commit -m "AIFA database update $(date +%Y%m)"
+
+          git push

@@ -4,7 +4,8 @@ import os
 from datetime import datetime
 import zipfile
 from urllib.parse import urljoin
-
+from pathlib import Path
+import shutil
 import requests
 from bs4 import BeautifulSoup
 
@@ -107,6 +108,31 @@ for f in downloaded_files:
         f" - {os.path.basename(f)} "
         f"({os.path.getsize(f):,} byte)"
     )
+    
+import json
+from datetime import datetime, timezone
+
+latest_info = {
+    "version": datetime.now().strftime("%Y%m"),
+    "file": ZIP_NAME,
+    "generated": datetime.now(timezone.utc).isoformat(),
+    "csv_count": len(csv_links)
+}
+
+os.makedirs("data", exist_ok=True)
+
+with open("data/latest.json", "w", encoding="utf-8") as f:
+    json.dump(latest_info, f, indent=2)
+
+# sposta lo zip nella cartella data
+shutil.move(ZIP_NAME, f"data/{ZIP_NAME}")
+ZIP_NAME = f"data/{ZIP_NAME}"
+
+archives = sorted(Path("data").glob("aifa-*.zip"))
+
+while len(archives) > 12:
+    archives[0].unlink()
+    archives.pop(0)
     
 github_output = os.getenv("GITHUB_OUTPUT")
 
