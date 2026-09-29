@@ -225,8 +225,9 @@ use cases, the monitor and the catch-up wait for it instead of hitting
 the busy timeout (§11.1). The embedded import, which lives in the UI
 and Infrastructure layers, cannot take the `internal` gate and keeps
 its previous behaviour; it runs only when a release changes a
-snapshot. The import duration is logged so it can be observed; it was
-not measured in this analysis [UNCERTAIN].
+snapshot. The import duration is logged; the first field run measured
+13.4 s for the Italian catalogue (§11.3), below the 30 s SQLite busy
+timeout that writers outside the gate would hit.
 
 ### 4.6 Relation to the embedded snapshot
 
@@ -512,3 +513,42 @@ resolved in §11.2.
   day 2 to day 7); a republish is a manual run with `force`.
 - Still not possible: rolling back to an older build. A bad month is
   corrected by publishing good data, which carries a later `generated`.
+
+### 11.3 First field run (2026-09-29, Windows, product owner)
+
+Build of PR #131, feed `latest.json` on `main` with `sha256` and
+`generated` (`202609`, `2026-09-29T13:34:03Z`); open profile holding
+the embedded snapshot `202609`.
+
+First start (18:23, local time):
+
+```
+Reference-catalogue import for IT complete: inserted=0, deleted=0, skipped=0, version=202609, ...
+Remote AIFA feed: newer snapshot available (local=202609, remote=202609+20260929T133403Z).
+Remote AIFA feed: downloaded 4953126 bytes in 915 ms (sha256 b8eeca3aafb6…).
+Reference-catalogue import for IT complete: inserted=85711, deleted=85697, skipped=74313, version=202609+20260929T133403Z, ..., source=remote feed, elapsedMs=13434.
+```
+
+Second start (18:40):
+
+```
+Remote AIFA feed: up to date (local=202609+20260929T133403Z, remote=202609+20260929T133403Z).
+```
+
+What this confirms:
+
+- Embedded import of an equal version is a no-op (newer-only rule).
+- A manifest with `sha256` and `generated` yields the suffixed label,
+  which is newer than the embedded month (§11.2), so the month is
+  imported once from the feed.
+- Download size and SHA-256 match `latest.json` (`size: 4953126`,
+  `sha256: b8eeca3a…`).
+- The import replaced the Italian catalogue (85 697 rows deleted,
+  85 711 inserted) in 13.4 s, parse included; use cases wait for that
+  long at most (`WriteGate`).
+- The next start recognises the stored label and downloads nothing.
+
+Still to check: the Windows test suites (`MedReminder.Infrastructure.Tests`,
+`MedReminder.UI.Tests`), an empty `catalogue\staging\` after the run,
+and a backup restore or archive import started within the first minute
+after launch (connection-lifetime fix, §11.1).
