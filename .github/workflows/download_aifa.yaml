@@ -5,7 +5,7 @@ on:
     # Daily from the 2nd to the 7th: a run that fails because AIFA is
     # down is retried the next day. Once the month's version is
     # published, scripts/download_aifa.py exits without changes.
-    - cron: '0 3 2-7 * *'
+    - cron: '0 3 2,9,16,23 * *'
   workflow_dispatch:
     inputs:
       force:
