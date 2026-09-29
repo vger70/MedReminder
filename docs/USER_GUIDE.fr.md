@@ -1105,7 +1105,9 @@ e-mail, paramètres de sauvegarde cloud et pays de référence.
   le code, ou avec la phrase secrète de l'installation et le code PIN
   d'un administrateur de l'installation. Ses paramètres remplacent ceux
   de cet appareil, et les profils déjà présents y sont ajoutés.
-  MedReminder redémarre avec les nouveaux profils.
+  MedReminder redémarre avec les nouveaux profils. Sur un nouveau PC, la
+  fenêtre d'accueil du premier démarrage propose la même chose avec
+  **Rejoindre une installation existante…**.
 
 Les paramètres e-mail sont aussi partagés : chaque appareil de
 l'installation peut envoyer les rappels par e-mail jusqu'à ce qu'une

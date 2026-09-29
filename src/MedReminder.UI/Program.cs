@@ -107,7 +107,7 @@ internal static class Program
             //    / first-run wizard). May exit if the user cancels.
             var startMinimized = args.Contains(MinimizedArgument);
             var explicitProfileId = TryReadProfileArg(args);
-            var current = ChooseProfile(registry, explicitProfileId, startMinimized);
+            var current = ChooseProfile(registry, explicitProfileId, startMinimized, args);
             if (current is null)
             {
                 Log.Information("Boot flow ended without a selected profile. Exiting.");
@@ -192,21 +192,32 @@ internal static class Program
     // Decides the profile to open. Returns null when the user
     // cancels the picker or the wizard — the caller then exits.
     private static ICurrentProfile? ChooseProfile(
-        ProfileRegistry registry, string? explicitProfileId, bool startMinimized)
+        ProfileRegistry registry, string? explicitProfileId, bool startMinimized, string[] args)
     {
         var profiles = registry.ListProfiles();
 
-        // First-run wizard: no profile exists yet (§12.3).
+        // First-run wizard: no profile exists yet (§12.3). Household step
+        // H3d-2: or the join of an existing installation, after which the
+        // start goes on with the profiles it brought.
         if (profiles.Count == 0)
         {
             ApplySystemLanguageOnFirstRun();
-            using var wizard = new FirstRunWizardForm(registry, _bootstrapLoc);
-            var result = wizard.ShowDialog();
-            if (result != System.Windows.Forms.DialogResult.OK || wizard.CreatedProfile is null)
+            while (true)
             {
-                return null;
+                using var wizard = new FirstRunWizardForm(registry, _bootstrapLoc);
+                var result = wizard.ShowDialog();
+                if (wizard.JoinRequested)
+                {
+                    if (RunFirstRunJoin(args) && registry.ListProfiles().Count > 0) break;
+                    continue;
+                }
+                if (result != System.Windows.Forms.DialogResult.OK || wizard.CreatedProfile is null)
+                {
+                    return null;
+                }
+                return new CurrentProfile(wizard.CreatedProfile);
             }
-            return new CurrentProfile(wizard.CreatedProfile);
+            profiles = registry.ListProfiles();
         }
 
         // --profile <id> from CLI — highest priority (§4.3).
@@ -296,6 +307,47 @@ internal static class Program
             }
         }
         return null;
+    }
+
+    // Household step H3d-2: the join of an existing installation before any
+    // profile exists. A host is built for the services the join needs and
+    // never started (no hosted service runs); its profile is a placeholder
+    // whose database is never opened (SetupProfile). True when the join
+    // brought at least one profile.
+    private static bool RunFirstRunJoin(string[] args)
+    {
+        var setup = SetupProfile.Create();
+        try
+        {
+            using var host = BuildHost(args, setup);
+            using var scope = host.Services.CreateScope();
+            var sp = scope.ServiceProvider;
+            using var dialog = new HouseholdDialog(
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                sp.GetRequiredService<HouseholdHostedService>(),
+                sp.GetRequiredService<ICloudAccountService>(),
+                setup,
+                sp.GetRequiredService<ILocalizationService>(),
+                sp.GetRequiredService<IApplicationRestarter>(),
+                setup: true);
+            var joined = dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK;
+            Log.Information("First-run join ended; profiles brought: {Joined}.", joined);
+            return joined;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "First-run join failed.");
+            MessageBox.Show(
+                _bootstrapLoc.Get("Ui.App.UnexpectedError.Body", ex.Message),
+                _bootstrapLoc.Get("Ui.App.UnexpectedError.Title"),
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return false;
+        }
+        finally
+        {
+            SetupProfile.Remove(setup);
+        }
     }
 
     private static IHost BuildHost(string[] args, ICurrentProfile currentProfile)

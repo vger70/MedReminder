@@ -1065,5 +1065,7 @@
   "Ui.HouseholdDialog.Approve.NotAdmin": "Este perfil no es administrador de la instalación.",
   "Ui.HouseholdDialog.Approve.Cancelled": "Este dispositivo se ha unido a la instalación sin perfiles. Para recibir perfiles, un administrador muestra un código en otro dispositivo de la instalación.",
   "Ui.HouseholdDialog.Profiles": "Perfiles",
-  "Ui.HouseholdDialog.Profiles.NoneSelected": "Seleccione al menos un perfil."
+  "Ui.HouseholdDialog.Profiles.NoneSelected": "Seleccione al menos un perfil.",
+  "Ui.FirstRunWizardForm.Join": "Unirse a una instalación existente…",
+  "Ui.HouseholdDialog.Status.Setup": "Únase a una instalación ya usada en otro dispositivo. Este dispositivo recibe los perfiles que un administrador le asigna y la configuración de la instalación."
 }

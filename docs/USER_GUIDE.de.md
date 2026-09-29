@@ -1122,7 +1122,9 @@ Referenzland.
   dem Code oder mit der Passphrase der Installation und der PIN eines
   Administrators der Installation. Ihre Einstellungen ersetzen die dieses
   Geräts, und die bereits vorhandenen Profile werden der Installation
-  hinzugefügt. MedReminder startet mit den neuen Profilen neu.
+  hinzugefügt. MedReminder startet mit den neuen Profilen neu. Auf einem
+  neuen PC bietet das Willkommensfenster des ersten Starts dasselbe mit
+  **Einer bestehenden Installation beitreten…** an.
 
 Die E-Mail-Einstellungen werden ebenfalls geteilt: Jedes Gerät der
 Installation kann E-Mail-Erinnerungen senden, bis eine spätere Version

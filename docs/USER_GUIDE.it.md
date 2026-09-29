@@ -1047,7 +1047,9 @@ impostazioni del backup cloud e paese di riferimento.
   codice, oppure con la passphrase dell'installazione e il PIN di un
   amministratore dell'installazione. Le sue impostazioni sostituiscono
   quelle di questo dispositivo, e i profili già presenti vengono aggiunti
-  all'installazione. MedReminder si riavvia con i nuovi profili.
+  all'installazione. MedReminder si riavvia con i nuovi profili. Su un
+  nuovo PC la finestra di benvenuto del primo avvio offre la stessa
+  funzione con **Unisciti a un'installazione esistente…**.
 
 Anche le impostazioni email sono condivise, quindi ogni dispositivo
 dell'installazione può inviare i promemoria email finché una versione

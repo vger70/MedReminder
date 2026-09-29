@@ -1070,5 +1070,7 @@
   "Ui.HouseholdDialog.Approve.NotAdmin": "This profile is not an administrator of the installation.",
   "Ui.HouseholdDialog.Approve.Cancelled": "This device has joined the installation without profiles. To receive profiles, an administrator shows a code on another device of the installation.",
   "Ui.HouseholdDialog.Profiles": "Profiles",
-  "Ui.HouseholdDialog.Profiles.NoneSelected": "Select at least one profile."
+  "Ui.HouseholdDialog.Profiles.NoneSelected": "Select at least one profile.",
+  "Ui.FirstRunWizardForm.Join": "Join an existing installation…",
+  "Ui.HouseholdDialog.Status.Setup": "Join an installation already used on another device. This device receives the profiles an administrator gives it, and the installation's settings."
 }

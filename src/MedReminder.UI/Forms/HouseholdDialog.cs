@@ -23,7 +23,11 @@ namespace MedReminder.UI.Forms;
 //     are added to the installation at the next start (ReconcileHousehold),
 //     and the installation's settings replace this device's.
 //
-// The first-run wizard does not offer the join yet (step H3d-2).
+// Step H3d-2: with setup set, the window is the join of the first-run
+// wizard (§6.1). No profile exists yet and no database is open: the join
+// starts at once, needs no confirmation (nothing on this device is
+// replaced), and a join that brings profiles closes the window with OK
+// instead of restarting; the start goes on with those profiles.
 internal sealed class HouseholdDialog : MedReminderFormBase
 {
     private readonly IServiceScopeFactory _scopes;
@@ -40,12 +44,17 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private readonly Button _addDevice;
     private readonly ListView _devices;
     private readonly Button _close;
+    private readonly bool _setup;
+    // The first-run join is done: the window closes although the action
+    // that did it is still on the stack.
+    private bool _completed;
     private HouseholdIdentity? _identity;
     private int _busy;
 
     public HouseholdDialog(IServiceScopeFactory scopes, HouseholdHostedService household, ICloudAccountService accounts,
-        ICurrentProfile profile, ILocalizationService localization, IApplicationRestarter restarter)
+        ICurrentProfile profile, ILocalizationService localization, IApplicationRestarter restarter, bool setup = false)
     {
+        _setup = setup;
         _scopes = scopes;
         _household = household;
         _accounts = accounts;
@@ -90,7 +99,14 @@ internal sealed class HouseholdDialog : MedReminderFormBase
 
         tabs.TabPages.AddRange([statusPage, devicesPage]);
 
-        _close = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, AutoSize = true, Height = 32 };
+        // During the first-run join, closing means no profile was brought.
+        _close = new Button
+        {
+            Text = _loc.Get("Common.Close"),
+            DialogResult = setup ? DialogResult.Cancel : DialogResult.OK,
+            AutoSize = true,
+            Height = 32,
+        };
         var bottom = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.RightToLeft,
@@ -107,13 +123,14 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         FormClosed += (_, _) => _household.Changed -= OnHouseholdChanged;
         FormClosing += (_, e) =>
         {
-            if (_busy > 0 && e.CloseReason is CloseReason.UserClosing or CloseReason.None) e.Cancel = true;
+            if (_busy > 0 && !_completed && e.CloseReason is CloseReason.UserClosing or CloseReason.None) e.Cancel = true;
         };
         Shown += async (_, _) =>
         {
             try
             {
                 await RefreshAllAsync();
+                if (_setup) _join.PerformClick();
             }
             catch (ObjectDisposedException) when (IsDisposed)
             {
@@ -140,10 +157,13 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     {
         await using var scope = _scopes.CreateAsyncScope();
         _identity = await scope.ServiceProvider.GetRequiredService<IHouseholdStore>().EnsureCreatedAsync(CancellationToken.None);
-        var link = await scope.ServiceProvider.GetRequiredService<HouseholdLinks>().StatusAsync(CancellationToken.None);
+        // No profile database is open during the first-run join.
+        var link = _setup
+            ? new HouseholdLinkStatus(HouseholdLinkState.None, null)
+            : await scope.ServiceProvider.GetRequiredService<HouseholdLinks>().StatusAsync(CancellationToken.None);
         if (IsDisposed) return;
 
-        _publish.Visible = !IsPublished;
+        _publish.Visible = !IsPublished && !_setup;
         _join.Visible = !IsPublished;
         _syncNow.Visible = IsPublished;
         _addDevice.Enabled = IsPublished;
@@ -151,7 +171,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         var lines = new List<string>();
         if (_identity.Storage is not { } storage)
         {
-            lines.Add(_loc.Get("Ui.HouseholdDialog.Status.NotPublished"));
+            lines.Add(_loc.Get(_setup ? "Ui.HouseholdDialog.Status.Setup" : "Ui.HouseholdDialog.Status.NotPublished"));
         }
         else
         {
@@ -303,7 +323,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private async Task JoinAsync()
     {
         if (IsPublished) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.Join.Confirm"), _loc.Get("Ui.HouseholdDialog.Join"),
+        if (!_setup && MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.Join.Confirm"), _loc.Get("Ui.HouseholdDialog.Join"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
@@ -339,7 +359,13 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         var installed = joined.Any(p => p.Status == JoinedProfileStatus.Installed);
         Info(_loc.Get("Ui.HouseholdDialog.Join.Result") + Environment.NewLine + Environment.NewLine
             + string.Join(Environment.NewLine, lines)
-            + (installed ? Environment.NewLine + Environment.NewLine + _loc.Get("Ui.SyncDialog.Restart") : string.Empty));
+            + (installed && !_setup ? Environment.NewLine + Environment.NewLine + _loc.Get("Ui.SyncDialog.Restart") : string.Empty));
+        if (installed && _setup)
+        {
+            _completed = true;
+            DialogResult = DialogResult.OK;
+            return;
+        }
         // A new profile appears in the picker after a restart.
         if (installed)
         {

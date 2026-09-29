@@ -1080,7 +1080,9 @@ correo, configuración de la copia en la nube y país de referencia.
   código, o con la frase de contraseña de la instalación y el PIN de un
   administrador de la instalación. Su configuración sustituye a la de
   este dispositivo, y los perfiles ya presentes se añaden a la
-  instalación. MedReminder se reinicia con los nuevos perfiles.
+  instalación. MedReminder se reinicia con los nuevos perfiles. En un PC
+  nuevo, la ventana de bienvenida del primer inicio ofrece lo mismo con
+  **Unirse a una instalación existente…**.
 
 La configuración de correo también se comparte, así que cada dispositivo
 de la instalación puede enviar los recordatorios por correo hasta que una

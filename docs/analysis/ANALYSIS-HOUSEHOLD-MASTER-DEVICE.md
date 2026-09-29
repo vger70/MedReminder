@@ -5,8 +5,8 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-29: revision 9 (§18 lists the revisions). Steps H0
-to H3c are implemented; H3d is in progress (§13).
+Status on 2026-09-29: revision 10 (§18 lists the revisions). Steps H0
+to H3 are implemented; H4 is next (§13).
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 topics below, this document wins once approved. §16 lists the
@@ -720,3 +720,4 @@ developer-days.
 | 7 | Recovery key as a key pair (§4.4 point 4), so escrow needs no passphrase; `HouseholdLinked` moved from H3b to H3c |
 | 8 | `HouseholdLinked` is profile schema version 5, not 4 (§11, §12). H3c as built: the household join replaces the local household store and is not staged, only the profiles are (§6.3); profile groups are read from the household's storage |
 | 9 | H3d split into H3d-1 and H3d-2 (§13). Until H4, the email settings are household settings, so every device of an installation can send email; the H1 deduplication limits repeats (user guides say so) |
+| 10 | H3d-2 as built: the first-run wizard keeps its single page and adds "Join an existing installation…" (§6.1); the join runs in a host never started, with a placeholder profile. Pages 1, 6 and 7 of §6.3 (language, notifications per device, summary with the master) are not separate pages: the language is the system's, per-device notifications keep their defaults, the master arrives with H4. A failed first-run join leaves this device in the installation with no profile; a profile then created in the wizard joins that installation |

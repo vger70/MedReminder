@@ -993,7 +993,9 @@ cloud backup settings and the reference country.
   or with the installation passphrase and the PIN of an administrator
   of the installation. Its settings replace this device's, and the
   profiles already on this device are added to the installation.
-  MedReminder restarts with the new profiles.
+  MedReminder restarts with the new profiles. On a new PC, the welcome
+  window of the first start offers the same with **Join an existing
+  installation…**.
 
 The email settings are shared too, so every device of the installation
 can send email reminders until a later version names one device for
