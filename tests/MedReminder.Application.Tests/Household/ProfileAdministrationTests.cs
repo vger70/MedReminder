@@ -29,7 +29,7 @@ public class ProfileAdministrationTests
 
     private async Task<IReadOnlyList<HouseholdProfile>> HouseholdAsync() => await Log.ProfilesAsync(CancellationToken.None);
 
-    private Task ReconcileAsync() => new ReconcileHousehold(_registry, Log).ExecuteAsync(CancellationToken.None);
+    private Task<int> ReconcileAsync() => new ReconcileHousehold(_registry, Log).ExecuteAsync(CancellationToken.None);
 
     [Fact]
     public async Task Reconcile_records_every_profile_once()
@@ -51,14 +51,30 @@ public class ProfileAdministrationTests
     {
         await ReconcileAsync();
         _registry.Rename("user", "Bruna");
-        _registry.SetRole("user", ProfileRole.Admin);
+        _registry.SetPin("user", "1234");
+        _registry.Add("spare", "Dario", ProfileRole.Admin);
         _registry.Delete("admin", deleteData: false);
 
-        (await new ReconcileHousehold(_registry, Log).ExecuteAsync(CancellationToken.None)).Should().Be(2);
+        (await new ReconcileHousehold(_registry, Log).ExecuteAsync(CancellationToken.None)).Should().Be(3);
 
         var profiles = await HouseholdAsync();
-        profiles.Should().HaveCount(2, "a profile missing from profiles.json is not removed from the household");
-        profiles.Single(p => p.ProfileId == "user").Should().Be(new HouseholdProfile("user", "Bruna", HouseholdRole.Admin, null));
+        profiles.Should().HaveCount(3, "a profile missing from profiles.json is not removed from the household");
+        profiles.Single(p => p.ProfileId == "user").Should().Be(
+            new HouseholdProfile("user", "Bruna", HouseholdRole.User, "100000:salt:hash-of-1234"));
+    }
+
+    // Step H3c: the projection leaves the last administrator of an
+    // installation in its role when another device demotes it; the next
+    // start must not record the local role back.
+    [Fact]
+    public async Task Reconcile_never_records_a_role_the_household_already_holds_differently()
+    {
+        await ReconcileAsync();
+        await Log.AppendAsync([new ProfileRoleChanged("admin", HouseholdRole.User)], CancellationToken.None);
+
+        (await ReconcileAsync()).Should().Be(0);
+
+        (await HouseholdAsync()).Single(p => p.ProfileId == "admin").Role.Should().Be(HouseholdRole.User);
     }
 
     [Fact]

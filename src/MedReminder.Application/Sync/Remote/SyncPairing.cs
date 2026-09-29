@@ -24,8 +24,7 @@ public sealed record SyncPairingCode(Guid GroupId, Guid DeviceId, CloudProvider?
     private const string FolderName = "folder";
 
     // The text to encode in the QR code. Secret: never logged.
-    public string Text => string.Join('.', Prefix, GroupId.ToString("N"), DeviceId.ToString("N"),
-        Provider?.ToString() ?? FolderName, Base64Url.EncodeToString(Secret));
+    public string Text => Format(Prefix, GroupId, DeviceId, Provider, Secret);
 
     // Leaves the secret out of any accidental log line.
     public override string ToString() => $"Pairing code of device {DeviceId:N}";
@@ -34,16 +33,31 @@ public sealed record SyncPairingCode(Guid GroupId, Guid DeviceId, CloudProvider?
     public static bool TryParse(string? text, out SyncPairingCode? code)
     {
         code = null;
+        if (!TryParse(text, Prefix, out var groupId, out var deviceId, out var provider, out var secret)) return false;
+        code = new SyncPairingCode(groupId, deviceId, provider, secret);
+        return true;
+    }
+
+    internal static string Format(string prefix, Guid groupId, Guid deviceId, CloudProvider? provider, byte[] secret)
+        => string.Join('.', prefix, groupId.ToString("N"), deviceId.ToString("N"),
+            provider?.ToString() ?? FolderName, Base64Url.EncodeToString(secret));
+
+    // The five parts shared by mrpair1 and mrpair2 (household step H3c).
+    internal static bool TryParse(string? text, string prefix, out Guid groupId, out Guid deviceId,
+        out CloudProvider? provider, out byte[] secret)
+    {
+        groupId = deviceId = Guid.Empty;
+        provider = null;
+        secret = [];
         if (string.IsNullOrWhiteSpace(text)) return false;
         var parts = string.Concat(text.Where(c => !char.IsWhiteSpace(c))).Split('.');
-        if (parts.Length != 5 || parts[0] != Prefix
-            || !Guid.TryParseExact(parts[1], "N", out var groupId)
-            || !Guid.TryParseExact(parts[2], "N", out var deviceId))
+        if (parts.Length != 5 || parts[0] != prefix
+            || !Guid.TryParseExact(parts[1], "N", out groupId)
+            || !Guid.TryParseExact(parts[2], "N", out deviceId))
         {
             return false;
         }
 
-        CloudProvider? provider;
         switch (parts[3])
         {
             case FolderName: provider = null; break;
@@ -52,9 +66,9 @@ public sealed record SyncPairingCode(Guid GroupId, Guid DeviceId, CloudProvider?
             default: return false;
         }
 
-        var secret = new byte[SecretSize];
-        if (!Base64Url.TryDecodeFromChars(parts[4], secret, out var written) || written != SecretSize) return false;
-        code = new SyncPairingCode(groupId, deviceId, provider, secret);
+        var decoded = new byte[SecretSize];
+        if (!Base64Url.TryDecodeFromChars(parts[4], decoded, out var written) || written != SecretSize) return false;
+        secret = decoded;
         return true;
     }
 }

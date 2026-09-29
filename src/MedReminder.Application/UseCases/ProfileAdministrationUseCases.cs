@@ -241,8 +241,11 @@ public sealed class ReconcileHousehold
             }
             if (!string.Equals(known.DisplayName, profile.DisplayName, StringComparison.Ordinal))
                 operations.Add(new ProfileRenamed(profile.Id, profile.DisplayName));
-            if (!string.Equals(known.Role, role, StringComparison.Ordinal))
-                operations.Add(new ProfileRoleChanged(profile.Id, role));
+            // No role change for a profile the household holds: since step
+            // H2 a role changes only through ChangeProfileRole, which records
+            // it. A local role that differs is one the projection could not
+            // apply (the last administrator of this installation keeps its
+            // role); recording it would undo the other device's change.
             if (!string.Equals(known.Pin, pin, StringComparison.Ordinal))
                 operations.Add(ProfileAdministration.Pin(profile.Id, hash));
         }

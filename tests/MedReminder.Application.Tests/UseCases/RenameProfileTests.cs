@@ -124,5 +124,6 @@ public class RenameProfileTests
         public ProfilePinHash? GetPinHash(string id) => null;
         public void SetPinHash(string id, ProfilePinHash? pin) => throw new NotSupportedException();
         public bool HasPin(string id) => throw new NotSupportedException();
+        public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin) => throw new NotSupportedException();
     }
 }

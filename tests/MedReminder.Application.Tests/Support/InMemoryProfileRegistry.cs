@@ -68,6 +68,13 @@ internal sealed class InMemoryProfileRegistry : IProfileRegistry
 
     public bool HasPin(string id) => Find(id).Pin is not null;
 
+    public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin)
+    {
+        if (_entries.Any(e => e.Id == id)) throw new InvalidOperationException("Profile exists.");
+        _entries.Add(new Entry { Id = id, Name = displayName.Trim(), Role = role });
+        SetPinHash(id, pin);
+    }
+
     private Entry Find(string id)
         => _entries.FirstOrDefault(e => e.Id == id) ?? throw new InvalidOperationException("Unknown profile.");
 

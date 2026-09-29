@@ -387,6 +387,7 @@ of its own next to the profile groups, under the same sync root.
   genesis/<generation>.mrg                     household image
   ops/<generation>/<deviceId>/<seq>.mrs        household segments
   devices/<deviceId>.mrd                       device record (§5.2)
+  pairing/<deviceId>.mrp                       pairing offer (§9.5), while a code is shown
 ```
 
 `household.json` is `{ "format": "MedReminder.Household",
@@ -465,3 +466,28 @@ purpose as associated data. Purposes:
 
 The group key of a profile is thus readable by the devices it was
 granted to, and by whoever types the household passphrase.
+
+### 9.5 Household pairing
+
+A household pairing code has the parts of `mrpair1` (§4.4) with the
+household id in place of the group id:
+
+```
+mrpair2.<householdId N>.<deviceId N>.<provider>.<secret>
+```
+
+The offer `<householdId>/pairing/<deviceId>.mrp` has the cleartext
+fields of a group pairing file (`formatVersion`, `householdId`,
+`deviceId`, `nonce`, `tag`, `ciphertext`). The ciphertext holds the
+household key version and key, the profiles offered (`profileId`,
+`groupId`, `keyVersion`, `key`) and the expiry, encrypted with the
+secret of the code (AES-256-GCM, associated data
+`MedReminder.Household.Pairing|<householdId N>|<deviceId N>`). Only an
+admin writes an offer; it lasts 10 minutes and is deleted when the
+window closes. The joining device records `ProfileKeyGranted` for its
+own public key for each profile offered, so it keeps them after the
+offer ends. A reader of `mrpair1` codes refuses an `mrpair2` code.
+
+A profile brought by an installation join is built from its profile
+group in the storage of the household: an installation keeps its
+profile groups and its household in one storage.

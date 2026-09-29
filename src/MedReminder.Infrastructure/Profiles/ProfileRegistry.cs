@@ -187,6 +187,39 @@ public sealed class ProfileRegistry : IProfileRegistry
         }
     }
 
+    public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        lock (_sync)
+        {
+            var doc = LoadOrEmpty();
+            if (doc.Profiles.Any(p => string.Equals(p.Id, id, StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException($"Profile '{id}' already exists.");
+            }
+
+            var now = _clock.GetUtcNow();
+            var entry = new ProfileEntry
+            {
+                Id = id,
+                DisplayName = displayName.Trim(),
+                Role = RoleToString(role),
+                CreatedAt = now,
+                LastUsedAt = now,
+                PinHash = pin?.Hash,
+                PinSalt = pin?.Salt,
+                PinIterations = pin?.Iterations ?? 0,
+            };
+            doc.Profiles.Add(entry);
+            if (string.IsNullOrWhiteSpace(doc.ActiveProfileId))
+            {
+                doc.ActiveProfileId = entry.Id;
+            }
+            Save(doc);
+        }
+    }
+
     public void Rename(string id, string newDisplayName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);

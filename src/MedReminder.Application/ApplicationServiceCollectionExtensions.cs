@@ -38,6 +38,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<HouseholdProjection>();
         services.AddScoped<HouseholdKeyring>();
         services.AddScoped<HouseholdSync>();
+        // Step H3c: pairing offers (mrpair2) and the installation join.
+        services.AddScoped<HouseholdPairingOffers>();
+        services.AddScoped<JoinInstallation>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();
