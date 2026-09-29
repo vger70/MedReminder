@@ -98,7 +98,7 @@ Sources: `EmaEparParser.cs:49-130,232-245`,
 | `CatalogueFeedOptions` | one manifest URL, one snapshot template, one size cap |
 | `RemoteCatalogueRefresher` | country `IT`; the two AIFA entry names in `ValidateArchive`; 512 MB uncompressed cap |
 | `CatalogueRefreshHostedService` | one remote step |
-| `scripts/download_aifa.py` | `data/latest.json`, `data/aifa-*.zip` |
+| `scripts/download_aifa.py` | `data/latest.json`, `data/aifa-*.zip` (moved to `data/it/` since, §11.4 of the AIFA analysis) |
 
 Everything else is already country-neutral: `SnapshotVersion` (month +
 build-time suffix), `IReferenceCatalogueImporter` (newer-only rule,
@@ -438,9 +438,9 @@ new one. Per-feed `Enabled` flags let an admin override.
 
 | # | Decision | Recommendation |
 |---|----------|----------------|
-| D1 | Layout | Option B, `data/<country>/` (or `<country>/` on the data branch) |
-| D2 | Branch | Dedicated data branch with periodic reset, decided before the first release of PR #131 |
-| D3 | Timing of the AIFA move | Together with D1/D2, before that release; otherwise keep writing `main/data/latest.json` for old clients |
+| D1 | Layout | **Settled:** option B, `data/<country>/`; AIFA moved to `data/it/` in PR #131 |
+| D2 | Branch | **Settled for now:** data stays on `main`; a dedicated data branch remains possible later, at the cost of changing the feed URLs again |
+| D3 | Timing of the AIFA move | **Done** in PR #131, before any release reads `data/latest.json` |
 | D4 | Feeds per client | Reference country + EU; per-feed flags for admins |
 | D5 | AEMPS source | **Settled:** `https://listadomedicamentos.aemps.gob.es/Medicamentos.xls`, `GET` with browser headers (200 from a GitHub runner, §3.2) |
 | D6 | Thresholds | As in §3.4 |
@@ -451,8 +451,8 @@ new one. Per-feed `Enabled` flags let an admin override.
 ## 9. Phases (after the AIFA feed is validated)
 
 1. D1–D3: move the AIFA publication path (workflow + client default
-   URL), no other change. Release-independent if done before #131
-   ships.
+   URL), no other change. **Done** in PR #131 (`data/it/`, manifest
+   `country` field).
 2. Client generalisation (§5) with IT only configured; AIFA regression
    tests stay green.
 3. `scripts/feeds/common.py` + AEMPS feed + workflow (direct download

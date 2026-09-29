@@ -34,10 +34,11 @@ build steps 1–3 but not the release dependency.
 
 At application start, after the passive application update check:
 
-1. Read `https://raw.githubusercontent.com/vger70/MedReminder/main/data/latest.json`.
+1. Read `https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/latest.json`
+   (originally `data/latest.json`; moved per §11.4).
 2. If its `version` is newer than the AIFA snapshot already imported
    in the open profile's database, download
-   `https://raw.githubusercontent.com/vger70/MedReminder/main/data/aifa-<version>.zip`
+   `https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/aifa-<version>.zip`
    into a staging folder.
 3. Validate it and import it through the existing
    `IReferenceCatalogueImporter` (country `IT`, version `<version>`).
@@ -236,7 +237,7 @@ timeout that writers outside the gate would hit.
 - With the newer-only rule the embedded ZIP no longer overrides a newer
   remote import.
 - The release procedure (`CATALOGUE-DATA.md` §2) shrinks to: copy the
-  current `data/aifa-<yyyymm>.zip` into
+  current `data/it/aifa-<yyyymm>.zip` into
   `src/MedReminder.Infrastructure/Assets/Catalogue/it/`, remove the old
   one, commit. Refreshing the embedded snapshot becomes optional per
   release instead of mandatory per month.
@@ -340,8 +341,8 @@ reused for the remote import so the verification step of
   "Enabled": true,
   "RemoteFeed": {
     "Enabled": true,
-    "ManifestUrl": "https://raw.githubusercontent.com/vger70/MedReminder/main/data/latest.json",
-    "SnapshotUrlTemplate": "https://raw.githubusercontent.com/vger70/MedReminder/main/data/aifa-{version}.zip",
+    "ManifestUrl": "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/latest.json",
+    "SnapshotUrlTemplate": "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/aifa-{version}.zip",
     "ManifestTimeoutSeconds": 10,
     "DownloadTimeoutSeconds": 120,
     "MaxDownloadBytes": 67108864
@@ -553,3 +554,25 @@ The Windows test suites (`MedReminder.Infrastructure.Tests`,
 checked by hand: an empty `catalogue\staging\` after the run, and a
 backup restore or archive import started within the first minute after
 launch (connection-lifetime fix, §11.1).
+
+### 11.4 Per-country publication path (2026-09-29)
+
+Decisions D1–D3 of `ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`, applied
+before the first release that ships the feed:
+
+- The AIFA feed publishes under `data/it/` (`latest.json`,
+  `aifa-<yyyymm>.zip`) instead of `data/`; the other feeds will use
+  `data/eu/`, `data/es/`, `data/fr/`. The data stays on `main` (no
+  dedicated data branch).
+- The manifest gains `"country": "IT"`. `CatalogueFeedManifestParser`
+  reads it (optional, must be a country code when present) and
+  `RemoteCatalogueRefresher` rejects, before downloading, a manifest
+  that declares another country.
+- The published files were moved with their content unchanged
+  (`generated` and `sha256` kept), so a client that already imported
+  `202609+20260929T133403Z` sees the feed as up to date.
+- A build made before this change (the product owner's test build)
+  still reads `main/data/latest.json`; after the merge it gets 404 and
+  logs "manifest unavailable", which is harmless. No release reads the
+  old path.
+

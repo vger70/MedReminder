@@ -46,8 +46,8 @@ The Italian catalogue has two delivery paths:
 
 - **Remote feed (monthly, no release needed).** The workflow
   `.github/workflows/download_aifa.yaml` runs daily from day 2 to day
-  7 of each month (and on demand), builds `data/aifa-<yyyymm>.zip` and
-  rewrites `data/latest.json`. The first successful run of the month
+  7 of each month (and on demand), builds `data/it/aifa-<yyyymm>.zip` and
+  rewrites `data/it/latest.json`. The first successful run of the month
   publishes; later runs find the month's version in `latest.json` and
   exit without changes. HTTP errors from AIFA (429, 5xx, timeouts,
   resets) are retried five times over about 5.5 minutes before a run
@@ -63,10 +63,12 @@ The Italian catalogue has two delivery paths:
 
 ### 2.1 Remote feed
 
-`data/latest.json`, written by `scripts/download_aifa.py`:
+`data/it/latest.json`, written by `scripts/download_aifa.py` (each feed
+owns a `data/<country>/` folder):
 
 ```json
 {
+  "country": "IT",
   "version": "202610",
   "file": "aifa-202610.zip",
   "generated": "2026-10-02T03:00:12.345678+00:00",
@@ -90,8 +92,8 @@ The Italian catalogue has two delivery paths:
   (`PA_confezioni.csv`) data rows, or has fewer than 90% of the rows
   recorded under `rows` by the previous run. If AIFA genuinely shrinks
   a file by more than 10%, lower the previous count in
-  `data/latest.json` by hand and re-run.
-- `data/` keeps the 3 newest archives.
+  `data/it/latest.json` by hand and re-run.
+- `data/it/` keeps the 3 newest archives.
 - **Republishing a month.** A forced run in the same month overwrites
   `aifa-<yyyymm>.zip` and writes a new `generated` and `sha256`. Clients
   store remote imports as `yyyymm+<generated, UTC>` (for example
@@ -117,7 +119,7 @@ Client behaviour (`RemoteCatalogueRefresher`,
 ### 2.2 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/aifa-<yyyymm>.zip` from `main`. It already has the layout the
+   `data/it/aifa-<yyyymm>.zip` from `main`. It already has the layout the
    parser expects (both CSV files at the root; an extra `atc.csv` in
    older archives is ignored):
 

@@ -666,7 +666,7 @@ with the `--minimized` argument. Per-user, no elevation.
   It only reports the release URL; nothing is downloaded or executed.
 - Remote AIFA feed: after that check, and under the same
   `CheckForUpdatesOnStartup` setting plus `Catalogue:RemoteFeed:Enabled`,
-  `RemoteCatalogueRefresher` reads `data/latest.json` from the
+  `RemoteCatalogueRefresher` reads `data/it/latest.json` from the
   repository and, when its version is newer than the open profile's
   Italian catalogue, downloads `aifa-<yyyymm>.zip` (HTTPS, no redirects,
   size cap, SHA-256 when published), imports it and deletes it. Data
