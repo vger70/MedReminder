@@ -129,7 +129,7 @@ ZIP_NAME = f"data/{ZIP_NAME}"
 
 archives = sorted(Path("data").glob("aifa-*.zip"))
 
-while len(archives) > 12:
+while len(archives) > 3:
     archives[0].unlink()
     archives.pop(0)
     
