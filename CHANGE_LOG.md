@@ -30,6 +30,29 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #118 — Record installation settings in the household (household H2b)
+
+Link: [vger70/MedReminder#118](https://github.com/vger70/MedReminder/pull/118)
+Branch: `claude/household-h2b-installation-settings` → `feature/master-slave`
+
+### Added
+
+- The SMTP transport and password, the scheduled cloud backup policy and
+  the reference country are recorded in the household
+  (`HouseholdSettingChanged`); the SMTP password only protected with
+  DPAPI. The start-up reconciliation records settings restored by an
+  import or edited by hand.
+
+### Changed
+
+- Settings → Email SMTP, Backup and General save through use cases with
+  the admin checks in the Application layer.
+- The reference country can be changed by an administrator only.
+
+### Docs
+
+- User guides (5 languages), `ANALYSIS.md` §5.2.
+
 ## PR #117 — Record profile administration in a local household and allow role changes (household H2a)
 
 Link: [vger70/MedReminder#117](https://github.com/vger70/MedReminder/pull/117)

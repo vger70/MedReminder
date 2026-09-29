@@ -671,6 +671,7 @@
   "medicine.autocomplete.badge.withdrawn": "Ausgesetztes oder zurückgezogenes Arzneimittel",
   "settings.referenceCountry.label": "Referenzland",
   "settings.referenceCountry.help": "Land, dessen Arzneimittelkatalog von der Auto-Vervollständigung im Medikamentenformular abgefragt wird. EU ergänzt zentral zugelassene Produkte.",
+  "settings.referenceCountry.adminOnly": "Das Referenzland gilt für die ganze Installation: Ein Administrator ändert es.",
   "about.dataSources.aifa": "Italienischer Arzneimittelkatalog: AIFA-Offene-Daten (CC BY 4.0).",
   "about.dataSources.emaArticle57": "Europäische zentral zugelassene Arzneimittel: EMA-EPAR-Datensatz (European public assessment reports), gemäß den EMA-Nutzungsbedingungen für öffentliche Inhalte weiterverwendet.",
   "about.dataSources.aemps": "Spanischer Arzneimittelkatalog: AEMPS-CIMA-Register „Medicamentos“, weiterverwendet gemäß der spanischen Regelung zur Weiterverwendung von Informationen des öffentlichen Sektors (Gesetz 37/2007). Quelle: Agencia Española de Medicamentos y Productos Sanitarios (AEMPS).",

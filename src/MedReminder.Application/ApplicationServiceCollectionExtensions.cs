@@ -31,6 +31,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ChangeProfileRole>();
         services.AddScoped<SetProfilePin>();
         services.AddScoped<ReconcileHousehold>();
+        services.AddScoped<UpdateSmtpSettings>();
+        services.AddScoped<UpdateBackupSettings>();
+        services.AddScoped<UpdateGeneralSettings>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();

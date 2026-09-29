@@ -191,19 +191,40 @@ public sealed class SetProfilePin
 // role edited by hand. A profile missing from profiles.json is not
 // recorded as removed: an unreadable file reads as empty, and only
 // DeleteProfile removes a profile from the household.
+//
+// Step H2b: the installation settings too (an import restores the
+// settings files, and a first start after the upgrade has none in the
+// household yet). The stored SMTP password is compared in clear with the
+// household's, which is protected locally.
 public sealed class ReconcileHousehold
 {
     private readonly IProfileRegistry _registry;
     private readonly HouseholdLog _household;
+    private readonly IInstallationSettingsStore? _settings;
+    private readonly ISmtpCredentialStore? _credentials;
+    private readonly ICredentialProtector? _protector;
 
-    public ReconcileHousehold(IProfileRegistry registry, HouseholdLog household)
+    public ReconcileHousehold(IProfileRegistry registry, HouseholdLog household,
+        IInstallationSettingsStore? settings = null, ISmtpCredentialStore? credentials = null,
+        ICredentialProtector? protector = null)
     {
         _registry = registry;
         _household = household;
+        _settings = settings;
+        _credentials = credentials;
+        _protector = protector;
     }
 
     // Returns the number of operations recorded.
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
+    {
+        var operations = await ProfileChangesAsync(cancellationToken);
+        operations.AddRange(await SettingChangesAsync(cancellationToken));
+        await _household.AppendAsync(operations, cancellationToken);
+        return operations.Count;
+    }
+
+    private async Task<List<HouseholdOperationBody>> ProfileChangesAsync(CancellationToken cancellationToken)
     {
         var held = (await _household.ProfilesAsync(cancellationToken)).ToDictionary(p => p.ProfileId, StringComparer.Ordinal);
         var operations = new List<HouseholdOperationBody>();
@@ -225,7 +246,51 @@ public sealed class ReconcileHousehold
             if (!string.Equals(known.Pin, pin, StringComparison.Ordinal))
                 operations.Add(ProfileAdministration.Pin(profile.Id, hash));
         }
-        await _household.AppendAsync(operations, cancellationToken);
-        return operations.Count;
+        return operations;
+    }
+
+    private async Task<List<HouseholdOperationBody>> SettingChangesAsync(CancellationToken cancellationToken)
+    {
+        if (_settings is null) return [];
+        var held = await _household.SettingsAsync(cancellationToken);
+        var values = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var map in new[]
+                 {
+                     InstallationSettingsMap.Of(_settings.ReadSmtp()),
+                     InstallationSettingsMap.Of(_settings.ReadBackup()),
+                     InstallationSettingsMap.Of(_settings.ReadUser()),
+                 })
+        {
+            foreach (var (key, value) in map) values[key] = value;
+        }
+        List<HouseholdOperationBody> operations = [.. InstallationSettingsMap.Changes(values, held)];
+
+        if (_credentials is not null && _protector is not null)
+        {
+            var stored = _credentials.GetPassword();
+            held.TryGetValue(HouseholdSetting.SmtpPassword, out var recorded);
+            if (!string.Equals(stored, Reveal(recorded), StringComparison.Ordinal)
+                && !(stored is null && !held.ContainsKey(HouseholdSetting.SmtpPassword)))
+            {
+                operations.Add(new HouseholdSettingChanged(HouseholdSetting.SmtpPassword,
+                    stored is null ? null : _protector.Protect(stored)));
+            }
+        }
+        return operations;
+    }
+
+    // The recorded password in clear; null when there is none or it cannot
+    // be read on this device (then it is recorded again).
+    private string? Reveal(string? recorded)
+    {
+        if (string.IsNullOrEmpty(recorded)) return null;
+        try
+        {
+            return _protector!.Unprotect(recorded);
+        }
+        catch (Exception ex) when (ex is FormatException or System.Security.Cryptography.CryptographicException)
+        {
+            return null;
+        }
     }
 }

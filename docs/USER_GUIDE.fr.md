@@ -180,7 +180,9 @@ médicament.
   avant.
 - Le **pays de référence** se choisit dans *Paramètres → Général →
   Pays de référence*. Par défaut : Italie ; un changement prend
-  effet à la prochaine ouverture du formulaire de médicament.
+  effet à la prochaine ouverture du formulaire de médicament. Le pays
+  vaut pour toute l'installation : seul un administrateur peut le
+  modifier.
 
 ### Médicaments en autorisation centralisée UE
 

@@ -178,7 +178,9 @@ medicamento.
   exactamente como antes.
 - El **país de referencia** se elige en *Ajustes → General → País
   de referencia*. El valor por defecto es Italia; el cambio se
-  aplica en la siguiente apertura del formulario del medicamento.
+  aplica en la siguiente apertura del formulario del medicamento. El
+  país vale para toda la instalación: solo un administrador puede
+  cambiarlo.
 
 ### Medicamentos con autorización centralizada UE
 

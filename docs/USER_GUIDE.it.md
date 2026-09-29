@@ -174,7 +174,8 @@ medicina.
 - Il **paese di riferimento** si sceglie da *Impostazioni → Generale
   → Paese di riferimento*. Il valore predefinito è Italia; una
   modifica ha effetto alla successiva apertura del form della
-  medicina.
+  medicina. Il paese vale per tutta l'installazione: solo un
+  amministratore può cambiarlo.
 
 ### Medicinali ad autorizzazione centralizzata UE
 

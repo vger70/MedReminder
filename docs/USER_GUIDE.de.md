@@ -185,7 +185,8 @@ Medikamentenformular automatisch zu vervollständigen.
   Katalogverknüpfung — die Erinnerung funktioniert genau wie zuvor.
 - Das **Referenzland** wird unter *Einstellungen → Allgemein →
   Referenzland* gewählt. Standard ist Italien; eine Änderung wirkt
-  beim nächsten Öffnen des Medikamentenformulars.
+  beim nächsten Öffnen des Medikamentenformulars. Das Land gilt für
+  die ganze Installation: Nur ein Administrator kann es ändern.
 
 ### Zentral zugelassene EU-Arzneimittel
 

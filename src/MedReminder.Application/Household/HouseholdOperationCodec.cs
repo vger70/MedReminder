@@ -17,6 +17,7 @@ public static class HouseholdOperationCodec
         ("ProfileRoleChanged", typeof(ProfileRoleChanged)),
         ("ProfilePinChanged", typeof(ProfilePinChanged)),
         ("ProfileRemoved", typeof(ProfileRemoved)),
+        ("HouseholdSettingChanged", typeof(HouseholdSettingChanged)),
     ];
 
     private static readonly Dictionary<Type, string> NameByType =

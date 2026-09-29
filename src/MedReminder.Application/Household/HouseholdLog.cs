@@ -50,6 +50,12 @@ public sealed class HouseholdLog
         }
     }
 
+    // The winning value of each installation setting (step H2b). A secret
+    // setting's value is still protected (HouseholdSettingChanged).
+    public async Task<IReadOnlyDictionary<string, string?>> SettingsAsync(CancellationToken cancellationToken)
+        => HouseholdRegisters.Settings((await _store.ListRegistersAsync(cancellationToken))
+            .Select(v => (v.ProfileId, v.Register, v.Version, v.Value)));
+
     // The profiles of the household, from the winning register versions.
     public async Task<IReadOnlyList<HouseholdProfile>> ProfilesAsync(CancellationToken cancellationToken)
         => HouseholdRegisters.Profiles((await _store.ListRegistersAsync(cancellationToken))

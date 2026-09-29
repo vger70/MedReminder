@@ -16,6 +16,8 @@ public class HouseholdOperationCodecTests
         new ProfilePinChanged("default", "aGFzaA==", "c2FsdA==", 100_000),
         new ProfilePinChanged("default", null, null, 0),
         new ProfileRemoved("default"),
+        new HouseholdSettingChanged(HouseholdSetting.SmtpHost, "smtp.example.org"),
+        new HouseholdSettingChanged(HouseholdSetting.SmtpPassword, null),
     };
 
     [Theory]

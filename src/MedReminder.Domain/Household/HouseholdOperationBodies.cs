@@ -41,6 +41,41 @@ public sealed record ProfilePinChanged(
 // Tombstone: wins over every other operation for the profile.
 public sealed record ProfileRemoved(string ProfileId) : HouseholdOperationBody(ProfileId);
 
+// A setting of the installation (step H2b): SMTP transport and password,
+// scheduled cloud backup policy, reference country (HouseholdSetting).
+// Not tied to a profile: ProfileId is HouseholdRegisters.Installation.
+// A secret setting (HouseholdSetting.IsSecret) carries its value
+// protected with the local credential protector (DPAPI on Windows) in
+// the local log; the replication of step H3 carries it inside the
+// encrypted segment instead. Null clears the setting.
+public sealed record HouseholdSettingChanged(
+    string Setting,
+    string? Value) : HouseholdOperationBody(HouseholdRegisters.Installation);
+
+// Names of the installation settings (HouseholdSettingChanged.Setting).
+// Part of the format. Values are invariant text: booleans "true" /
+// "false", integers in decimal, the cloud provider by enum member name.
+// Device-bound settings (backup folders, language, update check,
+// auto-start) are not household settings.
+public static class HouseholdSetting
+{
+    public const string SmtpHost = "Smtp.Host";
+    public const string SmtpPort = "Smtp.Port";
+    public const string SmtpUseStartTls = "Smtp.UseStartTls";
+    public const string SmtpUsername = "Smtp.Username";
+    public const string SmtpFromAddress = "Smtp.FromAddress";
+    public const string SmtpFromDisplayName = "Smtp.FromDisplayName";
+    public const string SmtpTimeoutSeconds = "Smtp.TimeoutSeconds";
+    public const string SmtpPassword = "Smtp.Password";
+    public const string CloudBackupEnabled = "CloudBackup.Enabled";
+    public const string CloudBackupRetention = "CloudBackup.Retention";
+    public const string CloudBackupProvider = "CloudBackup.Provider";
+    public const string CloudBackupAccountId = "CloudBackup.AccountId";
+    public const string ReferenceCountry = "ReferenceCountry";
+
+    public static bool IsSecret(string setting) => setting == SmtpPassword;
+}
+
 // Role values on the wire, as in profiles.json.
 public static class HouseholdRole
 {

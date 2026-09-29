@@ -432,6 +432,18 @@ root is committed to the repository.
   edits); a profile missing from the file is never recorded as
   removed. Until the household is replicated (step H3) the log is only
   local.
+- **Installation settings** (step H2b): the SMTP transport and
+  password, the scheduled cloud backup policy (enabled, retention,
+  provider account) and the reference country are household settings,
+  written by `UpdateSmtpSettings`, `UpdateBackupSettings` and
+  `UpdateGeneralSettings` through `IInstallationSettingsStore` and
+  recorded as `HouseholdSettingChanged`. The SMTP password is recorded
+  protected with the local credential protector (DPAPI), never in
+  clear. The backup folders, the local raw backup, the language and the
+  update check stay device settings. The reference country is changed
+  by an administrator only. The start-up reconciliation also records
+  settings changed outside the use cases (an import restores the
+  files).
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).
