@@ -30,6 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #135 — Refresh the EU, ES and FR catalogues from remote feeds
+
+Link: [vger70/MedReminder#135](https://github.com/vger70/MedReminder/pull/135)
+Branch: `claude/catalogue-feeds-eu-es-fr`
+
+### Changed
+
+- The remote catalogue feed is no longer AIFA-only: each country is a
+  `CatalogueFeedDescriptor` (archive prefix, required entries,
+  uncompressed cap) and its files live under `data/<country>/`
+  (`Catalogue:RemoteFeed:BaseUrl`, per-feed `Feeds:<country>` with
+  `Enabled` and `MaxDownloadBytes`). `ManifestUrl` and
+  `SnapshotUrlTemplate` remain as Italy-only overrides.
+- The manifest parser rejects a manifest whose `file` or `country`
+  belongs to another feed.
+- At startup the app refreshes the reference country's feed plus EU
+  (`CatalogueFeedSelection`), one scope per feed; a failure in one feed
+  does not stop the next. Log lines read `Remote catalogue feed <country>: …`.
+
+---
+
 ## PR #134 — Add the implementation prompt for the EU, ES and FR catalogue feeds
 
 Link: [vger70/MedReminder#134](https://github.com/vger70/MedReminder/pull/134)
