@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #133 — Remove the EMA/BDPM probe workflow and record #131 as merged
+
+Link: [vger70/MedReminder#133](https://github.com/vger70/MedReminder/pull/133)
+Branch: `claude/aifa-catalog-auto-update-jrkles`
+
+### Build
+
+- Removed `.github/workflows/ema_bdpm_probe.yaml`, a manual probe whose
+  results are recorded in `ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`.
+
+### Docs
+
+- PR #131 marked merged; the AIFA analysis records the empty staging
+  folder after the field run.
+
+---
+
 ## PR #131 — Refresh the Italian catalogue from the remote AIFA feed at startup
 
 Link: [vger70/MedReminder#131](https://github.com/vger70/MedReminder/pull/131)
