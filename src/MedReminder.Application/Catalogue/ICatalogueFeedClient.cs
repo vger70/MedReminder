@@ -1,18 +1,19 @@
 namespace MedReminder.Application.Catalogue;
 
-// Transport of the remote AIFA feed. The Infrastructure adapter reads
-// the manifest and downloads the archive over HTTPS.
+// Transport of the remote catalogue feeds. The Infrastructure adapter
+// reads a feed's manifest and downloads its archive over HTTPS.
 public interface ICatalogueFeedClient
 {
-    // The published manifest, or null when it cannot be fetched or
-    // parsed (the adapter logs why). Never throws except on
-    // cancellation of `cancellationToken`.
-    Task<CatalogueFeedManifest?> GetLatestAsync(CancellationToken cancellationToken);
+    // The manifest `feed` publishes, or null when it cannot be fetched
+    // or parsed, or belongs to another feed (the adapter logs why).
+    // Never throws except on cancellation of `cancellationToken`.
+    Task<CatalogueFeedManifest?> GetLatestAsync(CatalogueFeedDescriptor feed, CancellationToken cancellationToken);
 
     // Downloads the archive the manifest names to `destinationPath`
     // (written as `<destinationPath>.part`, renamed when complete).
     // Throws on any failure; the caller deletes both files.
     Task<CatalogueFeedDownload> DownloadAsync(
+        CatalogueFeedDescriptor feed,
         CatalogueFeedManifest manifest,
         string destinationPath,
         CancellationToken cancellationToken);

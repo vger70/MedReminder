@@ -4,9 +4,9 @@ using MedReminder.Domain.Catalogue;
 
 namespace MedReminder.Application.Catalogue;
 
-// The `latest.json` manifest published by .github/workflows/
-// download_aifa.yaml next to the monthly AIFA archive, under
-// data/<country>/ (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md §2.1,
+// The `latest.json` manifest each download workflow publishes next to
+// its monthly archive, under data/<country>/
+// (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md §2.1,
 // ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §4.1). `Sha256`, `Size`
 // and `Country` are optional: the client checks them when present.
 public sealed record CatalogueFeedManifest(
@@ -19,20 +19,21 @@ public sealed record CatalogueFeedManifest(
     // Country the feed publishes for (for example "IT"); null in
     // manifests written before the per-country layout.
     public string? Country { get; init; }
-
-    public string ExpectedFileName => CatalogueFeedManifestParser.FileNameFor(Version);
 }
 
 // Pure JSON parser for the feed manifest, kept in the Application layer
 // (like GitHubReleaseParser) so it is testable without HTTP. Unknown
-// fields such as `csv_count` are ignored.
+// fields such as `file_count` are ignored. The manifest must belong to
+// `feed`: its `file` must be the feed's archive name, and its `country`,
+// when present, the feed's country, so a manifest served from another
+// feed's folder is never used.
 public static class CatalogueFeedManifestParser
 {
-    public static string FileNameFor(string version) => $"aifa-{version}.zip";
-
-    public static bool TryParse(string json, out CatalogueFeedManifest? manifest, out string? error)
+    public static bool TryParse(
+        string json, CatalogueFeedDescriptor feed, out CatalogueFeedManifest? manifest, out string? error)
     {
         ArgumentNullException.ThrowIfNull(json);
+        ArgumentNullException.ThrowIfNull(feed);
         manifest = null;
 
         JsonDocument document;
@@ -65,9 +66,9 @@ public static class CatalogueFeedManifestParser
             if (root.TryGetProperty("file", out var fileElement) && fileElement.ValueKind != JsonValueKind.Null)
             {
                 file = fileElement.ValueKind == JsonValueKind.String ? fileElement.GetString() : null;
-                if (!string.Equals(file, FileNameFor(version!), StringComparison.Ordinal))
+                if (!string.Equals(file, feed.FileNameFor(version!), StringComparison.Ordinal))
                 {
-                    error = $"The manifest 'file' does not match '{FileNameFor(version!)}'.";
+                    error = $"The manifest 'file' does not match '{feed.FileNameFor(version!)}'.";
                     return false;
                 }
             }
@@ -109,6 +110,11 @@ public static class CatalogueFeedManifestParser
                     || !CountryCode.TryParse(countryElement.GetString(), out var parsedCountry))
                 {
                     error = "The manifest 'country' is not a country code.";
+                    return false;
+                }
+                if (parsedCountry != feed.Country)
+                {
+                    error = $"The manifest is for {parsedCountry.Value}, not {feed.Country.Value}.";
                     return false;
                 }
                 country = parsedCountry.Value;

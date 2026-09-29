@@ -181,13 +181,16 @@ médicament.
 - Le **pays de référence** se choisit dans *Paramètres → Général →
   Pays de référence*. Par défaut : Italie ; un changement prend
   effet à la prochaine ouverture du formulaire de médicament.
-- Le **catalogue italien se met à jour tout seul** : au démarrage,
-  si *Paramètres → Général → Vérifier les mises à jour au démarrage
-  (GitHub)* est coché, MedReminder télécharge la dernière liste
-  mensuelle AIFA lorsqu'elle est plus récente que la sienne, et
-  l'utilise dès la prochaine ouverture du formulaire de médicament.
-  Sans connexion, rien ne change. Avec plusieurs profils, chacun est
-  mis à jour la première fois qu'il est ouvert.
+- Le **catalogue de votre pays de référence et celui de l'UE se
+  mettent à jour tout seuls** : au démarrage, si *Paramètres →
+  Général → Vérifier les mises à jour au démarrage (GitHub)* est
+  coché, MedReminder télécharge la dernière liste mensuelle de votre
+  pays de référence (Italie, Espagne ou France) et celle de l'UE
+  lorsqu'elles sont plus récentes que les siennes, et les utilise dès
+  la prochaine ouverture du formulaire de médicament. Sans connexion,
+  rien ne change. Avec plusieurs profils, chacun est mis à jour la
+  première fois qu'il est ouvert. Après un changement de pays de
+  référence, son catalogue est mis à jour au démarrage suivant.
 
 ### Médicaments en autorisation centralisée UE
 

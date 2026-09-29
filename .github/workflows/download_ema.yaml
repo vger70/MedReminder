@@ -1,11 +1,11 @@
-name: Download AIFA CSV
+name: Download EMA EPAR catalogue (EU)
 
 on:
   schedule:
-    # On the 2nd, 9th, 16th and 23rd: a run that fails because AIFA is
-    # down is retried a week later. Once the month's version is
-    # published, scripts/feeds/aifa.py exits without changes.
-    - cron: '0 3 2,9,16,23 * *'
+    # Same days as download_aifa.yaml, staggered by an hour. Once the
+    # month's version is published, scripts/feeds/ema.py exits
+    # without changes.
+    - cron: '0 4 2,9,16,23 * *'
   workflow_dispatch:
     inputs:
       force:
@@ -34,22 +34,22 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests beautifulsoup4
+          pip install requests beautifulsoup4 openpyxl
 
       - name: Generate files
         env:
           FORCE_REFRESH: ${{ inputs.force }}
         run: |
-          python scripts/feeds/aifa.py
+          python scripts/feeds/ema.py
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add data/it/
+          git add data/eu/
           git diff --staged --quiet && exit 0
-          git commit -m "AIFA database update $(date -u +%Y%m)"
+          git commit -m "EMA EPAR database update $(date -u +%Y%m)"
 
           # Another push may have landed since the checkout: rebase once
           # and retry once.

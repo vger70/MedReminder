@@ -30,6 +30,60 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #135 — Refresh the EU, ES and FR catalogues from remote feeds
+
+Link: [vger70/MedReminder#135](https://github.com/vger70/MedReminder/pull/135)
+Branch: `claude/catalogue-feeds-eu-es-fr`
+
+### Added
+
+- Monthly remote feeds for the EU, Spanish and French catalogues, on
+  the AIFA days: `download_aemps.yaml` (03:20 UTC,
+  `data/es/aemps-<yyyymm>.zip`), `download_bdpm.yaml` (03:40,
+  `data/fr/bdpm-<yyyymm>.zip`) and `download_ema.yaml` (04:00,
+  `data/eu/ema-epar-<yyyymm>.zip`, EMA XLSX converted to the parser's
+  CSV). Each script checks format, header or columns and row floors
+  before anything under `data/` changes.
+- `scripts/feeds/common.py`, shared by the four feed scripts, with
+  pytest tests in `scripts/feeds/tests/` run by `scripts_tests.yaml`.
+- Fixtures `ema-epar-sample.xlsx` and `ema-epar-from-xlsx.csv`, and a
+  parser test proving the converted CSV reads like the manual export.
+
+### Changed
+
+- The remote catalogue feed is no longer AIFA-only: each country is a
+  `CatalogueFeedDescriptor` (archive prefix, required entries,
+  uncompressed cap) and its files live under `data/<country>/`
+  (`Catalogue:RemoteFeed:BaseUrl`, per-feed `Feeds:<country>` with
+  `Enabled` and `MaxDownloadBytes`; all four enabled). `ManifestUrl`
+  and `SnapshotUrlTemplate` remain as Italy-only overrides.
+- The manifest parser rejects a manifest whose `file` or `country`
+  belongs to another feed.
+- At startup the app refreshes the reference country's feed plus EU
+  (`CatalogueFeedSelection`), one scope per feed; a failure in one feed
+  does not stop the next. Log lines read `Remote catalogue feed <country>: …`.
+- `scripts/download_aifa.py` moved to `scripts/feeds/aifa.py` on the
+  shared module, with the same output; its manifest writes `file_count`
+  instead of `csv_count`.
+- All feed workflows, AIFA included, share the concurrency group
+  `catalogue-feeds-publish` and rebase before pushing.
+
+### Docs
+
+- `CATALOGUE-DATA.md` §1, §3, §5, §6: remote feed first, embedded
+  refresh optional, with the runner measurements; §2.1 describes the
+  client for every feed.
+- `THIRD-PARTY-NOTICES.md`: the four datasets are also redistributed
+  from `data/<country>/`.
+- `ANALYSIS.md`: outbound calls, staging folder and hosted service list
+  all feeds.
+- User guides (en, it, fr, es, de): the reference country's catalogue
+  and the EU one update themselves.
+- `ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md` §11: implementation
+  notes and verification.
+
+---
+
 ## PR #134 — Add the implementation prompt for the EU, ES and FR catalogue feeds
 
 Link: [vger70/MedReminder#134](https://github.com/vger70/MedReminder/pull/134)

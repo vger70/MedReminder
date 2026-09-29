@@ -9,6 +9,12 @@ separately) and is surfaced in the app's About dialog through the
 
 ## Reference catalogue
 
+Each dataset below is redistributed twice, with the same attribution
+and the same content: embedded in the build (the snapshot shipped with
+it), and as a monthly archive the repository publishes under
+`data/<country>/` on `main`, which the app downloads at startup
+(`docs/CATALOGUE-DATA.md` §1, §2.1).
+
 ### AIFA — Agenzia Italiana del Farmaco (Italy)
 
 - **Dataset:** AIFA open data — medicine catalogue
@@ -23,6 +29,8 @@ separately) and is surfaced in the app's About dialog through the
   The `<yyyymm>` suffix identifies the AIFA release date and is the
   value written to the `snapshot_version` column of every imported
   row.
+- **Also redistributed from:** `data/it/aifa-<yyyymm>.zip` (both CSV
+  files unchanged), built monthly by `.github/workflows/download_aifa.yaml`.
 - **Modifications:** two documented row filters are applied at import
   time (`docs/ANALYSIS-DRUG-CATALOGUE.md` §3.2) —
   `TIPO_PROCEDURA = 'Omeopatico'` and
@@ -48,6 +56,10 @@ separately) and is surfaced in the app's About dialog through the
   `src/MedReminder.Infrastructure/Assets/Catalogue/es/aemps-<yyyymm>.zip`.
   The `<yyyymm>` suffix identifies the export month and is the value
   written to the `snapshot_version` column of every imported row.
+- **Also redistributed from:** `data/es/aemps-<yyyymm>.zip` (the
+  export of <https://listadomedicamentos.aemps.gob.es/Medicamentos.xls>
+  unchanged, stored as `aemps.xlsx`), built monthly by
+  `.github/workflows/download_aemps.yaml`.
 - **Modifications:** the parser drops no rows on ingest — the CIMA
   "Medicamentos" register is human-only (veterinary products live in
   the separate CIMAvet portal, not shipped here). `PharmaceuticalForm`
@@ -73,6 +85,8 @@ separately) and is surfaced in the app's About dialog through the
   médicaments (BDPM), diffusée sous Licence Ouverte Etalab 2.0."
 - **Snapshot shipped with this build:** see
   `src/MedReminder.Infrastructure/Assets/Catalogue/fr/bdpm-<yyyymm>.zip`.
+- **Also redistributed from:** `data/fr/bdpm-<yyyymm>.zip` (the three
+  files unchanged), built monthly by `.github/workflows/download_bdpm.yaml`.
 - **Modifications:** rows whose `Type de procédure AMM` starts with
   `Enreg homéo` are skipped at parse time (recorded as `Skipped` in
   `ImportReport`) — homeopathic products carry no meaningful
@@ -106,6 +120,11 @@ separately) and is surfaced in the app's About dialog through the
   `src/MedReminder.Infrastructure/Assets/Catalogue/eu/ema-epar-<yyyymm>.zip`.
   The `<yyyymm>` suffix identifies the export month and is written
   to the `snapshot_version` column of every imported row.
+- **Also redistributed from:** `data/eu/ema-epar-<yyyymm>.zip`, built
+  monthly by `.github/workflows/download_ema.yaml`. The spreadsheet is
+  converted to `ema-epar.csv` with all its columns and rows; the only
+  changes are layout (metadata rows above the header dropped, line
+  breaks and tabs inside cells replaced by spaces, `;` as delimiter).
 - **Modifications:** one documented row filter is applied at import
   time (`docs/ANALYSIS-DRUG-CATALOGUE.md` §3.4) — rows whose
   `Category` is not `Human` are dropped. Every imported row lands
