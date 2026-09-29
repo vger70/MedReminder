@@ -2,9 +2,9 @@
   "country": "IT",
   "version": "202609",
   "file": "aifa-202609.zip",
-  "generated": "2026-09-29T13:34:03.741258+00:00",
+  "generated": "2026-09-29T17:18:31.125843+00:00",
   "csv_count": 2,
-  "sha256": "b8eeca3aafb6ed5fcc4c777ad59dee10436e5dd232b5804eadea1e7f5633c1c5",
+  "sha256": "3010f83248ad2b7257ed04fa885bc6f16af6a919239c2a7a583042c573f64315",
   "size": 4953126,
   "rows": {
     "confezioni_fornitura.csv": 160024,
