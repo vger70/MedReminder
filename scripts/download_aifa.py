@@ -88,6 +88,46 @@ for url in csv_links:
 
     downloaded_files.append(target)
 
+# Validate the CSVs before anything under data/ changes: the app
+# imports whatever latest.json points to, and a header-only or
+# truncated file would reach every user
+# (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md §2.2 W2, §8).
+REQUIRED_COLUMNS = {
+    "confezioni_fornitura.csv": [
+        "CODICE_AIC", "DENOMINAZIONE", "DESCRIZIONE", "RAGIONE_SOCIALE",
+        "STATO_AMMINISTRATIVO", "TIPO_PROCEDURA", "FORMA", "CODICE_ATC",
+        "FORNITURA", "LINK_FI", "LINK_RCP",
+    ],
+    "PA_confezioni.csv": ["CODICE_AIC", "PRINCIPIO_ATTIVO"],
+}
+MIN_DATA_ROWS = 1000
+
+
+def validate_csv(path, required):
+    with open(path, encoding="latin-1", newline="") as fh:
+        header = fh.readline().strip()
+        columns = {c.strip().strip('"').upper() for c in header.split(";")}
+        missing = [c for c in required if c not in columns]
+        if missing:
+            raise RuntimeError(
+                f"{os.path.basename(path)}: missing columns {missing}"
+            )
+        rows = sum(1 for line in fh if line.strip())
+    if rows < MIN_DATA_ROWS:
+        raise RuntimeError(
+            f"{os.path.basename(path)}: {rows} data rows, "
+            f"at least {MIN_DATA_ROWS} required"
+        )
+    print(f"Validated {os.path.basename(path)}: {rows:,} data rows")
+
+
+by_name = {os.path.basename(f).lower(): f for f in downloaded_files}
+for name, required in REQUIRED_COLUMNS.items():
+    path = by_name.get(name.lower())
+    if path is None:
+        raise RuntimeError(f"{name} was not downloaded")
+    validate_csv(path, required)
+
 print("\nCreazione ZIP")
 
 with zipfile.ZipFile(
@@ -108,14 +148,24 @@ for f in downloaded_files:
         f"({os.path.getsize(f):,} byte)"
     )
     
+import hashlib
 import json
 from datetime import datetime, timezone
+
+# sha256 and size let the app verify the archive it downloads
+# (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md §5.3).
+sha256 = hashlib.sha256()
+with open(ZIP_NAME, "rb") as fh:
+    for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+        sha256.update(chunk)
 
 latest_info = {
     "version": datetime.now().strftime("%Y%m"),
     "file": ZIP_NAME,
     "generated": datetime.now(timezone.utc).isoformat(),
-    "csv_count": len(csv_links)
+    "csv_count": len(csv_links),
+    "sha256": sha256.hexdigest(),
+    "size": os.path.getsize(ZIP_NAME),
 }
 
 os.makedirs("data", exist_ok=True)
