@@ -1,0 +1,149 @@
+name: EMA and BDPM download probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    env:
+      UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+      EMA_URL: https://www.ema.europa.eu/en/documents/report/medicines-output-medicines-report_en.xlsx
+      EMA_PAGE: https://www.ema.europa.eu/en/medicines/download-medicine-data
+      BDPM_BASE: https://base-donnees-publique.medicaments.gouv.fr
+      DATAGOUV_API: https://www.data.gouv.fr/api/1/datasets/base-de-donnees-publique-des-medicaments-base-officielle/
+
+    steps:
+      - name: Install openpyxl
+        run: pip install -q openpyxl
+
+      # ------------------------------------------------------------ EMA
+      - name: EMA 1 - direct URL, curl default User-Agent
+        continue-on-error: true
+        run: |
+          curl -sS -I "$EMA_URL" | head -8 || true
+          curl -sS -o /dev/null -w 'GET plain: status=%{http_code} type=%{content_type} bytes=%{size_download}\n' "$EMA_URL" || true
+
+      - name: EMA 2 - direct URL, browser headers
+        continue-on-error: true
+        run: |
+          curl -sS -L -o ema.xlsx \
+            -w 'GET browser: status=%{http_code} type=%{content_type} bytes=%{size_download} final=%{url_effective}\n' \
+            -A "$UA" -H 'Accept: */*' -H 'Accept-Language: en-GB,en;q=0.9' "$EMA_URL" || true
+          echo "Magic: $(head -c 4 ema.xlsx 2>/dev/null | xxd -p)  (504b0304 = XLSX)"
+
+      - name: EMA 3 - landing page still links the file
+        continue-on-error: true
+        run: |
+          curl -sS -L -A "$UA" -o ema_page.html -w 'page: status=%{http_code}\n' "$EMA_PAGE" || true
+          grep -o 'href="[^"]*medicines-output-medicines-report[^"]*"' ema_page.html | sort -u || echo "Link not found on the page"
+
+      - name: EMA 4 - workbook structure against EmaEparParser
+        continue-on-error: true
+        run: |
+          python - <<'EOF'
+          import openpyxl, datetime
+          REQUIRED = ["Category", "Name of medicine", "EMA product number", "Medicine status",
+                      "Active substance", "ATC code (human)",
+                      "Marketing authorisation developer / applicant / holder", "Medicine URL"]
+          wb = openpyxl.load_workbook("ema.xlsx", read_only=True)
+          print("Sheets:", wb.sheetnames)
+          ws = wb["Medicine"] if "Medicine" in wb.sheetnames else wb.worksheets[0]
+          header, header_row, data = None, None, []
+          for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
+              if header is None:
+                  if row and isinstance(row[0], str) and row[0].strip() == "Category":
+                      header, header_row = [str(c).strip() if c is not None else "" for c in row], i
+              else:
+                  if any(c not in (None, "") for c in row):
+                      data.append(row)
+          if header is None:
+              raise SystemExit("No row starting with 'Category' found")
+          print(f"Header at row {header_row} (rows skipped before it: {header_row - 1})")
+          print(f"Columns: {len(header)}")
+          missing = [c for c in REQUIRED if c.lower() not in {h.lower() for h in header}]
+          print("Missing required columns:", missing or "none")
+          print("Data rows:", len(data))
+          cat = header.index("Category")
+          print("Human rows:", sum(1 for r in data if str(r[cat]).strip() == "Human"))
+          multiline = sum(1 for r in data for c in r if isinstance(c, str) and any(x in c for x in "\r\n\t"))
+          semicolon = sum(1 for r in data for c in r if isinstance(c, str) and ";" in c)
+          dates = sum(1 for r in data for c in r if isinstance(c, (datetime.date, datetime.datetime)))
+          print(f"Cells with newline/tab: {multiline}; with ';': {semicolon}; date cells: {dates}")
+          EOF
+
+      # ----------------------------------------------------------- BDPM
+      - name: BDPM 1 - landing pages and file links
+        continue-on-error: true
+        run: |
+          for p in /telechargement /telechargement.php; do
+            curl -sS -L -A "$UA" -o page.html -w "$p: status=%{http_code} final=%{url_effective}\n" "$BDPM_BASE$p" || true
+            grep -oE 'href="[^"]*(CIS_bdpm|CIS_CIP_bdpm|CIS_COMPO_bdpm)\.txt[^"]*"' page.html | sort -u || echo "  no file links found"
+          done
+
+      - name: BDPM 2 - download the three files (URL patterns x User-Agent)
+        continue-on-error: true
+        run: |
+          for f in CIS_bdpm.txt CIS_CIP_bdpm.txt CIS_COMPO_bdpm.txt; do
+            echo "== $f"
+            for path in "/download/file/$f" "/index.php/download/file/$f" "/telechargement.php?fichier=$f"; do
+              for ua in plain browser; do
+                args=(); [ "$ua" = browser ] && args=(-A "$UA")
+                out="probe_${f}_$(echo "$path" | tr '/?=.' '____')_$ua"
+                curl -sS -L "${args[@]}" -o "$out" \
+                  -w "  $path [$ua]: status=%{http_code} type=%{content_type} bytes=%{size_download}\n" \
+                  "$BDPM_BASE$path" || true
+                if [ ! -s "$f" ] && [ -s "$out" ] && ! grep -qi '<html' <(head -c 512 "$out"); then
+                  cp "$out" "$f"; echo "  -> kept as $f"
+                fi
+              done
+            done
+          done
+          ls -l CIS_*.txt || true
+
+      - name: BDPM 3 - content against AnsmBdpmParser
+        continue-on-error: true
+        run: |
+          python - <<'EOF'
+          from collections import Counter
+          def load(name, enc):
+              raw = open(name, "rb").read()
+              try:
+                  text = raw.decode(enc)
+                  print(f"{name}: decodes as {enc}")
+              except UnicodeDecodeError as e:
+                  print(f"{name}: NOT {enc} ({e}); falling back to cp1252 with replacement")
+                  text = raw.decode("cp1252", errors="replace")
+              lines = [l for l in text.splitlines() if l.strip()]
+              widths = Counter(len(l.split("\t")) for l in lines)
+              print(f"  lines={len(lines)} columns per line (count: lines)={dict(widths.most_common(5))}")
+              return lines
+          cis = load("CIS_bdpm.txt", "cp1252")
+          first = next(l.split("\t") for l in cis if len(l.split("\t")) >= 11)
+          print(f"  first full row: CIS={first[0]!r} statut={first[4]!r} titulaire={first[10]!r}")
+          print("  statut starts with 'Autorisation':", first[4].startswith("Autorisation"))
+          print("  homeopathic rows (type procedure starts 'Enreg homéo'):",
+                sum(1 for l in cis if len(l.split('\t')) >= 11 and l.split('\t')[5].startswith('Enreg homéo')))
+          compo = load("CIS_COMPO_bdpm.txt", "cp1252")
+          print("  rows with >= 4 columns:", sum(1 for l in compo if len(l.split("\t")) >= 4))
+          load("CIS_CIP_bdpm.txt", "utf-8")
+          EOF
+
+      - name: BDPM 4 - data.gouv.fr mirror (fallback source)
+        continue-on-error: true
+        run: |
+          curl -sS -A "$UA" -o dg.json -w 'api: status=%{http_code}\n' "$DATAGOUV_API" || true
+          python - <<'EOF'
+          import json
+          try:
+              d = json.load(open("dg.json"))
+          except Exception as e:
+              raise SystemExit(f"Not JSON: {e}")
+          for r in d.get("resources", []):
+              t = r.get("title", "")
+              if any(k in t for k in ("CIS_bdpm", "CIS_CIP_bdpm", "CIS_COMPO_bdpm")):
+                  print(f"{t}: {r.get('url')} (modified {r.get('last_modified')})")
+          EOF
