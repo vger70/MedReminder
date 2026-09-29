@@ -49,43 +49,69 @@ public sealed class HouseholdMasterRole : IMasterRole
     }
 }
 
-// Tools → Installation → Devices → Make master (step H4a, §7.2 step 1): an
-// administrator elects a device of the household. The elected device
-// activates on its own when MasterRules allows it (step H4b adds the
-// handover wizard before that). Electing the active master again cancels
-// a pending election.
+// Tools → Installation → Devices → Make master (steps H4a, H4b; §7.2
+// step 1, §4.4 point 5): an administrator elects a device of the
+// household. The master holds every profile, so the profiles this device
+// holds and the elected one lacks are granted to it at once; the handover
+// wizard on the elected device brings them, recovers with the household
+// passphrase those no device at hand holds, and confirms the activation.
+// Electing the active master again cancels a pending election.
 public sealed class ElectMaster
 {
     private readonly IHouseholdStore _store;
     private readonly HouseholdLog _household;
+    private readonly HouseholdKeyring _keyring;
+    private readonly IProfileGroupKeys _groupKeys;
     private readonly ICurrentProfile _current;
     private readonly ILogger<ElectMaster> _log;
 
-    public ElectMaster(IHouseholdStore store, HouseholdLog household, ICurrentProfile current, ILogger<ElectMaster> log)
+    public ElectMaster(IHouseholdStore store, HouseholdLog household, HouseholdKeyring keyring,
+        IProfileGroupKeys groupKeys, ICurrentProfile current, ILogger<ElectMaster> log)
     {
         _store = store;
         _household = household;
+        _keyring = keyring;
+        _groupKeys = groupKeys;
         _current = current;
         _log = log;
     }
 
     // ProfileAdministrationException(NotAdmin) for a user profile;
     // InvalidOperationException when the household is not published or the
-    // device is not one of it (no published key).
-    public async Task ExecuteAsync(Guid deviceId, CancellationToken cancellationToken,
+    // device is not one of it (no published key). Returns the number of
+    // profiles granted to the elected device.
+    public async Task<int> ExecuteAsync(Guid deviceId, CancellationToken cancellationToken,
         string kind = MasterElectionKind.Planned)
     {
         ProfileAdministration.RequireAdmin(_current);
         var identity = await _store.EnsureCreatedAsync(cancellationToken);
         if (identity.Storage is null) throw new InvalidOperationException("The household is not published.");
-        if (deviceId != identity.DeviceId
-            && !(await _household.KeysAsync(cancellationToken)).DevicePublicKeys.ContainsKey(deviceId))
+        var keys = await _household.KeysAsync(cancellationToken);
+        if (deviceId != identity.DeviceId && !keys.DevicePublicKeys.ContainsKey(deviceId))
         {
             throw new InvalidOperationException("The device is not part of the household.");
         }
+
+        var granted = 0;
+        if (deviceId != identity.DeviceId)
+        {
+            foreach (var profile in await _household.ProfilesAsync(cancellationToken))
+            {
+                if (_groupKeys.Load(profile.ProfileId) is not { } group) continue;
+                var held = keys.Grants.GetValueOrDefault((profile.ProfileId, deviceId));
+                var current = held is not null && held.GroupId == group.GroupId && held.KeyVersion == group.KeyVersion;
+                System.Security.Cryptography.CryptographicOperations.ZeroMemory(group.Key);
+                if (current) continue;
+                await _keyring.GrantAsync(profile.ProfileId, deviceId, cancellationToken);
+                granted++;
+            }
+        }
+
         var electionId = Guid.NewGuid();
         await _household.AppendAsync([new MasterElected(electionId, deviceId, _current.Id, kind)], cancellationToken);
-        _log.LogInformation("Profile {ProfileId} elected device {DeviceId} as master ({Kind}, election {ElectionId}).",
-            _current.Id, deviceId, kind, electionId);
+        _log.LogInformation(
+            "Profile {ProfileId} elected device {DeviceId} as master ({Kind}, election {ElectionId}); {Granted} profiles granted.",
+            _current.Id, deviceId, kind, electionId, granted);
+        return granted;
     }
 }

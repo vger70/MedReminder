@@ -360,6 +360,15 @@ public sealed class HouseholdSync
         {
             return false;
         }
+        // Step H4b (§7.2 step 3): an administrator confirms the handover on
+        // this device first, except for the device that publishes the
+        // household and for the active master elected again (nothing bound
+        // to it changes).
+        if (election.Kind != MasterElectionKind.Creation && master.OutgoingDevice != me
+            && identity.ConfirmedElection != election.ElectionId)
+        {
+            return false;
+        }
         await _household.AppendAsync([new MasterActivated(election.ElectionId, me)], ct);
         return true;
     }

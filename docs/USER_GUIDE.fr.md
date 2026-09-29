@@ -1121,6 +1121,16 @@ place prend le relais une heure plus tard. Les installations publiées
 avant cette version n'ont pas de maître tant qu'un administrateur n'en
 désigne pas un.
 
+Sur le nouveau maître, un administrateur termine le passage de relais :
+la fenêtre s'ouvre d'elle-même, ou depuis **Outils → Installation… →
+Terminer le passage de relais…**. Elle montre les paramètres de
+l'installation, teste la connexion e-mail depuis cet appareil, se
+connecte au stockage de la sauvegarde cloud et demande à nouveau la
+phrase secrète de la sauvegarde cloud (jamais copiée entre appareils),
+puis télécharge les profils dont le nouveau maître a besoin. La phrase
+secrète de l'installation apporte les profils qu'aucun appareil
+disponible ne contient.
+
 ## Vérifier maintenant
 
 Le moniteur s'exécute automatiquement toutes les 30 minutes

@@ -46,6 +46,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<HouseholdMasterRole>();
         services.AddScoped<IMasterRole>(sp => sp.GetRequiredService<HouseholdMasterRole>());
         services.AddScoped<ElectMaster>();
+        services.AddScoped<MasterHandover>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();

@@ -5,8 +5,8 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-29: revision 11 (§18 lists the revisions). Steps H0
-to H3 are implemented; H4a is in progress (§13).
+Status on 2026-09-29: revision 12 (§18 lists the revisions). Steps H0
+to H4a are implemented; H4b is in progress (§13).
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 topics below, this document wins once approved. §16 lists the
@@ -723,3 +723,4 @@ developer-days.
 | 9 | H3d split into H3d-1 and H3d-2 (§13). Until H4, the email settings are household settings, so every device of an installation can send email; the H1 deduplication limits repeats (user guides say so) |
 | 10 | H3d-2 as built: the first-run wizard keeps its single page and adds "Join an existing installation…" (§6.1); the join runs in a host never started, with a placeholder profile. Pages 1, 6 and 7 of §6.3 (language, notifications per device, summary with the master) are not separate pages: the language is the system's, per-device notifications keep their defaults, the master arrives with H4. A failed first-run join leaves this device in the installation with no profile; a profile then created in the wizard joins that installation |
 | 11 | H4 split into H4a–H4c (§13). `MasterActivated` carries the device id; `MasterReleased` added (§5.2): the first activation condition of §7.4 is the outgoing master's explicit release instead of its applied vector, which does not say in which segment the election travelled. A household with no election (never published, or published before H4) keeps every device sending; the device that publishes elects itself (`Creation`). Until H4b the elected device activates without the handover wizard |
+| 12 | H4b as built: the election itself grants the elected device the profiles the electing device holds (§4.4 point 5); the wizard recovers the others with the household passphrase. The inherited settings are shown in the wizard and edited in Settings as usual, not in the wizard. The confirmation is local to the elected device (`ConfirmedElection`), not a household operation. Electing the active master again needs no wizard (§7.2: nothing bound to it changes). A takeover is the election made while the current master has not been seen for longer than the lease; it changes the wording only (§7.3) |

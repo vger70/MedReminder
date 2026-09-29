@@ -30,6 +30,29 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #125 — Confirm the master handover with a wizard on the elected device (household H4b)
+
+Link: [vger70/MedReminder#125](https://github.com/vger70/MedReminder/pull/125)
+Branch: `claude/household-h4b-handover` → `feature/master-slave`
+
+### Added
+
+- Handover wizard on the elected device: settings of the installation,
+  email connection test, cloud backup sign-in and passphrase (typed
+  again, never copied), download of the profiles the master needs, and
+  recovery of the others with the installation passphrase. The device
+  becomes master only after an administrator confirms it.
+- An election grants the elected device the profiles the electing
+  device holds.
+- Takeover: an election made while the master is not seen for more than
+  24 hours.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`, analysis revision 12.
+
+---
+
 ## PR #124 — Send email and run the cloud backup from the master device only (household H4a)
 
 Link: [vger70/MedReminder#124](https://github.com/vger70/MedReminder/pull/124)

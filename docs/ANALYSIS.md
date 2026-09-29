@@ -481,6 +481,11 @@ root is committed to the repository.
   the active master within a 24-hour lease counted from its last
   household sync, or every device while no master is elected. Each
   household run releases (outgoing master) or activates (elected device).
+  Step H4b: an election grants the elected device the profiles the
+  electing device holds; the elected device activates only after an
+  administrator confirmed the handover wizard there (`MasterHandover`,
+  `ConfirmedElection` in `household.settings.json`), except for the
+  publishing device and the active master elected again.
 - **First-run join** (step H3d-2): the first-run wizard offers "Join an
   existing installation…". The boot flow then builds a host it never
   starts, with a placeholder profile (`SetupProfile`,

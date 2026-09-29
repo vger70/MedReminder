@@ -120,6 +120,7 @@ internal sealed class MainForm : MedReminderFormBase
 
         Load += async (_, _) => await ReloadAsync();
         Load += (_, _) => WireSyncRefresh();
+        Load += (_, _) => WireHandoverPrompt();
         Load += (_, _) => TryStartPassiveUpdateCheck();
         FormClosing += OnFormClosing;
     }
@@ -780,6 +781,49 @@ internal sealed class MainForm : MedReminderFormBase
         };
         status.RemoteChangesApplied += handler;
         FormClosed += (_, _) => status.RemoteChangesApplied -= handler;
+    }
+
+    // Household step H4b (§7.2 step 3): when this device is elected master,
+    // an administrator is asked, once per election and session, to run the
+    // handover wizard. Later leaves it in Tools → Installation.
+    private readonly HashSet<Guid> _handoverAsked = [];
+
+    private void WireHandoverPrompt()
+    {
+        if (!_currentProfile.IsAdmin) return;
+        using var scope = _scopeFactory.CreateScope();
+        var household = scope.ServiceProvider.GetRequiredService<HouseholdHostedService>();
+        EventHandler handler = (_, _) =>
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            BeginInvoke(new Func<Task>(PromptHandoverAsync));
+        };
+        household.Changed += handler;
+        FormClosed += (_, _) => household.Changed -= handler;
+    }
+
+    private async Task PromptHandoverAsync()
+    {
+        try
+        {
+            MedReminder.Application.Household.HandoverView? view;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                view = await scope.ServiceProvider.GetRequiredService<MedReminder.Application.Household.MasterHandover>()
+                    .PendingAsync(CancellationToken.None);
+            }
+            if (view is null || !_handoverAsked.Add(view.Election.ElectionId)) return;
+            if (MessageBox.Show(this, _loc.Get("Ui.HandoverWizard.Prompt"), _loc.Get("Ui.HandoverWizard.Title"),
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                return;
+            }
+            await HandoverWizardForm.ShowIfPendingAsync(this, _scopeFactory, _loc);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
+        }
     }
 
     private void ShowSync()
