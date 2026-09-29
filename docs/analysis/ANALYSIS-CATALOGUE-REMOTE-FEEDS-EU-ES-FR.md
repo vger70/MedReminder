@@ -327,7 +327,8 @@ writing `main/data/latest.json` until that release is out of use.
 - **Shared concurrency group** `catalogue-feeds-publish`
   (`cancel-in-progress: false`) so pushes are serialized; each job also
   does `git pull --rebase` before `git push`, with one retry.
-- **Schedule:** days 2–7 like AIFA, staggered (`0 3`, `20 3`, `40 3`,
+- **Schedule:** the same days as AIFA (days 2, 9, 16 and 23 since
+  2026-09-29; days 2–7 when this analysis was written), staggered (`0 3`, `20 3`, `40 3`,
   `0 4`) to spread load and simplify logs. Each script exits early when
   the month is already published; `force` input as for AIFA.
 - **Permissions:** `contents: write` only.
@@ -427,7 +428,7 @@ new one. Per-feed `Enabled` flags let an admin override.
 | EMA changes column names | Parser rejects the snapshot | Script validation fails first, nothing is published |
 | EMA XLSX has multi-line cells | Parser splits records | Collapse `\r\n\t`; re-read the CSV to check column counts |
 | BDPM column order changes | Parser rejects (invariant check) | Script applies the same invariant before publishing |
-| Scraped link layouts change (BDPM, AIFA) | Download fails | Retries, then fallback URL pattern, then a red run on each scheduled day 2–7 (BDPM already moved once: `telechargement.php` is now 404) |
+| Scraped link layouts change (BDPM, AIFA) | Download fails | Retries, then fallback URL pattern, then a red run on each scheduled day (BDPM already moved once: `telechargement.php` is now 404) |
 | EMA sheet dimension wider than the data (observed: 1 024 columns) | Hundreds of empty CSV columns | Trim the header to its last non-empty cell and rows to the header width |
 | Repository growth | Slow clones | Data branch with periodic reset (§4.2) |
 | Four pushes in the same window | Push rejected | Concurrency group + rebase-and-retry |
