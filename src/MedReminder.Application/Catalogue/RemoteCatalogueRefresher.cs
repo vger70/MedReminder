@@ -107,23 +107,24 @@ public sealed class RemoteCatalogueRefresher
             return RemoteCatalogueRefreshOutcome.Failed;
         }
 
-        if (!SnapshotVersion.IsNewer(manifest.Version, state.Version))
+        var label = LabelFor(manifest);
+        if (!SnapshotVersion.IsNewer(label, state.Version))
         {
             _log.LogInformation(
                 "Remote AIFA feed: up to date (local={Local}, remote={Remote}).",
-                state.Version, manifest.Version);
+                state.Version, label);
             return RemoteCatalogueRefreshOutcome.UpToDate;
         }
 
         _log.LogInformation(
             "Remote AIFA feed: newer snapshot available (local={Local}, remote={Remote}).",
-            state.Version ?? "none", manifest.Version);
+            state.Version ?? "none", label);
 
         var target = Path.Combine(staging, manifest.ExpectedFileName);
         try
         {
             Directory.CreateDirectory(staging);
-            return await DownloadAndImportAsync(manifest, state, target, cancellationToken);
+            return await DownloadAndImportAsync(manifest, label, state, target, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -131,12 +132,12 @@ public sealed class RemoteCatalogueRefresher
         }
         catch (InvalidDataException ex)
         {
-            _log.LogWarning(ex, "Remote AIFA feed: snapshot {Version} rejected; catalogue unchanged.", manifest.Version);
+            _log.LogWarning(ex, "Remote AIFA feed: snapshot {Version} rejected; catalogue unchanged.", label);
             return RemoteCatalogueRefreshOutcome.Rejected;
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "Remote AIFA feed: refresh to {Version} failed; catalogue unchanged.", manifest.Version);
+            _log.LogWarning(ex, "Remote AIFA feed: refresh to {Version} failed; catalogue unchanged.", label);
             return RemoteCatalogueRefreshOutcome.Failed;
         }
         finally
@@ -146,8 +147,24 @@ public sealed class RemoteCatalogueRefresher
         }
     }
 
+    // The label stored with the imported rows. The build time in the
+    // suffix lets an archive republished in the same month replace the
+    // earlier one (§11.2). It is used only when the manifest also has a
+    // SHA-256: raw.githubusercontent.com caches files for five minutes,
+    // so right after a republish the new manifest can arrive with the
+    // old archive, and only the hash rejects that pair. Without it the
+    // old content would be stored under the new label and never fixed.
+    public static string LabelFor(CatalogueFeedManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        return manifest.Sha256 is not null && manifest.Generated is { } generated
+            ? SnapshotVersion.Compose(manifest.Version, generated)
+            : manifest.Version;
+    }
+
     private async Task<RemoteCatalogueRefreshOutcome> DownloadAndImportAsync(
         CatalogueFeedManifest manifest,
+        string label,
         CatalogueImportState state,
         string target,
         CancellationToken cancellationToken)
@@ -188,7 +205,7 @@ public sealed class RemoteCatalogueRefresher
         var minimumRowCount = Math.Max(1, state.RowCount / 2);
         stopwatch.Restart();
         var report = await WriteGate.RunExclusiveAsync(
-            ct => _importer.ImportAsync(snapshot, Italy, manifest.Version, minimumRowCount, ct),
+            ct => _importer.ImportAsync(snapshot, Italy, label, minimumRowCount, ct),
             cancellationToken);
 
         _log.LogInformation(

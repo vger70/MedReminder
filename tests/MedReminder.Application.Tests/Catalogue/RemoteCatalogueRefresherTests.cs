@@ -58,6 +58,65 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         importer.Imports.Single().MinimumRowCount.Should().Be(1);
     }
 
+    [Fact]
+    public async Task Imports_an_archive_republished_in_the_same_month_under_a_suffixed_label()
+    {
+        var archive = BuildArchive();
+        var generated = new DateTimeOffset(2026, 10, 5, 3, 0, 12, TimeSpan.Zero);
+        var manifest = Manifest("202610", Sha(archive)) with { Generated = generated };
+        var feed = new FakeFeed(manifest, archive);
+        var importer = new FakeImporter(new CatalogueImportState("202610+20261002T030000Z", 1000));
+
+        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
+        importer.Imports.Single().Version.Should().Be("202610+20261005T030012Z");
+    }
+
+    [Fact]
+    public async Task A_first_import_of_the_month_replaces_the_embedded_snapshot_of_that_month()
+    {
+        var archive = BuildArchive();
+        var manifest = Manifest("202610", Sha(archive)) with { Generated = DateTimeOffset.UnixEpoch.AddYears(56) };
+        var feed = new FakeFeed(manifest, archive);
+        var importer = new FakeImporter(new CatalogueImportState("202610", 1000));
+
+        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
+    }
+
+    [Fact]
+    public async Task Does_not_download_when_the_stored_build_is_the_same_or_later()
+    {
+        var archive = BuildArchive();
+        var manifest = Manifest("202610", Sha(archive)) with
+        {
+            Generated = new DateTimeOffset(2026, 10, 2, 3, 0, 0, TimeSpan.Zero),
+        };
+        var feed = new FakeFeed(manifest, archive);
+        var importer = new FakeImporter(new CatalogueImportState("202610+20261002T030000Z", 1000));
+
+        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.UpToDate);
+        feed.Downloads.Should().Be(0);
+    }
+
+    [Fact]
+    public void LabelFor_uses_the_build_time_only_with_a_hash()
+    {
+        var generated = new DateTimeOffset(2026, 10, 5, 3, 0, 12, TimeSpan.Zero);
+        var hash = new string('a', 64);
+
+        RemoteCatalogueRefresher.LabelFor(Manifest("202610", hash) with { Generated = generated })
+            .Should().Be("202610+20261005T030012Z");
+        RemoteCatalogueRefresher.LabelFor(Manifest("202610") with { Generated = generated })
+            .Should().Be("202610");
+        RemoteCatalogueRefresher.LabelFor(Manifest("202610", hash))
+            .Should().Be("202610");
+    }
+
     [Theory]
     [InlineData("202610")]
     [InlineData("202611")]

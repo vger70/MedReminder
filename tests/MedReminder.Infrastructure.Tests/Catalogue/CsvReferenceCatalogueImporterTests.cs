@@ -277,6 +277,44 @@ public sealed class CsvReferenceCatalogueImporterTests
     }
 
     [Fact]
+    public async Task Embedded_snapshot_of_the_same_month_does_not_replace_a_remote_import()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporter(fixture);
+
+        await using (var remote = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(remote, Italy, "202610+20261002T030000Z", CancellationToken.None);
+        }
+
+        await using var embedded = CatalogueFixtures.BuildAifaSnapshotStream();
+        var report = await importer.ImportAsync(embedded, Italy, "202610", CancellationToken.None);
+
+        report.Inserted.Should().Be(0);
+        report.SnapshotVersion.Should().Be("202610+20261002T030000Z");
+    }
+
+    [Fact]
+    public async Task Republished_remote_snapshot_of_the_same_month_replaces_the_earlier_build()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporter(fixture);
+
+        await using (var first = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(first, Italy, "202610+20261002T030000Z", CancellationToken.None);
+        }
+
+        await using var republished = CatalogueFixtures.BuildAifaSnapshotStream();
+        var report = await importer.ImportAsync(republished, Italy, "202610+20261005T030012Z", CancellationToken.None);
+
+        report.Inserted.Should().Be(168);
+        report.Deleted.Should().Be(168);
+        (await importer.GetImportStateAsync(Italy, CancellationToken.None)).Version
+            .Should().Be("202610+20261005T030012Z");
+    }
+
+    [Fact]
     public async Task Header_only_snapshot_is_rejected_and_keeps_the_existing_rows()
     {
         using var fixture = new SqliteInMemoryFixture();

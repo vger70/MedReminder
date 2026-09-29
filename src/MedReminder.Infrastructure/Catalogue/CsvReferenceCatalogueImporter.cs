@@ -155,7 +155,7 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
         {
             var groupVersion = reader.GetString(0);
             count += reader.GetInt32(1);
-            if (version is null || string.CompareOrdinal(groupVersion, version) > 0)
+            if (version is null || SnapshotVersion.IsNewer(groupVersion, version))
             {
                 version = groupVersion;
             }
