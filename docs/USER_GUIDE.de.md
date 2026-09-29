@@ -1138,6 +1138,12 @@ er verloren, übernimmt das an seiner Stelle gewählte Gerät eine Stunde
 später. Installationen, die vor dieser Version veröffentlicht wurden,
 haben keinen Master, bis ein Administrator einen festlegt.
 
+Der Master prüft jedes Profil, das er hat, auch die nicht geöffneten,
+und sendet deren E-Mail-Erinnerungen an die Empfänger des jeweiligen
+Profils. Auf den anderen Geräten öffnet sich eine Rezeptanfrage im
+E-Mail-Programm, und der Test der E-Mail-Verbindung ist nur auf dem
+Master verfügbar.
+
 Auf dem neuen Master schließt ein Administrator die Übergabe ab: Das
 Fenster öffnet sich von selbst oder über **Extras → Installation… →
 Übergabe abschließen…**. Es zeigt die Einstellungen der Installation,

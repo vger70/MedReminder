@@ -668,6 +668,7 @@ internal sealed class MainForm : MedReminderFormBase
         MedReminder.Application.Notifications.EmailMessage draft;
         string doctorAddress;
         bool smtpConfigured;
+        bool isMaster;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -680,6 +681,9 @@ internal sealed class MainForm : MedReminderFormBase
                 .GetRequiredService<IOptionsMonitor<NotificationSettings>>().CurrentValue.DoctorAddress;
             smtpConfigured = scope.ServiceProvider
                 .GetRequiredService<IOptionsMonitor<SmtpSettings>>().CurrentValue.IsConfigured;
+            // Household step H4c (C5): a device that is not the master
+            // offers the mail client only.
+            isMaster = await scope.ServiceProvider.GetRequiredService<IMasterRole>().SendsEmailAsync(CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -688,7 +692,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
 
         using var dialog = new PrescriptionRequestDialog(
-            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc);
+            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc, isMaster);
         dialog.ShowDialog(this);
     }
 

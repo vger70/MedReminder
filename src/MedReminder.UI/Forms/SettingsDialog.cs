@@ -641,6 +641,20 @@ internal sealed class SettingsDialog : MedReminderFormBase
         // current settings (IOptionsMonitor refreshes after the file
         // is written).
         if (!await SaveSmtpSettingsAsync()) return;
+        // Household step H4c (§7.6): the settings are the installation's
+        // and stay editable here; only the master sends, so only the
+        // master tests the connection.
+        if (_scopes is not null)
+        {
+            await using var scope = _scopes.CreateAsyncScope();
+            if (scope.ServiceProvider.GetService<IMasterRole>() is { } master
+                && !await master.SendsEmailAsync(CancellationToken.None))
+            {
+                MessageBox.Show(this, _loc.Get("Ui.SettingsDialog.Email.NotMaster"),
+                    _loc.Get("Ui.SettingsDialog.Email.TestTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+        }
         button.Enabled = false;
         try
         {

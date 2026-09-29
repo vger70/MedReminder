@@ -1110,5 +1110,7 @@
   "Ui.HandoverWizard.Recover": "Per portare i profili che nessun dispositivo disponibile contiene, digita la passphrase dell'installazione (facoltativo). Un profilo mai sincronizzato non può essere portato.",
   "Ui.HandoverWizard.Confirm": "Conferma",
   "Ui.HandoverWizard.Later": "Più tardi",
-  "Ui.HandoverWizard.Done": "Confermato. Questo dispositivo diventa master quando il master attuale ha ceduto il ruolo. I nuovi profili compaiono al prossimo avvio."
+  "Ui.HandoverWizard.Done": "Confermato. Questo dispositivo diventa master quando il master attuale ha ceduto il ruolo. I nuovi profili compaiono al prossimo avvio.",
+  "Ui.SettingsDialog.Email.NotMaster": "Le impostazioni sono salvate e arrivano a ogni dispositivo. Le email vengono inviate solo dal dispositivo master: verifica la connessione lì (Strumenti → Installazione indica quale dispositivo è).",
+  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Questo dispositivo non è il master, che invia le email dell'installazione: apri la richiesta nel programma di posta per inviarla da qui."
 }

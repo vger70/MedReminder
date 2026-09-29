@@ -1063,6 +1063,12 @@ suo posto subentra un'ora dopo. Le installazioni pubblicate prima di
 questa versione non hanno un master finché un amministratore non ne
 designa uno.
 
+Il master controlla tutti i profili che contiene, anche quelli non
+aperti, e invia i loro promemoria email ai destinatari di ciascun
+profilo. Sugli altri dispositivi la richiesta di ricetta si apre nel
+programma di posta, e la verifica della connessione email è disponibile
+solo sul master.
+
 Sul nuovo master un amministratore completa il passaggio: la finestra
 si apre da sola, oppure da **Strumenti → Installazione… → Completa il
 passaggio…**. Mostra le impostazioni dell'installazione, verifica la

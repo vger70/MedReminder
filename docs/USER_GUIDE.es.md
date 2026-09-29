@@ -1096,6 +1096,12 @@ se pierde, el dispositivo elegido en su lugar toma el relevo una hora
 después. Las instalaciones publicadas antes de esta versión no tienen
 principal hasta que un administrador designe uno.
 
+El principal revisa todos los perfiles que tiene, también los que no
+están abiertos, y envía sus recordatorios por correo a los
+destinatarios de cada perfil. En los demás dispositivos, la solicitud de
+receta se abre en el programa de correo, y la prueba de la conexión de
+correo solo está disponible en el principal.
+
 En el nuevo principal, un administrador completa el relevo: la ventana
 se abre sola, o desde **Herramientas → Instalación… → Completar el
 relevo…**. Muestra la configuración de la instalación, prueba la
