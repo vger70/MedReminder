@@ -36,6 +36,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<UpdateGeneralSettings>();
         // Step H3a: replication of the household.
         services.AddScoped<HouseholdProjection>();
+        services.AddScoped<HouseholdKeyring>();
         services.AddScoped<HouseholdSync>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.

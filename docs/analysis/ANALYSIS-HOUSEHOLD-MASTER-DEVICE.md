@@ -157,11 +157,13 @@ Mechanism:
    key, granted again to the devices that keep P. D keeps what it had
    already downloaded and cannot read what is written afterwards (same
    limit as B.1 §6.2).
-4. **Recovery key.** A random recovery key, distinct from the household
-   key, is wrapped with the household passphrase
+4. **Recovery key.** A recovery key pair, distinct from the household
+   key: the public key is household state (`RecoveryKeyPublished`), the
+   private key is wrapped with the household passphrase
    (`recovery.<v>.wrap`, §5.1). Every profile key is also recorded
-   wrapped with the recovery key (`ProfileKeyEscrowed`). Devices do not
-   store the recovery key. Whoever types the household passphrase can
+   wrapped for the recovery public key (`ProfileKeyEscrowed`), so any
+   device can escrow a new profile group without the passphrase
+   (revision 7). Devices do not store the recovery private key. Whoever types the household passphrase can
    therefore open every profile, which is what an admin needs on a new
    device when no other device is at hand (§6.3 page 5), and what
    recovers the data when every device is lost. Without it, losing the
@@ -598,8 +600,8 @@ Step H3 is split into four PRs, each merged into
 | Sub-step | Content |
 |---|---|
 | H3a | Household group on a storage: creation with the household passphrase, a dedicated engine (publish, pull in causal order, apply, device records) reusing the envelope and header of `SYNC-FORMAT.md`, the household image as the full operation log (no checkpoints: the log stays small, §5.5), projection of remote changes into `profiles.json` and the settings files, the SMTP password carried in clear only inside the encrypted segment |
-| H3b | Device key pairs, `ProfileKeyGranted` / `Revoked` / `Escrowed`, recovery key; adoption of existing profile groups (`HouseholdLinked`, profile operation schema 5) |
-| H3c | `mrpair2` offers with the profile selection; the join-installation use case (household, then each granted profile group, staged) |
+| H3b | Device key pairs, `ProfileKeyGranted` / `Revoked` / `Escrowed`, recovery key; adoption of existing profile groups (grant to self, escrow) |
+| H3c | `mrpair2` offers with the profile selection; the join-installation use case (household, then each granted profile group, staged); `HouseholdLinked` in adopted profile groups (profile operation schema 5) to detect two households claiming one group (§11) |
 | H3d | UI: first-run choice and join wizard (§6), Devices → Add a device, household sync in the background service, Tools → Sync… admin-only |
 
 H0 and H1 can ship before any household code. H1 reduces, not
@@ -716,3 +718,4 @@ developer-days.
 | 4 | Review against the code: recovery key escrow (without it, losing every device lost the profiles, and the passphrase path of the wizard could not open any profile); offer file carries the profile keys (the new device has no public key when the code is made); one activation rule with clock margin; permission matrix aligned with today's gating (auto-start admin-only, update check open); forged-key residual risk; PIN hash brute force; H1 reduces duplicates, does not remove them |
 | 5 | Branching policy (§13): integration branch `feature/master-slave`; decisions D-16, D-17 |
 | 6 | D-18 (cloud-backup passphrase asked in the handover wizard); H3 split into H3a–H3d (§13) |
+| 7 | Recovery key as a key pair (§4.4 point 4), so escrow needs no passphrase; `HouseholdLinked` moved from H3b to H3c |

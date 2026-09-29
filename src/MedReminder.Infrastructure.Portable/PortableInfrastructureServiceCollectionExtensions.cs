@@ -89,6 +89,10 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.TryAddSingleton<IHouseholdKeyStore>(sp => new ProtectedHouseholdKeyStore(
             sp.GetRequiredService<ICredentialProtector>(),
             Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
+        // Step H3b: this device's key pair for the household.
+        services.TryAddSingleton<IDeviceKeyStore>(sp => new ProtectedDeviceKeyStore(
+            sp.GetRequiredService<ICredentialProtector>(),
+            Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
 
         return services;
     }

@@ -18,6 +18,11 @@ public static class HouseholdOperationCodec
         ("ProfilePinChanged", typeof(ProfilePinChanged)),
         ("ProfileRemoved", typeof(ProfileRemoved)),
         ("HouseholdSettingChanged", typeof(HouseholdSettingChanged)),
+        ("DeviceKeyPublished", typeof(DeviceKeyPublished)),
+        ("RecoveryKeyPublished", typeof(RecoveryKeyPublished)),
+        ("ProfileKeyGranted", typeof(ProfileKeyGranted)),
+        ("ProfileKeyRevoked", typeof(ProfileKeyRevoked)),
+        ("ProfileKeyEscrowed", typeof(ProfileKeyEscrowed)),
     ];
 
     private static readonly Dictionary<Type, string> NameByType =

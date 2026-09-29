@@ -66,6 +66,29 @@ public class HouseholdRegistersTests
     }
 
     [Fact]
+    public void Keys_hold_device_keys_grants_escrows_and_revocations()
+    {
+        var group = Guid.Parse("0000000000000000000000000000000c");
+        var versions = Versions(
+            (new DeviceKeyPublished(DeviceA, "keyA"), new HybridTimestamp(1, 0, DeviceA)),
+            (new RecoveryKeyPublished(1, "recovery"), new HybridTimestamp(1, 1, DeviceA)),
+            (new ProfileKeyGranted("p", DeviceA, group, 3, "1.w.a"), new HybridTimestamp(2, 0, DeviceA)),
+            (new ProfileKeyGranted("p", DeviceB, group, 3, "1.w.b"), new HybridTimestamp(2, 1, DeviceA)),
+            (new ProfileKeyRevoked("p", DeviceB), new HybridTimestamp(3, 0, DeviceA)),
+            (new ProfileKeyEscrowed("p", group, 3, "1.w.e"), new HybridTimestamp(2, 2, DeviceA))).ToList();
+
+        var keys = HouseholdRegisters.Keys(versions);
+
+        keys.DevicePublicKeys.Should().Equal(new Dictionary<Guid, string> { [DeviceA] = "keyA" });
+        keys.RecoveryPublicKey.Should().Be(new HouseholdWrappedKey(Guid.Empty, 1, "recovery"));
+        keys.Grants.Keys.Should().Equal(("p", DeviceA));
+        keys.Grants[("p", DeviceA)].Should().Be(new HouseholdWrappedKey(group, 3, "1.w.a"));
+        keys.Escrows["p"].Should().Be(new HouseholdWrappedKey(group, 3, "1.w.e"));
+        HouseholdRegisters.Profiles(versions).Should().BeEmpty();
+        HouseholdRegisters.Settings(versions).Should().BeEmpty();
+    }
+
+    [Fact]
     public void A_pin_value_needs_hash_salt_and_iterations()
     {
         HouseholdRegisters.PinValue("h", "s", 100_000).Should().Be("100000:s:h");

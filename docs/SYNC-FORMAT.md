@@ -383,6 +383,7 @@ of its own next to the profile groups, under the same sync root.
 <householdId>/
   household.json                               cleartext, written once
   key.<keyVersion>.wrap                        household key, wrapped with the household passphrase (§4.1)
+  recovery.<keyVersion>.wrap                   recovery private key, wrapped with the household passphrase
   genesis/<generation>.mrg                     household image
   ops/<generation>/<deviceId>/<seq>.mrs        household segments
   devices/<deviceId>.mrd                       device record (§5.2)
@@ -425,6 +426,11 @@ published, with empty dependencies. Header `contentVersion` is 1.
 | `ProfilePinChanged` | `hash`, `salt`, `iterations` (PBKDF2-HMAC-SHA256, base64; `null`, `null`, `0` when cleared) | last writer wins |
 | `ProfileRemoved` | — | tombstone: the profile never comes back |
 | `HouseholdSettingChanged` | `setting`, `value` | last writer wins per setting; `profileId` empty |
+| `DeviceKeyPublished` | `deviceId`, `publicKey` | last writer wins; `profileId` is `device:<deviceId>` |
+| `RecoveryKeyPublished` | `keyVersion`, `publicKey` | last writer wins; `profileId` is `recovery` |
+| `ProfileKeyGranted` | `deviceId`, `groupId`, `keyVersion`, `wrappedKey` | last writer wins per profile and device |
+| `ProfileKeyRevoked` | `deviceId` | clears the grant of that device |
+| `ProfileKeyEscrowed` | `groupId`, `keyVersion`, `wrappedKey` | last writer wins per profile |
 
 Settings: `Smtp.Host`, `Smtp.Port`, `Smtp.UseStartTls`,
 `Smtp.Username`, `Smtp.FromAddress`, `Smtp.FromDisplayName`,
@@ -437,3 +443,25 @@ payload also carries `profileId`.
 `Smtp.Password` is the only secret: it is in clear inside the encrypted
 segment and nowhere else; each device keeps it protected with its own
 credential protector.
+
+### 9.4 Keys
+
+Public keys are the SubjectPublicKeyInfo of an ECDH P-256 key, base64.
+A device publishes its own; the recovery public key is published with
+the household, its private key (PKCS#8) is in `recovery.<v>.wrap`: the
+key wrap of §4.1 with associated data
+`MedReminder.Sync.Recovery|<householdId N format>|<v>`.
+
+A wrapped key is `1.<ephemeral public key>.<nonce>.<tag>.<ciphertext>`,
+each part base64url without padding: a fresh ephemeral P-256 key,
+ECDH with the recipient's public key, HKDF-SHA256 (salt: the ephemeral
+public key, info: the purpose) to a 32-byte key, AES-256-GCM with the
+purpose as associated data. Purposes:
+
+| Use | Purpose |
+|---|---|
+| Grant to a device | `MedReminder.Household.Grant|<groupId N>|<keyVersion>|<deviceId N>` |
+| Escrow for the recovery key | `MedReminder.Household.Escrow|<groupId N>|<keyVersion>` |
+
+The group key of a profile is thus readable by the devices it was
+granted to, and by whoever types the household passphrase.

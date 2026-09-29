@@ -52,6 +52,39 @@ public sealed record HouseholdSettingChanged(
     string Setting,
     string? Value) : HouseholdOperationBody(HouseholdRegisters.Installation);
 
+// Step H3b: keys (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §4.4).
+// Public keys are SubjectPublicKeyInfo of an ECDH P-256 key, base64. A
+// wrapped key is the output of HouseholdKeyWrap: only the holder of the
+// matching private key can open it.
+
+// A device's public key, for the grants made to it.
+public sealed record DeviceKeyPublished(Guid DeviceId, string PublicKey)
+    : HouseholdOperationBody(HouseholdRegisters.DeviceEntity(DeviceId));
+
+// The recovery public key; its private key is in recovery.<v>.wrap,
+// wrapped with the household passphrase.
+public sealed record RecoveryKeyPublished(int KeyVersion, string PublicKey)
+    : HouseholdOperationBody(HouseholdRegisters.Recovery);
+
+// The key of the profile's sync group, wrapped for one device.
+public sealed record ProfileKeyGranted(
+    string ProfileId,
+    Guid DeviceId,
+    Guid GroupId,
+    int KeyVersion,
+    string WrappedKey) : HouseholdOperationBody(ProfileId);
+
+// The device no longer receives the profile's key; a rotation of the
+// group key follows (step H5).
+public sealed record ProfileKeyRevoked(string ProfileId, Guid DeviceId) : HouseholdOperationBody(ProfileId);
+
+// The key of the profile's sync group, wrapped for the recovery key.
+public sealed record ProfileKeyEscrowed(
+    string ProfileId,
+    Guid GroupId,
+    int KeyVersion,
+    string WrappedKey) : HouseholdOperationBody(ProfileId);
+
 // Names of the installation settings (HouseholdSettingChanged.Setting).
 // Part of the format. Values are invariant text: booleans "true" /
 // "false", integers in decimal, the cloud provider by enum member name.

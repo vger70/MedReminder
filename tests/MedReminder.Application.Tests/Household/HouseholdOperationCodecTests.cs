@@ -18,6 +18,12 @@ public class HouseholdOperationCodecTests
         new ProfileRemoved("default"),
         new HouseholdSettingChanged(HouseholdSetting.SmtpHost, "smtp.example.org"),
         new HouseholdSettingChanged(HouseholdSetting.SmtpPassword, null),
+        new DeviceKeyPublished(Guid.Parse("0a0a0a0a000000000000000000000002"), "cHVibGlj"),
+        new RecoveryKeyPublished(1, "cmVjb3Zlcnk="),
+        new ProfileKeyGranted("default", Guid.Parse("0a0a0a0a000000000000000000000002"),
+            Guid.Parse("0a0a0a0a000000000000000000000003"), 1, "1.a.b.c.d"),
+        new ProfileKeyRevoked("default", Guid.Parse("0a0a0a0a000000000000000000000002")),
+        new ProfileKeyEscrowed("default", Guid.Parse("0a0a0a0a000000000000000000000003"), 1, "1.a.b.c.d"),
     };
 
     [Theory]
