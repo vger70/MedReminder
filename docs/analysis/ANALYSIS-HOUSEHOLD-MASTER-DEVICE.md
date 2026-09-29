@@ -6,8 +6,8 @@ Design document, **prior** to implementation. It extends B.1
 as master.
 
 Status on 2026-09-29: revision 15 (§18 lists the revisions). Steps H0
-to H5a are implemented; H5b is in progress, then the merge into `main`
-(D-16). Manual tests:
+to H5 are implemented. The merge into `main` (D-16, PR #129) waits for
+the manual tests. Manual tests:
 `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`.
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the

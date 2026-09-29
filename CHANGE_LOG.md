@@ -30,6 +30,30 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #129 — Household of devices with a master device (H1–H5)
+
+Link: [vger70/MedReminder#129](https://github.com/vger70/MedReminder/pull/129)
+Branch: `feature/master-slave` → `main`
+
+**Status:** draft, on hold until the manual tests pass
+(`docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`).
+
+### Added
+
+- The final merge of the household feature: PRs #116–#128 listed
+  below. An installation is shared between devices (profiles, roles,
+  PINs, installation settings), each device holds only the profiles an
+  administrator gives it, one master device sends email and runs the
+  cloud backup, and a device can be removed.
+
+### Changed
+
+- Tools → Sync… is shown to administrators only.
+- Profile operation schemas 4 and 5: every device of a sync group needs
+  this version.
+
+---
+
 ## PR #128 — Rotate the profile keys of a removed device (household H5b)
 
 Link: [vger70/MedReminder#128](https://github.com/vger70/MedReminder/pull/128)
