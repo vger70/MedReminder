@@ -2,8 +2,8 @@ name: Download AIFA CSV
 
 on:
   schedule:
-    # Daily from the 2nd to the 7th: a run that fails because AIFA is
-    # down is retried the next day. Once the month's version is
+    # On the 2nd, 9th, 16th and 23rd: a run that fails because AIFA is
+    # down is retried a week later. Once the month's version is
     # published, scripts/download_aifa.py exits without changes.
     - cron: '0 3 2,9,16,23 * *'
   workflow_dispatch:

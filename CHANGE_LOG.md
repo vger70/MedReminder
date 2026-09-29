@@ -30,10 +30,29 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #TBD — Implementation prompt for the EU, ES and FR catalogue feeds
+
+Link: pending
+Branch: `claude/aifa-catalog-auto-update-jrkles`
+
+### Docs
+
+- `docs/prompt/PROMPT-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`: step-by-step
+  briefing to implement the EMA, AEMPS and ANSM feeds from
+  `ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md` (client generalisation,
+  shared script module, one workflow per source, docs).
+- The AIFA workflow comment, `download_aifa.py`, `CATALOGUE-DATA.md` and
+  both feed analyses describe the current schedule (days 2, 9, 16, 23)
+  instead of the former days 2–7.
+
+---
+
 ## PR #133 — Remove the EMA/BDPM probe workflow and record #131 as merged
 
 Link: [vger70/MedReminder#133](https://github.com/vger70/MedReminder/pull/133)
 Branch: `claude/aifa-catalog-auto-update-jrkles`
+
+**Status:** merged (2026-09-29)
 
 ### Build
 

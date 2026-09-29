@@ -28,8 +28,8 @@ MANIFEST_PATH = f"{DATA_DIR}/latest.json"
 VERSION = f"{RUN_TIME:%Y%m}"
 ZIP_NAME = f"aifa-{VERSION}.zip"
 
-# The workflow runs daily from the 2nd to the 7th of the month so that
-# an AIFA outage on one day is retried the next. Once this month's
+# The workflow runs on the 2nd, 9th, 16th and 23rd of the month so that
+# an AIFA outage on one run is retried a week later. Once this month's
 # version is published the remaining runs stop here, so each month is
 # published once. FORCE_REFRESH=true (workflow_dispatch input) rebuilds
 # the month; clients re-import it because the new "generated" and

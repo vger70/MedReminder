@@ -510,8 +510,9 @@ resolved in §11.2.
   republish a client can get the new manifest with the old archive; the
   hash mismatch rejects that pair and the next start retries. Without a
   hash the old content would be stored under the new label for good.
-- The workflow publishes once per month (first successful run from
-  day 2 to day 7); a republish is a manual run with `force`.
+- The workflow publishes once per month (first successful run of the
+  month; the schedule was days 2–7, then days 2, 9, 16 and 23 since
+  2026-09-29); a republish is a manual run with `force`.
 - Still not possible: rolling back to an older build. A bad month is
   corrected by publishing good data, which carries a later `generated`.
 
