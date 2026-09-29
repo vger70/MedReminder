@@ -28,11 +28,11 @@ public class CatalogueFeedSelectionTests
     }
 
     [Theory]
-    [InlineData("IT", "IT")]
-    [InlineData("ES", "ES")]
-    [InlineData("FR", "FR")]
-    [InlineData("EU", "")]
-    public void The_defaults_enable_the_published_feeds(string reference, string expected)
+    [InlineData("IT", "IT,EU")]
+    [InlineData("ES", "EU,ES")]
+    [InlineData("FR", "EU,FR")]
+    [InlineData("EU", "EU")]
+    public void The_defaults_enable_every_published_feed(string reference, string expected)
     {
         var selected = CatalogueFeedSelection.Select(reference, new CatalogueFeedOptions());
 
@@ -61,7 +61,7 @@ public class CatalogueFeedSelectionTests
     public void Feed_keys_are_case_insensitive()
     {
         var options = new CatalogueFeedOptions();
-        options.Feeds["es"].Enabled = true;
+        options.Feeds["eu"].Enabled = false;
 
         Codes(CatalogueFeedSelection.Select("ES", options)).Should().Be("ES");
     }

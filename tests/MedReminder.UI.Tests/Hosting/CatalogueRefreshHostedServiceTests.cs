@@ -61,7 +61,7 @@ public sealed class CatalogueRefreshHostedServiceTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Catalogue:RemoteFeed:Enabled"] = "true",
-                ["Catalogue:RemoteFeed:Feeds:ES:Enabled"] = "true",
+                ["Catalogue:RemoteFeed:Feeds:EU:Enabled"] = "false",
                 ["Catalogue:RemoteFeed:Feeds:fr:MaxDownloadBytes"] = "1024",
             })
             .Build();

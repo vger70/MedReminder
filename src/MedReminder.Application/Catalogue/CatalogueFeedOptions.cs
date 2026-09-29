@@ -26,7 +26,7 @@ public sealed class CatalogueFeedOptions
     public Dictionary<string, CatalogueFeedSourceOptions> Feeds { get; set; } = new(StringComparer.OrdinalIgnoreCase)
     {
         ["IT"] = new() { Enabled = true, MaxDownloadBytes = 64 * MiB },
-        ["EU"] = new() { Enabled = false, MaxDownloadBytes = 16 * MiB },
+        ["EU"] = new() { Enabled = true, MaxDownloadBytes = 16 * MiB },
         ["ES"] = new() { Enabled = true, MaxDownloadBytes = 16 * MiB },
         ["FR"] = new() { Enabled = true, MaxDownloadBytes = 16 * MiB },
     };
