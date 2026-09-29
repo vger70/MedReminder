@@ -30,6 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #128 — Rotate the profile keys of a removed device (household H5b)
+
+Link: [vger70/MedReminder#128](https://github.com/vger70/MedReminder/pull/128)
+Branch: `claude/household-h5b-profile-rotation` → `feature/master-slave`
+
+### Added
+
+- Removing a device also changes the keys of the profiles it held; the
+  other devices take the new keys from the installation without typing
+  anything (at start, or in the master's background checks; an open
+  profile asks to restart).
+- A device that does not hold every profile of the device to remove
+  refuses the removal and names the missing profiles.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`, analysis revision 15,
+  `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md` (H5b section).
+
+---
+
 ## PR #127 — Remove a device from the installation (household H5a)
 
 Link: [vger70/MedReminder#127](https://github.com/vger70/MedReminder/pull/127)

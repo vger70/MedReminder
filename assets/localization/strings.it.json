@@ -1129,5 +1129,7 @@
   "Ui.HouseholdDialog.NewKey.PassphraseHint": "Inserisci la nuova passphrase dell'installazione.",
   "Ui.HouseholdDialog.NewKey.CodeHint": "Su ogni altro dispositivo apri Strumenti → Installazione → Inserisci la nuova chiave → Con un codice, poi inserisci questo codice.",
   "Ui.HouseholdDialog.NewKey.Done": "Fatto: questo dispositivo sincronizza di nuovo l'installazione. Le modifiche fatte qui nel frattempo sono conservate.",
-  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "La passphrase non apre la nuova chiave dell'installazione."
+  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "La passphrase non apre la nuova chiave dell'installazione.",
+  "Ui.HouseholdDialog.RemoveDevice.NotHeld": "Questo dispositivo non contiene tutti i profili del dispositivo da rimuovere ({0}): le loro chiavi non potrebbero essere cambiate. Rimuovilo dal dispositivo master, che contiene tutti i profili.",
+  "Ui.MainForm.RotatedKey.Prompt": "Un dispositivo è stato rimosso dall'installazione e questo profilo ha una nuova chiave. MedReminder la prende al riavvio; fino ad allora questo profilo non si sincronizza. Riavviare ora?"
 }

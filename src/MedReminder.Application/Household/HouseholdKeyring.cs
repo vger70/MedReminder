@@ -131,6 +131,31 @@ public sealed class HouseholdKeyring
         await GrantCoreAsync(profileId, identity.DeviceId, group, cancellationToken);
     }
 
+    // Step H5b: grants a given group key (a new key after a rotation) to
+    // another device. The caller zeroes the key.
+    public Task GrantKeyAsync(string profileId, Guid deviceId, ProfileGroupKey group, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        return GrantCoreAsync(profileId, deviceId, group, cancellationToken);
+    }
+
+    // Step H5b: the group key granted to this device for a profile synced
+    // here, when it is newer than the key this device uses: the profile's
+    // group was rotated after a device removal. Null otherwise. The caller
+    // zeroes the key.
+    public async Task<ProfileGroupKey?> NewerGrantAsync(string profileId, Guid groupId, int keyVersion,
+        CancellationToken cancellationToken)
+    {
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        var keys = await _household.KeysAsync(cancellationToken);
+        if (keys.Grants.GetValueOrDefault((profileId, identity.DeviceId)) is not { } grant
+            || grant.GroupId != groupId || grant.KeyVersion <= keyVersion)
+        {
+            return null;
+        }
+        return await OpenGrantAsync(profileId, cancellationToken);
+    }
+
     private async Task GrantCoreAsync(string profileId, Guid deviceId, ProfileGroupKey group, CancellationToken ct)
     {
         var keys = await _household.KeysAsync(ct);

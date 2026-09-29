@@ -1133,5 +1133,7 @@
   "Ui.HouseholdDialog.NewKey.PassphraseHint": "Enter the new installation passphrase.",
   "Ui.HouseholdDialog.NewKey.CodeHint": "On each other device, open Tools → Installation → Enter the new key → With a code, then enter this code.",
   "Ui.HouseholdDialog.NewKey.Done": "Done: this device syncs the installation again. Changes made here meanwhile are kept.",
-  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "The passphrase does not open the new installation key."
+  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "The passphrase does not open the new installation key.",
+  "Ui.HouseholdDialog.RemoveDevice.NotHeld": "This device does not hold every profile of the device to remove ({0}): their keys could not be changed. Remove it from the master device, which holds every profile.",
+  "Ui.MainForm.RotatedKey.Prompt": "A device was removed from the installation and this profile has a new key. MedReminder takes it when it restarts; until then this profile does not sync. Restart now?"
 }

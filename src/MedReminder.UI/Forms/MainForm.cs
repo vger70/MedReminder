@@ -785,6 +785,17 @@ internal sealed class MainForm : MedReminderFormBase
         };
         status.RemoteChangesApplied += handler;
         FormClosed += (_, _) => status.RemoteChangesApplied -= handler;
+
+        // Household step H5b: the profile's group was rotated after a device
+        // removal; the new key is taken at the next start, before the
+        // database is used.
+        EventHandler rotated = (_, _) =>
+        {
+            if (IsDisposed || !IsHandleCreated || !status.NeedsNewKey || _rotatedKeyAsked) return;
+            BeginInvoke(new Func<Task>(OfferRestartForRotatedKeyAsync));
+        };
+        status.Changed += rotated;
+        FormClosed += (_, _) => status.Changed -= rotated;
     }
 
     // Household step H4b (§7.2 step 3): when this device is elected master,
@@ -834,6 +845,32 @@ internal sealed class MainForm : MedReminderFormBase
                 return;
             }
             await HandoverWizardForm.ShowIfPendingAsync(this, _scopeFactory, _loc);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
+        }
+    }
+
+    private bool _rotatedKeyAsked;
+
+    private async Task OfferRestartForRotatedKeyAsync()
+    {
+        if (_rotatedKeyAsked) return;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            if (scope.ServiceProvider.GetRequiredService<ISyncSettingsStore>().Load() is not { } settings) return;
+            var key = await scope.ServiceProvider.GetRequiredService<MedReminder.Application.Household.HouseholdKeyring>()
+                .NewerGrantAsync(_currentProfile.Id, settings.GroupId, settings.KeyVersion, CancellationToken.None);
+            if (key is null) return;
+            System.Security.Cryptography.CryptographicOperations.ZeroMemory(key.Key);
+            _rotatedKeyAsked = true;
+            if (MessageBox.Show(this, _loc.Get("Ui.MainForm.RotatedKey.Prompt"), _loc.Get("Ui.HouseholdDialog.Title"),
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                _restarter.RestartAndExit(["--profile", _currentProfile.Id]);
+            }
         }
         catch (Exception ex)
         {

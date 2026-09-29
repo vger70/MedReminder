@@ -132,6 +132,7 @@ internal static class Program
 
             using var host = BuildHost(args, current);
             InitializeDatabase(host);
+            AdoptRotatedProfileKey(host, current);
             ReconcileHousehold(host);
             host.StartAsync().GetAwaiter().GetResult();
 
@@ -436,6 +437,8 @@ internal static class Program
         builder.Services.AddHostedService(sp => sp.GetRequiredService<HouseholdHostedService>());
         // Step H4c: the master checks every profile of this device.
         builder.Services.AddHostedService<MasterProfilesHostedService>();
+        // Step H5b: the rotation of a profile's group after a device removal.
+        builder.Services.AddScoped<IProfileGroupRotation, ProfileGroupRotation>();
 
         var catalogueEnabledRaw = builder.Configuration[
             MedReminder.Application.Catalogue.CatalogueFeatureOptions.SectionName + ":Enabled"];
@@ -461,6 +464,23 @@ internal static class Program
         using var scope = host.Services.CreateScope();
         var init = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
         init.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    // Household step H5b: before anything uses the open profile's database,
+    // a group key rotated after a device removal is taken from the household
+    // grant. A failure is logged; the sync window shows the key is needed.
+    private static void AdoptRotatedProfileKey(IHost host, ICurrentProfile current)
+    {
+        try
+        {
+            ProfileServices.AdoptRotatedKeyAsync(host.Services, current,
+                host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("MedReminder.Household"),
+                CancellationToken.None).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "The new group key of the profile could not be taken from the household.");
+        }
     }
 
     // Household step H2: records in the local household what profiles.json
