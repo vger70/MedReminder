@@ -1063,6 +1063,15 @@ suo posto subentra un'ora dopo. Le installazioni pubblicate prima di
 questa versione non hanno un master finché un amministratore non ne
 designa uno.
 
+Sul nuovo master un amministratore completa il passaggio: la finestra
+si apre da sola, oppure da **Strumenti → Installazione… → Completa il
+passaggio…**. Mostra le impostazioni dell'installazione, verifica la
+connessione email da quel dispositivo, esegue l'accesso allo storage del
+backup cloud e chiede di nuovo la passphrase del backup cloud (non viene
+mai copiata tra dispositivi), poi scarica i profili che servono al nuovo
+master. La passphrase dell'installazione porta i profili che nessun
+dispositivo disponibile contiene.
+
 ## Controlla ora
 
 Il monitor gira automaticamente ogni 30 minuti (configurabile in

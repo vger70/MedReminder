@@ -1138,6 +1138,15 @@ er verloren, übernimmt das an seiner Stelle gewählte Gerät eine Stunde
 später. Installationen, die vor dieser Version veröffentlicht wurden,
 haben keinen Master, bis ein Administrator einen festlegt.
 
+Auf dem neuen Master schließt ein Administrator die Übergabe ab: Das
+Fenster öffnet sich von selbst oder über **Extras → Installation… →
+Übergabe abschließen…**. Es zeigt die Einstellungen der Installation,
+testet die E-Mail-Verbindung von diesem Gerät, meldet sich beim
+Speicher der Cloud-Sicherung an und fragt erneut nach der Passphrase der
+Cloud-Sicherung (sie wird nie zwischen Geräten kopiert) und lädt dann
+die Profile herunter, die der neue Master braucht. Die Passphrase der
+Installation holt die Profile, die kein verfügbares Gerät hat.
+
 ## Jetzt prüfen
 
 Der Monitor läuft automatisch alle 30 Minuten (einstellbar in

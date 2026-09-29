@@ -41,10 +41,12 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private readonly Button _publish;
     private readonly Button _join;
     private readonly Button _syncNow;
+    private readonly Button _handover;
     private readonly Button _addDevice;
     private readonly Button _makeMaster;
     // Step H4a: device names from the last device list, for the master line.
     private Dictionary<Guid, string> _deviceNames = [];
+    private Dictionary<Guid, DateTimeOffset> _lastSeen = [];
     private MasterView? _master;
     private readonly ListView _devices;
     private readonly Button _close;
@@ -80,8 +82,10 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         _publish = Action("Ui.HouseholdDialog.Publish", PublishAsync);
         _join = Action("Ui.HouseholdDialog.Join", JoinAsync);
         _syncNow = Action("Ui.SyncDialog.SyncNow", SyncNowAsync);
+        _handover = Action("Ui.HouseholdDialog.Handover", HandoverAsync);
+        _handover.Visible = false;
         var statusButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
-        statusButtons.Controls.AddRange([_syncNow, _publish, _join]);
+        statusButtons.Controls.AddRange([_syncNow, _handover, _publish, _join]);
         statusPage.Controls.Add(_statusText);
         statusPage.Controls.Add(statusButtons);
 
@@ -177,11 +181,14 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             ? new HouseholdLinkStatus(HouseholdLinkState.None, null)
             : await scope.ServiceProvider.GetRequiredService<HouseholdLinks>().StatusAsync(CancellationToken.None);
         _master = await scope.ServiceProvider.GetRequiredService<HouseholdMasterRole>().DescribeAsync(CancellationToken.None);
+        var handover = _setup ? null
+            : await scope.ServiceProvider.GetRequiredService<MasterHandover>().PendingAsync(CancellationToken.None);
         if (IsDisposed) return;
 
         _publish.Visible = !IsPublished && !_setup;
         _join.Visible = !IsPublished;
         _syncNow.Visible = IsPublished;
+        _handover.Visible = handover is not null;
         _addDevice.Enabled = IsPublished;
 
         var lines = new List<string>();
@@ -233,8 +240,22 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             : _loc.Get("Ui.HouseholdDialog.Master.Other", NameOf(election.DeviceId));
     }
 
+    // §7.3: the active master (or the one still handing over) has not been
+    // seen for longer than the lease: the election is a takeover.
+    private bool TakeoverFor()
+    {
+        var current = _master?.Master.ActiveDevice ?? _master?.Master.OutgoingDevice;
+        return current is { } device && _lastSeen.TryGetValue(device, out var seen)
+            && DateTimeOffset.UtcNow - seen > MasterRules.DefaultLease;
+    }
+
     private string NameOf(Guid device)
         => _deviceNames.TryGetValue(device, out var name) ? name : device.ToString("N")[..8];
+
+    private async Task HandoverAsync()
+    {
+        if (await HandoverWizardForm.ShowIfPendingAsync(this, _scopes, _loc)) await RefreshAllAsync();
+    }
 
     private async Task MakeMasterAsync()
     {
@@ -249,7 +270,8 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         {
             await using (var scope = _scopes.CreateAsyncScope())
             {
-                await scope.ServiceProvider.GetRequiredService<ElectMaster>().ExecuteAsync(device, CancellationToken.None);
+                await scope.ServiceProvider.GetRequiredService<ElectMaster>().ExecuteAsync(device, CancellationToken.None,
+                    TakeoverFor() ? MasterElectionKind.Takeover : MasterElectionKind.Planned);
             }
             await _household.RunNowAsync();
         }
@@ -269,6 +291,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             await using var scope = _scopes.CreateAsyncScope();
             var records = await scope.ServiceProvider.GetRequiredService<HouseholdSync>().ListDevicesAsync(CancellationToken.None);
             _deviceNames = records.ToDictionary(r => r.DeviceId, r => r.Name);
+            _lastSeen = records.ToDictionary(r => r.DeviceId, r => r.LastSeen);
             foreach (var record in records)
             {
                 var name = record.DeviceId == _identity?.DeviceId

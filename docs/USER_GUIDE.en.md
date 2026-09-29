@@ -1007,6 +1007,14 @@ for 24 hours stops sending email; if it is lost, the device elected in
 its place takes over one hour after that. Installations published before
 this version have no master until an administrator makes one.
 
+On the new master, an administrator completes the handover: the window
+opens by itself, or from **Tools → Installation… → Complete the
+handover…**. It shows the installation's settings, tests the email
+connection from that device, signs in to the cloud backup storage and
+asks the cloud backup passphrase again (it is never copied between
+devices), then downloads the profiles the new master needs. The
+installation passphrase brings the profiles no device at hand holds.
+
 ## Check now
 
 The monitor runs automatically every 30 minutes (configurable in

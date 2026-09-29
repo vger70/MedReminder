@@ -277,6 +277,10 @@ public sealed class HouseholdSyncTests : IDisposable
         await a.Sync.RunAsync(CancellationToken.None);
         (await a.Master.SendsEmailAsync(CancellationToken.None)).Should().BeFalse("A stops as soon as it applies the election");
         await b.Sync.RunAsync(CancellationToken.None);
+        (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeFalse("step H4b: an admin confirms on B first");
+
+        await b.ConfirmHandoverAsync();
+        await b.Sync.RunAsync(CancellationToken.None);
 
         (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeTrue();
         await a.Sync.RunAsync(CancellationToken.None);
@@ -297,6 +301,7 @@ public sealed class HouseholdSyncTests : IDisposable
         (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeFalse("A was seen a moment ago");
 
         b.Clock.Shift = TimeSpan.FromHours(26);
+        await b.ConfirmHandoverAsync();
         await b.Sync.RunAsync(CancellationToken.None);
         (await b.Master.SendsEmailAsync(CancellationToken.None)).Should().BeTrue();
 
@@ -305,6 +310,50 @@ public sealed class HouseholdSyncTests : IDisposable
         var view = await a.Master.DescribeAsync(CancellationToken.None);
         view.SendsEmail.Should().BeFalse();
         view.LeaseExpired.Should().BeTrue();
+    }
+
+    // Step H4b: the election grants what the electing device holds; the
+    // handover lists what the elected device has, gets, or must recover.
+    [Fact]
+    public async Task An_election_grants_the_profiles_the_electing_device_holds()
+    {
+        var (a, b) = await PublishedWithASyncedProfileAsync();
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        (await a.Elect().ExecuteAsync(await DeviceOf(b), CancellationToken.None)).Should().Be(1);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+
+        (await b.Keyring.OpenGrantAsync("user", CancellationToken.None))!.Key.Should().Equal(UserGroup.Key);
+        var pending = await b.Handover().PendingAsync(CancellationToken.None);
+        pending!.Profiles.Should().BeEquivalentTo([
+            new HandoverProfile("admin", "Anna", HandoverProfileState.Missing),
+            new HandoverProfile("user", "Bruno", HandoverProfileState.Granted),
+        ]);
+        (await a.Handover().PendingAsync(CancellationToken.None)).Should().BeNull("A is not the elected device");
+
+        var asUser = () => b.Handover(b.As("user", ProfileRole.User)).ConfirmAsync(pending.Election.ElectionId, CancellationToken.None);
+        await asUser.Should().ThrowAsync<ProfileAdministrationException>();
+        await b.ConfirmHandoverAsync();
+        (await b.Handover().PendingAsync(CancellationToken.None)).Should().BeNull("confirmed");
+    }
+
+    [Fact]
+    public async Task Electing_the_active_master_again_cancels_a_pending_election_without_a_wizard()
+    {
+        var (a, b) = await PublishedAndJoinedAsync();
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.Elect(b.As("admin", ProfileRole.Admin)).ExecuteAsync(await DeviceOf(b), CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+
+        await b.Elect(b.As("admin", ProfileRole.Admin)).ExecuteAsync(await DeviceOf(a), CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        (await a.Master.SendsEmailAsync(CancellationToken.None)).Should().BeTrue();
+        (await a.Handover().PendingAsync(CancellationToken.None)).Should().BeNull();
     }
 
     [Fact]
@@ -513,7 +562,18 @@ public sealed class HouseholdSyncTests : IDisposable
         public HouseholdMasterRole Master => new(Store, Log, Clock);
 
         public ElectMaster Elect(ICurrentProfile? current = null)
-            => new(Store, Log, current ?? As("admin", ProfileRole.Admin), NullLogger<ElectMaster>.Instance);
+            => new(Store, Log, Keyring, GroupKeys, current ?? As("admin", ProfileRole.Admin), NullLogger<ElectMaster>.Instance);
+
+        // Step H4b.
+        public MasterHandover Handover(ICurrentProfile? current = null)
+            => new(Store, Log, Keyring, Registry, current ?? As("admin", ProfileRole.Admin),
+                NullLogger<MasterHandover>.Instance);
+
+        public async Task ConfirmHandoverAsync()
+        {
+            var pending = await Handover().PendingAsync(CancellationToken.None);
+            await Handover().ConfirmAsync(pending!.Election.ElectionId, CancellationToken.None);
+        }
 
         public string Directory { get; }
         public SqliteHouseholdStore Store { get; }

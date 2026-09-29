@@ -1096,6 +1096,16 @@ se pierde, el dispositivo elegido en su lugar toma el relevo una hora
 después. Las instalaciones publicadas antes de esta versión no tienen
 principal hasta que un administrador designe uno.
 
+En el nuevo principal, un administrador completa el relevo: la ventana
+se abre sola, o desde **Herramientas → Instalación… → Completar el
+relevo…**. Muestra la configuración de la instalación, prueba la
+conexión de correo desde ese dispositivo, inicia sesión en el
+almacenamiento de la copia en la nube y vuelve a pedir la frase de
+contraseña de la copia en la nube (nunca se copia entre dispositivos), y
+luego descarga los perfiles que necesita el nuevo principal. La frase de
+contraseña de la instalación trae los perfiles que ningún dispositivo
+disponible tiene.
+
 ## Comprobar ahora
 
 El monitor se ejecuta automáticamente cada 30 minutos (configurable
