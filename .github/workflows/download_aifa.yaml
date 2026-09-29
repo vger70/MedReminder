@@ -4,7 +4,7 @@ on:
   schedule:
     # On the 2nd, 9th, 16th and 23rd: a run that fails because AIFA is
     # down is retried a week later. Once the month's version is
-    # published, scripts/download_aifa.py exits without changes.
+    # published, scripts/feeds/aifa.py exits without changes.
     - cron: '0 3 2,9,16,23 * *'
   workflow_dispatch:
     inputs:
@@ -40,7 +40,7 @@ jobs:
         env:
           FORCE_REFRESH: ${{ inputs.force }}
         run: |
-          python scripts/download_aifa.py
+          python scripts/feeds/aifa.py
 
       - name: Commit changes
         run: |
