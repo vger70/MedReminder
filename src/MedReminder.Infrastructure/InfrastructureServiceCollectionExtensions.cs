@@ -14,6 +14,7 @@ using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Sync;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Export;
+using MedReminder.Infrastructure.Household;
 using MedReminder.Infrastructure.Notifications;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Profiles;
@@ -109,6 +110,11 @@ public static class InfrastructureServiceCollectionExtensions
         // Household step H3b: the group key of any profile, for grants and
         // escrows.
         services.TryAddSingleton<IProfileGroupKeys, ProfileGroupKeys>();
+        // Household step H3c: profiles brought by an installation join, with
+        // their group key DPAPI-protected like any synced profile.
+        services.TryAddSingleton<IHouseholdProfileInstaller>(_ => new HouseholdProfileInstaller(
+            AppDataPaths.GetProfilesRootDirectory(),
+            directory => new DpapiSyncKeyStore(Path.Combine(directory, DpapiSyncKeyStore.FileName))));
         // B.1 Phase 3d: create, join and rebuild from the sync window.
         services.AddScoped<ISyncSetupService, SyncSetupService>();
         // B.1 Phase 4a: OneDrive sign-in and access tokens, one MSAL

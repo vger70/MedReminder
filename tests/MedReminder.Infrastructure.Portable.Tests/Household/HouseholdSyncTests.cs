@@ -10,6 +10,7 @@ using MedReminder.Infrastructure.Export;
 using MedReminder.Infrastructure.Household;
 using MedReminder.Infrastructure.Sync;
 using MedReminder.Infrastructure.Tests.Sync;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -251,6 +252,156 @@ public sealed class HouseholdSyncTests : IDisposable
             CancellationToken.None)).Should().BeEmpty();
     }
 
+    // Step H3c: pairing codes and the installation join.
+    [Fact]
+    public void A_household_code_round_trips_and_is_not_a_group_code()
+    {
+        var code = new HouseholdPairingCode(Guid.NewGuid(), Guid.NewGuid(), CloudProvider.OneDrive, RandomNumberGenerator.GetBytes(32));
+
+        HouseholdPairingCode.TryParse(code.Text, out var parsed).Should().BeTrue();
+        parsed!.HouseholdId.Should().Be(code.HouseholdId);
+        parsed.DeviceId.Should().Be(code.DeviceId);
+        parsed.Provider.Should().Be(CloudProvider.OneDrive);
+        parsed.Secret.Should().Equal(code.Secret);
+        code.Text.Should().StartWith("mrpair2.");
+        code.ToString().Should().NotContain(code.Text.Split('.')[4]);
+        MedReminder.Application.Sync.Remote.SyncPairingCode.TryParse(code.Text, out _).Should().BeFalse();
+        HouseholdPairingCode.TryParse(code.Text.Replace("mrpair2", "mrpair1"), out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task A_device_joining_with_a_code_is_granted_the_offered_profiles_only()
+    {
+        var (a, _) = await PublishedWithASyncedProfileAsync();
+        var offer = await a.Offers().StartAsync(["user"], CancellationToken.None);
+        var c = Create("C");
+
+        var (_, granted) = await c.Sync.JoinAsync(SyncTarget.ForFolder(Folder), offer.Code, "PC C", CancellationToken.None);
+
+        granted.Should().Equal("user");
+        (await c.Keyring.OpenGrantAsync("user", CancellationToken.None))!.Key.Should().Equal(UserGroup.Key);
+        (await c.Keyring.OpenGrantAsync("admin", CancellationToken.None)).Should().BeNull();
+        await a.Sync.RunAsync(CancellationToken.None);
+        var deviceC = (await c.Store.EnsureCreatedAsync(CancellationToken.None)).DeviceId;
+        (await a.Keyring.KeysAsync(CancellationToken.None)).Grants.Should().ContainKey(("user", deviceC),
+            "the grant outlives the offer");
+    }
+
+    [Fact]
+    public async Task Only_an_admin_offers_and_only_profiles_this_device_holds()
+    {
+        var (a, _) = await PublishedWithASyncedProfileAsync();
+
+        var asUser = () => a.Offers(a.As("user", ProfileRole.User)).StartAsync(["user"], CancellationToken.None);
+        await asUser.Should().ThrowAsync<ProfileAdministrationException>();
+        var notHeld = () => a.Offers().StartAsync(["admin"], CancellationToken.None);
+        await notHeld.Should().ThrowAsync<InvalidOperationException>();
+        var unknown = () => a.Offers().StartAsync(["nobody"], CancellationToken.None);
+        await unknown.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task An_ended_or_replaced_offer_does_not_open()
+    {
+        var (a, _) = await PublishedWithASyncedProfileAsync();
+        var first = await a.Offers().StartAsync(["user"], CancellationToken.None);
+        await a.Offers().StartAsync([], CancellationToken.None);
+
+        var replaced = () => Create("C").Sync.JoinAsync(SyncTarget.ForFolder(Folder), first.Code, "PC C", CancellationToken.None);
+        await replaced.Should().ThrowAsync<CryptographicException>();
+
+        var second = await a.Offers().StartAsync(["user"], CancellationToken.None);
+        await a.Offers().EndAsync(CancellationToken.None);
+        var ended = () => Create("D").Sync.JoinAsync(SyncTarget.ForFolder(Folder), second.Code, "PC D", CancellationToken.None);
+        await ended.Should().ThrowAsync<MedReminder.Application.Sync.Remote.SyncPairingExpiredException>();
+    }
+
+    [Fact]
+    public async Task The_offer_file_holds_no_key_in_clear()
+    {
+        var (a, _) = await PublishedWithASyncedProfileAsync();
+        await a.Offers().StartAsync(["user"], CancellationToken.None);
+
+        var base64 = Encoding.ASCII.GetBytes(Convert.ToBase64String(UserGroup.Key));
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(Folder), "*.mrp", SearchOption.AllDirectories))
+        {
+            var bytes = File.ReadAllBytes(file);
+            bytes.AsSpan().IndexOf(UserGroup.Key).Should().Be(-1);
+            bytes.AsSpan().IndexOf(base64).Should().Be(-1);
+        }
+    }
+
+    [Fact]
+    public async Task With_the_passphrase_an_admin_approves_with_the_pin_and_the_escrow_grants()
+    {
+        var (a, _) = await PublishedWithASyncedProfileAsync();
+        var pin = new ProfilePinHash(Convert.ToBase64String(System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
+            "4321", Encoding.ASCII.GetBytes("0123456789abcdef"), 1000, HashAlgorithmName.SHA256, 32)),
+            Convert.ToBase64String(Encoding.ASCII.GetBytes("0123456789abcdef")), 1000);
+        a.Registry.SetPinHash("admin", pin);
+        await a.ReconcileAsync();
+        await a.Sync.RunAsync(CancellationToken.None);
+        var c = Create("C");
+        var join = c.Join(null!);
+        var householdId = (await a.Store.EnsureCreatedAsync(CancellationToken.None)).HouseholdId;
+        await join.JoinHouseholdAsync(SyncTarget.ForFolder(Folder), householdId, Passphrase.ToCharArray(), "PC C",
+            CancellationToken.None);
+
+        var wrongPin = () => join.ApproveAndGrantAsync("admin", "0000", ["user"], Passphrase.ToCharArray(), CancellationToken.None);
+        (await wrongPin.Should().ThrowAsync<HouseholdApprovalException>()).Which.Error.Should().Be(HouseholdApprovalError.WrongPin);
+        var notAdmin = () => join.ApproveAndGrantAsync("user", null, ["user"], Passphrase.ToCharArray(), CancellationToken.None);
+        (await notAdmin.Should().ThrowAsync<HouseholdApprovalException>()).Which.Error.Should().Be(HouseholdApprovalError.NotAdmin);
+
+        (await join.ApproveAndGrantAsync("admin", "4321", ["user", "admin"], Passphrase.ToCharArray(), CancellationToken.None))
+            .Should().Equal(["user"], "the admin profile is not synced, so it has no escrow");
+        (await c.Keyring.OpenGrantAsync("user", CancellationToken.None))!.Key.Should().Equal(UserGroup.Key);
+    }
+
+    [Fact]
+    public async Task Joining_an_installation_builds_each_granted_profile_from_its_group()
+    {
+        Directory.CreateDirectory(Folder);
+        using var group = new SyncDevice("P", Path.Combine(_root, "P.db"), DateTimeOffset.UtcNow, settings: null);
+        await group.InitializeAsync();
+        await group.RunAsync(sp => sp.GetRequiredService<MedReminder.Application.Sync.CreateSyncGroup>().ExecuteAsync(
+            new LocalFolderSyncTransport(Folder), "group words".ToCharArray(), SyncTarget.ForFolder(Folder),
+            CancellationToken.None, SyncFileFormatTests.FastKdf));
+        var settings = group.Settings.Load()!;
+        var a = Create("A");
+        a.Registry.Add("admin", "Anna", ProfileRole.Admin);
+        a.Registry.Add("user", "Bruno", ProfileRole.User);
+        a.GroupKeys.Keys["user"] = new ProfileGroupKey(settings.GroupId, settings.KeyVersion,
+            group.Keys.Load(settings.GroupId, settings.KeyVersion)!);
+        await a.ReconcileAsync();
+        await a.Sync.PublishAsync(SyncTarget.ForFolder(Folder), Passphrase.ToCharArray(), "PC A", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+        var offer = await a.Offers().StartAsync(["user"], CancellationToken.None);
+        var c = Create("C");
+
+        var result = await group.RunAsync(sp => c.Join(sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>())
+            .JoinWithCodeAsync(SyncTarget.ForFolder(Folder), offer.Code, "PC C", CancellationToken.None));
+
+        result.Profiles.Should().Equal(new JoinedProfile("user", JoinedProfileStatus.Installed));
+        c.Registry.GetById("user").Should().BeEquivalentTo(new { DisplayName = "Bruno", Role = ProfileRole.User });
+        c.Registry.GetById("admin").Should().BeNull();
+        var installed = Path.Combine(c.ProfilesRoot, "user");
+        File.Exists(Path.Combine(installed, "medreminder.db")).Should().BeTrue();
+        var joined = new JsonSyncSettingsStore(Path.Combine(installed, JsonSyncSettingsStore.FileName)).Load()!;
+        joined.GroupId.Should().Be(settings.GroupId);
+        joined.DeviceId.Should().NotBe(settings.DeviceId);
+        c.InstalledKeys.Values.Single().Load(settings.GroupId, settings.KeyVersion).Should()
+            .Equal(group.Keys.Load(settings.GroupId, settings.KeyVersion));
+        Directory.EnumerateDirectories(c.ProfilesRoot, ".join-*").Should().BeEmpty();
+
+        // What ProfileGroupKeys reads from the installed folder on Windows.
+        c.GroupKeys.Keys["user"] = new ProfileGroupKey(joined.GroupId, joined.KeyVersion,
+            c.InstalledKeys.Values.Single().Load(joined.GroupId, joined.KeyVersion)!);
+        var again = await group.RunAsync(sp => c.Join(sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>())
+            .InstallGrantedAsync(["user", "admin"], "PC C", CancellationToken.None));
+        again.Should().Equal(new JoinedProfile("user", JoinedProfileStatus.AlreadyHere),
+            new JoinedProfile("admin", JoinedProfileStatus.NotGranted));
+    }
+
     // One installation: its household store and key in its own folder, and
     // in-memory stand-ins for profiles.json and the settings files.
     private sealed class Installation
@@ -290,6 +441,25 @@ public sealed class HouseholdSyncTests : IDisposable
 
         public UpdateGeneralSettings General(ICurrentProfile? current = null)
             => new(Settings, current ?? As("admin", ProfileRole.Admin), Log);
+
+        // Step H3c.
+        public HouseholdPairingOffers Offers(ICurrentProfile? current = null)
+            => new(Store, new ProtectedHouseholdKeyStore(Protector, System.IO.Path.Combine(Directory, "household")), GroupKeys,
+                Log, new FolderTransports(), new ArchiveCipher(), current ?? As("admin", ProfileRole.Admin), TimeProvider.System);
+
+        public Dictionary<string, SyncDevice.MemoryKeyStore> InstalledKeys { get; } = new(StringComparer.Ordinal);
+
+        public string ProfilesRoot => System.IO.Path.Combine(Directory, "profiles");
+
+        public JoinInstallation Join(MedReminder.Application.Sync.JoinSyncGroup join)
+            => new(Sync, Keyring, Log, Store, Registry, GroupKeys,
+                new HouseholdProfileInstaller(ProfilesRoot, directory =>
+                {
+                    var keys = new SyncDevice.MemoryKeyStore();
+                    InstalledKeys[System.IO.Path.GetFileName(directory)] = keys;
+                    return keys;
+                }),
+                join, new FolderTransports(), NullLogger<JoinInstallation>.Instance);
     }
 
     // profiles\<id>\sync.protected of each synced profile.
@@ -356,6 +526,12 @@ public sealed class HouseholdSyncTests : IDisposable
         public string? ActiveProfileIdHint => null;
 
         public void Add(string id, string name, ProfileRole role) => _entries.Add((id, name, role, null));
+
+        public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin)
+        {
+            if (_entries.Any(e => e.Id == id)) throw new InvalidOperationException("Profile exists.");
+            _entries.Add((id, displayName, role, pin));
+        }
 
         public IReadOnlyList<Profile> ListProfiles() => [.. _entries.Select(e => ToProfile(e))];
 

@@ -135,6 +135,83 @@ public sealed class HouseholdSync
 
         var obtained = await SyncKeys.ObtainAsync(transport, _cipher, householdId,
             new SyncKeySource.Passphrase(passphrase), _clock, cancellationToken);
+        await JoinCoreAsync(transport, target, householdId, obtained, deviceName, cancellationToken);
+        return await RunAsync(cancellationToken);
+    }
+
+    // Step H3c: joins with a household pairing code (mrpair2). The offer
+    // holds the household key and the group keys of the profiles an admin
+    // selected; this device records their grants to itself, so it keeps
+    // them after the offer ends. Returns the granted profile ids.
+    // SyncPairingExpiredException when the offer is over,
+    // CryptographicException when a newer offer replaced it.
+    public async Task<(HouseholdSyncResult Result, IReadOnlyList<string> Granted)> JoinAsync(SyncTarget target,
+        HouseholdPairingCode code, string deviceName, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(code);
+        var transport = _transports.Create(target);
+        HouseholdFile.Parse(await transport.ReadAsync(HouseholdFile.PathOf(code.HouseholdId), cancellationToken)
+            ?? throw new InvalidOperationException("Household not found."));
+        var file = await transport.ReadAsync(SyncLayout.Pairing(code.HouseholdId, code.DeviceId), cancellationToken)
+            ?? throw new SyncPairingExpiredException();
+        var offer = HouseholdPairingFile.Parse(file).Open(_cipher, code, _clock.GetUtcNow());
+        try
+        {
+            var obtained = await SyncKeys.ObtainAsync(transport, _cipher, code.HouseholdId,
+                new SyncKeySource.Known(offer.KeyVersion, offer.Key), _clock, cancellationToken);
+            await JoinCoreAsync(transport, target, code.HouseholdId, obtained, deviceName, cancellationToken);
+            foreach (var profile in offer.Profiles)
+            {
+                await _keyring.AcceptAsync(profile.ProfileId,
+                    new ProfileGroupKey(profile.GroupId, profile.KeyVersion, profile.Key), cancellationToken);
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(offer.Key);
+            foreach (var profile in offer.Profiles) CryptographicOperations.ZeroMemory(profile.Key);
+        }
+        return (await RunAsync(cancellationToken), [.. offer.Profiles.Select(p => p.ProfileId)]);
+    }
+
+    // Step H3c, join with the household passphrase (§6.3 page 5): after an
+    // admin approved on this device (JoinInstallation), the passphrase
+    // opens the recovery key and the escrows of the selected profiles are
+    // granted to this device. Returns the profile ids granted; a profile
+    // without escrow is left out. CryptographicException for a wrong
+    // passphrase.
+    public async Task<IReadOnlyList<string>> GrantFromEscrowAsync(IReadOnlyCollection<string> profileIds,
+        char[] passphrase, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(profileIds);
+        ArgumentNullException.ThrowIfNull(passphrase);
+        var granted = new List<string>();
+        if (profileIds.Count == 0) return granted;
+        var recovery = await OpenRecoveryKeyAsync(passphrase, cancellationToken);
+        if (recovery is null) return granted;
+        foreach (var profileId in profileIds.Distinct(StringComparer.Ordinal))
+        {
+            var group = await _keyring.OpenEscrowAsync(profileId, recovery, cancellationToken);
+            if (group is null) continue;
+            try
+            {
+                await _keyring.AcceptAsync(profileId, group, cancellationToken);
+                granted.Add(profileId);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(group.Key);
+            }
+        }
+        await RunAsync(cancellationToken);
+        return granted;
+    }
+
+    // The household replaces the local one; zeroes the key.
+    private async Task JoinCoreAsync(ISyncTransport transport, SyncTarget target, Guid householdId, SyncGroupKey obtained,
+        string deviceName, CancellationToken cancellationToken)
+    {
         try
         {
             var genesis = await transport.ReadAsync(SyncLayout.Genesis(householdId, obtained.Generation), cancellationToken)
@@ -168,7 +245,6 @@ public sealed class HouseholdSync
         {
             CryptographicOperations.ZeroMemory(obtained.Key);
         }
-        return await RunAsync(cancellationToken);
     }
 
     // One run: publish this device's pending operations, apply the other
@@ -208,17 +284,25 @@ public sealed class HouseholdSync
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(passphrase);
-        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        var recovery = await OpenRecoveryKeyAsync(passphrase, cancellationToken);
+        return recovery is null ? null : await _keyring.OpenEscrowAsync(profileId, recovery, cancellationToken);
+    }
+
+    // The recovery private key (PKCS#8, base64); null when the household
+    // has no recovery key. Argon2id runs once per call.
+    private async Task<string?> OpenRecoveryKeyAsync(char[] passphrase, CancellationToken ct)
+    {
+        var identity = await _store.EnsureCreatedAsync(ct);
         if (identity.Storage is null) throw new InvalidOperationException("The household is not published.");
-        var keys = await _keyring.KeysAsync(cancellationToken);
+        var keys = await _keyring.KeysAsync(ct);
         if (keys.RecoveryPublicKey is not { } recovery) return null;
         var file = await _transports.Create(identity.Storage)
-            .ReadAsync(RecoveryWrapPath(identity.HouseholdId, recovery.KeyVersion), cancellationToken)
+            .ReadAsync(RecoveryWrapPath(identity.HouseholdId, recovery.KeyVersion), ct)
             ?? throw new InvalidOperationException("The recovery key is missing from the storage.");
         var privateKey = SyncKeyWrap.Parse(file).Unwrap(_cipher, passphrase, RecoveryPurpose);
         try
         {
-            return await _keyring.OpenEscrowAsync(profileId, Convert.ToBase64String(privateKey), cancellationToken);
+            return Convert.ToBase64String(privateKey);
         }
         finally
         {

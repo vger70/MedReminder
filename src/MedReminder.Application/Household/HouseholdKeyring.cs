@@ -113,17 +113,32 @@ public sealed class HouseholdKeyring
             ?? throw new InvalidOperationException("This device does not hold the key of the profile.");
         try
         {
-            var keys = await _household.KeysAsync(cancellationToken);
-            var publicKey = keys.DevicePublicKeys.GetValueOrDefault(deviceId)
-                ?? throw new InvalidOperationException("The device has not published its key yet.");
-            await _household.AppendAsync([new ProfileKeyGranted(profileId, deviceId, group.GroupId, group.KeyVersion,
-                HouseholdKeyWrap.Wrap(_cipher, publicKey, group.Key,
-                    HouseholdKeyWrap.GrantPurpose(group.GroupId, group.KeyVersion, deviceId)))], cancellationToken);
+            await GrantCoreAsync(profileId, deviceId, group, cancellationToken);
         }
         finally
         {
             CryptographicOperations.ZeroMemory(group.Key);
         }
+    }
+
+    // Step H3c: records the grant to this device of a group key received
+    // with a pairing offer or opened from the escrow, so the device keeps
+    // the profile after the offer ends. The caller zeroes the key.
+    public async Task AcceptAsync(string profileId, ProfileGroupKey group, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        await GrantCoreAsync(profileId, identity.DeviceId, group, cancellationToken);
+    }
+
+    private async Task GrantCoreAsync(string profileId, Guid deviceId, ProfileGroupKey group, CancellationToken ct)
+    {
+        var keys = await _household.KeysAsync(ct);
+        var publicKey = keys.DevicePublicKeys.GetValueOrDefault(deviceId)
+            ?? throw new InvalidOperationException("The device has not published its key yet.");
+        await _household.AppendAsync([new ProfileKeyGranted(profileId, deviceId, group.GroupId, group.KeyVersion,
+            HouseholdKeyWrap.Wrap(_cipher, publicKey, group.Key,
+                HouseholdKeyWrap.GrantPurpose(group.GroupId, group.KeyVersion, deviceId)))], ct);
     }
 
     public Task RevokeAsync(string profileId, Guid deviceId, CancellationToken cancellationToken)

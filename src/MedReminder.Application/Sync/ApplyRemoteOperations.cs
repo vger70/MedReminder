@@ -248,6 +248,10 @@ public sealed class ApplyRemoteOperations
                 continue;
             }
             if (body is ProfileSettingChanged) profileTouched = true;
+            else if (body is HouseholdLinked)
+            {
+                // The log row is the state (HouseholdLinks).
+            }
             else if (body is MedicineDeleted) touched.Remove(body.MedicineId);
             // A sent email changes no fact of the ledger.
             else if (body is not EmailNotificationSent) touched.Add(body.MedicineId);
@@ -332,6 +336,8 @@ public sealed class ApplyRemoteOperations
                 return;
             case EmailNotificationSent email:
                 await ApplyEmailSentAsync(email, ct);
+                return;
+            case HouseholdLinked:
                 return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");

@@ -620,6 +620,7 @@ public sealed class ExportServiceTests : IDisposable
         public ProfilePinHash? GetPinHash(string id) => null;
         public void SetPinHash(string id, ProfilePinHash? pin) => throw new NotSupportedException();
         public bool HasPin(string id) => false;
+        public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin) => throw new NotSupportedException();
     }
 
     private sealed class FakeCurrentProfile : ICurrentProfile

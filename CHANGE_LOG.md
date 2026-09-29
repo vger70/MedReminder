@@ -30,6 +30,38 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #121 — Join an existing installation with a household pairing code (household H3c)
+
+Link: [vger70/MedReminder#121](https://github.com/vger70/MedReminder/pull/121)
+Branch: `claude/household-h3c-join-installation` → `feature/master-slave`
+
+### Added
+
+- Household pairing codes (`mrpair2`): an admin offers the household
+  and selected profiles; the joining device grants those profiles to
+  itself and keeps them after the offer ends.
+- Join with the household passphrase: an admin of the household
+  approves on the new device with an admin PIN; the escrow grants the
+  selected profiles.
+- `JoinInstallation`: each granted profile is built from its sync group
+  in a staging folder, moved to `profiles\<id>\` and added to
+  `profiles.json` under its household id.
+- `HouseholdLinked` (profile operation schema 5): an adopted profile
+  group records the household that claims it; the earliest claim wins.
+
+### Fixed
+
+- The start-up reconciliation no longer records a local role that
+  differs from the household's, which could undo a demotion made on
+  another device.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md` §6, §9.1, §9.5; `docs/ANALYSIS.md`; analysis
+  revision 8.
+
+---
+
 ## PR #120 — Grant profile keys per device and escrow them for recovery (household H3b)
 
 Link: [vger70/MedReminder#120](https://github.com/vger70/MedReminder/pull/120)

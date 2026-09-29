@@ -67,4 +67,13 @@ public interface IProfileRegistry
     void SetPinHash(string id, ProfilePinHash? pin);
 
     bool HasPin(string id);
+
+    // Step H3c: adds a profile of the household under its household id,
+    // with the household's name, role and PIN hash, when an installation
+    // join brings it to this device. The role is kept as given, even in an
+    // empty registry: a device holds only the profiles an admin granted to
+    // it, possibly none that is an administrator (ANALYSIS-HOUSEHOLD-
+    // MASTER-DEVICE.md §4.4). Throws InvalidOperationException when the id
+    // exists.
+    void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin);
 }

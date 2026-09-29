@@ -24,6 +24,7 @@ internal static class Operations
         SuspensionEndChanged s => s.SuspensionId,
         FactRetracted r => r.RetractionId,
         EmailNotificationSent e => e.NotificationId,
+        HouseholdLinked h => h.HouseholdId,
         _ => body.MedicineId,
     };
 

@@ -265,7 +265,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 4)
+## 6. Operation catalogue (schema versions 1 to 5)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -291,10 +291,11 @@ nothing.
 | `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
 | `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
 | `EmailNotificationSent` (version 4) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt` | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`): the receiving device does not send it again |
+| `HouseholdLinked` (version 5) | `householdId`, `linkedAt` | fact; the household that adopted the group (§9); the earliest by HLC wins; profile-level (`medicineId` empty) |
 
 Every type is schema version 1 except `MedicineDeleted`, version 2,
-`ProfileSettingChanged`, version 3, and `EmailNotificationSent`,
-version 4.
+`ProfileSettingChanged`, version 3, `EmailNotificationSent`, version 4,
+and `HouseholdLinked`, version 5.
 
 Profile settings (`ProfileSettingChanged.setting`): `DisplayName` (the
 profile's name, never empty), `ToAddress`, `CaregiverAddress`,
@@ -387,6 +388,7 @@ of its own next to the profile groups, under the same sync root.
   genesis/<generation>.mrg                     household image
   ops/<generation>/<deviceId>/<seq>.mrs        household segments
   devices/<deviceId>.mrd                       device record (§5.2)
+  pairing/<deviceId>.mrp                       pairing offer (§9.5), while a code is shown
 ```
 
 `household.json` is `{ "format": "MedReminder.Household",
@@ -465,3 +467,28 @@ purpose as associated data. Purposes:
 
 The group key of a profile is thus readable by the devices it was
 granted to, and by whoever types the household passphrase.
+
+### 9.5 Household pairing
+
+A household pairing code has the parts of `mrpair1` (§4.4) with the
+household id in place of the group id:
+
+```
+mrpair2.<householdId N>.<deviceId N>.<provider>.<secret>
+```
+
+The offer `<householdId>/pairing/<deviceId>.mrp` has the cleartext
+fields of a group pairing file (`formatVersion`, `householdId`,
+`deviceId`, `nonce`, `tag`, `ciphertext`). The ciphertext holds the
+household key version and key, the profiles offered (`profileId`,
+`groupId`, `keyVersion`, `key`) and the expiry, encrypted with the
+secret of the code (AES-256-GCM, associated data
+`MedReminder.Household.Pairing|<householdId N>|<deviceId N>`). Only an
+admin writes an offer; it lasts 10 minutes and is deleted when the
+window closes. The joining device records `ProfileKeyGranted` for its
+own public key for each profile offered, so it keeps them after the
+offer ends. A reader of `mrpair1` codes refuses an `mrpair2` code.
+
+A profile brought by an installation join is built from its profile
+group in the storage of the household: an installation keeps its
+profile groups and its household in one storage.

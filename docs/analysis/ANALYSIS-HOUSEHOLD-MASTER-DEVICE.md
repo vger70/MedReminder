@@ -5,9 +5,8 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-28: analysis only, revision 4 (§18 lists the
-revisions). Nothing here is planned until the decisions in §15 are
-confirmed.
+Status on 2026-09-29: revision 8 (§18 lists the revisions). Steps H0
+to H3b are implemented; H3c is in progress (§13).
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 topics below, this document wins once approved. §16 lists the
@@ -539,7 +538,7 @@ Removing the master is a removal plus a takeover (§7.3).
   (`ProfileRegistered` with the existing `groupId`, `ProfileKeyGranted`
   for itself, `ProfileKeyEscrowed`; the admin sets the household
   passphrase at this point) and records `HouseholdLinked(householdId)` in each adopted profile
-  group (profile operation schema version 4).
+  group (profile operation schema version 5).
 - Another device of those groups, on applying `HouseholdLinked`, is
   asked to join the household (pairing code or household passphrase)
   instead of publishing its own. Two households published concurrently
@@ -553,8 +552,8 @@ Removing the master is a removal plus a takeover (§7.3).
 ## 12. Compatibility
 
 - Apps up to 2.10 never see the household (§5.1).
-- Profile operation schema version 4 (`EmailNotificationSent`,
-  `HouseholdLinked`): an older app in the same profile group stops at
+- Profile operation schema versions 4 (`EmailNotificationSent`) and 5
+  (`HouseholdLinked`): an older app in the same profile group stops at
   the first such operation and asks for an update (R7 of B.1)
   `[VERIFIED — SYNC-FORMAT.md §5.1]`. Release notes must say that
   every device of a group must be updated.
@@ -719,3 +718,4 @@ developer-days.
 | 5 | Branching policy (§13): integration branch `feature/master-slave`; decisions D-16, D-17 |
 | 6 | D-18 (cloud-backup passphrase asked in the handover wizard); H3 split into H3a–H3d (§13) |
 | 7 | Recovery key as a key pair (§4.4 point 4), so escrow needs no passphrase; `HouseholdLinked` moved from H3b to H3c |
+| 8 | `HouseholdLinked` is profile schema version 5, not 4 (§11, §12). H3c as built: the household join replaces the local household store and is not staged, only the profiles are (§6.3); profile groups are read from the household's storage |

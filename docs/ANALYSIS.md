@@ -461,6 +461,14 @@ root is committed to the repository.
   opens (escrow). Publishing, and every run, adopts the synced profiles
   of the installation (grant to itself, escrow). Format:
   `docs/SYNC-FORMAT.md` §9.4.
+- **Installation join** (step H3c): an admin offers the household and
+  selected profiles with an `mrpair2` code (`HouseholdPairingOffers`),
+  or approves on the joining device with an admin PIN after the
+  household passphrase (escrow). `JoinInstallation` joins the household,
+  then builds each granted profile from its group in
+  `profiles\.join-<guid>\` and moves it to `profiles\<id>\`
+  (`IHouseholdProfileInstaller`) before adding it to `profiles.json`
+  under its household id. Not yet wired to the UI (step H3d).
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).
