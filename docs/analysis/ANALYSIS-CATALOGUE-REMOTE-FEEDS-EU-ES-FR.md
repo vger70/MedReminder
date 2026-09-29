@@ -176,7 +176,21 @@ row floor, per-country state), `GitHubRawCatalogueFeedClient`,
   showed; the size matches the embedded `aemps.xlsx` (2 755 386 bytes).
   `openpyxl` refuses to open the file under its `.xls` name (it checks
   the extension, not the content), so the script saves it as
-  `aemps.xlsx` before reading the header.
+  `aemps.xlsx` before reading the header. Read on the runner as
+  `aemps.xlsx`: sheets `Hoja1`, `Hoja2`, `Hoja3`; the first sheet's
+  header is exactly the 15 columns `AempsCimaParser` expects
+  (`Nº Registro` … `¿Problemas de suministro?`), and it has **26 763**
+  data rows (embedded snapshot: 26 743).
+- **Protection layer.** The 403 body is a plain `openresty` error page,
+  not a JavaScript challenge: a reverse proxy filtering on request
+  headers [INFERRED].
+- **REST fallback, verified reachable:** `GET
+  https://cima.aemps.es/cima/rest/medicamentos?pagina=1` with a browser
+  User-Agent returned 200, JSON, `totalFilas: 25476`,
+  `tamanioPagina: 200` (about 128 pages). Its count differs from the
+  XLSX (25 476 vs 26 763) and its fields differ from the XLSX columns
+  (for example `nregistro`, `nombre`, `labtitular`, `comerc`), so using
+  it would need a mapping to the parser's layout. Kept as fallback only.
 - **Fallbacks, only if the header filter tightens later:** the CIMA
   REST API (documented, paginated JSON) [SEARCH] with the XLSX rebuilt
   by the script, if its host is not blocked too; a self-hosted runner
@@ -427,9 +441,9 @@ new one. Per-feed `Enabled` flags let an admin override.
   confirmed as AEMPS's static download server by search results. Not
   fetched from this session (egress proxy 403). From a GitHub runner
   (product owner's tests): 403 without a browser User-Agent, 200 with
-  browser headers; the payload is an XLSX container of 2 758 433 bytes.
-  Header row and row count of that download not yet printed (the probe
-  opened it under its `.xls` name, which `openpyxl` rejects).
+  browser headers; the payload is an XLSX container of 2 758 433 bytes
+  whose first sheet has the parser's 15-column header and 26 763 data
+  rows. The CIMA REST API is also reachable from the runner.
 - Not verified: download behaviour of the three sources from GitHub
   runners, actual format of the current `Medicamentos.xls` (XLSX
   assumed from the embedded snapshot), EMA Human share of rows, BDPM
