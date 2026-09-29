@@ -342,7 +342,7 @@ Three sibling fixtures — `bdpm-cis-sample.txt`,
   path round-trips.
 
 1. Download the current BDPM TSVs from
-   <https://base-donnees-publique.medicaments.gouv.fr/telechargement.php>.
+   <https://base-donnees-publique.medicaments.gouv.fr/telechargement>.
 2. Run `scripts/build_bdpm_fixture.py`, pointing it at the local
    TSVs. It rewrites the three fixture files, preserving the exact
    ISO-8859-15 encoding and CRLF terminators.
@@ -447,7 +447,7 @@ Cadence: monthly, aligned to a MedReminder release. ANSM regenerates
 the BDPM export daily.
 
 1. **Download the BDPM TSVs from ANSM.**
-   - Portal: <https://base-donnees-publique.medicaments.gouv.fr/telechargement.php>
+   - Portal: <https://base-donnees-publique.medicaments.gouv.fr/telechargement>
      — pick the three "Base de données publique des médicaments"
      downloads:
      - `CIS_bdpm.txt` (one row per medicinal product, key = CIS)

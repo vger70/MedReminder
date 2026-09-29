@@ -119,20 +119,37 @@ row floor, per-country state), `GitHubRawCatalogueFeedClient`,
   script still falls back to scraping the landing page for an `href`
   ending in `medicines-output-medicines-report_en.xlsx` if the direct
   URL fails.
+- **Runner test, 2026-09-29** [OWNER]: plain `GET` (curl User-Agent) and
+  browser-header `GET` both return 200,
+  `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`,
+  901 861 bytes, XLSX magic bytes; no header filter. `HEAD` answers
+  `content-length: 0` (a cached response), so the script must not rely
+  on `HEAD` for the size. The landing page still links
+  `/en/documents/report/medicines-output-medicines-report_en.xlsx`.
+- **Workbook, measured on the runner:** one sheet `Medicine`; header on
+  row 9 (8 metadata rows before it, as the manual procedure says); the
+  8 required columns present; **2 746** data rows, **2 351** of them
+  `Human`; 5 cells contain newlines or tabs; 2 260 cells contain `;`
+  (multi-substance lists); no cell is typed as a date (dates are text).
+  `openpyxl` in read-only mode reports **1 024** columns because the
+  sheet's declared dimension is wider than the data: the script must
+  drop trailing empty header cells (39 real columns) and cut every
+  data row to the header width.
 - **Transformation** (`scripts/feeds/ema.py`):
   1. Read the workbook with `openpyxl` (read-only mode); sheet
      `Medicine`, or the first sheet if absent.
   2. Header = first row whose first cell is `Category` (§1.3 point 3).
   3. Write `ema-epar.csv`: `;` delimiter, UTF-8 without BOM, all
-     columns, cells quoted by `csv.writer` when they contain `;` or
-     `"`; every `\r`, `\n`, `\t` inside a cell replaced by a single
-     space and repeated spaces collapsed; dates as ISO `yyyy-mm-dd`;
-     empty cells as empty strings.
+     real columns (header trimmed of trailing empty cells, rows cut to
+     the header width), cells quoted by `csv.writer` when they contain
+     `;` or `"` (2 260 cells today, so quoting is mandatory); every
+     `\r`, `\n`, `\t` inside a cell replaced by a single space and
+     repeated spaces collapsed (5 cells today); a date-typed cell, should
+     one appear, as ISO `yyyy-mm-dd`; empty cells as empty strings.
   4. Zip as `ema-epar-<v>.zip` with the CSV at the root.
-- **Validation.** The 8 required columns present; `Category = Human`
-  rows ≥ 2 000 (today about 2 700 total rows, most of them Human
-  [UNCERTAIN on the exact share]); at least 90% of the previous run's
-  row count; no line of the output CSV breaks a record (re-read it with
+- **Validation.** The 8 required columns present; data rows ≥ 2 000
+  and `Category = Human` rows ≥ 1 800 (today 2 746 and 2 351); at least
+  90% of the previous run's row count; no line of the output CSV breaks a record (re-read it with
   `csv.reader` and check every row has the header's column count).
 - **Licence.** EMA legal notice, reuse with attribution (Commission
   Decision 2011/833/EU), per `CATALOGUE-DATA.md` §3.
@@ -211,23 +228,39 @@ row floor, per-country state), `GitHubRawCatalogueFeedClient`,
 
 ### 3.3 FR — ANSM BDPM
 
-- **URLs.** `https://base-donnees-publique.medicaments.gouv.fr/download/file/CIS_bdpm.txt`
-  (also seen as `/index.php/download/file/CIS_bdpm.txt`) and the same
-  pattern for `CIS_CIP_bdpm.txt` and `CIS_COMPO_bdpm.txt` [SEARCH]. The
-  landing page moved from `telechargement.php` to `telechargement`
-  [SEARCH], so the script scrapes the landing page for links ending in
-  the three file names (as `download_aifa.py` does for AIFA) and uses
-  the `/download/file/<name>` pattern as fallback. A mirror exists on
-  data.gouv.fr ("Base de données publique des médicaments (base
-  officielle)") [SEARCH], usable as a second fallback.
+- **URLs.** `https://base-donnees-publique.medicaments.gouv.fr/download/file/<name>`
+  for `CIS_bdpm.txt`, `CIS_CIP_bdpm.txt`, `CIS_COMPO_bdpm.txt`. The
+  script scrapes `https://base-donnees-publique.medicaments.gouv.fr/telechargement`
+  for links ending in the three file names (as `download_aifa.py` does
+  for AIFA) and uses the `/download/file/<name>` pattern as fallback.
+- **Runner test, 2026-09-29** [OWNER]:
+  - `/telechargement` → 200, links `/download/file/CIS_bdpm.txt`,
+    `/download/file/CIS_CIP_bdpm.txt`, `/download/file/CIS_COMPO_bdpm.txt`.
+  - `/telechargement.php` and `/telechargement.php?fichier=<name>` →
+    **404**: the portal URL in `CATALOGUE-DATA.md` §6 is outdated.
+  - `/download/file/<name>` and `/index.php/download/file/<name>` → 200,
+    `application/octet-stream`, with or without a browser User-Agent
+    (no header filter). Sizes: 3 175 357 / 4 140 976 / 2 735 840 bytes.
+  - data.gouv.fr API (`/api/1/datasets/base-de-donnees-publique-des-medicaments-base-officielle/`)
+    → 200, but no resource title matched the three file names, so the
+    mirror's file layout is unconfirmed; dropped as fallback until
+    checked [UNCERTAIN].
 - **Update frequency.** The portal text found says "updated monthly";
   `CATALOGUE-DATA.md` §6 says daily [UNCERTAIN]. Irrelevant for a
   monthly feed.
 - **Transformation.** None: keep the raw bytes (the parser decodes
   Windows-1252; `CIS_CIP_bdpm.txt` is UTF-8 upstream and unused). Zip
   the three files as `bdpm-<v>.zip`.
+- **Content, measured on the runner:** `CIS_bdpm.txt` decodes as
+  cp1252, 15 883 lines, all with 12 tab-separated columns, first row's
+  statut `Autorisation active` (parser invariant holds), 1 316
+  homeopathic rows (skipped by the parser); `CIS_COMPO_bdpm.txt`
+  decodes as cp1252, 32 439 lines, all with 8 columns;
+  `CIS_CIP_bdpm.txt` decodes as UTF-8, 20 862 lines, all with 13
+  columns. Matches `CATALOGUE-DATA.md` §6 and the parser.
 - **Validation.** Each file decodes as cp1252 (`CIS_CIP` as UTF-8 or
-  cp1252); content type not HTML; `CIS_bdpm.txt`: tab-separated, the
+  cp1252); content type not HTML; every line has the expected column
+  count (12 / 8 / 13, a change fails the run); `CIS_bdpm.txt`: tab-separated, the
   first full row has "Statut administratif" starting with
   `Autorisation` (the parser's own invariant), ≥ 12 000 rows;
   `CIS_COMPO_bdpm.txt` ≥ 25 000 rows; `CIS_CIP_bdpm.txt` ≥ 15 000 rows;
@@ -239,9 +272,11 @@ row floor, per-country state), `GitHubRawCatalogueFeedClient`,
 | Feed | Absolute floor | Today | Relative floor |
 |------|----------------|-------|----------------|
 | IT confezioni / PA | 100 000 / 200 000 | 160 024 / 338 722 | 90% of previous |
-| EU ema-epar.csv | 2 000 | 2 734 | 90% |
-| ES aemps.xlsx | 20 000 | 26 743 | 90% |
-| FR CIS / COMPO / CIP | 12 000 / 25 000 / 15 000 | 15 859 / 32 400 / 20 879 | 90% |
+| EU ema-epar.csv (all / Human) | 2 000 / 1 800 | 2 746 / 2 351 | 90% |
+| ES aemps.xlsx | 20 000 | 26 763 | 90% |
+| FR CIS / COMPO / CIP | 12 000 / 25 000 / 15 000 | 15 883 / 32 439 / 20 862 | 90% |
+
+"Today" is the runner measurement of 2026-09-29.
 
 Client guard, unchanged: reject a snapshot with fewer than half the
 rows the open profile holds for that country.
@@ -392,7 +427,8 @@ new one. Per-feed `Enabled` flags let an admin override.
 | EMA changes column names | Parser rejects the snapshot | Script validation fails first, nothing is published |
 | EMA XLSX has multi-line cells | Parser splits records | Collapse `\r\n\t`; re-read the CSV to check column counts |
 | BDPM column order changes | Parser rejects (invariant check) | Script applies the same invariant before publishing |
-| Scraped link layouts change (BDPM, AIFA) | Download fails | Retries, then fallback URL pattern, then a red run on each scheduled day 2–7 |
+| Scraped link layouts change (BDPM, AIFA) | Download fails | Retries, then fallback URL pattern, then a red run on each scheduled day 2–7 (BDPM already moved once: `telechargement.php` is now 404) |
+| EMA sheet dimension wider than the data (observed: 1 024 columns) | Hundreds of empty CSV columns | Trim the header to its last non-empty cell and rows to the header width |
 | Repository growth | Slow clones | Data branch with periodic reset (§4.2) |
 | Four pushes in the same window | Push rejected | Concurrency group + rebase-and-retry |
 
@@ -408,7 +444,7 @@ new one. Per-feed `Enabled` flags let an admin override.
 | D4 | Feeds per client | Reference country + EU; per-feed flags for admins |
 | D5 | AEMPS source | **Settled:** `https://listadomedicamentos.aemps.gob.es/Medicamentos.xls`, `GET` with browser headers (200 from a GitHub runner, §3.2) |
 | D6 | Thresholds | As in §3.4 |
-| D7 | Order of work | ES, FR, EU: ES has no transformation and its download is now proven from a runner; EU needs the XLSX→CSV conversion |
+| D7 | Order of work | ES, FR, EU: all three downloads are proven from a runner; ES and FR need no transformation, EU needs the XLSX→CSV conversion |
 
 ---
 
@@ -434,9 +470,10 @@ new one. Per-feed `Enabled` flags let an admin override.
 
 - §2.1–§2.3: re-read against the tree at `6bc2a35`; row and size figures
   measured by unzipping the embedded snapshots in this session.
-- §3 URLs: from web search results only (the four source domains are
-  blocked by this environment's egress proxy); every URL must be
-  checked with `curl -I` from a GitHub runner before implementation.
+- §3 URLs: found through web search (the source domains are blocked
+  by this environment's egress proxy), then verified from GitHub-hosted
+  runners by the product owner on 2026-09-29 (EMA, BDPM, AEMPS probes;
+  results in §3.1–§3.3).
 - AEMPS URL supplied by the product owner (2026-09-29); the host is
   confirmed as AEMPS's static download server by search results. Not
   fetched from this session (egress proxy 403). From a GitHub runner
@@ -444,7 +481,5 @@ new one. Per-feed `Enabled` flags let an admin override.
   browser headers; the payload is an XLSX container of 2 758 433 bytes
   whose first sheet has the parser's 15-column header and 26 763 data
   rows. The CIMA REST API is also reachable from the runner.
-- Not verified: download behaviour of the three sources from GitHub
-  runners, actual format of the current `Medicamentos.xls` (XLSX
-  assumed from the embedded snapshot), EMA Human share of rows, BDPM
-  update frequency.
+- Not verified: the data.gouv.fr mirror's file layout, BDPM update
+  frequency (irrelevant for a monthly feed).
