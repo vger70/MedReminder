@@ -463,10 +463,13 @@ administered by an **administrator profile**.
   tab or the Backup tab in Settings, and does not see
   `Tools → Manage profiles…`.
 
-The role is chosen when the profile is created and **cannot be
-changed later**. If in the future you need to change a profile's
-role, the current workaround is to create a new profile with the
-target role and copy the data over.
+The role is chosen when the profile is created. An administrator can
+change it later: `Tools → Manage profiles…`, select the profile,
+**Change role…**. The role of the open profile cannot be changed:
+open another administrator profile first. At least one administrator
+always remains. Before making a profile without a PIN an
+administrator, consider setting a PIN: anyone at the PC could
+otherwise open it.
 
 The role is soft security: a user with filesystem access can
 edit `profiles.json` by hand and become admin. The user interface

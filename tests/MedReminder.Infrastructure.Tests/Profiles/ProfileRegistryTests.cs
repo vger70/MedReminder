@@ -38,6 +38,41 @@ public sealed class ProfileRegistryTests : IDisposable
     private ProfileRegistry NewRegistry() =>
         new(_registryPath, _profilesRoot, _clock);
 
+    // Household step H2: role change under the last-admin invariant.
+    [Fact]
+    public void SetRole_changes_the_role_and_keeps_one_admin()
+    {
+        var sut = NewRegistry();
+        var admin = sut.Create("Anna", ProfileRole.Admin);
+        var user = sut.Create("Bruno", ProfileRole.User);
+
+        sut.SetRole(user.Id, ProfileRole.Admin);
+        sut.SetRole(admin.Id, ProfileRole.User);
+
+        NewRegistry().GetById(user.Id)!.Role.Should().Be(ProfileRole.Admin);
+        NewRegistry().GetById(admin.Id)!.Role.Should().Be(ProfileRole.User);
+        FluentActions.Invoking(() => sut.SetRole(user.Id, ProfileRole.User))
+            .Should().Throw<InvalidOperationException>();
+        NewRegistry().GetById(user.Id)!.Role.Should().Be(ProfileRole.Admin);
+    }
+
+    [Fact]
+    public void GetPinHash_returns_the_stored_hash_or_null()
+    {
+        var sut = NewRegistry();
+        var profile = sut.Create("Anna", ProfileRole.Admin);
+
+        sut.GetPinHash(profile.Id).Should().BeNull();
+        sut.SetPin(profile.Id, "1234");
+        var hash = sut.GetPinHash(profile.Id)!;
+
+        hash.Iterations.Should().Be(100_000);
+        Convert.FromBase64String(hash.Salt).Should().HaveCount(16);
+        Convert.FromBase64String(hash.Hash).Should().HaveCount(32);
+        sut.SetPin(profile.Id, null);
+        sut.GetPinHash(profile.Id).Should().BeNull();
+    }
+
     [Fact]
     public void First_profile_in_empty_registry_is_forced_to_admin()
     {

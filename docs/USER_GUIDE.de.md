@@ -519,11 +519,13 @@ Sicherung und das Profilregister werden gemeinsam genutzt und vom
   Einstellungen weder die SMTP- noch die Sicherungs-Registerkarte
   und sieht `Extras → Profile verwalten…` nicht.
 
-Die Rolle wird bei der Profilerstellung gewählt und kann
-**danach nicht mehr geändert werden**. Wenn du in Zukunft die Rolle
-eines Profils ändern möchtest, ist der aktuelle Weg, ein neues
-Profil mit der gewünschten Rolle anzulegen und die Daten
-darüberzukopieren.
+Die Rolle wird bei der Profilerstellung gewählt. Ein Administrator
+kann sie später ändern: `Extras → Profile verwalten…`, das Profil
+auswählen, **Rolle ändern…**. Die Rolle des geöffneten Profils kann
+nicht geändert werden: öffne zuerst ein anderes Administratorprofil.
+Mindestens ein Administrator bleibt immer erhalten. Bevor du ein
+Profil ohne PIN zum Administrator machst, richte besser eine PIN ein:
+sonst könnte jeder am PC es öffnen.
 
 Die Rolle ist eine „weiche“ Hürde: wer Zugriff auf das Dateisystem
 hat, kann `profiles.json` von Hand ändern und zum Administrator

@@ -3,6 +3,7 @@ using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Cloud.GoogleDrive;
 using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Export;
+using MedReminder.Infrastructure.Household;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
@@ -78,6 +79,11 @@ public static class PortableInfrastructureServiceCollectionExtensions
 
         // Requires IAppDataLocation and IOptions<UserSettings> from the host.
         services.TryAddSingleton<ILocalizationService, LocalizationService>();
+
+        // Household feature, step H2: one store per installation, next to
+        // the profiles. Requires IAppDataLocation from the host.
+        services.TryAddSingleton<IHouseholdStore>(sp => new SqliteHouseholdStore(
+            Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
 
         return services;
     }

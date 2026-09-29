@@ -394,6 +394,9 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   localization\strings.<lang>.json   optional user overrides of the UI dictionaries
   logs\medreminder-<date>.log    Serilog, daily files
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
+  household\
+    household.db                 household operation log and registers (household feature, step H2)
+    household.settings.json      household id, device id, generation
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
@@ -415,8 +418,20 @@ root is committed to the repository.
   PIN (PBKDF2, 100 000 iterations, per-profile salt).
 - **Roles**: `User` manages its own medicines and recipient address;
   `Admin` also manages SMTP, backup and the profile registry. The role
-  is enforced by the UI only: anyone with file-system access can edit
-  `profiles.json`. Unknown role values deserialize to `User`.
+  is enforced by the UI and the use cases only: anyone with file-system
+  access can edit `profiles.json`. Unknown role values deserialize to
+  `User`. An admin changes the role of another profile
+  (`ChangeProfileRole`); the open profile's role cannot change and one
+  admin always remains.
+- **Household** (step H2 of the household feature): profile creation,
+  rename, role, PIN and deletion go through use cases that also record
+  the change in `household\household.db` (`HouseholdLog`: HLC-stamped
+  operations and last-writer-wins registers). At start,
+  `ReconcileHousehold` records what `profiles.json` holds and the
+  household does not (the first-run wizard, the V1 migration, hand
+  edits); a profile missing from the file is never recorded as
+  removed. Until the household is replicated (step H3) the log is only
+  local.
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).
