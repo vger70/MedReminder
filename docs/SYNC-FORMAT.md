@@ -6,8 +6,8 @@ describes the on-disk format only. The design rationale (merge rules,
 security model, phases) is in
 [`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md).
 
-Format version: **1**. Operation catalogue: schema version **3**.
-Database image: schema version **2**.
+Format version: **1**. Operation catalogue: schema version **4**.
+Database image: schema version **3**.
 
 ---
 
@@ -248,12 +248,14 @@ derived stock movements (`Origin` 3), notification and dose-reminder
 events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
 the reference catalogue. It keeps the facts, the frozen (`Legacy`)
 movements and the cutoff, the register versions (`SyncFieldVersions`),
-the tombstones (`FactRetractions`), the register conflicts and the
+the tombstones (`FactRetractions`), the low-stock emails sent by any
+device (`SentEmailNotifications`), the register conflicts and the
 operation log (`SyncOperations`).
 
 Image schema versions: 1, the original image; 2, the operation log may
 hold `MedicineDeleted`, so a medicine can be absent from the image
-while later operations for it exist (they are skipped, §6).
+while later operations for it exist (they are skipped, §6); 3, the
+image holds `SentEmailNotifications`, which an older app would drop.
 
 A device joins from the newest checkpoint whose `vector` covers every
 device folder's first remaining segment (`vector[d] >= first − 1`), or
@@ -263,7 +265,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 3)
+## 6. Operation catalogue (schema versions 1 to 4)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -288,9 +290,11 @@ nothing.
 | `FactRetracted` | `retractionId`, `kind`, `factId`, `recordedAt` | the fact is removed whatever the order of arrival |
 | `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
 | `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
+| `EmailNotificationSent` (version 4) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt` | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`): the receiving device does not send it again |
 
-Every type is schema version 1 except `MedicineDeleted`, version 2, and
-`ProfileSettingChanged`, version 3.
+Every type is schema version 1 except `MedicineDeleted`, version 2,
+`ProfileSettingChanged`, version 3, and `EmailNotificationSent`,
+version 4.
 
 Profile settings (`ProfileSettingChanged.setting`): `DisplayName` (the
 profile's name, never empty), `ToAddress`, `CaregiverAddress`,

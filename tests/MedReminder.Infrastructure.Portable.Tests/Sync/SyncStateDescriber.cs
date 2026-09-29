@@ -46,6 +46,8 @@ internal static class SyncStateDescriber
                 sb.AppendLine($"A {a.Id} {a.Day:O} {a.Active}");
             foreach (var r in (await db.FactRetractions.AsNoTracking().ToListAsync()).OrderBy(r => r.Id))
                 sb.AppendLine($"R {r.Id} {r.FactId} {r.Kind}");
+            foreach (var e in (await db.SentEmailNotifications.AsNoTracking().ToListAsync()).OrderBy(e => e.Id))
+                sb.AppendLine($"E {e.Id} {e.MedicineId} {e.StockEpoch} {e.EpochFactId} {e.SentAt:O}");
             foreach (var c in (await db.SyncConflicts.AsNoTracking().ToListAsync())
                          .Where(c => c.Kind is SyncConflictKind.MedicineField or SyncConflictKind.ScheduleSameDate
                              or SyncConflictKind.SlotSetReplaced)

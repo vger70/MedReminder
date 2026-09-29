@@ -30,6 +30,29 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #116 — Send each low-stock email once per sync group (household H1)
+
+Link: [vger70/MedReminder#116](https://github.com/vger70/MedReminder/pull/116)
+Branch: `claude/household-h1-email-dedup` → `feature/master-slave`
+
+### Fixed
+
+- Every synced device with email configured sent the same low-stock
+  email. A successful email is now a replicated fact
+  (`SentEmailNotification`, operation `EmailNotificationSent`); a device
+  about to email for an epoch another device already emailed for leaves
+  the email out and still shows its toast. Two devices that notify
+  before either has synced still both send (removed by the master, H4).
+
+### Changed
+
+- Operation schema 4, image schema 3: apps up to v2.10 must be updated
+  on every device of a group.
+
+### Docs
+
+- `SYNC-FORMAT.md`, `ANALYSIS.md`, `ANALYSIS-B1-MOBILE-SYNC.md` §20.
+
 ## PR #115 — Close the join-during-listing-lag limit and ask which group a passphrase opens
 
 Link: [vger70/MedReminder#115](https://github.com/vger70/MedReminder/pull/115)

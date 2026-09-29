@@ -54,11 +54,25 @@ public static class NotificationCycle
         return true;
     }
 
+    // Whether the low-stock email of the medicine's current epoch was
+    // already sent, by this device or by another device of the sync
+    // group (SentEmailNotification is replicated). The caller then leaves
+    // the email channel out and still shows its own toast.
+    public static bool EmailAlreadySent(Medicine medicine, SentEmailNotification? latestEmailForMedicine)
+    {
+        ArgumentNullException.ThrowIfNull(medicine);
+        return latestEmailForMedicine is { } sent
+            && IsSameEpoch(sent.EpochFactId, sent.StockEpoch, medicine);
+    }
+
+    private static bool IsSameEpoch(NotificationEvent evt, Medicine medicine)
+        => IsSameEpoch(evt.EpochFactId, evt.StockEpoch, medicine);
+
     // The epoch is identified by the fact that opened it when both sides
     // know it (B.1 Phase 2d): epoch numbers can be reused after a
     // retraction. Older events fall back to the number.
-    private static bool IsSameEpoch(NotificationEvent evt, Medicine medicine)
-        => evt.EpochFactId is { } eventFact && medicine.StockEpochFactId is { } currentFact
-            ? eventFact == currentFact
-            : evt.StockEpoch == medicine.StockEpoch;
+    private static bool IsSameEpoch(Guid? factId, int epoch, Medicine medicine)
+        => factId is { } recordedFact && medicine.StockEpochFactId is { } currentFact
+            ? recordedFact == currentFact
+            : epoch == medicine.StockEpoch;
 }
