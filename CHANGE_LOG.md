@@ -84,6 +84,9 @@ Implements `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`.
   embedded refresh becomes optional. `ANALYSIS.md`, `CLAUDE.md` §5,
   `ANALYSIS-DRUG-CATALOGUE.md` §3.6 and the five user guides updated.
   Prompt moved to `docs/prompt/Completed/`.
+- `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`: design
+  for extending the remote feed to EMA EPAR, AEMPS CIMA and ANSM BDPM
+  (not implemented; waits for the AIFA feed to be validated).
 
 ---
 
