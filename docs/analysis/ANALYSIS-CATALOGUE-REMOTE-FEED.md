@@ -220,13 +220,13 @@ required.
 ### 4.5 Concurrency with other writers
 
 The import transaction holds the SQLite write lock for the duration of
-the delete + insert. This already happens at every embedded refresh; the
-feature adds at most one such transaction per month per profile
-[INFERRED]. Reference tables are not written by any `WriteGate` user,
-so no gate is added. Whether a concurrent `WriteGate` writer can hit
-`SQLITE_BUSY` during a long import depends on the connection busy
-timeout, which this analysis did not measure [UNCERTAIN]; the
-implementation must log the import duration so it can be observed.
+the delete + insert. The remote import runs under `WriteGate`, so the
+use cases, the monitor and the catch-up wait for it instead of hitting
+the busy timeout (§11.1). The embedded import, which lives in the UI
+and Infrastructure layers, cannot take the `internal` gate and keeps
+its previous behaviour; it runs only when a release changes a
+snapshot. The import duration is logged so it can be observed; it was
+not measured in this analysis [UNCERTAIN].
 
 ### 4.6 Relation to the embedded snapshot
 
@@ -464,3 +464,31 @@ Infrastructure.Portable and DataImporter tests pass. The new
 run (the test project requires the WindowsDesktop runtime). The
 workflow's CSV validation was run against the real
 `data/aifa-202609.zip` content (160 024 and 338 722 data rows).
+
+### 11.1 Review remediation (2026-09-29)
+
+Fixes applied after the code review of PR #131:
+
+- **Connection lifetime.** The embedded imports dispose their DI scope,
+  and with it the importer's open SQLite connection, before the remote
+  step starts. The remote step checks `Catalogue:RemoteFeed:Enabled`
+  and `CheckForUpdatesOnStartup` before waiting on the signal, and
+  opens its own scope only for the refresh. Previously one handle
+  stayed open for up to about three minutes, long enough to break the
+  file move done by backup restore, archive import and sync join.
+- **Write lock.** The remote import runs under `WriteGate` (§4.5).
+- **Manifest read errors.** The client maps an `IOException` while
+  reading the body to "manifest unavailable"; the refresher guards
+  the call as well.
+- **Staging cleanup.** Leftovers are removed at the start of every
+  run, also when offline or up to date.
+- **Workflow.** One UTC timestamp drives the archive name, `version`
+  and `generated`. Row checks: absolute floors of 100 000 / 200 000
+  rows and at least 90% of the previous run's counts, recorded in
+  `latest.json` under `rows`.
+
+Accepted limitation, unchanged: a snapshot republished in the same
+month keeps the same version and is not re-imported by clients that
+already hold it, and a bad month cannot be rolled back by publishing
+an older label (§2.2 W4). The stricter workflow checks above reduce
+the chance of publishing a bad month.

@@ -66,16 +66,25 @@ The Italian catalogue has two delivery paths:
   "generated": "2026-10-02T03:00:12.345678+00:00",
   "csv_count": 2,
   "sha256": "<64 hex characters>",
-  "size": 5016171
+  "size": 5016171,
+  "rows": {
+    "confezioni_fornitura.csv": 160024,
+    "PA_confezioni.csv": 338722
+  }
 }
 ```
 
-- `version` is the **download month** (`datetime.now()` in the
-  script), not an AIFA release date. With the cron on day 2 the two
-  usually coincide.
+- `version` is the **download month** in UTC, not an AIFA release
+  date. With the cron on day 2 the two usually coincide. The archive
+  name, `version` and `generated` all come from one timestamp taken
+  when the run starts.
 - The script fails, leaving `data/` untouched, when either CSV is
-  missing, lacks a column `AifaSnapshotParser` requires, or has fewer
-  than 1 000 data rows.
+  missing, lacks a column `AifaSnapshotParser` requires, has fewer
+  than 100 000 (`confezioni_fornitura.csv`) or 200 000
+  (`PA_confezioni.csv`) data rows, or has fewer than 90% of the rows
+  recorded under `rows` by the previous run. If AIFA genuinely shrinks
+  a file by more than 10%, lower the previous count in
+  `data/latest.json` by hand and re-run.
 - `data/` keeps the 3 newest archives.
 - A second run in the same month overwrites `aifa-<yyyymm>.zip` with
   the same version. Clients that already imported that version do not

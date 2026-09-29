@@ -56,12 +56,19 @@ Implements `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`.
 - A snapshot that parsed to zero rows emptied the country; the
   importer now rejects snapshots below a minimum row count before
   deleting anything.
+- Review follow-up: the startup catalogue refresh no longer keeps a
+  SQLite connection open while it waits and downloads (it could break
+  backup restore, archive import and sync join); the remote import
+  runs under `WriteGate`; manifest read errors and staging leftovers
+  are handled on every start.
 
 ### Build
 
 - `scripts/download_aifa.py` fails before touching `data/` when a CSV
-  is missing, lacks a required column or has fewer than 1 000 rows,
-  and publishes `sha256` and `size` in `latest.json`.
+  is missing, lacks a required column, is below 100 000 / 200 000
+  rows or below 90% of the previous run, and publishes `sha256`,
+  `size` and `rows` in `latest.json`. One timestamp drives the archive
+  name and the manifest version.
 
 ### Docs
 
