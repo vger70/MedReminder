@@ -1,0 +1,121 @@
+using MedReminder.Application.Abstractions;
+using MedReminder.Application.Sync;
+using MedReminder.Domain.Sync;
+
+namespace MedReminder.Application.UseCases;
+
+// Settings → Notifications (B.1, P8 of docs/analysis/
+// ANALYSIS-B1-MOBILE-SYNC.md §2): the recipients of this profile's
+// emails. Each changed address is a ProfileSettingChanged operation, so
+// the other devices of the profile's sync group get it. An address
+// that has no version in the group yet (a group created before the
+// settings were replicated) is recorded on the first save too, so the
+// devices end up with the same three addresses. The caller validates
+// the addresses.
+public sealed class UpdateNotificationSettings
+{
+    private readonly IProfileSettingsStore _store;
+    private readonly SyncRegisters _registers;
+    private readonly IOperationLog _operations;
+    private readonly IUnitOfWork _uow;
+
+    public UpdateNotificationSettings(IProfileSettingsStore store, SyncRegisters registers, IOperationLog operations,
+        IUnitOfWork uow)
+    {
+        _store = store;
+        _registers = registers;
+        _operations = operations;
+        _uow = uow;
+    }
+
+    public Task ExecuteAsync(string toAddress, string caregiverAddress, string doctorAddress,
+        CancellationToken cancellationToken)
+        => WriteGate.RunExclusiveAsync(async ct =>
+        {
+            var current = _store.Read();
+            var wanted = new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                [ProfileSetting.ToAddress] = toAddress?.Trim() ?? string.Empty,
+                [ProfileSetting.CaregiverAddress] = caregiverAddress?.Trim() ?? string.Empty,
+                [ProfileSetting.DoctorAddress] = doctorAddress?.Trim() ?? string.Empty,
+            };
+            var changes = wanted
+                .Where(w => !string.Equals(current.GetValueOrDefault(w.Key) ?? string.Empty, w.Value, StringComparison.Ordinal))
+                .ToDictionary(w => w.Key, w => w.Value, StringComparer.Ordinal);
+            if (changes.Count == 0) return true;
+
+            var recorded = new List<SyncOperationBody>();
+            foreach (var (setting, value) in wanted)
+            {
+                if (changes.ContainsKey(setting)
+                    || await _registers.WinnerAsync(ProfileSettingsProjection.Entity,
+                        ProfileSettingsProjection.Register(setting), ct) is null)
+                {
+                    recorded.Add(new ProfileSettingChanged(setting, value));
+                }
+            }
+            // The log first: if the file write fails, the next sync run
+            // projects the recorded value into it.
+            await _operations.AppendAsync(recorded, ct);
+            await _uow.SaveChangesAsync(ct);
+            _store.Write(changes);
+            return true;
+        }, cancellationToken);
+}
+
+// A profile synced with other devices is renamed only while it is open:
+// the new name is an operation of its own database. Thrown when the
+// administrator renames another profile that takes part in sync.
+public sealed class SyncedProfileRenameException : Exception
+{
+    public SyncedProfileRenameException()
+        : base("This profile is synced with other devices: open it to rename it.")
+    {
+    }
+}
+
+// Tools → Manage profiles → Rename (B.1, P8): the display name of the
+// current profile is a replicated setting (ProfileSettingChanged); the
+// name of another profile is local to this installation unless that
+// profile takes part in sync, in which case it must be opened first.
+public sealed class RenameProfile
+{
+    private readonly IProfileRegistry _registry;
+    private readonly ICurrentProfile _current;
+    private readonly ISyncProfileStatus _sync;
+    private readonly IOperationLog _operations;
+    private readonly IUnitOfWork _uow;
+
+    public RenameProfile(IProfileRegistry registry, ICurrentProfile current, ISyncProfileStatus sync,
+        IOperationLog operations, IUnitOfWork uow)
+    {
+        _registry = registry;
+        _current = current;
+        _sync = sync;
+        _operations = operations;
+        _uow = uow;
+    }
+
+    public Task ExecuteAsync(string profileId, string newDisplayName, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newDisplayName);
+        if (profileId != _current.Id)
+        {
+            if (_sync.IsSyncEnabled(profileId)) throw new SyncedProfileRenameException();
+            _registry.Rename(profileId, newDisplayName);
+            return Task.CompletedTask;
+        }
+
+        return WriteGate.RunExclusiveAsync(async ct =>
+        {
+            var before = _registry.GetById(profileId)?.DisplayName;
+            _registry.Rename(profileId, newDisplayName);
+            var after = _registry.GetById(profileId)?.DisplayName ?? newDisplayName.Trim();
+            if (string.Equals(before, after, StringComparison.Ordinal)) return true;
+            await _operations.AppendAsync([new ProfileSettingChanged(ProfileSetting.DisplayName, after)], ct);
+            await _uow.SaveChangesAsync(ct);
+            return true;
+        }, cancellationToken);
+    }
+}

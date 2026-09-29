@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MedReminder — MSI authoring (WiX v5 SDK-style).
+
+  Per-user install (no UAC): scope=perUser, target folder
+  %LOCALAPPDATA%\Programs\MedReminder\. No writes to
+  %PROGRAMFILES%, no system-wide entries. Removes everything on
+  uninstall — data in %LOCALAPPDATA%\MedReminder\ (DB, log,
+  smtp.protected) survives by design (the user might reinstall).
+
+  Upgrade code is IMMUTABLE: identifies the product family across
+  every version; never change it or upgrades will not find the
+  installed version.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <?define ProductName = "MedReminder" ?>
+  <?define Manufacturer = "vger70" ?>
+  <?define UpgradeCode = "{9BC2E4A1-4F7D-4E82-9F4B-2AC1B3E5D7F0}" ?>
+
+  <Package Name="$(ProductName)"
+           Manufacturer="$(Manufacturer)"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="$(UpgradeCode)"
+           Scope="perUser"
+           Compressed="yes"
+           InstallerVersion="500">
+
+    <SummaryInformation Description="MedReminder — organizational reminder for medication stock run-out" />
+
+    <!-- Upgrade rules: automatically replace any previous version
+         of the same UpgradeCode. Block downgrades. -->
+    <MajorUpgrade
+      Schedule="afterInstallInitialize"
+      AllowSameVersionUpgrades="yes"
+      DowngradeErrorMessage="A newer version of [ProductName] is already installed. Uninstall it before proceeding." />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Icon registered in Add/Remove Programs. -->
+    <Icon Id="MedReminder.ico" SourceFile="..\..\assets\medreminder.ico" />
+    <Property Id="ARPPRODUCTICON" Value="MedReminder.ico" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/vger70/MedReminder" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/vger70/MedReminder" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <!-- Directory layout: %LOCALAPPDATA%\Programs\MedReminder\ +
+         Start Menu\Programs\MedReminder\. StandardDirectory is
+         the v5 form (replaces Directory with well-known Ids). -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="MedReminder" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="MedReminder" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- Main feature: harvested files + shortcuts. -->
+    <Feature Id="MainFeature"
+             Title="MedReminder"
+             Level="1"
+             AllowAdvertise="no"
+             Display="expand"
+             ConfigurableDirectory="INSTALLFOLDER">
+
+      <ComponentGroupRef Id="ApplicationFiles" />
+      <ComponentGroupRef Id="StartMenuShortcuts" />
+      <Feature Id="DesktopShortcut"
+               Title="Desktop shortcut"
+               Level="1"
+               AllowAdvertise="no">
+        <ComponentGroupRef Id="DesktopShortcuts" />
+      </Feature>
+      <Feature Id="AutoStart"
+               Title="Auto-start with Windows (--minimized)"
+               Level="1000"
+               AllowAdvertise="no"
+               Description="Starts MedReminder minimized to the tray on every Windows login.">
+        <ComponentGroupRef Id="AutoStartRegistry" />
+      </Feature>
+    </Feature>
+
+    <!--
+      Auto-harvest of the publish folder. The <Files> tag in WiX v5
+      automatically generates Component / File for each file it
+      finds, preserving the subfolder structure relative to
+      Directory. The generated ComponentGroup has the same Id as
+      this <Files>.
+    -->
+    <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)\**" />
+    </ComponentGroup>
+
+    <!-- Start Menu shortcut. Non-advertising: classic shortcut
+         pointing to the file (KeyPath on the HKCU registry so it
+         does not conflict with the exe as the harvest KeyPath). -->
+    <ComponentGroup Id="StartMenuShortcuts" Directory="ApplicationProgramsFolder">
+      <Component Id="StartMenuShortcut" Guid="{2B9F3E6C-1D6A-4E7B-9F82-6B0C4E8A1D34}">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="MedReminder"
+                  Description="MedReminder — medication stock reminder"
+                  Target="[INSTALLFOLDER]MedReminder.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="MedReminder.ico" />
+        <Shortcut Id="StartMenuShortcutMinimized"
+                  Name="MedReminder (in tray)"
+                  Description="Starts MedReminder minimized to the tray"
+                  Target="[INSTALLFOLDER]MedReminder.exe"
+                  Arguments="--minimized"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="MedReminder.ico" />
+        <RemoveFolder Id="RemoveStartMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\vger70\MedReminder"
+                       Name="StartMenuShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="DesktopShortcuts" Directory="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="{5C4E1A9D-8F3B-4A6E-B2C1-3D7E9F0A5B84}">
+        <Shortcut Id="DesktopShortcut"
+                  Name="MedReminder"
+                  Description="MedReminder — medication stock reminder"
+                  Target="[INSTALLFOLDER]MedReminder.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="MedReminder.ico" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\vger70\MedReminder"
+                       Name="DesktopShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Optional auto-start via HKCU\...\Run. Feature disabled
+         by default (Level=1000); the user can enable it from the
+         installer UI or later, from the app's settings (already
+         supported). -->
+    <ComponentGroup Id="AutoStartRegistry" Directory="INSTALLFOLDER">
+      <Component Id="AutoStartRegKey" Guid="{7D9B2F1E-4A8C-4E3F-8B0D-6C1A5E9F3D72}">
+        <RegistryValue Root="HKCU"
+                       Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                       Name="MedReminder"
+                       Type="string"
+                       Value="&quot;[INSTALLFOLDER]MedReminder.exe&quot; --minimized"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- UI: WixUI_InstallDir gives (Welcome → EULA → InstallDir
+         → Progress → Exit). Per-user install: no UAC prompt. -->
+    <ui:WixUI Id="WixUI_InstallDir" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+  </Package>
+</Wix>

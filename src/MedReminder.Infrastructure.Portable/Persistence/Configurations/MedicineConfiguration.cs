@@ -1,0 +1,51 @@
+using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Medicines;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace MedReminder.Infrastructure.Persistence.Configurations;
+
+internal sealed class MedicineConfiguration : IEntityTypeConfiguration<Medicine>
+{
+    public void Configure(EntityTypeBuilder<Medicine> builder)
+    {
+        builder.ToTable("Medicines");
+        builder.HasKey(m => m.Id);
+
+        builder.Property(m => m.Name).IsRequired().HasMaxLength(200);
+        builder.Property(m => m.ActiveIngredient).HasMaxLength(200);
+        builder.Property(m => m.Package).HasMaxLength(200);
+        builder.Property(m => m.Unit).IsRequired().HasMaxLength(40);
+        builder.Property(m => m.DoctorName).HasMaxLength(200);
+        builder.Property(m => m.Notes).HasMaxLength(1000);
+
+        // SQLite has no native decimal. HasConversion<string> stores
+        // it as TEXT preserving precision (avoids the rounding REAL
+        // would introduce).
+        builder.Property(m => m.DosePerAdministration).HasConversion<string>();
+
+        builder.Property(m => m.NotificationChannels).HasConversion<int>();
+
+        // Optional catalogue link (M1). The columns are also added
+        // to pre-existing DBs by DatabaseInitializer's additive step.
+        builder.Property(m => m.NationalCode).HasMaxLength(40);
+        builder.Property(m => m.AtcCode)
+            .HasMaxLength(7)
+            .HasConversion(
+                atc => atc.HasValue ? atc.Value.Value : null,
+                text => string.IsNullOrEmpty(text) ? (AtcCode?)null : AtcCode.Parse(text));
+        builder.Property(m => m.LinkedReferenceMedicineId);
+
+        // A5: dose-time reminder opt-in flag (ANALYSIS-A5 §3.1).
+        // Also added to pre-existing DBs by DatabaseInitializer's additive step.
+        // HasDefaultValue(false) makes the generated column NOT NULL DEFAULT 0,
+        // consistent with the additive patch, so no reminder is ever "armed"
+        // by the upgrade and legacy inserts that omit the column still succeed.
+        builder.Property(m => m.RemindOnDose).HasDefaultValue(false);
+        // B.1 Phase 2c-2: same default as the boot patch column.
+        builder.Property(m => m.LedgerBaselineEpoch).HasDefaultValue(1);
+
+        builder.HasIndex(m => m.IsActive);
+        builder.HasIndex(m => m.Name);
+    }
+}

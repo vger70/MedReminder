@@ -1,0 +1,197 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- The TFM includes the Windows SDK 10.0.19041 (Windows 10
+         2004 / 20H1+) so we can access the WinRT ToastNotification
+         APIs via Microsoft.Toolkit.Uwp.Notifications. Compatible
+         with every currently supported Windows 10 / 11 version. -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>MedReminder.UI</RootNamespace>
+    <AssemblyName>MedReminder</AssemblyName>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\medreminder.ico</ApplicationIcon>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>$(NoWarn);CA1848;MSB3277;IDE0011;SYSLIB1045;CA1873;IDE0290</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>$(NoWarn);CA1848;MSB3277;IDE0011;SYSLIB1045;CA1873;IDE0290</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+    <!-- Inline help (Increment 14): WebView2 for the HTML rendering +
+         Markdig for the Markdown → HTML conversion of USER_GUIDE.md
+         embedded as a resource. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+    <PackageReference Include="Markdig" Version="1.3.2" />
+    <!-- Pairing QR code (B.1 Phase 4c). MIT. PngByteQRCode renders
+         without System.Drawing; WinForms loads the PNG. -->
+    <PackageReference Include="QRCoder" Version="1.8.0" />
+    <!-- Webcam barcode decoding (A2 phase 2). Apache 2.0, pure managed.
+         Only the core package: frames reach the decoder as BGRA bytes
+         through RGBLuminanceSource, so no Bitmap binding is needed. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
+    <ProjectReference Include="..\MedReminder.Infrastructure\MedReminder.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MedReminder.UI.Tests" />
+  </ItemGroup>
+
+  <!--
+    The Microsoft.Web.WebView2 NuGet package references both the
+    WinForms and the WPF integration assemblies. This project is
+    WinForms-only (`<UseWindowsForms>true`), so
+    `Microsoft.Web.WebView2.Wpf.dll` is never loaded at runtime — but
+    it pulls in `WindowsBase 5.0.0.0`, which unifies against the
+    `WindowsBase 4.0.0.0` provided by .NET 10 and produces an
+    MSB3277 warning at build time (plus ~50 KB of dead weight in
+    the published output).
+
+    Drop the WPF reference and its copy-local entry after MSBuild
+    has resolved package references. HelpViewerForm only uses
+    `Microsoft.Web.WebView2.WinForms`, so nothing at runtime changes;
+    the native `WebView2Loader.dll` (under `runtimes/`) is untouched
+    and still ships.
+  -->
+  <Target Name="RemoveUnusedWebView2Wpf" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(FileName)' == 'Microsoft.Web.WebView2.Wpf'" />
+      <Reference Remove="@(Reference)" Condition="'%(FileName)' == 'Microsoft.Web.WebView2.Wpf'" />
+      <ReferencePath Remove="@(ReferencePath)" Condition="'%(FileName)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Donation config TEMPLATE (A6). Placeholder public URLs only,
+         no secrets, every Enabled flag false. Copied to the output but
+         NOT read at runtime: the app loads assets/donations.settings.json,
+         embedded in MedReminder.Infrastructure (JsonDonationOptionsProvider).
+         Kept as a reference shape and as the target of the
+         no-secrets test in JsonDonationOptionsProviderTests. -->
+    <None Update="donations.settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Icon embedded as a resource: loaded at runtime by
+         AppIcon.Load() and assigned to every Form + the tray
+         NotifyIcon. The exe itself uses the multi-resolution
+         version via ApplicationIcon. -->
+    <EmbeddedResource Include="..\..\assets\medreminder.ico">
+      <Link>Assets\medreminder.ico</Link>
+      <LogicalName>MedReminder.UI.medreminder.ico</LogicalName>
+    </EmbeddedResource>
+    <!-- Localized user guide (Increment 16e): one file per supported
+         UI language (en, it, fr, es) under docs/. HelpViewerForm
+         loads the one matching the current UI language; if missing,
+         falls back to English. Copied as Content into
+         bin/localization/ so they are inspectable / editable; ALSO
+         embedded for single-file publish. -->
+    <Content Include="..\..\docs\USER_GUIDE.en.md">
+      <Link>localization\USER_GUIDE.en.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\docs\USER_GUIDE.it.md">
+      <Link>localization\USER_GUIDE.it.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\docs\USER_GUIDE.fr.md">
+      <Link>localization\USER_GUIDE.fr.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\docs\USER_GUIDE.es.md">
+      <Link>localization\USER_GUIDE.es.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\docs\USER_GUIDE.de.md">
+      <Link>localization\USER_GUIDE.de.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.en.md">
+      <Link>Assets\USER_GUIDE.en.md</Link>
+      <LogicalName>USER_GUIDE.en.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.it.md">
+      <Link>Assets\USER_GUIDE.it.md</Link>
+      <LogicalName>USER_GUIDE.it.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.fr.md">
+      <Link>Assets\USER_GUIDE.fr.md</Link>
+      <LogicalName>USER_GUIDE.fr.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.es.md">
+      <Link>Assets\USER_GUIDE.es.md</Link>
+      <LogicalName>USER_GUIDE.es.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\docs\USER_GUIDE.de.md">
+      <Link>Assets\USER_GUIDE.de.md</Link>
+      <LogicalName>USER_GUIDE.de.md</LogicalName>
+    </EmbeddedResource>
+    <!-- Localization dictionaries (Increment 16a). Copied as
+         Content into bin/localization/ so they are inspectable and
+         editable by the user without recompiling. Also included as
+         EmbeddedResource for the fallback (e.g. single-file publish
+         where Content does not survive). -->
+    <Content Include="..\..\assets\localization\strings.en.json">
+      <Link>localization\strings.en.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.it.json">
+      <Link>localization\strings.it.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.fr.json">
+      <Link>localization\strings.fr.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.es.json">
+      <Link>localization\strings.es.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\localization\strings.de.json">
+      <Link>localization\strings.de.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="..\..\assets\localization\strings.en.json">
+      <Link>Assets\strings.en.json</Link>
+      <LogicalName>strings.en.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\localization\strings.it.json">
+      <Link>Assets\strings.it.json</Link>
+      <LogicalName>strings.it.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\localization\strings.fr.json">
+      <Link>Assets\strings.fr.json</Link>
+      <LogicalName>strings.fr.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\localization\strings.es.json">
+      <Link>Assets\strings.es.json</Link>
+      <LogicalName>strings.es.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\localization\strings.de.json">
+      <Link>Assets\strings.de.json</Link>
+      <LogicalName>strings.de.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

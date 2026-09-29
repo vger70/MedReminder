@@ -1,0 +1,1982 @@
+using System.Globalization;
+using System.Text.Json;
+using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
+using MedReminder.Application.Export;
+using MedReminder.Application.UseCases;
+using MedReminder.Infrastructure.Email;
+using MedReminder.Infrastructure.Settings;
+using MedReminder.Infrastructure.Storage;
+using MedReminder.UI.UiExtensions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+
+namespace MedReminder.UI.Forms;
+
+// Settings split into tabs:
+//   Email  — SMTP host / port / TLS / user, DPAPI-protected
+//            password, send test.
+//   Startup — auto-start with Windows.
+//   Backup — DB export / import.
+//
+// The editable SMTP fields are serialized to
+// %LOCALAPPDATA%\MedReminder\smtp.settings.json (added to the
+// IConfiguration chain in Program.cs with reloadOnChange=true, so
+// IOptionsMonitor<SmtpSettings> refreshes without a restart).
+internal sealed class SettingsDialog : MedReminderFormBase
+{
+    private readonly IOptionsMonitor<SmtpSettings> _smtpMonitor;
+    private readonly IOptionsMonitor<NotificationSettings> _notificationMonitor;
+    private readonly IOptionsMonitor<BackupSettings> _backupMonitor;
+    private readonly IOptionsMonitor<UserSettings> _userMonitor;
+    private readonly ISmtpCredentialStore _credentialStore;
+    private readonly IEmailNotificationService _emailService;
+    private readonly IAutoStartService _autoStart;
+    private readonly IBackupService _backup;
+    private readonly IBackupStateStore _backupState;
+    private readonly IApplicationRestarter _restarter;
+    private readonly ICurrentProfile _currentProfile;
+    private readonly IProfileRegistry _profileRegistry;
+    private readonly ILocalizationService _loc;
+    private readonly IReferenceCatalogueQueryService _catalogueQuery;
+    // C.3: encrypted export / import (§5). The dialogs run the services
+    // off the UI thread; the SettingsDialog only launches them.
+    private readonly IExportService _exportService;
+    private readonly IImportService _importService;
+
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §5): the
+    // Cloud Backup section reads / writes the DPAPI-cached backup
+    // passphrase, and the Restore-from-cloud dialog enumerates and
+    // applies snapshots via the cloud-restore service.
+    private readonly ICloudBackupPassphraseStore _cloudPassStore;
+    private readonly ICloudRestoreService _cloudRestore;
+    private readonly ICloudAccountService? _cloudAccounts;
+    private readonly IArchiveStorage? _archiveStorage;
+    private readonly MedReminder.UI.Hosting.SyncHostedService? _sync;
+    private readonly IServiceScopeFactory? _scopes;
+
+    // Email tab controls
+    private TextBox _hostBox = null!;
+    private NumericUpDown _portBox = null!;
+    private CheckBox _useTlsBox = null!;
+    private TextBox _usernameBox = null!;
+    private TextBox _passwordBox = null!;
+    private CheckBox _clearPasswordBox = null!;
+    private TextBox _fromBox = null!;
+    private TextBox _fromNameBox = null!;
+    private TextBox _toBox = null!;
+    // A3 (docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md §5): the
+    // optional per-profile secondary recipient, on the Notifications tab.
+    private TextBox _caregiverBox = null!;
+    // Prescription request (EVOLUTION-PROPOSALS §3.4): optional
+    // per-profile doctor address, recipient of the explicit send from
+    // PrescriptionRequestDialog only.
+    private TextBox _doctorBox = null!;
+    private NumericUpDown _timeoutBox = null!;
+    private Label _passwordStatusLabel = null!;
+
+    // My PIN section on the Notifications tab. Lets a non-admin
+    // profile set or clear its own PIN without opening the
+    // admin-only ProfilesManagerForm.
+    private Label _pinStateLabel = null!;
+
+    // Auto-start
+    private CheckBox _autoStartCheck = null!;
+
+    // Backup
+    private Label _dbPathLabel = null!;
+    private CheckBox _backupEnabledBox = null!;
+    private TextBox _backupDirectoryBox = null!;
+    private DateTimePicker _backupTimePicker = null!;
+    private NumericUpDown _backupRetentionBox = null!;
+    private Label _backupStatusLabel = null!;
+    private Label _backupCloudWarningLabel = null!;
+
+    // C.3+ Cloud Backup subsection controls.
+    private CheckBox _cloudEnabledBox = null!;
+    private TextBox _cloudDirectoryBox = null!;
+    private NumericUpDown _cloudRetentionBox = null!;
+    private Label _cloudPassStatusLabel = null!;
+    private Button _cloudPassChangeButton = null!;
+    // C.3++ Phase 2 (B.1 Phase 4a): folder or OneDrive target.
+    private ComboBox? _cloudProviderBox;
+    private Label? _cloudAccountLabel;
+    private Button? _cloudSignInButton;
+    private Button? _cloudBrowseButton;
+    private Label? _cloudNotSyncWarning;
+    // Phase 4b: the providers offered in the combo (null = folder), and the
+    // account signed in for each in this dialog.
+    private List<CloudProvider?> _cloudProviderChoices = [];
+    private readonly Dictionary<CloudProvider, string> _cloudAccountIds = [];
+
+    // Generale (Incremento 16b) — selezione lingua UI
+    private ComboBox _languageCombo = null!;
+    // Reference-catalogue country (M2). Dropdown populated with
+    // countries actually present in the local catalogue plus a
+    // synthetic "EU" entry for supranational authorisations.
+    private ComboBox _referenceCountryCombo = null!;
+    // Passive update check opt-in — surfaces new GitHub releases at
+    // startup without downloading anything.
+    private CheckBox _checkUpdatesBox = null!;
+    // Per-profile text size (EVOLUTION-PROPOSALS.md §3.2), saved to
+    // profiles\<id>\ui.settings.json with the rest of the General tab.
+    private ComboBox _textSizeCombo = null!;
+
+    // Shared component for the explanatory tooltips on the technical fields.
+    // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
+    // ToolTip per dialog è la best practice WinForms.
+    private readonly ToolTip _tooltips = new()
+    {
+        AutoPopDelay = 20_000,
+        InitialDelay = 400,
+        ReshowDelay = 200,
+        ShowAlways = true,
+    };
+
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        WriteIndented = true,
+    };
+
+    // A3 (§5.2): validate the caregiver address exactly as the MailKit
+    // adapter does. MimeKit accepts a bare local part as a valid mailbox
+    // by default; a caregiver address must carry a domain, so parse with
+    // AllowAddressesWithoutDomain off. Kept in sync with
+    // MailKitEmailNotificationService.AddressParserOptions (the adapter's
+    // copy), which is internal to the Infrastructure assembly.
+    private static readonly MimeKit.ParserOptions _addressParserOptions = new()
+    {
+        AllowAddressesWithoutDomain = false,
+    };
+
+    public SettingsDialog(
+        IOptionsMonitor<SmtpSettings> smtpMonitor,
+        IOptionsMonitor<NotificationSettings> notificationMonitor,
+        IOptionsMonitor<BackupSettings> backupMonitor,
+        IOptionsMonitor<UserSettings> userMonitor,
+        ISmtpCredentialStore credentialStore,
+        IEmailNotificationService emailService,
+        IAutoStartService autoStart,
+        IBackupService backup,
+        IBackupStateStore backupState,
+        IApplicationRestarter restarter,
+        ICurrentProfile currentProfile,
+        IProfileRegistry profileRegistry,
+        ILocalizationService localization,
+        IReferenceCatalogueQueryService catalogueQuery,
+        IExportService exportService,
+        IImportService importService,
+        ICloudBackupPassphraseStore cloudPassStore,
+        ICloudRestoreService cloudRestore,
+        MedReminder.UI.Hosting.SyncHostedService? sync = null,
+        ICloudAccountService? cloudAccounts = null,
+        IArchiveStorage? archiveStorage = null,
+        IServiceScopeFactory? scopes = null)
+    {
+        _scopes = scopes;
+        _sync = sync;
+        _cloudAccounts = cloudAccounts;
+        _archiveStorage = archiveStorage;
+        _smtpMonitor = smtpMonitor;
+        _notificationMonitor = notificationMonitor;
+        _backupMonitor = backupMonitor;
+        _userMonitor = userMonitor;
+        _credentialStore = credentialStore;
+        _emailService = emailService;
+        _autoStart = autoStart;
+        _backup = backup;
+        _backupState = backupState;
+        _restarter = restarter;
+        _currentProfile = currentProfile;
+        _profileRegistry = profileRegistry;
+        _loc = localization;
+        _catalogueQuery = catalogueQuery;
+        _exportService = exportService;
+        _importService = importService;
+        _cloudPassStore = cloudPassStore;
+        _cloudRestore = cloudRestore;
+
+        Text = _loc.Get("Ui.SettingsDialog.Title");
+        // Sized so that the Backup tab fits the folder textbox, the
+        // Browse button, and every localised help/warning label
+        // without an horizontal scrollbar. Every other tab has
+        // Dock=Fill or AutoSize controls that scale to fit.
+        Width = 840;
+        Height = 620;
+        StartPosition = FormStartPosition.CenterParent;
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MinimizeBox = false;
+        MaximizeBox = false;
+        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+
+        var tabs = new TabControl { Dock = DockStyle.Fill };
+        tabs.TabPages.Add(BuildGeneralTab());
+        // Increment 15d (docs/ANALYSIS-MULTI-USER.md §7.4): SMTP and
+        // Backup tabs are admin-only. Every profile still needs to
+        // choose its own recipient — that lives in the new
+        // Notifications tab, visible to admins and users alike.
+        if (_currentProfile.IsAdmin)
+        {
+            tabs.TabPages.Add(BuildEmailTab());
+        }
+        tabs.TabPages.Add(BuildNotificationsTab());
+        // The Windows Run entry is a per-Windows-account setting, so
+        // it must not be toggled by a non-admin profile: doing so
+        // would change the auto-start behaviour for every profile of
+        // the same Windows user. Admin-only, coherent with Email
+        // gating (§7.4).
+        if (_currentProfile.IsAdmin)
+        {
+            tabs.TabPages.Add(BuildStartupTab());
+        }
+        // Backup tab: all profiles. Automatic-backup settings and the
+        // Save/Run-now buttons are hidden for non-admin profiles;
+        // the manual export/import buttons are always visible.
+        tabs.TabPages.Add(BuildBackupTab());
+
+        var closeButton = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
+        var buttonPanel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.RightToLeft,
+            Dock = DockStyle.Bottom,
+            Height = 48,
+            Padding = new Padding(12, 8, 12, 8),
+        };
+        buttonPanel.Controls.Add(closeButton);
+
+        Controls.Add(tabs);
+        Controls.Add(buttonPanel);
+        AcceptButton = closeButton;
+        CancelButton = closeButton;
+    }
+
+    // ------------------ General tab (Incremento 16b) ------------------
+    private TabPage BuildGeneralTab()
+    {
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.General"));
+
+        var languageLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.Language"),
+        };
+
+        // ComboBox con Items = SupportedLanguage records. DisplayMember
+        // = DisplayName localized for the current language.
+        _languageCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        foreach (var lang in SupportedLanguages.All)
+        {
+            var localizedName = _loc.Get(LanguageDisplayKey(lang.Code));
+            _languageCombo.Items.Add(new LanguageChoice(lang.Code, localizedName));
+            if (string.Equals(lang.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+            {
+                _languageCombo.SelectedIndex = _languageCombo.Items.Count - 1;
+            }
+        }
+        _languageCombo.DisplayMember = nameof(LanguageChoice.DisplayName);
+
+        _tooltips.SetToolTip(_languageCombo, _loc.Get("Ui.SettingsDialog.Tooltip.Language"));
+
+        // Reference country (M2). Sits under the language row.
+        var referenceCountryLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("settings.referenceCountry.label"),
+        };
+        _referenceCountryCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        PopulateReferenceCountryCombo();
+        _tooltips.SetToolTip(_referenceCountryCombo, _loc.Get("settings.referenceCountry.help"));
+
+        var referenceCountryHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("settings.referenceCountry.help"),
+        };
+
+        _checkUpdatesBox = new CheckBox
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.CheckUpdates"),
+            Checked = _userMonitor.CurrentValue.CheckForUpdatesOnStartup,
+        };
+        _tooltips.SetToolTip(_checkUpdatesBox,
+            _loc.Get("Ui.SettingsDialog.Tooltip.CheckUpdates"));
+
+        var textSizeLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.TextSize"),
+        };
+        _textSizeCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        PopulateTextSizeCombo();
+        var textSizeHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.General.TextSize.Help"),
+        };
+        _tooltips.SetToolTip(_textSizeCombo, textSizeHelp.Text);
+
+        var saveButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.General.Save"),
+            AutoSize = true,
+            Height = 30,
+        };
+        saveButton.Click += (_, _) => SaveGeneral();
+
+        var note = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.General.Note"),
+        };
+
+        var panel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16),
+        };
+        panel.Controls.Add(languageLabel);
+        panel.Controls.Add(_languageCombo);
+        panel.Controls.Add(referenceCountryLabel);
+        panel.Controls.Add(_referenceCountryCombo);
+        panel.Controls.Add(referenceCountryHelp);
+        panel.Controls.Add(_checkUpdatesBox);
+        panel.Controls.Add(textSizeLabel);
+        panel.Controls.Add(_textSizeCombo);
+        panel.Controls.Add(textSizeHelp);
+        panel.Controls.Add(saveButton);
+        panel.Controls.Add(note);
+        page.Controls.Add(panel);
+        return page;
+    }
+
+    // The selection shows the saved value, which differs from the size
+    // in use when the user saved without restarting.
+    private void PopulateTextSizeCombo()
+    {
+        var saved = ProfileUiSettingsFile.ReadTextSize(_currentProfile.DataDirectory);
+        foreach (var size in Enum.GetValues<TextSize>())
+        {
+            _textSizeCombo.Items.Add(new TextSizeChoice(size, _loc.Get(TextSizeDisplayKey(size))));
+            if (size == saved)
+            {
+                _textSizeCombo.SelectedIndex = _textSizeCombo.Items.Count - 1;
+            }
+        }
+        _textSizeCombo.DisplayMember = nameof(TextSizeChoice.DisplayName);
+    }
+
+    private static string TextSizeDisplayKey(TextSize size) => size switch
+    {
+        TextSize.Large => "Ui.SettingsDialog.General.TextSize.Large",
+        TextSize.ExtraLarge => "Ui.SettingsDialog.General.TextSize.ExtraLarge",
+        _ => "Ui.SettingsDialog.General.TextSize.Normal",
+    };
+
+    // Fill the reference-country dropdown with the distinct countries
+    // present in the local catalogue plus the synthetic "EU" entry
+    // (supranational). "IT" is always offered even on an empty DB so
+    // the user has something meaningful to pick before the first
+    // snapshot import completes.
+    private void PopulateReferenceCountryCombo()
+    {
+        var options = new SortedSet<string>(StringComparer.Ordinal) { "IT", "EU" };
+        try
+        {
+            var present = _catalogueQuery
+                .ListAvailableCountriesAsync(CancellationToken.None)
+                .GetAwaiter().GetResult();
+            foreach (var code in present)
+            {
+                options.Add(code.Value);
+            }
+        }
+        catch
+        {
+            // Best-effort: an empty or unavailable catalogue must not
+            // stop the Settings dialog from opening.
+        }
+
+        var selected = _userMonitor.CurrentValue.ReferenceCountry ?? "IT";
+        foreach (var option in options)
+        {
+            _referenceCountryCombo.Items.Add(option);
+            if (string.Equals(option, selected, StringComparison.OrdinalIgnoreCase))
+            {
+                _referenceCountryCombo.SelectedIndex = _referenceCountryCombo.Items.Count - 1;
+            }
+        }
+        if (_referenceCountryCombo.SelectedIndex < 0 && _referenceCountryCombo.Items.Count > 0)
+        {
+            _referenceCountryCombo.SelectedIndex = 0;
+        }
+    }
+
+    private void SaveGeneral()
+    {
+        if (_languageCombo.SelectedItem is not LanguageChoice choice) return;
+
+        var referenceCountry = _referenceCountryCombo.SelectedItem as string ?? "IT";
+        var settings = new UserSettings
+        {
+            Language = choice.Code,
+            ReferenceCountry = referenceCountry,
+            CheckForUpdatesOnStartup = _checkUpdatesBox.Checked,
+        };
+
+        var textSize = (_textSizeCombo.SelectedItem as TextSizeChoice)?.Size ?? TextSize.Normal;
+
+        try
+        {
+            WriteUserSettingsToDisk(settings);
+            ProfileUiSettingsFile.WriteTextSize(_currentProfile.DataDirectory, textSize);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        // If neither the language nor the text size changed, no
+        // restart needed. A ReferenceCountry change alone is picked up
+        // at the next opening of the medicine form via IOptionsMonitor
+        // (user.settings.json is watched with reloadOnChange=true).
+        // The text size is applied when each window loads, and the
+        // main window is already open, hence the restart.
+        var languageChanged = !string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase);
+        var textSizeChanged = TextSizes.ScaleOf(textSize) != MedReminderFormBase.TextScale;
+        if (!languageChanged && !textSizeChanged)
+        {
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.General.Saved"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var confirm = MessageBox.Show(this,
+            _loc.Get(textSizeChanged
+                ? "Ui.SettingsDialog.General.RestartPrompt.Changes"
+                : "Ui.SettingsDialog.General.RestartPrompt"),
+            _loc.Get("Ui.SettingsDialog.General.RestartPrompt.Title"),
+            MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (confirm != DialogResult.Yes) return;
+
+        if (textSizeChanged)
+        {
+            // The text size belongs to this profile: reopen it rather
+            // than the picker.
+            _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
+        }
+        else
+        {
+            _restarter.RestartAndExit();
+        }
+    }
+
+    private static void WriteUserSettingsToDisk(UserSettings settings)
+    {
+        var payload = new { UI = settings };
+        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "user.settings.json");
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
+        File.WriteAllText(path, json);
+    }
+
+    private sealed record LanguageChoice(string Code, string DisplayName);
+
+    private sealed record TextSizeChoice(TextSize Size, string DisplayName);
+
+    // Mappa un codice ISO 639-1 sulla chiave JSON che restituisce il
+    // the language name in the current UI language. Unknown codes
+    // ricadono su Language.English (fail-safe).
+    private static string LanguageDisplayKey(string code) => code switch
+    {
+        "en" => "Language.English",
+        "it" => "Language.Italian",
+        "fr" => "Language.French",
+        "es" => "Language.Spanish",
+        "de" => "Language.German",
+        _ => "Language.English",
+    };
+
+    // ------------------ Email tab ------------------
+    private TabPage BuildEmailTab()
+    {
+        // Admin-only tab (§7.4). The per-profile ToAddress moved to
+        // the Notifications tab in Increment 15d; the Email tab now
+        // only holds the global SMTP transport configuration.
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Email"));
+        var current = _smtpMonitor.CurrentValue;
+
+        _hostBox = new TextBox { Dock = DockStyle.Fill, Text = current.Host };
+        _portBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 1, Maximum = 65535, Value = current.Port > 0 ? current.Port : 587 };
+        _useTlsBox = new CheckBox { Text = _loc.Get("Ui.SettingsDialog.Email.UseTls"), AutoSize = true, Checked = current.UseStartTls };
+        _usernameBox = new TextBox { Dock = DockStyle.Fill, Text = current.Username };
+        _passwordBox = new TextBox { Dock = DockStyle.Fill, UseSystemPasswordChar = true, PlaceholderText = _loc.Get("Ui.SettingsDialog.Email.PasswordPlaceholder") };
+        _clearPasswordBox = new CheckBox { Text = _loc.Get("Ui.SettingsDialog.Email.ClearPassword"), AutoSize = true };
+        _fromBox = new TextBox { Dock = DockStyle.Fill, Text = current.FromAddress };
+        _fromNameBox = new TextBox { Dock = DockStyle.Fill, Text = string.IsNullOrEmpty(current.FromDisplayName) ? "MedReminder" : current.FromDisplayName };
+        _timeoutBox = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 5, Maximum = 300, Value = current.TimeoutSeconds > 0 ? current.TimeoutSeconds : 30 };
+
+        _tooltips.SetToolTip(_hostBox, _loc.Get("Ui.SettingsDialog.Tooltip.Host"));
+        _tooltips.SetToolTip(_portBox, _loc.Get("Ui.SettingsDialog.Tooltip.Port"));
+        _tooltips.SetToolTip(_useTlsBox, _loc.Get("Ui.SettingsDialog.Tooltip.UseTls"));
+        _tooltips.SetToolTip(_usernameBox, _loc.Get("Ui.SettingsDialog.Tooltip.Username"));
+        _tooltips.SetToolTip(_passwordBox, _loc.Get("Ui.SettingsDialog.Tooltip.Password"));
+        _tooltips.SetToolTip(_clearPasswordBox, _loc.Get("Ui.SettingsDialog.Tooltip.ClearPassword"));
+        _tooltips.SetToolTip(_fromBox, _loc.Get("Ui.SettingsDialog.Tooltip.From"));
+        _tooltips.SetToolTip(_fromNameBox, _loc.Get("Ui.SettingsDialog.Tooltip.FromName"));
+        _tooltips.SetToolTip(_timeoutBox, _loc.Get("Ui.SettingsDialog.Tooltip.Timeout"));
+
+        _passwordStatusLabel = new Label
+        {
+            AutoSize = true,
+            ForeColor = _credentialStore.HasPassword ? UiColors.Success : UiColors.Hint,
+            Text = _loc.Get(_credentialStore.HasPassword
+                ? "Ui.SettingsDialog.Email.PasswordStored"
+                : "Ui.SettingsDialog.Email.PasswordEmpty"),
+        };
+
+        var testButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Email.Test"), AutoSize = true, Height = 28 };
+        var saveButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Email.Save"), AutoSize = true, Height = 28 };
+        testButton.Click += async (_, _) => await TestSmtpAsync(testButton);
+        saveButton.Click += (_, _) => SaveSmtpSettings();
+
+        var table = BuildFormTable();
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Host"), _hostBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Port"), _portBox);
+        AddRow(table, string.Empty, _useTlsBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Username"), _usernameBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.NewPassword"), _passwordBox);
+        AddRow(table, string.Empty, _passwordStatusLabel);
+        AddRow(table, string.Empty, _clearPasswordBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.From"), _fromBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.FromName"), _fromNameBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Timeout"), _timeoutBox);
+
+        var buttons = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(12) };
+        buttons.Controls.Add(saveButton);
+        buttons.Controls.Add(testButton);
+
+        var container = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+        container.Controls.Add(table);
+
+        page.Controls.Add(container);
+        page.Controls.Add(buttons);
+        return page;
+    }
+
+    private void SaveSmtpSettings()
+    {
+        try
+        {
+            var settings = new SmtpSettings
+            {
+                Host = _hostBox.Text.Trim(),
+                Port = (int)_portBox.Value,
+                UseStartTls = _useTlsBox.Checked,
+                Username = _usernameBox.Text.Trim(),
+                FromAddress = _fromBox.Text.Trim(),
+                FromDisplayName = _fromNameBox.Text.Trim(),
+                TimeoutSeconds = (int)_timeoutBox.Value,
+            };
+
+            // Password: if the user has typed something, encrypt it;
+            // otherwise keep the current one. The "clear" checkbox
+            // ha precedenza e rimuove la password.
+            if (_clearPasswordBox.Checked)
+            {
+                _credentialStore.Clear();
+            }
+            else if (!string.IsNullOrEmpty(_passwordBox.Text))
+            {
+                _credentialStore.SetPassword(_passwordBox.Text);
+            }
+
+            WriteSmtpSettingsToDisk(settings);
+            _passwordStatusLabel.Text = _loc.Get(_credentialStore.HasPassword
+                ? "Ui.SettingsDialog.Email.PasswordStored"
+                : "Ui.SettingsDialog.Email.PasswordEmpty");
+            _passwordBox.Text = string.Empty;
+            _clearPasswordBox.Checked = false;
+
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Email.Saved"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Email.SaveError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task TestSmtpAsync(Button button)
+    {
+        // Save first because TestConnectionAsync operates on the
+        // current settings (IOptionsMonitor refreshes after the file
+        // is written).
+        SaveSmtpSettings();
+        button.Enabled = false;
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var ok = await _emailService.TestConnectionAsync(cts.Token);
+            var msg = _loc.Get(ok
+                ? "Ui.SettingsDialog.Email.TestOk"
+                : "Ui.SettingsDialog.Email.TestFailed");
+            var icon = ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning;
+            MessageBox.Show(this, msg,
+                _loc.Get("Ui.SettingsDialog.Email.TestTitle"),
+                MessageBoxButtons.OK, icon);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Email.TestTitle"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            button.Enabled = true;
+        }
+    }
+
+    private static void WriteSmtpSettingsToDisk(SmtpSettings settings)
+    {
+        var payload = new { Smtp = settings };
+        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "smtp.settings.json");
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
+        File.WriteAllText(path, json);
+    }
+
+    // ------------------ Notifications tab (Increment 15d) ------------------
+    // Per-profile "where do the emails go" tab (§7.4). Visible to
+    // every profile: an admin sees it in addition to the Email tab
+    // (SMTP transport); a non-admin user sees only this tab and
+    // relies on the admin for the SMTP configuration itself.
+    private TabPage BuildNotificationsTab()
+    {
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Notifications"));
+        var current = _notificationMonitor.CurrentValue;
+
+        _toBox = new TextBox { Dock = DockStyle.Fill, Text = current.ToAddress };
+        _tooltips.SetToolTip(_toBox, _loc.Get("Ui.SettingsDialog.Tooltip.To"));
+
+        // A3: optional secondary recipient. Empty = no caregiver (§3.1).
+        _caregiverBox = new TextBox { Dock = DockStyle.Fill, Text = current.CaregiverAddress };
+
+        var caregiverHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Help"),
+        };
+
+        _doctorBox = new TextBox { Dock = DockStyle.Fill, Text = current.DoctorAddress };
+
+        var doctorHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Help"),
+        };
+
+        var saveButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.Save"),
+            AutoSize = true,
+            Height = 28,
+        };
+        saveButton.Click += async (_, _) => await SaveNotificationSettingsAsync(saveButton);
+
+        var explanation = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get(_currentProfile.IsAdmin
+                ? "Ui.SettingsDialog.Notifications.NoteAdmin"
+                : "Ui.SettingsDialog.Notifications.NoteUser"),
+        };
+
+        var table = BuildFormTable();
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Email.To"), _toBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Label"), _caregiverBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Label"), _doctorBox);
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            Padding = new Padding(12),
+        };
+        buttons.Controls.Add(saveButton);
+
+        var container = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16),
+            AutoScroll = true,
+        };
+        container.Controls.Add(table);
+        container.Controls.Add(caregiverHelp);
+        container.Controls.Add(doctorHelp);
+        container.Controls.Add(buttons);
+        container.Controls.Add(explanation);
+        container.Controls.Add(BuildMyPinSection());
+
+        page.Controls.Add(container);
+        return page;
+    }
+
+    // Self-service PIN management for the current profile. Renders
+    // on the Notifications tab because that is the only settings
+    // page visible to non-admin profiles — the admin-only
+    // ProfilesManagerForm can still change PINs for any profile
+    // (§8).
+    private GroupBox BuildMyPinSection()
+    {
+        var group = new GroupBox
+        {
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.MyPin"),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(12),
+            Margin = new Padding(0, 12, 0, 0),
+        };
+
+        _pinStateLabel = new Label
+        {
+            AutoSize = true,
+            Location = new System.Drawing.Point(12, 24),
+            Text = FormatPinStateText(),
+        };
+
+        var changeButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.SetPin"),
+            AutoSize = true,
+            Location = new System.Drawing.Point(12, 52),
+        };
+        changeButton.Click += (_, _) => ChangeMyPin();
+
+        group.Controls.Add(_pinStateLabel);
+        group.Controls.Add(changeButton);
+        return group;
+    }
+
+    private string FormatPinStateText()
+    {
+        var stateKey = _profileRegistry.HasPin(_currentProfile.Id)
+            ? "Ui.SettingsDialog.Notifications.PinStateSet"
+            : "Ui.SettingsDialog.Notifications.PinStateNone";
+        return _loc.Get(stateKey);
+    }
+
+    private void ChangeMyPin()
+    {
+        try
+        {
+            var hasPin = _profileRegistry.HasPin(_currentProfile.Id);
+            using var dialog = new ChangePinDialog(_loc, hasPin);
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+            _profileRegistry.SetPin(
+                _currentProfile.Id,
+                dialog.ClearPin ? null : dialog.NewPin);
+
+            _pinStateLabel.Text = FormatPinStateText();
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Notifications.PinChanged"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Common.Error"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    // B.1, P8: through UpdateNotificationSettings, which records the
+    // change for the other devices of a synced profile and writes
+    // notifications.settings.json.
+    private async Task SaveNotificationSettingsAsync(Button saveButton)
+    {
+        saveButton.Enabled = false;
+        try
+        {
+            var toAddress = _toBox.Text.Trim();
+            var caregiverAddress = _caregiverBox.Text.Trim();
+            var doctorAddress = _doctorBox.Text.Trim();
+
+            // A3 (§5.2): a non-empty caregiver address must parse as a
+            // well-formed mailbox and must not equal the primary
+            // (case-insensitive). An empty value is allowed
+            // (unconfigured). On failure, surface an inline error and
+            // abort the save.
+            if (caregiverAddress.Length > 0)
+            {
+                if (!MimeKit.MailboxAddress.TryParse(
+                        _addressParserOptions, caregiverAddress, out _))
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Invalid"),
+                        _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (string.Equals(caregiverAddress, toAddress, StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.SameAsPrimary"),
+                        _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            // Doctor address: same well-formedness rule as the
+            // caregiver (a full mailbox with a domain). Empty allowed.
+            if (doctorAddress.Length > 0
+                && !MimeKit.MailboxAddress.TryParse(_addressParserOptions, doctorAddress, out _))
+            {
+                MessageBox.Show(this,
+                    _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Invalid"),
+                    _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (_scopes is null) throw new InvalidOperationException("The settings dialog has no service scope.");
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<UpdateNotificationSettings>()
+                    .ExecuteAsync(toAddress, caregiverAddress, doctorAddress, CancellationToken.None);
+            }
+            if (IsDisposed) return;
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Notifications.Saved"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            if (!IsDisposed)
+            {
+                MessageBox.Show(this, ex.Message,
+                    _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        finally
+        {
+            if (!IsDisposed) saveButton.Enabled = true;
+        }
+    }
+
+    // ------------------ Startup tab ------------------
+    private TabPage BuildStartupTab()
+    {
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Startup"));
+
+        _autoStartCheck = new CheckBox
+        {
+            Text = _loc.Get("Ui.SettingsDialog.Startup.AutoStart"),
+            AutoSize = true,
+            Checked = _autoStart.IsEnabled,
+        };
+        _autoStartCheck.CheckedChanged += (_, _) =>
+        {
+            try
+            {
+                if (_autoStartCheck.Checked) _autoStart.Enable();
+                else _autoStart.Disable();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message,
+                    _loc.Get("Ui.SettingsDialog.Startup.Error"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _autoStartCheck.Checked = _autoStart.IsEnabled;
+            }
+        };
+
+        var note = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.Startup.Note"),
+            ForeColor = UiColors.Hint,
+        };
+
+        var panel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16),
+        };
+        panel.Controls.Add(_autoStartCheck);
+        panel.Controls.Add(note);
+        page.Controls.Add(panel);
+        return page;
+    }
+
+    // ------------------ Backup tab ------------------
+    private TabPage BuildBackupTab()
+    {
+        var page = new TabPage(_loc.Get("Ui.SettingsDialog.Tab.Backup"));
+        var isAdmin = _currentProfile.IsAdmin;
+        var settings = _backupMonitor.CurrentValue;
+
+        _dbPathLabel = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            Text = _loc.Get("Ui.SettingsDialog.Backup.DbPath", _backup.DatabasePath),
+            ForeColor = UiColors.Hint,
+        };
+
+        _backupEnabledBox = new CheckBox
+        {
+            Text = _loc.Get("Ui.SettingsDialog.Backup.Enable"),
+            AutoSize = true,
+            Checked = settings.Enabled,
+        };
+
+        _backupDirectoryBox = new TextBox
+        {
+            // Sized against the current SettingsDialog width so
+            // it never pushes the Backup tab into an horizontal
+            // scrollbar. Column 0 of BuildFormTable is 160 wide,
+            // container padding is 16 on each side, table padding
+            // is 12 on each side — the directory box + browse
+            // button must stay under (Width − 160 − 32 − 24).
+            Width = 460,
+            Text = settings.Directory,
+            ReadOnly = false,
+        };
+        var browseButton = new Button { Text = _loc.Get("Common.Browse"), AutoSize = true };
+        browseButton.Click += (_, _) => BrowseBackupDirectory();
+
+        // DateTimePicker in modalità "Time": mostra solo HH:mm (custom
+        // format), prevent the user from changing the date.
+        _backupTimePicker = new DateTimePicker
+        {
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = "HH:mm",
+            ShowUpDown = true,
+            Width = 100,
+            Value = ParsePreferredTimeAsDateTime(settings.PreferredTime)
+        };
+
+        _backupRetentionBox = new NumericUpDown
+        {
+            Width = 80,
+            Minimum = 0,
+            Maximum = 3650,
+            Value = settings.RetentionDays > 0 ? settings.RetentionDays : 30,
+        };
+
+        _tooltips.SetToolTip(_backupEnabledBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupEnabled"));
+        _tooltips.SetToolTip(_backupDirectoryBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupDirectory"));
+        _tooltips.SetToolTip(_backupTimePicker, _loc.Get("Ui.SettingsDialog.Tooltip.BackupTime"));
+        _tooltips.SetToolTip(_backupRetentionBox, _loc.Get("Ui.SettingsDialog.Tooltip.BackupRetention"));
+        _tooltips.SetToolTip(browseButton, _loc.Get("Ui.SettingsDialog.Tooltip.BackupBrowse"));
+
+        var saveButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.SaveSettings"), AutoSize = true, Height = 30 };
+        saveButton.Click += (_, _) => SaveBackupSettings();
+
+        var runNowButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.RunNow"), AutoSize = true, Height = 30 };
+        runNowButton.Click += async (_, _) => await RunBackupNowAsync(runNowButton);
+
+        var exportButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.ExportCustom"), AutoSize = true, Height = 30 };
+        exportButton.Click += async (_, _) => await ExportBackupAsync(exportButton);
+
+        var importButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.Restore"), AutoSize = true, Height = 30 };
+        importButton.Click += async (_, _) => await ImportBackupAsync(importButton);
+
+        // C.3: encrypted, portable export / import (§5.4). Sits next to
+        // the raw DB backup / restore because it is the same "move my
+        // data" concern, but produces a passphrase-encrypted .mrz that
+        // is portable across Windows accounts and machines.
+        var exportEncryptedButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.File.ExportData"),
+            AutoSize = true,
+            Height = 30,
+        };
+        exportEncryptedButton.Click += (_, _) => ShowExportDialog();
+
+        var importEncryptedButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.File.ImportData"),
+            AutoSize = true,
+            Height = 30,
+        };
+        importEncryptedButton.Click += async (_, _) => await ShowImportDialog();
+
+        _backupStatusLabel = new Label { AutoSize = true };
+        UpdateBackupStatusLabel();
+
+        _backupCloudWarningLabel = new Label
+        {
+            AutoSize = true,
+            // Constrained to the width available in table column 1
+            // (dialog − 160 − container padding − table padding),
+            // so the localized warning text wraps within the tab
+            // instead of forcing an horizontal scrollbar.
+            MaximumSize = new System.Drawing.Size(540, 0),
+            ForeColor = UiColors.Warning,
+            Text = string.Empty,
+            Visible = false,
+        };
+        UpdateCloudWarning();
+        _backupDirectoryBox.TextChanged += (_, _) => UpdateCloudWarning();
+
+        var directoryRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            WrapContents = false,
+        };
+        directoryRow.Controls.Add(_backupDirectoryBox);
+        directoryRow.Controls.Add(browseButton);
+
+        var table = BuildFormTable();
+        AddRow(table, string.Empty, _backupEnabledBox);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.Directory"), directoryRow);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.PreferredTime"), _backupTimePicker);
+        AddRow(table, _loc.Get("Ui.SettingsDialog.Backup.RetentionDays"), _backupRetentionBox);
+        AddRow(table, string.Empty, _backupStatusLabel);
+        AddRow(table, string.Empty, _backupCloudWarningLabel);
+        table.Visible = isAdmin;
+
+        var actionButtons = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            Padding = new Padding(4, 8, 4, 8),
+        };
+        if (isAdmin)
+        {
+            actionButtons.Controls.Add(saveButton);
+            actionButtons.Controls.Add(runNowButton);
+        }
+        actionButtons.Controls.Add(exportButton);
+        actionButtons.Controls.Add(importButton);
+        actionButtons.Controls.Add(exportEncryptedButton);
+        actionButtons.Controls.Add(importEncryptedButton);
+
+        // C.3+ (§5.3): Restore-from-cloud sits next to the encrypted
+        // export / import buttons since it is the same "move my data"
+        // concern. Always visible so a non-admin profile can still
+        // restore a snapshot into its own DB after installing the app
+        // on a fresh machine.
+        var restoreFromCloudButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.File.RestoreFromCloud"),
+            AutoSize = true,
+            Height = 30,
+        };
+        restoreFromCloudButton.Click += async (_, _) => await ShowRestoreFromCloudDialog();
+        actionButtons.Controls.Add(restoreFromCloudButton);
+
+        var cloudSection = BuildCloudBackupSection(isAdmin);
+
+        var note = new Label
+        {
+            AutoSize = true,
+            // Wraps against the tab's usable width (dialog width
+            // minus container padding on both sides).
+            MaximumSize = new System.Drawing.Size(700, 0),
+            AutoEllipsis = false,
+            Text = _loc.Get("Ui.SettingsDialog.Backup.Note"),
+            ForeColor = UiColors.Hint,
+        };
+
+        // AutoScroll on: the admin view (Cloud Backup section, action
+        // buttons, localized notes) can be taller than the tab, in
+        // particular at DPI scales above 100%. Without a scrollbar
+        // the lower controls were cut off and unreachable.
+        var container = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16),
+            WrapContents = false,
+            AutoScroll = true,
+        };
+        container.Controls.Add(_dbPathLabel);
+        container.Controls.Add(table);
+        if (cloudSection is not null)
+        {
+            container.Controls.Add(cloudSection);
+        }
+        container.Controls.Add(actionButtons);
+        container.Controls.Add(note);
+        page.Controls.Add(container);
+        return page;
+    }
+
+    // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §5.1):
+    // second target that writes encrypted .mrz snapshots into a
+    // user-picked cloud-synced folder. Admin-only writer (the settings
+    // live in backup.settings.json alongside the raw-DB target) — a
+    // non-admin profile can still trigger a restore from the encrypted
+    // export / import row above.
+    private Control? BuildCloudBackupSection(bool isAdmin)
+    {
+        if (!isAdmin)
+        {
+            // Nothing to configure for a non-admin profile — the
+            // Restore-from-cloud button above remains available so the
+            // user can still consume snapshots.
+            return null;
+        }
+
+        var settings = _backupMonitor.CurrentValue;
+
+        var groupTitle = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+            Font = new System.Drawing.Font(Font, System.Drawing.FontStyle.Bold),
+            Padding = new Padding(0, 12, 0, 4),
+        };
+
+        _cloudEnabledBox = new CheckBox
+        {
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Enabled"),
+            AutoSize = true,
+            Checked = settings.CloudFolderEnabled,
+        };
+
+        _cloudDirectoryBox = new TextBox
+        {
+            Width = 460,
+            Text = settings.CloudFolderDirectory,
+        };
+        var cloudBrowseButton = new Button
+        {
+            Text = _loc.Get("Common.Browse"),
+            AutoSize = true,
+        };
+        cloudBrowseButton.Click += (_, _) => BrowseCloudDirectory();
+        _cloudBrowseButton = cloudBrowseButton;
+        var cloudDirectoryRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            WrapContents = false,
+        };
+        cloudDirectoryRow.Controls.Add(_cloudDirectoryBox);
+        cloudDirectoryRow.Controls.Add(cloudBrowseButton);
+
+        _cloudRetentionBox = new NumericUpDown
+        {
+            Width = 80,
+            Minimum = 0,
+            Maximum = 3650,
+            Value = settings.CloudFolderRetention > 0 ? settings.CloudFolderRetention : 30,
+        };
+
+        _cloudPassStatusLabel = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(360, 0),
+            Text = _cloudPassStore.HasPassphrase
+                ? _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Set")
+                : _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.NotSet"),
+        };
+        _cloudPassChangeButton = new Button
+        {
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Change"),
+            AutoSize = true,
+        };
+        _cloudPassChangeButton.Click += (_, _) => ChangeCloudPassphrase();
+        var passRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            WrapContents = false,
+        };
+        passRow.Controls.Add(_cloudPassStatusLabel);
+        passRow.Controls.Add(_cloudPassChangeButton);
+
+        var notSyncWarning = _cloudNotSyncWarning = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(600, 0),
+            ForeColor = UiColors.Warning,
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Warning.NotSync"),
+        };
+        var lostPassWarning = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(600, 0),
+            ForeColor = UiColors.Warning,
+            Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Warning.LostPassphrase"),
+        };
+
+        var cloudTable = BuildFormTable();
+        AddRow(cloudTable, string.Empty, _cloudEnabledBox);
+        // The saved provider stays a choice even when this build does not
+        // offer it (no client id), so a save does not switch it silently.
+        var providers = new[] { CloudProvider.OneDrive, CloudProvider.GoogleDrive }
+            .Where(p => _cloudAccounts?.IsAvailable(p) == true || p == settings.CloudProvider).ToList();
+        if (providers.Count > 0)
+        {
+            if (settings.CloudProvider is { } saved && !string.IsNullOrEmpty(settings.CloudAccountId))
+            {
+                _cloudAccountIds[saved] = settings.CloudAccountId;
+            }
+            _cloudProviderChoices = [null, .. providers.Cast<CloudProvider?>()];
+            _cloudProviderBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
+            foreach (var choice in _cloudProviderChoices)
+            {
+                _cloudProviderBox.Items.Add(_loc.Get($"Ui.SettingsDialog.CloudBackup.Provider.{choice?.ToString() ?? "Folder"}"));
+            }
+            _cloudProviderBox.SelectedIndex = Math.Max(0, _cloudProviderChoices.IndexOf(settings.CloudProvider));
+            _cloudProviderBox.SelectedIndexChanged += async (_, _) =>
+            {
+                UpdateCloudTargetControls();
+                await RefreshCloudAccountAsync();
+            };
+            _cloudAccountLabel = new Label { AutoSize = true, Margin = new Padding(0, 6, 8, 0) };
+            _cloudSignInButton = new Button { Text = _loc.Get("Ui.SettingsDialog.CloudBackup.SignIn"), AutoSize = true };
+            _cloudSignInButton.Click += async (_, _) => await SignInCloudBackupAsync();
+            var accountRow = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = false,
+            };
+            accountRow.Controls.Add(_cloudAccountLabel);
+            accountRow.Controls.Add(_cloudSignInButton);
+            AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Provider.Label"), _cloudProviderBox);
+            AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Account.Label"), accountRow);
+            _ = RefreshCloudAccountAsync();
+        }
+        AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Directory.Label"), cloudDirectoryRow);
+        AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Retention.Label"), _cloudRetentionBox);
+        AddRow(cloudTable, _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Label"), passRow);
+        AddRow(cloudTable, string.Empty, notSyncWarning);
+        AddRow(cloudTable, string.Empty, lostPassWarning);
+
+        var wrapper = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            AutoSize = true,
+            WrapContents = false,
+        };
+        wrapper.Controls.Add(groupTitle);
+        wrapper.Controls.Add(cloudTable);
+        UpdateCloudTargetControls();
+        return wrapper;
+    }
+
+    // Without the provider choice (no app registration, or a non-admin
+    // view) the saved target applies, so validation and the folder row
+    // follow what the save keeps.
+    private CloudProvider? CloudTargetProvider => _cloudProviderBox is null
+        ? _backupMonitor.CurrentValue.CloudProvider
+        : _cloudProviderChoices[_cloudProviderBox.SelectedIndex];
+
+    private string CloudTargetAccountId => _cloudProviderBox is null
+        ? _backupMonitor.CurrentValue.CloudAccountId
+        : CloudTargetProvider is { } provider ? _cloudAccountIds.GetValueOrDefault(provider, string.Empty) : string.Empty;
+
+    private void UpdateCloudTargetControls()
+    {
+        var cloud = CloudTargetProvider is not null;
+        _cloudDirectoryBox.Enabled = !cloud;
+        if (_cloudBrowseButton is not null) _cloudBrowseButton.Enabled = !cloud;
+        if (_cloudNotSyncWarning is not null) _cloudNotSyncWarning.Visible = !cloud;
+        if (_cloudAccountLabel is not null) _cloudAccountLabel.Enabled = cloud;
+        if (_cloudSignInButton is not null) _cloudSignInButton.Enabled = cloud;
+    }
+
+    private async Task RefreshCloudAccountAsync()
+    {
+        if (_cloudAccountLabel is null || _cloudAccounts is null) return;
+        CloudAccount? account = null;
+        if (CloudTargetProvider is { } provider && CloudTargetAccountId is { Length: > 0 } accountId)
+        {
+            try
+            {
+                account = await _cloudAccounts.FindAsync(provider, accountId, CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                // Shown as not signed in.
+            }
+        }
+        _cloudAccountLabel.Text = account?.UserName ?? _loc.Get("Ui.SettingsDialog.CloudBackup.Account.None");
+    }
+
+    private async Task SignInCloudBackupAsync()
+    {
+        if (_cloudAccounts is null || _cloudSignInButton is null || CloudTargetProvider is not { } provider) return;
+        _cloudSignInButton.Enabled = false;
+        UseWaitCursor = true;
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            var known = CloudTargetAccountId;
+            var account = await _cloudAccounts.SignInAsync(provider,
+                string.IsNullOrEmpty(known) ? null : known, timeout.Token);
+            _cloudAccountIds[provider] = account.Id;
+            await RefreshCloudAccountAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, _loc.Get(provider == CloudProvider.GoogleDrive
+                    ? "Ui.SyncDialog.SignIn.Failed.GoogleDrive"
+                    : "Ui.SyncDialog.SignIn.Failed", ex.Message),
+                _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            UseWaitCursor = false;
+            _cloudSignInButton.Enabled = CloudTargetProvider is not null;
+        }
+    }
+
+    private void BrowseCloudDirectory()
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = _loc.Get("Ui.SettingsDialog.CloudBackup.Directory.Browse.Title"),
+            InitialDirectory = string.IsNullOrWhiteSpace(_cloudDirectoryBox.Text)
+                ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                : _cloudDirectoryBox.Text,
+        };
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            _cloudDirectoryBox.Text = dialog.SelectedPath;
+        }
+    }
+
+    private void ChangeCloudPassphrase()
+    {
+        using var dialog = new ChangeCloudPassphraseDialog(_loc, _cloudPassStore);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            _cloudPassStatusLabel.Text = _loc.Get("Ui.SettingsDialog.CloudBackup.Passphrase.Set");
+        }
+    }
+
+    // B.1 Phase 3d (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §5.7): an
+    // import or a restore on a synced profile starts a new sync
+    // generation; the other devices discard what they have not sent yet
+    // and rebuild. The user confirms, then the sync publishes what is
+    // pending and stops until the restart. False when the user declines.
+    private async Task<bool> ConfirmSyncResetAsync(string profileId)
+    {
+        var synced = File.Exists(Path.Combine(AppDataPaths.GetProfileDataDirectory(profileId), "sync.settings.json"));
+        if (!synced) return true;
+        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.ResetWarning"), _loc.Get("Common.Warning"),
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            return false;
+        }
+        if (_sync is not null && string.Equals(profileId, _currentProfile.Id, StringComparison.Ordinal))
+        {
+            try
+            {
+                await _sync.SuspendAsync();
+            }
+            catch (Exception)
+            {
+                // Offline folder: what was not sent is discarded, as the
+                // warning says.
+            }
+        }
+        return true;
+    }
+
+    private async Task ShowRestoreFromCloudDialog()
+    {
+        if (!await ConfirmSyncResetAsync(_currentProfile.Id)) return;
+        var defaultFolder = _cloudDirectoryBox is null
+            ? _backupMonitor.CurrentValue.CloudFolderDirectory
+            : _cloudDirectoryBox.Text;
+        // The saved target decides: the storage reads the saved settings.
+        var storage = _backupMonitor.CurrentValue.CloudProvider is not null ? _archiveStorage : null;
+        using var dialog = new RestoreFromCloudDialog(
+            _loc, _cloudRestore, _cloudPassStore, _currentProfile, _profileRegistry,
+            defaultFolder ?? string.Empty, storage, _backupMonitor.CurrentValue.CloudProvider ?? CloudProvider.OneDrive);
+        var result = dialog.ShowDialog(this);
+        if (result == DialogResult.OK && dialog.RestartRequested)
+        {
+            _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
+        }
+    }
+
+    private void BrowseBackupDirectory()
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = _loc.Get("Ui.SettingsDialog.Backup.BrowseDialog.Title"),
+            InitialDirectory = string.IsNullOrWhiteSpace(_backupDirectoryBox.Text)
+                ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                : _backupDirectoryBox.Text,
+        };
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            _backupDirectoryBox.Text = dialog.SelectedPath;
+        }
+    }
+
+    private void SaveBackupSettings()
+    {
+        try
+        {
+            var directory = _backupDirectoryBox.Text.Trim();
+            var enabled = _backupEnabledBox.Checked;
+
+            if (enabled && string.IsNullOrWhiteSpace(directory))
+            {
+                MessageBox.Show(this,
+                    _loc.Get("Ui.SettingsDialog.Backup.NoDirectorySelected"),
+                    _loc.Get("Ui.SettingsDialog.Backup.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                // Create the folder if missing — immediate feedback to the user.
+                try { Directory.CreateDirectory(directory); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.SettingsDialog.Backup.DirectoryCreateError", ex.Message),
+                        _loc.Get("Ui.SettingsDialog.Backup.Title"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+
+            var cloudEnabled = _cloudEnabledBox?.Checked ?? false;
+            var cloudDirectory = _cloudDirectoryBox?.Text.Trim() ?? string.Empty;
+            var cloudRetention = _cloudRetentionBox is null
+                ? 30
+                : (int)_cloudRetentionBox.Value;
+
+            var cloudProvider = CloudTargetProvider;
+            var cloudIsProvider = cloudProvider is not null;
+            var cloudAccountId = CloudTargetAccountId;
+            if (cloudEnabled && cloudIsProvider && string.IsNullOrEmpty(cloudAccountId))
+            {
+                MessageBox.Show(this,
+                    _loc.Get(cloudProvider == CloudProvider.GoogleDrive
+                        ? "Ui.SettingsDialog.CloudBackup.SignInFirst.GoogleDrive"
+                        : "Ui.SettingsDialog.CloudBackup.SignInFirst"),
+                    _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (cloudEnabled && !cloudIsProvider && string.IsNullOrWhiteSpace(cloudDirectory))
+            {
+                MessageBox.Show(this,
+                    _loc.Get("Ui.CloudBackup.Error.FolderMissing"),
+                    _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (cloudEnabled && !_cloudPassStore.HasPassphrase)
+            {
+                MessageBox.Show(this,
+                    _loc.Get("Ui.CloudBackup.Error.PassphraseMissing"),
+                    _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (cloudEnabled && !cloudIsProvider)
+            {
+                try { Directory.CreateDirectory(cloudDirectory); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this,
+                        _loc.Get("Ui.SettingsDialog.Backup.DirectoryCreateError", ex.Message),
+                        _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+
+            var settings = new BackupSettings
+            {
+                Enabled = enabled,
+                Directory = directory,
+                PreferredTime = _backupTimePicker.Value.ToString("HH:mm", CultureInfo.InvariantCulture),
+                RetentionDays = (int)_backupRetentionBox.Value,
+                CloudFolderEnabled = cloudEnabled,
+                CloudFolderDirectory = cloudDirectory,
+                CloudFolderRetention = cloudRetention,
+                // Without the provider choice the saved target is kept
+                // (CloudTargetProvider, CloudTargetAccountId).
+                CloudProvider = cloudProvider,
+                CloudAccountId = cloudIsProvider ? cloudAccountId : string.Empty,
+            };
+
+            WriteBackupSettingsToDisk(settings);
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Backup.Saved"),
+                _loc.Get("Common.Ok"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Backup.SaveError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task RunBackupNowAsync(Button button)
+    {
+        var directory = _backupDirectoryBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Backup.RunNoDir"),
+                _loc.Get("Ui.SettingsDialog.Backup.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        button.Enabled = false;
+        try
+        {
+            var file = await _backup.ExportProfileAsync(
+                _currentProfile.Id, directory, CancellationToken.None);
+            var retention = (int)_backupRetentionBox.Value;
+            var pruned = retention > 0
+                ? await _backup.PruneOldBackupsAsync(directory, retention, CancellationToken.None)
+                : 0;
+
+            _backupState.Save(new BackupState(
+                LastSuccessfulBackupAt: DateTimeOffset.UtcNow,
+                LastAttemptAt: DateTimeOffset.UtcNow,
+                LastError: null,
+                LastBackupFile: file));
+            UpdateBackupStatusLabel();
+
+            var suffix = pruned > 0 ? _loc.Get("Ui.SettingsDialog.Backup.RunPruned", pruned) : string.Empty;
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Backup.RunSuccess", file) + suffix,
+                _loc.Get("Ui.SettingsDialog.Backup.Title"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            _backupState.Save(new BackupState(
+                LastSuccessfulBackupAt: _backupState.Load().LastSuccessfulBackupAt,
+                LastAttemptAt: DateTimeOffset.UtcNow,
+                LastError: ex.Message,
+                LastBackupFile: null));
+            UpdateBackupStatusLabel();
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Backup.RunError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            button.Enabled = true;
+        }
+    }
+
+    private async Task ExportBackupAsync(Button button)
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = _loc.Get("Ui.SettingsDialog.Backup.ExportDialog.Title"),
+        };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        button.Enabled = false;
+        try
+        {
+            var file = await _backup.ExportProfileAsync(
+                _currentProfile.Id, dialog.SelectedPath, CancellationToken.None);
+            MessageBox.Show(this,
+                _loc.Get("Ui.SettingsDialog.Backup.RunSuccess", file),
+                _loc.Get("Ui.SettingsDialog.Backup.ExportTitle"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Backup.ExportError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            button.Enabled = true;
+        }
+    }
+
+    private async Task ImportBackupAsync(Button button)
+    {
+        using var fileDialog = new OpenFileDialog
+        {
+            Title = _loc.Get("Ui.SettingsDialog.Backup.FileDialog.Title"),
+            Filter = _loc.Get("Ui.SettingsDialog.Backup.FileDialog.Filter"),
+            CheckFileExists = true,
+        };
+        if (fileDialog.ShowDialog(this) != DialogResult.OK) return;
+
+        // Increment 15d (docs/ANALYSIS-MULTI-USER.md §11.3): after
+        // picking the .db, show a chooser dialog with a dropdown of
+        // known profiles. Default to the profileId extracted from the
+        // filename (medreminder-<profileId>-YYYYMMDD-HHmmss.db) so
+        // the common case is a one-click restore into the profile
+        // the backup originally came from.
+        var profiles = _profileRegistry.ListProfiles();
+        var fileName = Path.GetFileName(fileDialog.FileName);
+        var extractedId = TryExtractProfileIdFromBackupName(fileName);
+        using var chooser = new RestoreIntoProfileDialog(
+            _loc, profiles, extractedId, _currentProfile.Id);
+        if (chooser.ShowDialog(this) != DialogResult.OK) return;
+        var targetProfileId = chooser.SelectedProfileId;
+        if (string.IsNullOrWhiteSpace(targetProfileId)) return;
+
+        var confirm = MessageBox.Show(this,
+            _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirm"),
+            _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirmTitle"),
+            MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+        if (confirm != DialogResult.Yes) return;
+        if (!await ConfirmSyncResetAsync(targetProfileId)) return;
+
+        button.Enabled = false;
+        try
+        {
+            await _backup.ImportProfileAsync(
+                targetProfileId, fileDialog.FileName, CancellationToken.None);
+
+            var isActive = string.Equals(
+                targetProfileId, _currentProfile.Id, StringComparison.Ordinal);
+            MessageBox.Show(this,
+                _loc.Get(isActive
+                    ? "Ui.SettingsDialog.Backup.RestoreDone"
+                    : "Ui.SettingsDialog.Backup.RestoreDoneInactive"),
+                _loc.Get("Ui.SettingsDialog.Backup.ImportTitle"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // §11.2: only restart when the imported profile is the
+            // active one — the process is still holding the old DB
+            // open through EF Core. Restoring an inactive profile
+            // does not touch the live connection.
+            //
+            // Pass "--profile <id>" so the restarted process opens
+            // the same profile without going through the picker,
+            // even if the registry contains more than one profile.
+            if (isActive)
+            {
+                _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message,
+                _loc.Get("Ui.SettingsDialog.Backup.ImportError"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            button.Enabled = true;
+        }
+    }
+
+    // C.3: launches the encrypted-export dialog. The dialog owns the
+    // whole flow (destination, passphrase, opt-in scope, progress); the
+    // SettingsDialog only opens it.
+    private void ShowExportDialog()
+    {
+        using var dialog = new ExportDialog(_loc, _exportService, _currentProfile, _profileRegistry);
+        dialog.ShowDialog(this);
+    }
+
+    // C.3: launches the encrypted-import dialog. On a successful import
+    // the dialog reports whether the user accepted the restart prompt
+    // (§4.2 step 11); the profile DB has been swapped from under EF
+    // Core, so a restart into the same profile is the clean path.
+    private async Task ShowImportDialog()
+    {
+        if (!await ConfirmSyncResetAsync(_currentProfile.Id)) return;
+        using var dialog = new ImportDialog(_loc, _importService, _currentProfile, _profileRegistry);
+        var result = dialog.ShowDialog(this);
+        if (result == DialogResult.OK && dialog.RestartRequested)
+        {
+            _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
+        }
+    }
+
+    // Parses "medreminder-<profileId>-YYYYMMDD-HHmmss.db" and returns
+    // the profileId, or null when the filename does not follow the
+    // convention (user-renamed backup, pre-15c filename, etc.).
+    private static string? TryExtractProfileIdFromBackupName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)) return null;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            fileName,
+            @"^medreminder-(?<profileId>[0-9a-fA-F]{32}|default)-\d{8}-\d{6}\.db$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups["profileId"].Value : null;
+    }
+
+    // Nested chooser dialog for the restore-into-profile UX (§11.3).
+    // Sits close to the caller to keep the wiring one-file; the
+    // logic is trivial enough that a separate top-level class would
+    // be overkill.
+    private sealed class RestoreIntoProfileDialog : MedReminderFormBase
+    {
+        private readonly ComboBox _combo;
+
+        public RestoreIntoProfileDialog(
+            ILocalizationService loc,
+            IReadOnlyList<Profile> profiles,
+            string? filenameProfileId,
+            string activeProfileId)
+        {
+            Text = loc.Get("Ui.SettingsDialog.Backup.RestoreInto.Title");
+            Width = 460;
+            Height = 260;
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MinimizeBox = false;
+            MaximizeBox = false;
+            ShowInTaskbar = false;
+            Font = new System.Drawing.Font("Segoe UI", 9.75F);
+
+            var prompt = new Label
+            {
+                AutoSize = true,
+                MaximumSize = new System.Drawing.Size(420, 0),
+                Location = new System.Drawing.Point(16, 12),
+                Text = loc.Get("Ui.SettingsDialog.Backup.RestoreInto.Prompt"),
+            };
+
+            _combo = new ComboBox
+            {
+                Location = new System.Drawing.Point(16, 56),
+                Width = 420,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+            };
+            foreach (var p in profiles)
+            {
+                var label = p.DisplayName;
+                if (string.Equals(p.Id, activeProfileId, StringComparison.Ordinal))
+                {
+                    label = loc.Get("Ui.SettingsDialog.Backup.RestoreInto.ActiveSuffix", label);
+                }
+                _combo.Items.Add(new ProfileItem(p.Id, label));
+            }
+            // Default selection: filename profileId first, then the
+            // active profile as a safe fallback.
+            int defaultIndex = -1;
+            if (!string.IsNullOrWhiteSpace(filenameProfileId))
+            {
+                for (int i = 0; i < _combo.Items.Count; i++)
+                {
+                    if (((ProfileItem)_combo.Items[i]!).Id
+                            .Equals(filenameProfileId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        defaultIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (defaultIndex < 0)
+            {
+                for (int i = 0; i < _combo.Items.Count; i++)
+                {
+                    if (((ProfileItem)_combo.Items[i]!).Id
+                            .Equals(activeProfileId, StringComparison.Ordinal))
+                    {
+                        defaultIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (defaultIndex >= 0) _combo.SelectedIndex = defaultIndex;
+
+            var extractedNote = new Label
+            {
+                AutoSize = true,
+                MaximumSize = new System.Drawing.Size(420, 0),
+                Location = new System.Drawing.Point(16, 96),
+                ForeColor = UiColors.Hint,
+                Text = string.IsNullOrWhiteSpace(filenameProfileId)
+                    ? loc.Get("Ui.SettingsDialog.Backup.RestoreInto.NoFilenameHint")
+                    : loc.Get("Ui.SettingsDialog.Backup.RestoreInto.FilenameHint", filenameProfileId),
+            };
+
+            var okButton = new Button
+            {
+                Text = loc.Get("Common.Ok"),
+                Location = new System.Drawing.Point(256, 172),
+                Width = 90,
+            };
+            var cancelButton = new Button
+            {
+                Text = loc.Get("Common.Cancel"),
+                DialogResult = DialogResult.Cancel,
+                Location = new System.Drawing.Point(356, 172),
+                Width = 80,
+            };
+            okButton.Click += (_, _) =>
+            {
+                if (_combo.SelectedItem is ProfileItem picked)
+                {
+                    SelectedProfileId = picked.Id;
+                    DialogResult = DialogResult.OK;
+                    Close();
+                }
+            };
+            AcceptButton = okButton;
+            CancelButton = cancelButton;
+
+            Controls.Add(prompt);
+            Controls.Add(_combo);
+            Controls.Add(extractedNote);
+            Controls.Add(okButton);
+            Controls.Add(cancelButton);
+        }
+
+        public string? SelectedProfileId { get; private set; }
+
+        private sealed record ProfileItem(string Id, string Label)
+        {
+            public override string ToString() => Label;
+        }
+    }
+
+    private void UpdateBackupStatusLabel()
+    {
+        var state = _backupState.Load();
+        if (state.LastSuccessfulBackupAt is null && state.LastAttemptAt is null)
+        {
+            _backupStatusLabel.ForeColor = UiColors.Hint;
+            _backupStatusLabel.Text = _loc.Get("Ui.SettingsDialog.Backup.NoBackupsYet");
+            return;
+        }
+
+        if (state.LastSuccessfulBackupAt is { } ok)
+        {
+            var okLocal = ok.ToLocalTime();
+            var timestamp = okLocal.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
+            var errorSuffix = state.LastError is not null
+                ? _loc.Get("Ui.SettingsDialog.Backup.LastError", state.LastError)
+                : string.Empty;
+            _backupStatusLabel.ForeColor = state.LastError is null
+                ? UiColors.Success
+                : UiColors.Warning;
+            _backupStatusLabel.Text =
+                _loc.Get("Ui.SettingsDialog.Backup.LastOk", timestamp) + errorSuffix;
+            return;
+        }
+
+        _backupStatusLabel.ForeColor = UiColors.Error;
+        _backupStatusLabel.Text = state.LastError is not null
+            ? _loc.Get("Ui.SettingsDialog.Backup.LastFailedWithMessage", state.LastError)
+            : _loc.Get("Ui.SettingsDialog.Backup.LastFailedGeneric");
+    }
+
+    private void UpdateCloudWarning()
+    {
+        var path = _backupDirectoryBox.Text ?? string.Empty;
+        var isCloud =
+            path.Contains("OneDrive", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains("Dropbox", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains("Google Drive", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains("iCloudDrive", StringComparison.OrdinalIgnoreCase);
+        if (isCloud)
+        {
+            _backupCloudWarningLabel.Text = _loc.Get("Ui.SettingsDialog.Backup.CloudWarning");
+            _backupCloudWarningLabel.Visible = true;
+        }
+        else
+        {
+            _backupCloudWarningLabel.Text = string.Empty;
+            _backupCloudWarningLabel.Visible = false;
+        }
+    }
+
+    private static void WriteBackupSettingsToDisk(BackupSettings settings)
+    {
+        var payload = new { Backup = settings };
+        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "backup.settings.json");
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
+        File.WriteAllText(path, json);
+    }
+
+    private static DateTime ParsePreferredTimeAsDateTime(string raw)
+    {
+        // DateTimePicker needs a full DateTime: use "today" and
+        // overwrite just the time part. If parsing fails (empty
+        // default or invalid text) fall back to 03:00.
+        if (!string.IsNullOrWhiteSpace(raw) &&
+            (TimeOnly.TryParseExact(raw, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var t) ||
+             TimeOnly.TryParse(raw, CultureInfo.InvariantCulture, out t)))
+        {
+            return DateTime.Today.Add(t.ToTimeSpan());
+        }
+        return DateTime.Today.AddHours(3);
+    }
+
+    // ------------------ Layout helpers ------------------
+    private static TableLayoutPanel BuildFormTable()
+    {
+        var table = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 2,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(12),
+        };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        return table;
+    }
+
+    private static void AddRow(TableLayoutPanel table, string label, Control input)
+    {
+        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
+        table.RowCount++;
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.Controls.Add(lbl, 0, table.RowCount - 1);
+        table.Controls.Add(input, 1, table.RowCount - 1);
+    }
+}

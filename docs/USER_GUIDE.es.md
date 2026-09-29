@@ -1,0 +1,1159 @@
+# MedReminder — Guía rápida
+
+Guía operativa para el usuario final. El archivo
+[`ANALYSIS.md`](ANALYSIS.md) describe en cambio la arquitectura
+técnica.
+
+> **MedReminder es un recordatorio organizativo, no un dispositivo
+> médico.** No proporciona diagnósticos, indicaciones terapéuticas,
+> modificaciones del tratamiento ni sugerencias clínicas. Toda
+> decisión sobre la terapia debe tomarse con tu médico.
+
+---
+
+## Primer inicio
+
+1. Ejecuta `MedReminder.exe`.
+2. En el primer inicio la aplicación muestra un **asistente de
+   bienvenida** y te pide crear el primer perfil. Ese perfil es
+   siempre el **administrador**: puede gestionar el servidor de
+   correo compartido y la copia de seguridad automática, y crear
+   los demás perfiles (véase *Perfiles múltiples*). Puedes definir
+   un PIN opcional en el mismo asistente.
+3. La base de datos se crea automáticamente en
+   `%LOCALAPPDATA%\MedReminder\profiles\<id-perfil>\medreminder.db`.
+4. Arriba se encuentra la barra de herramientas; abajo la barra de
+   estado muestra el perfil activo («Perfil: Owner (administrador)»
+   para un administrador, «Perfil: Abuela» para un usuario normal).
+   El icono en el área de notificación de Windows permanece visible
+   mientras la aplicación esté en ejecución.
+
+### SmartScreen de Windows en el primer inicio
+
+Los binarios publicados no están firmados digitalmente. En el primer
+inicio de `MedReminder.exe`, Windows muestra un diálogo azul «Windows
+protegió tu PC». Para continuar:
+
+1. Haz clic en **Más información**.
+2. Haz clic en **Ejecutar de todas formas**.
+
+Windows recuerda la elección para ese archivo concreto: los inicios
+siguientes no volverán a preguntar. Si instalas mediante el MSI, el
+diálogo UAC indica «Editor desconocido» por el mismo motivo y es
+normal.
+
+## Añadir un medicamento
+
+1. Barra de herramientas → **Nuevo medicamento**.
+2. Rellena los campos obligatorios (marcados con `*`): Nombre,
+   Unidad, Dosis por toma, Tomas al día, Fecha de inicio, Umbral de
+   aviso (días restantes).
+3. Campos opcionales: Principio activo, Envase, Fecha de fin de
+   terapia, Médico de referencia, Notas.
+4. **Stock inicial**: indica los comprimidos/ml/dosis que ya tienes
+   en el momento del registro. Se crea un movimiento `InitialLoad`.
+5. **Canales de notificación**: marca Windows y/o E-mail. Debes
+   haber configurado los ajustes SMTP (ver más abajo) para que el
+   e-mail funcione.
+6. **Esquema**: déjalo en **Simple** para una dosis fija tomada cada
+   día — es el valor por defecto y coincide con el comportamiento
+   histórico de la aplicación. Consulta *Regímenes complejos* más
+   abajo para terapias cíclicas, decrecientes, semanales o a
+   demanda.
+7. **Guardar**.
+
+## Regímenes complejos
+
+No todas las terapias consumen la misma cantidad de medicamento
+cada día. En el formulario **Nuevo medicamento** el selector
+*Esquema* pasa de **Simple** (una dosis diaria fija) a **Avanzado**
+y muestra un desplegable *Tipo de régimen* con cuatro formas
+adicionales:
+
+- **Patrón semanal** — una cantidad diferente para cada día de la
+  semana (por ejemplo un anticoagulante oral con dosis distintas
+  lun/mié/vie respecto al resto).
+- **Cíclico (N días on / M off)** — una cantidad fija durante los
+  primeros `N` días del ciclo seguidos de `M` días off. Típico de
+  las terapias hormonales y de los pulsos de cortisona.
+- **Reducción progresiva** — una dosis que baja (o sube)
+  gradualmente hasta la dosis final. El panel de reducción ofrece
+  dos variantes mediante el selector *Lineal / Por etapas*:
+  - **Lineal** — la dosis varía un paso fijo cada X días hasta
+    alcanzar la dosis final, y luego se mantiene. Típico del
+    descenso simple de glucocorticoides.
+  - **Por etapas** — una lista explícita de etapas, cada una con
+    su propia dosis y su propia duración en días (por ejemplo
+    4/día durante 7 días, luego 2/día durante 7 días, luego 1/día
+    durante 14 días). Usa *Añadir etapa* / *Eliminar* para
+    construir la secuencia y revisa la vista previa en vivo bajo la
+    lista antes de guardar. Marca *Mantener la última dosis como
+    dosis de mantenimiento* si la dosis final debe continuar
+    indefinidamente en lugar de terminar el ciclo.
+- **A demanda (PRN)** — sin consumo planificado. MedReminder sigue
+  llevando el stock pero la columna *días restantes* queda vacía
+  hasta que cambie el tipo de esquema.
+
+Al seleccionar Avanzado, los campos *Dosis por toma*, *Tomas al
+día* y *Horarios* de la parte superior del formulario se
+desactivan: el esquema que configures abajo es la única fuente
+para la cantidad diaria. Para volver al flujo "un clic" con dosis
+fija, vuelve a poner el selector en Simple.
+
+Para cambiar la forma de una terapia en curso, usa *Barra de
+herramientas → Cambiar pauta*. Ahí está disponible el mismo
+selector Simple/Avanzado y surte efecto a partir de la *Fecha de
+vigencia* que elijas, de modo que el esquema anterior sigue siendo
+válido para los días previos.
+
+Si la *Fecha de vigencia* está en el pasado, en la siguiente
+comprobación el consumo automático ya registrado a partir de esa fecha
+se recalcula con la nueva pauta. Los movimientos de stock registrados
+antes de instalar esta versión nunca se recalculan.
+
+MedReminder no es un dispositivo médico: no comprueba dosis máximas
+diarias, no avisa de sobredosis y no verifica interacciones
+farmacológicas. Solo sigue la terapia que tu médico ha prescrito y
+te recuerda antes de que se agote el stock.
+
+## Recordatorio a la hora de la dosis
+
+Para los medicamentos que tienen **franjas de dosis con hora** (un
+momento concreto del día definido en cada franja de administración)
+puedes pedir a MedReminder que te avise *en el momento en que la dosis
+corresponde*. Marca **Recordarme a la hora de la dosis** en el
+formulario de añadir o editar el medicamento. La opción solo está
+disponible cuando el medicamento tiene al menos una franja con hora y
+todavía queda stock; en caso contrario permanece desactivada.
+
+Cuando está activada, a la hora de cada franja MedReminder muestra una
+notificación en el escritorio («Es hora de tomar …»). Si has
+configurado las notificaciones por e-mail y has seleccionado el canal
+de e-mail para ese medicamento, el mismo recordatorio también se envía
+por e-mail.
+
+Algunos detalles útiles que conviene saber:
+
+- **Un recordatorio por franja y día.** Cada franja con hora se activa
+  como máximo una vez en un día natural dado, aunque se reinicie la
+  aplicación.
+- **Ventana de tolerancia.** Si la aplicación no se está ejecutando
+  exactamente a la hora de la franja — por ejemplo, el ordenador estaba
+  suspendido — el recordatorio se activa igualmente en la siguiente
+  comprobación de la aplicación, siempre que sea dentro de los 30
+  minutos posteriores a la hora de la franja. Pasada esa ventana, la
+  dosis se considera perdida y no se muestra ningún recordatorio;
+  MedReminder no lleva un registro de dosis perdidas y nunca da consejos
+  clínicos.
+- **Un stock a cero lo desactiva.** Cuando el stock llega a cero no se
+  envía ningún recordatorio, porque ya no queda nada que tomar.
+- **Horario de verano.** En la noche del cambio a horario de verano,
+  una franja que cae en la hora omitida no se activa (esa hora no
+  existe). En la noche del cambio a horario de invierno, la franja se
+  activa una sola vez, como de costumbre.
+
+Este recordatorio es solo un aviso práctico. No registra si has tomado
+la dosis y no modifica el stock: para eso usa *Registrar toma*.
+
+## Catálogo de referencia (multi-país)
+
+MedReminder incluye dos instantáneas de un catálogo de medicamentos
+de referencia y las utiliza para autocompletar el formulario del
+medicamento.
+
+- En los campos **Nombre comercial** y **Principio activo** empieza
+  a escribir para ver las coincidencias. Seleccionar una fila
+  rellena también el otro campo (y, entre bastidores, el código
+  nacional y el código ATC), de modo que no tienes que escribir
+  ambos.
+- La lista desplegable muestra como máximo 20 filas y se actualiza
+  unos 150 ms después de dejar de teclear. Un círculo rojo junto a
+  una fila indica que el producto está **suspendido o retirado del
+  mercado**: puedes elegirlo igualmente, MedReminder solo señala el
+  estado.
+- **¿Medicamento no incluido en el catálogo?** Simplemente sigue
+  escribiendo lo que sepas. Si no seleccionas ninguna fila de la
+  lista, MedReminder guarda el texto tal cual y no se almacena
+  ningún vínculo con el catálogo: el recordatorio funciona
+  exactamente como antes.
+- El **país de referencia** se elige en *Ajustes → General → País
+  de referencia*. El valor por defecto es Italia; el cambio se
+  aplica en la siguiente apertura del formulario del medicamento.
+
+### Medicamentos con autorización centralizada UE
+
+Algunos medicamentos están autorizados en toda la Unión Europea
+mediante el *procedimiento centralizado*, gestionado por la Agencia
+Europea de Medicamentos (EMA). MedReminder incorpora el catálogo
+EMA EPAR — *European public assessment reports* — y muestra esos
+medicamentos en la misma lista desplegable del autocompletado.
+
+- Si tu **país de referencia es un Estado miembro de la UE** (por
+  ejemplo Italia por defecto, o cualquier otro país UE elegido en
+  Ajustes), el autocompletado muestra **tu catálogo nacional + los
+  medicamentos centralizados válidos en toda la UE**, mezclados en
+  la misma lista. No tienes que cambiar nada: las filas UE aparecen
+  solas cuando coinciden.
+- Si estableces el **país de referencia en `EU`**, el
+  autocompletado muestra **solo** los medicamentos centralizados
+  UE, sin filas nacionales. Útil cuando quieres examinar o
+  vincular un producto específicamente a su autorización EMA.
+- Un medicamento UE y un producto nacional equivalente pueden
+  aparecer al mismo tiempo en la lista; las dos filas no se
+  deduplican. Elige la que corresponde a la caja que tienes en la
+  mano.
+
+### Catálogos nacionales español y francés
+
+El catálogo español procede de AEMPS CIMA (registro
+«Medicamentos») y el catálogo francés de ANSM BDPM (*Base de
+données publique des médicaments*). En el autocompletado se
+comportan exactamente como el catálogo italiano:
+
+- Configura **Ajustes → General → País de referencia** en `ES` o
+  `FR` una vez cargada la instantánea correspondiente (`ES` y `FR`
+  aparecen automáticamente en el menú desplegable en cuanto sus
+  catálogos están en la base de datos).
+- El autocompletado enumera entonces **tu catálogo nacional + los
+  medicamentos centralizados UE**, mezclados en la misma lista.
+  España y Francia son Estados miembros de la UE, así que las
+  filas UE se incluyen por defecto igual que para Italia.
+- Las demás reglas se mantienen: selecciona una fila para rellenar
+  ambos lados, o sigue escribiendo para guardar un texto libre que
+  la aplicación no conoce.
+
+**Fuentes de los datos y condiciones de reutilización.** El
+catálogo italiano procede de los datos abiertos de AIFA
+(Agenzia Italiana del Farmaco), publicados bajo licencia Creative
+Commons Attribution 4.0 International (CC BY 4.0). El catálogo UE
+procede del conjunto de datos EMA EPAR, reutilizado según el aviso
+legal de la EMA (decisión 2011/833/UE sobre la reutilización de
+los documentos de la Comisión). El catálogo español procede de
+AEMPS CIMA, reutilizado según el régimen español de reutilización
+de la información del sector público (Ley 37/2007). El catálogo
+francés procede de ANSM BDPM, reutilizado bajo Licence Ouverte
+Etalab 2.0. El cuadro de diálogo Acerca de y el archivo
+`THIRD-PARTY-NOTICES.md` en la raíz de la instalación incluyen
+las atribuciones completas.
+
+## Escanear el código de barras del envase
+
+Con el catálogo de referencia activado, la ficha del medicamento
+tiene un botón **Escanear código…** junto al nombre comercial.
+Completa el medicamento desde el catálogo en un solo paso.
+
+1. Haga clic en **Escanear código…**. Se abre una pequeña ventana
+   lista para recibir el código.
+2. Escanee el código de barras de la caja con un lector de códigos de
+   barras USB, o escriba el código impreso bajo el código de barras y
+   pulse **Intro**.
+3. Si el código está en el catálogo, la ventana se cierra y la ficha
+   se completa como si hubiera elegido la fila en la lista
+   desplegable. Si no, un mensaje muestra el código leído y no se
+   modifica nada.
+
+Notas:
+
+- Haga clic primero en **Escanear código…** y después escanee. Un
+  escaneo realizado mientras la ficha del medicamento tiene el foco
+  escribe el código en el campo activo.
+- En los envases italianos el lector lee el **código AIC** (el código
+  de barras con el texto `A` seguido de 9 dígitos). Sirve cualquier
+  lector USB de códigos 1D; si el código no se reconoce, active la
+  simbología **Code 32** (Italian Pharmacode) en la configuración del
+  lector. El código cuadrado 2D (DataMatrix) requiere un lector 2D y a
+  menudo todavía no corresponde a una entrada del catálogo.
+- El lector debe usar la misma distribución de teclado que Windows.
+  Con un teclado francés (AZERTY) o alemán (QWERTZ), configure el
+  lector con esa distribución; de lo contrario, el código no se
+  reconoce.
+- También funciona un lector que no envía Intro después del código:
+  el código se acepta un instante después del escaneo.
+
+### Con la webcam
+
+¿No tiene lector? En la ventana de escaneo haga clic en **Usar la
+webcam**. La cámara se enciende solo entonces y se apaga en cuanto se
+lee un código, hace clic en **Usar el lector**, cierra la ventana o
+pasan 30 segundos sin código.
+
+- Sostenga el envase a 10–20 cm de la cámara, con el código de barras
+  dentro del marco discontinuo, bien iluminado y enfocado. Las webcams
+  de portátil con enfoque fijo suelen tener dificultades con el fino
+  código AIC; un lector USB es más fiable.
+- Si Windows bloquea la cámara, la ventana lo indica y ofrece **Abrir
+  configuración de privacidad**: active **Permitir que las
+  aplicaciones de escritorio accedan a la cámara** en Configuración →
+  Privacidad y seguridad → Cámara y luego haga clic en **Reintentar**.
+- Las imágenes de la cámara nunca se guardan ni se envían; solo se usa
+  el código leído.
+
+### Reponer escaneando
+
+Cuando compre una caja nueva de un medicamento que ya está en su lista,
+use **Stock → Reponer por código de barras…**. No hace falta
+seleccionar antes el medicamento: el escaneo lo encuentra.
+
+1. Escanee el envase con el lector o con la webcam, como se indica
+   arriba.
+2. Se selecciona el medicamento con ese código y se abre la ventana
+   **Movimiento de stock**, ajustada a caja nueva, con la cantidad de su última caja nueva ya
+   rellenada. Revísela y confirme.
+
+- Si varios medicamentos tienen el mismo código, elija el que desea
+  reponer.
+- Si ningún medicamento tiene el código pero el catálogo lo conoce,
+  puede añadirlo como medicamento nuevo o vincular el código a un
+  medicamento de su lista que aún no tenga código (por ejemplo, uno
+  introducido a mano); la caja se añade entonces a ese medicamento.
+- El medicamento se encuentra por su código AIC. Un envase que solo
+  lleva el código 2D cuadrado (DataMatrix) no se reconoce: use
+  **Stock → Añadir caja**.
+
+## Añadir stock (nueva caja)
+
+1. Selecciona el medicamento en la cuadrícula.
+2. Barra de herramientas → **Añadir stock**.
+3. Elige el tipo de movimiento:
+   - **Nueva caja**: el caso habitual tras una compra.
+   - **Añadido manual**: por ejemplo si recibes muestras del médico.
+   - **Corrección positiva**: habías contado menos que la cantidad
+     real.
+4. Introduce la cantidad (en la unidad del medicamento) y confirma.
+
+**Efecto**: el stock aumenta y el `StockEpoch` del medicamento
+avanza en 1. Esto reinicia el ciclo de aviso — la próxima
+notificación podrá emitirse cuando el stock vuelva a bajar del
+umbral.
+
+## Corregir una cantidad en defecto
+
+Si observas que el stock real es menor que el calculado (comprimido
+perdido, derramado, etc.):
+
+1. Selecciona el medicamento.
+2. Barra de herramientas → **Corregir stock**.
+3. El tipo por defecto es **Corrección negativa**: la cantidad
+   introducida se resta del stock. No hace avanzar el epoch: no
+   reprograma el ciclo de notificaciones.
+
+Si la corrección dejara el stock por debajo de cero, la operación se
+bloquea con un error.
+
+## Contar existencias
+
+Cuando los comprimidos del armario ya no coinciden con las
+existencias que muestra la aplicación, cuéntelos y deje que la
+aplicación registre la corrección:
+
+1. Seleccione el medicamento.
+2. Menú **Stock → Contar existencias…**.
+3. Escriba la cantidad contada. El diálogo muestra las existencias
+   esperadas (con los consumos automáticos al día), la diferencia de
+   existencias con su signo y la fecha de agotamiento antes y después
+   de la corrección.
+4. En **Ya tomado hoy**, indique qué parte de la cantidad prevista
+   para hoy ya había tomado al contar. La aplicación propone las dosis
+   cuya hora ya ha pasado; sin horas definidas propone 0. Si indica
+   solo una parte, la lista muestra las existencias al inicio del día
+   hasta que se registre el consumo de hoy.
+5. Añada una nota si lo desea (por defecto: «Recuento de
+   existencias») y confirme con **Registrar recuento**.
+
+**Efecto**: se registra una única corrección, positiva o negativa,
+para que las existencias sean iguales a la cantidad contada. Una
+diferencia nula no registra nada. Una corrección positiva que devuelve las existencias por encima del
+umbral de aviso hace avanzar la época, para que más adelante pueda
+enviarse un nuevo aviso de existencias bajas; una corrección negativa
+nunca la hace avanzar. La diferencia
+es solo un dato de existencias: no se interpreta como dosis omitidas
+o adicionales.
+
+## Editar o desactivar un medicamento
+
+- **Editar**: doble clic en la fila o barra de herramientas →
+  **Editar**. Puedes cambiar el nombre, principio activo, envase,
+  unidad, umbral, médico, notas, fecha de fin, canales de
+  notificación, y el estado Activo/Inactivo.
+  **La dosis y la frecuencia NO se modifican desde aquí**: usa
+  *Barra de herramientas → Cambiar pauta* (véase *Regímenes
+  complejos* más arriba).
+- **Desactivar**: barra de herramientas → **Desactivar**. El
+  medicamento desaparece de las comprobaciones automáticas y de los
+  avisos, pero los datos históricos (movimientos, notificaciones)
+  permanecen en la DB para auditoría.
+- **Mostrar los medicamentos desactivados**: los medicamentos
+  desactivados se ocultan en la lista. **Terapia → Mostrar
+  medicamentos desactivados** los muestra de nuevo, con estado
+  *Desactivado*, hasta que se cierra la aplicación. La barra de estado
+  indica cuántos están ocultos.
+- **Reactivar**: muestra los medicamentos desactivados y luego
+  **Editar** → marca **Activo**. Los días en que el medicamento estuvo
+  desactivado no se cuentan como consumo.
+- **Eliminar**: **Terapia → Eliminar…** elimina de forma definitiva un
+  medicamento introducido por error, con su pauta. Solo es posible
+  mientras no se haya registrado nada: ninguna entrada de stock
+  (incluida la cantidad inicial), toma, recuento o suspensión. Si no,
+  desactívalo, o elimina antes esas entradas en **Stock →
+  Historial…**. Con la sincronización activada el medicamento también
+  se elimina de los demás dispositivos, junto con lo que se haya
+  registrado en ellos entretanto.
+
+## Historial del stock y eliminación de una entrada errónea
+
+**Stock → Historial…** (Ctrl+H) muestra lo que registraste para el
+medicamento seleccionado, de lo más reciente a lo más antiguo: cajas
+nuevas y correcciones, tomas, recuentos y suspensiones.
+
+- **Eliminar** quita una entrada errónea; el stock y el consumo se
+  recalculan.
+- Solo se pueden eliminar las entradas registradas después del último
+  recuento: un recuento ya incluye los errores anteriores, así que
+  para corregirlos vuelve a contar el stock.
+- Las entradas registradas antes de instalar esta versión no se pueden
+  eliminar: corrígelas con una corrección.
+
+## Cronología de la terapia
+
+**Terapia → Cronología de la terapia…** (Ctrl+T) o el botón
+**Cronología** de la barra de herramientas abre una vista de solo
+lectura con una fila por medicamento y los días en el eje horizontal.
+De forma predeterminada muestra 60 días hacia atrás y 120 hacia
+delante.
+
+- **Barra llena**: terapia activa, desde la fecha de inicio hasta la de
+  fin (o hasta el borde de la vista si no hay fecha de fin).
+- **Barra rayada con borde discontinuo**: suspensión, prevista o en
+  curso.
+- **Rombo lleno**: entra en vigor una nueva dosis, frecuencia o pauta.
+  **Rombo vacío**: fase siguiente de una reducción por fases.
+- **Triángulo sobre una línea vertical**: fecha de agotamiento
+  estimada. Es la misma estimación que la columna *Agotamiento*:
+  existencias actuales divididas por la cantidad diaria de hoy. No
+  tiene en cuenta suspensiones ni cambios de dosis futuros.
+- **Línea vertical discontinua**: hoy.
+- Un medicamento desactivado se muestra en gris; su barra se detiene
+  en hoy porque la fecha de desactivación no se registra.
+
+Controles:
+
+- **Antes** / **Después** mueven el periodo 30 días, **Hoy** restablece
+  el periodo predeterminado. En el gráfico, las flechas izquierda y
+  derecha (o Mayús + rueda del ratón) lo mueven una semana.
+- Las flechas arriba y abajo seleccionan un medicamento; el cuadro
+  **Detalles** bajo el gráfico muestra la misma información como texto
+  (dosis, existencias, agotamiento estimado, suspensiones y cambios de
+  dosis en el periodo). Al pasar el ratón sobre un elemento aparece el
+  mismo texto como información sobre herramientas.
+- **Mostrar en la lista** (o Intro, o doble clic) cierra la cronología
+  y selecciona el medicamento en la lista principal, donde se aplican
+  las acciones habituales.
+
+La cronología no modifica ningún dato. Las fechas de agotamiento son
+estimaciones: sirven para planificar reposiciones, no son un consejo
+clínico.
+
+## Ficha de terapia (impresión y PDF)
+
+**Terapia → Ficha de terapia…** (Ctrl+P) o el botón **Ficha terapia**
+de la barra de herramientas abre una ficha de los medicamentos activos
+para entregar al médico de cabecera, a urgencias o al farmacéutico.
+Para cada medicamento activo indica el principio activo, la posología
+(franjas de toma, o dosis × veces al día), el periodo de terapia y el
+médico. Los medicamentos desactivados no aparecen.
+
+- **Incluir las notas**: desactivado por defecto. Las notas son texto
+  libre y pueden ser privadas; marca la casilla solo si la ficha debe
+  incluirlas.
+- **Papel**: A4 o Carta (EE. UU.), preseleccionado según la región de
+  Windows.
+- **Imprimir…** abre la vista previa de la tabla. Las listas largas
+  continúan en la página siguiente, con el encabezado y los títulos de
+  columna repetidos.
+- **Guardar como PDF…** pregunta dónde guardar el archivo y escribe la
+  misma tabla en PDF mediante la impresora de Windows "Microsoft Print
+  to PDF". Si esa impresora se ha eliminado, el diálogo explica cómo
+  volver a añadirla (Panel de control → Programas → Activar o
+  desactivar las características de Windows).
+- **Guardar en archivo…** y **Copiar al portapapeles** mantienen la
+  versión en texto plano.
+
+El PDF y el archivo de texto se escriben solo donde tú elijas;
+MedReminder no guarda ninguna copia. Cada página lleva el aviso de que
+MedReminder es un recordatorio organizativo, no un dispositivo médico.
+
+## Perfiles múltiples y roles administrador/usuario
+
+MedReminder puede gestionar medicamentos para **varias personas**
+desde la misma cuenta de Windows — caso típico: un padre o madre
+que sigue su propia terapia y la de uno o dos familiares. Cada
+perfil tiene su propia base de datos y su propio destinatario de
+correo; el servidor SMTP, la carpeta de la copia de seguridad
+automática y el registro de perfiles se comparten y los gestiona
+un perfil **administrador**.
+
+### Roles
+
+- **Administrador** — gestiona los ajustes globales (SMTP, Copia
+  de seguridad, lista de perfiles, PIN de cualquier perfil)
+  además de sus propios datos. Siempre debe existir al menos un
+  administrador.
+- **Usuario** — gestiona solo su propio perfil (medicamentos,
+  stock, terapias, destinatario de correo personal). No ve la
+  pestaña SMTP ni la pestaña Copia de seguridad en Ajustes, y no
+  ve `Herramientas → Gestionar perfiles…`.
+
+El rol se elige al crear el perfil y **no se puede cambiar
+después**. Si en el futuro necesitas cambiar el rol de un perfil,
+la solución actual es crear un perfil nuevo con el rol deseado y
+copiar los datos.
+
+El rol es una barrera «suave»: quien tiene acceso al sistema de
+archivos puede editar `profiles.json` a mano y hacerse
+administrador. La interfaz respeta el rol, el sistema de archivos
+no.
+
+### Crear perfiles adicionales (administrador)
+
+1. `Herramientas → Gestionar perfiles…` — esta entrada solo existe
+   para los administradores.
+2. **Nuevo perfil** → introduce un nombre, elige Administrador o
+   Usuario (predeterminado: Usuario), define opcionalmente un PIN.
+   Confirma.
+3. El nuevo perfil aparece inmediatamente en el selector en el
+   próximo inicio.
+
+### Cambiar de perfil
+
+`Archivo → Cambiar perfil…` abre el selector. Elige el perfil de
+destino y confirma: la aplicación se reinicia automáticamente para
+que el nuevo perfil esté totalmente aislado. Si el perfil elegido
+tiene un PIN, la solicitud aparece antes de que la aplicación se
+abra.
+
+### Renombrar, cambiar PIN, eliminar
+
+`Herramientas → Gestionar perfiles…` (solo administrador) ofrece
+también:
+
+- **Renombrar** — solo el nombre mostrado. El identificador interno
+  nunca cambia.
+- **Cambiar PIN** — establecer, cambiar o eliminar el PIN de
+  cualquier perfil.
+- **Eliminar** — pide **escribir el nombre del perfil** para
+  confirmar. Una casilla separada permite eliminar también los
+  datos del perfil del disco; está desactivada por defecto, así la
+  carpeta queda disponible para recuperación manual.
+
+El perfil activo no se puede eliminar (cambia antes de perfil), y
+tampoco el último administrador restante.
+
+### Sobre el PIN
+
+El PIN es una **barrera, no seguridad**. Bloquea los cambios
+accidentales de perfil, pero **no** cifra los datos — cualquiera
+con acceso a este PC puede seguir abriendo los archivos del
+perfil. Tres intentos incorrectos cierran la solicitud y la
+aplicación.
+
+**Una separación real requiere cuentas de Windows separadas.** Cada
+cuenta de Windows tiene su propia carpeta
+`%LOCALAPPDATA%\MedReminder\`, que los demás usuarios estándar de
+Windows (no administradores) no pueden leer. Los perfiles dentro de
+una misma cuenta de Windows son una comodidad, no una barrera de
+privacidad: cualquiera que use esa cuenta puede leer los archivos de
+todos los perfiles, y las copias automáticas configuradas por el
+administrador incluyen todos los perfiles, también los protegidos con
+PIN.
+
+Si olvidas un PIN, elimínalo a mano en
+`%LOCALAPPDATA%\MedReminder\profiles.json` (borra `PinHash` y
+`PinSalt` y pon `PinIterations` a `0` en la entrada afectada).
+Esto se documenta en lugar de resolverse con un flujo de
+«restablecer PIN» a propósito: la recuperación no es un bug,
+porque el PIN no es seguridad.
+
+### Disposición en disco
+
+```
+%LOCALAPPDATA%\MedReminder\
+├── profiles.json                        ← registro de perfiles
+├── smtp.settings.json                   ← SMTP compartido (admin)
+├── smtp.protected                       ← contraseña cifrada con DPAPI
+├── backup.settings.json                 ← config. copia compartida (admin)
+├── backup.state.json                    ← estado de la última copia
+├── logs\medreminder-YYYYMMDD.log
+└── profiles\
+    ├── <id-perfil>\                     ← una carpeta por perfil
+    │   ├── medreminder.db (+ -wal, -shm)
+    │   ├── notifications.settings.json  ← ToAddress de este perfil
+    │   └── ui.settings.json             ← tamaño del texto de este perfil
+    └── …
+```
+
+### La copia automática cubre todos los perfiles
+
+Cuando la copia automática está activada, cada ejecución diaria
+hace copia de seguridad de la base de datos de **todos** los
+perfiles en la carpeta compartida, con nombres del tipo
+`medreminder-<id-perfil>-YYYYMMDD-HHmmss.db`. La retención se
+aplica por perfil, de modo que la copia más reciente de un perfil
+no protege las copias más antiguas de otro.
+
+Al restaurar desde `Ajustes → Copia de seguridad → Restaurar
+copia…`, el diálogo pregunta en qué perfil debe cargarse la base
+importada. Por defecto selecciona el perfil indicado en el nombre
+del archivo. Si restauras en un perfil distinto al activo, la
+aplicación no se reinicia; si restauras en el perfil activo, se
+reinicia para abrir la nueva base limpiamente.
+
+### Inicio automático con Windows
+
+La entrada de inicio automático de Windows es única por usuario de
+Windows. Al iniciar sesión, la aplicación abre el perfil **más
+reciente** sin mostrar el selector; si ese perfil tiene PIN, la
+solicitud se muestra sobre la ventana vacía. Para abrir un perfil
+distinto en el arranque, usa `Archivo → Cambiar perfil…` una vez
+que la aplicación esté abierta.
+
+### Actualización desde una instalación mono-usuario
+
+Si ya tienes un archivo `medreminder.db` en
+`%LOCALAPPDATA%\MedReminder\` de una versión anterior, en el
+próximo inicio la aplicación ejecuta una **migración V1 → V2**
+una vez:
+
+1. Hace una copia obligatoria en
+   `%LOCALAPPDATA%\MedReminder\backups\pre-migration-YYYYMMDD-HHmmss\`
+   que contiene el `medreminder.db` original (y sus archivos
+   asociados) y el `smtp.settings.json` original.
+2. Mueve la base a `profiles\default\medreminder.db` y crea el
+   `profiles.json` inicial con un único perfil administrador
+   llamado `User`.
+3. Extrae el destinatario (`Smtp.ToAddress`) de
+   `smtp.settings.json` a
+   `profiles\default\notifications.settings.json`.
+
+La migración es **atómica** — si un paso falla tras la copia
+previa, la aplicación revierte al estado V1 y conserva la copia
+de pre-migración.
+
+La **copia de pre-migración no se limpia automáticamente**: tras
+comprobar que la aplicación migrada abre los mismos datos, puedes
+eliminar manualmente la carpeta `backups\pre-migration-*`.
+Renombra el perfil `User` como prefieras desde
+`Herramientas → Gestionar perfiles… → Renombrar`.
+
+## Configurar el envío de e-mails
+
+**Configuración → E-mail SMTP**:
+
+- **Servidor**: por ejemplo `smtp.gmail.com`,
+  `smtp-mail.outlook.com`, etc.
+- **Puerto**: normalmente 587 (StartTLS) o 465 (SSL/TLS directo).
+  MedReminder usa StartTLS cuando la casilla correspondiente está
+  marcada.
+- **Nombre de usuario / Nueva contraseña**: si el servidor requiere
+  autenticación. La contraseña se cifra con DPAPI y se guarda en
+  `%LOCALAPPDATA%\MedReminder\smtp.protected`. No aparece en
+  `smtp.settings.json` ni en los logs.
+- **Eliminar contraseña guardada**: borra `smtp.protected` al
+  siguiente guardado.
+- **Remitente / Nombre del remitente**: el «from» de los e-mails
+  enviados.
+- **Destinatario**: dónde recibir los avisos (normalmente tu
+  dirección personal).
+- **Timeout**: segundos antes de considerar la conexión fallida.
+- **Probar conexión**: abre una sesión SMTP, autentica, cierra. No
+  envía un e-mail real.
+- **Guardar configuración SMTP**: escribe
+  `%LOCALAPPDATA%\MedReminder\smtp.settings.json`. La configuración
+  se recarga en caliente, sin reiniciar la aplicación.
+
+### Ejemplo: Gmail con app-password
+
+1. Activa la 2FA en tu cuenta de Google.
+2. Crea una app-password en
+   `myaccount.google.com/apppasswords`.
+3. En MedReminder: Servidor `smtp.gmail.com`, Puerto `587`,
+   StartTLS activado, Nombre de usuario `tudireccion@gmail.com`,
+   Contraseña la app-password que acabas de crear.
+
+Google y otros proveedores pueden modificar sus requisitos: consulta
+la documentación de tu proveedor si la prueba de conexión falla.
+
+## Notificaciones al cuidador
+
+**Configuración → Notificaciones → E-mail del cuidador (opcional)**.
+
+Un perfil puede designar un segundo destinatario — por ejemplo un
+familiar o un cuidador que gestiona la renovación de la receta en tu
+nombre. Cuando este campo está configurado, cada e-mail enviado al
+destinatario principal también se envía al cuidador, en el **mismo**
+mensaje. Nada más cambia: el transporte, el contenido del mensaje y los
+momentos de envío son exactamente los mismos que antes.
+
+- **Para activarlo**: escribe la dirección e-mail del cuidador y
+  guarda.
+- **Para desactivarlo**: vacía el campo y guarda. Un campo vacío
+  significa que no hay cuidador configurado — el comportamiento por
+  defecto.
+- **Ambas direcciones son visibles para ambos destinatarios**: el
+  cuidador y el destinatario principal pueden ver la dirección del
+  otro en el e-mail. Es intencional para que una respuesta llegue a
+  todos.
+- La dirección del cuidador no puede coincidir con la del
+  destinatario principal y debe ser una dirección e-mail válida; de
+  lo contrario el guardado se rechaza con un mensaje.
+
+El ajuste es por perfil: el cuidador de un perfil no es el cuidador de
+otro perfil.
+
+## Solicitar una receta al médico
+
+Selecciona un medicamento y elige **Terapia → Solicitar receta…** (o
+el botón **Solicitar receta** de la barra de herramientas). La acción
+está disponible para cualquier medicamento, sea cual sea su
+existencia.
+
+MedReminder prepara un mensaje breve con el nombre del medicamento, el
+envase, el código del producto (cuando el medicamento está vinculado
+al catálogo) y el nombre del perfil como firma. Si el medicamento
+tiene un médico de referencia, el saludo usa ese nombre. La posología,
+las notas y otros detalles clínicos no se incluyen. El asunto y el
+mensaje se pueden modificar antes del envío.
+
+Tres formas de entregar el mensaje:
+
+- **Copiar**: el asunto y el mensaje van al portapapeles, para pegarlos
+  en un webmail, una aplicación de mensajería o un portal del paciente.
+- **Abrir en el programa de correo**: abre un nuevo e-mail ya
+  rellenado en el programa de correo predeterminado. Si el mensaje es
+  demasiado largo para el programa de correo, o no hay ninguno
+  configurado, se copia al portapapeles en su lugar.
+- **Enviar…**: envía el mensaje mediante la cuenta de e-mail
+  configurada en **Configuración → E-mail SMTP**, tras una
+  confirmación explícita. Disponible solo cuando el envío SMTP está
+  configurado y el e-mail del médico está definido.
+
+El e-mail del médico se define en **Configuración → Notificaciones →
+E-mail del médico (opcional)**. Es por perfil, se incluye en la
+exportación y la importación, y solo se usa para las solicitudes que
+envías tú: las notificaciones automáticas nunca se envían a esta
+dirección.
+
+MedReminder nunca envía una solicitud de receta por su cuenta. El
+contenido del mensaje y el destinatario no se escriben en los archivos
+de registro.
+
+## Configurar el inicio automático
+
+**Configuración → Inicio automático**: marca la casilla. Se crea
+una entrada en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+que lanza MedReminder con el argumento `--minimized` (arranca en el
+área de notificación, ventana oculta). No requiere privilegios de
+administrador.
+
+## Copia de seguridad de la base de datos
+
+**Configuración → Copia de seguridad / Restaurar**:
+
+- **Exportar**: elige una carpeta. La DB se copia como
+  `medreminder-YYYYMMDD-HHMMSS.db`. Guarda la copia en una unidad
+  externa o en la nube personal si quieres más resiliencia.
+- **Restaurar**: selecciona una copia anterior. La DB actual se
+  renombra a `medreminder.db.bak-<timestamp>` (¡no se pierde!) y se
+  sustituye. **Cierra y vuelve a abrir MedReminder** tras la
+  restauración para evitar incoherencias.
+
+## Exportación e importación
+
+Además de la copia de seguridad directa de la base de datos, MedReminder
+puede producir un único **archivo cifrado y portable** con todos tus
+datos. A diferencia de una copia normal, este archivo no está vinculado
+a tu cuenta de Windows ni a tu PC, por lo que es el método recomendado
+para mover MedReminder a un nuevo ordenador.
+
+**Configuración → Copia de seguridad → Exportar todos los datos
+(cifrado)…**:
+
+- Elige dónde guardar el archivo (extensión `.mrz`).
+- Elige una **frase de contraseña** (mínimo 12 caracteres) e
+  introdúcela dos veces.
+- Activa opcionalmente los ajustes compartidos a incluir: ajustes
+  SMTP, contraseña SMTP, preferencias de copia, preferencias de
+  usuario (idioma y país de referencia del catálogo). Todos
+  desactivados por defecto. Si incluyes la contraseña SMTP, se
+  vuelve a cifrar con tu frase — nunca se escribe en texto claro.
+- Haz clic en **Exportar**.
+
+**Administrador: todos los perfiles a la vez.** Cuando existe más de
+un perfil, un perfil administrador ve también **Exportar todos los
+perfiles**. Elige una carpeta en lugar de un archivo: MedReminder
+escribe un archivo cifrado por perfil
+(`medreminder-export-<profileId>-<timestamp>.mrz`), todos con la misma
+frase de contraseña. Para restaurar un perfil, abre ese perfil e
+importa su archivo.
+
+**La frase de contraseña no puede recuperarse.** No existe reinicio,
+puerta trasera ni copia en servidor. Si pierdes la frase, el archivo no
+podrá leerse nunca — guárdala en un lugar seguro.
+
+**Configuración → Copia de seguridad → Importar desde exportación…**:
+
+- Selecciona el archivo `.mrz`. MedReminder muestra su contenido
+  (versión, fecha, alcance, ajustes incluidos) antes de hacer nada.
+- Escribe la frase de contraseña.
+- Marca **«Entiendo que esto sobrescribirá los datos del perfil
+  actual.»** La importación reemplaza íntegramente los datos del
+  perfil actual — no hay modo de fusión. Antes se conserva una copia
+  de seguridad como `medreminder.db.bak-<timestamp>`.
+- Si el archivo se exportó desde otro perfil, MedReminder pide
+  confirmación: importarlo sustituye los datos del perfil activo por
+  los del otro perfil.
+- Haz clic en **Importar** y luego **reinicia** MedReminder cuando
+  se solicite para que los datos importados se carguen limpiamente.
+
+Si la frase es incorrecta, el archivo está dañado o fue producido por
+una versión más reciente de MedReminder, la importación se detiene con
+un mensaje claro y tus datos actuales quedan intactos.
+
+El formato del archivo está documentado públicamente en
+[`docs/EXPORT-FORMAT.md`](EXPORT-FORMAT.md), así que tus datos nunca
+están bloqueados — pueden descifrarse con herramientas estándar si es
+necesario.
+
+## Copia de seguridad en carpeta en la nube
+
+MedReminder también puede escribir la copia de seguridad automática
+diaria como una **instantánea cifrada** en una carpeta local que tu
+sistema operativo ya está sincronizando (OneDrive, iCloud Drive,
+Dropbox, Google Drive Desktop, …). Es la forma económica de llevar tus
+datos de un "PC de casa" a un "PC del trabajo" sin ningún servidor, y
+mantiene una copia fuera del equipo por si falla el disco.
+
+**Esto no es sincronización en tiempo real.** MedReminder escribe como
+máximo una instantánea al día, y solo un ordenador a la vez debería
+escribir. Si editas medicamentos en dos dispositivos entre dos
+instantáneas, las dos copias divergen — y la siguiente restauración
+borra los datos del equipo en el que restauras. Decide de antemano qué
+dispositivo es el "activo" y restaura en el otro solo cuando cambies.
+
+### Configuración en el primer dispositivo
+
+**Configuración → Copia de seguridad → Copia de seguridad a carpeta
+sincronizada (cifrada)**:
+
+- Marca la casilla.
+- Elige una carpeta dentro de la carpeta de sincronización local de tu
+  servicio en la nube (por ejemplo
+  `C:\Users\<nombre>\OneDrive\MedReminder`). MedReminder nunca se
+  comunica por sí mismo con OneDrive / iCloud / Dropbox — solo escribe
+  los archivos ahí, y el agente de sincronización del sistema los sube.
+- Indica el número de instantáneas que conservar (por defecto: 30).
+- Haz clic en **Establecer / cambiar…** junto a Frase de contraseña de
+  copia de seguridad y elige una frase (mínimo 12 caracteres). Esta
+  frase nunca sale del equipo.
+- Guarda.
+
+A partir del siguiente ciclo diario, MedReminder escribe
+`medreminder-<profileId>-<timestamp>.mrz` en la carpeta. El archivo
+está cifrado con una clave derivada de tu frase de contraseña de
+copia; el servicio en la nube nunca ve tus datos en claro.
+
+Se escribe una instantánea para **cada perfil** del equipo, como en la
+copia local, y todas se cifran con la misma frase de contraseña de
+copia. Quien conozca la frase puede, por tanto, leer los datos de
+todos los perfiles, incluidos los protegidos con PIN.
+
+### Configuración en el segundo dispositivo
+
+- Instala MedReminder.
+- **Configuración → Copia de seguridad → Establecer / cambiar…** e
+  introduce la **misma** frase de contraseña de copia que configuraste
+  en el primer dispositivo. Es el único paso imprescindible: sin la
+  misma frase, el segundo equipo no puede descifrar lo que escribió el
+  primero.
+- La instantánea automática diaria queda desactivada en el segundo
+  dispositivo — solo hace falta en un equipo.
+
+### Restauración en el segundo dispositivo
+
+**Configuración → Copia de seguridad → Restaurar desde carpeta en la
+nube…**:
+
+- Indica en la ventana la carpeta de sincronización local (la misma en
+  la que escribe el primer dispositivo).
+- Elige la instantánea más reciente de la lista. Cada fila muestra la
+  fecha, el nombre del perfil (o su id, si el perfil no existe en este
+  equipo) y un breve "hash del dispositivo" para distinguir
+  instantáneas de equipos distintos. El hash del dispositivo es una
+  huella SHA-256 del nombre de host del equipo de origen — suficiente
+  para agrupar instantáneas por procedencia, no para identificar el
+  equipo.
+- Se preselecciona la instantánea más reciente del perfil activo. La
+  restauración siempre sobrescribe el perfil **activo**: para
+  restaurar otro perfil, cambia antes a ese perfil. Si eliges la
+  instantánea de un perfil distinto, MedReminder pide confirmación
+  antes de sustituir con ella los datos del perfil activo.
+- Marca **"Entiendo que esto sobrescribirá los datos del perfil
+  actual."** — la restauración solo sobrescribe.
+- Haz clic en **Restaurar**. MedReminder descifra la instantánea,
+  sustituye la base de datos del perfil actual y te pide reiniciar.
+
+### Notas
+
+- **Perder la frase de contraseña es perder los datos.** No hay forma
+  de restablecerla. La frase se guarda localmente, cifrada con las
+  credenciales de tu cuenta de Windows; nunca sale del equipo ni
+  aparece en la nube.
+- La instantánea automática diaria **no** incluye la contraseña SMTP
+  ni tus preferencias de usuario — para eso, usa la exportación
+  cifrada puntual descrita arriba, con las casillas de ajustes
+  compartidos.
+- La retención de MedReminder solo elimina archivos antiguos de la
+  carpeta visible. Tu servicio en la nube probablemente conserva los
+  archivos eliminados en su propia papelera (OneDrive: 30 días por
+  defecto) — MedReminder no puede vaciarla por ti, y no lo intenta.
+- **No** coloques el archivo de base de datos en uso en una carpeta
+  sincronizada. Ahí solo deben ir las instantáneas cifradas `.mrz`.
+
+### OneDrive en lugar de una carpeta
+
+En la misma sección, **Almacenamiento** puede ser **OneDrive (carpeta de
+aplicación)**: haga clic en **Iniciar sesión…**, inicie sesión con una
+cuenta Microsoft, defina la frase de contraseña de las copias y guarde.
+Las copias van a `Apps/MedReminder26/backups` en OneDrive, cifradas como
+arriba; no hace falta una carpeta local. **Restaurar desde carpeta en la nube…**
+lista entonces las copias de OneDrive por fecha y perfil y descarga solo
+la que restaure.
+
+**Google Drive (carpeta MedReminder/backups)** funciona igual con una
+cuenta de Google: las copias van a una carpeta visible **MedReminder →
+backups** de su Mi unidad, cifradas como arriba, y **Restaurar desde
+carpeta en la nube…** las lista desde allí.
+
+## Sincronización entre PC
+
+Varios PC pueden mantener actualizado el mismo perfil: lo que registra en uno
+aparece en los demás. Los PC solo intercambian cambios cifrados a través de
+una carpeta compartida (una carpeta de OneDrive, Google Drive o Dropbox
+sincronizada por su aplicación de escritorio, o un recurso de red). No
+interviene ningún servidor y la carpeta nunca contiene datos legibles.
+
+Abra **Herramientas → Sincronización…**. Cada perfil gestiona la sincronización de sus
+propios datos, incluidos el cambio de clave y quitar un dispositivo.
+
+### OneDrive o carpeta compartida
+
+Al activar la sincronización o unirse a un grupo, MedReminder pregunta
+dónde guardar el grupo:
+
+- **OneDrive**: inicie sesión con una cuenta Microsoft en la ventana del
+  navegador que se abre. MedReminder solo puede usar su propia carpeta de
+  aplicación (`Apps/MedReminder26` en OneDrive); los datos allí están
+  cifrados. Todos los PC inician sesión con la **misma** cuenta Microsoft.
+  No hace falta la aplicación OneDrive en el PC.
+- **Google Drive**: inicie sesión con una cuenta de Google en la ventana
+  del navegador que se abre. Los datos de sincronización van a la
+  carpeta de datos oculta de MedReminder en Google Drive (no aparece en
+  Mi unidad), cifrados. Todos los PC inician sesión con la **misma**
+  cuenta de Google.
+- **Una carpeta compartida**: una carpeta que otro programa mantiene
+  sincronizada, o una carpeta de red, como se describe abajo.
+
+Si la sesión de OneDrive o Google Drive caduca (cambio de contraseña,
+larga inactividad), el estado lo indica y **Volver a iniciar sesión en
+OneDrive** (o **Volver a iniciar sesión en Google Drive**) reanuda la
+sincronización; los cambios registrados mientras tanto se envían
+después.
+
+### Activar en el primer PC
+
+1. **Activar sincronización…**, elija la carpeta compartida.
+2. Introduzca un nombre para este PC y una **frase de contraseña de
+   sincronización** (al menos 10 caracteres, escrita dos veces). No es la
+   frase de las copias de seguridad. Guárdela: sin ella los datos de la
+   carpeta no se pueden leer, y no se puede recuperar.
+
+### Unirse desde otro PC
+
+1. Espere a que el cliente de sincronización haya descargado la carpeta
+   compartida.
+2. **Unirse a un grupo…**, elija la misma carpeta, introduzca un nombre para
+   este PC y la misma frase de contraseña.
+3. Confirme: **los datos de este perfil en este PC se sustituyen** por los
+   del grupo (se conserva una copia junto a la base de datos). MedReminder
+   se reinicia.
+
+Si la frase de contraseña abre más de un grupo en la carpeta o la cuenta
+(varios perfiles sincronizados con la misma frase), MedReminder pregunta
+a cuál unirse y muestra cada grupo con sus dispositivos.
+
+Con OneDrive o Google Drive la unión puede tardar hasta un minuto:
+MedReminder espera a que la cuenta liste el nuevo PC, para que los demás
+PC conserven los cambios que aún necesita.
+
+### Uso diario
+
+- MedReminder sincroniza unos segundos después de cada cambio, cada 5
+  minutos y con **Sincronizar ahora**.
+- La pestaña **Dispositivos** muestra los PC del grupo y su último contacto.
+- Si dos PC cambian lo mismo antes de ver el cambio del otro, se conserva el
+  más reciente y el caso aparece en **Conflictos**. Para un campo del
+  medicamento, **Restaurar valor perdido** recupera el otro valor;
+  **Descartar** quita la entrada de la lista.
+- Importar una exportación o restaurar una copia en un perfil sincronizado
+  inicia una nueva **generación**: tras un aviso, los demás PC descartan lo
+  que aún no habían enviado y deben reconstruirse con **Reconstruir desde el
+  grupo…**.
+- El **nombre del perfil** y los **destinatarios de las
+  notificaciones** (Configuración → Notificaciones) pertenecen al
+  grupo: un cambio en un PC llega a los demás, y un PC que se une toma
+  los del grupo. Para cambiar el nombre de otro perfil sincronizado,
+  abra primero ese perfil.
+- **E-mail**: cada PC con el e-mail configurado (Configuración → E-mail
+  SMTP) envía sus propios mensajes de stock bajo y al cuidador, así que
+  con dos PC sincronizados el mismo mensaje llega dos veces. Configure
+  el e-mail en un solo PC del grupo.
+- **Desactivar sincronización…** detiene la sincronización en este PC y
+  conserva sus datos.
+
+### Códigos de vinculación
+
+Un PC que ya está en el grupo puede mostrar un **código de
+vinculación**: **Vincular un dispositivo…** muestra un código QR (para
+la futura aplicación móvil) y el mismo código como texto. En otro PC,
+**Unirse con un código de vinculación…** usa ese código en lugar de la
+frase de contraseña; el PC igualmente necesita acceso a la misma cuenta
+o carpeta.
+
+- El código vale 10 minutos y solo mientras su ventana siga abierta. Al
+  cerrar la ventana se retira.
+- Quien lea el código mientras es válido puede leer los datos del
+  grupo: muéstrelo solo a sus propios dispositivos y no lo envíe por
+  mensaje ni por correo. La ventana no aparece en las capturas de
+  pantalla.
+
+### Cambiar la clave, quitar un PC perdido
+
+- Pestaña **Dispositivos** → seleccione un PC → **Quitar
+  dispositivo…**: para un PC perdido o robado. **Cambiar clave y frase
+  de contraseña…** hace lo mismo sin indicar un PC, por ejemplo si
+  alguien conoce la frase de contraseña.
+- Usted elige una **nueva frase de contraseña de sincronización**. El
+  grupo recibe una nueva clave; el PC quitado no la recibe y no puede
+  leer nada de lo que se escriba a partir de entonces. Lo que ya tenía
+  sigue siendo legible para él.
+- Cierre también las sesiones del PC perdido en la configuración de
+  seguridad de la cuenta de Microsoft o Google: hasta entonces aún
+  puede acceder al almacenamiento.
+- Cada uno de los demás PC deja de enviar cambios e indica que la clave
+  cambió. Use allí **Introducir la nueva clave…**, con la nueva frase de
+  contraseña o un código de vinculación de un PC que ya tenga la nueva
+  clave. El perfil se reconstruye a partir del grupo y **los cambios
+  hechos en ese PC se conservan**, también los registrados durante la
+  espera. MedReminder se reinicia.
+
+## Comprobar ahora
+
+El monitor se ejecuta automáticamente cada 30 minutos (configurable
+en `appsettings.json` en la clave `Monitoring:IntervalMinutes`). Si
+quieres forzar una comprobación inmediata: barra de herramientas →
+**Comprobar ahora** o menú del área de notificación → **Comprobar
+ahora**.
+
+## Icono en el área de notificación
+
+- **Doble clic** → abre la ventana.
+- **Menú contextual (clic derecho)**:
+  - Abrir MedReminder
+  - Comprobar ahora
+  - Configuración…
+  - Salir
+
+Cerrar la ventana principal con la X la minimiza al área de
+notificación; la aplicación sigue ejecutándose en segundo plano.
+Para salir de verdad: menú del área de notificación → **Salir**.
+
+## Idioma de la interfaz
+
+**Configuración → General**: elige el idioma del desplegable
+(español, inglés, italiano, francés o alemán) y haz clic en **Guardar**.
+MedReminder pide reiniciarse para aplicar el cambio.
+
+Notas:
+- Las notificaciones toast de Windows usan el idioma elegido aquí,
+  como el resto de la aplicación.
+- Las notificaciones e-mail y la ficha de terapia usan el idioma
+  seleccionado aquí.
+
+## Tamaño del texto
+
+**Configuración → General → Tamaño del texto (este perfil)**: elige
+**Normal**, **Grande** o **Muy grande** y haz clic en **Guardar**.
+MedReminder pide reiniciarse; tras el reinicio, todas las ventanas de
+este perfil muestran texto, botones y filas de las listas más
+grandes. La guía también se amplía.
+
+Notas:
+- El tamaño pertenece al perfil: en un PC compartido cada persona
+  conserva el suyo. La selección de perfil y la solicitud del PIN,
+  que aparecen antes de abrir un perfil, usan siempre Normal.
+- MedReminder también sigue el escalado de pantalla y los temas de
+  contraste de Windows. Con un tema de contraste, la lista de
+  medicamentos no usa las filas de color sino los colores del tema;
+  la columna **Estado** sigue indicando la situación de cada
+  medicamento.
+- En una pantalla pequeña, una ventana en **Muy grande** se reduce al
+  tamaño de la pantalla y parte de ella puede no verse; en ese caso
+  elige **Grande**.
+
+## Apoyar el desarrollo
+
+Si el mantenedor lo ha habilitado, la opción **? → Apoyar el
+desarrollo…** abre una pequeña ventana en la que puedes, de forma
+totalmente voluntaria, contribuir al proyecto. Es opcional y nunca es
+necesario para usar MedReminder.
+
+- Elige un importe fijo (2 €, 5 €, 10 €, 20 €) o, cuando se ofrezca, un
+  **importe personalizado**.
+- Elige un método de pago (Stripe o PayPal).
+- Haz clic en **Continuar con …**: MedReminder abre la página de pago
+  oficial del proveedor en tu navegador predeterminado.
+
+Con un importe personalizado eliges la cifra exacta **en la página del
+proveedor**, no dentro de MedReminder. La aplicación nunca procesa el
+pago, no ve los datos de tu tarjeta y no puede confirmar que un pago se
+haya completado: solo abre la página. Si el mantenedor no ha
+configurado esta función, la opción de menú no aparece.
+
+## Diagnóstico
+
+- **Logs**:
+  `%LOCALAPPDATA%\MedReminder\logs\medreminder-YYYYMMDD.log`.
+  Contiene los ticks del planificador, envíos de notificaciones,
+  errores.
+- **DB corrupta o incompatible**: elimina `medreminder.db`,
+  `medreminder.db-shm`, `medreminder.db-wal` bajo
+  `%LOCALAPPDATA%\MedReminder\`. En el próximo inicio la DB se
+  recrea vacía. Haz antes una copia manual si tienes datos
+  importantes.
+- **Aplicación ya en ejecución**: solo una instancia por usuario
+  Windows. Si el arranque indica «ya en ejecución», busca el icono
+  en el área de notificación.
+
+## Lo que MedReminder NO hace
+
+- No registra si has tomado una dosis, no hace seguimiento de la
+  adherencia terapéutica y no alerta por dosis perdidas (el
+  recordatorio a la hora de la dosis es solo un aviso práctico, no
+  un sistema de adherencia).
+- No proporciona indicaciones terapéuticas ni interacciones
+  farmacológicas.
+- No sincroniza entre dispositivos.
+- No pide medicamentos automáticamente.
+- No contacta directamente con tu médico.
+
+Su único propósito es avisarte a tiempo de que necesitas solicitar
+una nueva receta.

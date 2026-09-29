@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  PRI (Package Resource Index) config for MSIX. Declares the
+  supported languages; must be consistent with the manifest's
+  <Resources> section. Generated via:
+
+    MakeAppx.exe /o /if priconfig.xml /pr <publishDir> /cf <this file>
+
+  but it is easier to use the MakePri default directly:
+    MakePri.exe createconfig /cf priconfig.xml /dq en-US /pv 10.0.19041.0 /o
+
+  then edit to add the other languages inside the <qualifier> entry.
+-->
+<resources targetOsVersion="10.0.19041.0" majorVersion="1">
+  <packaging>
+    <autoResourcePackage qualifier="Language" />
+    <autoResourcePackage qualifier="Scale" />
+    <autoResourcePackage qualifier="DXFeatureLevel" />
+  </packaging>
+  <index root="\" startIndexAt="\">
+    <default>
+      <qualifier name="Language" value="en-US" />
+      <qualifier name="Contrast" value="standard" />
+      <qualifier name="Scale" value="100" />
+      <qualifier name="HomeRegion" value="001" />
+      <qualifier name="TargetSize" value="256" />
+      <qualifier name="LayoutDirection" value="LTR" />
+      <qualifier name="DXFeatureLevel" value="DX9" />
+      <qualifier name="Configuration" value="" />
+      <qualifier name="AlternateForm" value="" />
+      <qualifier name="Platform" value="UAP" />
+    </default>
+    <indexer-config type="folder" foldernameAsQualifier="true" filenameAsQualifier="true" qualifierDelimiter="." />
+    <indexer-config type="resw" convertDotsToSlashes="true" initialPath="" />
+    <indexer-config type="resjson" initialPath="" />
+    <indexer-config type="PRI" />
+  </index>
+</resources>

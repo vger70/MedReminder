@@ -1,0 +1,272 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# This workflow will build, test, sign and package a WPF or Windows Forms desktop application
+# built on .NET Core.
+# To learn how to migrate your existing application to .NET Core,
+# refer to https://docs.microsoft.com/en-us/dotnet/desktop-wpf/migration/convert-project-from-net-framework
+#
+# To configure this workflow:
+#
+# 1. Configure environment variables
+# GitHub sets default environment variables for every workflow run.
+# Replace the variables relative to your project in the "env" section below.
+#
+# 2. Signing
+# Generate a signing certificate in the Windows Application
+# Packaging Project or add an existing signing certificate to the project.
+# Next, use PowerShell to encode the .pfx file using Base64 encoding
+# by running the following Powershell script to generate the output string:
+#
+# $pfx_cert = Get-Content '.\SigningCertificate.pfx' -Encoding Byte
+# [System.Convert]::ToBase64String($pfx_cert) | Out-File 'SigningCertificate_Encoded.txt'
+#
+# Open the output file, SigningCertificate_Encoded.txt, and copy the
+# string inside. Then, add the string to the repo as a GitHub secret
+# and name it "Base64_Encoded_Pfx."
+# For more information on how to configure your signing certificate for
+# this workflow, refer to https://github.com/microsoft/github-actions-for-desktop-apps#signing
+#
+# Finally, add the signing certificate password to the repo as a secret and name it "Pfx_Key".
+# See "Build the Windows Application Packaging project" below to see how the secret is used.
+#
+# For more information on GitHub Actions, refer to https://github.com/features/actions
+# For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
+# refer to https://github.com/microsoft/github-actions-for-desktop-apps
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+#
+# This workflow builds, packages and publishes a Windows release
+# of MedReminder whenever a Git tag matching v* is pushed.
+#
+# Example:
+#
+#   git tag v2.3.2
+#   git push origin v2.3.2
+#
+# The workflow automatically:
+#   - extracts version 2.3.2 from the tag
+#   - builds the application
+#   - stamps assemblies with version 2.3.2
+#   - generates ZIP packages
+#   - generates the MSI installer
+#   - publishes a GitHub Release
+#
+# NOTES ABOUT VERSIONING
+#
+# The repository can keep any value inside Directory.Build.props,
+# for example:
+#
+#   <VersionPrefix>0.0.0</VersionPrefix>
+#
+# During CI/CD the value is overridden by the Git tag version
+# through MSBuild properties:
+#
+#   Version
+#   VersionPrefix
+#   AssemblyVersion
+#   FileVersion
+#   InformationalVersion
+#
+# Therefore no file is modified or committed back to the repository.
+
+name: Build and Release MedReminder
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build Windows Release
+    runs-on: windows-latest
+
+    steps:
+
+      # ------------------------------------------------------------
+      # Checkout source code
+      # ------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # ------------------------------------------------------------
+      # Install .NET SDK
+      # ------------------------------------------------------------
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # ------------------------------------------------------------
+      # Extract version from Git tag.
+      #
+      # Examples:
+      #
+      #   v1.0.0  -> 1.0.0
+      #   v2.3.2  -> 2.3.2
+      #
+      # The extracted value is exposed as:
+      #
+      #   steps.version.outputs.version
+      # ------------------------------------------------------------
+      - name: Extract Version From Tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Release tag must be in format vX.Y.Z"
+          }
+
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+          Write-Host ""
+          Write-Host "========================================="
+          Write-Host "Release Version: $version"
+          Write-Host "========================================="
+          Write-Host ""
+
+      # ------------------------------------------------------------
+      # Restore NuGet dependencies
+      #
+      # Both the main solution and the WiX installer project
+      # are restored.
+      # ------------------------------------------------------------
+      - name: Restore
+        shell: pwsh
+        run: |
+          dotnet restore MedReminder.sln
+          dotnet restore packaging/wix/MedReminder.wixproj
+
+      # ------------------------------------------------------------
+      # Publish self-contained application
+      #
+      # Self-contained means the .NET runtime is bundled into
+      # the package, therefore the user does not need to install
+      # .NET separately.
+      #
+      # The release version comes from the Git tag.
+      #
+      # The Google Drive OAuth client id and secret come from the
+      # repository secrets of the same names and are stamped into
+      # MedReminder.Infrastructure (docs/PACKAGING.md §24). If the
+      # secrets are missing, the release is built without Google Drive.
+      # ------------------------------------------------------------
+      - name: Publish self-contained
+        env:
+          MEDREMINDER_GOOGLE_CLIENT_ID: ${{ secrets.MEDREMINDER_GOOGLE_CLIENT_ID }}
+          MEDREMINDER_GOOGLE_CLIENT_SECRET: ${{ secrets.MEDREMINDER_GOOGLE_CLIENT_SECRET }}
+        run: >
+          dotnet publish
+          src/MedReminder.UI/MedReminder.UI.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -o publish-net10
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:VersionPrefix=${{ steps.version.outputs.version }}
+          -p:AssemblyVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
+
+      # ------------------------------------------------------------
+      # Create self-contained ZIP package
+      # ------------------------------------------------------------
+      - name: Create self-contained ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path publish-net10\* `
+            -DestinationPath MedReminder-win-x64-net10.zip
+
+      # ------------------------------------------------------------
+      # Publish framework-dependent application
+      #
+      # Framework-dependent means the target machine must
+      # already have the required .NET runtime installed.
+      # Same Google Drive client secrets as the self-contained publish.
+      # ------------------------------------------------------------
+      - name: Publish framework-dependent
+        env:
+          MEDREMINDER_GOOGLE_CLIENT_ID: ${{ secrets.MEDREMINDER_GOOGLE_CLIENT_ID }}
+          MEDREMINDER_GOOGLE_CLIENT_SECRET: ${{ secrets.MEDREMINDER_GOOGLE_CLIENT_SECRET }}
+        run: >
+          dotnet publish
+          src/MedReminder.UI/MedReminder.UI.csproj
+          -c Release
+          -r win-x64
+          --self-contained false
+          -o publish
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:VersionPrefix=${{ steps.version.outputs.version }}
+          -p:AssemblyVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
+
+      # ------------------------------------------------------------
+      # Create framework-dependent ZIP package
+      # ------------------------------------------------------------
+      - name: Create framework-dependent ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path publish\* `
+            -DestinationPath MedReminder-win-x64.zip
+
+      # ------------------------------------------------------------
+      # Build MSI installer using WiX
+      #
+      # ProductVersion must match the release version in order
+      # for Windows Installer upgrade detection to function
+      # correctly.
+      # ------------------------------------------------------------
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+
+          $publishDir = (Resolve-Path publish).Path
+
+          dotnet build packaging/wix/MedReminder.wixproj `
+            -c Release `
+            /p:PublishDir="$publishDir" `
+            /p:ProductVersion=$version
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "MSI build failed."
+          }
+
+          $msi = "packaging/wix/bin/Release/MedReminder-$version-x64.msi"
+
+          if (-not (Test-Path $msi)) {
+            throw "MSI not generated: $msi"
+          }
+
+          Copy-Item `
+            $msi `
+            "MedReminder-win-x64.msi"
+
+      # ------------------------------------------------------------
+      # Create GitHub Release
+      #
+      # The release is automatically associated with the tag
+      # that triggered the workflow.
+      # ------------------------------------------------------------
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            MedReminder-win-x64-net10.zip
+            MedReminder-win-x64.zip
+            MedReminder-win-x64.msi
+          generate_release_notes: true

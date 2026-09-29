@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>MedReminder.Infrastructure.Tests</RootNamespace>
+    <AssemblyName>MedReminder.Infrastructure.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="8.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MedReminder.Domain\MedReminder.Domain.csproj" />
+    <ProjectReference Include="..\..\src\MedReminder.Application\MedReminder.Application.csproj" />
+    <ProjectReference Include="..\..\src\MedReminder.Infrastructure\MedReminder.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- Shared with MedReminder.Infrastructure.Portable.Tests, where the
+       persistence tests live; the catalogue tests here still use it. -->
+  <ItemGroup>
+    <Compile Include="..\MedReminder.Infrastructure.Portable.Tests\Support\SqliteInMemoryFixture.cs" Link="Support\SqliteInMemoryFixture.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\fixtures\catalogue\aifa-confezioni-sample.csv">
+      <Link>fixtures\catalogue\aifa-confezioni-sample.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\aifa-pa-sample.csv">
+      <Link>fixtures\catalogue\aifa-pa-sample.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\aifa-atc-sample.csv">
+      <Link>fixtures\catalogue\aifa-atc-sample.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\ema-epar-sample.csv">
+      <Link>fixtures\catalogue\ema-epar-sample.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\aemps-cima-sample.xlsx">
+      <Link>fixtures\catalogue\aemps-cima-sample.xlsx</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\bdpm-cis-sample.txt">
+      <Link>fixtures\catalogue\bdpm-cis-sample.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\bdpm-compo-sample.txt">
+      <Link>fixtures\catalogue\bdpm-compo-sample.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\fixtures\catalogue\bdpm-cip-sample.txt">
+      <Link>fixtures\catalogue\bdpm-cip-sample.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

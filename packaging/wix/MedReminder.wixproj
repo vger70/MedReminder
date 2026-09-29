@@ -1,0 +1,54 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <!--
+    WiX v5 SDK-style project: produces MedReminder-<version>-x64.msi.
+
+    How to build:
+      dotnet build packaging/wix/MedReminder.wixproj -c Release ^
+        /p:PublishDir=..\..\src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\ ^
+        /p:ProductVersion=1.0.1
+
+    Build prerequisites:
+      dotnet nuget add source https://api.nuget.org/v3/index.json
+      dotnet tool install [g]lobal wix (optional, only for the wix CLI)
+      The WixToolset.Sdk 5.x package is restored automatically.
+
+    Before building the MSI, PUBLISH the app (win-x64-sc profile):
+      dotnet publish src\MedReminder.UI -c Release
+        /p:PublishProfile=win-x64-self-contained
+
+    The installer harvests the whole publish folder and copies it
+    under %LOCALAPPDATA%\Programs\MedReminder\ (per-user install,
+    no UAC).
+  -->
+
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <OutputName>MedReminder-$(ProductVersion)-x64</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+
+    <!-- Version: defaults to 1.0.1, override from the CLI with /p:ProductVersion=... -->
+    <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.1</ProductVersion>
+
+    <!-- Folder with the published app (win-x64-self-contained).
+         Must be passed from the CLI or by the build-installer.ps1
+         script. -->
+    <PublishDir Condition="'$(PublishDir)' == ''">..\..\src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\</PublishDir>
+
+    <!-- Downgrade light.exe validation errors to warnings so
+         ICE cookies for large harvested folders are tolerated. -->
+    <SuppressIces>ICE60;ICE64;ICE69;ICE38;ICE91</SuppressIces>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Pass the version and the publish folder to Product.wxs
+         as preprocessor constants ($(var.ConstantName)). -->
+    <DefineConstants>$(DefineConstants);ProductVersion=$(ProductVersion);PublishDir=$(PublishDir)</DefineConstants>
+  </PropertyGroup>
+
+</Project>

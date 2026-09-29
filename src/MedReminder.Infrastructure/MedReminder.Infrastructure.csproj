@@ -1,0 +1,83 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>MedReminder.Infrastructure</RootNamespace>
+    <AssemblyName>MedReminder.Infrastructure</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <!-- NotifyIcon lives in System.Windows.Forms: enable WinForms
+         here for the local notification adapter. The UI
+         (Increment 6) uses the same WinForms namespace. -->
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
+    <PackageReference Include="MailKit" Version="4.18.0" />
+    <!-- OneDrive sign-in (B.1 Phase 4a, docs/analysis/
+         ANALYSIS-B1-MOBILE-SYNC.md §5.8): public client, system browser,
+         token cache protected with DPAPI. MIT. -->
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.90.1" />
+    <!-- Windows-1252 is a code page and requires the CodePages
+         provider at runtime (registered by AnsmBdpmParser via
+         Encoding.RegisterProvider). Only the FR / BDPM parser needs
+         it today; other parsers stay on UTF-8. -->
+  </ItemGroup>
+
+  <!--
+    Google Drive (B.1 Phase 4b): the Desktop OAuth client's id and secret
+    are not in the repository. Set MEDREMINDER_GOOGLE_CLIENT_ID and
+    MEDREMINDER_GOOGLE_CLIENT_SECRET in the environment of a release build
+    (docs/PACKAGING.md); they are stamped into this assembly and read by
+    GoogleCloudAccountService. GoogleDrive:ClientId / ClientSecret in
+    configuration override them. Without either, Google Drive is not
+    offered.
+  -->
+  <ItemGroup Condition="'$(MEDREMINDER_GOOGLE_CLIENT_ID)' != '' and '$(MEDREMINDER_GOOGLE_CLIENT_SECRET)' != ''">
+    <AssemblyMetadata Include="GoogleDriveClientId" Value="$(MEDREMINDER_GOOGLE_CLIENT_ID)" />
+    <AssemblyMetadata Include="GoogleDriveClientSecret" Value="$(MEDREMINDER_GOOGLE_CLIENT_SECRET)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MedReminder.Domain\MedReminder.Domain.csproj" />
+    <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
+    <ProjectReference Include="..\MedReminder.Infrastructure.Portable\MedReminder.Infrastructure.Portable.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);IDE0011</NoWarn>
+  </PropertyGroup>
+    
+  <!--
+    Reference-catalogue snapshots (ANALYSIS-DRUG-CATALOGUE.md §2.6).
+    Ship each AIFA / EMA snapshot ZIP as an embedded resource so
+    EmbeddedSnapshotProvider can open it from the assembly on boot.
+    LogicalName pins the manifest-resource name to
+    MedReminder.Infrastructure.Assets.Catalogue.<country>.<file>
+    regardless of the on-disk folder capitalisation.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Catalogue\it\aifa-*.zip">
+      <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.it.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Assets\Catalogue\eu\ema-epar-*.zip">
+      <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.eu.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Assets\Catalogue\es\aemps-*.zip">
+      <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.es.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Assets\Catalogue\fr\bdpm-*.zip">
+      <LogicalName>MedReminder.Infrastructure.Assets.Catalogue.fr.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\assets\donations.settings.json">
+      <Link>Assets\donations.settings.json</Link>
+      <LogicalName>donations.settings.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
