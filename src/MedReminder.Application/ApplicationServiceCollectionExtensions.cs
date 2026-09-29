@@ -6,6 +6,7 @@ using MedReminder.Application.Monitoring;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
+using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -44,6 +45,13 @@ public static class ApplicationServiceCollectionExtensions
         // B.1 Phase 4c: key rotation (device removal) and pairing offers.
         services.AddScoped<RotateSyncKey>();
         services.AddScoped<SyncPairingOffers>();
+
+        // Remote AIFA feed (ANALYSIS-CATALOGUE-REMOTE-FEED.md §4.3). The
+        // host registers ICatalogueFeedClient, IReferenceCatalogueImporter
+        // and IAppDataLocation. The signal orders the refresh after the
+        // startup update check.
+        services.AddSingleton<StartupUpdateCheckSignal>();
+        services.AddScoped<RemoteCatalogueRefresher>();
 
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();
