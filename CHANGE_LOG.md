@@ -30,6 +30,33 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #117 — Record profile administration in a local household and allow role changes (household H2a)
+
+Link: [vger70/MedReminder#117](https://github.com/vger70/MedReminder/pull/117)
+Branch: `claude/household-h2a-profile-registry` → `feature/master-slave`
+
+### Added
+
+- Local household store under `%LOCALAPPDATA%\MedReminder\household\`:
+  every profile creation, rename, PIN, role change and deletion is
+  recorded as an HLC-stamped operation with last-writer-wins registers,
+  ready for replication in step H3.
+- Manage profiles → Change role…: an admin makes another profile an
+  administrator or a standard user; the open profile's role stays fixed
+  and one admin always remains.
+- Start-up reconciliation of the household with `profiles.json`.
+
+### Changed
+
+- Profile administration goes through use cases with the admin checks
+  in the Application layer; the UI no longer writes the registry,
+  except the first-run wizard.
+
+### Docs
+
+- User guides (5 languages), `ANALYSIS.md` §5, `CLAUDE.md` §5,
+  `ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`.
+
 ## PR #116 — Send each low-stock email once per sync group (household H1)
 
 Link: [vger70/MedReminder#116](https://github.com/vger70/MedReminder/pull/116)
