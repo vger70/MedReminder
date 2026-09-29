@@ -3,9 +3,9 @@
 Design document, written before implementation. It extends the remote
 AIFA feed (`ANALYSIS-CATALOGUE-REMOTE-FEED.md`, PR #131) to the three
 other reference catalogues: EMA EPAR (`EU`), AEMPS CIMA (`ES`) and ANSM
-BDPM (`FR`). **Implementation waits until the AIFA feed has been
-tested on Windows and in production** (product-owner decision,
-2026-09-29).
+BDPM (`FR`). Implementation waited until the AIFA feed had been
+tested on Windows and in production (product-owner decision,
+2026-09-29); it landed in PR #135, see §11.
 
 Epistemic classification, aligned with the sibling documents:
 `[VERIFIED]` (checked against the tree at `6bc2a35`, or measured on the
@@ -442,7 +442,7 @@ new one. Per-feed `Enabled` flags let an admin override.
 | D1 | Layout | **Settled:** option B, `data/<country>/`; AIFA moved to `data/it/` in PR #131 |
 | D2 | Branch | **Settled for now:** data stays on `main`; a dedicated data branch remains possible later, at the cost of changing the feed URLs again |
 | D3 | Timing of the AIFA move | **Done** in PR #131, before any release reads `data/latest.json` |
-| D4 | Feeds per client | Reference country + EU; per-feed flags for admins |
+| D4 | Feeds per client | **Confirmed** 2026-09-29: reference country + EU; per-feed flags for admins |
 | D5 | AEMPS source | **Settled:** `https://listadomedicamentos.aemps.gob.es/Medicamentos.xls`, `GET` with browser headers (200 from a GitHub runner, §3.2) |
 | D6 | Thresholds | As in §3.4 |
 | D7 | Order of work | ES, FR, EU: all three downloads are proven from a runner; ES and FR need no transformation, EU needs the XLSX→CSV conversion |
@@ -484,3 +484,82 @@ new one. Per-feed `Enabled` flags let an admin override.
   rows. The CIMA REST API is also reachable from the runner.
 - Not verified: the data.gouv.fr mirror's file layout, BDPM update
   frequency (irrelevant for a monthly feed).
+
+---
+
+## 11. Implementation notes (2026-09-29)
+
+Implemented in PR #135 after the product owner confirmed both
+preconditions of the implementation prompt: the first scheduled AIFA
+run published `data/it/aifa-202609.zip`, and an app start imported it
+with `source=remote feed`. Decision D4 was confirmed as written
+(reference country + EU). D1–D3 and D5–D7 were applied as recorded in
+§8.
+
+### 11.1 Client
+
+- `CatalogueFeedDescriptor` (Application) holds the four feeds with the
+  prefixes, entries and caps of §5.2. `CatalogueFeedOptions` gained
+  `BaseUrl` and `Feeds:<country>` (`Enabled`, `MaxDownloadBytes`);
+  every feed is enabled by default and in `appsettings.json`. The
+  prefix stays in the descriptor, not in the configuration: it is
+  fixed by the parser. The top-level `MaxDownloadBytes` was removed; a
+  feed missing from `Feeds` is off and its download cap is 0.
+  `ManifestUrl` and `SnapshotUrlTemplate` remain Italy-only overrides,
+  unset in the shipped configuration.
+- The manifest parser checks `file` and `country` against the
+  descriptor. A manifest of another feed is therefore reported by the
+  client as unavailable (outcome `ManifestUnavailable`), where the
+  AIFA-only refresher reported `Rejected`.
+- `CatalogueFeedSelection` implements D4; an invalid reference country
+  falls back to IT, a country without a feed (for example `DE`) or `EU`
+  selects EU only.
+- The per-feed loop is `CatalogueRefreshHostedService.RefreshFeedsAsync`
+  (internal static), so the isolation rule is tested in
+  `MedReminder.UI.Tests` without a host.
+- Log lines are `Remote catalogue feed <country>: …`; the import line
+  `Reference-catalogue import for <country> complete: … source=remote feed`
+  is unchanged.
+
+### 11.2 Scripts and workflows
+
+- `download_aifa.py` moved to `scripts/feeds/aifa.py` (next to
+  `common.py`, which it imports) instead of being rewritten in place;
+  `download_aifa.yaml` calls the new path. Its requests, validation,
+  thresholds and `data/it/` output are unchanged; the manifest's
+  `csv_count` became `file_count`.
+- All four workflows share the concurrency group, stage only their own
+  `data/<country>/` folder, and push with one `git pull --rebase` and
+  one retry. The AIFA workflow received the same push step.
+- AEMPS: the `Referer` sent is the CIMA home page; which header the
+  proxy checks was not isolated (§3.2). A legacy BIFF `.xls` is
+  rejected with its own message.
+- EMA: the check of §3.1 ("no line of the output CSV breaks a record")
+  parses each physical line on its own. A single `csv.reader` over the
+  whole file would join a quoted field split across two lines and hide
+  the break. The `Human` count is recorded in `rows` as
+  `ema-epar.csv (Human)`, so the next run can apply the 90% rule to it.
+- `scripts_tests.yaml` runs `pytest scripts/feeds/tests` on changes
+  under `scripts/` and `tests/fixtures/catalogue/`.
+- New fixtures: `ema-epar-sample.xlsx` (the rows of
+  `ema-epar-sample.csv` laid out like the EMA report, with 8 metadata
+  rows, a wider declared sheet and a multi-line cell) and
+  `ema-epar-from-xlsx.csv` (`ema.py`'s conversion of it). pytest checks
+  that the script still produces that CSV; `EmaEparParserTests` checks
+  that the parser reads it to the same 70 rows as the manual export.
+
+### 11.3 Verification
+
+- Windows session (.NET SDK 10.0.401): `dotnet build MedReminder.sln -c Release`
+  succeeds and `dotnet test MedReminder.sln -c Release` passes (1 298
+  tests). Earlier runs in the session each had one Infrastructure
+  failure in `ExportServiceTests` or `SyncSetupServiceTests`, a
+  different test each time, passing on re-run; this change does not
+  touch those areas.
+- `pytest scripts/feeds/tests`: 94 tests pass (Python 3.14).
+- `python scripts/feeds/aifa.py` against the current `data/it/`
+  exits "Version 202609 is already published".
+- Not verified in this session (no access to the sources from here):
+  the first `workflow_dispatch` of each new workflow, and the app check
+  of §5 of the implementation prompt (reference country `ES`, then a
+  second start reporting "up to date" for ES and EU).

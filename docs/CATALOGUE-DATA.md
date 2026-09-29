@@ -38,6 +38,26 @@ startup (each country in its own transaction, per
 `ANALYSIS-DRUG-CATALOGUE.md` §3.4) — a broken snapshot for one
 country never blocks the others.
 
+The same four catalogues are also published monthly by GitHub
+workflows under `data/<country>/` on `main`, and the app refreshes
+from there at startup without a new release (§2.1). The embedded
+snapshots stay the offline baseline:
+
+| Country | Workflow (UTC, days 2, 9, 16, 23) | Script | Published |
+|---------|-----------------------------------|--------|-----------|
+| `it` | `download_aifa.yaml`, 03:00 | `scripts/feeds/aifa.py` | `data/it/aifa-<yyyymm>.zip` |
+| `es` | `download_aemps.yaml`, 03:20 | `scripts/feeds/aemps.py` | `data/es/aemps-<yyyymm>.zip` |
+| `fr` | `download_bdpm.yaml`, 03:40 | `scripts/feeds/bdpm.py` | `data/fr/bdpm-<yyyymm>.zip` |
+| `eu` | `download_ema.yaml`, 04:00 | `scripts/feeds/ema.py` | `data/eu/ema-epar-<yyyymm>.zip` |
+
+Each folder also holds `latest.json` (§2.1) and keeps the 3 newest
+archives. The scripts share `scripts/feeds/common.py` (retries, run
+timestamp, row floors, publication); their unit tests
+(`scripts/feeds/tests/`) run in `scripts_tests.yaml`. The four
+workflows share the concurrency group `catalogue-feeds-publish`, so
+their pushes to `main` never race. Each script changes nothing under
+`data/` until every check has passed.
+
 ---
 
 ## 2. Refresh procedure (Italy)
@@ -64,8 +84,8 @@ The Italian catalogue has two delivery paths:
 
 ### 2.1 Remote feed
 
-`data/it/latest.json`, written by `scripts/download_aifa.py` (each feed
-owns a `data/<country>/` folder):
+`data/it/latest.json`, written by `scripts/feeds/aifa.py`. Every feed
+writes the same manifest in its own `data/<country>/` folder:
 
 ```json
 {
@@ -73,7 +93,7 @@ owns a `data/<country>/` folder):
   "version": "202610",
   "file": "aifa-202610.zip",
   "generated": "2026-10-02T03:00:12.345678+00:00",
-  "csv_count": 2,
+  "file_count": 2,
   "sha256": "<64 hex characters>",
   "size": 5016171,
   "rows": {
@@ -83,6 +103,10 @@ owns a `data/<country>/` folder):
 }
 ```
 
+- `rows` holds the row counts the script validated, by file; the next
+  run compares against them. Manifests written before the shared
+  module carry `csv_count` instead of `file_count`; clients ignore
+  both.
 - `version` is the **download month** in UTC, not an AIFA release
   date. With the cron on day 2 the two usually coincide. The archive
   name, `version` and `generated` all come from one timestamp taken
@@ -95,27 +119,42 @@ owns a `data/<country>/` folder):
   a file by more than 10%, lower the previous count in
   `data/it/latest.json` by hand and re-run.
 - `data/it/` keeps the 3 newest archives.
-- **Republishing a month.** A forced run in the same month overwrites
-  `aifa-<yyyymm>.zip` and writes a new `generated` and `sha256`. Clients
+- **Republishing a month** (any feed). A forced run in the same month
+  overwrites `<prefix>-<yyyymm>.zip` and writes a new `generated` and `sha256`. Clients
   store remote imports as `yyyymm+<generated, UTC>` (for example
   `202610+20261005T030012Z`), so the later build replaces the earlier
   one at their next start. This needs `sha256` in the manifest: without
   it clients store the bare month and do not re-import. A month cannot
   be rolled back to an older build; publish corrected data instead.
 
-Client behaviour (`RemoteCatalogueRefresher`,
-`docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`):
+Client behaviour, the same for every feed (`RemoteCatalogueRefresher`,
+`docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`,
+`ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`):
 
 - Runs once at startup, after the passive update check, when
   `Catalogue:RemoteFeed:Enabled` and the user's *Check for updates on
   startup* setting are both on.
+- Refreshes the feeds the autocomplete reads: the reference country's
+  (when it is IT, ES or FR) and EU, in the order IT, EU, ES, FR. A
+  reference country without a feed refreshes EU only. Other countries
+  keep their current catalogue until the user switches to them.
+  `Catalogue:RemoteFeed:Feeds:<country>:Enabled` turns one feed off;
+  `MaxDownloadBytes` caps its archive. A failure in one feed does not
+  stop the next.
+- URLs: `{BaseUrl}<country>/latest.json` and
+  `{BaseUrl}<country>/<prefix>-<version>.zip`. The manifest must name
+  that feed's archive and, when present, its country.
 - Downloads only when `version` is newer than the open profile's
-  Italian catalogue; other profiles update at their own next start.
+  catalogue for that country; other profiles update at their own next
+  start.
 - Stages the file in `%LOCALAPPDATA%\MedReminder\catalogue\staging\`,
-  checks size and SHA-256 (when present) and the two CSV entries,
-  imports it, and deletes it in every outcome.
+  checks size and SHA-256 (when present) and the entries the country's
+  parser reads, imports it, and deletes it in every outcome.
 - Rejects a snapshot with fewer than half the rows of the current
-  catalogue, leaving the catalogue unchanged.
+  catalogue for that country, leaving it unchanged.
+- Logs `Remote catalogue feed <country>: …` (`up to date`,
+  `newer snapshot available`, rejections) and, after an import,
+  `Reference-catalogue import for <country> complete: … source=remote feed`.
 
 ### 2.2 Embedded snapshot
 
@@ -167,68 +206,88 @@ Client behaviour (`RemoteCatalogueRefresher`,
 
 ## 3. Refresh procedure (EU — EMA EPAR)
 
-Cadence: monthly, aligned to a MedReminder release. The EMA
-"Medicines" report is regenerated at least daily on
-`www.ema.europa.eu`, so picking the current export at release-cut
-time is enough.
+Two delivery paths, as for Italy:
 
-1. **Download the EPAR "Medicines" report from EMA.**
-   - Portal: <https://www.ema.europa.eu/en/medicines/download-medicine-data>
-     — pick the "Medicines" download (Excel spreadsheet, one sheet
-     named `Medicine`, ~2 700 rows, 39 columns).
-   - No login needed; the file is public. Reuse governed by EMA's
-     legal notice (Commission reuse decision 2011/833/EU), which
-     allows redistribution with attribution.
+- **Remote feed (monthly, no release needed).**
+  `.github/workflows/download_ema.yaml` runs `scripts/feeds/ema.py` on
+  days 2, 9, 16 and 23 at 04:00 UTC (and on demand, with the same
+  `force` input as AIFA) and publishes `data/eu/ema-epar-<yyyymm>.zip`
+  and `data/eu/latest.json` (§2.1). No manual step.
+- **Embedded snapshot (per release, optional)**, §3.2.
 
-2. **Convert the XLSX to a CSV.** MedReminder's importer reads
-   CSV, not XLSX, so a one-shot conversion is required. Any tool
-   works (LibreOffice `soffice --convert-to csv`, `xlsx2csv`, a
-   two-line Python snippet with `openpyxl`, or Excel's "Save as
-   CSV UTF-8"). Requirements:
+### 3.1 Remote feed
 
-   - Delimiter `;` (semicolon).
-   - Encoding UTF-8, no BOM required.
-   - Preserve **all 39** columns and their exact header names
-     (the parser matches columns by name, case-insensitively;
-     any of the expected columns missing fails the import loudly).
-   - Drop the first 8 metadata rows and use the row that starts
-     with `Category` as the header. Every subsequent row is data.
-   - Collapse embedded newlines / tabs inside cells to single
-     spaces (the parser reads one record per physical line).
+Source: the EMA "Medicines" report,
+<https://www.ema.europa.eu/en/documents/report/medicines-output-medicines-report_en.xlsx>,
+linked from <https://www.ema.europa.eu/en/medicines/download-medicine-data>
+(the script falls back to that page's link if the direct URL fails).
+EMA regenerates it daily. No login, no header filter. Reuse is governed
+by EMA's legal notice (Commission reuse decision 2011/833/EU), which
+allows redistribution with attribution.
 
-3. **Build the ZIP.** Place the single CSV file at the **root** of
-   the archive (no sub-directory). The name inside the archive
-   must be `ema-epar.csv` (case-insensitive; `EmaEparParser` looks
-   it up by name):
+Facts measured from a GitHub runner on 2026-09-29: 901 861 bytes of
+XLSX; one sheet `Medicine`; 8 metadata rows, then the header on row 9;
+39 real columns although the sheet declares 1 024; 2 746 data rows,
+2 351 of them `Human`; 2 260 cells contain `;` (multi-substance lists)
+and 5 contain line breaks or tabs; dates are text. `HEAD` reports a
+length of 0 (a cached response), so the script never relies on it.
+
+The parser reads CSV, so the script converts the workbook to
+`ema-epar.csv`:
+
+- sheet `Medicine`, or the first sheet;
+- header = the first row whose first cell is `Category`; trailing
+  empty header cells dropped and every row cut to the header width;
+- fully empty rows skipped;
+- cells: CR, LF and TAB become spaces and runs of spaces collapse (the
+  parser reads one record per physical line); integral numbers lose
+  the `.0`; a date-typed cell becomes `yyyy-mm-dd`; empty cells stay
+  empty;
+- `;` delimiter, UTF-8 without BOM, `\n` line ends, fields quoted only
+  when needed (every `;` list is quoted).
+
+The archive holds `ema-epar.csv` at its root. The run fails, leaving
+`data/` untouched, when the download is not an XLSX, when the CSV
+re-read line by line has a line whose column count differs from the
+header's, when one of the 8 columns `EmaEparParser` requires is
+missing (`Category`, `Name of medicine`, `EMA product number`,
+`Medicine status`, `Active substance`, `ATC code (human)`,
+`Marketing authorisation developer / applicant / holder`,
+`Medicine URL`), or when the data rows fall below 2 000 or the `Human`
+rows below 1 800, or either below 90% of the previous run (recorded in
+`rows` as `ema-epar.csv` and `ema-epar.csv (Human)`).
+
+### 3.2 Embedded snapshot
+
+1. **Take the archive published by the workflow**:
+   `data/eu/ema-epar-<yyyymm>.zip` from `main`. It already has the
+   layout the parser expects:
 
    ```
    ema-epar-<yyyymm>.zip
    └── ema-epar.csv
    ```
 
-   Any standard tool works. Expected compressed size is ~400–600 KB
-   (about 20–25 % of the raw CSV).
+   To build one by hand instead, download the report, convert it with
+   the rules of §3.1 (`convert()` in `scripts/feeds/ema.py` implements
+   them) and zip the CSV at the archive root as `ema-epar.csv`
+   (case-insensitive; `EmaEparParser` looks it up by name).
 
-4. **Name the archive** `ema-epar-<yyyymm>.zip` where `<yyyymm>` is
-   the export month (e.g. `ema-epar-202609.zip`). This suffix ends
-   up in the `snapshot_version` column of every imported row and
-   drives the `CatalogueRefreshHostedService` change-detection.
-
-5. **Drop it into the repo** at
+2. **Copy it into the repo** at
    `src/MedReminder.Infrastructure/Assets/Catalogue/eu/ema-epar-<yyyymm>.zip`.
    The `<EmbeddedResource>` glob in
    `src/MedReminder.Infrastructure/MedReminder.Infrastructure.csproj`
    picks it up automatically — no csproj edit needed.
 
-6. **Delete the previous month's ZIP** in the same folder. Only one
-   EPAR snapshot must ship at a time; leaving two behind lets
+3. **Delete the previous ZIP** in the same folder. Only one EPAR
+   snapshot must ship at a time; leaving two behind lets
    `EmbeddedSnapshotProvider.TryOpen` pick whichever the reflection
    layer surfaces first for `country = "EU"`.
 
-7. **Commit** with an imperative English message, e.g.
-   `Refresh EMA EPAR snapshot to 202609`.
+4. **Commit** with an imperative English message, e.g.
+   `Refresh EMA EPAR snapshot to 202610`.
 
-8. **Verify** locally on Windows:
+5. **Verify** locally on Windows:
    ```powershell
    dotnet restore MedReminder.sln
    dotnet build   MedReminder.sln -c Release
@@ -237,9 +296,9 @@ time is enough.
    Then run the app once: `CatalogueRefreshHostedService` logs
    `Reference-catalogue import for EU complete: inserted=… version=<yyyymm>`
    in `%LOCALAPPDATA%\MedReminder\logs\medreminder-*.log` on the
-   first boot after the version changed. Subsequent boots log
-   nothing because the importer short-circuits on the recorded
-   `snapshot_version`.
+   first boot after the version changed. On later boots the line
+   reports `inserted=0` and the stored version, which may be a newer
+   remote import.
 
 The EMA Article 57 dataset (pan-EEA, one row per national
 authorisation, ~160 000 rows) is a **different** product and does
@@ -296,6 +355,16 @@ readable.
    (the M3 IT+EU tests) and `SqliteReferenceCatalogueQueryServiceTests`
    (the M3 cross-country tests). Don't silently loosen counts.
 4. Re-run `dotnet test tests/MedReminder.Infrastructure.Tests`.
+
+`ema-epar-sample.xlsx` holds the same rows laid out like the EMA
+report (8 metadata rows above the header, a sheet declared wider than
+its 39 columns, one cell with a line break, a tab and double spaces).
+`ema-epar-from-xlsx.csv` is `scripts/feeds/ema.py`'s conversion of it:
+`test_ema.py` checks that the script still produces exactly that file,
+and `EmaEparParserTests` checks that the parser reads it to the same
+rows as `ema-epar-sample.csv`. After changing `ema-epar-sample.csv`,
+rebuild the XLSX with `openpyxl` along those lines and regenerate the
+CSV with `ema.convert()`.
 
 ### 4.3 AEMPS / CIMA fixture
 
@@ -364,65 +433,82 @@ so the on-disk layout stays symmetric with what ANSM publishes.
 
 ## 5. Refresh procedure (Spain — AEMPS CIMA)
 
-Cadence: monthly, aligned to a MedReminder release. AEMPS regenerates
-the CIMA "Nomenclátor" export at least monthly, so picking the
-current export at release-cut time is enough.
+Two delivery paths, as for Italy:
 
-1. **Download the CIMA "Medicamentos" export from AEMPS.**
-   - Portal: <https://cima.aemps.es/cima/publico/home.html> — pick
-     the "Nomenclátor / Descargas" section and download the current
-     "Medicamentos" package.
-   - No login needed; the file is public. Reuse governed by Spain's
-     public-sector information reuse regime (Law 37/2007), which
-     allows redistribution with attribution ("Fuente: AEMPS").
-   - The exported file is labelled `Medicamentos.xls` but the payload
-     is actually a modern XLSX (verifiable with `file(1)`); this
-     mismatch is upstream and does not require any preprocessing on
-     our side beyond a rename.
+- **Remote feed (monthly, no release needed).**
+  `.github/workflows/download_aemps.yaml` runs `scripts/feeds/aemps.py`
+  on days 2, 9, 16 and 23 at 03:20 UTC (and on demand, with the same
+  `force` input as AIFA) and publishes `data/es/aemps-<yyyymm>.zip` and
+  `data/es/latest.json` (§2.1). No manual step.
+- **Embedded snapshot (per release, optional)**, §5.2.
 
-2. **Rename and (optionally) prune the payload.** MedReminder's
-   parser expects a single-sheet workbook with the 15-column
-   `Nº Registro | Medicamento | Laboratorio | Fecha Aut. | Estado |
-   Fecha Estado | Cód. ATC | Principios Activos | Nº P. Activos |
-   ¿Comercializado? | ¿Triangulo Amarillo? | Observaciones |
-   ¿Sustituible? | ¿Afecta conducción? | ¿Problemas de suministro?`
-   layout. The upstream file already matches, so the only step is to
-   rename the file to `aemps.xlsx`.
+### 5.1 Remote feed
 
-3. **Build the ZIP.** Place the renamed XLSX at the **root** of the
-   archive (no sub-directory). The name inside the archive must be
-   `aemps.xlsx` (case-insensitive; `AempsCimaParser` looks it up
-   by name):
+Source: <https://listadomedicamentos.aemps.gob.es/Medicamentos.xls>,
+AEMPS's static download server (the CIMA "Medicamentos" export). No
+login. Reuse is governed by Spain's public-sector information reuse
+regime (Law 37/2007), which allows redistribution with attribution
+("Fuente: AEMPS").
+
+Facts measured from a GitHub runner on 2026-09-29: without browser
+request headers the server answers **403** (an `openresty` proxy
+filtering on headers, not on runner IP ranges); with a browser
+User-Agent plus `Accept`, `Accept-Language` and `Referer` it answers
+200 with 2 758 433 bytes. The file is labelled `.xls` but is an XLSX
+(a ZIP container); `openpyxl` refuses the `.xls` name, so the script
+saves it as `aemps.xlsx`. First sheet `Hoja1`, 26 763 data rows.
+
+The script sends the browser headers and stores the bytes unchanged as
+`aemps.xlsx` at the archive root. The run fails, leaving `data/`
+untouched, when the response is an HTML page or not an XLSX container
+(a legacy BIFF `.xls` is rejected with its own message), when the
+first sheet's header is not exactly these 15 columns in this order
+(case-insensitive):
+
+`Nº Registro | Medicamento | Laboratorio | Fecha Aut. | Estado |
+Fecha Estado | Cód. ATC | Principios Activos | Nº P. Activos |
+¿Comercializado? | ¿Triangulo Amarillo? | Observaciones |
+¿Sustituible? | ¿Afecta conducción? | ¿Problemas de suministro?`
+
+or when the data rows fall below 20 000 or below 90% of the previous
+run.
+
+If the header filter tightens (for example into a JavaScript
+challenge), the fallbacks listed in
+`docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md` §3.2 apply:
+the CIMA REST API, a self-hosted runner, a semi-manual intake, or the
+embedded path alone.
+
+### 5.2 Embedded snapshot
+
+1. **Take the archive published by the workflow**:
+   `data/es/aemps-<yyyymm>.zip` from `main`:
 
    ```
    aemps-<yyyymm>.zip
    └── aemps.xlsx
    ```
 
-   Any standard tool works (`zip`, 7-Zip, Windows Explorer's
-   "Send to → Compressed folder"). Expected compressed size is
-   ~2.5–3.5 MB, dominated by the already-compressed XLSX payload.
+   To build one by hand instead, download the export from the URL of
+   §5.1 in a browser, rename it to `aemps.xlsx` (the name inside the
+   archive is case-insensitive; `AempsCimaParser` looks it up by name)
+   and zip it at the archive root.
 
-4. **Name the archive** `aemps-<yyyymm>.zip` where `<yyyymm>` is the
-   AEMPS export month (e.g. `aemps-202609.zip`). This suffix ends up
-   in the `snapshot_version` column of every imported row and drives
-   the `CatalogueRefreshHostedService` change-detection.
-
-5. **Drop it into the repo** at
+2. **Copy it into the repo** at
    `src/MedReminder.Infrastructure/Assets/Catalogue/es/aemps-<yyyymm>.zip`.
    The `<EmbeddedResource>` glob in
    `src/MedReminder.Infrastructure/MedReminder.Infrastructure.csproj`
    picks it up automatically — no csproj edit needed.
 
-6. **Delete the previous month's ZIP** in the same folder. Only one
-   AEMPS snapshot must ship at a time; leaving two behind lets
+3. **Delete the previous ZIP** in the same folder. Only one AEMPS
+   snapshot must ship at a time; leaving two behind lets
    `EmbeddedSnapshotProvider.TryOpen` pick whichever the reflection
    layer surfaces first for `country = "ES"`.
 
-7. **Commit** with an imperative English message, e.g.
-   `Refresh AEMPS CIMA snapshot to 202609`.
+4. **Commit** with an imperative English message, e.g.
+   `Refresh AEMPS CIMA snapshot to 202610`.
 
-8. **Verify** locally on Windows:
+5. **Verify** locally on Windows:
    ```powershell
    dotnet restore MedReminder.sln
    dotnet build   MedReminder.sln -c Release
@@ -431,9 +517,7 @@ current export at release-cut time is enough.
    Then run the app once: `CatalogueRefreshHostedService` logs
    `Reference-catalogue import for ES complete: inserted=… version=<yyyymm>`
    in `%LOCALAPPDATA%\MedReminder\logs\medreminder-*.log` on the
-   first boot after the version changed. Subsequent boots log
-   nothing because the importer short-circuits on the recorded
-   `snapshot_version`.
+   first boot after the version changed.
 
 The alternative CIMA distribution — an XML "Prescripción" bundle
 (~200 MB decompressed, relational, dictionary-driven) — is **not**
@@ -446,48 +530,77 @@ provides, and covers every field the autocomplete needs. See
 
 ## 6. Refresh procedure (France — ANSM BDPM)
 
-Cadence: monthly, aligned to a MedReminder release. ANSM regenerates
-the BDPM export daily.
+Two delivery paths, as for Italy:
 
-1. **Download the BDPM TSVs from ANSM.**
-   - Portal: <https://base-donnees-publique.medicaments.gouv.fr/telechargement>
-     — pick the three "Base de données publique des médicaments"
-     downloads:
-     - `CIS_bdpm.txt` (one row per medicinal product, key = CIS)
-     - `CIS_CIP_bdpm.txt` (one row per package, key = CIP —
-       shipped for symmetry with what ANSM publishes; the parser
-       does not read it)
-     - `CIS_COMPO_bdpm.txt` (one row per medicinal product ×
-       active substance, join key = CIS)
-   - No login needed; the files are public. Reuse governed by
-     Licence Ouverte Etalab 2.0 — attribution required, no
-     endorsement implied.
+- **Remote feed (monthly, no release needed).**
+  `.github/workflows/download_bdpm.yaml` runs `scripts/feeds/bdpm.py`
+  on days 2, 9, 16 and 23 at 03:40 UTC (and on demand, with the same
+  `force` input as AIFA) and publishes `data/fr/bdpm-<yyyymm>.zip` and
+  `data/fr/latest.json` (§2.1). No manual step.
+- **Embedded snapshot (per release, optional)**, §6.3.
 
-2. **Wire format** (verified against the current BDPM export):
-   - Delimiter: **TAB** (`\t`).
-   - Encoding: **Windows-1252** on `CIS_bdpm.txt` and
-     `CIS_COMPO_bdpm.txt`. The ANSM portal documents the encoding
-     as ISO-8859-15, but the actual bytes include cp1252-only 0x92
-     (the curly single-quote `’` used as apostrophe in French
-     denominations — `d’organes`, `Pack d’initiation`,
-     `CARMIN D’INDIGO`). Reading those files as strict ISO-8859-15
-     turns the byte into a U+0092 C1 control character;
-     Windows-1252 covers both the documented spec and the actual
-     content, so the parser uses it. `CIS_CIP_bdpm.txt` is
-     UTF-8 upstream — a separate ANSM inconsistency — and
-     MedReminder does not parse it, so that mismatch is inert.
-   - **No header row**: columns are positional and documented at
-     the portal ("Description des fichiers de la BDPM"). The
-     parser hard-codes the column indices it needs, re-validates
-     the row length before mapping, and asserts on the first
-     non-short row that the Statut administratif AMM column starts
-     with `Autorisation` (invariant prefix of every value ANSM
-     writes there) so a future column-order change trips loudly
-     instead of silently corrupting every row's MAH / MarketingStatus.
+### 6.1 Source and wire format
 
-3. **Build the ZIP.** Place the three TSVs at the **root** of the
-   archive (no sub-directory). File names must be preserved verbatim
-   (`AnsmBdpmParser` looks them up by name, case-insensitive):
+Three files of the "Base de données publique des médicaments", linked
+from <https://base-donnees-publique.medicaments.gouv.fr/telechargement>
+as `/download/file/<name>`:
+
+- `CIS_bdpm.txt` (one row per medicinal product, key = CIS)
+- `CIS_CIP_bdpm.txt` (one row per package, key = CIP — shipped for
+  symmetry with what ANSM publishes; the parser does not read it)
+- `CIS_COMPO_bdpm.txt` (one row per medicinal product × active
+  substance, join key = CIS)
+
+No login, no header filter. The older `telechargement.php` URLs answer
+404 since 2026. Reuse is governed by Licence Ouverte Etalab 2.0 —
+attribution required, no endorsement implied.
+
+Wire format (verified against the current BDPM export):
+
+- Delimiter: **TAB** (`\t`).
+- Encoding: **Windows-1252** on `CIS_bdpm.txt` and
+  `CIS_COMPO_bdpm.txt`. The ANSM portal documents the encoding as
+  ISO-8859-15, but the actual bytes include cp1252-only 0x92 (the
+  curly single-quote `’` used as apostrophe in French denominations —
+  `d’organes`, `Pack d’initiation`, `CARMIN D’INDIGO`). Reading those
+  files as strict ISO-8859-15 turns the byte into a U+0092 C1 control
+  character; Windows-1252 covers both the documented spec and the
+  actual content, so the parser uses it. `CIS_CIP_bdpm.txt` is UTF-8
+  upstream — a separate ANSM inconsistency — and MedReminder does not
+  parse it, so that mismatch is inert.
+- **No header row**: columns are positional and documented on the
+  portal ("Description des fichiers de la BDPM"). The parser
+  hard-codes the column indices it needs, re-validates the row length
+  before mapping, and asserts on the first non-short row that the
+  Statut administratif AMM column starts with `Autorisation`
+  (invariant prefix of every value ANSM writes there) so a future
+  column-order change trips loudly instead of silently corrupting
+  every row's MAH / MarketingStatus.
+
+Facts measured from a GitHub runner on 2026-09-29: 3 175 357 /
+4 140 976 / 2 735 840 bytes; 15 883 lines of 12 columns in
+`CIS_bdpm.txt` (first status `Autorisation active`), 20 862 lines of 13
+columns in `CIS_CIP_bdpm.txt`, 32 439 lines of 8 columns in
+`CIS_COMPO_bdpm.txt`.
+
+### 6.2 Remote feed
+
+The script scrapes the download page for the three links, falls back
+to `/download/file/<name>` for any link it does not find, and stores
+the three files unchanged at the archive root. The run fails, leaving
+`data/` untouched, when a response is HTML, when `CIS_bdpm.txt` or
+`CIS_COMPO_bdpm.txt` does not decode as Windows-1252
+(`CIS_CIP_bdpm.txt`: UTF-8 or Windows-1252), when a non-empty line has
+a column count other than 12 / 13 / 8, when column 4 of the first
+`CIS_bdpm.txt` row does not start with `Autorisation`, or when the rows
+fall below 12 000 / 15 000 / 25 000 (`CIS_bdpm.txt` /
+`CIS_CIP_bdpm.txt` / `CIS_COMPO_bdpm.txt`) or below 90% of the previous
+run.
+
+### 6.3 Embedded snapshot
+
+1. **Take the archive published by the workflow**:
+   `data/fr/bdpm-<yyyymm>.zip` from `main`:
 
    ```
    bdpm-<yyyymm>.zip
@@ -496,22 +609,22 @@ the BDPM export daily.
    └── CIS_COMPO_bdpm.txt
    ```
 
-4. **Name the archive** `bdpm-<yyyymm>.zip` where `<yyyymm>` is the
-   export month (e.g. `bdpm-202609.zip`). Written to
-   `snapshot_version` per row.
+   To build one by hand instead, download the three files from the
+   page of §6.1 and zip them at the archive root with their names
+   verbatim (`AnsmBdpmParser` looks them up by name, case-insensitive).
 
-5. **Drop it into the repo** at
+2. **Copy it into the repo** at
    `src/MedReminder.Infrastructure/Assets/Catalogue/fr/bdpm-<yyyymm>.zip`.
    The `<EmbeddedResource>` glob picks it up automatically.
 
-6. **Delete the previous month's ZIP** in the same folder. Same
+3. **Delete the previous ZIP** in the same folder. Same
    `EmbeddedSnapshotProvider.TryOpen` rule as for the other
    countries: keep only one snapshot per country per build.
 
-7. **Commit** with an imperative English message, e.g.
-   `Refresh ANSM BDPM snapshot to 202609`.
+4. **Commit** with an imperative English message, e.g.
+   `Refresh ANSM BDPM snapshot to 202610`.
 
-8. **Verify** on Windows:
+5. **Verify** on Windows:
    ```powershell
    dotnet restore MedReminder.sln
    dotnet build   MedReminder.sln -c Release
