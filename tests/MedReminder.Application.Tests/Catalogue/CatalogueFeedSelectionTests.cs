@@ -30,7 +30,7 @@ public class CatalogueFeedSelectionTests
     [Theory]
     [InlineData("IT", "IT")]
     [InlineData("ES", "ES")]
-    [InlineData("FR", "")]
+    [InlineData("FR", "FR")]
     [InlineData("EU", "")]
     public void The_defaults_enable_the_published_feeds(string reference, string expected)
     {
