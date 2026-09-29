@@ -63,7 +63,7 @@ separately) and is surfaced in the app's About dialog through the
   médicaments*. Three TSV files (`CIS_bdpm.txt`, `CIS_CIP_bdpm.txt`,
   `CIS_COMPO_bdpm.txt`); MedReminder consumes CIS and COMPO, keeps
   CIP in the shipped ZIP for symmetry with what ANSM publishes.
-- **Source:** <https://base-donnees-publique.medicaments.gouv.fr/telechargement.php>
+- **Source:** <https://base-donnees-publique.medicaments.gouv.fr/telechargement>
 - **Licence / terms of use:** Licence Ouverte Etalab 2.0 as
   declared on the download portal at retrieval time —
   <https://www.etalab.gouv.fr/licence-ouverte-open-licence>.

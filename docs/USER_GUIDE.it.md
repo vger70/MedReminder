@@ -175,6 +175,13 @@ medicina.
   → Paese di riferimento*. Il valore predefinito è Italia; una
   modifica ha effetto alla successiva apertura del form della
   medicina.
+- Il **catalogo italiano si aggiorna da solo**: all'avvio, se
+  *Impostazioni → Generale → Controlla aggiornamenti all'avvio
+  (GitHub)* è attivo, MedReminder scarica l'ultimo elenco mensile
+  AIFA quando è più recente di quello che ha, e lo usa dalla
+  successiva apertura del form della medicina. Senza connessione non
+  cambia nulla. Con più profili, ciascuno si aggiorna la prima volta
+  che viene aperto.
 
 ### Medicinali ad autorizzazione centralizzata UE
 

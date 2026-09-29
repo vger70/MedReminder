@@ -250,6 +250,130 @@ public sealed class CsvReferenceCatalogueImporterTests
             .Should().Be(70);
     }
 
+    // --- Remote feed: newer-only rule and row-count guard ----------
+
+    [Fact]
+    public async Task Importing_an_older_snapshot_version_is_a_noop()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporter(fixture);
+
+        await using (var newer = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(newer, Italy, "202610", CancellationToken.None);
+        }
+
+        await using var older = CatalogueFixtures.BuildAifaSnapshotStream();
+        var report = await importer.ImportAsync(older, Italy, "202609", CancellationToken.None);
+
+        report.Inserted.Should().Be(0);
+        report.Deleted.Should().Be(0);
+        report.SnapshotVersion.Should().Be("202610");
+
+        await using var context = fixture.CreateContext();
+        (await ScalarLongAsync(context.Database.GetDbConnection(),
+            "SELECT COUNT(*) FROM reference_medicines WHERE snapshot_version = '202610';"))
+            .Should().Be(168);
+    }
+
+    [Fact]
+    public async Task Embedded_snapshot_of_the_same_month_does_not_replace_a_remote_import()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporter(fixture);
+
+        await using (var remote = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(remote, Italy, "202610+20261002T030000Z", CancellationToken.None);
+        }
+
+        await using var embedded = CatalogueFixtures.BuildAifaSnapshotStream();
+        var report = await importer.ImportAsync(embedded, Italy, "202610", CancellationToken.None);
+
+        report.Inserted.Should().Be(0);
+        report.SnapshotVersion.Should().Be("202610+20261002T030000Z");
+    }
+
+    [Fact]
+    public async Task Republished_remote_snapshot_of_the_same_month_replaces_the_earlier_build()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporter(fixture);
+
+        await using (var first = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(first, Italy, "202610+20261002T030000Z", CancellationToken.None);
+        }
+
+        await using var republished = CatalogueFixtures.BuildAifaSnapshotStream();
+        var report = await importer.ImportAsync(republished, Italy, "202610+20261005T030012Z", CancellationToken.None);
+
+        report.Inserted.Should().Be(168);
+        report.Deleted.Should().Be(168);
+        (await importer.GetImportStateAsync(Italy, CancellationToken.None)).Version
+            .Should().Be("202610+20261005T030012Z");
+    }
+
+    [Fact]
+    public async Task Header_only_snapshot_is_rejected_and_keeps_the_existing_rows()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporter(fixture);
+
+        await using (var first = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(first, Italy, "202609", CancellationToken.None);
+        }
+
+        await using var empty = CatalogueFixtures.BuildAifaHeaderOnlySnapshotStream();
+        var act = () => importer.ImportAsync(empty, Italy, "202610", CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidDataException>();
+        var state = await importer.GetImportStateAsync(Italy, CancellationToken.None);
+        state.Should().Be(new MedReminder.Application.Catalogue.CatalogueImportState("202609", 168));
+    }
+
+    [Fact]
+    public async Task Snapshot_below_the_minimum_row_count_is_rejected_and_keeps_the_existing_rows()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporter(fixture);
+
+        await using (var first = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(first, Italy, "202609", CancellationToken.None);
+        }
+
+        await using var second = CatalogueFixtures.BuildAifaSnapshotStream();
+        var act = () => importer.ImportAsync(second, Italy, "202610", minimumRowCount: 169, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidDataException>();
+        var state = await importer.GetImportStateAsync(Italy, CancellationToken.None);
+        state.Version.Should().Be("202609");
+        state.RowCount.Should().Be(168);
+    }
+
+    [Fact]
+    public async Task Import_state_is_empty_before_any_import_and_reports_version_and_count_after()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var importer = BuildImporter(fixture);
+
+        var before = await importer.GetImportStateAsync(Italy, CancellationToken.None);
+        before.Version.Should().BeNull();
+        before.RowCount.Should().Be(0);
+
+        await using (var snapshot = CatalogueFixtures.BuildAifaSnapshotStream())
+        {
+            await importer.ImportAsync(snapshot, Italy, "202609", CancellationToken.None);
+        }
+
+        var after = await importer.GetImportStateAsync(Italy, CancellationToken.None);
+        after.Version.Should().Be("202609");
+        after.RowCount.Should().Be(168);
+        (await importer.GetImportStateAsync(Eu, CancellationToken.None)).Version.Should().BeNull();
+    }
+
     private static CsvReferenceCatalogueImporter BuildImporter(SqliteInMemoryFixture fixture)
     {
         return new CsvReferenceCatalogueImporter(

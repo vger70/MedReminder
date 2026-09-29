@@ -7,8 +7,11 @@ from urllib.parse import urljoin
 from pathlib import Path
 import json
 import shutil
+import sys
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 PAGE_URL = "https://www.aifa.gov.it/liste-dei-farmaci"
 OUTPUT_DIR = "aifa_csv"
@@ -16,10 +19,55 @@ OUTPUT_DIR = "aifa_csv"
 # version and "generated" must agree even when a run crosses a month
 # boundary, otherwise every client rejects the manifest.
 RUN_TIME = datetime.now(timezone.utc)
+# Each catalogue feed publishes under data/<country>/ (latest.json and
+# its archives), so feeds for other countries never touch these files
+# (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §4.1).
+COUNTRY = "IT"
+DATA_DIR = "data/it"
+MANIFEST_PATH = f"{DATA_DIR}/latest.json"
 VERSION = f"{RUN_TIME:%Y%m}"
 ZIP_NAME = f"aifa-{VERSION}.zip"
 
+# The workflow runs daily from the 2nd to the 7th of the month so that
+# an AIFA outage on one day is retried the next. Once this month's
+# version is published the remaining runs stop here, so each month is
+# published once. FORCE_REFRESH=true (workflow_dispatch input) rebuilds
+# the month; clients re-import it because the new "generated" and
+# "sha256" make it a later build (ANALYSIS-CATALOGUE-REMOTE-FEED.md
+# §11.2).
+FORCE_REFRESH = os.getenv("FORCE_REFRESH", "").strip().lower() == "true"
+try:
+    with open(MANIFEST_PATH, encoding="utf-8") as fh:
+        published_version = json.load(fh).get("version")
+except (OSError, ValueError):
+    published_version = None
+
+if published_version == VERSION and not FORCE_REFRESH:
+    print(f"Version {VERSION} is already published; nothing to do.")
+    sys.exit(0)
+
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Transient AIFA errors (502 Bad Gateway, 503, timeouts, resets) are
+# retried up to 5 times with exponential back-off (urllib3 waits 0, 30,
+# 60, 120 and 120 s: about 5.5 minutes in total). Retry-After is
+# honoured when the server sends it. A persistent error still fails the
+# run, and the next day's scheduled run tries again.
+RETRY = Retry(
+    total=5,
+    connect=5,
+    read=5,
+    status=5,
+    backoff_factor=15,
+    backoff_max=120,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=frozenset({"GET"}),
+    respect_retry_after_header=True,
+    raise_on_status=False,
+)
+session = requests.Session()
+session.mount("https://", HTTPAdapter(max_retries=RETRY))
+session.mount("http://", HTTPAdapter(max_retries=RETRY))
 
 headers = {
     "User-Agent": (
@@ -31,7 +79,7 @@ headers = {
 
 print(f"Leggo {PAGE_URL}")
 
-resp = requests.get(PAGE_URL, headers=headers, timeout=60)
+resp = session.get(PAGE_URL, headers=headers, timeout=60)
 resp.raise_for_status()
 
 soup = BeautifulSoup(resp.text, "html.parser")
@@ -66,7 +114,7 @@ for url in csv_links:
 
     print(f"\nDownload {filename}")
 
-    r = requests.get(
+    r = session.get(
         url,
         headers=headers,
         timeout=120,
@@ -113,13 +161,13 @@ MIN_DATA_ROWS = {
     "PA_confezioni.csv": 200_000,
 }
 # A file may not shrink below this share of the previous published run
-# (the row counts recorded in data/latest.json).
+# (the row counts recorded in data/it/latest.json).
 MIN_SHARE_OF_PREVIOUS = 0.9
 
 
 def previous_row_counts():
     try:
-        with open("data/latest.json", encoding="utf-8") as fh:
+        with open(MANIFEST_PATH, encoding="utf-8") as fh:
             rows = json.load(fh).get("rows", {})
     except (OSError, ValueError):
         return {}
@@ -188,6 +236,7 @@ with open(ZIP_NAME, "rb") as fh:
         sha256.update(chunk)
 
 latest_info = {
+    "country": COUNTRY,
     "version": VERSION,
     "file": ZIP_NAME,
     "generated": RUN_TIME.isoformat(),
@@ -197,16 +246,16 @@ latest_info = {
     "rows": row_counts,
 }
 
-os.makedirs("data", exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
-with open("data/latest.json", "w", encoding="utf-8") as f:
+with open(MANIFEST_PATH, "w", encoding="utf-8") as f:
     json.dump(latest_info, f, indent=2)
 
 # sposta lo zip nella cartella data
-shutil.move(ZIP_NAME, f"data/{ZIP_NAME}")
-ZIP_NAME = f"data/{ZIP_NAME}"
+shutil.move(ZIP_NAME, f"{DATA_DIR}/{ZIP_NAME}")
+ZIP_NAME = f"{DATA_DIR}/{ZIP_NAME}"
 
-archives = sorted(Path("data").glob("aifa-*.zip"))
+archives = sorted(Path(DATA_DIR).glob("aifa-*.zip"))
 
 while len(archives) > 3:
     archives[0].unlink()

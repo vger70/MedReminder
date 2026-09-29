@@ -30,10 +30,76 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #131 — Refresh the Italian catalogue from the remote AIFA feed at startup
+
+Link: [vger70/MedReminder#131](https://github.com/vger70/MedReminder/pull/131)
+Branch: `claude/aifa-catalog-auto-update-jrkles`
+
+Implements `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`.
+
+### Added
+
+- At startup, after the passive update check, the app reads
+  `data/latest.json` from the repository and, when its version is newer
+  than the open profile's Italian catalogue, downloads
+  `aifa-<yyyymm>.zip` into `%LOCALAPPDATA%\MedReminder\catalogue\staging\`,
+  verifies it, imports it and deletes it. Gated by
+  `Catalogue:RemoteFeed:Enabled` and *Check for updates on startup*
+  (`RemoteCatalogueRefresher`, `GitHubRawCatalogueFeedClient`,
+  `StartupUpdateCheckSignal`).
+
+### Fixed
+
+- The catalogue importer replaced a country on any version change, so
+  an older embedded snapshot would overwrite a newer one; it now
+  imports only newer versions.
+- A snapshot that parsed to zero rows emptied the country; the
+  importer now rejects snapshots below a minimum row count before
+  deleting anything.
+- Review follow-up: the startup catalogue refresh no longer keeps a
+  SQLite connection open while it waits and downloads (it could break
+  backup restore, archive import and sync join); the remote import
+  runs under `WriteGate`; manifest read errors and staging leftovers
+  are handled on every start.
+
+### Build
+
+- `scripts/download_aifa.py` fails before touching `data/` when a CSV
+  is missing, lacks a required column, is below 100 000 / 200 000
+  rows or below 90% of the previous run, and publishes `sha256`,
+  `size` and `rows` in `latest.json`. One timestamp drives the archive
+  name and the manifest version.
+- The AIFA download retries transient HTTP errors (a 502 from the AIFA
+  site used to fail the month's only run), and the workflow now runs
+  daily from day 2 to day 7, skipping once the month is published;
+  `workflow_dispatch` gains a `force` input.
+- The AIFA feed publishes under `data/it/` (manifest gains
+  `"country": "IT"`) so each catalogue feed owns `data/<country>/`;
+  the client defaults follow and a manifest for another country is
+  ignored.
+- A month republished with `force` is re-imported by clients: remote
+  imports store `yyyymm+<generated, UTC>` as the snapshot version when
+  the manifest has a SHA-256, and a later build of the same month is
+  newer.
+
+### Docs
+
+- `CATALOGUE-DATA.md` §2 rewritten around the remote feed; the
+  embedded refresh becomes optional. `ANALYSIS.md`, `CLAUDE.md` §5,
+  `ANALYSIS-DRUG-CATALOGUE.md` §3.6 and the five user guides updated.
+  Prompt moved to `docs/prompt/Completed/`.
+- `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`: design
+  for extending the remote feed to EMA EPAR, AEMPS CIMA and ANSM BDPM
+  (not implemented; waits for the AIFA feed to be validated).
+
+---
+
 ## PR #130 — Add analysis and implementation prompt for the remote AIFA feed
 
 Link: [vger70/MedReminder#130](https://github.com/vger70/MedReminder/pull/130)
 Branch: `claude/aifa-catalog-auto-update-jrkles`
+
+**Status:** merged (2026-09-29)
 
 ### Docs
 

@@ -1,11 +1,12 @@
 # ANALYSIS — Remote AIFA catalogue feed (M5-lite)
 
-Design document, **prior** to implementation. Work proceeds on branch
+Design document, written before implementation; §11 records how the
+implementation departs from it. Work proceeds on branch
 `claude/aifa-catalog-auto-update-jrkles`. It implements a reduced form
 of `ANALYSIS-DRUG-CATALOGUE.md` §3.6 (M5 "Snapshot online updater"),
 limited to Italy (AIFA), using the monthly archive produced by
 `.github/workflows/download_aifa.yaml`. The implementation briefing is
-`docs/prompt/PROMPT-CATALOGUE-REMOTE-FEED.md`.
+`docs/prompt/Completed/PROMPT-CATALOGUE-REMOTE-FEED.md`.
 
 Epistemic classification, aligned with the sibling documents:
 `[VERIFIED]` (checked against the tree at commit `891ec94`, or against
@@ -33,10 +34,11 @@ build steps 1–3 but not the release dependency.
 
 At application start, after the passive application update check:
 
-1. Read `https://raw.githubusercontent.com/vger70/MedReminder/main/data/latest.json`.
+1. Read `https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/latest.json`
+   (originally `data/latest.json`; moved per §11.4).
 2. If its `version` is newer than the AIFA snapshot already imported
    in the open profile's database, download
-   `https://raw.githubusercontent.com/vger70/MedReminder/main/data/aifa-<version>.zip`
+   `https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/aifa-<version>.zip`
    into a staging folder.
 3. Validate it and import it through the existing
    `IReferenceCatalogueImporter` (country `IT`, version `<version>`).
@@ -102,8 +104,8 @@ At application start, after the passive application update check:
 - **W4 — same-month re-runs overwrite the same version.** A
   `workflow_dispatch` in the same month rewrites `aifa-<yyyymm>.zip`
   with the same version; a client that already imported that version
-  will not pick up the new content (F5 short-circuit). Accepted
-  limitation; documented.
+  will not pick up the new content (F5 short-circuit). Resolved in
+  §11.2 with a build-time suffix on the stored version.
 - **W5 — `atc.csv` inside the current ZIP** (`csv_count: 3`). Harmless
   (F8). Commit `2315008` removed it from the link filter, so the next
   run produces 2 entries [INFERRED].
@@ -219,13 +221,14 @@ required.
 ### 4.5 Concurrency with other writers
 
 The import transaction holds the SQLite write lock for the duration of
-the delete + insert. This already happens at every embedded refresh; the
-feature adds at most one such transaction per month per profile
-[INFERRED]. Reference tables are not written by any `WriteGate` user,
-so no gate is added. Whether a concurrent `WriteGate` writer can hit
-`SQLITE_BUSY` during a long import depends on the connection busy
-timeout, which this analysis did not measure [UNCERTAIN]; the
-implementation must log the import duration so it can be observed.
+the delete + insert. The remote import runs under `WriteGate`, so the
+use cases, the monitor and the catch-up wait for it instead of hitting
+the busy timeout (§11.1). The embedded import, which lives in the UI
+and Infrastructure layers, cannot take the `internal` gate and keeps
+its previous behaviour; it runs only when a release changes a
+snapshot. The import duration is logged; the first field run measured
+13.4 s for the Italian catalogue (§11.3), below the 30 s SQLite busy
+timeout that writers outside the gate would hit.
 
 ### 4.6 Relation to the embedded snapshot
 
@@ -234,7 +237,7 @@ implementation must log the import duration so it can be observed.
 - With the newer-only rule the embedded ZIP no longer overrides a newer
   remote import.
 - The release procedure (`CATALOGUE-DATA.md` §2) shrinks to: copy the
-  current `data/aifa-<yyyymm>.zip` into
+  current `data/it/aifa-<yyyymm>.zip` into
   `src/MedReminder.Infrastructure/Assets/Catalogue/it/`, remove the old
   one, commit. Refreshing the embedded snapshot becomes optional per
   release instead of mandatory per month.
@@ -255,7 +258,7 @@ SELECT "snapshot_version", COUNT(*)
 One group is the normal case (the importer writes one version per
 country, F5/F6). Zero rows → `Version = null`, `RowCount = 0`. More
 than one group is not produced by the importer; if seen, take the
-highest version and the total count, and log a Warning.
+highest version and the total count.
 
 ### 5.2 Version ordering and import guard
 
@@ -338,8 +341,8 @@ reused for the remote import so the verification step of
   "Enabled": true,
   "RemoteFeed": {
     "Enabled": true,
-    "ManifestUrl": "https://raw.githubusercontent.com/vger70/MedReminder/main/data/latest.json",
-    "SnapshotUrlTemplate": "https://raw.githubusercontent.com/vger70/MedReminder/main/data/aifa-{version}.zip",
+    "ManifestUrl": "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/latest.json",
+    "SnapshotUrlTemplate": "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/aifa-{version}.zip",
     "ManifestTimeoutSeconds": 10,
     "DownloadTimeoutSeconds": 120,
     "MaxDownloadBytes": 67108864
@@ -429,3 +432,147 @@ after writing:
 - Not verified: SQLite busy behaviour during a long import (§4.5), the
   exact `Load` timing when the app starts minimized (the 60 s signal
   timeout covers it either way).
+
+---
+
+## 11. Implementation notes (2026-09-29)
+
+Decisions D1–D6 were applied as recommended. Departures from §4.3:
+
+- `RemoteCatalogueRefresher` (orchestration, archive validation) lives
+  in `MedReminder.Application/Catalogue/`, not in the UI hosted
+  service. It depends only on ports (`ICatalogueFeedClient`,
+  `IReferenceCatalogueImporter`, `IAppDataLocation`), so its tests run
+  on any platform. The hosted service keeps the gate (D1) and the wait
+  on `StartupUpdateCheckSignal`.
+- `GitHubRawCatalogueFeedClient` lives in
+  `MedReminder.Infrastructure.Portable/Catalogue/`, not in
+  `MedReminder.Infrastructure`: it has no Windows dependency, and the
+  Windows-only Infrastructure test project cannot run on Linux.
+- The staging path is
+  `RemoteCatalogueRefresher.GetStagingDirectory(IAppDataLocation.DataDirectory)`;
+  no `AppDataPaths` getter was added.
+- `IReferenceCatalogueImporter` gained a second `ImportAsync` overload
+  with `minimumRowCount` instead of an optional parameter, so existing
+  call sites are unchanged.
+- The remote import logs the same "Reference-catalogue import for IT
+  complete" line, with `source=remote feed` and the elapsed time
+  appended (§4.5 asks for the duration).
+
+Verification in this session (Linux, .NET SDK 10.0.112): the solution
+builds with `EnableWindowsTargeting=true`; Domain, Application,
+Infrastructure.Portable and DataImporter tests pass. The new
+`CsvReferenceCatalogueImporterTests` cases compile but need Windows to
+run (the test project requires the WindowsDesktop runtime). The
+workflow's CSV validation was run against the real
+`data/aifa-202609.zip` content (160 024 and 338 722 data rows).
+
+### 11.1 Review remediation (2026-09-29)
+
+Fixes applied after the code review of PR #131:
+
+- **Connection lifetime.** The embedded imports dispose their DI scope,
+  and with it the importer's open SQLite connection, before the remote
+  step starts. The remote step checks `Catalogue:RemoteFeed:Enabled`
+  and `CheckForUpdatesOnStartup` before waiting on the signal, and
+  opens its own scope only for the refresh. Previously one handle
+  stayed open for up to about three minutes, long enough to break the
+  file move done by backup restore, archive import and sync join.
+- **Write lock.** The remote import runs under `WriteGate` (§4.5).
+- **Manifest read errors.** The client maps an `IOException` while
+  reading the body to "manifest unavailable"; the refresher guards
+  the call as well.
+- **Staging cleanup.** Leftovers are removed at the start of every
+  run, also when offline or up to date.
+- **Workflow.** One UTC timestamp drives the archive name, `version`
+  and `generated`. Row checks: absolute floors of 100 000 / 200 000
+  rows and at least 90% of the previous run's counts, recorded in
+  `latest.json` under `rows`.
+
+The same-month limitation (§2.2 W4) was first accepted here and then
+resolved in §11.2.
+
+### 11.2 Same-month republish (2026-09-29)
+
+- Remote imports store `snapshot_version` as
+  `yyyymm+yyyyMMddTHHmmssZ`, the suffix being the manifest's
+  `generated` in UTC, truncated to seconds
+  (`RemoteCatalogueRefresher.LabelFor`, `SnapshotVersion.Compose`).
+  Embedded snapshots keep the bare month. The column is TEXT and no UI
+  shows it, so no schema change is needed.
+- `SnapshotVersion.IsNewer` orders by month, then by suffix; a bare
+  month is older than any suffixed label of the same month. Examples:
+  embedded `202609` < `202610+…`; `202610+20261005…` >
+  `202610+20261002…`; embedded `202610` < remote `202610+…` (one
+  extra import when the release and the feed carry the same month).
+- The suffix is used only when the manifest also has `sha256`.
+  `raw.githubusercontent.com` caches for five minutes, so right after a
+  republish a client can get the new manifest with the old archive; the
+  hash mismatch rejects that pair and the next start retries. Without a
+  hash the old content would be stored under the new label for good.
+- The workflow publishes once per month (first successful run from
+  day 2 to day 7); a republish is a manual run with `force`.
+- Still not possible: rolling back to an older build. A bad month is
+  corrected by publishing good data, which carries a later `generated`.
+
+### 11.3 First field run (2026-09-29, Windows, product owner)
+
+Build of PR #131, feed `latest.json` on `main` with `sha256` and
+`generated` (`202609`, `2026-09-29T13:34:03Z`); open profile holding
+the embedded snapshot `202609`.
+
+First start (18:23, local time):
+
+```
+Reference-catalogue import for IT complete: inserted=0, deleted=0, skipped=0, version=202609, ...
+Remote AIFA feed: newer snapshot available (local=202609, remote=202609+20260929T133403Z).
+Remote AIFA feed: downloaded 4953126 bytes in 915 ms (sha256 b8eeca3aafb6…).
+Reference-catalogue import for IT complete: inserted=85711, deleted=85697, skipped=74313, version=202609+20260929T133403Z, ..., source=remote feed, elapsedMs=13434.
+```
+
+Second start (18:40):
+
+```
+Remote AIFA feed: up to date (local=202609+20260929T133403Z, remote=202609+20260929T133403Z).
+```
+
+What this confirms:
+
+- Embedded import of an equal version is a no-op (newer-only rule).
+- A manifest with `sha256` and `generated` yields the suffixed label,
+  which is newer than the embedded month (§11.2), so the month is
+  imported once from the feed.
+- Download size and SHA-256 match `latest.json` (`size: 4953126`,
+  `sha256: b8eeca3a…`).
+- The import replaced the Italian catalogue (85 697 rows deleted,
+  85 711 inserted) in 13.4 s, parse included; use cases wait for that
+  long at most (`WriteGate`).
+- The next start recognises the stored label and downloads nothing.
+
+The Windows test suites (`MedReminder.Infrastructure.Tests`,
+`MedReminder.UI.Tests`) pass (product owner, 2026-09-29). Not yet
+checked by hand: an empty `catalogue\staging\` after the run, and a
+backup restore or archive import started within the first minute after
+launch (connection-lifetime fix, §11.1).
+
+### 11.4 Per-country publication path (2026-09-29)
+
+Decisions D1–D3 of `ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`, applied
+before the first release that ships the feed:
+
+- The AIFA feed publishes under `data/it/` (`latest.json`,
+  `aifa-<yyyymm>.zip`) instead of `data/`; the other feeds will use
+  `data/eu/`, `data/es/`, `data/fr/`. The data stays on `main` (no
+  dedicated data branch).
+- The manifest gains `"country": "IT"`. `CatalogueFeedManifestParser`
+  reads it (optional, must be a country code when present) and
+  `RemoteCatalogueRefresher` rejects, before downloading, a manifest
+  that declares another country.
+- The published files were moved with their content unchanged
+  (`generated` and `sha256` kept), so a client that already imported
+  `202609+20260929T133403Z` sees the feed as up to date.
+- A build made before this change (the product owner's test build)
+  still reads `main/data/latest.json`; after the merge it gets 404 and
+  logs "manifest unavailable", which is harmless. No release reads the
+  old path.
+

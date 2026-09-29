@@ -428,13 +428,17 @@ internal sealed class MainForm : MedReminderFormBase
     // version pops the shared prompt; every other outcome (up to
     // date, network error, rate limit) is silent — the startup
     // path must never bother the user with transient failures.
+    // Whatever the outcome, StartupUpdateCheckSignal is marked so
+    // the remote catalogue refresh can follow (it waits for it).
     private void TryStartPassiveUpdateCheck()
     {
         _ = Task.Run(async () =>
         {
+            StartupUpdateCheckSignal? signal = null;
             try
             {
                 using var scope = _scopeFactory.CreateScope();
+                signal = scope.ServiceProvider.GetService<StartupUpdateCheckSignal>();
                 var settings = scope.ServiceProvider
                     .GetRequiredService<IOptionsMonitor<UserSettings>>()
                     .CurrentValue;
@@ -457,6 +461,10 @@ internal sealed class MainForm : MedReminderFormBase
             catch (Exception ex)
             {
                 _log.LogInformation(ex, "Startup update check failed silently.");
+            }
+            finally
+            {
+                signal?.MarkCompleted();
             }
         });
     }

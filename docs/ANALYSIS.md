@@ -29,7 +29,8 @@ this document in the same pull request.
 - Local-first: one SQLite database per profile under
   `%LOCALAPPDATA%\MedReminder\`. No server component. The only
   outbound network calls are SMTP (user-configured), the passive
-  GitHub Releases update check (§9.5) and, only when the user signs
+  GitHub Releases update check and the remote AIFA catalogue feed
+  (§9.5) and, only when the user signs
   in to one, the OneDrive (Microsoft Graph) or Google Drive APIs for
   cloud backups and sync (§8.3, §4.4). Sync data leaves the device
   encrypted end to end.
@@ -389,6 +390,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   user.settings.json             UI language, reference country, update check
   localization\strings.<lang>.json   optional user overrides of the UI dictionaries
   logs\medreminder-<date>.log    Serilog, daily files
+  catalogue\staging\             remote AIFA archive while it is downloaded and imported; emptied every run
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
@@ -461,7 +463,7 @@ ticks. A failing tick is logged and does not stop the service.
 | `MedicationMonitorHostedService` | `PeriodicTimer`, `Monitoring:IntervalMinutes` (default 30, min 1) | `MedicationMonitor`: consumption catch-up, forecast, `NotificationCycle`, dispatch per channel, `NotificationEvent` |
 | `DoseReminderHostedService` | `PeriodicTimer`, `DoseReminder:IntervalSeconds` (default 60, min 10) | `DoseReminderService`: fires due timed slots for medicines with `RemindOnDose`, positive stock and an active therapy; prunes dedup rows older than 30 days |
 | `AutomaticBackupHostedService` | 30 s initial delay, then every 15 min | Daily backup at or after `Backup:PreferredTime` (§8) |
-| `CatalogueRefreshHostedService` | Once at startup; registered only when `Catalogue:Enabled` is true | Imports each embedded catalogue snapshot whose version is newer, one transaction per country |
+| `CatalogueRefreshHostedService` | Once at startup; registered only when `Catalogue:Enabled` is true | Imports each embedded catalogue snapshot whose version is newer, one transaction per country; then, after the startup update check, `RemoteCatalogueRefresher` for the AIFA feed (§9.5) |
 | `SyncHostedService` | 15 s initial delay, then every `Sync:IntervalMinutes` (default 5, min 1) and 10 s after local changes; idle while sync is off | Starts a pending new generation, then `SyncEngine.RunAsync` (B.1 Phase 3d) |
 
 The Application services (`MedicationMonitor`, `DoseReminderService`,
@@ -662,6 +664,14 @@ with the `--minimized` argument. Per-user, no elevation.
 - `GitHubUpdateChecker` queries the GitHub Releases API (8 s timeout)
   at startup when `UI:CheckForUpdatesOnStartup` is true, and on demand.
   It only reports the release URL; nothing is downloaded or executed.
+- Remote AIFA feed: after that check, and under the same
+  `CheckForUpdatesOnStartup` setting plus `Catalogue:RemoteFeed:Enabled`,
+  `RemoteCatalogueRefresher` reads `data/it/latest.json` from the
+  repository and, when its version is newer than the open profile's
+  Italian catalogue, downloads `aifa-<yyyymm>.zip` (HTTPS, no redirects,
+  size cap, SHA-256 when published), imports it and deletes it. Data
+  only; nothing is executed. See
+  [`analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md).
 - `DonationService` opens Stripe or PayPal payment links in the
   default browser. See [`analysis/ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md).
 

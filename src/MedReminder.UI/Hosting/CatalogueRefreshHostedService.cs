@@ -1,4 +1,6 @@
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.UpdateChecking;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Infrastructure.Catalogue;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,11 +24,21 @@ namespace MedReminder.UI.Hosting;
 // next country still runs — a broken EU snapshot must never take the
 // Italian catalogue offline, and vice versa.
 //
+// After the embedded snapshots, the Italian catalogue is refreshed
+// from the remote AIFA feed (ANALYSIS-CATALOGUE-REMOTE-FEED.md §4.1):
+// the step waits for MainForm's startup update check (at most
+// RemoteFeedSignalTimeout), then runs RemoteCatalogueRefresher when
+// both Catalogue:RemoteFeed:Enabled and the user's "check for updates
+// at startup" setting are on. Running it on the same task as the
+// embedded imports keeps every catalogue write sequential.
+//
 // Nothing blocks the UI: the whole run lives on a background thread
 // pool task started from ExecuteAsync. When the flag is off the
 // service is not registered at all (see Program.BuildHost).
 internal sealed class CatalogueRefreshHostedService : BackgroundService
 {
+    private static readonly TimeSpan RemoteFeedSignalTimeout = TimeSpan.FromSeconds(60);
+
     // Ordered so IT runs first (default reference country), then the
     // supranational EU catalogue, then the M4 national additions
     // (ES → AEMPS, FR → BDPM). Each country runs in its own
@@ -77,12 +89,27 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
 
     private async Task RunOnceAsync(CancellationToken cancellationToken)
     {
+        if (!await ImportEmbeddedSnapshotsAsync(cancellationToken))
+        {
+            return;
+        }
+
+        await RefreshFromRemoteFeedAsync(cancellationToken);
+    }
+
+    // Returns false when the catalogue feature is off. The scope, and
+    // with it the SQLite connection the importer opened, is disposed
+    // before the remote step starts: backup restore, archive import and
+    // sync join move the database file and fail on Windows while
+    // another handle is open (CLAUDE.md §7).
+    private async Task<bool> ImportEmbeddedSnapshotsAsync(CancellationToken cancellationToken)
+    {
         await using var scope = _services.CreateAsyncScope();
 
         var options = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<CatalogueFeatureOptions>>();
         if (!options.CurrentValue.Enabled)
         {
-            return;
+            return false;
         }
 
         var provider = scope.ServiceProvider.GetRequiredService<EmbeddedSnapshotProvider>();
@@ -92,6 +119,49 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         {
             cancellationToken.ThrowIfCancellationRequested();
             await ImportCountryAsync(provider, importer, country, cancellationToken);
+        }
+
+        return true;
+    }
+
+    private async Task RefreshFromRemoteFeedAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Gates first, so a disabled step neither waits for the
+            // update-check signal nor holds anything while it waits.
+            var feedOptions = _services.GetRequiredService<IOptionsMonitor<CatalogueFeedOptions>>().CurrentValue;
+            if (!feedOptions.Enabled)
+            {
+                _log.LogInformation("Remote AIFA feed disabled by configuration; skipping.");
+                return;
+            }
+
+            var userSettings = _services.GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue;
+            if (!userSettings.CheckForUpdatesOnStartup)
+            {
+                _log.LogInformation("Remote AIFA feed skipped: checking for updates at startup is off.");
+                return;
+            }
+
+            var signal = _services.GetRequiredService<StartupUpdateCheckSignal>();
+            await signal.WaitAsync(RemoteFeedSignalTimeout, cancellationToken);
+
+            // Own scope, opened only now and disposed as soon as the
+            // refresh ends, for the same reason as above.
+            await using var scope = _services.CreateAsyncScope();
+            var refresher = scope.ServiceProvider.GetRequiredService<RemoteCatalogueRefresher>();
+            await refresher.RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // The embedded imports above are already committed; a
+            // failure here only means the catalogue stays as it is.
+            _log.LogWarning(ex, "Remote AIFA feed refresh failed; catalogue unchanged.");
         }
     }
 

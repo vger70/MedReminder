@@ -42,23 +42,86 @@ country never blocks the others.
 
 ## 2. Refresh procedure (Italy)
 
-Cadence: monthly, aligned to a MedReminder release
-(`docs/ANALYSIS-DRUG-CATALOGUE.md` §12 point 2).
+The Italian catalogue has two delivery paths:
 
-1. **Download the two CSV files from AIFA open data.**
-   - Portal: <https://www.aifa.gov.it/opendata>
-   - Files needed:
-     - `confezioni_fornitura.csv` (one row per package;
-       ~80 MB, ASCII, `;` delimiter)
-     - `PA_confezioni.csv` (one row per package × active
-       ingredient; ~11 MB, same encoding and delimiter)
-   - Do not fetch `atc.csv` — `confezioni_fornitura.csv` already
-     carries `CODICE_ATC` for every row.
+- **Remote feed (monthly, no release needed).** The workflow
+  `.github/workflows/download_aifa.yaml` runs daily from day 2 to day
+  7 of each month (and on demand), builds `data/it/aifa-<yyyymm>.zip` and
+  rewrites `data/it/latest.json`. The first successful run of the month
+  publishes; later runs find the month's version in `latest.json` and
+  exit without changes. HTTP errors from AIFA (429, 5xx, timeouts,
+  resets) are retried five times over about 5.5 minutes before a run
+  fails; a failed run is retried by the next day's schedule. A manual
+  run with the `force` input rebuilds an already published month;
+  clients re-import it (see "Republishing a month" below). The app
+  downloads it at startup (§2.1). No manual step.
+- **Embedded snapshot (per release, optional).** The ZIP embedded in
+  the Infrastructure assembly is the baseline for a first run without
+  network. Refreshing it at each release keeps that baseline recent;
+  skipping it is harmless, because a newer remote import is never
+  overwritten by an older embedded one.
 
-2. **Build the ZIP.** Place the two CSV files at the **root** of the
-   archive (no sub-directory). Both file names must be preserved
-   verbatim (`AifaSnapshotParser` looks them up by name,
-   case-insensitive):
+### 2.1 Remote feed
+
+`data/it/latest.json`, written by `scripts/download_aifa.py` (each feed
+owns a `data/<country>/` folder):
+
+```json
+{
+  "country": "IT",
+  "version": "202610",
+  "file": "aifa-202610.zip",
+  "generated": "2026-10-02T03:00:12.345678+00:00",
+  "csv_count": 2,
+  "sha256": "<64 hex characters>",
+  "size": 5016171,
+  "rows": {
+    "confezioni_fornitura.csv": 160024,
+    "PA_confezioni.csv": 338722
+  }
+}
+```
+
+- `version` is the **download month** in UTC, not an AIFA release
+  date. With the cron on day 2 the two usually coincide. The archive
+  name, `version` and `generated` all come from one timestamp taken
+  when the run starts.
+- The script fails, leaving `data/` untouched, when either CSV is
+  missing, lacks a column `AifaSnapshotParser` requires, has fewer
+  than 100 000 (`confezioni_fornitura.csv`) or 200 000
+  (`PA_confezioni.csv`) data rows, or has fewer than 90% of the rows
+  recorded under `rows` by the previous run. If AIFA genuinely shrinks
+  a file by more than 10%, lower the previous count in
+  `data/it/latest.json` by hand and re-run.
+- `data/it/` keeps the 3 newest archives.
+- **Republishing a month.** A forced run in the same month overwrites
+  `aifa-<yyyymm>.zip` and writes a new `generated` and `sha256`. Clients
+  store remote imports as `yyyymm+<generated, UTC>` (for example
+  `202610+20261005T030012Z`), so the later build replaces the earlier
+  one at their next start. This needs `sha256` in the manifest: without
+  it clients store the bare month and do not re-import. A month cannot
+  be rolled back to an older build; publish corrected data instead.
+
+Client behaviour (`RemoteCatalogueRefresher`,
+`docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`):
+
+- Runs once at startup, after the passive update check, when
+  `Catalogue:RemoteFeed:Enabled` and the user's *Check for updates on
+  startup* setting are both on.
+- Downloads only when `version` is newer than the open profile's
+  Italian catalogue; other profiles update at their own next start.
+- Stages the file in `%LOCALAPPDATA%\MedReminder\catalogue\staging\`,
+  checks size and SHA-256 (when present) and the two CSV entries,
+  imports it, and deletes it in every outcome.
+- Rejects a snapshot with fewer than half the rows of the current
+  catalogue, leaving the catalogue unchanged.
+
+### 2.2 Embedded snapshot
+
+1. **Take the archive published by the workflow**:
+   `data/it/aifa-<yyyymm>.zip` from `main`. It already has the layout the
+   parser expects (both CSV files at the root; an extra `atc.csv` in
+   older archives is ignored):
 
    ```
    aifa-<yyyymm>.zip
@@ -66,40 +129,38 @@ Cadence: monthly, aligned to a MedReminder release
    └── PA_confezioni.csv
    ```
 
-   Any standard tool works (`zip`, 7-Zip, Windows Explorer's
-   "Send to → Compressed folder"). Expected compressed size is
-   ~4–20 MB depending on the raw text redundancy.
+   To build one by hand instead, download `confezioni_fornitura.csv`
+   and `PA_confezioni.csv` from <https://www.aifa.gov.it/liste-dei-farmaci>,
+   keep the file names verbatim (`AifaSnapshotParser` looks them up by
+   name, case-insensitive) and zip them at the archive root.
 
-3. **Name the archive** `aifa-<yyyymm>.zip` where `<yyyymm>` is the
-   AIFA release date, e.g. `aifa-202609.zip`. This suffix ends up in
-   the `snapshot_version` column of every imported row.
-
-4. **Drop it into the repo** at
+2. **Copy it into the repo** at
    `src/MedReminder.Infrastructure/Assets/Catalogue/it/aifa-<yyyymm>.zip`.
    The `<EmbeddedResource>` glob in
    `src/MedReminder.Infrastructure/MedReminder.Infrastructure.csproj`
    picks it up automatically — no csproj edit needed.
 
-5. **Delete the previous month's ZIP** in the same folder. Only one
-   AIFA snapshot must ship at a time; leaving two behind would let
+3. **Delete the previous ZIP** in the same folder. Only one AIFA
+   snapshot must ship at a time; leaving two behind would let
    `EmbeddedSnapshotProvider.TryOpen` pick the wrong one (it takes
    the first resource matching the country prefix).
 
-6. **Commit** with an imperative English message, e.g.
-   `Refresh AIFA snapshot to 202609`.
+4. **Commit** with an imperative English message, e.g.
+   `Refresh AIFA snapshot to 202610`.
 
-7. **Verify** locally on Windows:
+5. **Verify** locally on Windows:
    ```powershell
    dotnet restore MedReminder.sln
    dotnet build   MedReminder.sln -c Release
    dotnet test    MedReminder.sln -c Release
    ```
-   Then run the app once: the `CatalogueRefreshHostedService` logs
-   `Reference-catalogue import for IT complete: inserted=… version=<yyyymm>`
-   in `%LOCALAPPDATA%\MedReminder\logs\medreminder-*.log` on the
-   first boot after the version changed. Subsequent boots log
-   nothing because the importer short-circuits when the recorded
-   `snapshot_version` already matches.
+   Then run the app once and check
+   `%LOCALAPPDATA%\MedReminder\logs\medreminder-*.log`. On the first
+   boot after the version changed, `CatalogueRefreshHostedService` logs
+   `Reference-catalogue import for IT complete: inserted=<n> … version=<yyyymm>`.
+   On later boots the same line reports `inserted=0` and the version
+   stored in the database, which may be newer than the embedded one
+   when the remote feed already delivered a later month.
 
 ---
 
@@ -283,7 +344,7 @@ Three sibling fixtures — `bdpm-cis-sample.txt`,
   path round-trips.
 
 1. Download the current BDPM TSVs from
-   <https://base-donnees-publique.medicaments.gouv.fr/telechargement.php>.
+   <https://base-donnees-publique.medicaments.gouv.fr/telechargement>.
 2. Run `scripts/build_bdpm_fixture.py`, pointing it at the local
    TSVs. It rewrites the three fixture files, preserving the exact
    ISO-8859-15 encoding and CRLF terminators.
@@ -388,7 +449,7 @@ Cadence: monthly, aligned to a MedReminder release. ANSM regenerates
 the BDPM export daily.
 
 1. **Download the BDPM TSVs from ANSM.**
-   - Portal: <https://base-donnees-publique.medicaments.gouv.fr/telechargement.php>
+   - Portal: <https://base-donnees-publique.medicaments.gouv.fr/telechargement>
      — pick the three "Base de données publique des médicaments"
      downloads:
      - `CIS_bdpm.txt` (one row per medicinal product, key = CIS)

@@ -186,6 +186,13 @@ Medikamentenformular automatisch zu vervollständigen.
 - Das **Referenzland** wird unter *Einstellungen → Allgemein →
   Referenzland* gewählt. Standard ist Italien; eine Änderung wirkt
   beim nächsten Öffnen des Medikamentenformulars.
+- Der **italienische Katalog aktualisiert sich selbst**: Beim Start
+  lädt MedReminder, wenn *Einstellungen → Allgemein → Beim Start nach
+  Updates suchen (GitHub)* aktiviert ist, die neueste monatliche
+  AIFA-Liste herunter, sofern sie neuer ist als die vorhandene, und
+  verwendet sie ab dem nächsten Öffnen des Medikamentenformulars.
+  Ohne Verbindung ändert sich nichts. Bei mehreren Profilen wird jedes
+  beim ersten Öffnen aktualisiert.
 
 ### Zentral zugelassene EU-Arzneimittel
 

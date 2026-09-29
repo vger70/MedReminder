@@ -182,6 +182,13 @@ public static class InfrastructureServiceCollectionExtensions
             sp.GetServices<IReferenceSnapshotParser>(),
             sp.GetRequiredService<TimeProvider>()));
 
+        // Remote AIFA feed (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md).
+        // Singleton client so the HttpClient is reused; the refresher
+        // itself is registered by AddMedReminderApplication.
+        services.Configure<CatalogueFeedOptions>(
+            configuration.GetSection(CatalogueFeedOptions.SectionName));
+        services.TryAddSingleton<ICatalogueFeedClient, GitHubRawCatalogueFeedClient>();
+
         // ------- Barcode scan (A2) -------
         //
         // Bound once at startup: the parser singleton reads it at
