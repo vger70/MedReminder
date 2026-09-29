@@ -158,27 +158,26 @@ row floor, per-country state), `GitHubRawCatalogueFeedClient`,
   instead of publishing a file the parser cannot read. If AEMPS ever
   switches to real BIFF, the script can convert it (`xlrd` +
   `openpyxl`), which is out of scope until it happens.
-- **Runner test, 2026-09-29** [OWNER]: `curl -sSI` from a GitHub-hosted
-  runner answered `HTTP/2 403`, `content-type: text/html`,
-  `server: BlasDeLezo`. The HTML body and the server header point to a
-  protection layer in front of the host, not to a missing file
-  [INFERRED]. The test used `HEAD` and curl's default User-Agent, which
-  such layers often reject by themselves, so the cause is not isolated
-  yet. Next runner test (both commands):
+- **Runner tests, 2026-09-29** [OWNER], GitHub-hosted `ubuntu-24.04`:
 
-  ```bash
-  UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
-  curl -sS -o /tmp/m.xls -w '%{http_code} %{content_type} %{size_download}\n' \
-    -A "$UA" -H 'Accept: */*' -H 'Accept-Language: es-ES,es;q=0.9' \
-    https://listadomedicamentos.aemps.gob.es/Medicamentos.xls
-  curl -sS -o /dev/null -w '%{http_code} %{content_type}\n' -A "$UA" \
-    'https://cima.aemps.es/cima/rest/medicamentos?pagina=1'
-  ```
+  | Request | Result |
+  |---------|--------|
+  | `HEAD`, curl default User-Agent | 403, `text/html`, `server: BlasDeLezo` |
+  | `GET`, curl default User-Agent | 403, `text/html`, 150 bytes |
+  | `GET`, browser User-Agent + `Accept`, `Accept-Language`, `Referer` headers | **200**, `application/vnd.ms-excel`, 2 758 433 bytes |
 
-  The same first command from a home PC tells an IP block apart from a
-  header block: `200` at home and `403` on the runner means the runner
-  IP range is refused.
-- **Fallbacks, if the runner stays blocked:** the CIMA
+  The protection layer filters on request headers, not on runner IP
+  ranges. The script therefore sends a browser User-Agent and the same
+  `Accept` / `Accept-Language` / `Referer` headers (the AIFA script
+  already sends a browser User-Agent). Which header is decisive was not
+  isolated; sending all of them is cheap.
+- **Content, verified on the runner:** the first bytes are
+  `PK\x03\x04`, an XLSX container, as the embedded snapshot already
+  showed; the size matches the embedded `aemps.xlsx` (2 755 386 bytes).
+  `openpyxl` refuses to open the file under its `.xls` name (it checks
+  the extension, not the content), so the script saves it as
+  `aemps.xlsx` before reading the header.
+- **Fallbacks, only if the header filter tightens later:** the CIMA
   REST API (documented, paginated JSON) [SEARCH] with the XLSX rebuilt
   by the script, if its host is not blocked too; a self-hosted runner
   on a machine that can reach AEMPS (the workflow runs there, the rest
@@ -374,7 +373,7 @@ new one. Per-feed `Enabled` flags let an admin override.
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| AEMPS blocks runner requests (**observed**: 403 on `HEAD` with curl's User-Agent) | ES feed cannot download | Browser-like `GET` test and home-PC comparison (§3.2); then REST API, self-hosted runner, semi-manual intake, or ES embedded-only |
+| AEMPS header filter (observed: 403 without a browser User-Agent, 200 with it) tightens, for example into a JavaScript challenge | ES feed cannot download | Retries, then a red run on each scheduled day; fallbacks of §3.2 (REST API, self-hosted runner, semi-manual intake, embedded-only) |
 | AEMPS changes `Medicamentos.xls` to real BIFF or to another layout | Parser cannot read it | Magic-byte check and header check in the script; nothing is published |
 | EMA changes column names | Parser rejects the snapshot | Script validation fails first, nothing is published |
 | EMA XLSX has multi-line cells | Parser splits records | Collapse `\r\n\t`; re-read the CSV to check column counts |
@@ -393,9 +392,9 @@ new one. Per-feed `Enabled` flags let an admin override.
 | D2 | Branch | Dedicated data branch with periodic reset, decided before the first release of PR #131 |
 | D3 | Timing of the AIFA move | Together with D1/D2, before that release; otherwise keep writing `main/data/latest.json` for old clients |
 | D4 | Feeds per client | Reference country + EU; per-feed flags for admins |
-| D5 | AEMPS source | `https://listadomedicamentos.aemps.gob.es/Medicamentos.xls` (product owner). First runner test: 403 (§3.2). Decide after the browser-like `GET` test: direct download if it passes; otherwise REST API if reachable, else self-hosted runner or semi-manual intake; embedded-only as last resort |
+| D5 | AEMPS source | **Settled:** `https://listadomedicamentos.aemps.gob.es/Medicamentos.xls`, `GET` with browser headers (200 from a GitHub runner, §3.2) |
 | D6 | Thresholds | As in §3.4 |
-| D7 | Order of work | EU and FR first; ES after D5 is settled |
+| D7 | Order of work | ES, FR, EU: ES has no transformation and its download is now proven from a runner; EU needs the XLSX→CSV conversion |
 
 ---
 
@@ -406,10 +405,10 @@ new one. Per-feed `Enabled` flags let an admin override.
    ships.
 2. Client generalisation (§5) with IT only configured; AIFA regression
    tests stay green.
-3. `scripts/feeds/common.py` + EMA feed + workflow; enable `EU` in the
-   client.
+3. `scripts/feeds/common.py` + AEMPS feed + workflow (direct download
+   with browser headers, no transformation); enable `ES` in the client.
 4. BDPM feed + workflow; enable `FR`.
-5. AEMPS feed + workflow, in the form D5 settles; enable `ES`.
+5. EMA feed (XLSX→CSV conversion) + workflow; enable `EU`.
 6. Move `download_aifa.py` onto `common.py`.
 7. Docs: `CATALOGUE-DATA.md` §3, §5, §6 rewritten like §2;
    `THIRD-PARTY-NOTICES.md` notes that the snapshots are also
@@ -426,9 +425,11 @@ new one. Per-feed `Enabled` flags let an admin override.
   checked with `curl -I` from a GitHub runner before implementation.
 - AEMPS URL supplied by the product owner (2026-09-29); the host is
   confirmed as AEMPS's static download server by search results. Not
-  fetched from this session (egress proxy 403). From a GitHub runner:
-  `HEAD` with curl's User-Agent returned 403 with an HTML body
-  (product owner's test); browser-like `GET` not yet tested.
+  fetched from this session (egress proxy 403). From a GitHub runner
+  (product owner's tests): 403 without a browser User-Agent, 200 with
+  browser headers; the payload is an XLSX container of 2 758 433 bytes.
+  Header row and row count of that download not yet printed (the probe
+  opened it under its `.xls` name, which `openpyxl` rejects).
 - Not verified: download behaviour of the three sources from GitHub
   runners, actual format of the current `Medicamentos.xls` (XLSX
   assumed from the embedded snapshot), EMA Human share of rows, BDPM
