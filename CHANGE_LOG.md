@@ -35,6 +35,8 @@ with the classification adapted to per-PR granularity: **Added**,
 Link: [vger70/MedReminder#131](https://github.com/vger70/MedReminder/pull/131)
 Branch: `claude/aifa-catalog-auto-update-jrkles`
 
+**Status:** merged (2026-09-29)
+
 Implements `docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`.
 
 ### Added
