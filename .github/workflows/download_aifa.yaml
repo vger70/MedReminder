@@ -2,7 +2,7 @@ name: Download AIFA CSV
 
 on:
   schedule:
-    - cron: '0 3 2 * *'
+    - cron: '0 3 2 * *'  
   workflow_dispatch:
 
 permissions:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   download:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v6
