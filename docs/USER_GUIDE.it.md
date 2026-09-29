@@ -174,7 +174,8 @@ medicina.
 - Il **paese di riferimento** si sceglie da *Impostazioni → Generale
   → Paese di riferimento*. Il valore predefinito è Italia; una
   modifica ha effetto alla successiva apertura del form della
-  medicina.
+  medicina. Il paese vale per tutta l'installazione: solo un
+  amministratore può cambiarlo.
 
 ### Medicinali ad autorizzazione centralizzata UE
 
@@ -489,10 +490,13 @@ condivisi e gestiti da un profilo **amministratore**.
   né la scheda Backup nelle Impostazioni, e non vede
   `Strumenti → Gestisci profili…`.
 
-Il ruolo si sceglie alla creazione del profilo e **non può essere
-cambiato in seguito**. Se in futuro dovessi voler cambiare il ruolo
-a un profilo, la soluzione oggi è creare un nuovo profilo con il
-ruolo desiderato e copiarci sopra i dati.
+Il ruolo si sceglie alla creazione del profilo. Un amministratore può
+cambiarlo in seguito: `Strumenti → Gestisci profili…`, seleziona il
+profilo, **Cambia ruolo…**. Il ruolo del profilo aperto non può
+essere cambiato: apri prima un altro profilo amministratore. Resta
+sempre almeno un amministratore. Prima di rendere amministratore un
+profilo senza PIN, valuta di impostarne uno: altrimenti chiunque al
+PC potrebbe aprirlo.
 
 Il ruolo è una barriera "soft": chi ha accesso al filesystem può
 modificare `profiles.json` a mano e diventare amministratore.
@@ -956,6 +960,14 @@ modifiche registrate nel frattempo vengono inviate dopo.
    da quelli del gruppo (una copia resta accanto al database). MedReminder
    si riavvia.
 
+Se la passphrase apre più di un gruppo nella cartella o nell'account
+(più profili sincronizzati con la stessa passphrase), MedReminder chiede
+a quale unirsi e mostra ogni gruppo con i suoi dispositivi.
+
+Con OneDrive o Google Drive l'unione può richiedere fino a un minuto:
+MedReminder attende che l'account elenchi il nuovo PC, così gli altri PC
+conservano le modifiche che gli servono ancora.
+
 ### Uso quotidiano
 
 - MedReminder sincronizza pochi secondi dopo ogni modifica, ogni 5 minuti
@@ -974,6 +986,10 @@ modifiche registrate nel frattempo vengono inviate dopo.
   (Impostazioni → Notifiche) appartengono al gruppo: una modifica su un
   PC arriva agli altri, e un PC che si unisce prende quelli del gruppo.
   Per rinominare un altro profilo sincronizzato, apri prima quel profilo.
+- **Email**: ogni PC con l'email configurata (Impostazioni → Email SMTP)
+  invia i propri messaggi di scorta bassa e al caregiver, quindi con due
+  PC sincronizzati lo stesso messaggio arriva due volte. Configura
+  l'email su un solo PC del gruppo.
 - **Disattiva sincronizzazione…** ferma la sincronizzazione su questo PC e
   ne conserva i dati.
 

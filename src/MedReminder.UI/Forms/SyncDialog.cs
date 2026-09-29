@@ -360,38 +360,48 @@ internal sealed class SyncDialog : MedReminderFormBase
             return;
         }
         // One group per profile: a folder shared by several profiles has
-        // several. The passphrase tells them apart; the first that opens
-        // is joined.
+        // several. The passphrase tells them apart; when it opens more than
+        // one, the user chooses by the devices of each group.
         using var dialog = new SyncPassphraseDialog(_loc, confirm: false, Environment.MachineName);
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
-                _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
-                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
-        {
-            return;
-        }
 
         var passphrase = dialog.TakePassphrase();
         try
         {
-            Exception? last = null;
-            foreach (var group in groups)
+            IReadOnlyList<SyncGroupCandidate> opened;
+            await using (var scope = _scopes.CreateAsyncScope())
             {
-                try
-                {
-                    await using var scope = _scopes.CreateAsyncScope();
-                    await scope.ServiceProvider.GetRequiredService<ISyncSetupService>()
-                        .JoinAsync(target, group, passphrase, dialog.DeviceName, CancellationToken.None);
-                    last = null;
-                    break;
-                }
-                catch (CryptographicException ex)
-                {
-                    last = ex;
-                }
+                opened = await scope.ServiceProvider.GetRequiredService<ISyncSetupService>()
+                    .FindGroupsAsync(target, passphrase, CancellationToken.None);
             }
-            if (last is not null)
+            if (opened.Count == 0)
             {
+                Error(_loc.Get("Ui.SyncDialog.Join.WrongPassphrase"));
+                return;
+            }
+            var group = opened[0].GroupId;
+            if (opened.Count > 1)
+            {
+                using var choice = new SyncGroupChoiceDialog(_loc, opened);
+                if (choice.ShowDialog(this) != DialogResult.OK || choice.SelectedGroupId is not { } chosen) return;
+                group = chosen;
+            }
+            if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
+                    _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                await using var scope = _scopes.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<ISyncSetupService>()
+                    .JoinAsync(target, group, passphrase, dialog.DeviceName, CancellationToken.None);
+            }
+            catch (CryptographicException)
+            {
+                // The group was re-keyed between the search and the join.
                 Error(_loc.Get("Ui.SyncDialog.Join.WrongPassphrase"));
                 return;
             }

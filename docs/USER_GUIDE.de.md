@@ -185,7 +185,8 @@ Medikamentenformular automatisch zu vervollständigen.
   Katalogverknüpfung — die Erinnerung funktioniert genau wie zuvor.
 - Das **Referenzland** wird unter *Einstellungen → Allgemein →
   Referenzland* gewählt. Standard ist Italien; eine Änderung wirkt
-  beim nächsten Öffnen des Medikamentenformulars.
+  beim nächsten Öffnen des Medikamentenformulars. Das Land gilt für
+  die ganze Installation: Nur ein Administrator kann es ändern.
 
 ### Zentral zugelassene EU-Arzneimittel
 
@@ -519,11 +520,13 @@ Sicherung und das Profilregister werden gemeinsam genutzt und vom
   Einstellungen weder die SMTP- noch die Sicherungs-Registerkarte
   und sieht `Extras → Profile verwalten…` nicht.
 
-Die Rolle wird bei der Profilerstellung gewählt und kann
-**danach nicht mehr geändert werden**. Wenn du in Zukunft die Rolle
-eines Profils ändern möchtest, ist der aktuelle Weg, ein neues
-Profil mit der gewünschten Rolle anzulegen und die Daten
-darüberzukopieren.
+Die Rolle wird bei der Profilerstellung gewählt. Ein Administrator
+kann sie später ändern: `Extras → Profile verwalten…`, das Profil
+auswählen, **Rolle ändern…**. Die Rolle des geöffneten Profils kann
+nicht geändert werden: öffne zuerst ein anderes Administratorprofil.
+Mindestens ein Administrator bleibt immer erhalten. Bevor du ein
+Profil ohne PIN zum Administrator machst, richte besser eine PIN ein:
+sonst könnte jeder am PC es öffnen.
 
 Die Rolle ist eine „weiche“ Hürde: wer Zugriff auf das Dateisystem
 hat, kann `profiles.json` von Hand ändern und zum Administrator
@@ -1024,6 +1027,15 @@ gesendet.
    der Gruppe ersetzt** (eine Kopie bleibt neben der Datenbank erhalten).
    MedReminder wird neu gestartet.
 
+Öffnet die Passphrase mehr als eine Gruppe im Ordner oder Konto (mehrere
+synchronisierte Profile mit derselben Passphrase), fragt MedReminder,
+welcher beigetreten werden soll, und zeigt jede Gruppe mit ihren
+Geräten.
+
+Mit OneDrive oder Google Drive kann der Beitritt bis zu einer Minute
+dauern: MedReminder wartet, bis das Konto den neuen PC auflistet, damit
+die anderen PCs die Änderungen aufbewahren, die er noch braucht.
+
 ### Im Alltag
 
 - MedReminder synchronisiert einige Sekunden nach jeder Änderung, alle 5
@@ -1044,6 +1056,11 @@ gesendet.
   Änderung auf einem PC erreicht die anderen, und ein PC, der beitritt,
   übernimmt die der Gruppe. Um ein anderes synchronisiertes Profil
   umzubenennen, öffnen Sie zuerst dieses Profil.
+- **E-Mail**: Jeder PC mit eingerichteter E-Mail (Einstellungen →
+  E-Mail-SMTP) sendet seine eigenen Nachrichten zu niedrigem Bestand und
+  an Pflegepersonen; mit zwei synchronisierten PCs kommt dieselbe
+  Nachricht daher zweimal an. Richten Sie die E-Mail nur auf einem PC
+  der Gruppe ein.
 - **Synchronisierung deaktivieren…** beendet die Synchronisierung auf diesem
   PC und behält seine Daten.
 

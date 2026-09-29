@@ -25,7 +25,7 @@ namespace MedReminder.Infrastructure.Cloud.OneDrive;
 // A create retried after a lost response can report "exists" for a file
 // it wrote itself; the engine then publishes the same operations under
 // the next number, which replays as a no-op (§5.2).
-public sealed class OneDriveSyncTransport : ISyncTransport
+public sealed class OneDriveSyncTransport : ISyncTransport, IProviderListing
 {
     public const string RootFolder = "sync";
 
@@ -73,6 +73,22 @@ public sealed class OneDriveSyncTransport : ISyncTransport
             }
 
             return [.. files.Where(p => p.StartsWith(prefix, StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<bool> IsListedByProviderAsync(string path, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await RefreshAsync(cancellationToken);
+            _syncFiles ??= ResolveSyncFiles();
+            return _syncFiles.Contains(path);
         }
         finally
         {

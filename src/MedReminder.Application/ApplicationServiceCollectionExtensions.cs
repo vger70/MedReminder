@@ -1,6 +1,7 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Donations;
+using MedReminder.Application.Household;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Timeline;
@@ -22,6 +23,17 @@ public static class ApplicationServiceCollectionExtensions
         // B.1 Phase 3a: operation capture. Records nothing until sync
         // is enabled for the profile (ISyncSettingsStore).
         services.AddScoped<IOperationLog, OperationLog>();
+        // Household feature, step H2: the local household log and the
+        // profile administration use cases.
+        services.AddScoped<HouseholdLog>();
+        services.AddScoped<CreateProfile>();
+        services.AddScoped<DeleteProfile>();
+        services.AddScoped<ChangeProfileRole>();
+        services.AddScoped<SetProfilePin>();
+        services.AddScoped<ReconcileHousehold>();
+        services.AddScoped<UpdateSmtpSettings>();
+        services.AddScoped<UpdateBackupSettings>();
+        services.AddScoped<UpdateGeneralSettings>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();

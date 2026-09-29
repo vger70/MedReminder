@@ -52,6 +52,109 @@ Branch: `claude/medreminder-sync-analysis-fquf7h`
 - `docs/ANALYSIS.md` §12: index entry for the new analysis.
 - `CLAUDE.md` §4: PRs of this feature target the integration branch
   `feature/master-slave`; only the final PR merges it into main.
+## PR #118 — Record installation settings in the household (household H2b)
+
+Link: [vger70/MedReminder#118](https://github.com/vger70/MedReminder/pull/118)
+Branch: `claude/household-h2b-installation-settings` → `feature/master-slave`
+
+### Added
+
+- The SMTP transport and password, the scheduled cloud backup policy and
+  the reference country are recorded in the household
+  (`HouseholdSettingChanged`); the SMTP password only protected with
+  DPAPI. The start-up reconciliation records settings restored by an
+  import or edited by hand.
+
+### Changed
+
+- Settings → Email SMTP, Backup and General save through use cases with
+  the admin checks in the Application layer.
+- The reference country can be changed by an administrator only.
+
+### Docs
+
+- User guides (5 languages), `ANALYSIS.md` §5.2.
+
+## PR #117 — Record profile administration in a local household and allow role changes (household H2a)
+
+Link: [vger70/MedReminder#117](https://github.com/vger70/MedReminder/pull/117)
+Branch: `claude/household-h2a-profile-registry` → `feature/master-slave`
+
+### Added
+
+- Local household store under `%LOCALAPPDATA%\MedReminder\household\`:
+  every profile creation, rename, PIN, role change and deletion is
+  recorded as an HLC-stamped operation with last-writer-wins registers,
+  ready for replication in step H3.
+- Manage profiles → Change role…: an admin makes another profile an
+  administrator or a standard user; the open profile's role stays fixed
+  and one admin always remains.
+- Start-up reconciliation of the household with `profiles.json`.
+
+### Changed
+
+- Profile administration goes through use cases with the admin checks
+  in the Application layer; the UI no longer writes the registry,
+  except the first-run wizard.
+
+### Docs
+
+- User guides (5 languages), `ANALYSIS.md` §5, `CLAUDE.md` §5,
+  `ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`.
+
+## PR #116 — Send each low-stock email once per sync group (household H1)
+
+Link: [vger70/MedReminder#116](https://github.com/vger70/MedReminder/pull/116)
+Branch: `claude/household-h1-email-dedup` → `feature/master-slave`
+
+### Fixed
+
+- Every synced device with email configured sent the same low-stock
+  email. A successful email is now a replicated fact
+  (`SentEmailNotification`, operation `EmailNotificationSent`); a device
+  about to email for an epoch another device already emailed for leaves
+  the email out and still shows its toast. Two devices that notify
+  before either has synced still both send (removed by the master, H4).
+
+### Changed
+
+- Operation schema 4, image schema 3: apps up to v2.10 must be updated
+  on every device of a group.
+
+### Docs
+
+- `SYNC-FORMAT.md`, `ANALYSIS.md`, `ANALYSIS-B1-MOBILE-SYNC.md` §20.
+
+## PR #115 — Close the join-during-listing-lag limit and ask which group a passphrase opens
+
+Link: [vger70/MedReminder#115](https://github.com/vger70/MedReminder/pull/115)
+Branch: `claude/household-h0-join-fixes`
+
+Step H0 of the household / master device feature; targets `main`
+(decision D-17).
+
+### Fixed
+
+- A device joining through OneDrive or Google Drive while the listing
+  lagged could end in `RebuildRequired`. The join now waits until the
+  provider itself lists its record (`IProviderListing`), rechecks that
+  the chosen image still covers the remaining segments and picks again
+  if not.
+- A failed first join removes its device record, so it does not hold
+  back compaction on the other devices.
+
+### Changed
+
+- A join by passphrase that opens several groups asks which one, showing
+  each group's devices (`SyncGroupChoiceDialog`), instead of joining the
+  first.
+
+### Docs
+
+- User guides (5 languages): configure email on one PC of a synced group
+  only; group choice; join time with a cloud account.
+- `STATUS.md`, `ANALYSIS.md`, `ANALYSIS-B1-MOBILE-SYNC.md` §20: the known
+  limit is closed.
 
 ## PR #113 — Align STATUS, EVOLUTION and ANALYSIS with v2.10.0
 

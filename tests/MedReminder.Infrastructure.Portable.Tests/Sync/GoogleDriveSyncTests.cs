@@ -79,6 +79,52 @@ public sealed class GoogleDriveSyncTests : IDisposable
         return device;
     }
 
+    // Known limit of B.1 Phase 4b (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md
+    // §20), now closed: a device joins while the listing lags, and another
+    // device compacts in those seconds without listing the new record. The
+    // join waits until the provider lists its record, then picks another
+    // image if segments after the chosen one are gone.
+    [Fact]
+    public async Task A_join_during_a_listing_lag_does_not_need_a_rebuild()
+    {
+        for (var seed = 1; seed <= 10; seed++)
+        {
+            var random = new Random(seed);
+            var a = await CreateGroupAsync($"A{seed}", checkpointEvery: 5);
+            var b = await JoinAsync(a, $"B{seed}", 5);
+            var devices = new List<SyncDevice> { a, b };
+            for (var step = 0; step < 20; step++)
+            {
+                var device = devices[random.Next(devices.Count)];
+                if (random.Next(3) == 0) (await device.SyncAsync()).Problems.Should().BeEmpty();
+                else await SyncConvergenceTests.ActAsync(device, random);
+                device.Clock.Advance(TimeSpan.FromMinutes(random.Next(1, 60)));
+            }
+            foreach (var d in devices) await d.SyncAsync();
+
+            _drive.ListingLags = true;
+            var compacted = false;
+            async Task CompactDuringLagAsync()
+            {
+                if (compacted) return;
+                compacted = true;
+                for (var k = 0; k < 6; k++) await SyncConvergenceTests.ActAsync(a, random);
+                (await a.SyncAsync()).Problems.Should().BeEmpty();
+                (await b.SyncAsync()).Problems.Should().BeEmpty();
+                (await a.SyncAsync()).Problems.Should().BeEmpty();
+                _drive.ListingLags = false;
+            }
+            b.JoinDelay = (_, _) => CompactDuringLagAsync();
+            var c = await JoinAsync(b, $"C{seed}", 5);
+            b.JoinDelay = (_, _) => Task.CompletedTask;
+            compacted.Should().BeTrue("the join waits while the provider does not list its record");
+
+            var result = await c.SyncAsync();
+            result.RebuildRequired.Should().BeFalse($"seed {seed}");
+            result.Problems.Should().BeEmpty();
+        }
+    }
+
     [Fact]
     public async Task Random_workloads_converge_through_the_app_data_folder()
     {
@@ -113,9 +159,7 @@ public sealed class GoogleDriveSyncTests : IDisposable
                 if (lagging) _drive.ListingLags = false;
                 if (step == 25)
                 {
-                    // A join during a lag can make the new device rebuild at
-                    // once: another device compacting in those seconds does
-                    // not see its record yet (known limit, §20). Not modelled.
+                    // A join during a lag: A_join_during_a_listing_lag_does_not_need_a_rebuild.
                     _drive.ListingLags = false;
                     await device.SyncAsync();
                     devices.Add(await JoinAsync(device, $"C{seed}", 15));

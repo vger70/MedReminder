@@ -178,7 +178,9 @@ medicamento.
   exactamente como antes.
 - El **país de referencia** se elige en *Ajustes → General → País
   de referencia*. El valor por defecto es Italia; el cambio se
-  aplica en la siguiente apertura del formulario del medicamento.
+  aplica en la siguiente apertura del formulario del medicamento. El
+  país vale para toda la instalación: solo un administrador puede
+  cambiarlo.
 
 ### Medicamentos con autorización centralizada UE
 
@@ -503,10 +505,13 @@ un perfil **administrador**.
   pestaña SMTP ni la pestaña Copia de seguridad en Ajustes, y no
   ve `Herramientas → Gestionar perfiles…`.
 
-El rol se elige al crear el perfil y **no se puede cambiar
-después**. Si en el futuro necesitas cambiar el rol de un perfil,
-la solución actual es crear un perfil nuevo con el rol deseado y
-copiar los datos.
+El rol se elige al crear el perfil. Un administrador puede cambiarlo
+después: `Herramientas → Gestionar perfiles…`, selecciona el perfil,
+**Cambiar rol…**. El rol del perfil abierto no se puede cambiar:
+abre primero otro perfil administrador. Siempre queda al menos un
+administrador. Antes de convertir en administrador un perfil sin
+PIN, considera configurar uno: de lo contrario, cualquiera en el PC
+podría abrirlo.
 
 El rol es una barrera «suave»: quien tiene acceso al sistema de
 archivos puede editar `profiles.json` a mano y hacerse
@@ -986,6 +991,14 @@ después.
    del grupo (se conserva una copia junto a la base de datos). MedReminder
    se reinicia.
 
+Si la frase de contraseña abre más de un grupo en la carpeta o la cuenta
+(varios perfiles sincronizados con la misma frase), MedReminder pregunta
+a cuál unirse y muestra cada grupo con sus dispositivos.
+
+Con OneDrive o Google Drive la unión puede tardar hasta un minuto:
+MedReminder espera a que la cuenta liste el nuevo PC, para que los demás
+PC conserven los cambios que aún necesita.
+
 ### Uso diario
 
 - MedReminder sincroniza unos segundos después de cada cambio, cada 5
@@ -1004,6 +1017,10 @@ después.
   grupo: un cambio en un PC llega a los demás, y un PC que se une toma
   los del grupo. Para cambiar el nombre de otro perfil sincronizado,
   abra primero ese perfil.
+- **E-mail**: cada PC con el e-mail configurado (Configuración → E-mail
+  SMTP) envía sus propios mensajes de stock bajo y al cuidador, así que
+  con dos PC sincronizados el mismo mensaje llega dos veces. Configure
+  el e-mail en un solo PC del grupo.
 - **Desactivar sincronización…** detiene la sincronización en este PC y
   conserva sus datos.
 

@@ -19,6 +19,19 @@ public sealed record SyncEngineOptions
 
     // §5.6: a device not seen for this long no longer holds segments back.
     public TimeSpan StaleAfter { get; init; } = TimeSpan.FromDays(90);
+
+    // Join (JoinSyncGroup): how long the joining device waits for its own
+    // record to appear in the storage listing, how often it looks, and how
+    // many times it picks an image again when segments after the chosen
+    // one were deleted meanwhile.
+    public TimeSpan JoinListingTimeout { get; init; } = TimeSpan.FromSeconds(60);
+
+    public TimeSpan JoinListingPoll { get; init; } = TimeSpan.FromSeconds(2);
+
+    public int JoinAttempts { get; init; } = 3;
+
+    // The wait between two listings; tests replace it.
+    public Func<TimeSpan, CancellationToken, Task> Delay { get; init; } = Task.Delay;
 }
 
 public sealed record SyncRunResult(
@@ -455,30 +468,37 @@ public sealed class SyncEngine
             ?? throw new InvalidOperationException("The group key is not stored on this device.");
         try
         {
-            var records = new List<DeviceRecordContent>();
-            foreach (var path in await _transport.ListAsync(SyncLayout.DevicesFolder(settings.GroupId), cancellationToken))
-            {
-                var file = await _transport.ReadAsync(path, cancellationToken);
-                if (file is null) continue;
-                try
-                {
-                    if (!IsCurrentRecord(SyncFileCodec.ReadHeader(file), settings)) continue;
-                    var (header, content) = SyncFileCodec.Open(_cipher, key, file);
-                    if (header.Kind == SyncFileKind.Device && header.Generation == settings.Generation)
-                        records.Add(DeviceRecordContent.Parse(content));
-                }
-                catch (Exception ex) when (ex is CryptographicException or InvalidDataException
-                                               or NotSupportedException or System.Text.Json.JsonException)
-                {
-                    // An unreadable record is left out of the list.
-                }
-            }
-            return [.. records.OrderByDescending(r => r.LastSeen)];
+            return await ReadRecordsAsync(_transport, _cipher, key, settings, cancellationToken);
         }
         finally
         {
             CryptographicOperations.ZeroMemory(key);
         }
+    }
+
+    // The readable device records of settings' generation, newest first.
+    internal static async Task<IReadOnlyList<DeviceRecordContent>> ReadRecordsAsync(ISyncTransport transport,
+        IArchiveCipher cipher, byte[] key, SyncSettings settings, CancellationToken ct)
+    {
+        var records = new List<DeviceRecordContent>();
+        foreach (var path in await transport.ListAsync(SyncLayout.DevicesFolder(settings.GroupId), ct))
+        {
+            var file = await transport.ReadAsync(path, ct);
+            if (file is null) continue;
+            try
+            {
+                if (!IsCurrentRecord(SyncFileCodec.ReadHeader(file), settings)) continue;
+                var (header, content) = SyncFileCodec.Open(cipher, key, file);
+                if (header.Kind == SyncFileKind.Device && header.Generation == settings.Generation)
+                    records.Add(DeviceRecordContent.Parse(content));
+            }
+            catch (Exception ex) when (ex is CryptographicException or InvalidDataException
+                                           or NotSupportedException or System.Text.Json.JsonException)
+            {
+                // An unreadable record is left out of the list.
+            }
+        }
+        return [.. records.OrderByDescending(r => r.LastSeen)];
     }
 
     private static bool IsCurrentRecord(SyncFileHeader header, SyncSettings settings)

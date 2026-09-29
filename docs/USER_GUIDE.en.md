@@ -166,7 +166,8 @@ catalogue and uses them to autocomplete the medicine form.
   exactly as before.
 - The **reference country** is picked from *Settings → General →
   Reference country*. Default is Italy; a change takes effect at the
-  next opening of the medicine form.
+  next opening of the medicine form. The country applies to the whole
+  installation: only an administrator can change it.
 
 ### EU centrally authorised medicines
 
@@ -463,10 +464,13 @@ administered by an **administrator profile**.
   tab or the Backup tab in Settings, and does not see
   `Tools → Manage profiles…`.
 
-The role is chosen when the profile is created and **cannot be
-changed later**. If in the future you need to change a profile's
-role, the current workaround is to create a new profile with the
-target role and copy the data over.
+The role is chosen when the profile is created. An administrator can
+change it later: `Tools → Manage profiles…`, select the profile,
+**Change role…**. The role of the open profile cannot be changed:
+open another administrator profile first. At least one administrator
+always remains. Before making a profile without a PIN an
+administrator, consider setting a PIN: anyone at the PC could
+otherwise open it.
 
 The role is soft security: a user with filesystem access can
 edit `profiles.json` by hand and become admin. The user interface
@@ -909,6 +913,14 @@ meanwhile are sent afterwards.
 3. Confirm: **the data of this profile on this PC is replaced** by the
    group's (a copy is kept next to the database). MedReminder restarts.
 
+If the passphrase opens more than one group in the folder or account
+(several synced profiles with the same passphrase), MedReminder asks
+which one to join and shows each group with its devices.
+
+With OneDrive or Google Drive the join can take up to a minute:
+MedReminder waits until the account lists the new PC, so that the other
+PCs keep the changes it still needs.
+
 ### Daily use
 
 - MedReminder syncs a few seconds after each change, every 5 minutes, and
@@ -926,6 +938,10 @@ meanwhile are sent afterwards.
   Notifications) belong to the group: a change on one PC reaches the
   others, and a PC that joins takes the group's. To rename another
   profile that is synced, open that profile first.
+- **Email**: every PC with email configured (Settings → Email SMTP)
+  sends its own low-stock and caregiver messages, so with two synced PCs
+  the same message arrives twice. Configure email on one PC of the group
+  only.
 - **Disable sync…** stops syncing on this PC and keeps its data.
 
 ### Pairing codes

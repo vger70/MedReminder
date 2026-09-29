@@ -16,3 +16,7 @@ public sealed record Profile(
     DateTimeOffset CreatedAt,
     DateTimeOffset LastUsedAt,
     bool HasPin);
+
+// PBKDF2-HMAC-SHA256 hash and salt of a profile PIN, base64, as
+// profiles.json stores them.
+public sealed record ProfilePinHash(string Hash, string Salt, int Iterations);

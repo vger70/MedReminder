@@ -132,6 +132,7 @@ internal static class Program
 
             using var host = BuildHost(args, current);
             InitializeDatabase(host);
+            ReconcileHousehold(host);
             host.StartAsync().GetAwaiter().GetResult();
 
             try
@@ -398,6 +399,25 @@ internal static class Program
         using var scope = host.Services.CreateScope();
         var init = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
         init.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    // Household step H2: records in the local household what profiles.json
+    // holds and the household does not (the first-run wizard, the V1
+    // migration, hand edits). A failure is logged and does not stop the
+    // start: the profiles work from profiles.json as before.
+    private static void ReconcileHousehold(IHost host)
+    {
+        try
+        {
+            using var scope = host.Services.CreateScope();
+            var recorded = scope.ServiceProvider.GetRequiredService<MedReminder.Application.UseCases.ReconcileHousehold>()
+                .ExecuteAsync(CancellationToken.None).GetAwaiter().GetResult();
+            if (recorded > 0) Log.Information("Household: {Count} profile changes recorded at start.", recorded);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Household reconciliation failed.");
+        }
     }
 
     private static void RunUi(IHost host, bool startMinimized)

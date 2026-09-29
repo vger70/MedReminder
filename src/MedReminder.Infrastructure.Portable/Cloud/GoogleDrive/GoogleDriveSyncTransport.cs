@@ -22,7 +22,7 @@ namespace MedReminder.Infrastructure.Cloud.GoogleDrive;
 // In the sync layout every file has one writer except group.json and a
 // new genesis, so a real race needs two devices creating the same group
 // or generation at the same second.
-public sealed class GoogleDriveSyncTransport : ISyncTransport
+public sealed class GoogleDriveSyncTransport : ISyncTransport, IProviderListing
 {
     public const string SyncProperty = "mrsync";
 
@@ -54,6 +54,21 @@ public sealed class GoogleDriveSyncTransport : ISyncTransport
         {
             if (_clock.GetUtcNow() - _refreshedAt >= RefreshInterval) await RefreshAsync(cancellationToken);
             return [.. Paths().Where(p => p.StartsWith(prefix, StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<bool> IsListedByProviderAsync(string path, CancellationToken cancellationToken)
+    {
+        Validate(path);
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await RefreshAsync(cancellationToken);
+            return _index.ContainsKey(path);
         }
         finally
         {

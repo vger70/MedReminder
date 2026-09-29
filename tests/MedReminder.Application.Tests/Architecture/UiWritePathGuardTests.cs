@@ -123,6 +123,65 @@ public class UiWritePathGuardTests
             "the profile name and the notification recipients are replicated settings (ANALYSIS-B1-MOBILE-SYNC.md P8)");
     }
 
+    // Household step H2: profiles are created, deleted, re-roled and
+    // given a PIN through use cases that record the change in the
+    // household. The first-run wizard runs before the host exists, so it
+    // writes profiles.json directly; ReconcileHousehold records its
+    // profile at the next step of the start.
+    [Fact]
+    public void Ui_sources_do_not_change_profiles_through_the_registry()
+    {
+        var root = FindRepositoryRoot();
+        var uiDir = Path.Combine(root, "src", "MedReminder.UI");
+        var pattern = new Regex(@"[Rr]egistry\s*\.\s*(Create|Delete|SetPin|SetRole)\s*\(", RegexOptions.CultureInvariant);
+        var violations = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(uiDir, "*.cs", SearchOption.AllDirectories)
+                     .Where(f => !IsBuildOutput(uiDir, f)))
+        {
+            var relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+            if (relative == "src/MedReminder.UI/Forms/FirstRunWizardForm.cs") continue;
+            foreach (var (line, text) in FindViolations(File.ReadAllText(file), pattern))
+            {
+                violations.Add($"{relative}:{line}: {text}");
+            }
+        }
+
+        violations.Should().BeEmpty(
+            "profile changes go through CreateProfile, DeleteProfile, ChangeProfileRole and SetProfilePin, " +
+            "which record them in the household (ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §8)");
+    }
+
+    // Household step H2b: the installation settings (SMTP transport and
+    // password, backup, user settings) are written by UpdateSmtpSettings,
+    // UpdateBackupSettings and UpdateGeneralSettings, which record them in
+    // the household. Program.cs reads the files into the configuration and
+    // writes the first-run language before the host exists; the start-up
+    // reconciliation records it.
+    [Fact]
+    public void Ui_sources_do_not_write_installation_settings()
+    {
+        var root = FindRepositoryRoot();
+        var uiDir = Path.Combine(root, "src", "MedReminder.UI");
+        var pattern = new Regex(
+            @"""(smtp|backup|user)\.settings\.json""|[Cc]redentialStore\s*\.\s*(SetPassword|Clear)\s*\(",
+            RegexOptions.CultureInvariant);
+        var violations = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(uiDir, "*.cs", SearchOption.AllDirectories)
+                     .Where(f => !IsBuildOutput(uiDir, f)))
+        {
+            var relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+            if (relative == "src/MedReminder.UI/Program.cs") continue;
+            foreach (var (line, text) in FindViolations(File.ReadAllText(file), pattern))
+            {
+                violations.Add($"{relative}:{line}: {text}");
+            }
+        }
+
+        violations.Should().BeEmpty(
+            "installation settings go through the use cases that record them in the household " +
+            "(ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §4.3)");
+    }
+
     [Fact]
     public void Allow_list_entries_point_to_existing_files()
     {

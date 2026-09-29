@@ -171,6 +171,7 @@ is used.
 | `SyncConflict` (`SyncConflicts`) | Local conflict list, §4.5 cases only (B.1 Phase 3b) | `Kind`, `SubjectId`, `Register`, winning / losing value and device |
 | `SyncPeer` (`SyncPeers`) | Sync progress per device of the group (B.1 Phase 3c) | `DeviceId`, `Generation`, `Seq` (applied, or published for this device), checkpoint counters |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
+| `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
@@ -223,7 +224,10 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
 - **`NotificationCycle`** — decides whether a low-stock warning is
   due: inside `ThresholdDays`, not suppressed by `EndDate` (therapy
   ending before run-out), and no successful `NotificationEvent` on the
-  current `StockEpoch`.
+  current `StockEpoch`. `EmailAlreadySent` tells whether any device of
+  the sync group already emailed for the current epoch
+  (`SentEmailNotification`): the monitor then leaves the email channel
+  out and still shows its toast.
 - **`SuspensionState`** — whether a date falls in a suspension.
 - **`LedgerDeriver`** (`Domain/Ledger`, B.1 Phase 2c) — derives a
   medicine's ledger and `StockEpoch` from its facts (stock entries,
@@ -390,6 +394,9 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   localization\strings.<lang>.json   optional user overrides of the UI dictionaries
   logs\medreminder-<date>.log    Serilog, daily files
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
+  household\
+    household.db                 household operation log and registers (household feature, step H2)
+    household.settings.json      household id, device id, generation
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
@@ -411,8 +418,32 @@ root is committed to the repository.
   PIN (PBKDF2, 100 000 iterations, per-profile salt).
 - **Roles**: `User` manages its own medicines and recipient address;
   `Admin` also manages SMTP, backup and the profile registry. The role
-  is enforced by the UI only: anyone with file-system access can edit
-  `profiles.json`. Unknown role values deserialize to `User`.
+  is enforced by the UI and the use cases only: anyone with file-system
+  access can edit `profiles.json`. Unknown role values deserialize to
+  `User`. An admin changes the role of another profile
+  (`ChangeProfileRole`); the open profile's role cannot change and one
+  admin always remains.
+- **Household** (step H2 of the household feature): profile creation,
+  rename, role, PIN and deletion go through use cases that also record
+  the change in `household\household.db` (`HouseholdLog`: HLC-stamped
+  operations and last-writer-wins registers). At start,
+  `ReconcileHousehold` records what `profiles.json` holds and the
+  household does not (the first-run wizard, the V1 migration, hand
+  edits); a profile missing from the file is never recorded as
+  removed. Until the household is replicated (step H3) the log is only
+  local.
+- **Installation settings** (step H2b): the SMTP transport and
+  password, the scheduled cloud backup policy (enabled, retention,
+  provider account) and the reference country are household settings,
+  written by `UpdateSmtpSettings`, `UpdateBackupSettings` and
+  `UpdateGeneralSettings` through `IInstallationSettingsStore` and
+  recorded as `HouseholdSettingChanged`. The SMTP password is recorded
+  protected with the local credential protector (DPAPI), never in
+  clear. The backup folders, the local raw backup, the language and the
+  update check stay device settings. The reference country is changed
+  by an administrator only. The start-up reconciliation also records
+  settings changed outside the use cases (an import restores the
+  files).
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).
@@ -531,7 +562,8 @@ start:
    whose absence triggers the re-freeze (`LedgerFreeze`, also applied
    to every import); then the B.1 Phase 2d patch: `FactRetractions`,
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
-   `NotificationEvents.EpochFactId`; then `SyncOperations` with its two
+   `NotificationEvents.EpochFactId`; then `SentEmailNotifications`
+   (household step H1); then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);
    then `SyncPeers` (B.1 Phase 3c).
@@ -784,7 +816,3 @@ Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:
   release stay as they are; only new days follow the corrected rules.
 - **`IStockMovementRepository.GetLastConsumptionDayAsync`** is no
   longer used by production code (only by `RoundTripTests`).
-- **Sync join during a lagging listing.** A device that joins while
-  the cloud listing lags behind another device's compaction ends in
-  `RebuildRequired`; *Rebuild from the group* repairs it
-  ([`analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md)).

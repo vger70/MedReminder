@@ -4,7 +4,7 @@ using MedReminder.Domain.Stock;
 
 namespace MedReminder.Domain.Sync;
 
-// Operation catalogue, schema versions 1 to 3 (B.1 Phase 3a,
+// Operation catalogue, schema versions 1 to 4 (B.1 Phase 3a,
 // docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §4.2, §7.2). One operation
 // per user fact or per changed register, never a derived row:
 // consumption, count corrections, StockEpoch and the schedule summary on
@@ -145,6 +145,16 @@ public sealed record FactRetracted(
 public sealed record MedicineDeleted(
     Guid MedicineId,
     DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+
+// A low-stock email sent for a stock epoch of the medicine (operation
+// schema version 4): the other devices of the group do not send it again
+// for that epoch. A fact, never retracted.
+public sealed record EmailNotificationSent(
+    Guid MedicineId,
+    Guid NotificationId,
+    int StockEpoch,
+    Guid? EpochFactId,
+    DateTimeOffset SentAt) : SyncOperationBody(MedicineId);
 
 // A replicated setting of the profile (operation schema version 3,
 // closing P8 of docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §2, §4.2):

@@ -180,7 +180,9 @@ médicament.
   avant.
 - Le **pays de référence** se choisit dans *Paramètres → Général →
   Pays de référence*. Par défaut : Italie ; un changement prend
-  effet à la prochaine ouverture du formulaire de médicament.
+  effet à la prochaine ouverture du formulaire de médicament. Le pays
+  vaut pour toute l'installation : seul un administrateur peut le
+  modifier.
 
 ### Médicaments en autorisation centralisée UE
 
@@ -508,10 +510,13 @@ des profils sont partagés et gérés par un profil
   l'onglet SMTP ni l'onglet Sauvegarde dans les Paramètres, et ne
   voit pas `Outils → Gérer les profils…`.
 
-Le rôle est choisi à la création du profil et **ne peut pas être
-modifié ensuite**. Si tu as besoin plus tard de changer le rôle
-d'un profil, la solution actuelle est de créer un nouveau profil
-avec le rôle voulu et d'y recopier les données.
+Le rôle est choisi à la création du profil. Un administrateur peut le
+changer ensuite : `Outils → Gérer les profils…`, sélectionne le
+profil, **Changer le rôle…**. Le rôle du profil ouvert ne peut pas
+être modifié : ouvre d'abord un autre profil administrateur. Il reste
+toujours au moins un administrateur. Avant de rendre administrateur un
+profil sans PIN, pense à en définir un : sinon toute personne devant
+le PC pourrait l'ouvrir.
 
 Le rôle est une barrière « douce » : quiconque a accès au système
 de fichiers peut modifier `profiles.json` à la main et devenir
@@ -1010,6 +1015,15 @@ ensuite.
    celles du groupe (une copie est conservée à côté de la base).
    MedReminder redémarre.
 
+Si la phrase secrète ouvre plus d'un groupe dans le dossier ou le compte
+(plusieurs profils synchronisés avec la même phrase secrète),
+MedReminder demande lequel rejoindre et affiche chaque groupe avec ses
+appareils.
+
+Avec OneDrive ou Google Drive, l'opération peut prendre jusqu'à une
+minute : MedReminder attend que le compte liste le nouveau PC, afin que
+les autres PC conservent les modifications dont il a encore besoin.
+
 ### Utilisation courante
 
 - MedReminder synchronise quelques secondes après chaque modification,
@@ -1028,6 +1042,10 @@ ensuite.
   modification sur un PC parvient aux autres, et un PC qui rejoint le
   groupe prend ceux du groupe. Pour renommer un autre profil
   synchronisé, ouvrez d'abord ce profil.
+- **E-mail** : chaque PC où l'e-mail est configuré (Paramètres → E-mail
+  SMTP) envoie ses propres messages de stock bas et au soignant ; avec
+  deux PC synchronisés, le même message arrive donc deux fois.
+  Configurez l'e-mail sur un seul PC du groupe.
 - **Désactiver la synchronisation…** arrête la synchronisation sur ce PC et
   conserve ses données.
 
