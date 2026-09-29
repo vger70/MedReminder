@@ -785,7 +785,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
             Location = new System.Drawing.Point(12, 52),
         };
-        changeButton.Click += (_, _) => ChangeMyPin();
+        changeButton.Click += async (_, _) => await ChangeMyPinAsync();
 
         group.Controls.Add(_pinStateLabel);
         group.Controls.Add(changeButton);
@@ -800,7 +800,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         return _loc.Get(stateKey);
     }
 
-    private void ChangeMyPin()
+    // Household step H2: through SetProfilePin, which records the PIN
+    // hash in the household.
+    private async Task ChangeMyPinAsync()
     {
         try
         {
@@ -808,9 +810,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
             using var dialog = new ChangePinDialog(_loc, hasPin);
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
-            _profileRegistry.SetPin(
-                _currentProfile.Id,
-                dialog.ClearPin ? null : dialog.NewPin);
+            if (_scopes is null) throw new InvalidOperationException("The settings dialog has no service scope.");
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<SetProfilePin>().ExecuteAsync(
+                    _currentProfile.Id, dialog.ClearPin ? null : dialog.NewPin, CancellationToken.None);
+            }
+            if (IsDisposed) return;
 
             _pinStateLabel.Text = FormatPinStateText();
             MessageBox.Show(this,

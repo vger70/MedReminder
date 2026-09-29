@@ -342,6 +342,40 @@ public sealed class ProfileRegistry : IProfileRegistry
         }
     }
 
+    public void SetRole(string id, ProfileRole role)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        lock (_sync)
+        {
+            var doc = LoadOrEmpty();
+            var entry = FindOrThrow(doc, id);
+            var target = RoleToString(role);
+            if (string.Equals(RoleToString(ParseRole(entry.Role)), target, StringComparison.Ordinal)) return;
+
+            // Invariant: at least one admin must remain (§2.2).
+            if (role != ProfileRole.Admin
+                && !doc.Profiles.Any(p => !string.Equals(p.Id, id, StringComparison.Ordinal) && StringEqualsAdmin(p.Role)))
+            {
+                throw new InvalidOperationException("Cannot demote the last admin profile.");
+            }
+
+            entry.Role = target;
+            Save(doc);
+        }
+    }
+
+    public ProfilePinHash? GetPinHash(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        lock (_sync)
+        {
+            var entry = FindOrThrow(LoadOrEmpty(), id);
+            return string.IsNullOrEmpty(entry.PinHash) || string.IsNullOrEmpty(entry.PinSalt) || entry.PinIterations <= 0
+                ? null
+                : new ProfilePinHash(entry.PinHash, entry.PinSalt, entry.PinIterations);
+        }
+    }
+
     public bool HasPin(string id)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);

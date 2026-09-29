@@ -342,6 +342,8 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         public void SetActiveProfileHint(string id) => throw new NotSupportedException();
         public void SetPin(string id, string? pin) => throw new NotSupportedException();
         public bool VerifyPin(string id, string pin) => throw new NotSupportedException();
+        public void SetRole(string id, ProfileRole role) => throw new NotSupportedException();
+        public ProfilePinHash? GetPinHash(string id) => null;
         public bool HasPin(string id) => false;
     }
 

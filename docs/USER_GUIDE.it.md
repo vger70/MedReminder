@@ -489,10 +489,13 @@ condivisi e gestiti da un profilo **amministratore**.
   né la scheda Backup nelle Impostazioni, e non vede
   `Strumenti → Gestisci profili…`.
 
-Il ruolo si sceglie alla creazione del profilo e **non può essere
-cambiato in seguito**. Se in futuro dovessi voler cambiare il ruolo
-a un profilo, la soluzione oggi è creare un nuovo profilo con il
-ruolo desiderato e copiarci sopra i dati.
+Il ruolo si sceglie alla creazione del profilo. Un amministratore può
+cambiarlo in seguito: `Strumenti → Gestisci profili…`, seleziona il
+profilo, **Cambia ruolo…**. Il ruolo del profilo aperto non può
+essere cambiato: apri prima un altro profilo amministratore. Resta
+sempre almeno un amministratore. Prima di rendere amministratore un
+profilo senza PIN, valuta di impostarne uno: altrimenti chiunque al
+PC potrebbe aprirlo.
 
 Il ruolo è una barriera "soft": chi ha accesso al filesystem può
 modificare `profiles.json` a mano e diventare amministratore.

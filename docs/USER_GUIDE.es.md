@@ -503,10 +503,13 @@ un perfil **administrador**.
   pestaña SMTP ni la pestaña Copia de seguridad en Ajustes, y no
   ve `Herramientas → Gestionar perfiles…`.
 
-El rol se elige al crear el perfil y **no se puede cambiar
-después**. Si en el futuro necesitas cambiar el rol de un perfil,
-la solución actual es crear un perfil nuevo con el rol deseado y
-copiar los datos.
+El rol se elige al crear el perfil. Un administrador puede cambiarlo
+después: `Herramientas → Gestionar perfiles…`, selecciona el perfil,
+**Cambiar rol…**. El rol del perfil abierto no se puede cambiar:
+abre primero otro perfil administrador. Siempre queda al menos un
+administrador. Antes de convertir en administrador un perfil sin
+PIN, considera configurar uno: de lo contrario, cualquiera en el PC
+podría abrirlo.
 
 El rol es una barrera «suave»: quien tiene acceso al sistema de
 archivos puede editar `profiles.json` a mano y hacerse

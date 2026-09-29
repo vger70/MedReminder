@@ -18,9 +18,14 @@ namespace MedReminder.UI.Forms;
 //    Switch profile first.
 //  - Delete is disabled for the last remaining admin (§14a G).
 //    Handled twice: the button is disabled AND the registry throws.
-//  - Role is set once at creation and never editable afterwards
-//    (§14a G, "immutable role"). The rename dialog does not touch
-//    Role; there is no promote/demote UI.
+//  - Household step H2 (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md
+//    §8) makes the role editable: Change role… for any profile but the
+//    open one (ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md D1), never leaving
+//    the installation without an admin; promoting a profile without a
+//    PIN warns (D2).
+//  - Every change goes through a use case (CreateProfile, RenameProfile,
+//    SetProfilePin, ChangeProfileRole, DeleteProfile), which records it
+//    in the household.
 //  - The optional "also delete data on disk" checkbox defaults to
 //    OFF (§13, "user deletes a profile by mistake" mitigation).
 internal sealed class ProfilesManagerForm : MedReminderFormBase
@@ -34,6 +39,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
     private Button _newButton = null!;
     private Button _renameButton = null!;
     private Button _pinButton = null!;
+    private Button _roleButton = null!;
     private Button _deleteButton = null!;
     private Label _hintLabel = null!;
     private readonly ToolTip _tooltips = new() { ShowAlways = true };
@@ -50,7 +56,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         _loc = loc;
 
         Text = _loc.Get("Ui.ProfilesManagerForm.Title");
-        Width = 640;
+        Width = 790;
         Height = 460;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -67,7 +73,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         var header = new Label
         {
             AutoSize = true,
-            MaximumSize = new System.Drawing.Size(600, 0),
+            MaximumSize = new System.Drawing.Size(740, 0),
             Location = new System.Drawing.Point(16, 12),
             Text = _loc.Get("Ui.ProfilesManagerForm.Header"),
         };
@@ -79,7 +85,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             HideSelection = false,
             MultiSelect = false,
             Location = new System.Drawing.Point(16, 44),
-            Size = new System.Drawing.Size(600, 300),
+            Size = new System.Drawing.Size(740, 300),
         };
         _list.Columns.Add(_loc.Get("Ui.ProfilesManagerForm.Column.Name"), 200);
         _list.Columns.Add(_loc.Get("Ui.ProfilesManagerForm.Column.Role"), 100);
@@ -109,25 +115,33 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             Width = 140,
             Height = 30,
         };
+        _roleButton = new Button
+        {
+            Text = _loc.Get("Ui.ProfilesManagerForm.ChangeRole"),
+            Location = new System.Drawing.Point(416, 360),
+            Width = 140,
+            Height = 30,
+        };
         _deleteButton = new Button
         {
             Text = _loc.Get("Ui.ProfilesManagerForm.Delete"),
-            Location = new System.Drawing.Point(416, 360),
-            Width = 100,
+            Location = new System.Drawing.Point(566, 360),
+            Width = 90,
             Height = 30,
         };
         var closeButton = new Button
         {
             Text = _loc.Get("Common.Close"),
             DialogResult = DialogResult.OK,
-            Location = new System.Drawing.Point(526, 360),
+            Location = new System.Drawing.Point(666, 360),
             Width = 90,
             Height = 30,
         };
-        _newButton.Click += (_, _) => AddNew();
+        _newButton.Click += async (_, _) => await AddNewAsync();
         _renameButton.Click += async (_, _) => await RenameSelectedAsync();
-        _pinButton.Click += (_, _) => ChangePinSelected();
-        _deleteButton.Click += (_, _) => DeleteSelected();
+        _pinButton.Click += async (_, _) => await ChangePinSelectedAsync();
+        _roleButton.Click += async (_, _) => await ChangeRoleSelectedAsync();
+        _deleteButton.Click += async (_, _) => await DeleteSelectedAsync();
         CancelButton = closeButton;
 
         _hintLabel = new Label
@@ -135,8 +149,8 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             AutoSize = true,
             Location = new System.Drawing.Point(16, 400),
             ForeColor = UiColors.Hint,
-            MaximumSize = new System.Drawing.Size(600, 0),
-            Text = _loc.Get("Ui.ProfilesManagerForm.Hint.ImmutableRole"),
+            MaximumSize = new System.Drawing.Size(740, 0),
+            Text = _loc.Get("Ui.ProfilesManagerForm.Hint.Role"),
         };
 
         Controls.Add(header);
@@ -144,6 +158,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         Controls.Add(_newButton);
         Controls.Add(_renameButton);
         Controls.Add(_pinButton);
+        Controls.Add(_roleButton);
         Controls.Add(_deleteButton);
         Controls.Add(closeButton);
         Controls.Add(_hintLabel);
@@ -152,6 +167,8 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             _loc.Get("Ui.ProfilesManagerForm.Tooltip.Delete"));
         _tooltips.SetToolTip(_pinButton,
             _loc.Get("Ui.ProfilesManagerForm.Tooltip.Pin"));
+        _tooltips.SetToolTip(_roleButton,
+            _loc.Get("Ui.ProfilesManagerForm.Tooltip.ChangeRole"));
     }
 
     private void Reload()
@@ -207,6 +224,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         if (selected is null)
         {
             _deleteButton.Enabled = false;
+            _roleButton.Enabled = false;
             return;
         }
 
@@ -217,6 +235,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         var isLastAdmin = selected.Role == ProfileRole.Admin && adminsCount <= 1;
 
         _deleteButton.Enabled = !isActive && !isLastAdmin;
+        _roleButton.Enabled = !isActive && !isLastAdmin;
     }
 
     private Profile? SelectedProfile() =>
@@ -228,22 +247,23 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
 
     // ---- New profile ----
 
-    private void AddNew()
+    private async Task AddNewAsync()
     {
         using var dialog = new NewProfileDialog(_loc);
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try
         {
-            var created = _registry.Create(dialog.ProfileName, dialog.SelectedRole);
-            if (!string.IsNullOrEmpty(dialog.OptionalPin))
+            await using (var scope = _scopes.CreateAsyncScope())
             {
-                _registry.SetPin(created.Id, dialog.OptionalPin);
+                await scope.ServiceProvider.GetRequiredService<CreateProfile>().ExecuteAsync(
+                    dialog.ProfileName, dialog.SelectedRole,
+                    string.IsNullOrEmpty(dialog.OptionalPin) ? null : dialog.OptionalPin, CancellationToken.None);
             }
-            Reload();
+            if (!IsDisposed) Reload();
         }
         catch (Exception ex)
         {
-            ShowError(ex);
+            if (!IsDisposed) ShowError(ex);
         }
     }
 
@@ -283,7 +303,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
 
     // ---- PIN change ----
 
-    private void ChangePinSelected()
+    private async Task ChangePinSelectedAsync()
     {
         var selected = SelectedProfile();
         if (selected is null) return;
@@ -291,18 +311,59 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try
         {
-            _registry.SetPin(selected.Id, dialog.ClearPin ? null : dialog.NewPin);
-            Reload();
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<SetProfilePin>().ExecuteAsync(
+                    selected.Id, dialog.ClearPin ? null : dialog.NewPin, CancellationToken.None);
+            }
+            if (!IsDisposed) Reload();
         }
         catch (Exception ex)
         {
-            ShowError(ex);
+            if (!IsDisposed) ShowError(ex);
+        }
+    }
+
+    // ---- Role change (household step H2) ----
+
+    private async Task ChangeRoleSelectedAsync()
+    {
+        var selected = SelectedProfile();
+        if (selected is null) return;
+        var promote = selected.Role != ProfileRole.Admin;
+        var text = promote
+            ? _loc.Get(selected.HasPin
+                ? "Ui.ProfilesManagerForm.Role.ConfirmPromote"
+                : "Ui.ProfilesManagerForm.Role.ConfirmPromoteNoPin", selected.DisplayName)
+            : _loc.Get("Ui.ProfilesManagerForm.Role.ConfirmDemote", selected.DisplayName);
+        if (MessageBox.Show(this, text, _loc.Get("Ui.ProfilesManagerForm.Role.Title"), MessageBoxButtons.YesNo,
+                promote && !selected.HasPin ? MessageBoxIcon.Warning : MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            return;
+        }
+        try
+        {
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<ChangeProfileRole>().ExecuteAsync(
+                    selected.Id, promote ? ProfileRole.Admin : ProfileRole.User, CancellationToken.None);
+            }
+            if (!IsDisposed) Reload();
+        }
+        catch (ProfileAdministrationException ex) when (!IsDisposed)
+        {
+            ShowRefusal(ex, "Ui.ProfilesManagerForm.Role.Title", "Ui.ProfilesManagerForm.Role.ActiveBlocked");
+        }
+        catch (Exception ex)
+        {
+            if (!IsDisposed) ShowError(ex);
         }
     }
 
     // ---- Delete ----
 
-    private void DeleteSelected()
+    private async Task DeleteSelectedAsync()
     {
         var selected = SelectedProfile();
         if (selected is null) return;
@@ -321,13 +382,33 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
 
         try
         {
-            _registry.Delete(selected.Id, deleteData: dialog.AlsoDeleteData);
-            Reload();
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<DeleteProfile>().ExecuteAsync(
+                    selected.Id, dialog.AlsoDeleteData, CancellationToken.None);
+            }
+            if (!IsDisposed) Reload();
+        }
+        catch (ProfileAdministrationException ex) when (!IsDisposed)
+        {
+            ShowRefusal(ex, "Ui.ProfilesManagerForm.Delete.Title", "Ui.ProfilesManagerForm.Delete.ActiveBlocked");
         }
         catch (Exception ex)
         {
-            ShowError(ex);
+            if (!IsDisposed) ShowError(ex);
         }
+    }
+
+    // A refusal of a use case, in the words of the form.
+    private void ShowRefusal(ProfileAdministrationException ex, string titleKey, string activeKey)
+    {
+        var message = ex.Error switch
+        {
+            ProfileAdministrationError.ActiveProfile => _loc.Get(activeKey),
+            ProfileAdministrationError.LastAdmin => _loc.Get("Ui.ProfilesManagerForm.Role.LastAdmin"),
+            _ => ex.Message,
+        };
+        MessageBox.Show(this, message, _loc.Get(titleKey), MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 
     private void ShowError(Exception ex) =>

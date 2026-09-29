@@ -508,10 +508,13 @@ des profils sont partagés et gérés par un profil
   l'onglet SMTP ni l'onglet Sauvegarde dans les Paramètres, et ne
   voit pas `Outils → Gérer les profils…`.
 
-Le rôle est choisi à la création du profil et **ne peut pas être
-modifié ensuite**. Si tu as besoin plus tard de changer le rôle
-d'un profil, la solution actuelle est de créer un nouveau profil
-avec le rôle voulu et d'y recopier les données.
+Le rôle est choisi à la création du profil. Un administrateur peut le
+changer ensuite : `Outils → Gérer les profils…`, sélectionne le
+profil, **Changer le rôle…**. Le rôle du profil ouvert ne peut pas
+être modifié : ouvre d'abord un autre profil administrateur. Il reste
+toujours au moins un administrateur. Avant de rendre administrateur un
+profil sans PIN, pense à en définir un : sinon toute personne devant
+le PC pourrait l'ouvrir.
 
 Le rôle est une barrière « douce » : quiconque a accès au système
 de fichiers peut modifier `profiles.json` à la main et devenir
