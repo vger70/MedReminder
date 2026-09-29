@@ -38,7 +38,6 @@ for a in soup.find_all("a", href=True):
     if (
         "confezioni_fornitura.csv" in href
         or "PA_confezioni.csv" in href
-        or "atc.csv" in href
     ):
         csv_links.append(urljoin(PAGE_URL, href))
 
