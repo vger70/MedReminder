@@ -548,7 +548,8 @@ What this confirms:
   long at most (`WriteGate`).
 - The next start recognises the stored label and downloads nothing.
 
-Still to check: the Windows test suites (`MedReminder.Infrastructure.Tests`,
-`MedReminder.UI.Tests`), an empty `catalogue\staging\` after the run,
-and a backup restore or archive import started within the first minute
-after launch (connection-lifetime fix, §11.1).
+The Windows test suites (`MedReminder.Infrastructure.Tests`,
+`MedReminder.UI.Tests`) pass (product owner, 2026-09-29). Not yet
+checked by hand: an empty `catalogue\staging\` after the run, and a
+backup restore or archive import started within the first minute after
+launch (connection-lifetime fix, §11.1).
