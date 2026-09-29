@@ -12,8 +12,10 @@ using Xunit;
 
 namespace MedReminder.Application.Tests.Catalogue;
 
-// Orchestration of the remote AIFA feed with a fake transport and a
-// fake importer: version decision, verification, staging cleanup.
+// Orchestration of a remote catalogue feed with a fake transport and a
+// fake importer: version decision, verification, staging cleanup. The
+// AIFA cases run on the Italian descriptor; the per-descriptor cases
+// check that country, entries and caps follow the feed.
 public sealed class RemoteCatalogueRefresherTests : IDisposable
 {
     private readonly string _appData = Path.Combine(
@@ -37,7 +39,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
         var refresher = Build(feed, importer);
 
-        var outcome = await refresher.RunAsync(CancellationToken.None);
+        var outcome = await refresher.RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
         importer.Imports.Should().ContainSingle();
@@ -52,7 +54,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(Manifest("202610"), archive);
         var importer = new FakeImporter(new CatalogueImportState(null, 0));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
         importer.Imports.Single().MinimumRowCount.Should().Be(1);
@@ -67,7 +69,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(manifest, archive);
         var importer = new FakeImporter(new CatalogueImportState("202610+20261002T030000Z", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
         importer.Imports.Single().Version.Should().Be("202610+20261005T030012Z");
@@ -81,7 +83,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(manifest, archive);
         var importer = new FakeImporter(new CatalogueImportState("202610", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
     }
@@ -97,7 +99,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(manifest, archive);
         var importer = new FakeImporter(new CatalogueImportState("202610+20261002T030000Z", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.UpToDate);
         feed.Downloads.Should().Be(0);
@@ -125,22 +127,9 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(Manifest("202610"), BuildArchive());
         var importer = new FakeImporter(new CatalogueImportState(local, 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.UpToDate);
-        feed.Downloads.Should().Be(0);
-        importer.Imports.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task Ignores_a_manifest_published_for_another_country()
-    {
-        var feed = new FakeFeed(Manifest("202610") with { Country = "FR" }, BuildArchive());
-        var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
-
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
-
-        outcome.Should().Be(RemoteCatalogueRefreshOutcome.Rejected);
         feed.Downloads.Should().Be(0);
         importer.Imports.Should().BeEmpty();
     }
@@ -151,7 +140,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(Manifest("202610") with { Country = "IT" }, BuildArchive());
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
     }
@@ -162,7 +151,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(manifest: null, BuildArchive());
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.ManifestUnavailable);
         importer.Imports.Should().BeEmpty();
@@ -175,7 +164,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(Manifest("202610", sha256: new string('0', 64)), archive);
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Rejected);
         importer.Imports.Should().BeEmpty();
@@ -189,7 +178,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(Manifest("202610", size: archive.Length + 1), archive);
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Rejected);
         importer.Imports.Should().BeEmpty();
@@ -202,7 +191,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(Manifest("202610"), archive);
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Rejected);
         importer.Imports.Should().BeEmpty();
@@ -214,7 +203,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(Manifest("202610"), Encoding.ASCII.GetBytes("<html>not a zip</html>"));
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Rejected);
         Directory.EnumerateFiles(Staging).Should().BeEmpty();
@@ -229,7 +218,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
             ImportFailure = new InvalidDataException("too few rows"),
         };
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Rejected);
         Directory.EnumerateFiles(Staging).Should().BeEmpty();
@@ -244,7 +233,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         };
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.Failed);
         Directory.EnumerateFiles(Staging).Should().BeEmpty();
@@ -270,7 +259,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         var feed = new FakeFeed(situation == "offline" ? null : Manifest("202610"), BuildArchive());
         var importer = new FakeImporter(new CatalogueImportState(situation == "up to date" ? "202610" : "202609", 1000));
 
-        await Build(feed, importer).RunAsync(CancellationToken.None);
+        await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         leftovers.Should().OnlyContain(path => !File.Exists(path));
     }
@@ -284,7 +273,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         };
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
 
-        var outcome = await Build(feed, importer).RunAsync(CancellationToken.None);
+        var outcome = await Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
 
         outcome.Should().Be(RemoteCatalogueRefreshOutcome.ManifestUnavailable);
         importer.Imports.Should().BeEmpty();
@@ -295,7 +284,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
     {
         var feed = new FakeFeed(Manifest("202610"), BuildArchive());
         var importer = new FakeImporter(new CatalogueImportState("202609", 1000)) { BlockImport = true };
-        var refresh = Build(feed, importer).RunAsync(CancellationToken.None);
+        var refresh = Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
         await importer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         var scope = new ApplicationTestScope();
@@ -328,7 +317,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         DeclareUncompressedSize(archive, 0x30000000u);
         using var stream = new MemoryStream(archive);
 
-        var act = () => RemoteCatalogueRefresher.ValidateArchive(stream);
+        var act = () => RemoteCatalogueRefresher.ValidateArchive(stream, CatalogueFeedDescriptor.Italy);
 
         act.Should().Throw<InvalidDataException>().WithMessage("*limit*");
     }
@@ -344,10 +333,82 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         }
         buffer.Position = 0;
 
-        var act = () => RemoteCatalogueRefresher.ValidateArchive(buffer);
+        var act = () => RemoteCatalogueRefresher.ValidateArchive(buffer, CatalogueFeedDescriptor.Italy);
 
         act.Should().NotThrow();
     }
+
+    public static TheoryData<string, string[]> FeedArchives() => new()
+    {
+        { "EU", ["ema-epar.csv"] },
+        { "ES", ["aemps.xlsx"] },
+        { "FR", ["CIS_bdpm.txt", "CIS_COMPO_bdpm.txt", "CIS_CIP_bdpm.txt"] },
+    };
+
+    [Theory]
+    [MemberData(nameof(FeedArchives))]
+    public async Task Imports_each_feed_into_its_own_country_under_its_own_archive_name(string country, string[] entries)
+    {
+        var feed = Descriptor(country);
+        var archive = BuildArchive(entries);
+        var client = new FakeFeed(Manifest(feed, "202610", Sha(archive), archive.Length), archive);
+        var importer = new FakeImporter(new CatalogueImportState("202609", 3000));
+
+        var outcome = await Build(client, importer).RunAsync(feed, CancellationToken.None);
+
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
+        client.Requests.Should().Equal(country);
+        client.DownloadPaths.Should().Equal($"{feed.Prefix}-202610.zip");
+        importer.StateRequests.Should().Equal(country);
+        importer.Imports.Should().Equal((country, "202610", 1500, archive.Length));
+        Directory.EnumerateFiles(Staging).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("EU", "aemps.xlsx")]
+    [InlineData("ES", "ema-epar.csv")]
+    [InlineData("FR", "CIS_bdpm.txt")]
+    [InlineData("IT", "confezioni_fornitura.csv")]
+    public async Task Rejects_an_archive_missing_an_entry_the_feed_requires(string country, string onlyEntry)
+    {
+        var feed = Descriptor(country);
+        var client = new FakeFeed(Manifest(feed, "202610"), BuildArchive(onlyEntry));
+        var importer = new FakeImporter(new CatalogueImportState("202609", 1000));
+
+        var outcome = await Build(client, importer).RunAsync(feed, CancellationToken.None);
+
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.Rejected);
+        importer.Imports.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("EU")]
+    [InlineData("ES")]
+    [InlineData("FR")]
+    public void ValidateArchive_applies_the_cap_of_the_feed(string country)
+    {
+        // 128 MB: within the Italian cap, above the 64 MB of the others.
+        var feed = Descriptor(country);
+        var archive = BuildArchive([.. feed.RequiredEntries]);
+        DeclareUncompressedSize(archive, 0x08000000u);
+
+        using (var stream = new MemoryStream(archive))
+        {
+            var act = () => RemoteCatalogueRefresher.ValidateArchive(stream, feed);
+            act.Should().Throw<InvalidDataException>().WithMessage("*limit*");
+        }
+
+        var italian = BuildArchive([.. CatalogueFeedDescriptor.Italy.RequiredEntries]);
+        DeclareUncompressedSize(italian, 0x08000000u);
+        using (var stream = new MemoryStream(italian))
+        {
+            var act = () => RemoteCatalogueRefresher.ValidateArchive(stream, CatalogueFeedDescriptor.Italy);
+            act.Should().NotThrow();
+        }
+    }
+
+    private static CatalogueFeedDescriptor Descriptor(string country) =>
+        CatalogueFeedDescriptor.All.Single(feed => feed.Country.Value == country);
 
     // Rewrites the uncompressed-size field (offset 24) of every central
     // directory header (signature PK\x01\x02).
@@ -366,7 +427,11 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         new(feed, importer, new FixedAppData(_appData), new CapturingLogger<RemoteCatalogueRefresher>());
 
     private static CatalogueFeedManifest Manifest(string version, string? sha256 = null, long? size = null) =>
-        new(version, $"aifa-{version}.zip", null, sha256, size);
+        Manifest(CatalogueFeedDescriptor.Italy, version, sha256, size);
+
+    private static CatalogueFeedManifest Manifest(
+        CatalogueFeedDescriptor feed, string version, string? sha256 = null, long? size = null) =>
+        new(version, feed.FileNameFor(version), null, sha256, size) { Country = feed.Country.Value };
 
     private static string Sha(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
 
@@ -379,6 +444,19 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
             if (includePa)
             {
                 Write(zip, "PA_confezioni.csv", "CODICE_AIC;PRINCIPIO_ATTIVO\n012345678;TEST\n");
+            }
+        }
+        return buffer.ToArray();
+    }
+
+    private static byte[] BuildArchive(params string[] entries)
+    {
+        using var buffer = new MemoryStream();
+        using (var zip = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var entry in entries)
+            {
+                Write(zip, entry, "content\n");
             }
         }
         return buffer.ToArray();
@@ -403,13 +481,21 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
 
         public Exception? ManifestFailure { get; init; }
 
-        public Task<CatalogueFeedManifest?> GetLatestAsync(CancellationToken cancellationToken) =>
-            ManifestFailure is null ? Task.FromResult(manifest) : Task.FromException<CatalogueFeedManifest?>(ManifestFailure);
+        public List<string> Requests { get; } = new();
+
+        public List<string> DownloadPaths { get; } = new();
+
+        public Task<CatalogueFeedManifest?> GetLatestAsync(CatalogueFeedDescriptor feed, CancellationToken cancellationToken)
+        {
+            Requests.Add(feed.Country.Value);
+            return ManifestFailure is null ? Task.FromResult(manifest) : Task.FromException<CatalogueFeedManifest?>(ManifestFailure);
+        }
 
         public async Task<CatalogueFeedDownload> DownloadAsync(
-            CatalogueFeedManifest m, string destinationPath, CancellationToken cancellationToken)
+            CatalogueFeedDescriptor feed, CatalogueFeedManifest m, string destinationPath, CancellationToken cancellationToken)
         {
             Downloads++;
+            DownloadPaths.Add(Path.GetFileName(destinationPath));
             var part = destinationPath + ".part";
             await File.WriteAllBytesAsync(part, payload, cancellationToken);
             if (DownloadFailure is not null)
@@ -458,7 +544,12 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
             return new ImportReport(1, 0, 0, 0, snapshotVersion, DateTimeOffset.UnixEpoch);
         }
 
-        public Task<CatalogueImportState> GetImportStateAsync(CountryCode country, CancellationToken cancellationToken) =>
-            Task.FromResult(state);
+        public List<string> StateRequests { get; } = new();
+
+        public Task<CatalogueImportState> GetImportStateAsync(CountryCode country, CancellationToken cancellationToken)
+        {
+            StateRequests.Add(country.Value);
+            return Task.FromResult(state);
+        }
     }
 }

@@ -8,15 +8,16 @@ using Microsoft.Extensions.Options;
 
 namespace MedReminder.Infrastructure.Catalogue;
 
-// ICatalogueFeedClient over the raw files the download_aifa workflow
-// commits to data/ (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md
-// §4.2, §5.3).
+// ICatalogueFeedClient over the raw files the download workflows commit
+// to data/<country>/ (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md
+// §4.2, §5.3; ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §5).
 //
 //   * HTTPS only (plain HTTP is accepted for a loopback host, for a
 //     local test server). Redirects are not followed, so the response
 //     always comes from the configured host.
-//   * The manifest is capped at 4 KB; the archive at MaxDownloadBytes,
-//     checked against Content-Length and again while streaming.
+//   * The manifest is capped at 4 KB; the archive at the feed's
+//     MaxDownloadBytes, checked against Content-Length and again while
+//     streaming.
 //   * The archive is written to `<destination>.part`, hashed while
 //     written, and renamed once complete.
 //
@@ -67,12 +68,15 @@ public sealed class GitHubRawCatalogueFeedClient : ICatalogueFeedClient, IDispos
         _ownsClient = ownsClient;
     }
 
-    public async Task<CatalogueFeedManifest?> GetLatestAsync(CancellationToken cancellationToken)
+    public async Task<CatalogueFeedManifest?> GetLatestAsync(
+        CatalogueFeedDescriptor feed, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(feed);
+
         var options = _options.CurrentValue;
-        if (!TryBuildUri(options.ManifestUrl, out var uri))
+        if (!TryBuildUri(options.ManifestUrlFor(feed), out var uri))
         {
-            _log.LogWarning("Remote AIFA feed: the manifest URL is not an absolute HTTPS URL.");
+            _log.LogWarning("Remote catalogue feed {Country}: the manifest URL is not an absolute HTTPS URL.", feed.Country.Value);
             return null;
         }
 
@@ -84,25 +88,26 @@ public sealed class GitHubRawCatalogueFeedClient : ICatalogueFeedClient, IDispos
             if (!response.IsSuccessStatusCode)
             {
                 _log.LogInformation(
-                    "Remote AIFA feed: manifest request answered HTTP {Status}.", (int)response.StatusCode);
+                    "Remote catalogue feed {Country}: manifest request answered HTTP {Status}.",
+                    feed.Country.Value, (int)response.StatusCode);
                 return null;
             }
             if (response.Content.Headers.ContentLength > MaxManifestBytes)
             {
-                _log.LogWarning("Remote AIFA feed: the manifest exceeds {Limit} bytes.", MaxManifestBytes);
+                _log.LogWarning("Remote catalogue feed {Country}: the manifest exceeds {Limit} bytes.", feed.Country.Value, MaxManifestBytes);
                 return null;
             }
 
             var bytes = await ReadCappedAsync(response.Content, MaxManifestBytes, timeout.Token);
             if (bytes is null)
             {
-                _log.LogWarning("Remote AIFA feed: the manifest exceeds {Limit} bytes.", MaxManifestBytes);
+                _log.LogWarning("Remote catalogue feed {Country}: the manifest exceeds {Limit} bytes.", feed.Country.Value, MaxManifestBytes);
                 return null;
             }
 
-            if (!CatalogueFeedManifestParser.TryParse(Encoding.UTF8.GetString(bytes), out var manifest, out var error))
+            if (!CatalogueFeedManifestParser.TryParse(Encoding.UTF8.GetString(bytes), feed, out var manifest, out var error))
             {
-                _log.LogWarning("Remote AIFA feed: {Error}", error);
+                _log.LogWarning("Remote catalogue feed {Country}: {Error}", feed.Country.Value, error);
                 return null;
             }
             return manifest;
@@ -113,41 +118,46 @@ public sealed class GitHubRawCatalogueFeedClient : ICatalogueFeedClient, IDispos
         }
         catch (OperationCanceledException)
         {
-            _log.LogInformation("Remote AIFA feed: the manifest request timed out.");
+            _log.LogInformation("Remote catalogue feed {Country}: the manifest request timed out.", feed.Country.Value);
             return null;
         }
         catch (HttpRequestException ex)
         {
-            _log.LogInformation("Remote AIFA feed: network error reading the manifest: {Message}", ex.Message);
+            _log.LogInformation(
+                "Remote catalogue feed {Country}: network error reading the manifest: {Message}",
+                feed.Country.Value, ex.Message);
             return null;
         }
         catch (IOException ex)
         {
             // HttpIOException and friends: the connection dropped while
             // the body was being read.
-            _log.LogInformation("Remote AIFA feed: the manifest body could not be read: {Message}", ex.Message);
+            _log.LogInformation(
+                "Remote catalogue feed {Country}: the manifest body could not be read: {Message}",
+                feed.Country.Value, ex.Message);
             return null;
         }
     }
 
     public async Task<CatalogueFeedDownload> DownloadAsync(
+        CatalogueFeedDescriptor feed,
         CatalogueFeedManifest manifest,
         string destinationPath,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(feed);
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
 
         var options = _options.CurrentValue;
         // Version is validated as six digits by the manifest parser, so
         // the substitution cannot inject a path or query.
-        var url = options.SnapshotUrlTemplate.Replace("{version}", manifest.Version, StringComparison.Ordinal);
-        if (!TryBuildUri(url, out var uri))
+        if (!TryBuildUri(options.SnapshotUrlFor(feed, manifest.Version), out var uri))
         {
-            throw new InvalidOperationException("The snapshot URL template is not an absolute HTTPS URL.");
+            throw new InvalidOperationException("The snapshot URL is not an absolute HTTPS URL.");
         }
 
-        var maxBytes = options.MaxDownloadBytes;
+        var maxBytes = options.MaxDownloadBytesFor(feed);
         var part = destinationPath + ".part";
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
