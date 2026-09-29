@@ -27,7 +27,7 @@ public sealed class CatalogueFeedOptions
     {
         ["IT"] = new() { Enabled = true, MaxDownloadBytes = 64 * MiB },
         ["EU"] = new() { Enabled = false, MaxDownloadBytes = 16 * MiB },
-        ["ES"] = new() { Enabled = false, MaxDownloadBytes = 16 * MiB },
+        ["ES"] = new() { Enabled = true, MaxDownloadBytes = 16 * MiB },
         ["FR"] = new() { Enabled = false, MaxDownloadBytes = 16 * MiB },
     };
 

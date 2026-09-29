@@ -29,10 +29,10 @@ public class CatalogueFeedSelectionTests
 
     [Theory]
     [InlineData("IT", "IT")]
-    [InlineData("ES", "")]
+    [InlineData("ES", "ES")]
     [InlineData("FR", "")]
     [InlineData("EU", "")]
-    public void The_shipped_defaults_enable_Italy_only(string reference, string expected)
+    public void The_defaults_enable_the_published_feeds(string reference, string expected)
     {
         var selected = CatalogueFeedSelection.Select(reference, new CatalogueFeedOptions());
 
