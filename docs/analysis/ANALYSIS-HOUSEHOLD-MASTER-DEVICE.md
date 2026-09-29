@@ -377,7 +377,8 @@ The device that creates the household records `MasterElected` +
    - summary of inherited settings (SMTP, cloud backup policy,
      reference country), editable;
    - device-bound steps: SMTP connection test; cloud-backup storage
-     sign-in on this device;
+     sign-in on this device; the cloud-backup passphrase, typed again
+     (D-18: it is not a household setting);
    - the profiles missing on this device are granted by the admin
      (key wrapped for this device, §4.4) and joined (C4, C7);
    - confirm → `MasterActivated`.
@@ -591,6 +592,16 @@ Branching (product owner, 2026-09-28):
 | H5 | Device removal at household level (§9) | H3 | 8–12 d |
 | H6 | Mobile: household creation and join on the phone, roles and PIN (B.1 Phase 5); phone as master with email (B.1 Phase 7); QR decode on the PC webcam | H3, H4, B.1 Phase 5 | inside B.1 Phases 5 and 7, plus 5–8 d |
 
+Step H3 is split into four PRs, each merged into
+`feature/master-slave` (plan of 2026-09-29):
+
+| Sub-step | Content |
+|---|---|
+| H3a | Household group on a storage: creation with the household passphrase, a dedicated engine (publish, pull in causal order, apply, device records) reusing the envelope and header of `SYNC-FORMAT.md`, the household image as the full operation log (no checkpoints: the log stays small, §5.5), projection of remote changes into `profiles.json` and the settings files, the SMTP password carried in clear only inside the encrypted segment |
+| H3b | Device key pairs, `ProfileKeyGranted` / `Revoked` / `Escrowed`, recovery key; adoption of existing profile groups (`HouseholdLinked`, profile operation schema 5) |
+| H3c | `mrpair2` offers with the profile selection; the join-installation use case (household, then each granted profile group, staged) |
+| H3d | UI: first-run choice and join wizard (§6), Devices → Add a device, household sync in the background service, Tools → Sync… admin-only |
+
 H0 and H1 can ship before any household code. H1 reduces, not
 removes, duplicate email in today's two-PC setups: two devices can
 still send before either sees the other's record; only the master
@@ -649,6 +660,7 @@ developer-days.
 | D-15 | After a device removal, remaining devices receive the new household key without typing it (§9 option B) | Yes, after H5 tests |
 | D-16 | Last step before merging `feature/master-slave` into `main` | **Decided 2026-09-28**: H5 (desktop complete); H6 follows with B.1 Phases 5 and 7 |
 | D-17 | H0 (join fixes, no format change) merged into `main` directly, then `main` into `feature/master-slave` | **Decided 2026-09-28**: yes |
+| D-18 | Cloud-backup passphrase: household secret or asked in the handover wizard | **Decided 2026-09-29**: asked in the handover wizard (§7.2); never replicated |
 
 ---
 
@@ -703,3 +715,4 @@ developer-days.
 | 3 | Setup wizard (§6); per-device profile keys (§4.4), because keys in the household state made the profile subset ineffective |
 | 4 | Review against the code: recovery key escrow (without it, losing every device lost the profiles, and the passphrase path of the wizard could not open any profile); offer file carries the profile keys (the new device has no public key when the code is made); one activation rule with clock margin; permission matrix aligned with today's gating (auto-start admin-only, update check open); forged-key residual risk; PIN hash brute force; H1 reduces duplicates, does not remove them |
 | 5 | Branching policy (§13): integration branch `feature/master-slave`; decisions D-16, D-17 |
+| 6 | D-18 (cloud-backup passphrase asked in the handover wizard); H3 split into H3a–H3d (§13) |
