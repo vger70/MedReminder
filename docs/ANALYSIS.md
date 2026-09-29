@@ -494,6 +494,12 @@ root is committed to the repository.
   dose checks by email only, and syncs again. On a device that is not the
   master, a prescription request offers the mail client only and the
   SMTP test is refused.
+- **Device removal** (step H5a, D-15 option A): an administrator removes
+  a device from the installation window; the household moves to a new
+  key, passphrase, recovery key and generation (`HouseholdSync.
+  RemoveDeviceAsync`), and each remaining device takes the new key with
+  the new passphrase or a code (`RekeyAsync`), carrying its own pending
+  operations over. `docs/SYNC-FORMAT.md` §9.3.
 - **First-run join** (step H3d-2): the first-run wizard offers "Join an
   existing installation…". The boot flow then builds a host it never
   starts, with a placeholder profile (`SetupProfile`,

@@ -1112,5 +1112,22 @@
   "Ui.HandoverWizard.Later": "Più tardi",
   "Ui.HandoverWizard.Done": "Confermato. Questo dispositivo diventa master quando il master attuale ha ceduto il ruolo. I nuovi profili compaiono al prossimo avvio.",
   "Ui.SettingsDialog.Email.NotMaster": "Le impostazioni sono salvate e arrivano a ogni dispositivo. Le email vengono inviate solo dal dispositivo master: verifica la connessione lì (Strumenti → Installazione indica quale dispositivo è).",
-  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Questo dispositivo non è il master, che invia le email dell'installazione: apri la richiesta nel programma di posta per inviarla da qui."
+  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Questo dispositivo non è il master, che invia le email dell'installazione: apri la richiesta nel programma di posta per inviarla da qui.",
+  "Ui.HouseholdDialog.RemoveDevice": "Rimuovi dispositivo…",
+  "Ui.HouseholdDialog.RemoveDevice.Confirm": "Rimuovere {0} dall'installazione? Conserva ciò che ha già ma non riceve più nulla di nuovo. L'installazione riceve una nuova chiave e una nuova passphrase: ogni altro dispositivo avrà bisogno, una volta, della nuova passphrase o di un codice mostrato da questo dispositivo.",
+  "Ui.HouseholdDialog.RemoveDevice.Title": "Nuova passphrase dell'installazione",
+  "Ui.HouseholdDialog.RemoveDevice.Hint": "Scegli una nuova passphrase per l'installazione. Il dispositivo rimosso non deve conoscerla. Riservala agli amministratori: aggiunge dispositivi e recupera i profili. Non può essere recuperata.",
+  "Ui.HouseholdDialog.RemoveDevice.Done": "Il dispositivo è stato rimosso. Gli altri dispositivi si fermano finché non ricevono la nuova chiave. Mostrare ora un codice da inserire su ciascuno di essi?",
+  "Ui.HouseholdDialog.Status.NewKey": "La chiave dell'installazione è stata cambiata su un altro dispositivo (un dispositivo è stato rimosso). Questo dispositivo non invia né riceve nulla finché un amministratore non inserisce la nuova chiave: Strumenti → Installazione → Inserisci la nuova chiave.",
+  "Ui.HouseholdDialog.Status.Removed": "Questo dispositivo è stato rimosso dall'installazione. Conserva i suoi dati ma non riceve nulla di nuovo.",
+  "Ui.HouseholdDialog.NewKey": "Inserisci la nuova chiave…",
+  "Ui.HouseholdDialog.NewKey.Heading": "Come vuoi inserire la nuova chiave?",
+  "Ui.HouseholdDialog.NewKey.Passphrase": "Con la nuova passphrase dell'installazione",
+  "Ui.HouseholdDialog.NewKey.PassphraseNote": "La passphrase scelta alla rimozione del dispositivo.",
+  "Ui.HouseholdDialog.NewKey.Code": "Con un codice",
+  "Ui.HouseholdDialog.NewKey.CodeNote": "Mostrato da un dispositivo che ha la nuova chiave: Strumenti → Installazione → Dispositivi → Aggiungi un dispositivo, oppure dopo una rimozione.",
+  "Ui.HouseholdDialog.NewKey.PassphraseHint": "Inserisci la nuova passphrase dell'installazione.",
+  "Ui.HouseholdDialog.NewKey.CodeHint": "Su ogni altro dispositivo apri Strumenti → Installazione → Inserisci la nuova chiave → Con un codice, poi inserisci questo codice.",
+  "Ui.HouseholdDialog.NewKey.Done": "Fatto: questo dispositivo sincronizza di nuovo l'installazione. Le modifiche fatte qui nel frattempo sono conservate.",
+  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "La passphrase non apre la nuova chiave dell'installazione."
 }

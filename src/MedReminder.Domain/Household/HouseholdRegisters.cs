@@ -53,6 +53,7 @@ public static class HouseholdRegisters
         ProfileKeyGranted g => [(GrantRegister(g.DeviceId), Wrapped(g.KeyVersion, g.GroupId, g.WrappedKey))],
         ProfileKeyRevoked r => [(GrantRegister(r.DeviceId), null)],
         ProfileKeyEscrowed e => [(Escrow, Wrapped(e.KeyVersion, e.GroupId, e.WrappedKey))],
+        DeviceRemoved => [(Removed, "true")],
         MasterElected m => [(Election, $"{m.ElectionId:N}:{m.DeviceId:N}:{m.Kind}")],
         MasterActivated a => [(Activation, $"{a.ElectionId:N}:{a.DeviceId:N}")],
         MasterReleased r => [(Release, r.ElectionId.ToString("N"))],
@@ -104,6 +105,7 @@ public static class HouseholdRegisters
             .GroupBy(v => (v.ProfileId, v.Register))
             .ToDictionary(g => g.Key, g => g.MaxBy(v => v.Version).Value);
         var devices = new Dictionary<Guid, string>();
+        var removed = new HashSet<Guid>();
         HouseholdWrappedKey? recovery = null;
         var escrows = new Dictionary<string, HouseholdWrappedKey>(StringComparer.Ordinal);
         var grants = new Dictionary<(string ProfileId, Guid DeviceId), HouseholdWrappedKey>();
@@ -114,6 +116,11 @@ public static class HouseholdRegisters
                 && Guid.TryParseExact(entity["device:".Length..], "N", out var device))
             {
                 devices[device] = value;
+            }
+            else if (entity.StartsWith("device:", StringComparison.Ordinal) && register == Removed
+                     && Guid.TryParseExact(entity["device:".Length..], "N", out var gone))
+            {
+                removed.Add(gone);
             }
             else if (entity == Recovery && register == PublicKey)
             {
@@ -130,7 +137,9 @@ public static class HouseholdRegisters
                 grants[(entity, grantee)] = grant;
             }
         }
-        return new HouseholdKeys(devices, recovery, escrows, grants);
+        // Step H5a: a removed device has no public key to grant to.
+        foreach (var gone in removed) devices.Remove(gone);
+        return new HouseholdKeys(devices, recovery, escrows, grants, removed);
     }
 
     // Step H4a: the master registers.
@@ -219,4 +228,9 @@ public sealed record HouseholdKeys(
     IReadOnlyDictionary<Guid, string> DevicePublicKeys,
     HouseholdWrappedKey? RecoveryPublicKey,
     IReadOnlyDictionary<string, HouseholdWrappedKey> Escrows,
-    IReadOnlyDictionary<(string ProfileId, Guid DeviceId), HouseholdWrappedKey> Grants);
+    IReadOnlyDictionary<(string ProfileId, Guid DeviceId), HouseholdWrappedKey> Grants,
+    // Step H5a.
+    IReadOnlySet<Guid>? RemovedDevices = null)
+{
+    public bool IsRemoved(Guid deviceId) => RemovedDevices?.Contains(deviceId) == true;
+}

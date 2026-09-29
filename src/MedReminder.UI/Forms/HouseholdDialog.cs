@@ -42,6 +42,9 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private readonly Button _join;
     private readonly Button _syncNow;
     private readonly Button _handover;
+    private readonly Button _newKey;
+    private readonly Button _removeDevice;
+    private bool _needsNewKey;
     private readonly Button _addDevice;
     private readonly Button _makeMaster;
     // Step H4a: device names from the last device list, for the master line.
@@ -84,8 +87,10 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         _syncNow = Action("Ui.SyncDialog.SyncNow", SyncNowAsync);
         _handover = Action("Ui.HouseholdDialog.Handover", HandoverAsync);
         _handover.Visible = false;
+        _newKey = Action("Ui.HouseholdDialog.NewKey", NewKeyAsync);
+        _newKey.Visible = false;
         var statusButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
-        statusButtons.Controls.AddRange([_syncNow, _handover, _publish, _join]);
+        statusButtons.Controls.AddRange([_syncNow, _newKey, _handover, _publish, _join]);
         statusPage.Controls.Add(_statusText);
         statusPage.Controls.Add(statusButtons);
 
@@ -105,6 +110,8 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         deviceButtons.Controls.Add(_addDevice);
         _makeMaster = Action("Ui.HouseholdDialog.MakeMaster", MakeMasterAsync);
         deviceButtons.Controls.Add(_makeMaster);
+        _removeDevice = Action("Ui.HouseholdDialog.RemoveDevice", RemoveDeviceAsync);
+        deviceButtons.Controls.Add(_removeDevice);
         _devices.SelectedIndexChanged += (_, _) => UpdateDeviceButtons();
         devicesPage.Controls.Add(_devices);
         devicesPage.Controls.Add(deviceButtons);
@@ -169,8 +176,11 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private Guid? SelectedDevice => _devices.SelectedItems.Count == 1 ? _devices.SelectedItems[0].Tag as Guid? : null;
 
     private void UpdateDeviceButtons()
-        => _makeMaster.Enabled = IsPublished && SelectedDevice is { } device
+    {
+        _makeMaster.Enabled = IsPublished && !_needsNewKey && SelectedDevice is { } device
             && _master?.Master.Election?.DeviceId != device;
+        _removeDevice.Enabled = IsPublished && !_needsNewKey && SelectedDevice is { } other && other != _identity?.DeviceId;
+    }
 
     private async Task RefreshStatusAsync()
     {
@@ -183,12 +193,23 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         _master = await scope.ServiceProvider.GetRequiredService<HouseholdMasterRole>().DescribeAsync(CancellationToken.None);
         var handover = _setup ? null
             : await scope.ServiceProvider.GetRequiredService<MasterHandover>().PendingAsync(CancellationToken.None);
+        try
+        {
+            _needsNewKey = !_setup
+                && await scope.ServiceProvider.GetRequiredService<HouseholdSync>().NeedsNewKeyAsync(CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            // Storage offline: the last run's outcome says it.
+            _needsNewKey = _household.LastResult?.NewKeyRequired == true;
+        }
         if (IsDisposed) return;
 
         _publish.Visible = !IsPublished && !_setup;
         _join.Visible = !IsPublished;
         _syncNow.Visible = IsPublished;
-        _handover.Visible = handover is not null;
+        _handover.Visible = handover is not null && !_needsNewKey;
+        _newKey.Visible = _needsNewKey;
         _addDevice.Enabled = IsPublished;
 
         var lines = new List<string>();
@@ -214,6 +235,8 @@ internal sealed class HouseholdDialog : MedReminderFormBase
                 lines.AddRange(result.Problems);
             }
             if (_household.LastError is { } error) lines.Add(_loc.Get("Ui.SyncDialog.Status.Error", error));
+            // Step H5a: a device was removed elsewhere.
+            if (_needsNewKey) lines.Add(_loc.Get("Ui.HouseholdDialog.Status.NewKey"));
             lines.Add(string.Empty);
             lines.Add(MasterLine(_master));
         }
@@ -251,6 +274,153 @@ internal sealed class HouseholdDialog : MedReminderFormBase
 
     private string NameOf(Guid device)
         => _deviceNames.TryGetValue(device, out var name) ? name : device.ToString("N")[..8];
+
+    // Step H5a (§9, D-15 option A): the removed device gets no new key; the
+    // administrator chooses the new installation passphrase, then may show
+    // a code the other devices take the new key with.
+    private async Task RemoveDeviceAsync()
+    {
+        if (SelectedDevice is not { } device || device == _identity?.DeviceId) return;
+        if (MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.RemoveDevice.Confirm", NameOf(device)),
+                _loc.Get("Ui.HouseholdDialog.RemoveDevice"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            return;
+        }
+        using var dialog = new SyncPassphraseDialog(_loc, confirm: true, defaultDeviceName: null,
+            "Ui.HouseholdDialog.RemoveDevice.Title", "Ui.HouseholdDialog.RemoveDevice.Hint");
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        var passphrase = dialog.TakePassphrase();
+        try
+        {
+            await _household.WhileIdleAsync(async () =>
+            {
+                await using var scope = _scopes.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<HouseholdSync>()
+                    .RemoveDeviceAsync(device, passphrase, _profile.Id, CancellationToken.None);
+                return true;
+            });
+        }
+        catch (Exception ex)
+        {
+            Error(ex.Message);
+            await RefreshAllAsync();
+            return;
+        }
+        finally
+        {
+            Array.Clear(passphrase);
+        }
+        await RefreshAllAsync();
+        if (MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.RemoveDevice.Done"), Text, MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information) == DialogResult.Yes)
+        {
+            await ShowNewKeyCodeAsync();
+        }
+    }
+
+    // A code with no profile: the devices that need the new key take it.
+    private async Task ShowNewKeyCodeAsync()
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        var offers = scope.ServiceProvider.GetRequiredService<HouseholdPairingOffers>();
+        HouseholdPairingOffer offer;
+        try
+        {
+            offer = await offers.StartAsync([], CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Error(ex.Message);
+            return;
+        }
+        try
+        {
+            using var dialog = new SyncPairingDialog(_loc, offer.Code.Text, offer.ExpiresAt, TimeProvider.System,
+                "Ui.HouseholdDialog.NewKey.CodeHint");
+            dialog.ShowDialog(this);
+        }
+        finally
+        {
+            Array.Clear(offer.Code.Secret);
+            try
+            {
+                await offers.EndAsync(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Error(_loc.Get("Ui.SyncDialog.Pair.EndFailed", ex.Message));
+            }
+        }
+    }
+
+    // Step H5a: the new key after a removal on another device.
+    private async Task NewKeyAsync()
+    {
+        var passphraseChoice = new TaskDialogCommandLinkButton(
+            _loc.Get("Ui.HouseholdDialog.NewKey.Passphrase"), _loc.Get("Ui.HouseholdDialog.NewKey.PassphraseNote"));
+        var codeChoice = new TaskDialogCommandLinkButton(
+            _loc.Get("Ui.HouseholdDialog.NewKey.Code"), _loc.Get("Ui.HouseholdDialog.NewKey.CodeNote"));
+        var page = new TaskDialogPage
+        {
+            Caption = Text,
+            Heading = _loc.Get("Ui.HouseholdDialog.NewKey.Heading"),
+            AllowCancel = true,
+        };
+        page.Buttons.Add(passphraseChoice);
+        page.Buttons.Add(codeChoice);
+        page.Buttons.Add(TaskDialogButton.Cancel);
+        var choice = TaskDialog.ShowDialog(this, page);
+
+        HouseholdKeySource source;
+        if (choice == passphraseChoice)
+        {
+            using var dialog = new SyncPassphraseDialog(_loc, confirm: false, defaultDeviceName: null,
+                "Ui.HouseholdDialog.NewKey", "Ui.HouseholdDialog.NewKey.PassphraseHint");
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+            source = new HouseholdKeySource.Passphrase(dialog.TakePassphrase());
+        }
+        else if (choice == codeChoice)
+        {
+            using var dialog = new SyncPairingCodeDialog(_loc, defaultDeviceName: null, household: true);
+            if (dialog.ShowDialog(this) != DialogResult.OK || dialog.HouseholdCode is not { } code) return;
+            source = new HouseholdKeySource.Code(code);
+        }
+        else
+        {
+            return;
+        }
+
+        try
+        {
+            await _household.WhileIdleAsync(async () =>
+            {
+                await using var scope = _scopes.CreateAsyncScope();
+                return await scope.ServiceProvider.GetRequiredService<HouseholdSync>().RekeyAsync(source, CancellationToken.None);
+            });
+            Info(_loc.Get("Ui.HouseholdDialog.NewKey.Done"));
+        }
+        catch (HouseholdDeviceRemovedException)
+        {
+            Error(_loc.Get("Ui.HouseholdDialog.Status.Removed"));
+        }
+        catch (Exception ex)
+        {
+            Error(ex switch
+            {
+                CryptographicException when source is HouseholdKeySource.Passphrase => _loc.Get("Ui.HouseholdDialog.NewKey.WrongPassphrase"),
+                SyncPairingExpiredException => _loc.Get("Ui.SyncDialog.PairingCode.Expired"),
+                CryptographicException => _loc.Get("Ui.SyncDialog.PairingCode.Rejected"),
+                _ => ex.Message,
+            });
+        }
+        finally
+        {
+            if (source is HouseholdKeySource.Passphrase p) Array.Clear(p.Value);
+            if (source is HouseholdKeySource.Code c) Array.Clear(c.Value.Secret);
+        }
+        await RefreshAllAsync();
+    }
 
     private async Task HandoverAsync()
     {

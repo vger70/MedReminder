@@ -1111,5 +1111,22 @@
   "Ui.HandoverWizard.Later": "Plus tard",
   "Ui.HandoverWizard.Done": "Confirmé. Cet appareil devient maître dès que le maître actuel a passé le relais. Les nouveaux profils apparaissent au prochain démarrage.",
   "Ui.SettingsDialog.Email.NotMaster": "Les paramètres sont enregistrés et atteignent chaque appareil. Seul l'appareil maître envoie les e-mails : testez la connexion sur celui-ci (Outils → Installation indique lequel).",
-  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Cet appareil n'est pas l'appareil maître, qui envoie les e-mails de l'installation : ouvrez la demande dans votre client de messagerie pour l'envoyer d'ici."
+  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Cet appareil n'est pas l'appareil maître, qui envoie les e-mails de l'installation : ouvrez la demande dans votre client de messagerie pour l'envoyer d'ici.",
+  "Ui.HouseholdDialog.RemoveDevice": "Retirer l'appareil…",
+  "Ui.HouseholdDialog.RemoveDevice.Confirm": "Retirer {0} de l'installation ? Il garde ce qu'il a déjà mais ne reçoit plus rien de nouveau. L'installation reçoit une nouvelle clé et une nouvelle phrase secrète : chaque autre appareil aura besoin, une fois, de la nouvelle phrase secrète ou d'un code affiché par cet appareil.",
+  "Ui.HouseholdDialog.RemoveDevice.Title": "Nouvelle phrase secrète de l'installation",
+  "Ui.HouseholdDialog.RemoveDevice.Hint": "Choisissez une nouvelle phrase secrète pour l'installation. L'appareil retiré ne doit pas la connaître. Réservez-la aux administrateurs : elle ajoute des appareils et récupère les profils. Elle ne peut pas être récupérée.",
+  "Ui.HouseholdDialog.RemoveDevice.Done": "L'appareil est retiré. Les autres appareils s'arrêtent jusqu'à ce qu'ils reçoivent la nouvelle clé. Afficher maintenant un code à saisir sur chacun d'eux ?",
+  "Ui.HouseholdDialog.Status.NewKey": "La clé de l'installation a été changée sur un autre appareil (un appareil a été retiré). Cet appareil n'envoie et ne reçoit rien tant qu'un administrateur n'a pas saisi la nouvelle clé : Outils → Installation → Saisir la nouvelle clé.",
+  "Ui.HouseholdDialog.Status.Removed": "Cet appareil a été retiré de l'installation. Il garde ses données mais ne reçoit plus rien de nouveau.",
+  "Ui.HouseholdDialog.NewKey": "Saisir la nouvelle clé…",
+  "Ui.HouseholdDialog.NewKey.Heading": "Comment voulez-vous saisir la nouvelle clé ?",
+  "Ui.HouseholdDialog.NewKey.Passphrase": "Avec la nouvelle phrase secrète de l'installation",
+  "Ui.HouseholdDialog.NewKey.PassphraseNote": "La phrase secrète choisie lors du retrait de l'appareil.",
+  "Ui.HouseholdDialog.NewKey.Code": "Avec un code",
+  "Ui.HouseholdDialog.NewKey.CodeNote": "Affiché par un appareil qui a la nouvelle clé : Outils → Installation → Appareils → Ajouter un appareil, ou après un retrait.",
+  "Ui.HouseholdDialog.NewKey.PassphraseHint": "Saisissez la nouvelle phrase secrète de l'installation.",
+  "Ui.HouseholdDialog.NewKey.CodeHint": "Sur chaque autre appareil, ouvrez Outils → Installation → Saisir la nouvelle clé → Avec un code, puis saisissez ce code.",
+  "Ui.HouseholdDialog.NewKey.Done": "Terminé : cet appareil synchronise à nouveau l'installation. Les modifications faites ici entre-temps sont conservées.",
+  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "La phrase secrète n'ouvre pas la nouvelle clé de l'installation."
 }

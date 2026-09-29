@@ -1111,5 +1111,22 @@
   "Ui.HandoverWizard.Later": "Später",
   "Ui.HandoverWizard.Done": "Bestätigt. Dieses Gerät wird Master, sobald der bisherige Master übergeben hat. Neue Profile erscheinen beim nächsten Start.",
   "Ui.SettingsDialog.Email.NotMaster": "Die Einstellungen sind gespeichert und erreichen jedes Gerät. E-Mails sendet nur das Master-Gerät: Testen Sie die Verbindung dort (Extras → Installation zeigt, welches Gerät es ist).",
-  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Dieses Gerät ist nicht das Master-Gerät, das die E-Mails der Installation sendet: Öffnen Sie die Anfrage in Ihrem E-Mail-Programm, um sie von hier zu senden."
+  "Ui.PrescriptionRequestDialog.Hint.NotMaster": "Dieses Gerät ist nicht das Master-Gerät, das die E-Mails der Installation sendet: Öffnen Sie die Anfrage in Ihrem E-Mail-Programm, um sie von hier zu senden.",
+  "Ui.HouseholdDialog.RemoveDevice": "Gerät entfernen…",
+  "Ui.HouseholdDialog.RemoveDevice.Confirm": "{0} aus der Installation entfernen? Es behält, was es schon hat, erhält aber nichts Neues. Die Installation erhält einen neuen Schlüssel und eine neue Passphrase: Jedes andere Gerät braucht einmal die neue Passphrase oder einen Code, den dieses Gerät anzeigt.",
+  "Ui.HouseholdDialog.RemoveDevice.Title": "Neue Passphrase der Installation",
+  "Ui.HouseholdDialog.RemoveDevice.Hint": "Wählen Sie eine neue Passphrase für die Installation. Das entfernte Gerät darf sie nicht kennen. Nur für Administratoren: Sie fügt Geräte hinzu und stellt Profile wieder her. Sie kann nicht wiederhergestellt werden.",
+  "Ui.HouseholdDialog.RemoveDevice.Done": "Das Gerät ist entfernt. Die anderen Geräte halten an, bis sie den neuen Schlüssel erhalten. Jetzt einen Code anzeigen, der auf jedem von ihnen eingegeben wird?",
+  "Ui.HouseholdDialog.Status.NewKey": "Der Schlüssel der Installation wurde auf einem anderen Gerät geändert (ein Gerät wurde entfernt). Dieses Gerät sendet und empfängt nichts, bis ein Administrator den neuen Schlüssel eingibt: Extras → Installation → Neuen Schlüssel eingeben.",
+  "Ui.HouseholdDialog.Status.Removed": "Dieses Gerät wurde aus der Installation entfernt. Es behält seine Daten, erhält aber nichts Neues.",
+  "Ui.HouseholdDialog.NewKey": "Neuen Schlüssel eingeben…",
+  "Ui.HouseholdDialog.NewKey.Heading": "Wie möchten Sie den neuen Schlüssel eingeben?",
+  "Ui.HouseholdDialog.NewKey.Passphrase": "Mit der neuen Passphrase der Installation",
+  "Ui.HouseholdDialog.NewKey.PassphraseNote": "Die beim Entfernen des Geräts gewählte Passphrase.",
+  "Ui.HouseholdDialog.NewKey.Code": "Mit einem Code",
+  "Ui.HouseholdDialog.NewKey.CodeNote": "Angezeigt von einem Gerät mit dem neuen Schlüssel: Extras → Installation → Geräte → Gerät hinzufügen, oder nach einem Entfernen.",
+  "Ui.HouseholdDialog.NewKey.PassphraseHint": "Geben Sie die neue Passphrase der Installation ein.",
+  "Ui.HouseholdDialog.NewKey.CodeHint": "Öffnen Sie auf jedem anderen Gerät Extras → Installation → Neuen Schlüssel eingeben → Mit einem Code und geben Sie diesen Code ein.",
+  "Ui.HouseholdDialog.NewKey.Done": "Fertig: Dieses Gerät synchronisiert die Installation wieder. Zwischenzeitliche Änderungen hier bleiben erhalten.",
+  "Ui.HouseholdDialog.NewKey.WrongPassphrase": "Die Passphrase öffnet den neuen Schlüssel der Installation nicht."
 }

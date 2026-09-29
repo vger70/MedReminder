@@ -5,8 +5,9 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-29: revision 13 (§18 lists the revisions). Steps H0
-to H4b are implemented; H4c is in progress (§13).
+Status on 2026-09-29: revision 14 (§18 lists the revisions). Steps H0
+to H4 are implemented; H5a is in progress (§13). Manual tests:
+`docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`.
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 topics below, this document wins once approved. §16 lists the
@@ -500,16 +501,30 @@ An admin removes device D:
    recovery key.
 4. The remaining devices receive the new household key. Option A
    (as B.1 today): each asks for the new passphrase or a pairing code.
-   Option B (proposed): the removing device writes the new household
-   key wrapped for each remaining device's public key, in a file
-   outside the household envelope, so the others continue without
-   typing anything `[INFERRED — new file kind; the forged-key risk of
-   §4.4 applies]`. D-15.
+   Option B: the removing device writes the new household key wrapped
+   for each remaining device's public key, in a file outside the
+   household envelope, so the others continue without typing anything.
+   Correction of revision 13: such a file must be signed, because
+   anyone who can write the storage, the removed device first, can wrap
+   a key of its choice for a public key, and signed it still carries the
+   forged-key risk of §4.4. D-15 chose option A (2026-09-29).
 5. The profile-group wraps of the new keys (`key.<n>.wrap`) use a
    random passphrase never shown; recovery goes through the recovery
    key (§4.4).
 
 Removing the master is a removal plus a takeover (§7.3).
+
+As built (step H5a): `DeviceRemoved(deviceId)` and the revocation of
+its grants, a new recovery key pair and the escrows of the profiles the
+removing device holds, then `key.<v+1>.wrap`, `recovery.<v+1>.wrap` and
+the genesis of generation g+1 (the whole log) sealed with the new key.
+A remaining device finds a newer key wrap, stops publishing and takes
+the new key with the new passphrase or a code (`mrpair2` without
+profiles); its own operations the genesis lacks are carried over. A
+removed device is refused when it tries. When the removed device was the
+active or elected master, the removing device takes over at once; when
+it was only elected, the master still active is elected again. Points 2,
+3 and 5 (profile group rotation) are step H5b.
 
 ---
 
@@ -591,7 +606,7 @@ Branching (product owner, 2026-09-28):
 | H2 | Household local store, projection, use cases for every installation setting, permission matrix (§4.3), role change and PIN as household state; single device, no storage | — | 10–15 d |
 | H3 | Household group on storage: create, pairing `mrpair2`, setup wizard (§6), profile subsets with per-device key grants and recovery escrow (§4.4), adoption of existing groups (§11), engine port (§5.5) | H1, H2 | 25–38 d |
 | H4 | Master: election, handover wizard, takeover, lease, email and cloud backup gated on master, all-profile monitoring, `mailto:` on non-master. Three PRs: H4a (master state, election, activation rule, lease, gating of email and cloud backup, Make master in the installation window, activation without wizard); H4b (handover wizard before activation, takeover wording, cloud-backup passphrase, grants of missing profiles); H4c (all-profile monitoring, `mailto:` and SMTP test on non-master) | H3 | 15–25 d |
-| H5 | Device removal at household level (§9) | H3 | 8–12 d |
+| H5 | Device removal at household level (§9). Two PRs: H5a (household key, passphrase, recovery key and generation; option A for the remaining devices; master takeover); H5b (rotation of the profile groups the removed device held, new keys granted and escrowed, adopted by the remaining devices from their grants) | H3 | 8–12 d |
 | H6 | Mobile: household creation and join on the phone, roles and PIN (B.1 Phase 5); phone as master with email (B.1 Phase 7); QR decode on the PC webcam | H3, H4, B.1 Phase 5 | inside B.1 Phases 5 and 7, plus 5–8 d |
 
 Step H3 is split into four PRs, each merged into
@@ -659,7 +674,7 @@ developer-days.
 | D-12 | Profiles for a new device chosen by the admin when creating the pairing code; no admin PIN on the new device on that path (§6.2) | Yes |
 | D-13 | Recovery key escrow: the household passphrase opens every profile and is an admin secret (§4.4) | Yes: otherwise losing the devices loses the data |
 | D-14 | Reference country becomes household-wide and admin-only (§4.3) | Yes |
-| D-15 | After a device removal, remaining devices receive the new household key without typing it (§9 option B) | Yes, after H5 tests |
+| D-15 | After a device removal, remaining devices receive the new household key without typing it (§9 option B) | **Decided 2026-09-29**: option A (§9 point 4): each remaining device takes the new key with the new passphrase or a code. Option B needs a signed key file (an unsigned one can be forged by the removed device itself, which knows the old key and every public key) and still carries the residual risk of §4.4; later, with fingerprint confirmation |
 | D-16 | Last step before merging `feature/master-slave` into `main` | **Decided 2026-09-28**: H5 (desktop complete); H6 follows with B.1 Phases 5 and 7 |
 | D-17 | H0 (join fixes, no format change) merged into `main` directly, then `main` into `feature/master-slave` | **Decided 2026-09-28**: yes |
 | D-18 | Cloud-backup passphrase: household secret or asked in the handover wizard | **Decided 2026-09-29**: asked in the handover wizard (§7.2); never replicated |
@@ -725,3 +740,4 @@ developer-days.
 | 11 | H4 split into H4a–H4c (§13). `MasterActivated` carries the device id; `MasterReleased` added (§5.2): the first activation condition of §7.4 is the outgoing master's explicit release instead of its applied vector, which does not say in which segment the election travelled. A household with no election (never published, or published before H4) keeps every device sending; the device that publishes elects itself (`Creation`). Until H4b the elected device activates without the handover wizard |
 | 12 | H4b as built: the election itself grants the elected device the profiles the electing device holds (§4.4 point 5); the wizard recovers the others with the household passphrase. The inherited settings are shown in the wizard and edited in Settings as usual, not in the wizard. The confirmation is local to the elected device (`ConfirmedElection`), not a household operation. Electing the active master again needs no wizard (§7.2: nothing bound to it changes). A takeover is the election made while the current master has not been seen for longer than the lease; it changes the wording only (§7.3) |
 | 13 | H4c as built: the master checks the profiles that are not open by email only (an on-screen reminder for a profile nobody opened would reach the wrong person) and syncs each of them before and after, since a profile not open is not synced by its own service. Sync problems of those profiles are logged; they are repaired from the sync window when the profile is opened. The SMTP tab stays editable on every device (R6); the test is refused on a device that is not the master |
+| 14 | D-15 decided: option A. Correction to §9 point 4: option B needs a signed key file. H5 split into H5a and H5b (§13); §9 records what H5a builds |

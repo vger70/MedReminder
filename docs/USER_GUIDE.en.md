@@ -1012,6 +1012,14 @@ sends their email reminders to each profile's recipients. On the other
 devices, a prescription request opens in the mail client, and the email
 connection test is available on the master only.
 
+**Removing a device.** When a device is lost, sold or given away, select
+it in **Devices** and choose **Remove device…**, preferably on the
+master. You choose a new installation passphrase: the removed device
+keeps what it already has but receives nothing new. Every other device
+stops until an administrator opens **Tools → Installation… → Enter the
+new key…** on it and types the new passphrase, or a code the removing
+device shows. Changes made on those devices meanwhile are kept.
+
 On the new master, an administrator completes the handover: the window
 opens by itself, or from **Tools → Installation… → Complete the
 handover…**. It shows the installation's settings, tests the email

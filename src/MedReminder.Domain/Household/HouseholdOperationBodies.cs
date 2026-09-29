@@ -85,6 +85,14 @@ public sealed record ProfileKeyEscrowed(
     int KeyVersion,
     string WrappedKey) : HouseholdOperationBody(ProfileId);
 
+// Step H5a (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §9): a
+// device removed by an administrator. It keeps what it had, but receives
+// no new key: the household key and passphrase change with the removal,
+// and its grants are revoked. A removed device never comes back under the
+// same id.
+public sealed record DeviceRemoved(Guid DeviceId)
+    : HouseholdOperationBody(HouseholdRegisters.DeviceEntity(DeviceId));
+
 // Step H4a: the master device (docs/analysis/
 // ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §7). An administrator elects a device;
 // the elected device activates the election when the outgoing master has

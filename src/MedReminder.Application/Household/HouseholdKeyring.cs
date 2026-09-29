@@ -141,6 +141,30 @@ public sealed class HouseholdKeyring
                 HouseholdKeyWrap.GrantPurpose(group.GroupId, group.KeyVersion, deviceId)))], ct);
     }
 
+    // Step H5a: the escrow of every profile this device holds, for a new
+    // recovery public key (a removal changes the recovery key with the
+    // household passphrase). The caller records the operations.
+    public async Task<IReadOnlyList<HouseholdOperationBody>> EscrowAllAsync(string recoveryPublicKey,
+        CancellationToken cancellationToken)
+    {
+        var operations = new List<HouseholdOperationBody>();
+        foreach (var profile in await _household.ProfilesAsync(cancellationToken))
+        {
+            if (_groupKeys.Load(profile.ProfileId) is not { } group) continue;
+            try
+            {
+                operations.Add(new ProfileKeyEscrowed(profile.ProfileId, group.GroupId, group.KeyVersion,
+                    HouseholdKeyWrap.Wrap(_cipher, recoveryPublicKey, group.Key,
+                        HouseholdKeyWrap.EscrowPurpose(group.GroupId, group.KeyVersion))));
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(group.Key);
+            }
+        }
+        return operations;
+    }
+
     public Task RevokeAsync(string profileId, Guid deviceId, CancellationToken cancellationToken)
         => _household.AppendAsync([new ProfileKeyRevoked(profileId, deviceId)], cancellationToken);
 

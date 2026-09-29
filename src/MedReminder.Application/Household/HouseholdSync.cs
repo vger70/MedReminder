@@ -14,7 +14,35 @@ public sealed record HouseholdSyncResult(
     int SegmentsApplied,
     int OperationsApplied,
     // Ids, counters and setting names only.
-    IReadOnlyList<string> Problems);
+    IReadOnlyList<string> Problems,
+    // Step H5a: the household key was changed (a device was removed); this
+    // device publishes nothing until it has the new key (RekeyAsync).
+    bool NewKeyRequired = false,
+    // Step H5a: this device was removed from the household.
+    bool Removed = false);
+
+// Step H5a: how a device that needs the new household key obtains it.
+public abstract record HouseholdKeySource
+{
+    private HouseholdKeySource()
+    {
+    }
+
+    // The caller zeroes the array after use.
+    public sealed record Passphrase(char[] Value) : HouseholdKeySource;
+
+    public sealed record Code(HouseholdPairingCode Value) : HouseholdKeySource;
+}
+
+// Step H5a: this device was removed from the household; it cannot take
+// the new key.
+public sealed class HouseholdDeviceRemovedException : InvalidOperationException
+{
+    public HouseholdDeviceRemovedException()
+        : base("This device was removed from the household.")
+    {
+    }
+}
 
 // Replication of the household (household feature, step H3a;
 // docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §5): the household
@@ -223,7 +251,7 @@ public sealed class HouseholdSync
 
     // The household replaces the local one; zeroes the key.
     private async Task JoinCoreAsync(ISyncTransport transport, SyncTarget target, Guid householdId, SyncGroupKey obtained,
-        string deviceName, CancellationToken cancellationToken)
+        string deviceName, CancellationToken cancellationToken, IReadOnlyList<HouseholdSegmentOperation>? carried = null)
     {
         try
         {
@@ -233,6 +261,14 @@ public sealed class HouseholdSync
             var image = HouseholdSegmentContent.Parse(content);
 
             var current = await _store.EnsureCreatedAsync(cancellationToken);
+            // Step H5a: a removed device takes nothing; its local household
+            // stays as it was.
+            if (image.Operations.Any(o => o.Type == nameof(DeviceRemoved)
+                    && HouseholdOperationCodec.Deserialize(o.Type, o.SchemaVersion, o.Payload) is DeviceRemoved r
+                    && r.DeviceId == current.DeviceId))
+            {
+                throw new HouseholdDeviceRemovedException();
+            }
             var identity = new HouseholdIdentity(householdId, current.DeviceId, obtained.Generation, obtained.KeyVersion,
                 target, deviceName, 0);
             await HouseholdLog.Gate.WaitAsync(cancellationToken);
@@ -249,6 +285,20 @@ public sealed class HouseholdSync
                 HouseholdLog.Gate.Release();
             }
             await _store.MarkPublishedAsync([.. image.Operations.Select(o => o.Id)], 0, cancellationToken);
+            // Step H5a: this device's own operations the new genesis lacks
+            // stay pending and go out with the next run.
+            if (carried is { Count: > 0 })
+            {
+                await HouseholdLog.Gate.WaitAsync(cancellationToken);
+                try
+                {
+                    foreach (var operation in carried) await ApplyOperationAsync(operation, identity.Generation, cancellationToken);
+                }
+                finally
+                {
+                    HouseholdLog.Gate.Release();
+                }
+            }
             _keys.Save(householdId, obtained.KeyVersion, obtained.Key);
             // Step H3b: this device's public key goes up with the first run.
             await _keyring.EnsureDeviceKeyAsync(cancellationToken);
@@ -273,6 +323,14 @@ public sealed class HouseholdSync
         {
             var transport = _transports.Create(identity.Storage);
             var problems = new List<string>();
+            // Step H5a: after a removal the household runs on a new key and
+            // generation; this device stops until it has them.
+            if ((await SyncKeys.KeyVersionsAsync(transport, identity.HouseholdId, cancellationToken)).FirstOrDefault()
+                > identity.KeyVersion)
+            {
+                var removed = (await _household.KeysAsync(cancellationToken)).IsRemoved(identity.DeviceId);
+                return new HouseholdSyncResult(0, 0, 0, [], NewKeyRequired: true, Removed: removed);
+            }
             // Step H3b: a profile synced since the last run joins the household.
             await _keyring.EnsureDeviceKeyAsync(cancellationToken);
             await _keyring.AdoptProfileGroupsAsync(cancellationToken);
@@ -331,6 +389,196 @@ public sealed class HouseholdSync
         {
             CryptographicOperations.ZeroMemory(privateKey);
         }
+    }
+
+    // Step H5a (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §9, D-15
+    // option A): removes a device. The removed device holds the household
+    // key, so the household moves to a new key and a new generation:
+    //
+    //   1. a run, so the new genesis holds the latest changes;
+    //   2. DeviceRemoved, the revocation of its grants, a new recovery key
+    //      pair and the escrows of the profiles this device holds for it;
+    //      when the removed device was the master or the elected one, this
+    //      device takes over (or the outgoing master is elected again);
+    //   3. key.<v+1>.wrap and recovery.<v+1>.wrap with the new household
+    //      passphrase, then the genesis of generation g+1 (the whole log)
+    //      sealed with the new key, then this device's record;
+    //   4. the local household moves to the new generation.
+    //
+    // The other devices find a newer key, stop publishing and ask for the
+    // new passphrase or a code (RekeyAsync). CryptographicException never:
+    // the passphrase is new. InvalidOperationException when this device is
+    // behind (it needs the new key itself), the device is unknown or
+    // already removed, or another device is changing the key.
+    public async Task RemoveDeviceAsync(Guid deviceId, char[] passphrase, string electedBy,
+        CancellationToken cancellationToken, Argon2Params? kdf = null)
+    {
+        ArgumentNullException.ThrowIfNull(passphrase);
+        var before = await RunAsync(cancellationToken);
+        if (before.NewKeyRequired) throw new InvalidOperationException("This device needs the new household key first.");
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) throw new InvalidOperationException("The household is not published.");
+        if (deviceId == identity.DeviceId) throw new InvalidOperationException("A device cannot remove itself.");
+        var transport = _transports.Create(identity.Storage);
+        var keys = await _household.KeysAsync(cancellationToken);
+        if (keys.IsRemoved(deviceId)) throw new InvalidOperationException("The device is already removed.");
+        if (!keys.DevicePublicKeys.ContainsKey(deviceId)
+            && (await ListDevicesAsync(cancellationToken)).All(r => r.DeviceId != deviceId))
+        {
+            throw new InvalidOperationException("The device is not part of the household.");
+        }
+
+        var version = (await SyncKeys.KeyVersionsAsync(transport, identity.HouseholdId, cancellationToken))
+            .DefaultIfEmpty(identity.KeyVersion).Max() + 1;
+        var (recoveryPrivate, recoveryPublic) = HouseholdKeyWrap.CreateKeyPair();
+        var operations = new List<HouseholdOperationBody> { new DeviceRemoved(deviceId) };
+        operations.AddRange(keys.Grants.Keys.Where(g => g.DeviceId == deviceId)
+            .Select(g => new ProfileKeyRevoked(g.ProfileId, deviceId)));
+        operations.Add(new RecoveryKeyPublished(version, recoveryPublic));
+        operations.AddRange(await _keyring.EscrowAllAsync(recoveryPublic, cancellationToken));
+        operations.AddRange(MasterAfterRemoval(await _household.MasterAsync(cancellationToken), deviceId,
+            identity.DeviceId, electedBy));
+        await _household.AppendAsync(operations, cancellationToken);
+
+        var key = RandomNumberGenerator.GetBytes(SyncKeyWrap.KeySize);
+        var recovery = Convert.FromBase64String(recoveryPrivate);
+        try
+        {
+            // Wraps first: an interruption leaves a wrap without a
+            // generation, which no device takes (SyncKeys.ObtainAsync).
+            if (!await transport.CreateAsync(SyncLayout.KeyWrap(identity.HouseholdId, version),
+                    SyncKeyWrap.Wrap(_cipher, identity.HouseholdId, version, key, passphrase, kdf ?? Argon2Params.Default)
+                        .ToBytes(), cancellationToken))
+            {
+                throw new InvalidOperationException("The household key is being changed on another device.");
+            }
+            await transport.CreateAsync(RecoveryWrapPath(identity.HouseholdId, version),
+                SyncKeyWrap.Wrap(_cipher, identity.HouseholdId, version, recovery, passphrase, kdf ?? Argon2Params.Default,
+                    RecoveryPurpose).ToBytes(), cancellationToken);
+
+            var generation = await SyncEngine.LatestGenerationAsync(transport, identity.HouseholdId, cancellationToken) + 1;
+            var moved = identity with { KeyVersion = version, Generation = generation, SegmentSeq = 0 };
+            var image = new HouseholdSegmentContent(new Dictionary<Guid, int>(),
+                [.. (await _store.ListOperationsAsync(cancellationToken)).Select(Outgoing)]);
+            var header = Header(SyncFileKind.Genesis, moved, moved.DeviceId, 0) with { Vector = new Dictionary<Guid, int>() };
+            await transport.CreateAsync(SyncLayout.Genesis(identity.HouseholdId, generation),
+                SyncFileCodec.Seal(_cipher, key, header, image.ToBytes()), cancellationToken);
+
+            await HouseholdLog.Gate.WaitAsync(cancellationToken);
+            try
+            {
+                await _store.ResetAsync(moved, cancellationToken);
+                foreach (var operation in image.Operations) await ApplyOperationAsync(operation, generation, cancellationToken);
+            }
+            finally
+            {
+                HouseholdLog.Gate.Release();
+            }
+            await _store.MarkPublishedAsync([.. image.Operations.Select(o => o.Id)], 0, cancellationToken);
+            _keys.Save(identity.HouseholdId, version, key);
+            await WriteRecordAsync(transport, key, moved, new Dictionary<Guid, int>(), cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+            CryptographicOperations.ZeroMemory(recovery);
+        }
+    }
+
+    // §9 last line: removing the master is a removal plus a takeover. When
+    // the removed device was the elected one, the master still active is
+    // elected again (it activates without a wizard), or this device takes
+    // over when there is none.
+    private static IEnumerable<HouseholdOperationBody> MasterAfterRemoval(HouseholdMaster master, Guid removed, Guid me,
+        string electedBy)
+    {
+        var concerned = master.ActiveDevice == removed || master.OutgoingDevice == removed
+            || master.Election?.DeviceId == removed;
+        if (!concerned) yield break;
+        var electionId = Guid.NewGuid();
+        var keep = master.Pending && master.OutgoingDevice is { } outgoing && outgoing != removed ? outgoing : (Guid?)null;
+        if (keep is { } still)
+        {
+            yield return new MasterElected(electionId, still, electedBy, MasterElectionKind.Planned);
+            yield break;
+        }
+        yield return new MasterElected(electionId, me, electedBy, MasterElectionKind.Takeover);
+        yield return new MasterActivated(electionId, me);
+    }
+
+    // Step H5a: whether the storage holds a newer household key than this
+    // device (a device was removed elsewhere). False while not published.
+    public async Task<bool> NeedsNewKeyAsync(CancellationToken cancellationToken)
+    {
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) return false;
+        return (await SyncKeys.KeyVersionsAsync(_transports.Create(identity.Storage), identity.HouseholdId, cancellationToken))
+            .FirstOrDefault() > identity.KeyVersion;
+    }
+
+    // Step H5a (D-15 option A): the new household key after a removal on
+    // another device, from the new passphrase or a code (mrpair2) shown by
+    // a device that has it. The local household moves to the new
+    // generation and this device's own operations the genesis lacks are
+    // carried over. CryptographicException for a wrong passphrase;
+    // SyncPairingExpiredException or CryptographicException for a code no
+    // longer offered; HouseholdDeviceRemovedException for a removed device.
+    public async Task<HouseholdSyncResult> RekeyAsync(HouseholdKeySource source, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) throw new InvalidOperationException("The household is not published.");
+        var transport = _transports.Create(identity.Storage);
+
+        HouseholdOffer? offer = null;
+        SyncGroupKey obtained;
+        try
+        {
+            switch (source)
+            {
+                case HouseholdKeySource.Passphrase passphrase:
+                    obtained = await SyncKeys.ObtainAsync(transport, _cipher, identity.HouseholdId,
+                        new SyncKeySource.Passphrase(passphrase.Value), _clock, cancellationToken);
+                    break;
+                case HouseholdKeySource.Code { Value: var code }:
+                    if (code.HouseholdId != identity.HouseholdId)
+                        throw new InvalidOperationException("The code belongs to another household.");
+                    var file = await transport.ReadAsync(SyncLayout.Pairing(code.HouseholdId, code.DeviceId), cancellationToken)
+                        ?? throw new SyncPairingExpiredException();
+                    offer = HouseholdPairingFile.Parse(file).Open(_cipher, code, _clock.GetUtcNow());
+                    obtained = await SyncKeys.ObtainAsync(transport, _cipher, identity.HouseholdId,
+                        new SyncKeySource.Known(offer.KeyVersion, offer.Key), _clock, cancellationToken);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(source));
+            }
+            if (obtained.KeyVersion <= identity.KeyVersion)
+            {
+                CryptographicOperations.ZeroMemory(obtained.Key);
+                throw new InvalidOperationException("The key is not newer than the one this device holds.");
+            }
+
+            var carried = (await _store.ListOperationsAsync(cancellationToken))
+                .Where(r => r.Timestamp.DeviceId == identity.DeviceId)
+                .Select(Outgoing)
+                .ToList();
+            await JoinCoreAsync(transport, identity.Storage, identity.HouseholdId, obtained,
+                identity.DeviceName ?? _options.DeviceName, cancellationToken, carried);
+            foreach (var profile in offer?.Profiles ?? [])
+            {
+                await _keyring.AcceptAsync(profile.ProfileId,
+                    new ProfileGroupKey(profile.GroupId, profile.KeyVersion, profile.Key), cancellationToken);
+            }
+        }
+        finally
+        {
+            if (offer is not null)
+            {
+                CryptographicOperations.ZeroMemory(offer.Key);
+                foreach (var profile in offer.Profiles) CryptographicOperations.ZeroMemory(profile.Key);
+            }
+        }
+        return await RunAsync(cancellationToken);
     }
 
     // Step H4a (§7.2, §7.4): an outgoing master releases the election that

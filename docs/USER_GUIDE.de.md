@@ -1144,6 +1144,16 @@ Profils. Auf den anderen Geräten öffnet sich eine Rezeptanfrage im
 E-Mail-Programm, und der Test der E-Mail-Verbindung ist nur auf dem
 Master verfügbar.
 
+**Ein Gerät entfernen.** Wenn ein Gerät verloren, verkauft oder
+weitergegeben wird, wählen Sie es unter **Geräte** und dann **Gerät
+entfernen…**, am besten auf dem Master. Sie wählen eine neue
+Passphrase der Installation: Das entfernte Gerät behält, was es schon
+hat, erhält aber nichts Neues. Jedes andere Gerät hält an, bis ein
+Administrator darauf **Extras → Installation… → Neuen Schlüssel
+eingeben…** öffnet und die neue Passphrase eingibt oder einen Code,
+den das entfernende Gerät anzeigt. Zwischenzeitliche Änderungen auf
+diesen Geräten bleiben erhalten.
+
 Auf dem neuen Master schließt ein Administrator die Übergabe ab: Das
 Fenster öffnet sich von selbst oder über **Extras → Installation… →
 Übergabe abschließen…**. Es zeigt die Einstellungen der Installation,

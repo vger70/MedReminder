@@ -30,6 +30,28 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #127 — Remove a device from the installation (household H5a)
+
+Link: [vger70/MedReminder#127](https://github.com/vger70/MedReminder/pull/127)
+Branch: `claude/household-h5-device-removal` → `feature/master-slave`
+
+### Added
+
+- Tools → Installation → Devices → Remove device…: the removed device
+  keeps what it has and receives nothing new. The installation moves to
+  a new key, passphrase and recovery key; every other device takes the
+  new key once, with the new passphrase or a code (D-15 option A), and
+  keeps its changes made meanwhile. Removing the master makes the
+  removing device the master.
+
+### Docs
+
+- User guides (5 languages), `docs/SYNC-FORMAT.md` §9.3,
+  `docs/ANALYSIS.md`, analysis revision 14 (D-15 decided),
+  `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md` (manual tests H1–H5).
+
+---
+
 ## PR #126 — Check every profile on the master device (household H4c)
 
 Link: [vger70/MedReminder#126](https://github.com/vger70/MedReminder/pull/126)
