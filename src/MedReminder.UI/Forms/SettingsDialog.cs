@@ -266,6 +266,10 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         };
         body.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        // Without a style the single row sizes to its tallest child, so a
+        // long section grew past the window and its scroll bar never
+        // showed; Percent keeps the row as tall as the table.
+        body.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         _sectionList.Dock = DockStyle.Left;
         body.Controls.Add(_sectionList, 0, 0);
         body.Controls.Add(page, 1, 0);
@@ -413,8 +417,9 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         // A table clamps a child to its cell, and a fixed-width field is
         // never grown back: after one layout pass with a narrow column
         // (the section is measured before it is docked) the time picker
-        // and number boxes stayed 1 px wide. The minimum keeps them.
-        if (!input.AutoSize && input.Dock == DockStyle.None && (input.Anchor & AnchorStyles.Right) == 0)
+        // and number boxes (docked left in Email) stayed a few pixels
+        // wide. The minimum keeps them.
+        if (!input.AutoSize && (input.Dock is DockStyle.None or DockStyle.Left) && (input.Anchor & AnchorStyles.Right) == 0)
         {
             input.MinimumSize = new System.Drawing.Size(input.Width, input.MinimumSize.Height);
         }
