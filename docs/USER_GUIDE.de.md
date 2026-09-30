@@ -82,13 +82,22 @@ demselben Grund „Unbekannter Herausgeber“.
 
 - **Menüs** oben: **Datei**, **Therapie**, **Bestand**, **Extras** und
   **?** (Hilfe).
-- **Symbolleiste** unter den Menüs mit den häufigsten Aktionen: *Neues
-  Medikament*, *Bearbeiten*, *Einnahme erfassen*, *Jetzt prüfen*,
-  *Therapieplan*, *Therapieverlauf*, *Rezept anfordern*.
+- **Symbolleiste** unter den Menüs: *Neues Medikament*, *Einnahme
+  erfassen* und rechts ein Suchfeld (**Strg+F**), das die Liste nach
+  Namen filtert.
+- **Navigation** links: *Medikamente* (diese Liste), dann
+  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Installation*
+  (Administratoren) und *Einstellungen*, die ein eigenes Fenster öffnen.
+  In einem schmalen Fenster zeigt sie nur die Symbole.
+- **Übersicht** über der Liste: wie viele Medikamente *Leer*, *Bald
+  leer* und *Ausgesetzt* sind, und alle zusammen. Ein Klick auf ein
+  Feld zeigt nur diese Medikamente; ein zweiter Klick zeigt wieder alle.
 - **Medikamentenliste** in der Mitte: eine Zeile pro Medikament, mit
   Bestand, verbleibenden Tagen und voraussichtlichem Ende des Bestands.
-  Die Zeilen ändern die Farbe, wenn der Bestand niedrig ist; die Spalte
-  **Status** sagt es auch in Worten.
+  Die Spalte **Status** zeigt den Zustand als farbige Markierung. Ein
+  Rechtsklick auf eine Zeile bietet die Befehle für dieses Medikament
+  (bearbeiten, Einnahme erfassen, Packung hinzufügen…); Doppelklick
+  oder **F2** bearbeiten es.
 - **Statusleiste** unten: das geöffnete Profil („Profil: Anna (Admin)“
   für einen Administrator).
 
@@ -445,8 +454,8 @@ MedReminder sendet nie von selbst eine Anforderung.
   über die für dieses Medikament gewählten Kanäle: eine
   Windows-Benachrichtigung und/oder eine E-Mail. Nach einer neuen
   Packung beginnt der Zyklus von vorn.
-- **Extras → Jetzt prüfen** (oder die Schaltfläche in der Symbolleiste
-  oder das Menü des Symbols) prüft sofort.
+- **Extras → Jetzt prüfen** (**Strg+R** oder das Menü des Symbols)
+  prüft sofort.
 - MedReminder muss laufen, um Warnungen zu senden. Aktiviere den
   Autostart (siehe [Einstellungen](#settings)).
 

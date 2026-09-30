@@ -80,13 +80,23 @@ motivo.
 
 - **Menús** arriba: **Archivo**, **Terapia**, **Stock**,
   **Herramientas** y **?** (ayuda).
-- **Barra de herramientas** bajo los menús, con las acciones más
-  frecuentes: *Nuevo medicamento*, *Editar*, *Registrar toma*,
-  *Comprobar ahora*, *Ficha terapia*, *Cronología*, *Solicitar receta*.
+- **Barra de herramientas** bajo los menús: *Nuevo medicamento*,
+  *Registrar toma* y, a la derecha, un cuadro de búsqueda (**Ctrl+F**)
+  que filtra la lista por nombre.
+- **Navegación** a la izquierda: *Medicamentos* (esta lista), luego
+  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*,
+  *Instalación* (administradores) y *Configuración*, que se abren en su
+  propia ventana. Si la ventana es estrecha, solo muestra los iconos.
+- **Resumen** encima de la lista: cuántos medicamentos están
+  *Agotados*, *Por agotarse*, *Suspendidos*, y el total. Haz clic en un
+  recuadro para ver solo esos medicamentos; un segundo clic los muestra
+  todos.
 - **Lista de medicamentos** en el centro: una fila por medicamento, con
-  el stock, los días restantes y la fecha estimada de agotamiento. Las
-  filas cambian de color cuando el stock es bajo; la columna **Estado**
-  lo dice también con palabras.
+  el stock, los días restantes y la fecha estimada de agotamiento. La
+  columna **Estado** muestra el estado con una etiqueta de color. El
+  clic derecho en una fila ofrece los comandos para ese medicamento
+  (editar, registrar toma, añadir envase…); doble clic o **F2** lo
+  editan.
 - **Barra de estado** abajo: el perfil abierto ("Perfil: Ana (admin)"
   para un administrador).
 
@@ -429,8 +439,8 @@ MedReminder nunca envía una solicitud por sí solo.
   medicamento baja de su **umbral de aviso**, te avisa **una vez**, por
   los canales elegidos para ese medicamento: una notificación de
   Windows y/o un correo. Tras una caja nueva, el ciclo vuelve a empezar.
-- **Herramientas → Comprobar ahora** (o el botón de la barra, o el menú
-  del icono) ejecuta la comprobación enseguida.
+- **Herramientas → Comprobar ahora** (**Ctrl+R**, o el menú del icono)
+  ejecuta la comprobación enseguida.
 - MedReminder tiene que estar en marcha para enviar avisos. Activa el
   inicio automático (ver [Configuración](#settings)).
 

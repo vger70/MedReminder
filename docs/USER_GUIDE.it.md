@@ -80,13 +80,22 @@ motivo.
 
 - **Menu** in alto: **File**, **Terapia**, **Scorte**, **Strumenti** e
   **?** (aiuto).
-- **Barra degli strumenti** sotto i menu, con le azioni più frequenti:
-  *Nuova medicina*, *Modifica*, *Registra assunzione*, *Controlla ora*,
-  *Scheda terapia*, *Linea del tempo*, *Richiedi ricetta*.
+- **Barra degli strumenti** sotto i menu: *Nuova medicina*, *Registra
+  assunzione* e, a destra, una casella di ricerca (**Ctrl+F**) che
+  filtra l'elenco per nome.
+- **Navigazione** a sinistra: *Medicine* (questo elenco), poi *Linea del
+  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Installazione*
+  (amministratori) e *Impostazioni*, che si aprono in una finestra
+  propria. Se la finestra è stretta mostra solo le icone.
+- **Riepilogo** sopra l'elenco: quante medicine sono *Esaurite*, *In
+  esaurimento*, *Sospese*, e il totale. Fai clic su un riquadro per
+  vedere solo quelle medicine; un secondo clic le mostra tutte.
 - **Elenco delle medicine** al centro: una riga per medicina, con le
-  scorte, i giorni rimanenti e la data stimata di esaurimento. Le righe
-  cambiano colore quando le scorte sono basse; la colonna **Stato** lo
-  dice anche a parole.
+  scorte, i giorni rimanenti e la data stimata di esaurimento. La
+  colonna **Stato** mostra lo stato con un'etichetta colorata. Il clic
+  destro su una riga offre i comandi per quella medicina (modifica,
+  registra assunzione, aggiungi confezione…); doppio clic o **F2** la
+  modificano.
 - **Barra di stato** in basso: il profilo aperto ("Profilo: Anna
   (admin)" per un amministratore).
 
@@ -430,8 +439,8 @@ MedReminder non invia mai una richiesta da solo.
   scende sotto la sua **soglia di avviso**, ti avvisa **una volta**, con
   i canali scelti per quella medicina: una notifica di Windows e/o
   un'email. Dopo una nuova confezione il ciclo riparte.
-- **Strumenti → Controlla ora** (o il pulsante nella barra, o il menu
-  dell'icona) esegue subito il controllo.
+- **Strumenti → Controlla ora** (**Ctrl+R**, o il menu dell'icona)
+  esegue subito il controllo.
 - MedReminder deve essere in esecuzione per inviare gli avvisi. Attiva
   l'avvio automatico (vedi [Impostazioni](#settings)).
 

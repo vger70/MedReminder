@@ -82,14 +82,24 @@ installes depuis le paquet MSI, la fenêtre d'autorisation indique
 
 - **Menus** en haut : **Fichier**, **Traitement**, **Stock**,
   **Outils** et **?** (aide).
-- **Barre d'outils** sous les menus, avec les actions les plus
-  fréquentes : *Nouveau médicament*, *Modifier*, *Enregistrer prise*,
-  *Vérifier maintenant*, *Fiche traitement*, *Chronologie*, *Demander
-  ordonnance*.
+- **Barre d'outils** sous les menus : *Nouveau médicament*,
+  *Enregistrer prise* et, à droite, une zone de recherche (**Ctrl+F**)
+  qui filtre la liste par nom.
+- **Navigation** à gauche : *Médicaments* (cette liste), puis
+  *Chronologie du traitement*, *Fiche de traitement*, *Demander une
+  ordonnance*, *Installation* (administrateurs) et *Paramètres*, qui
+  s'ouvrent dans leur propre fenêtre. Dans une fenêtre étroite, elle
+  n'affiche que les icônes.
+- **Résumé** au-dessus de la liste : combien de médicaments sont
+  *Épuisés*, *Bientôt épuisés*, *Suspendus*, et le total. Clique sur
+  une case pour n'afficher que ces médicaments ; un second clic les
+  affiche tous.
 - **Liste des médicaments** au centre : une ligne par médicament, avec
-  le stock, les jours restants et la date estimée de fin de stock. Les
-  lignes changent de couleur quand le stock est bas ; la colonne
-  **État** le dit aussi en toutes lettres.
+  le stock, les jours restants et la date estimée de fin de stock. La
+  colonne **État** montre l'état avec une étiquette colorée. Le clic
+  droit sur une ligne propose les commandes pour ce médicament
+  (modifier, enregistrer une prise, ajouter une boîte…) ; double-clic
+  ou **F2** le modifient.
 - **Barre d'état** en bas : le profil ouvert (« Profil : Anna
   (admin) » pour un administrateur).
 
@@ -445,8 +455,8 @@ MedReminder n'envoie jamais de demande tout seul.
   médicament passe sous son **seuil d'alerte**, il te prévient **une
   fois**, par les canaux choisis pour ce médicament : une notification
   Windows et/ou un e-mail. Après une nouvelle boîte, le cycle recommence.
-- **Outils → Vérifier maintenant** (ou le bouton de la barre, ou le menu
-  de l'icône) lance la vérification tout de suite.
+- **Outils → Vérifier maintenant** (**Ctrl+R**, ou le menu de l'icône)
+  lance la vérification tout de suite.
 - MedReminder doit tourner pour envoyer les alertes. Active le
   démarrage automatique (voir [Paramètres](#settings)).
 

@@ -30,6 +30,37 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #146 — Redesign the main window around a summary and a navigation pane
+
+Link: [vger70/MedReminder#146](https://github.com/vger70/MedReminder/pull/146)
+Branch: `claude/ui-phase3-main-window` → `main`
+
+### Added
+
+- Summary cards above the medicine list (Empty, Running low, Suspended,
+  All medicines) that filter the list on click.
+- Search box in the toolbar (Ctrl+F) filtering the list by name.
+- Navigation pane on the left for the timeline, therapy report,
+  prescription request, installation and settings windows; icons only
+  in a narrow window.
+- Context menu on the medicine list with the per-medicine commands.
+
+### Changed
+
+- Toolbar reduced to New medicine, Register intake and search; every
+  other command stays in the menus with its shortcut.
+- Status shown as a coloured label; list rows 36 px high.
+- Main-window section of the five user guides rewritten.
+
+### Fixed
+
+- With Large text at 150 % the main window no longer extends past its
+  right edge: the search box was scaled twice and the grid's full
+  column width sized the page. The list columns share the width by
+  weight down to a minimum, so the list no longer scrolls sideways
+  there.
+- Profile picker buttons grow with their captions instead of being cut.
+
 ## PR #145 — Fix the dark-mode and layout defects found in the UI baseline
 
 Link: [vger70/MedReminder#145](https://github.com/vger70/MedReminder/pull/145)

@@ -13,6 +13,7 @@ using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Application.Overview;
+using MedReminder.UI.Controls;
 using MedReminder.UI.Tray;
 using MedReminder.UI.UiExtensions;
 using MedReminder.UI.Hosting;
@@ -44,6 +45,11 @@ internal sealed class MainForm : MedReminderFormBase
     // deactivated medicines unless _showInactive (session only).
     private List<MedicineListItem> _allRows = [];
     private bool _showInactive;
+    // Summary card filter and search text (ANALYSIS-UI-MODERNIZATION §5.1).
+    private MedicineListBucket _bucket = MedicineListBucket.All;
+    private ToolStripTextBox _searchBox = null!;
+    private NavigationPane _nav = null!;
+    private readonly List<SummaryCard> _cards = [];
     private ToolStripMenuItem _showInactiveItem = null!;
     private ToolStripStatusLabel _statusLabel = null!;
     private ToolStripStatusLabel _lastCheckLabel = null!;
@@ -112,30 +118,167 @@ internal sealed class MainForm : MedReminderFormBase
         var statusStrip = BuildStatusStrip();
         _grid = BuildGrid();
         _errorBanner = BuildErrorBanner();
+        _nav = BuildNavigationPane();
 
-        // TableLayout with 5 rows: menu, toolbar, error banner,
-        // grid, status. The MenuStrip must be added to Controls AND
-        // assigned to MainMenuStrip so keyboard shortcuts (Ctrl+N,
-        // F5, Alt+F4) work everywhere.
+        // Page: summary cards above the grid (§5.1).
+        var page = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = new Padding(UiTheme.Space.L, UiTheme.Space.M, UiTheme.Space.L, UiTheme.Space.M),
+            Margin = Padding.Empty,
+        };
+        // A column without a style sizes to its widest child, and the
+        // grid's preferred width is the sum of its columns: at 150 % the
+        // page then grew past the window. Percent keeps it in bounds.
+        page.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        page.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        page.Controls.Add(BuildSummaryCards(), 0, 0);
+        page.Controls.Add(_grid, 0, 1);
+
+        var body = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = Padding.Empty,
+        };
+        body.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        body.Controls.Add(_nav, 0, 0);
+        body.Controls.Add(page, 1, 0);
+        _nav.Dock = DockStyle.Left;
+
+        // TableLayout with 5 rows: menu, toolbar, error banner, body
+        // (navigation + page), status. The MenuStrip must be added to
+        // Controls AND assigned to MainMenuStrip so keyboard shortcuts
+        // (Ctrl+N, F5, Alt+F4) work everywhere.
         var container = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 5,
         };
+        container.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // menu
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // toolbar
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // banner (Visible=false)
-        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));// grid
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));// body
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // status
         container.Controls.Add(menuStrip, 0, 0);
         container.Controls.Add(toolStrip, 0, 1);
         container.Controls.Add(_errorBanner, 0, 2);
-        container.Controls.Add(_grid, 0, 3);
+        container.Controls.Add(body, 0, 3);
         container.Controls.Add(statusStrip, 0, 4);
 
         Controls.Add(container);
         MainMenuStrip = menuStrip;
+
+        // Below this width the navigation pane shows icons only.
+        Resize += (_, _) => _nav.Collapsed = ClientSize.Width < ScaledLength(NavCollapseWidth);
+        Load += (_, _) => _nav.Collapsed = ClientSize.Width < ScaledLength(NavCollapseWidth);
+
+        // Control.Scale also scales the text box a tool strip hosts, so
+        // a width scaled at build time was scaled twice; set it once
+        // the layout has been scaled.
+        Load += (_, _) => _searchBox.Width = ScaledLength(SearchBoxWidth);
+    }
+
+    private const int SearchBoxWidth = 240;
+
+    private const int NavCollapseWidth = 900;
+
+    // D3: the medicine list is the page of this window; the other entries
+    // open the windows the menus already open.
+    private NavigationPane BuildNavigationPane()
+    {
+        var nav = new NavigationPane();
+        var medicines = nav.AddItem(_loc.Get("Ui.MainForm.Nav.Medicines"), Mdl2Glyph.Glyphs.BulletedList,
+            opensWindow: false, () => _grid.Focus());
+        medicines.Selected = true;
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Timeline"), Mdl2Glyph.Glyphs.Calendar,
+            opensWindow: true, ShowTherapyTimeline);
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Report"), Mdl2Glyph.Glyphs.Document,
+            opensWindow: true, async () => await ShowTherapyReportAsync());
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.RequestPrescription"), Mdl2Glyph.Glyphs.Mail,
+            opensWindow: true, async () => await ShowPrescriptionRequestAsync());
+        nav.AddSeparator();
+        if (_currentProfile.IsAdmin)
+        {
+            nav.AddItem(MenuCaption("Ui.MainForm.Menu.Tools.Household"), Mdl2Glyph.Glyphs.Home,
+                opensWindow: true, ShowHousehold);
+        }
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Tools.Settings"), Mdl2Glyph.Glyphs.Settings,
+            opensWindow: true, ShowSettings);
+        return nav;
+    }
+
+    // Menu captions carry an access key (&) and an ellipsis; the
+    // navigation pane and the toolbar show the plain caption, so the
+    // same translation serves both.
+    private string MenuCaption(string key)
+        => _loc.Get(key).Replace("&&", "\u0001").Replace("&", string.Empty).Replace("\u0001", "&")
+            .TrimEnd('…', '.').Trim();
+
+    private TableLayoutPanel BuildSummaryCards()
+    {
+        var row = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 4,
+            RowCount = 1,
+            Margin = new Padding(0, 0, 0, UiTheme.Space.M),
+        };
+        foreach (var (bucket, key) in new[]
+        {
+            (MedicineListBucket.Empty, "Ui.MainForm.Summary.Empty"),
+            (MedicineListBucket.Warning, "Ui.MainForm.Summary.Warning"),
+            (MedicineListBucket.Suspended, "Ui.MainForm.Summary.Suspended"),
+            (MedicineListBucket.All, "Ui.MainForm.Summary.All"),
+        })
+        {
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+            var card = new SummaryCard(bucket, _loc.Get(key))
+            {
+                Dock = DockStyle.Fill,
+                Pressed = bucket == _bucket,
+            };
+            card.Click += (_, _) => SelectBucket(card.Bucket);
+            _cards.Add(card);
+            row.Controls.Add(card);
+        }
+        // The last card needs no gap on its right.
+        _cards[^1].Margin = Padding.Empty;
+        return row;
+    }
+
+    // A second click on the active card clears the filter.
+    private void SelectBucket(MedicineListBucket bucket)
+    {
+        _bucket = bucket == _bucket ? MedicineListBucket.All : bucket;
+        foreach (var card in _cards) card.Pressed = card.Bucket == _bucket;
+        ApplyFilters();
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        // Ctrl+F moves to the search box, Esc there clears it.
+        if (keyData == (Keys.Control | Keys.F))
+        {
+            _searchBox.Focus();
+            _searchBox.SelectAll();
+            return true;
+        }
+        if (keyData == Keys.Escape && _searchBox.Focused && _searchBox.Text.Length > 0)
+        {
+            _searchBox.Clear();
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
     }
 
     // ------------------ Menu bar ------------------
@@ -187,7 +330,7 @@ internal sealed class MainForm : MedReminderFormBase
         showInactive.CheckedChanged += (_, _) =>
         {
             _showInactive = showInactive.Checked;
-            ApplyInactiveFilter();
+            ApplyFilters();
         };
         _showInactiveItem = showInactive;
         therapyMenu.DropDownItems.Add(showInactive);
@@ -519,41 +662,37 @@ internal sealed class MainForm : MedReminderFormBase
         _errorBanner.Visible = false;
     }
 
-    // Toolbar "quick access": solo 5 azioni frequenti, icone MDL2 sopra
-    // il testo. Tutti gli altri comandi sono raggiungibili dal MenuStrip
-    // + shortcut tastiera. Riduce il rumore visivo (era ~11 bottoni).
+    // Toolbar (D4, F5): the two most frequent actions and the search
+    // box. Every other command stays in the menus with its shortcut, in
+    // the navigation pane and in the grid's context menu.
     private ToolStrip BuildToolStrip()
     {
         var strip = new ToolStrip
         {
             GripStyle = ToolStripGripStyle.Hidden,
-            Padding = new Padding(6, 4, 6, 4),
-            ImageScalingSize = new Size(ScaledIconSize(24), ScaledIconSize(24)),
+            Padding = new Padding(UiTheme.Space.S, UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.XS),
+            ImageScalingSize = new Size(ScaledIconSize(20), ScaledIconSize(20)),
             AutoSize = true,
         };
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.NewMedicine"),
+        strip.Items.Add(BuildToolbarButton(MenuCaption("Ui.MainForm.Menu.Therapy.NewMedicine"),
             Mdl2Glyph.Glyphs.Add,
             async () => await ShowNewMedicineAsync()));
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.Edit"),
-            Mdl2Glyph.Glyphs.Edit,
-            async () => await ShowEditMedicineAsync()));
-        strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.RegisterIntake"),
+        strip.Items.Add(BuildToolbarButton(MenuCaption("Ui.MainForm.Menu.Therapy.RegisterIntake"),
             Mdl2Glyph.Glyphs.CheckMark,
             async () => await ShowRegisterIntakeAsync()));
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.CheckNow"),
-            Mdl2Glyph.Glyphs.Sync,
-            async () => await RunMonitorAsync()));
-        strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.TherapyReport"),
-            Mdl2Glyph.Glyphs.Document,
-            async () => await ShowTherapyReportAsync()));
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.TherapyTimeline"),
-            Mdl2Glyph.Glyphs.Calendar,
-            () => { ShowTherapyTimeline(); return Task.CompletedTask; }));
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.RequestPrescription"),
-            Mdl2Glyph.Glyphs.Mail,
-            async () => await ShowPrescriptionRequestAsync()));
+
+        _searchBox = new ToolStripTextBox
+        {
+            Alignment = ToolStripItemAlignment.Right,
+            AutoSize = false,
+            Width = SearchBoxWidth,
+            BorderStyle = BorderStyle.FixedSingle,
+            Margin = new Padding(0, UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.XS),
+            AccessibleName = _loc.Get("Ui.MainForm.Search.Placeholder"),
+        };
+        _searchBox.TextBox.PlaceholderText = _loc.Get("Ui.MainForm.Search.Placeholder");
+        _searchBox.TextChanged += (_, _) => ApplyFilters();
+        strip.Items.Add(_searchBox);
         return strip;
     }
 
@@ -563,11 +702,11 @@ internal sealed class MainForm : MedReminderFormBase
         var b = new ToolStripButton(text)
         {
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
-            TextImageRelation = TextImageRelation.ImageAboveText,
-            Image = Mdl2Glyph.Create(glyph, size: ScaledIconSize(24)),
+            TextImageRelation = TextImageRelation.ImageBeforeText,
+            Image = Mdl2Glyph.Create(glyph, size: ScaledIconSize(20)),
             ImageScaling = ToolStripItemImageScaling.None,
             AutoSize = true,
-            Padding = new Padding(4, 2, 4, 2),
+            Padding = new Padding(UiTheme.Space.S, UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.XS),
         };
         b.Click += async (_, _) => await action();
         return b;
@@ -642,6 +781,14 @@ internal sealed class MainForm : MedReminderFormBase
         {
             // Raises CheckedChanged, which shows the inactive rows.
             _showInactiveItem.Checked = true;
+        }
+        // A card or search filter that hides the medicine is cleared.
+        if (!_rows.Any(r => r.Id == medicineId))
+        {
+            _bucket = MedicineListBucket.All;
+            foreach (var card in _cards) card.Pressed = card.Bucket == _bucket;
+            if (_searchBox.Text.Length > 0) _searchBox.Clear(); // raises ApplyFilters
+            else ApplyFilters();
         }
         foreach (DataGridViewRow row in _grid.Rows)
         {
@@ -961,12 +1108,20 @@ internal sealed class MainForm : MedReminderFormBase
             BackgroundColor = SystemColors.Window,
             BorderStyle = BorderStyle.None,
             EnableHeadersVisualStyles = false,
+            AllowUserToResizeRows = false,
         };
+        // 36 px rows at Normal size (§5.1); MedReminderFormBase scales
+        // the row template with the display and the text size.
+        grid.RowTemplate.Height = 36;
+        // Every column fills by weight down to a minimum, so with Large
+        // text at 150 % the list fits the page instead of scrolling
+        // sideways; the name column takes the largest share.
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Medicine"),
             DataPropertyName = nameof(MedicineListItem.Name),
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 250,
             MinimumWidth = 160,
             SortMode = DataGridViewColumnSortMode.Programmatic
         });
@@ -974,19 +1129,25 @@ internal sealed class MainForm : MedReminderFormBase
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Stock"),
             DataPropertyName = nameof(MedicineListItem.StockDisplay),
-            Width = 120,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 120,
+            MinimumWidth = 96,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.DailyRate"),
             DataPropertyName = nameof(MedicineListItem.DailyRateDisplay),
-            Width = 100,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 100,
+            MinimumWidth = 80,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.DaysRemaining"),
             DataPropertyName = nameof(MedicineListItem.DaysRemainingDisplay),
-            Width = 100,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 100,
+            MinimumWidth = 80,
             SortMode = DataGridViewColumnSortMode.Programmatic
         });
 
@@ -994,14 +1155,18 @@ internal sealed class MainForm : MedReminderFormBase
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.RunOut"),
             DataPropertyName = nameof(MedicineListItem.EtaDisplay),
-            Width = 110,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 110,
+            MinimumWidth = 88,
         });
         _statusCellFont = new Font(Font, FontStyle.Bold);
         var statusColumn = new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Status"),
             DataPropertyName = nameof(MedicineListItem.StatusDisplay),
-            Width = 110,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 110,
+            MinimumWidth = 88,
             DefaultCellStyle = new DataGridViewCellStyle
             {
                 // Alignment and font are column-level: they do not
@@ -1093,13 +1258,27 @@ internal sealed class MainForm : MedReminderFormBase
             }
         };
         grid.RowPrePaint += OnRowPrePaint;
+        grid.CellPainting += OnStatusCellPainting;
         grid.CellDoubleClick += async (_, _) => await ShowEditMedicineAsync();
+
+        // Right-click selects the row under the pointer before the
+        // context menu opens, so the command acts on that medicine.
+        grid.CellMouseDown += (_, e) =>
+        {
+            if (e.Button != MouseButtons.Right || e.RowIndex < 0) return;
+            grid.ClearSelection();
+            var row = grid.Rows[e.RowIndex];
+            var cell = row.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible);
+            if (cell is not null) grid.CurrentCell = cell;
+            row.Selected = true;
+        };
+        grid.ContextMenuStrip = BuildGridContextMenu();
         return grid;
     }
 
     private void OnRowPrePaint(object? sender, DataGridViewRowPrePaintEventArgs e)
     {
-        if (e.RowIndex < 0 || e.RowIndex >= _rows.Count) return;
+        if (e.RowIndex < 0 || e.RowIndex >= _grid.Rows.Count) return;
         var row = _grid.Rows[e.RowIndex];
         if (row.DataBoundItem is not MedicineListItem item) return;
 
@@ -1129,10 +1308,18 @@ internal sealed class MainForm : MedReminderFormBase
             ? palette.TextSecondary
             : Color.Empty;
 
-        // Badge on the "Status" cell: tinted background, coloured text.
-        // SelectionBackColor / SelectionForeColor mirror the badge
-        // so the signal survives even when the row is selected.
-        if (_statusColumnIndex < 0 || _statusColumnIndex >= row.Cells.Count) return;
+    }
+
+    // Status as a pill (§5.1): tinted rounded background and coloured
+    // text on the row's own background, so the selection highlight and
+    // the status read together. Under high contrast the stock cell is
+    // drawn and the text alone tells the status.
+    private void OnStatusCellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex != _statusColumnIndex || UiColors.HighContrast) return;
+        if (_grid.Rows[e.RowIndex].DataBoundItem is not MedicineListItem item || e.Graphics is null) return;
+
+        var palette = UiTheme.Palette;
         var (bg, fg) = item.Status switch
         {
             MedicineRowStatus.Ok        => (palette.OkBack,      palette.OkText),
@@ -1142,11 +1329,61 @@ internal sealed class MainForm : MedReminderFormBase
                 or MedicineRowStatus.Inactive => (palette.NeutralBack, palette.NeutralText),
             _                           => (palette.Surface,     palette.Text),
         };
-        var cell = row.Cells[_statusColumnIndex];
-        cell.Style.BackColor = bg;
-        cell.Style.ForeColor = fg;
-        cell.Style.SelectionBackColor = bg;
-        cell.Style.SelectionForeColor = fg;
+
+        var selected = (e.State & DataGridViewElementStates.Selected) != 0;
+        e.PaintBackground(e.CellBounds, selected);
+
+        var text = e.FormattedValue as string ?? item.StatusDisplay;
+        var font = e.CellStyle?.Font ?? _grid.Font;
+        var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+            | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis;
+        var textSize = TextRenderer.MeasureText(e.Graphics, text, font, e.CellBounds.Size, flags);
+        var padX = font.Height * 2 / 3;
+        var padY = font.Height / 5;
+        var width = Math.Min(e.CellBounds.Width - 2 * padY, textSize.Width + 2 * padX);
+        var height = Math.Min(e.CellBounds.Height - 2 * padY, textSize.Height + 2 * padY);
+        var pill = new Rectangle(
+            e.CellBounds.X + (e.CellBounds.Width - width) / 2,
+            e.CellBounds.Y + (e.CellBounds.Height - height) / 2,
+            width, height);
+
+        var smoothing = e.Graphics.SmoothingMode;
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using (var path = SummaryCard.RoundedRect(pill, Math.Max(2, height / 6)))
+        using (var brush = new SolidBrush(bg))
+        {
+            e.Graphics.FillPath(brush, path);
+        }
+        e.Graphics.SmoothingMode = smoothing;
+        TextRenderer.DrawText(e.Graphics, text, font, pill, fg, flags);
+        e.Handled = true;
+    }
+
+    // Context menu of the grid (D4): the per-medicine commands of the
+    // Therapy and Stock menus, next to the row they act on.
+    private ContextMenuStrip BuildGridContextMenu()
+    {
+        var menu = new ContextMenuStrip();
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Edit"),
+            Mdl2Glyph.Glyphs.Edit, Keys.None, async () => await ShowEditMedicineAsync()));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RegisterIntake"),
+            Mdl2Glyph.Glyphs.CheckMark, Keys.None, async () => await ShowRegisterIntakeAsync()));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.ChangeSchedule"),
+            Mdl2Glyph.Glyphs.Notebook, Keys.None, async () => await ShowChangeScheduleAsync()));
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.AddPackage"),
+            Mdl2Glyph.Glyphs.Package, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NewPackage)));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
+            Mdl2Glyph.Glyphs.Edit, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.History"),
+            Mdl2Glyph.Glyphs.History, Keys.None, async () => await ShowFactHistoryAsync()));
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deactivate"),
+            Mdl2Glyph.Glyphs.Cancel, Keys.None, async () => await DeactivateSelectedAsync()));
+        menu.ImageScalingSize = new Size(ScaledIconSize(16), ScaledIconSize(16));
+        // Nothing to act on without a row (right-click below the last one).
+        menu.Opening += (_, e) => e.Cancel = GetSelectedRow() is null;
+        return menu;
     }
 
     private void WireTrayHandlers()
@@ -1189,7 +1426,7 @@ internal sealed class MainForm : MedReminderFormBase
             var items = await loader.LoadAsync(CancellationToken.None);
 
             _allRows = items.ToList();
-            ApplyInactiveFilter();
+            ApplyFilters();
             HideErrorBanner();
         }
         catch (Exception ex)
@@ -1200,16 +1437,40 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    // Rebuilds the shown rows from the last load, in load order.
-    private void ApplyInactiveFilter()
+    // Rebuilds the shown rows from the last load, in load order: the
+    // inactive toggle, then the summary card and the search text
+    // (MedicineListFilter). The cards count the rows before the card and
+    // search filters, so each card shows what a click on it would list.
+    private void ApplyFilters()
     {
+        var visible = MedicineListFilter.Visible(_allRows, _showInactive);
+        var summary = MedicineListFilter.Summarize(visible);
+        foreach (var card in _cards)
+        {
+            card.Count = card.Bucket switch
+            {
+                MedicineListBucket.Empty => summary.Empty,
+                MedicineListBucket.Warning => summary.Warning,
+                MedicineListBucket.Suspended => summary.Suspended,
+                _ => summary.All,
+            };
+        }
+
         _rows = new BindingList<MedicineListItem>(
-            _showInactive ? _allRows : _allRows.Where(r => r.IsActive).ToList());
+            MedicineListFilter.Apply(visible, _bucket, _searchBox.Text));
         _grid.DataSource = _rows;
-        var hidden = _allRows.Count - _rows.Count;
-        SetStatus(hidden > 0
-            ? _loc.Get("Ui.MainForm.Status.MedicinesLoadedHidden", _rows.Count, hidden)
-            : _loc.Get("Ui.MainForm.Status.MedicinesLoaded", _rows.Count));
+
+        var hidden = _allRows.Count - visible.Count;
+        if (_rows.Count != visible.Count)
+        {
+            SetStatus(_loc.Get("Ui.MainForm.Status.Filtered", _rows.Count, visible.Count));
+        }
+        else
+        {
+            SetStatus(hidden > 0
+                ? _loc.Get("Ui.MainForm.Status.MedicinesLoadedHidden", _rows.Count, hidden)
+                : _loc.Get("Ui.MainForm.Status.MedicinesLoaded", _rows.Count));
+        }
     }
 
     private MedicineListItem? GetSelectedRow()

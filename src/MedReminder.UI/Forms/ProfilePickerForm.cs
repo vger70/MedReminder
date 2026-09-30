@@ -1,5 +1,6 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -33,14 +34,16 @@ internal sealed class ProfilePickerForm : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
+        // Docked layout: header, list and a right-aligned button row
+        // that grows with its captions, so no button is cut at any text
+        // size or display scaling (the fixed 80 x 23 buttons were).
         var header = new Label
         {
             AutoSize = true,
+            Dock = DockStyle.Fill,
             Text = _loc.Get("Ui.ProfilePickerForm.Header"),
-            Location = new System.Drawing.Point(16, 12),
-            MaximumSize = new System.Drawing.Size(520, 0),
+            Margin = new Padding(0, 0, 0, UiTheme.Space.S),
         };
 
         _list = new ListView
@@ -49,37 +52,50 @@ internal sealed class ProfilePickerForm : MedReminderFormBase
             FullRowSelect = true,
             HideSelection = false,
             MultiSelect = false,
-            Location = new System.Drawing.Point(16, 44),
-            Size = new System.Drawing.Size(520, 260),
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
         };
         _list.Columns.Add(_loc.Get("Ui.ProfilePickerForm.Column.Name"), 220);
         _list.Columns.Add(_loc.Get("Ui.ProfilePickerForm.Column.Role"), 100);
         _list.Columns.Add(_loc.Get("Ui.ProfilePickerForm.Column.LastUsed"), 180);
         _list.DoubleClick += (_, _) => TryOpenSelection();
 
-        _openButton = new Button
-        {
-            Text = _loc.Get("Ui.ProfilePickerForm.Open"),
-            Location = new System.Drawing.Point(360, 320),
-            Width = 80,
-            Enabled = false,
-        };
-        _cancelButton = new Button
-        {
-            Text = _loc.Get("Common.Cancel"),
-            DialogResult = DialogResult.Cancel,
-            Location = new System.Drawing.Point(456, 320),
-            Width = 80,
-        };
+        _openButton = DialogButton(_loc.Get("Ui.ProfilePickerForm.Open"));
+        _openButton.Enabled = false;
+        _cancelButton = DialogButton(_loc.Get("Common.Cancel"));
+        _cancelButton.DialogResult = DialogResult.Cancel;
         _openButton.Click += (_, _) => TryOpenSelection();
 
         AcceptButton = _openButton;
         CancelButton = _cancelButton;
 
-        Controls.Add(header);
-        Controls.Add(_list);
-        Controls.Add(_openButton);
-        Controls.Add(_cancelButton);
+        var buttons = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.RightToLeft,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, UiTheme.Space.M, 0, 0),
+        };
+        buttons.Controls.Add(_cancelButton);
+        buttons.Controls.Add(_openButton);
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 3,
+            Padding = new Padding(UiTheme.Space.L),
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.Controls.Add(header, 0, 0);
+        layout.Controls.Add(_list, 0, 1);
+        layout.Controls.Add(buttons, 0, 2);
+        Controls.Add(layout);
 
         _list.SelectedIndexChanged += (_, _) =>
             _openButton.Enabled = _list.SelectedItems.Count == 1;
@@ -130,6 +146,16 @@ internal sealed class ProfilePickerForm : MedReminderFormBase
             _list.Items[0].Selected = true;
         }
     }
+
+    private static Button DialogButton(string text) => new()
+    {
+        Text = text,
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowOnly,
+        MinimumSize = new System.Drawing.Size(88, 32),
+        Padding = new Padding(UiTheme.Space.M, 0, UiTheme.Space.M, 0),
+        Margin = new Padding(UiTheme.Space.S, 0, 0, 0),
+    };
 
     private void TryOpenSelection()
     {
