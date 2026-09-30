@@ -56,6 +56,8 @@ Branch: `claude/ui-phase5-dialogs` → `main`
 - Settings sections taller than the window (General, Notifications)
   showed no scroll bar, so the Save buttons could not be reached; the
   Email port and timeout fields were a few pixels wide.
+- The My PIN group in Settings → Notifications was cut at the bottom
+  with Large text.
 
 ## PR #147 — Replace the Settings tabs with a section list
 

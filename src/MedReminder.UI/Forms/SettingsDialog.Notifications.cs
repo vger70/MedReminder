@@ -96,6 +96,9 @@ internal sealed partial class SettingsDialog
         container.Controls.Add(buttons);
         container.Controls.Add(explanation);
         container.Controls.Add(BuildMyPinSection());
+        // The flow's scroll range stops at the last control and ignores
+        // its bottom padding; a spacer keeps the group off the edge.
+        container.Controls.Add(new Panel { Height = UiTheme.Space.L, Width = 1, Margin = Padding.Empty });
 
         page.Controls.Add(container);
         return page;
@@ -120,7 +123,7 @@ internal sealed partial class SettingsDialog
         _pinStateLabel = new Label
         {
             AutoSize = true,
-            Location = new System.Drawing.Point(12, 24),
+            Margin = new Padding(0, 0, 0, UiTheme.Space.S),
             Text = FormatPinStateText(),
         };
 
@@ -128,12 +131,25 @@ internal sealed partial class SettingsDialog
         {
             Text = _loc.Get("Ui.SettingsDialog.Notifications.SetPin"),
             AutoSize = true,
-            Location = new System.Drawing.Point(12, 52),
+            Margin = Padding.Empty,
         };
         changeButton.Click += async (_, _) => await ChangeMyPinAsync();
 
-        group.Controls.Add(_pinStateLabel);
-        group.Controls.Add(changeButton);
+        // A flow inside the group instead of fixed positions: the group
+        // sizes to what the label and button need after scaling, so its
+        // bottom edge is no longer cut with Large text.
+        var content = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
+        };
+        content.Controls.Add(_pinStateLabel);
+        content.Controls.Add(changeButton);
+        group.Controls.Add(content);
         return group;
     }
 
