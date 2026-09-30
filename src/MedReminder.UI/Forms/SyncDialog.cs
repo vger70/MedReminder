@@ -8,6 +8,8 @@ using MedReminder.UI.Hosting;
 using MedReminder.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
 
+using MedReminder.UI.UiExtensions;
+
 namespace MedReminder.UI.Forms;
 
 // Tools → Sync… (B.1 Phase 3d, docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md
@@ -116,7 +118,7 @@ internal sealed class SyncDialog : MedReminderFormBase
             ("Ui.SyncDialog.Devices.Version", 110), ("Ui.SyncDialog.Devices.LastSeen", 170));
         _devices.SelectedIndexChanged += (_, _) => UpdateDeviceButtons();
         _removeDevice = Action("Ui.SyncDialog.RemoveDevice", async () => await RemoveDeviceAsync());
-        var deviceButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
+        var deviceButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, UiTheme.Space.S, 0, 0) };
         deviceButtons.Controls.Add(_removeDevice);
         devicesPage.Controls.Add(_devices);
         devicesPage.Controls.Add(deviceButtons);
@@ -130,25 +132,17 @@ internal sealed class SyncDialog : MedReminderFormBase
         _conflicts.SelectedIndexChanged += (_, _) => UpdateConflictButtons();
         _restore = Action("Ui.SyncDialog.Conflicts.Restore", async () => await RestoreAsync());
         _dismiss = Action("Ui.SyncDialog.Conflicts.Dismiss", async () => await DismissAsync());
-        var conflictButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
+        var conflictButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, UiTheme.Space.S, 0, 0) };
         conflictButtons.Controls.AddRange([_restore, _dismiss]);
         conflictsPage.Controls.Add(_conflicts);
         conflictsPage.Controls.Add(conflictButtons);
 
         tabs.TabPages.AddRange([statusPage, devicesPage, conflictsPage]);
 
-        var close = _close = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, AutoSize = true, Height = 32 };
-        var bottom = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        bottom.Controls.Add(close);
+        var close = _close = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.OK);
+        var bottom = DialogLayout.ButtonBar(this, close, close);
         Controls.Add(tabs);
         Controls.Add(bottom);
-        CancelButton = close;
 
         _status.Changed += OnStatusChanged;
         FormClosed += (_, _) => _status.Changed -= OnStatusChanged;
@@ -735,7 +729,8 @@ internal sealed class SyncDialog : MedReminderFormBase
 
     private Button Action(string key, Func<Task> action)
     {
-        var button = new Button { Text = _loc.Get(key), AutoSize = true, Height = 32 };
+        var button = DialogLayout.Button(_loc.Get(key));
+        button.Margin = new Padding(0, 0, UiTheme.Space.S, 0);
         button.Click += async (_, _) =>
         {
             button.Enabled = false;

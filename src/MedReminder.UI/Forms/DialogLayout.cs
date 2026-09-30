@@ -120,6 +120,45 @@ internal static class DialogLayout
         }
     }
 
+    // Content of a simple dialog stacked top to bottom, filling the form
+    // above the button bar. Replaces fixed positions, which did not move
+    // when a wrapped label grew with the text size.
+    public static FlowLayoutPanel Stack(params Control[] rows)
+    {
+        var stack = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(UiTheme.Space.L, UiTheme.Space.M, UiTheme.Space.L, 0),
+        };
+        foreach (var row in rows)
+        {
+            row.Margin = new Padding(0, 0, 0, UiTheme.Space.S);
+            stack.Controls.Add(row);
+        }
+        return stack;
+    }
+
+    // Controls side by side on one row of a Stack.
+    public static FlowLayoutPanel Row(params Control[] controls)
+    {
+        var row = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+        };
+        foreach (var control in controls)
+        {
+            control.Margin = new Padding(0, 0, UiTheme.Space.M, 0);
+            row.Controls.Add(control);
+        }
+        return row;
+    }
+
     // Inline field error (F9): hidden until ShowError sets a message.
     public static Label ErrorLabel() => new()
     {

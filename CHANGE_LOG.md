@@ -30,6 +30,25 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #149 — Apply the dialog template to the large dialogs
+
+Link: [vger70/MedReminder#149](https://github.com/vger70/MedReminder/pull/149)
+Branch: `claude/ui-phase5b-large-dialogs` → `main`
+
+### Changed
+
+- The export, import, restore from cloud, about, donate, fact history,
+  prescription request, therapy report, barcode scan, sync,
+  installation, profiles (with the new, rename and delete profile
+  dialogs) and restore-into-profile windows use the same button bar
+  as the other dialogs: bottom right, main action last, buttons at
+  least 32 px high that grow with their caption.
+- The profile dialogs no longer use fixed positions: their content
+  stacks and the window grows with Large text; the new-profile errors
+  appear under the fields.
+- The medicine editor, import, restore and profile dialogs use the
+  10 pt base font.
+
 ## PR #148 — Add the dialog template and apply it to the small dialogs
 
 Link: [vger70/MedReminder#148](https://github.com/vger70/MedReminder/pull/148)

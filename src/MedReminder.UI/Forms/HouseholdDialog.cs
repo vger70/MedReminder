@@ -7,6 +7,8 @@ using MedReminder.Domain.Household;
 using MedReminder.UI.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
+using MedReminder.UI.UiExtensions;
+
 namespace MedReminder.UI.Forms;
 
 // Tools → Installation… (household step H3d; docs/analysis/
@@ -105,7 +107,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             _devices.Columns.Add(_loc.Get(key), width);
         }
         _addDevice = Action("Ui.HouseholdDialog.AddDevice", AddDeviceAsync);
-        var deviceButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
+        var deviceButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, UiTheme.Space.S, 0, 0) };
         deviceButtons.Controls.Add(_addDevice);
         _makeMaster = Action("Ui.HouseholdDialog.MakeMaster", MakeMasterAsync);
         deviceButtons.Controls.Add(_makeMaster);
@@ -118,24 +120,10 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         tabs.TabPages.AddRange([statusPage, devicesPage]);
 
         // During the first-run join, closing means no profile was brought.
-        _close = new Button
-        {
-            Text = _loc.Get("Common.Close"),
-            DialogResult = setup ? DialogResult.Cancel : DialogResult.OK,
-            AutoSize = true,
-            Height = 32,
-        };
-        var bottom = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        bottom.Controls.Add(_close);
+        _close = DialogLayout.Button(_loc.Get("Common.Close"), setup ? DialogResult.Cancel : DialogResult.OK);
+        var bottom = DialogLayout.ButtonBar(this, _close, _close);
         Controls.Add(tabs);
         Controls.Add(bottom);
-        CancelButton = _close;
 
         _household.Changed += OnHouseholdChanged;
         FormClosed += (_, _) => _household.Changed -= OnHouseholdChanged;
@@ -794,7 +782,8 @@ internal sealed class HouseholdDialog : MedReminderFormBase
 
     private Button Action(string key, Func<Task> action)
     {
-        var button = new Button { Text = _loc.Get(key), AutoSize = true, Height = 32 };
+        var button = DialogLayout.Button(_loc.Get(key));
+        button.Margin = new Padding(0, 0, UiTheme.Space.S, 0);
         button.Click += async (_, _) =>
         {
             button.Enabled = false;
