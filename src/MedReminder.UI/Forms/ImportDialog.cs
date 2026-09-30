@@ -258,10 +258,10 @@ internal sealed class ImportDialog : MedReminderFormBase
 
             // §4.2 step 11: offer a restart so the hosted services pick
             // up the swapped DB cleanly.
-            var restart = MessageBox.Show(this,
+            var restart = ConfirmDialog.Show(_loc, this,
                 _loc.Get("Ui.ImportDialog.Success.RestartPrompt"),
                 _loc.Get("Ui.ImportDialog.Title"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                MessageBoxIcon.Information);
             RestartRequested = restart == DialogResult.Yes;
             DialogResult = DialogResult.OK;
             Close();

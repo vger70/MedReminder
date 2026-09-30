@@ -33,14 +33,13 @@ internal static class OtherProfileArchivePrompt
     {
         if (!IsOtherProfile(currentProfile, archiveProfileId)) return true;
 
-        var answer = MessageBox.Show(
+        var answer = ConfirmDialog.Show(loc, 
             owner,
             loc.Get(
                 "Ui.Import.OtherProfile.Body",
                 DisplayName(registry, archiveProfileId),
                 currentProfile.DisplayName),
             loc.Get("Ui.Import.OtherProfile.Title"),
-            MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
             MessageBoxDefaultButton.Button2);
         return answer == DialogResult.Yes;

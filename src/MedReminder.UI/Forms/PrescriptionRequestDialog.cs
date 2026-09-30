@@ -238,10 +238,10 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
     {
         if (!_canSend || _sending || !HasDraft()) return;
 
-        var confirm = MessageBox.Show(this,
+        var confirm = ConfirmDialog.Show(_loc, this,
             _loc.Get("Ui.PrescriptionRequestDialog.ConfirmSend", _doctorAddress),
             _loc.Get("Common.Confirm"),
-            MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+            MessageBoxIcon.Question,
             MessageBoxDefaultButton.Button2);
         if (confirm != DialogResult.Yes) return;
 

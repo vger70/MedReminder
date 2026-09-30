@@ -379,8 +379,8 @@ internal sealed class SyncDialog : MedReminderFormBase
                 if (choice.ShowDialog(this) != DialogResult.OK || choice.SelectedGroupId is not { } chosen) return;
                 group = chosen;
             }
-            if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
-                    _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+            if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
+                    _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxIcon.Warning,
                     MessageBoxDefaultButton.Button2) != DialogResult.Yes)
             {
                 return;
@@ -414,8 +414,8 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task RebuildAsync()
     {
         if (!IsEnabled) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Rebuild.Confirm"), _loc.Get("Ui.SyncDialog.Rebuild"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.Rebuild.Confirm"), _loc.Get("Ui.SyncDialog.Rebuild"),
+                MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
         }
@@ -436,8 +436,8 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task DisableAsync()
     {
         if (!IsEnabled) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Disable.Confirm"), _loc.Get("Ui.SyncDialog.Disable"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.Disable.Confirm"), _loc.Get("Ui.SyncDialog.Disable"),
+                MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
         }
@@ -465,8 +465,8 @@ internal sealed class SyncDialog : MedReminderFormBase
 
         var target = await Picker.ForCodeAsync(code.Provider);
         if (target is null) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
-                _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
+                _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxIcon.Warning,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
@@ -542,8 +542,8 @@ internal sealed class SyncDialog : MedReminderFormBase
         var confirm = removedDevice is null
             ? _loc.Get("Ui.SyncDialog.Rotate.Confirm")
             : _loc.Get("Ui.SyncDialog.RemoveDevice.Confirm", removedDevice);
-        if (MessageBox.Show(this, confirm, _loc.Get(removedDevice is null ? "Ui.SyncDialog.Rotate" : "Ui.SyncDialog.RemoveDevice"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        if (ConfirmDialog.Show(_loc, this, confirm, _loc.Get(removedDevice is null ? "Ui.SyncDialog.Rotate" : "Ui.SyncDialog.RemoveDevice"),
+                MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
         }

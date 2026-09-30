@@ -43,7 +43,6 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         // leave the app without a profile to open. AcceptButton
         // handles the flow; the Cancel button below exits the app.
         ControlBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
         // Layout panels + AutoSize instead of absolute coordinates:
         // the form grows with the DPI scale and with the localized
         // text length, so labels and buttons are never clipped.
@@ -117,37 +116,14 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         pinRow.Controls.Add(_pinBox);
         pinRow.Controls.Add(_pinConfirmBox);
 
-        _statusLabel = new Label
-        {
-            AutoSize = true,
-            MaximumSize = new System.Drawing.Size(contentWidth, 0),
-            ForeColor = UiColors.Error,
-            Text = string.Empty,
-        };
+        // Inline error under the fields (F9).
+        _statusLabel = DialogLayout.ErrorLabel();
+        _statusLabel.MaximumSize = new System.Drawing.Size(contentWidth, 0);
 
-        _createButton = new Button
-        {
-            Text = _loc.Get("Ui.FirstRunWizardForm.Create"),
-            AutoSize = true,
-            MinimumSize = new System.Drawing.Size(110, 34),
-            Padding = new Padding(8, 2, 8, 2),
-        };
-        var exitButton = new Button
-        {
-            Text = _loc.Get("Common.Exit"),
-            DialogResult = DialogResult.Cancel,
-            AutoSize = true,
-            MinimumSize = new System.Drawing.Size(110, 34),
-            Padding = new Padding(8, 2, 8, 2),
-        };
+        _createButton = DialogLayout.Button(_loc.Get("Ui.FirstRunWizardForm.Create"));
+        var exitButton = DialogLayout.Button(_loc.Get("Common.Exit"), DialogResult.Cancel);
         _createButton.Click += (_, _) => TryCreate();
-        var joinButton = new Button
-        {
-            Text = _loc.Get("Ui.FirstRunWizardForm.Join"),
-            AutoSize = true,
-            MinimumSize = new System.Drawing.Size(110, 34),
-            Padding = new Padding(8, 2, 8, 2),
-        };
+        var joinButton = DialogLayout.Button(_loc.Get("Ui.FirstRunWizardForm.Join"));
         joinButton.Click += (_, _) =>
         {
             JoinRequested = true;
@@ -157,8 +133,8 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         AcceptButton = _createButton;
         CancelButton = exitButton;
 
-        // RightToLeft: the first control added sits on the far right,
-        // so Exit is added first to keep the [Create] [Exit] order.
+        // RightToLeft: the first control added sits on the far right;
+        // Create, the primary action, is last as in every dialog (§5.3).
         var buttonRow = new FlowLayoutPanel
         {
             AutoSize = true,
@@ -167,8 +143,8 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
             Anchor = AnchorStyles.Right,
             Margin = new Padding(3, 12, 3, 3),
         };
-        buttonRow.Controls.Add(exitButton);
         buttonRow.Controls.Add(_createButton);
+        buttonRow.Controls.Add(exitButton);
         buttonRow.Controls.Add(joinButton);
 
         var tooltip = new ToolTip { ShowAlways = true };
@@ -204,7 +180,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         var name = _nameBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
-            _statusLabel.Text = _loc.Get("Ui.FirstRunWizardForm.NameRequired");
+            DialogLayout.ShowError(_statusLabel, _loc.Get("Ui.FirstRunWizardForm.NameRequired"));
             _nameBox.Focus();
             return;
         }
@@ -215,7 +191,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         {
             if (!string.Equals(pin, pinConfirm, StringComparison.Ordinal))
             {
-                _statusLabel.Text = _loc.Get("Ui.FirstRunWizardForm.PinMismatch");
+                DialogLayout.ShowError(_statusLabel, _loc.Get("Ui.FirstRunWizardForm.PinMismatch"));
                 _pinConfirmBox.Focus();
                 return;
             }
@@ -239,7 +215,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            _statusLabel.Text = ex.Message;
+            DialogLayout.ShowError(_statusLabel, ex.Message);
         }
     }
 }

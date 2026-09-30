@@ -372,10 +372,9 @@ internal static class UpdateCheckPrompt
         var body = loc.Get("Ui.UpdateCheck.NewVersionPrompt",
             result.LatestTag ?? "?",
             result.ReleaseUrl ?? string.Empty);
-        var response = MessageBox.Show(
+        var response = ConfirmDialog.Show(loc, 
             owner, body,
             loc.Get("Ui.UpdateCheck.NewVersionTitle"),
-            MessageBoxButtons.YesNo,
             MessageBoxIcon.Information,
             MessageBoxDefaultButton.Button1);
 

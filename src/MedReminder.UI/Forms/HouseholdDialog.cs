@@ -268,8 +268,8 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private async Task RemoveDeviceAsync()
     {
         if (SelectedDevice is not { } device || device == _identity?.DeviceId) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.RemoveDevice.Confirm", NameOf(device)),
-                _loc.Get("Ui.HouseholdDialog.RemoveDevice"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.HouseholdDialog.RemoveDevice.Confirm", NameOf(device)),
+                _loc.Get("Ui.HouseholdDialog.RemoveDevice"), MessageBoxIcon.Warning,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
@@ -306,8 +306,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             Array.Clear(passphrase);
         }
         await RefreshAllAsync();
-        if (MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.RemoveDevice.Done"), Text, MessageBoxButtons.YesNo,
-                MessageBoxIcon.Information) == DialogResult.Yes)
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.HouseholdDialog.RemoveDevice.Done"), Text, MessageBoxIcon.Information) == DialogResult.Yes)
         {
             await ShowNewKeyCodeAsync();
         }
@@ -424,8 +423,8 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private async Task MakeMasterAsync()
     {
         if (SelectedDevice is not { } device) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.MakeMaster.Confirm", NameOf(device)),
-                _loc.Get("Ui.HouseholdDialog.MakeMaster"), MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.HouseholdDialog.MakeMaster.Confirm", NameOf(device)),
+                _loc.Get("Ui.HouseholdDialog.MakeMaster"), MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
@@ -580,8 +579,8 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     private async Task JoinAsync()
     {
         if (IsPublished) return;
-        if (!_setup && MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.Join.Confirm"), _loc.Get("Ui.HouseholdDialog.Join"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        if (!_setup && ConfirmDialog.Show(_loc, this, _loc.Get("Ui.HouseholdDialog.Join.Confirm"), _loc.Get("Ui.HouseholdDialog.Join"),
+                MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
         }

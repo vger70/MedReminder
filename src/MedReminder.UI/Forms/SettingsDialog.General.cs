@@ -308,12 +308,12 @@ internal sealed partial class SettingsDialog
             return;
         }
 
-        var confirm = MessageBox.Show(this,
+        var confirm = ConfirmDialog.Show(_loc, this,
             _loc.Get(profileChanged
                 ? "Ui.SettingsDialog.General.RestartPrompt.Changes"
                 : "Ui.SettingsDialog.General.RestartPrompt"),
             _loc.Get("Ui.SettingsDialog.General.RestartPrompt.Title"),
-            MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            MessageBoxIcon.Question);
         if (confirm != DialogResult.Yes) return;
 
         if (profileChanged)
