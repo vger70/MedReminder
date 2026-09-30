@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Export;
@@ -121,6 +120,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // Per-profile text size (EVOLUTION-PROPOSALS.md §3.2), saved to
     // profiles\<id>\ui.settings.json with the rest of the General tab.
     private ComboBox _textSizeCombo = null!;
+    private ComboBox _appearanceCombo = null!;
 
     // Shared component for the explanatory tooltips on the technical fields.
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
@@ -131,11 +131,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
         InitialDelay = 400,
         ReshowDelay = 200,
         ShowAlways = true,
-    };
-
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        WriteIndented = true,
     };
 
     // A3 (§5.2): validate the caregiver address exactly as the MailKit
@@ -293,7 +288,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Width = 220,
         };
         PopulateReferenceCountryCombo();
-        _tooltips.SetToolTip(_referenceCountryCombo, _loc.Get("settings.referenceCountry.help"));
+        // Household step H2b (D-14): the reference country belongs to the
+        // installation and is changed by an administrator.
+        _referenceCountryCombo.Enabled = _currentProfile.IsAdmin;
+        _tooltips.SetToolTip(_referenceCountryCombo, _loc.Get(_currentProfile.IsAdmin
+            ? "settings.referenceCountry.help"
+            : "settings.referenceCountry.adminOnly"));
 
         var referenceCountryHelp = new Label
         {
@@ -332,13 +332,33 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
         _tooltips.SetToolTip(_textSizeCombo, textSizeHelp.Text);
 
+        var appearanceLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.Appearance"),
+        };
+        _appearanceCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        PopulateAppearanceCombo();
+        var appearanceHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.General.Appearance.Help"),
+        };
+        _tooltips.SetToolTip(_appearanceCombo, appearanceHelp.Text);
+
         var saveButton = new Button
         {
             Text = _loc.Get("Ui.SettingsDialog.General.Save"),
             AutoSize = true,
             Height = 30,
         };
-        saveButton.Click += (_, _) => SaveGeneral();
+        saveButton.Click += async (_, _) => await SaveGeneralAsync();
 
         var note = new Label
         {
@@ -363,6 +383,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         panel.Controls.Add(textSizeLabel);
         panel.Controls.Add(_textSizeCombo);
         panel.Controls.Add(textSizeHelp);
+        panel.Controls.Add(appearanceLabel);
+        panel.Controls.Add(_appearanceCombo);
+        panel.Controls.Add(appearanceHelp);
         panel.Controls.Add(saveButton);
         panel.Controls.Add(note);
         page.Controls.Add(panel);
@@ -384,6 +407,28 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
         _textSizeCombo.DisplayMember = nameof(TextSizeChoice.DisplayName);
     }
+
+    // Like the text size, the selection shows the saved value.
+    private void PopulateAppearanceCombo()
+    {
+        var saved = ProfileUiSettingsFile.ReadAppearance(_currentProfile.DataDirectory);
+        foreach (var mode in Enum.GetValues<AppearanceMode>())
+        {
+            _appearanceCombo.Items.Add(new AppearanceChoice(mode, _loc.Get(AppearanceDisplayKey(mode))));
+            if (mode == saved)
+            {
+                _appearanceCombo.SelectedIndex = _appearanceCombo.Items.Count - 1;
+            }
+        }
+        _appearanceCombo.DisplayMember = nameof(AppearanceChoice.DisplayName);
+    }
+
+    private static string AppearanceDisplayKey(AppearanceMode mode) => mode switch
+    {
+        AppearanceMode.Light => "Ui.SettingsDialog.General.Appearance.Light",
+        AppearanceMode.Dark => "Ui.SettingsDialog.General.Appearance.Dark",
+        _ => "Ui.SettingsDialog.General.Appearance.System",
+    };
 
     private static string TextSizeDisplayKey(TextSize size) => size switch
     {
@@ -431,7 +476,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
     }
 
-    private void SaveGeneral()
+    // Household step H2b: through UpdateGeneralSettings, which records the
+    // reference country in the household.
+    private async Task SaveGeneralAsync()
     {
         if (_languageCombo.SelectedItem is not LanguageChoice choice) return;
 
@@ -444,11 +491,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
 
         var textSize = (_textSizeCombo.SelectedItem as TextSizeChoice)?.Size ?? TextSize.Normal;
+        var appearance = (_appearanceCombo.SelectedItem as AppearanceChoice)?.Mode ?? AppearanceMode.System;
 
         try
         {
-            WriteUserSettingsToDisk(settings);
-            ProfileUiSettingsFile.WriteTextSize(_currentProfile.DataDirectory, textSize);
+            await RunUseCaseAsync<UpdateGeneralSettings>(u => u.ExecuteAsync(settings, CancellationToken.None));
+            ProfileUiSettingsFile.Write(_currentProfile.DataDirectory, textSize, appearance);
         }
         catch (Exception ex)
         {
@@ -458,15 +506,18 @@ internal sealed class SettingsDialog : MedReminderFormBase
             return;
         }
 
-        // If neither the language nor the text size changed, no
-        // restart needed. A ReferenceCountry change alone is picked up
+        // If neither the language, the text size nor the appearance
+        // changed, no restart needed. A ReferenceCountry change alone is picked up
         // at the next opening of the medicine form via IOptionsMonitor
         // (user.settings.json is watched with reloadOnChange=true).
-        // The text size is applied when each window loads, and the
-        // main window is already open, hence the restart.
+        // The text size is applied when each window loads and the
+        // appearance before the first one is created; the main window
+        // is already open, hence the restart.
         var languageChanged = !string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase);
         var textSizeChanged = TextSizes.ScaleOf(textSize) != MedReminderFormBase.TextScale;
-        if (!languageChanged && !textSizeChanged)
+        var appearanceChanged = appearance != UiTheme.Appearance;
+        var profileChanged = textSizeChanged || appearanceChanged;
+        if (!languageChanged && !profileChanged)
         {
             MessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.General.Saved"),
@@ -476,17 +527,17 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
 
         var confirm = MessageBox.Show(this,
-            _loc.Get(textSizeChanged
+            _loc.Get(profileChanged
                 ? "Ui.SettingsDialog.General.RestartPrompt.Changes"
                 : "Ui.SettingsDialog.General.RestartPrompt"),
             _loc.Get("Ui.SettingsDialog.General.RestartPrompt.Title"),
             MessageBoxButtons.YesNo, MessageBoxIcon.Question);
         if (confirm != DialogResult.Yes) return;
 
-        if (textSizeChanged)
+        if (profileChanged)
         {
-            // The text size belongs to this profile: reopen it rather
-            // than the picker.
+            // Text size and appearance belong to this profile: reopen
+            // it rather than the picker.
             _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
         }
         else
@@ -495,17 +546,19 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
     }
 
-    private static void WriteUserSettingsToDisk(UserSettings settings)
+    // Runs a use case of the installation settings in its own scope.
+    private async Task RunUseCaseAsync<T>(Func<T, Task> action) where T : notnull
     {
-        var payload = new { UI = settings };
-        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "user.settings.json");
-        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
-        File.WriteAllText(path, json);
+        if (_scopes is null) throw new InvalidOperationException("The settings dialog has no service scope.");
+        await using var scope = _scopes.CreateAsyncScope();
+        await action(scope.ServiceProvider.GetRequiredService<T>());
     }
 
     private sealed record LanguageChoice(string Code, string DisplayName);
 
     private sealed record TextSizeChoice(TextSize Size, string DisplayName);
+
+    private sealed record AppearanceChoice(AppearanceMode Mode, string DisplayName);
 
     // Mappa un codice ISO 639-1 sulla chiave JSON che restituisce il
     // the language name in the current UI language. Unknown codes
@@ -561,7 +614,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var testButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Email.Test"), AutoSize = true, Height = 28 };
         var saveButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Email.Save"), AutoSize = true, Height = 28 };
         testButton.Click += async (_, _) => await TestSmtpAsync(testButton);
-        saveButton.Click += (_, _) => SaveSmtpSettings();
+        saveButton.Click += async (_, _) => await SaveSmtpSettingsAsync();
 
         var table = BuildFormTable();
         AddRow(table, _loc.Get("Ui.SettingsDialog.Email.Host"), _hostBox);
@@ -587,34 +640,29 @@ internal sealed class SettingsDialog : MedReminderFormBase
         return page;
     }
 
-    private void SaveSmtpSettings()
+    // Household step H2b: through UpdateSmtpSettings, which writes the
+    // transport and the password and records them in the household.
+    // Returns false when the save failed (the error was shown).
+    private async Task<bool> SaveSmtpSettingsAsync()
     {
         try
         {
-            var settings = new SmtpSettings
-            {
-                Host = _hostBox.Text.Trim(),
-                Port = (int)_portBox.Value,
-                UseStartTls = _useTlsBox.Checked,
-                Username = _usernameBox.Text.Trim(),
-                FromAddress = _fromBox.Text.Trim(),
-                FromDisplayName = _fromNameBox.Text.Trim(),
-                TimeoutSeconds = (int)_timeoutBox.Value,
-            };
+            var settings = new SmtpTransport(
+                Host: _hostBox.Text.Trim(),
+                Port: (int)_portBox.Value,
+                UseStartTls: _useTlsBox.Checked,
+                Username: _usernameBox.Text.Trim(),
+                FromAddress: _fromBox.Text.Trim(),
+                FromDisplayName: _fromNameBox.Text.Trim(),
+                TimeoutSeconds: (int)_timeoutBox.Value);
 
-            // Password: if the user has typed something, encrypt it;
-            // otherwise keep the current one. The "clear" checkbox
-            // ha precedenza e rimuove la password.
-            if (_clearPasswordBox.Checked)
-            {
-                _credentialStore.Clear();
-            }
-            else if (!string.IsNullOrEmpty(_passwordBox.Text))
-            {
-                _credentialStore.SetPassword(_passwordBox.Text);
-            }
-
-            WriteSmtpSettingsToDisk(settings);
+            // Password: what the user typed replaces the stored one; empty
+            // keeps it. The "clear" checkbox wins and removes it.
+            var clear = _clearPasswordBox.Checked;
+            var typed = _passwordBox.Text;
+            await RunUseCaseAsync<UpdateSmtpSettings>(u => u.ExecuteAsync(
+                settings, string.IsNullOrEmpty(typed) ? null : typed, clear, CancellationToken.None));
+            if (IsDisposed) return true;
             _passwordStatusLabel.Text = _loc.Get(_credentialStore.HasPassword
                 ? "Ui.SettingsDialog.Email.PasswordStored"
                 : "Ui.SettingsDialog.Email.PasswordEmpty");
@@ -625,12 +673,17 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 _loc.Get("Ui.SettingsDialog.Email.Saved"),
                 _loc.Get("Common.Ok"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return true;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
-                _loc.Get("Ui.SettingsDialog.Email.SaveError"),
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (!IsDisposed)
+            {
+                MessageBox.Show(this, ex.Message,
+                    _loc.Get("Ui.SettingsDialog.Email.SaveError"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            return false;
         }
     }
 
@@ -639,7 +692,21 @@ internal sealed class SettingsDialog : MedReminderFormBase
         // Save first because TestConnectionAsync operates on the
         // current settings (IOptionsMonitor refreshes after the file
         // is written).
-        SaveSmtpSettings();
+        if (!await SaveSmtpSettingsAsync()) return;
+        // Household step H4c (§7.6): the settings are the installation's
+        // and stay editable here; only the master sends, so only the
+        // master tests the connection.
+        if (_scopes is not null)
+        {
+            await using var scope = _scopes.CreateAsyncScope();
+            if (scope.ServiceProvider.GetService<IMasterRole>() is { } master
+                && !await master.SendsEmailAsync(CancellationToken.None))
+            {
+                MessageBox.Show(this, _loc.Get("Ui.SettingsDialog.Email.NotMaster"),
+                    _loc.Get("Ui.SettingsDialog.Email.TestTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+        }
         button.Enabled = false;
         try
         {
@@ -663,14 +730,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             button.Enabled = true;
         }
-    }
-
-    private static void WriteSmtpSettingsToDisk(SmtpSettings settings)
-    {
-        var payload = new { Smtp = settings };
-        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "smtp.settings.json");
-        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
-        File.WriteAllText(path, json);
     }
 
     // ------------------ Notifications tab (Increment 15d) ------------------
@@ -785,7 +844,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             AutoSize = true,
             Location = new System.Drawing.Point(12, 52),
         };
-        changeButton.Click += (_, _) => ChangeMyPin();
+        changeButton.Click += async (_, _) => await ChangeMyPinAsync();
 
         group.Controls.Add(_pinStateLabel);
         group.Controls.Add(changeButton);
@@ -800,7 +859,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         return _loc.Get(stateKey);
     }
 
-    private void ChangeMyPin()
+    // Household step H2: through SetProfilePin, which records the PIN
+    // hash in the household.
+    private async Task ChangeMyPinAsync()
     {
         try
         {
@@ -808,9 +869,13 @@ internal sealed class SettingsDialog : MedReminderFormBase
             using var dialog = new ChangePinDialog(_loc, hasPin);
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
-            _profileRegistry.SetPin(
-                _currentProfile.Id,
-                dialog.ClearPin ? null : dialog.NewPin);
+            if (_scopes is null) throw new InvalidOperationException("The settings dialog has no service scope.");
+            await using (var scope = _scopes.CreateAsyncScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<SetProfilePin>().ExecuteAsync(
+                    _currentProfile.Id, dialog.ClearPin ? null : dialog.NewPin, CancellationToken.None);
+            }
+            if (IsDisposed) return;
 
             _pinStateLabel.Text = FormatPinStateText();
             MessageBox.Show(this,
@@ -1013,7 +1078,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         _tooltips.SetToolTip(browseButton, _loc.Get("Ui.SettingsDialog.Tooltip.BackupBrowse"));
 
         var saveButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.SaveSettings"), AutoSize = true, Height = 30 };
-        saveButton.Click += (_, _) => SaveBackupSettings();
+        saveButton.Click += async (_, _) => await SaveBackupSettingsAsync();
 
         var runNowButton = new Button { Text = _loc.Get("Ui.SettingsDialog.Backup.RunNow"), AutoSize = true, Height = 30 };
         runNowButton.Click += async (_, _) => await RunBackupNowAsync(runNowButton);
@@ -1457,7 +1522,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
     }
 
-    private void SaveBackupSettings()
+    // Household step H2b: through UpdateBackupSettings, which records the
+    // scheduled cloud backup policy in the household.
+    private async Task SaveBackupSettingsAsync()
     {
         try
         {
@@ -1550,7 +1617,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
                 CloudAccountId = cloudIsProvider ? cloudAccountId : string.Empty,
             };
 
-            WriteBackupSettingsToDisk(settings);
+            await RunUseCaseAsync<UpdateBackupSettings>(u => u.ExecuteAsync(settings, CancellationToken.None));
+            if (IsDisposed) return;
             MessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Backup.Saved"),
                 _loc.Get("Common.Ok"),
@@ -1931,14 +1999,6 @@ internal sealed class SettingsDialog : MedReminderFormBase
             _backupCloudWarningLabel.Text = string.Empty;
             _backupCloudWarningLabel.Visible = false;
         }
-    }
-
-    private static void WriteBackupSettingsToDisk(BackupSettings settings)
-    {
-        var payload = new { Backup = settings };
-        var path = Path.Combine(AppDataPaths.GetAppDataDirectory(), "backup.settings.json");
-        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
-        File.WriteAllText(path, json);
     }
 
     private static DateTime ParsePreferredTimeAsDateTime(string raw)

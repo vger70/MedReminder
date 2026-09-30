@@ -9,6 +9,11 @@ I, §16):
 - **I** — a read-only view, for an admin, of the stock status of every
   profile without switching profile.
 
+Status on 2026-09-29: item G is implemented by step H2 of the
+household feature (`ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` §8), with the
+recommendations of D1 and D2 (§9) and the design of §3, plus a
+household operation per change. Item I is still not planned.
+
 Status on 2026-09-28: `docs/STATUS.md` §3.5 and `docs/EVOLUTION.md`
 record both as "not planned, picked up only if a concrete need
 emerges". This document exists because the product owner asked for it

@@ -56,6 +56,53 @@ public sealed class ProfileUiSettingsFileTests : IDisposable
         ProfileUiSettingsFile.ReadTextSize(_dir).Should().Be(TextSize.ExtraLarge);
     }
 
+    [Theory]
+    [InlineData(AppearanceMode.System)]
+    [InlineData(AppearanceMode.Light)]
+    [InlineData(AppearanceMode.Dark)]
+    public void Appearance_round_trips_through_the_profile_file(AppearanceMode mode)
+    {
+        ProfileUiSettingsFile.WriteAppearance(_dir, mode);
+
+        ProfileUiSettingsFile.ReadAppearance(_dir).Should().Be(mode);
+        File.ReadAllText(FilePath).Should().Contain($"\"Appearance\": \"{mode}\"");
+        File.Exists(FilePath + ".tmp").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Writing_one_preference_keeps_the_other()
+    {
+        ProfileUiSettingsFile.WriteTextSize(_dir, TextSize.Large);
+        ProfileUiSettingsFile.WriteAppearance(_dir, AppearanceMode.Dark);
+        ProfileUiSettingsFile.WriteTextSize(_dir, TextSize.ExtraLarge);
+
+        ProfileUiSettingsFile.ReadTextSize(_dir).Should().Be(TextSize.ExtraLarge);
+        ProfileUiSettingsFile.ReadAppearance(_dir).Should().Be(AppearanceMode.Dark);
+    }
+
+    [Fact]
+    public void File_written_before_the_appearance_setting_reads_as_system()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, "{ \"TextSize\": \"Large\" }");
+
+        ProfileUiSettingsFile.ReadAppearance(_dir).Should().Be(AppearanceMode.System);
+        ProfileUiSettingsFile.ReadTextSize(_dir).Should().Be(TextSize.Large);
+    }
+
+    [Theory]
+    [InlineData("{ \"Appearance\": \"Sepia\" }")]
+    [InlineData("{ \"Appearance\": \"2\" }")]
+    [InlineData("{ \"Appearance\": 2 }")]
+    [InlineData("not json")]
+    public void Unknown_appearance_reads_as_system(string content)
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, content);
+
+        ProfileUiSettingsFile.ReadAppearance(_dir).Should().Be(AppearanceMode.System);
+    }
+
     [Fact]
     public void Normal_keeps_the_default_look()
     {

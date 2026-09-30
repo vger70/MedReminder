@@ -85,6 +85,15 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         _log.LogInformation("Backup scheduler stopped.");
     }
 
+    // True without a household (tests, or a host without the household
+    // services), as before step H4a.
+    private async Task<bool> SendsAsMasterAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = _services.CreateAsyncScope();
+        return scope.ServiceProvider.GetService<IMasterRole>() is not { } master
+            || await master.SendsEmailAsync(cancellationToken);
+    }
+
     internal async Task TryRunAsync(CancellationToken cancellationToken)
     {
         try
@@ -92,6 +101,13 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             var settings = _settings.CurrentValue;
             var localEnabled = settings.Enabled && !string.IsNullOrWhiteSpace(settings.Directory);
             var cloudEnabled = settings.CloudFolderEnabled && settings.IsCloudTargetConfigured();
+            // Household step H4a (§7.2): only the master runs the cloud
+            // backup; the local backup stays on every device.
+            if (cloudEnabled && !await SendsAsMasterAsync(cancellationToken))
+            {
+                _log.LogInformation("Cloud-folder backup left to the master device.");
+                cloudEnabled = false;
+            }
 
             if (!localEnabled && !cloudEnabled)
             {

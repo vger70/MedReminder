@@ -46,13 +46,15 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         string doctorAddress,
         bool smtpConfigured,
         Func<string, string, string, CancellationToken, Task> sendAsync,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        bool isMaster = true)
     {
         ArgumentNullException.ThrowIfNull(draft);
         ArgumentNullException.ThrowIfNull(sendAsync);
         _loc = localization;
         _doctorAddress = doctorAddress?.Trim() ?? string.Empty;
-        _canSend = smtpConfigured && _doctorAddress.Length > 0;
+        // Household step H4c (C5): only the master device sends email.
+        _canSend = smtpConfigured && isMaster && _doctorAddress.Length > 0;
         _sendAsync = sendAsync;
 
         Text = _loc.Get("Ui.PrescriptionRequestDialog.Title");
@@ -94,6 +96,8 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             Margin = new Padding(3, 6, 3, 3),
             Text = _loc.Get(_canSend
                 ? "Ui.PrescriptionRequestDialog.Hint"
+                : smtpConfigured && !isMaster
+                    ? "Ui.PrescriptionRequestDialog.Hint.NotMaster"
                 : smtpConfigured
                     ? "Ui.PrescriptionRequestDialog.Hint.NoDoctorAddress"
                     : "Ui.PrescriptionRequestDialog.Hint.NoSmtp"),

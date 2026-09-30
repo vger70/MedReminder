@@ -1,1076 +1,956 @@
-# MedReminder — Quick Guide
+# MedReminder — User guide
 
-Operational guide for the end user. The
-[`ANALYSIS.md`](ANALYSIS.md) file describes the technical
-architecture instead.
+MedReminder tells you **in time** when a medicine is about to run out,
+so you can ask your doctor for a new prescription before you are left
+without it. It can also remind you at the time of each dose, keep
+track of several people, and work on more than one computer.
 
 > **MedReminder is an organizational reminder, not a medical
 > device.** It does not provide diagnoses, therapy instructions,
 > therapy changes or clinical suggestions. Every therapy decision
 > must be taken with your doctor.
 
+Press **F1** or open **? → User guide** to read this guide inside the
+app. The technical architecture is described in `docs/ANALYSIS.md`.
+
 ---
 
-## First start
+## Contents
+
+1. [Getting started](#start)
+   - [First start](#first-start) · [The main window](#main-window) ·
+     [Where to find what](#where)
+2. [Medicines](#medicines)
+   - [Add a medicine](#add-medicine) ·
+     [Administration times](#slots) ·
+     [Complex regimens](#regimens) ·
+     [Dose-time reminder](#dose-reminder) ·
+     [Edit, deactivate, delete](#edit-medicine)
+3. [Find a medicine: catalogue and barcode](#catalogue)
+4. [Stock](#stock)
+   - [Add a package](#add-package) · [Register an intake](#intake) ·
+     [Correct stock](#correct) · [Count stock](#count) ·
+     [History](#history)
+5. [Timeline, report and prescription requests](#documents)
+6. [Notifications and email](#notifications)
+7. [Several people: profiles and roles](#profiles)
+8. [Protect your data: backup and export](#backup)
+9. [Several computers](#devices)
+   - [Which option do I need?](#devices-choice) ·
+     [Sync a profile between PCs](#sync) ·
+     [Share the installation](#installation) ·
+     [The master device](#master) ·
+     [Lost or replaced device](#remove-device)
+10. [Settings and everyday use](#settings)
+11. [Problems and answers](#faq)
+12. [Where MedReminder keeps its data](#data)
+13. [What MedReminder does not do](#limits)
+
+---
+
+<a id="start"></a>
+## 1. Getting started
+
+<a id="first-start"></a>
+### First start
 
 1. Launch `MedReminder.exe`.
-2. On the very first launch the app shows a **welcome wizard** and
-   asks you to create the first profile. This profile is always the
-   **administrator**: it can manage the shared email server and the
-   automatic backup, and it can create the other profiles (see
-   *Multiple profiles*). You may set an optional PIN in the same
-   wizard.
-3. The database is created automatically under
-   `%LOCALAPPDATA%\MedReminder\profiles\<profile-id>\medreminder.db`.
-4. At the top you find the toolbar; at the bottom the status bar
-   shows the active profile ("Profile: Owner (admin)" for an admin,
-   "Profile: Grandma" for a regular user). The icon in the Windows
-   notification area stays visible while the app is running.
+2. The **Welcome to MedReminder** window opens. Choose one of:
+   - **Create profile** — the normal case on your first computer. Type
+     your name and, if you want, a PIN. This first profile is the
+     **administrator**: it manages email, backup and the other profiles
+     (see [Several people](#profiles)).
+   - **Join an existing installation…** — only if MedReminder is
+     already used on another computer of yours and you want this one to
+     take part (see [Share the installation](#installation)).
+3. The main window opens. The MedReminder icon in the Windows
+   notification area (near the clock) stays visible while the app runs.
 
-### Windows SmartScreen on first launch
+**Windows SmartScreen.** The program is not code-signed. On the very
+first launch Windows may show a blue "Windows protected your PC"
+window: click **More info**, then **Run anyway**. Windows remembers the
+choice. If you install from the MSI package, the permission window says
+"Unknown Publisher" for the same reason.
 
-The published binaries are not code-signed. On the very first launch
-of `MedReminder.exe`, Windows shows a blue "Windows protected your
-PC" dialog. To proceed:
+<a id="main-window"></a>
+### The main window
 
-1. Click **More info**.
-2. Click **Run anyway**.
+- **Menus** at the top: **File**, **Therapy**, **Stock**, **Tools** and
+  **?** (help).
+- **Toolbar** below the menus with the most frequent actions: *New
+  medicine*, *Edit*, *Register intake*, *Check now*, *Therapy report*,
+  *Therapy timeline*, *Request prescription*.
+- **Medicine list** in the middle: one row per medicine, with the stock,
+  the days remaining and the estimated run-out date. Rows change colour
+  when the stock is low; the **Status** column says the same in words.
+- **Status bar** at the bottom: the open profile ("Profile: Anna
+  (admin)" for an administrator).
 
-Windows remembers the choice for that specific file: subsequent
-launches do not prompt again. If you install via the MSI, the UAC
-dialog reports "Unknown Publisher" for the same reason and is
-expected.
+Closing the window with **X** does not quit MedReminder: it keeps
+running in the notification area, so reminders still arrive. To quit,
+right-click the icon and choose **Exit**.
 
-## Add a medicine
+<a id="where"></a>
+### Where to find what
 
-1. Toolbar → **New medicine**.
-2. Fill the required fields (marked with `*`): Name, Unit, Dose
-   per administration, Administrations per day, Start date,
-   Warning threshold (days remaining).
-3. Optional fields: Active ingredient, Package, Therapy end date,
-   Reference doctor, Notes.
-4. **Initial stock quantity**: set the tablets/ml/doses you already
-   own at the time of registration. An `InitialLoad` movement
-   is created.
-5. **Notification channels**: check Windows and/or Email. You must
-   have configured SMTP settings (see below) for the email to work.
-6. **Schedule**: leave on **Simple** for a fixed dose taken every
-   day — this is the default and matches how the app has always
-   worked. See *Complex regimens* below for cyclic, tapering,
-   weekly or as-needed therapies.
+| I want to… | Go to |
+|---|---|
+| Add a medicine | **Therapy → New medicine…** |
+| Change dose or frequency | **Therapy → Change dose/frequency…** |
+| Record a purchased package | **Stock → Add package…** or **Stock → Restock from barcode…** |
+| Fix the stock to what I really have | **Stock → Count stock…** |
+| Undo a mistaken entry | **Stock → History…** |
+| Print the therapy for a doctor | **Therapy → Therapy report…** |
+| Ask for a prescription | **Therapy → Request prescription…** |
+| Set up email, language, backup | **Tools → Settings…** |
+| Add a person | **Tools → Manage profiles…** (administrator) |
+| Use MedReminder on another PC | **Tools → Sync…** and **Tools → Installation…** (administrator) |
+| Open another person's profile | **File → Change profile…** |
+
+---
+
+<a id="medicines"></a>
+## 2. Medicines
+
+<a id="add-medicine"></a>
+### Add a medicine
+
+1. **Therapy → New medicine…** (or the *New medicine* button).
+2. Start typing the **name**: the catalogue suggests matching medicines
+   (see [Find a medicine](#catalogue)). Picking one fills in the active
+   ingredient and the package. You can also click **Scan barcode…**.
+3. Fill in the required fields, marked with `*`: *Unit*, *Dose per
+   admin*, *Admins per day*, *Therapy start date* and *Warning threshold
+   (days)*.
+   - The **warning threshold** is how many days before running out you
+     want to be warned. Leave enough time to get the prescription and
+     buy the medicine, for example 10 days.
+4. **Initial stock quantity**: how many tablets (or ml, doses…) you have
+   now.
+5. **Notification channels**: tick **Windows notification** and/or
+   **Email**. Email works only after it is set up (see
+   [Notifications and email](#notifications)).
+6. Optional: *Therapy end date*, *Reference doctor*, *Notes*,
+   administration times, *Remind me at dose time*.
 7. **Save**.
 
-## Complex regimens
+From now on MedReminder deducts the daily dose by itself every day. You
+do not need to record each tablet you take.
 
-Not every therapy consumes the same amount of medicine every day.
-On the **New medicine** form the *Schedule* selector switches from
-**Simple** (a fixed daily dose) to **Advanced** and reveals a
-*Regime type* dropdown with four additional shapes:
+<a id="slots"></a>
+### Administration times
 
-- **Weekly pattern** — a per-day quantity for each day of the week
-  (for example an oral anticoagulant taken at different doses on
-  Mon / Wed / Fri than on the other days).
-- **Cyclic (N on / M off)** — a fixed quantity for the first `N`
-  days of the cycle followed by `M` days off. Typical of hormonal
-  therapies and cortisone pulses.
-- **Tapering** — a step-down (or step-up) dose. Two shapes are
-  available through the *Linear / Stepped* selector inside the
-  Tapering panel:
-  - **Linear** — the dose changes by a fixed amount every fixed
-    number of days until the end dose is reached, then holds.
-    Typical of a simple glucocorticoid down-titration.
-  - **Stepped** — an explicit list of stages, each with its own
-    dose and its own duration in days (for example 4/day for 7
-    days, then 2/day for 7 days, then 1/day for 14 days). Use
-    *Add stage* / *Remove* to shape the sequence, and read the
-    live preview below the list to check the totals before saving.
-    Tick *Keep the last dose as maintenance* when the final dose
-    should continue indefinitely instead of ending the course.
-- **As needed (PRN)** — no scheduled consumption. MedReminder keeps
-  tracking the stock but the *days remaining* column stays empty
-  until the schedule shape changes.
+In **Administration times (optional)** you can split the daily dose
+into slots: **Add…** opens a window where you set the dose, an optional
+time (*With specific time*) and a label such as "After breakfast" (pick
+one of the *Common labels* or type your own). The slots appear in the
+therapy report, and timed slots can remind you at dose time.
 
-When Advanced is selected the *Dose per administration*,
-*Administrations / day* and *Administration slots* fields at the
-top of the form become inactive: the schedule you configure below
-is the sole source used for the daily quantity. To go back to the
-one-click fixed-daily flow, switch the selector back to Simple.
+Without slots, the medicine uses "dose × administrations per day".
 
-To change the shape of an existing therapy mid-course, use
-*Toolbar → Change schedule*. The same Simple / Advanced selector
-is available there and takes effect from the *Effective from* date
-you pick, so the previous schedule stays valid for the days before
-that date.
+<a id="regimens"></a>
+### Complex regimens
 
-If the *Effective from* date is in the past, the automatic consumption
-already booked from that date on is recalculated with the new schedule
-at the next check. Stock movements recorded before you installed this
-version are never recalculated.
+Not every therapy uses the same amount every day. In the medicine
+window, set **Schedule** to **Advanced** and choose a **Regime type**:
 
-MedReminder is not a medical device: it does not check maximum
-daily doses, does not warn about overdoses and does not verify
-drug-drug interactions. It only follows the therapy your doctor
-prescribed and reminds you before the stock runs out.
+| Regime type | Example |
+|---|---|
+| **Weekly pattern** | A different quantity for each day of the week, e.g. an anticoagulant with different doses on Mon, Wed, Fri. |
+| **Cyclic (N on / M off)** | A quantity for N days, then M days without, e.g. 21 days on, 7 off. |
+| **Tapering** — *Linear* | The dose changes by a fixed step every few days until the end dose, then holds. |
+| **Tapering** — *Stepped* | A list of stages, each with its dose and duration, e.g. 4 a day for 7 days, 2 a day for 7 days, 1 a day for 14 days. Use **Add stage** / **Remove**; the total is shown below the list. Tick *Keep the last dose as maintenance* if the last dose continues indefinitely. |
+| **As needed (PRN)** | No scheduled consumption: the stock is tracked, but no run-out date is estimated. |
 
-## Dose-time reminder
+With **Advanced**, the dose fields at the top of the window are not
+used. Switch back to **Simple** for a fixed daily dose.
 
-For medicines that have **timed dose slots** (a specific time of
-day set on each administration slot), you can ask MedReminder to
-remind you *at the moment the dose is due*. Tick **Remind me at
-dose time** on the New medicine or Edit medicine form. The option
-is only available when the medicine has at least one slot with a
-time and still has stock on hand; it stays greyed out otherwise.
+**The therapy changes?** Use **Therapy → Change dose/frequency…** and
+pick the **Effective from** date. The old schedule stays valid for the
+days before that date. If the date is in the past, the consumption
+already deducted from that date on is recalculated with the new
+schedule.
 
-When enabled, at each slot's time MedReminder shows a desktop
-notification ("Time to take …"). If you have configured email
-notifications and selected the email channel for that medicine, the
-same reminder is also sent by email.
+MedReminder does not check maximum doses, overdoses or drug
+interactions: it only follows the therapy your doctor prescribed.
 
-A few details worth knowing:
+<a id="dose-reminder"></a>
+### Dose-time reminder
 
-- **One reminder per slot per day.** Each timed slot fires at most
-  once on a given calendar day, even if the app is restarted.
-- **Grace window.** If the app is not running exactly at the slot
-  time — for example the computer was asleep — the reminder still
-  fires when the app next checks, as long as it is within 30 minutes
-  of the slot time. Past that window the dose is treated as missed
-  and no reminder is shown; MedReminder does not keep a missed-dose
-  log and never gives clinical advice.
-- **Zero stock turns it off.** When the stock reaches zero no dose
-  reminder is sent, because there is nothing left to take.
-- **Daylight saving time.** On the spring-forward night a slot that
-  falls inside the skipped hour does not fire (that wall-clock time
-  does not exist). On the fall-back night the slot fires once, as
-  usual.
+Tick **Remind me at dose time** in the medicine window to get a
+reminder ("Time to take …") at each timed slot. It is available when
+the medicine has at least one slot with a time and some stock left.
 
-This reminder is a convenience prompt only. It does not record
-whether you took the dose and does not change your stock — use
-*Register intake* for that.
+- The reminder appears on screen; if the medicine uses the **Email**
+  channel and email is set up, it is also sent by email.
+- **Once per slot per day**, even if you restart the app.
+- If the PC was asleep at that time, the reminder still arrives within
+  **30 minutes**; later than that it is skipped.
+- With **zero stock** no dose reminder is sent.
+- On the night the clock moves forward, a slot inside the skipped hour
+  does not fire.
 
-## Reference catalogue (multi-country)
+The reminder does not record whether you took the dose and does not
+change the stock.
 
-MedReminder ships with two snapshots of a reference medicine
-catalogue and uses them to autocomplete the medicine form.
+<a id="edit-medicine"></a>
+### Edit, deactivate, delete
 
-- On the **Commercial name** and **Active ingredient** fields, start
-  typing to see matches. Picking a row fills in the other side (and
-  the technical fields — national code and ATC — behind the scenes)
-  so you don't have to type both.
-- The dropdown shows at most 20 rows and updates about 150 ms after
-  you stop typing. A red circle next to a row means the product is
-  **suspended or withdrawn** — you can still pick it, MedReminder
-  only surfaces the status.
-- **Medicine not in the catalogue?** Just keep typing what you know.
-  If you never pick a row from the dropdown, MedReminder saves your
-  text as-is and no reference linkage is stored — the reminder works
-  exactly as before.
-- The **reference country** is picked from *Settings → General →
-  Reference country*. Default is Italy; a change takes effect at the
-  next opening of the medicine form.
-- The **catalogue of your reference country and the EU one update
-  themselves**: at startup, when *Settings → General → Check for
-  updates on startup (GitHub)* is on, MedReminder downloads the
-  latest monthly list of your reference country (Italy, Spain or
-  France) and the EU list if they are newer than the ones it has,
-  and uses them from the next opening of the medicine form. Without a
-  connection nothing changes. With several profiles, each one is
-  updated the first time it is opened. After you change the reference
-  country, its catalogue is updated at the next start.
-
-### EU centrally authorised medicines
-
-Some medicines are authorised across the whole European Union under
-the *centralised procedure*, run by the European Medicines Agency
-(EMA). MedReminder embeds the EMA EPAR catalogue — *European public
-assessment reports* — and shows those medicines in the same
-autocomplete dropdown.
-
-- If your **reference country is an EU member** (e.g. the default
-  Italy, or any other EU country you pick from Settings), the
-  autocomplete shows **your national catalogue + the EU-wide
-  centrally authorised medicines**, mixed in the same list. You do
-  not have to switch anything: EU rows just appear when they match.
-- If you set the **reference country to `EU`**, the autocomplete
-  shows **only** the EU-centralised medicines — no national rows.
-  Useful if you specifically want to browse or link a product to
-  its EMA authorisation.
-- An EU medicine and an equivalent national product may both appear
-  in the list at the same time; neither is deduplicated against the
-  other. Pick whichever matches the box in your hand.
-
-### Spanish and French national catalogues
-
-The Spanish catalogue comes from AEMPS CIMA ("Medicamentos"
-register) and the French one from ANSM BDPM (*Base de données
-publique des médicaments*). They behave exactly like the Italian
-catalogue in the autocomplete:
-
-- Set **Settings → General → Reference country** to `ES` or `FR`
-  once the corresponding snapshot is loaded (`ES` and `FR` appear
-  automatically in the dropdown as soon as their catalogues are
-  in the DB).
-- The autocomplete then lists **your national catalogue + the
-  EU-wide centrally authorised medicines**, mixed in the same list.
-  Spain and France are EU members, so EU rows are included by
-  default the same way they are for Italy.
-- All the other rules stay the same: pick a row to fill both
-  sides, or keep typing to store a free-text entry the app has
-  never seen.
-
-**Data sources and terms.** The Italian catalogue comes from
-AIFA (Agenzia Italiana del Farmaco) open data, released under the
-Creative Commons Attribution 4.0 International licence (CC BY 4.0).
-The EU catalogue comes from the EMA EPAR dataset, reused under
-EMA's legal notice (Commission decision 2011/833/EU on the reuse
-of Commission documents). The Spanish catalogue comes from AEMPS
-CIMA, reused under Spain's public-sector information reuse regime
-(Law 37/2007). The French catalogue comes from ANSM BDPM, reused
-under Licence Ouverte Etalab 2.0. The About dialog and
-`THIRD-PARTY-NOTICES.md` at the root of the installation carry the
-full attributions.
-
-## Scan the package barcode
-
-When the reference catalogue is on, the medicine form has a
-**Scan barcode…** button next to the commercial name. It fills in the
-medicine from the catalogue in one step.
-
-1. Click **Scan barcode…**. A small window opens, ready to receive
-   the code.
-2. Scan the barcode on the box with a USB barcode scanner, or type
-   the code printed under the barcode and press **Enter**.
-3. If the code is in the catalogue, the window closes and the form is
-   filled in as if you had picked the row from the dropdown. If it is
-   not, a message shows the code read and nothing is changed.
-
-Notes:
-
-- Click **Scan barcode…** first, then scan. A scan made while the
-  medicine form itself has the focus types the code into the field
-  you are on.
-- On Italian packages the scanner reads the **AIC code** (the
-  barcode with the text `A` followed by 9 digits). Any USB scanner
-  that reads 1D barcodes works; enable the **Code 32** (Italian
-  Pharmacode) symbology in the scanner settings if the code is not
-  recognized. The square 2D code (DataMatrix) needs a 2D scanner and
-  often does not resolve to a catalogue entry yet.
-- The scanner must use the same keyboard layout as Windows. With a
-  French (AZERTY) or German (QWERTZ) keyboard, set the scanner to
-  that layout, otherwise the code is not recognized.
-- A scanner that sends no Enter after the code also works: the code
-  is accepted a moment after the scan.
-
-### With the webcam
-
-No scanner? In the scan window click **Use webcam**. The camera turns
-on only then, and turns off as soon as a code is read, you click
-**Use scanner**, you close the window, or 30 seconds pass without a
-code.
-
-- Hold the package 10–20 cm from the camera, with the barcode inside
-  the dashed frame, in good light and in focus. Laptop webcams with
-  fixed focus often struggle with the thin AIC barcode; a USB scanner
-  is more reliable.
-- If Windows blocks the camera, the window says so and offers
-  **Open privacy settings**: turn on **Let desktop apps access your
-  camera** under Settings → Privacy & security → Camera, then click
-  **Try again**.
-- Images from the camera are never saved or sent anywhere; only the
-  code read is used.
-
-### Restock by scanning
-
-When you buy a new package of a medicine already in your list, use
-**Stock → Restock from barcode…**. You do not need to select the
-medicine first: the scan finds it.
-
-1. Scan the package with the scanner or the webcam, as above.
-2. The medicine with that code is selected and the **Stock movement**
-   window opens, set to **New package**, with the quantity of its last new package already
-   filled in. Check it and confirm.
-
-- If several medicines have the same code, choose the one to restock.
-- If no medicine has the code but the catalogue knows it, you can add
-  it as a new medicine, or link the code to a medicine in your list
-  that has no code yet (for example one entered by hand); the package
-  is then added to that medicine.
-- The medicine is found by its AIC code. A package that carries only
-  the square 2D code (DataMatrix) is not matched; use
-  **Stock → Add package** instead.
-
-## Add stock (new package)
-
-1. Select the medicine in the grid.
-2. Toolbar → **Add stock**.
-3. Choose the movement type:
-   - **New package**: the normal case after a purchase.
-   - **Manual addition**: e.g. if you receive samples from the doctor.
-   - **Positive correction**: you had counted less than the actual amount.
-4. Enter the quantity (in the medicine's unit) and confirm.
-
-**Effect**: stock increases and the medicine's `StockEpoch` advances
-by 1. This restarts the warning cycle — the next notification can
-be emitted when stock falls below the threshold again.
-
-## Correct a negative quantity
-
-If you notice that actual stock is less than the calculated one
-(lost tablet, spilled, etc.):
-
-1. Select the medicine.
-2. Toolbar → **Correct stock**.
-3. The default kind is **Negative correction**: the typed quantity
-   is subtracted from stock. It does not advance the epoch: it
-   does not reprogram the notification cycle.
-
-If the correction would bring stock below zero, the operation is
-blocked with an error.
-
-## Count stock
-
-When the tablets in the cabinet no longer match the stock shown by
-the app, count them and let the app record the correction:
-
-1. Select the medicine.
-2. Menu **Stock → Count stock…**.
-3. Type the quantity you counted. The dialog shows the expected
-   stock (with automatic consumption brought up to date), the stock
-   discrepancy with its sign, and the run-out date before and after
-   the correction.
-4. In **Already taken today**, enter how much of today's scheduled
-   quantity you had already taken when you counted. The app suggests
-   the doses whose time has passed; without set times it suggests 0.
-   If you enter part of today's quantity, the list shows the stock at
-   the start of the day until today's consumption is recorded.
-5. Optionally add a note (default: "Stock count") and confirm with
-   **Record count**.
-
-**Effect**: one positive or negative correction is recorded so that
-stock equals the counted quantity. A zero discrepancy records
-nothing. A positive correction that brings the stock above the
-warning threshold advances the epoch, so a new low-stock warning can
-be sent later; a negative correction never does. The discrepancy is a stock
-figure only: it is not interpreted as missed or extra doses.
-
-## Edit or deactivate a medicine
-
-- **Edit**: double click on the row or toolbar → **Edit**.
-  You can change name, active ingredient, package, unit, threshold,
-  doctor, notes, end date, notification channels, and Active/Inactive
-  state.
-  **Dose and frequency are NOT changed from here**: use
-  *Toolbar → Change schedule* (see *Complex regimens* above).
-- **Deactivate**: toolbar → **Deactivate**. The medicine disappears
-  from automatic checks and alerts, but historical data (movements,
-  notifications) stays in the DB for audit.
-- **Show inactive medicines**: deactivated medicines are hidden from
-  the list. **Therapy → Show inactive medicines** shows them again,
-  marked *Inactive*, until the app is closed. The status bar says how
-  many are hidden.
-- **Reactivate**: show the inactive medicines, then **Edit** → tick
-  **Active**. The days on which the medicine was inactive are not
-  counted as consumption.
+- **Edit**: double-click the row, or **Therapy → Edit**. You can change
+  everything except dose and frequency (use *Change dose/frequency…*).
+- **Deactivate**: **Therapy → Deactivate** when you stop a therapy. The
+  medicine is hidden and gets no more reminders; its history is kept.
+  **Therapy → Show inactive medicines** shows it again; to reactivate
+  it, open it with **Edit** and tick **Active**. The days it was
+  inactive are not counted as consumption.
 - **Delete**: **Therapy → Delete…** removes a medicine entered by
-  mistake, with its schedule, permanently. It is allowed only while
-  nothing was recorded for it: no stock entry (the initial quantity
-  included), intake, stock count or suspension. Otherwise deactivate
-  it, or first delete those entries from **Stock → History…**. With
-  sync enabled the medicine is removed from the other devices too,
-  together with anything recorded there in the meantime.
+  mistake. It works only while nothing was recorded for it (no stock,
+  not even the initial quantity, no intake, no count). Otherwise
+  deactivate it. With sync on, it disappears from the other computers
+  too.
 
-## Stock history and deleting a mistaken entry
+---
 
-**Stock → History…** (Ctrl+H) lists what you entered for the selected
-medicine, newest first: new packages and corrections, intakes, stock
-counts and suspensions.
+<a id="catalogue"></a>
+## 3. Find a medicine: catalogue and barcode
 
-- **Delete** removes a mistaken entry; stock and consumption are
-  recalculated.
-- Only entries recorded after the latest stock count can be deleted:
-  a count already includes earlier mistakes, so to fix those count the
-  stock again.
-- Entries recorded before you installed this version cannot be
-  deleted: fix them with a correction.
+### The reference catalogue
 
-## Therapy timeline
+MedReminder includes the official medicine lists of **Italy** (AIFA),
+**Spain** (AEMPS), **France** (ANSM) and the medicines authorised for
+the whole **European Union** (EMA).
 
-**Therapy → Therapy timeline…** (Ctrl+T) or the **Therapy timeline**
-toolbar button opens a read-only view with one row per medicine and
-the days on the horizontal axis. It shows by default 60 days back and
-120 days forward.
+- In the medicine window, type part of the **name** or of the **active
+  ingredient**: up to 20 matches appear. Picking one fills in the other
+  fields.
+- A **red circle** next to a row means the product is suspended or
+  withdrawn. You can still pick it.
+- **Not in the list?** Just type the name and save: the medicine works
+  the same, only without the catalogue link.
+- **Which country?** **Tools → Settings… → General → Reference
+  country** (default: Italy). Only an administrator can change it: it
+  applies to every profile and, with a shared installation, to every
+  device. With IT, ES or FR the list also contains the EU medicines;
+  with **EU** it contains only those. A medicine may appear twice
+  (national and EU): pick the one that matches your box.
+- **Automatic updates.** When **Check for updates on startup (GitHub)**
+  is on (Settings → General), MedReminder downloads at start the latest
+  monthly list of your country and the EU list, if newer. Without an
+  internet connection nothing changes. With several profiles, each is
+  updated the first time it is opened.
 
-- **Solid bar**: active therapy, from the start date to the end date
-  (or to the edge of the view when there is no end date).
-- **Hatched bar with dashed border**: suspension, planned or ongoing.
-- **Filled diamond**: a new dose, frequency or regimen takes effect.
-  **Hollow diamond**: next stage of a stepped taper.
-- **Triangle on a vertical line**: estimated run-out date. It is the
-  same estimate as the *Runs out* column: current stock divided by
-  today's daily quantity. It does not account for future suspensions
-  or dosage changes.
-- **Dashed vertical line**: today.
-- A deactivated medicine is shown in grey; its bar stops at today
-  because the deactivation date is not recorded.
+**Sources.** AIFA open data (CC BY 4.0); EMA EPAR data (EMA legal
+notice, Commission decision 2011/833/EU); AEMPS CIMA (Spanish Law
+37/2007 on reuse of public-sector information); ANSM BDPM (Licence
+Ouverte Etalab 2.0). Full attributions are in **? → About MedReminder…**
+and in `THIRD-PARTY-NOTICES.md`.
 
-Controls:
+### Scan the barcode
 
-- **Earlier** / **Later** move the period by 30 days, **Today**
-  restores the default period. In the chart, the left and right arrow
-  keys (or Shift + mouse wheel) move it by one week.
-- Up and down arrows select a medicine; the **Details** box below the
-  chart shows the same information as text (dosage, stock, estimated
-  run-out, suspensions and dosage changes in the period). Hovering an
-  element shows the same text as a tooltip.
-- **Show in list** (or Enter, or a double click) closes the timeline
-  and selects the medicine in the main list, where the usual actions
-  apply.
+With a USB barcode scanner or a webcam you can fill in a medicine
+without typing.
 
-The timeline does not change any data. Run-out dates are estimates:
-use them to plan refills, not as clinical advice.
+1. In the medicine window click **Scan barcode…**.
+2. Scan the barcode of the box, or type the code printed under it and
+   press **Enter**.
+3. If the code is in the catalogue, the form is filled in. Otherwise
+   the window shows the code read and nothing changes.
 
-## Therapy report (print and PDF)
+Tips:
 
-**Therapy → Therapy report…** (Ctrl+P) or the **Therapy report**
-toolbar button opens a card of the active medicines to hand to a GP,
-an emergency room or a pharmacist. It lists, for each active medicine,
-the active ingredient, the dosage (administration slots, or dose ×
-times a day), the therapy period and the doctor. Inactive medicines
-are not listed.
+- Click **Scan barcode…** *before* scanning, otherwise the code is typed
+  into whichever field has the focus.
+- On Italian boxes the code to scan is the **AIC** barcode (`A`
+  followed by 9 digits). If the scanner does not recognise it, enable
+  the **Code 32** (Italian Pharmacode) symbology in its settings. The
+  square code (DataMatrix) needs a 2D scanner and often is not in the
+  catalogue.
+- Set the scanner to the same keyboard layout as Windows (e.g. AZERTY,
+  QWERTZ).
 
-- **Include notes**: off by default. Notes are free text and may be
-  private; tick the box only if the card should carry them.
-- **Paper**: A4 or Letter, preselected from the Windows region.
-- **Print…** opens a preview of the table. Long lists continue on the
-  next page with the heading and the column titles repeated.
-- **Save as PDF…** asks where to save the file and writes the same
-  table as a PDF through the Windows "Microsoft Print to PDF" printer.
-  If that printer has been removed, the dialog explains how to add it
-  back (Control Panel → Programs → Turn Windows features on or off).
-- **Save to file…** and **Copy to clipboard** keep the plain-text
-  version.
+**With the webcam.** Click **Use webcam** in the scan window. Hold the
+box 10–20 cm away, barcode inside the frame, in good light. The camera
+turns off when a code is read, when you click **Use scanner**, when you
+close the window, or after 30 seconds. If Windows blocks the camera,
+click **Open privacy settings**, turn on *Let desktop apps access your
+camera*, then **Try again**. No image is saved or sent.
 
-The PDF and the text file are written only where you choose;
-MedReminder keeps no copy. Every page carries the notice that
-MedReminder is an organizational reminder, not a medical device.
+**Restock by scanning.** **Stock → Restock from barcode…**: scan the new
+box and the matching medicine opens in the stock window, already set to
+*New package* with the usual quantity. If no medicine has that code,
+you can add a new medicine or link the code to an existing one.
 
-## Multiple profiles and admin/user roles
+---
 
-MedReminder can manage medicines for **more than one person** from
-the same Windows account — typical case: a parent taking care of
-their own therapy and of one or two family members. Each profile
-has its own database and its own email recipient; the SMTP server,
-the automatic backup folder and the profile registry are shared and
-administered by an **administrator profile**.
+<a id="stock"></a>
+## 4. Stock
+
+MedReminder lowers the stock by itself every day according to the
+schedule. You only record what changes the stock in another way.
+
+<a id="add-package"></a>
+### Add a package
+
+1. Select the medicine.
+2. **Stock → Add package…**.
+3. Choose the type:
+   - **New package** — after a purchase (the usual case);
+   - **Manual addition** — e.g. samples from the doctor;
+   - **Positive correction** — you had counted too few.
+4. Enter the quantity and confirm.
+
+A new package restarts the warning cycle: when the stock falls below
+the threshold again, you get a new warning.
+
+<a id="intake"></a>
+### Register an intake
+
+**Therapy → Register intake…** (or the toolbar button) records a single
+intake as **Taken**, **Skipped** or **Cancelled**, with the day and the
+quantity. You do not need it on normal days. Use it when a day differs
+from the schedule: once you register an intake for a day, that day's
+automatic deduction is replaced by what you registered.
+
+<a id="correct"></a>
+### Correct stock
+
+If you have less than the app shows (a lost tablet, a spilled bottle):
+**Stock → Correct stock…**, keep the type **Negative correction** and
+enter the quantity to subtract. The stock cannot go below zero.
+
+<a id="count"></a>
+### Count stock
+
+When the count in your cabinet does not match the app, count and let
+the app fix it:
+
+1. Select the medicine, then **Stock → Count stock…**.
+2. Type the **Counted quantity**. The window shows the expected stock,
+   the difference and how the run-out date changes.
+3. In **Already taken today**, enter what you had already taken today
+   when you counted (the app suggests the doses whose time has passed).
+4. Click **Record count**.
+
+The app records one correction so that the stock equals what you
+counted. The difference is only a stock figure: it is not interpreted
+as missed or extra doses.
+
+<a id="history"></a>
+### History and mistaken entries
+
+**Stock → History…** (Ctrl+H) lists packages, corrections, intakes,
+counts and suspensions of the selected medicine, newest first. Select a
+mistaken entry and click **Delete**: stock and consumption are
+recalculated. Only entries after the latest stock count can be deleted
+(to fix older ones, count again); entries from versions before this
+feature cannot be deleted, fix them with a correction.
+
+---
+
+<a id="documents"></a>
+## 5. Timeline, report and prescription requests
+
+### Therapy timeline
+
+**Therapy → Therapy timeline…** (Ctrl+T) shows one row per medicine on
+a calendar (60 days back, 120 forward):
+
+- **solid bar**: therapy in progress; **hatched bar**: suspension;
+- **filled diamond**: a new dose or regimen starts; **hollow diamond**:
+  next stage of a stepped taper;
+- **triangle**: estimated run-out date; **dashed line**: today;
+- grey row: deactivated medicine.
+
+**Earlier** / **Later** move by 30 days, **Today** goes back; the
+arrow keys move by a week. The **Details** box describes the selected
+medicine in words. **Show in list** (or Enter) selects it in the main
+list. The timeline changes nothing; run-out dates are estimates.
+
+### Therapy report (print and PDF)
+
+**Therapy → Therapy report…** (Ctrl+P) prepares a card of your active
+medicines for a doctor, an emergency room or a pharmacist: active
+ingredient, dosage, therapy period, doctor.
+
+- **Include notes** is off by default: notes may be private.
+- **Paper**: A4 or Letter.
+- **Print…** shows a preview; **Save as PDF…** uses the Windows
+  "Microsoft Print to PDF" printer (if it was removed, the window says
+  how to add it back); **Save to file…** and **Copy to clipboard** give
+  plain text.
+
+MedReminder keeps no copy of what you save or print.
+
+### Request a prescription
+
+Select a medicine, then **Therapy → Request prescription…**. MedReminder
+prepares a short message with the medicine name, the package, the
+product code and your name; with a reference doctor, the greeting uses
+the doctor's name. No dosage or notes are included. You can edit
+everything before sending.
+
+- **Copy** — to paste in webmail, a messaging app or a patient portal.
+- **Open in mail client** — a new email in your usual mail program.
+- **Send…** — sends it with MedReminder's email account, after a
+  confirmation. Available when email is set up and a **Doctor e-mail**
+  is filled in (Settings → Notifications). With a shared installation,
+  only the [master device](#master) sends: on the other devices use
+  **Open in mail client**.
+
+MedReminder never sends a request by itself.
+
+---
+
+<a id="notifications"></a>
+## 6. Notifications and email
+
+### How reminders work
+
+- Every 30 minutes MedReminder checks the medicines. When a medicine
+  falls below its **warning threshold**, it warns you **once**, through
+  the channels chosen for that medicine: a Windows notification and/or
+  an email. After a new package the cycle starts again.
+- **Tools → Check now** (or the toolbar button, or the tray menu) runs
+  the check immediately.
+- MedReminder must be running to send reminders. Turn on automatic
+  startup (see [Settings](#settings)).
+
+### Step 1 — the email account (administrator)
+
+**Tools → Settings… → Email SMTP**:
+
+| Field | What to enter |
+|---|---|
+| **Host** | Your provider's outgoing server, e.g. `smtp.gmail.com` |
+| **Port** | Usually `587` (with *Use StartTLS*) or `465` |
+| **Username** / **New password** | Your email account. The password is stored encrypted and never written to the logs |
+| **Sender (from)** / **Sender name** | Who the emails come from |
+| **Timeout (s)** | Seconds before giving up |
+
+Click **Test connection** (it logs in without sending anything), then
+**Save SMTP settings**.
+
+*Example with Gmail:* turn on two-step verification in your Google
+account, create an app password at `myaccount.google.com/apppasswords`,
+then use Host `smtp.gmail.com`, Port `587`, StartTLS on, your Gmail
+address as Username and the app password as password. Providers change
+their rules: if the test fails, check your provider's instructions.
+
+### Step 2 — the recipients (each profile)
+
+**Tools → Settings… → Notifications**, for the open profile:
+
+- **Recipient (to)** — who receives this profile's reminders.
+- **Caregiver e-mail (optional)** — a family member or carer who gets a
+  copy of every reminder, in the same email (both addresses are
+  visible to both). It must differ from the recipient.
+- **Doctor e-mail (optional)** — used only for prescription requests
+  you send yourself; automatic reminders never go there.
+
+Click **Save recipients**. In the same tab, **My PIN** lets you set or
+change the PIN of your own profile.
+
+---
+
+<a id="profiles"></a>
+## 7. Several people: profiles and roles
+
+One MedReminder can follow the medicines of several people, e.g. you
+and a parent. Each person has a **profile** with its own medicines and
+its own recipients.
 
 ### Roles
 
-- **Administrator** — manages the global settings (Email SMTP,
-  Backup, list of profiles, PIN of any profile) in addition to
-  their own data. There must always be at least one administrator.
-- **User** — manages only their own profile (medicines, stock,
-  therapies, personal email recipient). Does not see the Email SMTP
-  tab or the Backup tab in Settings, and does not see
-  `Tools → Manage profiles…`.
+| | Administrator | User |
+|---|---|---|
+| Own medicines, stock, recipients | yes | yes |
+| Email account, backup, reference country | yes | no |
+| Create, rename, delete profiles; PINs of all | yes | no |
+| Tools → Sync… and Tools → Installation… | yes | no |
 
-The role is chosen when the profile is created and **cannot be
-changed later**. If in the future you need to change a profile's
-role, the current workaround is to create a new profile with the
-target role and copy the data over.
+There is always at least one administrator.
 
-The role is soft security: a user with filesystem access can
-edit `profiles.json` by hand and become admin. The user interface
-honors the role, the filesystem does not.
+### Manage profiles (administrator)
 
-### Create additional profiles (administrator)
+**Tools → Manage profiles…**:
 
-1. `Tools → Manage profiles…` — this entry is only present for
-   administrators.
-2. **New profile** → enter a name, choose Administrator or User
-   (default: User), optionally set a PIN. Confirm.
-3. The new profile immediately appears in the picker at the next
-   launch.
+- **New profile** — name, role (default *User*), optional PIN.
+- **Rename** — changes the displayed name.
+- **Change PIN** — set, change or clear a profile's PIN.
+- **Change role…** — makes a profile administrator or user. The role of
+  the open profile cannot be changed (open another administrator
+  profile first). Before making a profile without PIN an administrator,
+  consider adding a PIN.
+- **Delete** — type the profile name to confirm. The data on disk is
+  kept unless you tick *Also delete the profile's data on disk*. The
+  open profile and the last administrator cannot be deleted.
 
 ### Switch profile
 
-`File → Change profile…` opens the picker. Choose the target
-profile and confirm: the app restarts automatically so the new
-profile is fully isolated. If the chosen profile has a PIN, the
-prompt appears before the app opens.
-
-### Rename, change PIN, delete
-
-`Tools → Manage profiles…` (administrator only) also offers:
-
-- **Rename** — the display name only. The internal id never
-  changes.
-- **Change PIN** — set, rotate or clear the PIN on any profile.
-- **Delete** — asks you to **type the profile name** to confirm.
-  A separate checkbox lets you also delete the profile's data
-  on disk; it defaults to OFF, so the folder stays available for
-  manual recovery.
-
-The active profile cannot be deleted (switch first), and the last
-remaining administrator cannot be deleted either.
+**File → Change profile…**, choose the profile, confirm. MedReminder
+restarts with that profile (and asks its PIN, if it has one). At
+Windows startup the last used profile opens.
 
 ### About the PIN
 
-The PIN is **friction, not security**. It blocks accidental
-switches into the wrong profile, but it does **not** encrypt the
-data — anyone with access to this PC can still open the profile's
-files. Three wrong attempts close the prompt and the app.
+The PIN avoids opening the wrong profile by accident. It is **not**
+protection: it does not encrypt anything, and anyone using the same
+Windows account can read every profile's files. Three wrong attempts
+close the app. For real privacy, give each person their own Windows
+account. If a PIN is forgotten, an administrator clears it with
+**Change PIN**; if the only administrator forgot it, see
+[Problems and answers](#faq).
 
-**Real separation needs separate Windows accounts.** Each Windows
-account has its own `%LOCALAPPDATA%\MedReminder\` folder, which other
-standard (non-administrator) Windows users cannot read. Profiles
-inside one Windows account are a convenience, not a privacy boundary:
-anyone using that account can read every profile's files, and the
-automatic backups configured by the administrator include every
-profile, PIN-protected ones too.
+---
 
-If you forget a PIN, remove it manually from
-`%LOCALAPPDATA%\MedReminder\profiles.json` (delete the `PinHash`,
-`PinSalt` and set `PinIterations` to `0` for the affected entry).
-This is documented rather than fixed with a "reset PIN" flow on
-purpose: recovery is not a bug, because the PIN is not security.
+<a id="backup"></a>
+## 8. Protect your data: backup and export
 
-### On-disk layout
+| Option | What it is for | Where |
+|---|---|---|
+| **Automatic daily backup** | A copy of every profile, every day, in a folder of yours | Settings → Backup / Restore |
+| **Encrypted export** | One portable file to move to a new PC or keep safe | Settings → Backup / Restore → Export all data (encrypted)… |
+| **Cloud backup** | An encrypted daily copy in OneDrive, Google Drive or a synced folder | Settings → Backup / Restore → Backup to a cloud-synced folder |
+| **Sync / Installation** | Several PCs working on the same data, continuously | [Several computers](#devices) |
+
+The backup settings are managed by an administrator.
+
+### Automatic daily backup
+
+1. **Tools → Settings… → Backup / Restore**.
+2. Tick **Daily automatic backup**, choose the **Backup folder** (ideally
+   an external disk), the **Preferred time** and **Retention (days)**.
+3. **Save backup settings**. **Run backup now** makes one at once.
+
+Every profile is saved, as `medreminder-<profile>-<date>-<time>.db`.
+MedReminder must be running at the chosen time; if the PC was off, the
+backup runs at the next start. Do not choose a cloud-synced folder
+for this backup: the files are not encrypted (MedReminder warns you).
+
+- **Export to specific folder…** — one copy now, where you want.
+- **Restore backup…** — choose a `.db` file and the profile that
+  receives it. The current data is kept aside as
+  `medreminder.db.bak-<date>`. If you restore into the open profile,
+  MedReminder restarts.
+
+### Encrypted export and import
+
+An export is **one encrypted file** (`.mrz`) with all the data of a
+profile. It is not tied to your PC: it is the recommended way to move
+to a new computer.
+
+**Export** — **Settings → Backup / Restore → Export all data
+(encrypted)…**:
+
+1. Choose the destination file.
+2. Choose a **passphrase** of at least 12 characters and type it twice.
+3. Optionally include the SMTP password, the backup preferences and
+   the user preferences (language, catalogue country). The SMTP password
+   is encrypted with your passphrase.
+4. **Export**.
+
+An administrator with several profiles can tick **Export every profile
+(one encrypted file per profile)** and choose a folder.
+
+> **The passphrase cannot be recovered.** Without it, the file can
+> never be read again. Write it down somewhere safe.
+
+**Import** — **Settings → Backup / Restore → Import from export…**: choose
+the file (MedReminder shows what it contains), type the passphrase, tick
+*I understand that this will overwrite the current profile's data*,
+click **Import** and restart when asked. Import **replaces** the open
+profile's data; a safety copy is kept. A wrong passphrase, a damaged
+file or a file from a newer version stops the import without touching
+your data. The format is public (`docs/EXPORT-FORMAT.md`): your data is
+never locked in.
+
+### Cloud backup
+
+An encrypted copy of every profile, once a day, in the cloud.
+
+1. **Settings → Backup / Restore → Backup to a cloud-synced folder
+   (encrypted)**: tick the box.
+2. **Storage**:
+   - **OneDrive (app folder)** or **Google Drive (MedReminder/backups
+     folder)** — click **Sign in…** and sign in with your account;
+   - **Folder** — a folder already synchronized by OneDrive, Dropbox,
+     iCloud or Google Drive on this PC.
+3. **Snapshots to keep** (default 30).
+4. **Backup passphrase → Set / change…**: at least 12 characters. It
+   stays on this PC and is never sent anywhere.
+5. Save.
+
+**Restore** — **Settings → Backup / Restore → Restore from cloud
+folder…**: choose the folder or account, pick a copy (date, profile,
+device), type the passphrase, tick the confirmation and click
+**Restore**. The copy replaces the **open** profile: to restore another
+profile, open it first.
+
+Good to know:
+
+- Losing the backup passphrase means losing the copies.
+- The copies do not contain the SMTP password or the preferences: use
+  the encrypted export for those.
+- Whoever knows the passphrase can read every profile's copy, PIN
+  protected ones included.
+- Your cloud provider may keep deleted files in its recycle bin.
+- This is a **backup, not synchronisation**: to work on several PCs use
+  [Sync](#sync).
+- With a shared installation, only the [master device](#master) makes
+  the cloud backup.
+
+---
+
+<a id="devices"></a>
+## 9. Several computers
+
+<a id="devices-choice"></a>
+### Which option do I need?
+
+| Situation | Use |
+|---|---|
+| One PC only | Nothing to do. Keep a [backup](#backup). |
+| Move to a new PC once | [Encrypted export](#backup) on the old PC, import on the new one. |
+| The **same profile** on two or more PCs, always up to date | [Sync](#sync) (Tools → Sync…). |
+| The **whole family setup** (profiles, roles, PINs, email, backup) on several PCs, with **one** PC sending the emails | [Installation](#installation) (Tools → Installation…), on top of sync. |
+
+Both options need a storage that every PC can reach: **OneDrive**,
+**Google Drive**, or a **shared folder** (a folder synced by Dropbox or
+similar, or a network share). The data there is always encrypted. No
+MedReminder server is involved.
+
+Every PC of a group must run the same MedReminder version: update all
+of them together.
+
+<a id="sync"></a>
+### Sync a profile between PCs
+
+Sync keeps **one profile** identical on several PCs: medicines, stock,
+intakes, profile name and recipients. What you record on one PC appears
+on the others within minutes. It is set up **for each profile**, with
+the profile open, by an administrator.
+
+**On the first PC**
+
+1. Open the profile, then **Tools → Sync… → Enable sync…**.
+2. Choose where the group lives:
+   - **OneDrive** or **Google Drive**: sign in in the browser window.
+     Every PC must use the **same** account. MedReminder only uses its
+     own app folder;
+   - **a shared folder**: choose it.
+3. Enter a name for this PC and a **sync passphrase** (at least 10
+   characters, twice). It is not the backup passphrase. Keep it safe:
+   it cannot be recovered.
+
+**On each other PC**
+
+1. Create a profile (any name: it will be replaced), or open the one to
+   replace.
+2. **Tools → Sync… → Join a group…**, choose the same storage, enter a
+   name for this PC and the same passphrase. Instead of the passphrase
+   you can use **Join with a pairing code…** (see below).
+3. Confirm: **this profile's data on this PC is replaced** by the
+   group's (a copy is kept). MedReminder restarts.
+
+With a shared folder, wait until it is fully downloaded on the new PC
+first. With OneDrive or Google Drive the join may take a minute. If
+the passphrase opens several groups (several profiles synced with the
+same passphrase), MedReminder asks which one to join.
+
+**Pairing code instead of passphrase.** On a PC already in the group,
+**Tools → Sync… → Pair a device…** and click **Show the code** when the
+other PC is ready. On the other PC, **Join with a pairing code…** and
+type the code. The code works for 10 minutes and only while its window
+is open. Anyone who sees it can read the data: never send it by email
+or message, and show it only when needed (remote-assistance tools see
+it too).
+
+**Everyday use**
+
+- Sync runs a few seconds after each change, every 5 minutes, and with
+  **Sync now**. The **Devices** tab shows the PCs and when each was last
+  seen.
+- If two PCs changed the same thing before syncing, the latest change
+  wins and the case appears in **Conflicts**: **Restore lost value**
+  brings the other value back, **Dismiss** removes the entry.
+- A low-stock email is sent **once per group**, not once per PC. (Two
+  PCs that check before they have synced may both send; a
+  [master device](#master) removes that case.)
+- Importing an export or restoring a backup on a synced profile starts
+  a new **generation**: the other PCs are warned and must use **Rebuild
+  from the group…**.
+- **Disable sync…** stops syncing on this PC and keeps its data.
+- If the OneDrive or Google Drive session ends (password change, long
+  inactivity), click **Sign in to OneDrive again** / **Sign in to Google
+  Drive again**; nothing is lost.
+
+**A PC is lost or the passphrase leaked.** In the **Devices** tab select
+the PC and click **Remove device…**, or use **Change key and
+passphrase…**. Choose a new sync passphrase: the removed PC cannot read
+anything written from then on. Also sign that PC out in your Microsoft
+or Google account security settings. On every other PC click **Enter
+the new key…** and type the new passphrase or a pairing code: its
+changes are kept, and MedReminder restarts.
+
+<a id="installation"></a>
+### Share the installation
+
+Sync works profile by profile. The **installation** adds everything
+around the profiles, so that every PC is set up the same way:
+
+| Shared by all devices | Kept per device |
+|---|---|
+| Profiles: names, roles, PINs | Which profiles the device holds |
+| Email account (SMTP, password included) | Interface language, text size |
+| Cloud backup policy (storage, number of copies) | Cloud backup passphrase and sign-in |
+| Reference country | Local automatic backup |
+
+Each device holds **only the profiles an administrator gives it**: the
+PC of a grandparent can hold only their profile, while the family PC
+holds everyone's.
+
+**Before you start**
+
+- An administrator profile, on the PC that will be the main one.
+- **Sync enabled for each profile** you want to share (see
+  [Sync](#sync)); a profile without sync cannot be given to another
+  device.
+
+**Step 1 — Publish (on the main PC)**
+
+1. **Tools → Installation… → Publish the installation…**.
+2. Choose the **same storage** that holds the profiles' sync groups.
+3. Choose an **installation passphrase**. It lets an administrator add
+   a device and recover every profile when no other device is at hand.
+   Keep it for administrators only; it cannot be recovered.
+
+This PC becomes the [master device](#master).
+
+**Step 2 — Add a device**
+
+1. On the main PC: **Tools → Installation… → Devices → Add a device…**,
+   tick the profiles for the new device, then **Show the code**.
+2. On the new PC:
+   - if MedReminder was never used there: in the welcome window choose
+     **Join an existing installation…**;
+   - otherwise: **Tools → Installation… → Join an existing
+     installation…**.
+3. Choose **With a code** and type the code. The code lasts 10 minutes,
+   or until its window closes.
+4. The window lists each profile ("added to this device", "already on
+   this device", …). MedReminder restarts with the new profiles and the
+   installation's settings. Profiles already on the new PC are added to
+   the installation.
+
+*No other device at hand?* Choose **With the installation passphrase**,
+select the storage and type the passphrase. An administrator then picks
+their profile, types its PIN and selects the profiles for this device.
+
+**Everyday use**
+
+- The installation syncs by itself every 15 minutes.
+- A change of profile, role, PIN, email account, cloud backup policy
+  or reference country made on one device reaches the others.
+- A profile created later: enable sync for it (Tools → Sync…), then give
+  it to other devices with **Add a device…** on a device that holds it.
+- **Tools → Installation… → Status** shows the storage, the master and
+  any action needed.
+
+<a id="master"></a>
+### The master device
+
+In a shared installation **one device, the master**, sends every email
+(low-stock and dose reminders, of every profile it holds, also those
+not open) and makes the cloud backup. The other devices show their
+reminders on screen only. This way each email arrives once.
+
+- The device that publishes the installation is the master. The
+  **Devices** tab shows it in the **Role** column.
+- Choose a master that is **often switched on** and has MedReminder
+  running.
+- On other devices, prescription requests open in the mail client, and
+  **Test connection** works only on the master. The email settings can
+  be edited everywhere and reach every device.
+- A master that has not synced the installation for **24 hours** stops
+  sending email until it syncs again.
+- Installations published before this version have no master until an
+  administrator chooses one; until then every device sends.
+
+**Move the master to another device**
+
+1. **Tools → Installation… → Devices**, select the new device, **Make
+   master…**, confirm. No device sends email until the handover is
+   complete.
+2. On the new device, with an administrator profile open, the
+   **Master handover** window opens by itself (or later from **Tools →
+   Installation… → Complete the handover…**). It shows the settings and
+   asks you to:
+   - **Test the email connection from this device**;
+   - **Sign in** to the cloud backup storage with the same account;
+   - type the **cloud backup passphrase** again (it is never copied
+     between devices);
+   - optionally type the installation passphrase, to bring profiles no
+     device at hand holds.
+3. **Confirm**. The new device takes over when the old master hands over
+   at its next sync. New profiles appear at the next start.
+
+**The master is broken or lost.** Do the same from another device: the
+new master takes over by itself once the old one has been silent for 25
+hours. Then remove the old one (below).
+
+<a id="remove-device"></a>
+### Lost or replaced device
+
+When a device is lost, sold or given away:
+
+1. On the **master** (it holds every profile): **Tools → Installation…
+   → Devices**, select the device, **Remove device…**.
+2. Choose a **new installation passphrase**. The removed device keeps
+   what it already has but receives nothing new; the profiles it held
+   get new keys too.
+3. MedReminder offers to show a code. The other devices stop syncing
+   until they get the new key: on each of them an administrator opens
+   **Tools → Installation… → Enter the new key…** and types the new
+   passphrase or the code. Changes made there meanwhile are kept.
+4. The new profile keys reach the other devices by themselves; a
+   profile open at that moment asks to restart MedReminder.
+
+Removing the master from another device makes that device the master.
+Also sign the lost device out in your Microsoft or Google account.
+
+---
+
+<a id="settings"></a>
+## 10. Settings and everyday use
+
+All in **Tools → Settings…**:
+
+- **General → Interface language**: English, Italian, French, Spanish
+  or German. Emails and the therapy report use it too. MedReminder
+  restarts.
+- **General → Text size (this profile)**: Normal, Large, Extra large,
+  for each profile. MedReminder also follows the Windows scaling and
+  contrast themes. On a small screen prefer Large.
+- **General → Check for updates on startup (GitHub)**: checks for a new
+  version (nothing is installed by itself) and updates the catalogue.
+  **? → Check for updates…** checks now.
+- **Startup → Start MedReminder at Windows login**: starts hidden in
+  the notification area. No administrator rights needed.
+
+**Notification area icon.** Double-click opens the window; right-click
+offers *Open MedReminder*, *Check now*, *Settings…*, *Exit*.
+
+**Support development.** If enabled, **? → Support development…** opens
+a voluntary contribution page (Stripe or PayPal) in your browser.
+MedReminder never sees your payment details.
+
+---
+
+<a id="faq"></a>
+## 11. Problems and answers
+
+**I get no email.**
+Check, in order: *Test connection* in Settings → Email SMTP; the
+*Recipient* in Settings → Notifications; the **Email** channel ticked on
+the medicine; MedReminder running. With a shared installation, only the
+master sends: check **Tools → Installation… → Status**.
+
+**"This device is the master but has not synced the installation for
+more than 24 hours".**
+The master cannot reach the storage. Check the internet connection and
+the OneDrive / Google Drive sign-in, then **Sync now**.
+
+**"The installation key was changed on another device".**
+A device was removed. Open **Tools → Installation… → Enter the new
+key…** and type the new passphrase, or a code shown by a device that
+already has it.
+
+**"A device was removed … this profile has a new key. Restart now?"**
+Answer yes: the profile takes its new key when MedReminder restarts.
+
+**"This device was removed from the installation".**
+This device keeps its data but receives nothing more. To use it again,
+an administrator adds it as a new device.
+
+**The master handover does not finish.**
+The old master hands over at its next sync. If it is off for good, the
+new master takes over 25 hours after the old one was last seen.
+
+**"The sync group of this profile belongs to another installation".**
+The profile was published from another installation. Join that
+installation (**Join an existing installation…**).
+
+**I forgot a PIN.**
+An administrator clears it with **Tools → Manage profiles… → Change
+PIN**. If nobody else can: close MedReminder, open
+`%LOCALAPPDATA%\MedReminder\profiles.json` with Notepad and, for that
+profile, delete the values of `PinHash` and `PinSalt` and set
+`PinIterations` to `0`. MedReminder records the change at the next
+start; with a shared installation it reaches the other devices.
+
+**I forgot a passphrase.**
+Export, backup, sync and installation passphrases cannot be recovered.
+You can still set new ones (new export, new cloud backup passphrase,
+*Change key and passphrase…*), but files encrypted with the old one
+stay unreadable.
+
+**"Already running".**
+MedReminder is already open: look for its icon in the notification
+area.
+
+**The data looks damaged.**
+Restore a backup (Settings → Backup / Restore → Restore backup…) or
+an export. The log files (below) help to understand what happened.
+
+---
+
+<a id="data"></a>
+## 12. Where MedReminder keeps its data
+
+Everything is under `%LOCALAPPDATA%\MedReminder\` (paste it in the
+File Explorer address bar). MedReminder writes nowhere else, except the
+backup and export files you place yourself.
 
 ```
 %LOCALAPPDATA%\MedReminder\
-├── profiles.json                        ← profile registry
-├── smtp.settings.json                   ← shared SMTP (admin)
-├── smtp.protected                       ← DPAPI-encrypted password
-├── backup.settings.json                 ← shared backup config (admin)
-├── backup.state.json                    ← last automatic-backup state
+├── profiles.json              list of profiles, roles, PINs (hashed)
+├── smtp.settings.json         email account (no password)
+├── smtp.protected             email password, encrypted by Windows
+├── backup.settings.json       backup settings
+├── cloud-backup.protected     cloud backup passphrase, encrypted by Windows
+├── user.settings.json         language, reference country, update check
+├── household\                 shared installation (only when used)
 ├── logs\medreminder-YYYYMMDD.log
 └── profiles\
-    ├── <profile-id>\                    ← one folder per profile
-    │   ├── medreminder.db (+ -wal, -shm)
-    │   ├── notifications.settings.json  ← this profile's ToAddress
-    │   └── ui.settings.json             ← this profile's text size
-    └── …
+    └── <profile>\
+        ├── medreminder.db     the profile's medicines and stock
+        ├── notifications.settings.json   recipients
+        ├── ui.settings.json   text size
+        └── sync.*             sync settings (only when used)
 ```
 
-### Automatic backup covers every profile
-
-When automatic backup is enabled, each daily tick backs up **every**
-profile's database into the shared folder, with filenames of the
-form `medreminder-<profile-id>-YYYYMMDD-HHmmss.db`. Retention is
-applied per-profile so the most recent backup of one profile does
-not shield the older backups of another.
-
-When restoring from `Settings → Backup → Restore backup…`, the
-dialog asks which profile should receive the imported database.
-By default it picks the profile the filename refers to. If you
-restore into a profile other than the active one, the app does not
-restart; if you restore into the active profile, the app restarts
-so the new database can be opened cleanly.
-
-### Auto-start with Windows
-
-The Windows auto-start entry is unique per Windows user. On login,
-the app opens the **last used** profile without showing the picker;
-if that profile has a PIN, the prompt is raised over the empty
-window. To open a different profile at auto-start, use
-`File → Change profile…` once the app is up.
-
-### Upgrading from a single-user install
-
-If you already have a `medreminder.db` file at
-`%LOCALAPPDATA%\MedReminder\` from an older version, the app runs
-a one-shot **V1 → V2 migration** on next launch:
-
-1. It takes a mandatory backup at
-   `%LOCALAPPDATA%\MedReminder\backups\pre-migration-YYYYMMDD-HHmmss\`
-   containing the original `medreminder.db` (and its side files)
-   and the original `smtp.settings.json`.
-2. It moves the database into `profiles\default\medreminder.db`
-   and creates the initial `profiles.json` with a single
-   administrator profile called `User`.
-3. It extracts the recipient (`Smtp.ToAddress`) from
-   `smtp.settings.json` into
-   `profiles\default\notifications.settings.json`.
-
-The migration is **atomic** — if any step fails after the pre-
-backup, the app rolls back to the V1 state and preserves the
-pre-migration backup.
-
-The **pre-migration backup is not cleaned up automatically** —
-after you have verified that the migrated app opens the same data,
-you can delete the `backups\pre-migration-*` folder manually.
-Rename the profile from `User` to something you prefer in
-`Tools → Manage profiles… → Rename`.
-
-## Configure email sending
-
-**Settings → Email SMTP**:
-
-- **Host**: e.g. `smtp.gmail.com`, `smtp-mail.outlook.com`, etc.
-- **Port**: usually 587 (StartTLS) or 465 (direct SSL/TLS).
-  MedReminder uses StartTLS when the relevant checkbox is on.
-- **Username / New password**: if the server requires authentication.
-  The password is encrypted with DPAPI and stored in
-  `%LOCALAPPDATA%\MedReminder\smtp.protected`. It does not end up
-  in `smtp.settings.json` nor in the logs.
-- **Remove stored password**: deletes `smtp.protected` at the next
-  Save.
-- **Sender / Sender name**: the "from" of the sent emails.
-- **Recipient**: where to receive alerts (usually your own
-  personal address).
-- **Timeout**: seconds before considering the connection failed.
-- **Test connection**: opens an SMTP session, authenticates,
-  closes. Does not send a real email.
-- **Save SMTP settings**: writes
-  `%LOCALAPPDATA%\MedReminder\smtp.settings.json`. Configuration
-  is hot-reloaded without restarting the app.
-
-### Example: Gmail with app-password
-
-1. Enable 2FA on your Google account.
-2. Create an app-password at
-   `myaccount.google.com/apppasswords`.
-3. In MedReminder: Host `smtp.gmail.com`, Port `587`,
-   StartTLS on, Username `youraddress@gmail.com`, Password
-   the app-password you just created.
-
-Google and other providers can change the requirements: consult
-your provider's documentation if the connection test fails.
-
-## Caregiver notifications
-
-**Settings → Notifications → Caregiver e-mail (optional)**.
-
-A profile can name a second recipient — for example a family
-member or a caregiver who handles the reorder on your behalf.
-When this field is set, every e-mail sent to the primary
-recipient is also sent to the caregiver, in the **same** message.
-Nothing else changes: the transport, the message content and when
-the e-mails are sent are exactly the same as before.
-
-- **To enable it**: type the caregiver's e-mail address and save.
-- **To disable it**: clear the field and save. Leaving it empty
-  means no caregiver is configured — the default.
-- **Both addresses are visible to both recipients**: the caregiver
-  and the primary recipient can see each other's address on the
-  e-mail. This is intentional, so a reply reaches everyone.
-- The caregiver address cannot be the same as the primary
-  recipient, and must be a valid e-mail address; otherwise the
-  save is rejected with a message.
-
-The setting is per profile: one profile's caregiver is not
-another profile's caregiver.
-
-## Request a prescription from your doctor
-
-Select a medicine and choose **Therapy → Request prescription…**
-(or the **Request prescription** toolbar button). The action is
-available for every medicine, whatever its stock.
-
-MedReminder prepares a short message with the medicine name, the
-package, the product code (when the medicine is linked to the
-catalogue) and your profile name as signature. When the medicine has
-a reference doctor, the greeting uses that name. Dosage, notes and
-other clinical details are not included. Subject and message are
-editable before you deliver them.
-
-Three ways to deliver the message:
-
-- **Copy**: subject and message go to the clipboard, to paste into a
-  web mail, a messaging app or a patient portal.
-- **Open in mail client**: opens a new e-mail in your default mail
-  program, already filled in. If the message is too long for the mail
-  program, or no mail program is set up, it is copied to the
-  clipboard instead.
-- **Send…**: sends the message through the e-mail account configured
-  in **Settings → Email SMTP**, after an explicit confirmation.
-  Available only when SMTP sending is configured and a doctor e-mail
-  is set.
-
-The doctor e-mail is set in **Settings → Notifications → Doctor
-e-mail (optional)**. It is per profile, is included in export and
-import, and is used only for the requests you send yourself: the
-automatic notifications never go to this address.
-
-MedReminder never sends a prescription request on its own. The
-message content and the recipient are not written to the log files.
-
-## Windows automatic startup
-
-**Settings → Automatic startup**: check the box. An entry is
-created in `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
-that launches MedReminder with the `--minimized` argument
-(starts in tray, window hidden). No administrator privileges
-required.
-
-## Database backup
-
-**Settings → Backup / Restore**:
-
-- **Export**: pick a folder. The DB is copied as
-  `medreminder-YYYYMMDD-HHMMSS.db`. Save the copy on an external
-  drive or personal cloud if you want resilience.
-- **Restore**: select a previous backup. The current DB is
-  renamed to `medreminder.db.bak-<timestamp>` (not lost!) and
-  replaced. **Close and reopen MedReminder** after the restore
-  to avoid inconsistencies.
-
-## Export and import
-
-Alongside the raw database backup, MedReminder can produce a single
-**encrypted, portable file** with all of your data. Unlike a plain
-backup, this file is not tied to your Windows account or PC, so it is
-also the recommended way to move MedReminder to a new computer.
-
-**Settings → Backup → Export all data (encrypted)…**:
-
-- Pick where to save the file (extension `.mrz`).
-- Choose a **passphrase** (at least 12 characters) and type it twice.
-- Optionally tick the shared settings you want to include: SMTP
-  transport settings, the SMTP password, backup preferences, user
-  preferences (language and catalogue country). All are off by default.
-  If you include the SMTP password, it is re-encrypted with your
-  passphrase — it is never written in clear text.
-- Click **Export**.
-
-**Admin: every profile at once.** When more than one profile exists,
-an admin profile also sees **Export every profile**. Pick a folder
-instead of a file: MedReminder writes one encrypted file per profile
-(`medreminder-export-<profileId>-<timestamp>.mrz`), all with the same
-passphrase. To restore a profile, open that profile and import its
-file.
-
-**The passphrase cannot be recovered.** There is no reset, no backdoor
-and no server copy. If you lose the passphrase, the file can never be
-read again — store it somewhere safe.
-
-**Settings → Backup → Import from export…**:
-
-- Pick the `.mrz` file. MedReminder shows what it contains (version,
-  date, scope, included settings) before doing anything.
-- Type the passphrase.
-- Tick **"I understand that this will overwrite the current profile's
-  data."** Import replaces the current profile's data entirely — there
-  is no merge. A safety copy of the current database is kept as
-  `medreminder.db.bak-<timestamp>` first.
-- If the file was exported from a different profile, MedReminder asks
-  for confirmation: importing it replaces the active profile's data
-  with that profile's data.
-- Click **Import**, then **restart** MedReminder when prompted so the
-  imported data is loaded cleanly.
-
-If the passphrase is wrong, or the file is damaged, or it was produced by
-a newer version of MedReminder, the import stops with a clear message and
-your current data is left untouched.
-
-The archive format is documented publicly in
-[`docs/EXPORT-FORMAT.md`](EXPORT-FORMAT.md), so your data is never locked
-in — it can be decrypted with standard tools if you ever need to.
-
-## Cloud folder backup
-
-MedReminder can also write the automatic daily backup as an **encrypted
-snapshot** into a local folder that your operating system is already
-synchronizing (OneDrive, iCloud Drive, Dropbox, Google Drive Desktop, …).
-This is the low-cost way to move your data from a "home PC" to a
-"work PC" without running a server, and it keeps a copy off the
-machine in case the disk fails.
-
-**This is not real-time sync.** MedReminder writes a snapshot at
-most once a day, and only one computer at a time should be writing.
-If you edit medicines on two devices between two snapshots, the two
-copies diverge — and the next restore wipes whichever machine you
-restore on. Decide up front which device is "active" and only
-restore on the other one when you switch.
-
-### Setup on the first device
-
-**Settings → Backup → Backup to a cloud-synced folder (encrypted)**:
-
-- Tick the checkbox.
-- Pick a folder inside your cloud provider's local sync folder
-  (for example `C:\Users\<name>\OneDrive\MedReminder`). MedReminder
-  never talks to OneDrive / iCloud / Dropbox itself — it just writes
-  files there, and your OS-level agent uploads them.
-- Set the number of snapshots to keep (default: 30).
-- Click **Set / change…** next to Backup passphrase and choose a
-  passphrase (at least 12 characters). This passphrase never leaves
-  the machine.
-- Save.
-
-From the next daily tick onward, MedReminder writes
-`medreminder-<profileId>-<timestamp>.mrz` into the folder. The file
-is encrypted with a key derived from your backup passphrase; the
-cloud provider never sees your data in the clear.
-
-One snapshot is written for **every profile** on the computer, like
-the local backup, and all of them are encrypted with the same backup
-passphrase. Whoever knows the passphrase can therefore read the data
-of every profile, including profiles protected by a PIN.
-
-### Setup on the second device
-
-- Install MedReminder.
-- **Settings → Backup → Set / change…** and enter the **same** backup
-  passphrase you configured on the first device. This is the only
-  irreducible step: without the same passphrase, the second machine
-  cannot decrypt what the first one wrote.
-- The daily automatic snapshot is off on the second device — you
-  only need it on one machine.
-
-### Restore on the second device
-
-**Settings → Backup → Restore from cloud folder…**:
-
-- Point the dialog at the local sync folder (the same one the first
-  device writes into).
-- Pick the most recent snapshot from the list. Each row shows the
-  date, the profile name (or its id, if the profile does not exist on
-  this computer), and a short "device hash" so you can tell snapshots
-  from different machines apart. The device hash is a SHA-256
-  fingerprint of the source machine's host name — enough to group
-  snapshots by origin, not enough to identify the machine.
-- The newest snapshot of the active profile is preselected. Restore
-  always overwrites the **active** profile: to restore another
-  profile, switch to it first. If you pick a snapshot of a different
-  profile, MedReminder asks for confirmation before replacing the
-  active profile's data with it.
-- Tick **"I understand that this will overwrite the current profile's
-  data."** — restore is Overwrite-only.
-- Click **Restore**. MedReminder decrypts the snapshot, replaces
-  the current profile's database, and prompts you to restart.
-
-### Notes
-
-- **Losing the passphrase is losing the data.** There is no reset.
-  The passphrase is stored locally, encrypted with your Windows
-  account credentials; it never leaves the machine and never appears
-  in the cloud.
-- The daily automatic snapshot does **not** include your SMTP
-  password or your user preferences — for that, use the one-shot
-  encrypted export above with the shared-settings tickboxes.
-- MedReminder's own retention only deletes old files from the visible
-  folder. Your cloud provider likely keeps deleted files in its own
-  recycle bin (OneDrive: 30 days by default) — MedReminder cannot
-  purge that on your behalf, and doesn't try to.
-- Do **not** place the live database file into a cloud-synced folder.
-  Only the encrypted `.mrz` snapshots belong there.
-
-### OneDrive instead of a folder
-
-In the same section, **Storage** can be set to **OneDrive (app
-folder)**: click **Sign in…**, sign in with a Microsoft account, set
-the backup passphrase and save. Snapshots go to `Apps/MedReminder26/backups`
-in OneDrive, encrypted as above; no local folder is needed. **Restore
-from cloud folder…** then lists the OneDrive snapshots by date and profile
-and downloads only the one you restore.
-
-**Google Drive (MedReminder/backups folder)** works the same way with a
-Google account: the snapshots go to a visible **MedReminder → backups**
-folder in your My Drive, encrypted as above, and **Restore from cloud
-folder…** lists them from there.
-
-## Sync between PCs
-
-Several PCs can keep the same profile up to date: what you record on one
-appears on the others. The PCs exchange only encrypted changes through a
-folder they share (a OneDrive, Google Drive or Dropbox folder kept in sync
-by its desktop app, or a network share). No server is involved and the
-folder never contains readable data.
-
-Open **Tools → Sync…**. Every profile manages the sync of its own data,
-including changing the key and removing a device.
-
-### OneDrive or a shared folder
-
-When you enable sync or join a group, MedReminder asks where the group
-lives:
-
-- **OneDrive**: sign in with a Microsoft account in the browser window
-  that opens. MedReminder can only use its own app folder
-  (`Apps/MedReminder26` in OneDrive); the data there is encrypted.
-  Every PC signs in with the **same** Microsoft account. The OneDrive
-  app on the PC is not needed.
-- **Google Drive**: sign in with a Google account in the browser window
-  that opens. The sync data goes to MedReminder's hidden app data folder
-  in Google Drive (it does not appear in My Drive), encrypted. Every PC
-  signs in with the **same** Google account.
-- **A shared folder**: a folder kept in sync by another program, or a
-  network share, as described below.
-
-If the OneDrive or Google Drive session ends (password change, long
-inactivity), the status says so and **Sign in to OneDrive again** (or
-**Sign in to Google Drive again**) resumes the sync; changes recorded
-meanwhile are sent afterwards.
-
-### Enable on the first PC
-
-1. **Enable sync…**, choose the shared folder.
-2. Enter a name for this PC and a **sync passphrase** (at least 10
-   characters, typed twice). It is not the backup passphrase. Keep it
-   safe: without it the data in the folder cannot be read, and it cannot
-   be recovered.
-
-### Join from another PC
-
-1. Wait until the sync client has downloaded the shared folder.
-2. **Join a group…**, choose the same folder, enter a name for this PC and
-   the same passphrase.
-3. Confirm: **the data of this profile on this PC is replaced** by the
-   group's (a copy is kept next to the database). MedReminder restarts.
-
-If the passphrase opens more than one group in the folder or account
-(several synced profiles with the same passphrase), MedReminder asks
-which one to join and shows each group with its devices.
-
-With OneDrive or Google Drive the join can take up to a minute:
-MedReminder waits until the account lists the new PC, so that the other
-PCs keep the changes it still needs.
-
-### Daily use
-
-- MedReminder syncs a few seconds after each change, every 5 minutes, and
-  with **Sync now**.
-- The **Devices** tab lists the PCs of the group and when each was last
-  seen.
-- If two PCs changed the same thing before seeing each other's change,
-  the most recent change is kept and the case is listed in **Conflicts**.
-  For a medicine field, **Restore lost value** brings back the other
-  value; **Dismiss** removes the entry from the list.
-- Importing an export or restoring a backup on a synced profile starts a
-  new **generation**: after a warning, the other PCs discard what they had
-  not sent yet and must be rebuilt with **Rebuild from the group…**.
-- The **profile name** and the **notification recipients** (Settings →
-  Notifications) belong to the group: a change on one PC reaches the
-  others, and a PC that joins takes the group's. To rename another
-  profile that is synced, open that profile first.
-- **Email**: every PC with email configured (Settings → Email SMTP)
-  sends its own low-stock and caregiver messages, so with two synced PCs
-  the same message arrives twice. Configure email on one PC of the group
-  only.
-- **Disable sync…** stops syncing on this PC and keeps its data.
-
-### Pairing codes
-
-A PC already in the group can show a **pairing code**: **Pair a
-device…** displays a QR code (for the future phone app) and the same
-code as text. On another PC, **Join with a pairing code…** takes that
-code instead of the passphrase; the PC still needs access to the same
-account or folder.
-
-- The code is valid for 10 minutes and only while its window is open.
-  Closing the window withdraws it.
-- Whoever reads the code while it is valid can read the group's data:
-  show it only to your own devices, do not send it by message or email.
-  The window is hidden from screenshots.
-
-### Changing the key, removing a lost PC
-
-- **Devices** tab → select a PC → **Remove device…**: for a lost or
-  stolen PC. **Change key and passphrase…** does the same without
-  naming a PC, for example when the passphrase became known to someone.
-- You choose a **new sync passphrase**. The group gets a new key; the
-  removed PC never receives it and cannot read anything written from
-  then on. What it already held stays readable to it.
-- Also end the sessions of the lost PC in the Microsoft or Google
-  account security settings: until then it can still reach the storage.
-- Every other PC stops sending changes and shows that the key was
-  changed. Use **Enter the new key…** there, with the new passphrase or
-  a pairing code from a PC that has the new key. The profile is rebuilt
-  from the group and **the changes made on that PC are kept**, also
-  those recorded while it waited. MedReminder restarts.
-
-## Check now
-
-The monitor runs automatically every 30 minutes (configurable in
-`appsettings.json` at `Monitoring:IntervalMinutes`). If you want
-to force an immediate check: toolbar → **Check now** or tray
-menu → **Check now**.
-
-## Notification area icon
-
-- **Double click** → opens the window.
-- **Context menu (right click)**:
-  - Open MedReminder
-  - Check now
-  - Settings…
-  - Exit
-
-Closing the main window with the X minimizes to tray; the app
-keeps running in background. To really exit: tray menu → **Exit**.
-
-## Interface language
-
-**Settings → General**: pick the language from the dropdown
-(English, Italian, French, Spanish or
-German) and click **Save**. MedReminder asks to
-restart to apply the change.
-
-Notes:
-- Windows toast notifications use the language chosen here, like
-  the rest of the app.
-- Email notifications and the therapy report use the language
-  selected here.
-
-## Text size
-
-**Settings → General → Text size (this profile)**: choose **Normal**,
-**Large** or **Extra large** and click **Save**. MedReminder asks to
-restart; after the restart every window of this profile shows larger
-text, buttons and list rows. The user guide is enlarged too.
-
-Notes:
-- The size belongs to the profile: on a shared PC each person keeps
-  their own. The profile picker and the PIN prompt, shown before a
-  profile is open, always use Normal.
-- MedReminder also follows the Windows display scaling and the
-  Windows contrast themes. Under a contrast theme the medicine list
-  drops its coloured rows and uses the theme colours; the **Status**
-  column still states each medicine's condition.
-- On a small screen a window at **Extra large** is reduced to the
-  screen size and part of it may not be visible; choose **Large** in
-  that case.
-
-## Support Development
-
-If the maintainer has enabled it, the **Help → Support development…**
-entry opens a small dialog where you can, entirely voluntarily,
-contribute to the project. It is optional and never required to use
-MedReminder.
-
-- Pick a fixed amount (€2, €5, €10, €20) or, when offered, a **custom
-  amount**.
-- Pick a payment method (Stripe or PayPal).
-- Click **Continue with …** — MedReminder opens the provider's official
-  payment page in your default browser.
-
-With a custom amount you choose the exact figure **on the provider's
-page**, not inside MedReminder. The application never processes the
-payment itself, never sees your card details, and cannot confirm that a
-payment completed — it only opens the page. If the maintainer has not
-configured this feature, the menu entry does not appear.
-
-## Diagnostics
-
-- **Logs**: `%LOCALAPPDATA%\MedReminder\logs\medreminder-YYYYMMDD.log`.
-  Contains scheduler ticks, notification sends, errors.
-- **Corrupted or incompatible DB**: delete `medreminder.db`,
-  `medreminder.db-shm`, `medreminder.db-wal` under
-  `%LOCALAPPDATA%\MedReminder\`. On next start the DB is
-  recreated empty. Make a manual backup first if you have
-  important data.
-- **App already running**: only one instance per Windows user.
-  If the launch says "already running", look for the icon in
-  the notification area.
-
-## What MedReminder does NOT do
-
-- It does not record whether you took a dose, does not track
-  adherence and does not alert on missed doses (the dose-time
-  reminder is a convenience prompt only, not an adherence system).
-- It does not provide therapy instructions or drug interactions.
-- It does not sync between different devices.
-- It does not automatically order medicines.
-- It does not contact your doctor directly.
-
-Its only purpose is to let you know in time that you need to
-request a new prescription.
+- The **logs** record what the app did (checks, emails sent, errors).
+  They never contain passwords, email text or medical notes.
+- The database is not encrypted: it is protected by your Windows
+  account. Exports and cloud copies are encrypted.
+- **Upgrading from a very old version** (a single `medreminder.db`
+  directly in the folder): the first start moves it into a profile
+  called *User* and keeps a copy in `backups\pre-migration-…`, which you
+  can delete once everything looks right.
+
+---
+
+<a id="limits"></a>
+## 13. What MedReminder does not do
+
+- It does not track whether you took your doses and does not alert on
+  missed doses (the dose-time reminder is only a prompt).
+- It does not give therapy instructions and does not check doses or
+  drug interactions.
+- It does not order medicines and does not contact your doctor by
+  itself.
+- It does not merge data restored from a backup: restore and import
+  always replace.
+
+Its purpose is to let you know in time that you need a new
+prescription.

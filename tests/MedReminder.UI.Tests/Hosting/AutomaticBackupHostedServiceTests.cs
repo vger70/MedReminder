@@ -342,7 +342,11 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         public void SetActiveProfileHint(string id) => throw new NotSupportedException();
         public void SetPin(string id, string? pin) => throw new NotSupportedException();
         public bool VerifyPin(string id, string pin) => throw new NotSupportedException();
+        public void SetRole(string id, ProfileRole role) => throw new NotSupportedException();
+        public ProfilePinHash? GetPinHash(string id) => null;
+        public void SetPinHash(string id, ProfilePinHash? pin) => throw new NotSupportedException();
         public bool HasPin(string id) => false;
+        public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin) => throw new NotSupportedException();
     }
 
     // The local raw-DB target is disabled in every test here.

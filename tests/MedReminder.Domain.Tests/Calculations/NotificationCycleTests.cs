@@ -11,6 +11,36 @@ public class NotificationCycleTests
     private static readonly DateOnly Today = new(2026, 9, 13);
 
     [Fact]
+    public void An_email_of_the_same_epoch_fact_was_already_sent()
+    {
+        var medicine = DomainFactory.Medicine(stockEpoch: 2);
+        var fact = Guid.NewGuid();
+        medicine.StockEpochFactId = fact;
+
+        NotificationCycle.EmailAlreadySent(medicine, Sent(epoch: 2, fact)).Should().BeTrue();
+        // Epoch numbers can be reused after a retraction: the fact decides.
+        NotificationCycle.EmailAlreadySent(medicine, Sent(epoch: 2, Guid.NewGuid())).Should().BeFalse();
+        NotificationCycle.EmailAlreadySent(medicine, null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Without_epoch_facts_the_email_epoch_number_decides()
+    {
+        var medicine = DomainFactory.Medicine(stockEpoch: 3);
+
+        NotificationCycle.EmailAlreadySent(medicine, Sent(epoch: 3, null)).Should().BeTrue();
+        NotificationCycle.EmailAlreadySent(medicine, Sent(epoch: 2, null)).Should().BeFalse();
+    }
+
+    private static SentEmailNotification Sent(int epoch, Guid? fact) => new()
+    {
+        MedicineId = DomainFactory.MedicineId,
+        StockEpoch = epoch,
+        EpochFactId = fact,
+        SentAt = new DateTimeOffset(2026, 9, 13, 8, 0, 0, TimeSpan.Zero),
+    };
+
+    [Fact]
     public void Inactive_medicine_never_notifies()
     {
         var medicine = DomainFactory.Medicine(thresholdDays: 7, isActive: false);

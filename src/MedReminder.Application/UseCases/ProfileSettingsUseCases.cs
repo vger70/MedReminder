@@ -1,5 +1,7 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Household;
 using MedReminder.Application.Sync;
+using MedReminder.Domain.Household;
 using MedReminder.Domain.Sync;
 
 namespace MedReminder.Application.UseCases;
@@ -9,8 +11,9 @@ namespace MedReminder.Application.UseCases;
 // emails. Each changed address is a ProfileSettingChanged operation, so
 // the other devices of the profile's sync group get it. An address
 // that has no version in the group yet (a group created before the
-// settings were replicated) is recorded on the first save too, so the
-// devices end up with the same three addresses. The caller validates
+// settings were replicated) is recorded on the first save too, even when
+// no address changed, so the devices end up with the same three
+// addresses. The caller validates
 // the addresses.
 public sealed class UpdateNotificationSettings
 {
@@ -42,8 +45,9 @@ public sealed class UpdateNotificationSettings
             var changes = wanted
                 .Where(w => !string.Equals(current.GetValueOrDefault(w.Key) ?? string.Empty, w.Value, StringComparison.Ordinal))
                 .ToDictionary(w => w.Key, w => w.Value, StringComparer.Ordinal);
-            if (changes.Count == 0) return true;
-
+            // An unchanged save still records the addresses the group has
+            // no version of: otherwise a group created before the settings
+            // were replicated never carries them to a device that joins.
             var recorded = new List<SyncOperationBody>();
             foreach (var (setting, value) in wanted)
             {
@@ -54,11 +58,12 @@ public sealed class UpdateNotificationSettings
                     recorded.Add(new ProfileSettingChanged(setting, value));
                 }
             }
+            if (recorded.Count == 0) return true;
             // The log first: if the file write fails, the next sync run
             // projects the recorded value into it.
             await _operations.AppendAsync(recorded, ct);
             await _uow.SaveChangesAsync(ct);
-            _store.Write(changes);
+            if (changes.Count > 0) _store.Write(changes);
             return true;
         }, cancellationToken);
 }
@@ -85,10 +90,13 @@ public sealed class RenameProfile
     private readonly ISyncProfileStatus _sync;
     private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
+    private readonly HouseholdLog? _household;
 
+    // household: the name is also a household register (step H2).
     public RenameProfile(IProfileRegistry registry, ICurrentProfile current, ISyncProfileStatus sync,
-        IOperationLog operations, IUnitOfWork uow)
+        IOperationLog operations, IUnitOfWork uow, HouseholdLog? household = null)
     {
+        _household = household;
         _registry = registry;
         _current = current;
         _sync = sync;
@@ -96,26 +104,33 @@ public sealed class RenameProfile
         _uow = uow;
     }
 
-    public Task ExecuteAsync(string profileId, string newDisplayName, CancellationToken cancellationToken)
+    public async Task ExecuteAsync(string profileId, string newDisplayName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
         ArgumentException.ThrowIfNullOrWhiteSpace(newDisplayName);
+        var before = _registry.GetById(profileId)?.DisplayName;
         if (profileId != _current.Id)
         {
             if (_sync.IsSyncEnabled(profileId)) throw new SyncedProfileRenameException();
             _registry.Rename(profileId, newDisplayName);
-            return Task.CompletedTask;
+        }
+        else
+        {
+            await WriteGate.RunExclusiveAsync(async ct =>
+            {
+                _registry.Rename(profileId, newDisplayName);
+                var renamed = _registry.GetById(profileId)?.DisplayName ?? newDisplayName.Trim();
+                if (string.Equals(before, renamed, StringComparison.Ordinal)) return true;
+                await _operations.AppendAsync([new ProfileSettingChanged(ProfileSetting.DisplayName, renamed)], ct);
+                await _uow.SaveChangesAsync(ct);
+                return true;
+            }, cancellationToken);
         }
 
-        return WriteGate.RunExclusiveAsync(async ct =>
+        var after = _registry.GetById(profileId)?.DisplayName ?? newDisplayName.Trim();
+        if (_household is not null && !string.Equals(before, after, StringComparison.Ordinal))
         {
-            var before = _registry.GetById(profileId)?.DisplayName;
-            _registry.Rename(profileId, newDisplayName);
-            var after = _registry.GetById(profileId)?.DisplayName ?? newDisplayName.Trim();
-            if (string.Equals(before, after, StringComparison.Ordinal)) return true;
-            await _operations.AppendAsync([new ProfileSettingChanged(ProfileSetting.DisplayName, after)], ct);
-            await _uow.SaveChangesAsync(ct);
-            return true;
-        }, cancellationToken);
+            await _household.AppendAsync([new ProfileRenamed(profileId, after)], cancellationToken);
+        }
     }
 }

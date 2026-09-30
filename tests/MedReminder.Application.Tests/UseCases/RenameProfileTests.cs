@@ -29,6 +29,23 @@ public class RenameProfileTests
         _uow.SaveChangesCalls.Should().Be(1);
     }
 
+    // Household step H2: the name is also a household register, for the
+    // open profile and for another one.
+    [Theory]
+    [InlineData("me", "Lucia")]
+    [InlineData("other", "Paolo")]
+    public async Task A_rename_is_recorded_in_the_household(string profileId, string name)
+    {
+        var store = new InMemoryHouseholdStore();
+        var household = new MedReminder.Application.Household.HouseholdLog(store, TimeProvider.System);
+        var useCase = new RenameProfile(_registry, new FakeCurrent("me"), new FakeSyncStatus(_synced), _log, _uow, household);
+
+        await useCase.ExecuteAsync(profileId, name, CancellationToken.None);
+        await useCase.ExecuteAsync(profileId, name, CancellationToken.None);
+
+        store.Operations.Should().ContainSingle().Which.Type.Should().Be("ProfileRenamed");
+    }
+
     [Fact]
     public async Task Keeping_the_same_name_records_nothing()
     {
@@ -103,6 +120,10 @@ public class RenameProfileTests
         public void SetActiveProfileHint(string id) => throw new NotSupportedException();
         public void SetPin(string id, string? pin) => throw new NotSupportedException();
         public bool VerifyPin(string id, string pin) => throw new NotSupportedException();
+        public void SetRole(string id, ProfileRole role) => throw new NotSupportedException();
+        public ProfilePinHash? GetPinHash(string id) => null;
+        public void SetPinHash(string id, ProfilePinHash? pin) => throw new NotSupportedException();
         public bool HasPin(string id) => throw new NotSupportedException();
+        public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin) => throw new NotSupportedException();
     }
 }
