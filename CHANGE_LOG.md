@@ -52,7 +52,9 @@ Branch: `claude/ui-phase4-settings` → `main`
 - Auto-sized buttons in every window are no longer scaled twice at
   display scaling above 100 %.
 - Settings → Backup: the folder fields take the section's width, so
-  the Browse buttons stay visible; the storage-location list is wider.
+  the Browse buttons stay visible, and the passphrase and account rows
+  wrap instead of cutting their text; the storage-location list is
+  wider.
 
 ## PR #146 — Redesign the main window around a summary and a navigation pane
 

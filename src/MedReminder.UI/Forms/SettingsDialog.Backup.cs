@@ -176,56 +176,46 @@ internal sealed partial class SettingsDialog
             ForeColor = UiColors.Hint,
         };
 
-        // AutoScroll on: the admin view (Cloud Backup section, action
-        // buttons, localized notes) can be taller than the tab, in
-        // particular at DPI scales above 100%. Without a scrollbar
-        // the lower controls were cut off and unreachable.
-        var container = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.TopDown,
-            Dock = DockStyle.Fill,
-            Padding = new Padding(16),
-            WrapContents = false,
-            AutoScroll = true,
-        };
-        container.Controls.Add(_dbPathLabel);
-        container.Controls.Add(table);
+        // One column as wide as the section: the form tables stretch
+        // with it, so the folder fields keep their Browse buttons in
+        // view, and the section panel scrolls when the content is
+        // taller than the window (admin view at 150 % and Large text).
+        var container = BuildSectionColumn(new Padding(16));
+        AddToColumn(container, _dbPathLabel);
+        AddToColumn(container, table);
         if (cloudSection is not null)
         {
-            container.Controls.Add(cloudSection);
+            AddToColumn(container, cloudSection);
         }
-        container.Controls.Add(actionButtons);
-        container.Controls.Add(note);
-        // A top-down flow sizes each child to its preferred width; the
-        // form tables follow the section's width instead, so the folder
-        // fields stretch and their Browse buttons stay visible.
-        container.ClientSizeChanged += (_, _) => FitTablesToWidth(container);
-        container.VisibleChanged += (_, _) => FitTablesToWidth(container);
+        actionButtons.Dock = DockStyle.Top;
+        AddToColumn(container, actionButtons);
+        AddToColumn(container, note);
         page.Controls.Add(container);
         return page;
     }
 
-    private static void FitTablesToWidth(FlowLayoutPanel flow)
+    // A single full-width column that grows to its content, docked at
+    // the top of a scrolling section panel.
+    private static TableLayoutPanel BuildSectionColumn(Padding padding)
     {
-        var width = flow.ClientSize.Width - flow.Padding.Horizontal;
-        if (width > 0) FitTablesToWidth(flow, width);
+        var column = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            Padding = padding,
+            Margin = Padding.Empty,
+        };
+        column.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        return column;
     }
 
-    private static void FitTablesToWidth(FlowLayoutPanel flow, int width)
+    private static void AddToColumn(TableLayoutPanel column, Control control)
     {
-        foreach (Control child in flow.Controls)
-        {
-            var childWidth = Math.Max(1, width - child.Margin.Horizontal);
-            if (child is TableLayoutPanel or FlowLayoutPanel { FlowDirection: FlowDirection.TopDown })
-            {
-                child.MinimumSize = new System.Drawing.Size(childWidth, 0);
-                child.MaximumSize = new System.Drawing.Size(childWidth, 0);
-            }
-            if (child is FlowLayoutPanel { FlowDirection: FlowDirection.TopDown } inner)
-            {
-                FitTablesToWidth(inner, childWidth - inner.Padding.Horizontal);
-            }
-        }
+        column.RowCount++;
+        column.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        column.Controls.Add(control, 0, column.RowCount - 1);
     }
 
     // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §5.1):
@@ -300,7 +290,10 @@ internal sealed partial class SettingsDialog
         {
             FlowDirection = FlowDirection.LeftToRight,
             AutoSize = true,
-            WrapContents = false,
+            // Wraps the button under the text when the section is
+            // narrow instead of cutting the text.
+            WrapContents = true,
+            Dock = DockStyle.Fill,
         };
         passRow.Controls.Add(_cloudPassStatusLabel);
         passRow.Controls.Add(_cloudPassChangeButton);
@@ -351,7 +344,10 @@ internal sealed partial class SettingsDialog
             {
                 FlowDirection = FlowDirection.LeftToRight,
                 AutoSize = true,
-                WrapContents = false,
+                // Wraps the button under the text when the section is
+                // narrow instead of cutting the text.
+                WrapContents = true,
+                Dock = DockStyle.Fill,
             };
             accountRow.Controls.Add(_cloudAccountLabel);
             accountRow.Controls.Add(_cloudSignInButton);
@@ -365,14 +361,10 @@ internal sealed partial class SettingsDialog
         AddRow(cloudTable, string.Empty, notSyncWarning);
         AddRow(cloudTable, string.Empty, lostPassWarning);
 
-        var wrapper = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.TopDown,
-            AutoSize = true,
-            WrapContents = false,
-        };
-        wrapper.Controls.Add(groupTitle);
-        wrapper.Controls.Add(cloudTable);
+        var wrapper = BuildSectionColumn(Padding.Empty);
+        wrapper.Dock = DockStyle.Fill;
+        AddToColumn(wrapper, groupTitle);
+        AddToColumn(wrapper, cloudTable);
         UpdateCloudTargetControls();
         return wrapper;
     }
