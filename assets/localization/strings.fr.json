@@ -778,7 +778,7 @@
   "Ui.SettingsDialog.Notifications.DoctorAddress.Label": "E-mail du médecin (facultatif)",
   "Ui.SettingsDialog.Notifications.DoctorAddress.Help": "Utilisée uniquement comme destinataire des demandes d'ordonnance que tu envoies toi-même (Traitement > Demander une ordonnance). Les notifications automatiques ne sont jamais envoyées à cette adresse.",
   "Ui.SettingsDialog.Notifications.DoctorAddress.Invalid": "Saisis une adresse e-mail valide pour le médecin.",
-  "Ui.SettingsDialog.Notifications.NoteAdmin": "Vous pouvez aussi modifier le serveur SMTP partagé dans l'onglet Email.",
+  "Ui.SettingsDialog.Notifications.NoteAdmin": "Vous pouvez aussi modifier le serveur SMTP partagé dans la section E-mail SMTP.",
   "Ui.SettingsDialog.Notifications.NoteUser": "Pour modifier le compte SMTP ou la configuration de la sauvegarde, contactez l'administrateur du profil.",
   "Ui.SettingsDialog.Notifications.MyPin": "Mon code PIN",
   "Ui.SettingsDialog.Notifications.PinStateSet": "État du code PIN : défini.",

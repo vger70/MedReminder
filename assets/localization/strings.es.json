@@ -778,7 +778,7 @@
   "Ui.SettingsDialog.Notifications.DoctorAddress.Label": "E-mail del médico (opcional)",
   "Ui.SettingsDialog.Notifications.DoctorAddress.Help": "Se usa solo como destinatario de las solicitudes de receta que envías tú (Terapia > Solicitar receta). Las notificaciones automáticas nunca se envían a esta dirección.",
   "Ui.SettingsDialog.Notifications.DoctorAddress.Invalid": "Introduce una dirección de e-mail válida para el médico.",
-  "Ui.SettingsDialog.Notifications.NoteAdmin": "También puedes cambiar el servidor SMTP compartido en la pestaña Email.",
+  "Ui.SettingsDialog.Notifications.NoteAdmin": "También puedes cambiar el servidor SMTP compartido en la sección E-mail SMTP.",
   "Ui.SettingsDialog.Notifications.NoteUser": "Para cambiar la cuenta SMTP o la configuración de la copia de seguridad, pídeselo al administrador del perfil.",
   "Ui.SettingsDialog.Notifications.MyPin": "Mi PIN",
   "Ui.SettingsDialog.Notifications.PinStateSet": "Estado del PIN: establecido.",
