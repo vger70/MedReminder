@@ -318,14 +318,20 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         var item = _sectionList.AddItem(title, glyph, opensWindow: false, () => SelectSection(index));
         body.Dock = DockStyle.Fill;
         body.Visible = false;
-        // A section whose content is docked at the top (Backup) scrolls
-        // as a whole. Sections with a filling panel scroll inside it; a
-        // second scrolling level around it lost the scroll bar after
-        // scaling (Settings -> General at 150 % with Large text).
-        if (body is ScrollableControl scrollable)
+        // Every section scrolls as a whole, with its content docked at
+        // the top and sized to what it needs, as Backup does. A panel
+        // that filled the section and scrolled by itself showed no scroll
+        // bar after scaling when the content was only a little taller
+        // than the window (Settings -> General with Large text).
+        foreach (var content in body.Controls.OfType<ScrollableControl>().Where(c => c.Dock == DockStyle.Fill).ToList())
         {
-            scrollable.AutoScroll = !body.Controls.Cast<Control>().Any(c => c.Dock == DockStyle.Fill);
+            content.AutoScroll = false;
+            content.AutoSize = true;
+            if (content is FlowLayoutPanel flow) flow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            else if (content is Panel panel) panel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            content.Dock = DockStyle.Top;
         }
+        if (body is ScrollableControl scrollable) scrollable.AutoScroll = true;
         _sectionHost.Controls.Add(body);
         _sections.Add((item, title, body));
     }

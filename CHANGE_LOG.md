@@ -54,7 +54,8 @@ Branch: `claude/ui-phase5-dialogs` → `main`
 - The PIN prompt and the first-run and handover wizards were scaled
   twice above 100 % display scaling.
 - Settings sections taller than the window (General, Notifications)
-  showed no scroll bar, so the Save buttons could not be reached; the
+  showed no scroll bar, so the Save buttons could not be reached; every
+  section now scrolls as a whole, as Backup does. The
   Email port and timeout fields were a few pixels wide.
 - The My PIN group in Settings → Notifications was cut at the bottom
   with Large text.
