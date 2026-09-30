@@ -356,7 +356,17 @@ and button captions.
 | 4 Settings | Done (PR #147) | Section list (`NavigationPane`) on the left, one section shown at a time with a heading, Ctrl+Tab / Ctrl+PageDown between sections; window resizable, minimum 760×520; each section in its own partial file `Forms/SettingsDialog.<Section>.cs` instead of a `UserControl` (see below); Notifications line in the five user guides |
 | 5a Dialog template | Done (PR #148) | `Forms/DialogLayout.cs` (form table, button bar with the primary button last, 88×32 buttons, `GrowToContent`, inline errors) applied to 12 small dialogs; baseline L6 fixed (`MedicineAutocompleteBox` height); `LogicalToDeviceUnits` removed from the PIN prompt and wizards (scaled twice with `ScaleLayout`). Larger dialogs, wizard step indicator and confirmations follow in 5b/5c |
 | 5b Large dialogs | Done (PR #149) | Button bar in export, import, restore from cloud, about, donate, fact history, prescription request, therapy report, barcode scan, sync, household, profiles and restore-into-profile; `DialogLayout.Stack`/`Row` replace fixed positions in the profile dialogs; the last 9.75 pt fonts removed except the first-run wizard (5c). Sync and household keep their tabs |
-| 5c Wizards and confirmations | Done, pending Windows check | `ConfirmDialog` (TaskDialog with Yes/No from the dictionaries) replaces the 23 Yes/No message boxes (F10); first-run and handover wizards take the template buttons, the first-run wizard the 10 pt font and inline errors; no step indicator (§5.4) |
+| 5c Wizards and confirmations | Done (PR #150) | `ConfirmDialog` (TaskDialog with Yes/No from the dictionaries) replaces the 23 Yes/No message boxes (F10); first-run and handover wizards take the template buttons, the first-run wizard the 10 pt font and inline errors; no step indicator (§5.4) |
+| 6 Documentation | Done | Appearance setting in the five user guides (main window and Settings sections were rewritten in steps 3 and 4); UI architecture paragraph in `docs/ANALYSIS.md` |
+
+Known limitations after step 6, all in dark mode: date and time
+pickers keep a white field (S2; WinForms does not recolour it), text
+boxes keep a light border (WinForms offers no border colour; a drawn
+frame around every field was judged not worth the change), the Sync
+and Household dialogs keep light tab headers (their tabs were not in
+scope), and message boxes and task dialogs follow Windows. At the
+minimum Settings size with Large text at 150 % a few check box captions
+are cut (check boxes do not wrap).
 
 The summary cards count the rows the grid can show before the card and
 search filters (active medicines, plus inactive ones when shown), so a

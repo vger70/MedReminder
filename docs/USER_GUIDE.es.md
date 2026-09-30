@@ -898,6 +898,11 @@ redimensionar.
 - **General → Tamaño del texto (este perfil)**: Normal, Grande, Muy
   grande, para cada perfil. MedReminder sigue también el escalado y los
   temas de contraste de Windows. En una pantalla pequeña, mejor Grande.
+- **General → Apariencia (este perfil)**: Como Windows, Claro u Oscuro,
+  para cada perfil en este equipo. «Como Windows» solo es oscuro en
+  Windows 11 con el modo oscuro activado; con un tema de contraste alto
+  de Windows se usan sus colores. Se aplica tras reiniciar. En Oscuro,
+  los campos de fecha siguen claros.
 - **General → Buscar actualizaciones al iniciar (GitHub)**: busca una
   versión nueva (nada se instala solo) y actualiza el catálogo. **? →
   Buscar actualizaciones…** busca ahora.

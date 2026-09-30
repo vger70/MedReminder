@@ -840,6 +840,11 @@ All in **Tools → Settings…**. The sections are listed on the left;
 - **General → Text size (this profile)**: Normal, Large, Extra large,
   for each profile. MedReminder also follows the Windows scaling and
   contrast themes. On a small screen prefer Large.
+- **General → Appearance (this profile)**: Same as Windows, Light or
+  Dark, for each profile on this computer. "Same as Windows" is dark
+  only on Windows 11 with dark mode on; with a Windows high-contrast
+  theme its colours are used. Applies after a restart. Date fields stay
+  light in Dark.
 - **General → Check for updates on startup (GitHub)**: checks for a new
   version (nothing is installed by itself) and updates the catalogue.
   **? → Check for updates…** checks now.

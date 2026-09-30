@@ -894,6 +894,11 @@ ridimensionare.
   Molto grande, per ogni profilo. MedReminder segue anche il
   ridimensionamento e i temi a contrasto di Windows. Su uno schermo
   piccolo preferisci Grande.
+- **Generale → Aspetto (questo profilo)**: Come Windows, Chiaro o Scuro,
+  per ogni profilo su questo computer. "Come Windows" è scuro solo su
+  Windows 11 con la modalità scura attiva; con un tema a contrasto
+  elevato di Windows si usano i suoi colori. Vale dopo il riavvio. In
+  Scuro i campi data restano chiari.
 - **Generale → Controlla aggiornamenti all'avvio (GitHub)**: cerca una
   nuova versione (nulla viene installato da solo) e aggiorna il
   catalogo. **? → Controlla aggiornamenti…** controlla subito.

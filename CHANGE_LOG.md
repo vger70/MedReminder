@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #151 — Document the appearance setting and the UI building blocks
+
+Link: [vger70/MedReminder#151](https://github.com/vger70/MedReminder/pull/151)
+Branch: `claude/ui-phase6-docs` → `main`
+
+### Changed
+
+- The five user guides describe Settings → General → Appearance.
+- `docs/ANALYSIS.md` names the shared dialog layout, the confirmation
+  dialog, the navigation pane and the medicine list filter; the UI
+  modernisation analysis records the final status and the known
+  dark-mode limitations.
+
 ## PR #150 — Ask confirmations in the app language and give the wizards the template buttons
 
 Link: [vger70/MedReminder#150](https://github.com/vger70/MedReminder/pull/150)
