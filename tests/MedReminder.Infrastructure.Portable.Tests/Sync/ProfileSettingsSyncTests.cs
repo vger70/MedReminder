@@ -104,6 +104,40 @@ public sealed class ProfileSettingsSyncTests : IDisposable
     }
 
     [Fact]
+    public async Task An_unchanged_save_in_a_group_created_before_the_settings_were_replicated_reaches_a_new_device()
+    {
+        var a = await CreateGroupAsync(beforeSync: d => d.ProfileSettings.Write(new Dictionary<string, string?>
+        {
+            [ProfileSetting.ToAddress] = "patient@example.org",
+            [ProfileSetting.DoctorAddress] = "doctor@example.org",
+        }));
+        // As in a group created by an older build: no profile versions on
+        // any device (the genesis image on the storage still has them, so
+        // they are removed on B too before its first run).
+        await RemoveProfileVersionsAsync(a);
+        var b = await JoinAsync(a, "B");
+        await RemoveProfileVersionsAsync(b);
+        await b.SyncAsync();
+        b.ProfileSettings.Read()[ProfileSetting.ToAddress].Should().BeEmpty();
+
+        // The administrator saves the same addresses again.
+        await a.RunAsync(sp => sp.GetRequiredService<UpdateNotificationSettings>().ExecuteAsync(
+            "patient@example.org", string.Empty, "doctor@example.org", CancellationToken.None));
+        (await a.SyncAsync()).OperationsPublished.Should().Be(3);
+        await b.SyncAsync();
+
+        var values = b.ProfileSettings.Read();
+        values[ProfileSetting.ToAddress].Should().Be("patient@example.org");
+        values[ProfileSetting.CaregiverAddress].Should().BeEmpty();
+        values[ProfileSetting.DoctorAddress].Should().Be("doctor@example.org");
+
+        // Once recorded, a second unchanged save records nothing.
+        await a.RunAsync(sp => sp.GetRequiredService<UpdateNotificationSettings>().ExecuteAsync(
+            "patient@example.org", string.Empty, "doctor@example.org", CancellationToken.None));
+        (await a.SyncAsync()).OperationsPublished.Should().Be(0);
+    }
+
+    [Fact]
     public async Task Concurrent_changes_converge_on_the_later_one()
     {
         var a = await CreateGroupAsync();
@@ -184,6 +218,14 @@ public sealed class ProfileSettingsSyncTests : IDisposable
         await device.InitializeAsync();
         return device;
     }
+
+    private static Task RemoveProfileVersionsAsync(SyncDevice device)
+        => device.RunAsync(async sp =>
+        {
+            var db = sp.GetRequiredService<MedReminderDbContext>();
+            db.SyncFieldVersions.RemoveRange(db.SyncFieldVersions.Where(v => v.EntityId == Guid.Empty));
+            await db.SaveChangesAsync();
+        });
 
     private SyncDevice Track(SyncDevice device)
     {
