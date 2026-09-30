@@ -4,7 +4,7 @@ Design document, **prior** to implementation. Phase 0 of the UI
 modernization: review of the current WinForms UI, target design
 system, layout proposals and phased plan. No code changes.
 
-Status on 2026-09-30: revision 1. Scope agreed with the product owner:
+Status on 2026-09-30: revision 2. Scope agreed with the product owner:
 options A (restyling) and B (UX redesign) of the preliminary estimate;
 a framework migration (WinUI 3, WPF, Avalonia) is out of scope.
 
@@ -217,8 +217,14 @@ request). They show intent, not pixel values.
 ```
 
 - Navigation pane on the left, collapsible to icons below 900 px
-  width. Entries open existing windows (timeline, report, household)
-  in phase B-1; turning them into in-window pages is out of scope.
+  width (D3). "Medicines" is the only in-window page (the grid). The
+  other entries (timeline, therapy report, prescription request,
+  installation, settings) open the existing windows, as the menus do
+  today; they never show a selected state and carry an "opens a
+  window" glyph. Turning them into in-window pages is out of scope:
+  every window would become a hosted control with its own OK/Cancel,
+  sizing and scaling rules, and modeless pages would allow editing a
+  medicine while another page shows stale data.
 - Summary cards: counts from the list the grid already loads
   (`MedicineOverviewLoader.LoadAsync`, grouped by status); a click
   filters the grid. No new use case. Cards that need other data (next
@@ -226,9 +232,18 @@ request). They show intent, not pixel values.
 - Grid: no full-row tint; status in a pill (tinted background,
   coloured text, 4 px radius); row height 36 px; horizontal separators
   only; alternating rows off (F3).
-- Toolbar reduced to two primary actions plus search; the other five
-  actions stay in the menus and move to a new grid context menu
-  (the grid has none today [VERIFIED]) (F5).
+- Toolbar reduced to New medicine, Register intake and a search box
+  (D4, F5). The five other actions stay reachable [VERIFIED]:
+  Edit through row double-click (`MainForm.cs:1103`), F2, the Therapy
+  menu and the new context menu; Check now through Tools (Ctrl+R);
+  Therapy report (Ctrl+P), Timeline (Ctrl+T) and Request prescription
+  through the navigation pane and the Therapy menu. Keyboard shortcuts
+  do not change.
+- New grid context menu (the grid has none today [VERIFIED]): Edit,
+  Register intake, Add package, Adjust stock, Change dose/frequency,
+  Deactivate, History. It reuses the menu commands.
+- Search box: filters the grid by medicine name while typing; one or
+  two new UI keys.
 - Error banner restyled with `Danger` tokens.
 - Menu bar kept: keyboard shortcuts and the user guide rely on it.
 
@@ -351,9 +366,11 @@ remaining dialogs).
 
 ---
 
-## 10. Open decisions
+## 10. Decisions
 
-| # | Decision | Proposal |
+Accepted by the product owner on 2026-09-30 as proposed.
+
+| # | Decision | Outcome |
 |---|---|---|
 | D1 | Appearance scope | Device × profile, like text size (§4.4) |
 | D2 | Base font size | 10 pt (§4.2) |
@@ -368,3 +385,4 @@ remaining dialogs).
 | Rev | Date | Change |
 |---|---|---|
 | 1 | 2026-09-30 | First version: inventory, findings, design system, layouts, plan |
+| 2 | 2026-09-30 | D1–D5 accepted; §5.1 details the navigation pane and the toolbar |
