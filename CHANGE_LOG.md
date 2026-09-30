@@ -30,6 +30,17 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #152 — Draw text and number box borders in the dark palette
+
+Link: [vger70/MedReminder#152](https://github.com/vger70/MedReminder/pull/152)
+Branch: `claude/ui-dark-textbox-border` → `main`
+
+### Fixed
+
+- In dark mode text boxes and number boxes had a light border; it is
+  now dark grey, and a text box shows the accent colour while it has
+  the focus.
+
 ## PR #151 — Document the appearance setting and the UI building blocks
 
 Link: [vger70/MedReminder#151](https://github.com/vger70/MedReminder/pull/151)
