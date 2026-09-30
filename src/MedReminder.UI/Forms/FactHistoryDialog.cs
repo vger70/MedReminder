@@ -64,36 +64,16 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
         _list.Columns.Add(_loc.Get("Ui.FactHistoryDialog.Column.Deletion"), 170);
         _list.SelectedIndexChanged += (_, _) => UpdateButtons();
 
-        _deleteButton = new Button
-        {
-            Text = _loc.Get("Ui.FactHistoryDialog.Delete"),
-            AutoSize = true,
-            Height = 32,
-            Enabled = false,
-        };
+        _deleteButton = DialogLayout.Button(_loc.Get("Ui.FactHistoryDialog.Delete"));
+        _deleteButton.Enabled = false;
         _deleteButton.Click += async (_, _) => await DeleteSelectedAsync();
-        var closeButton = new Button
-        {
-            Text = _loc.Get("Common.Close"),
-            DialogResult = DialogResult.OK,
-            AutoSize = true,
-            Height = 32,
-        };
-
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(closeButton);
-        buttons.Controls.Add(_deleteButton);
+        var closeButton = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.OK);
+        // Close is the only way out; Delete sits to its left.
+        var buttons = DialogLayout.ButtonBar(this, closeButton, closeButton, _deleteButton);
 
         Controls.Add(_list);
         Controls.Add(hint);
         Controls.Add(buttons);
-        CancelButton = closeButton;
 
         Shown += async (_, _) => await ReloadAsync();
     }

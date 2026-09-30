@@ -127,30 +127,23 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         table.Controls.Add(_bodyBox, 1, 2);
         table.Controls.Add(hint, 1, 3);
 
-        _copyButton = new Button { Text = _loc.Get("Ui.PrescriptionRequestDialog.Copy"), AutoSize = true, Height = 32 };
-        _mailClientButton = new Button { Text = _loc.Get("Ui.PrescriptionRequestDialog.OpenMailClient"), AutoSize = true, Height = 32 };
-        _sendButton = new Button { Text = _loc.Get("Ui.PrescriptionRequestDialog.Send"), AutoSize = true, Height = 32, Enabled = _canSend };
-        _closeButton = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.Cancel, AutoSize = true, Height = 32 };
+        _copyButton = DialogLayout.Button(_loc.Get("Ui.PrescriptionRequestDialog.Copy"));
+        _mailClientButton = DialogLayout.Button(_loc.Get("Ui.PrescriptionRequestDialog.OpenMailClient"));
+        _sendButton = DialogLayout.Button(_loc.Get("Ui.PrescriptionRequestDialog.Send"));
+        _sendButton.Enabled = _canSend;
+        _closeButton = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.Cancel);
 
         _copyButton.Click += (_, _) => CopyDraft(showConfirmation: true);
         _mailClientButton.Click += (_, _) => OpenInMailClient();
         _sendButton.Click += async (_, _) => await SendAsync();
 
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(_closeButton);
-        buttonPanel.Controls.Add(_sendButton);
-        buttonPanel.Controls.Add(_mailClientButton);
-        buttonPanel.Controls.Add(_copyButton);
+        // Send is the primary action, last on the right (§5.3).
+        var buttonPanel = DialogLayout.ButtonBar(this, _sendButton, _closeButton, _mailClientButton, _copyButton);
+        // No default button: Enter in the subject must not send the email.
+        AcceptButton = null;
 
         Controls.Add(table);
         Controls.Add(buttonPanel);
-        CancelButton = _closeButton;
 
         // Closing while a send is in flight would dispose the controls
         // the continuation writes to; the user waits for the outcome.

@@ -74,7 +74,8 @@ internal static class DialogLayout
             Padding = new Padding(UiTheme.Space.L, UiTheme.Space.M, UiTheme.Space.L, UiTheme.Space.L),
         };
         bar.Controls.Add(primary);
-        if (cancel is not null) bar.Controls.Add(cancel);
+        // A dialog with a single Close button passes it as both.
+        if (cancel is not null && !ReferenceEquals(cancel, primary)) bar.Controls.Add(cancel);
         foreach (var other in others) bar.Controls.Add(other);
         form.AcceptButton = primary;
         if (cancel is not null) form.CancelButton = cancel;
