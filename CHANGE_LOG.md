@@ -30,6 +30,31 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #137 — Add local Certum-signed release build to release.ps1
+
+Link: [vger70/MedReminder#137](https://github.com/vger70/MedReminder/pull/137)
+Branch: `claude/certum-code-signing`
+
+### Build
+
+- `release.ps1 -LocalBuild` mirrors the CI packaging into
+  `dist\<version>\` (ZIPs, MSI, `SHA256SUMS.txt`) and signs
+  MedReminder's own binaries and the MSI with the Certum SimplySign
+  certificate, SHA-256 with an RFC 3161 timestamp
+  (`http://time.certum.pl`). The Git release flow is unchanged.
+- `.gitignore` ignores `dist/`.
+
+### Fixed
+
+- `packaging/scripts/sign-artifact.ps1` no longer shadows the `$args`
+  and `$matches` automatic variables.
+
+### Docs
+
+- `docs/PACKAGING.md` §25 documents the signed local build.
+
+---
+
 ## PR #135 — Refresh the EU, ES and FR catalogues from remote feeds
 
 Link: [vger70/MedReminder#135](https://github.com/vger70/MedReminder/pull/135)
