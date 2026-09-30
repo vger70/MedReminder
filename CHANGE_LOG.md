@@ -56,7 +56,9 @@ Branch: `claude/ui-phase3-main-window` → `main`
 
 - With Large text at 150 % the main window no longer extends past its
   right edge: the search box was scaled twice and the grid's full
-  column width sized the page.
+  column width sized the page. The list columns share the width by
+  weight down to a minimum, so the list no longer scrolls sideways
+  there.
 - Profile picker buttons grow with their captions instead of being cut.
 
 ## PR #145 — Fix the dark-mode and layout defects found in the UI baseline

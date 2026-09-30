@@ -1113,11 +1113,15 @@ internal sealed class MainForm : MedReminderFormBase
         // 36 px rows at Normal size (§5.1); MedReminderFormBase scales
         // the row template with the display and the text size.
         grid.RowTemplate.Height = 36;
+        // Every column fills by weight down to a minimum, so with Large
+        // text at 150 % the list fits the page instead of scrolling
+        // sideways; the name column takes the largest share.
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Medicine"),
             DataPropertyName = nameof(MedicineListItem.Name),
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 250,
             MinimumWidth = 160,
             SortMode = DataGridViewColumnSortMode.Programmatic
         });
@@ -1125,19 +1129,25 @@ internal sealed class MainForm : MedReminderFormBase
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Stock"),
             DataPropertyName = nameof(MedicineListItem.StockDisplay),
-            Width = 120,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 120,
+            MinimumWidth = 96,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.DailyRate"),
             DataPropertyName = nameof(MedicineListItem.DailyRateDisplay),
-            Width = 100,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 100,
+            MinimumWidth = 80,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.DaysRemaining"),
             DataPropertyName = nameof(MedicineListItem.DaysRemainingDisplay),
-            Width = 100,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 100,
+            MinimumWidth = 80,
             SortMode = DataGridViewColumnSortMode.Programmatic
         });
 
@@ -1145,14 +1155,18 @@ internal sealed class MainForm : MedReminderFormBase
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.RunOut"),
             DataPropertyName = nameof(MedicineListItem.EtaDisplay),
-            Width = 110,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 110,
+            MinimumWidth = 88,
         });
         _statusCellFont = new Font(Font, FontStyle.Bold);
         var statusColumn = new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Status"),
             DataPropertyName = nameof(MedicineListItem.StatusDisplay),
-            Width = 110,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 110,
+            MinimumWidth = 88,
             DefaultCellStyle = new DataGridViewCellStyle
             {
                 // Alignment and font are column-level: they do not
