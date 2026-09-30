@@ -6,8 +6,8 @@ describes the on-disk format only. The design rationale (merge rules,
 security model, phases) is in
 [`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md).
 
-Format version: **1**. Operation catalogue: schema version **3**.
-Database image: schema version **2**.
+Format version: **1**. Operation catalogue: schema version **4**.
+Database image: schema version **3**.
 
 ---
 
@@ -248,12 +248,14 @@ derived stock movements (`Origin` 3), notification and dose-reminder
 events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
 the reference catalogue. It keeps the facts, the frozen (`Legacy`)
 movements and the cutoff, the register versions (`SyncFieldVersions`),
-the tombstones (`FactRetractions`), the register conflicts and the
+the tombstones (`FactRetractions`), the low-stock emails sent by any
+device (`SentEmailNotifications`), the register conflicts and the
 operation log (`SyncOperations`).
 
 Image schema versions: 1, the original image; 2, the operation log may
 hold `MedicineDeleted`, so a medicine can be absent from the image
-while later operations for it exist (they are skipped, §6).
+while later operations for it exist (they are skipped, §6); 3, the
+image holds `SentEmailNotifications`, which an older app would drop.
 
 A device joins from the newest checkpoint whose `vector` covers every
 device folder's first remaining segment (`vector[d] >= first − 1`), or
@@ -263,7 +265,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 3)
+## 6. Operation catalogue (schema versions 1 to 5)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -288,9 +290,12 @@ nothing.
 | `FactRetracted` | `retractionId`, `kind`, `factId`, `recordedAt` | the fact is removed whatever the order of arrival |
 | `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
 | `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
+| `EmailNotificationSent` (version 4) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt` | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`): the receiving device does not send it again |
+| `HouseholdLinked` (version 5) | `householdId`, `linkedAt` | fact; the household that adopted the group (§9); the earliest by HLC wins; profile-level (`medicineId` empty) |
 
-Every type is schema version 1 except `MedicineDeleted`, version 2, and
-`ProfileSettingChanged`, version 3.
+Every type is schema version 1 except `MedicineDeleted`, version 2,
+`ProfileSettingChanged`, version 3, `EmailNotificationSent`, version 4,
+and `HouseholdLinked`, version 5.
 
 Profile settings (`ProfileSettingChanged.setting`): `DisplayName` (the
 profile's name, never empty), `ToAddress`, `CaregiverAddress`,
@@ -364,3 +369,138 @@ must be updated before it can take the new key.
   version.
 - A change to the envelope, the layout or the header raises
   `formatVersion`.
+
+---
+
+## 9. Household group
+
+A household (the installation spread over several devices, household
+feature, `docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`) is a group
+of its own next to the profile groups, under the same sync root.
+
+### 9.1 Layout
+
+```
+<householdId>/
+  household.json                               cleartext, written once
+  key.<keyVersion>.wrap                        household key, wrapped with the household passphrase (§4.1)
+  recovery.<keyVersion>.wrap                   recovery private key, wrapped with the household passphrase
+  genesis/<generation>.mrg                     household image
+  ops/<generation>/<deviceId>/<seq>.mrs        household segments
+  devices/<deviceId>.mrd                       device record (§5.2)
+  pairing/<deviceId>.mrp                       pairing offer (§9.5), while a code is shown
+```
+
+`household.json` is `{ "format": "MedReminder.Household",
+"formatVersion": 1, "householdId": "…" }`. There is no `group.json`: a
+reader that lists `group.json` files never takes a household for a
+profile group. Key wrap, envelope, header and device record are those
+of §4 and §5.2, with the household id in the place of the group id.
+There are no checkpoints.
+
+### 9.2 Content
+
+Segments and the genesis hold the same JSON:
+
+```json
+{
+  "dependencies": { "<deviceId>": 3 },
+  "operations": [
+    {
+      "id": "…", "physicalMs": 1790000000000, "counter": 0, "deviceId": "…",
+      "type": "ProfileRoleChanged", "schemaVersion": 1,
+      "profileId": "default", "payload": "{…}"
+    }
+  ]
+}
+```
+
+The genesis holds every operation of the household when it was
+published, with empty dependencies. Header `contentVersion` is 1.
+
+### 9.3 Operation catalogue (household schema version 1)
+
+| `type` | Payload fields | Merge rule |
+|---|---|---|
+| `ProfileRegistered` | `displayName`, `role`, `createdAt` | the profile exists from then on; name and role are registers |
+| `ProfileRenamed` | `displayName` | last writer wins |
+| `ProfileRoleChanged` | `role` (`admin`, `user`) | last writer wins |
+| `ProfilePinChanged` | `hash`, `salt`, `iterations` (PBKDF2-HMAC-SHA256, base64; `null`, `null`, `0` when cleared) | last writer wins |
+| `ProfileRemoved` | — | tombstone: the profile never comes back |
+| `HouseholdSettingChanged` | `setting`, `value` | last writer wins per setting; `profileId` empty |
+| `DeviceKeyPublished` | `deviceId`, `publicKey` | last writer wins; `profileId` is `device:<deviceId>` |
+| `RecoveryKeyPublished` | `keyVersion`, `publicKey` | last writer wins; `profileId` is `recovery` |
+| `ProfileKeyGranted` | `deviceId`, `groupId`, `keyVersion`, `wrappedKey` | last writer wins per profile and device |
+| `ProfileKeyRevoked` | `deviceId` | clears the grant of that device |
+| `ProfileKeyEscrowed` | `groupId`, `keyVersion`, `wrappedKey` | last writer wins per profile |
+| `MasterElected` | `electionId`, `deviceId`, `electedBy`, `kind` (`Creation`, `Planned`, `Takeover`) | last writer wins; `profileId` is `master` |
+| `MasterActivated` | `electionId`, `deviceId` | last writer wins; counts only for the current election |
+| `MasterReleased` | `electionId` | last writer wins; the outgoing master stopped for that election |
+| `DeviceRemoved` | `deviceId` | the device's public key no longer counts; `profileId` is `device:<deviceId>` |
+
+A removal changes the household key: `key.<v+1>.wrap` and
+`recovery.<v+1>.wrap` with the new household passphrase, then the
+genesis of a new generation, sealed with the new key, holding the whole
+log. A device holding an older key publishes nothing more and takes the
+new key with the new passphrase or a code; its own operations the new
+genesis lacks are published again in the new generation, where receivers
+skip those they have by id.
+
+Settings: `Smtp.Host`, `Smtp.Port`, `Smtp.UseStartTls`,
+`Smtp.Username`, `Smtp.FromAddress`, `Smtp.FromDisplayName`,
+`Smtp.TimeoutSeconds`, `Smtp.Password`, `CloudBackup.Enabled`,
+`CloudBackup.Retention`, `CloudBackup.Provider`,
+`CloudBackup.AccountId`, `ReferenceCountry`. Values are invariant text
+(`true` / `false`, decimal integers, the provider by name). Every
+payload also carries `profileId`.
+
+`Smtp.Password` is the only secret: it is in clear inside the encrypted
+segment and nowhere else; each device keeps it protected with its own
+credential protector.
+
+### 9.4 Keys
+
+Public keys are the SubjectPublicKeyInfo of an ECDH P-256 key, base64.
+A device publishes its own; the recovery public key is published with
+the household, its private key (PKCS#8) is in `recovery.<v>.wrap`: the
+key wrap of §4.1 with associated data
+`MedReminder.Sync.Recovery|<householdId N format>|<v>`.
+
+A wrapped key is `1.<ephemeral public key>.<nonce>.<tag>.<ciphertext>`,
+each part base64url without padding: a fresh ephemeral P-256 key,
+ECDH with the recipient's public key, HKDF-SHA256 (salt: the ephemeral
+public key, info: the purpose) to a 32-byte key, AES-256-GCM with the
+purpose as associated data. Purposes:
+
+| Use | Purpose |
+|---|---|
+| Grant to a device | `MedReminder.Household.Grant|<groupId N>|<keyVersion>|<deviceId N>` |
+| Escrow for the recovery key | `MedReminder.Household.Escrow|<groupId N>|<keyVersion>` |
+
+The group key of a profile is thus readable by the devices it was
+granted to, and by whoever types the household passphrase.
+
+### 9.5 Household pairing
+
+A household pairing code has the parts of `mrpair1` (§4.4) with the
+household id in place of the group id:
+
+```
+mrpair2.<householdId N>.<deviceId N>.<provider>.<secret>
+```
+
+The offer `<householdId>/pairing/<deviceId>.mrp` has the cleartext
+fields of a group pairing file (`formatVersion`, `householdId`,
+`deviceId`, `nonce`, `tag`, `ciphertext`). The ciphertext holds the
+household key version and key, the profiles offered (`profileId`,
+`groupId`, `keyVersion`, `key`) and the expiry, encrypted with the
+secret of the code (AES-256-GCM, associated data
+`MedReminder.Household.Pairing|<householdId N>|<deviceId N>`). Only an
+admin writes an offer; it lasts 10 minutes and is deleted when the
+window closes. The joining device records `ProfileKeyGranted` for its
+own public key for each profile offered, so it keeps them after the
+offer ends. A reader of `mrpair1` codes refuses an `mrpair2` code.
+
+A profile brought by an installation join is built from its profile
+group in the storage of the household: an installation keeps its
+profile groups and its household in one storage.

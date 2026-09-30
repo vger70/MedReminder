@@ -680,10 +680,15 @@ Two ways to give a new device the group key:
    thus enforced, not advisory: a photo of the code opens nothing once
    the offer ended, unless the storage file was also copied during the
    offer. The same code is shown as text, so a PC can join or take a new
-   key with it (Join with a pairing code). The window uses
-   `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`, falling back to
-   `WDA_MONITOR` before Windows 10 2004 `[VERIFIED — Win32 API
-   documentation, training knowledge; not exercised on a device]`.
+   key with it (Join with a pairing code). The window used
+   `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`; a manual test on
+   2026-09-30 showed the window invisible in a remote-control session
+   (RustDesk), where the application looked frozen behind it. Since then
+   the window is always visible and the code stays hidden until the user
+   chooses "Show the code" (product owner, 2026-09-30): it is kept out of
+   screenshots and shared screens taken before, and the exclusion was no
+   barrier against a program running as the user, which can read the
+   protected keys directly.
    Format: `docs/SYNC-FORMAT.md` §4.4.
 2. **Passphrase**: the device signs in to the provider, finds the group,
    and unwraps the key with the sync passphrase. Needed when no paired
@@ -1811,3 +1816,13 @@ Phase 2 implements the derivation from the prototype and its tests.
   picked. A join by passphrase that opens several groups of the
   storage now asks which one (`JoinSyncGroup.FindGroupsAsync`) instead
   of joining the first.
+- 2026-09-29 — Low-stock email deduplicated across devices (household
+  step H1). A successful email is recorded as a `SentEmailNotification`
+  and replicated as `EmailNotificationSent` (operation schema 4); the
+  table travels in images (image schema 3). A device about to notify an
+  epoch another device already emailed for leaves the email channel out
+  and still shows its toast. §4.2 "`NotificationEvent` device-local" is
+  unchanged: toasts stay per device. Two devices that notify before
+  either has synced still both send; the master device of the
+  household feature (step H4) takes the place of the designated mail
+  device (§8.4) and removes that case.

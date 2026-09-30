@@ -29,25 +29,6 @@ namespace MedReminder.UI.Forms;
 // between threads or concurrent operations.
 internal sealed class MainForm : MedReminderFormBase
 {
-    // Soft backgrounds applied to the whole row: "atmosphere"
-    // layer that hints at the state without overloading the view.
-    private static readonly Color WarningColor = Color.FromArgb(255, 245, 205);
-    private static readonly Color EmptyColor = Color.FromArgb(255, 210, 210);
-    private static readonly Color SuspendedColor = Color.FromArgb(230, 230, 230);
-
-    // "Status" cell: saturated badge with high-contrast bold text.
-    // "Signal" layer — legible at a glance even when the row is not
-    // focused. Material light 200 / 900 palette to guarantee WCAG
-    // AA contrast on the foreground colors.
-    private static readonly Color StatusOkBack       = Color.FromArgb(200, 230, 201);  // #C8E6C9
-    private static readonly Color StatusOkFore       = Color.FromArgb( 27,  94,  32);  // #1B5E20
-    private static readonly Color StatusWarnBack     = Color.FromArgb(255, 236, 179);  // #FFECB3
-    private static readonly Color StatusWarnFore     = Color.FromArgb( 93,  64,  55);  // #5D4037
-    private static readonly Color StatusEmptyBack    = Color.FromArgb(239, 154, 154);  // #EF9A9A
-    private static readonly Color StatusEmptyFore    = Color.FromArgb(183,  28,  28);  // #B71C1C
-    private static readonly Color StatusSuspendBack  = Color.FromArgb(207, 207, 207);  // #CFCFCF
-    private static readonly Color StatusSuspendFore  = Color.FromArgb( 66,  66,  66);  // #424242
-
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ApplicationTrayIcon _tray;
     private readonly ILogger<MainForm> _log;
@@ -120,6 +101,7 @@ internal sealed class MainForm : MedReminderFormBase
 
         Load += async (_, _) => await ReloadAsync();
         Load += (_, _) => WireSyncRefresh();
+        Load += (_, _) => WireHandoverPrompt();
         Load += (_, _) => TryStartPassiveUpdateCheck();
         FormClosing += OnFormClosing;
     }
@@ -253,9 +235,18 @@ internal sealed class MainForm : MedReminderFormBase
         toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.CheckNow"),
             Mdl2Glyph.Glyphs.Sync, Keys.Control | Keys.R,
             async () => await RunMonitorAsync()));
-        toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Sync"),
-            Mdl2Glyph.Glyphs.Sync, Keys.None,
-            () => { ShowSync(); return Task.CompletedTask; }));
+        // Household step H3d (ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §4.3):
+        // sync and the installation are administrators' tools, hidden from
+        // other profiles like Manage profiles.
+        if (_currentProfile.IsAdmin)
+        {
+            toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Sync"),
+                Mdl2Glyph.Glyphs.Sync, Keys.None,
+                () => { ShowSync(); return Task.CompletedTask; }));
+            toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Household"),
+                Mdl2Glyph.Glyphs.Sync, Keys.None,
+                () => { ShowHousehold(); return Task.CompletedTask; }));
+        }
         toolsMenu.DropDownItems.Add(new ToolStripSeparator());
         // Manage profiles… — admin only. The design (§12.2) is
         // clear: non-admin users must not see this entry at all,
@@ -480,7 +471,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            BackColor = UiColors.HighContrast ? SystemColors.Info : Color.FromArgb(255, 220, 220),
+            BackColor = UiColors.HighContrast ? SystemColors.Info : UiTheme.Palette.DangerBack,
             Padding = new Padding(12, 8, 12, 8),
             Visible = false,
         };
@@ -489,7 +480,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             AutoSize = true,
             Dock = DockStyle.Left,
-            ForeColor = UiColors.HighContrast ? SystemColors.InfoText : Color.FromArgb(120, 0, 0),
+            ForeColor = UiColors.HighContrast ? SystemColors.InfoText : UiTheme.Palette.DangerText,
             Font = new Font(Font, FontStyle.Bold),
             Text = _loc.Get("Ui.MainForm.ErrorBanner.Load"),
         };
@@ -526,7 +517,6 @@ internal sealed class MainForm : MedReminderFormBase
         var strip = new ToolStrip
         {
             GripStyle = ToolStripGripStyle.Hidden,
-            RenderMode = ToolStripRenderMode.System,
             Padding = new Padding(6, 4, 6, 4),
             ImageScalingSize = new Size(24, 24),
             AutoSize = true,
@@ -666,6 +656,7 @@ internal sealed class MainForm : MedReminderFormBase
         MedReminder.Application.Notifications.EmailMessage draft;
         string doctorAddress;
         bool smtpConfigured;
+        bool isMaster;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -678,6 +669,9 @@ internal sealed class MainForm : MedReminderFormBase
                 .GetRequiredService<IOptionsMonitor<NotificationSettings>>().CurrentValue.DoctorAddress;
             smtpConfigured = scope.ServiceProvider
                 .GetRequiredService<IOptionsMonitor<SmtpSettings>>().CurrentValue.IsConfigured;
+            // Household step H4c (C5): a device that is not the master
+            // offers the mail client only.
+            isMaster = await scope.ServiceProvider.GetRequiredService<IMasterRole>().SendsEmailAsync(CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -686,7 +680,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
 
         using var dialog = new PrescriptionRequestDialog(
-            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc);
+            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc, isMaster);
         dialog.ShowDialog(this);
     }
 
@@ -711,8 +705,8 @@ internal sealed class MainForm : MedReminderFormBase
         {
             TextAlign = ContentAlignment.MiddleLeft,
             ForeColor = _currentProfile.IsAdmin
-                ? UiColors.Themed(System.Drawing.Color.DarkBlue)
-                : SystemColors.ControlText,
+                ? UiTheme.Palette.Accent
+                : UiTheme.Palette.Text,
             Font = new Font("Segoe UI", 9.75F,
                 _currentProfile.IsAdmin ? FontStyle.Bold : FontStyle.Regular),
         };
@@ -779,10 +773,102 @@ internal sealed class MainForm : MedReminderFormBase
         };
         status.RemoteChangesApplied += handler;
         FormClosed += (_, _) => status.RemoteChangesApplied -= handler;
+
+        // Household step H5b: the profile's group was rotated after a device
+        // removal; the new key is taken at the next start, before the
+        // database is used.
+        EventHandler rotated = (_, _) =>
+        {
+            if (IsDisposed || !IsHandleCreated || !status.NeedsNewKey || _rotatedKeyAsked) return;
+            BeginInvoke(new Func<Task>(OfferRestartForRotatedKeyAsync));
+        };
+        status.Changed += rotated;
+        FormClosed += (_, _) => status.Changed -= rotated;
+    }
+
+    // Household step H4b (§7.2 step 3): when this device is elected master,
+    // an administrator is asked, once per election and session, to run the
+    // handover wizard. Later leaves it in Tools → Installation.
+    private readonly HashSet<Guid> _handoverAsked = [];
+    private bool _newKeyAsked;
+    private HouseholdHostedService? _householdService;
+
+    private void WireHandoverPrompt()
+    {
+        if (!_currentProfile.IsAdmin) return;
+        using var scope = _scopeFactory.CreateScope();
+        var household = scope.ServiceProvider.GetRequiredService<HouseholdHostedService>();
+        _householdService = household;
+        EventHandler handler = (_, _) =>
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            BeginInvoke(new Func<Task>(PromptHandoverAsync));
+        };
+        household.Changed += handler;
+        FormClosed += (_, _) => household.Changed -= handler;
+    }
+
+    private async Task PromptHandoverAsync()
+    {
+        try
+        {
+            MedReminder.Application.Household.HandoverView? view;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                view = await scope.ServiceProvider.GetRequiredService<MedReminder.Application.Household.MasterHandover>()
+                    .PendingAsync(CancellationToken.None);
+            }
+            // Step H5a: a device was removed elsewhere; an administrator
+            // enters the new key in the installation window.
+            if (!_newKeyAsked && _householdService?.LastResult?.NewKeyRequired == true)
+            {
+                _newKeyAsked = true;
+                MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.Status.NewKey"), _loc.Get("Ui.HouseholdDialog.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            if (view is null || !_handoverAsked.Add(view.Election.ElectionId)) return;
+            if (MessageBox.Show(this, _loc.Get("Ui.HandoverWizard.Prompt"), _loc.Get("Ui.HandoverWizard.Title"),
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                return;
+            }
+            await HandoverWizardForm.ShowIfPendingAsync(this, _scopeFactory, _loc);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
+        }
+    }
+
+    private bool _rotatedKeyAsked;
+
+    private async Task OfferRestartForRotatedKeyAsync()
+    {
+        if (_rotatedKeyAsked) return;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            if (scope.ServiceProvider.GetRequiredService<ISyncSettingsStore>().Load() is not { } settings) return;
+            var key = await scope.ServiceProvider.GetRequiredService<MedReminder.Application.Household.HouseholdKeyring>()
+                .NewerGrantAsync(_currentProfile.Id, settings.GroupId, settings.KeyVersion, CancellationToken.None);
+            if (key is null) return;
+            System.Security.Cryptography.CryptographicOperations.ZeroMemory(key.Key);
+            _rotatedKeyAsked = true;
+            if (MessageBox.Show(this, _loc.Get("Ui.MainForm.RotatedKey.Prompt"), _loc.Get("Ui.HouseholdDialog.Title"),
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                _restarter.RestartAndExit(["--profile", _currentProfile.Id]);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
+        }
     }
 
     private void ShowSync()
     {
+        if (!_currentProfile.IsAdmin) return;
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -801,6 +887,28 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.Sync"), ex);
+        }
+    }
+
+    private void ShowHousehold()
+    {
+        if (!_currentProfile.IsAdmin) return;
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var sp = scope.ServiceProvider;
+            using var dialog = new HouseholdDialog(
+                _scopeFactory,
+                sp.GetRequiredService<HouseholdHostedService>(),
+                sp.GetRequiredService<ICloudAccountService>(),
+                _currentProfile,
+                _loc,
+                _restarter);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
         }
     }
 
@@ -987,6 +1095,7 @@ internal sealed class MainForm : MedReminderFormBase
         if (UiColors.HighContrast)
         {
             row.DefaultCellStyle.BackColor = Color.Empty;
+            row.DefaultCellStyle.ForeColor = Color.Empty;
             if (_statusColumnIndex >= 0 && _statusColumnIndex < row.Cells.Count)
             {
                 var style = row.Cells[_statusColumnIndex].Style;
@@ -998,27 +1107,27 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        // Layer 1 — atmosphere across the whole row (soft colors).
-        row.DefaultCellStyle.BackColor = item.Status switch
-        {
-            MedicineRowStatus.Warning => WarningColor,
-            MedicineRowStatus.Empty => EmptyColor,
-            MedicineRowStatus.Suspended or MedicineRowStatus.Inactive => SuspendedColor,
-            _ => SystemColors.Window,
-        };
+        // Status is told once, in the Status cell (ANALYSIS-UI-MODERNIZATION
+        // §5.1, F3): no whole-row tint, which competed with the selection.
+        // Suspended and inactive rows read in secondary text.
+        var palette = UiTheme.Palette;
+        row.DefaultCellStyle.BackColor = Color.Empty;
+        row.DefaultCellStyle.ForeColor = item.Status is MedicineRowStatus.Suspended or MedicineRowStatus.Inactive
+            ? palette.TextSecondary
+            : Color.Empty;
 
-        // Layer 2 — badge on the "Status" cell (saturated bg + fg).
+        // Badge on the "Status" cell: tinted background, coloured text.
         // SelectionBackColor / SelectionForeColor mirror the badge
         // so the signal survives even when the row is selected.
         if (_statusColumnIndex < 0 || _statusColumnIndex >= row.Cells.Count) return;
         var (bg, fg) = item.Status switch
         {
-            MedicineRowStatus.Ok        => (StatusOkBack,      StatusOkFore),
-            MedicineRowStatus.Warning   => (StatusWarnBack,    StatusWarnFore),
-            MedicineRowStatus.Empty     => (StatusEmptyBack,   StatusEmptyFore),
+            MedicineRowStatus.Ok        => (palette.OkBack,      palette.OkText),
+            MedicineRowStatus.Warning   => (palette.WarningBack, palette.WarningText),
+            MedicineRowStatus.Empty     => (palette.DangerBack,  palette.DangerText),
             MedicineRowStatus.Suspended
-                or MedicineRowStatus.Inactive => (StatusSuspendBack, StatusSuspendFore),
-            _                           => (SystemColors.Window, SystemColors.ControlText),
+                or MedicineRowStatus.Inactive => (palette.NeutralBack, palette.NeutralText),
+            _                           => (palette.Surface,     palette.Text),
         };
         var cell = row.Cells[_statusColumnIndex];
         cell.Style.BackColor = bg;

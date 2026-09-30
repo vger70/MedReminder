@@ -1,3 +1,5 @@
+using MedReminder.UI.UiExtensions;
+
 namespace MedReminder.UI.Forms;
 
 // Base class for every form in the app. Single source of truth for
@@ -32,6 +34,7 @@ internal class MedReminderFormBase : Form
     protected override void OnLoad(EventArgs e)
     {
         ScaleLayout();
+        UiThemeApplier.Apply(this);
         // Form.OnLoad centres modal dialogs, so it runs after the
         // resize, and the Load handlers of the derived forms see the
         // final layout (rows they add use the scaled row template).

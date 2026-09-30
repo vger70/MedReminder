@@ -15,13 +15,14 @@ namespace MedReminder.Application.Sync;
 // DateTimeOffset as ISO 8601 with offset, decimals as JSON numbers.
 //
 // Schema versions: 1 is the original catalogue; 2 adds MedicineDeleted;
-// 3 adds ProfileSettingChanged.
+// 3 adds ProfileSettingChanged; 4 adds EmailNotificationSent; 5 adds
+// HouseholdLinked.
 // Each operation is written with the lowest version that can carry it,
 // so the operations an older app understands keep version 1 and only the
 // new type stops it (R7).
 public static class OperationCodec
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 5;
 
     private static readonly (string Name, Type Type)[] Catalogue =
     [
@@ -38,6 +39,8 @@ public static class OperationCodec
         ("FactRetracted", typeof(FactRetracted)),
         ("MedicineDeleted", typeof(MedicineDeleted)),
         ("ProfileSettingChanged", typeof(ProfileSettingChanged)),
+        ("EmailNotificationSent", typeof(EmailNotificationSent)),
+        ("HouseholdLinked", typeof(HouseholdLinked)),
     ];
 
     private static readonly Dictionary<Type, string> NameByType =
@@ -60,6 +63,8 @@ public static class OperationCodec
     {
         MedicineDeleted => 2,
         ProfileSettingChanged => 3,
+        EmailNotificationSent => 4,
+        HouseholdLinked => 5,
         _ => 1,
     };
 

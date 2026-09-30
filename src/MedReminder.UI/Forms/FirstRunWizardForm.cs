@@ -13,6 +13,11 @@ namespace MedReminder.UI.Forms;
 // types it in, with a hint that it is recommended for admins
 // (§12.3 step 4). The polish pass (tooltips, wording, extra help
 // text) lands in 15e.
+//
+// Household step H3d-2 (ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §6.1): the
+// profile created here starts a new installation; "Join an existing
+// installation…" closes the wizard with JoinRequested set, and the boot
+// flow runs the join (Program).
 internal sealed class FirstRunWizardForm : MedReminderFormBase
 {
     private readonly IProfileRegistry _registry;
@@ -134,6 +139,19 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
             Padding = new Padding(8, 2, 8, 2),
         };
         _createButton.Click += (_, _) => TryCreate();
+        var joinButton = new Button
+        {
+            Text = _loc.Get("Ui.FirstRunWizardForm.Join"),
+            AutoSize = true,
+            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(110), LogicalToDeviceUnits(34)),
+            Padding = new Padding(8, 2, 8, 2),
+        };
+        joinButton.Click += (_, _) =>
+        {
+            JoinRequested = true;
+            DialogResult = DialogResult.Retry;
+            Close();
+        };
         AcceptButton = _createButton;
         CancelButton = exitButton;
 
@@ -149,6 +167,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         };
         buttonRow.Controls.Add(exitButton);
         buttonRow.Controls.Add(_createButton);
+        buttonRow.Controls.Add(joinButton);
 
         var tooltip = new ToolTip { ShowAlways = true };
         tooltip.SetToolTip(_pinBox, _loc.Get("Ui.FirstRunWizardForm.Tooltip.PinRecommended"));
@@ -174,6 +193,9 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
     // dismissed the wizard through the Exit button — the caller
     // must then close the app (§12.3 makes the wizard mandatory).
     public Profile? CreatedProfile { get; private set; }
+
+    // Step H3d-2: the user chose to join an existing installation.
+    public bool JoinRequested { get; private set; }
 
     private void TryCreate()
     {

@@ -14,9 +14,11 @@ using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Sync;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Export;
+using MedReminder.Infrastructure.Household;
 using MedReminder.Infrastructure.Notifications;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Profiles;
+using MedReminder.Infrastructure.Settings;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.Infrastructure.UpdateChecking;
 using MedReminder.Application.UpdateChecking;
@@ -97,11 +99,22 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
+        // Household step H2b: the shared settings files behind the
+        // installation-settings use cases.
+        services.TryAddSingleton<IInstallationSettingsStore, InstallationSettingsStore>();
 
         // B.1 Phase 3c: the sync group key, DPAPI-protected next to the
         // profile database.
         services.TryAddSingleton<ISyncKeyStore>(
             new DpapiSyncKeyStore(Path.Combine(currentProfile.DataDirectory, DpapiSyncKeyStore.FileName)));
+        // Household step H3b: the group key of any profile, for grants and
+        // escrows.
+        services.TryAddSingleton<IProfileGroupKeys, ProfileGroupKeys>();
+        // Household step H3c: profiles brought by an installation join, with
+        // their group key DPAPI-protected like any synced profile.
+        services.TryAddSingleton<IHouseholdProfileInstaller>(_ => new HouseholdProfileInstaller(
+            AppDataPaths.GetProfilesRootDirectory(),
+            directory => new DpapiSyncKeyStore(Path.Combine(directory, DpapiSyncKeyStore.FileName))));
         // B.1 Phase 3d: create, join and rebuild from the sync window.
         services.AddScoped<ISyncSetupService, SyncSetupService>();
         // B.1 Phase 4a: OneDrive sign-in and access tokens, one MSAL

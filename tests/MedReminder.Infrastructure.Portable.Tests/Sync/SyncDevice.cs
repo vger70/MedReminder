@@ -36,6 +36,12 @@ internal sealed class SyncDevice : IDisposable
         services.AddSingleton<ISyncSettingsStore>(Settings);
         services.AddSingleton<ISyncKeyStore>(Keys);
         services.AddSingleton<IProfileSettingsStore>(ProfileSettings);
+        services.AddSingleton<IEmailNotificationService>(Emails);
+        services.AddSingleton<IWindowsNotificationService>(Toasts);
+        // Household step H4a: the master role reads the installation's
+        // household, a household of one here (every device sends).
+        services.AddSingleton<IAppDataLocation>(new DataLocation(
+            Path.Combine(Path.GetDirectoryName(Path.GetFullPath(databasePath))!, name + "-appdata")));
         // A join waits for its record to be listed (JoinSyncGroup); JoinDelay
         // stands for the seconds between two listings.
         services.AddSingleton(new SyncEngineOptions
@@ -54,6 +60,9 @@ internal sealed class SyncDevice : IDisposable
         }
         services.AddMedReminderPortableInfrastructure(databasePath);
         services.AddMedReminderApplication();
+        // The monitor's texts need no dictionary here (after the portable
+        // registration, which it replaces).
+        services.AddSingleton<ILocalizationService, KeyLocalization>();
         _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
 
@@ -68,6 +77,11 @@ internal sealed class SyncDevice : IDisposable
     public MemoryKeyStore Keys { get; }
 
     public MemoryProfileSettingsStore ProfileSettings { get; }
+
+    // What MedicationMonitor sent from this device.
+    public RecordingEmail Emails { get; } = new();
+
+    public RecordingToasts Toasts { get; } = new();
 
     // What happens while a join run on this device waits between two
     // listings. Immediate by default.
@@ -92,6 +106,46 @@ internal sealed class SyncDevice : IDisposable
     {
         _provider.Dispose();
         SqliteConnection.ClearAllPools();
+    }
+
+    private sealed class DataLocation(string directory) : IAppDataLocation
+    {
+        public string DataDirectory => directory;
+    }
+
+    private sealed class KeyLocalization : ILocalizationService
+    {
+        public string CurrentLanguage => "en";
+
+        public System.Globalization.CultureInfo CurrentCulture => System.Globalization.CultureInfo.InvariantCulture;
+
+        public string Get(string key, params object?[] args) => key;
+
+        public string GetIn(string languageCode, string key, params object?[] args) => key;
+    }
+
+    internal sealed class RecordingEmail : IEmailNotificationService
+    {
+        public List<MedReminder.Application.Notifications.EmailMessage> Sent { get; } = [];
+
+        public Task SendAsync(MedReminder.Application.Notifications.EmailMessage message, CancellationToken cancellationToken)
+        {
+            Sent.Add(message);
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> TestConnectionAsync(CancellationToken cancellationToken) => Task.FromResult(true);
+    }
+
+    internal sealed class RecordingToasts : IWindowsNotificationService
+    {
+        public List<string> Shown { get; } = [];
+
+        public Task ShowAsync(string title, string body, CancellationToken cancellationToken)
+        {
+            Shown.Add(title);
+            return Task.CompletedTask;
+        }
     }
 
     internal sealed class SettableClock(DateTimeOffset now) : TimeProvider
