@@ -26,7 +26,6 @@ internal sealed class HouseholdProfilesDialog : MedReminderFormBase
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        Font = new Font("Segoe UI", 9.75F);
 
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Padding = new Padding(12) };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));

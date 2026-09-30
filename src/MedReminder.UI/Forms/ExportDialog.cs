@@ -66,7 +66,6 @@ internal sealed class ExportDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var intro = new Label
         {

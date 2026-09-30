@@ -93,7 +93,6 @@ internal sealed class MainForm : MedReminderFormBase
         Width = 960;
         Height = 560;
         StartPosition = FormStartPosition.CenterScreen;
-        Font = new Font("Segoe UI", 9.75F);
         MinimumSize = new Size(720, 420);
 
         BuildLayout();
@@ -298,15 +297,26 @@ internal sealed class MainForm : MedReminderFormBase
         strip.Items.Add(stockMenu);
         strip.Items.Add(toolsMenu);
         strip.Items.Add(helpMenu);
+
+        // Drop-downs draw item images at their ImageScalingSize; match
+        // it to the scaled glyphs so icons grow with the text.
+        var iconSize = new Size(ScaledIconSize(16), ScaledIconSize(16));
+        foreach (ToolStripItem top in strip.Items)
+        {
+            if (top is ToolStripMenuItem menu)
+            {
+                menu.DropDown.ImageScalingSize = iconSize;
+            }
+        }
         return strip;
     }
 
-    private static ToolStripMenuItem BuildMenuItem(
+    private ToolStripMenuItem BuildMenuItem(
         string text, string glyph, Keys shortcut, Func<Task> action)
     {
         var item = new ToolStripMenuItem(text)
         {
-            Image = Mdl2Glyph.Create(glyph, size: 16),
+            Image = Mdl2Glyph.Create(glyph, size: ScaledIconSize(16)),
         };
         if (shortcut != Keys.None)
         {
@@ -518,7 +528,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             GripStyle = ToolStripGripStyle.Hidden,
             Padding = new Padding(6, 4, 6, 4),
-            ImageScalingSize = new Size(24, 24),
+            ImageScalingSize = new Size(ScaledIconSize(24), ScaledIconSize(24)),
             AutoSize = true,
         };
         strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.NewMedicine"),
@@ -547,14 +557,14 @@ internal sealed class MainForm : MedReminderFormBase
         return strip;
     }
 
-    private static ToolStripButton BuildToolbarButton(
+    private ToolStripButton BuildToolbarButton(
         string text, string glyph, Func<Task> action)
     {
         var b = new ToolStripButton(text)
         {
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
             TextImageRelation = TextImageRelation.ImageAboveText,
-            Image = Mdl2Glyph.Create(glyph, size: 24),
+            Image = Mdl2Glyph.Create(glyph, size: ScaledIconSize(24)),
             ImageScaling = ToolStripItemImageScaling.None,
             AutoSize = true,
             Padding = new Padding(4, 2, 4, 2),
@@ -704,12 +714,15 @@ internal sealed class MainForm : MedReminderFormBase
                 _currentProfile.DisplayName))
         {
             TextAlign = ContentAlignment.MiddleLeft,
-            ForeColor = _currentProfile.IsAdmin
-                ? UiTheme.Palette.Accent
-                : UiTheme.Palette.Text,
-            Font = new Font("Segoe UI", 9.75F,
-                _currentProfile.IsAdmin ? FontStyle.Bold : FontStyle.Regular),
+            Font = new Font(Font, _currentProfile.IsAdmin ? FontStyle.Bold : FontStyle.Regular),
         };
+        // Only the admin badge gets its own colour; the other label
+        // keeps the default so the strip renderer draws it in the
+        // palette's text colour.
+        if (_currentProfile.IsAdmin)
+        {
+            profileLabel.ForeColor = UiTheme.Palette.Accent;
+        }
         _statusLabel = new ToolStripStatusLabel(_loc.Get("Ui.App.Ready"))
         {
             Spring = true,

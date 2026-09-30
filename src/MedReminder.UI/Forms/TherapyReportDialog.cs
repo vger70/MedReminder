@@ -42,7 +42,6 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
         MaximizeBox = true;
-        Font = new Font("Segoe UI", 9.75F);
 
         _reportBox = new TextBox
         {

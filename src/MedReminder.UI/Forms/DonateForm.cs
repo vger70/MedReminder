@@ -49,7 +49,6 @@ internal sealed class DonateForm : MedReminderFormBase
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         BuildLayout();
         UpdateCustomOptionAvailability();

@@ -19,6 +19,10 @@ internal class MedReminderFormBase : Form
 
     protected MedReminderFormBase()
     {
+        // One base font for every window (F1, D2): derived forms no
+        // longer set their own, and the text size scales it on load.
+        Font = UiTheme.Fonts.Body();
+
         var icon = AppIcon.Default;
         if (icon is not null)
         {
@@ -30,6 +34,12 @@ internal class MedReminderFormBase : Form
     // Set once in Program after the profile is chosen; windows shown
     // before that (picker, PIN prompt, first-run wizard) stay at 1.
     internal static float TextScale { get; set; } = 1f;
+
+    // Pixel size for an icon drawn at build time: glyph bitmaps are not
+    // resized by ScaleLayout, so they are rendered at the size they
+    // will be shown, following the display and the text size.
+    protected int ScaledIconSize(int pixelsAt96Dpi)
+        => (int)Math.Round(pixelsAt96Dpi * Math.Max(1f, TextScale) * Math.Max(1f, DeviceDpi / BaselineDpi));
 
     protected override void OnLoad(EventArgs e)
     {

@@ -38,7 +38,6 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var hint = new Label
         {

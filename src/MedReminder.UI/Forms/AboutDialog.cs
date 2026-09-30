@@ -55,7 +55,6 @@ internal sealed class AboutDialog : MedReminderFormBase
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         BuildLayout();
     }

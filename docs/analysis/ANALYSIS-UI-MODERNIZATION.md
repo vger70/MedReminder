@@ -4,8 +4,7 @@ Design document, **prior** to implementation. Phase 0 of the UI
 modernization: review of the current WinForms UI, target design
 system, layout proposals and phased plan. No code changes.
 
-Status on 2026-09-30: revision 3. Scope agreed with the product owner:
-Status on 2026-09-30: revision 2. Scope agreed with the product owner:
+Status on 2026-09-30: revision 4. Scope agreed with the product owner:
 options A (restyling) and B (UX redesign) of the preliminary estimate;
 a framework migration (WinUI 3, WPF, Avalonia) is out of scope.
 
@@ -346,14 +345,36 @@ and button captions.
 |---|---|---|
 | 1.1 Tokens, fonts, spacing | Done | `UiExtensions/UiTheme.cs`; `UiColors` is a facade over it |
 | 1.2 Appearance setting | Done | `AppearanceMode` (Application), `ProfileUiSettingsFile`, `Program.ApplyAppearance`, Settings → General, 5 new keys per language |
-| 1.3 Themed controls | Done except the icon font (§4.5) | `UiThemeApplier` (buttons, grids) from `MedReminderFormBase.OnLoad`; `UiToolStripRenderer` as `ToolStripManager.Renderer` |
+| 1.3 Themed controls | Done | `UiThemeApplier` (buttons, grids) from `MedReminderFormBase.OnLoad`; `UiToolStripRenderer` as `ToolStripManager.Renderer` |
 | Palette migration pulled forward | Done | Main grid status and error banner, timeline dark palette, autocomplete badge: without it the dark mode would show light tints under light text |
+| 1.0 Screenshot baseline | Done | 12 captures by the product owner (§6c) |
+| 2 Controls, typography, icons | In progress | Baseline fixes S1, S3, S4, L1, L2, L3; one 10 pt base font set by `MedReminderFormBase`; icons drawn at the scaled size, Segoe Fluent Icons when installed |
 
 Main grid: the whole-row tint is removed and status stays in the
 Status cell only (§5.1, F3); the pill shape and 36 px rows come with
-step 3. Fonts and the spacing scale are defined but not applied yet
-(step 2), because they change window sizes and need the screenshot
-baseline.
+step 3.
+
+## 6c. Screenshot baseline (step 1.0)
+
+Captured on Windows 11 by the product owner on 2026-09-30, build of
+PR #144: main window, Settings (General, Notifications, Backup) and
+the medicine editor, at 100 % + Normal + Light + EN and at Large +
+Dark + DE, the main window also at 150 % display scaling. Findings:
+
+| # | Finding | Where | Step 2 action |
+|---|---|---|---|
+| S1 | Drop-down lists keep a white face in dark mode | Settings, medicine editor | Flat style with palette colours (`UiThemeApplier.StyleComboBox`) |
+| S2 | Date pickers keep a white field in dark mode | Medicine editor | None: WinForms does not recolour the field; revisit if a replacement is wanted |
+| S3 | Text boxes mix a light single border and no border in dark mode | Medicine editor, Notifications | One 3D border style and palette colours (`StyleTextBox`) |
+| S4 | Dose-slot list draws light grid lines in dark mode | Medicine editor | Grid lines off, palette colours (`StyleListView`) |
+| S5 | Tab headers stay light grey in dark mode | Settings | None: tabs are replaced in step 4 |
+| L1 | "Benachrichtigungskanäle" split mid-word by a fixed 160 px label column | Medicine editor | Label column sized to the longest label |
+| L2 | Wrapped German column headers cut ("Verbleibende Tage", "Aufgebraucht am") | Main window | Header height sized to the captions |
+| L3 | Help texts touch the next label | Settings → General | 16 px above each group |
+| I1 | Toolbar and menu glyphs stay at 24/16 px while text grows with Large and 150 % | Main window | Glyphs rendered at the scaled size |
+
+Display scaling itself works: the main window at 150 % + Large is
+1.86 times the 100 % + Normal capture (1.5 × 1.25 = 1.875 expected).
 
 ## 7. Risks
 
@@ -428,3 +449,4 @@ Accepted by the product owner on 2026-09-30 as proposed.
 | 1 | 2026-09-30 | First version: inventory, findings, design system, layouts, plan |
 | 2 | 2026-09-30 | D1–D5 accepted; §5.1 details the navigation pane and the toolbar |
 | 3 | 2026-09-30 | Phase 1 implemented (§6b); dark tokens aligned with WinForms' dark system colours; §4.4 verified against .NET 10.0.12 |
+| 4 | 2026-09-30 | Screenshot baseline (§6c); step 2 started |

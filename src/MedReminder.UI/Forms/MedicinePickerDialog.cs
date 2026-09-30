@@ -27,7 +27,6 @@ internal sealed class MedicinePickerDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var inactiveSuffix = localization.Get("Ui.MedicinePickerDialog.InactiveSuffix");
         var promptLabel = new Label
