@@ -31,6 +31,7 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
 
     public AdministrationSlotEntry? Result { get; private set; }
 
+    private readonly Label _error = DialogLayout.ErrorLabel();
     private readonly ILocalizationService _loc;
     private readonly CheckBox _hasTime;
     private readonly DateTimePicker _timePicker;
@@ -51,7 +52,7 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        DialogLayout.GrowToContent(this);
 
         _hasTime = new CheckBox
         {
@@ -105,32 +106,23 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(12),
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Time"), BuildTimeRow());
-        AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Dose"), BuildDoseRow(unit));
-        AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Description"), _labelBox);
-        AddRow(table, string.Empty, note);
+        DialogLayout.AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Time"), BuildTimeRow());
+        DialogLayout.AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Dose"), BuildDoseRow(unit));
+        DialogLayout.AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Description"), _labelBox);
+        DialogLayout.AddRow(table, string.Empty, _error);
+        DialogLayout.AddRow(table, string.Empty, note);
 
-        var okButton = new Button { Text = _loc.Get("Ui.AdministrationSlotDialog.Save"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = DialogLayout.Button(_loc.Get("Ui.AdministrationSlotDialog.Save"), DialogResult.OK);
+        var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
         okButton.Click += OnConfirm;
 
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 48,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(okButton);
-        buttonPanel.Controls.Add(cancelButton);
+        var buttonPanel = DialogLayout.ButtonBar(this, okButton, cancelButton);
 
         Controls.Add(table);
         Controls.Add(buttonPanel);
-        AcceptButton = okButton;
-        CancelButton = cancelButton;
     }
 
     private Control BuildTimeRow()
@@ -155,10 +147,8 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         var hasLabel = !string.IsNullOrWhiteSpace(_labelBox.Text);
         if (!hasTime && !hasLabel)
         {
-            MessageBox.Show(this,
-                _loc.Get("Ui.AdministrationSlotDialog.Validation.NeedOne"),
-                _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            // Shown under the fields instead of a message box (F9).
+            DialogLayout.ShowError(_error, _loc.Get("Ui.AdministrationSlotDialog.Validation.NeedOne"), _labelBox);
             DialogResult = DialogResult.None;
             return;
         }
@@ -168,14 +158,6 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         Result = new AdministrationSlotEntry(time, _doseBox.Value, label);
     }
 
-    private static void AddRow(TableLayoutPanel table, string label, Control input)
-    {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
-        table.RowCount++;
-        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        table.Controls.Add(lbl, 0, table.RowCount - 1);
-        table.Controls.Add(input, 1, table.RowCount - 1);
-    }
 }
 
 // Slot row kept by MedicineEditDialog. UI-side DTO that gets

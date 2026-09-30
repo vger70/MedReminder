@@ -116,6 +116,20 @@ public sealed class MedicineAutocompleteBox : UserControl
         Height = _input.PreferredHeight;
     }
 
+    // Always one text box tall. The height taken from the text box at
+    // construction already followed the display scaling, and the form's
+    // layout scaling then multiplied it again: at 150 % with Large text
+    // the Name and Active ingredient rows were about twice the field
+    // height (ANALYSIS-UI-MODERNIZATION L6).
+    protected override void SetBoundsCore(int x, int y, int width, int height, BoundsSpecified specified)
+        => base.SetBoundsCore(x, y, width, _input?.PreferredHeight ?? height, specified);
+
+    protected override void OnFontChanged(EventArgs e)
+    {
+        base.OnFontChanged(e);
+        Height = _input.PreferredHeight;
+    }
+
     // Populated by the medicine form via BindSearch(...) after
     // construction. Held as fields so the designer-friendly
     // parameterless ctor still works.

@@ -12,6 +12,7 @@ namespace MedReminder.UI.Forms;
 // (mrpair2) instead of a group code.
 internal sealed class SyncPairingCodeDialog : MedReminderFormBase
 {
+    private readonly Label _error = DialogLayout.ErrorLabel();
     private readonly ILocalizationService _loc;
     private readonly bool _household;
     private readonly TextBox _code;
@@ -27,6 +28,7 @@ internal sealed class SyncPairingCodeDialog : MedReminderFormBase
         Height = defaultDeviceName is null ? 280 : 320;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
+        DialogLayout.GrowToContent(this);
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
 
@@ -68,26 +70,19 @@ internal sealed class SyncPairingCodeDialog : MedReminderFormBase
         layout.RowCount = row + 1;
         for (var i = 0; i < row; i++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        // Inline error in the filler row, under the code (F9).
+        layout.Controls.Add(_error, 1, row);
 
-        var ok = new Button { Text = _loc.Get("Common.Ok"), AutoSize = true, Height = 32 };
+        var ok = DialogLayout.Button(_loc.Get("Common.Ok"));
         ok.Click += (_, _) => Accept();
-        var cancel = new Button
-        {
-            Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, AutoSize = true, Height = 32,
-        };
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(cancel);
-        buttons.Controls.Add(ok);
+        var cancel = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
+        var buttons = DialogLayout.ButtonBar(this, ok, cancel);
+        // Enter types a new line in the multi-line code box; no default
+        // button, as before.
+        AcceptButton = null;
 
         Controls.Add(layout);
         Controls.Add(buttons);
-        CancelButton = cancel;
     }
 
     public SyncPairingCode? Code { get; private set; }
@@ -110,7 +105,7 @@ internal sealed class SyncPairingCodeDialog : MedReminderFormBase
 
         if (error is not null)
         {
-            MessageBox.Show(this, error, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            DialogLayout.ShowError(_error, error, _code);
             return;
         }
         _code.Text = string.Empty;

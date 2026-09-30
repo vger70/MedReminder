@@ -51,7 +51,9 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Padding = new Padding(12);
 
-        var contentWidth = LogicalToDeviceUnits(440);
+        // 96-DPI sizes: MedReminderFormBase scales them with the display
+        // on load (LogicalToDeviceUnits here scaled them twice).
+        var contentWidth = 440;
 
         var welcome = new Label
         {
@@ -88,7 +90,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
             MaximumSize = new System.Drawing.Size(contentWidth, 0),
             Text = _loc.Get("Ui.FirstRunWizardForm.PinOptional"),
         };
-        var pinBoxWidth = (contentWidth - LogicalToDeviceUnits(6)) / 2;
+        var pinBoxWidth = (contentWidth - 6) / 2;
         _pinBox = new TextBox
         {
             Width = pinBoxWidth,
@@ -127,7 +129,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         {
             Text = _loc.Get("Ui.FirstRunWizardForm.Create"),
             AutoSize = true,
-            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(110), LogicalToDeviceUnits(34)),
+            MinimumSize = new System.Drawing.Size(110, 34),
             Padding = new Padding(8, 2, 8, 2),
         };
         var exitButton = new Button
@@ -135,7 +137,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
             Text = _loc.Get("Common.Exit"),
             DialogResult = DialogResult.Cancel,
             AutoSize = true,
-            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(110), LogicalToDeviceUnits(34)),
+            MinimumSize = new System.Drawing.Size(110, 34),
             Padding = new Padding(8, 2, 8, 2),
         };
         _createButton.Click += (_, _) => TryCreate();
@@ -143,7 +145,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         {
             Text = _loc.Get("Ui.FirstRunWizardForm.Join"),
             AutoSize = true,
-            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(110), LogicalToDeviceUnits(34)),
+            MinimumSize = new System.Drawing.Size(110, 34),
             Padding = new Padding(8, 2, 8, 2),
         };
         joinButton.Click += (_, _) =>

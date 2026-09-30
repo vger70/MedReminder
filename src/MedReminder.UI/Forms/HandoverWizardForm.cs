@@ -68,7 +68,9 @@ internal sealed class HandoverWizardForm : MedReminderFormBase
             AutoScroll = true,
             Padding = new Padding(12),
         };
-        var width = LogicalToDeviceUnits(580);
+        // 96-DPI sizes: MedReminderFormBase scales them with the display
+        // on load (LogicalToDeviceUnits here scaled them twice).
+        var width = 580;
 
         Add(layout, Text2(_loc.Get(takeover ? "Ui.HandoverWizard.IntroTakeover" : "Ui.HandoverWizard.Intro"), width));
 

@@ -37,7 +37,6 @@ internal sealed class PinPromptForm : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
         // Layout panels + AutoSize instead of absolute coordinates:
         // the friction note wraps on two or three lines in some
         // languages, and a fixed-height form cut the buttons off.
@@ -45,7 +44,9 @@ internal sealed class PinPromptForm : MedReminderFormBase
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Padding = new Padding(12);
 
-        var contentWidth = LogicalToDeviceUnits(380);
+        // 96-DPI sizes: MedReminderFormBase scales them with the display
+        // on load (LogicalToDeviceUnits here scaled them twice).
+        const int contentWidth = 380;
 
         var prompt = new Label
         {
@@ -58,7 +59,7 @@ internal sealed class PinPromptForm : MedReminderFormBase
         _pinBox = new TextBox
         {
             UseSystemPasswordChar = true,
-            Width = LogicalToDeviceUnits(240),
+            Width = 240,
             MaxLength = 32,
             Margin = new Padding(3, 3, 3, 8),
         };
@@ -83,28 +84,14 @@ internal sealed class PinPromptForm : MedReminderFormBase
             Text = string.Empty,
         };
 
-        _okButton = new Button
-        {
-            Text = _loc.Get("Common.Ok"),
-            DialogResult = DialogResult.None,
-            AutoSize = true,
-            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(96), LogicalToDeviceUnits(34)),
-            Padding = new Padding(8, 2, 8, 2),
-        };
-        _cancelButton = new Button
-        {
-            Text = _loc.Get("Common.Cancel"),
-            DialogResult = DialogResult.Cancel,
-            AutoSize = true,
-            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(96), LogicalToDeviceUnits(34)),
-            Padding = new Padding(8, 2, 8, 2),
-        };
+        _okButton = DialogLayout.Button(_loc.Get("Common.Ok"));
+        _cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
         _okButton.Click += (_, _) => Verify();
         AcceptButton = _okButton;
         CancelButton = _cancelButton;
 
-        // RightToLeft: the first control added sits on the far right,
-        // so Cancel is added first to keep the [OK] [Cancel] order.
+        // RightToLeft: the first control added sits on the far right;
+        // the primary button is last, as in every dialog (§5.3).
         var buttonRow = new FlowLayoutPanel
         {
             AutoSize = true,
@@ -113,8 +100,8 @@ internal sealed class PinPromptForm : MedReminderFormBase
             Anchor = AnchorStyles.Right,
             Margin = new Padding(3, 12, 3, 3),
         };
-        buttonRow.Controls.Add(_cancelButton);
         buttonRow.Controls.Add(_okButton);
+        buttonRow.Controls.Add(_cancelButton);
 
         var tooltip = new ToolTip { ShowAlways = true };
         tooltip.SetToolTip(_pinBox, _loc.Get("Ui.PinPromptForm.Tooltip.Friction"));

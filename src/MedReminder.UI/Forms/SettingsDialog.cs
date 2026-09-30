@@ -266,6 +266,10 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         };
         body.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        // Without a style the single row sizes to its tallest child, so a
+        // long section grew past the window and its scroll bar never
+        // showed; Percent keeps the row as tall as the table.
+        body.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         _sectionList.Dock = DockStyle.Left;
         body.Controls.Add(_sectionList, 0, 0);
         body.Controls.Add(page, 1, 0);
@@ -314,8 +318,19 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         var item = _sectionList.AddItem(title, glyph, opensWindow: false, () => SelectSection(index));
         body.Dock = DockStyle.Fill;
         body.Visible = false;
-        // A section taller than the window scrolls as a whole; sections
-        // whose content fills the panel keep their own scrolling.
+        // Every section scrolls as a whole, with its content docked at
+        // the top and sized to what it needs, as Backup does. A panel
+        // that filled the section and scrolled by itself showed no scroll
+        // bar after scaling when the content was only a little taller
+        // than the window (Settings -> General with Large text).
+        foreach (var content in body.Controls.OfType<ScrollableControl>().Where(c => c.Dock == DockStyle.Fill).ToList())
+        {
+            content.AutoScroll = false;
+            content.AutoSize = true;
+            if (content is FlowLayoutPanel flow) flow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            else if (content is Panel panel) panel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            content.Dock = DockStyle.Top;
+        }
         if (body is ScrollableControl scrollable) scrollable.AutoScroll = true;
         _sectionHost.Controls.Add(body);
         _sections.Add((item, title, body));
@@ -338,6 +353,8 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
             }
         }
         _sectionHost.ResumeLayout(performLayout: true);
+        // A section laid out while hidden can keep a stale scroll range.
+        RelayoutTree(_sections[index].Body);
     }
 
     // Ctrl+Tab / Ctrl+Shift+Tab and Ctrl+PageDown / Ctrl+PageUp move
@@ -406,8 +423,9 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         // A table clamps a child to its cell, and a fixed-width field is
         // never grown back: after one layout pass with a narrow column
         // (the section is measured before it is docked) the time picker
-        // and number boxes stayed 1 px wide. The minimum keeps them.
-        if (!input.AutoSize && input.Dock == DockStyle.None && (input.Anchor & AnchorStyles.Right) == 0)
+        // and number boxes (docked left in Email) stayed a few pixels
+        // wide. The minimum keeps them.
+        if (!input.AutoSize && (input.Dock is DockStyle.None or DockStyle.Left) && (input.Anchor & AnchorStyles.Right) == 0)
         {
             input.MinimumSize = new System.Drawing.Size(input.Width, input.MinimumSize.Height);
         }

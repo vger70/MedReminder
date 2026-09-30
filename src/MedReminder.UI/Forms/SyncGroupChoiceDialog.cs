@@ -23,6 +23,7 @@ internal sealed class SyncGroupChoiceDialog : MedReminderFormBase
         Height = 340;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
+        DialogLayout.GrowToContent(this);
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
 
@@ -45,27 +46,14 @@ internal sealed class SyncGroupChoiceDialog : MedReminderFormBase
         var list = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 0, 12, 0) };
         list.Controls.Add(_groups);
 
-        var ok = new Button { Text = localization.Get("Common.Ok"), AutoSize = true, Height = 32 };
+        var ok = DialogLayout.Button(localization.Get("Common.Ok"));
         ok.Click += (_, _) => Accept();
-        var cancel = new Button
-        {
-            Text = localization.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, AutoSize = true, Height = 32,
-        };
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(cancel);
-        buttons.Controls.Add(ok);
+        var cancel = DialogLayout.Button(localization.Get("Common.Cancel"), DialogResult.Cancel);
+        var buttons = DialogLayout.ButtonBar(this, ok, cancel);
 
         Controls.Add(list);
         Controls.Add(hint);
         Controls.Add(buttons);
-        AcceptButton = ok;
-        CancelButton = cancel;
     }
 
     public Guid? SelectedGroupId

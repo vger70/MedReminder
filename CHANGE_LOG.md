@@ -30,6 +30,39 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #148 — Add the dialog template and apply it to the small dialogs
+
+Link: [vger70/MedReminder#148](https://github.com/vger70/MedReminder/pull/148)
+Branch: `claude/ui-phase5-dialogs` → `main`
+
+### Changed
+
+- One dialog layout: labels sized to the longest caption, buttons at
+  the bottom right with the main button last, buttons at least 32 px
+  high that grow with their caption, dialogs that grow to their content
+  with Large text. Applied to the stock, stock count, intake, schedule
+  change, administration time, PIN, cloud passphrase, sync passphrase,
+  pairing code, sync group, household profiles and medicine picker
+  dialogs, which also use the 10 pt base font.
+- Validation errors in these dialogs appear under the fields instead
+  of in a message box.
+
+### Fixed
+
+- Name and active ingredient rows in the medicine editor were about
+  twice the field height with Large text at 150 %.
+- The PIN prompt and the first-run and handover wizards were scaled
+  twice above 100 % display scaling.
+- Settings sections taller than the window (General, Notifications)
+  showed no scroll bar, so the Save buttons could not be reached; every
+  section now scrolls as a whole, as Backup does. The
+  Email port and timeout fields were a few pixels wide.
+- The My PIN group in Settings → Notifications was cut at the bottom
+  with Large text.
+- The therapy timeline was sized twice above 100 % display scaling,
+  leaving the chart too short for its first row; date fields no longer
+  cut the first digit.
+
 ## PR #147 — Replace the Settings tabs with a section list
 
 Link: [vger70/MedReminder#147](https://github.com/vger70/MedReminder/pull/147)

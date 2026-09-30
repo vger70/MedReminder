@@ -46,6 +46,34 @@ internal class MedReminderFormBase : Form
     protected int ScaledLength(int pixelsAt96Dpi)
         => (int)Math.Round(pixelsAt96Dpi * Math.Max(1f, TextScale) * Math.Max(1f, DeviceDpi / BaselineDpi));
 
+    // A date picker laid out once in a narrow cell before the final
+    // layout scrolls its fields to keep the day visible and keeps that
+    // offset after it widens: the first digit of the date was cut.
+    // Setting the format again makes the native control lay the fields
+    // out anew at the final width.
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        ResetDatePickers(this);
+    }
+
+    private static void ResetDatePickers(Control control)
+    {
+        foreach (Control child in control.Controls)
+        {
+            if (child is DateTimePicker { IsHandleCreated: true } picker)
+            {
+                var format = picker.Format;
+                picker.Format = format == DateTimePickerFormat.Long ? DateTimePickerFormat.Short : DateTimePickerFormat.Long;
+                picker.Format = format;
+            }
+            else if (child.HasChildren)
+            {
+                ResetDatePickers(child);
+            }
+        }
+    }
+
     protected override void OnLoad(EventArgs e)
     {
         ScaleLayout();
@@ -84,7 +112,22 @@ internal class MedReminderFormBase : Form
         {
             ResumeLayout(performLayout: true);
         }
+        RelayoutTree(this);
         FitToWorkingArea();
+    }
+
+    // Lays out every container from the innermost outwards. Scaling
+    // runs with the form's layout suspended, and a scrolling panel
+    // whose own size did not change kept the scroll range of its
+    // unscaled content: Settings -> General lost its scroll bar and
+    // the Save button below the fold.
+    internal static void RelayoutTree(Control control)
+    {
+        foreach (Control child in control.Controls)
+        {
+            if (child.HasChildren) RelayoutTree(child);
+        }
+        control.PerformLayout();
     }
 
     // Every font is read before any is changed and then set scaled
@@ -179,9 +222,13 @@ internal class MedReminderFormBase : Form
             case Button { AutoSize: true, AutoSizeMode: AutoSizeMode.GrowOnly } button:
                 // An auto-sized button already grew to its text at the
                 // scaled font, and Scale then multiplied that size again;
-                // GrowOnly would keep it. Shrinking it to its minimum lets
-                // the layout grow it back to the text alone.
-                button.Size = new Size(Math.Max(1, button.MinimumSize.Width), Math.Max(1, button.MinimumSize.Height));
+                // GrowOnly would keep it. Its size is set to the text alone
+                // (GrowAndShrink stops the preferred size from including
+                // the current one), then GrowOnly is restored.
+                button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+                var preferred = button.GetPreferredSize(Size.Empty);
+                button.AutoSizeMode = AutoSizeMode.GrowOnly;
+                button.Size = preferred;
                 break;
         }
         foreach (Control child in control.Controls)

@@ -49,9 +49,11 @@ internal sealed class TherapyTimelineForm : MedReminderFormBase
         MaximizeBox = true;
         ShowInTaskbar = false;
 
-        // Size from the font so the window grows with Windows scaling,
-        // capped to the screen.
-        var lh = Font.Height;
+        // Size from the font, in 96-DPI pixels: Font.Height already
+        // follows the display scaling, and MedReminderFormBase scales
+        // the bounds on load, so using it as is scaled the window and the
+        // details row twice and left the chart too short for one row.
+        var lh = (int)Math.Round(Font.Height * 96f / DeviceDpi);
         var area = Screen.FromPoint(Cursor.Position).WorkingArea;
         ClientSize = new Size(Math.Min(lh * 62, area.Width - lh * 2), Math.Min(lh * 40, area.Height - lh * 2));
         MinimumSize = new Size(Math.Min(lh * 40, area.Width), Math.Min(lh * 28, area.Height));
