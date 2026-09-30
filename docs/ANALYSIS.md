@@ -108,7 +108,14 @@ UI  ──►  Application  ──►  Domain
   `UiColors` is a facade over it); on load the base form also themes
   buttons and grids through `UiThemeApplier`, and
   `UiToolStripRenderer` draws every menu and toolbar
-  (`docs/analysis/ANALYSIS-UI-MODERNIZATION.md`).
+  (`docs/analysis/ANALYSIS-UI-MODERNIZATION.md`). Dialogs share
+  `DialogLayout` (form table, button bar with the primary action last,
+  inline field errors, `GrowToContent`), Yes/No questions go through
+  `ConfirmDialog` (a TaskDialog labelled from the dictionaries), the
+  main window and Settings navigate with `Controls/NavigationPane`, and
+  the main window's summary cards filter through the pure
+  `MedicineListFilter` (Application). Settings keeps one partial file
+  per section (`Forms/SettingsDialog.<Section>.cs`).
 - **DataImporter** is a maintainer tool that loads AIFA CSV files into
   PostgreSQL. It shares no code with the runtime and is not shipped.
   See [`DATA_IMPORTER.md`](DATA_IMPORTER.md).

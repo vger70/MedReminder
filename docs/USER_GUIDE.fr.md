@@ -926,6 +926,11 @@ redimensionnable.
   grande, pour chaque profil. MedReminder suit aussi la mise à
   l'échelle et les thèmes de contraste de Windows. Sur un petit écran,
   préfère Grande.
+- **Général → Apparence (ce profil)** : Comme Windows, Clair ou Sombre,
+  pour chaque profil sur cet ordinateur. « Comme Windows » n'est sombre
+  que sous Windows 11 avec le mode sombre activé ; avec un thème à
+  contraste élevé de Windows, ses couleurs sont utilisées. S'applique
+  après un redémarrage. En Sombre, les champs de date restent clairs.
 - **Général → Vérifier les mises à jour au démarrage (GitHub)** :
   recherche une nouvelle version (rien n'est installé tout seul) et met
   à jour le catalogue. **? → Vérifier les mises à jour…** vérifie tout

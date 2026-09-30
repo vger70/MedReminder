@@ -922,6 +922,11 @@ Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
 - **Allgemein → Textgröße (dieses Profil)**: Normal, Groß, Sehr groß,
   pro Profil. MedReminder folgt auch der Windows-Skalierung und den
   Kontrastdesigns. Auf einem kleinen Bildschirm wähle lieber Groß.
+- **Allgemein → Darstellung (dieses Profil)**: Wie Windows, Hell oder
+  Dunkel, pro Profil auf diesem Computer. „Wie Windows“ ist nur unter
+  Windows 11 mit aktiviertem dunklem Modus dunkel; bei einem
+  Windows-Kontrastdesign werden dessen Farben verwendet. Gilt nach einem
+  Neustart. In Dunkel bleiben Datumsfelder hell.
 - **Allgemein → Beim Start nach Updates suchen (GitHub)**: sucht nach
   einer neuen Version (nichts wird von selbst installiert) und
   aktualisiert den Katalog. **? → Nach Updates suchen…** sucht sofort.
