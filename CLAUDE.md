@@ -34,6 +34,7 @@ Note: Infra tests need Windows (DPAPI/Registry). Release build deletes .pdb and 
 
 ## 4. Git, Branching & PR Workflow
  * Base Branch: main. Ask before creating feature branch.
+ * Exception, household / master device feature (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md): every PR of that feature targets integration branch `feature/master-slave`, not main. Only final PR (after step H5) merges `feature/master-slave` into main. Step H0 is the one exception and targets main.
  * Branch Naming: name MUST reflect request. Prefixes allowed: claude/<name> or feature/<name>.
  * Early PR Requirement: Open PR after first commit of session. No ask to follow PR. No wait until end.
  * Commit Messages: Imperative, English, explain "why". Never push to main directly.
@@ -42,7 +43,7 @@ Note: Infra tests need Windows (DPAPI/Registry). Release build deletes .pdb and 
 ---
 
 ## 5. Runtime Data (%LOCALAPPDATA%\MedReminder\)
- * Shared: profiles.json, smtp.settings.json, smtp.protected (DPAPI), backup.*.json, user.settings.json, logs/*.log, catalogue\staging\ (transient remote AIFA archive, deleted after each run).
+ * Shared: profiles.json, smtp.settings.json, smtp.protected (DPAPI), backup.*.json, user.settings.json, logs/*.log, catalogue\staging\ (transient remote AIFA archive, deleted after each run), household/ (household.db, household.settings.json, household.protected and device.protected (DPAPI)), setup/ (transient, first-run join only).
  * Per-Profile (profiles\<id>\): medreminder.db (SQLite), notifications.settings.json, ui.settings.json.
  * Constraint: Never write outside %LOCALAPPDATA%\MedReminder\. Never log secrets/PII.
 

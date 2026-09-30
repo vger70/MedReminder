@@ -89,7 +89,6 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         var toolbar = new ToolStrip
         {
             GripStyle = ToolStripGripStyle.Hidden,
-            RenderMode = ToolStripRenderMode.System,
         };
         toolbar.Items.Add(_btnBack);
         toolbar.Items.Add(_btnForward);

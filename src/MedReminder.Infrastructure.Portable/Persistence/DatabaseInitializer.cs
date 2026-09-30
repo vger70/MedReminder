@@ -168,6 +168,22 @@ public sealed class DatabaseInitializer
         await ApplyLedgerFactsPatchAsync(cancellationToken);
         await ApplyLedgerDerivationPatchAsync(cancellationToken);
         await ApplyFactRetractionPatchAsync(cancellationToken);
+
+        // Household step H1: low-stock emails sent by any device of the
+        // sync group (replicated; SentEmailNotificationConfiguration).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""SentEmailNotifications"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_SentEmailNotifications"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""StockEpoch"" INTEGER NOT NULL,
+                ""EpochFactId"" TEXT NULL,
+                ""SentAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_SentEmailNotifications_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_SentEmailNotifications_MedicineId_SentAt""
+                ON ""SentEmailNotifications"" (""MedicineId"", ""SentAt"");", cancellationToken);
         await ExecuteRawSqlAsync(SyncOperationsTableSql, cancellationToken);
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_HlcPhysicalMs_HlcCounter""

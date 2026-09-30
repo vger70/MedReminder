@@ -32,6 +32,13 @@ public sealed record SyncEngineOptions
 
     // The wait between two listings; tests replace it.
     public Func<TimeSpan, CancellationToken, Task> Delay { get; init; } = Task.Delay;
+
+    // Household step H4a (§7.4): the master's lease, counted from its last
+    // successful household sync, and the margin an elected device adds
+    // before it takes over from an outgoing master that is not seen.
+    public TimeSpan MasterLease { get; init; } = MedReminder.Domain.Household.MasterRules.DefaultLease;
+
+    public TimeSpan MasterMargin { get; init; } = MedReminder.Domain.Household.MasterRules.DefaultMargin;
 }
 
 public sealed record SyncRunResult(

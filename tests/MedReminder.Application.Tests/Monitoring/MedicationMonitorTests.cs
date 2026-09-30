@@ -57,6 +57,106 @@ public class MedicationMonitorTests
         events[0].MedicineId.Should().Be(id);
     }
 
+    // Household step H1: a successful email is recorded as a replicated
+    // fact, and an operation while sync is enabled.
+    [Fact]
+    public async Task A_sent_email_is_recorded_for_the_epoch_and_as_an_operation()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        scope.EnableSync();
+        var id = await SeedAsync(scope, initialQuantity: 6m,
+            channels: NotificationChannels.Windows | NotificationChannels.Email);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Email.Sent.Should().ContainSingle();
+        var sent = scope.SentEmails.All.Should().ContainSingle().Subject;
+        sent.MedicineId.Should().Be(id);
+        sent.StockEpoch.Should().Be(1);
+        scope.SyncOperations.All.Should().ContainSingle(o => o.Type == "EmailNotificationSent" && o.EntityId == sent.Id);
+    }
+
+    [Fact]
+    public async Task A_failed_email_is_not_recorded_as_sent()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        _ = await SeedAsync(scope, initialQuantity: 6m, channels: NotificationChannels.Email);
+        scope.Email.ShouldFail = true;
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.SentEmails.All.Should().BeEmpty();
+    }
+
+    // Another device of the group already emailed for this epoch: this
+    // device shows its own toast and does not email again.
+    [Fact]
+    public async Task An_email_sent_elsewhere_for_the_epoch_is_not_sent_again_but_the_toast_is_shown()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope, initialQuantity: 6m,
+            channels: NotificationChannels.Windows | NotificationChannels.Email);
+        var medicine = (await scope.Medicines.GetAsync(id, CancellationToken.None))!;
+        await scope.SentEmails.AddAsync(new SentEmailNotification
+        {
+            MedicineId = id,
+            StockEpoch = medicine.StockEpoch,
+            EpochFactId = medicine.StockEpochFactId,
+            SentAt = FixedNow.AddMinutes(-5),
+        }, CancellationToken.None);
+
+        var result = await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Email.Sent.Should().BeEmpty();
+        scope.Windows.Sent.Should().ContainSingle();
+        result.NotificationsSent.Should().Be(1);
+        scope.Notifications.All.Should().ContainSingle().Which.Success.Should().BeTrue();
+        scope.SentEmails.All.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task An_email_sent_elsewhere_for_an_older_epoch_does_not_stop_the_email()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope, initialQuantity: 6m, channels: NotificationChannels.Email);
+        var medicine = (await scope.Medicines.GetAsync(id, CancellationToken.None))!;
+        await scope.SentEmails.AddAsync(new SentEmailNotification
+        {
+            MedicineId = id,
+            StockEpoch = medicine.StockEpoch - 1,
+            EpochFactId = Guid.NewGuid(),
+            SentAt = FixedNow.AddDays(-20),
+        }, CancellationToken.None);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Email.Sent.Should().ContainSingle();
+    }
+
+    // Email only, already sent elsewhere: nothing is dispatched, and the
+    // epoch is closed on this device too.
+    [Fact]
+    public async Task An_email_only_medicine_already_emailed_elsewhere_closes_the_cycle_without_sending()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope, initialQuantity: 6m, channels: NotificationChannels.Email);
+        var medicine = (await scope.Medicines.GetAsync(id, CancellationToken.None))!;
+        await scope.SentEmails.AddAsync(new SentEmailNotification
+        {
+            MedicineId = id,
+            StockEpoch = medicine.StockEpoch,
+            EpochFactId = medicine.StockEpochFactId,
+            SentAt = FixedNow.AddMinutes(-5),
+        }, CancellationToken.None);
+
+        var result = await scope.Monitor.RunAsync(CancellationToken.None);
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        result.NotificationsSent.Should().Be(0);
+        scope.Email.Sent.Should().BeEmpty();
+        scope.Notifications.All.Should().ContainSingle().Which.Success.Should().BeTrue();
+    }
+
     [Fact]
     public async Task Does_not_send_when_days_remaining_above_threshold()
     {
@@ -135,6 +235,24 @@ public class MedicationMonitorTests
 
         result.NotificationsSent.Should().Be(0);
         scope.Windows.Sent.Should().BeEmpty();
+    }
+
+    // Household step H4a: a device that is not the master shows the toast
+    // and leaves the email to the master; the epoch's cycle is closed here.
+    [Fact]
+    public async Task A_device_that_is_not_the_master_does_not_send_email()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        scope.Master.SendsEmail = false;
+        _ = await SeedAsync(scope, initialQuantity: 6m, channels: NotificationChannels.Both);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Windows.Sent.Should().HaveCount(1);
+        scope.Email.Sent.Should().BeEmpty();
+        scope.SentEmails.All.Should().BeEmpty("nothing was sent from here");
+        scope.Notifications.All.Should().ContainSingle().Which.Success.Should().BeTrue();
     }
 
     [Fact]

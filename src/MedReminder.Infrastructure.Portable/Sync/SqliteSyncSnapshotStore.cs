@@ -30,7 +30,9 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
     //   2: the log may hold MedicineDeleted: a medicine absent from the
     //      image whose later operations must be skipped, which an app
     //      without that operation cannot do.
-    public const int CurrentSchemaVersion = 2;
+    //   3: SentEmailNotifications (household step H1), replicated: an
+    //      older app would drop them and send those emails again.
+    public const int CurrentSchemaVersion = 3;
 
     private static readonly string[] NotReplicated =
     [

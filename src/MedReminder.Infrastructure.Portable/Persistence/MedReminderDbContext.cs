@@ -27,6 +27,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<MedicationAdministrationSlot> MedicationAdministrationSlots => Set<MedicationAdministrationSlot>();
     public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
     public DbSet<DoseReminderEvent> DoseReminderEvents => Set<DoseReminderEvent>();
+    public DbSet<SentEmailNotification> SentEmailNotifications => Set<SentEmailNotification>();
     public DbSet<MedicationAdministrationSlotSet> MedicationAdministrationSlotSets => Set<MedicationAdministrationSlotSet>();
     public DbSet<StockCount> StockCounts => Set<StockCount>();
     public DbSet<LedgerCutoff> LedgerCutoffs => Set<LedgerCutoff>();
@@ -48,6 +49,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new MedicationAdministrationSlotConfiguration());
         modelBuilder.ApplyConfiguration(new NotificationEventConfiguration());
         modelBuilder.ApplyConfiguration(new DoseReminderEventConfiguration());
+        modelBuilder.ApplyConfiguration(new SentEmailNotificationConfiguration());
         modelBuilder.ApplyConfiguration(new MedicationAdministrationSlotSetConfiguration());
         modelBuilder.ApplyConfiguration(new StockCountConfiguration());
         modelBuilder.ApplyConfiguration(new LedgerCutoffConfiguration());

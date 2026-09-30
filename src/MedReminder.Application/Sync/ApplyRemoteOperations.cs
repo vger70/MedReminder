@@ -3,6 +3,7 @@ using MedReminder.Application.Ledger;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 
@@ -66,6 +67,7 @@ public sealed class ApplyRemoteOperations
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
     private readonly IProfileSettingsStore? _profileSettings;
+    private readonly ISentEmailNotificationRepository? _sentEmails;
 
     // Facts added or updated in this batch, by id: the context tracks
     // these instances, so a later update or removal in the batch must use
@@ -94,9 +96,11 @@ public sealed class ApplyRemoteOperations
         LedgerSynchronizer ledger,
         IUnitOfWork uow,
         TimeProvider clock,
-        IProfileSettingsStore? profileSettings = null)
+        IProfileSettingsStore? profileSettings = null,
+        ISentEmailNotificationRepository? sentEmails = null)
     {
         _profileSettings = profileSettings;
+        _sentEmails = sentEmails;
         _settings = settings;
         _operations = operations;
         _registers = registers;
@@ -244,8 +248,13 @@ public sealed class ApplyRemoteOperations
                 continue;
             }
             if (body is ProfileSettingChanged) profileTouched = true;
+            else if (body is HouseholdLinked)
+            {
+                // The log row is the state (HouseholdLinks).
+            }
             else if (body is MedicineDeleted) touched.Remove(body.MedicineId);
-            else touched.Add(body.MedicineId);
+            // A sent email changes no fact of the ledger.
+            else if (body is not EmailNotificationSent) touched.Add(body.MedicineId);
             applied++;
         }
 
@@ -325,11 +334,33 @@ public sealed class ApplyRemoteOperations
                 // written after the batch (ProfileSettingsProjection).
                 await RecordRegistersAsync(body, timestamp, ct);
                 return;
+            case EmailNotificationSent email:
+                await ApplyEmailSentAsync(email, ct);
+                return;
+            case HouseholdLinked:
+                return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");
         }
 
         await RecordRegistersAsync(body, timestamp, ct);
+    }
+
+    // Household step H1: an email another device sent for an epoch. The
+    // medicine exists (causal order; a deleted medicine's operations are
+    // skipped before this point).
+    private async Task ApplyEmailSentAsync(EmailNotificationSent email, CancellationToken ct)
+    {
+        if (_sentEmails is null || await _sentEmails.ExistsAsync(email.NotificationId, ct)) return;
+        if (await _medicines.GetAsync(email.MedicineId, ct) is null) return;
+        await _sentEmails.AddAsync(new SentEmailNotification
+        {
+            Id = email.NotificationId,
+            MedicineId = email.MedicineId,
+            StockEpoch = email.StockEpoch,
+            EpochFactId = email.EpochFactId,
+            SentAt = email.SentAt,
+        }, ct);
     }
 
     private async Task CreateMedicineAsync(MedicineCreated created, CancellationToken ct)

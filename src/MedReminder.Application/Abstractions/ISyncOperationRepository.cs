@@ -22,6 +22,9 @@ public interface ISyncOperationRepository
     // In HLC order.
     Task<IReadOnlyList<SyncOperation>> ListAllAsync(CancellationToken cancellationToken);
 
+    // Household step H3c: the operations of one type, in HLC order.
+    Task<IReadOnlyList<SyncOperation>> ListOfTypeAsync(string type, CancellationToken cancellationToken);
+
     // The operations of one medicine, in HLC order.
     Task<IReadOnlyList<SyncOperation>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken);
 

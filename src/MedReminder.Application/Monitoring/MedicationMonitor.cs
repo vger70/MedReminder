@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Notifications;
+using MedReminder.Application.Sync;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
@@ -18,6 +19,14 @@ namespace MedReminder.Application.Monitoring;
 //     channel worked);
 //  6. commit.
 //
+// Email across devices (household step H1): a successful email is also
+// recorded as a SentEmailNotification, replicated to the other devices of
+// the sync group (EmailNotificationSent). A device about to notify an
+// epoch whose email another device already sent leaves the email channel
+// out and still shows its own toast. Two devices that notify before
+// either has synced still both send: only the master device of a later
+// step removes that case.
+//
 // Does not depend on IHostedService: the scheduler lives in the UI
 // (Increment 5).
 public sealed class MedicationMonitor
@@ -34,6 +43,9 @@ public sealed class MedicationMonitor
     private readonly TimeProvider _clock;
     private readonly ILogger<MedicationMonitor> _log;
     private readonly ILocalizationService? _localization;
+    private readonly ISentEmailNotificationRepository? _sentEmails;
+    private readonly IOperationLog? _operationLog;
+    private readonly IMasterRole? _master;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -47,8 +59,14 @@ public sealed class MedicationMonitor
         IUnitOfWork uow,
         TimeProvider clock,
         ILogger<MedicationMonitor> log,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        ISentEmailNotificationRepository? sentEmails = null,
+        IOperationLog? operationLog = null,
+        IMasterRole? master = null)
     {
+        _master = master;
+        _sentEmails = sentEmails;
+        _operationLog = operationLog;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -75,6 +93,8 @@ public sealed class MedicationMonitor
         var today = LocalToday();
         var medicines = await _medicines.ListActiveAsync(cancellationToken);
         var sent = 0;
+        // Household step H4a: only the master sends email.
+        var sendsEmail = _master is null || await _master.SendsEmailAsync(cancellationToken);
 
         foreach (var medicine in medicines)
         {
@@ -98,7 +118,24 @@ public sealed class MedicationMonitor
 
             var daysRemaining = forecast.DaysRemaining!.Value;
             var eta = forecast.EstimatedRunOutDate;
-            var dispatch = await DispatchAsync(medicine, currentStock, daysRemaining, eta, slots, cancellationToken);
+            var channels = medicine.NotificationChannels;
+            var emailSentElsewhere = false;
+            if ((channels & NotificationChannels.Email) != 0 && _sentEmails is not null
+                && NotificationCycle.EmailAlreadySent(medicine,
+                    await _sentEmails.GetLatestForMedicineAsync(medicine.Id, cancellationToken)))
+            {
+                channels &= ~NotificationChannels.Email;
+                emailSentElsewhere = true;
+            }
+            else if ((channels & NotificationChannels.Email) != 0 && !sendsEmail)
+            {
+                // The master sends it: for this device the channel is done.
+                channels &= ~NotificationChannels.Email;
+                emailSentElsewhere = true;
+            }
+            var dispatch = await DispatchAsync(medicine, channels, currentStock, daysRemaining, eta, slots,
+                cancellationToken);
+            if (dispatch.EmailSucceeded) await RecordEmailSentAsync(medicine, cancellationToken);
 
             var evt = new NotificationEvent
             {
@@ -108,7 +145,10 @@ public sealed class MedicationMonitor
                 TriggeredAt = _clock.GetUtcNow(),
                 Channel = dispatch.ChannelsAttempted,
                 DaysRemainingAtSend = daysRemaining,
-                Success = dispatch.AnyChannelSucceeded,
+                // An email another device sent, or left to the master,
+                // closes this epoch's cycle like a successful channel of
+                // this device.
+                Success = dispatch.AnyChannelSucceeded || emailSentElsewhere,
                 ErrorMessage = dispatch.CombinedError,
             };
             await _notifications.AddAsync(evt, cancellationToken);
@@ -120,15 +160,33 @@ public sealed class MedicationMonitor
         return new RunResult(medicines.Count, sent);
     }
 
+    private async Task RecordEmailSentAsync(Medicine medicine, CancellationToken cancellationToken)
+    {
+        if (_sentEmails is null) return;
+        var record = new SentEmailNotification
+        {
+            MedicineId = medicine.Id,
+            StockEpoch = medicine.StockEpoch,
+            EpochFactId = medicine.StockEpochFactId,
+            SentAt = _clock.GetUtcNow(),
+        };
+        await _sentEmails.AddAsync(record, cancellationToken);
+        // Recorded only while sync is enabled (OperationLog).
+        if (_operationLog is not null)
+        {
+            await _operationLog.AppendAsync([Operations.EmailSent(record)], cancellationToken);
+        }
+    }
+
     private async Task<DispatchOutcome> DispatchAsync(
         Medicine medicine,
+        NotificationChannels channels,
         decimal currentStock,
         int daysRemaining,
         DateOnly? eta,
         IReadOnlyList<MedicationAdministrationSlot> slots,
         CancellationToken cancellationToken)
     {
-        var channels = medicine.NotificationChannels;
         var windowsSucceeded = false;
         var emailSucceeded = false;
         string? windowsError = null;
@@ -184,6 +242,7 @@ public sealed class MedicationMonitor
         return new DispatchOutcome(
             ChannelsAttempted: channels,
             AnyChannelSucceeded: windowsSucceeded || emailSucceeded,
+            EmailSucceeded: emailSucceeded,
             CombinedError: combinedError);
     }
 
@@ -197,5 +256,6 @@ public sealed class MedicationMonitor
     private sealed record DispatchOutcome(
         NotificationChannels ChannelsAttempted,
         bool AnyChannelSucceeded,
+        bool EmailSucceeded,
         string? CombinedError);
 }
