@@ -179,9 +179,13 @@ internal class MedReminderFormBase : Form
             case Button { AutoSize: true, AutoSizeMode: AutoSizeMode.GrowOnly } button:
                 // An auto-sized button already grew to its text at the
                 // scaled font, and Scale then multiplied that size again;
-                // GrowOnly would keep it. Shrinking it to its minimum lets
-                // the layout grow it back to the text alone.
-                button.Size = new Size(Math.Max(1, button.MinimumSize.Width), Math.Max(1, button.MinimumSize.Height));
+                // GrowOnly would keep it. Its size is set to the text alone
+                // (GrowAndShrink stops the preferred size from including
+                // the current one), then GrowOnly is restored.
+                button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+                var preferred = button.GetPreferredSize(Size.Empty);
+                button.AutoSizeMode = AutoSizeMode.GrowOnly;
+                button.Size = preferred;
                 break;
         }
         foreach (Control child in control.Controls)

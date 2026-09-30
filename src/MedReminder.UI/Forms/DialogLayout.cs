@@ -83,11 +83,40 @@ internal static class DialogLayout
 
     // The dialog grows to its content when the text size or the display
     // scaling makes it larger than the size it was written for; the size
-    // set by the dialog stays the minimum.
+    // set by the dialog stays the minimum. Measured once when the form
+    // loads, after MedReminderFormBase has scaled it: Form.AutoSize with
+    // a docked, filling table fed the table's width back into the form
+    // and kept the dialog from opening.
     public static void GrowToContent(Form form)
+        => form.Load += (_, _) => FitClientToContent(form);
+
+    private static void FitClientToContent(Form form)
     {
-        form.AutoSize = true;
-        form.AutoSizeMode = AutoSizeMode.GrowOnly;
+        var client = form.ClientSize;
+        var width = client.Width;
+        var height = 0;
+        foreach (Control child in form.Controls)
+        {
+            if (!child.Visible) continue;
+            var preferred = child.GetPreferredSize(new Size(client.Width, 0));
+            width = Math.Max(width, preferred.Width);
+            height += child.Dock is DockStyle.Top or DockStyle.Bottom or DockStyle.Fill
+                ? preferred.Height
+                : 0;
+        }
+        var target = new Size(width, Math.Max(client.Height, height));
+        if (target == client) return;
+        var area = Screen.FromControl(form).WorkingArea;
+        var chrome = form.Size - client;
+        form.ClientSize = new Size(
+            Math.Min(target.Width, area.Width - chrome.Width),
+            Math.Min(target.Height, area.Height - chrome.Height));
+        if (form.StartPosition == FormStartPosition.CenterParent && form.Owner is { } owner)
+        {
+            form.Location = new Point(
+                owner.Left + (owner.Width - form.Width) / 2,
+                owner.Top + (owner.Height - form.Height) / 2);
+        }
     }
 
     // Inline field error (F9): hidden until ShowError sets a message.
