@@ -86,6 +86,27 @@ internal sealed partial class SettingsDialog
         _tooltips.SetToolTip(_checkUpdatesBox,
             _loc.Get("Ui.SettingsDialog.Tooltip.CheckUpdates"));
 
+        // Diagnostics: the SQL commands in the log. Shown to every profile,
+        // changed by an administrator; a user's save keeps the value.
+        _logQueriesBox = new CheckBox
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.LogQueries"),
+            Margin = GroupMargin,
+            Checked = _userMonitor.CurrentValue.LogDatabaseQueries,
+            Enabled = _currentProfile.IsAdmin,
+        };
+        _tooltips.SetToolTip(_logQueriesBox, _loc.Get(_currentProfile.IsAdmin
+            ? "Ui.SettingsDialog.General.LogQueries.Help"
+            : "Ui.SettingsDialog.General.LogQueries.AdminOnly"));
+        var logQueriesHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.General.LogQueries.Help"),
+        };
+
         var textSizeLabel = new Label
         {
             AutoSize = true,
@@ -168,6 +189,8 @@ internal sealed partial class SettingsDialog
         panel.Controls.Add(appearanceLabel);
         panel.Controls.Add(_appearanceCombo);
         panel.Controls.Add(appearanceHelp);
+        panel.Controls.Add(_logQueriesBox);
+        panel.Controls.Add(logQueriesHelp);
         panel.Controls.Add(saveButton);
         panel.Controls.Add(note);
         page.Controls.Add(panel);
@@ -270,6 +293,7 @@ internal sealed partial class SettingsDialog
             Language = choice.Code,
             ReferenceCountry = referenceCountry,
             CheckForUpdatesOnStartup = _checkUpdatesBox.Checked,
+            LogDatabaseQueries = _logQueriesBox.Checked,
         };
 
         var textSize = (_textSizeCombo.SelectedItem as TextSizeChoice)?.Size ?? TextSize.Normal;
@@ -289,7 +313,8 @@ internal sealed partial class SettingsDialog
         }
 
         // If neither the language, the text size nor the appearance
-        // changed, no restart needed. A ReferenceCountry change alone is picked up
+        // changed, no restart needed. The query log follows the file
+        // within a second. A ReferenceCountry change alone is picked up
         // at the next opening of the medicine form via IOptionsMonitor
         // (user.settings.json is watched with reloadOnChange=true).
         // The text size is applied when each window loads and the
