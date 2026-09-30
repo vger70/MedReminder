@@ -205,29 +205,11 @@ internal sealed class ExportDialog : MedReminderFormBase
             Text = string.Empty,
         };
 
-        _exportButton = new Button
-        {
-            Text = _loc.Get("Ui.ExportDialog.ExportButton"),
-            AutoSize = true,
-            Height = 30,
-        };
+        _exportButton = DialogLayout.Button(_loc.Get("Ui.ExportDialog.ExportButton"));
         _exportButton.Click += async (_, _) => await RunExportAsync();
-        _cancelButton = new Button
-        {
-            Text = _loc.Get("Common.Cancel"),
-            AutoSize = true,
-            Height = 30,
-        };
+        _cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"));
         _cancelButton.Click += (_, _) => OnCancel();
 
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            Margin = new Padding(0, 8, 0, 0),
-        };
-        buttons.Controls.Add(_exportButton);
-        buttons.Controls.Add(_cancelButton);
 
         var layout = new FlowLayoutPanel
         {
@@ -255,10 +237,9 @@ internal sealed class ExportDialog : MedReminderFormBase
         layout.Controls.Add(_includeUserSettingsBox);
         layout.Controls.Add(_progressBar);
         layout.Controls.Add(_statusLabel);
-        layout.Controls.Add(buttons);
 
         Controls.Add(layout);
-        CancelButton = _cancelButton;
+        Controls.Add(DialogLayout.ButtonBar(this, _exportButton, _cancelButton));
     }
 
     private void BrowseDestination()

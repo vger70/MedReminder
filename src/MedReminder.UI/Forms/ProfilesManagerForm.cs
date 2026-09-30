@@ -62,7 +62,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        DialogLayout.GrowToContent(this);
 
         BuildLayout();
         Reload();
@@ -74,7 +74,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(740, 0),
-            Location = new System.Drawing.Point(16, 12),
+            Margin = new Padding(0, 0, 0, UiTheme.Space.S),
             Text = _loc.Get("Ui.ProfilesManagerForm.Header"),
         };
 
@@ -84,8 +84,8 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             FullRowSelect = true,
             HideSelection = false,
             MultiSelect = false,
-            Location = new System.Drawing.Point(16, 44),
-            Size = new System.Drawing.Size(740, 300),
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
         };
         _list.Columns.Add(_loc.Get("Ui.ProfilesManagerForm.Column.Name"), 200);
         _list.Columns.Add(_loc.Get("Ui.ProfilesManagerForm.Column.Role"), 100);
@@ -94,74 +94,60 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         _list.Columns.Add(_loc.Get("Ui.ProfilesManagerForm.Column.Active"), 70);
         _list.SelectedIndexChanged += (_, _) => UpdateButtonStates();
 
-        _newButton = new Button
-        {
-            Text = _loc.Get("Ui.ProfilesManagerForm.New"),
-            Location = new System.Drawing.Point(16, 360),
-            Width = 130,
-            Height = 30,
-        };
-        _renameButton = new Button
-        {
-            Text = _loc.Get("Ui.ProfilesManagerForm.Rename"),
-            Location = new System.Drawing.Point(156, 360),
-            Width = 100,
-            Height = 30,
-        };
-        _pinButton = new Button
-        {
-            Text = _loc.Get("Ui.ProfilesManagerForm.ChangePin"),
-            Location = new System.Drawing.Point(266, 360),
-            Width = 140,
-            Height = 30,
-        };
-        _roleButton = new Button
-        {
-            Text = _loc.Get("Ui.ProfilesManagerForm.ChangeRole"),
-            Location = new System.Drawing.Point(416, 360),
-            Width = 140,
-            Height = 30,
-        };
-        _deleteButton = new Button
-        {
-            Text = _loc.Get("Ui.ProfilesManagerForm.Delete"),
-            Location = new System.Drawing.Point(566, 360),
-            Width = 90,
-            Height = 30,
-        };
-        var closeButton = new Button
-        {
-            Text = _loc.Get("Common.Close"),
-            DialogResult = DialogResult.OK,
-            Location = new System.Drawing.Point(666, 360),
-            Width = 90,
-            Height = 30,
-        };
+        _newButton = DialogLayout.Button(_loc.Get("Ui.ProfilesManagerForm.New"));
+        _renameButton = DialogLayout.Button(_loc.Get("Ui.ProfilesManagerForm.Rename"));
+        _pinButton = DialogLayout.Button(_loc.Get("Ui.ProfilesManagerForm.ChangePin"));
+        _roleButton = DialogLayout.Button(_loc.Get("Ui.ProfilesManagerForm.ChangeRole"));
+        _deleteButton = DialogLayout.Button(_loc.Get("Ui.ProfilesManagerForm.Delete"));
+        var closeButton = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.OK);
         _newButton.Click += async (_, _) => await AddNewAsync();
         _renameButton.Click += async (_, _) => await RenameSelectedAsync();
         _pinButton.Click += async (_, _) => await ChangePinSelectedAsync();
         _roleButton.Click += async (_, _) => await ChangeRoleSelectedAsync();
         _deleteButton.Click += async (_, _) => await DeleteSelectedAsync();
-        CancelButton = closeButton;
 
         _hintLabel = new Label
         {
             AutoSize = true,
-            Location = new System.Drawing.Point(16, 400),
             ForeColor = UiColors.Hint,
             MaximumSize = new System.Drawing.Size(740, 0),
             Text = _loc.Get("Ui.ProfilesManagerForm.Hint.Role"),
         };
 
-        Controls.Add(header);
-        Controls.Add(_list);
-        Controls.Add(_newButton);
-        Controls.Add(_renameButton);
-        Controls.Add(_pinButton);
-        Controls.Add(_roleButton);
-        Controls.Add(_deleteButton);
-        Controls.Add(closeButton);
-        Controls.Add(_hintLabel);
+        // Profile actions under the list, wrapping when the captions are
+        // long; Close alone in the dialog's button bar (§5.3).
+        var actions = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, UiTheme.Space.S, 0, UiTheme.Space.XS),
+        };
+        foreach (var button in new[] { _newButton, _renameButton, _pinButton, _roleButton, _deleteButton })
+        {
+            button.Margin = new Padding(0, 0, UiTheme.Space.S, UiTheme.Space.XS);
+            actions.Controls.Add(button);
+        }
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 4,
+            Padding = new Padding(UiTheme.Space.L, UiTheme.Space.M, UiTheme.Space.L, 0),
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.Controls.Add(header, 0, 0);
+        layout.Controls.Add(_list, 0, 1);
+        layout.Controls.Add(actions, 0, 2);
+        layout.Controls.Add(_hintLabel, 0, 3);
+
+        Controls.Add(layout);
+        Controls.Add(DialogLayout.ButtonBar(this, closeButton, closeButton));
 
         _tooltips.SetToolTip(_deleteButton,
             _loc.Get("Ui.ProfilesManagerForm.Tooltip.Delete"));
@@ -439,17 +425,15 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             MinimizeBox = false;
             MaximizeBox = false;
             ShowInTaskbar = false;
-            Font = new System.Drawing.Font("Segoe UI", 9.75F);
+            DialogLayout.GrowToContent(this);
 
             var nameLabel = new Label
             {
                 AutoSize = true,
-                Location = new System.Drawing.Point(16, 12),
                 Text = _loc.Get("Ui.ProfilesManagerForm.NewDialog.Name"),
             };
             _nameBox = new TextBox
             {
-                Location = new System.Drawing.Point(16, 32),
                 Width = 420,
                 MaxLength = 100,
             };
@@ -457,27 +441,23 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             var roleLabel = new Label
             {
                 AutoSize = true,
-                Location = new System.Drawing.Point(16, 68),
                 Text = _loc.Get("Ui.ProfilesManagerForm.NewDialog.Role"),
             };
             _userRadio = new RadioButton
             {
                 AutoSize = true,
                 Checked = true,
-                Location = new System.Drawing.Point(16, 88),
                 Text = _loc.Get("Ui.ProfilesManagerForm.NewDialog.RoleUser"),
             };
             _adminRadio = new RadioButton
             {
                 AutoSize = true,
-                Location = new System.Drawing.Point(120, 88),
                 Text = _loc.Get("Ui.ProfilesManagerForm.NewDialog.RoleAdmin"),
             };
             var roleNote = new Label
             {
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(420, 0),
-                Location = new System.Drawing.Point(16, 112),
                 ForeColor = UiColors.Hint,
                 Text = _loc.Get("Ui.ProfilesManagerForm.NewDialog.RoleNote"),
             };
@@ -485,12 +465,10 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             var pinLabel = new Label
             {
                 AutoSize = true,
-                Location = new System.Drawing.Point(16, 168),
                 Text = _loc.Get("Ui.ProfilesManagerForm.NewDialog.PinOptional"),
             };
             _pinBox = new TextBox
             {
-                Location = new System.Drawing.Point(16, 188),
                 Width = 200,
                 UseSystemPasswordChar = true,
                 MaxLength = 32,
@@ -498,50 +476,23 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             };
             _pinConfirmBox = new TextBox
             {
-                Location = new System.Drawing.Point(230, 188),
                 Width = 206,
                 UseSystemPasswordChar = true,
                 MaxLength = 32,
                 PlaceholderText = _loc.Get("Ui.FirstRunWizardForm.PinConfirmPlaceholder"),
             };
 
-            _statusLabel = new Label
-            {
-                AutoSize = true,
-                ForeColor = UiColors.Error,
-                Location = new System.Drawing.Point(16, 224),
-                Text = string.Empty,
-            };
+            // Inline error under the fields (F9).
+            _statusLabel = DialogLayout.ErrorLabel();
 
-            var createButton = new Button
-            {
-                Text = _loc.Get("Ui.ProfilesManagerForm.NewDialog.Create"),
-                Location = new System.Drawing.Point(256, 300),
-                Width = 90,
-            };
-            var cancelButton = new Button
-            {
-                Text = _loc.Get("Common.Cancel"),
-                DialogResult = DialogResult.Cancel,
-                Location = new System.Drawing.Point(356, 300),
-                Width = 80,
-            };
+            var createButton = DialogLayout.Button(_loc.Get("Ui.ProfilesManagerForm.NewDialog.Create"));
+            var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
             createButton.Click += (_, _) => Confirm();
-            AcceptButton = createButton;
-            CancelButton = cancelButton;
 
-            Controls.Add(nameLabel);
-            Controls.Add(_nameBox);
-            Controls.Add(roleLabel);
-            Controls.Add(_userRadio);
-            Controls.Add(_adminRadio);
-            Controls.Add(roleNote);
-            Controls.Add(pinLabel);
-            Controls.Add(_pinBox);
-            Controls.Add(_pinConfirmBox);
-            Controls.Add(_statusLabel);
-            Controls.Add(createButton);
-            Controls.Add(cancelButton);
+            Controls.Add(DialogLayout.Stack(
+                nameLabel, _nameBox, roleLabel, DialogLayout.Row(_userRadio, _adminRadio), roleNote,
+                pinLabel, DialogLayout.Row(_pinBox, _pinConfirmBox), _statusLabel));
+            Controls.Add(DialogLayout.ButtonBar(this, createButton, cancelButton));
 
             Shown += (_, _) => _nameBox.Focus();
         }
@@ -555,8 +506,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             var name = _nameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(name))
             {
-                _statusLabel.Text = _loc.Get("Ui.FirstRunWizardForm.NameRequired");
-                _nameBox.Focus();
+                DialogLayout.ShowError(_statusLabel, _loc.Get("Ui.FirstRunWizardForm.NameRequired"), _nameBox);
                 return;
             }
             var pin = _pinBox.Text;
@@ -565,8 +515,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             {
                 if (!string.Equals(pin, pinConfirm, StringComparison.Ordinal))
                 {
-                    _statusLabel.Text = _loc.Get("Ui.FirstRunWizardForm.PinMismatch");
-                    _pinConfirmBox.Focus();
+                    DialogLayout.ShowError(_statusLabel, _loc.Get("Ui.FirstRunWizardForm.PinMismatch"), _pinConfirmBox);
                     return;
                 }
             }
@@ -595,34 +544,21 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             MinimizeBox = false;
             MaximizeBox = false;
             ShowInTaskbar = false;
-            Font = new System.Drawing.Font("Segoe UI", 9.75F);
+            DialogLayout.GrowToContent(this);
 
             var label = new Label
             {
                 AutoSize = true,
-                Location = new System.Drawing.Point(16, 12),
                 Text = _loc.Get("Ui.ProfilesManagerForm.RenameDialog.Prompt"),
             };
             _nameBox = new TextBox
             {
-                Location = new System.Drawing.Point(16, 40),
                 Width = 360,
                 Text = currentName,
                 MaxLength = 100,
             };
-            var okButton = new Button
-            {
-                Text = _loc.Get("Common.Ok"),
-                Location = new System.Drawing.Point(196, 96),
-                Width = 90,
-            };
-            var cancelButton = new Button
-            {
-                Text = _loc.Get("Common.Cancel"),
-                DialogResult = DialogResult.Cancel,
-                Location = new System.Drawing.Point(296, 96),
-                Width = 80,
-            };
+            var okButton = DialogLayout.Button(_loc.Get("Common.Ok"));
+            var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
             okButton.Click += (_, _) =>
             {
                 var value = _nameBox.Text.Trim();
@@ -631,13 +567,9 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
                 DialogResult = DialogResult.OK;
                 Close();
             };
-            AcceptButton = okButton;
-            CancelButton = cancelButton;
 
-            Controls.Add(label);
-            Controls.Add(_nameBox);
-            Controls.Add(okButton);
-            Controls.Add(cancelButton);
+            Controls.Add(DialogLayout.Stack(label, _nameBox));
+            Controls.Add(DialogLayout.ButtonBar(this, okButton, cancelButton));
             Shown += (_, _) => { _nameBox.Focus(); _nameBox.SelectAll(); };
         }
 
@@ -664,13 +596,12 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             MinimizeBox = false;
             MaximizeBox = false;
             ShowInTaskbar = false;
-            Font = new System.Drawing.Font("Segoe UI", 9.75F);
+            DialogLayout.GrowToContent(this);
 
             var warning = new Label
             {
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(440, 0),
-                Location = new System.Drawing.Point(16, 12),
                 ForeColor = UiColors.Error,
                 Text = _loc.Get("Ui.ProfilesManagerForm.DeleteDialog.Warning", profileName),
             };
@@ -678,12 +609,10 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             {
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(440, 0),
-                Location = new System.Drawing.Point(16, 84),
                 Text = _loc.Get("Ui.ProfilesManagerForm.DeleteDialog.TypeName", profileName),
             };
             _confirmBox = new TextBox
             {
-                Location = new System.Drawing.Point(16, 116),
                 Width = 440,
             };
             _confirmBox.TextChanged += (_, _) => UpdateConfirmEnabled();
@@ -692,7 +621,6 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             _alsoDeleteDataBox = new CheckBox
             {
                 AutoSize = true,
-                Location = new System.Drawing.Point(16, 152),
                 Text = _loc.Get("Ui.ProfilesManagerForm.DeleteDialog.AlsoDeleteData"),
                 Checked = false,
             };
@@ -700,41 +628,24 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             {
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(440, 0),
-                Location = new System.Drawing.Point(36, 176),
                 ForeColor = UiColors.Hint,
                 Text = _loc.Get("Ui.ProfilesManagerForm.DeleteDialog.AlsoDeleteDataNote"),
             };
 
-            _confirmButton = new Button
-            {
-                Text = _loc.Get("Ui.ProfilesManagerForm.DeleteDialog.Confirm"),
-                Location = new System.Drawing.Point(266, 220),
-                Width = 110,
-                Enabled = false,
-            };
-            var cancelButton = new Button
-            {
-                Text = _loc.Get("Common.Cancel"),
-                DialogResult = DialogResult.Cancel,
-                Location = new System.Drawing.Point(386, 220),
-                Width = 80,
-            };
+            _confirmButton = DialogLayout.Button(_loc.Get("Ui.ProfilesManagerForm.DeleteDialog.Confirm"));
+            _confirmButton.Enabled = false;
+            var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
             _confirmButton.Click += (_, _) =>
             {
                 AlsoDeleteData = _alsoDeleteDataBox.Checked;
                 DialogResult = DialogResult.OK;
                 Close();
             };
-            AcceptButton = _confirmButton;
-            CancelButton = cancelButton;
 
-            Controls.Add(warning);
-            Controls.Add(typePrompt);
-            Controls.Add(_confirmBox);
-            Controls.Add(_alsoDeleteDataBox);
-            Controls.Add(alsoDeleteNote);
-            Controls.Add(_confirmButton);
-            Controls.Add(cancelButton);
+            Controls.Add(DialogLayout.Stack(warning, typePrompt, _confirmBox, _alsoDeleteDataBox, alsoDeleteNote));
+            // The note belongs to the check box above it.
+            alsoDeleteNote.Margin = new Padding(UiTheme.Space.XL, 0, 0, UiTheme.Space.S);
+            Controls.Add(DialogLayout.ButtonBar(this, _confirmButton, cancelButton));
 
             Shown += (_, _) => _confirmBox.Focus();
         }

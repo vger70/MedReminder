@@ -845,19 +845,17 @@ internal sealed partial class SettingsDialog
             MinimizeBox = false;
             MaximizeBox = false;
             ShowInTaskbar = false;
-            Font = new System.Drawing.Font("Segoe UI", 9.75F);
+            DialogLayout.GrowToContent(this);
 
             var prompt = new Label
             {
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(420, 0),
-                Location = new System.Drawing.Point(16, 12),
                 Text = loc.Get("Ui.SettingsDialog.Backup.RestoreInto.Prompt"),
             };
 
             _combo = new ComboBox
             {
-                Location = new System.Drawing.Point(16, 56),
                 Width = 420,
                 DropDownStyle = ComboBoxStyle.DropDownList,
             };
@@ -903,26 +901,14 @@ internal sealed partial class SettingsDialog
             {
                 AutoSize = true,
                 MaximumSize = new System.Drawing.Size(420, 0),
-                Location = new System.Drawing.Point(16, 96),
                 ForeColor = UiColors.Hint,
                 Text = string.IsNullOrWhiteSpace(filenameProfileId)
                     ? loc.Get("Ui.SettingsDialog.Backup.RestoreInto.NoFilenameHint")
                     : loc.Get("Ui.SettingsDialog.Backup.RestoreInto.FilenameHint", filenameProfileId),
             };
 
-            var okButton = new Button
-            {
-                Text = loc.Get("Common.Ok"),
-                Location = new System.Drawing.Point(256, 172),
-                Width = 90,
-            };
-            var cancelButton = new Button
-            {
-                Text = loc.Get("Common.Cancel"),
-                DialogResult = DialogResult.Cancel,
-                Location = new System.Drawing.Point(356, 172),
-                Width = 80,
-            };
+            var okButton = DialogLayout.Button(loc.Get("Common.Ok"));
+            var cancelButton = DialogLayout.Button(loc.Get("Common.Cancel"), DialogResult.Cancel);
             okButton.Click += (_, _) =>
             {
                 if (_combo.SelectedItem is ProfileItem picked)
@@ -932,14 +918,9 @@ internal sealed partial class SettingsDialog
                     Close();
                 }
             };
-            AcceptButton = okButton;
-            CancelButton = cancelButton;
 
-            Controls.Add(prompt);
-            Controls.Add(_combo);
-            Controls.Add(extractedNote);
-            Controls.Add(okButton);
-            Controls.Add(cancelButton);
+            Controls.Add(DialogLayout.Stack(prompt, _combo, extractedNote));
+            Controls.Add(DialogLayout.ButtonBar(this, okButton, cancelButton));
         }
 
         public string? SelectedProfileId { get; private set; }

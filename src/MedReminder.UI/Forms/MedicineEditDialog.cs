@@ -151,7 +151,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
         _nameBox = new MedicineAutocompleteBox { Dock = DockStyle.Fill };
         _ingredientBox = new MedicineAutocompleteBox { Dock = DockStyle.Fill };
