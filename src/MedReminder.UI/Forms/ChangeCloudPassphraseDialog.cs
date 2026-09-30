@@ -34,7 +34,7 @@ internal sealed class ChangeCloudPassphraseDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        DialogLayout.GrowToContent(this);
 
         var intro = new Label
         {
@@ -72,30 +72,9 @@ internal sealed class ChangeCloudPassphraseDialog : MedReminderFormBase
             ForeColor = UiColors.Warning,
         };
 
-        _saveButton = new Button
-        {
-            Text = _loc.Get("Common.Save"),
-            AutoSize = true,
-            Height = 30,
-        };
+        _saveButton = DialogLayout.Button(_loc.Get("Common.Save"));
         _saveButton.Click += (_, _) => Save();
-
-        var cancelButton = new Button
-        {
-            Text = _loc.Get("Common.Cancel"),
-            AutoSize = true,
-            Height = 30,
-            DialogResult = DialogResult.Cancel,
-        };
-
-        var actions = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            Padding = new Padding(4, 8, 4, 8),
-        };
-        actions.Controls.Add(_saveButton);
-        actions.Controls.Add(cancelButton);
+        var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
 
         var container = new FlowLayoutPanel
         {
@@ -110,11 +89,9 @@ internal sealed class ChangeCloudPassphraseDialog : MedReminderFormBase
         container.Controls.Add(confirmLabel);
         container.Controls.Add(_confirmBox);
         container.Controls.Add(_statusLabel);
-        container.Controls.Add(actions);
 
         Controls.Add(container);
-        AcceptButton = _saveButton;
-        CancelButton = cancelButton;
+        Controls.Add(DialogLayout.ButtonBar(this, _saveButton, cancelButton));
     }
 
     private void Save()

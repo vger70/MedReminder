@@ -9,6 +9,7 @@ namespace MedReminder.UI.Forms;
 // profiles. The PIN is checked by the caller (JoinInstallation).
 internal sealed class HouseholdProfilesDialog : MedReminderFormBase
 {
+    private readonly Label _error = DialogLayout.ErrorLabel();
     private readonly ILocalizationService _loc;
     private readonly CheckedListBox _profiles;
     private readonly ComboBox? _admin;
@@ -24,6 +25,7 @@ internal sealed class HouseholdProfilesDialog : MedReminderFormBase
         Height = administrators is null ? 420 : 500;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
+        DialogLayout.GrowToContent(this);
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
 
@@ -59,28 +61,25 @@ internal sealed class HouseholdProfilesDialog : MedReminderFormBase
         layout.SetColumnSpan(label, 2);
         layout.Controls.Add(_profiles, 0, row);
         layout.SetColumnSpan(_profiles, 2);
+        var profilesRow = row++;
+        // Inline error under the list (F9).
+        layout.Controls.Add(_error, 0, row);
+        layout.SetColumnSpan(_error, 2);
         row++;
 
         layout.RowCount = row;
-        for (var i = 0; i < row - 1; i++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-
-        var ok = new Button { Text = _loc.Get("Common.Ok"), AutoSize = true, Height = 32 };
-        ok.Click += (_, _) => Accept();
-        var cancel = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, AutoSize = true, Height = 32 };
-        var buttons = new FlowLayoutPanel
+        for (var i = 0; i < row; i++)
         {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(cancel);
-        buttons.Controls.Add(ok);
+            layout.RowStyles.Add(i == profilesRow ? new RowStyle(SizeType.Percent, 100) : new RowStyle(SizeType.AutoSize));
+        }
+
+        var ok = DialogLayout.Button(_loc.Get("Common.Ok"));
+        ok.Click += (_, _) => Accept();
+        var cancel = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
+        var buttons = DialogLayout.ButtonBar(this, ok, cancel);
 
         Controls.Add(layout);
         Controls.Add(buttons);
-        CancelButton = cancel;
     }
 
     public IReadOnlyList<string> SelectedProfileIds { get; private set; } = [];
@@ -98,7 +97,7 @@ internal sealed class HouseholdProfilesDialog : MedReminderFormBase
         else if (selected.Count == 0) error = _loc.Get("Ui.HouseholdDialog.Profiles.NoneSelected");
         if (error is not null)
         {
-            MessageBox.Show(this, error, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            DialogLayout.ShowError(_error, error);
             return;
         }
 
