@@ -87,7 +87,11 @@ data on the storage besides `household.json`.
 profile and restarts; the profile appears in the picker with its PIN;
 PC2's local profile is added to the installation at the start; SMTP,
 backup policy and reference country are PC1's. The closed or expired
-code is refused ("expired"); a newer code refuses the older one. The
+code is refused ("expired"); a newer code refuses the older one. With
+the profile open on PC2, after Sync now, Settings → Notifications
+shows PC1's recipients. For a profile synced since before v2.9.0 (P8)
+the recipients reach PC2 only after one save on PC1, even without
+changes, followed by a sync of both PCs. The
 code window opens with the code hidden until "Show the code"; it is
 visible and usable through a remote-control tool (RustDesk, Remote
 Desktop).
