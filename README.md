@@ -66,6 +66,21 @@ scheduled dose time.
 - Several people on one installation, each with a separate
   database; administrator and user roles; optional PIN per profile.
 
+**Several devices**
+
+- Sync of a profile between PCs through an end-to-end encrypted
+  group on OneDrive, Google Drive or a shared folder (no server):
+  medicines, stock, intakes, profile name and recipients; conflicts
+  listed, lost or stolen devices removed with a key change.
+- Shared installation: profiles, roles, PINs, email account, cloud
+  backup policy and reference country replicated to every device;
+  each device holds only the profiles an administrator gives it;
+  devices join with a short-lived code or the installation
+  passphrase.
+- One master device sends every email and runs the cloud backup;
+  planned handover with a wizard, takeover of a lost master, device
+  removal with new installation and profile keys.
+
 **Backup, export and restore**
 
 - Daily automatic backup of every profile's database to a local
@@ -239,6 +254,9 @@ Shared, admin-managed:
 | `cloud-backup.protected` | Cloud-folder backup passphrase, DPAPI-encrypted (CurrentUser scope) |
 | `donations.settings.json` | Optional public Payment Link URLs for the Support Development dialog |
 | `user.settings.json` | UI language, reference-catalogue country, update-check preference |
+| `onedrive.protected` / `googledrive.protected` | OneDrive / Google Drive sign-in tokens, DPAPI-encrypted |
+| `household\` | Shared installation: operation log, settings, installation and device keys (DPAPI) |
+| `catalogue\staging\` | Remote catalogue archive while it is imported; emptied every run |
 | `logs/medreminder-YYYYMMDD.log` | Daily rolling log, 30-day retention |
 
 Per-profile, under `profiles\<profile-id>\`:
@@ -246,7 +264,9 @@ Per-profile, under `profiles\<profile-id>\`:
 | File | Content |
 |---|---|
 | `medreminder.db` (+ `-shm`, `-wal`) | This profile's SQLite database |
-| `notifications.settings.json` | This profile's email recipient and optional caregiver address |
+| `notifications.settings.json` | This profile's email recipient, optional caregiver and doctor address |
+| `ui.settings.json` | This profile's text size |
+| `sync.settings.json` / `sync.protected` | Sync group, device and storage; group key, DPAPI-encrypted (only when sync is on) |
 
 Nothing outside `%LOCALAPPDATA%\MedReminder\` is written by the app,
 except the backup, export and cloud-folder files written to folders
@@ -258,7 +278,7 @@ the logs.
 
 Open **Settings → Email SMTP** from the main menu:
 
-1. Fill in host, port, StartTLS, username, sender, recipient.
+1. Fill in host, port, StartTLS, username and sender.
 2. Type the password in the dedicated field (encrypted via DPAPI and
    stored in `smtp.protected`; the settings file never contains the
    plaintext password).
@@ -285,8 +305,10 @@ cloud folder are available to every profile.
   is copied (unencrypted `.db`). If the PC is off at the preferred
   time, the backup runs at the next start of the day.
 - **Backup to a cloud-synced folder (encrypted)**: optional second
-  target. Writes an encrypted `.mrz` snapshot of the current profile
-  into a folder the user's cloud client synchronizes. Requires a
+  target. Writes an encrypted `.mrz` snapshot of every profile into a
+  folder the user's cloud client synchronizes, or into OneDrive or
+  Google Drive directly. With a shared installation only the master
+  device writes it. Requires a
   backup passphrase; losing it means the snapshots cannot be
   restored.
 - **Run backup now** / **Export to specific folder…**: on-demand
@@ -353,11 +375,14 @@ dose/quantity values are never written to the logs.**
   5s → 30s → 2m, then gives up, logging the error.
 - Single-instance is per-user (one Windows session). A second
   Windows user on the same machine can run their own instance.
-- No real-time sync between devices. The cloud-folder backup is
-  single-writer: restoring on a second PC replaces its data, and
-  changes made on two PCs between restores are not merged.
-- Only the current profile is written to the cloud folder; the local
-  automatic backup covers every profile.
+- The cloud-folder backup is single-writer: restoring on a second PC
+  replaces its data, and changes made on two PCs between restores are
+  not merged. Use sync (Tools → Sync…) to work on several PCs.
+- Every device of a sync group or installation must run the same
+  MedReminder version: newer operation schemas stop older apps.
+- Sync and the installation need a storage every device reaches
+  (OneDrive, Google Drive or a shared folder); MedReminder runs no
+  server.
 
 ## License
 
