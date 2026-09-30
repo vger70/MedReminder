@@ -216,7 +216,7 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
             Padding = new Padding(UiTheme.Space.S, 0, 0, 0),
         };
         _sectionHost = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
-        _sectionList = new NavigationPane();
+        _sectionList = new NavigationPane(expandedWidth: 280);
 
         AddSection("Ui.SettingsDialog.Tab.General", Mdl2Glyph.Glyphs.Settings, BuildGeneralTab());
         // Increment 15d (docs/ANALYSIS-MULTI-USER.md §7.4): SMTP and
@@ -275,7 +275,9 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
             Text = _loc.Get("Common.Close"),
             DialogResult = DialogResult.OK,
             AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowOnly,
+            // GrowAndShrink: with GrowOnly the size reached with the
+            // larger font was then scaled again by the display factor.
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             MinimumSize = new System.Drawing.Size(88, 32),
             Padding = new Padding(UiTheme.Space.M, 0, UiTheme.Space.M, 0),
         };

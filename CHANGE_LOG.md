@@ -47,6 +47,8 @@ Branch: `claude/ui-phase4-settings` → `main`
 ### Fixed
 
 - Settings tab headers stayed light in dark mode.
+- With Large text at 150 % the Settings Close button was about twice
+  its size; long German section names are no longer cut.
 
 ## PR #146 — Redesign the main window around a summary and a navigation pane
 
