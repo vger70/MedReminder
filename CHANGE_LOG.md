@@ -52,6 +52,13 @@ Branch: `claude/ui-phase3-main-window` → `main`
 - Status shown as a coloured label; list rows 36 px high.
 - Main-window section of the five user guides rewritten.
 
+### Fixed
+
+- With Large text at 150 % the main window no longer extends past its
+  right edge: the search box was scaled twice and the grid's full
+  column width sized the page.
+- Profile picker buttons grow with their captions instead of being cut.
+
 ## PR #145 — Fix the dark-mode and layout defects found in the UI baseline
 
 Link: [vger70/MedReminder#145](https://github.com/vger70/MedReminder/pull/145)

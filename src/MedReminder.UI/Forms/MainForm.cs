@@ -129,6 +129,10 @@ internal sealed class MainForm : MedReminderFormBase
             Padding = new Padding(UiTheme.Space.L, UiTheme.Space.M, UiTheme.Space.L, UiTheme.Space.M),
             Margin = Padding.Empty,
         };
+        // A column without a style sizes to its widest child, and the
+        // grid's preferred width is the sum of its columns: at 150 % the
+        // page then grew past the window. Percent keeps it in bounds.
+        page.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         page.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         page.Controls.Add(BuildSummaryCards(), 0, 0);
@@ -157,6 +161,7 @@ internal sealed class MainForm : MedReminderFormBase
             ColumnCount = 1,
             RowCount = 5,
         };
+        container.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // menu
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // toolbar
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // banner (Visible=false)
@@ -174,7 +179,14 @@ internal sealed class MainForm : MedReminderFormBase
         // Below this width the navigation pane shows icons only.
         Resize += (_, _) => _nav.Collapsed = ClientSize.Width < ScaledLength(NavCollapseWidth);
         Load += (_, _) => _nav.Collapsed = ClientSize.Width < ScaledLength(NavCollapseWidth);
+
+        // Control.Scale also scales the text box a tool strip hosts, so
+        // a width scaled at build time was scaled twice; set it once
+        // the layout has been scaled.
+        Load += (_, _) => _searchBox.Width = ScaledLength(SearchBoxWidth);
     }
+
+    private const int SearchBoxWidth = 240;
 
     private const int NavCollapseWidth = 900;
 
@@ -673,7 +685,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             Alignment = ToolStripItemAlignment.Right,
             AutoSize = false,
-            Width = ScaledLength(240),
+            Width = SearchBoxWidth,
             BorderStyle = BorderStyle.FixedSingle,
             Margin = new Padding(0, UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.XS),
             AccessibleName = _loc.Get("Ui.MainForm.Search.Placeholder"),

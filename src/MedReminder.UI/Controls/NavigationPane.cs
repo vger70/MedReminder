@@ -14,7 +14,7 @@ internal sealed class NavigationPane : FlowLayoutPanel
     // Sizes at 96 DPI and text size Normal; MedReminderFormBase scales
     // the pane's bounds and fonts on load like any other control.
     private const int ItemHeight = 40;
-    private const int ExpandedWidth = 220;
+    private const int ExpandedWidth = 240;
 
     private readonly ToolTip _tips = new();
     private bool _collapsed;
@@ -28,6 +28,9 @@ internal sealed class NavigationPane : FlowLayoutPanel
         Padding = new Padding(UiTheme.Space.S, UiTheme.Space.M, UiTheme.Space.S, UiTheme.Space.M);
         Margin = Padding.Empty;
         BackColor = UiTheme.Palette.Background;
+        // The divider is drawn at the right edge, which moves when the
+        // pane collapses or expands.
+        SetStyle(ControlStyles.ResizeRedraw, true);
     }
 
     public NavigationItem AddItem(string text, string glyph, bool opensWindow, Action onClick)
