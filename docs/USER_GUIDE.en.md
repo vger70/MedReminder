@@ -957,7 +957,9 @@ account or folder.
   Closing the window withdraws it.
 - Whoever reads the code while it is valid can read the group's data:
   show it only to your own devices, do not send it by message or email.
-  The window is hidden from screenshots.
+  The code stays hidden until you choose **Show the code**: show it
+  only when the other device is ready, since anyone who sees or records
+  the screen from then on (remote assistance included) can use it.
 
 ### Changing the key, removing a lost PC
 

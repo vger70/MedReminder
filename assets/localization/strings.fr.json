@@ -1130,5 +1130,7 @@
   "Ui.HouseholdDialog.NewKey.Done": "Terminé : cet appareil synchronise à nouveau l'installation. Les modifications faites ici entre-temps sont conservées.",
   "Ui.HouseholdDialog.NewKey.WrongPassphrase": "La phrase secrète n'ouvre pas la nouvelle clé de l'installation.",
   "Ui.HouseholdDialog.RemoveDevice.NotHeld": "Cet appareil ne contient pas tous les profils de l'appareil à retirer ({0}) : leurs clés ne pourraient pas être changées. Retirez-le depuis l'appareil maître, qui contient tous les profils.",
-  "Ui.MainForm.RotatedKey.Prompt": "Un appareil a été retiré de l'installation et ce profil a une nouvelle clé. MedReminder la prend au redémarrage ; d'ici là ce profil ne se synchronise pas. Redémarrer maintenant ?"
+  "Ui.MainForm.RotatedKey.Prompt": "Un appareil a été retiré de l'installation et ce profil a une nouvelle clé. MedReminder la prend au redémarrage ; d'ici là ce profil ne se synchronise pas. Redémarrer maintenant ?",
+  "Ui.SyncDialog.Pair.Reveal": "Afficher le code",
+  "Ui.SyncDialog.Pair.RevealHint": "Affichez-le seulement quand l'autre appareil est prêt : à partir de là, quiconque voit ou enregistre l'écran, assistance à distance comprise, peut l'utiliser jusqu'à son expiration ou la fermeture de cette fenêtre."
 }

@@ -30,6 +30,26 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #130 — Show the pairing code on request instead of hiding its window from capture
+
+Link: [vger70/MedReminder#130](https://github.com/vger70/MedReminder/pull/130)
+Branch: `claude/pairing-code-show-on-request` → `feature/master-slave`
+
+### Fixed
+
+- The pairing code window (Pair a device, Add a device, the new key
+  after a removal) was invisible in remote-control sessions such as
+  RustDesk or Remote Desktop, and the application looked frozen. It now
+  opens normally, with the QR and text code hidden until **Show the
+  code**; the window is no longer excluded from screen capture.
+
+### Docs
+
+- User guides (5 languages), `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`,
+  `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`.
+
+---
+
 ## PR #129 — Household of devices with a master device (H1–H5)
 
 Link: [vger70/MedReminder#129](https://github.com/vger70/MedReminder/pull/129)

@@ -1130,5 +1130,7 @@
   "Ui.HouseholdDialog.NewKey.Done": "Hecho: este dispositivo vuelve a sincronizar la instalación. Los cambios hechos aquí mientras tanto se conservan.",
   "Ui.HouseholdDialog.NewKey.WrongPassphrase": "La frase no abre la nueva clave de la instalación.",
   "Ui.HouseholdDialog.RemoveDevice.NotHeld": "Este dispositivo no tiene todos los perfiles del dispositivo que se quiere quitar ({0}): sus claves no podrían cambiarse. Quítelo desde el dispositivo principal, que tiene todos los perfiles.",
-  "Ui.MainForm.RotatedKey.Prompt": "Se quitó un dispositivo de la instalación y este perfil tiene una nueva clave. MedReminder la toma al reiniciarse; hasta entonces este perfil no se sincroniza. ¿Reiniciar ahora?"
+  "Ui.MainForm.RotatedKey.Prompt": "Se quitó un dispositivo de la instalación y este perfil tiene una nueva clave. MedReminder la toma al reiniciarse; hasta entonces este perfil no se sincroniza. ¿Reiniciar ahora?",
+  "Ui.SyncDialog.Pair.Reveal": "Mostrar el código",
+  "Ui.SyncDialog.Pair.RevealHint": "Muéstrelo solo cuando el otro dispositivo esté listo: desde ese momento quien vea o grabe la pantalla, asistencia remota incluida, puede usarlo hasta que caduque o se cierre esta ventana."
 }

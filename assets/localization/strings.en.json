@@ -1135,5 +1135,7 @@
   "Ui.HouseholdDialog.NewKey.Done": "Done: this device syncs the installation again. Changes made here meanwhile are kept.",
   "Ui.HouseholdDialog.NewKey.WrongPassphrase": "The passphrase does not open the new installation key.",
   "Ui.HouseholdDialog.RemoveDevice.NotHeld": "This device does not hold every profile of the device to remove ({0}): their keys could not be changed. Remove it from the master device, which holds every profile.",
-  "Ui.MainForm.RotatedKey.Prompt": "A device was removed from the installation and this profile has a new key. MedReminder takes it when it restarts; until then this profile does not sync. Restart now?"
+  "Ui.MainForm.RotatedKey.Prompt": "A device was removed from the installation and this profile has a new key. MedReminder takes it when it restarts; until then this profile does not sync. Restart now?",
+  "Ui.SyncDialog.Pair.Reveal": "Show the code",
+  "Ui.SyncDialog.Pair.RevealHint": "Show it only when the other device is ready: whoever sees or records the screen from then on, remote assistance included, can use it until it expires or this window closes."
 }

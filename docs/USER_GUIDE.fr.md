@@ -1063,8 +1063,10 @@ au même dossier.
   ouverte. Fermer la fenêtre le retire.
 - Quiconque lit le code pendant sa validité peut lire les données du
   groupe : ne le montrez qu'à vos propres appareils, ne l'envoyez ni par
-  message ni par e-mail. La fenêtre n'apparaît pas dans les captures
-  d'écran.
+  message ni par e-mail. Le code reste masqué jusqu'à ce que vous
+  choisissiez **Afficher le code** : affichez-le seulement quand l'autre
+  appareil est prêt, car à partir de là quiconque voit ou enregistre
+  l'écran (assistance à distance comprise) peut l'utiliser.
 
 ### Changer la clé, retirer un PC perdu
 

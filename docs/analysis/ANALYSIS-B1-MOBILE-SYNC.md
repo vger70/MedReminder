@@ -680,10 +680,15 @@ Two ways to give a new device the group key:
    thus enforced, not advisory: a photo of the code opens nothing once
    the offer ended, unless the storage file was also copied during the
    offer. The same code is shown as text, so a PC can join or take a new
-   key with it (Join with a pairing code). The window uses
-   `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`, falling back to
-   `WDA_MONITOR` before Windows 10 2004 `[VERIFIED — Win32 API
-   documentation, training knowledge; not exercised on a device]`.
+   key with it (Join with a pairing code). The window used
+   `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`; a manual test on
+   2026-09-30 showed the window invisible in a remote-control session
+   (RustDesk), where the application looked frozen behind it. Since then
+   the window is always visible and the code stays hidden until the user
+   chooses "Show the code" (product owner, 2026-09-30): it is kept out of
+   screenshots and shared screens taken before, and the exclusion was no
+   barrier against a program running as the user, which can read the
+   protected keys directly.
    Format: `docs/SYNC-FORMAT.md` §4.4.
 2. **Passphrase**: the device signs in to the provider, finds the group,
    and unwraps the key with the sync passphrase. Needed when no paired

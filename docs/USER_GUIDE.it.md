@@ -1006,7 +1006,10 @@ cartella.
   Chiudendo la finestra viene ritirato.
 - Chi legge il codice mentre è valido può leggere i dati del gruppo:
   mostralo solo ai tuoi dispositivi, non inviarlo per messaggio o
-  email. La finestra non compare nelle schermate catturate.
+  email. Il codice resta nascosto finché non scegli **Mostra il
+  codice**: mostralo solo quando l'altro dispositivo è pronto, perché da
+  quel momento chi vede o registra lo schermo (assistenza remota
+  compresa) può usarlo.
 
 ### Cambiare la chiave, rimuovere un PC perso
 
