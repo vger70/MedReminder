@@ -44,7 +44,6 @@ internal sealed class TherapyTimelineForm : MedReminderFormBase
         _initialSelection = initialSelection;
 
         Text = _loc.Get("Ui.TherapyTimeline.Title");
-        Font = new Font("Segoe UI", 9.75F);
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
         MaximizeBox = true;

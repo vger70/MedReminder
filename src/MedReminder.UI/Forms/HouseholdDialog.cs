@@ -76,7 +76,6 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         Height = 520;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var tabs = new TabControl { Dock = DockStyle.Fill };
 

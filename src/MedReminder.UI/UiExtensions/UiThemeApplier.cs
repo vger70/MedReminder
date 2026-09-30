@@ -1,11 +1,14 @@
 namespace MedReminder.UI.UiExtensions;
 
 // Applies the theme to the stock controls a form contains
-// (docs/analysis/ANALYSIS-UI-MODERNIZATION.md §4.3, step 1.3): buttons
-// become flat, the form's AcceptButton filled with the accent colour
-// and the others outlined; grids take the palette's surface, borders
-// and selection. Called by MedReminderFormBase when a form loads, and
-// again for controls added later (dynamic rows, rebuilt panels).
+// (docs/analysis/ANALYSIS-UI-MODERNIZATION.md §4.3, steps 1.3 and 2):
+// buttons become flat, the form's AcceptButton filled with the accent
+// colour and the others outlined; grids take the palette's surface,
+// borders and selection. In dark mode, drop-down lists, text boxes and
+// list views, which WinForms leaves partly light (baseline S1, S3, S4),
+// take the palette too. Called by MedReminderFormBase when a form
+// loads, and again for controls added later (dynamic rows, rebuilt
+// panels).
 //
 // Sizes are left alone: moving to the 32 px button height and the
 // spacing scale is done window by window (step 2), where each layout
@@ -29,6 +32,15 @@ internal static class UiThemeApplier
                 break;
             case DataGridView grid:
                 StyleGrid(grid, palette);
+                break;
+            case ComboBox combo when UiTheme.IsDark:
+                StyleComboBox(combo, palette);
+                break;
+            case TextBoxBase textBox when UiTheme.IsDark:
+                StyleTextBox(textBox, palette);
+                break;
+            case ListView list when UiTheme.IsDark:
+                StyleListView(list, palette);
                 break;
         }
 
@@ -73,10 +85,42 @@ internal static class UiThemeApplier
         }
     }
 
+    // The stock drop-down list keeps a light face in dark mode; the
+    // flat style is the one that honours BackColor and ForeColor.
+    public static void StyleComboBox(ComboBox combo, UiPalette palette)
+    {
+        combo.FlatStyle = FlatStyle.Flat;
+        combo.BackColor = palette.Surface;
+        combo.ForeColor = palette.Text;
+    }
+
+    // FixedSingle draws a light border in dark mode next to fields
+    // drawn without one; the 3D style is used for all of them.
+    public static void StyleTextBox(TextBoxBase textBox, UiPalette palette)
+    {
+        if (textBox.BorderStyle == BorderStyle.FixedSingle)
+        {
+            textBox.BorderStyle = BorderStyle.Fixed3D;
+        }
+        textBox.BackColor = palette.Surface;
+        textBox.ForeColor = palette.Text;
+    }
+
+    // Grid lines are drawn light in dark mode; rows are told apart by
+    // the selection instead.
+    public static void StyleListView(ListView list, UiPalette palette)
+    {
+        list.GridLines = false;
+        list.BackColor = palette.Surface;
+        list.ForeColor = palette.Text;
+    }
+
     // Colours only: row height and column widths belong to each form
-    // and to the text-size scaling in MedReminderFormBase.
+    // and to the text-size scaling in MedReminderFormBase. Headers grow
+    // to fit wrapped captions (baseline L2: German headers were cut).
     public static void StyleGrid(DataGridView grid, UiPalette palette)
     {
+        grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
         grid.BackgroundColor = palette.Surface;
         grid.GridColor = palette.Border;
         grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;

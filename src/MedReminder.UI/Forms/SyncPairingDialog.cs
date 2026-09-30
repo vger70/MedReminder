@@ -48,7 +48,6 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        Font = new Font("Segoe UI", 9.75F);
 
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, Padding = new Padding(12) };
         layout.Controls.Add(new Label

@@ -329,7 +329,14 @@ public sealed class MedicineAutocompleteBox : UserControl
         if (e.Index < 0) return;
         var text = _dropdown.Items[e.Index]?.ToString() ?? string.Empty;
 
-        e.DrawBackground();
+        // Selection from the theme: the stock dark highlight pairs
+        // black text with a mid blue below AA contrast.
+        var palette = UiTheme.Palette;
+        var selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+        using (var background = new SolidBrush(selected ? palette.Selection : palette.Surface))
+        {
+            e.Graphics.FillRectangle(background, e.Bounds);
+        }
         var isReference = e.Index < _lastResults.Count && _dropdown.Enabled;
 
         var textBounds = e.Bounds;
@@ -351,9 +358,9 @@ public sealed class MedicineAutocompleteBox : UserControl
                 e.Bounds.Height);
         }
 
-        var foreColor = (e.State & DrawItemState.Selected) == DrawItemState.Selected
-            ? SystemColors.HighlightText
-            : (_dropdown.Enabled ? SystemColors.WindowText : SystemColors.GrayText);
+        var foreColor = selected
+            ? palette.SelectionText
+            : (_dropdown.Enabled ? palette.Text : palette.TextSecondary);
         using var brush = new SolidBrush(foreColor);
         using var format = new StringFormat
         {

@@ -34,7 +34,6 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        Font = new Font("Segoe UI", 9.75F);
 
         var layout = new TableLayoutPanel
         {

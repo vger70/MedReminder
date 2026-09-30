@@ -58,21 +58,21 @@ internal sealed class HelpViewerForm : MedReminderFormBase
 
         _btnBack = new ToolStripButton(_loc.Get("Ui.HelpViewer.Back"))
         {
-            Image = Mdl2Glyph.Create("", size: 20), // Back
+            Image = Mdl2Glyph.Create("", size: ScaledIconSize(20)), // Back
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
             TextImageRelation = TextImageRelation.ImageBeforeText,
             Enabled = false,
         };
         _btnForward = new ToolStripButton(_loc.Get("Ui.HelpViewer.Forward"))
         {
-            Image = Mdl2Glyph.Create("", size: 20), // Forward
+            Image = Mdl2Glyph.Create("", size: ScaledIconSize(20)), // Forward
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
             TextImageRelation = TextImageRelation.ImageBeforeText,
             Enabled = false,
         };
         _btnOpenBrowser = new ToolStripButton(_loc.Get("Ui.HelpViewer.OpenGithub"))
         {
-            Image = Mdl2Glyph.Create("", size: 20), // Globe
+            Image = Mdl2Glyph.Create("", size: ScaledIconSize(20)), // Globe
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
             TextImageRelation = TextImageRelation.ImageBeforeText,
         };
@@ -89,6 +89,7 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         var toolbar = new ToolStrip
         {
             GripStyle = ToolStripGripStyle.Hidden,
+            ImageScalingSize = new Size(ScaledIconSize(20), ScaledIconSize(20)),
         };
         toolbar.Items.Add(_btnBack);
         toolbar.Items.Add(_btnForward);

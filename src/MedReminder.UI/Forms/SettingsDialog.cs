@@ -122,6 +122,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private ComboBox _textSizeCombo = null!;
     private ComboBox _appearanceCombo = null!;
 
+    // Space above each group of the General tab (label, field, help),
+    // so a help text no longer touches the next label (baseline L3).
+    private static readonly Padding GroupMargin = new(3, UiTheme.Space.L, 3, 3);
+
     // Shared component for the explanatory tooltips on the technical fields.
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
     // ToolTip per dialog è la best practice WinForms.
@@ -281,6 +285,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             Text = _loc.Get("settings.referenceCountry.label"),
+            Margin = GroupMargin,
         };
         _referenceCountryCombo = new ComboBox
         {
@@ -307,6 +312,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             Text = _loc.Get("Ui.SettingsDialog.General.CheckUpdates"),
+            Margin = GroupMargin,
             Checked = _userMonitor.CurrentValue.CheckForUpdatesOnStartup,
         };
         _tooltips.SetToolTip(_checkUpdatesBox,
@@ -316,6 +322,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             Text = _loc.Get("Ui.SettingsDialog.General.TextSize"),
+            Margin = GroupMargin,
         };
         _textSizeCombo = new ComboBox
         {
@@ -336,6 +343,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         {
             AutoSize = true,
             Text = _loc.Get("Ui.SettingsDialog.General.Appearance"),
+            Margin = GroupMargin,
         };
         _appearanceCombo = new ComboBox
         {
@@ -355,6 +363,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
         var saveButton = new Button
         {
             Text = _loc.Get("Ui.SettingsDialog.General.Save"),
+            Margin = GroupMargin,
             AutoSize = true,
             Height = 30,
         };
@@ -368,11 +377,16 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Text = _loc.Get("Ui.SettingsDialog.General.Note"),
         };
 
+        // A top-down flow wraps into a second column when the tab is
+        // shorter than its content (Large text, 150 % scaling); it
+        // scrolls instead.
         var panel = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
+            WrapContents = false,
+            AutoScroll = true,
         };
         panel.Controls.Add(languageLabel);
         panel.Controls.Add(_languageCombo);
@@ -802,6 +816,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
+            WrapContents = false,
             AutoScroll = true,
         };
         container.Controls.Add(table);
@@ -1003,11 +1018,16 @@ internal sealed class SettingsDialog : MedReminderFormBase
             ForeColor = UiColors.Hint,
         };
 
+        // A top-down flow wraps into a second column when the tab is
+        // shorter than its content (Large text, 150 % scaling); it
+        // scrolls instead.
         var panel = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
+            WrapContents = false,
+            AutoScroll = true,
         };
         panel.Controls.Add(_autoStartCheck);
         panel.Controls.Add(note);
@@ -2033,7 +2053,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private static void AddRow(TableLayoutPanel table, string label, Control input)
     {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
+        // Top-aligned: a label that wraps to several lines, or a field
+        // taller than one line, would otherwise centre the label below
+        // the field's first line (ANALYSIS-UI-MODERNIZATION L6).
+        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Top | AnchorStyles.Left, Margin = new Padding(UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.M, UiTheme.Space.XS) };
         table.RowCount++;
         table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         table.Controls.Add(lbl, 0, table.RowCount - 1);

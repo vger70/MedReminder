@@ -25,7 +25,6 @@ internal sealed class SyncGroupChoiceDialog : MedReminderFormBase
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        Font = new Font("Segoe UI", 9.75F);
 
         var hint = new Label
         {

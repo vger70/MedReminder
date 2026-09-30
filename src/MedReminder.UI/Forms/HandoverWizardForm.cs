@@ -60,7 +60,6 @@ internal sealed class HandoverWizardForm : MedReminderFormBase
         Height = 700;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var layout = new TableLayoutPanel
         {

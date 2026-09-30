@@ -30,6 +30,35 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #145 — Fix the dark-mode and layout defects found in the UI baseline
+
+Link: [vger70/MedReminder#145](https://github.com/vger70/MedReminder/pull/145)
+Branch: `claude/ui-phase2-controls` → `main`
+
+### Fixed
+
+- Dark mode: drop-down lists, text box borders and list view grid
+  lines no longer stay light; the autocomplete drop-down selection
+  reads at AA contrast.
+- Wrapped German column headers in the main window are no longer cut;
+  medicine editor labels no longer split mid-word; Settings → General
+  groups are spaced and, with Large text at 150 %, scroll instead of
+  wrapping into a second column; form labels align with the top of
+  their field.
+- The profile picker uses the appearance of the profile used last, and
+  the PIN prompt that of the profile being opened, instead of always
+  following Windows.
+
+### Changed
+
+- One 10 pt base font for every window (was 9 or 9.75 pt).
+- Toolbar and menu icons grow with the text size and display scaling;
+  Segoe Fluent Icons on Windows 11.
+
+### Docs
+
+- `ANALYSIS-UI-MODERNIZATION.md` revision 4: screenshot baseline.
+
 ## PR #144 — Add a theme layer with a per-profile light/dark appearance
 
 Link: [vger70/MedReminder#144](https://github.com/vger70/MedReminder/pull/144)

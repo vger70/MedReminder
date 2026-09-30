@@ -83,7 +83,6 @@ internal sealed class SyncDialog : MedReminderFormBase
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var tabs = new TabControl { Dock = DockStyle.Fill };
 

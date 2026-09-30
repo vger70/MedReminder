@@ -65,7 +65,6 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = true;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var recipientValue = new Label
         {
