@@ -314,9 +314,14 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         var item = _sectionList.AddItem(title, glyph, opensWindow: false, () => SelectSection(index));
         body.Dock = DockStyle.Fill;
         body.Visible = false;
-        // A section taller than the window scrolls as a whole; sections
-        // whose content fills the panel keep their own scrolling.
-        if (body is ScrollableControl scrollable) scrollable.AutoScroll = true;
+        // A section whose content is docked at the top (Backup) scrolls
+        // as a whole. Sections with a filling panel scroll inside it; a
+        // second scrolling level around it lost the scroll bar after
+        // scaling (Settings -> General at 150 % with Large text).
+        if (body is ScrollableControl scrollable)
+        {
+            scrollable.AutoScroll = !body.Controls.Cast<Control>().Any(c => c.Dock == DockStyle.Fill);
+        }
         _sectionHost.Controls.Add(body);
         _sections.Add((item, title, body));
     }
@@ -338,6 +343,8 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
             }
         }
         _sectionHost.ResumeLayout(performLayout: true);
+        // A section laid out while hidden can keep a stale scroll range.
+        RelayoutTree(_sections[index].Body);
     }
 
     // Ctrl+Tab / Ctrl+Shift+Tab and Ctrl+PageDown / Ctrl+PageUp move

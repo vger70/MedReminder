@@ -84,7 +84,22 @@ internal class MedReminderFormBase : Form
         {
             ResumeLayout(performLayout: true);
         }
+        RelayoutTree(this);
         FitToWorkingArea();
+    }
+
+    // Lays out every container from the innermost outwards. Scaling
+    // runs with the form's layout suspended, and a scrolling panel
+    // whose own size did not change kept the scroll range of its
+    // unscaled content: Settings -> General lost its scroll bar and
+    // the Save button below the fold.
+    internal static void RelayoutTree(Control control)
+    {
+        foreach (Control child in control.Controls)
+        {
+            if (child.HasChildren) RelayoutTree(child);
+        }
+        control.PerformLayout();
     }
 
     // Every font is read before any is changed and then set scaled

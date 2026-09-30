@@ -53,6 +53,8 @@ Branch: `claude/ui-phase5-dialogs` → `main`
   twice the field height with Large text at 150 %.
 - The PIN prompt and the first-run and handover wizards were scaled
   twice above 100 % display scaling.
+- Settings → General lost its scroll bar with Large text at 150 %, so
+  the Save button could not be reached.
 
 ## PR #147 — Replace the Settings tabs with a section list
 
