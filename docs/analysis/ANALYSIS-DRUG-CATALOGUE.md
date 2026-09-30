@@ -495,6 +495,11 @@ defaulting to `true`), so no country-profile work is blocking. See
 
 ### 3.6 M5 — Snapshot online updater (optional)
 
+> Implemented for Italy only, in reduced form (HTTPS + SHA-256 in the
+> manifest instead of a signed manifest; reuses the startup update
+> check setting instead of a separate opt-in). See
+> [`ANALYSIS-CATALOGUE-REMOTE-FEED.md`](ANALYSIS-CATALOGUE-REMOTE-FEED.md).
+
 Only if we later decide the "ship with the app" cadence is not
 enough. Design outline:
 

@@ -74,3 +74,9 @@ desktop.ini
 node_modules/
 *.msi
 /.claude/settings.local.json
+
+# Python bytecode (scripts/feeds tests)
+__pycache__/
+
+# caveman:compress backups
+*.original.md

@@ -191,11 +191,29 @@ public sealed class EmaEparParserTests
         rows.Should().HaveCount(70);
     }
 
+    // The remote EU feed converts the EMA XLSX with scripts/feeds/ema.py;
+    // its output must parse to the same rows as the manual export, even
+    // with the multi-line cell the XLSX fixture adds.
+    [Fact]
+    public async Task Parses_the_csv_the_feed_script_produces_like_the_manual_export()
+    {
+        var manualReport = new ParseReport();
+        var manual = await CollectAsync(new EmaEparParser(), manualReport);
+
+        var scriptReport = new ParseReport();
+        var script = await CollectAsync(new EmaEparParser(), scriptReport, CatalogueFixtures.EmaEparFromXlsxCsv);
+
+        script.Should().HaveCount(70);
+        scriptReport.Skipped.Should().Be(3);
+        script.Should().BeEquivalentTo(manual, options => options.WithStrictOrdering());
+        script.Should().Contain(row => row.ActiveIngredients.Count > 1);
+    }
+
     private static async Task<List<ReferenceMedicineRow>> CollectAsync(
-        EmaEparParser parser, ParseReport report)
+        EmaEparParser parser, ParseReport report, string csvFixture = CatalogueFixtures.EmaEparCsv)
     {
         var rows = new List<ReferenceMedicineRow>();
-        await using var snapshot = CatalogueFixtures.BuildEmaEparSnapshotStream();
+        await using var snapshot = CatalogueFixtures.BuildEmaEparSnapshotStream(csvFixture);
         await foreach (var row in parser.ParseAsync(snapshot, report, CancellationToken.None))
         {
             rows.Add(row);

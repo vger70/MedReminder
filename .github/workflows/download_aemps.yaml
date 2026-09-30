@@ -1,0 +1,57 @@
+name: Download AEMPS catalogue (ES)
+
+on:
+  schedule:
+    # Same days as download_aifa.yaml, staggered by 20 minutes. Once the
+    # month's version is published, scripts/feeds/aemps.py exits
+    # without changes.
+    - cron: '20 3 2,9,16,23 * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Rebuild and republish this month even if already published (clients re-import it at next start)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Every feed workflow pushes to main: one at a time.
+concurrency:
+  group: catalogue-feeds-publish
+  cancel-in-progress: false
+
+jobs:
+  download:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 openpyxl
+
+      - name: Generate files
+        env:
+          FORCE_REFRESH: ${{ inputs.force }}
+        run: |
+          python scripts/feeds/aemps.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/es/
+          git diff --staged --quiet && exit 0
+          git commit -m "AEMPS database update $(date -u +%Y%m)"
+
+          # Another push may have landed since the checkout: rebase once
+          # and retry once.
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push || { git pull --rebase origin "${GITHUB_REF_NAME}" && git push; }

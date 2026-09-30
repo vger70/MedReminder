@@ -9,8 +9,11 @@ namespace MedReminder.Infrastructure.Catalogue;
 
 // Generic CSV importer that delegates parsing to a strategy per
 // country (ANALYSIS-DRUG-CATALOGUE.md §2.3). The importer owns:
-//   - version detection: an import with the same snapshot_version
-//     already recorded in the DB is a no-op.
+//   - version detection: an import whose snapshot_version is not newer
+//     than the one recorded in the DB is a no-op (SnapshotVersion,
+//     ANALYSIS-CATALOGUE-REMOTE-FEED.md §5.2).
+//   - the row-count guard: a snapshot with fewer rows than the caller's
+//     minimum is rejected before any row is deleted.
 //   - transactional replace: on a newer snapshot the country's rows
 //     are deleted and re-inserted in one transaction.
 //   - active-ingredient interning: same (country, name_norm) yields
@@ -32,10 +35,18 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
         _clock = clock;
     }
 
+    public Task<ImportReport> ImportAsync(
+        Stream snapshot,
+        CountryCode expectedCountry,
+        string snapshotVersion,
+        CancellationToken cancellationToken)
+        => ImportAsync(snapshot, expectedCountry, snapshotVersion, minimumRowCount: 1, cancellationToken);
+
     public async Task<ImportReport> ImportAsync(
         Stream snapshot,
         CountryCode expectedCountry,
         string snapshotVersion,
+        int minimumRowCount,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -43,28 +54,20 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
         {
             throw new ArgumentException("Snapshot version is required.", nameof(snapshotVersion));
         }
+        ArgumentOutOfRangeException.ThrowIfLessThan(minimumRowCount, 1);
 
         var parser = _parsers.FirstOrDefault(p => p.SupportedCountries.Contains(expectedCountry))
             ?? throw new NotSupportedException(
                 $"No parser strategy registered for country '{expectedCountry}'.");
 
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenWithSchemaAsync(cancellationToken);
 
-        // The DDL step in DatabaseInitializer normally runs at boot.
-        // Running it here too keeps the importer usable in isolation
-        // (tests that instantiate it against a fresh DbContext), and
-        // it is a cheap no-op afterwards (CREATE * IF NOT EXISTS).
-        await CatalogueSchema.ApplyAsync(connection, cancellationToken);
-
-        if (await SameVersionAlreadyImportedAsync(connection, expectedCountry, snapshotVersion, cancellationToken))
+        var state = await ReadStateAsync(connection, expectedCountry, cancellationToken);
+        if (!SnapshotVersion.IsNewer(snapshotVersion, state.Version))
         {
             return new ImportReport(
                 Inserted: 0, Updated: 0, Deleted: 0, Skipped: 0,
-                SnapshotVersion: snapshotVersion,
+                SnapshotVersion: state.Version ?? snapshotVersion,
                 CompletedAt: _clock.GetUtcNow());
         }
 
@@ -78,6 +81,15 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
                     $"Parser yielded a row for '{row.Country}' but the importer was called for '{expectedCountry}'.");
             }
             rows.Add(row);
+        }
+
+        // Checked before the transaction: DeleteCountryAsync would
+        // otherwise empty the country and InsertAsync write nothing.
+        if (rows.Count < minimumRowCount)
+        {
+            throw new InvalidDataException(
+                $"Snapshot {snapshotVersion} for '{expectedCountry}' yielded {rows.Count} rows; " +
+                $"at least {minimumRowCount} are required. The catalogue was left unchanged.");
         }
 
         await using var tx = await connection.BeginTransactionAsync(cancellationToken);
@@ -96,23 +108,60 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
             CompletedAt: _clock.GetUtcNow());
     }
 
-    private static async Task<bool> SameVersionAlreadyImportedAsync(
+    public async Task<CatalogueImportState> GetImportStateAsync(
+        CountryCode country,
+        CancellationToken cancellationToken)
+    {
+        var connection = await OpenWithSchemaAsync(cancellationToken);
+        return await ReadStateAsync(connection, country, cancellationToken);
+    }
+
+    private async Task<DbConnection> OpenWithSchemaAsync(CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        // The DDL step in DatabaseInitializer normally runs at boot.
+        // Running it here too keeps the importer usable in isolation
+        // (tests that instantiate it against a fresh DbContext), and
+        // it is a cheap no-op afterwards (CREATE * IF NOT EXISTS).
+        await CatalogueSchema.ApplyAsync(connection, cancellationToken);
+        return connection;
+    }
+
+    // The importer writes one snapshot_version per country, so one
+    // group is the normal case. Should several ever coexist, the
+    // highest version and the total count are reported.
+    private static async Task<CatalogueImportState> ReadStateAsync(
         DbConnection connection,
         CountryCode country,
-        string snapshotVersion,
         CancellationToken cancellationToken)
     {
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = @"
-            SELECT 1
+            SELECT ""snapshot_version"", COUNT(*)
               FROM ""reference_medicines""
              WHERE ""country"" = $country
-               AND ""snapshot_version"" = $version
-             LIMIT 1;";
+             GROUP BY ""snapshot_version"";";
         AddParameter(cmd, "$country", country.Value);
-        AddParameter(cmd, "$version", snapshotVersion);
-        var result = await cmd.ExecuteScalarAsync(cancellationToken);
-        return result is not null;
+
+        string? version = null;
+        var count = 0;
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var groupVersion = reader.GetString(0);
+            count += reader.GetInt32(1);
+            if (version is null || SnapshotVersion.IsNewer(groupVersion, version))
+            {
+                version = groupVersion;
+            }
+        }
+
+        return new CatalogueImportState(version, count);
     }
 
     private static async Task<int> DeleteCountryAsync(

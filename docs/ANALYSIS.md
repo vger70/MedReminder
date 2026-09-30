@@ -29,7 +29,8 @@ this document in the same pull request.
 - Local-first: one SQLite database per profile under
   `%LOCALAPPDATA%\MedReminder\`. No server component. The only
   outbound network calls are SMTP (user-configured), the passive
-  GitHub Releases update check (§9.5) and, only when the user signs
+  GitHub Releases update check and the remote catalogue feeds
+  (IT, EU, ES, FR; §9.5) and, only when the user signs
   in to one, the OneDrive (Microsoft Graph) or Google Drive APIs for
   cloud backups and sync (§8.3, §4.4). Sync data leaves the device
   encrypted end to end.
@@ -198,7 +199,9 @@ over three tables created by raw DDL (`reference_medicines`,
 `reference_active_ingredients`, `reference_medicine_ingredients`, see
 `Catalogue/CatalogueSchema.cs`). They are populated from snapshots
 embedded in the Infrastructure assembly (IT/AIFA, EU/EMA, ES/AEMPS,
-FR/BDPM) and are refreshed idempotently by snapshot version.
+FR/BDPM) and, at startup, from the monthly remote feed of the
+reference country and EU (§9.5); both paths refresh idempotently by
+snapshot version.
 `Medicine.LinkedReferenceMedicineId` is a weak reference: no physical
 foreign key, because catalogue rows are replaced on refresh. See
 [`analysis/ANALYSIS-DRUG-CATALOGUE.md`](analysis/ANALYSIS-DRUG-CATALOGUE.md)
@@ -393,6 +396,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   user.settings.json             UI language, reference country, update check
   localization\strings.<lang>.json   optional user overrides of the UI dictionaries
   logs\medreminder-<date>.log    Serilog, daily files
+  catalogue\staging\             remote catalogue archive while it is downloaded and imported; emptied every run
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
   household\
     household.db                 household operation log and registers (household feature, step H2)
@@ -560,7 +564,7 @@ ticks. A failing tick is logged and does not stop the service.
 | `MedicationMonitorHostedService` | `PeriodicTimer`, `Monitoring:IntervalMinutes` (default 30, min 1) | `MedicationMonitor`: consumption catch-up, forecast, `NotificationCycle`, dispatch per channel, `NotificationEvent` |
 | `DoseReminderHostedService` | `PeriodicTimer`, `DoseReminder:IntervalSeconds` (default 60, min 10) | `DoseReminderService`: fires due timed slots for medicines with `RemindOnDose`, positive stock and an active therapy; prunes dedup rows older than 30 days |
 | `AutomaticBackupHostedService` | 30 s initial delay, then every 15 min | Daily backup at or after `Backup:PreferredTime` (§8) |
-| `CatalogueRefreshHostedService` | Once at startup; registered only when `Catalogue:Enabled` is true | Imports each embedded catalogue snapshot whose version is newer, one transaction per country |
+| `CatalogueRefreshHostedService` | Once at startup; registered only when `Catalogue:Enabled` is true | Imports each embedded catalogue snapshot whose version is newer, one transaction per country; then, after the startup update check, `RemoteCatalogueRefresher` for the remote feeds of the reference country and EU, one scope per feed (§9.5) |
 | `SyncHostedService` | 15 s initial delay, then every `Sync:IntervalMinutes` (default 5, min 1) and 10 s after local changes; idle while sync is off | Starts a pending new generation, then `SyncEngine.RunAsync` (B.1 Phase 3d) |
 
 The Application services (`MedicationMonitor`, `DoseReminderService`,
@@ -762,6 +766,18 @@ with the `--minimized` argument. Per-user, no elevation.
 - `GitHubUpdateChecker` queries the GitHub Releases API (8 s timeout)
   at startup when `UI:CheckForUpdatesOnStartup` is true, and on demand.
   It only reports the release URL; nothing is downloaded or executed.
+- Remote catalogue feeds: after that check, and under the same
+  `CheckForUpdatesOnStartup` setting plus `Catalogue:RemoteFeed:Enabled`,
+  `RemoteCatalogueRefresher` runs for the reference country's feed
+  (IT, ES or FR) and the EU feed (`CatalogueFeedSelection`). For each,
+  it reads `data/<country>/latest.json` from the repository and, when
+  its version is newer than the open profile's catalogue for that
+  country, downloads `<prefix>-<yyyymm>.zip` (`aifa`, `ema-epar`,
+  `aemps`, `bdpm`; HTTPS, no redirects, size cap, SHA-256 when
+  published), imports it and deletes it. Data only; nothing is
+  executed. See
+  [`analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md)
+  and [`analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md).
 - `DonationService` opens Stripe or PayPal payment links in the
   default browser. See [`analysis/ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md).
 

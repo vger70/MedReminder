@@ -176,6 +176,15 @@ medicina.
   modifica ha effetto alla successiva apertura del form della
   medicina. Il paese vale per tutta l'installazione: solo un
   amministratore può cambiarlo.
+- Il **catalogo del tuo paese di riferimento e quello UE si
+  aggiornano da soli**: all'avvio, se *Impostazioni → Generale →
+  Controlla aggiornamenti all'avvio (GitHub)* è attivo, MedReminder
+  scarica l'ultimo elenco mensile del paese di riferimento (Italia,
+  Spagna o Francia) e quello UE quando sono più recenti di quelli che
+  ha, e li usa dalla successiva apertura del form della medicina.
+  Senza connessione non cambia nulla. Con più profili, ciascuno si
+  aggiorna la prima volta che viene aperto. Se cambi paese di
+  riferimento, il suo catalogo si aggiorna all'avvio successivo.
 
 ### Medicinali ad autorizzazione centralizzata UE
 

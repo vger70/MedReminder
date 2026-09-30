@@ -187,6 +187,16 @@ Medikamentenformular automatisch zu vervollständigen.
   Referenzland* gewählt. Standard ist Italien; eine Änderung wirkt
   beim nächsten Öffnen des Medikamentenformulars. Das Land gilt für
   die ganze Installation: Nur ein Administrator kann es ändern.
+- Der **Katalog Ihres Referenzlandes und der EU-Katalog
+  aktualisieren sich selbst**: Beim Start lädt MedReminder, wenn
+  *Einstellungen → Allgemein → Beim Start nach Updates suchen
+  (GitHub)* aktiviert ist, die neueste monatliche Liste Ihres
+  Referenzlandes (Italien, Spanien oder Frankreich) und die EU-Liste
+  herunter, sofern sie neuer sind als die vorhandenen, und verwendet
+  sie ab dem nächsten Öffnen des Medikamentenformulars. Ohne
+  Verbindung ändert sich nichts. Bei mehreren Profilen wird jedes beim
+  ersten Öffnen aktualisiert. Nach einem Wechsel des Referenzlandes
+  wird dessen Katalog beim nächsten Start aktualisiert.
 
 ### Zentral zugelassene EU-Arzneimittel
 

@@ -1,0 +1,155 @@
+using System.Globalization;
+using System.Text.Json;
+using MedReminder.Domain.Catalogue;
+
+namespace MedReminder.Application.Catalogue;
+
+// The `latest.json` manifest each download workflow publishes next to
+// its monthly archive, under data/<country>/
+// (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md §2.1,
+// ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §4.1). `Sha256`, `Size`
+// and `Country` are optional: the client checks them when present.
+public sealed record CatalogueFeedManifest(
+    string Version,
+    string? File,
+    DateTimeOffset? Generated,
+    string? Sha256,
+    long? Size)
+{
+    // Country the feed publishes for (for example "IT"); null in
+    // manifests written before the per-country layout.
+    public string? Country { get; init; }
+}
+
+// Pure JSON parser for the feed manifest, kept in the Application layer
+// (like GitHubReleaseParser) so it is testable without HTTP. Unknown
+// fields such as `file_count` are ignored. The manifest must belong to
+// `feed`: its `file` must be the feed's archive name, and its `country`,
+// when present, the feed's country, so a manifest served from another
+// feed's folder is never used.
+public static class CatalogueFeedManifestParser
+{
+    public static bool TryParse(
+        string json, CatalogueFeedDescriptor feed, out CatalogueFeedManifest? manifest, out string? error)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        ArgumentNullException.ThrowIfNull(feed);
+        manifest = null;
+
+        JsonDocument document;
+        try
+        {
+            document = JsonDocument.Parse(json);
+        }
+        catch (JsonException ex)
+        {
+            error = "Malformed manifest: " + ex.Message;
+            return false;
+        }
+
+        using (document)
+        {
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                error = "The manifest is not a JSON object.";
+                return false;
+            }
+
+            if (!TryGetString(root, "version", out var version) || !SnapshotVersion.IsYearMonth(version))
+            {
+                error = "The manifest has no valid 'version' (yyyymm).";
+                return false;
+            }
+
+            string? file = null;
+            if (root.TryGetProperty("file", out var fileElement) && fileElement.ValueKind != JsonValueKind.Null)
+            {
+                file = fileElement.ValueKind == JsonValueKind.String ? fileElement.GetString() : null;
+                if (!string.Equals(file, feed.FileNameFor(version!), StringComparison.Ordinal))
+                {
+                    error = $"The manifest 'file' does not match '{feed.FileNameFor(version!)}'.";
+                    return false;
+                }
+            }
+
+            DateTimeOffset? generated = null;
+            if (TryGetString(root, "generated", out var generatedText)
+                && DateTimeOffset.TryParse(generatedText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+            {
+                generated = parsed;
+            }
+
+            string? sha256 = null;
+            if (root.TryGetProperty("sha256", out var shaElement) && shaElement.ValueKind != JsonValueKind.Null)
+            {
+                sha256 = shaElement.ValueKind == JsonValueKind.String ? shaElement.GetString() : null;
+                if (!IsSha256Hex(sha256))
+                {
+                    error = "The manifest 'sha256' is not 64 hexadecimal characters.";
+                    return false;
+                }
+                sha256 = sha256!.ToLowerInvariant();
+            }
+
+            long? size = null;
+            if (root.TryGetProperty("size", out var sizeElement) && sizeElement.ValueKind != JsonValueKind.Null)
+            {
+                if (sizeElement.ValueKind != JsonValueKind.Number || !sizeElement.TryGetInt64(out var value) || value <= 0)
+                {
+                    error = "The manifest 'size' is not a positive integer.";
+                    return false;
+                }
+                size = value;
+            }
+
+            string? country = null;
+            if (root.TryGetProperty("country", out var countryElement) && countryElement.ValueKind != JsonValueKind.Null)
+            {
+                if (countryElement.ValueKind != JsonValueKind.String
+                    || !CountryCode.TryParse(countryElement.GetString(), out var parsedCountry))
+                {
+                    error = "The manifest 'country' is not a country code.";
+                    return false;
+                }
+                if (parsedCountry != feed.Country)
+                {
+                    error = $"The manifest is for {parsedCountry.Value}, not {feed.Country.Value}.";
+                    return false;
+                }
+                country = parsedCountry.Value;
+            }
+
+            manifest = new CatalogueFeedManifest(version!, file, generated, sha256, size) { Country = country };
+            error = null;
+            return true;
+        }
+    }
+
+    private static bool TryGetString(JsonElement root, string name, out string? value)
+    {
+        value = null;
+        if (!root.TryGetProperty(name, out var element) || element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+        value = element.GetString();
+        return !string.IsNullOrEmpty(value);
+    }
+
+    private static bool IsSha256Hex(string? value)
+    {
+        if (value is null || value.Length != 64)
+        {
+            return false;
+        }
+        foreach (var c in value)
+        {
+            if (!char.IsAsciiHexDigit(c))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+}
