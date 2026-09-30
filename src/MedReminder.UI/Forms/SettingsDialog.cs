@@ -403,6 +403,14 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         // taller than one line, would otherwise centre the label below
         // the field's first line (ANALYSIS-UI-MODERNIZATION L6).
         var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Top | AnchorStyles.Left, Margin = new Padding(UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.M, UiTheme.Space.XS) };
+        // A table clamps a child to its cell, and a fixed-width field is
+        // never grown back: after one layout pass with a narrow column
+        // (the section is measured before it is docked) the time picker
+        // and number boxes stayed 1 px wide. The minimum keeps them.
+        if (!input.AutoSize && input.Dock == DockStyle.None && (input.Anchor & AnchorStyles.Right) == 0)
+        {
+            input.MinimumSize = new System.Drawing.Size(input.Width, input.MinimumSize.Height);
+        }
         table.RowCount++;
         table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         table.Controls.Add(lbl, 0, table.RowCount - 1);
