@@ -30,6 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #138 — Record unchanged recipients a legacy profile group has no version of
+
+Link: [vger70/MedReminder#138](https://github.com/vger70/MedReminder/pull/138)
+Branch: `claude/replicate-unchanged-recipients` → `feature/master-slave`
+
+### Fixed
+
+- Settings → Notifications: saving unchanged addresses now records the
+  addresses the profile group has no version of (a group created before
+  P8). Before, the save returned early, so a device that joined the
+  installation kept empty recipients even after a re-save and a sync.
+  Found by manual test H3c/H3d-1
+  (`src/MedReminder.Application/UseCases/ProfileSettingsUseCases.cs`).
+
+### Docs
+
+- `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`: H3c/H3d-1 checks the
+  recipients on the joined device, and the re-save for a legacy group.
+
+---
+
 ## PR #136 — Show the pairing code on request instead of hiding its window from capture
 
 Link: [vger70/MedReminder#136](https://github.com/vger70/MedReminder/pull/136)

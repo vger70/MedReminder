@@ -11,8 +11,9 @@ namespace MedReminder.Application.UseCases;
 // emails. Each changed address is a ProfileSettingChanged operation, so
 // the other devices of the profile's sync group get it. An address
 // that has no version in the group yet (a group created before the
-// settings were replicated) is recorded on the first save too, so the
-// devices end up with the same three addresses. The caller validates
+// settings were replicated) is recorded on the first save too, even when
+// no address changed, so the devices end up with the same three
+// addresses. The caller validates
 // the addresses.
 public sealed class UpdateNotificationSettings
 {
@@ -44,8 +45,9 @@ public sealed class UpdateNotificationSettings
             var changes = wanted
                 .Where(w => !string.Equals(current.GetValueOrDefault(w.Key) ?? string.Empty, w.Value, StringComparison.Ordinal))
                 .ToDictionary(w => w.Key, w => w.Value, StringComparer.Ordinal);
-            if (changes.Count == 0) return true;
-
+            // An unchanged save still records the addresses the group has
+            // no version of: otherwise a group created before the settings
+            // were replicated never carries them to a device that joins.
             var recorded = new List<SyncOperationBody>();
             foreach (var (setting, value) in wanted)
             {
@@ -56,11 +58,12 @@ public sealed class UpdateNotificationSettings
                     recorded.Add(new ProfileSettingChanged(setting, value));
                 }
             }
+            if (recorded.Count == 0) return true;
             // The log first: if the file write fails, the next sync run
             // projects the recorded value into it.
             await _operations.AppendAsync(recorded, ct);
             await _uow.SaveChangesAsync(ct);
-            _store.Write(changes);
+            if (changes.Count > 0) _store.Write(changes);
             return true;
         }, cancellationToken);
 }
