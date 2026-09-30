@@ -30,6 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #142 — Rewrite the user guides around tasks and cover the household features
+
+Link: [vger70/MedReminder#142](https://github.com/vger70/MedReminder/pull/142)
+Branch: `claude/household-user-guides` → `feature/master-slave`
+
+### Docs
+
+- User guides (en, it, fr, es, de) rewritten with one structure: contents
+  with stable anchors, "where to find what", a "Several computers"
+  chapter (sync, shared installation, master device, handover, device
+  removal), intake and administration-time sections, and problems and
+  answers keyed on the app's messages.
+- Menu paths aligned with the UI dictionaries; removed the outdated
+  "does not sync between devices" and duplicate low-stock email
+  statements; data layout lists `household\`, `sync.*` and
+  `cloud-backup.protected`.
+- `README.md`: several-devices features, cloud backup of every profile,
+  sync and household runtime files, updated known limitations.
+
+---
+
 ## PR #141 — Merge main into feature/master-slave
 
 Link: [vger70/MedReminder#141](https://github.com/vger70/MedReminder/pull/141)
