@@ -7,7 +7,7 @@ the merge rules and the use cases on Linux and Windows; these tests
 cover what they cannot: the WinForms windows, DPAPI, the real storages
 (folder, OneDrive, Google Drive), MailKit and several real PCs.
 
-Status on 2026-09-29: H1–H5 written.
+Status on 2026-09-30: H1–H5 run before the merge into `main` (PR #129).
 
 ## Setup
 

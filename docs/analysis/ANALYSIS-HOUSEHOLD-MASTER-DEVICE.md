@@ -5,10 +5,9 @@ Design document, **prior** to implementation. It extends B.1
 "one installation spread over several devices", with one device acting
 as master.
 
-Status on 2026-09-29: revision 15 (§18 lists the revisions). Steps H0
-to H5 are implemented. The merge into `main` (D-16, PR #129) waits for
-the manual tests. Manual tests:
-`docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`.
+Status on 2026-09-30: revision 15 (§18 lists the revisions). Steps H0
+to H5 are implemented and merged into `main` (D-16, PR #129) after the
+manual tests (`docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`).
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 topics below, this document wins once approved. §16 lists the

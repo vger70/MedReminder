@@ -335,7 +335,7 @@ Branch: `claude/aifa-catalog-auto-update-jrkles`
 Link: [vger70/MedReminder#129](https://github.com/vger70/MedReminder/pull/129)
 Branch: `feature/master-slave` → `main`
 
-**Status:** draft, on hold until the manual tests pass
+**Status:** merged (2026-09-30), after the manual tests
 (`docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`).
 
 ### Added
