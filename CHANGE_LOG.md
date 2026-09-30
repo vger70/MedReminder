@@ -30,6 +30,32 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #147 — Replace the Settings tabs with a section list
+
+Link: [vger70/MedReminder#147](https://github.com/vger70/MedReminder/pull/147)
+Branch: `claude/ui-phase4-settings` → `main`
+
+### Changed
+
+- Settings lists its sections on the left and shows one at a time
+  under a heading; Ctrl+Tab and Ctrl+PageDown move between sections.
+- The Settings window can be resized (minimum 760×520) and uses the
+  10 pt base font.
+- Each Settings section lives in its own source file; no behaviour
+  change.
+
+### Fixed
+
+- Settings tab headers stayed light in dark mode.
+- With Large text at 150 % the Settings Close button was about twice
+  its size; long German section names are no longer cut.
+- Auto-sized buttons in every window are no longer scaled twice at
+  display scaling above 100 %.
+- Settings → Backup: the folder fields take the section's width, so
+  the Browse buttons stay visible, and the passphrase and account rows
+  wrap instead of cutting their text; the storage-location list is
+  wider.
+
 ## PR #146 — Redesign the main window around a summary and a navigation pane
 
 Link: [vger70/MedReminder#146](https://github.com/vger70/MedReminder/pull/146)

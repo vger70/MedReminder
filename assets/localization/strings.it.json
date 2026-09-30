@@ -779,7 +779,7 @@
   "Ui.SettingsDialog.Notifications.DoctorAddress.Label": "E-mail del medico (facoltativa)",
   "Ui.SettingsDialog.Notifications.DoctorAddress.Help": "Usata solo come destinatario delle richieste di ricetta che invii tu (Terapia > Richiedi ricetta). Le notifiche automatiche non vengono mai inviate a questo indirizzo.",
   "Ui.SettingsDialog.Notifications.DoctorAddress.Invalid": "Inserisci un indirizzo e-mail valido per il medico.",
-  "Ui.SettingsDialog.Notifications.NoteAdmin": "Puoi modificare anche il server SMTP condiviso nella scheda Email.",
+  "Ui.SettingsDialog.Notifications.NoteAdmin": "Puoi modificare anche il server SMTP condiviso nella sezione Email SMTP.",
   "Ui.SettingsDialog.Notifications.NoteUser": "Per modificare l'account SMTP o la configurazione del backup, chiedi all'amministratore del profilo.",
   "Ui.SettingsDialog.Notifications.MyPin": "Il mio PIN",
   "Ui.SettingsDialog.Notifications.PinStateSet": "Stato PIN: impostato.",

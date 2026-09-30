@@ -350,13 +350,23 @@ and button captions.
 | Palette migration pulled forward | Done | Main grid status and error banner, timeline dark palette, autocomplete badge: without it the dark mode would show light tints under light text |
 | 1.0 Screenshot baseline | Done | 12 captures by the product owner (§6c) |
 | 2 Controls, typography, icons | Done for the main window, Settings and the medicine editor (PR #145) | Baseline fixes S1, S3, S4, L1–L3, L5, L6 (label alignment), P1; one 10 pt base font set by `MedReminderFormBase`; icons drawn at the scaled size, Segoe Fluent Icons when installed. The 32 px buttons and the spacing scale in the other dialogs move to step 5 |
-| 3 Main window | Done, pending Windows check | `Controls/NavigationPane.cs` (D3), `Controls/SummaryCard.cs`, `MedicineListFilter` (Application, unit-tested), toolbar with New medicine, Register intake and search (D4, Ctrl+F), grid context menu, status pill, 36 px rows; main-window section of the five user guides |
+| 3 Main window | Done (PR #146) | `Controls/NavigationPane.cs` (D3), `Controls/SummaryCard.cs`, `MedicineListFilter` (Application, unit-tested), toolbar with New medicine, Register intake and search (D4, Ctrl+F), grid context menu, status pill, 36 px rows; main-window section of the five user guides |
+| 4 Settings | Done, pending Windows check | Section list (`NavigationPane`) on the left, one section shown at a time with a heading, Ctrl+Tab / Ctrl+PageDown between sections; window resizable, minimum 760×520; each section in its own partial file `Forms/SettingsDialog.<Section>.cs` instead of a `UserControl` (see below); Notifications line in the five user guides |
 
 The summary cards count the rows the grid can show before the card and
 search filters (active medicines, plus inactive ones when shown), so a
 card always shows how many rows a click on it lists. A second click on
 the active card clears the filter; opening a medicine from the timeline
 clears a filter that would hide it.
+
+Settings sections are partial files of `SettingsDialog`, not the
+`UserControl` per section planned in §5.2. The sections share about
+twenty injected services and cross-section state (the cloud warning
+reads the backup fields, the General save prompts the restart shared
+with the text size), which a `UserControl` split would have to pass
+around; the partial files move the code without changing it, so the
+refactor carries no behaviour change. The dialog frame and the section
+list stay in `SettingsDialog.cs`.
 
 ## 6c. Screenshot baseline (step 1.0)
 

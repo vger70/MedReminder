@@ -14,17 +14,21 @@ internal sealed class NavigationPane : FlowLayoutPanel
     // Sizes at 96 DPI and text size Normal; MedReminderFormBase scales
     // the pane's bounds and fonts on load like any other control.
     private const int ItemHeight = 40;
-    private const int ExpandedWidth = 240;
+    private const int DefaultExpandedWidth = 240;
+
+    private readonly int _expandedWidth;
 
     private readonly ToolTip _tips = new();
     private bool _collapsed;
 
-    public NavigationPane()
+    // Settings passes a wider pane for its longer German captions.
+    public NavigationPane(int expandedWidth = DefaultExpandedWidth)
     {
+        _expandedWidth = expandedWidth;
         FlowDirection = FlowDirection.TopDown;
         WrapContents = false;
         AutoScroll = true;
-        Width = ExpandedWidth;
+        Width = _expandedWidth;
         Padding = new Padding(UiTheme.Space.S, UiTheme.Space.M, UiTheme.Space.S, UiTheme.Space.M);
         Margin = Padding.Empty;
         BackColor = UiTheme.Palette.Background;
@@ -38,7 +42,7 @@ internal sealed class NavigationPane : FlowLayoutPanel
         var item = new NavigationItem(text, glyph, opensWindow)
         {
             Height = ItemHeight,
-            Width = ExpandedWidth - Padding.Horizontal,
+            Width = _expandedWidth - Padding.Horizontal,
             Margin = new Padding(0, 0, 0, UiTheme.Space.XS),
         };
         item.Click += (_, _) => onClick();
@@ -51,7 +55,7 @@ internal sealed class NavigationPane : FlowLayoutPanel
         Controls.Add(new Panel
         {
             Height = 1,
-            Width = ExpandedWidth - Padding.Horizontal,
+            Width = _expandedWidth - Padding.Horizontal,
             Margin = new Padding(UiTheme.Space.S, UiTheme.Space.S, UiTheme.Space.S, UiTheme.Space.S),
             BackColor = UiTheme.Palette.Border,
         });
@@ -78,7 +82,7 @@ internal sealed class NavigationPane : FlowLayoutPanel
         var itemHeight = Controls.OfType<NavigationItem>().FirstOrDefault()?.Height ?? ItemHeight;
         var itemWidth = _collapsed
             ? itemHeight
-            : (int)Math.Round(itemHeight * (ExpandedWidth - Padding.Horizontal) / (float)ItemHeight);
+            : (int)Math.Round(itemHeight * (_expandedWidth - Padding.Horizontal) / (float)ItemHeight);
         SuspendLayout();
         foreach (Control child in Controls)
         {

@@ -151,7 +151,7 @@ internal sealed class ProfilePickerForm : MedReminderFormBase
     {
         Text = text,
         AutoSize = true,
-        AutoSizeMode = AutoSizeMode.GrowOnly,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
         MinimumSize = new System.Drawing.Size(88, 32),
         Padding = new Padding(UiTheme.Space.M, 0, UiTheme.Space.M, 0),
         Margin = new Padding(UiTheme.Space.S, 0, 0, 0),

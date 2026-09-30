@@ -455,7 +455,7 @@ their rules: if the test fails, check your provider's instructions.
 - **Doctor e-mail (optional)** — used only for prescription requests
   you send yourself; automatic reminders never go there.
 
-Click **Save recipients**. In the same tab, **My PIN** lets you set or
+Click **Save recipients**. In the same section, **My PIN** lets you set or
 change the PIN of your own profile.
 
 ---
@@ -831,7 +831,8 @@ Also sign the lost device out in your Microsoft or Google account.
 <a id="settings"></a>
 ## 10. Settings and everyday use
 
-All in **Tools → Settings…**:
+All in **Tools → Settings…**. The sections are listed on the left;
+**Ctrl+Tab** moves to the next one. The window can be resized.
 
 - **General → Interface language**: English, Italian, French, Spanish
   or German. Emails and the therapy report use it too. MedReminder

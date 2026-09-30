@@ -477,7 +477,7 @@ prova fallisce, controlla le istruzioni del tuo provider.
 - **E-mail del medico (facoltativa)** — usata solo per le richieste di
   ricetta che invii tu; gli avvisi automatici non ci vanno mai.
 
-Fai clic su **Salva destinatari**. Nella stessa scheda, **Il mio PIN**
+Fai clic su **Salva destinatari**. Nella stessa sezione, **Il mio PIN**
 permette di impostare o cambiare il PIN del tuo profilo.
 
 ---
@@ -883,7 +883,9 @@ Microsoft o Google.
 <a id="settings"></a>
 ## 10. Impostazioni e uso quotidiano
 
-Tutto in **Strumenti → Impostazioni…**:
+Tutto in **Strumenti → Impostazioni…**. Le sezioni sono elencate a
+sinistra; **Ctrl+Tab** passa alla successiva. La finestra si può
+ridimensionare.
 
 - **Generale → Lingua interfaccia**: Inglese, Italiano, Francese,
   Spagnolo o Tedesco. Anche le email e la scheda terapia la usano.

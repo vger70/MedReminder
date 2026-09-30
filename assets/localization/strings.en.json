@@ -779,7 +779,7 @@
   "Ui.SettingsDialog.Notifications.DoctorAddress.Label": "Doctor e-mail (optional)",
   "Ui.SettingsDialog.Notifications.DoctorAddress.Help": "Used only as the recipient of the prescription requests you send yourself (Therapy > Request prescription). Automatic notifications are never sent to this address.",
   "Ui.SettingsDialog.Notifications.DoctorAddress.Invalid": "Enter a valid e-mail address for the doctor.",
-  "Ui.SettingsDialog.Notifications.NoteAdmin": "You can also change the shared SMTP server in the Email tab.",
+  "Ui.SettingsDialog.Notifications.NoteAdmin": "You can also change the shared SMTP server in the Email SMTP section.",
   "Ui.SettingsDialog.Notifications.NoteUser": "To change the SMTP account or the backup configuration, please ask the profile administrator.",
   "Ui.SettingsDialog.Notifications.MyPin": "My PIN",
   "Ui.SettingsDialog.Notifications.PinStateSet": "PIN status: set.",
