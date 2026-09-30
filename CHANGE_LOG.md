@@ -42,7 +42,8 @@ Branch: `claude/ui-phase2-controls` → `main`
   reads at AA contrast.
 - Wrapped German column headers in the main window are no longer cut;
   medicine editor labels no longer split mid-word; Settings → General
-  groups are spaced.
+  groups are spaced and, with Large text at 150 %, scroll instead of
+  wrapping into a second column.
 
 ### Changed
 

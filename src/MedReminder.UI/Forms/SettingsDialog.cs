@@ -377,11 +377,16 @@ internal sealed class SettingsDialog : MedReminderFormBase
             Text = _loc.Get("Ui.SettingsDialog.General.Note"),
         };
 
+        // A top-down flow wraps into a second column when the tab is
+        // shorter than its content (Large text, 150 % scaling); it
+        // scrolls instead.
         var panel = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
+            WrapContents = false,
+            AutoScroll = true,
         };
         panel.Controls.Add(languageLabel);
         panel.Controls.Add(_languageCombo);
@@ -811,6 +816,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
+            WrapContents = false,
             AutoScroll = true,
         };
         container.Controls.Add(table);
@@ -1012,11 +1018,16 @@ internal sealed class SettingsDialog : MedReminderFormBase
             ForeColor = UiColors.Hint,
         };
 
+        // A top-down flow wraps into a second column when the tab is
+        // shorter than its content (Large text, 150 % scaling); it
+        // scrolls instead.
         var panel = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
+            WrapContents = false,
+            AutoScroll = true,
         };
         panel.Controls.Add(_autoStartCheck);
         panel.Controls.Add(note);

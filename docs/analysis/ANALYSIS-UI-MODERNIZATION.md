@@ -372,6 +372,8 @@ Dark + DE, the main window also at 150 % display scaling. Findings:
 | L2 | Wrapped German column headers cut ("Verbleibende Tage", "Aufgebraucht am") | Main window | Header height sized to the captions |
 | L3 | Help texts touch the next label | Settings → General | 16 px above each group |
 | I1 | Toolbar and menu glyphs stay at 24/16 px while text grows with Large and 150 % | Main window | Glyphs rendered at the scaled size |
+| L5 | At 150 % + Large the General tab is taller than the window and its top-down flow wraps the last note into a second column | Settings → General | Top-down flows in Settings scroll instead of wrapping |
+| L6 | Medicine editor labels sit lower than their fields in the Name and Active ingredient rows at 150 % + Large | Medicine editor | Open: to check on the step 2 build |
 
 Display scaling itself works: the main window at 150 % + Large is
 1.86 times the 100 % + Normal capture (1.5 × 1.25 = 1.875 expected).
