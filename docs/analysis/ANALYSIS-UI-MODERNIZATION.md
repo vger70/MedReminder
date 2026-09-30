@@ -192,9 +192,9 @@ change (F11).
 
 ## 5. Layout proposals
 
-Mockups: HTML page (private link, shared on request):
-https://claude.ai/artifact/2uFqZT6oVJHqohxf9nXhmm. Published with the PR of this document
-(light and dark). They show intent, not pixel values.
+Mockups, light and dark: HTML page at
+https://claude.ai/artifact/2uFqZT6oVJHqohxf9nXhmm (private, shared on
+request). They show intent, not pixel values.
 
 ### 5.1 Main window
 
