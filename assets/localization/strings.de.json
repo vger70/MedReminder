@@ -1130,5 +1130,7 @@
   "Ui.HouseholdDialog.NewKey.Done": "Fertig: Dieses Gerät synchronisiert die Installation wieder. Zwischenzeitliche Änderungen hier bleiben erhalten.",
   "Ui.HouseholdDialog.NewKey.WrongPassphrase": "Die Passphrase öffnet den neuen Schlüssel der Installation nicht.",
   "Ui.HouseholdDialog.RemoveDevice.NotHeld": "Dieses Gerät hat nicht alle Profile des zu entfernenden Geräts ({0}): Deren Schlüssel könnten nicht geändert werden. Entfernen Sie es vom Master-Gerät aus, das alle Profile hat.",
-  "Ui.MainForm.RotatedKey.Prompt": "Ein Gerät wurde aus der Installation entfernt und dieses Profil hat einen neuen Schlüssel. MedReminder übernimmt ihn beim Neustart; bis dahin wird dieses Profil nicht synchronisiert. Jetzt neu starten?"
+  "Ui.MainForm.RotatedKey.Prompt": "Ein Gerät wurde aus der Installation entfernt und dieses Profil hat einen neuen Schlüssel. MedReminder übernimmt ihn beim Neustart; bis dahin wird dieses Profil nicht synchronisiert. Jetzt neu starten?",
+  "Ui.SyncDialog.Pair.Reveal": "Code anzeigen",
+  "Ui.SyncDialog.Pair.RevealHint": "Zeigen Sie ihn erst, wenn das andere Gerät bereit ist: Ab dann kann jeder, der den Bildschirm sieht oder aufzeichnet, auch per Fernwartung, ihn nutzen, bis er abläuft oder dieses Fenster geschlossen wird."
 }

@@ -88,7 +88,9 @@ profile and restarts; the profile appears in the picker with its PIN;
 PC2's local profile is added to the installation at the start; SMTP,
 backup policy and reference country are PC1's. The closed or expired
 code is refused ("expired"); a newer code refuses the older one. The
-code window cannot be captured by a screenshot tool.
+code window opens with the code hidden until "Show the code"; it is
+visible and usable through a remote-control tool (RustDesk, Remote
+Desktop).
 
 ### H3c/H3d-1 — Join with the passphrase
 

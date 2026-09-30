@@ -1038,8 +1038,10 @@ o carpeta.
   cerrar la ventana se retira.
 - Quien lea el código mientras es válido puede leer los datos del
   grupo: muéstrelo solo a sus propios dispositivos y no lo envíe por
-  mensaje ni por correo. La ventana no aparece en las capturas de
-  pantalla.
+  mensaje ni por correo. El código permanece oculto hasta que elija
+  **Mostrar el código**: muéstrelo solo cuando el otro dispositivo esté
+  listo, porque desde ese momento quien vea o grabe la pantalla
+  (asistencia remota incluida) puede usarlo.
 
 ### Cambiar la clave, quitar un PC perdido
 

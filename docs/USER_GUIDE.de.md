@@ -1078,8 +1078,10 @@ denselben Ordner.
   Beim Schließen des Fensters wird er zurückgezogen.
 - Wer den Code liest, solange er gültig ist, kann die Daten der Gruppe
   lesen: Zeigen Sie ihn nur Ihren eigenen Geräten und senden Sie ihn
-  nicht per Nachricht oder E-Mail. Das Fenster erscheint nicht auf
-  Bildschirmfotos.
+  nicht per Nachricht oder E-Mail. Der Code bleibt verborgen, bis Sie
+  **Code anzeigen** wählen: Zeigen Sie ihn erst, wenn das andere Gerät
+  bereit ist, denn ab dann kann jeder, der den Bildschirm sieht oder
+  aufzeichnet (auch per Fernwartung), ihn nutzen.
 
 ### Schlüssel ändern, einen verlorenen PC entfernen
 
