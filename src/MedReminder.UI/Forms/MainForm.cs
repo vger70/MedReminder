@@ -991,8 +991,8 @@ internal sealed class MainForm : MedReminderFormBase
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             if (view is null || !_handoverAsked.Add(view.Election.ElectionId)) return;
-            if (MessageBox.Show(this, _loc.Get("Ui.HandoverWizard.Prompt"), _loc.Get("Ui.HandoverWizard.Title"),
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.HandoverWizard.Prompt"), _loc.Get("Ui.HandoverWizard.Title"),
+                    MessageBoxIcon.Question) != DialogResult.Yes)
             {
                 return;
             }
@@ -1018,8 +1018,8 @@ internal sealed class MainForm : MedReminderFormBase
             if (key is null) return;
             System.Security.Cryptography.CryptographicOperations.ZeroMemory(key.Key);
             _rotatedKeyAsked = true;
-            if (MessageBox.Show(this, _loc.Get("Ui.MainForm.RotatedKey.Prompt"), _loc.Get("Ui.HouseholdDialog.Title"),
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.MainForm.RotatedKey.Prompt"), _loc.Get("Ui.HouseholdDialog.Title"),
+                    MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 _restarter.RestartAndExit(["--profile", _currentProfile.Id]);
             }
@@ -1698,10 +1698,10 @@ internal sealed class MainForm : MedReminderFormBase
         var row = GetSelectedRow();
         if (row is null) return;
 
-        var confirm = MessageBox.Show(this,
+        var confirm = ConfirmDialog.Show(_loc, this,
             _loc.Get("Ui.MainForm.Deactivate.Confirm", row.Name),
             _loc.Get("Ui.MainForm.Deactivate.Confirm.Title"),
-            MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            MessageBoxIcon.Question);
         if (confirm != DialogResult.Yes) return;
 
         try
@@ -1746,10 +1746,10 @@ internal sealed class MainForm : MedReminderFormBase
                 return;
             }
 
-            var confirm = MessageBox.Show(this,
+            var confirm = ConfirmDialog.Show(_loc, this,
                 _loc.Get("Ui.MainForm.Delete.Confirm", row.Name),
                 _loc.Get("Ui.MainForm.Delete.Title"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+                MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
             if (confirm != DialogResult.Yes) return;
 
             DeleteMedicineOutcome outcome;

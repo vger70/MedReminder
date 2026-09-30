@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #150 — Ask confirmations in the app language and give the wizards the template buttons
+
+Link: [vger70/MedReminder#150](https://github.com/vger70/MedReminder/pull/150)
+Branch: `claude/ui-phase5c-wizards-confirmations` → `main`
+
+### Changed
+
+- Confirmation questions show Yes and No in the language chosen in
+  MedReminder instead of the Windows language.
+- The first-run and handover wizards use the same buttons as the other
+  dialogs, with the main action last; the first-run wizard uses the
+  10 pt base font and shows its errors under the fields.
+
 ## PR #149 — Apply the dialog template to the large dialogs
 
 Link: [vger70/MedReminder#149](https://github.com/vger70/MedReminder/pull/149)

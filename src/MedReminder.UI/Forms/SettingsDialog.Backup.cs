@@ -469,8 +469,8 @@ internal sealed partial class SettingsDialog
     {
         var synced = File.Exists(Path.Combine(AppDataPaths.GetProfileDataDirectory(profileId), "sync.settings.json"));
         if (!synced) return true;
-        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.ResetWarning"), _loc.Get("Common.Warning"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.ResetWarning"), _loc.Get("Common.Warning"),
+                MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return false;
         }
@@ -739,10 +739,10 @@ internal sealed partial class SettingsDialog
         var targetProfileId = chooser.SelectedProfileId;
         if (string.IsNullOrWhiteSpace(targetProfileId)) return;
 
-        var confirm = MessageBox.Show(this,
+        var confirm = ConfirmDialog.Show(_loc, this,
             _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirm"),
             _loc.Get("Ui.SettingsDialog.Backup.RestoreConfirmTitle"),
-            MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            MessageBoxIcon.Warning);
         if (confirm != DialogResult.Yes) return;
         if (!await ConfirmSyncResetAsync(targetProfileId)) return;
 

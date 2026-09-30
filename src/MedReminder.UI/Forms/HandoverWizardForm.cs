@@ -93,7 +93,7 @@ internal sealed class HandoverWizardForm : MedReminderFormBase
         _smtpResult = new Label { AutoSize = true, MaximumSize = new Size(width, 0) };
         if (!string.IsNullOrWhiteSpace(smtp.Host))
         {
-            var test = new Button { Text = _loc.Get("Ui.HandoverWizard.SmtpTest"), AutoSize = true, Height = 32 };
+            var test = DialogLayout.Button(_loc.Get("Ui.HandoverWizard.SmtpTest"));
             test.Click += async (_, _) => await RunAsync(test, TestSmtpAsync);
             Add(layout, test);
             Add(layout, _smtpResult);
@@ -104,7 +104,7 @@ internal sealed class HandoverWizardForm : MedReminderFormBase
         if (_backup.CloudFolderEnabled && _backup.CloudProvider is { } cloud)
         {
             Add(layout, Heading(_loc.Get("Ui.HandoverWizard.Cloud")));
-            var signIn = new Button { Text = _loc.Get("Ui.HandoverWizard.CloudSignIn", cloud), AutoSize = true, Height = 32 };
+            var signIn = DialogLayout.Button(_loc.Get("Ui.HandoverWizard.CloudSignIn", cloud));
             signIn.Click += async (_, _) => await RunAsync(signIn, () => SignInAsync(cloud));
             Add(layout, signIn);
             Add(layout, _cloudResult);
@@ -126,22 +126,15 @@ internal sealed class HandoverWizardForm : MedReminderFormBase
             Add(layout, _householdPassphraseBox);
         }
 
-        _confirm = new Button { Text = _loc.Get("Ui.HandoverWizard.Confirm"), AutoSize = true, Height = 32 };
+        _confirm = DialogLayout.Button(_loc.Get("Ui.HandoverWizard.Confirm"));
         _confirm.Click += async (_, _) => await RunAsync(_confirm, ConfirmAsync);
-        var later = new Button { Text = _loc.Get("Ui.HandoverWizard.Later"), DialogResult = DialogResult.Cancel, AutoSize = true, Height = 32 };
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(later);
-        buttons.Controls.Add(_confirm);
+        var later = DialogLayout.Button(_loc.Get("Ui.HandoverWizard.Later"), DialogResult.Cancel);
+        var buttons = DialogLayout.ButtonBar(this, _confirm, later);
+        // Enter in a passphrase box must not confirm the handover.
+        AcceptButton = null;
 
         Controls.Add(layout);
         Controls.Add(buttons);
-        CancelButton = later;
         FormClosing += (_, e) =>
         {
             if (_busy > 0 && e.CloseReason is CloseReason.UserClosing or CloseReason.None && DialogResult != DialogResult.OK)

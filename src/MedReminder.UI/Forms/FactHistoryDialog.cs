@@ -121,10 +121,10 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
     {
         if (Selected is not { CanRetract: true } item) return;
 
-        var confirm = MessageBox.Show(this,
+        var confirm = ConfirmDialog.Show(_loc, this,
             _loc.Get("Ui.FactHistoryDialog.Confirm"),
             _loc.Get("Ui.FactHistoryDialog.Confirm.Title"),
-            MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+            MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
         if (confirm != DialogResult.Yes) return;
 
         try

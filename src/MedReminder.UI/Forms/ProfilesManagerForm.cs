@@ -322,8 +322,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
                 ? "Ui.ProfilesManagerForm.Role.ConfirmPromote"
                 : "Ui.ProfilesManagerForm.Role.ConfirmPromoteNoPin", selected.DisplayName)
             : _loc.Get("Ui.ProfilesManagerForm.Role.ConfirmDemote", selected.DisplayName);
-        if (MessageBox.Show(this, text, _loc.Get("Ui.ProfilesManagerForm.Role.Title"), MessageBoxButtons.YesNo,
-                promote && !selected.HasPin ? MessageBoxIcon.Warning : MessageBoxIcon.Question,
+        if (ConfirmDialog.Show(_loc, this, text, _loc.Get("Ui.ProfilesManagerForm.Role.Title"), promote && !selected.HasPin ? MessageBoxIcon.Warning : MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;

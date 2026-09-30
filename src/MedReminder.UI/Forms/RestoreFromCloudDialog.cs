@@ -412,11 +412,10 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
             }
 
             _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Restore.Success");
-            var restart = MessageBox.Show(
+            var restart = ConfirmDialog.Show(_loc, 
                 this,
                 _loc.Get("Ui.RestoreCloudDialog.RestartPrompt"),
                 _loc.Get("Ui.RestoreCloudDialog.RestartPrompt.Title"),
-                MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information);
             RestartRequested = restart == DialogResult.Yes;
             DialogResult = DialogResult.OK;
