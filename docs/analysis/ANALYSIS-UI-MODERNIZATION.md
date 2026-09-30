@@ -194,10 +194,11 @@ Setting: **Appearance** = System (default), Light, Dark, in Settings →
 General. Scope: device × profile, stored in the profile's
 `ui.settings.json` next to the text size; not replicated by the
 household sync, same rule as the text size
-(ANALYSIS-HOUSEHOLD-MASTER-DEVICE §3). Windows shown before a profile
-is chosen (profile picker, PIN prompt, first-run wizard) follow
-Windows. A change applies after restart, which the app already offers
-for the language and the text size (D5): colours assigned when a
+(ANALYSIS-HOUSEHOLD-MASTER-DEVICE §3). The first-run wizard follows
+Windows; the profile picker takes the appearance of the profile used
+last, the PIN prompt that of the profile being opened. A change
+applies after restart, which the app already offers for the language
+and the text size (D5): colours assigned when a
 window is built do not follow a live `SetColorMode` call.
 
 When Windows runs a high-contrast theme, the High contrast palette
@@ -373,7 +374,8 @@ Dark + DE, the main window also at 150 % display scaling. Findings:
 | L3 | Help texts touch the next label | Settings → General | 16 px above each group |
 | I1 | Toolbar and menu glyphs stay at 24/16 px while text grows with Large and 150 % | Main window | Glyphs rendered at the scaled size |
 | L5 | At 150 % + Large the General tab is taller than the window and its top-down flow wraps the last note into a second column | Settings → General | Top-down flows in Settings scroll instead of wrapping |
-| L6 | Medicine editor labels sit lower than their fields in the Name and Active ingredient rows at 150 % + Large | Medicine editor | Open: to check on the step 2 build |
+| L6 | Labels centred on rows taller than their field: Name and Active ingredient rows in the medicine editor at 150 % + Large (the rows are about twice the field height), wrapped labels in Settings → Notifications | Medicine editor, Settings | Labels aligned to the top of the row; the extra row height in the medicine editor is still open |
+| P1 | Profile picker light for a profile set to Dark: it followed Windows because no profile was known yet | Profile picker | Picker takes the last used profile's appearance, PIN prompt the chosen profile's |
 
 Display scaling itself works: the main window at 150 % + Large is
 1.86 times the 100 % + Normal capture (1.5 × 1.25 = 1.875 expected).

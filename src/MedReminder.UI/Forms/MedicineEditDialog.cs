@@ -907,7 +907,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private static void AddRow(TableLayoutPanel table, string label, Control input)
     {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.M, UiTheme.Space.XS) };
+        // Top-aligned with the field's first line: some rows are taller
+        // than their field (L6), and multi-line fields (notes, dose
+        // slots) should keep their label at the top.
+        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Top | AnchorStyles.Left, Margin = new Padding(UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.M, UiTheme.Space.XS) };
         table.RowCount++;
         table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         table.Controls.Add(lbl, 0, table.RowCount - 1);

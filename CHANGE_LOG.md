@@ -43,7 +43,11 @@ Branch: `claude/ui-phase2-controls` → `main`
 - Wrapped German column headers in the main window are no longer cut;
   medicine editor labels no longer split mid-word; Settings → General
   groups are spaced and, with Large text at 150 %, scroll instead of
-  wrapping into a second column.
+  wrapping into a second column; form labels align with the top of
+  their field.
+- The profile picker uses the appearance of the profile used last, and
+  the PIN prompt that of the profile being opened, instead of always
+  following Windows.
 
 ### Changed
 

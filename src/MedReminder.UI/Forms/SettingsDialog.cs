@@ -2053,7 +2053,10 @@ internal sealed class SettingsDialog : MedReminderFormBase
 
     private static void AddRow(TableLayoutPanel table, string label, Control input)
     {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
+        // Top-aligned: a label that wraps to several lines, or a field
+        // taller than one line, would otherwise centre the label below
+        // the field's first line (ANALYSIS-UI-MODERNIZATION L6).
+        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Top | AnchorStyles.Left, Margin = new Padding(UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.M, UiTheme.Space.XS) };
         table.RowCount++;
         table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         table.Controls.Add(lbl, 0, table.RowCount - 1);

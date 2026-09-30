@@ -58,9 +58,10 @@ internal static class Program
     private static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
-        // Windows shown before a profile is chosen (picker, PIN prompt,
-        // first-run wizard) follow Windows; the profile's own choice is
-        // applied once it is known (ANALYSIS-UI-MODERNIZATION §4.4).
+        // Windows shown before a profile is known (first-run wizard)
+        // follow Windows; the picker takes the last used profile's
+        // appearance, the PIN prompt and the main window the chosen
+        // profile's (ANALYSIS-UI-MODERNIZATION §4.4).
         ApplyAppearance(AppearanceMode.System);
         Log.Logger = ConfigureSerilog();
 
@@ -167,6 +168,9 @@ internal static class Program
         }
     }
 
+    private static void ApplyProfileAppearance(Profile profile)
+        => ApplyAppearance(ProfileUiSettingsFile.ReadAppearance(new CurrentProfile(profile).DataDirectory));
+
     // Sets the WinForms colour mode and the strip renderer built from
     // the resulting palette. Applied before the windows it affects are
     // created; windows already open keep the look they were built with.
@@ -270,7 +274,14 @@ internal static class Program
             return VerifyPinIfNeeded(registry, profiles[0]);
         }
 
-        // Multiple profiles — picker.
+        // Multiple profiles — picker, drawn with the appearance of the
+        // profile used last: it is the one most likely to be chosen,
+        // and a dark profile no longer starts with a light picker.
+        var lastUsed = ResolveHintedProfile(registry, profiles);
+        if (lastUsed is not null)
+        {
+            ApplyProfileAppearance(lastUsed);
+        }
         using var picker = new ProfilePickerForm(registry, _bootstrapLoc);
         var pickerResult = picker.ShowDialog();
         if (pickerResult != System.Windows.Forms.DialogResult.OK || picker.SelectedProfile is null)
@@ -301,6 +312,8 @@ internal static class Program
         {
             return new CurrentProfile(profile);
         }
+        // The PIN prompt belongs to the profile being opened.
+        ApplyProfileAppearance(profile);
         using var prompt = new PinPromptForm(registry, profile, _bootstrapLoc);
         var result = prompt.ShowDialog();
         if (result != System.Windows.Forms.DialogResult.OK)
