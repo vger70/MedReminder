@@ -5,6 +5,7 @@ modernization: review of the current WinForms UI, target design
 system, layout proposals and phased plan. No code changes.
 
 Status on 2026-09-30: revision 3. Scope agreed with the product owner:
+Status on 2026-09-30: revision 2. Scope agreed with the product owner:
 options A (restyling) and B (UX redesign) of the preliminary estimate;
 a framework migration (WinUI 3, WPF, Avalonia) is out of scope.
 
