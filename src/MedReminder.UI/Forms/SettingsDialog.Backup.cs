@@ -41,13 +41,6 @@ internal sealed partial class SettingsDialog
 
         _backupDirectoryBox = new TextBox
         {
-            // Sized against the current SettingsDialog width so
-            // it never pushes the Backup tab into an horizontal
-            // scrollbar. Column 0 of BuildFormTable is 160 wide,
-            // container padding is 16 on each side, table padding
-            // is 12 on each side — the directory box + browse
-            // button must stay under (Width − 160 − 32 − 24).
-            Width = 460,
             Text = settings.Directory,
             ReadOnly = false,
         };
@@ -129,14 +122,7 @@ internal sealed partial class SettingsDialog
         UpdateCloudWarning();
         _backupDirectoryBox.TextChanged += (_, _) => UpdateCloudWarning();
 
-        var directoryRow = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            WrapContents = false,
-        };
-        directoryRow.Controls.Add(_backupDirectoryBox);
-        directoryRow.Controls.Add(browseButton);
+        var directoryRow = BuildPathRow(_backupDirectoryBox, browseButton);
 
         var table = BuildFormTable();
         AddRow(table, string.Empty, _backupEnabledBox);
@@ -210,8 +196,36 @@ internal sealed partial class SettingsDialog
         }
         container.Controls.Add(actionButtons);
         container.Controls.Add(note);
+        // A top-down flow sizes each child to its preferred width; the
+        // form tables follow the section's width instead, so the folder
+        // fields stretch and their Browse buttons stay visible.
+        container.ClientSizeChanged += (_, _) => FitTablesToWidth(container);
+        container.VisibleChanged += (_, _) => FitTablesToWidth(container);
         page.Controls.Add(container);
         return page;
+    }
+
+    private static void FitTablesToWidth(FlowLayoutPanel flow)
+    {
+        var width = flow.ClientSize.Width - flow.Padding.Horizontal;
+        if (width > 0) FitTablesToWidth(flow, width);
+    }
+
+    private static void FitTablesToWidth(FlowLayoutPanel flow, int width)
+    {
+        foreach (Control child in flow.Controls)
+        {
+            var childWidth = Math.Max(1, width - child.Margin.Horizontal);
+            if (child is TableLayoutPanel or FlowLayoutPanel { FlowDirection: FlowDirection.TopDown })
+            {
+                child.MinimumSize = new System.Drawing.Size(childWidth, 0);
+                child.MaximumSize = new System.Drawing.Size(childWidth, 0);
+            }
+            if (child is FlowLayoutPanel { FlowDirection: FlowDirection.TopDown } inner)
+            {
+                FitTablesToWidth(inner, childWidth - inner.Padding.Horizontal);
+            }
+        }
     }
 
     // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §5.1):
@@ -249,7 +263,6 @@ internal sealed partial class SettingsDialog
 
         _cloudDirectoryBox = new TextBox
         {
-            Width = 460,
             Text = settings.CloudFolderDirectory,
         };
         var cloudBrowseButton = new Button
@@ -259,14 +272,7 @@ internal sealed partial class SettingsDialog
         };
         cloudBrowseButton.Click += (_, _) => BrowseCloudDirectory();
         _cloudBrowseButton = cloudBrowseButton;
-        var cloudDirectoryRow = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            WrapContents = false,
-        };
-        cloudDirectoryRow.Controls.Add(_cloudDirectoryBox);
-        cloudDirectoryRow.Controls.Add(cloudBrowseButton);
+        var cloudDirectoryRow = BuildPathRow(_cloudDirectoryBox, cloudBrowseButton);
 
         _cloudRetentionBox = new NumericUpDown
         {
@@ -327,7 +333,7 @@ internal sealed partial class SettingsDialog
                 _cloudAccountIds[saved] = settings.CloudAccountId;
             }
             _cloudProviderChoices = [null, .. providers.Cast<CloudProvider?>()];
-            _cloudProviderBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
+            _cloudProviderBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 380 };
             foreach (var choice in _cloudProviderChoices)
             {
                 _cloudProviderBox.Items.Add(_loc.Get($"Ui.SettingsDialog.CloudBackup.Provider.{choice?.ToString() ?? "Folder"}"));

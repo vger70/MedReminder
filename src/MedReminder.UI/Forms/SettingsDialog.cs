@@ -374,6 +374,29 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         return table;
     }
 
+    // A folder field and its Browse button: the field takes the width
+    // the section leaves, so the button stays visible in a narrow
+    // window or with Large text (a fixed 460 px field pushed it out).
+    private static TableLayoutPanel BuildPathRow(TextBox path, Button browse)
+    {
+        var row = new TableLayoutPanel
+        {
+            ColumnCount = 2,
+            RowCount = 1,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        path.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        browse.Anchor = AnchorStyles.Left;
+        row.Controls.Add(path, 0, 0);
+        row.Controls.Add(browse, 1, 0);
+        return row;
+    }
+
     private static void AddRow(TableLayoutPanel table, string label, Control input)
     {
         // Top-aligned: a label that wraps to several lines, or a field

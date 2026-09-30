@@ -49,6 +49,10 @@ Branch: `claude/ui-phase4-settings` → `main`
 - Settings tab headers stayed light in dark mode.
 - With Large text at 150 % the Settings Close button was about twice
   its size; long German section names are no longer cut.
+- Auto-sized buttons in every window are no longer scaled twice at
+  display scaling above 100 %.
+- Settings → Backup: the folder fields take the section's width, so
+  the Browse buttons stay visible; the storage-location list is wider.
 
 ## PR #146 — Redesign the main window around a summary and a navigation pane
 
