@@ -495,7 +495,7 @@ instructions de ton fournisseur.
   demandes d'ordonnance que tu envoies toi-même ; les alertes
   automatiques n'y vont jamais.
 
-Clique sur **Enregistrer les destinataires**. Dans le même onglet,
+Clique sur **Enregistrer les destinataires**. Dans la même section,
 **Mon code PIN** permet de définir ou changer le PIN de ton propre
 profil.
 
@@ -915,7 +915,9 @@ Google.
 <a id="settings"></a>
 ## 10. Paramètres et usage quotidien
 
-Tout se trouve dans **Outils → Paramètres…** :
+Tout se trouve dans **Outils → Paramètres…**. Les sections sont
+listées à gauche ; **Ctrl+Tab** passe à la suivante. La fenêtre est
+redimensionnable.
 
 - **Général → Langue de l'interface** : anglais, italien, français,
   espagnol ou allemand. Les e-mails et la fiche de traitement

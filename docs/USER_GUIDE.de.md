@@ -494,7 +494,7 @@ Profil:
 - **E-Mail des Arztes (optional)** — nur für Rezeptanforderungen, die du
   selbst sendest; automatische Warnungen gehen nie dorthin.
 
-Klicke auf **Empfänger speichern**. Im selben Reiter kannst du unter
+Klicke auf **Empfänger speichern**. Im selben Bereich kannst du unter
 **Meine PIN** die PIN deines eigenen Profils festlegen oder ändern.
 
 ---
@@ -913,7 +913,8 @@ Google-Konto ab.
 <a id="settings"></a>
 ## 10. Einstellungen und Alltag
 
-Alles unter **Extras → Einstellungen…**:
+Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
+**Strg+Tab** wechselt zum nächsten. Die Fenstergröße lässt sich ändern.
 
 - **Allgemein → Oberflächensprache**: Englisch, Italienisch,
   Französisch, Spanisch oder Deutsch. Auch E-Mails und der Therapieplan

@@ -112,5 +112,7 @@ internal static class Mdl2Glyph
         public const string Mail = "";          // Mail
         public const string OpenInNewWindow = "\uE8A7"; // OpenInNewWindow
         public const string BulletedList = "\uE8FD";    // BulletedList
+        public const string Ringer = "\uEA8F";          // Ringer
+        public const string Power = "\uE7E8";           // PowerButton
     }
 }

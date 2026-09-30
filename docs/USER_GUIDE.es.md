@@ -479,7 +479,7 @@ abierto:
 - **E-mail del médico (opcional)** — se usa solo para las solicitudes de
   receta que envías tú; los avisos automáticos nunca van ahí.
 
-Haz clic en **Guardar destinatarios**. En la misma pestaña, **Mi PIN**
+Haz clic en **Guardar destinatarios**. En la misma sección, **Mi PIN**
 permite establecer o cambiar el PIN de tu propio perfil.
 
 ---
@@ -888,7 +888,9 @@ cuenta de Microsoft o Google.
 <a id="settings"></a>
 ## 10. Configuración y uso diario
 
-Todo en **Herramientas → Configuración…**:
+Todo en **Herramientas → Configuración…**. Las secciones aparecen a la
+izquierda; **Ctrl+Tab** pasa a la siguiente. La ventana se puede
+redimensionar.
 
 - **General → Idioma de la interfaz**: inglés, italiano, francés,
   español o alemán. Los correos y la ficha de terapia también lo usan.
