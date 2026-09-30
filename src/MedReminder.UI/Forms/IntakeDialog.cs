@@ -32,7 +32,7 @@ internal sealed class IntakeDialog : MedReminderFormBase
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        DialogLayout.GrowToContent(this);
 
         var header = new Label
         {
@@ -99,34 +99,24 @@ internal sealed class IntakeDialog : MedReminderFormBase
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(12),
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        AddRow(table, string.Empty, header);
-        AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Status"), _statusBox);
-        AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Amount"), _quantityBox);
-        AddRow(table, _loc.Get("Ui.IntakeDialog.Field.When"), _dayPicker);
-        AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Notes"), _notesBox);
-        AddRow(table, string.Empty, note);
+        DialogLayout.AddRow(table, string.Empty, header);
+        DialogLayout.AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Status"), _statusBox);
+        DialogLayout.AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Amount"), _quantityBox);
+        DialogLayout.AddRow(table, _loc.Get("Ui.IntakeDialog.Field.When"), _dayPicker);
+        DialogLayout.AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Notes"), _notesBox);
+        DialogLayout.AddRow(table, string.Empty, note);
 
-        var okButton = new Button { Text = _loc.Get("Ui.IntakeDialog.Save"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = DialogLayout.Button(_loc.Get("Ui.IntakeDialog.Save"), DialogResult.OK);
+        var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
         okButton.Click += OnConfirm;
 
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 48,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(okButton);
-        buttonPanel.Controls.Add(cancelButton);
+        var buttonPanel = DialogLayout.ButtonBar(this, okButton, cancelButton);
 
         Controls.Add(table);
         Controls.Add(buttonPanel);
-        AcceptButton = okButton;
-        CancelButton = cancelButton;
     }
 
     private void OnConfirm(object? sender, EventArgs e)
@@ -137,14 +127,6 @@ internal sealed class IntakeDialog : MedReminderFormBase
             NullIfBlank(_notesBox.Text));
     }
 
-    private static void AddRow(TableLayoutPanel table, string label, Control input)
-    {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
-        table.RowCount++;
-        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        table.Controls.Add(lbl, 0, table.RowCount - 1);
-        table.Controls.Add(input, 1, table.RowCount - 1);
-    }
 
     private static string? NullIfBlank(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();

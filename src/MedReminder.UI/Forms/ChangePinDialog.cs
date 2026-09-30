@@ -22,41 +22,48 @@ internal sealed class ChangePinDialog : MedReminderFormBase
         _loc = loc;
         Text = _loc.Get("Ui.ProfilesManagerForm.PinDialog.Title");
         Width = 420;
-        Height = 260;
+        Height = 240;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        DialogLayout.GrowToContent(this);
 
         var prompt = new Label
         {
             AutoSize = true,
             MaximumSize = new System.Drawing.Size(380, 0),
-            Location = new System.Drawing.Point(16, 12),
+            Margin = new Padding(0, 0, 0, UiTheme.Space.S),
             Text = _loc.Get("Ui.ProfilesManagerForm.PinDialog.Prompt"),
         };
         _pinBox = new TextBox
         {
-            Location = new System.Drawing.Point(16, 60),
             Width = 180,
             UseSystemPasswordChar = true,
             MaxLength = 32,
             PlaceholderText = _loc.Get("Ui.FirstRunWizardForm.PinPlaceholder"),
+            Margin = new Padding(0, 0, UiTheme.Space.S, 0),
         };
         _pinConfirmBox = new TextBox
         {
-            Location = new System.Drawing.Point(206, 60),
             Width = 180,
             UseSystemPasswordChar = true,
             MaxLength = 32,
             PlaceholderText = _loc.Get("Ui.FirstRunWizardForm.PinConfirmPlaceholder"),
+            Margin = Padding.Empty,
         };
+        var pinRow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            WrapContents = false,
+            Margin = new Padding(0, 0, 0, UiTheme.Space.S),
+        };
+        pinRow.Controls.Add(_pinBox);
+        pinRow.Controls.Add(_pinConfirmBox);
         _clearBox = new CheckBox
         {
             AutoSize = true,
-            Location = new System.Drawing.Point(16, 96),
             Text = _loc.Get("Ui.ProfilesManagerForm.PinDialog.Clear"),
             Enabled = profileHasPin,
         };
@@ -67,38 +74,28 @@ internal sealed class ChangePinDialog : MedReminderFormBase
             _pinConfirmBox.Enabled = enabled;
         };
 
-        _statusLabel = new Label
-        {
-            AutoSize = true,
-            ForeColor = UiColors.Error,
-            Location = new System.Drawing.Point(16, 128),
-            Text = string.Empty,
-        };
+        // Inline error under the fields (F9).
+        _statusLabel = DialogLayout.ErrorLabel();
 
-        var okButton = new Button
-        {
-            Text = _loc.Get("Common.Ok"),
-            Location = new System.Drawing.Point(216, 180),
-            Width = 90,
-        };
-        var cancelButton = new Button
-        {
-            Text = _loc.Get("Common.Cancel"),
-            DialogResult = DialogResult.Cancel,
-            Location = new System.Drawing.Point(316, 180),
-            Width = 80,
-        };
+        var okButton = DialogLayout.Button(_loc.Get("Common.Ok"));
+        var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
         okButton.Click += (_, _) => Confirm();
-        AcceptButton = okButton;
-        CancelButton = cancelButton;
 
-        Controls.Add(prompt);
-        Controls.Add(_pinBox);
-        Controls.Add(_pinConfirmBox);
-        Controls.Add(_clearBox);
-        Controls.Add(_statusLabel);
-        Controls.Add(okButton);
-        Controls.Add(cancelButton);
+        var content = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            Padding = new Padding(UiTheme.Space.L, UiTheme.Space.M, UiTheme.Space.L, 0),
+        };
+        content.Controls.Add(prompt);
+        content.Controls.Add(pinRow);
+        content.Controls.Add(_clearBox);
+        content.Controls.Add(_statusLabel);
+
+        Controls.Add(content);
+        Controls.Add(DialogLayout.ButtonBar(this, okButton, cancelButton));
 
         var tooltip = new ToolTip { ShowAlways = true };
         tooltip.SetToolTip(_clearBox,
@@ -121,14 +118,12 @@ internal sealed class ChangePinDialog : MedReminderFormBase
         var pin = _pinBox.Text;
         if (string.IsNullOrEmpty(pin))
         {
-            _statusLabel.Text = _loc.Get("Ui.PinPromptForm.Empty");
-            _pinBox.Focus();
+            DialogLayout.ShowError(_statusLabel, _loc.Get("Ui.PinPromptForm.Empty"), _pinBox);
             return;
         }
         if (!string.Equals(pin, _pinConfirmBox.Text, StringComparison.Ordinal))
         {
-            _statusLabel.Text = _loc.Get("Ui.FirstRunWizardForm.PinMismatch");
-            _pinConfirmBox.Focus();
+            DialogLayout.ShowError(_statusLabel, _loc.Get("Ui.FirstRunWizardForm.PinMismatch"), _pinConfirmBox);
             return;
         }
         ClearPin = false;

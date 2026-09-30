@@ -20,6 +20,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
 {
     public ChangeScheduleResult? Result { get; private set; }
 
+    private readonly Label _error = DialogLayout.ErrorLabel();
     private readonly ILocalizationService _loc;
     private readonly NumericUpDown _doseBox;
     private readonly NumericUpDown _freqBox;
@@ -44,7 +45,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        DialogLayout.GrowToContent(this);
 
         var header = new Label
         {
@@ -112,7 +113,7 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(12),
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         _schedulePanel = new SchedulePanel(_loc);
@@ -125,34 +126,25 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         // would show their defaults).
         _seedSchedule = currentSchedule;
 
-        AddRow(table, string.Empty, header);
-        AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewDose"), _doseBox);
-        AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewFrequency"), _freqBox);
-        AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.EffectiveFrom"), _effectiveFromPicker);
-        AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
-        AddRow(table, string.Empty, note);
+        DialogLayout.AddRow(table, string.Empty, header);
+        DialogLayout.AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewDose"), _doseBox);
+        DialogLayout.AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.NewFrequency"), _freqBox);
+        DialogLayout.AddRow(table, _loc.Get("Ui.ChangeScheduleDialog.Field.EffectiveFrom"), _effectiveFromPicker);
+        DialogLayout.AddRow(table, _loc.Get("Ui.Schedule.Mode.Label"), _schedulePanel.Root);
+        DialogLayout.AddRow(table, string.Empty, _error);
+        DialogLayout.AddRow(table, string.Empty, note);
 
-        var okButton = new Button { Text = _loc.Get("Ui.ChangeScheduleDialog.Apply"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = DialogLayout.Button(_loc.Get("Ui.ChangeScheduleDialog.Apply"), DialogResult.OK);
+        var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
         okButton.Click += OnConfirm;
 
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 48,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(okButton);
-        buttonPanel.Controls.Add(cancelButton);
+        var buttonPanel = DialogLayout.ButtonBar(this, okButton, cancelButton);
 
         var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
         scroll.Controls.Add(table);
 
         Controls.Add(scroll);
         Controls.Add(buttonPanel);
-        AcceptButton = okButton;
-        CancelButton = cancelButton;
 
         SyncSimpleControlsEnabled();
     }
@@ -176,14 +168,13 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
             newSchedule = _schedulePanel.TryBuildSchedule(out var error);
             if (newSchedule is null)
             {
-                MessageBox.Show(this,
-                    error ?? _loc.Get("Ui.Schedule.Validation.Generic"),
-                    _loc.Get("Ui.ChangeScheduleDialog.Title"),
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // Shown under the schedule instead of a message box (F9).
+                DialogLayout.ShowError(_error, error ?? _loc.Get("Ui.Schedule.Validation.Generic"));
                 DialogResult = DialogResult.None;
                 return;
             }
         }
+        DialogLayout.ShowError(_error, null);
         Result = new ChangeScheduleResult(_doseBox.Value, (int)_freqBox.Value, effectiveFrom, newSchedule);
     }
 
@@ -194,14 +185,6 @@ internal sealed class ChangeScheduleDialog : MedReminderFormBase
         _freqBox.Enabled = simple;
     }
 
-    private static void AddRow(TableLayoutPanel table, string label, Control input)
-    {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
-        table.RowCount++;
-        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        table.Controls.Add(lbl, 0, table.RowCount - 1);
-        table.Controls.Add(input, 1, table.RowCount - 1);
-    }
 }
 
 internal sealed record ChangeScheduleResult(

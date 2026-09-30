@@ -38,7 +38,7 @@ internal sealed class StockCountDialog : MedReminderFormBase
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        DialogLayout.GrowToContent(this);
 
         var header = new Label
         {
@@ -96,21 +96,21 @@ internal sealed class StockCountDialog : MedReminderFormBase
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(12),
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        AddRow(table, string.Empty, header);
-        AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Counted"), _countedBox);
-        AddRow(table, _loc.Get("Ui.StockCountDialog.Field.TakenToday",
+        DialogLayout.AddRow(table, string.Empty, header);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Counted"), _countedBox);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockCountDialog.Field.TakenToday",
             snapshot.TodayScheduledQuantity.ToString("0.##"), unit), _takenTodayBox);
-        AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Expected"), _expectedValue);
-        AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Gap"), _gapValue);
-        AddRow(table, _loc.Get("Ui.StockCountDialog.Field.RunOut"), _runOutValue);
-        AddRow(table, string.Empty, _infoLabel);
-        AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Notes"), _notesBox);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Expected"), _expectedValue);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Gap"), _gapValue);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockCountDialog.Field.RunOut"), _runOutValue);
+        DialogLayout.AddRow(table, string.Empty, _infoLabel);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockCountDialog.Field.Notes"), _notesBox);
 
-        var okButton = new Button { Text = _loc.Get("Ui.StockCountDialog.Apply"), DialogResult = DialogResult.OK, AutoSize = true, Width = 120, Height = 32 };
-        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = DialogLayout.Button(_loc.Get("Ui.StockCountDialog.Apply"), DialogResult.OK);
+        var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
         okButton.Click += (_, _) =>
         {
             Result = new StockCountResult(
@@ -119,20 +119,10 @@ internal sealed class StockCountDialog : MedReminderFormBase
                 string.IsNullOrWhiteSpace(_notesBox.Text) ? null : _notesBox.Text.Trim());
         };
 
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 48,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(okButton);
-        buttonPanel.Controls.Add(cancelButton);
+        var buttonPanel = DialogLayout.ButtonBar(this, okButton, cancelButton);
 
         Controls.Add(table);
         Controls.Add(buttonPanel);
-        AcceptButton = okButton;
-        CancelButton = cancelButton;
 
         _countedBox.ValueChanged += (_, _) => RefreshPreview();
         _takenTodayBox.ValueChanged += (_, _) => RefreshPreview();
@@ -170,14 +160,6 @@ internal sealed class StockCountDialog : MedReminderFormBase
     private string FormatRunOut(RunOutForecastResult forecast) =>
         forecast.EstimatedRunOutDate?.ToString("d") ?? _loc.Get("Ui.StockCountDialog.RunOutNone");
 
-    private static void AddRow(TableLayoutPanel table, string label, Control input)
-    {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
-        table.RowCount++;
-        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        table.Controls.Add(lbl, 0, table.RowCount - 1);
-        table.Controls.Add(input, 1, table.RowCount - 1);
-    }
 }
 
 internal sealed record StockCountResult(
