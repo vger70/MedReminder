@@ -505,6 +505,11 @@
   "Ui.SettingsDialog.General.TextSize.Large": "Groß",
   "Ui.SettingsDialog.General.TextSize.ExtraLarge": "Sehr groß",
   "Ui.SettingsDialog.General.TextSize.Help": "Vergrößert Text, Schaltflächen und Listenzeilen in allen Fenstern dieses Profils. Andere Profile behalten ihre eigene Größe. Wird nach einem Neustart übernommen.",
+  "Ui.SettingsDialog.General.Appearance": "Darstellung (dieses Profil)",
+  "Ui.SettingsDialog.General.Appearance.System": "Wie Windows",
+  "Ui.SettingsDialog.General.Appearance.Light": "Hell",
+  "Ui.SettingsDialog.General.Appearance.Dark": "Dunkel",
+  "Ui.SettingsDialog.General.Appearance.Help": "Gilt für dieses Profil auf diesem Computer. Bei einem Windows-Kontrastdesign werden dessen Farben verwendet. Unter Windows 10 bleibt „Wie Windows“ hell. Wird nach einem Neustart übernommen.",
   "Ui.SettingsDialog.General.RestartPrompt.Changes": "Die Änderungen werden beim Neustart übernommen. MedReminder jetzt neu starten?",
 
   "Ui.SettingsDialog.Email.Host": "Host",

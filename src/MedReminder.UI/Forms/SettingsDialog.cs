@@ -120,6 +120,7 @@ internal sealed class SettingsDialog : MedReminderFormBase
     // Per-profile text size (EVOLUTION-PROPOSALS.md §3.2), saved to
     // profiles\<id>\ui.settings.json with the rest of the General tab.
     private ComboBox _textSizeCombo = null!;
+    private ComboBox _appearanceCombo = null!;
 
     // Shared component for the explanatory tooltips on the technical fields.
     // (spec Incremento 14: help in linea, tooltip diffusi). Un solo
@@ -331,6 +332,26 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
         _tooltips.SetToolTip(_textSizeCombo, textSizeHelp.Text);
 
+        var appearanceLabel = new Label
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.General.Appearance"),
+        };
+        _appearanceCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 220,
+        };
+        PopulateAppearanceCombo();
+        var appearanceHelp = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.General.Appearance.Help"),
+        };
+        _tooltips.SetToolTip(_appearanceCombo, appearanceHelp.Text);
+
         var saveButton = new Button
         {
             Text = _loc.Get("Ui.SettingsDialog.General.Save"),
@@ -362,6 +383,9 @@ internal sealed class SettingsDialog : MedReminderFormBase
         panel.Controls.Add(textSizeLabel);
         panel.Controls.Add(_textSizeCombo);
         panel.Controls.Add(textSizeHelp);
+        panel.Controls.Add(appearanceLabel);
+        panel.Controls.Add(_appearanceCombo);
+        panel.Controls.Add(appearanceHelp);
         panel.Controls.Add(saveButton);
         panel.Controls.Add(note);
         page.Controls.Add(panel);
@@ -383,6 +407,28 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
         _textSizeCombo.DisplayMember = nameof(TextSizeChoice.DisplayName);
     }
+
+    // Like the text size, the selection shows the saved value.
+    private void PopulateAppearanceCombo()
+    {
+        var saved = ProfileUiSettingsFile.ReadAppearance(_currentProfile.DataDirectory);
+        foreach (var mode in Enum.GetValues<AppearanceMode>())
+        {
+            _appearanceCombo.Items.Add(new AppearanceChoice(mode, _loc.Get(AppearanceDisplayKey(mode))));
+            if (mode == saved)
+            {
+                _appearanceCombo.SelectedIndex = _appearanceCombo.Items.Count - 1;
+            }
+        }
+        _appearanceCombo.DisplayMember = nameof(AppearanceChoice.DisplayName);
+    }
+
+    private static string AppearanceDisplayKey(AppearanceMode mode) => mode switch
+    {
+        AppearanceMode.Light => "Ui.SettingsDialog.General.Appearance.Light",
+        AppearanceMode.Dark => "Ui.SettingsDialog.General.Appearance.Dark",
+        _ => "Ui.SettingsDialog.General.Appearance.System",
+    };
 
     private static string TextSizeDisplayKey(TextSize size) => size switch
     {
@@ -445,11 +491,12 @@ internal sealed class SettingsDialog : MedReminderFormBase
         };
 
         var textSize = (_textSizeCombo.SelectedItem as TextSizeChoice)?.Size ?? TextSize.Normal;
+        var appearance = (_appearanceCombo.SelectedItem as AppearanceChoice)?.Mode ?? AppearanceMode.System;
 
         try
         {
             await RunUseCaseAsync<UpdateGeneralSettings>(u => u.ExecuteAsync(settings, CancellationToken.None));
-            ProfileUiSettingsFile.WriteTextSize(_currentProfile.DataDirectory, textSize);
+            ProfileUiSettingsFile.Write(_currentProfile.DataDirectory, textSize, appearance);
         }
         catch (Exception ex)
         {
@@ -459,15 +506,18 @@ internal sealed class SettingsDialog : MedReminderFormBase
             return;
         }
 
-        // If neither the language nor the text size changed, no
-        // restart needed. A ReferenceCountry change alone is picked up
+        // If neither the language, the text size nor the appearance
+        // changed, no restart needed. A ReferenceCountry change alone is picked up
         // at the next opening of the medicine form via IOptionsMonitor
         // (user.settings.json is watched with reloadOnChange=true).
-        // The text size is applied when each window loads, and the
-        // main window is already open, hence the restart.
+        // The text size is applied when each window loads and the
+        // appearance before the first one is created; the main window
+        // is already open, hence the restart.
         var languageChanged = !string.Equals(choice.Code, _loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase);
         var textSizeChanged = TextSizes.ScaleOf(textSize) != MedReminderFormBase.TextScale;
-        if (!languageChanged && !textSizeChanged)
+        var appearanceChanged = appearance != UiTheme.Appearance;
+        var profileChanged = textSizeChanged || appearanceChanged;
+        if (!languageChanged && !profileChanged)
         {
             MessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.General.Saved"),
@@ -477,17 +527,17 @@ internal sealed class SettingsDialog : MedReminderFormBase
         }
 
         var confirm = MessageBox.Show(this,
-            _loc.Get(textSizeChanged
+            _loc.Get(profileChanged
                 ? "Ui.SettingsDialog.General.RestartPrompt.Changes"
                 : "Ui.SettingsDialog.General.RestartPrompt"),
             _loc.Get("Ui.SettingsDialog.General.RestartPrompt.Title"),
             MessageBoxButtons.YesNo, MessageBoxIcon.Question);
         if (confirm != DialogResult.Yes) return;
 
-        if (textSizeChanged)
+        if (profileChanged)
         {
-            // The text size belongs to this profile: reopen it rather
-            // than the picker.
+            // Text size and appearance belong to this profile: reopen
+            // it rather than the picker.
             _restarter.RestartAndExit(new[] { "--profile", _currentProfile.Id });
         }
         else
@@ -507,6 +557,8 @@ internal sealed class SettingsDialog : MedReminderFormBase
     private sealed record LanguageChoice(string Code, string DisplayName);
 
     private sealed record TextSizeChoice(TextSize Size, string DisplayName);
+
+    private sealed record AppearanceChoice(AppearanceMode Mode, string DisplayName);
 
     // Mappa un codice ISO 639-1 sulla chiave JSON che restituisce il
     // the language name in the current UI language. Unknown codes
