@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #143 — Add phase 0 review of the WinForms UI modernization
+
+Link: [vger70/MedReminder#143](https://github.com/vger70/MedReminder/pull/143)
+Branch: `claude/ui-modernization-review` → `feature/master-slave`
+
+### Docs
+
+- New `docs/analysis/ANALYSIS-UI-MODERNIZATION.md`: inventory of the
+  WinForms UI, findings with file references (two base fonts, colours
+  hard-coded in the forms, double status encoding in the main grid, no
+  inline validation), target tokens for light, dark and high contrast
+  with WCAG AA contrast checked, layout proposals for the main window,
+  Settings and dialogs, phased plan with estimates, open decisions.
+- No code changes.
+
 ## PR #142 — Rewrite the user guides around tasks and cover the household features
 
 Link: [vger70/MedReminder#142](https://github.com/vger70/MedReminder/pull/142)
