@@ -30,9 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #130 — Show the pairing code on request instead of hiding its window from capture
+## PR #136 — Show the pairing code on request instead of hiding its window from capture
 
-Link: [vger70/MedReminder#130](https://github.com/vger70/MedReminder/pull/130)
+Link: [vger70/MedReminder#136](https://github.com/vger70/MedReminder/pull/136)
 Branch: `claude/pairing-code-show-on-request` → `feature/master-slave`
 
 ### Fixed
