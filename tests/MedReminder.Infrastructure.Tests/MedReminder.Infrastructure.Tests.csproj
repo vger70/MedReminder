@@ -46,6 +46,10 @@
       <Link>fixtures\catalogue\ema-epar-sample.csv</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\fixtures\catalogue\ema-epar-from-xlsx.csv">
+      <Link>fixtures\catalogue\ema-epar-from-xlsx.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\fixtures\catalogue\aemps-cima-sample.xlsx">
       <Link>fixtures\catalogue\aemps-cima-sample.xlsx</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

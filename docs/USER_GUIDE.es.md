@@ -181,6 +181,15 @@ medicamento.
   aplica en la siguiente apertura del formulario del medicamento. El
   país vale para toda la instalación: solo un administrador puede
   cambiarlo.
+- El **catálogo de tu país de referencia y el de la UE se
+  actualizan solos**: al iniciar, si *Ajustes → General → Buscar
+  actualizaciones al iniciar (GitHub)* está activado, MedReminder
+  descarga la última lista mensual de tu país de referencia (Italia,
+  España o Francia) y la de la UE cuando son más recientes que las
+  suyas, y las usa desde la siguiente apertura del formulario del
+  medicamento. Sin conexión no cambia nada. Con varios perfiles, cada
+  uno se actualiza la primera vez que se abre. Si cambias el país de
+  referencia, su catálogo se actualiza en el siguiente inicio.
 
 ### Medicamentos con autorización centralizada UE
 

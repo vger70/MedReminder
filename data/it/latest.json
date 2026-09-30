@@ -1,0 +1,13 @@
+{
+  "country": "IT",
+  "version": "202609",
+  "file": "aifa-202609.zip",
+  "generated": "2026-09-29T17:18:31.125843+00:00",
+  "csv_count": 2,
+  "sha256": "3010f83248ad2b7257ed04fa885bc6f16af6a919239c2a7a583042c573f64315",
+  "size": 4953126,
+  "rows": {
+    "confezioni_fornitura.csv": 160024,
+    "PA_confezioni.csv": 338722
+  }
+}

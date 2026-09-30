@@ -1,0 +1,12 @@
+{
+  "country": "ES",
+  "version": "202609",
+  "file": "aemps-202609.zip",
+  "generated": "2026-09-29T18:03:50.843073+00:00",
+  "file_count": 1,
+  "sha256": "91fc01b9377b1743fbe29aa2f2dfa786a61548d1886a44c57462b069504d0512",
+  "size": 2625880,
+  "rows": {
+    "aemps.xlsx": 26763
+  }
+}

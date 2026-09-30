@@ -183,6 +183,16 @@ médicament.
   effet à la prochaine ouverture du formulaire de médicament. Le pays
   vaut pour toute l'installation : seul un administrateur peut le
   modifier.
+- Le **catalogue de votre pays de référence et celui de l'UE se
+  mettent à jour tout seuls** : au démarrage, si *Paramètres →
+  Général → Vérifier les mises à jour au démarrage (GitHub)* est
+  coché, MedReminder télécharge la dernière liste mensuelle de votre
+  pays de référence (Italie, Espagne ou France) et celle de l'UE
+  lorsqu'elles sont plus récentes que les siennes, et les utilise dès
+  la prochaine ouverture du formulaire de médicament. Sans connexion,
+  rien ne change. Avec plusieurs profils, chacun est mis à jour la
+  première fois qu'il est ouvert. Après un changement de pays de
+  référence, son catalogue est mis à jour au démarrage suivant.
 
 ### Médicaments en autorisation centralisée UE
 

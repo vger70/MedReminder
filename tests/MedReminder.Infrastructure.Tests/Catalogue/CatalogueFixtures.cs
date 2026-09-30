@@ -14,6 +14,11 @@ internal static class CatalogueFixtures
     public const string ConfezioniCsv = "aifa-confezioni-sample.csv";
     public const string PaCsv = "aifa-pa-sample.csv";
     public const string EmaEparCsv = "ema-epar-sample.csv";
+
+    // scripts/feeds/ema.py's conversion of ema-epar-sample.xlsx (the
+    // same rows laid out like the EMA report); pytest checks that the
+    // script still produces exactly this file.
+    public const string EmaEparFromXlsxCsv = "ema-epar-from-xlsx.csv";
     public const string AempsXlsx = "aemps-cima-sample.xlsx";
     public const string BdpmCisTxt = "bdpm-cis-sample.txt";
     public const string BdpmCompoTxt = "bdpm-compo-sample.txt";
@@ -31,12 +36,12 @@ internal static class CatalogueFixtures
         return buffer;
     }
 
-    public static Stream BuildEmaEparSnapshotStream()
+    public static Stream BuildEmaEparSnapshotStream(string csvFixture = EmaEparCsv)
     {
         var buffer = new MemoryStream();
         using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
         {
-            AddEntry(archive, "ema-epar.csv", EmaEparCsv);
+            AddEntry(archive, "ema-epar.csv", csvFixture);
         }
         buffer.Position = 0;
         return buffer;
@@ -72,6 +77,29 @@ internal static class CatalogueFixtures
         }
         buffer.Position = 0;
         return buffer;
+    }
+
+    // AIFA snapshot with the two CSV entries reduced to their header
+    // line: parses without error and yields zero rows.
+    public static Stream BuildAifaHeaderOnlySnapshotStream()
+    {
+        var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            AddHeaderOnlyEntry(archive, "confezioni_fornitura.csv", ConfezioniCsv);
+            AddHeaderOnlyEntry(archive, "PA_confezioni.csv", PaCsv);
+        }
+        buffer.Position = 0;
+        return buffer;
+    }
+
+    private static void AddHeaderOnlyEntry(ZipArchive archive, string logicalName, string fixtureName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, FixtureDirectory, fixtureName);
+        var header = File.ReadLines(path).First();
+        var entry = archive.CreateEntry(logicalName, CompressionLevel.NoCompression);
+        using var writer = new StreamWriter(entry.Open());
+        writer.WriteLine(header);
     }
 
     private static void AddEntry(ZipArchive archive, string logicalName, string fixtureName)
