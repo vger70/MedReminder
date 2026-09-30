@@ -17,6 +17,7 @@ using MedReminder.UI.Notifications;
 using MedReminder.Application.Overview;
 using MedReminder.UI.Services;
 using MedReminder.UI.Tray;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -57,6 +58,10 @@ internal static class Program
     private static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
+        // Windows shown before a profile is chosen (picker, PIN prompt,
+        // first-run wizard) follow Windows; the profile's own choice is
+        // applied once it is known (ANALYSIS-UI-MODERNIZATION §4.4).
+        ApplyAppearance(AppearanceMode.System);
         Log.Logger = ConfigureSerilog();
 
         _bootstrapLoc = LocalizationService.CreateStandalone(ReadUserLanguage(), AppDataPaths.GetAppDataDirectory());
@@ -130,6 +135,11 @@ internal static class Program
             MedReminderFormBase.TextScale = TextSizes.ScaleOf(textSize);
             Log.Information("Text size for this profile: {TextSize}.", textSize);
 
+            var appearance = ProfileUiSettingsFile.ReadAppearance(current.DataDirectory);
+            ApplyAppearance(appearance);
+            Log.Information("Appearance for this profile: {Appearance} (dark: {IsDark}).",
+                appearance, UiTheme.IsDark);
+
             using var host = BuildHost(args, current);
             InitializeDatabase(host);
             AdoptRotatedProfileKey(host, current);
@@ -155,6 +165,18 @@ internal static class Program
             try { singleInstance.ReleaseMutex(); } catch { /* already released */ }
             Log.CloseAndFlush();
         }
+    }
+
+    // Sets the WinForms colour mode and the strip renderer built from
+    // the resulting palette. Applied before the windows it affects are
+    // created; windows already open keep the look they were built with.
+    private static void ApplyAppearance(AppearanceMode mode)
+    {
+        UiTheme.Appearance = mode;
+        WinFormsApp.SetColorMode(UiTheme.ToColorMode(mode));
+        ToolStripManager.Renderer = UiTheme.HighContrast
+            ? new ToolStripProfessionalRenderer()
+            : new UiToolStripRenderer(UiTheme.Palette);
     }
 
     private static void RunMigrationIfNeeded()

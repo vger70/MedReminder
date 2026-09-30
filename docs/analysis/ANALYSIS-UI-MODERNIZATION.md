@@ -4,6 +4,7 @@ Design document, **prior** to implementation. Phase 0 of the UI
 modernization: review of the current WinForms UI, target design
 system, layout proposals and phased plan. No code changes.
 
+Status on 2026-09-30: revision 3. Scope agreed with the product owner:
 Status on 2026-09-30: revision 2. Scope agreed with the product owner:
 options A (restyling) and B (UX redesign) of the preliminary estimate;
 a framework migration (WinUI 3, WPF, Avalonia) is out of scope.
@@ -112,20 +113,27 @@ every text pair is at least 4.5:1 (AA, normal text).
 | Token | Light | Dark | Ratio L / D | High contrast |
 |---|---|---|---|---|
 | `Background` (window) | `#F3F3F3` | `#202020` | — | `Control` |
-| `Surface` (grid, cards, fields) | `#FFFFFF` | `#2B2B2B` | — | `Window` |
-| `Border` | `#E0E0E0` | `#3D3D3D` | — | `WindowFrame` |
-| `Text` on `Surface` | `#1B1B1B` | `#FFFFFF` | 17.2 / 14.2 | `WindowText` |
-| `TextSecondary` on `Surface` | `#5C5C5C` | `#C5C5C5` | 6.7 / 8.2 | `GrayText` |
-| `Accent` (primary button, links, focus) | `#0F6CBD` | `#62ABF5` | 5.4 / 5.8 on surface | `Highlight` |
+| `Surface` (grid, cards, fields) | `#FFFFFF` | `#323232` | — | `Window` |
+| `Border` | `#E0E0E0` | `#464646` | — | `WindowFrame` |
+| `Hover` (menus, secondary buttons) | `#EAEAEA` | `#3D3D3D` | 14.3 / 10.9 with `Text` | `Highlight` |
+| `Text` on `Surface` | `#1B1B1B` | `#FFFFFF` | 17.2 / 12.8 | `WindowText` |
+| `TextSecondary` on `Surface` | `#5C5C5C` | `#C5C5C5` | 6.7 / 7.4 | `GrayText` |
+| `Accent` (primary button, links, focus) | `#0F6CBD` | `#62ABF5` | 5.4 / 5.3 on surface | `Highlight` |
+| `AccentHover` | `#115EA3` | `#7DB9F7` | 6.7 / 10.2 with `OnAccent` | `Highlight` |
 | `OnAccent` (text on accent) | `#FFFFFF` | `#000000` | 5.4 / 8.7 | `HighlightText` |
 | `Selection` (grid row) | `#CFE4FA` | `#0E4775` | 13.2 / 9.7 with `Text` | `Highlight` |
 | `Ok` fg / bg | `#0E700E` / `#DFF6DD` | `#9FD89F` / `#1E3A1E` | 5.5 / 7.6 | `WindowText` / `Window` |
 | `Warning` fg / bg | `#835B00` / `#FFF4CE` | `#F4D38A` / `#3D300E` | 5.5 / 8.9 | same |
 | `Danger` fg / bg | `#B10E1C` / `#FDE7E9` | `#F1BBBC` / `#4A2426` | 6.0 / 8.0 | same |
-| `Neutral` (suspended) fg / bg | `#484644` / `#EDEBE9` | `#C8C8C8` / `#383838` | 7.9 / 7.0 | same |
+| `Neutral` (suspended) fg / bg | `#484644` / `#EDEBE9` | `#C8C8C8` / `#404040` | 7.9 / 6.2 | same |
 
 The palette follows the neutral greys and the blue accent of the
-Windows 11 look; it is not a copy of an official token set.
+Windows 11 look; it is not a copy of an official token set. The dark
+`Background` and `Surface` equal the colours WinForms itself uses in
+dark mode for `Control` (`#202020`) and `Window` (`#323232`)
+[VERIFIED: `KnownColorTable.AlternateSystemColors`, .NET 10.0.12], so
+stock and themed controls share the same greys. `UiThemeTests` checks
+every text pair of both palettes against 4.5:1.
 
 ### 4.2 Typography
 
@@ -162,7 +170,22 @@ fallback applies. Font availability is checked once through
 
 `Application.SetColorMode` is a supported API in .NET 10 (it required
 suppressing `WFO5001` in .NET 9)
-([What's new in WinForms for .NET 10](https://learn.microsoft.com/en-us/dotnet/desktop/winforms/whats-new/net100)).
+([What's new in WinForms for .NET 10](https://learn.microsoft.com/en-us/dotnet/desktop/winforms/whats-new/net100));
+the .NET 10.0.12 reference assembly carries no `WFO5001` marker
+[VERIFIED].
+
+Behaviour of `System.Windows.Forms` 10.0.12 [VERIFIED, decompiled]:
+
+- `SetColorMode` can be called at any time. It switches
+  `SystemColors` to the dark set and broadcasts a colour change; it
+  does not rebuild colours a form assigned explicitly.
+- `SystemColorMode.System` follows the Windows "app mode" only on
+  Windows 11; on Windows 10 it resolves to light.
+  `SystemColorMode.Dark` is honoured on Windows 10 too.
+- Under a high-contrast theme `IsDarkModeEnabled` is always false.
+- In the dark set, `Highlight` `#2864B4` with `HighlightText` `#000000`
+  reads at 3.6:1, below AA; themed grids use the `Selection` token
+  instead. Stock list views keep it (step 2 checks them).
 Open issues in dotnet/winforms report rendering defects for some
 controls in dark mode, e.g. #13723 (buttons), #13636, #13901 (dropdown
 focus contrast). Mitigation: primary and secondary buttons are drawn
@@ -175,8 +198,8 @@ household sync, same rule as the text size
 (ANALYSIS-HOUSEHOLD-MASTER-DEVICE §3). Windows shown before a profile
 is chosen (profile picker, PIN prompt, first-run wizard) follow
 Windows. A change applies after restart, which the app already offers
-for the language [UNCERTAIN: live switching to be evaluated in step
-1.2; `SetColorMode` must be called before the first window is created].
+for the language and the text size (D5): colours assigned when a
+window is built do not follow a live `SetColorMode` call.
 
 When Windows runs a high-contrast theme, the High contrast palette
 wins over the Appearance setting.
@@ -185,8 +208,11 @@ wins over the Appearance setting.
 
 Keep `Mdl2Glyph` as the renderer; select Segoe Fluent Icons when
 installed, Segoe MDL2 Assets otherwise (F13). Icons take their colour
-from `UiTheme.Text` or `UiTheme.Accent`; the cache is cleared on theme
-change (F11).
+from `UiTheme.Text` or `UiTheme.Accent`. The appearance changes only at
+restart (D5), so the glyph cache never holds images of another theme
+(F11 closed). The font switch moves to step 2: code-point parity of
+the glyphs in `Mdl2Glyph.Glyphs` must be checked on a Windows 11
+machine first.
 
 ---
 
@@ -314,6 +340,21 @@ and button captions.
 
 ---
 
+## 6b. Implementation status
+
+| Step | State | Where |
+|---|---|---|
+| 1.1 Tokens, fonts, spacing | Done | `UiExtensions/UiTheme.cs`; `UiColors` is a facade over it |
+| 1.2 Appearance setting | Done | `AppearanceMode` (Application), `ProfileUiSettingsFile`, `Program.ApplyAppearance`, Settings → General, 5 new keys per language |
+| 1.3 Themed controls | Done except the icon font (§4.5) | `UiThemeApplier` (buttons, grids) from `MedReminderFormBase.OnLoad`; `UiToolStripRenderer` as `ToolStripManager.Renderer` |
+| Palette migration pulled forward | Done | Main grid status and error banner, timeline dark palette, autocomplete badge: without it the dark mode would show light tints under light text |
+
+Main grid: the whole-row tint is removed and status stays in the
+Status cell only (§5.1, F3); the pill shape and 36 px rows come with
+step 3. Fonts and the spacing scale are defined but not applied yet
+(step 2), because they change window sizes and need the screenshot
+baseline.
+
 ## 7. Risks
 
 | Risk | Mitigation |
@@ -386,3 +427,4 @@ Accepted by the product owner on 2026-09-30 as proposed.
 |---|---|---|
 | 1 | 2026-09-30 | First version: inventory, findings, design system, layouts, plan |
 | 2 | 2026-09-30 | D1–D5 accepted; §5.1 details the navigation pane and the toolbar |
+| 3 | 2026-09-30 | Phase 1 implemented (§6b); dark tokens aligned with WinForms' dark system colours; §4.4 verified against .NET 10.0.12 |

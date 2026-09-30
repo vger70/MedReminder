@@ -30,6 +30,33 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #144 — Add a theme layer with a per-profile light/dark appearance
+
+Link: [vger70/MedReminder#144](https://github.com/vger70/MedReminder/pull/144)
+Branch: `claude/ui-theme-foundation` → `feature/master-slave`
+
+### Added
+
+- Appearance setting (Same as Windows, Light, Dark) in Settings →
+  General, stored per profile in `ui.settings.json` next to the text
+  size and applied at restart; keys in all five dictionaries.
+- `UiTheme`: light, dark and high-contrast palettes (WCAG AA checked
+  by `UiThemeTests`), type and spacing scales.
+- `UiThemeApplier` (buttons, grids) and `UiToolStripRenderer` (menus,
+  toolbars, status bar, tray menu).
+
+### Changed
+
+- Main grid: status shown only in the Status cell, no whole-row tint;
+  error banner, timeline and autocomplete badge use theme colours.
+- `UiColors` is a facade over `UiTheme`.
+
+### Docs
+
+- `ANALYSIS-UI-MODERNIZATION.md` revision 3 (implementation status,
+  dark-mode behaviour verified against .NET 10.0.12); `ANALYSIS.md`
+  boot sequence and runtime data updated.
+
 ## PR #143 — Add phase 0 review of the WinForms UI modernization
 
 Link: [vger70/MedReminder#143](https://github.com/vger70/MedReminder/pull/143)

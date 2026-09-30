@@ -29,25 +29,6 @@ namespace MedReminder.UI.Forms;
 // between threads or concurrent operations.
 internal sealed class MainForm : MedReminderFormBase
 {
-    // Soft backgrounds applied to the whole row: "atmosphere"
-    // layer that hints at the state without overloading the view.
-    private static readonly Color WarningColor = Color.FromArgb(255, 245, 205);
-    private static readonly Color EmptyColor = Color.FromArgb(255, 210, 210);
-    private static readonly Color SuspendedColor = Color.FromArgb(230, 230, 230);
-
-    // "Status" cell: saturated badge with high-contrast bold text.
-    // "Signal" layer — legible at a glance even when the row is not
-    // focused. Material light 200 / 900 palette to guarantee WCAG
-    // AA contrast on the foreground colors.
-    private static readonly Color StatusOkBack       = Color.FromArgb(200, 230, 201);  // #C8E6C9
-    private static readonly Color StatusOkFore       = Color.FromArgb( 27,  94,  32);  // #1B5E20
-    private static readonly Color StatusWarnBack     = Color.FromArgb(255, 236, 179);  // #FFECB3
-    private static readonly Color StatusWarnFore     = Color.FromArgb( 93,  64,  55);  // #5D4037
-    private static readonly Color StatusEmptyBack    = Color.FromArgb(239, 154, 154);  // #EF9A9A
-    private static readonly Color StatusEmptyFore    = Color.FromArgb(183,  28,  28);  // #B71C1C
-    private static readonly Color StatusSuspendBack  = Color.FromArgb(207, 207, 207);  // #CFCFCF
-    private static readonly Color StatusSuspendFore  = Color.FromArgb( 66,  66,  66);  // #424242
-
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ApplicationTrayIcon _tray;
     private readonly ILogger<MainForm> _log;
@@ -490,7 +471,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            BackColor = UiColors.HighContrast ? SystemColors.Info : Color.FromArgb(255, 220, 220),
+            BackColor = UiColors.HighContrast ? SystemColors.Info : UiTheme.Palette.DangerBack,
             Padding = new Padding(12, 8, 12, 8),
             Visible = false,
         };
@@ -499,7 +480,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             AutoSize = true,
             Dock = DockStyle.Left,
-            ForeColor = UiColors.HighContrast ? SystemColors.InfoText : Color.FromArgb(120, 0, 0),
+            ForeColor = UiColors.HighContrast ? SystemColors.InfoText : UiTheme.Palette.DangerText,
             Font = new Font(Font, FontStyle.Bold),
             Text = _loc.Get("Ui.MainForm.ErrorBanner.Load"),
         };
@@ -536,7 +517,6 @@ internal sealed class MainForm : MedReminderFormBase
         var strip = new ToolStrip
         {
             GripStyle = ToolStripGripStyle.Hidden,
-            RenderMode = ToolStripRenderMode.System,
             Padding = new Padding(6, 4, 6, 4),
             ImageScalingSize = new Size(24, 24),
             AutoSize = true,
@@ -725,8 +705,8 @@ internal sealed class MainForm : MedReminderFormBase
         {
             TextAlign = ContentAlignment.MiddleLeft,
             ForeColor = _currentProfile.IsAdmin
-                ? UiColors.Themed(System.Drawing.Color.DarkBlue)
-                : SystemColors.ControlText,
+                ? UiTheme.Palette.Accent
+                : UiTheme.Palette.Text,
             Font = new Font("Segoe UI", 9.75F,
                 _currentProfile.IsAdmin ? FontStyle.Bold : FontStyle.Regular),
         };
@@ -1115,6 +1095,7 @@ internal sealed class MainForm : MedReminderFormBase
         if (UiColors.HighContrast)
         {
             row.DefaultCellStyle.BackColor = Color.Empty;
+            row.DefaultCellStyle.ForeColor = Color.Empty;
             if (_statusColumnIndex >= 0 && _statusColumnIndex < row.Cells.Count)
             {
                 var style = row.Cells[_statusColumnIndex].Style;
@@ -1126,27 +1107,27 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        // Layer 1 — atmosphere across the whole row (soft colors).
-        row.DefaultCellStyle.BackColor = item.Status switch
-        {
-            MedicineRowStatus.Warning => WarningColor,
-            MedicineRowStatus.Empty => EmptyColor,
-            MedicineRowStatus.Suspended or MedicineRowStatus.Inactive => SuspendedColor,
-            _ => SystemColors.Window,
-        };
+        // Status is told once, in the Status cell (ANALYSIS-UI-MODERNIZATION
+        // §5.1, F3): no whole-row tint, which competed with the selection.
+        // Suspended and inactive rows read in secondary text.
+        var palette = UiTheme.Palette;
+        row.DefaultCellStyle.BackColor = Color.Empty;
+        row.DefaultCellStyle.ForeColor = item.Status is MedicineRowStatus.Suspended or MedicineRowStatus.Inactive
+            ? palette.TextSecondary
+            : Color.Empty;
 
-        // Layer 2 — badge on the "Status" cell (saturated bg + fg).
+        // Badge on the "Status" cell: tinted background, coloured text.
         // SelectionBackColor / SelectionForeColor mirror the badge
         // so the signal survives even when the row is selected.
         if (_statusColumnIndex < 0 || _statusColumnIndex >= row.Cells.Count) return;
         var (bg, fg) = item.Status switch
         {
-            MedicineRowStatus.Ok        => (StatusOkBack,      StatusOkFore),
-            MedicineRowStatus.Warning   => (StatusWarnBack,    StatusWarnFore),
-            MedicineRowStatus.Empty     => (StatusEmptyBack,   StatusEmptyFore),
+            MedicineRowStatus.Ok        => (palette.OkBack,      palette.OkText),
+            MedicineRowStatus.Warning   => (palette.WarningBack, palette.WarningText),
+            MedicineRowStatus.Empty     => (palette.DangerBack,  palette.DangerText),
             MedicineRowStatus.Suspended
-                or MedicineRowStatus.Inactive => (StatusSuspendBack, StatusSuspendFore),
-            _                           => (SystemColors.Window, SystemColors.ControlText),
+                or MedicineRowStatus.Inactive => (palette.NeutralBack, palette.NeutralText),
+            _                           => (palette.Surface,     palette.Text),
         };
         var cell = row.Cells[_statusColumnIndex];
         cell.Style.BackColor = bg;

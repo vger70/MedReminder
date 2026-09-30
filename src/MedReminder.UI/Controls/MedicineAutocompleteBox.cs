@@ -336,14 +336,13 @@ public sealed class MedicineAutocompleteBox : UserControl
         if (isReference && IsWithdrawn(_lastResults[e.Index].MarketingStatus))
         {
             // Withdrawn badge: a filled red circle glyph before the
-            // text with a matching tooltip on hover. Colour picked
-            // for AA contrast against both the default and highlight
-            // ListBox backgrounds.
+            // text with a matching tooltip on hover. Colour from the
+            // theme's danger token.
             const string BadgeGlyph = "●"; // ●
             using var badgeFont = new Font(e.Font ?? _dropdown.Font, FontStyle.Bold);
             var badgeSize = e.Graphics.MeasureString(BadgeGlyph, badgeFont);
-            var badgeColor = UiColors.Themed(Color.FromArgb(198, 40, 40)); // Material red 700
-            e.Graphics.DrawString(BadgeGlyph, badgeFont, new SolidBrush(badgeColor),
+            using var badgeBrush = new SolidBrush(UiTheme.Palette.DangerText);
+            e.Graphics.DrawString(BadgeGlyph, badgeFont, badgeBrush,
                 e.Bounds.X + 2, e.Bounds.Y + 2);
             textBounds = new Rectangle(
                 e.Bounds.X + (int)badgeSize.Width + 8,

@@ -103,8 +103,12 @@ UI  ──►  Application  ──►  Domain
   Every form derives from `MedReminderFormBase`, which on load scales
   fonts by the profile's text size and bounds, grid rows and list
   columns by text size times display DPI / 96: the forms are built in
-  96-DPI pixels and do not set `AutoScaleMode`. Text colours come from
-  `UiColors`, which yields to the Windows high-contrast theme.
+  96-DPI pixels and do not set `AutoScaleMode`. Colours, fonts and
+  spacing come from `UiTheme` (light, dark and high-contrast palettes;
+  `UiColors` is a facade over it); on load the base form also themes
+  buttons and grids through `UiThemeApplier`, and
+  `UiToolStripRenderer` draws every menu and toolbar
+  (`docs/analysis/ANALYSIS-UI-MODERNIZATION.md`).
 - **DataImporter** is a maintainer tool that loads AIFA CSV files into
   PostgreSQL. It shares no code with the runtime and is not shipped.
   See [`DATA_IMPORTER.md`](DATA_IMPORTER.md).
@@ -406,7 +410,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
-    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal)
+    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal) and appearance (System / Light / Dark; absent = System)
     sync.settings.json           sync group, device, generation, folder or cloud account (B.1; absent while sync is off)
     sync.protected               sync group key, DPAPI CurrentUser (B.1)
 ```
@@ -545,7 +549,8 @@ never stored in these files.
 The profile's `ui.settings.json` is not part of this chain: it is read
 once by `Program`, after the profile is chosen and before the main
 window exists (`ProfileUiSettingsFile`, Infrastructure.Portable). A
-missing, unreadable or unknown value reads as Normal.
+missing, unreadable or unknown value reads as the default (Normal,
+System).
 
 The donation configuration is read from `assets/donations.settings.json`,
 embedded in the Infrastructure assembly; a missing or invalid section
@@ -592,7 +597,9 @@ with the "Check now" command and with every use case through
    profile, else the profile picker. A profile with a PIN requires
    `PinPromptForm`.
 5. Read the profile's text size (`ui.settings.json`) into
-   `MedReminderFormBase.TextScale`; the windows of step 4 use Normal.
+   `MedReminderFormBase.TextScale`, and its appearance into
+   `Application.SetColorMode` and the strip renderer; the windows of
+   step 4 use Normal and follow Windows.
 6. Build the host (§5.3, DI registration via
    `AddMedReminderApplication` and `AddMedReminderInfrastructure`),
    run `DatabaseInitializer` (§8.1), start the hosted services.

@@ -506,6 +506,11 @@
   "Ui.SettingsDialog.General.TextSize.Large": "Large",
   "Ui.SettingsDialog.General.TextSize.ExtraLarge": "Extra large",
   "Ui.SettingsDialog.General.TextSize.Help": "Enlarges text, buttons and list rows in every window of this profile. Other profiles keep their own size. Applies after a restart.",
+  "Ui.SettingsDialog.General.Appearance": "Appearance (this profile)",
+  "Ui.SettingsDialog.General.Appearance.System": "Same as Windows",
+  "Ui.SettingsDialog.General.Appearance.Light": "Light",
+  "Ui.SettingsDialog.General.Appearance.Dark": "Dark",
+  "Ui.SettingsDialog.General.Appearance.Help": "Applies to this profile on this computer. With a Windows high-contrast theme, the theme's colours are used. On Windows 10, \"Same as Windows\" stays light. Applies after a restart.",
   "Ui.SettingsDialog.General.RestartPrompt.Changes": "The changes apply on restart. Restart MedReminder now?",
 
   "Ui.SettingsDialog.Email.Host": "Host",
