@@ -58,6 +58,9 @@ Branch: `claude/ui-phase5-dialogs` → `main`
   Email port and timeout fields were a few pixels wide.
 - The My PIN group in Settings → Notifications was cut at the bottom
   with Large text.
+- The therapy timeline was sized twice above 100 % display scaling,
+  leaving the chart too short for its first row; date fields no longer
+  cut the first digit.
 
 ## PR #147 — Replace the Settings tabs with a section list
 
