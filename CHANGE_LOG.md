@@ -30,6 +30,30 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #153 — Add an admin-only option to log database queries
+
+Link: [vger70/MedReminder#153](https://github.com/vger70/MedReminder/pull/153)
+Branch: `claude/db-query-logging` → `main`
+
+### Added
+
+- Settings → General → Log database queries (diagnostics), administrators
+  only: writes each SQL command EF Core runs, with its duration, to the
+  log file. Parameter values stay hidden. Applies without a restart.
+  Device setting `UI:LogDatabaseQueries` in `user.settings.json`, not
+  replicated in the household.
+
+### Changed
+
+- EF Core command entries (`Microsoft.EntityFrameworkCore.Database.Command`)
+  no longer reach the log while the option is off.
+- `UpdateGeneralSettings` requires an administrator to change the option;
+  `HouseholdProjection` keeps it when it rewrites `user.settings.json`.
+
+### Docs
+
+- The five user guides describe the option.
+
 ## PR #151 — Document the appearance setting and the UI building blocks
 
 Link: [vger70/MedReminder#151](https://github.com/vger70/MedReminder/pull/151)
