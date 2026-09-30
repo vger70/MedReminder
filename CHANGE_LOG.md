@@ -30,6 +30,26 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #141 — Merge main into feature/master-slave
+
+Link: [vger70/MedReminder#141](https://github.com/vger70/MedReminder/pull/141)
+Branch: `claude/merge-main-into-master-slave` → `feature/master-slave`
+
+### Changed
+
+- The household integration branch takes `main` up to v2.11.0 (remote
+  catalogue feeds #130–#135, database updates), so the manual tests
+  run on the code the final merge (#129) ships.
+
+### Docs
+
+- `CLAUDE.md`: `main`'s wording, with the household integration-branch
+  rule and the `household/` and `setup/` runtime folders.
+- User guides: the admin-only reference country and the catalogue
+  self-update paragraph, both kept.
+
+---
+
 ## PR #138 — Record unchanged recipients a legacy profile group has no version of
 
 Link: [vger70/MedReminder#138](https://github.com/vger70/MedReminder/pull/138)
