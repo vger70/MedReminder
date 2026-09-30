@@ -38,7 +38,12 @@ internal class MedReminderFormBase : Form
     // Pixel size for an icon drawn at build time: glyph bitmaps are not
     // resized by ScaleLayout, so they are rendered at the size they
     // will be shown, following the display and the text size.
-    protected int ScaledIconSize(int pixelsAt96Dpi)
+    protected int ScaledIconSize(int pixelsAt96Dpi) => ScaledLength(pixelsAt96Dpi);
+
+    // A length in 96-DPI pixels at text size Normal, scaled like the
+    // bounds ScaleLayout scales: for sizes set after load or kept
+    // outside the control tree (tool strip text boxes, thresholds).
+    protected int ScaledLength(int pixelsAt96Dpi)
         => (int)Math.Round(pixelsAt96Dpi * Math.Max(1f, TextScale) * Math.Max(1f, DeviceDpi / BaselineDpi));
 
     protected override void OnLoad(EventArgs e)

@@ -110,5 +110,7 @@ internal static class Mdl2Glyph
         public const string StatusCircle = "";  // StatusCircleOuter
         public const string Package = "";       // Package
         public const string Mail = "";          // Mail
+        public const string OpenInNewWindow = "\uE8A7"; // OpenInNewWindow
+        public const string BulletedList = "\uE8FD";    // BulletedList
     }
 }

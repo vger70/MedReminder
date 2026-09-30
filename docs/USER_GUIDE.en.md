@@ -77,12 +77,20 @@ choice. If you install from the MSI package, the permission window says
 
 - **Menus** at the top: **File**, **Therapy**, **Stock**, **Tools** and
   **?** (help).
-- **Toolbar** below the menus with the most frequent actions: *New
-  medicine*, *Edit*, *Register intake*, *Check now*, *Therapy report*,
-  *Therapy timeline*, *Request prescription*.
+- **Toolbar** below the menus: *New medicine*, *Register intake* and a
+  search box on the right (**Ctrl+F**) that filters the list by name.
+- **Navigation** on the left: *Medicines* (this list), then *Therapy
+  timeline*, *Therapy report*, *Request prescription*, *Installation*
+  (administrators) and *Settings*, which open their own windows. In a
+  narrow window it shows icons only.
+- **Summary** above the list: how many medicines are *Empty*, *Running
+  low*, *Suspended*, and all of them. Click a box to show only those
+  medicines; click it again to show all.
 - **Medicine list** in the middle: one row per medicine, with the stock,
-  the days remaining and the estimated run-out date. Rows change colour
-  when the stock is low; the **Status** column says the same in words.
+  the days remaining and the estimated run-out date. The **Status**
+  column shows the state as a coloured label. Right-click a row for the
+  commands on that medicine (edit, register intake, add package…);
+  double-click or **F2** edits it.
 - **Status bar** at the bottom: the open profile ("Profile: Anna
   (admin)" for an administrator).
 
@@ -410,7 +418,7 @@ MedReminder never sends a request by itself.
   falls below its **warning threshold**, it warns you **once**, through
   the channels chosen for that medicine: a Windows notification and/or
   an email. After a new package the cycle starts again.
-- **Tools → Check now** (or the toolbar button, or the tray menu) runs
+- **Tools → Check now** (**Ctrl+R**, or the tray menu) runs
   the check immediately.
 - MedReminder must be running to send reminders. Turn on automatic
   startup (see [Settings](#settings)).

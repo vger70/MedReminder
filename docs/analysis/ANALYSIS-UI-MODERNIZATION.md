@@ -4,7 +4,7 @@ Design document, **prior** to implementation. Phase 0 of the UI
 modernization: review of the current WinForms UI, target design
 system, layout proposals and phased plan. No code changes.
 
-Status on 2026-09-30: revision 4. Scope agreed with the product owner:
+Status on 2026-09-30: revision 5. Scope agreed with the product owner:
 options A (restyling) and B (UX redesign) of the preliminary estimate;
 a framework migration (WinUI 3, WPF, Avalonia) is out of scope.
 
@@ -349,11 +349,14 @@ and button captions.
 | 1.3 Themed controls | Done | `UiThemeApplier` (buttons, grids) from `MedReminderFormBase.OnLoad`; `UiToolStripRenderer` as `ToolStripManager.Renderer` |
 | Palette migration pulled forward | Done | Main grid status and error banner, timeline dark palette, autocomplete badge: without it the dark mode would show light tints under light text |
 | 1.0 Screenshot baseline | Done | 12 captures by the product owner (§6c) |
-| 2 Controls, typography, icons | In progress | Baseline fixes S1, S3, S4, L1, L2, L3; one 10 pt base font set by `MedReminderFormBase`; icons drawn at the scaled size, Segoe Fluent Icons when installed |
+| 2 Controls, typography, icons | Done for the main window, Settings and the medicine editor (PR #145) | Baseline fixes S1, S3, S4, L1–L3, L5, L6 (label alignment), P1; one 10 pt base font set by `MedReminderFormBase`; icons drawn at the scaled size, Segoe Fluent Icons when installed. The 32 px buttons and the spacing scale in the other dialogs move to step 5 |
+| 3 Main window | Done, pending Windows check | `Controls/NavigationPane.cs` (D3), `Controls/SummaryCard.cs`, `MedicineListFilter` (Application, unit-tested), toolbar with New medicine, Register intake and search (D4, Ctrl+F), grid context menu, status pill, 36 px rows; main-window section of the five user guides |
 
-Main grid: the whole-row tint is removed and status stays in the
-Status cell only (§5.1, F3); the pill shape and 36 px rows come with
-step 3.
+The summary cards count the rows the grid can show before the card and
+search filters (active medicines, plus inactive ones when shown), so a
+card always shows how many rows a click on it lists. A second click on
+the active card clears the filter; opening a medicine from the timeline
+clears a filter that would hide it.
 
 ## 6c. Screenshot baseline (step 1.0)
 
@@ -454,3 +457,4 @@ Accepted by the product owner on 2026-09-30 as proposed.
 | 2 | 2026-09-30 | D1–D5 accepted; §5.1 details the navigation pane and the toolbar |
 | 3 | 2026-09-30 | Phase 1 implemented (§6b); dark tokens aligned with WinForms' dark system colours; §4.4 verified against .NET 10.0.12 |
 | 4 | 2026-09-30 | Screenshot baseline (§6c); step 2 started |
+| 5 | 2026-09-30 | Step 2 closed for the reviewed windows; step 3 implemented |
