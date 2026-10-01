@@ -1,7 +1,7 @@
-# Development status — 2026-09-28
+# Development status — 2026-10-01
 
 Snapshot of what has shipped and what remains open, taken at
-`main` = v2.10.0 plus #112 (commit `c7092de`). Sources: `CHANGE_LOG.md`,
+`main` = v2.12.0 plus #155 (commit `508785a`). Sources: `CHANGE_LOG.md`,
 `docs/EVOLUTION.md`, `docs/EVOLUTION-DONE.md`,
 `docs/notes/EVOLUTION-PROPOSALS.md`,
 `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`, the GitHub tracker.
@@ -18,6 +18,10 @@ Reviewed on 2026-09-28 at v2.9.1, after #100, #104, #106 (draft),
 Reviewed again on 2026-09-28 at v2.10.0, after #109–#112 (A2 webcam
 and restock by scan shipped, multi-user G/I design): all sections.
 
+Reviewed again on 2026-10-01 at v2.12.0, after #113–#155 (remote
+catalogue feeds, household of devices with a master device, UI
+modernisation, database-query logging): all sections.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -27,11 +31,11 @@ verified against the tree or the tracker.
 
 | Item | Value |
 |---|---|
-| Latest release | v2.10.0 (2026-09-28) |
-| Projects | Domain, Application, Infrastructure.Portable (`net10.0`); Infrastructure (`net10.0-windows`); UI (WinForms); DataImporter |
-| Source files | 370 `.cs` under `src/` |
-| Test projects | 6 (one per project, plus UI and DataImporter); 168 `.cs` files, 923 `[Fact]`/`[Theory]` attributes |
-| Open pull requests | #106 — Android spikes S1–S4 (draft, not to be merged) |
+| Latest release | v2.12.0 (2026-10-01); v2.11.0 on 2026-09-29 |
+| Projects | Domain, Application, Infrastructure.Portable (`net10.0`); Infrastructure (`net10.0-windows`); UI (WinForms, `net10.0-windows10.0.19041.0`); DataImporter |
+| Source files | 446 `.cs` under `src/` |
+| Test projects | 6 (one per project, plus UI and DataImporter); 192 `.cs` files, 1122 `[Fact]`/`[Theory]` attributes |
+| Open pull requests | #156 — update-check tooltip mentions the catalogue download; #137 — local Certum-signed release build in `release.ps1` (based on `509e2e4`, before v2.12.0); #106 — Android spikes S1–S4 (draft, not to be merged) |
 | Open issues | #11 — Simplified Chinese localization (catalogue search disabled) |
 | UI languages | en, it, fr, es, de |
 
@@ -48,7 +52,9 @@ verified against the tree or the tracker.
   database and settings (PRs #22–#26).
 - Reference drug catalogue with autocomplete (Italian data, see
   `docs/CATALOGUE-DATA.md`).
-- Update check against GitHub releases (notice only, no download).
+- Update check against GitHub releases (notice only, the app is never
+  downloaded). Since v2.11.0 the same setting also refreshes the
+  reference catalogues from the remote feeds (§2.6).
 
 ### 2.2 Evolution items (`EVOLUTION-DONE.md`)
 
@@ -62,6 +68,7 @@ verified against the tree or the tracker.
 | C.3+ | Automatic backup to a user-chosen cloud folder, explicit restore, all profiles |
 | C.3++ Phase 1 | `IArchiveStorage` + `LocalFolderArchiveStorage` (PR #56) |
 | Website v1 | `vger70/medreminder-website`, live since 2026-09-25 |
+| Multi-user G | Profile role change (Manage profiles → Change role…), shipped with household step H2a (#117, merged with #129); item I (all-profiles view) not planned |
 
 ### 2.3 Proposals from `EVOLUTION-PROPOSALS.md`
 
@@ -94,7 +101,7 @@ folder, OneDrive or Google Drive, end-to-end encrypted, without a
 backend. Public format: `docs/SYNC-FORMAT.md`; manual exit check:
 `docs/SYNC-TWO-PC-CHECKLIST.md`.
 
-### 2.5 Latest changes (v2.9.0 – v2.10.0)
+### 2.5 Changes v2.9.0 – v2.10.0
 
 - v2.9.0: B.1 Phase 4c and P8 (§2.4); toasts and the dose-reminder
   email follow the application language, not the Windows language
@@ -113,6 +120,60 @@ backend. Public format: `docs/SYNC-FORMAT.md`; manual exit check:
   before the release cannot be verified from this repository
   `[UNCERTAIN]`.
 
+### 2.6 Remote catalogue feeds (v2.11.0)
+
+| PR | Content |
+|---|---|
+| #130, #131 | Italian catalogue refreshed at startup from the monthly AIFA feed published in this repository (`data/it/`) |
+| #134, #135 | Same for EU (EMA EPAR), Spain (AEMPS) and France (BDPM): the reference country's feed and the EU feed |
+
+Feeds are built by the `download_*.yaml` workflows into
+`data/<country>/` (`docs/CATALOGUE-DATA.md`). The app downloads a
+feed only when it is newer than the profile's catalogue, under the
+startup update-check setting; data only, nothing is executed
+(`docs/ANALYSIS.md` §9.5).
+
+### 2.7 Household of devices with a master device (v2.12.0)
+
+Steps H0–H5 of `analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`: H0 in
+#115 (on `main`, v2.11.0), H1–H5 in #116–#128 on the integration branch
+`feature/master-slave`, merged into `main` by #129 on 2026-09-30 after
+the manual tests (`analysis/HOUSEHOLD-MANUAL-TESTS.md`).
+
+| Step | Content | PR |
+|---|---|---|
+| H0 | Join waits for its own device record; join by passphrase asks which group | #115 |
+| H1 | One low-stock email per sync group (`EmailNotificationSent`, profile schema 4) | #116 |
+| H2 | Local household store; role change; installation settings as household state | #117, #118 |
+| H3 | Household group on a storage, device keys and recovery escrow, join with an `mrpair2` code, Tools → Installation…, first-run join | #119–#123 |
+| H4 | Master device: email and cloud backup on the master only, handover wizard, every profile checked on the master | #124–#126 |
+| H5 | Device removal with new installation and profile keys | #127, #128 |
+
+Fixes on the integration branch before the merge: #136 (pairing code
+shown on request), #138 (unchanged recipients of a legacy profile
+group); #141 merged v2.11.0 into it.
+
+Every device of a sync group needs v2.12.0 or later (profile
+operation schemas 4 and 5). Tools → Sync… is admin-only.
+
+### 2.8 UI modernisation (v2.12.0)
+
+Plan in `analysis/ANALYSIS-UI-MODERNIZATION.md` (§6b status: every
+step done).
+
+| PR | Content |
+|---|---|
+| #143, #144 | Phase 0 review; theme layer (light, dark, high-contrast palettes) and per-profile appearance setting |
+| #145 | Dark-mode and layout defects of the screenshot baseline |
+| #146 | Main window: summary cards, navigation pane, toolbar with search (Ctrl+F) |
+| #147 | Settings: section list instead of tabs, resizable window |
+| #148–#150 | Dialog template (`DialogLayout`), inline errors, confirmations in the app language |
+| #151, #152, #154 | Documentation; dark text box borders; own message and choice dialogs, section lists in Sync and Installation |
+
+Also in v2.12.0: Settings → General → Log database queries
+(diagnostics), administrators only (#153). The user guides were
+rewritten around tasks and the household features (#142).
+
 ---
 
 ## 3. Open work
@@ -124,6 +185,10 @@ backend. Public format: `docs/SYNC-FORMAT.md`; manual exit check:
 | 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | spikes S1, S3 (and S2, S4, S5, S8); D4, D11, D13; Play Console account |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | Feature parity on mobile (timeline, prescription request, catalogue and camera scan, mail device, `.mrz` export, PDF share, state-hash check) | 20–30 d | Phase 5 / 6; D14 |
+
+Household step H6 (household creation and join on the phone, phone as
+master, QR decode on the PC webcam) belongs to Phases 5 and 7, plus
+5–8 d (`ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` §13).
 
 Open prerequisites and debts inside B.1:
 
@@ -156,10 +221,10 @@ developer-days `[INFERRED — from the §13.1 estimates]`.
 
 ### 3.3 Proposals with an implementation prompt ready
 
-`docs/prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md` (multi-user G and
-I, §3.5), gated on decisions D1–D7. The earlier prompts (large text
-mode, medication card PDF) shipped in v2.9.1 and are in
-`docs/prompt/Completed/`.
+None for the application. `docs/prompt/` holds only the two website
+prompts (§3.5). The others are in `docs/prompt/Completed/`, including
+the multi-user roles prompt (item G shipped with household step H2a;
+item I was not built) and the two remote-feed prompts.
 
 ### 3.4 Proposals without design
 
@@ -168,25 +233,32 @@ From `EVOLUTION-PROPOSALS.md`, not started: 1 package expiry tracking
 pill-organizer preparation (interaction with A5 needs a decision),
 10–16 and 18–19 (storage location, shared household stock, database
 encryption at rest, text-to-speech, cost tracking, Windows 11 widget,
-WebDAV target, command palette, CLI).
+WebDAV target, command palette, CLI). The household of devices (§2.7)
+shares profiles and settings between PCs, not the stock of one
+medicine between profiles: proposal 11 is still open.
 
 ### 3.5 Other open items
 
 - **Automatic update** (`docs/AUTO_UPDATE.md`): design proposal, not
   implemented.
+- **Code signing**: PR #137 (local Certum-signed release build in
+  `release.ps1`) is open and predates v2.12.0; the published binaries
+  are still unsigned (`README.md`).
+- **UI, known limitations** (`ANALYSIS-UI-MODERNIZATION.md` §6b): in
+  dark mode the date and time pickers keep a white field (a dark picker
+  needs a replacement control); the Windows MessageBox remains on the
+  start-up and crash paths; the extra row height of Name and Active
+  ingredient in the medicine editor at 150 % + Large is still open.
 - **Issue #11**: Simplified Chinese localization.
 - **Website**: `PROMPT-WEBSITE-CONTENT-REFRESH.md` is live on the site;
   whether `PROMPT-WEBSITE-V2.6-REFRESH.md` has been applied cannot be
-  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.10
+  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.12
   (sync, cloud providers, therapy card PDF, text size, webcam scan,
-  restock by scan) `[INFERRED]`.
-- **Multi-user G and I** (`ANALYSIS-MULTI-USER.md` §14a, §16): profile
-  role change (promote / demote) and a read-only "All profiles" view
-  for an admin. Design and implementation brief ready (#112):
-  `analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`,
-  `prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md`. Not scheduled: work
-  starts only after the product owner confirms decisions D1–D7 of that
-  analysis (§9). Effort not estimated there `[UNCERTAIN]`.
+  restock by scan, remote catalogue feeds, shared installation and
+  master device, dark mode and the new main window) `[INFERRED]`.
+- **Multi-user I** (`ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`): a
+  read-only "All profiles" stock view for an admin. Not planned. Item G
+  (role change) shipped (§2.2).
 
 ### 3.6 Excluded by decision
 
@@ -199,18 +271,18 @@ WebDAV target, command palette, CLI).
 
 ## 4. Suggested next steps `[INFERRED]`
 
-Phase 4c and P8 shipped in v2.9.0. Whether
-`docs/SYNC-TWO-PC-CHECKLIST.md` (K1–K11, P1–P4) was run before that
-release cannot be verified from this repository `[UNCERTAIN]`. Every
-device must run v2.9.0 or later before anyone changes a group key or
-records a replicated profile setting (an app ≤ 2.8.x cannot follow).
+The household feature shipped after its manual tests (§2.7). Every
+device of a sync group or installation must run v2.12.0 or later
+before anyone uses the household features (older apps cannot read
+profile operation schemas 4 and 5).
 
 1. Desktop: confirm webcam decoding on a real pack with a webcam of
-   sufficient resolution (A2 checklist item 7); run the restock
-   checks of `ANALYSIS-A2-BARCODE-SCAN.md` §5C.5 if they were not run
-   before v2.10.0. Then decide D1–D7 of
-   `ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md` if G and I are wanted.
-2. Mobile: build and run the S1–S4 spike app of draft PR #106 on
+   sufficient resolution (A2 checklist item 7). Decide on PR #137
+   (code signing): bring it up to date with `main` or close it.
+2. UI: replace the date and time pickers if a fully dark mode is
+   wanted (§3.5).
+3. Website content refresh for v2.7–v2.12; the screenshots in
+   particular predate the new main window and dark mode.
+4. Mobile: build and run the S1–S4 spike app of draft PR #106 on
    Android before committing to Phase 5; S1 and S3 are the go / no-go
-   risks for MAUI. Independent of item 1.
-3. Website content refresh for v2.7–v2.10.
+   risks for MAUI. Independent of items 1–3.

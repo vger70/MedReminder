@@ -21,7 +21,9 @@ read this file instead.
 | §4 | C.3 — Manual encrypted export/import | PR #48, PR #49, PR #52 |
 | §5 | C.3+ — Backup to a cloud-synced folder + explicit restore | PR #55, PR #57, PR #58 |
 | §6 (Phase 1) | C.3++ — `IArchiveStorage` abstraction | PR #56 |
+| §6 (Phase 2) | C.3++ — OneDrive and Google Drive backends | Through B.1 Phase 4a/4b: PRs #91, #93–#95 (v2.8.0) |
 | §10 | Public presentation website v1 | `vger70/medreminder-website` PRs #1–#5 |
+| — (§12 here) | Shipped outside the backlog: multi-user G, remote catalogue feeds, household with master device, UI modernisation | v2.11.0, v2.12.0 |
 
 Where this file and an analysis document disagree, the analysis
 document and the code win; this file is a summary.
@@ -247,11 +249,12 @@ profile).
 
 ---
 
-## 6. C.3++ — Native cloud provider strategy: Phase 1
+## 6. C.3++ — Native cloud provider strategy: Phases 1 and 2
 
-**Status.** Phase 1 shipped. PR #56 (2026-09-25). Phase 2 and later
-(native OneDrive / Google Drive / Dropbox backends) stay open in
-`EVOLUTION.md` §6 and are gated on B.1.
+**Status.** Phase 1 shipped in PR #56 (2026-09-25). Phase 2 (OneDrive
+and Google Drive) shipped inside B.1 Phase 4 in v2.8.0 (see below).
+Phase 3 (Dropbox, enterprise REST providers) stays open and optional
+in `EVOLUTION.md` §6.
 
 **Authoritative analysis.**
 `docs/analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md` (§14 roadmap, §7.3,
@@ -270,6 +273,21 @@ profile).
   future provider backend must pass.
 - No OAuth, no provider SDK, no new NuGet dependency, no change to
   the `.mrz` format. No user-visible change.
+
+**Phase 2, as implemented** (B.1 Phase 4a, PRs #91, #93, #94; Phase 4b,
+PR #95; `ANALYSIS-B1-MOBILE-SYNC.md`).
+
+- OneDrive through Microsoft Graph REST with MSAL; Google Drive through
+  Drive REST v3 with loopback sign-in and PKCE. Tokens cached with
+  DPAPI (`onedrive.protected`, `googledrive.protected`).
+- Both serve the cloud backup (Settings → Backup) and the sync
+  transport (Tools → Sync…), next to the local or cloud-synced folder.
+- Since household step H4a (v2.12.0), with a shared installation only
+  the master device writes the cloud backup.
+
+**Deviation from the roadmap.** Phase 2 was planned as an
+`IArchiveStorage`-only backup feature after B.1 approval; it shipped as
+part of B.1 sync, which needed the same providers.
 
 ---
 
@@ -312,12 +330,120 @@ custom domain yet.
   load (`assets/js/version.js`, PR #3) to fill the version badge and
   download links.
 - Screenshots ship as text placeholders; no images yet.
-- The static version fallback (`currentVersion`) still reads
-  `v1.2.0`; the app is at 2.4.1.
+- The static version fallback (`currentVersion`) read `v1.2.0` at
+  v1, when the app was at 2.4.1.
 
 **Known gaps.** The site's feature list and several factual claims
 no longer match the application. The corrections are listed in
-`docs/prompt/PROMPT-WEBSITE-CONTENT-REFRESH.md`.
+`docs/prompt/PROMPT-WEBSITE-CONTENT-REFRESH.md`; releases v2.7–v2.12
+are not covered by it (`EVOLUTION.md` §10).
+
+---
+
+## 12. Shipped outside the backlog numbering
+
+Work that never had an `EVOLUTION.md` section but changes what the
+backlog builds on. Summaries only; the analyses are authoritative.
+
+### 12.1 Multi-user G — profile role change
+
+**Status.** Shipped with household step H2a (PR #117 on
+`feature/master-slave`, merged into `main` by PR #129, v2.12.0).
+
+**Authoritative analysis.**
+`docs/analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md` (status note of
+2026-09-29), `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` §8.
+
+**As implemented.** Manage profiles → Change role…: an administrator
+makes another profile an administrator or a standard user; the open
+profile's role stays fixed and one administrator always remains. The
+change is a household operation, replicated with a shared
+installation.
+
+**Not done.** Item I (read-only "All profiles" view for an
+administrator) is not planned.
+
+### 12.2 Remote catalogue feeds
+
+**Status.** Shipped in v2.11.0: Italy (PRs #130, #131), EU, Spain and
+France (PRs #134, #135).
+
+**Authoritative analysis.**
+`docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md`,
+`docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`; sources
+and workflows in `docs/CATALOGUE-DATA.md`.
+
+**As implemented.**
+
+- Monthly GitHub workflows (`download_aifa.yaml`, `download_aemps.yaml`,
+  `download_bdpm.yaml`, `download_ema.yaml`) publish a zip and
+  `latest.json` per country under `data/<country>/`.
+- At startup, after the update check and under the same setting,
+  `RemoteCatalogueRefresher` downloads the reference country's feed
+  and the EU feed when newer than the profile's catalogue (HTTPS, no
+  redirects, size cap, SHA-256 when published), imports it and deletes
+  the archive from `catalogue\staging\`. Data only.
+- The embedded snapshots remain the offline baseline.
+
+### 12.3 Household of devices with a master device
+
+**Status.** Desktop steps H0–H5 shipped: H0 in PR #115 (v2.11.0),
+H1–H5 in PRs #116–#128 on `feature/master-slave`, merged by PR #129 on
+2026-09-30 (v2.12.0) after the manual tests
+(`docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`). Step H6 (mobile) belongs
+to B.1 Phases 5 and 7.
+
+**Authoritative analysis.**
+`docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`; storage format in
+`docs/SYNC-FORMAT.md` §9.
+
+**As implemented.**
+
+- Profiles, roles, PINs, the email account, the cloud-backup policy
+  and the reference country are household state, replicated through
+  an end-to-end encrypted household group on the same storages as
+  sync.
+- Each device holds only the profiles an administrator grants it;
+  profile keys are wrapped per device and escrowed under the household
+  passphrase for recovery.
+- Devices join with a short-lived `mrpair2` code or the household
+  passphrase, from Tools → Installation… or the first-run wizard.
+- One master device sends every email and runs the cloud backup;
+  planned handover with a wizard, takeover of a lost master, and on
+  the master a periodic check of every profile it holds
+  (`MasterProfilesHostedService`). One low-stock email per sync group
+  (`EmailNotificationSent`).
+- Device removal moves the installation and the profile groups the
+  device held to new keys.
+
+**Deviations.** Tools → Sync… became admin-only. Profile operation
+schemas 4 and 5: every device of a group needs v2.12.0.
+
+### 12.4 UI modernisation
+
+**Status.** Shipped in v2.12.0 (PRs #143–#152, #154).
+
+**Authoritative analysis.**
+`docs/analysis/ANALYSIS-UI-MODERNIZATION.md` (§6b status, known
+limitations).
+
+**As implemented.**
+
+- Theme layer (`UiTheme`: light, dark, high-contrast palettes, WCAG AA
+  checked) and a per-profile appearance setting (Same as Windows,
+  Light, Dark).
+- Main window with summary cards that filter the list, a navigation
+  pane and a toolbar with search (Ctrl+F).
+- Settings, Sync and Installation list their sections on the left
+  instead of tabs.
+- One dialog template (`DialogLayout`): button bar with the main
+  action last, inline field errors, dialogs that grow with Large text.
+- Messages, confirmations and choices in MedReminder's own themed
+  dialogs, labelled in the app language.
+
+**Not done.** Framework migration (WinUI 3, WPF, Avalonia) was out of
+scope. In dark mode the date and time pickers keep a white field; the
+Windows MessageBox remains on the start-up and crash paths.
 
 ---
 
@@ -327,3 +453,8 @@ no longer match the application. The corrections are listed in
   (pointer), A5, A6, C.3, C.3+, C.3++ Phase 1 and website v1 here and
   rewrote each item to match what shipped.
 - 2026-09-28 — added A2 (§3.2), shipped in full with v2.10.0.
+- 2026-10-01 — §6: C.3++ Phase 2 recorded as shipped through B.1
+  Phase 4 (v2.8.0). New §12 for work shipped outside the backlog:
+  multi-user G, remote catalogue feeds (v2.11.0), household with a
+  master device and UI modernisation (v2.12.0). §10 notes no longer
+  give the app version as current.
