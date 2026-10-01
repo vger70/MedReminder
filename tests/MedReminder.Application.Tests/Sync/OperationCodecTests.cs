@@ -33,6 +33,7 @@ public class OperationCodecTests
         new MedicineDeleted(M, At),
         new ProfileSettingChanged(ProfileSetting.CaregiverAddress, "carer@example.org"),
         new EmailNotificationSent(M, F, 3, Guid.Parse("0a0a0a0a-0000-0000-0000-000000000004"), At),
+        new EmailNotificationSent(M, F, 3, null, At, Stage: 2),
         new HouseholdLinked(Guid.Parse("0d0d0d0d-0000-0000-0000-000000000005"), At),
     };
 
@@ -58,7 +59,8 @@ public class OperationCodecTests
             .Select(t => t.Name);
 
         OperationCodec.TypeNames.Should().BeEquivalentTo(concrete);
-        ((IEnumerable<object[]>)Samples()).Select(row => row[0].GetType().Name).Should().BeEquivalentTo(concrete);
+        ((IEnumerable<object[]>)Samples()).Select(row => row[0].GetType().Name).Distinct()
+            .Should().BeEquivalentTo(concrete);
     }
 
     // Pins the wire format: property names, enum names, date and decimal
@@ -86,6 +88,7 @@ public class OperationCodecTests
         {
             MedicineDeleted => 2,
             ProfileSettingChanged => 3,
+            EmailNotificationSent { Stage: > 1 } => 6,
             EmailNotificationSent => 4,
             HouseholdLinked => 5,
             _ => 1,
@@ -105,5 +108,35 @@ public class OperationCodecTests
             .Should().Throw<NotSupportedException>();
         FluentActions.Invoking(() => OperationCodec.Deserialize(type, OperationCodec.CurrentSchemaVersion + 1, payload))
             .Should().Throw<NotSupportedException>();
+    }
+
+    // Second low-stock warning: an EmailNotificationSent written before
+    // the stage existed (schema version 4, no "stage") is a first-stage
+    // email.
+    [Fact]
+    public void An_email_payload_without_a_stage_is_a_first_stage_email()
+    {
+        const string payload =
+            "{\"notificationId\":\"0f0f0f0f-0000-0000-0000-000000000002\",\"stockEpoch\":3," +
+            "\"epochFactId\":null,\"sentAt\":\"2026-09-27T10:15:30+02:00\"," +
+            "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}";
+
+        var back = OperationCodec.Deserialize("EmailNotificationSent", 4, payload);
+
+        back.Should().BeOfType<EmailNotificationSent>().Which.Stage.Should().Be(1);
+    }
+
+    // A first-stage email keeps schema version 4 although its payload now
+    // carries "stage": a reader ignores a property it does not know, as an
+    // older app does with this field.
+    [Fact]
+    public void A_property_the_reader_does_not_know_is_ignored()
+    {
+        const string payload =
+            "{\"field\":\"Name\",\"value\":\"x\",\"stage\":1," +
+            "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}";
+
+        OperationCodec.Deserialize("MedicineFieldChanged", 1, payload)
+            .Should().Be(new MedicineFieldChanged(M, "Name", "x"));
     }
 }

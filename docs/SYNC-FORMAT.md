@@ -6,8 +6,8 @@ describes the on-disk format only. The design rationale (merge rules,
 security model, phases) is in
 [`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md).
 
-Format version: **1**. Operation catalogue: schema version **4**.
-Database image: schema version **3**.
+Format version: **1**. Operation catalogue: schema version **6**.
+Database image: schema version **4**.
 
 ---
 
@@ -255,7 +255,9 @@ operation log (`SyncOperations`).
 Image schema versions: 1, the original image; 2, the operation log may
 hold `MedicineDeleted`, so a medicine can be absent from the image
 while later operations for it exist (they are skipped, §6); 3, the
-image holds `SentEmailNotifications`, which an older app would drop.
+image holds `SentEmailNotifications`, which an older app would drop;
+4, `SentEmailNotifications` carry `Stage`, which an older app would
+drop.
 
 A device joins from the newest checkpoint whose `vector` covers every
 device folder's first remaining segment (`vector[d] >= first − 1`), or
@@ -265,7 +267,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 5)
+## 6. Operation catalogue (schema versions 1 to 6)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -290,12 +292,16 @@ nothing.
 | `FactRetracted` | `retractionId`, `kind`, `factId`, `recordedAt` | the fact is removed whatever the order of arrival |
 | `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
 | `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
-| `EmailNotificationSent` (version 4) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt` | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`): the receiving device does not send it again |
+| `EmailNotificationSent` (version 4; version 6 for `stage` 2) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt`, `stage` (from version 6; absent = 1) | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`) at that warning stage: the receiving device does not send it again at that stage or an earlier one |
 | `HouseholdLinked` (version 5) | `householdId`, `linkedAt` | fact; the household that adopted the group (§9); the earliest by HLC wins; profile-level (`medicineId` empty) |
 
 Every type is schema version 1 except `MedicineDeleted`, version 2,
 `ProfileSettingChanged`, version 3, `EmailNotificationSent`, version 4,
-and `HouseholdLinked`, version 5.
+and `HouseholdLinked`, version 5. A second-stage `EmailNotificationSent`
+(the second low-stock warning, sent at half of the medicine's warning
+threshold) is written with version 6, so only that operation stops an
+older app; a first-stage one keeps version 4 and its `stage` field,
+which an older app ignores, is 1.
 
 Profile settings (`ProfileSettingChanged.setting`): `DisplayName` (the
 profile's name, never empty), `ToAddress`, `CaregiverAddress`,

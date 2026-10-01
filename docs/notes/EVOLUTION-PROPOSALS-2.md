@@ -75,6 +75,10 @@ operation schema bump so that devices must be updated only once.
 
 ### 3.1 Escalation warning before run-out
 
+**Status.** Implemented in PR #162 with the threshold derived from
+`ThresholdDays` (half, rounded down) instead of a per-medicine
+setting: nothing new to replicate or configure.
+
 **Problem (verified in the tree).** `NotificationCycle.ShouldNotify`
 suppresses any further low-stock warning once a successful event
 exists for the current `StockEpoch`. A user who ignores the first

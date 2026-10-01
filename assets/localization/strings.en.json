@@ -629,6 +629,8 @@
 
   "Notifications.Email.Subject": "MedReminder — {0} running low ({1} days left)",
   "Notifications.Email.Header": "MedReminder reminder.",
+  "Notifications.Email.SubjectSecond": "MedReminder — second reminder: {0} running low ({1} days left)",
+  "Notifications.Email.HeaderSecond": "MedReminder second reminder: the stock has not been replenished since the first reminder.",
   "Notifications.Email.Medicine": "Medicine: {0}",
   "Notifications.Email.ActiveIngredient": "Active ingredient: {0}",
   "Notifications.Email.Stock": "Remaining quantity: {0} {1}",
@@ -650,6 +652,8 @@
 
   "Notifications.Toast.Title": "{0}: {1} days remaining",
   "Notifications.Toast.Body": "Estimated for {0} days. It's advisable to request a new prescription.",
+  "Notifications.Toast.TitleSecond": "Second reminder — {0}: {1} days remaining",
+  "Notifications.Toast.BodySecond": "Not replenished yet. Estimated for {0} days. Request a new prescription soon.",
   "Notifications.DoseReminder.Title": "Time to take {0}",
   "Notifications.DoseReminder.Body": "{0} — scheduled dose at {1}",
 

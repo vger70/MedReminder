@@ -116,10 +116,12 @@ internal static class DomainFactory
     public static NotificationEvent NotificationEventForEpoch(
         int epoch,
         bool success = true,
-        Guid? medicineId = null)
+        Guid? medicineId = null,
+        int stage = 1)
     {
         return new NotificationEvent
         {
+            Stage = stage,
             MedicineId = medicineId ?? MedicineId,
             StockEpoch = epoch,
             TriggeredAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),

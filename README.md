@@ -60,6 +60,8 @@ scheduled dose time.
   each timed slot, at most once per slot per day).
 - Optional caregiver email address per profile: receives a copy of
   every email the profile receives.
+- Second warning at half of the warning threshold when the stock has
+  not been replenished since the first one.
 - Structural notification de-duplication via `StockEpoch`: after a
   refill the warning cycle restarts.
 - Internal scheduler with configurable periodic check (default 30

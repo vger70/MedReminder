@@ -1,3 +1,5 @@
+using MedReminder.Domain.Calculations;
+
 namespace MedReminder.Domain.Notifications;
 
 // A low-stock email sent for one stock epoch of a medicine, by any device
@@ -20,4 +22,9 @@ public sealed class SentEmailNotification
     public Guid? EpochFactId { get; init; }
 
     public required DateTimeOffset SentAt { get; init; }
+
+    // Warning stage of the email (NotificationCycle.FirstStage or
+    // SecondStage): a first-stage email does not cover the second
+    // warning of the same epoch.
+    public int Stage { get; init; } = NotificationCycle.FirstStage;
 }

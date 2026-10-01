@@ -213,11 +213,11 @@ public class LedgerDeriverTests
             DaysRemainingAtSend = 3, Success = true,
         };
 
-        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 3, null, Event(Guid.NewGuid()))
+        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 5, null, Event(Guid.NewGuid()))
             .Should().BeTrue("same number, another epoch");
-        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 3, null, Event(medicine.StockEpochFactId))
+        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 5, null, Event(medicine.StockEpochFactId))
             .Should().BeFalse();
-        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 3, null, Event(null))
+        MedReminder.Domain.Calculations.NotificationCycle.ShouldNotify(medicine, 5, null, Event(null))
             .Should().BeFalse("older events compare the number");
     }
 

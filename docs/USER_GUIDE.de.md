@@ -453,8 +453,13 @@ MedReminder sendet nie von selbst eine Anforderung.
 - Alle 30 Minuten prüft MedReminder die Medikamente. Fällt ein
   Medikament unter seine **Warnschwelle**, warnt es dich **einmal**,
   über die für dieses Medikament gewählten Kanäle: eine
-  Windows-Benachrichtigung und/oder eine E-Mail. Nach einer neuen
-  Packung beginnt der Zyklus von vorn.
+  Windows-Benachrichtigung und/oder eine E-Mail.
+- Wurde keine neue Packung hinzugefügt, wenn die verbleibenden Tage
+  **die Hälfte der Schwelle** erreichen, folgt eine **zweite
+  Erinnerung** über dieselben Kanäle (bei einer Schwelle von 10 Tagen:
+  erste Warnung bei 10 Tagen, zweite bei 5). Ein Medikament, das bei der
+  ersten Prüfung schon unter der Hälfte liegt, bekommt nur die zweite
+  Erinnerung. Nach einer neuen Packung beginnt der Zyklus von vorn.
 - **Extras → Jetzt prüfen** (**Strg+R** oder das Menü des Symbols)
   prüft sofort.
 - MedReminder muss laufen, um Warnungen zu senden. Aktiviere den

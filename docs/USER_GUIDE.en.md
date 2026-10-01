@@ -418,7 +418,12 @@ MedReminder never sends a request by itself.
 - Every 30 minutes MedReminder checks the medicines. When a medicine
   falls below its **warning threshold**, it warns you **once**, through
   the channels chosen for that medicine: a Windows notification and/or
-  an email. After a new package the cycle starts again.
+  an email.
+- If no new package has been added when the days left reach **half of
+  the threshold**, a **second reminder** follows on the same channels
+  (with a threshold of 10 days: first warning at 10 days, second at 5).
+  A medicine that is already below half when it is first checked gets
+  only the second reminder. After a new package the cycle starts again.
 - **Tools → Check now** (**Ctrl+R**, or the tray menu) runs
   the check immediately.
 - MedReminder must be running to send reminders. Turn on automatic

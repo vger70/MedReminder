@@ -628,6 +628,8 @@
 
   "Notifications.Email.Subject": "MedReminder — {0} bald aufgebraucht ({1} Tage verbleiben)",
   "Notifications.Email.Header": "MedReminder-Erinnerung.",
+  "Notifications.Email.SubjectSecond": "MedReminder — zweite Erinnerung: {0} bald aufgebraucht ({1} Tage verbleiben)",
+  "Notifications.Email.HeaderSecond": "Zweite MedReminder-Erinnerung: Der Vorrat wurde seit der ersten Erinnerung nicht aufgefüllt.",
   "Notifications.Email.Medicine": "Medikament: {0}",
   "Notifications.Email.ActiveIngredient": "Wirkstoff: {0}",
   "Notifications.Email.Stock": "Verbleibende Menge: {0} {1}",
@@ -649,6 +651,8 @@
 
   "Notifications.Toast.Title": "{0}: {1} Tage verbleiben",
   "Notifications.Toast.Body": "Geschätzt für {0} Tage. Es ist ratsam, ein neues Rezept anzufordern.",
+  "Notifications.Toast.TitleSecond": "Zweite Erinnerung — {0}: {1} Tage verbleiben",
+  "Notifications.Toast.BodySecond": "Noch nicht aufgefüllt. Geschätzt für {0} Tage. Fordern Sie bald ein neues Rezept an.",
   "Notifications.DoseReminder.Title": "Zeit für die Einnahme von {0}",
   "Notifications.DoseReminder.Body": "{0} — geplante Dosis um {1}",
 

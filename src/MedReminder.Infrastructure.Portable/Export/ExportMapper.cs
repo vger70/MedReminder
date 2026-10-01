@@ -242,6 +242,7 @@ internal static class ExportMapper
         DaysRemainingAtSend = e.DaysRemainingAtSend,
         Success = e.Success,
         ErrorMessage = e.ErrorMessage,
+        Stage = e.Stage,
     };
 
     public static NotificationEvent ToEntity(ExportedNotificationEvent d) => new()
@@ -254,6 +255,7 @@ internal static class ExportMapper
         DaysRemainingAtSend = d.DaysRemainingAtSend,
         Success = d.Success,
         ErrorMessage = d.ErrorMessage,
+        Stage = d.Stage < 1 ? 1 : d.Stage,
     };
 
     public static ExportedDoseReminderEvent ToDto(DoseReminderEvent e) => new()

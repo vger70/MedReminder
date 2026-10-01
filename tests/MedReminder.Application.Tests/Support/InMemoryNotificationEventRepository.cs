@@ -16,6 +16,7 @@ internal sealed class InMemoryNotificationEventRepository
         var latest = _items
             .Where(e => e.MedicineId == medicineId)
             .OrderByDescending(e => e.TriggeredAt)
+            .ThenByDescending(e => e.Stage)
             .FirstOrDefault();
         return Task.FromResult<NotificationEvent?>(latest);
     }

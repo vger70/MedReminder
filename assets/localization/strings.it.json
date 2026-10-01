@@ -629,6 +629,8 @@
 
   "Notifications.Email.Subject": "MedReminder — {0} in esaurimento ({1} gg)",
   "Notifications.Email.Header": "Promemoria MedReminder.",
+  "Notifications.Email.SubjectSecond": "MedReminder — secondo avviso: {0} in esaurimento ({1} gg)",
+  "Notifications.Email.HeaderSecond": "Secondo avviso MedReminder: la scorta non è stata rifornita dopo il primo avviso.",
   "Notifications.Email.Medicine": "Medicina: {0}",
   "Notifications.Email.ActiveIngredient": "Principio attivo: {0}",
   "Notifications.Email.Stock": "Quantità residua: {0} {1}",
@@ -650,6 +652,8 @@
 
   "Notifications.Toast.Title": "{0}: {1} giorni residui",
   "Notifications.Toast.Body": "Quantità stimata per {0} giorni. È consigliabile richiedere una nuova prescrizione.",
+  "Notifications.Toast.TitleSecond": "Secondo avviso — {0}: {1} giorni residui",
+  "Notifications.Toast.BodySecond": "Non ancora rifornito. Quantità stimata per {0} giorni. Richiedi presto una nuova prescrizione.",
   "Notifications.DoseReminder.Title": "È ora di prendere {0}",
   "Notifications.DoseReminder.Body": "{0} — dose programmata alle {1}",
 

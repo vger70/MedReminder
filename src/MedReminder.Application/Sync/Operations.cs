@@ -74,7 +74,7 @@ internal static class Operations
         => new(medicineId, recordedAt);
 
     public static EmailNotificationSent EmailSent(SentEmailNotification sent)
-        => new(sent.MedicineId, sent.Id, sent.StockEpoch, sent.EpochFactId, sent.SentAt);
+        => new(sent.MedicineId, sent.Id, sent.StockEpoch, sent.EpochFactId, sent.SentAt, sent.Stage);
 
     public static FactRetracted Retraction(FactRetraction retraction)
         => new(retraction.MedicineId, retraction.Id, retraction.Kind, retraction.FactId, retraction.RecordedAt);

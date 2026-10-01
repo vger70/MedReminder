@@ -184,6 +184,12 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SentEmailNotifications_MedicineId_SentAt""
                 ON ""SentEmailNotifications"" (""MedicineId"", ""SentAt"");", cancellationToken);
+
+        // Second low-stock warning (docs/notes/EVOLUTION-PROPOSALS-2.md
+        // §3.1): the warning stage of every event and sent email. Rows
+        // written before it are first-stage warnings.
+        await AddColumnIfMissingAsync("NotificationEvents", "Stage", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await AddColumnIfMissingAsync("SentEmailNotifications", "Stage", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
         await ExecuteRawSqlAsync(SyncOperationsTableSql, cancellationToken);
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_HlcPhysicalMs_HlcCounter""
