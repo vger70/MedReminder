@@ -843,8 +843,8 @@ All in **Tools → Settings…**. The sections are listed on the left;
 - **General → Appearance (this profile)**: Same as Windows, Light or
   Dark, for each profile on this computer. "Same as Windows" is dark
   only on Windows 11 with dark mode on; with a Windows high-contrast
-  theme its colours are used. Applies after a restart. The calendar that
-  opens from a date field stays light in Dark.
+  theme its colours are used. Applies after a restart. Date fields stay
+  light in Dark.
 - **General → Check for updates on startup (GitHub)**: checks for a new
   version (nothing is installed by itself) and updates the catalogue.
   **? → Check for updates…** checks now.

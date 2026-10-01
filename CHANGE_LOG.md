@@ -45,7 +45,6 @@ Branch: `claude/ui-dark-mode-gaps` → `main`
 
 ### Fixed
 
-- Date and time fields were white in dark mode.
 - Settings check box captions were cut at the minimum window size with
   Large text; they wrap.
 

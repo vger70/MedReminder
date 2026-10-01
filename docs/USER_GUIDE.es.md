@@ -902,7 +902,7 @@ redimensionar.
   para cada perfil en este equipo. «Como Windows» solo es oscuro en
   Windows 11 con el modo oscuro activado; con un tema de contraste alto
   de Windows se usan sus colores. Se aplica tras reiniciar. En Oscuro,
-  el calendario que se abre desde un campo de fecha sigue claro.
+  los campos de fecha siguen claros.
 - **General → Buscar actualizaciones al iniciar (GitHub)**: busca una
   versión nueva (nada se instala solo) y actualiza el catálogo. **? →
   Buscar actualizaciones…** busca ahora.

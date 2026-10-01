@@ -926,8 +926,7 @@ Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
   Dunkel, pro Profil auf diesem Computer. „Wie Windows“ ist nur unter
   Windows 11 mit aktiviertem dunklem Modus dunkel; bei einem
   Windows-Kontrastdesign werden dessen Farben verwendet. Gilt nach einem
-  Neustart. In Dunkel bleibt der Kalender, der sich aus einem Datumsfeld
-  öffnet, hell.
+  Neustart. In Dunkel bleiben Datumsfelder hell.
 - **Allgemein → Beim Start nach Updates suchen (GitHub)**: sucht nach
   einer neuen Version (nichts wird von selbst installiert) und
   aktualisiert den Katalog. **? → Nach Updates suchen…** sucht sofort.

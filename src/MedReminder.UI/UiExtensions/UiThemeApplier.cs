@@ -42,9 +42,6 @@ internal static class UiThemeApplier
             case UpDownBase upDown when UiTheme.IsDark:
                 ThemedBorder.Attach(upDown);
                 break;
-            case DateTimePicker picker when UiTheme.IsDark:
-                ThemedDatePicker.Attach(picker);
-                break;
             case ListView list when UiTheme.IsDark:
                 StyleListView(list, palette);
                 break;
