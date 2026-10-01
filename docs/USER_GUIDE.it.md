@@ -998,14 +998,14 @@ i file di backup ed esportazione che posizioni tu.
 ├── smtp.protected             password email, cifrata da Windows
 ├── backup.settings.json       impostazioni di backup
 ├── cloud-backup.protected     passphrase del backup cloud, cifrata da Windows
-├── user.settings.json         lingua, Paese di riferimento, controllo aggiornamenti
+├── user.settings.json         lingua, Paese di riferimento, controllo aggiornamenti, registrazione query
 ├── household\                 installazione condivisa (solo se usata)
 ├── logs\medreminder-AAAAMMGG.log
 └── profiles\
     └── <profilo>\
         ├── medreminder.db     medicine e scorte del profilo
         ├── notifications.settings.json   destinatari
-        ├── ui.settings.json   dimensione del testo
+        ├── ui.settings.json   dimensione del testo e aspetto
         └── sync.*             impostazioni di sincronizzazione (solo se usata)
 ```
 

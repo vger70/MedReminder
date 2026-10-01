@@ -936,14 +936,14 @@ backup and export files you place yourself.
 ├── smtp.protected             email password, encrypted by Windows
 ├── backup.settings.json       backup settings
 ├── cloud-backup.protected     cloud backup passphrase, encrypted by Windows
-├── user.settings.json         language, reference country, update check
+├── user.settings.json         language, reference country, update check, query logging
 ├── household\                 shared installation (only when used)
 ├── logs\medreminder-YYYYMMDD.log
 └── profiles\
     └── <profile>\
         ├── medreminder.db     the profile's medicines and stock
         ├── notifications.settings.json   recipients
-        ├── ui.settings.json   text size
+        ├── ui.settings.json   text size and appearance
         └── sync.*             sync settings (only when used)
 ```
 

@@ -1004,14 +1004,14 @@ tú.
 ├── smtp.protected             contraseña de correo, cifrada por Windows
 ├── backup.settings.json       configuración de copia de seguridad
 ├── cloud-backup.protected     frase de la copia en la nube, cifrada por Windows
-├── user.settings.json         idioma, país de referencia, búsqueda de actualizaciones
+├── user.settings.json         idioma, país de referencia, búsqueda de actualizaciones, registro de consultas
 ├── household\                 instalación compartida (solo si se usa)
 ├── logs\medreminder-AAAAMMDD.log
 └── profiles\
     └── <perfil>\
         ├── medreminder.db     medicamentos y stock del perfil
         ├── notifications.settings.json   destinatarios
-        ├── ui.settings.json   tamaño del texto
+        ├── ui.settings.json   tamaño del texto y apariencia
         └── sync.*             configuración de sincronización (solo si se usa)
 ```
 

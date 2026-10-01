@@ -1036,14 +1036,14 @@ toi-même.
 ├── smtp.protected             mot de passe e-mail, chiffré par Windows
 ├── backup.settings.json       paramètres de sauvegarde
 ├── cloud-backup.protected     phrase de passe de la sauvegarde cloud, chiffrée par Windows
-├── user.settings.json         langue, pays de référence, vérification des mises à jour
+├── user.settings.json         langue, pays de référence, vérification des mises à jour, journal des requêtes
 ├── household\                 installation partagée (seulement si utilisée)
 ├── logs\medreminder-AAAAMMJJ.log
 └── profiles\
     └── <profil>\
         ├── medreminder.db     médicaments et stock du profil
         ├── notifications.settings.json   destinataires
-        ├── ui.settings.json   taille du texte
+        ├── ui.settings.json   taille du texte et apparence
         └── sync.*             paramètres de synchronisation (seulement si utilisée)
 ```
 

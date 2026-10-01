@@ -1,7 +1,7 @@
 # MedReminder — Architecture
 
 This document describes the architecture of MedReminder **as built**
-(release line 2.10.x). It is the entry point for anyone changing the
+(release line 2.12.x). It is the entry point for anyone changing the
 code: it states the layering rules, where each responsibility lives,
 how data is stored and how the background work is scheduled.
 
@@ -95,7 +95,7 @@ UI  ──►  Application  ──►  Domain
   entry point. It owns the WinForms forms, the tray icon, the toast
   adapter, the webcam capture adapter (`WindowsCameraCaptureService`,
   the only project whose TFM carries the WinRT projections it needs)
-  and the five hosted services (§6). It changes profile data
+  and the seven hosted services (§6). It changes profile data
   only through Application use cases, never through repository write
   methods, `IUnitOfWork` or the `DbContext`;
   `UiWritePathGuardTests` in `MedReminder.Application.Tests` enforces
@@ -110,12 +110,18 @@ UI  ──►  Application  ──►  Domain
   `UiToolStripRenderer` draws every menu and toolbar
   (`docs/analysis/ANALYSIS-UI-MODERNIZATION.md`). Dialogs share
   `DialogLayout` (form table, button bar with the primary action last,
-  inline field errors, `GrowToContent`), Yes/No questions go through
-  `ConfirmDialog` (a TaskDialog labelled from the dictionaries), the
-  main window and Settings navigate with `Controls/NavigationPane`, and
-  the main window's summary cards filter through the pure
-  `MedicineListFilter` (Application). Settings keeps one partial file
-  per section (`Forms/SettingsDialog.<Section>.cs`).
+  inline field errors, `GrowToContent`). Messages go through
+  `UiMessageBox` (themed, buttons labelled from the dictionaries; same
+  overloads as `MessageBox.Show`), Yes/No questions through
+  `ConfirmDialog` (a wrapper over it) and multiple-choice questions
+  through `ChoiceDialog`; `Program` keeps the Windows `MessageBox` only
+  on the start-up and crash paths. The main window and Settings
+  navigate with `Controls/NavigationPane`; the Sync and Installation
+  windows use `Controls/SectionView` (section list plus heading, Ctrl+Tab
+  between sections) instead of a `TabControl`. The main window's
+  summary cards filter through the pure `MedicineListFilter`
+  (Application). Settings keeps one partial file per section
+  (`Forms/SettingsDialog.<Section>.cs`).
 - **DataImporter** is a maintainer tool that loads AIFA CSV files into
   PostgreSQL. It shares no code with the runtime and is not shipped.
   See [`DATA_IMPORTER.md`](DATA_IMPORTER.md).
@@ -404,7 +410,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   googledrive.protected          Google refresh tokens per account, DPAPI CurrentUser (B.1 Phase 4b)
   backup.settings.json           automatic backup settings (admin-managed)
   backup.state.json              last successful backup timestamp
-  user.settings.json             UI language, reference country, update check
+  user.settings.json             UI language, reference country, update check, database-query logging (device only, not replicated)
   localization\strings.<lang>.json   optional user overrides of the UI dictionaries
   logs\medreminder-<date>.log    Serilog, daily files
   catalogue\staging\             remote catalogue archive while it is downloaded and imported; emptied every run
@@ -567,7 +573,7 @@ disables the feature.
 
 ## 6. Background processing
 
-Five `BackgroundService`s in `MedReminder.UI/Hosting`. Each tick opens
+Seven `BackgroundService`s in `MedReminder.UI/Hosting`. Each tick opens
 its own DI scope, so the scoped `DbContext` is never shared between
 ticks. A failing tick is logged and does not stop the service.
 
@@ -578,6 +584,8 @@ ticks. A failing tick is logged and does not stop the service.
 | `AutomaticBackupHostedService` | 30 s initial delay, then every 15 min | Daily backup at or after `Backup:PreferredTime` (§8) |
 | `CatalogueRefreshHostedService` | Once at startup; registered only when `Catalogue:Enabled` is true | Imports each embedded catalogue snapshot whose version is newer, one transaction per country; then, after the startup update check, `RemoteCatalogueRefresher` for the remote feeds of the reference country and EU, one scope per feed (§9.5) |
 | `SyncHostedService` | 15 s initial delay, then every `Sync:IntervalMinutes` (default 5, min 1) and 10 s after local changes; idle while sync is off | Starts a pending new generation, then `SyncEngine.RunAsync` (B.1 Phase 3d) |
+| `HouseholdHostedService` | 20 s initial delay, then every `Household:IntervalMinutes` (default 15, min 1), or at once from the Installation window; idle while the installation is not on a storage | `HouseholdSync.RunAsync` (§5.2, step H3d) |
+| `MasterProfilesHostedService` | 90 s initial delay, then every `Master:ProfilesIntervalMinutes` (default 15, min 1); idle unless this device is the active master | For each other profile of the device: schema patches, profile sync, catch-up, low-stock and dose checks by email only, sync again (§5.2, step H4c) |
 
 The Application services (`MedicationMonitor`, `DoseReminderService`,
 `ConsumptionCatchUp`) have no scheduling code and are tested with a
@@ -832,7 +840,12 @@ PDF package is used. Medicine notes are included only on request.
   separation between people needs separate Windows accounts, as the
   user guides state.
 - Serilog: `Information` level, daily files, 30 files retained, 10 MB
-  per file.
+  per file. EF Core command entries
+  (`Microsoft.EntityFrameworkCore.Database.Command`: SQL text and
+  duration) pass only while `UI:LogDatabaseQueries` is true (Settings →
+  General, administrators only, applied without a restart; a filter on
+  `SerilogLoggerProvider` in `Program.BuildHost`). Sensitive data
+  logging is never enabled, so parameter values are not logged.
 
 ---
 
@@ -865,7 +878,7 @@ Where the implementation departed from the plan:
 | One database at the data-folder root | One database per profile (§5.2) |
 | `ApplicationSetting` key/value table | JSON settings files bound through `IOptions<T>` (§5.3) |
 | Backup = file copy after WAL checkpoint | SQLite online-backup API, plus encrypted `.mrz` export and cloud folder (§8) |
-| One hosted service | Five hosted services (§6) |
+| One hosted service | Seven hosted services (§6) |
 | Italian-only UI | Five UI languages (§9.3) |
 | 4 projects, 3 test projects | 6 projects, 6 test projects (§2) |
 
@@ -882,7 +895,7 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-A1-STEPPED-TAPER.md`](analysis/ANALYSIS-A1-STEPPED-TAPER.md) | Multi-stage tapering |
 | [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning: USB HID scanner (phase 1), webcam (phase 2), restock by scan (phase 3) |
 | [`ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md) | Mobile client with desktop synchronization: desktop side shipped (phases 1–4), mobile open |
-| [`ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`](analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md) | Household of devices with a master device, replicated installation settings, master handover (analysis only, decisions pending) |
+| [`ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`](analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md) | Household of devices with a master device, replicated installation settings, master handover, device removal (steps H0–H5 shipped, PR #129) |
 | [`ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`](analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md) | Caregiver email recipient |
 | [`ANALYSIS-A5-DOSE-TIME-REMINDER.md`](analysis/ANALYSIS-A5-DOSE-TIME-REMINDER.md) | Dose-time reminder |
 | [`ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md) | Donation links |
@@ -890,6 +903,9 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-C3PLUS-CLOUD-BACKUP.md`](analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md) | Cloud-folder backup and restore |
 | [`ANALYSIS-C3PP-CLOUD-PROVIDERS.md`](analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md) | Storage abstraction and native cloud providers |
 | [`ANALYSIS-DRUG-CATALOGUE.md`](analysis/ANALYSIS-DRUG-CATALOGUE.md) | Reference medicine catalogue |
+| [`ANALYSIS-CATALOGUE-REMOTE-FEED.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md) | Remote AIFA catalogue feed refreshed at startup |
+| [`ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md) | Remote EU (EMA), ES (AEMPS) and FR (BDPM) catalogue feeds |
+| [`ANALYSIS-UI-MODERNIZATION.md`](analysis/ANALYSIS-UI-MODERNIZATION.md) | UI restyling and redesign: theme, dark mode, main window, Settings sections, dialog template |
 | [`ANALYSIS-WEBSITE.md`](analysis/ANALYSIS-WEBSITE.md) | Public website |
 
 Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:

@@ -30,6 +30,26 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #155 — Bring README, ANALYSIS and the user guides in line with v2.12.0
+
+Link: [vger70/MedReminder#155](https://github.com/vger70/MedReminder/pull/155)
+Branch: `claude/docs-refresh-v2-12` → `main`
+
+### Docs
+
+- README: SQL commands reach the log only while the query-logging
+  option is on; features list the redesigned main window, section
+  lists, appearance, remote catalogue refresh and query logging;
+  repository layout adds `MedReminder.Infrastructure.Portable`;
+  data tables list the appearance and query-logging settings.
+- `docs/ANALYSIS.md`: release line 2.12.x; seven hosted services
+  (adds `HouseholdHostedService`, `MasterProfilesHostedService`);
+  `UiMessageBox`, `ChoiceDialog` and `SectionView` described;
+  query-logging filter in §10; feature-analysis index adds the remote
+  feeds and UI modernisation, household marked shipped.
+- The five user guides list appearance and query logging in the
+  data-folder tree.
+
 ## PR #154 — Close the remaining dark-mode gaps
 
 Link: [vger70/MedReminder#154](https://github.com/vger70/MedReminder/pull/154)
