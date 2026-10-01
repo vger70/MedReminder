@@ -43,10 +43,17 @@ Branch: `claude/db-query-logging` → `main`
   Device setting `UI:LogDatabaseQueries` in `user.settings.json`, not
   replicated in the household.
 
+### Fixed
+
+- EF Core command entries ("Executed DbCommand", category
+  `Microsoft.EntityFrameworkCore.Database.Command`) reached the log on
+  every run. They are now written only while the option is on. The
+  filter names `SerilogLoggerProvider`: `AddSerilog` registers a rule for
+  that provider (any category, Trace), which wins over any rule without
+  a provider (`src/MedReminder.UI/Program.cs`).
+
 ### Changed
 
-- EF Core command entries (`Microsoft.EntityFrameworkCore.Database.Command`)
-  no longer reach the log while the option is off.
 - `UpdateGeneralSettings` requires an administrator to change the option;
   `HouseholdProjection` keeps it when it rewrites `user.settings.json`.
 
