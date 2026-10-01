@@ -9,6 +9,8 @@ sequence (§2.0). An item here becomes work only once it is approved
 and moved into `EVOLUTION.md` or a dedicated analysis document.
 
 Prepared on 2026-09-25 and reconciled against the tree at that date.
+A second round of proposals, benchmarked against similar apps, is in
+`docs/notes/EVOLUTION-PROPOSALS-2.md` (2026-10-01).
 Status marks updated on 2026-10-01 at v2.12.0 (§8); the ranking itself
 is unchanged.
 
