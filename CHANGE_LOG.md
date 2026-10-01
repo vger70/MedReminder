@@ -30,10 +30,29 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #157 — Align STATUS, EVOLUTION and the proposals note with v2.12.0
+
+Link: [vger70/MedReminder#157](https://github.com/vger70/MedReminder/pull/157)
+Branch: `claude/docs-status-evolution-v2-12` → `main`
+
+### Docs
+
+- `docs/STATUS.md`: snapshot at v2.12.0; remote catalogue feeds,
+  household H0–H5 and UI modernisation recorded as shipped; open work
+  adds household step H6, PR #137 and the UI known limitations.
+- `docs/EVOLUTION.md`: multi-user G shipped, I not planned; household
+  impact on the mobile phases; website gap extended to v2.12.
+- `docs/EVOLUTION-DONE.md`: C.3++ Phase 2 shipped through B.1 Phase 4;
+  new §12 for work shipped outside the backlog numbering.
+- `docs/notes/EVOLUTION-PROPOSALS.md`: status marks and a status table
+  at v2.12.0; ranking unchanged.
+
 ## PR #156 — Say in the update-check tooltip that the catalogue is downloaded
 
 Link: [vger70/MedReminder#156](https://github.com/vger70/MedReminder/pull/156)
 Branch: `claude/update-check-tooltip-catalogue` → `main`
+
+**Status:** merged (2026-10-01)
 
 ### Fixed
 
@@ -48,6 +67,8 @@ Branch: `claude/update-check-tooltip-catalogue` → `main`
 
 Link: [vger70/MedReminder#155](https://github.com/vger70/MedReminder/pull/155)
 Branch: `claude/docs-refresh-v2-12` → `main`
+
+**Status:** merged (2026-10-01)
 
 ### Docs
 
