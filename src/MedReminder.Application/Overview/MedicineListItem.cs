@@ -29,6 +29,13 @@ public sealed class MedicineListItem
     // ILocalizationService — avoids injecting the service into a
     // data-binding DTO.
     public string StatusDisplay { get; set; } = string.Empty;
+
+    // Shortage of the medicine's package in the stored list
+    // (EVOLUTION-PROPOSALS-2 §3.3): empty when not listed. The detail is
+    // the grid cell's tooltip.
+    public string SupplyDisplay { get; set; } = string.Empty;
+    public string SupplyDetail { get; set; } = string.Empty;
+    public bool HasShortage => SupplyDisplay.Length > 0;
 }
 
 public enum MedicineRowStatus

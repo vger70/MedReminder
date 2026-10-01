@@ -1,5 +1,6 @@
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
@@ -27,6 +28,8 @@ internal sealed class ApplicationTestScope
     public InMemoryDoseReminderEventRepository DoseEvents { get; } = new();
     public InMemoryPrescriptionRepository Prescriptions { get; } = new();
     public InMemoryPrescriptionReminderEventRepository PrescriptionReminderEvents { get; } = new();
+    public InMemoryShortageListStore Shortages { get; } = new();
+    public InMemoryShortageNoticeEventRepository ShortageNoticeEvents { get; } = new();
     public InMemoryMedicineActivityRepository Activity { get; } = new();
     public InMemoryStockCountRepository Counts { get; } = new();
     public InMemoryLedgerCutoffRepository Cutoff { get; } = new();
@@ -66,6 +69,7 @@ internal sealed class ApplicationTestScope
     public DeletePrescription DeletePrescription { get; }
     public PrescriptionListQuery PrescriptionList { get; }
     public PrescriptionReminders PrescriptionReminders { get; }
+    public ShortageNotices ShortageNotices { get; }
     public SyncGenesis Genesis { get; }
 
     public ApplicationTestScope(DateTimeOffset? now = null)
@@ -114,12 +118,15 @@ internal sealed class ApplicationTestScope
             Prescriptions, PrescriptionReminderEvents, Medicines, Email, Windows, Clock,
             NullLogger<PrescriptionReminders>.Instance);
 
+        ShortageNotices = new ShortageNotices(Shortages, ShortageNoticeEvents, Medicines, Email, Windows,
+            new JsonDictionaryLocalizationService("en"), Clock, NullLogger<ShortageNotices>.Instance);
+
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance,
             sentEmails: SentEmails, operationLog: Operations, master: Master,
-            prescriptionReminders: PrescriptionReminders);
+            prescriptionReminders: PrescriptionReminders, shortageNotices: ShortageNotices);
     }
 
     // Turns operation capture on, as enabling sync will (Phase 3d).

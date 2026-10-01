@@ -55,3 +55,20 @@ internal sealed class PrescriptionReminderEventRepository : IPrescriptionReminde
     public async Task AddAsync(PrescriptionReminderEvent reminder, CancellationToken cancellationToken)
         => await _db.PrescriptionReminderEvents.AddAsync(reminder, cancellationToken);
 }
+
+internal sealed class ShortageNoticeEventRepository : MedReminder.Application.Catalogue.IShortageNoticeEventRepository
+{
+    private readonly MedReminderDbContext _db;
+
+    public ShortageNoticeEventRepository(MedReminderDbContext db)
+    {
+        _db = db;
+    }
+
+    public Task<bool> ExistsAsync(Guid medicineId, string code, DateOnly start, CancellationToken cancellationToken)
+        => _db.ShortageNoticeEvents.AnyAsync(
+            e => e.MedicineId == medicineId && e.Code == code && e.Start == start, cancellationToken);
+
+    public async Task AddAsync(MedReminder.Domain.Catalogue.ShortageNoticeEvent notice, CancellationToken cancellationToken)
+        => await _db.ShortageNoticeEvents.AddAsync(notice, cancellationToken);
+}

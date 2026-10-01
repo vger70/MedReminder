@@ -51,6 +51,9 @@ scheduled dose time.
   remote feed published in this repository (data only, nothing is
   executed).
 - Printable therapy report for the doctor.
+- Italian medicines in shortage: the AIFA list is downloaded with the
+  catalogue and a listed package is marked in the list (start, expected
+  end, reason) and notified once; no substitute is suggested.
 - Prescriptions followed from the request to the pharmacy: requested,
   issued (code, packages, valid until), collected; a reminder before an
   issued prescription lapses uncollected.

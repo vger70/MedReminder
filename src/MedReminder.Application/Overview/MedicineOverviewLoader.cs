@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Domain.Calculations;
 
 namespace MedReminder.Application.Overview;
@@ -18,6 +19,7 @@ public sealed class MedicineOverviewLoader
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly TimeProvider _clock;
     private readonly ILocalizationService _loc;
+    private readonly IShortageListStore? _shortages;
 
     public MedicineOverviewLoader(
         IMedicineRepository medicines,
@@ -26,8 +28,10 @@ public sealed class MedicineOverviewLoader
         IMedicationSuspensionRepository suspensions,
         IMedicationAdministrationSlotRepository slots,
         TimeProvider clock,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IShortageListStore? shortages = null)
     {
+        _shortages = shortages;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -42,6 +46,7 @@ public sealed class MedicineOverviewLoader
         var today = LocalToday();
         var medicines = await _medicines.ListAllAsync(cancellationToken);
         var items = new List<MedicineListItem>(medicines.Count);
+        var shortages = _shortages?.Load();
 
         foreach (var m in medicines)
         {
@@ -76,6 +81,11 @@ public sealed class MedicineOverviewLoader
                 Status = status,
                 StatusDisplay = LocalizeStatus(status),
             });
+            if (shortages?.NoticeFor(m.NationalCode, today) is { } notice)
+            {
+                items[^1].SupplyDisplay = ShortageTexts.Display(notice, _loc);
+                items[^1].SupplyDetail = ShortageTexts.Detail(notice, shortages.ListDate, _loc);
+            }
         }
 
         return items;

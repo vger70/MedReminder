@@ -40,6 +40,8 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<SyncPeer> SyncPeers => Set<SyncPeer>();
     public DbSet<Prescription> Prescriptions => Set<Prescription>();
     public DbSet<PrescriptionReminderEvent> PrescriptionReminderEvents => Set<PrescriptionReminderEvent>();
+    public DbSet<MedReminder.Domain.Catalogue.ShortageNoticeEvent> ShortageNoticeEvents
+        => Set<MedReminder.Domain.Catalogue.ShortageNoticeEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +66,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new SyncPeerConfiguration());
         modelBuilder.ApplyConfiguration(new PrescriptionConfiguration());
         modelBuilder.ApplyConfiguration(new PrescriptionReminderEventConfiguration());
+        modelBuilder.ApplyConfiguration(new ShortageNoticeEventConfiguration());
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

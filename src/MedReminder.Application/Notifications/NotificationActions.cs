@@ -14,6 +14,8 @@ public sealed record NotificationTarget(NotificationKind Kind, Guid MedicineId, 
     public static NotificationTarget LowStock(Guid medicineId) => new(NotificationKind.LowStock, medicineId);
 
     public static NotificationTarget Prescription(Guid medicineId) => new(NotificationKind.Prescription, medicineId);
+
+    public static NotificationTarget Shortage(Guid medicineId) => new(NotificationKind.Shortage, medicineId);
 }
 
 public enum NotificationKind
@@ -21,6 +23,7 @@ public enum NotificationKind
     DoseReminder,
     LowStock,
     Prescription,
+    Shortage,
 }
 
 // What the user asked for from a toast. Only actions with no effect on

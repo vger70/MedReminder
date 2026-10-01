@@ -176,6 +176,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
     {
         var skipLevel = atStartup ? LogLevel.Information : LogLevel.Debug;
         IReadOnlyList<CatalogueFeedDescriptor> feeds;
+        bool shortages;
         try
         {
             // Gates first, so a disabled step neither waits for the
@@ -195,6 +196,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             }
 
             feeds = CatalogueFeedSelection.Select(userSettings.ReferenceCountry, feedOptions);
+            shortages = CatalogueFeedSelection.IncludesShortages(userSettings.ReferenceCountry, feedOptions);
             if (feeds.Count == 0)
             {
                 _log.Log(skipLevel, "No remote catalogue feed enabled for the reference country; skipping.");
@@ -222,7 +224,28 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         }
 
         await RefreshFeedsAsync(feeds, RefreshFeedAsync, _log, cancellationToken);
+        if (shortages) await RefreshShortagesAsync(cancellationToken);
         return true;
+    }
+
+    // The shortage list (EVOLUTION-PROPOSALS-2 §3.3) after the catalogues.
+    // A file outside the profile database: no scope holds the database
+    // longer than the refresher needs.
+    private async Task RefreshShortagesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = _services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<ShortageRefresher>().RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Shortage list refresh failed; list unchanged.");
+        }
     }
 
     // Own scope per feed, opened only now and disposed as soon as that

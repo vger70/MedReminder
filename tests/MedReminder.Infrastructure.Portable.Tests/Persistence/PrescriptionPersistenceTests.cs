@@ -131,6 +131,43 @@ public class PrescriptionPersistenceTests
     }
 
     [Fact]
+    public async Task Shortage_notices_are_kept_once_patched_and_removed_with_the_medicine()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync(@"DROP TABLE ""ShortageNoticeEvents"";");
+        }
+        for (var run = 0; run < 2; run++)
+        {
+            await using var ctx = fixture.CreateContext();
+            await new DatabaseInitializer(ctx, NullLogger<DatabaseInitializer>.Instance, Clock)
+                .InitializeAsync(CancellationToken.None);
+        }
+        var medicine = await SeedAsync(fixture);
+        await using (var ctx = fixture.CreateContext())
+        {
+            await new ShortageNoticeEventRepository(ctx).AddAsync(new MedReminder.Domain.Catalogue.ShortageNoticeEvent
+            {
+                MedicineId = medicine, Code = "045348036", Start = Today, FiredAt = Clock.GetUtcNow(),
+            }, CancellationToken.None);
+            await ctx.SaveChangesAsync();
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            var repo = new ShortageNoticeEventRepository(ctx);
+            (await repo.ExistsAsync(medicine, "045348036", Today, CancellationToken.None)).Should().BeTrue();
+            (await repo.ExistsAsync(medicine, "045348036", Today.AddDays(1), CancellationToken.None)).Should().BeFalse();
+            await new MedicineDeletionRepository(ctx).RemoveAsync(medicine, CancellationToken.None);
+            await ctx.SaveChangesAsync();
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await ctx.ShortageNoticeEvents.AnyAsync()).Should().BeFalse();
+        }
+    }
+
+    [Fact]
     public void The_export_mapping_round_trips()
     {
         var p = new Prescription

@@ -650,6 +650,38 @@ Mapping notes:
 
 ---
 
+## 8. Shortage list (Italy — AIFA "farmaci carenti")
+
+Not a catalogue: the list of medicines in temporary shortage, used to
+mark the medicines of a profile whose package is listed and to notify
+the user once (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3).
+
+| Item | Value |
+|---|---|
+| Source | AIFA, `elenco_medicinali_carenti.csv` ("Carenze e indisponibilità"); CC BY 4.0, cited in the app as "AIFA list of medicines in shortage of <date>" |
+| Workflow | `download_aifa_shortages.yaml`, Mondays and Thursdays 04:30 UTC, concurrency group `catalogue-feeds-publish` |
+| Script | `scripts/feeds/aifa_shortages.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_shortages.py`, fixture `tests/fixtures/catalogue/aifa-shortages-sample.csv` |
+| Published | `data/it/shortages/shortages-<yyyymmdd>.json` (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`); the 3 newest files are kept |
+| Client | `ShortageRefresher` with `GitHubRawShortageFeedClient`, after the catalogue feeds, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:ShortagesEnabled` (default true), `ShortagesMaxDownloadBytes` (default 4 MiB) |
+| Stored | `%LOCALAPPDATA%\MedReminder\catalogue\shortages\shortages-it.json`, shared by every profile; not in any profile database, not synced, not exported |
+
+Source file format (checked on the list of 29/09/2026, 2,514 rows):
+Windows-1252, two free-text lines before the header (the second holds
+"aggiornato al dd/mm/yyyy", the list date), `;` separator, 13 columns,
+quoted fields with line breaks and doubled quotes, two codes listed
+twice. The 9-digit `Codice AIC` is the package code of the catalogue
+(`Medicine.NationalCode`). The script publishes per code only the
+start, the expected end (often empty), whether AIFA reports
+equivalents, and a reason category (`production`, `demand`,
+`withdrawn`, `suspended`, `commercial`, `regulatory`, `other`). AIFA's
+free-text suggestions and notes are not published.
+
+A listed shortage stays current after its expected end: AIFA keeps a
+medicine listed until the holder confirms the end. A start later than
+today is shown as an announced shortage.
+
+---
+
 ## 7. Suspended countries (M4b: UK / MHRA and DE / BfArM)
 
 Not shipping. Both remaining target countries on the M4 shortlist

@@ -315,6 +315,27 @@ Bestandsfenster, bereits auf *Neue Packung* mit der üblichen Menge. Hat
 kein Medikament diesen Code, kannst du ein neues Medikament anlegen oder
 den Code einem vorhandenen zuordnen.
 
+### Medikamente mit Lieferengpass (Italien)
+
+Mit Italien als Referenzland lädt MedReminder die AIFA-Liste der
+Lieferengpässe zusammen mit dem Katalog herunter (beim Start und einmal
+am Tag, wenn **Automatisch nach Updates suchen** aktiv ist). Ein
+Medikament, dessen Packung (AIC-Code, aus dem Katalog oder dem Barcode
+ausgefüllt) auf der Liste steht, zeigt das in der Spalte
+**Verfügbarkeit** der Liste:
+
+- *Lieferengpass*: die AIFA führt die Packung als schwer erhältlich;
+- *Engpass ab …*: die AIFA kündigt einen Engpass ab diesem Datum an.
+
+Fahre mit der Maus über die Zelle, um Beginn, voraussichtliches Ende
+(oft nicht mitgeteilt, und es kann sich ändern), Grund, ob die AIFA
+gleichwertige Arzneimittel meldet und das Datum der Liste zu lesen. Du
+bekommst außerdem eine Benachrichtigung pro Engpass über die Kanäle des
+Medikaments.
+
+MedReminder nennt keinen Ersatz: frage deinen Arzt oder Apotheker und
+fordere das Rezept rechtzeitig an.
+
 ---
 
 <a id="stock"></a>
