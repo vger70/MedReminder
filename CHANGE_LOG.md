@@ -30,6 +30,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #156 — Say in the update-check tooltip that the catalogue is downloaded
+
+Link: [vger70/MedReminder#156](https://github.com/vger70/MedReminder/pull/156)
+Branch: `claude/update-check-tooltip-catalogue` → `main`
+
+### Fixed
+
+- Settings → General → Check for updates on startup: the tooltip, in
+  all five languages, no longer says nothing is downloaded. Since
+  v2.11.0 the setting also downloads the catalogue of the reference
+  country and the EU one when a newer edition is published; a new app
+  version is still never downloaded or installed. The README feature
+  line said the same and is corrected.
+
 ## PR #155 — Bring README, ANALYSIS and the user guides in line with v2.12.0
 
 Link: [vger70/MedReminder#155](https://github.com/vger70/MedReminder/pull/155)

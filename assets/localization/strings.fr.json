@@ -593,7 +593,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Nombre de jours de conservation des sauvegardes automatiques. Les fichiers plus anciens sont supprimés après une sauvegarde réussie.\n\n0 = aucune suppression automatique (déconseillé : le dossier grandit indéfiniment).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Ouvrir l'Explorateur de fichiers pour choisir le dossier de sauvegarde.",
   "Ui.SettingsDialog.Tooltip.Language": "Langue de l'interface pour menus, dialogues et notifications e-mail.\nLes notifications toast Windows suivent toujours la langue du système.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si activé, MedReminder interroge l'API publique GitHub Releases au démarrage et affiche un message si une nouvelle version stable est disponible. Aucun téléchargement ni installation automatique.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si activé, MedReminder interroge l'API publique GitHub Releases au démarrage et affiche un message si une nouvelle version stable est disponible ; la nouvelle version n'est jamais téléchargée ni installée automatiquement. Il télécharge aussi le catalogue des médicaments du pays de référence et celui de l'UE lorsqu'une édition plus récente est publiée (données uniquement).",
 
   "Ui.HelpViewer.Title": "Guide utilisateur — MedReminder",
   "Ui.HelpViewer.Back": "Précédent",
