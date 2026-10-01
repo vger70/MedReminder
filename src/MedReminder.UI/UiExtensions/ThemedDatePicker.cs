@@ -8,19 +8,21 @@ namespace MedReminder.UI.UiExtensions;
 // §6c, S2). The native control paints a white field whatever the colour
 // mode, and WinForms cannot recolour it. The painter lets the control
 // paint itself into an off-screen bitmap, as it would on screen, and maps
-// its greys onto the palette before the bitmap reaches the window: white
-// becomes the field colour, black the text colour, the shades between
-// follow. Coloured pixels (the blue of the selected day, month or hour)
-// are kept, so editing looks as before. The drop-down calendar is a
-// separate window and stays light.
+// it onto the palette before the bitmap reaches the window: by brightness,
+// white becomes the field colour, black the text colour, the shades
+// between follow, including the coloured ClearType fringes of the text.
+// The selected part of the date (system highlight colour, with its white
+// text) is left as painted, so editing looks as before. The drop-down
+// calendar is a separate window and stays light.
 internal sealed class ThemedDatePicker : NativeWindow
 {
     private const int WmPaint = 0x000F;
     private const int WmEraseBackground = 0x0014;
 
-    // Below this spread between the strongest and the weakest channel a
-    // pixel counts as grey and is recoloured.
-    private const int GreySpread = 48;
+    // A pixel this close to the system highlight colour (sum of the
+    // channel differences) belongs to the selected part of the date.
+    private const int HighlightDistance = 60;
+    private const int ColorHighlight = 13;
 
     private static readonly ConditionalWeakTable<DateTimePicker, ThemedDatePicker> Attached = new();
 
@@ -83,7 +85,7 @@ internal sealed class ThemedDatePicker : NativeWindow
                     g.ReleaseHdc(memory);
                 }
             }
-            Recolour(bitmap, UiTheme.Palette.Surface, UiTheme.Palette.Text);
+            Recolour(bitmap, UiTheme.Palette.Surface, UiTheme.Palette.Text, NativeHighlight());
             using var target = Graphics.FromHdc(screen);
             target.DrawImageUnscaled(bitmap, 0, 0);
         }
@@ -94,27 +96,58 @@ internal sealed class ThemedDatePicker : NativeWindow
         }
     }
 
-    private static void Recolour(Bitmap bitmap, Color field, Color text)
+    // The colour the native control selects with: Windows' own, not the
+    // dark value WinForms reports through SystemColors.
+    private static Color NativeHighlight()
+    {
+        var bgr = GetSysColor(ColorHighlight);
+        return Color.FromArgb(bgr & 0xFF, (bgr >> 8) & 0xFF, (bgr >> 16) & 0xFF);
+    }
+
+    private static void Recolour(Bitmap bitmap, Color field, Color text, Color highlight)
     {
         var rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
         var data = bitmap.LockBits(rect, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
         try
         {
-            var pixels = new int[data.Stride / 4 * data.Height];
+            var stride = data.Stride / 4;
+            var pixels = new int[stride * data.Height];
             Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
-            for (var i = 0; i < pixels.Length; i++)
+
+            // The selected field: the box around the highlight-coloured
+            // pixels, kept as painted together with the text inside it.
+            int left = int.MaxValue, top = int.MaxValue, right = -1, bottom = -1;
+            for (var y = 0; y < data.Height; y++)
             {
-                var c = pixels[i];
-                int b = c & 0xFF, gr = (c >> 8) & 0xFF, r = (c >> 16) & 0xFF;
-                var max = Math.Max(r, Math.Max(gr, b));
-                var min = Math.Min(r, Math.Min(gr, b));
-                if (max - min >= GreySpread) continue;
-                // Luminance 255 (white) -> field, 0 (black) -> text.
-                var t = (r * 299 + gr * 587 + b * 114) / 1000;
-                var nr = text.R + (field.R - text.R) * t / 255;
-                var ng = text.G + (field.G - text.G) * t / 255;
-                var nb = text.B + (field.B - text.B) * t / 255;
-                pixels[i] = unchecked((int)0xFF000000) | (nr << 16) | (ng << 8) | nb;
+                for (var x = 0; x < bitmap.Width; x++)
+                {
+                    var c = pixels[y * stride + x];
+                    var distance = Math.Abs(((c >> 16) & 0xFF) - highlight.R)
+                        + Math.Abs(((c >> 8) & 0xFF) - highlight.G)
+                        + Math.Abs((c & 0xFF) - highlight.B);
+                    if (distance >= HighlightDistance) continue;
+                    left = Math.Min(left, x);
+                    right = Math.Max(right, x);
+                    top = Math.Min(top, y);
+                    bottom = Math.Max(bottom, y);
+                }
+            }
+
+            for (var y = 0; y < data.Height; y++)
+            {
+                for (var x = 0; x < bitmap.Width; x++)
+                {
+                    if (x >= left && x <= right && y >= top && y <= bottom) continue;
+                    var i = y * stride + x;
+                    var c = pixels[i];
+                    int b = c & 0xFF, g = (c >> 8) & 0xFF, r = (c >> 16) & 0xFF;
+                    // Brightness 255 (white) -> field, 0 (black) -> text.
+                    var t = (r * 299 + g * 587 + b * 114) / 1000;
+                    var nr = text.R + (field.R - text.R) * t / 255;
+                    var ng = text.G + (field.G - text.G) * t / 255;
+                    var nb = text.B + (field.B - text.B) * t / 255;
+                    pixels[i] = unchecked((int)0xFF000000) | (nr << 16) | (ng << 8) | nb;
+                }
             }
             Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
         }
@@ -138,6 +171,9 @@ internal sealed class ThemedDatePicker : NativeWindow
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
         public byte[] Reserved;
     }
+
+    [DllImport("user32.dll")]
+    private static extern int GetSysColor(int index);
 
     [DllImport("user32.dll")]
     private static extern IntPtr BeginPaint(IntPtr hWnd, ref PaintStruct paint);
