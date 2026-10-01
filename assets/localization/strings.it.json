@@ -594,7 +594,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Numero di giorni di conservazione dei backup automatici. File più vecchi vengono cancellati automaticamente dopo un backup riuscito.\n\n0 = nessuna cancellazione automatica (sconsigliato: la cartella cresce all'infinito).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Apri Esplora file per scegliere la cartella dei backup.",
   "Ui.SettingsDialog.Tooltip.Language": "Lingua dell'interfaccia utente e delle notifiche email.\nLe notifiche toast di Windows seguono sempre la lingua di sistema.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Se abilitato, all'avvio MedReminder interroga le GitHub Releases API pubbliche e mostra un messaggio se è disponibile una nuova versione stabile. Nessun download né installazione automatica.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Se abilitato, all'avvio MedReminder interroga le GitHub Releases API pubbliche e mostra un messaggio se è disponibile una nuova versione stabile; la nuova versione non viene mai scaricata né installata automaticamente. Scarica inoltre il catalogo dei medicinali del Paese di riferimento e quello UE quando ne è pubblicata un'edizione più recente (solo dati).",
 
   "Ui.HelpViewer.Title": "Guida utente — MedReminder",
   "Ui.HelpViewer.Back": "Indietro",

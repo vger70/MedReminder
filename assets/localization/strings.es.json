@@ -593,7 +593,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Número de días de conservación de las copias automáticas. Los archivos más antiguos se eliminan tras una copia correcta.\n\n0 = sin eliminación automática (desaconsejado: la carpeta crece indefinidamente).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Abrir el Explorador de archivos para elegir la carpeta de copia.",
   "Ui.SettingsDialog.Tooltip.Language": "Idioma de la interfaz para menús, diálogos y notificaciones e-mail.\nLas notificaciones toast Windows siguen siempre el idioma del sistema.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si está habilitado, MedReminder consulta la API pública de GitHub Releases al iniciar y muestra un mensaje si hay una nueva versión estable disponible. No descarga ni instala nada automáticamente.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si está habilitado, MedReminder consulta la API pública de GitHub Releases al iniciar y muestra un mensaje si hay una nueva versión estable disponible; la nueva versión nunca se descarga ni se instala automáticamente. También descarga el catálogo de medicamentos del país de referencia y el de la UE cuando se publica una edición más reciente (solo datos).",
 
   "Ui.HelpViewer.Title": "Guía de usuario — MedReminder",
   "Ui.HelpViewer.Back": "Atrás",

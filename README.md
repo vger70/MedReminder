@@ -117,7 +117,8 @@ scheduled dose time.
   closing the window minimizes to tray.
 - Optional automatic startup with Windows (per-user, no UAC).
 - Update check against GitHub Releases (at startup, can be turned
-  off; nothing is downloaded or installed automatically).
+  off; a new version is never downloaded or installed automatically).
+  The same setting governs the remote catalogue refresh.
 - Optional "Support Development" dialog opening Stripe or PayPal
   hosted payment pages; hidden unless configured.
 - Structured rolling log (daily, 30-day retention); optional,

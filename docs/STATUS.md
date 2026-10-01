@@ -1,7 +1,7 @@
 # Development status — 2026-10-01
 
 Snapshot of what has shipped and what remains open, taken at
-`main` = v2.12.0 plus #155 (commit `508785a`). Sources: `CHANGE_LOG.md`,
+`main` = v2.12.0 plus #155 and #156 (commit `d37de16`). Sources: `CHANGE_LOG.md`,
 `docs/EVOLUTION.md`, `docs/EVOLUTION-DONE.md`,
 `docs/notes/EVOLUTION-PROPOSALS.md`,
 `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`, the GitHub tracker.
@@ -35,7 +35,7 @@ verified against the tree or the tracker.
 | Projects | Domain, Application, Infrastructure.Portable (`net10.0`); Infrastructure (`net10.0-windows`); UI (WinForms, `net10.0-windows10.0.19041.0`); DataImporter |
 | Source files | 446 `.cs` under `src/` |
 | Test projects | 6 (one per project, plus UI and DataImporter); 192 `.cs` files, 1122 `[Fact]`/`[Theory]` attributes |
-| Open pull requests | #156 — update-check tooltip mentions the catalogue download; #137 — local Certum-signed release build in `release.ps1` (based on `509e2e4`, before v2.12.0); #106 — Android spikes S1–S4 (draft, not to be merged) |
+| Open pull requests | #137 — local Certum-signed release build in `release.ps1` (based on `509e2e4`, before v2.12.0); #106 — Android spikes S1–S4 (draft, not to be merged) |
 | Open issues | #11 — Simplified Chinese localization (catalogue search disabled) |
 | UI languages | en, it, fr, es, de |
 

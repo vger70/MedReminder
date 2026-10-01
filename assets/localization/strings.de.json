@@ -593,7 +593,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Anzahl der Tage, die automatische Sicherungen aufbewahrt werden. Ältere Dateien werden nach einer erfolgreichen Sicherung gelöscht.\n\n0 = keine automatische Löschung (nicht empfohlen: der Ordner wächst unbegrenzt).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Öffnet den Datei-Explorer, um den Sicherungsordner auszuwählen.",
   "Ui.SettingsDialog.Tooltip.Language": "Oberflächensprache für Menüs, Dialoge und E-Mail-Benachrichtigungen.\nWindows-Toast-Benachrichtigungen folgen immer der Systemsprache.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Wenn aktiviert, ruft MedReminder beim Start die öffentliche GitHub-Releases-API auf und zeigt eine Meldung an, sobald eine neuere stabile Version verfügbar ist. Es wird nichts automatisch heruntergeladen oder installiert.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Wenn aktiviert, ruft MedReminder beim Start die öffentliche GitHub-Releases-API auf und zeigt eine Meldung an, sobald eine neuere stabile Version verfügbar ist; die neue Version wird nie automatisch heruntergeladen oder installiert. Außerdem lädt MedReminder den Arzneimittelkatalog des Referenzlands und den der EU herunter, sobald eine neuere Ausgabe veröffentlicht ist (nur Daten).",
 
   "Ui.HelpViewer.Title": "Benutzerhandbuch — MedReminder",
   "Ui.HelpViewer.Back": "Zurück",
