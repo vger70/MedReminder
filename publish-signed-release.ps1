@@ -41,8 +41,8 @@ function Show-Usage {
     Write-Host "       (commit, push, tag v<version>; the tag triggers the CI release)"
     Write-Host "    2. wait for the CI workflow, then git checkout v<version>"
     Write-Host "    3. .\release.ps1 <version> -LocalBuild (signed and timestamped),"
-    Write-Host "       then signtool verify on the MSI"
-    Write-Host "    4. gh release upload --clobber: signed ZIPs, MSI and SHA256SUMS.txt"
+    Write-Host "       then signtool verify on both MSIs"
+    Write-Host "    4. gh release upload --clobber: signed ZIPs, MSIs and SHA256SUMS.txt"
     Write-Host "    5. git checkout main (always, also on failure)"
     Write-Host ""
     Write-Host "  -SkipGitRelease resumes from step 2 on an existing tag and release,"
@@ -72,6 +72,7 @@ $Assets       = @(
     "MedReminder-win-x64-net10.zip",
     "MedReminder-win-x64.zip",
     "MedReminder-win-x64.msi",
+    "MedReminder-win-x64-net10.msi",
     "SHA256SUMS.txt"
 )
 
@@ -216,8 +217,10 @@ try {
         -TimestampUrl $TimestampUrl
     if ($LASTEXITCODE -ne 0) { throw "release.ps1 $Version -LocalBuild failed (exit code $LASTEXITCODE)." }
 
-    $msi = Join-Path $DistDir "MedReminder-win-x64.msi"
-    Invoke-Native { & $script:SignTool verify /pa /v $msi } "signtool verify $msi"
+    foreach ($name in "MedReminder-win-x64.msi", "MedReminder-win-x64-net10.msi") {
+        $msi = Join-Path $DistDir $name
+        Invoke-Native { & $script:SignTool verify /pa /v $msi } "signtool verify $msi"
+    }
 
     Write-Step "[4/4] Uploading signed assets to $TagName"
     $files = $Assets | ForEach-Object {
