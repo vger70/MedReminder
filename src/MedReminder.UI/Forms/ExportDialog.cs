@@ -332,7 +332,7 @@ internal sealed class ExportDialog : MedReminderFormBase
                 successMessage = _loc.Get("Ui.ExportDialog.Success", path);
             }
 
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 successMessage,
                 _loc.Get("Ui.ExportDialog.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);

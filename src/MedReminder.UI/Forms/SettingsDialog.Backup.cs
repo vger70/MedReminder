@@ -424,7 +424,7 @@ internal sealed partial class SettingsDialog
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, _loc.Get(provider == CloudProvider.GoogleDrive
+            UiMessageBox.Show(this, _loc.Get(provider == CloudProvider.GoogleDrive
                     ? "Ui.SyncDialog.SignIn.Failed.GoogleDrive"
                     : "Ui.SyncDialog.SignIn.Failed", ex.Message),
                 _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -533,7 +533,7 @@ internal sealed partial class SettingsDialog
 
             if (enabled && string.IsNullOrWhiteSpace(directory))
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.SettingsDialog.Backup.NoDirectorySelected"),
                     _loc.Get("Ui.SettingsDialog.Backup.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -546,7 +546,7 @@ internal sealed partial class SettingsDialog
                 try { Directory.CreateDirectory(directory); }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this,
+                    UiMessageBox.Show(this,
                         _loc.Get("Ui.SettingsDialog.Backup.DirectoryCreateError", ex.Message),
                         _loc.Get("Ui.SettingsDialog.Backup.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -565,7 +565,7 @@ internal sealed partial class SettingsDialog
             var cloudAccountId = CloudTargetAccountId;
             if (cloudEnabled && cloudIsProvider && string.IsNullOrEmpty(cloudAccountId))
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get(cloudProvider == CloudProvider.GoogleDrive
                         ? "Ui.SettingsDialog.CloudBackup.SignInFirst.GoogleDrive"
                         : "Ui.SettingsDialog.CloudBackup.SignInFirst"),
@@ -575,7 +575,7 @@ internal sealed partial class SettingsDialog
             }
             if (cloudEnabled && !cloudIsProvider && string.IsNullOrWhiteSpace(cloudDirectory))
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.CloudBackup.Error.FolderMissing"),
                     _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -583,7 +583,7 @@ internal sealed partial class SettingsDialog
             }
             if (cloudEnabled && !_cloudPassStore.HasPassphrase)
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.CloudBackup.Error.PassphraseMissing"),
                     _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -594,7 +594,7 @@ internal sealed partial class SettingsDialog
                 try { Directory.CreateDirectory(cloudDirectory); }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this,
+                    UiMessageBox.Show(this,
                         _loc.Get("Ui.SettingsDialog.Backup.DirectoryCreateError", ex.Message),
                         _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -619,14 +619,14 @@ internal sealed partial class SettingsDialog
 
             await RunUseCaseAsync<UpdateBackupSettings>(u => u.ExecuteAsync(settings, CancellationToken.None));
             if (IsDisposed) return;
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Backup.Saved"),
                 _loc.Get("Common.Ok"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.SettingsDialog.Backup.SaveError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -637,7 +637,7 @@ internal sealed partial class SettingsDialog
         var directory = _backupDirectoryBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(directory))
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Backup.RunNoDir"),
                 _loc.Get("Ui.SettingsDialog.Backup.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -662,7 +662,7 @@ internal sealed partial class SettingsDialog
             UpdateBackupStatusLabel();
 
             var suffix = pruned > 0 ? _loc.Get("Ui.SettingsDialog.Backup.RunPruned", pruned) : string.Empty;
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Backup.RunSuccess", file) + suffix,
                 _loc.Get("Ui.SettingsDialog.Backup.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -675,7 +675,7 @@ internal sealed partial class SettingsDialog
                 LastError: ex.Message,
                 LastBackupFile: null));
             UpdateBackupStatusLabel();
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.SettingsDialog.Backup.RunError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -697,14 +697,14 @@ internal sealed partial class SettingsDialog
         {
             var file = await _backup.ExportProfileAsync(
                 _currentProfile.Id, dialog.SelectedPath, CancellationToken.None);
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Backup.RunSuccess", file),
                 _loc.Get("Ui.SettingsDialog.Backup.ExportTitle"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.SettingsDialog.Backup.ExportError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -754,7 +754,7 @@ internal sealed partial class SettingsDialog
 
             var isActive = string.Equals(
                 targetProfileId, _currentProfile.Id, StringComparison.Ordinal);
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get(isActive
                     ? "Ui.SettingsDialog.Backup.RestoreDone"
                     : "Ui.SettingsDialog.Backup.RestoreDoneInactive"),
@@ -776,7 +776,7 @@ internal sealed partial class SettingsDialog
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.SettingsDialog.Backup.ImportError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }

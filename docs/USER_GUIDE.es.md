@@ -713,7 +713,7 @@ asistencia remota también lo ven).
 **Uso diario**
 
 - La sincronización se hace unos segundos después de cada cambio, cada
-  5 minutos y con **Sincronizar ahora**. La pestaña **Dispositivos**
+  5 minutos y con **Sincronizar ahora**. La sección **Dispositivos**
   muestra los PC y cuándo se vio cada uno por última vez.
 - Si dos PC cambiaron lo mismo antes de sincronizarse, gana el cambio
   más reciente y el caso aparece en **Conflictos**: **Restaurar valor
@@ -731,7 +731,7 @@ asistencia remota también lo ven).
   OneDrive** / **Volver a iniciar sesión en Google Drive**; no se pierde
   nada.
 
-**Un PC se ha perdido o la frase se ha filtrado.** En la pestaña
+**Un PC se ha perdido o la frase se ha filtrado.** En la sección
 **Dispositivos** selecciona el PC y haz clic en **Quitar
 dispositivo…**, o usa **Cambiar clave y frase de contraseña…**. Elige
 una nueva frase de sincronización: el PC quitado no podrá leer nada de
@@ -821,7 +821,7 @@ de todos los perfiles que contiene, también los que no están abiertos)
 y hace la copia en la nube. Los demás dispositivos muestran sus avisos
 solo en pantalla. Así cada correo llega una sola vez.
 
-- El dispositivo que publica la instalación es el principal. La pestaña
+- El dispositivo que publica la instalación es el principal. La sección
   **Dispositivos** lo indica en la columna **Función**.
 - Elige como principal un dispositivo **que esté encendido a menudo** y
   con MedReminder en marcha.

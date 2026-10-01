@@ -426,7 +426,11 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         // (the section is measured before it is docked) the time picker
         // and number boxes (docked left in Email) stayed a few pixels
         // wide. The minimum keeps them.
-        if (!input.AutoSize && (input.Dock is DockStyle.None or DockStyle.Left) && (input.Anchor & AnchorStyles.Right) == 0)
+        if (input is CheckBox check)
+        {
+            WrapCaption(check);
+        }
+        else if (!input.AutoSize && (input.Dock is DockStyle.None or DockStyle.Left) && (input.Anchor & AnchorStyles.Right) == 0)
         {
             input.MinimumSize = new System.Drawing.Size(input.Width, input.MinimumSize.Height);
         }
@@ -434,5 +438,29 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         table.Controls.Add(lbl, 0, table.RowCount - 1);
         table.Controls.Add(input, 1, table.RowCount - 1);
+    }
+
+    // A check box does not wrap its caption while it sizes itself, so at
+    // the minimum window size with Large text the caption was cut. It
+    // takes the width of its cell instead and grows in height to the
+    // wrapped caption.
+    private static void WrapCaption(CheckBox check)
+    {
+        check.AutoSize = false;
+        check.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        check.CheckAlign = System.Drawing.ContentAlignment.TopLeft;
+        check.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+        void Fit()
+        {
+            var glyph = check.Font.Height + check.Padding.Horizontal + UiTheme.Space.XS;
+            var text = TextRenderer.MeasureText(check.Text, check.Font,
+                new System.Drawing.Size(Math.Max(1, check.Width - glyph), int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+            var height = Math.Max(text.Height, check.Font.Height) + UiTheme.Space.XS;
+            if (check.Height != height) check.Height = height;
+        }
+        check.SizeChanged += (_, _) => Fit();
+        check.FontChanged += (_, _) => Fit();
+        check.TextChanged += (_, _) => Fit();
     }
 }

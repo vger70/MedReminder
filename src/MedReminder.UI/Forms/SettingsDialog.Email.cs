@@ -113,7 +113,7 @@ internal sealed partial class SettingsDialog
             _passwordBox.Text = string.Empty;
             _clearPasswordBox.Checked = false;
 
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Email.Saved"),
                 _loc.Get("Common.Ok"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -123,7 +123,7 @@ internal sealed partial class SettingsDialog
         {
             if (!IsDisposed)
             {
-                MessageBox.Show(this, ex.Message,
+                UiMessageBox.Show(this, ex.Message,
                     _loc.Get("Ui.SettingsDialog.Email.SaveError"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -146,7 +146,7 @@ internal sealed partial class SettingsDialog
             if (scope.ServiceProvider.GetService<IMasterRole>() is { } master
                 && !await master.SendsEmailAsync(CancellationToken.None))
             {
-                MessageBox.Show(this, _loc.Get("Ui.SettingsDialog.Email.NotMaster"),
+                UiMessageBox.Show(this, _loc.Get("Ui.SettingsDialog.Email.NotMaster"),
                     _loc.Get("Ui.SettingsDialog.Email.TestTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -160,13 +160,13 @@ internal sealed partial class SettingsDialog
                 ? "Ui.SettingsDialog.Email.TestOk"
                 : "Ui.SettingsDialog.Email.TestFailed");
             var icon = ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning;
-            MessageBox.Show(this, msg,
+            UiMessageBox.Show(this, msg,
                 _loc.Get("Ui.SettingsDialog.Email.TestTitle"),
                 MessageBoxButtons.OK, icon);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.SettingsDialog.Email.TestTitle"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }

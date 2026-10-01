@@ -30,6 +30,24 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #154 — Close the remaining dark-mode gaps
+
+Link: [vger70/MedReminder#154](https://github.com/vger70/MedReminder/pull/154)
+Branch: `claude/ui-dark-mode-gaps` → `main`
+
+### Changed
+
+- Messages, confirmations and multiple-choice questions use
+  MedReminder's own dialogs: they follow the dark theme and show OK,
+  Cancel, Yes and No in the language chosen in MedReminder.
+- The Sync and Installation windows list their sections on the left
+  instead of tabs (Ctrl+Tab moves to the next one).
+
+### Fixed
+
+- Settings check box captions were cut at the minimum window size with
+  Large text; they wrap.
+
 ## PR #153 — Add an admin-only option to log database queries
 
 Link: [vger70/MedReminder#153](https://github.com/vger70/MedReminder/pull/153)

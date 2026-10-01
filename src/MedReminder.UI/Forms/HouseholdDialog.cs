@@ -4,10 +4,10 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Household;
 using MedReminder.Application.Sync.Remote;
 using MedReminder.Domain.Household;
+using MedReminder.UI.Controls;
 using MedReminder.UI.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-
 using MedReminder.UI.UiExtensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MedReminder.UI.Forms;
 
@@ -74,14 +74,15 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         _restarter = restarter;
 
         Text = _loc.Get("Ui.HouseholdDialog.Title");
-        Width = 820;
+        Width = 1020;
         Height = 520;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
 
-        var tabs = new TabControl { Dock = DockStyle.Fill };
+        // Section list instead of tabs: tab headers stay light in dark mode.
+        var sections = new SectionView();
 
-        var statusPage = new TabPage(_loc.Get("Ui.HouseholdDialog.Tab.Status")) { Padding = new Padding(12) };
+        var statusPage = new Panel { Padding = new Padding(12) };
         _statusText = new Label { Dock = DockStyle.Fill, AutoSize = false };
         _publish = Action("Ui.HouseholdDialog.Publish", PublishAsync);
         _join = Action("Ui.HouseholdDialog.Join", JoinAsync);
@@ -95,7 +96,7 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         statusPage.Controls.Add(_statusText);
         statusPage.Controls.Add(statusButtons);
 
-        var devicesPage = new TabPage(_loc.Get("Ui.HouseholdDialog.Tab.Devices")) { Padding = new Padding(12) };
+        var devicesPage = new Panel { Padding = new Padding(12) };
         _devices = new ListView { View = View.Details, FullRowSelect = true, MultiSelect = false, Dock = DockStyle.Fill };
         foreach (var (key, width) in new[]
                  {
@@ -117,12 +118,13 @@ internal sealed class HouseholdDialog : MedReminderFormBase
         devicesPage.Controls.Add(_devices);
         devicesPage.Controls.Add(deviceButtons);
 
-        tabs.TabPages.AddRange([statusPage, devicesPage]);
+        sections.AddSection(_loc.Get("Ui.HouseholdDialog.Tab.Status"), Mdl2Glyph.Glyphs.Info, statusPage);
+        sections.AddSection(_loc.Get("Ui.HouseholdDialog.Tab.Devices"), Mdl2Glyph.Glyphs.Devices, devicesPage);
 
         // During the first-run join, closing means no profile was brought.
         _close = DialogLayout.Button(_loc.Get("Common.Close"), setup ? DialogResult.Cancel : DialogResult.OK);
         var bottom = DialogLayout.ButtonBar(this, _close, _close);
-        Controls.Add(tabs);
+        Controls.Add(sections);
         Controls.Add(bottom);
 
         _household.Changed += OnHouseholdChanged;
@@ -350,20 +352,12 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     // Step H5a: the new key after a removal on another device.
     private async Task NewKeyAsync()
     {
-        var passphraseChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.HouseholdDialog.NewKey.Passphrase"), _loc.Get("Ui.HouseholdDialog.NewKey.PassphraseNote"));
-        var codeChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.HouseholdDialog.NewKey.Code"), _loc.Get("Ui.HouseholdDialog.NewKey.CodeNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = Text,
-            Heading = _loc.Get("Ui.HouseholdDialog.NewKey.Heading"),
-            AllowCancel = true,
-        };
-        page.Buttons.Add(passphraseChoice);
-        page.Buttons.Add(codeChoice);
-        page.Buttons.Add(TaskDialogButton.Cancel);
-        var choice = TaskDialog.ShowDialog(this, page);
+        const int passphraseChoice = 0, codeChoice = 1;
+        var choice = ChoiceDialog.Show(this, _loc, Text, _loc.Get("Ui.HouseholdDialog.NewKey.Heading"), null,
+        [
+            (_loc.Get("Ui.HouseholdDialog.NewKey.Passphrase"), _loc.Get("Ui.HouseholdDialog.NewKey.PassphraseNote")),
+            (_loc.Get("Ui.HouseholdDialog.NewKey.Code"), _loc.Get("Ui.HouseholdDialog.NewKey.CodeNote")),
+        ]);
 
         HouseholdKeySource source;
         if (choice == passphraseChoice)
@@ -585,20 +579,12 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             return;
         }
 
-        var codeChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.HouseholdDialog.Join.Code"), _loc.Get("Ui.HouseholdDialog.Join.CodeNote"));
-        var passphraseChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.HouseholdDialog.Join.Passphrase"), _loc.Get("Ui.HouseholdDialog.Join.PassphraseNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = Text,
-            Heading = _loc.Get("Ui.HouseholdDialog.Join.Heading"),
-            AllowCancel = true,
-        };
-        page.Buttons.Add(codeChoice);
-        page.Buttons.Add(passphraseChoice);
-        page.Buttons.Add(TaskDialogButton.Cancel);
-        var choice = TaskDialog.ShowDialog(this, page);
+        const int codeChoice = 0, passphraseChoice = 1;
+        var choice = ChoiceDialog.Show(this, _loc, Text, _loc.Get("Ui.HouseholdDialog.Join.Heading"), null,
+        [
+            (_loc.Get("Ui.HouseholdDialog.Join.Code"), _loc.Get("Ui.HouseholdDialog.Join.CodeNote")),
+            (_loc.Get("Ui.HouseholdDialog.Join.Passphrase"), _loc.Get("Ui.HouseholdDialog.Join.PassphraseNote")),
+        ]);
 
         IReadOnlyList<JoinedProfile>? joined = null;
         if (choice == codeChoice) joined = await JoinWithCodeAsync();
@@ -819,11 +805,11 @@ internal sealed class HouseholdDialog : MedReminderFormBase
 
     private void Info(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void Error(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 }

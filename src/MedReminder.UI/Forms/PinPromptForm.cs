@@ -157,7 +157,7 @@ internal sealed class PinPromptForm : MedReminderFormBase
             // behaviour flashed the status label for a fraction of a
             // second while Close() ran, so the user only saw the
             // window disappear (polished in 15e).
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.PinPromptForm.LockedOut"),
                 _loc.Get("Ui.PinPromptForm.Title", _profile.DisplayName),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);

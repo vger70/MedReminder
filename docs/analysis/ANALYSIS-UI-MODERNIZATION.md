@@ -365,12 +365,17 @@ and draws over the edge Windows paints light (`WM_NCPAINT` for text
 boxes, with the accent colour while focused; the end of `WM_PAINT` for
 number boxes), so no form changes its layout.
 
-Known limitations after step 6, all in dark mode: date and time
-pickers keep a white field (S2; WinForms does not recolour it), the Sync
-and Household dialogs keep light tab headers (their tabs were not in
-scope), and message boxes and task dialogs follow Windows. At the
-minimum Settings size with Large text at 150 % a few check box captions
-are cut (check boxes do not wrap).
+Known limitations after PR #154, all in dark mode: date and time
+pickers keep a white field (S2), and the Windows MessageBox remains
+only in Program's start-up and crash paths. Recolouring the picker
+was tried in PR #154 and dropped: the native control paints the date
+into an off-screen bitmap only in part (separators and digits also go
+straight to the screen), so the result overlapped. A dark picker needs
+a replacement control (text field plus drop-down calendar). PR #154
+closed the other gaps: `UiMessageBox` and `ChoiceDialog` replace the
+MessageBox and TaskDialog calls in the forms, `SectionView` replaces
+the Sync and Household tabs, and Settings check boxes wrap their
+caption.
 
 The summary cards count the rows the grid can show before the card and
 search filters (active medicines, plus inactive ones when shown), so a
