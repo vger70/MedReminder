@@ -53,6 +53,13 @@ Branch: `claude/store-msi-package` → `main`
   app, covering requirements, Partner Center steps and updates. MSIX
   is still not used.
 
+### Removed
+
+- `packaging/msix/` and `packaging/scripts/build-installer.ps1`: the
+  unused MSIX scaffolding and the script that built it, superseded by
+  `release.ps1`. Remaining MSIX mentions in the signing scripts, the
+  WiX project and `Directory.Build.props` are dropped.
+
 ---
 
 ## PR #159 — Check the remote catalogue feeds once a day during the session

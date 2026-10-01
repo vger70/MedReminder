@@ -31,8 +31,8 @@
     <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.1</ProductVersion>
 
     <!-- Folder with the published app (win-x64-self-contained).
-         Must be passed from the CLI or by the build-installer.ps1
-         script. -->
+         Must be passed from the CLI, by release.ps1 or by the
+         release workflow. -->
     <PublishDir Condition="'$(PublishDir)' == ''">..\..\src\MedReminder.UI\bin\Release\net10.0-windows10.0.19041.0\publish\win-x64-sc\</PublishDir>
 
     <!-- Downgrade light.exe validation errors to warnings so

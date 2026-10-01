@@ -809,14 +809,37 @@ change.
 
 ### Partner Center
 
-1. Create the app as an **MSI or EXE app** and reserve the name.
-2. Package: the URL above for the released tag, architecture x64,
-   language-neutral, installer type MSI.
-3. Properties: category and the privacy policy URL. MedReminder is
-   not a medical device; keep the same statement in the description.
-4. Donations (section 23): declare the use of a third-party payment
-   provider (Stripe, PayPal). The Store policy allows them for voluntary
-   donations in non-game apps as long as the donation unlocks nothing.
+One-time setup:
+
+1. Open a developer account at `storedeveloper.microsoft.com`. An
+   individual account is free and needs identity verification (an ID
+   document and a selfie); a company account has a one-time fee.
+2. Partner Center → Apps and games → New product → **EXE or MSI
+   app**, then reserve the name `MedReminder`.
+
+Every release:
+
+1. Run `publish-signed-release.ps1 <version>` and check that the
+   release contains the signed `MedReminder-win-x64-net10.msi`.
+2. Start a new submission and fill in the pages:
+   - **Pricing and availability**: free, markets.
+   - **Properties**: category (Health & fitness or Productivity),
+     privacy policy URL (MedReminder stores email settings and
+     syncs to OneDrive / Google Drive).
+   - **Age ratings**: the IARC questionnaire.
+   - **Packages**: the URL of the tag (table above), architecture x64,
+     languages en, it, fr, es, de. For an MSI the Store installs with
+     `/qn`; no other installer parameter is needed.
+   - **Store listings**, one per language: description, at least one
+     screenshot, logo. State that MedReminder is not a medical device.
+   - **Submission options**, notes for certification: the app runs in
+     the tray; donations (section 23) use third-party payment providers
+     (Stripe, PayPal), which the Store policy allows for voluntary
+     donations in non-game apps as long as the donation unlocks
+     nothing. If Partner Center asks for this declaration on another
+     page, give it there.
+3. Submit and wait for certification.
+4. Never replace the MSI of a submitted tag (see above).
 
 ### Updates
 
