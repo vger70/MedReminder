@@ -104,12 +104,12 @@ Write-Host "Timestamp: $TimestampUrl" -ForegroundColor Cyan
 
 $resolvedFiles = @()
 foreach ($pattern in $Files) {
-    $matches = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue
-    if (-not $matches) {
+    $found = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue
+    if (-not $found) {
         Write-Warning "No file found for: $pattern"
         continue
     }
-    $resolvedFiles += $matches.FullName
+    $resolvedFiles += $found.FullName
 }
 
 if ($resolvedFiles.Count -eq 0) {
@@ -117,7 +117,7 @@ if ($resolvedFiles.Count -eq 0) {
 }
 
 # Build the signtool arguments
-$args = @(
+$signArgs = @(
     'sign',
     '/fd', 'SHA256',
     '/td', 'SHA256',
@@ -130,7 +130,7 @@ if ($PSCmdlet.ParameterSetName -eq 'Thumbprint') {
     # signtool looks in CurrentUser\My by default; if the cert is
     # in LocalMachine\My, add /sm as an extra signtool argument.
     Write-Host "Signing with in-store certificate, thumbprint: $CertificateThumbprint" -ForegroundColor Cyan
-    $args += @('/sha1', $CertificateThumbprint)
+    $signArgs += @('/sha1', $CertificateThumbprint)
 }
 else {
     Write-Host "Signing with .pfx: $CertificatePath" -ForegroundColor Cyan
@@ -139,14 +139,14 @@ else {
     }
     $plainPwd = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
         [Runtime.InteropServices.Marshal]::SecureStringToBSTR($CertificatePassword))
-    $args += @('/f', $CertificatePath, '/p', $plainPwd)
+    $signArgs += @('/f', $CertificatePath, '/p', $plainPwd)
 }
 
-$args += $resolvedFiles
+$signArgs += $resolvedFiles
 
 Write-Host ""
 Write-Host "Signing in progress ($($resolvedFiles.Count) files)..." -ForegroundColor Yellow
-& $signtool @args
+& $signtool @signArgs
 if ($LASTEXITCODE -ne 0) {
     throw "signtool sign failed with exit code $LASTEXITCODE"
 }

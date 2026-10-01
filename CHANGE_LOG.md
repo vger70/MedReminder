@@ -59,6 +59,47 @@ Branch: `claude/catalogue-daily-refresh` → `main`
 - `ANALYSIS-CATALOGUE-REMOTE-FEED.md` §4.1, §4.4, §4.5, D2, new §11.5;
   user guides (5 languages) and README.
 
+## PR #158 — Add publish-signed-release.ps1 to automate signed releases
+
+Link: [vger70/MedReminder#158](https://github.com/vger70/MedReminder/pull/158)
+Branch: `claude/signed-release-script`
+
+### Build
+
+- `publish-signed-release.ps1 <version>` chains the Git release, the
+  wait for the CI run, the tag checkout, the Certum-signed local build
+  with `signtool verify`, and `gh release upload --clobber` of the
+  signed assets, then returns to `main`. Prerequisites are checked
+  before tagging; `-SkipGitRelease` resumes on an existing release.
+
+### Docs
+
+- `docs/PACKAGING.md` §25 documents the script.
+
+---
+
+## PR #137 — Add local Certum-signed release build to release.ps1
+
+Link: [vger70/MedReminder#137](https://github.com/vger70/MedReminder/pull/137)
+Branch: `claude/certum-code-signing`
+
+### Build
+
+- `release.ps1 -LocalBuild` mirrors the CI packaging into
+  `dist\<version>\` (ZIPs, MSI, `SHA256SUMS.txt`) and signs
+  MedReminder's own binaries and the MSI with the Certum SimplySign
+  certificate, SHA-256 with an RFC 3161 timestamp
+  (`http://time.certum.pl`). The Git release flow is unchanged.
+- `.gitignore` ignores `dist/`.
+
+### Fixed
+
+- `packaging/scripts/sign-artifact.ps1` no longer shadows the `$args`
+  and `$matches` automatic variables.
+
+### Docs
+
+- `docs/PACKAGING.md` §25 documents the signed local build.
 ## PR #157 — Align STATUS, EVOLUTION and the proposals note with v2.12.0
 
 Link: [vger70/MedReminder#157](https://github.com/vger70/MedReminder/pull/157)

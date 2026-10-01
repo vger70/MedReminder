@@ -679,3 +679,74 @@ Before a release that offers Google Drive, publish the consent screen
 (Google Auth Platform → Audience → **In production**): while it is in
 Testing, refresh tokens expire after 7 days and users would have to sign
 in again every week (spike S7, `ANALYSIS-B1-MOBILE-SYNC.md` §18.7).
+
+## 25. Code Signing (Certum SimplySign)
+
+Release binaries are signed with a Certum Open Source Code Signing
+certificate held in Certum's cloud HSM (SimplySign). No private key
+exists on disk, so there is no `.pfx` to protect.
+
+### Local signed build
+
+Prerequisites (Windows):
+
+- .NET 10 SDK and the Windows SDK (`signtool.exe`);
+- SimplySign Desktop installed and connected (token from the
+  SimplySign mobile app); the certificate then appears in
+  `Cert:\CurrentUser\My`;
+- the certificate SHA-1 thumbprint:
+  `Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Format-List Subject, Thumbprint, NotAfter`.
+
+Command:
+
+```powershell
+.\release.ps1 1.2.0 -LocalBuild -CertificateThumbprint <sha1>
+# or: $env:CERTUM_CERT_THUMBPRINT = '<sha1>'; .\release.ps1 1.2.0 -LocalBuild
+```
+
+The local build mirrors the CI packaging and writes to `dist\<version>\`
+(ignored by Git): both ZIP packages, the MSI and `SHA256SUMS.txt`.
+Only MedReminder's own binaries (`MedReminder*.exe`, `MedReminder*.dll`)
+are signed, before being zipped or harvested into the MSI; the MSI is
+signed afterwards. `-NoSign` produces an unsigned build to test the
+chain; `-SkipMsi` skips WiX.
+
+Every signature uses SHA-256 and an RFC 3161 timestamp
+(`http://time.certum.pl` by default, `-TimestampUrl` to override), so
+signed files remain valid after the certificate expires.
+
+Verification:
+
+```powershell
+signtool verify /pa /v dist\1.2.0\MedReminder-win-x64.msi
+```
+
+The output must report "Successfully verified" and "The signature is
+timestamped".
+
+### Relationship with CI
+
+The tag-triggered workflow (§12) still publishes unsigned packages.
+Until CI signing is enabled, replace the release assets with the
+locally signed ones from `dist\<version>\`.
+
+`publish-signed-release.ps1` runs the whole sequence:
+
+```powershell
+.\publish-signed-release.ps1 2.12.1
+```
+
+1. checks that `gh` is logged in, the certificate is in the store, the
+   working tree is clean and the tag is unused;
+2. `git checkout main`, `git pull`, `.\release.ps1 <version>` (commit,
+   push, tag);
+3. waits for the CI run on the tag commit (`gh run watch`), then checks
+   out the tag;
+4. `.\release.ps1 <version> -LocalBuild` and `signtool verify` on the MSI;
+5. `gh release upload --clobber` of the signed ZIPs, MSI and
+   `SHA256SUMS.txt`, keeping the release and its notes;
+6. returns to `main`, also on failure.
+
+If signing or upload fails after the tag is pushed, fix the cause and
+resume with `-SkipGitRelease`, which starts from the tag checkout. Run
+`.\publish-signed-release.ps1 -Help` for all options.
