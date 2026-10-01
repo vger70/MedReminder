@@ -202,7 +202,7 @@ time to talk to the doctor.
 
 ### 3.4 Actions in toast notifications
 
-**Status.** Implemented on branch `claude/toast-actions` with the safe
+**Status.** Implemented in PR #165 with the safe
 actions only: body click (open the app on the medicine, or the
 prescriptions), "Prepare request" on low-stock warnings and "Remind me
 in 15 minutes" on dose reminders (a toast scheduled with Windows).
