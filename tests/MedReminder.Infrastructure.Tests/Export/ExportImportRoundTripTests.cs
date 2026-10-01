@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
+using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Domain.Medicines;
@@ -582,7 +583,7 @@ public sealed class ExportImportRoundTripTests : IDisposable
     {
         var backupService = new BackupService(
             CreateProfileContext(), TimeProvider.System,
-            new DatabasePathProvider(_profile.DatabasePath));
+            new DatabasePathProvider(_profile.DatabasePath), new DatabaseExclusiveAccess());
         return new ExportService(
             _profile, backupService, _cipher, credentialStore, TimeProvider.System,
             NullLogger<ExportService>.Instance, _sharedDirectory);
@@ -591,7 +592,7 @@ public sealed class ExportImportRoundTripTests : IDisposable
     private ImportService CreateImportService(
         MedReminderDbContext live, ICredentialProtector protector)
         => new(
-            _profile, live, _cipher, protector, TimeProvider.System,
+            _profile, live, _cipher, protector, TimeProvider.System, new DatabaseExclusiveAccess(),
             NullLogger<ImportService>.Instance, _sharedDirectory);
 
     private MedReminderDbContext CreateProfileContext()

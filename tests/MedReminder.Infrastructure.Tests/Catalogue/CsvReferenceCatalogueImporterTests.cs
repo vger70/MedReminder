@@ -2,6 +2,7 @@ using FluentAssertions;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Infrastructure.Catalogue;
 using MedReminder.Infrastructure.Catalogue.Parsers;
+using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -490,6 +491,48 @@ public sealed class CsvReferenceCatalogueImporterTests
         (await ScalarLongAsync(connection,
             "SELECT COUNT(*) FROM reference_medicines WHERE country = 'FR' AND snapshot_version = '202609';"))
             .Should().Be(93);
+    }
+
+    // The remote refresh keeps its scope across a long download; a
+    // connection left open there would block a database swap.
+    [Fact]
+    public async Task A_connection_the_importer_opened_is_closed_when_the_call_ends()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"medreminder-importer-{Guid.NewGuid():N}.db");
+        var options = new DbContextOptionsBuilder<MedReminderDbContext>()
+            .UseSqlite($"Data Source={path};Pooling=False")
+            .Options;
+        try
+        {
+            await using (var setup = new MedReminderDbContext(options))
+            {
+                await setup.Database.EnsureCreatedAsync();
+            }
+
+            await using var context = new MedReminderDbContext(options);
+            var importer = new CsvReferenceCatalogueImporter(
+                context, new IReferenceSnapshotParser[] { new AifaSnapshotParser() }, TimeProvider.System);
+            var connection = context.Database.GetDbConnection();
+
+            await importer.GetImportStateAsync(Italy, CancellationToken.None);
+            connection.State.Should().Be(System.Data.ConnectionState.Closed);
+
+            await using (var snapshot = CatalogueFixtures.BuildAifaSnapshotStream())
+            {
+                var report = await importer.ImportAsync(snapshot, Italy, "202609", CancellationToken.None);
+                report.Inserted.Should().Be(168);
+            }
+            connection.State.Should().Be(System.Data.ConnectionState.Closed);
+
+            (await importer.GetImportStateAsync(Italy, CancellationToken.None)).Version.Should().Be("202609");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     private static async Task<long> ScalarLongAsync(

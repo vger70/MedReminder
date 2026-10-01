@@ -1,4 +1,5 @@
 using System.Data;
+using MedReminder.Application.Abstractions;
 using MedReminder.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -12,9 +13,26 @@ namespace MedReminder.Infrastructure.Storage;
 // the new file in, drop stale WAL / SHM side files. A restart follows so
 // the hosted services open the new file cleanly. One process owns each
 // profile database, so no other process holds it (CLAUDE.md §7).
+//
+// The swap runs under IDatabaseExclusiveAccess: the remote catalogue
+// import keeps the database open in a write transaction for several
+// seconds and may run at any time of the session, so the swap waits for
+// it instead of failing on the open handle.
 internal static class ProfileDatabaseSwap
 {
-    public static void Replace(MedReminderDbContext db, string target, string newFile, TimeProvider clock)
+    public static Task ReplaceAsync(
+        IDatabaseExclusiveAccess access, MedReminderDbContext db, string target, string newFile,
+        TimeProvider clock, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(access);
+        return access.RunExclusiveAsync(_ =>
+        {
+            Replace(db, target, newFile, clock);
+            return Task.CompletedTask;
+        }, cancellationToken);
+    }
+
+    private static void Replace(MedReminderDbContext db, string target, string newFile, TimeProvider clock)
     {
         SqliteConnection.ClearAllPools();
         var connection = db.Database.GetDbConnection();

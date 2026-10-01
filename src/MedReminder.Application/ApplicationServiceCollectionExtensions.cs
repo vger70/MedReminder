@@ -80,6 +80,9 @@ public static class ApplicationServiceCollectionExtensions
         // startup update check.
         services.AddSingleton<StartupUpdateCheckSignal>();
         services.AddScoped<RemoteCatalogueRefresher>();
+        // The database swaps in Infrastructure wait for the catalogue
+        // import through this port (ANALYSIS-CATALOGUE-REMOTE-FEED.md §4.5).
+        services.AddSingleton<IDatabaseExclusiveAccess, DatabaseExclusiveAccess>();
 
         services.AddScoped<AddMedicine>();
         services.AddScoped<UpdateMedicine>();

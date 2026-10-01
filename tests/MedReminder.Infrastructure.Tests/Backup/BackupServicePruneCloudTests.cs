@@ -1,5 +1,6 @@
 using System.Runtime.Versioning;
 using FluentAssertions;
+using MedReminder.Application;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Backup;
 using Microsoft.Data.Sqlite;
@@ -118,6 +119,7 @@ public sealed class BackupServicePruneCloudTests : IDisposable
         return new BackupService(
             db,
             TimeProvider.System,
-            new DatabasePathProvider(":memory:"));
+            new DatabasePathProvider(":memory:"),
+            new DatabaseExclusiveAccess());
     }
 }
