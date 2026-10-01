@@ -30,7 +30,45 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #162 — Send a second low-stock warning at half of the threshold
+
+Link: [vger70/MedReminder#162](https://github.com/vger70/MedReminder/pull/162)
+Branch: `claude/escalation-warning` → `main`
+
+### Added
+
+- Second low-stock warning (`docs/notes/EVOLUTION-PROPOSALS-2.md`
+  §3.1): when the days left reach half of the medicine's warning
+  threshold and no new package has been added since the first warning,
+  a second toast and/or email follows ("Second reminder"). A medicine
+  already below half when first checked gets only the second one. No
+  new setting: the second threshold is derived from `ThresholdDays`.
+- Strings `Notifications.Email.SubjectSecond`, `.HeaderSecond`,
+  `Notifications.Toast.TitleSecond`, `.BodySecond` in all five
+  dictionaries.
+
+### Changed
+
+- `NotificationCycle`: `StageToNotify`, `StageFor`,
+  `SecondWarningDays`; `EmailAlreadySent` takes the stage.
+- `NotificationEvents.Stage` and `SentEmailNotifications.Stage`, boot
+  patch with default 1; the latest row of an instant is the later stage.
+- Sync: `EmailNotificationSent.stage`; a second-stage email is written
+  with operation schema 6 (first-stage emails keep 4); image schema 4.
+  Devices still on v2.12.x stop at the first second-stage email until
+  updated.
+- Export: additive `stage` on `notificationEvents[]`.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
+  `README.md`, user guides (en, it, fr, es, de).
+
+---
+
 ## PR #160 — Add a second round of evolution proposals
+
+**Status:** merged (2026-10-01)
 
 Link: [vger70/MedReminder#160](https://github.com/vger70/MedReminder/pull/160)
 Branch: `claude/evolution-proposals-2` → `main`
