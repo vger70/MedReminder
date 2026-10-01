@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #160 — Add a second round of evolution proposals
+
+Link: [vger70/MedReminder#160](https://github.com/vger70/MedReminder/pull/160)
+Branch: `claude/evolution-proposals-2` → `main`
+
+### Docs
+
+- `docs/notes/EVOLUTION-PROPOSALS-2.md`: eight new proposals ranked by
+  user benefit after a survey of similar medication apps (escalation
+  warning before run-out, prescription lifecycle, AIFA shortage notice,
+  toast actions, coverage planner, administrative deadlines, `.ics`
+  export, caregiver opt-in and digest), each with an implementation
+  plan; re-assessment of expiry tracking and pill-organizer preparation.
+- `docs/notes/EVOLUTION-PROPOSALS.md`: pointer to the second round.
+
+---
+
 ## PR #159 — Check the remote catalogue feeds once a day during the session
 
 Link: [vger70/MedReminder#159](https://github.com/vger70/MedReminder/pull/159)
