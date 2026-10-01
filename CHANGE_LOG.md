@@ -63,6 +63,13 @@ Branch: `claude/prescription-lifecycle` → `main`
   `PrescriptionReminderEvents`; medicine deletion removes both.
 - Export: additive `prescriptions[]`.
 
+### Fixed
+
+- Prescription request window: wider (820 px), the hint wraps to the
+  field column, and the window is never narrower than its button bar
+  (`DialogLayout.KeepButtonsVisible`, also applied to the Prescriptions
+  and Plan supply windows); the buttons were cut on the left.
+
 ### Docs
 
 - `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,

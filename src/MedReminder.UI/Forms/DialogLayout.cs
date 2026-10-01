@@ -82,6 +82,22 @@ internal static class DialogLayout
         return bar;
     }
 
+    // A resizable dialog with many buttons: when the form loads (after
+    // MedReminderFormBase has scaled it), it becomes at least as wide as
+    // the button bar, so no button is cut at a larger text size or
+    // display scaling; the width is also its minimum width.
+    public static void KeepButtonsVisible(Form form, Control buttonBar)
+        => form.Load += (_, _) =>
+        {
+            var chrome = form.Width - form.ClientSize.Width;
+            var needed = buttonBar.GetPreferredSize(Size.Empty).Width + chrome;
+            var width = Math.Min(needed, Screen.FromControl(form).WorkingArea.Width);
+            if (form.MinimumSize.Width < width) form.MinimumSize = new Size(width, form.MinimumSize.Height);
+            if (form.Width >= width) return;
+            form.Width = width;
+            if (form.Owner is { } owner) form.Left = owner.Left + (owner.Width - form.Width) / 2;
+        };
+
     // The dialog grows to its content when the text size or the display
     // scaling makes it larger than the size it was written for; the size
     // set by the dialog stays the minimum. Measured once when the form

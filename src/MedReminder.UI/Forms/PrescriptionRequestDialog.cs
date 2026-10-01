@@ -63,9 +63,9 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         _sendAsync = sendAsync;
 
         Text = _loc.Get("Ui.PrescriptionRequestDialog.Title");
-        Width = 640;
-        Height = 560;
-        MinimumSize = new Size(520, 420);
+        Width = 820;
+        Height = 600;
+        MinimumSize = new Size(640, 460);
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
         MaximizeBox = true;
@@ -95,7 +95,6 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         var hint = new Label
         {
             AutoSize = true,
-            MaximumSize = new Size(580, 0),
             ForeColor = UiColors.Hint,
             Margin = new Padding(3, 6, 3, 3),
             Text = _loc.Get(_canSend
@@ -169,6 +168,18 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
 
         Controls.Add(table);
         Controls.Add(buttonPanel);
+
+        // The hint wraps to the width of the field column, whatever the
+        // window width.
+        table.SizeChanged += (_, _) =>
+        {
+            var widths = table.GetColumnWidths();
+            if (widths.Length < 2) return;
+            hint.MaximumSize = new Size(Math.Max(200, widths[1] - hint.Margin.Horizontal), 0);
+        };
+        // Every button stays visible at any text size and display
+        // scaling: the window is at least as wide as the button bar.
+        DialogLayout.KeepButtonsVisible(this, buttonPanel);
 
         // Closing while a send is in flight would dispose the controls
         // the continuation writes to; the user waits for the outcome.

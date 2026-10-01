@@ -74,6 +74,7 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
         Controls.Add(_list);
         Controls.Add(hint);
         Controls.Add(buttons);
+        DialogLayout.KeepButtonsVisible(this, buttons);
 
         UpdateButtons();
         Shown += async (_, _) => await ReloadAsync();
