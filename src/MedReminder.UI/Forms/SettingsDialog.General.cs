@@ -282,7 +282,7 @@ internal sealed partial class SettingsDialog
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
@@ -301,7 +301,7 @@ internal sealed partial class SettingsDialog
         var profileChanged = textSizeChanged || appearanceChanged;
         if (!languageChanged && !profileChanged)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.General.Saved"),
                 _loc.Get("Common.Ok"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);

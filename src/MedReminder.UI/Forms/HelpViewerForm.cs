@@ -158,7 +158,7 @@ internal sealed class HelpViewerForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.HelpViewer.BrowserError", ex.Message),
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);

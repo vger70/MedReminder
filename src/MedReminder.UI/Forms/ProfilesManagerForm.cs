@@ -277,7 +277,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         {
             if (!IsDisposed)
             {
-                MessageBox.Show(this, _loc.Get("Ui.ProfilesManagerForm.Rename.Synced", selected.DisplayName),
+                UiMessageBox.Show(this, _loc.Get("Ui.ProfilesManagerForm.Rename.Synced", selected.DisplayName),
                     _loc.Get("Ui.ProfilesManagerForm.Rename"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -356,7 +356,7 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
         // cases, but this is a defense-in-depth check.
         if (string.Equals(selected.Id, _currentProfile.Id, StringComparison.Ordinal))
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.ProfilesManagerForm.Delete.ActiveBlocked"),
                 _loc.Get("Ui.ProfilesManagerForm.Delete.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -393,11 +393,11 @@ internal sealed class ProfilesManagerForm : MedReminderFormBase
             ProfileAdministrationError.LastAdmin => _loc.Get("Ui.ProfilesManagerForm.Role.LastAdmin"),
             _ => ex.Message,
         };
-        MessageBox.Show(this, message, _loc.Get(titleKey), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        UiMessageBox.Show(this, message, _loc.Get(titleKey), MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 
     private void ShowError(Exception ex) =>
-        MessageBox.Show(this, ex.Message,
+        UiMessageBox.Show(this, ex.Message,
             _loc.Get("Common.Error"),
             MessageBoxButtons.OK, MessageBoxIcon.Error);
 

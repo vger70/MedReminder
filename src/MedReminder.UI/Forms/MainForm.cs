@@ -499,7 +499,7 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             _log.LogError(ex, "Failed to open the About dialog.");
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -516,7 +516,7 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             _log.LogError(ex, "Failed to open the Support Development dialog.");
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -541,7 +541,7 @@ internal sealed class MainForm : MedReminderFormBase
             switch (result.Status)
             {
                 case UpdateCheckStatus.UpToDate:
-                    MessageBox.Show(this,
+                    UiMessageBox.Show(this,
                         _loc.Get("Ui.UpdateCheck.UpToDate"),
                         _loc.Get("Ui.UpdateCheck.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -553,7 +553,7 @@ internal sealed class MainForm : MedReminderFormBase
 
                 case UpdateCheckStatus.Error:
                 default:
-                    MessageBox.Show(this,
+                    UiMessageBox.Show(this,
                         _loc.Get("Ui.UpdateCheck.Error", result.ErrorMessage ?? string.Empty),
                         _loc.Get("Ui.UpdateCheck.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -564,7 +564,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             UseWaitCursor = false;
             _log.LogWarning(ex, "Manual update check failed.");
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.UpdateCheck.Error", ex.Message),
                 _loc.Get("Ui.UpdateCheck.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -987,7 +987,7 @@ internal sealed class MainForm : MedReminderFormBase
             if (!_newKeyAsked && _householdService?.LastResult?.NewKeyRequired == true)
             {
                 _newKeyAsked = true;
-                MessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.Status.NewKey"), _loc.Get("Ui.HouseholdDialog.Title"),
+                UiMessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.Status.NewKey"), _loc.Get("Ui.HouseholdDialog.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             if (view is null || !_handoverAsked.Add(view.Election.ElectionId)) return;
@@ -1769,7 +1769,7 @@ internal sealed class MainForm : MedReminderFormBase
     }
 
     private void ShowDeleteRefused(string name)
-        => MessageBox.Show(this,
+        => UiMessageBox.Show(this,
             _loc.Get("Ui.MainForm.Delete.HasFacts", name),
             _loc.Get("Ui.MainForm.Delete.Title"),
             MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1936,7 +1936,7 @@ internal sealed class MainForm : MedReminderFormBase
         // medicines carry the national code only (§5C.3).
         if (content.NationalCode is not { } nationalCode)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MainForm.RestockScan.NoNationalCode", code),
                 _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
@@ -1986,25 +1986,20 @@ internal sealed class MainForm : MedReminderFormBase
             : await LookupReferenceByNationalCodeAsync(catalogue.Country, nationalCode, CancellationToken.None);
         if (catalogue is null || reference is null)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MainForm.RestockScan.NotFound", nationalCode),
                 _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             return null;
         }
 
-        var addNew = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.MainForm.RestockScan.AddNew"), _loc.Get("Ui.MainForm.RestockScan.AddNew.Description"));
-        var link = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.MainForm.RestockScan.Link"), _loc.Get("Ui.MainForm.RestockScan.Link.Description"));
-        var page = new TaskDialogPage
-        {
-            Caption = _loc.Get("Ui.MainForm.RestockScan.PickTitle"),
-            Heading = _loc.Get("Ui.MainForm.RestockScan.NoMatch.Heading", nationalCode),
-            Text = _loc.Get("Ui.MainForm.RestockScan.NoMatch.Text", reference.CommercialName),
-            Icon = TaskDialogIcon.Information,
-            Buttons = { addNew, link, TaskDialogButton.Cancel },
-        };
-        var choice = TaskDialog.ShowDialog(this, page);
+        const int addNew = 0, link = 1;
+        var choice = ChoiceDialog.Show(this, _loc, _loc.Get("Ui.MainForm.RestockScan.PickTitle"),
+            _loc.Get("Ui.MainForm.RestockScan.NoMatch.Heading", nationalCode),
+            _loc.Get("Ui.MainForm.RestockScan.NoMatch.Text", reference.CommercialName),
+        [
+            (_loc.Get("Ui.MainForm.RestockScan.AddNew"), _loc.Get("Ui.MainForm.RestockScan.AddNew.Description")),
+            (_loc.Get("Ui.MainForm.RestockScan.Link"), _loc.Get("Ui.MainForm.RestockScan.Link.Description")),
+        ]);
 
         if (choice == addNew)
         {
@@ -2021,7 +2016,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
         if (unlinked.Count == 0)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MainForm.RestockScan.NoUnlinked"),
                 _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             return null;
@@ -2183,6 +2178,6 @@ internal sealed class MainForm : MedReminderFormBase
     private void ShowError(string title, Exception ex)
     {
         _log.LogError(ex, "{Title}", title);
-        MessageBox.Show(this, ex.Message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        UiMessageBox.Show(this, ex.Message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 }

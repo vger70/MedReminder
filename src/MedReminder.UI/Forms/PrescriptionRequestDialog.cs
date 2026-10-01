@@ -169,7 +169,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         {
             return true;
         }
-        MessageBox.Show(this,
+        UiMessageBox.Show(this,
             _loc.Get("Ui.PrescriptionRequestDialog.EmptyDraft"),
             _loc.Get("Common.Warning"),
             MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -184,7 +184,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             Clipboard.SetText(_subjectBox.Text.Trim() + "\r\n\r\n" + _bodyBox.Text);
             if (showConfirmation)
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.PrescriptionRequestDialog.Copied"),
                     _loc.Get("Common.Information"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -193,7 +193,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.PrescriptionRequestDialog.CopyError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
@@ -208,7 +208,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         {
             if (CopyDraft(showConfirmation: false))
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.PrescriptionRequestDialog.TooLongForMailClient"),
                     _loc.Get("Common.Information"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -226,7 +226,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             // refused the hand-off. The draft is not lost.
             if (CopyDraft(showConfirmation: false))
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.PrescriptionRequestDialog.MailClientUnavailable"),
                     _loc.Get("Common.Information"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -251,7 +251,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             using var cts = new CancellationTokenSource(SendTimeout);
             await _sendAsync(_doctorAddress, _subjectBox.Text.Trim(), _bodyBox.Text, cts.Token);
             SetSending(false);
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.PrescriptionRequestDialog.Sent"),
                 _loc.Get("Common.Information"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -261,7 +261,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         catch (Exception ex)
         {
             SetSending(false);
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.PrescriptionRequestDialog.SendError", ex.Message),
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);

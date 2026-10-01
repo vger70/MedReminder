@@ -255,7 +255,7 @@ internal sealed class DonateForm : MedReminderFormBase
         {
             // Never claims the payment completed — only that a page was
             // opened (§8.3).
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get(result.UserMessageKey ?? DonationMessageKeys.Launched),
                 _loc.Get("Ui.Donate.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -264,7 +264,7 @@ internal sealed class DonateForm : MedReminderFormBase
 
         var messageKey = result.UserMessageKey
             ?? DonationMessageKeys.ForFailure(result.Reason ?? DonationFailureReason.LaunchFailed);
-        MessageBox.Show(this,
+        UiMessageBox.Show(this,
             _loc.Get(messageKey),
             _loc.Get("Ui.Donate.Title"),
             MessageBoxButtons.OK, MessageBoxIcon.Warning);

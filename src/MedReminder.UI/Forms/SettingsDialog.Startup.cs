@@ -37,7 +37,7 @@ internal sealed partial class SettingsDialog
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message,
+                UiMessageBox.Show(this, ex.Message,
                     _loc.Get("Ui.SettingsDialog.Startup.Error"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _autoStartCheck.Checked = _autoStart.IsEnabled;

@@ -350,20 +350,12 @@ internal sealed class HouseholdDialog : MedReminderFormBase
     // Step H5a: the new key after a removal on another device.
     private async Task NewKeyAsync()
     {
-        var passphraseChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.HouseholdDialog.NewKey.Passphrase"), _loc.Get("Ui.HouseholdDialog.NewKey.PassphraseNote"));
-        var codeChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.HouseholdDialog.NewKey.Code"), _loc.Get("Ui.HouseholdDialog.NewKey.CodeNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = Text,
-            Heading = _loc.Get("Ui.HouseholdDialog.NewKey.Heading"),
-            AllowCancel = true,
-        };
-        page.Buttons.Add(passphraseChoice);
-        page.Buttons.Add(codeChoice);
-        page.Buttons.Add(TaskDialogButton.Cancel);
-        var choice = TaskDialog.ShowDialog(this, page);
+        const int passphraseChoice = 0, codeChoice = 1;
+        var choice = ChoiceDialog.Show(this, _loc, Text, _loc.Get("Ui.HouseholdDialog.NewKey.Heading"), null,
+        [
+            (_loc.Get("Ui.HouseholdDialog.NewKey.Passphrase"), _loc.Get("Ui.HouseholdDialog.NewKey.PassphraseNote")),
+            (_loc.Get("Ui.HouseholdDialog.NewKey.Code"), _loc.Get("Ui.HouseholdDialog.NewKey.CodeNote")),
+        ]);
 
         HouseholdKeySource source;
         if (choice == passphraseChoice)
@@ -585,20 +577,12 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             return;
         }
 
-        var codeChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.HouseholdDialog.Join.Code"), _loc.Get("Ui.HouseholdDialog.Join.CodeNote"));
-        var passphraseChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.HouseholdDialog.Join.Passphrase"), _loc.Get("Ui.HouseholdDialog.Join.PassphraseNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = Text,
-            Heading = _loc.Get("Ui.HouseholdDialog.Join.Heading"),
-            AllowCancel = true,
-        };
-        page.Buttons.Add(codeChoice);
-        page.Buttons.Add(passphraseChoice);
-        page.Buttons.Add(TaskDialogButton.Cancel);
-        var choice = TaskDialog.ShowDialog(this, page);
+        const int codeChoice = 0, passphraseChoice = 1;
+        var choice = ChoiceDialog.Show(this, _loc, Text, _loc.Get("Ui.HouseholdDialog.Join.Heading"), null,
+        [
+            (_loc.Get("Ui.HouseholdDialog.Join.Code"), _loc.Get("Ui.HouseholdDialog.Join.CodeNote")),
+            (_loc.Get("Ui.HouseholdDialog.Join.Passphrase"), _loc.Get("Ui.HouseholdDialog.Join.PassphraseNote")),
+        ]);
 
         IReadOnlyList<JoinedProfile>? joined = null;
         if (choice == codeChoice) joined = await JoinWithCodeAsync();
@@ -819,11 +803,11 @@ internal sealed class HouseholdDialog : MedReminderFormBase
 
     private void Info(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void Error(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 }

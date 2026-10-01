@@ -66,6 +66,7 @@ internal static class Program
         Log.Logger = ConfigureSerilog();
 
         _bootstrapLoc = LocalizationService.CreateStandalone(ReadUserLanguage(), AppDataPaths.GetAppDataDirectory());
+        UiMessageBox.Localization = _bootstrapLoc;
 
         WinFormsApp.SetUnhandledExceptionMode(WinFormUnhandledExceptionMode.CatchException);
         WinFormsApp.ThreadException += OnUnhandledUiException;
@@ -633,6 +634,7 @@ internal static class Program
         }
 
         _bootstrapLoc = LocalizationService.CreateStandalone(code, AppDataPaths.GetAppDataDirectory());
+        UiMessageBox.Localization = _bootstrapLoc;
         Log.Information("First run: UI language set to {Language} from the system culture.", code);
     }
 

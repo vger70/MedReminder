@@ -427,7 +427,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         if (string.IsNullOrWhiteSpace(_nameBox.InputText))
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.Validation.NameRequired"),
                 _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -436,7 +436,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         }
         if (string.IsNullOrWhiteSpace(_unitBox.Text))
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.Validation.UnitRequired"),
                 _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -445,7 +445,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         }
         if (_hasEndDate.Checked && _endDatePicker.Value.Date < _startDatePicker.Value.Date)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.EndBeforeStart"),
                 _loc.Get("Ui.MedicineEditDialog.InconsistentData.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -473,7 +473,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             initialSchedule = _schedulePanel.TryBuildSchedule(out var scheduleError);
             if (initialSchedule is null)
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     scheduleError ?? _loc.Get("Ui.Schedule.Validation.Generic"),
                     _loc.Get("Ui.MedicineEditDialog.InconsistentData.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -700,7 +700,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             // async void handler: never let the exception escape.
             _barcodeContext.Logger.LogError(ex, "Catalogue lookup after a barcode scan failed.");
             if (IsDisposed) return;
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.ScanBarcode.LookupError"),
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -713,7 +713,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _barcodeContext.Logger.LogInformation(
                 "Scanned code not found in the {Country} catalogue.", _catalogueContext.Country.Value);
             // A MessageBox supports Ctrl+C, so the user can copy the code.
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.ScanBarcode.NotInCatalogue", code),
                 _loc.Get("Common.Information"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -985,7 +985,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.Documents.OpenError", ex.Message),
                 _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);

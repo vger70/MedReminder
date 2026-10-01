@@ -31,27 +31,17 @@ internal sealed class StorageTargetPicker
             return PickFolder() is { } only ? SyncTarget.ForFolder(only) : null;
         }
 
-        var buttons = providers.ToDictionary(p => p, p => new TaskDialogCommandLinkButton(
-            _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true)),
-            _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true) + "Note")));
-        var folder = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.SyncDialog.Target.Folder"), _loc.Get("Ui.SyncDialog.Target.FolderNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = _caption,
-            Heading = _loc.Get("Ui.SyncDialog.Target.Heading"),
-            AllowCancel = true,
-        };
-        foreach (var button in buttons.Values) page.Buttons.Add(button);
-        page.Buttons.Add(folder);
-        page.Buttons.Add(TaskDialogButton.Cancel);
+        // One option per cloud provider, then the folder; -1 is Cancel.
+        var options = providers
+            .Select(p => (_loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true)),
+                _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true) + "Note")))
+            .Append((_loc.Get("Ui.SyncDialog.Target.Folder"), _loc.Get("Ui.SyncDialog.Target.FolderNote")))
+            .ToList();
+        var choice = ChoiceDialog.Show(_owner, _loc, _caption, _loc.Get("Ui.SyncDialog.Target.Heading"), null, options);
+        if (choice < 0) return null;
+        if (choice == providers.Count) return PickFolder() is { } picked ? SyncTarget.ForFolder(picked) : null;
 
-        var choice = TaskDialog.ShowDialog(_owner, page);
-        if (choice == folder) return PickFolder() is { } picked ? SyncTarget.ForFolder(picked) : null;
-        var chosen = buttons.FirstOrDefault(b => b.Value == choice);
-        if (chosen.Value is null) return null;
-
-        var account = await SignInAsync(chosen.Key, null);
+        var account = await SignInAsync(providers[choice], null);
         return account is null ? null : SyncTarget.ForCloud(account.Provider, account.Id);
     }
 
@@ -106,6 +96,6 @@ internal sealed class StorageTargetPicker
     private void Error(string message)
     {
         if (_owner is Control { IsDisposed: true }) return;
-        MessageBox.Show(_owner, message, _caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        UiMessageBox.Show(_owner, message, _caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 }

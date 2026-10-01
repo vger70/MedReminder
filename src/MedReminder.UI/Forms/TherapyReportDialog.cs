@@ -126,7 +126,7 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.TherapyReportDialog.CopyError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -148,7 +148,7 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.TherapyReportDialog.SaveError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -162,7 +162,7 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
     {
         if (!IsPdfPrinterInstalled())
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.TherapyReportDialog.PdfPrinterMissing", PdfPrinterName),
                 _loc.Get("Ui.TherapyReportDialog.PdfPrinterMissing.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -203,14 +203,14 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (InvalidPrinterException)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.TherapyReportDialog.PdfPrinterMissing", PdfPrinterName),
                 _loc.Get("Ui.TherapyReportDialog.PdfPrinterMissing.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.TherapyReportDialog.PdfError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -242,14 +242,14 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (InvalidPrinterException ex)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.TherapyReportDialog.NoPrinter", ex.Message),
                 _loc.Get("Ui.TherapyReportDialog.NoPrinter.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.TherapyReportDialog.PrintError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }

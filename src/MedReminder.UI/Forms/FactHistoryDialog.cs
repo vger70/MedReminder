@@ -95,7 +95,7 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, _loc.Get("Ui.MainForm.Error.FactHistory"),
+            UiMessageBox.Show(this, ex.Message, _loc.Get("Ui.MainForm.Error.FactHistory"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
@@ -135,7 +135,7 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, _loc.Get("Ui.FactHistoryDialog.Error.Delete"),
+            UiMessageBox.Show(this, ex.Message, _loc.Get("Ui.FactHistoryDialog.Error.Delete"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         await ReloadAsync();

@@ -180,14 +180,14 @@ internal sealed partial class SettingsDialog
             if (IsDisposed) return;
 
             _pinStateLabel.Text = FormatPinStateText();
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Notifications.PinChanged"),
                 _loc.Get("Common.Ok"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -215,7 +215,7 @@ internal sealed partial class SettingsDialog
                 if (!MimeKit.MailboxAddress.TryParse(
                         _addressParserOptions, caregiverAddress, out _))
                 {
-                    MessageBox.Show(this,
+                    UiMessageBox.Show(this,
                         _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Invalid"),
                         _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -224,7 +224,7 @@ internal sealed partial class SettingsDialog
 
                 if (string.Equals(caregiverAddress, toAddress, StringComparison.OrdinalIgnoreCase))
                 {
-                    MessageBox.Show(this,
+                    UiMessageBox.Show(this,
                         _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.SameAsPrimary"),
                         _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -237,7 +237,7 @@ internal sealed partial class SettingsDialog
             if (doctorAddress.Length > 0
                 && !MimeKit.MailboxAddress.TryParse(_addressParserOptions, doctorAddress, out _))
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Invalid"),
                     _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -251,7 +251,7 @@ internal sealed partial class SettingsDialog
                     .ExecuteAsync(toAddress, caregiverAddress, doctorAddress, CancellationToken.None);
             }
             if (IsDisposed) return;
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.SettingsDialog.Notifications.Saved"),
                 _loc.Get("Common.Ok"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -260,7 +260,7 @@ internal sealed partial class SettingsDialog
         {
             if (!IsDisposed)
             {
-                MessageBox.Show(this, ex.Message,
+                UiMessageBox.Show(this, ex.Message,
                     _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }

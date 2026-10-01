@@ -238,7 +238,7 @@ internal sealed class TherapyTimelineForm : MedReminderFormBase
         catch (Exception ex)
         {
             if (IsDisposed) return;
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.TherapyTimeline.LoadError") + Environment.NewLine + Environment.NewLine + ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);

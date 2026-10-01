@@ -583,21 +583,13 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task NewKeyAsync()
     {
         if (!IsEnabled) return;
-        var passphraseChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.SyncDialog.NewKey.Passphrase"), _loc.Get("Ui.SyncDialog.NewKey.PassphraseNote"));
-        var codeChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.SyncDialog.NewKey.Code"), _loc.Get("Ui.SyncDialog.NewKey.CodeNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = Text,
-            Heading = _loc.Get("Ui.SyncDialog.NewKey.Heading"),
-            Text = _loc.Get("Ui.SyncDialog.NewKey.Text"),
-            AllowCancel = true,
-        };
-        page.Buttons.Add(passphraseChoice);
-        page.Buttons.Add(codeChoice);
-        page.Buttons.Add(TaskDialogButton.Cancel);
-        var choice = TaskDialog.ShowDialog(this, page);
+        const int passphraseChoice = 0, codeChoice = 1;
+        var choice = ChoiceDialog.Show(this, _loc, Text, _loc.Get("Ui.SyncDialog.NewKey.Heading"),
+            _loc.Get("Ui.SyncDialog.NewKey.Text"),
+        [
+            (_loc.Get("Ui.SyncDialog.NewKey.Passphrase"), _loc.Get("Ui.SyncDialog.NewKey.PassphraseNote")),
+            (_loc.Get("Ui.SyncDialog.NewKey.Code"), _loc.Get("Ui.SyncDialog.NewKey.CodeNote")),
+        ]);
 
         SyncKeySource source;
         if (choice == passphraseChoice)
@@ -784,11 +776,11 @@ internal sealed class SyncDialog : MedReminderFormBase
     // ran): the message is dropped rather than thrown from the action.
     private void Info(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void Error(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 }

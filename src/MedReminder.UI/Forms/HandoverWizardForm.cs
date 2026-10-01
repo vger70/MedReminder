@@ -258,7 +258,7 @@ internal sealed class HandoverWizardForm : MedReminderFormBase
         }
 
         await _household.RunNowAsync();
-        MessageBox.Show(this, _loc.Get("Ui.HandoverWizard.Done") + (lines.Count == 0 ? string.Empty
+        UiMessageBox.Show(this, _loc.Get("Ui.HandoverWizard.Done") + (lines.Count == 0 ? string.Empty
                 : Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, lines)),
             Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         DialogResult = DialogResult.OK;
@@ -290,7 +290,7 @@ internal sealed class HandoverWizardForm : MedReminderFormBase
 
     private void Warn(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 
     private static void Add(TableLayoutPanel layout, Control control)
