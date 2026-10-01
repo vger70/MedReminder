@@ -94,7 +94,7 @@ public class MedicationMonitorTests
     public async Task An_email_sent_elsewhere_for_the_epoch_is_not_sent_again_but_the_toast_is_shown()
     {
         var scope = new ApplicationTestScope(FixedNow);
-        var id = await SeedAsync(scope, initialQuantity: 6m,
+        var id = await SeedAsync(scope, initialQuantity: 10m,
             channels: NotificationChannels.Windows | NotificationChannels.Email);
         var medicine = (await scope.Medicines.GetAsync(id, CancellationToken.None))!;
         await scope.SentEmails.AddAsync(new SentEmailNotification
@@ -139,7 +139,7 @@ public class MedicationMonitorTests
     public async Task An_email_only_medicine_already_emailed_elsewhere_closes_the_cycle_without_sending()
     {
         var scope = new ApplicationTestScope(FixedNow);
-        var id = await SeedAsync(scope, initialQuantity: 6m, channels: NotificationChannels.Email);
+        var id = await SeedAsync(scope, initialQuantity: 10m, channels: NotificationChannels.Email);
         var medicine = (await scope.Medicines.GetAsync(id, CancellationToken.None))!;
         await scope.SentEmails.AddAsync(new SentEmailNotification
         {
@@ -347,5 +347,111 @@ public class MedicationMonitorTests
 
         result.MedicinesInspected.Should().Be(0);
         scope.Windows.Sent.Should().BeEmpty();
+    }
+
+    // Second low-stock warning (docs/notes/EVOLUTION-PROPOSALS-2.md §3.1):
+    // threshold 7, so the first warning at 4 to 7 days and the second at
+    // 3 days or fewer, within the same stock epoch.
+
+    [Fact]
+    public async Task The_second_warning_follows_when_the_stock_drops_below_half_of_the_threshold()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        // Stock 10, rate 2: 5 days, first stage.
+        var id = await SeedAsync(scope, initialQuantity: 10m,
+            channels: NotificationChannels.Windows | NotificationChannels.Email);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Windows.Sent.Should().ContainSingle();
+        scope.Email.Sent.Should().ContainSingle();
+        scope.Notifications.All.Should().ContainSingle().Which.Stage.Should().Be(1);
+
+        // 4 units out without a refill: 6 left, 3 days, second stage.
+        await scope.AdjustStockDown.ExecuteAsync(new AdjustStockDownCommand(id, 4m), CancellationToken.None);
+        scope.Clock.AdvanceBy(TimeSpan.FromMinutes(30));
+        var result = await scope.Monitor.RunAsync(CancellationToken.None);
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        result.NotificationsSent.Should().Be(1);
+        scope.Windows.Sent.Should().HaveCount(2);
+        scope.Windows.Sent[1].Title.Should().StartWith("Second reminder");
+        scope.Email.Sent.Should().HaveCount(2);
+        scope.Email.Sent[1].Subject.Should().Contain("second reminder");
+        scope.Notifications.All.Select(e => e.Stage).Should().Equal(1, 2);
+        scope.SentEmails.All.Select(e => e.Stage).Should().BeEquivalentTo(new[] { 1, 2 });
+    }
+
+    [Fact]
+    public async Task A_medicine_already_below_half_gets_a_single_second_stage_warning()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        // Stock 6, rate 2: 3 days.
+        _ = await SeedAsync(scope, initialQuantity: 6m);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Windows.Sent.Should().ContainSingle();
+        scope.Notifications.All.Should().ContainSingle().Which.Stage.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task A_first_stage_email_sent_elsewhere_does_not_stop_the_second_stage_email()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        // Stock 6, rate 2: 3 days, second stage.
+        var id = await SeedAsync(scope, initialQuantity: 6m, channels: NotificationChannels.Email);
+        var medicine = (await scope.Medicines.GetAsync(id, CancellationToken.None))!;
+        await scope.SentEmails.AddAsync(new SentEmailNotification
+        {
+            MedicineId = id,
+            StockEpoch = medicine.StockEpoch,
+            EpochFactId = medicine.StockEpochFactId,
+            SentAt = FixedNow.AddDays(-2),
+        }, CancellationToken.None);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Email.Sent.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task A_second_stage_email_sent_elsewhere_is_not_sent_again()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        var id = await SeedAsync(scope, initialQuantity: 6m,
+            channels: NotificationChannels.Windows | NotificationChannels.Email);
+        var medicine = (await scope.Medicines.GetAsync(id, CancellationToken.None))!;
+        await scope.SentEmails.AddAsync(new SentEmailNotification
+        {
+            MedicineId = id,
+            StockEpoch = medicine.StockEpoch,
+            EpochFactId = medicine.StockEpochFactId,
+            SentAt = FixedNow.AddMinutes(-5),
+            Stage = 2,
+        }, CancellationToken.None);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        scope.Email.Sent.Should().BeEmpty();
+        scope.Windows.Sent.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task A_second_stage_email_is_recorded_as_a_schema_6_operation()
+    {
+        var scope = new ApplicationTestScope(FixedNow);
+        scope.EnableSync();
+        _ = await SeedAsync(scope, initialQuantity: 6m, channels: NotificationChannels.Email);
+
+        await scope.Monitor.RunAsync(CancellationToken.None);
+
+        var sent = scope.SentEmails.All.Should().ContainSingle().Subject;
+        sent.Stage.Should().Be(2);
+        var operation = scope.SyncOperations.All.Should()
+            .ContainSingle(o => o.Type == "EmailNotificationSent" && o.EntityId == sent.Id).Subject;
+        operation.SchemaVersion.Should().Be(6);
     }
 }

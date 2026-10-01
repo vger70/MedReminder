@@ -440,7 +440,13 @@ MedReminder non invia mai una richiesta da solo.
 - Ogni 30 minuti MedReminder controlla le medicine. Quando una medicina
   scende sotto la sua **soglia di avviso**, ti avvisa **una volta**, con
   i canali scelti per quella medicina: una notifica di Windows e/o
-  un'email. Dopo una nuova confezione il ciclo riparte.
+  un'email.
+- Se quando i giorni residui arrivano a **metà della soglia** non è stata
+  aggiunta una nuova confezione, segue un **secondo avviso** sugli
+  stessi canali (con una soglia di 10 giorni: primo avviso a 10 giorni,
+  secondo a 5). Una medicina che al primo controllo è già sotto la metà
+  riceve solo il secondo avviso. Dopo una nuova confezione il ciclo
+  riparte.
 - **Strumenti → Controlla ora** (**Ctrl+R**, o il menu dell'icona)
   esegue subito il controllo.
 - MedReminder deve essere in esecuzione per inviare gli avvisi. Attiva

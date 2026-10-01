@@ -11,7 +11,9 @@ namespace MedReminder.Application.Monitoring;
 // Orchestrator of the periodic check (spec §18):
 //  1. run the daily-consumption catch-up;
 //  2. for each active medicine, compute stock, rate, forecast;
-//  3. evaluate NotificationCycle.ShouldNotify;
+//  3. evaluate NotificationCycle.StageToNotify (first warning at the
+//     threshold, second at half of it while the stock is not
+//     replenished);
 //  4. dispatch to the configured channels (Windows / Email) in
 //     isolation: an email failure does NOT prevent the toast and vice
 //     versa;
@@ -111,7 +113,8 @@ public sealed class MedicationMonitor
             var forecast = RunOutForecast.Compute(today, currentStock, rate, isSuspended);
             var latest = await _notifications.GetLatestForMedicineAsync(medicine.Id, cancellationToken);
 
-            if (!NotificationCycle.ShouldNotify(medicine, forecast.DaysRemaining, forecast.EstimatedRunOutDate, latest))
+            if (NotificationCycle.StageToNotify(medicine, forecast.DaysRemaining, forecast.EstimatedRunOutDate, latest)
+                is not { } stage)
             {
                 continue;
             }
@@ -122,7 +125,7 @@ public sealed class MedicationMonitor
             var emailSentElsewhere = false;
             if ((channels & NotificationChannels.Email) != 0 && _sentEmails is not null
                 && NotificationCycle.EmailAlreadySent(medicine,
-                    await _sentEmails.GetLatestForMedicineAsync(medicine.Id, cancellationToken)))
+                    await _sentEmails.GetLatestForMedicineAsync(medicine.Id, cancellationToken), stage))
             {
                 channels &= ~NotificationChannels.Email;
                 emailSentElsewhere = true;
@@ -133,9 +136,9 @@ public sealed class MedicationMonitor
                 channels &= ~NotificationChannels.Email;
                 emailSentElsewhere = true;
             }
-            var dispatch = await DispatchAsync(medicine, channels, currentStock, daysRemaining, eta, slots,
+            var dispatch = await DispatchAsync(medicine, stage, channels, currentStock, daysRemaining, eta, slots,
                 cancellationToken);
-            if (dispatch.EmailSucceeded) await RecordEmailSentAsync(medicine, cancellationToken);
+            if (dispatch.EmailSucceeded) await RecordEmailSentAsync(medicine, stage, cancellationToken);
 
             var evt = new NotificationEvent
             {
@@ -150,6 +153,7 @@ public sealed class MedicationMonitor
                 // this device.
                 Success = dispatch.AnyChannelSucceeded || emailSentElsewhere,
                 ErrorMessage = dispatch.CombinedError,
+                Stage = stage,
             };
             await _notifications.AddAsync(evt, cancellationToken);
 
@@ -160,7 +164,7 @@ public sealed class MedicationMonitor
         return new RunResult(medicines.Count, sent);
     }
 
-    private async Task RecordEmailSentAsync(Medicine medicine, CancellationToken cancellationToken)
+    private async Task RecordEmailSentAsync(Medicine medicine, int stage, CancellationToken cancellationToken)
     {
         if (_sentEmails is null) return;
         var record = new SentEmailNotification
@@ -169,6 +173,7 @@ public sealed class MedicationMonitor
             StockEpoch = medicine.StockEpoch,
             EpochFactId = medicine.StockEpochFactId,
             SentAt = _clock.GetUtcNow(),
+            Stage = stage,
         };
         await _sentEmails.AddAsync(record, cancellationToken);
         // Recorded only while sync is enabled (OperationLog).
@@ -180,6 +185,7 @@ public sealed class MedicationMonitor
 
     private async Task<DispatchOutcome> DispatchAsync(
         Medicine medicine,
+        int stage,
         NotificationChannels channels,
         decimal currentStock,
         int daysRemaining,
@@ -196,7 +202,7 @@ public sealed class MedicationMonitor
         {
             // Toast: USER language (chosen in the app), like the email.
             var (title, body) = NotificationTexts.BuildToast(
-                medicine, daysRemaining, localization: _localization);
+                medicine, daysRemaining, localization: _localization, stage: stage);
             try
             {
                 await _windows.ShowAsync(title, body, cancellationToken);
@@ -217,7 +223,8 @@ public sealed class MedicationMonitor
             var message = NotificationTexts.BuildEmail(
                 medicine, currentStock, daysRemaining, eta,
                 administrationSlots: slots,
-                localization: _localization);
+                localization: _localization,
+                stage: stage);
             try
             {
                 await _email.SendAsync(message, cancellationToken);

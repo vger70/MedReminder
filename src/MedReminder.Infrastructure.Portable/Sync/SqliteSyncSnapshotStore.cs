@@ -32,7 +32,9 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
     //      without that operation cannot do.
     //   3: SentEmailNotifications (household step H1), replicated: an
     //      older app would drop them and send those emails again.
-    public const int CurrentSchemaVersion = 3;
+    //   4: SentEmailNotifications.Stage (second low-stock warning): an
+    //      older app would read a second-stage email as a first-stage one.
+    public const int CurrentSchemaVersion = 4;
 
     private static readonly string[] NotReplicated =
     [

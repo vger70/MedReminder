@@ -1,5 +1,6 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
+using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Application.Notifications;
@@ -24,19 +25,23 @@ public static class NotificationTexts
         DateOnly? estimatedRunOutDate,
         CultureInfo? culture = null,
         IReadOnlyList<MedicationAdministrationSlot>? administrationSlots = null,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        int stage = NotificationCycle.FirstStage)
     {
         ArgumentNullException.ThrowIfNull(medicine);
         var c = culture ?? localization?.CurrentCulture ?? CultureInfo.CurrentCulture;
+        var second = stage >= NotificationCycle.SecondStage;
 
         string subject;
         var body = new System.Text.StringBuilder();
 
         if (localization is not null)
         {
-            subject = localization.Get("Notifications.Email.Subject", medicine.Name, daysRemaining);
+            subject = localization.Get(second ? "Notifications.Email.SubjectSecond" : "Notifications.Email.Subject",
+                medicine.Name, daysRemaining);
 
-            body.Append(localization.Get("Notifications.Email.Header")).Append('\n').Append('\n');
+            body.Append(localization.Get(second ? "Notifications.Email.HeaderSecond" : "Notifications.Email.Header"))
+                .Append('\n').Append('\n');
             body.Append(localization.Get("Notifications.Email.Medicine", medicine.Name)).Append('\n');
             if (!string.IsNullOrWhiteSpace(medicine.ActiveIngredient))
             {
@@ -71,8 +76,13 @@ public static class NotificationTexts
         {
             // Backwards compatibility: English hardcoded texts for the
             // tests that do not pass ILocalizationService.
-            subject = $"MedReminder — {medicine.Name} running low ({daysRemaining} days)";
-            body.Append("MedReminder reminder.").Append('\n').Append('\n');
+            subject = second
+                ? $"MedReminder — second reminder: {medicine.Name} running low ({daysRemaining} days)"
+                : $"MedReminder — {medicine.Name} running low ({daysRemaining} days)";
+            body.Append(second
+                    ? "MedReminder second reminder: the stock has not been replenished since the first reminder."
+                    : "MedReminder reminder.")
+                .Append('\n').Append('\n');
             body.Append($"Medicine: {medicine.Name}").Append('\n');
             if (!string.IsNullOrWhiteSpace(medicine.ActiveIngredient))
             {
@@ -125,20 +135,29 @@ public static class NotificationTexts
         Medicine medicine,
         int daysRemaining,
         CultureInfo? culture = null,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        int stage = NotificationCycle.FirstStage)
     {
         ArgumentNullException.ThrowIfNull(medicine);
         _ = culture;
+        var second = stage >= NotificationCycle.SecondStage;
 
         if (localization is not null)
         {
-            var title = localization.Get("Notifications.Toast.Title",
+            var title = localization.Get(second ? "Notifications.Toast.TitleSecond" : "Notifications.Toast.Title",
                 medicine.Name, daysRemaining);
-            var body = localization.Get("Notifications.Toast.Body", daysRemaining);
+            var body = localization.Get(second ? "Notifications.Toast.BodySecond" : "Notifications.Toast.Body",
+                daysRemaining);
             return (title, body);
         }
 
         // Backwards compatibility: hardcoded EN.
+        if (second)
+        {
+            return ($"Second reminder — {medicine.Name}: {daysRemaining} days left",
+                $"Not replenished yet. Estimated quantity for {daysRemaining} days. "
+                + "Request a new prescription soon.");
+        }
         var titleEn = $"{medicine.Name}: {daysRemaining} days left";
         var bodyEn = $"Estimated quantity for {daysRemaining} days. "
                    + "Consider requesting a new prescription.";

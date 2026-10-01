@@ -360,6 +360,7 @@ public sealed class ApplyRemoteOperations
             StockEpoch = email.StockEpoch,
             EpochFactId = email.EpochFactId,
             SentAt = email.SentAt,
+            Stage = email.Stage,
         }, ct);
     }
 

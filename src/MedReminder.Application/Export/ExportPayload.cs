@@ -194,6 +194,10 @@ public sealed class ExportedNotificationEvent
     public int DaysRemainingAtSend { get; set; }
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
+
+    // Warning stage (1 or 2). Additive field: archives without it
+    // import as the first stage.
+    public int Stage { get; set; } = 1;
 }
 
 public sealed class ExportedDoseReminderEvent

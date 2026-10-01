@@ -259,6 +259,7 @@ numbers.
 | `daysRemainingAtSend` | int | |
 | `success` | bool | |
 | `errorMessage` | string? | |
+| `stage` | int | warning stage: `1` at the threshold, `2` the second warning at half of it. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `1`. |
 
 ### 3.8 `doseReminderEvents[]`
 

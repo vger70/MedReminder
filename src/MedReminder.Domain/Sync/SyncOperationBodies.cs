@@ -148,13 +148,15 @@ public sealed record MedicineDeleted(
 
 // A low-stock email sent for a stock epoch of the medicine (operation
 // schema version 4): the other devices of the group do not send it again
-// for that epoch. A fact, never retracted.
+// for that epoch. A fact, never retracted. Stage (schema version 6) is
+// the warning stage; a payload without it is the first stage.
 public sealed record EmailNotificationSent(
     Guid MedicineId,
     Guid NotificationId,
     int StockEpoch,
     Guid? EpochFactId,
-    DateTimeOffset SentAt) : SyncOperationBody(MedicineId);
+    DateTimeOffset SentAt,
+    int Stage = 1) : SyncOperationBody(MedicineId);
 
 // Household step H3c (operation schema version 5; docs/analysis/
 // ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §11): the household that adopted

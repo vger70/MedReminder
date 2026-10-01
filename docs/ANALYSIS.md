@@ -188,8 +188,8 @@ is used.
 | `SyncFieldVersion` (`SyncFieldVersions`) | Every version of a last-writer-wins register (B.1 Phase 3b) | `EntityId`, `Register`, HLC, `Value`, base HLC |
 | `SyncConflict` (`SyncConflicts`) | Local conflict list, §4.5 cases only (B.1 Phase 3b) | `Kind`, `SubjectId`, `Register`, winning / losing value and device |
 | `SyncPeer` (`SyncPeers`) | Sync progress per device of the group (B.1 Phase 3c) | `DeviceId`, `Generation`, `Seq` (applied, or published for this device), checkpoint counters |
-| `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
-| `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt` |
+| `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success`, `Stage` |
+| `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt`, `Stage` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
@@ -242,10 +242,14 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   suspended today or when the rate is zero; `(0, today)` when stock is
   zero.
 - **`NotificationCycle`** — decides whether a low-stock warning is
-  due: inside `ThresholdDays`, not suppressed by `EndDate` (therapy
-  ending before run-out), and no successful `NotificationEvent` on the
-  current `StockEpoch`. `EmailAlreadySent` tells whether any device of
-  the sync group already emailed for the current epoch
+  due and at which stage: inside `ThresholdDays`, not suppressed by
+  `EndDate` (therapy ending before run-out), and no successful
+  `NotificationEvent` on the current `StockEpoch` at the same or a later
+  stage. Stage 1 is due at the threshold; stage 2 (second warning) at
+  half of it, rounded down, while the epoch has not changed. A medicine
+  that enters the window already below half gets stage 2 only.
+  `EmailAlreadySent` tells whether any device of the sync group already
+  emailed for the current epoch at that stage or a later one
   (`SentEmailNotification`): the monitor then leaves the email channel
   out and still shows its toast.
 - **`SuspensionState`** — whether a date falls in a suspension.
@@ -382,7 +386,8 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
 - `UpdateMedicine` takes an optional `Baseline` (the values the edit
   dialog loaded): with it, only the fields the user changed are written,
   and unchanged slots record no new slot set.
-- One low-stock notification per epoch that succeeded on at least one
+- At most two low-stock notifications per epoch (stage 1 at the
+  threshold, stage 2 at half of it) that succeeded on at least one
   channel, the epoch identified by `EpochFactId` when the event has one
   (B.1 Phase 2d), else by `StockEpoch`; a failed attempt does not block
   a retry on the next tick.
@@ -657,7 +662,9 @@ start:
    to every import); then the B.1 Phase 2d patch: `FactRetractions`,
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
    `NotificationEvents.EpochFactId`; then `SentEmailNotifications`
-   (household step H1); then `SyncOperations` with its two
+   (household step H1); then `NotificationEvents.Stage` and
+   `SentEmailNotifications.Stage` (second low-stock warning, default 1);
+   then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);
    then `SyncPeers` (B.1 Phase 3c).

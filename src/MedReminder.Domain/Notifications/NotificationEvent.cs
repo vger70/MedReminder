@@ -1,3 +1,5 @@
+using MedReminder.Domain.Calculations;
+
 namespace MedReminder.Domain.Notifications;
 
 // Record of a notification that has been emitted (or attempted). Used
@@ -25,4 +27,9 @@ public sealed class NotificationEvent
     // 2d). Null on events recorded before it: NotificationCycle then
     // compares epoch numbers.
     public Guid? EpochFactId { get; init; }
+
+    // Warning stage of the event (NotificationCycle.FirstStage or
+    // SecondStage). Events recorded before the second warning existed
+    // read as the first stage.
+    public int Stage { get; init; } = NotificationCycle.FirstStage;
 }

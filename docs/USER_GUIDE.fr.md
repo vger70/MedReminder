@@ -455,7 +455,13 @@ MedReminder n'envoie jamais de demande tout seul.
 - Toutes les 30 minutes, MedReminder vérifie les médicaments. Quand un
   médicament passe sous son **seuil d'alerte**, il te prévient **une
   fois**, par les canaux choisis pour ce médicament : une notification
-  Windows et/ou un e-mail. Après une nouvelle boîte, le cycle recommence.
+  Windows et/ou un e-mail.
+- Si aucune nouvelle boîte n'a été ajoutée quand les jours restants
+  atteignent **la moitié du seuil**, un **deuxième rappel** suit par les
+  mêmes canaux (avec un seuil de 10 jours : première alerte à 10 jours,
+  deuxième à 5). Un médicament déjà sous la moitié lors de la première
+  vérification reçoit seulement le deuxième rappel. Après une nouvelle
+  boîte, le cycle recommence.
 - **Outils → Vérifier maintenant** (**Ctrl+R**, ou le menu de l'icône)
   lance la vérification tout de suite.
 - MedReminder doit tourner pour envoyer les alertes. Active le

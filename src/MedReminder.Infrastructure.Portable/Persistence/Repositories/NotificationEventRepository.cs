@@ -21,6 +21,8 @@ internal sealed class NotificationEventRepository
             .AsNoTracking()
             .Where(e => e.MedicineId == medicineId)
             .OrderByDescending(e => e.TriggeredAt)
+            // Same instant: the later stage is the latest event.
+            .ThenByDescending(e => e.Stage)
             .FirstOrDefaultAsync(cancellationToken);
     }
 

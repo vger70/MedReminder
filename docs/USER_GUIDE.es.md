@@ -439,7 +439,13 @@ MedReminder nunca envía una solicitud por sí solo.
 - Cada 30 minutos MedReminder revisa los medicamentos. Cuando un
   medicamento baja de su **umbral de aviso**, te avisa **una vez**, por
   los canales elegidos para ese medicamento: una notificación de
-  Windows y/o un correo. Tras una caja nueva, el ciclo vuelve a empezar.
+  Windows y/o un correo.
+- Si cuando los días restantes llegan a **la mitad del umbral** no se ha
+  añadido una caja nueva, sigue un **segundo aviso** por los mismos
+  canales (con un umbral de 10 días: primer aviso a los 10 días, segundo
+  a los 5). Un medicamento que ya está por debajo de la mitad en la
+  primera revisión recibe solo el segundo aviso. Tras una caja nueva, el
+  ciclo vuelve a empezar.
 - **Herramientas → Comprobar ahora** (**Ctrl+R**, o el menú del icono)
   ejecuta la comprobación enseguida.
 - MedReminder tiene que estar en marcha para enviar avisos. Activa el

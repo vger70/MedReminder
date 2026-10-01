@@ -628,6 +628,8 @@
 
   "Notifications.Email.Subject": "MedReminder — {0} agotándose ({1} días restantes)",
   "Notifications.Email.Header": "Recordatorio MedReminder.",
+  "Notifications.Email.SubjectSecond": "MedReminder — segundo aviso: {0} agotándose ({1} días restantes)",
+  "Notifications.Email.HeaderSecond": "Segundo aviso de MedReminder: el stock no se ha repuesto desde el primer aviso.",
   "Notifications.Email.Medicine": "Medicamento: {0}",
   "Notifications.Email.ActiveIngredient": "Principio activo: {0}",
   "Notifications.Email.Stock": "Cantidad restante: {0} {1}",
@@ -649,6 +651,8 @@
 
   "Notifications.Toast.Title": "{0}: {1} días restantes",
   "Notifications.Toast.Body": "Cantidad estimada para {0} días. Se aconseja solicitar una nueva receta.",
+  "Notifications.Toast.TitleSecond": "Segundo aviso — {0}: {1} días restantes",
+  "Notifications.Toast.BodySecond": "Aún no repuesto. Cantidad estimada para {0} días. Solicita pronto una nueva receta.",
   "Notifications.DoseReminder.Title": "Es hora de tomar {0}",
   "Notifications.DoseReminder.Body": "{0} — dosis programada a las {1}",
 
