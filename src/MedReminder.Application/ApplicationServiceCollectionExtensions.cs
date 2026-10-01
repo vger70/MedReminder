@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Coverage;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Household;
 using MedReminder.Application.Ledger;
@@ -112,6 +113,8 @@ public static class ApplicationServiceCollectionExtensions
 
         // Therapy timeline view (EVOLUTION-PROPOSALS §4.3): read-only.
         services.AddScoped<TherapyTimelineQuery>();
+        // Coverage planner (EVOLUTION-PROPOSALS-2 §3.5): read-only.
+        services.AddScoped<CoveragePlanQuery>();
         services.AddScoped<RestockByScanQuery>();
         // Prescription request (EVOLUTION-PROPOSALS §3.4): interactive
         // send only, resolved per dialog action.

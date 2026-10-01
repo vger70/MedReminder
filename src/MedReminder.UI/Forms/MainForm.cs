@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Reflection;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Coverage;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
@@ -208,6 +209,8 @@ internal sealed class MainForm : MedReminderFormBase
             opensWindow: true, async () => await ShowTherapyReportAsync());
         nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.RequestPrescription"), Mdl2Glyph.Glyphs.Mail,
             opensWindow: true, async () => await ShowPrescriptionRequestAsync());
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.PlanSupply"), Mdl2Glyph.Glyphs.Package,
+            opensWindow: true, ShowCoveragePlanner);
         nav.AddSeparator();
         if (_currentProfile.IsAdmin)
         {
@@ -352,6 +355,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RequestPrescription"),
             Mdl2Glyph.Glyphs.Mail, Keys.None,
             async () => await ShowPrescriptionRequestAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.PlanSupply"),
+            Mdl2Glyph.Glyphs.Package, Keys.None,
+            () => { ShowCoveragePlanner(); return Task.CompletedTask; }));
 
         // Scorte
         var stockMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Stock"));
@@ -777,6 +783,34 @@ internal sealed class MainForm : MedReminderFormBase
         await using var scope = _scopeFactory.CreateAsyncScope();
         var query = scope.ServiceProvider.GetRequiredService<TherapyTimelineQuery>();
         return await query.LoadAsync(window, CancellationToken.None);
+    }
+
+    // Coverage planner (EVOLUTION-PROPOSALS-2 §3.5), read-only. Each
+    // computation runs in its own DI scope.
+    private void ShowCoveragePlanner()
+    {
+        try
+        {
+            DateOnly today;
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                today = scope.ServiceProvider.GetRequiredService<CoveragePlanQuery>().LocalToday();
+            }
+            using var dialog = new CoveragePlannerDialog(LoadCoveragePlanAsync, today,
+                _currentProfile.DisplayName, _loc);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenCoveragePlanner"), ex);
+        }
+    }
+
+    private async Task<CoveragePlan> LoadCoveragePlanAsync(DateOnly from, DateOnly to)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var query = scope.ServiceProvider.GetRequiredService<CoveragePlanQuery>();
+        return await query.LoadAsync(from, to, CancellationToken.None);
     }
 
     private void SelectGridRow(Guid medicineId)

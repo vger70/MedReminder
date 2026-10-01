@@ -51,6 +51,10 @@ scheduled dose time.
   remote feed published in this repository (data only, nothing is
   executed).
 - Printable therapy report for the doctor.
+- Supply planner: for a period chosen by the user (a trip, the days
+  until the next pharmacy visit) the quantity each active medicine needs,
+  the stock left when it starts and the packages to get; print, PDF or
+  clipboard.
 
 **Notifications**
 

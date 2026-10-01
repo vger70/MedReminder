@@ -84,7 +84,7 @@ motivo.
   *Registrar toma* y, a la derecha, un cuadro de búsqueda (**Ctrl+F**)
   que filtra la lista por nombre.
 - **Navegación** a la izquierda: *Medicamentos* (esta lista), luego
-  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*,
+  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*, *Planificar stock*,
   *Instalación* (administradores) y *Configuración*, que se abren en su
   propia ventana. Si la ventana es estrecha, solo muestra los iconos.
 - **Resumen** encima de la lista: cuántos medicamentos están
@@ -116,6 +116,7 @@ clic derecho en el icono y elige **Salir**.
 | Deshacer un registro erróneo | **Stock → Historial…** |
 | Imprimir la terapia para un médico | **Terapia → Ficha de terapia…** |
 | Pedir una receta | **Terapia → Solicitar receta…** |
+| Comprobar el stock para un viaje o hasta la próxima visita a la farmacia | **Terapia → Planificar stock…** |
 | Configurar correo, idioma, copia de seguridad | **Herramientas → Configuración…** |
 | Añadir una persona | **Herramientas → Gestionar perfiles…** (administrador) |
 | Usar MedReminder en otro PC | **Herramientas → Sincronización…** y **Herramientas → Instalación…** (administrador) |
@@ -407,6 +408,29 @@ principio activo, posología, periodo de terapia, médico.
   portapapeles** dan el texto simple.
 
 MedReminder no guarda ninguna copia de lo que guardas o imprimes.
+
+### Planificar el stock (viaje o farmacia)
+
+**Terapia → Planificar stock…** responde a la pregunta «¿tengo
+suficiente hasta…?». Elige el periodo con **Desde** y **Hasta**, por
+ejemplo los días de un viaje o los días hasta tu próxima visita a la
+farmacia (por defecto: los próximos 14 días, hoy incluido). Para cada
+medicamento activo la ventana muestra:
+
+- **Necesario en el periodo**: la cantidad que se consume en el periodo,
+  según la pauta, las suspensiones, la fecha de fin de la terapia y los
+  horarios de toma;
+- **Stock al inicio**: el stock de hoy menos el consumo previsto hasta
+  el inicio del periodo (*se agota antes* si no quedará nada);
+- **Falta**: lo que se necesita además de ese stock, o *cubierto*;
+- **Cajas a conseguir**: cuántas cajas cubren lo que falta, del tamaño
+  de la última caja nueva registrada (— si no se registró ninguna).
+
+Los medicamentos no cubiertos aparecen primero. Los medicamentos a
+demanda se listan pero no se calculan, porque su consumo no está
+planificado. **Imprimir…**, **Guardar como PDF…** y **Copiar al
+portapapeles** funcionan como en la ficha de terapia. La ventana no
+modifica nada: las cifras son estimaciones.
 
 ### Solicitar una receta
 

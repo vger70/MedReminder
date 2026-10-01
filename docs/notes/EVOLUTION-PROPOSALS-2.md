@@ -222,6 +222,9 @@ statistics or missed-dose alerts are added.
 
 ### 3.5 Coverage planner (trip or pharmacy pickup)
 
+**Status.** Implemented in PR #163 (Therapy → Plan supply…). Package counts use the quantity of the last
+new package recorded; as-needed medicines are listed, not computed.
+
 **Benefit — medium-high, low cost.** Given a date range, compute per
 medicine the units needed, the projected stock and the shortfall, and
 print a list ("to pack" or "to collect"). Dosecast covers travel only
