@@ -39,6 +39,9 @@ internal static class UiThemeApplier
             case TextBoxBase textBox when UiTheme.IsDark:
                 StyleTextBox(textBox, palette);
                 break;
+            case UpDownBase upDown when UiTheme.IsDark:
+                ThemedBorder.Attach(upDown);
+                break;
             case ListView list when UiTheme.IsDark:
                 StyleListView(list, palette);
                 break;
@@ -94,8 +97,9 @@ internal static class UiThemeApplier
         combo.ForeColor = palette.Text;
     }
 
-    // FixedSingle draws a light border in dark mode next to fields
-    // drawn without one; the 3D style is used for all of them.
+    // One 3D style for every bordered field (FixedSingle and Fixed3D
+    // were mixed, baseline S3); ThemedBorder then draws that edge in the
+    // palette's border colour, since Windows draws it light.
     public static void StyleTextBox(TextBoxBase textBox, UiPalette palette)
     {
         if (textBox.BorderStyle == BorderStyle.FixedSingle)
@@ -104,6 +108,7 @@ internal static class UiThemeApplier
         }
         textBox.BackColor = palette.Surface;
         textBox.ForeColor = palette.Text;
+        ThemedBorder.Attach(textBox);
     }
 
     // Grid lines are drawn light in dark mode; rows are told apart by

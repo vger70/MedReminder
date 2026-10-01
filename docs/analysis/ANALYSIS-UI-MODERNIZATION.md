@@ -359,10 +359,14 @@ and button captions.
 | 5c Wizards and confirmations | Done (PR #150) | `ConfirmDialog` (TaskDialog with Yes/No from the dictionaries) replaces the 23 Yes/No message boxes (F10); first-run and handover wizards take the template buttons, the first-run wizard the 10 pt font and inline errors; no step indicator (§5.4) |
 | 6 Documentation | Done | Appearance setting in the five user guides (main window and Settings sections were rewritten in steps 3 and 4); UI architecture paragraph in `docs/ANALYSIS.md` |
 
+Text and number box borders follow the palette in dark mode since
+PR #152: `UiExtensions/ThemedBorder` subclasses the control's window
+and draws over the edge Windows paints light (`WM_NCPAINT` for text
+boxes, with the accent colour while focused; the end of `WM_PAINT` for
+number boxes), so no form changes its layout.
+
 Known limitations after step 6, all in dark mode: date and time
-pickers keep a white field (S2; WinForms does not recolour it), text
-boxes keep a light border (WinForms offers no border colour; a drawn
-frame around every field was judged not worth the change), the Sync
+pickers keep a white field (S2; WinForms does not recolour it), the Sync
 and Household dialogs keep light tab headers (their tabs were not in
 scope), and message boxes and task dialogs follow Windows. At the
 minimum Settings size with Large text at 150 % a few check box captions
