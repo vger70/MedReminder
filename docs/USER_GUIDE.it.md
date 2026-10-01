@@ -902,6 +902,10 @@ ridimensionare.
 - **Generale → Controlla aggiornamenti all'avvio (GitHub)**: cerca una
   nuova versione (nulla viene installato da solo) e aggiorna il
   catalogo. **? → Controlla aggiornamenti…** controlla subito.
+- **Generale → Registra le query del database (diagnostica)**: solo
+  amministratori. Scrive nel file di log ogni comando del database, senza
+  i valori, per la diagnosi dei problemi. Vale subito; il log cresce in
+  fretta, quindi disattivala dopo l'uso.
 - **Avvio automatico → Avvia MedReminder all'accesso a Windows**: parte
   nascosto nell'area di notifica. Non servono diritti di
   amministratore.

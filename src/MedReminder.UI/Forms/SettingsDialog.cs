@@ -118,6 +118,7 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
     // Passive update check opt-in — surfaces new GitHub releases at
     // startup without downloading anything.
     private CheckBox _checkUpdatesBox = null!;
+    private CheckBox _logQueriesBox = null!;
     // Per-profile text size (EVOLUTION-PROPOSALS.md §3.2), saved to
     // profiles\<id>\ui.settings.json with the rest of the General tab.
     private ComboBox _textSizeCombo = null!;

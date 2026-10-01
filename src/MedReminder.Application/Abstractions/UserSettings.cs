@@ -37,6 +37,14 @@ public sealed class UserSettings
     // General tab of the Settings dialog. The manual "Check for
     // updates now" menu entry always runs regardless of this flag.
     public bool CheckForUpdatesOnStartup { get; set; } = true;
+
+    // Diagnostics: write every SQL command EF Core runs to the log
+    // (category Microsoft.EntityFrameworkCore.Database.Command). Off by
+    // default; changed by an administrator from Settings → General and
+    // applied without a restart. Parameter values stay hidden: sensitive
+    // data logging is never enabled, so no medical data reaches the log.
+    // A device setting, not replicated in the household.
+    public bool LogDatabaseQueries { get; set; }
 }
 
 // Definition of the "currently supported" languages — used by the UI

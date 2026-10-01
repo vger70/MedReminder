@@ -80,7 +80,8 @@ public sealed class UpdateBackupSettings
 
 // Settings → General. Language and update check belong to the device and
 // to every profile, as before; the reference country is an installation
-// setting, changed by an admin only (decision D-14).
+// setting, changed by an admin only (decision D-14). The query log is a
+// device setting, changed by an admin only.
 public sealed class UpdateGeneralSettings
 {
     private readonly IInstallationSettingsStore _settings;
@@ -98,7 +99,8 @@ public sealed class UpdateGeneralSettings
     {
         ArgumentNullException.ThrowIfNull(user);
         var before = _settings.ReadUser();
-        if (!string.Equals(before.ReferenceCountry, user.ReferenceCountry, StringComparison.Ordinal))
+        if (!string.Equals(before.ReferenceCountry, user.ReferenceCountry, StringComparison.Ordinal)
+            || before.LogDatabaseQueries != user.LogDatabaseQueries)
         {
             ProfileAdministration.RequireAdmin(_current);
         }

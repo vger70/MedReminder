@@ -906,6 +906,11 @@ redimensionar.
 - **General → Buscar actualizaciones al iniciar (GitHub)**: busca una
   versión nueva (nada se instala solo) y actualiza el catálogo. **? →
   Buscar actualizaciones…** busca ahora.
+- **General → Registrar las consultas de la base de datos
+  (diagnóstico)**: solo administradores. Escribe en el archivo de
+  registro cada comando de la base de datos, sin los valores, para
+  diagnosticar problemas. Se aplica en seguida; el registro crece
+  rápido, así que desactívala después.
 - **Inicio → Iniciar MedReminder al iniciar sesión en Windows**: arranca
   oculto en el área de notificación. No necesita derechos de
   administrador.

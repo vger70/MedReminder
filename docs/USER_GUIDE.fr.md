@@ -935,6 +935,11 @@ redimensionnable.
   recherche une nouvelle version (rien n'est installé tout seul) et met
   à jour le catalogue. **? → Vérifier les mises à jour…** vérifie tout
   de suite.
+- **Général → Journaliser les requêtes de la base de données
+  (diagnostic)** : administrateurs uniquement. Écrit dans le fichier
+  journal chaque commande de la base de données, sans les valeurs, pour
+  le diagnostic. S'applique tout de suite ; le journal grossit vite,
+  désactive-la ensuite.
 - **Démarrage → Démarrer MedReminder à l'ouverture de session
   Windows** : démarre masqué dans la zone de notification. Aucun droit
   d'administrateur n'est nécessaire.
