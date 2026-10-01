@@ -4,11 +4,11 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
 using MedReminder.Application.Sync.Remote;
 using MedReminder.Domain.Sync;
+using MedReminder.UI.Controls;
 using MedReminder.UI.Hosting;
 using MedReminder.UI.Services;
-using Microsoft.Extensions.DependencyInjection;
-
 using MedReminder.UI.UiExtensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MedReminder.UI.Forms;
 
@@ -81,15 +81,16 @@ internal sealed class SyncDialog : MedReminderFormBase
         _restarter = restarter;
 
         Text = _loc.Get("Ui.SyncDialog.Title");
-        Width = 880;
+        Width = 1080;
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
 
-        var tabs = new TabControl { Dock = DockStyle.Fill };
+        // Section list instead of tabs: tab headers stay light in dark mode.
+        var sections = new SectionView();
 
         // Status
-        var statusPage = new TabPage(_loc.Get("Ui.SyncDialog.Tab.Status")) { Padding = new Padding(12) };
+        var statusPage = new Panel { Padding = new Padding(12) };
         _statusText = new Label { Dock = DockStyle.Fill, AutoSize = false };
         _enable = Action("Ui.SyncDialog.Enable", async () => await EnableAsync());
         _join = Action("Ui.SyncDialog.Join", async () => await JoinAsync());
@@ -112,7 +113,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         statusPage.Controls.Add(statusButtons);
 
         // Devices
-        var devicesPage = new TabPage(_loc.Get("Ui.SyncDialog.Tab.Devices")) { Padding = new Padding(12) };
+        var devicesPage = new Panel { Padding = new Padding(12) };
         _devices = List(
             ("Ui.SyncDialog.Devices.Name", 220), ("Ui.SyncDialog.Devices.Platform", 110),
             ("Ui.SyncDialog.Devices.Version", 110), ("Ui.SyncDialog.Devices.LastSeen", 170));
@@ -124,7 +125,7 @@ internal sealed class SyncDialog : MedReminderFormBase
         devicesPage.Controls.Add(deviceButtons);
 
         // Conflicts
-        var conflictsPage = new TabPage(_loc.Get("Ui.SyncDialog.Tab.Conflicts")) { Padding = new Padding(12) };
+        var conflictsPage = new Panel { Padding = new Padding(12) };
         _conflicts = List(
             ("Ui.SyncDialog.Conflicts.Detected", 130), ("Ui.SyncDialog.Conflicts.Medicine", 150),
             ("Ui.SyncDialog.Conflicts.Kind", 200), ("Ui.SyncDialog.Conflicts.Field", 110),
@@ -137,11 +138,13 @@ internal sealed class SyncDialog : MedReminderFormBase
         conflictsPage.Controls.Add(_conflicts);
         conflictsPage.Controls.Add(conflictButtons);
 
-        tabs.TabPages.AddRange([statusPage, devicesPage, conflictsPage]);
+        sections.AddSection(_loc.Get("Ui.SyncDialog.Tab.Status"), Mdl2Glyph.Glyphs.Info, statusPage);
+        sections.AddSection(_loc.Get("Ui.SyncDialog.Tab.Devices"), Mdl2Glyph.Glyphs.Devices, devicesPage);
+        sections.AddSection(_loc.Get("Ui.SyncDialog.Tab.Conflicts"), Mdl2Glyph.Glyphs.Warning, conflictsPage);
 
         var close = _close = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.OK);
         var bottom = DialogLayout.ButtonBar(this, close, close);
-        Controls.Add(tabs);
+        Controls.Add(sections);
         Controls.Add(bottom);
 
         _status.Changed += OnStatusChanged;

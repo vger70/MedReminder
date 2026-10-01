@@ -114,5 +114,6 @@ internal static class Mdl2Glyph
         public const string BulletedList = "\uE8FD";    // BulletedList
         public const string Ringer = "\uEA8F";          // Ringer
         public const string Power = "\uE7E8";           // PowerButton
+        public const string Devices = "\uE772";         // Devices
     }
 }
