@@ -30,6 +30,38 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #161 — Build a self-contained MSI for the Microsoft Store
+
+Link: [vger70/MedReminder#161](https://github.com/vger70/MedReminder/pull/161)
+Branch: `claude/store-msi-package` → `main`
+
+### Build
+
+- `.github/workflows/dotnet-desktop.yml`: new release asset
+  `MedReminder-win-x64-net10.msi`, built from the self-contained
+  publish with `--no-incremental`. The Microsoft Store accepts only
+  standalone MSI installers.
+- `release.ps1 -LocalBuild`: new step [7/8] builds and signs the Store
+  MSI from a copy of the self-contained output, where every PE file
+  without a valid signature is signed, as the Store requires. The ZIPs
+  keep vendor files untouched.
+- `publish-signed-release.ps1`: verifies and uploads the Store MSI.
+
+### Docs
+
+- `docs/PACKAGING.md` §26: Microsoft Store submission as an MSI/EXE
+  app, covering requirements, Partner Center steps and updates. MSIX
+  is still not used.
+
+### Removed
+
+- `packaging/msix/` and `packaging/scripts/build-installer.ps1`: the
+  unused MSIX scaffolding and the script that built it, superseded by
+  `release.ps1`. Remaining MSIX mentions in the signing scripts, the
+  WiX project and `Directory.Build.props` are dropped.
+
+---
+
 ## PR #159 — Check the remote catalogue feeds once a day during the session
 
 Link: [vger70/MedReminder#159](https://github.com/vger70/MedReminder/pull/159)

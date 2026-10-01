@@ -1,20 +1,16 @@
 <#
 .SYNOPSIS
     Generates a self-signed certificate to sign MedReminder
-    development builds (MSI + MSIX + exe).
+    development builds (MSI + exe).
 
 .DESCRIPTION
     Creates a code-signing certificate in the CurrentUser\My store.
-    The Subject must EXACTLY match the Publisher declared in
-    Package.appxmanifest (otherwise the MSIX package will not
-    install).
 
     The certificate is ALSO exported as .pfx (for CI use) and as
     .cer (to import into the Trusted Root of the test machine).
 
 .PARAMETER Subject
-    The cert's X.500 Subject. Default: the one in the dev MSIX
-    manifest.
+    The cert's X.500 Subject.
 
 .PARAMETER Password
     Password of the exported .pfx. Never commit it.
@@ -31,11 +27,7 @@
 .NOTES
     WARNING — self-signed:
       - SmartScreen flags the app as "unknown".
-      - To install a self-signed MSIX, the end user MUST first
-        import the .cer into the Trusted Root Certification
-        Authorities of the target machine (manual command or via
-        GPO). The MSI installs anyway, but the SmartScreen warning
-        remains.
+      - The MSI installs, but the SmartScreen warning remains.
       - Production use: NOT RECOMMENDED. Buy an OV/EV cert.
 #>
 [CmdletBinding()]

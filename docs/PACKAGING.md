@@ -8,11 +8,13 @@ The official MedReminder distribution channel is:
 
 - **ZIP** — official distribution channel.
 
-The alternative distribution channel is:
+The alternative distribution channels are:
 
 - **MSI** — optional alternative installer.
+- **Microsoft Store** — the self-contained MSI, submitted to Partner
+  Center as an MSI/EXE app (section 26).
 
-**MSIX is not used.**
+**MSIX is not used**, also for the Microsoft Store.
 
 The official production package is a Windows x64, .NET 10, self-contained build.
 
@@ -178,6 +180,17 @@ The MSI must install the same production application produced by the official Wi
 
 The MSI is **not** the primary distribution channel. The ZIP package remains the official distribution format.
 
+Two MSIs are built from the same WiX project and UpgradeCode:
+
+- `MedReminder-win-x64.msi`: framework-dependent, same binaries as
+  `MedReminder-win-x64.zip`;
+- `MedReminder-win-x64-net10.msi`: self-contained, same binaries as
+  `MedReminder-win-x64-net10.zip`; the package submitted to the
+  Microsoft Store (section 26).
+
+Either one upgrades the other: installing one after the other replaces
+the installed files.
+
 MSIX is not part of the MedReminder distribution strategy.
 
 ## 9. Complete Local Packaging Test
@@ -304,7 +317,10 @@ dotnet publish, framework-dependent --> MedReminder-win-x64.zip
 WiX build over the framework-dependent output --> MedReminder-win-x64.msi
    |
    v
-Create the GitHub Release with the three assets
+WiX build over the self-contained output --> MedReminder-win-x64-net10.msi
+   |
+   v
+Create the GitHub Release with the four assets
 ```
 
 The workflow does not run the tests: run `dotnet test` (section 4)
@@ -324,6 +340,10 @@ points that matter when editing it:
   application needs them too, or its output has no Google Drive.
 - The MSI is built from the framework-dependent publish folder, so the
   MSI and `MedReminder-win-x64.zip` contain the same binaries.
+- The Microsoft Store MSI is built from the self-contained publish
+  folder with `--no-incremental`: both MSI builds share
+  `packaging/wix/obj`, and an incremental build could reuse the harvest
+  of the other folder.
 
 ## 14. GitHub Release
 
@@ -341,6 +361,7 @@ The release assets are:
 MedReminder-win-x64-net10.zip   self-contained (includes the .NET runtime)
 MedReminder-win-x64.zip         framework-dependent (.NET 10 Desktop Runtime required)
 MedReminder-win-x64.msi         installer, framework-dependent
+MedReminder-win-x64-net10.msi   installer, self-contained (Microsoft Store)
 ```
 
 GitHub may additionally provide its automatically generated source archives.
@@ -506,14 +527,15 @@ The current distribution strategy is intentionally simple:
                               |
                     .NET 10 Self-contained
                               |
-                  +-----------+-----------+
-                  |                       |
-                  v                       v
-             Official ZIP            Alternative MSI
-                  |                       |
-                  v                       v
-        GitHub Releases             GitHub Releases
-                  |
+                  +-----------+-----------+-----------------------+
+                  |                       |                       |
+                  v                       v                       v
+             Official ZIP            Alternative MSI     Self-contained MSI
+                  |                       |                       |
+                  v                       v                       v
+        GitHub Releases             GitHub Releases    GitHub Releases, URL
+                  |                                    submitted to the
+                  |                                    Microsoft Store
                   v
        /releases/latest/download/
        MedReminder-win-x64.zip
@@ -521,7 +543,7 @@ The current distribution strategy is intentionally simple:
 
 The ZIP package is the canonical distribution artifact.
 
-The MSI package is an optional convenience installer and must contain the same production application.
+The MSI packages are optional convenience installers and must contain the same production application.
 
 MSIX is not used.
 
@@ -705,11 +727,14 @@ Command:
 ```
 
 The local build mirrors the CI packaging and writes to `dist\<version>\`
-(ignored by Git): both ZIP packages, the MSI and `SHA256SUMS.txt`.
+(ignored by Git): both ZIP packages, both MSIs and `SHA256SUMS.txt`.
 Only MedReminder's own binaries (`MedReminder*.exe`, `MedReminder*.dll`)
 are signed, before being zipped or harvested into the MSI; the MSI is
-signed afterwards. `-NoSign` produces an unsigned build to test the
-chain; `-SkipMsi` skips WiX.
+signed afterwards. The Microsoft Store MSI is the exception: it is
+harvested from a copy of the self-contained output in which every
+`.exe`/`.dll` without a valid signature is also signed (section 26);
+the ZIPs keep the vendors' files untouched. `-NoSign` produces an
+unsigned build to test the chain; `-SkipMsi` skips both WiX builds.
 
 Every signature uses SHA-256 and an RFC 3161 timestamp
 (`http://time.certum.pl` by default, `-TimestampUrl` to override), so
@@ -742,11 +767,84 @@ locally signed ones from `dist\<version>\`.
    push, tag);
 3. waits for the CI run on the tag commit (`gh run watch`), then checks
    out the tag;
-4. `.\release.ps1 <version> -LocalBuild` and `signtool verify` on the MSI;
-5. `gh release upload --clobber` of the signed ZIPs, MSI and
+4. `.\release.ps1 <version> -LocalBuild` and `signtool verify` on both
+   MSIs;
+5. `gh release upload --clobber` of the signed ZIPs, MSIs and
    `SHA256SUMS.txt`, keeping the release and its notes;
 6. returns to `main`, also on failure.
 
 If signing or upload fails after the tag is pushed, fix the cause and
 resume with `-SkipGitRelease`, which starts from the tag checkout. Run
 `.\publish-signed-release.ps1 -Help` for all options.
+
+## 26. Microsoft Store (MSI/EXE submission)
+
+MedReminder is listed in the Microsoft Store as an **MSI/EXE app**: the
+Store does not host the package, it downloads the MSI from a URL given
+in Partner Center. MSIX is not used (section 1): it would virtualize
+writes to `%LOCALAPPDATA%\MedReminder\` and `HKCU\...\Run`, and the
+Store would replace the GitHub update check.
+
+### Store requirements and how they are met
+
+| Requirement (Partner Center, MSI/EXE apps) | MedReminder |
+| --- | --- |
+| Versioned HTTPS URL, binary unchanged after submission | `https://github.com/vger70/MedReminder/releases/download/vX.Y.Z/MedReminder-win-x64-net10.msi` |
+| Standalone, offline installer | Self-contained publish: no separate .NET runtime |
+| Silent install (a UAC prompt is allowed) | Windows Installer `/qn`; per-user install, no UAC |
+| `.msi` or `.exe` only | `.msi` |
+| The installer and every PE file in it signed by a CA of the Microsoft Trusted Root Program | Certum signature on the MSI and on every unsigned `.exe`/`.dll` (section 25) |
+
+The Store MSI is the only package in which third-party files are
+signed with the Certum certificate: a file that already carries a valid
+vendor signature (for example the .NET runtime) keeps it; the others
+(native SQLite, NuGet libraries without Authenticode) are signed, since
+the Store rejects unsigned PE files.
+
+The CI assets are unsigned. Submit the URL only after
+`publish-signed-release.ps1` has replaced them with the signed ones,
+and never upload a different `MedReminder-win-x64-net10.msi` to a tag
+already submitted: the Store requires the binary behind the URL not to
+change.
+
+### Partner Center
+
+One-time setup:
+
+1. Open a developer account at `storedeveloper.microsoft.com`. An
+   individual account is free and needs identity verification (an ID
+   document and a selfie); a company account has a one-time fee.
+2. Partner Center → Apps and games → New product → **EXE or MSI
+   app**, then reserve the name `MedReminder`.
+
+Every release:
+
+1. Run `publish-signed-release.ps1 <version>` and check that the
+   release contains the signed `MedReminder-win-x64-net10.msi`.
+2. Start a new submission and fill in the pages:
+   - **Pricing and availability**: free, markets.
+   - **Properties**: category (Health & fitness or Productivity),
+     privacy policy URL (MedReminder stores email settings and
+     syncs to OneDrive / Google Drive).
+   - **Age ratings**: the IARC questionnaire.
+   - **Packages**: the URL of the tag (table above), architecture x64,
+     languages en, it, fr, es, de. For an MSI the Store installs with
+     `/qn`; no other installer parameter is needed.
+   - **Store listings**, one per language: description, at least one
+     screenshot, logo. State that MedReminder is not a medical device.
+   - **Submission options**, notes for certification: the app runs in
+     the tray; donations (section 23) use third-party payment providers
+     (Stripe, PayPal), which the Store policy allows for voluntary
+     donations in non-game apps as long as the donation unlocks
+     nothing. If Partner Center asks for this declaration on another
+     page, give it there.
+3. Submit and wait for certification.
+4. Never replace the MSI of a submitted tag (see above).
+
+### Updates
+
+The Store does not update MSI/EXE apps by itself. Every release needs
+a new submission with the new tag's URL. The in-app update check
+(GitHub Releases) keeps working for Store installations; it may report
+a version before the Store has certified it.
+

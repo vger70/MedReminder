@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Signs one or more files (exe / dll / msi / msix / appx) with
+    Signs one or more files (exe / dll / msi) with
     signtool.exe.
 
 .DESCRIPTION
@@ -47,7 +47,7 @@
 .EXAMPLE
     # CI signing with .pfx (environment variable for the password)
     $pwd = ConvertTo-SecureString $env:SIGN_PFX_PASSWORD -AsPlainText -Force
-    .\sign-artifact.ps1 -Files dist\MedReminder-1.0.1-x64.msix `
+    .\sign-artifact.ps1 -Files dist\MedReminder-1.0.1-x64.msi `
         -CertificatePath cert.pfx -CertificatePassword $pwd
 
 .NOTES
