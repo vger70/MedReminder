@@ -47,15 +47,18 @@ internal sealed class BackupService : IBackupService
     private readonly MedReminderDbContext _db;
     private readonly TimeProvider _clock;
     private readonly DatabasePathProvider _databasePathProvider;
+    private readonly IDatabaseExclusiveAccess _exclusiveAccess;
 
     public BackupService(
         MedReminderDbContext db,
         TimeProvider clock,
-        DatabasePathProvider databasePathProvider)
+        DatabasePathProvider databasePathProvider,
+        IDatabaseExclusiveAccess exclusiveAccess)
     {
         _db = db;
         _clock = clock;
         _databasePathProvider = databasePathProvider;
+        _exclusiveAccess = exclusiveAccess;
     }
 
     public string DatabasePath => _databasePathProvider.DatabasePath;
@@ -215,6 +218,17 @@ internal sealed class BackupService : IBackupService
         // sync generation; marked before the database is replaced.
         MedReminder.Infrastructure.Sync.JsonSyncSettingsStore.MarkResetPending(Path.GetDirectoryName(target)!);
 
+        // Under the exclusive access, like ProfileDatabaseSwap: the
+        // remote catalogue import may hold the database open meanwhile.
+        return _exclusiveAccess.RunExclusiveAsync(_ =>
+        {
+            ReplaceProfileDatabase(target, sourceFilePath);
+            return Task.CompletedTask;
+        }, cancellationToken);
+    }
+
+    private void ReplaceProfileDatabase(string target, string sourceFilePath)
+    {
         SqliteConnection.ClearAllPools();
 
         // Also close the DbContext connection when the target belongs
@@ -251,9 +265,6 @@ internal sealed class BackupService : IBackupService
                 try { File.Delete(side); } catch { /* ignore */ }
             }
         }
-
-        _ = cancellationToken;
-        return Task.CompletedTask;
     }
 
     private static string ResolveProfileDatabasePath(string profileId) =>

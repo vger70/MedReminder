@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text.Json;
 using FluentAssertions;
+using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Domain.Medicines;
@@ -392,7 +393,8 @@ public sealed class ExportServiceTests : IDisposable
     {
         var backupContext = CreateProfileContext();
         var backupService = new BackupService(
-            backupContext, TimeProvider.System, new DatabasePathProvider(_profile.DatabasePath));
+            backupContext, TimeProvider.System, new DatabasePathProvider(_profile.DatabasePath),
+            new DatabaseExclusiveAccess());
         return new ExportService(
             currentProfile ?? _profile, backupService, _cipher, credentialStore, TimeProvider.System,
             NullLogger<ExportService>.Instance, _sharedDirectory, profileRegistry);

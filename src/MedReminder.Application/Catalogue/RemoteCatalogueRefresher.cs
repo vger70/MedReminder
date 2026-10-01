@@ -39,9 +39,12 @@ public enum RemoteCatalogueRefreshOutcome
 // The import runs under WriteGate: its transaction replaces the whole
 // catalogue of the country and holds the SQLite write lock meanwhile,
 // so the use cases wait for it instead of failing with SQLITE_BUSY
-// after the busy timeout.
+// after the busy timeout. The database swaps (backup restore, archive
+// import, sync join) take the same gate through IDatabaseExclusiveAccess,
+// and the importer closes the connection it opened before the gate is
+// released, so no handle stays open during the download.
 // Only the open profile is updated; other profiles refresh at their own
-// next start (§4.4).
+// next start or daily check (§4.4).
 public sealed class RemoteCatalogueRefresher
 {
     private readonly ICatalogueFeedClient _feed;
@@ -98,7 +101,10 @@ public sealed class RemoteCatalogueRefresher
         CatalogueImportState state;
         try
         {
-            state = await _importer.GetImportStateAsync(feed.Country, cancellationToken);
+            // Under the gate like the import: a database swap must not
+            // move the file while this read holds it open.
+            state = await WriteGate.RunExclusiveAsync(
+                ct => _importer.GetImportStateAsync(feed.Country, ct), cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -271,7 +277,7 @@ public sealed class RemoteCatalogueRefresher
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _log.LogWarning(
-                ex, "Remote catalogue feed {Country}: could not list the staging folder; the next start retries.", country);
+                ex, "Remote catalogue feed {Country}: could not list the staging folder; the next run retries.", country);
         }
     }
 
@@ -287,7 +293,7 @@ public sealed class RemoteCatalogueRefresher
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _log.LogWarning(
-                ex, "Remote catalogue feed {Country}: could not delete a staging file; the next start retries.", country);
+                ex, "Remote catalogue feed {Country}: could not delete a staging file; the next run retries.", country);
         }
     }
 }

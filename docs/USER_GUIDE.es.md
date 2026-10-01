@@ -251,11 +251,12 @@ medicamentos autorizados para toda la **Unión Europea** (EMA).
   contiene también los medicamentos de la UE; con **EU**, solo esos. Un
   medicamento puede aparecer dos veces (nacional y UE): elige el que
   coincide con tu caja.
-- **Actualización automática.** Cuando **Buscar actualizaciones al
-  iniciar (GitHub)** está activado (Configuración → General),
-  MedReminder descarga al iniciar la última lista mensual de tu país y
-  la de la UE, si son más recientes. Sin conexión no cambia nada. Con
-  varios perfiles, cada uno se actualiza la primera vez que se abre.
+- **Actualización automática.** Cuando **Buscar actualizaciones
+  automáticamente (GitHub)** está activado (Configuración → General),
+  MedReminder descarga al iniciar, y una vez al día mientras siga
+  abierto, la última lista mensual de tu país y la de la UE, si son más
+  recientes. Sin conexión no cambia nada. Con varios perfiles solo se
+  actualiza el abierto; los demás, la primera vez que se abren.
 
 **Fuentes.** Datos abiertos de AIFA (CC BY 4.0); datos EMA EPAR (aviso
 jurídico de la EMA, Decisión de la Comisión 2011/833/UE); AEMPS CIMA
@@ -903,8 +904,9 @@ redimensionar.
   Windows 11 con el modo oscuro activado; con un tema de contraste alto
   de Windows se usan sus colores. Se aplica tras reiniciar. En Oscuro,
   los campos de fecha siguen claros.
-- **General → Buscar actualizaciones al iniciar (GitHub)**: busca una
-  versión nueva (nada se instala solo) y actualiza el catálogo. **? →
+- **General → Buscar actualizaciones automáticamente (GitHub)**: busca
+  una versión nueva al iniciar (nada se instala solo) y actualiza el
+  catálogo al iniciar y una vez al día. **? →
   Buscar actualizaciones…** busca ahora.
 - **General → Registrar las consultas de la base de datos
   (diagnóstico)**: solo administradores. Escribe en el archivo de

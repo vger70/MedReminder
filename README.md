@@ -45,10 +45,11 @@ scheduled dose time.
   automatic stock adjustment when "taken".
 - Reference catalogue for medicine look-up (Italy, EU centralised
   authorisations, Spain, France), with links to the official
-  leaflet for Italian medicines. At startup, with the update check
-  on, the catalogue of the reference country and the EU one are
-  refreshed from the monthly remote feed published in this
-  repository (data only, nothing is executed).
+  leaflet for Italian medicines. At startup and once a day while the
+  app stays open, with the update check on, the catalogue of the
+  reference country and the EU one are refreshed from the monthly
+  remote feed published in this repository (data only, nothing is
+  executed).
 - Printable therapy report for the doctor.
 
 **Notifications**
@@ -118,7 +119,8 @@ scheduled dose time.
 - Optional automatic startup with Windows (per-user, no UAC).
 - Update check against GitHub Releases (at startup, can be turned
   off; a new version is never downloaded or installed automatically).
-  The same setting governs the remote catalogue refresh.
+  The same setting governs the remote catalogue refresh (at startup
+  and once a day).
 - Optional "Support Development" dialog opening Stripe or PayPal
   hosted payment pages; hidden unless configured.
 - Structured rolling log (daily, 30-day retention); optional,

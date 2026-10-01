@@ -155,6 +155,8 @@ Program.Main
                                                               newer-only rule §5.2)
                         2. await StartupUpdateCheckSignal     (timeout 60 s)
                         3. remote AIFA step (§4.2)            (IT only)
+                        4. every hour: remote step again when 24 h
+                           have passed since its last run (§11.5)
   RunUi ──► MainForm.Load ──► TryStartPassiveUpdateCheck
                                  CheckAsync (or skipped)
                                  finally: signal.MarkCompleted()
@@ -212,7 +214,8 @@ required.
 
 ### 4.4 Multi-profile behaviour
 
-- The remote step writes only the open profile's database (F9, F10).
+- The remote step writes only the open profile's database (F9, F10),
+  at boot and at each daily check of the session (§11.5).
 - Profile B, opened later, repeats the check at its own boot and
   downloads the same ZIP (5 MB) once. Each profile converges on the
   newest snapshot the first time it is opened after publication.
@@ -228,7 +231,9 @@ and Infrastructure layers, cannot take the `internal` gate and keeps
 its previous behaviour; it runs only when a release changes a
 snapshot. The import duration is logged; the first field run measured
 13.4 s for the Italian catalogue (§11.3), below the 30 s SQLite busy
-timeout that writers outside the gate would hit.
+timeout that writers outside the gate would hit. The database swaps
+(backup restore, archive import, sync join / rebuild / rekey) take the
+same gate through `IDatabaseExclusiveAccess` (§11.5).
 
 ### 4.6 Relation to the embedded snapshot
 
@@ -405,7 +410,7 @@ tests run anywhere.
 | # | Decision | Recommendation |
 |---|----------|----------------|
 | D1 | Gate of the remote step. | Reuse `CheckForUpdatesOnStartup` (one switch for startup network calls) plus the admin flag `Catalogue:RemoteFeed:Enabled`. Alternative: a separate user setting, which costs a checkbox and five dictionary entries. |
-| D2 | Profiles updated. | Open profile only; others at their next boot (§4.4). Forced by F10. |
+| D2 | Profiles updated. | Open profile only, at boot and at the daily check; others at their next boot (§4.4, §11.5). Forced by F10. |
 | D3 | Integrity. | Add `sha256` and `size` to `latest.json` in this work item; the client verifies when present and tolerates absence during the transition. |
 | D4 | Thresholds. | Client: reject a snapshot with fewer than half the current IT rows. Workflow: reject a CSV with fewer than 1 000 data rows. |
 | D5 | User feedback. | None beyond the log. The autocomplete reads the database per query, so the new rows appear at the next dialog opening [VERIFIED: `MainForm.BuildCatalogueContext` builds a fresh context per dialog, `MainForm.cs:1094-1110`]. |
@@ -578,3 +583,41 @@ before the first release that ships the feed:
   logs "manifest unavailable", which is harmless. No release reads the
   old path.
 
+### 11.5 Daily check during the session (2026-10-01)
+
+The remote step ran only at boot. An app left open for days
+(autostart, tray, sleep instead of shutdown) never saw a feed published
+after its start; the feeds publish once a month, on the first
+successful run of days 2, 9, 16 or 23.
+
+- `CatalogueRefreshHostedService` keeps its boot sequence (§4.1), then
+  ticks every hour and runs the remote step again when 24 hours have
+  passed since its last run, compared with the wall clock so a resume
+  from sleep catches up at the next tick. The last run is kept in
+  memory: every start checks anyway. A clock moved back before the
+  last run makes the check due.
+- The gates (D1) are read on every tick, so turning the setting on or
+  changing the reference country takes effect without a restart. A
+  step skipped by a gate does not count as a run; its log line is
+  Information at boot and Debug on later ticks. The daily step does not
+  wait for `StartupUpdateCheckSignal`.
+- D1 stays: one switch. The setting is relabelled "Check for updates
+  automatically (GitHub)" in the five dictionaries and user guides;
+  the property keeps its name `CheckForUpdatesOnStartup`, so settings
+  files, archives and household projections are unchanged. The
+  application update check itself still runs at startup only.
+- Concurrency. At boot nobody could reach a backup restore, an archive
+  import or a sync join while the import ran; during the session the
+  two can meet. Those paths move the database file and fail on Windows
+  while a handle is open. They now run under WriteGate through the new
+  port `IDatabaseExclusiveAccess` (Application, implemented by
+  `DatabaseExclusiveAccess`): `ProfileDatabaseSwap.ReplaceAsync` and
+  `BackupService.ImportProfileAsync`. Only the swap itself is gated,
+  never a call into a gated use case (the gate is not reentrant).
+- `RemoteCatalogueRefresher` reads the imported version under the gate
+  too, and `CsvReferenceCatalogueImporter` closes the connection it
+  opened when each call ends. Before, the refresher's scope kept the
+  connection open from the version read through the download (up to
+  two minutes), which would also have blocked a swap.
+- The embedded import keeps its boot-only, ungated behaviour (§4.5):
+  it runs before the user can reach any swap.

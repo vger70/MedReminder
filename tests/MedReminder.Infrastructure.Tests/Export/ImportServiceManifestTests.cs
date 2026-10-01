@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text.Json;
 using FluentAssertions;
+using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Export;
@@ -266,7 +267,7 @@ public sealed class ImportServiceManifestTests : IDisposable
         live = new MedReminderDbContext(options);
         return new ImportService(
             _profile, live, _cipher, new FakeCredentialProtector(),
-            TimeProvider.System, NullLogger<ImportService>.Instance, _sharedDirectory);
+            TimeProvider.System, new DatabaseExclusiveAccess(), NullLogger<ImportService>.Instance, _sharedDirectory);
     }
 
     private static void TryDeleteFile(string path)

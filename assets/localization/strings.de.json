@@ -499,7 +499,7 @@
   "Ui.SettingsDialog.General.RestartPrompt.Title": "Neustart erforderlich",
   "Ui.SettingsDialog.General.Note": "Windows-Toast-Benachrichtigungen verwenden immer die Systemsprache.\nE-Mail-Benachrichtigungen und das Benutzerhandbuch verwenden die hier gewählte Sprache.",
   "Ui.SettingsDialog.General.Saved": "Einstellungen gespeichert.",
-  "Ui.SettingsDialog.General.CheckUpdates": "Beim Start nach Updates suchen (GitHub)",
+  "Ui.SettingsDialog.General.CheckUpdates": "Automatisch nach Updates suchen (GitHub)",
   "Ui.SettingsDialog.General.LogQueries": "Datenbankabfragen protokollieren (Diagnose)",
   "Ui.SettingsDialog.General.LogQueries.Help": "Schreibt jeden SQL-Befehl der App ohne die Werte in die Protokolldatei. Nur zur Fehlersuche: Das Protokoll wächst schnell. Wird sofort angewendet.",
   "Ui.SettingsDialog.General.LogQueries.AdminOnly": "Die Protokollierung der Abfragen ist eine Diagnoseoption: Ein Administrator ändert sie.",
@@ -593,7 +593,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Anzahl der Tage, die automatische Sicherungen aufbewahrt werden. Ältere Dateien werden nach einer erfolgreichen Sicherung gelöscht.\n\n0 = keine automatische Löschung (nicht empfohlen: der Ordner wächst unbegrenzt).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Öffnet den Datei-Explorer, um den Sicherungsordner auszuwählen.",
   "Ui.SettingsDialog.Tooltip.Language": "Oberflächensprache für Menüs, Dialoge und E-Mail-Benachrichtigungen.\nWindows-Toast-Benachrichtigungen folgen immer der Systemsprache.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Wenn aktiviert, ruft MedReminder beim Start die öffentliche GitHub-Releases-API auf und zeigt eine Meldung an, sobald eine neuere stabile Version verfügbar ist; die neue Version wird nie automatisch heruntergeladen oder installiert. Außerdem lädt MedReminder den Arzneimittelkatalog des Referenzlands und den der EU herunter, sobald eine neuere Ausgabe veröffentlicht ist (nur Daten).",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Wenn aktiviert, ruft MedReminder beim Start die öffentliche GitHub-Releases-API auf und zeigt eine Meldung an, sobald eine neuere stabile Version verfügbar ist; die neue Version wird nie automatisch heruntergeladen oder installiert. Beim Start und, solange die App geöffnet bleibt, einmal täglich lädt MedReminder außerdem den Arzneimittelkatalog des Referenzlands und den der EU herunter, sobald eine neuere Ausgabe veröffentlicht ist (nur Daten).",
 
   "Ui.HelpViewer.Title": "Benutzerhandbuch — MedReminder",
   "Ui.HelpViewer.Back": "Zurück",

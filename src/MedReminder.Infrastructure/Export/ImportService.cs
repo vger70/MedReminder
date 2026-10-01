@@ -42,6 +42,7 @@ internal sealed class ImportService : IImportService
     private readonly IArchiveReader _reader;
     private readonly ICredentialProtector _credentialProtector;
     private readonly TimeProvider _clock;
+    private readonly IDatabaseExclusiveAccess _exclusiveAccess;
     private readonly ILogger<ImportService> _log;
     private readonly string _sharedDirectory;
 
@@ -51,8 +52,9 @@ internal sealed class ImportService : IImportService
         IArchiveCipher cipher,
         ICredentialProtector credentialProtector,
         TimeProvider clock,
+        IDatabaseExclusiveAccess exclusiveAccess,
         ILogger<ImportService> log)
-        : this(currentProfile, db, cipher, credentialProtector, clock, log,
+        : this(currentProfile, db, cipher, credentialProtector, clock, exclusiveAccess, log,
             AppDataPaths.GetAppDataDirectory())
     {
     }
@@ -65,6 +67,7 @@ internal sealed class ImportService : IImportService
         IArchiveCipher cipher,
         ICredentialProtector credentialProtector,
         TimeProvider clock,
+        IDatabaseExclusiveAccess exclusiveAccess,
         ILogger<ImportService> log,
         string sharedDirectory)
     {
@@ -73,6 +76,7 @@ internal sealed class ImportService : IImportService
         _reader = new ArchiveReader(cipher);
         _credentialProtector = credentialProtector;
         _clock = clock;
+        _exclusiveAccess = exclusiveAccess;
         _log = log;
         _sharedDirectory = sharedDirectory;
     }
@@ -169,7 +173,8 @@ internal sealed class ImportService : IImportService
 
             // Step 8: pre-import safety copy of the current DB, then the
             // swap (ProfileDatabaseSwap).
-            ProfileDatabaseSwap.Replace(_db, target, tempDbPath, _clock);
+            await ProfileDatabaseSwap.ReplaceAsync(
+                _exclusiveAccess, _db, target, tempDbPath, _clock, cancellationToken);
         }
         finally
         {

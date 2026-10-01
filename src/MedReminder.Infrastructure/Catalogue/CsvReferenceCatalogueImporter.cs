@@ -60,8 +60,27 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
             ?? throw new NotSupportedException(
                 $"No parser strategy registered for country '{expectedCountry}'.");
 
-        var connection = await OpenWithSchemaAsync(cancellationToken);
+        var (connection, opened) = await OpenWithSchemaAsync(cancellationToken);
+        try
+        {
+            return await ImportCoreAsync(
+                connection, parser, snapshot, expectedCountry, snapshotVersion, minimumRowCount, cancellationToken);
+        }
+        finally
+        {
+            await CloseIfOpenedAsync(connection, opened);
+        }
+    }
 
+    private async Task<ImportReport> ImportCoreAsync(
+        DbConnection connection,
+        IReferenceSnapshotParser parser,
+        Stream snapshot,
+        CountryCode expectedCountry,
+        string snapshotVersion,
+        int minimumRowCount,
+        CancellationToken cancellationToken)
+    {
         var state = await ReadStateAsync(connection, expectedCountry, cancellationToken);
         if (!SnapshotVersion.IsNewer(snapshotVersion, state.Version))
         {
@@ -112,24 +131,55 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
         CountryCode country,
         CancellationToken cancellationToken)
     {
-        var connection = await OpenWithSchemaAsync(cancellationToken);
-        return await ReadStateAsync(connection, country, cancellationToken);
+        var (connection, opened) = await OpenWithSchemaAsync(cancellationToken);
+        try
+        {
+            return await ReadStateAsync(connection, country, cancellationToken);
+        }
+        finally
+        {
+            await CloseIfOpenedAsync(connection, opened);
+        }
     }
 
-    private async Task<DbConnection> OpenWithSchemaAsync(CancellationToken cancellationToken)
+    // Returns whether this call opened the connection. A connection the
+    // importer opened is closed again when the call ends: the remote
+    // refresh keeps its scope alive across a download of up to two
+    // minutes, and an open handle would make a database swap (backup
+    // restore, archive import, sync join) fail on Windows meanwhile.
+    private async Task<(DbConnection Connection, bool Opened)> OpenWithSchemaAsync(
+        CancellationToken cancellationToken)
     {
         var connection = _db.Database.GetDbConnection();
+        var opened = false;
         if (connection.State != System.Data.ConnectionState.Open)
         {
             await connection.OpenAsync(cancellationToken);
+            opened = true;
         }
 
         // The DDL step in DatabaseInitializer normally runs at boot.
         // Running it here too keeps the importer usable in isolation
         // (tests that instantiate it against a fresh DbContext), and
         // it is a cheap no-op afterwards (CREATE * IF NOT EXISTS).
-        await CatalogueSchema.ApplyAsync(connection, cancellationToken);
-        return connection;
+        try
+        {
+            await CatalogueSchema.ApplyAsync(connection, cancellationToken);
+        }
+        catch
+        {
+            await CloseIfOpenedAsync(connection, opened);
+            throw;
+        }
+        return (connection, opened);
+    }
+
+    private static async Task CloseIfOpenedAsync(DbConnection connection, bool opened)
+    {
+        if (opened)
+        {
+            await connection.CloseAsync();
+        }
     }
 
     // The importer writes one snapshot_version per country, so one

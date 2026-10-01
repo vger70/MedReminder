@@ -7,10 +7,13 @@ using Xunit;
 
 namespace MedReminder.UI.Tests.Hosting;
 
-// Remote-feed step of the boot import: a failing feed never stops the
-// next one, and the configuration binds onto the per-feed defaults.
+// Remote-feed step of the boot import and of the daily check: a failing
+// feed never stops the next one, the daily check waits for its interval,
+// and the configuration binds onto the per-feed defaults.
 public sealed class CatalogueRefreshHostedServiceTests
 {
+    private static readonly DateTimeOffset Now = new(2026, 10, 1, 9, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public async Task A_failing_feed_does_not_stop_the_next_one()
     {
@@ -52,6 +55,29 @@ public sealed class CatalogueRefreshHostedServiceTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
         ran.Should().Equal("IT");
+    }
+
+    [Fact]
+    public void Remote_check_is_due_when_it_never_ran_in_the_session()
+    {
+        CatalogueRefreshHostedService.IsRemoteCheckDue(null, Now).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Remote_check_waits_for_the_interval()
+    {
+        var last = Now - CatalogueRefreshHostedService.RemoteCheckInterval;
+
+        CatalogueRefreshHostedService.IsRemoteCheckDue(last + TimeSpan.FromMinutes(1), Now).Should().BeFalse();
+        CatalogueRefreshHostedService.IsRemoteCheckDue(last, Now).Should().BeTrue();
+        CatalogueRefreshHostedService.IsRemoteCheckDue(last - TimeSpan.FromDays(3), Now).Should().BeTrue(
+            "a resume after days of sleep catches up at the first tick");
+    }
+
+    [Fact]
+    public void Remote_check_is_due_when_the_clock_went_back()
+    {
+        CatalogueRefreshHostedService.IsRemoteCheckDue(Now + TimeSpan.FromHours(2), Now).Should().BeTrue();
     }
 
     [Fact]

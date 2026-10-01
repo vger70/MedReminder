@@ -260,12 +260,13 @@ et les médicaments autorisés pour toute l'**Union européenne** (EMA).
   aussi les médicaments UE ; avec **EU**, seulement ceux-ci. Un
   médicament peut apparaître deux fois (national et UE) : choisis celui
   qui correspond à ta boîte.
-- **Mises à jour automatiques.** Quand **Vérifier les mises à jour au
-  démarrage (GitHub)** est activé (Paramètres → Général), MedReminder
-  télécharge au démarrage la dernière liste mensuelle de ton pays et la
-  liste UE, si elles sont plus récentes. Sans connexion, rien ne change.
-  Avec plusieurs profils, chacun est mis à jour la première fois qu'il
-  est ouvert.
+- **Mises à jour automatiques.** Quand **Vérifier les mises à jour
+  automatiquement (GitHub)** est activé (Paramètres → Général),
+  MedReminder télécharge au démarrage, puis une fois par jour tant qu'il
+  reste ouvert, la dernière liste mensuelle de ton pays et la liste UE,
+  si elles sont plus récentes. Sans connexion, rien ne change. Avec
+  plusieurs profils, seul le profil ouvert est mis à jour ; les autres
+  le sont la première fois qu'ils sont ouverts.
 
 **Sources.** Données ouvertes AIFA (CC BY 4.0) ; données EMA EPAR
 (avis juridique de l'EMA, décision de la Commission 2011/833/UE) ;
@@ -931,9 +932,9 @@ redimensionnable.
   que sous Windows 11 avec le mode sombre activé ; avec un thème à
   contraste élevé de Windows, ses couleurs sont utilisées. S'applique
   après un redémarrage. En Sombre, les champs de date restent clairs.
-- **Général → Vérifier les mises à jour au démarrage (GitHub)** :
-  recherche une nouvelle version (rien n'est installé tout seul) et met
-  à jour le catalogue. **? → Vérifier les mises à jour…** vérifie tout
+- **Général → Vérifier les mises à jour automatiquement (GitHub)** :
+  recherche une nouvelle version au démarrage (rien n'est installé tout
+  seul) et met à jour le catalogue au démarrage et une fois par jour. **? → Vérifier les mises à jour…** vérifie tout
   de suite.
 - **Général → Journaliser les requêtes de la base de données
   (diagnostic)** : administrateurs uniquement. Écrit dans le fichier

@@ -27,6 +27,7 @@ internal sealed class SyncSetupService : ISyncSetupService
     private readonly ISyncOperationRepository _operations;
     private readonly ApplyRemoteOperations _apply;
     private readonly TimeProvider _clock;
+    private readonly IDatabaseExclusiveAccess _exclusiveAccess;
     private readonly ILogger<SyncSetupService> _log;
 
     public SyncSetupService(
@@ -40,6 +41,7 @@ internal sealed class SyncSetupService : ISyncSetupService
         ISyncOperationRepository operations,
         ApplyRemoteOperations apply,
         TimeProvider clock,
+        IDatabaseExclusiveAccess exclusiveAccess,
         ILogger<SyncSetupService> log)
     {
         _profile = profile;
@@ -52,6 +54,7 @@ internal sealed class SyncSetupService : ISyncSetupService
         _operations = operations;
         _apply = apply;
         _clock = clock;
+        _exclusiveAccess = exclusiveAccess;
         _log = log;
     }
 
@@ -91,7 +94,8 @@ internal sealed class SyncSetupService : ISyncSetupService
                 target, cancellationToken, deviceName);
             try
             {
-                ProfileDatabaseSwap.Replace(_db, _profile.DatabasePath, temp, _clock);
+                await ProfileDatabaseSwap.ReplaceAsync(
+                    _exclusiveAccess, _db, _profile.DatabasePath, temp, _clock, cancellationToken);
                 _keys.Save(result.Settings.GroupId, result.Settings.KeyVersion, result.Key);
                 _settings.Save(result.Settings);
             }
@@ -117,7 +121,8 @@ internal sealed class SyncSetupService : ISyncSetupService
         {
             var rebuilt = await _join.RejoinAsync(_transports.Create(SyncTarget.Of(current)), current, key, temp,
                 cancellationToken);
-            ProfileDatabaseSwap.Replace(_db, _profile.DatabasePath, temp, _clock);
+            await ProfileDatabaseSwap.ReplaceAsync(
+                _exclusiveAccess, _db, _profile.DatabasePath, temp, _clock, cancellationToken);
             _settings.Save(rebuilt with { ResetPending = false });
             _log.LogInformation("Profile {ProfileId} rebuilt from sync generation {Generation}.",
                 _profile.Id, rebuilt.Generation);
@@ -144,7 +149,8 @@ internal sealed class SyncSetupService : ISyncSetupService
                 cancellationToken);
             try
             {
-                ProfileDatabaseSwap.Replace(_db, _profile.DatabasePath, temp, _clock);
+                await ProfileDatabaseSwap.ReplaceAsync(
+                    _exclusiveAccess, _db, _profile.DatabasePath, temp, _clock, cancellationToken);
                 // Nothing read from the replaced file may be written back.
                 _db.ChangeTracker.Clear();
                 _keys.Save(result.Settings.GroupId, result.Settings.KeyVersion, result.Key);

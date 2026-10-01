@@ -500,7 +500,7 @@
   "Ui.SettingsDialog.General.RestartPrompt.Title": "Restart required",
   "Ui.SettingsDialog.General.Note": "Windows toast notifications always use the system language.\nEmail notifications and the user guide use the language selected here.",
   "Ui.SettingsDialog.General.Saved": "Preferences saved.",
-  "Ui.SettingsDialog.General.CheckUpdates": "Check for updates on startup (GitHub)",
+  "Ui.SettingsDialog.General.CheckUpdates": "Check for updates automatically (GitHub)",
   "Ui.SettingsDialog.General.LogQueries": "Log database queries (diagnostics)",
   "Ui.SettingsDialog.General.LogQueries.Help": "Writes every SQL command the app runs to the log file, without the values. For troubleshooting only: it makes the log grow quickly. Applied immediately.",
   "Ui.SettingsDialog.General.LogQueries.AdminOnly": "Query logging is a diagnostic option: an administrator changes it.",
@@ -594,7 +594,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Days of automatic backup retention. Older files are deleted after a successful backup.\n\n0 = no automatic deletion (discouraged: the folder grows indefinitely).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Open File Explorer to choose the backup folder.",
   "Ui.SettingsDialog.Tooltip.Language": "Interface language for menus, dialogs and email notifications.\nWindows toast notifications always follow the system language.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "When enabled, MedReminder contacts the public GitHub Releases API at startup and shows a message when a newer stable release is available; the new version is never downloaded or installed automatically. It also downloads the medicine catalogue of the reference country and the EU one when a newer edition is published (data only).",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "When enabled, MedReminder contacts the public GitHub Releases API at startup and shows a message when a newer stable release is available; the new version is never downloaded or installed automatically. At startup, and once a day while the app stays open, it also downloads the medicine catalogue of the reference country and the EU one when a newer edition is published (data only).",
 
   "Ui.HelpViewer.Title": "User guide — MedReminder",
   "Ui.HelpViewer.Back": "Back",
