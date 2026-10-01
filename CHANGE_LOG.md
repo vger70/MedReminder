@@ -30,6 +30,25 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #158 — Add publish-signed-release.ps1 to automate signed releases
+
+Link: [vger70/MedReminder#158](https://github.com/vger70/MedReminder/pull/158)
+Branch: `claude/signed-release-script`
+
+### Build
+
+- `publish-signed-release.ps1 <version>` chains the Git release, the
+  wait for the CI run, the tag checkout, the Certum-signed local build
+  with `signtool verify`, and `gh release upload --clobber` of the
+  signed assets, then returns to `main`. Prerequisites are checked
+  before tagging; `-SkipGitRelease` resumes on an existing release.
+
+### Docs
+
+- `docs/PACKAGING.md` §25 documents the script.
+
+---
+
 ## PR #137 — Add local Certum-signed release build to release.ps1
 
 Link: [vger70/MedReminder#137](https://github.com/vger70/MedReminder/pull/137)
