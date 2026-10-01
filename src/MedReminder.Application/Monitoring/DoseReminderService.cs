@@ -180,7 +180,8 @@ public sealed class DoseReminderService
                 medicine, slotTime, localization: _localization);
             try
             {
-                await _windows.ShowAsync(title, body, cancellationToken);
+                await _windows.ShowAsync(title, body,
+                    NotificationTarget.DoseReminder(medicine.Id, slotTime), cancellationToken);
                 dispatched |= NotificationChannels.Windows;
             }
             catch (Exception ex)

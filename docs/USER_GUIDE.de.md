@@ -516,6 +516,13 @@ kopiert und in den verschlüsselten Export aufgenommen.
   erste Warnung bei 10 Tagen, zweite bei 5). Ein Medikament, das bei der
   ersten Prüfung schon unter der Hälfte liegt, bekommt nur die zweite
   Erinnerung. Nach einer neuen Packung beginnt der Zyklus von vorn.
+- **Aus der Windows-Benachrichtigung**: ein Klick öffnet MedReminder
+  bei diesem Medikament (bei den Rezepten, für eine Rezepterinnerung).
+  Eine Bestandswarnung hat **Anfrage vorbereiten**, das die Anfrage an
+  den Arzt öffnet; eine Dosiserinnerung hat **In 15 Minuten erinnern**,
+  das sie später erneut zeigt, auch wenn MedReminder inzwischen
+  geschlossen ist. Einnahmen werden nicht aus der Benachrichtigung
+  erfasst: nutze **Therapie → Einnahme erfassen…**.
 - **Extras → Jetzt prüfen** (**Strg+R** oder das Menü des Symbols)
   prüft sofort.
 - MedReminder muss laufen, um Warnungen zu senden. Aktiviere den

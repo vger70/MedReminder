@@ -30,7 +30,41 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #165 — Add actions to the Windows notifications
+
+Link: [vger70/MedReminder#165](https://github.com/vger70/MedReminder/pull/165)
+Branch: `claude/toast-actions` → `main`
+
+### Added
+
+- Toast actions (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.4): body click
+  opens the app on the medicine (or the prescriptions); "Prepare
+  request" on low-stock warnings; "Remind me in 15 minutes" on dose
+  reminders, scheduled with Windows. No intake is recorded from a
+  toast: intakes are per day in the ledger.
+- Application `NotificationTarget`, `NotificationActionArguments`
+  (identifiers only); UI `ToastActivationRouter`.
+- Strings `Notifications.Action.Snooze`,
+  `Notifications.Action.RequestPrescription` in all five dictionaries.
+
+### Changed
+
+- `IWindowsNotificationService`: target-aware `ShowAsync` overload with
+  a default body; the low-stock, dose and prescription notifiers pass
+  their target.
+- Startup: the toast activation is subscribed first; a toast launch
+  opens the last used profile minimized and exits silently when another
+  instance runs.
+
+### Docs
+
+- User guides (en, it, fr, es, de), `README.md`, proposals note.
+
+---
+
 ## PR #164 — Follow prescriptions from the request to the pharmacy
+
+**Status:** merged (2026-10-01)
 
 Link: [vger70/MedReminder#164](https://github.com/vger70/MedReminder/pull/164)
 Branch: `claude/prescription-lifecycle` → `main`

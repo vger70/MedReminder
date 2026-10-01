@@ -710,6 +710,8 @@
   "Notifications.Toast.BodySecond": "Noch nicht aufgefüllt. Geschätzt für {0} Tage. Fordern Sie bald ein neues Rezept an.",
   "Notifications.Prescription.Title": "Rezept einlösen: {0}",
   "Notifications.Prescription.Body": "Das Rezept für {0} ist bis {1} gültig. Lösen Sie es rechtzeitig in der Apotheke ein.",
+  "Notifications.Action.Snooze": "In {0} Minuten erinnern",
+  "Notifications.Action.RequestPrescription": "Anfrage vorbereiten",
   "Notifications.DoseReminder.Title": "Zeit für die Einnahme von {0}",
   "Notifications.DoseReminder.Body": "{0} — geplante Dosis um {1}",
 

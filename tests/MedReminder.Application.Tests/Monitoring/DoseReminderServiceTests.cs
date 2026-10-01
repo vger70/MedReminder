@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MedReminder.Application.Notifications;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Notifications;
@@ -53,6 +54,8 @@ public class DoseReminderServiceTests
 
         result.FiredCount.Should().Be(1);
         scope.Windows.Sent.Should().ContainSingle();
+        // The toast offers "Remind me later" for this slot (EVOLUTION-PROPOSALS-2 §3.4).
+        scope.Windows.Targets.Should().Equal(NotificationTarget.DoseReminder(id, SlotTime));
         scope.Email.Sent.Should().BeEmpty();
 
         var events = scope.DoseEvents.All;
