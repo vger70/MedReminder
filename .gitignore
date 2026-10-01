@@ -80,3 +80,6 @@ __pycache__/
 
 # caveman:compress backups
 *.original.md
+
+## Local release builds (release.ps1 -LocalBuild)
+dist/
