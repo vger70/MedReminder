@@ -244,8 +244,8 @@ Content, before compression:
 
 The database is the profile database of the writing device (MedReminder
 schema; `docs/ANALYSIS.md` §4.1) without what is not replicated:
-derived stock movements (`Origin` 3), notification, dose-reminder and
-prescription-reminder events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
+derived stock movements (`Origin` 3), notification, dose-reminder,
+prescription-reminder and shortage-notice events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
 the reference catalogue. It keeps the facts, the frozen (`Legacy`)
 movements and the cutoff, the register versions (`SyncFieldVersions`),
 the tombstones (`FactRetractions`), the low-stock emails sent by any

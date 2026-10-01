@@ -193,6 +193,7 @@ is used.
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 | `Prescription` (`Prescriptions`) | A prescription from request to collection (replicated, one register per prescription) | `RequestedOn?`, `IssuedOn?`, `Code?`, `Packages?`, `ValidUntil?`, `CollectedOn?` |
 | `PrescriptionReminderEvent` (`PrescriptionReminderEvents`) | Reminder to collect, device-local dedup | unique `(PrescriptionId, ValidUntil)` |
+| `ShortageNoticeEvent` (`ShortageNoticeEvents`) | Shortage notice shown, device-local dedup | unique `(MedicineId, Code, Start)` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
 `Consumption`, `PositiveCorrection`, `NegativeCorrection`.
@@ -421,6 +422,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   localization\strings.<lang>.json   optional user overrides of the UI dictionaries
   logs\medreminder-<date>.log    Serilog, daily files
   catalogue\staging\             remote catalogue archive while it is downloaded and imported; emptied every run
+  catalogue\shortages\shortages-it.json   AIFA shortage list, shared by every profile (EVOLUTION-PROPOSALS-2 §3.3)
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
   household\
     household.db                 household operation log and registers (household feature, step H2)
@@ -667,7 +669,7 @@ start:
    (household step H1); then `NotificationEvents.Stage` and
    `SentEmailNotifications.Stage` (second low-stock warning, default 1);
    then `Prescriptions` and `PrescriptionReminderEvents` (prescription
-   lifecycle);
+   lifecycle); then `ShortageNoticeEvents` (shortage notices);
    then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);

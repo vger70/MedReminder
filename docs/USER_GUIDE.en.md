@@ -291,6 +291,25 @@ box and the matching medicine opens in the stock window, already set to
 *New package* with the usual quantity. If no medicine has that code,
 you can add a new medicine or link the code to an existing one.
 
+### Medicines in shortage (Italy)
+
+With Italy as reference country, MedReminder downloads the AIFA list of
+medicines in shortage together with the catalogue (at startup and once
+a day, when **Check for updates automatically** is on). A medicine
+whose package (AIC code, filled in from the catalogue or the barcode)
+is on the list shows in the **Supply** column of the list:
+
+- *In shortage*: AIFA lists the package as hard to find;
+- *Shortage from …*: AIFA announces a shortage from that date.
+
+Hover over the cell to read the start, the expected end (often not
+communicated, and it may change), the reason, whether AIFA reports
+equivalent medicines, and the date of the list. You also get one
+notification per shortage, on the medicine's channels.
+
+MedReminder names no substitute: ask your doctor or pharmacist, and
+request the prescription in good time.
+
 ---
 
 <a id="stock"></a>

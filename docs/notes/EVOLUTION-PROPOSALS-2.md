@@ -144,6 +144,13 @@ days of therapy (consumer sources, §6).
 
 ### 3.3 AIFA shortage notice
 
+**Status.** Implemented on branch `claude/shortage-notice`: workflow
+and script publishing `data/it/shortages/` (first list, 29/09/2026,
+published from the reviewed file), client refresh with the catalogue
+feeds when Italy is the reference country, a Supply column with the
+detail as tooltip, and one notification per shortage start. Phase 2
+(EMA and national catalogues for France and Spain) is not started.
+
 **Benefit — high for Italian users**, and a differentiator: none of the
 surveyed apps shows it **[INFERRED — survey not exhaustive]**. When a
 medicine is in shortage the user must act earlier than the normal

@@ -40,6 +40,28 @@ public sealed class CatalogueFeedOptions
 
     public int ManifestTimeoutSeconds { get; set; } = 10;
 
+    // Shortage list (docs/notes/EVOLUTION-PROPOSALS-2.md §3.3), under
+    // `{BaseUrl}it/shortages/`. Downloaded when the remote feeds run and
+    // the reference country is Italy.
+    public bool ShortagesEnabled { get; set; } = true;
+
+    public long ShortagesMaxDownloadBytes { get; set; } = 4 * MiB;
+
+    public string ShortageManifestUrl() => ShortageFolder() + "latest.json";
+
+    // `file` must already be validated by ShortageFeedParser.
+    public string ShortageFileUrl(string file) => ShortageFolder() + file;
+
+    private string ShortageFolder()
+    {
+        var baseUrl = BaseUrl ?? string.Empty;
+        if (!baseUrl.EndsWith('/'))
+        {
+            baseUrl += "/";
+        }
+        return baseUrl + "it/shortages/";
+    }
+
     public int DownloadTimeoutSeconds { get; set; } = 120;
 
     public bool IsFeedEnabled(CatalogueFeedDescriptor feed) =>

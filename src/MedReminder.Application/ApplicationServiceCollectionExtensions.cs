@@ -125,6 +125,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<DeletePrescription>();
         services.AddScoped<PrescriptionListQuery>();
         services.AddScoped<PrescriptionReminders>();
+        // Shortage list (EVOLUTION-PROPOSALS-2 §3.3).
+        services.AddScoped<ShortageRefresher>();
+        services.AddScoped<ShortageNotices>();
 
         // Reference catalogue (M1). The country-profile provider owns
         // the "national ∪ EU" rule; use cases are cheap façades over

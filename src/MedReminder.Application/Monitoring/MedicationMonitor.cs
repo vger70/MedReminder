@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Application.Notifications;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
@@ -50,6 +51,7 @@ public sealed class MedicationMonitor
     private readonly IOperationLog? _operationLog;
     private readonly IMasterRole? _master;
     private readonly PrescriptionReminders? _prescriptionReminders;
+    private readonly ShortageNotices? _shortageNotices;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -67,8 +69,10 @@ public sealed class MedicationMonitor
         ISentEmailNotificationRepository? sentEmails = null,
         IOperationLog? operationLog = null,
         IMasterRole? master = null,
-        PrescriptionReminders? prescriptionReminders = null)
+        PrescriptionReminders? prescriptionReminders = null,
+        ShortageNotices? shortageNotices = null)
     {
+        _shortageNotices = shortageNotices;
         _prescriptionReminders = prescriptionReminders;
         _master = master;
         _sentEmails = sentEmails;
@@ -169,6 +173,11 @@ public sealed class MedicationMonitor
         if (_prescriptionReminders is not null)
         {
             await _prescriptionReminders.RunAsync(today, sendsEmail, cancellationToken);
+        }
+        // Medicines entering the shortage list (EVOLUTION-PROPOSALS-2 §3.3).
+        if (_shortageNotices is not null)
+        {
+            await _shortageNotices.RunAsync(today, sendsEmail, cancellationToken);
         }
 
         await _uow.SaveChangesAsync(cancellationToken);

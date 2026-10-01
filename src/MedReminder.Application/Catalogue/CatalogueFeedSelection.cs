@@ -25,4 +25,16 @@ public static class CatalogueFeedSelection
             .Where(feed => (feed.Country == reference || feed.Country.IsSupranational) && options.IsFeedEnabled(feed))
             .ToList();
     }
+
+    // Whether the shortage list is refreshed with the feeds: it lists
+    // Italian package codes, so only with Italy as reference country
+    // (an invalid value falls back to IT, as above).
+    public static bool IncludesShortages(string? referenceCountry, CatalogueFeedOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var reference = CountryCode.TryParse(referenceCountry, out var parsed)
+            ? parsed
+            : CatalogueFeedDescriptor.Italy.Country;
+        return options.ShortagesEnabled && reference == CatalogueFeedDescriptor.Italy.Country;
+    }
 }

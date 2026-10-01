@@ -1337,14 +1337,34 @@ internal sealed class MainForm : MedReminderFormBase
         };
         grid.Columns.Add(statusColumn);
         _statusColumnIndex = statusColumn.Index;
+        // Shortage of the package in the AIFA list (EVOLUTION-PROPOSALS-2
+        // §3.3); the detail is the cell's tooltip.
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            HeaderText = _loc.Get("Ui.MainForm.Column.Supply"),
+            DataPropertyName = nameof(MedicineListItem.SupplyDisplay),
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 120,
+            MinimumWidth = 88,
+        });
         grid.DataSource = _rows;
         grid.CellFormatting += (s, e) =>
         {
-            if (grid.Columns[e.ColumnIndex].DataPropertyName ==
-                nameof(MedicineListItem.DaysRemaining))
+            var property = grid.Columns[e.ColumnIndex].DataPropertyName;
+            if (property == nameof(MedicineListItem.DaysRemaining))
             {
                 e.Value ??= "—";
                 e.FormattingApplied = true;
+            }
+            else if (property == nameof(MedicineListItem.SupplyDisplay)
+                && e.RowIndex >= 0
+                && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem { HasShortage: true } item)
+            {
+                grid.Rows[e.RowIndex].Cells[e.ColumnIndex].ToolTipText = item.SupplyDetail;
+                if (!UiColors.HighContrast && e.CellStyle is { } style)
+                {
+                    style.ForeColor = UiTheme.Palette.WarningText;
+                }
             }
         };
         grid.ColumnHeaderMouseClick += (s, e) =>

@@ -1,0 +1,56 @@
+name: Download AIFA shortage list
+
+on:
+  schedule:
+    # Twice a week: AIFA updates the list several times a month. A run
+    # on a list already published exits without changes.
+    - cron: '30 4 * * 1,4'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Republish the current list even if already published'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Every feed workflow pushes to main: one at a time.
+concurrency:
+  group: catalogue-feeds-publish
+  cancel-in-progress: false
+
+jobs:
+  download:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Generate files
+        env:
+          FORCE_REFRESH: ${{ inputs.force }}
+        run: |
+          python scripts/feeds/aifa_shortages.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/it/shortages/
+          git diff --staged --quiet && exit 0
+          git commit -m "AIFA shortage list update $(date -u +%Y%m%d)"
+
+          # Another push may have landed since the checkout: rebase once
+          # and retry once.
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push || { git pull --rebase origin "${GITHUB_REF_NAME}" && git push; }

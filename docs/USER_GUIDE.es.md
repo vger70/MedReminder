@@ -304,6 +304,29 @@ ventana de stock, ya en *Nueva caja* con la cantidad habitual. Si ningún
 medicamento tiene ese código, puedes añadir un medicamento nuevo o
 vincular el código a uno existente.
 
+### Medicamentos en desabastecimiento (Italia)
+
+Con Italia como país de referencia, MedReminder descarga la lista AIFA
+de medicamentos en desabastecimiento junto con el catálogo (al inicio y
+una vez al día, si **Buscar actualizaciones automáticamente** está
+activo). Un medicamento cuya caja (código AIC, rellenado desde el
+catálogo o el código de barras) está en la lista lo muestra en la
+columna **Disponibilidad** de la lista:
+
+- *En desabastecimiento*: AIFA indica la caja como difícil de
+  encontrar;
+- *Desabastecimiento desde el …*: AIFA anuncia un desabastecimiento
+  desde esa fecha.
+
+Pasa el ratón por la celda para leer el inicio, el fin previsto (a
+menudo no comunicado, y puede cambiar), el motivo, si AIFA indica
+medicamentos equivalentes y la fecha de la lista. También recibes una
+notificación por cada desabastecimiento, por los canales del
+medicamento.
+
+MedReminder no indica sustitutos: consulta a tu médico o farmacéutico y
+solicita la receta a tiempo.
+
 ---
 
 <a id="stock"></a>

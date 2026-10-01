@@ -223,6 +223,20 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PrescriptionReminderEvents_PrescriptionId_ValidUntil""
                 ON ""PrescriptionReminderEvents"" (""PrescriptionId"", ""ValidUntil"");", cancellationToken);
+
+        // Shortage notices this device showed (docs/notes/
+        // EVOLUTION-PROPOSALS-2.md §3.3; not replicated).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""ShortageNoticeEvents"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_ShortageNoticeEvents"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""Code"" TEXT NOT NULL,
+                ""Start"" TEXT NOT NULL,
+                ""FiredAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_ShortageNoticeEvents_MedicineId_Code_Start""
+                ON ""ShortageNoticeEvents"" (""MedicineId"", ""Code"", ""Start"");", cancellationToken);
         await ExecuteRawSqlAsync(SyncOperationsTableSql, cancellationToken);
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_HlcPhysicalMs_HlcCounter""

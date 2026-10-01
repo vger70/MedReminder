@@ -304,6 +304,26 @@ apre nella finestra delle scorte, già impostata su *Nuova confezione*
 con la quantità abituale. Se nessuna medicina ha quel codice, puoi
 aggiungere una nuova medicina o collegare il codice a una esistente.
 
+### Medicine carenti (Italia)
+
+Con l'Italia come paese di riferimento, MedReminder scarica l'elenco
+AIFA dei farmaci carenti insieme al catalogo (all'avvio e una volta al
+giorno, se **Controlla aggiornamenti automaticamente** è attivo). Una
+medicina la cui confezione (codice AIC, compilato dal catalogo o dal
+codice a barre) è nell'elenco lo mostra nella colonna
+**Disponibilità** della lista:
+
+- *Carente*: AIFA indica la confezione come difficile da trovare;
+- *Carenza dal …*: AIFA annuncia una carenza da quella data.
+
+Passa il mouse sulla cella per leggere l'inizio, la fine prevista
+(spesso non comunicata, e può cambiare), il motivo, se AIFA segnala
+medicinali equivalenti e la data dell'elenco. Ricevi anche una notifica
+per ogni carenza, sui canali della medicina.
+
+MedReminder non indica sostituti: chiedi al medico o al farmacista e
+richiedi la ricetta per tempo.
+
 ---
 
 <a id="stock"></a>

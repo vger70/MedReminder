@@ -1,5 +1,7 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Application.Export;
+using MedReminder.Infrastructure.Catalogue;
 using MedReminder.Infrastructure.Cloud.GoogleDrive;
 using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Export;
@@ -40,6 +42,12 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<INotificationEventRepository, NotificationEventRepository>();
         services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
         services.AddScoped<IPrescriptionReminderEventRepository, PrescriptionReminderEventRepository>();
+        services.AddScoped<IShortageNoticeEventRepository, ShortageNoticeEventRepository>();
+        // Shortage list (EVOLUTION-PROPOSALS-2 §3.3): one file for every
+        // profile, so the store is a singleton like the client.
+        services.AddOptions();
+        services.TryAddSingleton<IShortageFeedClient, GitHubRawShortageFeedClient>();
+        services.TryAddSingleton<IShortageListStore, JsonFileShortageListStore>();
         services.AddScoped<ISentEmailNotificationRepository, SentEmailNotificationRepository>();
         services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
         services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();

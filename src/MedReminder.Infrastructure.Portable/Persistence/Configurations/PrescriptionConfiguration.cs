@@ -36,3 +36,17 @@ internal sealed class PrescriptionReminderEventConfiguration : IEntityTypeConfig
         builder.HasIndex(e => new { e.PrescriptionId, e.ValidUntil }).IsUnique();
     }
 }
+
+// Device-local shortage notices (docs/notes/EVOLUTION-PROPOSALS-2.md
+// §3.3): no foreign key, removed with the medicine by
+// MedicineDeletionRepository and left out of sync images.
+internal sealed class ShortageNoticeEventConfiguration : IEntityTypeConfiguration<MedReminder.Domain.Catalogue.ShortageNoticeEvent>
+{
+    public void Configure(EntityTypeBuilder<MedReminder.Domain.Catalogue.ShortageNoticeEvent> builder)
+    {
+        builder.ToTable("ShortageNoticeEvents");
+        builder.HasKey(e => e.Id);
+        builder.Property(e => e.Code).IsRequired().HasMaxLength(16);
+        builder.HasIndex(e => new { e.MedicineId, e.Code, e.Start }).IsUnique();
+    }
+}

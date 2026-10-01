@@ -316,6 +316,27 @@ la quantité habituelle. Si aucun médicament n'a ce code, tu peux
 ajouter un nouveau médicament ou associer le code à un médicament
 existant.
 
+### Médicaments en pénurie (Italie)
+
+Avec l'Italie comme pays de référence, MedReminder télécharge la liste
+AIFA des médicaments en pénurie avec le catalogue (au démarrage et une
+fois par jour, si **Vérifier les mises à jour automatiquement** est
+activé). Un médicament dont la boîte (code AIC, rempli depuis le
+catalogue ou le code-barres) figure sur la liste l'indique dans la
+colonne **Disponibilité** de la liste :
+
+- *En pénurie* : l'AIFA indique la boîte comme difficile à trouver ;
+- *Pénurie dès le …* : l'AIFA annonce une pénurie à partir de cette
+  date.
+
+Survole la cellule pour lire le début, la fin prévue (souvent non
+communiquée, et elle peut changer), le motif, si l'AIFA signale des
+médicaments équivalents et la date de la liste. Tu reçois aussi une
+notification par pénurie, par les canaux du médicament.
+
+MedReminder n'indique aucun substitut : demande à ton médecin ou à ton
+pharmacien, et demande l'ordonnance à temps.
+
 ---
 
 <a id="stock"></a>
