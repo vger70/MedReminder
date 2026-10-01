@@ -30,7 +30,36 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #163 — Add a supply planner for a trip or the next pharmacy visit
+
+Link: [vger70/MedReminder#163](https://github.com/vger70/MedReminder/pull/163)
+Branch: `claude/coverage-planner` → `main`
+
+### Added
+
+- Therapy → Plan supply… (and navigation pane): for a period chosen by
+  the user, each active medicine's need in the period, stock left at
+  its start, what is missing and the packages to get, sized like the
+  last new package (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.5).
+  Print, PDF and clipboard. Read-only.
+- `Application/Coverage`: `CoveragePlanner`, `CoveragePlanQuery`,
+  `CoveragePlanText`; `Application/Reporting`: `PrintableTable`,
+  `PrintableTableText`.
+- UI: `CoveragePlannerDialog`, `TablePrintDocument`, `PrintOutput`.
+- Strings `Ui.CoveragePlannerDialog.*`, `Reports.Coverage.*`,
+  `Ui.MainForm.Menu.Therapy.PlanSupply`,
+  `Ui.MainForm.Error.OpenCoveragePlanner` in all five dictionaries.
+
+### Docs
+
+- User guides (en, it, fr, es, de), `README.md`, status in
+  `docs/notes/EVOLUTION-PROPOSALS-2.md`.
+
+---
+
 ## PR #162 — Send a second low-stock warning at half of the threshold
+
+**Status:** merged (2026-10-01)
 
 Link: [vger70/MedReminder#162](https://github.com/vger70/MedReminder/pull/162)
 Branch: `claude/escalation-warning` → `main`
