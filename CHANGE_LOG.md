@@ -30,6 +30,35 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #159 — Check the remote catalogue feeds once a day during the session
+
+Link: [vger70/MedReminder#159](https://github.com/vger70/MedReminder/pull/159)
+Branch: `claude/catalogue-daily-refresh` → `main`
+
+### Changed
+
+- `CatalogueRefreshHostedService`: after the boot import, an hourly tick
+  runs the remote feed step again once 24 hours have passed since its
+  last run, so an app left open for days picks up a newly published
+  catalogue. Gates are re-read on every tick.
+- Setting relabelled "Check for updates automatically (GitHub)" in the
+  five dictionaries; `CheckForUpdatesOnStartup` keeps its name.
+
+### Fixed
+
+- Backup restore, archive import and sync join / rebuild / rekey now
+  wait for a running remote catalogue import (new port
+  `IDatabaseExclusiveAccess` over `WriteGate`) instead of failing to
+  move a database file that is still open.
+- `CsvReferenceCatalogueImporter` closes the connection it opened when
+  each call ends; the remote refresh no longer holds the database open
+  during the download.
+
+### Docs
+
+- `ANALYSIS-CATALOGUE-REMOTE-FEED.md` §4.1, §4.4, §4.5, D2, new §11.5;
+  user guides (5 languages) and README.
+
 ## PR #157 — Align STATUS, EVOLUTION and the proposals note with v2.12.0
 
 Link: [vger70/MedReminder#157](https://github.com/vger70/MedReminder/pull/157)
