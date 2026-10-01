@@ -729,3 +729,24 @@ timestamped".
 The tag-triggered workflow (§12) still publishes unsigned packages.
 Until CI signing is enabled, replace the release assets with the
 locally signed ones from `dist\<version>\`.
+
+`publish-signed-release.ps1` runs the whole sequence:
+
+```powershell
+.\publish-signed-release.ps1 2.12.1
+```
+
+1. checks that `gh` is logged in, the certificate is in the store, the
+   working tree is clean and the tag is unused;
+2. `git checkout main`, `git pull`, `.\release.ps1 <version>` (commit,
+   push, tag);
+3. waits for the CI run on the tag commit (`gh run watch`), then checks
+   out the tag;
+4. `.\release.ps1 <version> -LocalBuild` and `signtool verify` on the MSI;
+5. `gh release upload --clobber` of the signed ZIPs, MSI and
+   `SHA256SUMS.txt`, keeping the release and its notes;
+6. returns to `main`, also on failure.
+
+If signing or upload fails after the tag is pushed, fix the cause and
+resume with `-SkipGitRelease`, which starts from the tag checkout. Run
+`.\publish-signed-release.ps1 -Help` for all options.
