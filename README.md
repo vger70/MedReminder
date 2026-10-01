@@ -45,7 +45,10 @@ scheduled dose time.
   automatic stock adjustment when "taken".
 - Reference catalogue for medicine look-up (Italy, EU centralised
   authorisations, Spain, France), with links to the official
-  leaflet for Italian medicines.
+  leaflet for Italian medicines. At startup, with the update check
+  on, the catalogue of the reference country and the EU one are
+  refreshed from the monthly remote feed published in this
+  repository (data only, nothing is executed).
 - Printable therapy report for the doctor.
 
 **Notifications**
@@ -97,7 +100,17 @@ scheduled dose time.
 
 **Application**
 
-- UI localized in English, Italian, French, Spanish and German.
+- Main window with a summary of empty, running-low and suspended
+  medicines (click to filter), a navigation pane and a search box
+  (Ctrl+F).
+- Settings, Sync and Installation windows list their sections on
+  the left; dialogs share one layout, with errors shown under the
+  fields.
+- Per-profile appearance (same as Windows, light, dark; Windows
+  high-contrast themes respected) and text size (normal, large,
+  extra large).
+- UI localized in English, Italian, French, Spanish and German,
+  including message and confirmation buttons.
 - User guide integrated in the app (F1), rendered with WebView2, in
   the same five languages.
 - System tray icon with Open / Check now / Settings / Exit menu;
@@ -107,7 +120,8 @@ scheduled dose time.
   off; nothing is downloaded or installed automatically).
 - Optional "Support Development" dialog opening Stripe or PayPal
   hosted payment pages; hidden unless configured.
-- Structured rolling log (daily, 30-day retention).
+- Structured rolling log (daily, 30-day retention); optional,
+  administrator-only logging of database queries for diagnostics.
 
 ## Requirements
 
@@ -121,7 +135,7 @@ scheduled dose time.
 
 | Layer | Technology |
 |---|---|
-| UI | WinForms on .NET 10 (`net10.0-windows`) |
+| UI | WinForms on .NET 10 (`net10.0-windows10.0.19041.0`) |
 | Application / Domain | C# 12+, nullable + implicit usings |
 | Persistence | SQLite via EF Core 10 |
 | SMTP | MailKit 4.x |
@@ -146,12 +160,14 @@ MedReminder.sln
 src/
   MedReminder.Domain/           pure entities and calculations  (net10.0)
   MedReminder.Application/      use cases and ports             (net10.0)
-  MedReminder.Infrastructure/   SQLite/MailKit/DPAPI/export     (net10.0-windows)
-  MedReminder.UI/               WinForms + host                 (net10.0-windows)
-  MedReminder.DataImporter/     reference-catalogue import tool
+  MedReminder.Infrastructure.Portable/  SQLite/EF Core, archive cipher, localization (net10.0)
+  MedReminder.Infrastructure/   MailKit/DPAPI/registry/export   (net10.0-windows)
+  MedReminder.UI/               WinForms + host                 (net10.0-windows10.0.19041.0)
+  MedReminder.DataImporter/     reference-catalogue import tool (net10.0)
 tests/
   MedReminder.Domain.Tests/
   MedReminder.Application.Tests/
+  MedReminder.Infrastructure.Portable.Tests/
   MedReminder.Infrastructure.Tests/
   MedReminder.UI.Tests/
   MedReminder.DataImporter.Tests/
@@ -164,6 +180,7 @@ docs/
   EVOLUTION-DONE.md             shipped evolutions
   EXPORT-FORMAT.md              public .mrz archive format
   CATALOGUE-DATA.md             reference-catalogue sources and refresh
+  SYNC-FORMAT.md                sync and installation storage format
   PACKAGING.md                  publishing and distribution
   USER_GUIDE.<lang>.md          user guide (en, it, fr, es, de)
   analysis/                     per-feature design documents
@@ -186,8 +203,9 @@ dotnet test MedReminder.sln -c Release
 ```
 
 Integration tests (`MedReminder.Infrastructure.Tests`) run on Windows
-only (they use DPAPI and the registry). Domain and application tests
-run on any platform with the .NET 10 SDK.
+only (they use DPAPI and the registry); so do the UI tests. Domain,
+application, portable-infrastructure and data-importer tests run on
+any platform with the .NET 10 SDK.
 
 ## How to publish for distribution
 
@@ -253,7 +271,7 @@ Shared, admin-managed:
 | `backup.settings.json` / `backup.state.json` | Automatic backup config (local and cloud-folder targets) + last-tick state |
 | `cloud-backup.protected` | Cloud-folder backup passphrase, DPAPI-encrypted (CurrentUser scope) |
 | `donations.settings.json` | Optional public Payment Link URLs for the Support Development dialog |
-| `user.settings.json` | UI language, reference-catalogue country, update-check preference |
+| `user.settings.json` | UI language, reference-catalogue country, update-check preference, database-query logging (this device only) |
 | `onedrive.protected` / `googledrive.protected` | OneDrive / Google Drive sign-in tokens, DPAPI-encrypted |
 | `household\` | Shared installation: operation log, settings, installation and device keys (DPAPI) |
 | `catalogue\staging\` | Remote catalogue archive while it is imported; emptied every run |
@@ -265,7 +283,7 @@ Per-profile, under `profiles\<profile-id>\`:
 |---|---|
 | `medreminder.db` (+ `-shm`, `-wal`) | This profile's SQLite database |
 | `notifications.settings.json` | This profile's email recipient, optional caregiver and doctor address |
-| `ui.settings.json` | This profile's text size |
+| `ui.settings.json` | This profile's text size and appearance |
 | `sync.settings.json` / `sync.protected` | Sync group, device and storage; group key, DPAPI-encrypted (only when sync is on) |
 
 Nothing outside `%LOCALAPPDATA%\MedReminder\` is written by the app,
@@ -276,7 +294,7 @@ the logs.
 
 ## How to configure notifications
 
-Open **Settings → Email SMTP** from the main menu:
+Open **Tools → Settings… → Email SMTP**:
 
 1. Fill in host, port, StartTLS, username and sender.
 2. Type the password in the dedicated field (encrypted via DPAPI and
@@ -296,7 +314,7 @@ shared tray icon and modern Windows toast when available.
 
 ## How to back up
 
-**Settings → Backup / Restore**. Automatic-backup settings are
+**Tools → Settings… → Backup / Restore**. Automatic-backup settings are
 visible to administrators only; export, import and restore from a
 cloud folder are available to every profile.
 
@@ -354,9 +372,12 @@ Format: `medreminder-YYYYMMDD.log` — one file per day, 30-day
 retention, 10 MB max per file (with automatic alphabetic roll past
 that size).
 
-Default level: `Information`. Contains executed SQL commands (no
-sensitive parameters), scheduler ticks, notification sends, errors
-with stack trace. **Passwords, email content and sensitive
+Default level: `Information`. Contains scheduler ticks, notification
+sends, sync and installation outcomes, errors with stack trace.
+Executed SQL commands (text and duration, never parameter values) are
+written only while **Settings → General → Log database queries
+(diagnostics)** is on; administrators only, applied without a
+restart. **Passwords, email content and sensitive
 dose/quantity values are never written to the logs.**
 
 ## Known limitations

@@ -1029,14 +1029,14 @@ außer den Sicherungs- und Exportdateien, die du selbst ablegst.
 ├── smtp.protected             E-Mail-Passwort, von Windows verschlüsselt
 ├── backup.settings.json       Sicherungseinstellungen
 ├── cloud-backup.protected     Passphrase der Cloud-Sicherung, von Windows verschlüsselt
-├── user.settings.json         Sprache, Referenzland, Update-Prüfung
+├── user.settings.json         Sprache, Referenzland, Update-Prüfung, Abfrageprotokoll
 ├── household\                 geteilte Installation (nur wenn genutzt)
 ├── logs\medreminder-JJJJMMTT.log
 └── profiles\
     └── <Profil>\
         ├── medreminder.db     Medikamente und Bestand des Profils
         ├── notifications.settings.json   Empfänger
-        ├── ui.settings.json   Textgröße
+        ├── ui.settings.json   Textgröße und Darstellung
         └── sync.*             Synchronisierungseinstellungen (nur wenn genutzt)
 ```
 
