@@ -190,6 +190,39 @@ public sealed class DatabaseInitializer
         // written before it are first-stage warnings.
         await AddColumnIfMissingAsync("NotificationEvents", "Stage", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
         await AddColumnIfMissingAsync("SentEmailNotifications", "Stage", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+
+        // Prescription lifecycle (docs/notes/EVOLUTION-PROPOSALS-2.md
+        // §3.2): the prescriptions (replicated) and the reminders to
+        // collect them this device showed (not replicated).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""Prescriptions"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_Prescriptions"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""RequestedOn"" TEXT NULL,
+                ""IssuedOn"" TEXT NULL,
+                ""Code"" TEXT NULL,
+                ""Packages"" INTEGER NULL,
+                ""ValidUntil"" TEXT NULL,
+                ""CollectedOn"" TEXT NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                ""UpdatedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_Prescriptions_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_Prescriptions_MedicineId""
+                ON ""Prescriptions"" (""MedicineId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""PrescriptionReminderEvents"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_PrescriptionReminderEvents"" PRIMARY KEY,
+                ""PrescriptionId"" TEXT NOT NULL,
+                ""MedicineId"" TEXT NOT NULL,
+                ""ValidUntil"" TEXT NOT NULL,
+                ""FiredAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PrescriptionReminderEvents_PrescriptionId_ValidUntil""
+                ON ""PrescriptionReminderEvents"" (""PrescriptionId"", ""ValidUntil"");", cancellationToken);
         await ExecuteRawSqlAsync(SyncOperationsTableSql, cancellationToken);
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_HlcPhysicalMs_HlcCounter""

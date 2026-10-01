@@ -80,7 +80,7 @@ choice. If you install from the MSI package, the permission window says
 - **Toolbar** below the menus: *New medicine*, *Register intake* and a
   search box on the right (**Ctrl+F**) that filters the list by name.
 - **Navigation** on the left: *Medicines* (this list), then *Therapy
-  timeline*, *Therapy report*, *Request prescription*, *Plan supply*, *Installation*
+  timeline*, *Therapy report*, *Request prescription*, *Plan supply*, *Prescriptions*, *Installation*
   (administrators) and *Settings*, which open their own windows. In a
   narrow window it shows icons only.
 - **Summary** above the list: how many medicines are *Empty*, *Running
@@ -110,6 +110,7 @@ right-click the icon and choose **Exit**.
 | Undo a mistaken entry | **Stock → History…** |
 | Print the therapy for a doctor | **Therapy → Therapy report…** |
 | Ask for a prescription | **Therapy → Request prescription…** |
+| Keep track of a prescription until the pharmacy | **Therapy → Prescriptions…** |
 | Check the stock for a trip or until the next pharmacy visit | **Therapy → Plan supply…** |
 | Set up email, language, backup | **Tools → Settings…** |
 | Add a person | **Tools → Manage profiles…** (administrator) |
@@ -430,6 +431,34 @@ everything before sending.
   **Open in mail client**.
 
 MedReminder never sends a request by itself.
+
+### Follow a prescription to the pharmacy
+
+**Therapy → Prescriptions…** lists the prescriptions you recorded, the
+ones still to collect first. For each one you can note, when you know
+them:
+
+- **Requested on**: when you asked the doctor. **Mark as requested** in
+  the request window records it for you with today's date;
+- **Issued on**, **Prescription code** and **Packages**: from the
+  prescription the doctor issued;
+- **Valid until**: the last day the pharmacy accepts it. It is filled
+  in for 30 days from the issue date, the usual validity of an Italian
+  electronic prescription; check it against your prescription and
+  change it if it differs;
+- **Collected on**: when you took it to the pharmacy. **Collected
+  today** does it in one click. When you add a new package of a
+  medicine with a prescription still to collect, MedReminder asks
+  whether the package came from it.
+
+A prescription that is issued and not collected is *To collect*; after
+its last valid day it is *Expired*. From 3 days before that day you
+get a reminder, once, through the medicine's notification channels
+(the email only from the [master device](#master) when the
+installation is shared). The reminder does not include the code.
+
+Prescriptions are copied to the other PCs of a synced profile and
+included in the encrypted export.
 
 ---
 

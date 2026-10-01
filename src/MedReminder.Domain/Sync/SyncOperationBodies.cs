@@ -168,6 +168,22 @@ public sealed record HouseholdLinked(
     Guid HouseholdId,
     DateTimeOffset LinkedAt) : SyncOperationBody(Guid.Empty);
 
+// A prescription as a whole (operation schema version 7; docs/notes/
+// EVOLUTION-PROPOSALS-2.md §3.2): written when it is recorded, changed or
+// deleted. Last writer wins per prescription, without a conflict entry;
+// Deleted removes it, unless a later write brings it back.
+public sealed record PrescriptionChanged(
+    Guid MedicineId,
+    Guid PrescriptionId,
+    DateOnly? RequestedOn,
+    DateOnly? IssuedOn,
+    string? Code,
+    int? Packages,
+    DateOnly? ValidUntil,
+    DateOnly? CollectedOn,
+    bool Deleted,
+    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+
 // A replicated setting of the profile (operation schema version 3,
 // closing P8 of docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §2, §4.2):
 // its display name and the notification recipients. Last writer wins

@@ -35,6 +35,8 @@ public class OperationCodecTests
         new EmailNotificationSent(M, F, 3, Guid.Parse("0a0a0a0a-0000-0000-0000-000000000004"), At),
         new EmailNotificationSent(M, F, 3, null, At, Stage: 2),
         new HouseholdLinked(Guid.Parse("0d0d0d0d-0000-0000-0000-000000000005"), At),
+        new PrescriptionChanged(M, F, new DateOnly(2026, 9, 20), new DateOnly(2026, 9, 22), "1234ABCD5678",
+            2, new DateOnly(2026, 10, 21), null, false, At),
     };
 
     [Theory]
@@ -91,6 +93,7 @@ public class OperationCodecTests
             EmailNotificationSent { Stage: > 1 } => 6,
             EmailNotificationSent => 4,
             HouseholdLinked => 5,
+            PrescriptionChanged => 7,
             _ => 1,
         };
 

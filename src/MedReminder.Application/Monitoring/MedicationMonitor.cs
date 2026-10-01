@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Notifications;
+using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Medicines;
@@ -48,6 +49,7 @@ public sealed class MedicationMonitor
     private readonly ISentEmailNotificationRepository? _sentEmails;
     private readonly IOperationLog? _operationLog;
     private readonly IMasterRole? _master;
+    private readonly PrescriptionReminders? _prescriptionReminders;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -64,8 +66,10 @@ public sealed class MedicationMonitor
         ILocalizationService? localization = null,
         ISentEmailNotificationRepository? sentEmails = null,
         IOperationLog? operationLog = null,
-        IMasterRole? master = null)
+        IMasterRole? master = null,
+        PrescriptionReminders? prescriptionReminders = null)
     {
+        _prescriptionReminders = prescriptionReminders;
         _master = master;
         _sentEmails = sentEmails;
         _operationLog = operationLog;
@@ -158,6 +162,13 @@ public sealed class MedicationMonitor
             await _notifications.AddAsync(evt, cancellationToken);
 
             if (dispatch.AnyChannelSucceeded) sent += 1;
+        }
+
+        // Prescriptions to collect before they lapse (EVOLUTION-PROPOSALS-2
+        // §3.2); not counted in NotificationsSent, which is about stock.
+        if (_prescriptionReminders is not null)
+        {
+            await _prescriptionReminders.RunAsync(today, sendsEmail, cancellationToken);
         }
 
         await _uow.SaveChangesAsync(cancellationToken);

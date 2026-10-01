@@ -38,6 +38,8 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<IMedicationScheduleHistoryRepository, MedicationScheduleHistoryRepository>();
         services.AddScoped<IMedicationSuspensionRepository, MedicationSuspensionRepository>();
         services.AddScoped<INotificationEventRepository, NotificationEventRepository>();
+        services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
+        services.AddScoped<IPrescriptionReminderEventRepository, PrescriptionReminderEventRepository>();
         services.AddScoped<ISentEmailNotificationRepository, SentEmailNotificationRepository>();
         services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
         services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();

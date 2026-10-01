@@ -139,6 +139,7 @@ against `manifest.payload.sha256Base64` after decryption.
   "medicationAdministrationSlotSets": [ … ],
   "stockCounts": [ … ],
   "ledgerCutoff": { … },
+  "prescriptions": [ … ],
   "notificationSettings": { … },
   "shared": { … }
 }
@@ -329,6 +330,25 @@ otherwise. Stock movements up to `cutoffDay` are frozen (`Legacy`).
 |---|---|---|
 | `cutoffDay` | DateOnly | last frozen day |
 | `frozenAt` | DateTimeOffset | instant of the freeze |
+
+### 3.14 `prescriptions[]`
+
+Added after `schemaVersion` 2 shipped, as an additive field (§5):
+archives without it import with no prescriptions. Reminders to collect
+a prescription are device-local and not exported.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `medicineId` | Guid | parent medicine |
+| `requestedOn` | DateOnly? | |
+| `issuedOn` | DateOnly? | |
+| `code` | string? | prescription code as printed, at most 64 characters |
+| `packages` | int? | 1 to 99 |
+| `validUntil` | DateOnly? | last day the pharmacy accepts it |
+| `collectedOn` | DateOnly? | |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
 
 ---
 

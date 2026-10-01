@@ -86,7 +86,7 @@ demselben Grund „Unbekannter Herausgeber“.
   erfassen* und rechts ein Suchfeld (**Strg+F**), das die Liste nach
   Namen filtert.
 - **Navigation** links: *Medikamente* (diese Liste), dann
-  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Vorrat planen*, *Installation*
+  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Vorrat planen*, *Rezepte*, *Installation*
   (Administratoren) und *Einstellungen*, die ein eigenes Fenster öffnen.
   In einem schmalen Fenster zeigt sie nur die Symbole.
 - **Übersicht** über der Liste: wie viele Medikamente *Leer*, *Bald
@@ -118,6 +118,7 @@ Beenden klicke mit der rechten Maustaste auf das Symbol und wähle
 | Einen falschen Eintrag rückgängig machen | **Bestand → Verlauf…** |
 | Die Therapie für einen Arzt drucken | **Therapie → Therapieplan…** |
 | Ein Rezept anfordern | **Therapie → Rezept anfordern…** |
+| Ein Rezept bis zur Apotheke verfolgen | **Therapie → Rezepte…** |
 | Den Vorrat für eine Reise oder bis zum nächsten Apothekenbesuch prüfen | **Therapie → Vorrat planen…** |
 | E-Mail, Sprache, Sicherung einrichten | **Extras → Einstellungen…** |
 | Eine Person hinzufügen | **Extras → Profile verwalten…** (Administrator) |
@@ -468,6 +469,35 @@ kannst vor dem Senden alles ändern.
   Nutze auf den anderen Geräten **Im E-Mail-Programm öffnen**.
 
 MedReminder sendet nie von selbst eine Anforderung.
+
+### Ein Rezept bis zur Apotheke verfolgen
+
+**Therapie → Rezepte…** listet die erfassten Rezepte, die noch
+einzulösenden zuerst. Für jedes kannst du notieren, sobald du es weißt:
+
+- **Angefordert am**: wann du den Arzt gefragt hast. **Als angefordert
+  markieren** im Anforderungsfenster erfasst es für dich mit dem
+  heutigen Datum;
+- **Ausgestellt am**, **Rezeptcode** und **Packungen**: vom Rezept, das
+  der Arzt ausgestellt hat;
+- **Gültig bis**: der letzte Tag, an dem die Apotheke es annimmt. Es
+  wird für 30 Tage ab dem Ausstellungsdatum ausgefüllt, die übliche
+  Gültigkeit des italienischen elektronischen Rezepts; prüfe es an
+  deinem Rezept und ändere es, wenn es abweicht;
+- **Eingelöst am**: wann du es in der Apotheke eingelöst hast. **Heute
+  eingelöst** erledigt das mit einem Klick. Wenn du eine neue Packung
+  eines Medikaments mit einem noch einzulösenden Rezept hinzufügst,
+  fragt MedReminder, ob die Packung daraus stammt.
+
+Ein ausgestelltes, nicht eingelöstes Rezept ist *Einzulösen*; nach
+seinem letzten gültigen Tag ist es *Abgelaufen*. Ab 3 Tagen vor diesem
+Tag bekommst du einmal eine Erinnerung über die
+Benachrichtigungskanäle des Medikaments (die E-Mail nur vom
+[Master-Gerät](#master), wenn die Installation geteilt ist). Die
+Erinnerung enthält den Code nicht.
+
+Rezepte werden auf die anderen PCs eines synchronisierten Profils
+kopiert und in den verschlüsselten Export aufgenommen.
 
 ---
 

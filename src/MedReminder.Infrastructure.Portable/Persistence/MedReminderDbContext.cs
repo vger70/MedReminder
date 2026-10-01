@@ -1,6 +1,7 @@
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 using MedReminder.Infrastructure.Persistence.Configurations;
@@ -37,6 +38,8 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<SyncFieldVersion> SyncFieldVersions => Set<SyncFieldVersion>();
     public DbSet<SyncConflict> SyncConflicts => Set<SyncConflict>();
     public DbSet<SyncPeer> SyncPeers => Set<SyncPeer>();
+    public DbSet<Prescription> Prescriptions => Set<Prescription>();
+    public DbSet<PrescriptionReminderEvent> PrescriptionReminderEvents => Set<PrescriptionReminderEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +62,8 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new SyncFieldVersionConfiguration());
         modelBuilder.ApplyConfiguration(new SyncConflictConfiguration());
         modelBuilder.ApplyConfiguration(new SyncPeerConfiguration());
+        modelBuilder.ApplyConfiguration(new PrescriptionConfiguration());
+        modelBuilder.ApplyConfiguration(new PrescriptionReminderEventConfiguration());
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

@@ -191,6 +191,8 @@ is used.
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success`, `Stage` |
 | `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt`, `Stage` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
+| `Prescription` (`Prescriptions`) | A prescription from request to collection (replicated, one register per prescription) | `RequestedOn?`, `IssuedOn?`, `Code?`, `Packages?`, `ValidUntil?`, `CollectedOn?` |
+| `PrescriptionReminderEvent` (`PrescriptionReminderEvents`) | Reminder to collect, device-local dedup | unique `(PrescriptionId, ValidUntil)` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
 `Consumption`, `PositiveCorrection`, `NegativeCorrection`.
@@ -664,6 +666,8 @@ start:
    `NotificationEvents.EpochFactId`; then `SentEmailNotifications`
    (household step H1); then `NotificationEvents.Stage` and
    `SentEmailNotifications.Stage` (second low-stock warning, default 1);
+   then `Prescriptions` and `PrescriptionReminderEvents` (prescription
+   lifecycle);
    then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);

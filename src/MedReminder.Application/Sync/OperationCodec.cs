@@ -17,13 +17,14 @@ namespace MedReminder.Application.Sync;
 // Schema versions: 1 is the original catalogue; 2 adds MedicineDeleted;
 // 3 adds ProfileSettingChanged; 4 adds EmailNotificationSent; 5 adds
 // HouseholdLinked; 6 adds EmailNotificationSent.Stage, written only for
-// a second-stage email (a first-stage one keeps version 4).
+// a second-stage email (a first-stage one keeps version 4); 7 adds
+// PrescriptionChanged.
 // Each operation is written with the lowest version that can carry it,
 // so the operations an older app understands keep version 1 and only the
 // new type stops it (R7).
 public static class OperationCodec
 {
-    public const int CurrentSchemaVersion = 6;
+    public const int CurrentSchemaVersion = 7;
 
     private static readonly (string Name, Type Type)[] Catalogue =
     [
@@ -42,6 +43,7 @@ public static class OperationCodec
         ("ProfileSettingChanged", typeof(ProfileSettingChanged)),
         ("EmailNotificationSent", typeof(EmailNotificationSent)),
         ("HouseholdLinked", typeof(HouseholdLinked)),
+        ("PrescriptionChanged", typeof(PrescriptionChanged)),
     ];
 
     private static readonly Dictionary<Type, string> NameByType =
@@ -67,6 +69,7 @@ public static class OperationCodec
         EmailNotificationSent { Stage: > 1 } => 6,
         EmailNotificationSent => 4,
         HouseholdLinked => 5,
+        PrescriptionChanged => 7,
         _ => 1,
     };
 

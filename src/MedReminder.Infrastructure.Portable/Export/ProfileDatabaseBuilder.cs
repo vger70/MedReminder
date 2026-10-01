@@ -55,6 +55,7 @@ internal static class ProfileDatabaseBuilder
         db.NotificationEvents.AddRange(payload.NotificationEvents.Select(ExportMapper.ToEntity));
         db.DoseReminderEvents.AddRange(payload.DoseReminderEvents.Select(ExportMapper.ToEntity));
         db.StockCounts.AddRange(payload.StockCounts.Select(ExportMapper.ToEntity));
+        db.Prescriptions.AddRange((payload.Prescriptions ?? []).Select(ExportMapper.ToEntity));
         if (payload.LedgerCutoff is not null)
         {
             db.LedgerCutoffs.Add(ExportMapper.ToEntity(payload.LedgerCutoff));

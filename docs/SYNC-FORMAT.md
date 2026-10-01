@@ -6,8 +6,8 @@ describes the on-disk format only. The design rationale (merge rules,
 security model, phases) is in
 [`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md).
 
-Format version: **1**. Operation catalogue: schema version **6**.
-Database image: schema version **4**.
+Format version: **1**. Operation catalogue: schema version **7**.
+Database image: schema version **5**.
 
 ---
 
@@ -244,20 +244,20 @@ Content, before compression:
 
 The database is the profile database of the writing device (MedReminder
 schema; `docs/ANALYSIS.md` §4.1) without what is not replicated:
-derived stock movements (`Origin` 3), notification and dose-reminder
-events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
+derived stock movements (`Origin` 3), notification, dose-reminder and
+prescription-reminder events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
 the reference catalogue. It keeps the facts, the frozen (`Legacy`)
 movements and the cutoff, the register versions (`SyncFieldVersions`),
 the tombstones (`FactRetractions`), the low-stock emails sent by any
-device (`SentEmailNotifications`), the register conflicts and the
-operation log (`SyncOperations`).
+device (`SentEmailNotifications`), the prescriptions (`Prescriptions`),
+the register conflicts and the operation log (`SyncOperations`).
 
 Image schema versions: 1, the original image; 2, the operation log may
 hold `MedicineDeleted`, so a medicine can be absent from the image
 while later operations for it exist (they are skipped, §6); 3, the
 image holds `SentEmailNotifications`, which an older app would drop;
 4, `SentEmailNotifications` carry `Stage`, which an older app would
-drop.
+drop; 5, the image holds `Prescriptions`, which an older app would drop.
 
 A device joins from the newest checkpoint whose `vector` covers every
 device folder's first remaining segment (`vector[d] >= first − 1`), or
@@ -267,7 +267,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 6)
+## 6. Operation catalogue (schema versions 1 to 7)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -293,13 +293,14 @@ nothing.
 | `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
 | `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
 | `EmailNotificationSent` (version 4; version 6 for `stage` 2) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt`, `stage` (from version 6; absent = 1) | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`) at that warning stage: the receiving device does not send it again at that stage or an earlier one |
+| `PrescriptionChanged` (version 7) | `prescriptionId`, `requestedOn`, `issuedOn`, `code`, `packages`, `validUntil`, `collectedOn` (dates `null` when not known), `deleted`, `recordedAt` | the whole state of one prescription, written when it is recorded, changed or deleted; last writer wins per prescription (register `Prescription` of the prescription id, its value the payload), no conflict entry; when the winner has `deleted` true the prescription is removed, and a later write brings it back |
 | `HouseholdLinked` (version 5) | `householdId`, `linkedAt` | fact; the household that adopted the group (§9); the earliest by HLC wins; profile-level (`medicineId` empty) |
 
 Every type is schema version 1 except `MedicineDeleted`, version 2,
 `ProfileSettingChanged`, version 3, `EmailNotificationSent`, version 4,
-and `HouseholdLinked`, version 5. A second-stage `EmailNotificationSent`
-(the second low-stock warning, sent at half of the medicine's warning
-threshold) is written with version 6, so only that operation stops an
+`HouseholdLinked`, version 5, and `PrescriptionChanged`, version 7. A
+second-stage `EmailNotificationSent` (the second low-stock warning, sent
+at half of the medicine's warning threshold) is written with version 6, so only that operation stops an
 older app; a first-stage one keeps version 4 and its `stage` field,
 which an older app ignores, is 1.
 

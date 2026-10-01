@@ -36,6 +36,10 @@ public sealed class ExportPayload
     // Null when the profile has no cutoff (created after the patch).
     public ExportedLedgerCutoff? LedgerCutoff { get; set; }
 
+    // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2). Additive field
+    // of schema version 2: archives without it import with none.
+    public IList<ExportedPrescription> Prescriptions { get; set; } = new List<ExportedPrescription>();
+
     // Per-profile notification settings (§3.2). Travels implicitly
     // with the profile.
     public ExportedNotificationSettings? NotificationSettings { get; set; }
@@ -278,4 +282,18 @@ public sealed class ExportedProtectedSecret
     public string NonceBase64 { get; set; } = string.Empty;
     public string TagBase64 { get; set; } = string.Empty;
     public string CiphertextBase64 { get; set; } = string.Empty;
+}
+
+public sealed class ExportedPrescription
+{
+    public Guid Id { get; set; }
+    public Guid MedicineId { get; set; }
+    public DateOnly? RequestedOn { get; set; }
+    public DateOnly? IssuedOn { get; set; }
+    public string? Code { get; set; }
+    public int? Packages { get; set; }
+    public DateOnly? ValidUntil { get; set; }
+    public DateOnly? CollectedOn { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }

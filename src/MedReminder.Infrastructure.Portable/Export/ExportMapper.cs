@@ -2,6 +2,7 @@ using MedReminder.Application.Export;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Infrastructure.Export;
@@ -284,4 +285,32 @@ internal static class ExportMapper
     // payload rather than a benign casing difference.
     private static TEnum ParseEnum<TEnum>(string value) where TEnum : struct, Enum
         => Enum.Parse<TEnum>(value);
+
+    public static ExportedPrescription ToDto(Prescription p) => new()
+    {
+        Id = p.Id,
+        MedicineId = p.MedicineId,
+        RequestedOn = p.RequestedOn,
+        IssuedOn = p.IssuedOn,
+        Code = p.Code,
+        Packages = p.Packages,
+        ValidUntil = p.ValidUntil,
+        CollectedOn = p.CollectedOn,
+        RecordedAt = p.RecordedAt,
+        UpdatedAt = p.UpdatedAt,
+    };
+
+    public static Prescription ToEntity(ExportedPrescription d) => new()
+    {
+        Id = d.Id,
+        MedicineId = d.MedicineId,
+        RequestedOn = d.RequestedOn,
+        IssuedOn = d.IssuedOn,
+        Code = d.Code,
+        Packages = d.Packages,
+        ValidUntil = d.ValidUntil,
+        CollectedOn = d.CollectedOn,
+        RecordedAt = d.RecordedAt,
+        UpdatedAt = d.UpdatedAt,
+    };
 }

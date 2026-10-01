@@ -318,6 +318,9 @@ internal sealed class ExportService : IExportService
         payload.StockCounts = (await db.StockCounts.AsNoTracking()
             .OrderBy(c => c.Id).ToListAsync(cancellationToken))
             .Select(ExportMapper.ToDto).ToList();
+        payload.Prescriptions = (await db.Prescriptions.AsNoTracking()
+            .OrderBy(p => p.Id).ToListAsync(cancellationToken))
+            .Select(ExportMapper.ToDto).ToList();
         var cutoff = await db.LedgerCutoffs.AsNoTracking()
             .SingleOrDefaultAsync(cancellationToken);
         payload.LedgerCutoff = cutoff is null ? null : ExportMapper.ToDto(cutoff);
