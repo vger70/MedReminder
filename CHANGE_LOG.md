@@ -30,6 +30,36 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #153 — Add an admin-only option to log database queries
+
+Link: [vger70/MedReminder#153](https://github.com/vger70/MedReminder/pull/153)
+Branch: `claude/db-query-logging` → `main`
+
+### Added
+
+- Settings → General → Log database queries (diagnostics), administrators
+  only: writes each SQL command EF Core runs, with its duration, to the
+  log file. Parameter values stay hidden. Applies without a restart.
+  Device setting `UI:LogDatabaseQueries` in `user.settings.json`, not
+  replicated in the household.
+
+### Fixed
+
+- EF Core command entries ("Executed DbCommand", category
+  `Microsoft.EntityFrameworkCore.Database.Command`) reached the log on
+  every run. They are now written only while the option is on. The
+  filter names `SerilogLoggerProvider`: `AddSerilog` registers a rule for
+  that provider (any category, Trace), which wins over any rule without
+  a provider (`src/MedReminder.UI/Program.cs`).
+
+### Changed
+
+- `UpdateGeneralSettings` requires an administrator to change the option;
+  `HouseholdProjection` keeps it when it rewrites `user.settings.json`.
+
+### Docs
+
+- The five user guides describe the option.
 ## PR #152 — Draw text and number box borders in the dark palette
 
 Link: [vger70/MedReminder#152](https://github.com/vger70/MedReminder/pull/152)

@@ -930,6 +930,10 @@ Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
 - **Allgemein → Beim Start nach Updates suchen (GitHub)**: sucht nach
   einer neuen Version (nichts wird von selbst installiert) und
   aktualisiert den Katalog. **? → Nach Updates suchen…** sucht sofort.
+- **Allgemein → Datenbankabfragen protokollieren (Diagnose)**: nur
+  Administratoren. Schreibt jeden Datenbankbefehl ohne die Werte in die
+  Protokolldatei, zur Fehlersuche. Gilt sofort; das Protokoll wächst
+  schnell, danach also wieder ausschalten.
 - **Autostart → MedReminder bei der Windows-Anmeldung starten**: startet
   ausgeblendet im Infobereich. Keine Administratorrechte nötig.
 

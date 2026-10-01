@@ -143,6 +143,7 @@ public sealed class HouseholdProjection
                 Language = user.Language,
                 ReferenceCountry = country,
                 CheckForUpdatesOnStartup = user.CheckForUpdatesOnStartup,
+                LogDatabaseQueries = user.LogDatabaseQueries,
             });
         }
     }

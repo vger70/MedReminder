@@ -121,6 +121,23 @@ public class InstallationSettingsTests
     }
 
     [Fact]
+    public async Task Only_an_admin_turns_the_query_log_on()
+    {
+        var byUser = () => new UpdateGeneralSettings(_settings, User, Log)
+            .ExecuteAsync(new UserSettings { LogDatabaseQueries = true }, CancellationToken.None);
+
+        await byUser.Should().ThrowAsync<ProfileAdministrationException>();
+        _settings.User.LogDatabaseQueries.Should().BeFalse();
+
+        await new UpdateGeneralSettings(_settings, Admin, Log)
+            .ExecuteAsync(new UserSettings { LogDatabaseQueries = true }, CancellationToken.None);
+
+        _settings.User.LogDatabaseQueries.Should().BeTrue();
+        (await HeldAsync()).Keys.Should().NotContain(k => k.Contains("Query", StringComparison.OrdinalIgnoreCase),
+            "the query log is a device setting");
+    }
+
+    [Fact]
     public async Task Reconcile_records_the_settings_and_the_password_once()
     {
         _settings.Smtp = Transport;

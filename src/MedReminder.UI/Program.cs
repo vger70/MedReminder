@@ -18,6 +18,7 @@ using MedReminder.Application.Overview;
 using MedReminder.UI.Services;
 using MedReminder.UI.Tray;
 using MedReminder.UI.UiExtensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,6 +26,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
+using Serilog.Extensions.Logging;
 using WinFormsApp = System.Windows.Forms.Application;
 using WinFormThreadExceptionEventArgs = System.Threading.ThreadExceptionEventArgs;
 using WinFormUnhandledExceptionMode = System.Windows.Forms.UnhandledExceptionMode;
@@ -490,6 +492,23 @@ internal static class Program
 
         builder.Logging.ClearProviders();
         builder.Logging.AddSerilog(dispose: false);
+        // Settings → General → Log database queries (admin only). EF Core
+        // logs each executed command, SQL text and duration, at Information
+        // under this category. The filter reads the setting at each check,
+        // so a change applies without a restart (user.settings.json is
+        // reloaded on change; EF Core caches the decision for about a
+        // second). Parameter values stay hidden: sensitive data logging is
+        // never enabled. The rule names the Serilog provider: AddSerilog
+        // adds a provider rule (any category, Trace), and a provider rule
+        // wins over any rule without one, whatever its category.
+        var configuration = builder.Configuration;
+        const string logQueriesKey = $"{UserSettings.SectionName}:{nameof(UserSettings.LogDatabaseQueries)}";
+        builder.Logging.AddFilter<SerilogLoggerProvider>(DbLoggerCategory.Database.Command.Name,
+            (LogLevel _) => configuration.GetValue<bool>(logQueriesKey));
+        if (configuration.GetValue<bool>(logQueriesKey))
+        {
+            Log.Information("Database query logging is on.");
+        }
 
         return builder.Build();
     }

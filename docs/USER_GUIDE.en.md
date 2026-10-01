@@ -848,6 +848,10 @@ All in **Tools → Settings…**. The sections are listed on the left;
 - **General → Check for updates on startup (GitHub)**: checks for a new
   version (nothing is installed by itself) and updates the catalogue.
   **? → Check for updates…** checks now.
+- **General → Log database queries (diagnostics)**: administrators only.
+  Writes every database command to the log file, without the values,
+  for troubleshooting. Applies at once; the log grows quickly, so turn
+  it off afterwards.
 - **Startup → Start MedReminder at Windows login**: starts hidden in
   the notification area. No administrator rights needed.
 
