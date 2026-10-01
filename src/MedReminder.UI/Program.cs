@@ -26,6 +26,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
+using Serilog.Extensions.Logging;
 using WinFormsApp = System.Windows.Forms.Application;
 using WinFormThreadExceptionEventArgs = System.Threading.ThreadExceptionEventArgs;
 using WinFormUnhandledExceptionMode = System.Windows.Forms.UnhandledExceptionMode;
@@ -497,10 +498,12 @@ internal static class Program
         // so a change applies without a restart (user.settings.json is
         // reloaded on change; EF Core caches the decision for about a
         // second). Parameter values stay hidden: sensitive data logging is
-        // never enabled.
+        // never enabled. The rule names the Serilog provider: AddSerilog
+        // adds a provider rule (any category, Trace), and a provider rule
+        // wins over any rule without one, whatever its category.
         var configuration = builder.Configuration;
         const string logQueriesKey = $"{UserSettings.SectionName}:{nameof(UserSettings.LogDatabaseQueries)}";
-        builder.Logging.AddFilter(DbLoggerCategory.Database.Command.Name,
+        builder.Logging.AddFilter<SerilogLoggerProvider>(DbLoggerCategory.Database.Command.Name,
             (LogLevel _) => configuration.GetValue<bool>(logQueriesKey));
         if (configuration.GetValue<bool>(logQueriesKey))
         {
