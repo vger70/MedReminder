@@ -4,7 +4,7 @@ on:
   schedule:
     # Twice a week: AIFA updates the list several times a month. A run
     # on a list already published exits without changes.
-    - cron: '30 4 * * 1,4'
+    - cron: '20 4 2,9,16,23 * *'
   workflow_dispatch:
     inputs:
       force:
