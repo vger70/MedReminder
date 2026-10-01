@@ -44,6 +44,10 @@ internal sealed class MedicineDeletionRepository : IMedicineDeletionRepository
             await _db.SentEmailNotifications.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.DoseReminderEvents.RemoveRange(
             await _db.DoseReminderEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.Prescriptions.RemoveRange(
+            await _db.Prescriptions.Where(p => p.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.PrescriptionReminderEvents.RemoveRange(
+            await _db.PrescriptionReminderEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.SyncFieldVersions.RemoveRange(
             await _db.SyncFieldVersions.Where(v => v.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.SyncConflicts.RemoveRange(

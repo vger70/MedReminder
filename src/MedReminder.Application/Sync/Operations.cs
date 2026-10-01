@@ -1,6 +1,7 @@
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 
@@ -25,6 +26,7 @@ internal static class Operations
         FactRetracted r => r.RetractionId,
         EmailNotificationSent e => e.NotificationId,
         HouseholdLinked h => h.HouseholdId,
+        PrescriptionChanged p => p.PrescriptionId,
         _ => body.MedicineId,
     };
 
@@ -75,6 +77,10 @@ internal static class Operations
 
     public static EmailNotificationSent EmailSent(SentEmailNotification sent)
         => new(sent.MedicineId, sent.Id, sent.StockEpoch, sent.EpochFactId, sent.SentAt, sent.Stage);
+
+    public static PrescriptionChanged Prescription(Prescription p, bool deleted)
+        => new(p.MedicineId, p.Id, p.RequestedOn, p.IssuedOn, p.Code, p.Packages, p.ValidUntil, p.CollectedOn,
+            deleted, p.UpdatedAt);
 
     public static FactRetracted Retraction(FactRetraction retraction)
         => new(retraction.MedicineId, retraction.Id, retraction.Kind, retraction.FactId, retraction.RecordedAt);

@@ -138,6 +138,7 @@ internal sealed class CoveragePlannerDialog : MedReminderFormBase
         Controls.Add(hint);
         Controls.Add(_summary);
         Controls.Add(buttons);
+        DialogLayout.KeepButtonsVisible(this, buttons);
 
         UpdateButtons();
         Shown += async (_, _) => await ReloadAsync();

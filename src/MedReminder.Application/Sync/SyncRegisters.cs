@@ -20,6 +20,9 @@ public sealed class SyncRegisters
     public const string EndDate = "EndDate";
     public const string SlotSet = "SlotSet";
     public const string LatestSchedule = "LatestSchedule";
+    // The whole state of a prescription, as the payload of the
+    // PrescriptionChanged that wrote it (last writer wins).
+    public const string PrescriptionState = "Prescription";
 
     private readonly ISyncFieldVersionRepository _versions;
     private readonly ISyncConflictRepository _conflicts;
@@ -69,6 +72,8 @@ public sealed class SyncRegisters
             [new RegisterWrite(s.SuspensionId, EndDate, Date(s.EndDate), null)],
         ProfileSettingChanged p =>
             [new RegisterWrite(ProfileSettingsProjection.Entity, ProfileSettingsProjection.Register(p.Setting), p.Value, null)],
+        PrescriptionChanged p =>
+            [new RegisterWrite(p.PrescriptionId, PrescriptionState, OperationCodec.Serialize(p).Payload, null)],
         _ => [],
     };
 
@@ -87,6 +92,11 @@ public sealed class SyncRegisters
             _ => body,
         };
     }
+
+    // The prescription a PrescriptionState version holds.
+    public static PrescriptionChanged ParsePrescription(string value)
+        => (PrescriptionChanged)OperationCodec.Deserialize(
+            nameof(PrescriptionChanged), OperationCodec.CurrentSchemaVersion, value);
 
     public static HybridTimestamp? BaseOf(SyncOperationBody body) => body switch
     {

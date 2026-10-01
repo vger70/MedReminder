@@ -12,6 +12,8 @@ using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Prescriptions;
+using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Application.Overview;
 using MedReminder.UI.Controls;
@@ -211,6 +213,8 @@ internal sealed class MainForm : MedReminderFormBase
             opensWindow: true, async () => await ShowPrescriptionRequestAsync());
         nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.PlanSupply"), Mdl2Glyph.Glyphs.Package,
             opensWindow: true, ShowCoveragePlanner);
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Prescriptions"), Mdl2Glyph.Glyphs.Notebook,
+            opensWindow: true, async () => await ShowPrescriptionsAsync());
         nav.AddSeparator();
         if (_currentProfile.IsAdmin)
         {
@@ -358,6 +362,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.PlanSupply"),
             Mdl2Glyph.Glyphs.Package, Keys.None,
             () => { ShowCoveragePlanner(); return Task.CompletedTask; }));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Prescriptions"),
+            Mdl2Glyph.Glyphs.Notebook, Keys.None,
+            async () => await ShowPrescriptionsAsync()));
 
         // Scorte
         var stockMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Stock"));
@@ -874,9 +881,115 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
+        var medicineId = row.Id;
         using var dialog = new PrescriptionRequestDialog(
-            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc, isMaster);
+            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc, isMaster,
+            markRequested: () => MarkPrescriptionRequestedAsync(medicineId));
         dialog.ShowDialog(this);
+    }
+
+    // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2): a request sent
+    // or copied from the draft is recorded as requested today.
+    private async Task MarkPrescriptionRequestedAsync(Guid medicineId)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var today = scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>().LocalToday();
+        await scope.ServiceProvider.GetRequiredService<SavePrescription>().ExecuteAsync(
+            new SavePrescriptionCommand(null, medicineId, today, null, null, null, null, null), CancellationToken.None);
+    }
+
+    // Therapy → Prescriptions… Each action runs in its own DI scope.
+    private async Task ShowPrescriptionsAsync()
+    {
+        try
+        {
+            List<(Guid Id, string Name)> medicines;
+            DateOnly today;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                medicines = (await scope.ServiceProvider.GetRequiredService<IMedicineRepository>()
+                        .ListActiveAsync(CancellationToken.None))
+                    .OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(m => (m.Id, m.Name))
+                    .ToList();
+                today = scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>().LocalToday();
+            }
+            var selected = GetSelectedRow()?.Id;
+
+            var actions = new PrescriptionsDialogActions(
+                Load: async () =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>()
+                        .LoadAsync(CancellationToken.None);
+                },
+                CreateEditor: existing =>
+                {
+                    // An existing prescription of a deactivated medicine
+                    // keeps its medicine in the list.
+                    var options = existing is not null && medicines.All(m => m.Id != existing.MedicineId)
+                        ? [.. medicines, (existing.MedicineId, _allRows.FirstOrDefault(r => r.Id == existing.MedicineId)?.Name ?? string.Empty)]
+                        : medicines;
+                    return new PrescriptionEditDialog(options, selected, existing, today, _loc);
+                },
+                Save: async command =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<SavePrescription>()
+                        .ExecuteAsync(command, CancellationToken.None);
+                },
+                Collect: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<CollectPrescription>()
+                        .ExecuteAsync(id, today, CancellationToken.None);
+                },
+                Delete: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<DeletePrescription>()
+                        .ExecuteAsync(id, CancellationToken.None);
+                });
+
+            using var dialog = new PrescriptionsDialog(actions, _loc);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenPrescriptions"), ex);
+        }
+    }
+
+    // After a new package: an issued prescription of the medicine still
+    // to collect most likely became this package. Asks before recording.
+    private async Task OfferPrescriptionCollectedAsync(Guid medicineId, string medicineName)
+    {
+        try
+        {
+            Prescription? open;
+            DateOnly today;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                var query = scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>();
+                open = (await query.OpenForMedicineAsync(medicineId, CancellationToken.None)).FirstOrDefault();
+                today = query.LocalToday();
+            }
+            if (open?.IssuedOn is not { } issued) return;
+
+            var answer = ConfirmDialog.Show(_loc, this,
+                _loc.Get("Ui.MainForm.CollectPrescription", medicineName, issued.ToString("d", _loc.CurrentCulture)),
+                _loc.Get("Ui.MainForm.CollectPrescription.Title"),
+                MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes) return;
+
+            await using var save = _scopeFactory.CreateAsyncScope();
+            await save.ServiceProvider.GetRequiredService<CollectPrescription>()
+                .ExecuteAsync(open.Id, today, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.PrescriptionsDialog.Error.Save"), ex);
+        }
     }
 
     private async Task SendPrescriptionRequestAsync(
@@ -1923,6 +2036,7 @@ internal sealed class MainForm : MedReminderFormBase
         using var dialog = new StockAdjustmentDialog(
             row.Name, row.CurrentStock, row.Unit, defaultKind, _loc, initialQuantity);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+        var newPackage = false;
 
         try
         {
@@ -1933,6 +2047,7 @@ internal sealed class MainForm : MedReminderFormBase
                 await addStock.ExecuteAsync(
                     new AddStockCommand(row.Id, dialog.Result.Quantity, dialog.Result.ToMovementKind(), dialog.Result.Notes),
                     CancellationToken.None);
+                newPackage = dialog.Result.ToMovementKind() == StockMovementKind.NewPackage;
             }
             else
             {
@@ -1946,7 +2061,9 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.StockMovement"), ex);
+            return;
         }
+        if (newPackage) await OfferPrescriptionCollectedAsync(row.Id, row.Name);
     }
 
     // Restock by scan (A2 phase 3, flow b): the scanned national code

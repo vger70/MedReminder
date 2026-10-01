@@ -4,6 +4,7 @@ using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 
@@ -67,6 +68,7 @@ public sealed class ApplyRemoteOperations
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
     private readonly IProfileSettingsStore? _profileSettings;
+    private readonly IPrescriptionRepository? _prescriptions;
     private readonly ISentEmailNotificationRepository? _sentEmails;
 
     // Facts added or updated in this batch, by id: the context tracks
@@ -97,8 +99,10 @@ public sealed class ApplyRemoteOperations
         IUnitOfWork uow,
         TimeProvider clock,
         IProfileSettingsStore? profileSettings = null,
-        ISentEmailNotificationRepository? sentEmails = null)
+        ISentEmailNotificationRepository? sentEmails = null,
+        IPrescriptionRepository? prescriptions = null)
     {
+        _prescriptions = prescriptions;
         _profileSettings = profileSettings;
         _sentEmails = sentEmails;
         _settings = settings;
@@ -253,8 +257,8 @@ public sealed class ApplyRemoteOperations
                 // The log row is the state (HouseholdLinks).
             }
             else if (body is MedicineDeleted) touched.Remove(body.MedicineId);
-            // A sent email changes no fact of the ledger.
-            else if (body is not EmailNotificationSent) touched.Add(body.MedicineId);
+            // A sent email or a prescription changes no fact of the ledger.
+            else if (body is not (EmailNotificationSent or PrescriptionChanged)) touched.Add(body.MedicineId);
             applied++;
         }
 
@@ -339,6 +343,9 @@ public sealed class ApplyRemoteOperations
                 return;
             case HouseholdLinked:
                 return;
+            case PrescriptionChanged prescription:
+                await ApplyPrescriptionAsync(prescription, timestamp, ct);
+                return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");
         }
@@ -362,6 +369,46 @@ public sealed class ApplyRemoteOperations
             SentAt = email.SentAt,
             Stage = email.Stage,
         }, ct);
+    }
+
+    // A prescription is one register: the winning version holds its whole
+    // state, and this device's row is made to match it (deleted when the
+    // winner is a deletion).
+    private async Task ApplyPrescriptionAsync(PrescriptionChanged change, HybridTimestamp timestamp, CancellationToken ct)
+    {
+        await GetMedicineAsync(change.MedicineId, ct);
+        await RecordRegistersAsync(change, timestamp, ct);
+        if (_prescriptions is null) return;
+        var winner = await _registers.WinnerAsync(change.PrescriptionId, SyncRegisters.PrescriptionState, ct);
+        var state = winner?.Value is { } value ? SyncRegisters.ParsePrescription(value) : change;
+        var row = await _prescriptions.GetAsync(change.PrescriptionId, ct);
+        if (state.Deleted)
+        {
+            if (row is not null) await _prescriptions.RemoveAsync(row, ct);
+            return;
+        }
+        if (row is null)
+        {
+            row = new Prescription { Id = state.PrescriptionId, MedicineId = state.MedicineId, RecordedAt = state.RecordedAt };
+            CopyState(state, row);
+            await _prescriptions.AddAsync(row, ct);
+        }
+        else
+        {
+            CopyState(state, row);
+            await _prescriptions.UpdateAsync(row, ct);
+        }
+    }
+
+    private static void CopyState(PrescriptionChanged state, Prescription row)
+    {
+        row.RequestedOn = state.RequestedOn;
+        row.IssuedOn = state.IssuedOn;
+        row.Code = state.Code;
+        row.Packages = state.Packages;
+        row.ValidUntil = state.ValidUntil;
+        row.CollectedOn = state.CollectedOn;
+        row.UpdatedAt = state.RecordedAt;
     }
 
     private async Task CreateMedicineAsync(MedicineCreated created, CancellationToken ct)

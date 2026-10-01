@@ -119,6 +119,12 @@ public static class ApplicationServiceCollectionExtensions
         // Prescription request (EVOLUTION-PROPOSALS §3.4): interactive
         // send only, resolved per dialog action.
         services.AddScoped<SendPrescriptionRequest>();
+        // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2).
+        services.AddScoped<SavePrescription>();
+        services.AddScoped<CollectPrescription>();
+        services.AddScoped<DeletePrescription>();
+        services.AddScoped<PrescriptionListQuery>();
+        services.AddScoped<PrescriptionReminders>();
 
         // Reference catalogue (M1). The country-profile provider owns
         // the "national ∪ EU" rule; use cases are cheap façades over

@@ -87,7 +87,7 @@ installes depuis le paquet MSI, la fenêtre d'autorisation indique
   qui filtre la liste par nom.
 - **Navigation** à gauche : *Médicaments* (cette liste), puis
   *Chronologie du traitement*, *Fiche de traitement*, *Demander une
-  ordonnance*, *Planifier le stock*, *Installation* (administrateurs) et *Paramètres*, qui
+  ordonnance*, *Planifier le stock*, *Ordonnances*, *Installation* (administrateurs) et *Paramètres*, qui
   s'ouvrent dans leur propre fenêtre. Dans une fenêtre étroite, elle
   n'affiche que les icônes.
 - **Résumé** au-dessus de la liste : combien de médicaments sont
@@ -119,6 +119,7 @@ quitter, fais un clic droit sur l'icône et choisis **Quitter**.
 | Annuler une saisie erronée | **Stock → Historique…** |
 | Imprimer le traitement pour un médecin | **Traitement → Fiche de traitement…** |
 | Demander une ordonnance | **Traitement → Demander une ordonnance…** |
+| Suivre une ordonnance jusqu'à la pharmacie | **Traitement → Ordonnances…** |
 | Vérifier le stock pour un voyage ou jusqu'au prochain passage à la pharmacie | **Traitement → Planifier le stock…** |
 | Configurer e-mail, langue, sauvegarde | **Outils → Paramètres…** |
 | Ajouter une personne | **Outils → Gérer les profils…** (administrateur) |
@@ -470,6 +471,35 @@ l'envoi.
   les autres appareils, utilise **Ouvrir dans la messagerie**.
 
 MedReminder n'envoie jamais de demande tout seul.
+
+### Suivre une ordonnance jusqu'à la pharmacie
+
+**Traitement → Ordonnances…** liste les ordonnances enregistrées,
+d'abord celles à retirer. Pour chacune tu peux noter, quand tu les
+connais :
+
+- **Demandée le** : quand tu l'as demandée au médecin. **Marquer comme
+  demandée** dans la fenêtre de demande l'enregistre pour toi à la date
+  du jour ;
+- **Émise le**, **Code de l'ordonnance** et **Boîtes** : d'après
+  l'ordonnance émise par le médecin ;
+- **Valable jusqu'au** : le dernier jour où la pharmacie l'accepte. Il
+  est rempli pour 30 jours à partir de la date d'émission, la validité
+  habituelle de l'ordonnance électronique italienne ; vérifie-le sur ton
+  ordonnance et corrige-le s'il est différent ;
+- **Retirée le** : quand tu l'as présentée à la pharmacie. **Retirée
+  aujourd'hui** le fait en un clic. Quand tu ajoutes une nouvelle boîte
+  d'un médicament dont une ordonnance est encore à retirer, MedReminder
+  demande si la boîte en vient.
+
+Une ordonnance émise et non retirée est *À retirer* ; après son dernier
+jour de validité elle est *Expirée*. À partir de 3 jours avant ce jour,
+tu reçois un rappel, une fois, par les canaux de notification du
+médicament (l'e-mail seulement depuis l'[appareil maître](#master)
+si l'installation est partagée). Le rappel ne contient pas le code.
+
+Les ordonnances sont copiées sur les autres PC d'un profil synchronisé
+et incluses dans l'export chiffré.
 
 ---
 

@@ -84,7 +84,7 @@ motivo.
   *Registrar toma* y, a la derecha, un cuadro de búsqueda (**Ctrl+F**)
   que filtra la lista por nombre.
 - **Navegación** a la izquierda: *Medicamentos* (esta lista), luego
-  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*, *Planificar stock*,
+  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*, *Planificar stock*, *Recetas*,
   *Instalación* (administradores) y *Configuración*, que se abren en su
   propia ventana. Si la ventana es estrecha, solo muestra los iconos.
 - **Resumen** encima de la lista: cuántos medicamentos están
@@ -116,6 +116,7 @@ clic derecho en el icono y elige **Salir**.
 | Deshacer un registro erróneo | **Stock → Historial…** |
 | Imprimir la terapia para un médico | **Terapia → Ficha de terapia…** |
 | Pedir una receta | **Terapia → Solicitar receta…** |
+| Seguir una receta hasta la farmacia | **Terapia → Recetas…** |
 | Comprobar el stock para un viaje o hasta la próxima visita a la farmacia | **Terapia → Planificar stock…** |
 | Configurar correo, idioma, copia de seguridad | **Herramientas → Configuración…** |
 | Añadir una persona | **Herramientas → Gestionar perfiles…** (administrador) |
@@ -452,6 +453,34 @@ Puedes modificarlo todo antes de enviarlo.
   **Abrir en el programa de correo**.
 
 MedReminder nunca envía una solicitud por sí solo.
+
+### Seguir una receta hasta la farmacia
+
+**Terapia → Recetas…** lista las recetas registradas, primero las que
+están por retirar. Para cada una puedes anotar, cuando los conozcas:
+
+- **Solicitada el**: cuándo se la pediste al médico. **Marcar como
+  solicitada** en la ventana de solicitud la registra por ti con la
+  fecha de hoy;
+- **Emitida el**, **Código de la receta** y **Cajas**: de la receta que
+  emitió el médico;
+- **Válida hasta**: el último día en que la farmacia la acepta. Se
+  rellena para 30 días desde la fecha de emisión, la validez habitual
+  de la receta electrónica italiana; compruébala en tu receta y
+  corrígela si es distinta;
+- **Retirada el**: cuándo la llevaste a la farmacia. **Retirada hoy**
+  lo hace con un clic. Cuando añades una caja nueva de un medicamento
+  con una receta aún por retirar, MedReminder pregunta si la caja viene
+  de ella.
+
+Una receta emitida y no retirada está *Por retirar*; tras su último día
+de validez está *Caducada*. Desde 3 días antes de ese día recibes un
+recordatorio, una vez, por los canales de notificación del medicamento
+(el correo solo desde el [dispositivo principal](#master) si la
+instalación es compartida). El recordatorio no incluye el código.
+
+Las recetas se copian a los otros PC de un perfil sincronizado y se
+incluyen en la exportación cifrada.
 
 ---
 

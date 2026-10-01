@@ -84,7 +84,7 @@ motivo.
   assunzione* e, a destra, una casella di ricerca (**Ctrl+F**) che
   filtra l'elenco per nome.
 - **Navigazione** a sinistra: *Medicine* (questo elenco), poi *Linea del
-  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Pianifica scorte*, *Installazione*
+  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Pianifica scorte*, *Ricette*, *Installazione*
   (amministratori) e *Impostazioni*, che si aprono in una finestra
   propria. Se la finestra è stretta mostra solo le icone.
 - **Riepilogo** sopra l'elenco: quante medicine sono *Esaurite*, *In
@@ -115,6 +115,7 @@ uscire, fai clic destro sull'icona e scegli **Esci**.
 | Annullare una registrazione sbagliata | **Scorte → Storico…** |
 | Stampare la terapia per un medico | **Terapia → Scheda terapia…** |
 | Chiedere una ricetta | **Terapia → Richiedi ricetta…** |
+| Seguire una ricetta fino alla farmacia | **Terapia → Ricette…** |
 | Controllare la scorta per un viaggio o fino al prossimo passaggio in farmacia | **Terapia → Pianifica scorte…** |
 | Configurare email, lingua, backup | **Strumenti → Impostazioni…** |
 | Aggiungere una persona | **Strumenti → Gestisci profili…** (amministratore) |
@@ -454,6 +455,34 @@ prima di inviare.
   dispositivi usa **Apri nel programma di posta**.
 
 MedReminder non invia mai una richiesta da solo.
+
+### Seguire una ricetta fino alla farmacia
+
+**Terapia → Ricette…** elenca le ricette registrate, prima quelle da
+ritirare. Per ciascuna puoi annotare, quando le conosci:
+
+- **Richiesta il**: quando l'hai chiesta al medico. **Segna come
+  richiesta** nella finestra di richiesta la registra per te con la
+  data di oggi;
+- **Emessa il**, **Codice ricetta** e **Confezioni**: dalla ricetta
+  emessa dal medico;
+- **Valida fino al**: l'ultimo giorno in cui la farmacia la accetta.
+  Viene compilata per 30 giorni dalla data di emissione, la validità
+  abituale della ricetta elettronica italiana; controllala sulla tua
+  ricetta e correggila se è diversa;
+- **Ritirata il**: quando l'hai portata in farmacia. **Ritirata oggi**
+  lo fa con un clic. Quando aggiungi una nuova confezione di una
+  medicina con una ricetta ancora da ritirare, MedReminder chiede se la
+  confezione viene da lì.
+
+Una ricetta emessa e non ritirata è *Da ritirare*; dopo l'ultimo giorno
+di validità è *Scaduta*. Da 3 giorni prima di quel giorno ricevi un
+promemoria, una volta, sui canali di notifica della medicina (l'email
+solo dal [dispositivo master](#master) se l'installazione è
+condivisa). Il promemoria non contiene il codice.
+
+Le ricette vengono copiate sugli altri PC di un profilo sincronizzato e
+incluse nell'esportazione cifrata.
 
 ---
 

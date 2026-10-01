@@ -1,6 +1,7 @@
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Medicines;
@@ -24,6 +25,8 @@ internal sealed class ApplicationTestScope
     public InMemoryNotificationEventRepository Notifications { get; } = new();
     public InMemorySentEmailNotificationRepository SentEmails { get; } = new();
     public InMemoryDoseReminderEventRepository DoseEvents { get; } = new();
+    public InMemoryPrescriptionRepository Prescriptions { get; } = new();
+    public InMemoryPrescriptionReminderEventRepository PrescriptionReminderEvents { get; } = new();
     public InMemoryMedicineActivityRepository Activity { get; } = new();
     public InMemoryStockCountRepository Counts { get; } = new();
     public InMemoryLedgerCutoffRepository Cutoff { get; } = new();
@@ -58,6 +61,11 @@ internal sealed class ApplicationTestScope
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
     public ApplyRemoteOperations ApplyRemote { get; }
+    public SavePrescription SavePrescription { get; }
+    public CollectPrescription CollectPrescription { get; }
+    public DeletePrescription DeletePrescription { get; }
+    public PrescriptionListQuery PrescriptionList { get; }
+    public PrescriptionReminders PrescriptionReminders { get; }
     public SyncGenesis Genesis { get; }
 
     public ApplicationTestScope(DateTimeOffset? now = null)
@@ -95,13 +103,23 @@ internal sealed class ApplicationTestScope
         Genesis = new SyncGenesis(Medicines, Suspensions, SyncVersions, Uow);
         ApplyRemote = new ApplyRemoteOperations(
             SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
-            Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock, sentEmails: SentEmails);
+            Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock, sentEmails: SentEmails,
+            prescriptions: Prescriptions);
+
+        SavePrescription = new SavePrescription(Medicines, Prescriptions, Operations, Uow, Clock);
+        CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);
+        DeletePrescription = new DeletePrescription(Prescriptions, Operations, Uow, Clock);
+        PrescriptionList = new PrescriptionListQuery(Prescriptions, Medicines, Clock);
+        PrescriptionReminders = new PrescriptionReminders(
+            Prescriptions, PrescriptionReminderEvents, Medicines, Email, Windows, Clock,
+            NullLogger<PrescriptionReminders>.Instance);
 
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance,
-            sentEmails: SentEmails, operationLog: Operations, master: Master);
+            sentEmails: SentEmails, operationLog: Operations, master: Master,
+            prescriptionReminders: PrescriptionReminders);
     }
 
     // Turns operation capture on, as enabling sync will (Phase 3d).
