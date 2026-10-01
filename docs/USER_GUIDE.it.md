@@ -709,7 +709,7 @@ solo quando serve (anche gli strumenti di assistenza remota lo vedono).
 **Uso quotidiano**
 
 - La sincronizzazione parte pochi secondi dopo ogni modifica, ogni 5
-  minuti e con **Sincronizza ora**. La scheda **Dispositivi** mostra i
+  minuti e con **Sincronizza ora**. La sezione **Dispositivi** mostra i
   PC e quando ognuno si è visto l'ultima volta.
 - Se due PC hanno cambiato la stessa cosa prima di sincronizzarsi, vince
   la modifica più recente e il caso compare in **Conflitti**:
@@ -728,7 +728,7 @@ solo quando serve (anche gli strumenti di assistenza remota lo vedono).
   inattività), fai clic su **Accedi di nuovo a OneDrive** / **Accedi di
   nuovo a Google Drive**; non si perde nulla.
 
-**Un PC è perso o la passphrase è stata scoperta.** Nella scheda
+**Un PC è perso o la passphrase è stata scoperta.** Nella sezione
 **Dispositivi** seleziona il PC e fai clic su **Rimuovi dispositivo…**,
 oppure usa **Cambia chiave e passphrase…**. Scegli una nuova passphrase
 di sincronizzazione: il PC rimosso non potrà leggere nulla di quanto
@@ -818,7 +818,7 @@ i profili che contiene, anche quelli non aperti) e fa il backup cloud.
 Gli altri dispositivi mostrano i loro avvisi solo sullo schermo. Così
 ogni email arriva una volta sola.
 
-- Il dispositivo che pubblica l'installazione è il master. La scheda
+- Il dispositivo che pubblica l'installazione è il master. La sezione
   **Dispositivi** lo indica nella colonna **Ruolo**.
 - Scegli come master un dispositivo **acceso spesso** e con MedReminder
   in esecuzione.
@@ -898,7 +898,7 @@ ridimensionare.
   per ogni profilo su questo computer. "Come Windows" è scuro solo su
   Windows 11 con la modalità scura attiva; con un tema a contrasto
   elevato di Windows si usano i suoi colori. Vale dopo il riavvio. In
-  Scuro i campi data restano chiari.
+  Scuro il calendario che si apre dai campi data resta chiaro.
 - **Generale → Controlla aggiornamenti all'avvio (GitHub)**: cerca una
   nuova versione (nulla viene installato da solo) e aggiorna il
   catalogo. **? → Controlla aggiornamenti…** controlla subito.

@@ -737,7 +737,7 @@ d'assistance à distance le voient aussi).
 **Au quotidien**
 
 - La synchronisation a lieu quelques secondes après chaque modification,
-  toutes les 5 minutes et avec **Synchroniser maintenant**. L'onglet
+  toutes les 5 minutes et avec **Synchroniser maintenant**. La section
   **Appareils** montre les PC et quand chacun a été vu pour la dernière
   fois.
 - Si deux PC ont changé la même chose avant de se synchroniser, la
@@ -757,7 +757,7 @@ d'assistance à distance le voient aussi).
   passe, longue inactivité), clique sur **Se reconnecter à OneDrive** /
   **Se reconnecter à Google Drive** ; rien n'est perdu.
 
-**Un PC est perdu ou la phrase secrète a fuité.** Dans l'onglet
+**Un PC est perdu ou la phrase secrète a fuité.** Dans la section
 **Appareils**, sélectionne le PC et clique sur **Retirer l'appareil…**,
 ou utilise **Changer la clé et la phrase secrète…**. Choisis une
 nouvelle phrase secrète de synchronisation : le PC retiré ne pourra rien
@@ -847,7 +847,7 @@ profils qu'il contient, même ceux qui ne sont pas ouverts) et fait la
 sauvegarde cloud. Les autres appareils n'affichent leurs alertes qu'à
 l'écran. Ainsi chaque e-mail arrive une seule fois.
 
-- L'appareil qui publie l'installation est le maître. L'onglet
+- L'appareil qui publie l'installation est le maître. La section
   **Appareils** l'indique dans la colonne **Rôle**.
 - Choisis comme maître un appareil **souvent allumé** et où MedReminder
   tourne.
@@ -930,7 +930,8 @@ redimensionnable.
   pour chaque profil sur cet ordinateur. « Comme Windows » n'est sombre
   que sous Windows 11 avec le mode sombre activé ; avec un thème à
   contraste élevé de Windows, ses couleurs sont utilisées. S'applique
-  après un redémarrage. En Sombre, les champs de date restent clairs.
+  après un redémarrage. En Sombre, le calendrier qui s'ouvre depuis
+  un champ de date reste clair.
 - **Général → Vérifier les mises à jour au démarrage (GitHub)** :
   recherche une nouvelle version (rien n'est installé tout seul) et met
   à jour le catalogue. **? → Vérifier les mises à jour…** vérifie tout

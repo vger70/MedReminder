@@ -735,7 +735,7 @@ ihn nur, wenn nötig (auch Fernwartungsprogramme sehen ihn).
 **Im Alltag**
 
 - Die Synchronisierung läuft einige Sekunden nach jeder Änderung, alle 5
-  Minuten und mit **Jetzt synchronisieren**. Der Reiter **Geräte** zeigt
+  Minuten und mit **Jetzt synchronisieren**. Der Bereich **Geräte** zeigt
   die PCs und wann jeder zuletzt gesehen wurde.
 - Haben zwei PCs dasselbe geändert, bevor sie sich synchronisiert haben,
   gewinnt die neueste Änderung und der Fall erscheint unter
@@ -756,7 +756,7 @@ ihn nur, wenn nötig (auch Fernwartungsprogramme sehen ihn).
   **Erneut bei Google Drive anmelden**; nichts geht verloren.
 
 **Ein PC ist verloren oder die Passphrase wurde bekannt.** Wähle im
-Reiter **Geräte** den PC und klicke auf **Gerät entfernen…**, oder
+Bereich **Geräte** den PC und klicke auf **Gerät entfernen…**, oder
 nutze **Schlüssel und Passphrase ändern…**. Wähle eine neue
 Sync-Passphrase: Der entfernte PC kann nichts mehr lesen, was ab dann
 geschrieben wird. Melde diesen PC auch in den Sicherheitseinstellungen
@@ -847,7 +847,7 @@ Cloud-Sicherung. Die anderen Geräte zeigen ihre Warnungen nur auf dem
 Bildschirm. So kommt jede E-Mail genau einmal.
 
 - Das Gerät, das die Installation veröffentlicht, ist der Master. Der
-  Reiter **Geräte** zeigt es in der Spalte **Rolle**.
+  Bereich **Geräte** zeigt es in der Spalte **Rolle**.
 - Wähle als Master ein Gerät, das **oft eingeschaltet** ist und auf dem
   MedReminder läuft.
 - Auf den anderen Geräten öffnen sich Rezeptanforderungen im
@@ -926,7 +926,8 @@ Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
   Dunkel, pro Profil auf diesem Computer. „Wie Windows“ ist nur unter
   Windows 11 mit aktiviertem dunklem Modus dunkel; bei einem
   Windows-Kontrastdesign werden dessen Farben verwendet. Gilt nach einem
-  Neustart. In Dunkel bleiben Datumsfelder hell.
+  Neustart. In Dunkel bleibt der Kalender, der sich aus einem Datumsfeld
+  öffnet, hell.
 - **Allgemein → Beim Start nach Updates suchen (GitHub)**: sucht nach
   einer neuen Version (nichts wird von selbst installiert) und
   aktualisiert den Katalog. **? → Nach Updates suchen…** sucht sofort.

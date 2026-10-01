@@ -676,7 +676,7 @@ it too).
 **Everyday use**
 
 - Sync runs a few seconds after each change, every 5 minutes, and with
-  **Sync now**. The **Devices** tab shows the PCs and when each was last
+  **Sync now**. The **Devices** section shows the PCs and when each was last
   seen.
 - If two PCs changed the same thing before syncing, the latest change
   wins and the case appears in **Conflicts**: **Restore lost value**
@@ -692,7 +692,7 @@ it too).
   inactivity), click **Sign in to OneDrive again** / **Sign in to Google
   Drive again**; nothing is lost.
 
-**A PC is lost or the passphrase leaked.** In the **Devices** tab select
+**A PC is lost or the passphrase leaked.** In the **Devices** section select
 the PC and click **Remove device…**, or use **Change key and
 passphrase…**. Choose a new sync passphrase: the removed PC cannot read
 anything written from then on. Also sign that PC out in your Microsoft
@@ -773,7 +773,7 @@ not open) and makes the cloud backup. The other devices show their
 reminders on screen only. This way each email arrives once.
 
 - The device that publishes the installation is the master. The
-  **Devices** tab shows it in the **Role** column.
+  **Devices** section shows it in the **Role** column.
 - Choose a master that is **often switched on** and has MedReminder
   running.
 - On other devices, prescription requests open in the mail client, and
@@ -843,8 +843,8 @@ All in **Tools → Settings…**. The sections are listed on the left;
 - **General → Appearance (this profile)**: Same as Windows, Light or
   Dark, for each profile on this computer. "Same as Windows" is dark
   only on Windows 11 with dark mode on; with a Windows high-contrast
-  theme its colours are used. Applies after a restart. Date fields stay
-  light in Dark.
+  theme its colours are used. Applies after a restart. The calendar that
+  opens from a date field stays light in Dark.
 - **General → Check for updates on startup (GitHub)**: checks for a new
   version (nothing is installed by itself) and updates the catalogue.
   **? → Check for updates…** checks now.
