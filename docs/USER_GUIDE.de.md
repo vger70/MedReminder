@@ -86,7 +86,7 @@ demselben Grund „Unbekannter Herausgeber“.
   erfassen* und rechts ein Suchfeld (**Strg+F**), das die Liste nach
   Namen filtert.
 - **Navigation** links: *Medikamente* (diese Liste), dann
-  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Installation*
+  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Vorrat planen*, *Installation*
   (Administratoren) und *Einstellungen*, die ein eigenes Fenster öffnen.
   In einem schmalen Fenster zeigt sie nur die Symbole.
 - **Übersicht** über der Liste: wie viele Medikamente *Leer*, *Bald
@@ -118,6 +118,7 @@ Beenden klicke mit der rechten Maustaste auf das Symbol und wähle
 | Einen falschen Eintrag rückgängig machen | **Bestand → Verlauf…** |
 | Die Therapie für einen Arzt drucken | **Therapie → Therapieplan…** |
 | Ein Rezept anfordern | **Therapie → Rezept anfordern…** |
+| Den Vorrat für eine Reise oder bis zum nächsten Apothekenbesuch prüfen | **Therapie → Vorrat planen…** |
 | E-Mail, Sprache, Sicherung einrichten | **Extras → Einstellungen…** |
 | Eine Person hinzufügen | **Extras → Profile verwalten…** (Administrator) |
 | MedReminder auf einem anderen PC nutzen | **Extras → Synchronisierung…** und **Extras → Installation…** (Administrator) |
@@ -422,6 +423,31 @@ Apotheke: Wirkstoff, Dosierung, Therapiezeitraum, Arzt.
   und **In Zwischenablage kopieren** liefern reinen Text.
 
 MedReminder behält keine Kopie dessen, was du speicherst oder druckst.
+
+### Vorrat planen (Reise oder Apotheke)
+
+**Therapie → Vorrat planen…** beantwortet die Frage „reicht es bis …?“.
+Wähle den Zeitraum mit **Von** und **Bis**, zum Beispiel die Tage einer
+Reise oder die Tage bis zum nächsten Apothekenbesuch (Standard: die
+nächsten 14 Tage, heute eingeschlossen). Für jedes aktive Medikament
+zeigt das Fenster:
+
+- **Bedarf im Zeitraum**: die im Zeitraum verbrauchte Menge, nach
+  Schema, Unterbrechungen, Therapieende und Einnahmezeiten;
+- **Bestand zu Beginn**: der heutige Bestand minus der erwartete
+  Verbrauch bis zum Beginn des Zeitraums (*vorher aufgebraucht*, wenn
+  nichts übrig bleibt);
+- **Fehlt**: was über diesen Bestand hinaus gebraucht wird, oder
+  *gedeckt*;
+- **Zu besorgende Packungen**: wie viele Packungen das Fehlende decken,
+  so groß wie die zuletzt erfasste neue Packung (— wenn keine erfasst
+  wurde).
+
+Nicht gedeckte Medikamente stehen oben. Medikamente bei Bedarf werden
+aufgeführt, aber nicht berechnet, da ihr Verbrauch nicht geplant ist.
+**Drucken…**, **Als PDF speichern…** und **In Zwischenablage kopieren**
+funktionieren wie beim Therapieplan. Das Fenster ändert nichts: die
+Werte sind Schätzungen.
 
 ### Ein Rezept anfordern
 

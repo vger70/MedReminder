@@ -80,7 +80,7 @@ choice. If you install from the MSI package, the permission window says
 - **Toolbar** below the menus: *New medicine*, *Register intake* and a
   search box on the right (**Ctrl+F**) that filters the list by name.
 - **Navigation** on the left: *Medicines* (this list), then *Therapy
-  timeline*, *Therapy report*, *Request prescription*, *Installation*
+  timeline*, *Therapy report*, *Request prescription*, *Plan supply*, *Installation*
   (administrators) and *Settings*, which open their own windows. In a
   narrow window it shows icons only.
 - **Summary** above the list: how many medicines are *Empty*, *Running
@@ -110,6 +110,7 @@ right-click the icon and choose **Exit**.
 | Undo a mistaken entry | **Stock → History…** |
 | Print the therapy for a doctor | **Therapy → Therapy report…** |
 | Ask for a prescription | **Therapy → Request prescription…** |
+| Check the stock for a trip or until the next pharmacy visit | **Therapy → Plan supply…** |
 | Set up email, language, backup | **Tools → Settings…** |
 | Add a person | **Tools → Manage profiles…** (administrator) |
 | Use MedReminder on another PC | **Tools → Sync…** and **Tools → Installation…** (administrator) |
@@ -389,6 +390,28 @@ ingredient, dosage, therapy period, doctor.
   plain text.
 
 MedReminder keeps no copy of what you save or print.
+
+### Plan supply (trip or pharmacy visit)
+
+**Therapy → Plan supply…** answers the question "do I have enough until
+…?". Choose the period with **From** and **To**, for example the days
+of a trip or the days until your next visit to the pharmacy (default:
+the next 14 days, today included). For each active medicine the window
+shows:
+
+- **Needed in the period**: the quantity the period uses, following the
+  schedule, suspensions, the therapy end date and the administration
+  times;
+- **Stock at the start**: the stock today minus the expected use until
+  the period starts (*runs out before* if nothing will be left);
+- **Missing**: what the period needs beyond that stock, or *covered*;
+- **Packages to get**: how many packages cover what is missing, sized
+  like the last new package you recorded (— if none was recorded).
+
+Medicines that are not covered are listed first. As-needed medicines
+are shown but not computed, since their use is not planned. **Print…**,
+**Save as PDF…** and **Copy to clipboard** work as for the therapy
+report. The window changes nothing: the figures are estimates.
 
 ### Request a prescription
 

@@ -84,7 +84,7 @@ motivo.
   assunzione* e, a destra, una casella di ricerca (**Ctrl+F**) che
   filtra l'elenco per nome.
 - **Navigazione** a sinistra: *Medicine* (questo elenco), poi *Linea del
-  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Installazione*
+  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Pianifica scorte*, *Installazione*
   (amministratori) e *Impostazioni*, che si aprono in una finestra
   propria. Se la finestra è stretta mostra solo le icone.
 - **Riepilogo** sopra l'elenco: quante medicine sono *Esaurite*, *In
@@ -115,6 +115,7 @@ uscire, fai clic destro sull'icona e scegli **Esci**.
 | Annullare una registrazione sbagliata | **Scorte → Storico…** |
 | Stampare la terapia per un medico | **Terapia → Scheda terapia…** |
 | Chiedere una ricetta | **Terapia → Richiedi ricetta…** |
+| Controllare la scorta per un viaggio o fino al prossimo passaggio in farmacia | **Terapia → Pianifica scorte…** |
 | Configurare email, lingua, backup | **Strumenti → Impostazioni…** |
 | Aggiungere una persona | **Strumenti → Gestisci profili…** (amministratore) |
 | Usare MedReminder su un altro PC | **Strumenti → Sincronizzazione…** e **Strumenti → Installazione…** (amministratore) |
@@ -409,6 +410,30 @@ attivo, posologia, periodo di terapia, medico.
   danno il testo semplice.
 
 MedReminder non conserva copie di quanto salvi o stampi.
+
+### Pianificare le scorte (viaggio o farmacia)
+
+**Terapia → Pianifica scorte…** risponde alla domanda "ne ho abbastanza
+fino a…?". Scegli il periodo con **Dal** e **Al**, per esempio i giorni
+di un viaggio o i giorni fino al prossimo passaggio in farmacia
+(predefinito: i prossimi 14 giorni, oggi compreso). Per ogni medicina
+attiva la finestra mostra:
+
+- **Serve nel periodo**: la quantità consumata nel periodo, secondo lo
+  schema, le sospensioni, la data di fine terapia e gli orari di
+  assunzione;
+- **Scorta all'inizio**: la scorta di oggi meno il consumo previsto fino
+  all'inizio del periodo (*finisce prima* se non ne resterà);
+- **Mancano**: quanto serve oltre quella scorta, oppure *coperto*;
+- **Confezioni da procurare**: quante confezioni coprono ciò che manca,
+  della stessa dimensione dell'ultima nuova confezione registrata (— se
+  non ne è stata registrata nessuna).
+
+Le medicine non coperte compaiono per prime. Le medicine al bisogno sono
+elencate ma non calcolate, perché il loro consumo non è pianificato.
+**Stampa…**, **Salva come PDF…** e **Copia negli appunti** funzionano
+come per la scheda terapia. La finestra non modifica nulla: i valori
+sono stime.
 
 ### Richiedere la ricetta
 

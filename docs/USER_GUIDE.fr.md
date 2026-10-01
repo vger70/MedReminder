@@ -87,7 +87,7 @@ installes depuis le paquet MSI, la fenêtre d'autorisation indique
   qui filtre la liste par nom.
 - **Navigation** à gauche : *Médicaments* (cette liste), puis
   *Chronologie du traitement*, *Fiche de traitement*, *Demander une
-  ordonnance*, *Installation* (administrateurs) et *Paramètres*, qui
+  ordonnance*, *Planifier le stock*, *Installation* (administrateurs) et *Paramètres*, qui
   s'ouvrent dans leur propre fenêtre. Dans une fenêtre étroite, elle
   n'affiche que les icônes.
 - **Résumé** au-dessus de la liste : combien de médicaments sont
@@ -119,6 +119,7 @@ quitter, fais un clic droit sur l'icône et choisis **Quitter**.
 | Annuler une saisie erronée | **Stock → Historique…** |
 | Imprimer le traitement pour un médecin | **Traitement → Fiche de traitement…** |
 | Demander une ordonnance | **Traitement → Demander une ordonnance…** |
+| Vérifier le stock pour un voyage ou jusqu'au prochain passage à la pharmacie | **Traitement → Planifier le stock…** |
 | Configurer e-mail, langue, sauvegarde | **Outils → Paramètres…** |
 | Ajouter une personne | **Outils → Gérer les profils…** (administrateur) |
 | Utiliser MedReminder sur un autre PC | **Outils → Synchronisation…** et **Outils → Installation…** (administrateur) |
@@ -423,6 +424,31 @@ substance active, posologie, période du traitement, médecin.
   texte brut.
 
 MedReminder ne garde aucune copie de ce que tu enregistres ou imprimes.
+
+### Planifier le stock (voyage ou pharmacie)
+
+**Traitement → Planifier le stock…** répond à la question « en ai-je
+assez jusqu'au… ? ». Choisis la période avec **Du** et **Au**, par
+exemple les jours d'un voyage ou les jours jusqu'à ton prochain passage
+à la pharmacie (par défaut : les 14 prochains jours, aujourd'hui
+compris). Pour chaque médicament actif, la fenêtre affiche :
+
+- **Besoin sur la période** : la quantité consommée sur la période,
+  selon le schéma, les suspensions, la date de fin du traitement et les
+  horaires de prise ;
+- **Stock au début** : le stock d'aujourd'hui moins la consommation
+  prévue jusqu'au début de la période (*épuisé avant* s'il n'en restera
+  pas) ;
+- **Manque** : ce qu'il faut au-delà de ce stock, ou *couvert* ;
+- **Boîtes à obtenir** : combien de boîtes couvrent ce qui manque, de la
+  taille de la dernière nouvelle boîte enregistrée (— si aucune n'a été
+  enregistrée).
+
+Les médicaments non couverts apparaissent en premier. Les médicaments
+« si besoin » sont listés mais pas calculés, car leur consommation n'est
+pas planifiée. **Imprimer…**, **Enregistrer en PDF…** et **Copier dans
+le presse-papiers** fonctionnent comme pour la fiche de traitement. La
+fenêtre ne modifie rien : les chiffres sont des estimations.
 
 ### Demander une ordonnance
 
