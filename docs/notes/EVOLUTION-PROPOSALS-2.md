@@ -108,8 +108,7 @@ therapy is affected.
 
 ### 3.2 Prescription lifecycle: requested, issued, collected
 
-**Status.** Implemented on branch `claude/prescription-lifecycle`
-(Therapy → Prescriptions…). The whole prescription is one replicated
+**Status.** Implemented in PR #164 (Therapy → Prescriptions…). The whole prescription is one replicated
 register (`PrescriptionChanged`, operation schema 7, image schema 5);
 the reminder is sent 3 days before "valid until", once per date and
 device; after a new package the app asks whether an open prescription

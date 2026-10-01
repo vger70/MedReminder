@@ -30,7 +30,49 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #164 — Follow prescriptions from the request to the pharmacy
+
+Link: [vger70/MedReminder#164](https://github.com/vger70/MedReminder/pull/164)
+Branch: `claude/prescription-lifecycle` → `main`
+
+### Added
+
+- Prescription lifecycle (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.2):
+  Therapy → Prescriptions… (and navigation pane) with requested, issued
+  (code, packages, valid until) and collected dates, all optional;
+  "Mark as requested" in the request window; after a new package, a
+  question whether an open prescription was collected.
+- Reminder to collect an issued prescription from 3 days before it
+  lapses, once per date and device, on the medicine's channels; the
+  code is never in the reminder or the logs.
+- Domain `Prescription`, `PrescriptionRules`,
+  `PrescriptionReminderEvent`; Application `SavePrescription`,
+  `CollectPrescription`, `DeletePrescription`, `PrescriptionListQuery`,
+  `PrescriptionReminders`; UI `PrescriptionsDialog`,
+  `PrescriptionEditDialog`.
+- Strings `Ui.PrescriptionsDialog.*`, `Ui.PrescriptionEditDialog.*`,
+  `Prescriptions.Status.*`, `Notifications.Prescription.*` and the
+  menu, request-window and main-window keys in all five dictionaries.
+
+### Changed
+
+- Sync: `PrescriptionChanged` (operation schema 7), one last-writer-wins
+  register per prescription; image schema 5. Devices on older versions
+  stop at the first such operation until updated.
+- Persistence: boot patch for `Prescriptions` and
+  `PrescriptionReminderEvents`; medicine deletion removes both.
+- Export: additive `prescriptions[]`.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
+  user guides (en, it, fr, es, de), `README.md`, proposals note.
+
+---
+
 ## PR #163 — Add a supply planner for a trip or the next pharmacy visit
+
+**Status:** merged (2026-10-01)
 
 Link: [vger70/MedReminder#163](https://github.com/vger70/MedReminder/pull/163)
 Branch: `claude/coverage-planner` → `main`
