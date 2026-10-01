@@ -476,6 +476,13 @@ included in the encrypted export.
   (with a threshold of 10 days: first warning at 10 days, second at 5).
   A medicine that is already below half when it is first checked gets
   only the second reminder. After a new package the cycle starts again.
+- **From the Windows notification**: click it to open MedReminder on
+  that medicine (on the prescriptions for a prescription reminder). A
+  low-stock warning has **Prepare request**, which opens the request to
+  the doctor; a dose reminder has **Remind me in 15 minutes**, which
+  shows it again later, even if MedReminder is closed meanwhile.
+  Intakes are not recorded from the notification: use **Therapy →
+  Register intake…**.
 - **Tools → Check now** (**Ctrl+R**, or the tray menu) runs
   the check immediately.
 - MedReminder must be running to send reminders. Turn on automatic

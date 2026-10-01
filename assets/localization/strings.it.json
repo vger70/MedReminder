@@ -711,6 +711,8 @@
   "Notifications.Toast.BodySecond": "Non ancora rifornito. Quantità stimata per {0} giorni. Richiedi presto una nuova prescrizione.",
   "Notifications.Prescription.Title": "Ritira la ricetta: {0}",
   "Notifications.Prescription.Body": "La ricetta di {0} è valida fino al {1}. Ritirala in farmacia per tempo.",
+  "Notifications.Action.Snooze": "Ricordamelo tra {0} minuti",
+  "Notifications.Action.RequestPrescription": "Prepara la richiesta",
   "Notifications.DoseReminder.Title": "È ora di prendere {0}",
   "Notifications.DoseReminder.Body": "{0} — dose programmata alle {1}",
 

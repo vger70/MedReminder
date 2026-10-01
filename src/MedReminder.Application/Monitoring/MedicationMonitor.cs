@@ -216,7 +216,7 @@ public sealed class MedicationMonitor
                 medicine, daysRemaining, localization: _localization, stage: stage);
             try
             {
-                await _windows.ShowAsync(title, body, cancellationToken);
+                await _windows.ShowAsync(title, body, NotificationTarget.LowStock(medicine.Id), cancellationToken);
                 windowsSucceeded = true;
             }
             catch (Exception ex)

@@ -499,6 +499,13 @@ incluyen en la exportación cifrada.
   a los 5). Un medicamento que ya está por debajo de la mitad en la
   primera revisión recibe solo el segundo aviso. Tras una caja nueva, el
   ciclo vuelve a empezar.
+- **Desde la notificación de Windows**: un clic abre MedReminder en ese
+  medicamento (en las recetas, para un recordatorio de receta). Un
+  aviso de stock tiene **Preparar la solicitud**, que abre la solicitud
+  al médico; un recordatorio de dosis tiene **Recuérdamelo en 15
+  minutos**, que lo repite más tarde, aunque MedReminder se haya cerrado
+  entretanto. Las tomas no se registran desde la notificación: usa
+  **Terapia → Registrar toma…**.
 - **Herramientas → Comprobar ahora** (**Ctrl+R**, o el menú del icono)
   ejecuta la comprobación enseguida.
 - MedReminder tiene que estar en marcha para enviar avisos. Activa el

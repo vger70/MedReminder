@@ -71,6 +71,9 @@ scheduled dose time.
   not been replenished since the first one.
 - Structural notification de-duplication via `StockEpoch`: after a
   refill the warning cycle restarts.
+- Actions in Windows notifications: open the app on the medicine,
+  prepare the prescription request from a low-stock warning, snooze a
+  dose reminder by 15 minutes (scheduled with Windows).
 - Internal scheduler with configurable periodic check (default 30
   minutes); "Check now" for an on-demand run.
 

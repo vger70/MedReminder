@@ -6,6 +6,7 @@ using MedReminder.Application.Coverage;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Notifications;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UpdateChecking;
@@ -17,6 +18,7 @@ using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Application.Overview;
 using MedReminder.UI.Controls;
+using MedReminder.UI.Notifications;
 using MedReminder.UI.Tray;
 using MedReminder.UI.UiExtensions;
 using MedReminder.UI.Hosting;
@@ -107,7 +109,12 @@ internal sealed class MainForm : MedReminderFormBase
         BuildLayout();
         WireTrayHandlers();
 
-        Load += async (_, _) => await ReloadAsync();
+        Load += async (_, _) =>
+        {
+            await ReloadAsync();
+            // After the first load, so an action can select its medicine.
+            WireToastActions();
+        };
         Load += (_, _) => WireSyncRefresh();
         Load += (_, _) => WireHandoverPrompt();
         Load += (_, _) => TryStartPassiveUpdateCheck();
@@ -1544,6 +1551,77 @@ internal sealed class MainForm : MedReminderFormBase
         _tray.CheckNowItem.Click += async (_, _) => await RunMonitorAsync();
         _tray.SettingsItem.Click += (_, _) => { RestoreFromTray(); ShowSettings(); };
         _tray.ExitItem.Click += (_, _) => { _reallyExit = true; Close(); };
+    }
+
+    // Clicks on toasts and their buttons (EVOLUTION-PROPOSALS-2 §3.4),
+    // including one that launched the app.
+    private void WireToastActions()
+    {
+        ToastActivationRouter.Attach(action =>
+        {
+            if (IsDisposed) return;
+            try
+            {
+                BeginInvoke(async () => await HandleNotificationActionAsync(action));
+            }
+            catch (InvalidOperationException)
+            {
+                // The window is closing.
+            }
+        });
+        FormClosed += (_, _) => ToastActivationRouter.Detach();
+    }
+
+    private async Task HandleNotificationActionAsync(NotificationAction? action)
+    {
+        if (action is { Kind: NotificationActionKind.Snooze })
+        {
+            await SnoozeDoseReminderAsync(action);
+            return;
+        }
+        RestoreFromTray();
+        // A toast of another profile (shown before a profile change)
+        // only brings the window forward.
+        if (action is null || action.ProfileId != _currentProfile.Id) return;
+        switch (action.Kind)
+        {
+            case NotificationActionKind.Open:
+                SelectGridRow(action.MedicineId);
+                break;
+            case NotificationActionKind.OpenPrescriptions:
+                await ShowPrescriptionsAsync();
+                break;
+            case NotificationActionKind.RequestPrescription:
+                SelectGridRow(action.MedicineId);
+                if (GetSelectedRow()?.Id == action.MedicineId) await ShowPrescriptionRequestAsync();
+                break;
+        }
+    }
+
+    // "Remind me in 15 minutes": the same dose reminder, scheduled with
+    // Windows, so it arrives even if the app is closed meanwhile.
+    private async Task SnoozeDoseReminderAsync(NotificationAction action)
+    {
+        if (action.ProfileId != _currentProfile.Id || action.SlotTime is not { } slot) return;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var medicine = await scope.ServiceProvider.GetRequiredService<IMedicineRepository>()
+                .GetAsync(action.MedicineId, CancellationToken.None);
+            if (medicine is null || !medicine.IsActive) return;
+            var (title, body) = NotificationTexts.BuildDoseReminder(medicine, slot, _loc);
+            var target = NotificationTarget.DoseReminder(medicine.Id, slot);
+            var windows = scope.ServiceProvider.GetRequiredService<IWindowsNotificationService>();
+            if (windows is ToastWindowsNotificationService toast)
+            {
+                await toast.ScheduleAsync(title, body, target,
+                    DateTimeOffset.Now.AddMinutes(NotificationActionArguments.SnoozeMinutes), CancellationToken.None);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Snoozing a dose reminder failed.");
+        }
     }
 
     private void RestoreFromTray()

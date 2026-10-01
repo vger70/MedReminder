@@ -501,6 +501,13 @@ incluse nell'esportazione cifrata.
   secondo a 5). Una medicina che al primo controllo è già sotto la metà
   riceve solo il secondo avviso. Dopo una nuova confezione il ciclo
   riparte.
+- **Dalla notifica di Windows**: un clic apre MedReminder su quella
+  medicina (sulle ricette, per un promemoria di ricetta). Un avviso di
+  scorta ha **Prepara la richiesta**, che apre la richiesta al medico;
+  un promemoria di dose ha **Ricordamelo tra 15 minuti**, che lo
+  ripropone più tardi, anche se nel frattempo MedReminder è chiuso. Le
+  assunzioni non si registrano dalla notifica: usa **Terapia → Registra
+  assunzione…**.
 - **Strumenti → Controlla ora** (**Ctrl+R**, o il menu dell'icona)
   esegue subito il controllo.
 - MedReminder deve essere in esecuzione per inviare gli avvisi. Attiva

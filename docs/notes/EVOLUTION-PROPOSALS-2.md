@@ -202,6 +202,15 @@ time to talk to the doctor.
 
 ### 3.4 Actions in toast notifications
 
+**Status.** Implemented on branch `claude/toast-actions` with the safe
+actions only: body click (open the app on the medicine, or the
+prescriptions), "Prepare request" on low-stock warnings and "Remind me
+in 15 minutes" on dose reminders (a toast scheduled with Windows).
+"Taken" and "Skipped" were left out by decision: the ledger treats
+intakes per day (`LedgerDeriver` rule 2), so one intake recorded from a
+toast would cancel the automatic consumption of every other dose of
+that day. Recording intakes per slot needs its own analysis.
+
 **Benefit — medium-high**, mainly for elderly users: fewer steps.
 Dose reminder: "Taken", "Skipped", "Remind me in 15 minutes". Low-stock
 warning: "Prepare request".

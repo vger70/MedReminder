@@ -711,6 +711,8 @@
   "Notifications.Toast.BodySecond": "Not replenished yet. Estimated for {0} days. Request a new prescription soon.",
   "Notifications.Prescription.Title": "Collect the prescription: {0}",
   "Notifications.Prescription.Body": "The prescription for {0} is valid until {1}. Collect it at the pharmacy in time.",
+  "Notifications.Action.Snooze": "Remind me in {0} minutes",
+  "Notifications.Action.RequestPrescription": "Prepare request",
   "Notifications.DoseReminder.Title": "Time to take {0}",
   "Notifications.DoseReminder.Body": "{0} — scheduled dose at {1}",
 

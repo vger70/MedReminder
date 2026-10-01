@@ -518,6 +518,13 @@ et incluses dans l'export chiffré.
   deuxième à 5). Un médicament déjà sous la moitié lors de la première
   vérification reçoit seulement le deuxième rappel. Après une nouvelle
   boîte, le cycle recommence.
+- **Depuis la notification Windows** : un clic ouvre MedReminder sur ce
+  médicament (sur les ordonnances, pour un rappel d'ordonnance). Une
+  alerte de stock a **Préparer la demande**, qui ouvre la demande au
+  médecin ; un rappel de dose a **Me le rappeler dans 15 minutes**, qui
+  le reprend plus tard, même si MedReminder est fermé entre-temps. Les
+  prises ne s'enregistrent pas depuis la notification : utilise
+  **Traitement → Enregistrer prise…**.
 - **Outils → Vérifier maintenant** (**Ctrl+R**, ou le menu de l'icône)
   lance la vérification tout de suite.
 - MedReminder doit tourner pour envoyer les alertes. Active le

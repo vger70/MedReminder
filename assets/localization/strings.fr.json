@@ -710,6 +710,8 @@
   "Notifications.Toast.BodySecond": "Pas encore réapprovisionné. Quantité estimée pour {0} jours. Demande bientôt une nouvelle ordonnance.",
   "Notifications.Prescription.Title": "Retire l'ordonnance : {0}",
   "Notifications.Prescription.Body": "L'ordonnance de {0} est valable jusqu'au {1}. Retire-la à la pharmacie à temps.",
+  "Notifications.Action.Snooze": "Me le rappeler dans {0} minutes",
+  "Notifications.Action.RequestPrescription": "Préparer la demande",
   "Notifications.DoseReminder.Title": "Il est temps de prendre {0}",
   "Notifications.DoseReminder.Body": "{0} — prise programmée à {1}",
 
