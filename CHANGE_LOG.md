@@ -30,7 +30,45 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #166 — Mark Italian medicines in shortage from the AIFA list
+
+Link: [vger70/MedReminder#166](https://github.com/vger70/MedReminder/pull/166)
+Branch: `claude/shortage-notice` → `main`
+
+### Added
+
+- Shortage feed (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3):
+  `scripts/feeds/aifa_shortages.py` and `download_aifa_shortages.yaml`
+  publish `data/it/shortages/` (list date, start, expected end,
+  equivalent flag, reason category per AIC code); first list of
+  29/09/2026 published.
+- Client: `ShortageRefresher`, `GitHubRawShortageFeedClient`,
+  `JsonFileShortageListStore` (`catalogue\shortages\shortages-it.json`,
+  shared by every profile), run with the catalogue feeds when Italy is
+  the reference country.
+- Supply column in the medicine list with the detail as tooltip;
+  `ShortageNotices` notifies once per shortage start
+  (`ShortageNoticeEvents`, device-local).
+- Strings `Ui.MainForm.Column.Supply`, `Shortage.*`,
+  `Notifications.Shortage.*` in all five dictionaries.
+
+### Changed
+
+- Update-check tooltip mentions the shortage list.
+- Boot patch for `ShortageNoticeEvents`; left out of sync images and
+  removed with the medicine.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §8, `docs/ANALYSIS.md`, `docs/SYNC-FORMAT.md`,
+  `CLAUDE.md` §5, user guides (en, it, fr, es, de), `README.md`,
+  proposals note.
+
+---
+
 ## PR #165 — Add actions to the Windows notifications
+
+**Status:** merged (2026-10-01)
 
 Link: [vger70/MedReminder#165](https://github.com/vger70/MedReminder/pull/165)
 Branch: `claude/toast-actions` → `main`

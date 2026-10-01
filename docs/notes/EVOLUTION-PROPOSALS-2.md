@@ -144,7 +144,7 @@ days of therapy (consumer sources, §6).
 
 ### 3.3 AIFA shortage notice
 
-**Status.** Implemented on branch `claude/shortage-notice`: workflow
+**Status.** Implemented in PR #166: workflow
 and script publishing `data/it/shortages/` (first list, 29/09/2026,
 published from the reviewed file), client refresh with the catalogue
 feeds when Italy is the reference country, a Supply column with the
