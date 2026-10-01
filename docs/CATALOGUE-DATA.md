@@ -664,6 +664,7 @@ the user once (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3).
 | Published | `data/it/shortages/shortages-<yyyymmdd>.json` (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`); the 3 newest files are kept |
 | Client | `ShortageRefresher` with `GitHubRawShortageFeedClient`, after the catalogue feeds, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:ShortagesEnabled` (default true), `ShortagesMaxDownloadBytes` (default 4 MiB) |
 | Stored | `%LOCALAPPDATA%\MedReminder\catalogue\shortages\shortages-it.json`, shared by every profile; not in any profile database, not synced, not exported |
+| Line endings | `.gitattributes` marks `data/**/*.json` as `-text`: a checkout with `core.autocrlf` must not turn LF into CRLF, or the file no longer matches the manifest's size and SHA-256 |
 
 Source file format (checked on the list of 29/09/2026, 2,514 rows):
 Windows-1252, two free-text lines before the header (the second holds
