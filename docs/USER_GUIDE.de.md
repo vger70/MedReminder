@@ -260,12 +260,13 @@ ganze **Europäische Union** zugelassenen Arzneimittel (EMA).
   auch die EU-Arzneimittel; mit **EU** nur diese. Ein Arzneimittel kann
   zweimal erscheinen (national und EU): Wähle das, das zu deiner
   Packung passt.
-- **Automatische Aktualisierung.** Wenn **Beim Start nach Updates
+- **Automatische Aktualisierung.** Wenn **Automatisch nach Updates
   suchen (GitHub)** aktiviert ist (Einstellungen → Allgemein), lädt
-  MedReminder beim Start die neueste Monatsliste deines Landes und die
-  EU-Liste herunter, falls neuer. Ohne Internetverbindung ändert sich
-  nichts. Bei mehreren Profilen wird jedes beim ersten Öffnen
-  aktualisiert.
+  MedReminder beim Start und, solange es geöffnet bleibt, einmal täglich
+  die neueste Monatsliste deines Landes und die EU-Liste herunter, falls
+  neuer. Ohne Internetverbindung ändert sich nichts. Bei mehreren
+  Profilen wird nur das geöffnete aktualisiert, die anderen beim ersten
+  Öffnen.
 
 **Quellen.** AIFA Open Data (CC BY 4.0); EMA-EPAR-Daten (rechtlicher
 Hinweis der EMA, Beschluss der Kommission 2011/833/EU); AEMPS CIMA
@@ -927,9 +928,9 @@ Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
   Windows 11 mit aktiviertem dunklem Modus dunkel; bei einem
   Windows-Kontrastdesign werden dessen Farben verwendet. Gilt nach einem
   Neustart. In Dunkel bleiben Datumsfelder hell.
-- **Allgemein → Beim Start nach Updates suchen (GitHub)**: sucht nach
-  einer neuen Version (nichts wird von selbst installiert) und
-  aktualisiert den Katalog. **? → Nach Updates suchen…** sucht sofort.
+- **Allgemein → Automatisch nach Updates suchen (GitHub)**: sucht beim
+  Start nach einer neuen Version (nichts wird von selbst installiert)
+  und aktualisiert den Katalog beim Start und einmal täglich. **? → Nach Updates suchen…** sucht sofort.
 - **Allgemein → Datenbankabfragen protokollieren (Diagnose)**: nur
   Administratoren. Schreibt jeden Datenbankbefehl ohne die Werte in die
   Protokolldatei, zur Fehlersuche. Gilt sofort; das Protokoll wächst

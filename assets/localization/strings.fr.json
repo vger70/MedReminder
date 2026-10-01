@@ -499,7 +499,7 @@
   "Ui.SettingsDialog.General.RestartPrompt.Title": "Redémarrage requis",
   "Ui.SettingsDialog.General.Note": "Les notifications toast Windows utilisent toujours la langue du système.\nLes notifications e-mail et le guide utilisateur utilisent la langue choisie ici.",
   "Ui.SettingsDialog.General.Saved": "Préférences enregistrées.",
-  "Ui.SettingsDialog.General.CheckUpdates": "Vérifier les mises à jour au démarrage (GitHub)",
+  "Ui.SettingsDialog.General.CheckUpdates": "Vérifier les mises à jour automatiquement (GitHub)",
   "Ui.SettingsDialog.General.LogQueries": "Journaliser les requêtes de la base de données (diagnostic)",
   "Ui.SettingsDialog.General.LogQueries.Help": "Écrit dans le fichier journal chaque commande SQL exécutée par l'application, sans les valeurs. Uniquement pour le diagnostic : le journal grossit rapidement. Appliqué immédiatement.",
   "Ui.SettingsDialog.General.LogQueries.AdminOnly": "La journalisation des requêtes est une option de diagnostic : un administrateur la modifie.",
@@ -593,7 +593,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Nombre de jours de conservation des sauvegardes automatiques. Les fichiers plus anciens sont supprimés après une sauvegarde réussie.\n\n0 = aucune suppression automatique (déconseillé : le dossier grandit indéfiniment).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Ouvrir l'Explorateur de fichiers pour choisir le dossier de sauvegarde.",
   "Ui.SettingsDialog.Tooltip.Language": "Langue de l'interface pour menus, dialogues et notifications e-mail.\nLes notifications toast Windows suivent toujours la langue du système.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si activé, MedReminder interroge l'API publique GitHub Releases au démarrage et affiche un message si une nouvelle version stable est disponible ; la nouvelle version n'est jamais téléchargée ni installée automatiquement. Il télécharge aussi le catalogue des médicaments du pays de référence et celui de l'UE lorsqu'une édition plus récente est publiée (données uniquement).",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si activé, MedReminder interroge l'API publique GitHub Releases au démarrage et affiche un message si une nouvelle version stable est disponible ; la nouvelle version n'est jamais téléchargée ni installée automatiquement. Au démarrage, puis une fois par jour tant que l'application reste ouverte, il télécharge aussi le catalogue des médicaments du pays de référence et celui de l'UE lorsqu'une édition plus récente est publiée (données uniquement).",
 
   "Ui.HelpViewer.Title": "Guide utilisateur — MedReminder",
   "Ui.HelpViewer.Back": "Précédent",

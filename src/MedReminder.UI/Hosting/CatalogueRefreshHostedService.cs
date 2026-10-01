@@ -10,10 +10,12 @@ using Microsoft.Extensions.Options;
 
 namespace MedReminder.UI.Hosting;
 
-// Boot-time reference-catalogue import
-// (ANALYSIS-DRUG-CATALOGUE.md §2.6, M2 §3.3 B, M3 §3.4).
+// Reference-catalogue import at boot and daily remote-feed check
+// (ANALYSIS-DRUG-CATALOGUE.md §2.6, M2 §3.3 B, M3 §3.4,
+// ANALYSIS-CATALOGUE-REMOTE-FEED.md §4.1).
 //
-// Runs once on startup, in the background, if the feature flag is on.
+// The embedded snapshots are imported once on startup, in the
+// background, if the feature flag is on.
 // For each supported country a snapshot is embedded for, opens it via
 // EmbeddedSnapshotProvider and hands it to CsvReferenceCatalogueImporter,
 // which short-circuits when the recorded snapshot_version already
@@ -30,9 +32,19 @@ namespace MedReminder.UI.Hosting;
 // ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §5): the step waits for
 // MainForm's startup update check (at most RemoteFeedSignalTimeout),
 // then runs RemoteCatalogueRefresher once per feed when both
-// Catalogue:RemoteFeed:Enabled and the user's "check for updates at
-// startup" setting are on. Running it on the same task as the embedded
-// imports keeps every catalogue write sequential.
+// Catalogue:RemoteFeed:Enabled and the user's "check for updates
+// automatically" setting (UserSettings.CheckForUpdatesOnStartup) are on.
+//
+// The remote step then repeats during the session: a tick every
+// TickInterval runs it again once RemoteCheckInterval has passed since
+// the last run. An app left open for days (autostart, tray, sleep
+// instead of shutdown) would otherwise never see a feed published after
+// its start. The hourly tick, compared with the wall clock, catches up
+// right after a resume from sleep. The last run is kept in memory only:
+// every start checks anyway. The gates are read again on every tick, so
+// turning the setting on, or changing the reference country, takes
+// effect without a restart. Running every step on the same task keeps
+// every catalogue write sequential.
 //
 // Nothing blocks the UI: the whole run lives on a background thread
 // pool task started from ExecuteAsync. When the flag is off the
@@ -40,6 +52,8 @@ namespace MedReminder.UI.Hosting;
 internal sealed class CatalogueRefreshHostedService : BackgroundService
 {
     private static readonly TimeSpan RemoteFeedSignalTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan TickInterval = TimeSpan.FromHours(1);
+    internal static readonly TimeSpan RemoteCheckInterval = TimeSpan.FromHours(24);
 
     // Ordered so IT runs first (default reference country), then the
     // supranational EU catalogue, then the M4 national additions
@@ -54,13 +68,16 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
     };
 
     private readonly IServiceProvider _services;
+    private readonly TimeProvider _clock;
     private readonly ILogger<CatalogueRefreshHostedService> _log;
 
     public CatalogueRefreshHostedService(
         IServiceProvider services,
+        TimeProvider clock,
         ILogger<CatalogueRefreshHostedService> log)
     {
         _services = services;
+        _clock = clock;
         _log = log;
     }
 
@@ -74,30 +91,54 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         {
             try
             {
-                await RunOnceAsync(stoppingToken);
+                await RunAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                // Clean shutdown before the import got a chance to
-                // start or complete.
+                // Clean shutdown, at any point of the boot import or of
+                // the daily loop.
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Reference-catalogue boot import failed.");
+                _log.LogError(ex, "Reference-catalogue refresh stopped; the next start retries.");
             }
         }, stoppingToken);
         return Task.CompletedTask;
     }
 
-    private async Task RunOnceAsync(CancellationToken cancellationToken)
+    private async Task RunAsync(CancellationToken cancellationToken)
     {
         if (!await ImportEmbeddedSnapshotsAsync(cancellationToken))
         {
             return;
         }
 
-        await RefreshFromRemoteFeedAsync(cancellationToken);
+        var startedAt = _clock.GetUtcNow();
+        DateTimeOffset? lastRemoteRun =
+            await RefreshFromRemoteFeedAsync(atStartup: true, cancellationToken) ? startedAt : null;
+
+        using var timer = new PeriodicTimer(TickInterval, _clock);
+        while (await timer.WaitForNextTickAsync(cancellationToken))
+        {
+            var now = _clock.GetUtcNow();
+            if (!IsRemoteCheckDue(lastRemoteRun, now))
+            {
+                continue;
+            }
+
+            if (await RefreshFromRemoteFeedAsync(atStartup: false, cancellationToken))
+            {
+                lastRemoteRun = now;
+            }
+        }
     }
+
+    // Due when the remote step never ran in this session (a gate was
+    // off), when RemoteCheckInterval has passed, or when the clock went
+    // back before the last run (a manual clock change would otherwise
+    // hold the check back by the same amount).
+    internal static bool IsRemoteCheckDue(DateTimeOffset? lastRun, DateTimeOffset now) =>
+        lastRun is not { } last || now < last || now - last >= RemoteCheckInterval;
 
     // Returns false when the catalogue feature is off. The scope, and
     // with it the SQLite connection the importer opened, is disposed
@@ -126,8 +167,14 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         return true;
     }
 
-    private async Task RefreshFromRemoteFeedAsync(CancellationToken cancellationToken)
+    // Returns false when a gate kept the step from running, so the next
+    // tick checks again; true once it ran or failed to start (a failure
+    // waits for the next interval rather than repeating every hour).
+    // Skips are logged at Information at startup only, so a gate left
+    // off does not add a line to the log every hour.
+    private async Task<bool> RefreshFromRemoteFeedAsync(bool atStartup, CancellationToken cancellationToken)
     {
+        var skipLevel = atStartup ? LogLevel.Information : LogLevel.Debug;
         IReadOnlyList<CatalogueFeedDescriptor> feeds;
         try
         {
@@ -136,26 +183,33 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             var feedOptions = _services.GetRequiredService<IOptionsMonitor<CatalogueFeedOptions>>().CurrentValue;
             if (!feedOptions.Enabled)
             {
-                _log.LogInformation("Remote catalogue feeds disabled by configuration; skipping.");
-                return;
+                _log.Log(skipLevel, "Remote catalogue feeds disabled by configuration; skipping.");
+                return false;
             }
 
             var userSettings = _services.GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue;
             if (!userSettings.CheckForUpdatesOnStartup)
             {
-                _log.LogInformation("Remote catalogue feeds skipped: checking for updates at startup is off.");
-                return;
+                _log.Log(skipLevel, "Remote catalogue feeds skipped: checking for updates automatically is off.");
+                return false;
             }
 
             feeds = CatalogueFeedSelection.Select(userSettings.ReferenceCountry, feedOptions);
             if (feeds.Count == 0)
             {
-                _log.LogInformation("No remote catalogue feed enabled for the reference country; skipping.");
-                return;
+                _log.Log(skipLevel, "No remote catalogue feed enabled for the reference country; skipping.");
+                return false;
             }
 
-            var signal = _services.GetRequiredService<StartupUpdateCheckSignal>();
-            await signal.WaitAsync(RemoteFeedSignalTimeout, cancellationToken);
+            if (atStartup)
+            {
+                var signal = _services.GetRequiredService<StartupUpdateCheckSignal>();
+                await signal.WaitAsync(RemoteFeedSignalTimeout, cancellationToken);
+            }
+            else
+            {
+                _log.LogInformation("Daily remote catalogue check started.");
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -164,10 +218,11 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         catch (Exception ex)
         {
             _log.LogWarning(ex, "Remote catalogue feeds could not start; catalogues unchanged.");
-            return;
+            return true;
         }
 
         await RefreshFeedsAsync(feeds, RefreshFeedAsync, _log, cancellationToken);
+        return true;
     }
 
     // Own scope per feed, opened only now and disposed as soon as that

@@ -241,11 +241,12 @@ the whole **European Union** (EMA).
   device. With IT, ES or FR the list also contains the EU medicines;
   with **EU** it contains only those. A medicine may appear twice
   (national and EU): pick the one that matches your box.
-- **Automatic updates.** When **Check for updates on startup (GitHub)**
-  is on (Settings → General), MedReminder downloads at start the latest
-  monthly list of your country and the EU list, if newer. Without an
-  internet connection nothing changes. With several profiles, each is
-  updated the first time it is opened.
+- **Automatic updates.** When **Check for updates automatically
+  (GitHub)** is on (Settings → General), MedReminder downloads at start,
+  and once a day while it stays open, the latest monthly list of your
+  country and the EU list, if newer. Without an internet connection
+  nothing changes. With several profiles, only the open one is updated;
+  the others are updated the first time they are opened.
 
 **Sources.** AIFA open data (CC BY 4.0); EMA EPAR data (EMA legal
 notice, Commission decision 2011/833/EU); AEMPS CIMA (Spanish Law
@@ -845,8 +846,9 @@ All in **Tools → Settings…**. The sections are listed on the left;
   only on Windows 11 with dark mode on; with a Windows high-contrast
   theme its colours are used. Applies after a restart. Date fields stay
   light in Dark.
-- **General → Check for updates on startup (GitHub)**: checks for a new
-  version (nothing is installed by itself) and updates the catalogue.
+- **General → Check for updates automatically (GitHub)**: checks for a
+  new version at start (nothing is installed by itself) and updates the
+  catalogue at start and once a day.
   **? → Check for updates…** checks now.
 - **General → Log database queries (diagnostics)**: administrators only.
   Writes every database command to the log file, without the values,
