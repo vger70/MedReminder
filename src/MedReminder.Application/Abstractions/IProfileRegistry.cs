@@ -9,7 +9,10 @@ namespace MedReminder.Application.Abstractions;
 //   (§2.2). Delete() throws InvalidOperationException if id is the
 //   last admin. Create() forces Role = Admin when the registry is
 //   empty, regardless of the requested role.
-// - Role is immutable after creation (§14a G). No Update(role) API.
+// - Household step H2 (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md
+//   §8) reopens §14a G: SetRole changes the role, under the same
+//   last-admin invariant; ChangeProfileRole adds the admin and
+//   active-profile rules.
 //
 // The port does not know "who is calling" — the admin / user gating
 // is enforced by the UI, not here. This keeps the surface small and
@@ -50,5 +53,27 @@ public interface IProfileRegistry
 
     bool VerifyPin(string id, string pin);
 
+    // Throws InvalidOperationException if id is unknown or if the change
+    // would leave the registry without an admin (§2.2). Same role: no
+    // write.
+    void SetRole(string id, ProfileRole role);
+
+    // The stored PIN hash, as the household records it (step H2); null
+    // when the profile has no PIN. Throws for an unknown id.
+    ProfilePinHash? GetPinHash(string id);
+
+    // Step H3a: stores a PIN hash received from another device of the
+    // household (null clears the PIN). The PIN itself never travels.
+    void SetPinHash(string id, ProfilePinHash? pin);
+
     bool HasPin(string id);
+
+    // Step H3c: adds a profile of the household under its household id,
+    // with the household's name, role and PIN hash, when an installation
+    // join brings it to this device. The role is kept as given, even in an
+    // empty registry: a device holds only the profiles an admin granted to
+    // it, possibly none that is an administrator (ANALYSIS-HOUSEHOLD-
+    // MASTER-DEVICE.md §4.4). Throws InvalidOperationException when the id
+    // exists.
+    void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin);
 }

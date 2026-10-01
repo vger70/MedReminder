@@ -116,6 +116,20 @@ public sealed class MedicineAutocompleteBox : UserControl
         Height = _input.PreferredHeight;
     }
 
+    // Always one text box tall. The height taken from the text box at
+    // construction already followed the display scaling, and the form's
+    // layout scaling then multiplied it again: at 150 % with Large text
+    // the Name and Active ingredient rows were about twice the field
+    // height (ANALYSIS-UI-MODERNIZATION L6).
+    protected override void SetBoundsCore(int x, int y, int width, int height, BoundsSpecified specified)
+        => base.SetBoundsCore(x, y, width, _input?.PreferredHeight ?? height, specified);
+
+    protected override void OnFontChanged(EventArgs e)
+    {
+        base.OnFontChanged(e);
+        Height = _input.PreferredHeight;
+    }
+
     // Populated by the medicine form via BindSearch(...) after
     // construction. Held as fields so the designer-friendly
     // parameterless ctor still works.
@@ -329,21 +343,27 @@ public sealed class MedicineAutocompleteBox : UserControl
         if (e.Index < 0) return;
         var text = _dropdown.Items[e.Index]?.ToString() ?? string.Empty;
 
-        e.DrawBackground();
+        // Selection from the theme: the stock dark highlight pairs
+        // black text with a mid blue below AA contrast.
+        var palette = UiTheme.Palette;
+        var selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+        using (var background = new SolidBrush(selected ? palette.Selection : palette.Surface))
+        {
+            e.Graphics.FillRectangle(background, e.Bounds);
+        }
         var isReference = e.Index < _lastResults.Count && _dropdown.Enabled;
 
         var textBounds = e.Bounds;
         if (isReference && IsWithdrawn(_lastResults[e.Index].MarketingStatus))
         {
             // Withdrawn badge: a filled red circle glyph before the
-            // text with a matching tooltip on hover. Colour picked
-            // for AA contrast against both the default and highlight
-            // ListBox backgrounds.
+            // text with a matching tooltip on hover. Colour from the
+            // theme's danger token.
             const string BadgeGlyph = "●"; // ●
             using var badgeFont = new Font(e.Font ?? _dropdown.Font, FontStyle.Bold);
             var badgeSize = e.Graphics.MeasureString(BadgeGlyph, badgeFont);
-            var badgeColor = UiColors.Themed(Color.FromArgb(198, 40, 40)); // Material red 700
-            e.Graphics.DrawString(BadgeGlyph, badgeFont, new SolidBrush(badgeColor),
+            using var badgeBrush = new SolidBrush(UiTheme.Palette.DangerText);
+            e.Graphics.DrawString(BadgeGlyph, badgeFont, badgeBrush,
                 e.Bounds.X + 2, e.Bounds.Y + 2);
             textBounds = new Rectangle(
                 e.Bounds.X + (int)badgeSize.Width + 8,
@@ -352,9 +372,9 @@ public sealed class MedicineAutocompleteBox : UserControl
                 e.Bounds.Height);
         }
 
-        var foreColor = (e.State & DrawItemState.Selected) == DrawItemState.Selected
-            ? SystemColors.HighlightText
-            : (_dropdown.Enabled ? SystemColors.WindowText : SystemColors.GrayText);
+        var foreColor = selected
+            ? palette.SelectionText
+            : (_dropdown.Enabled ? palette.Text : palette.TextSecondary);
         using var brush = new SolidBrush(foreColor);
         using var format = new StringFormat
         {

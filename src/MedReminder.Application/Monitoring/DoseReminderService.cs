@@ -30,6 +30,7 @@ public sealed class DoseReminderService
     private readonly TimeProvider _clock;
     private readonly ILogger<DoseReminderService> _log;
     private readonly ILocalizationService? _localization;
+    private readonly IMasterRole? _master;
 
     // Grace window (ANALYSIS-A5 §4.3): a slot older than this is
     // considered "missed" and silently dropped. Configurable via
@@ -56,8 +57,10 @@ public sealed class DoseReminderService
         TimeProvider clock,
         ILogger<DoseReminderService> log,
         ILocalizationService? localization = null,
-        TimeSpan? graceWindow = null)
+        TimeSpan? graceWindow = null,
+        IMasterRole? master = null)
     {
+        _master = master;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -164,6 +167,12 @@ public sealed class DoseReminderService
     {
         var channels = medicine.NotificationChannels;
         var dispatched = NotificationChannels.None;
+        // Household step H4a: only the master sends email.
+        if ((channels & NotificationChannels.Email) != 0 && _master is not null
+            && !await _master.SendsEmailAsync(cancellationToken))
+        {
+            channels &= ~NotificationChannels.Email;
+        }
 
         if ((channels & NotificationChannels.Windows) != 0)
         {

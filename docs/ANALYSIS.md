@@ -1,7 +1,7 @@
 # MedReminder — Architecture
 
 This document describes the architecture of MedReminder **as built**
-(release line 2.10.x). It is the entry point for anyone changing the
+(release line 2.12.x). It is the entry point for anyone changing the
 code: it states the layering rules, where each responsibility lives,
 how data is stored and how the background work is scheduled.
 
@@ -95,7 +95,7 @@ UI  ──►  Application  ──►  Domain
   entry point. It owns the WinForms forms, the tray icon, the toast
   adapter, the webcam capture adapter (`WindowsCameraCaptureService`,
   the only project whose TFM carries the WinRT projections it needs)
-  and the five hosted services (§6). It changes profile data
+  and the seven hosted services (§6). It changes profile data
   only through Application use cases, never through repository write
   methods, `IUnitOfWork` or the `DbContext`;
   `UiWritePathGuardTests` in `MedReminder.Application.Tests` enforces
@@ -103,8 +103,25 @@ UI  ──►  Application  ──►  Domain
   Every form derives from `MedReminderFormBase`, which on load scales
   fonts by the profile's text size and bounds, grid rows and list
   columns by text size times display DPI / 96: the forms are built in
-  96-DPI pixels and do not set `AutoScaleMode`. Text colours come from
-  `UiColors`, which yields to the Windows high-contrast theme.
+  96-DPI pixels and do not set `AutoScaleMode`. Colours, fonts and
+  spacing come from `UiTheme` (light, dark and high-contrast palettes;
+  `UiColors` is a facade over it); on load the base form also themes
+  buttons and grids through `UiThemeApplier`, and
+  `UiToolStripRenderer` draws every menu and toolbar
+  (`docs/analysis/ANALYSIS-UI-MODERNIZATION.md`). Dialogs share
+  `DialogLayout` (form table, button bar with the primary action last,
+  inline field errors, `GrowToContent`). Messages go through
+  `UiMessageBox` (themed, buttons labelled from the dictionaries; same
+  overloads as `MessageBox.Show`), Yes/No questions through
+  `ConfirmDialog` (a wrapper over it) and multiple-choice questions
+  through `ChoiceDialog`; `Program` keeps the Windows `MessageBox` only
+  on the start-up and crash paths. The main window and Settings
+  navigate with `Controls/NavigationPane`; the Sync and Installation
+  windows use `Controls/SectionView` (section list plus heading, Ctrl+Tab
+  between sections) instead of a `TabControl`. The main window's
+  summary cards filter through the pure `MedicineListFilter`
+  (Application). Settings keeps one partial file per section
+  (`Forms/SettingsDialog.<Section>.cs`).
 - **DataImporter** is a maintainer tool that loads AIFA CSV files into
   PostgreSQL. It shares no code with the runtime and is not shipped.
   See [`DATA_IMPORTER.md`](DATA_IMPORTER.md).
@@ -172,6 +189,7 @@ is used.
 | `SyncConflict` (`SyncConflicts`) | Local conflict list, §4.5 cases only (B.1 Phase 3b) | `Kind`, `SubjectId`, `Register`, winning / losing value and device |
 | `SyncPeer` (`SyncPeers`) | Sync progress per device of the group (B.1 Phase 3c) | `DeviceId`, `Generation`, `Seq` (applied, or published for this device), checkpoint counters |
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
+| `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
@@ -226,7 +244,10 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
 - **`NotificationCycle`** — decides whether a low-stock warning is
   due: inside `ThresholdDays`, not suppressed by `EndDate` (therapy
   ending before run-out), and no successful `NotificationEvent` on the
-  current `StockEpoch`.
+  current `StockEpoch`. `EmailAlreadySent` tells whether any device of
+  the sync group already emailed for the current epoch
+  (`SentEmailNotification`): the monitor then leaves the email channel
+  out and still shows its toast.
 - **`SuspensionState`** — whether a date falls in a suspension.
 - **`LedgerDeriver`** (`Domain/Ledger`, B.1 Phase 2c) — derives a
   medicine's ledger and `StockEpoch` from its facts (stock entries,
@@ -389,15 +410,20 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   googledrive.protected          Google refresh tokens per account, DPAPI CurrentUser (B.1 Phase 4b)
   backup.settings.json           automatic backup settings (admin-managed)
   backup.state.json              last successful backup timestamp
-  user.settings.json             UI language, reference country, update check
+  user.settings.json             UI language, reference country, update check, database-query logging (device only, not replicated)
   localization\strings.<lang>.json   optional user overrides of the UI dictionaries
   logs\medreminder-<date>.log    Serilog, daily files
   catalogue\staging\             remote catalogue archive while it is downloaded and imported; emptied every run
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
+  household\
+    household.db                 household operation log and registers (household feature, step H2)
+    household.settings.json      household id, device id, generation, storage once published
+    household.protected          household key, DPAPI CurrentUser (step H3a)
+    device.protected             this device's household private key, DPAPI CurrentUser (step H3b)
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
-    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal)
+    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal) and appearance (System / Light / Dark; absent = System)
     sync.settings.json           sync group, device, generation, folder or cloud account (B.1; absent while sync is off)
     sync.protected               sync group key, DPAPI CurrentUser (B.1)
 ```
@@ -415,8 +441,98 @@ root is committed to the repository.
   PIN (PBKDF2, 100 000 iterations, per-profile salt).
 - **Roles**: `User` manages its own medicines and recipient address;
   `Admin` also manages SMTP, backup and the profile registry. The role
-  is enforced by the UI only: anyone with file-system access can edit
-  `profiles.json`. Unknown role values deserialize to `User`.
+  is enforced by the UI and the use cases only: anyone with file-system
+  access can edit `profiles.json`. Unknown role values deserialize to
+  `User`. An admin changes the role of another profile
+  (`ChangeProfileRole`); the open profile's role cannot change and one
+  admin always remains.
+- **Household** (step H2 of the household feature): profile creation,
+  rename, role, PIN and deletion go through use cases that also record
+  the change in `household\household.db` (`HouseholdLog`: HLC-stamped
+  operations and last-writer-wins registers). At start,
+  `ReconcileHousehold` records what `profiles.json` holds and the
+  household does not (the first-run wizard, the V1 migration, hand
+  edits); a profile missing from the file is never recorded as
+  removed. Until the household is replicated (step H3) the log is only
+  local.
+- **Installation settings** (step H2b): the SMTP transport and
+  password, the scheduled cloud backup policy (enabled, retention,
+  provider account) and the reference country are household settings,
+  written by `UpdateSmtpSettings`, `UpdateBackupSettings` and
+  `UpdateGeneralSettings` through `IInstallationSettingsStore` and
+  recorded as `HouseholdSettingChanged`. The SMTP password is recorded
+  protected with the local credential protector (DPAPI), never in
+  clear. The backup folders, the local raw backup, the language and the
+  update check stay device settings. The reference country is changed
+  by an administrator only. The start-up reconciliation also records
+  settings changed outside the use cases (an import restores the
+  files).
+- **Household replication** (step H3a): `HouseholdSync` publishes the
+  household on a storage (a household group, `docs/SYNC-FORMAT.md` §9)
+  or joins one with the household passphrase, then publishes and
+  applies segments like a profile group, without checkpoints.
+  `HouseholdProjection` writes the winners into `profiles.json` (name,
+  role and PIN of the profiles this installation already has; it never
+  creates or deletes one) and into the settings files. Not yet wired to
+  the UI or the background service (step H3d).
+- **Household keys** (step H3b): each device has an ECDH P-256 key pair
+  (`device.protected`); `HouseholdKeyring` wraps the group key of each
+  synced profile for the devices that hold it (grants) and for a
+  recovery key pair whose private key only the household passphrase
+  opens (escrow). Publishing, and every run, adopts the synced profiles
+  of the installation (grant to itself, escrow). Format:
+  `docs/SYNC-FORMAT.md` §9.4.
+- **Installation join** (step H3c): an admin offers the household and
+  selected profiles with an `mrpair2` code (`HouseholdPairingOffers`),
+  or approves on the joining device with an admin PIN after the
+  household passphrase (escrow). `JoinInstallation` joins the household,
+  then builds each granted profile from its group in
+  `profiles\.join-<guid>\` and moves it to `profiles\<id>\`
+  (`IHouseholdProfileInstaller`) before adding it to `profiles.json`
+  under its household id.
+- **Installation window** (step H3d-1): Tools → Installation…
+  (administrators only; so is Tools → Sync…) publishes the household,
+  lists its devices, shows `mrpair2` codes and joins an existing
+  installation. `HouseholdHostedService` runs the household sync every
+  15 minutes (`Household:IntervalMinutes`).
+- **Master device** (step H4a): the household records `MasterElected`,
+  `MasterActivated` and `MasterReleased`; `MasterRules` decide who
+  sends email and runs the cloud backup (`IMasterRole`, used by
+  `MedicationMonitor`, `DoseReminderService` and the backup scheduler):
+  the active master within a 24-hour lease counted from its last
+  household sync, or every device while no master is elected. Each
+  household run releases (outgoing master) or activates (elected device).
+  Step H4b: an election grants the elected device the profiles the
+  electing device holds; the elected device activates only after an
+  administrator confirmed the handover wizard there (`MasterHandover`,
+  `ConfirmedElection` in `household.settings.json`), except for the
+  publishing device and the active master elected again.
+  Step H4c: on the active master, `MasterProfilesHostedService` builds
+  the services of each other profile of the device (its database, sync
+  state and notification recipients; the process's cloud accounts,
+  registry and household store) every 15 minutes, applies the schema
+  patches, syncs the profile, runs the catch-up and the low-stock and
+  dose checks by email only, and syncs again. On a device that is not the
+  master, a prescription request offers the mail client only and the
+  SMTP test is refused.
+- **Device removal** (step H5a, D-15 option A): an administrator removes
+  a device from the installation window; the household moves to a new
+  key, passphrase, recovery key and generation (`HouseholdSync.
+  RemoveDeviceAsync`), and each remaining device takes the new key with
+  the new passphrase or a code (`RekeyAsync`), carrying its own pending
+  operations over. `docs/SYNC-FORMAT.md` §9.3. Step H5b (`RemoveDevice`):
+  the profile groups the removed device held are rotated with a random
+  passphrase never shown (`IProfileGroupRotation`, `ProfileServices`),
+  the new keys are granted to the other holders, and each remaining
+  device takes them from its grant (`ProfileServices.
+  AdoptRotatedKeyAsync`: at start for the open profile, in the master's
+  background checks for the others).
+- **First-run join** (step H3d-2): the first-run wizard offers "Join an
+  existing installation…". The boot flow then builds a host it never
+  starts, with a placeholder profile (`SetupProfile`,
+  `%LOCALAPPDATA%\MedReminder\setup\`, removed afterwards, its
+  database never opened), and shows the installation window in setup
+  mode; the start goes on with the profiles the join brought.
 - The profile is chosen once at boot (§7) and exposed as the
   singleton `ICurrentProfile`. Switching profile restarts the process
   (`IApplicationRestarter`).
@@ -446,7 +562,8 @@ never stored in these files.
 The profile's `ui.settings.json` is not part of this chain: it is read
 once by `Program`, after the profile is chosen and before the main
 window exists (`ProfileUiSettingsFile`, Infrastructure.Portable). A
-missing, unreadable or unknown value reads as Normal.
+missing, unreadable or unknown value reads as the default (Normal,
+System).
 
 The donation configuration is read from `assets/donations.settings.json`,
 embedded in the Infrastructure assembly; a missing or invalid section
@@ -456,7 +573,7 @@ disables the feature.
 
 ## 6. Background processing
 
-Five `BackgroundService`s in `MedReminder.UI/Hosting`. Each tick opens
+Seven `BackgroundService`s in `MedReminder.UI/Hosting`. Each tick opens
 its own DI scope, so the scoped `DbContext` is never shared between
 ticks. A failing tick is logged and does not stop the service.
 
@@ -467,6 +584,8 @@ ticks. A failing tick is logged and does not stop the service.
 | `AutomaticBackupHostedService` | 30 s initial delay, then every 15 min | Daily backup at or after `Backup:PreferredTime` (§8) |
 | `CatalogueRefreshHostedService` | Once at startup; registered only when `Catalogue:Enabled` is true | Imports each embedded catalogue snapshot whose version is newer, one transaction per country; then, after the startup update check, `RemoteCatalogueRefresher` for the remote feeds of the reference country and EU, one scope per feed (§9.5) |
 | `SyncHostedService` | 15 s initial delay, then every `Sync:IntervalMinutes` (default 5, min 1) and 10 s after local changes; idle while sync is off | Starts a pending new generation, then `SyncEngine.RunAsync` (B.1 Phase 3d) |
+| `HouseholdHostedService` | 20 s initial delay, then every `Household:IntervalMinutes` (default 15, min 1), or at once from the Installation window; idle while the installation is not on a storage | `HouseholdSync.RunAsync` (§5.2, step H3d) |
+| `MasterProfilesHostedService` | 90 s initial delay, then every `Master:ProfilesIntervalMinutes` (default 15, min 1); idle unless this device is the active master | For each other profile of the device: schema patches, profile sync, catch-up, low-stock and dose checks by email only, sync again (§5.2, step H4c) |
 
 The Application services (`MedicationMonitor`, `DoseReminderService`,
 `ConsumptionCatchUp`) have no scheduling code and are tested with a
@@ -493,7 +612,9 @@ with the "Check now" command and with every use case through
    profile, else the profile picker. A profile with a PIN requires
    `PinPromptForm`.
 5. Read the profile's text size (`ui.settings.json`) into
-   `MedReminderFormBase.TextScale`; the windows of step 4 use Normal.
+   `MedReminderFormBase.TextScale`, and its appearance into
+   `Application.SetColorMode` and the strip renderer; the windows of
+   step 4 use Normal and follow Windows.
 6. Build the host (§5.3, DI registration via
    `AddMedReminderApplication` and `AddMedReminderInfrastructure`),
    run `DatabaseInitializer` (§8.1), start the hosted services.
@@ -535,7 +656,8 @@ start:
    whose absence triggers the re-freeze (`LedgerFreeze`, also applied
    to every import); then the B.1 Phase 2d patch: `FactRetractions`,
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
-   `NotificationEvents.EpochFactId`; then `SyncOperations` with its two
+   `NotificationEvents.EpochFactId`; then `SentEmailNotifications`
+   (household step H1); then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);
    then `SyncPeers` (B.1 Phase 3c).
@@ -718,7 +840,12 @@ PDF package is used. Medicine notes are included only on request.
   separation between people needs separate Windows accounts, as the
   user guides state.
 - Serilog: `Information` level, daily files, 30 files retained, 10 MB
-  per file.
+  per file. EF Core command entries
+  (`Microsoft.EntityFrameworkCore.Database.Command`: SQL text and
+  duration) pass only while `UI:LogDatabaseQueries` is true (Settings →
+  General, administrators only, applied without a restart; a filter on
+  `SerilogLoggerProvider` in `Program.BuildHost`). Sensitive data
+  logging is never enabled, so parameter values are not logged.
 
 ---
 
@@ -751,7 +878,7 @@ Where the implementation departed from the plan:
 | One database at the data-folder root | One database per profile (§5.2) |
 | `ApplicationSetting` key/value table | JSON settings files bound through `IOptions<T>` (§5.3) |
 | Backup = file copy after WAL checkpoint | SQLite online-backup API, plus encrypted `.mrz` export and cloud folder (§8) |
-| One hosted service | Five hosted services (§6) |
+| One hosted service | Seven hosted services (§6) |
 | Italian-only UI | Five UI languages (§9.3) |
 | 4 projects, 3 test projects | 6 projects, 6 test projects (§2) |
 
@@ -768,6 +895,7 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-A1-STEPPED-TAPER.md`](analysis/ANALYSIS-A1-STEPPED-TAPER.md) | Multi-stage tapering |
 | [`ANALYSIS-A2-BARCODE-SCAN.md`](analysis/ANALYSIS-A2-BARCODE-SCAN.md) | Barcode scanning: USB HID scanner (phase 1), webcam (phase 2), restock by scan (phase 3) |
 | [`ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md) | Mobile client with desktop synchronization: desktop side shipped (phases 1–4), mobile open |
+| [`ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`](analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md) | Household of devices with a master device, replicated installation settings, master handover, device removal (steps H0–H5 shipped, PR #129) |
 | [`ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md`](analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md) | Caregiver email recipient |
 | [`ANALYSIS-A5-DOSE-TIME-REMINDER.md`](analysis/ANALYSIS-A5-DOSE-TIME-REMINDER.md) | Dose-time reminder |
 | [`ANALYSIS-A6-DONATION-SUPPORT.md`](analysis/ANALYSIS-A6-DONATION-SUPPORT.md) | Donation links |
@@ -775,6 +903,9 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-C3PLUS-CLOUD-BACKUP.md`](analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md) | Cloud-folder backup and restore |
 | [`ANALYSIS-C3PP-CLOUD-PROVIDERS.md`](analysis/ANALYSIS-C3PP-CLOUD-PROVIDERS.md) | Storage abstraction and native cloud providers |
 | [`ANALYSIS-DRUG-CATALOGUE.md`](analysis/ANALYSIS-DRUG-CATALOGUE.md) | Reference medicine catalogue |
+| [`ANALYSIS-CATALOGUE-REMOTE-FEED.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md) | Remote AIFA catalogue feed refreshed at startup |
+| [`ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md) | Remote EU (EMA), ES (AEMPS) and FR (BDPM) catalogue feeds |
+| [`ANALYSIS-UI-MODERNIZATION.md`](analysis/ANALYSIS-UI-MODERNIZATION.md) | UI restyling and redesign: theme, dark mode, main window, Settings sections, dialog template |
 | [`ANALYSIS-WEBSITE.md`](analysis/ANALYSIS-WEBSITE.md) | Public website |
 
 Backlog: [`EVOLUTION.md`](EVOLUTION.md); shipped items:

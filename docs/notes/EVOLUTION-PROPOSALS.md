@@ -9,6 +9,8 @@ sequence (§2.0). An item here becomes work only once it is approved
 and moved into `EVOLUTION.md` or a dedicated analysis document.
 
 Prepared on 2026-09-25 and reconciled against the tree at that date.
+Status marks updated on 2026-10-01 at v2.12.0 (§8); the ranking itself
+is unchanged.
 
 ---
 
@@ -39,6 +41,7 @@ are not ranked:
 | A3 — Caregiver notifications | Shipped | `EVOLUTION-DONE.md` §3.3 |
 | C.3++ Phase 1 — `IArchiveStorage` + `LocalFolderArchiveStorage` | Shipped (PR #56) | `EVOLUTION-DONE.md` §6 |
 | Public website v1 | Shipped in `vger70/medreminder-website` | `EVOLUTION-DONE.md` §10 |
+| C.3++ Phase 2 — OneDrive and Google Drive (ranked #17 below) | Shipped inside B.1 Phase 4 (v2.8.0) | `EVOLUTION-DONE.md` §6 |
 
 The website content refresh is already prepared in
 `docs/prompt/PROMPT-WEBSITE-CONTENT-REFRESH.md` and is not repeated
@@ -61,7 +64,7 @@ a proposal, and is not merged here.
 | **4** | Prescription request draft for the doctor **[DONE]** | 1 | 2–3 days | Chronic patients, caregivers | EV-2 |
 | 5 | Weekly pill-organizer preparation | 1 | 1 week | Elderly users, caregivers | EV-2 |
 | **6** | Guided stock count and reconciliation **[DONE]** | 2 | 3–5 days | All users | EV-2 |
-| 7 | B.1 — Mobile companion (.NET MAUI) | 2 | 2–4 person-months | Users away from the PC | EV-1 |
+| 7 | B.1 — Mobile companion (.NET MAUI) **[desktop side DONE, mobile open]** | 2 | 2–4 person-months | Users away from the PC | EV-1 |
 | **8** | Therapy calendar / timeline view **[DONE]** | 2 | 1–2 weeks | All users | EV-2 |
 | **9** | Printable medication card (PDF) **[DONE]** | 2 | 1 week | Patients seeing several clinicians | EV-2 |
 | 10 | Storage location per medicine | 3 | 1–2 days | Families, many medicines | EV-2 |
@@ -71,10 +74,10 @@ a proposal, and is not merged here.
 | 14 | Medicine cost tracking | 3 | 3–5 days | Users tracking health expenses | EV-2 |
 | 15 | Windows 11 widget | 4 | 1–2 weeks | Desktop-centric users | EV-2 |
 | 16 | WebDAV backup target (self-hosted) | 4 | 1 week | Privacy-focused, NAS owners | EV-2 |
-| 17 | C.3++ Phase 2 — native cloud providers | 4 | [UNCERTAIN] | Mobile companion users | EV-1 |
+| **17** | C.3++ Phase 2 — native cloud providers **[DONE]** | 4 | [UNCERTAIN] | Mobile companion users | EV-1 |
 | 18 | Command palette (`Ctrl+K`) | 4 | 3–5 days | Power users | EV-2 |
 | 19 | Command-line interface | 4 | 1–2 weeks | Power users, administrators | EV-2 |
-| 20 | C.1 — End-to-end encrypted sync service | 4 | Months + running cost | Multi-device users | EV-1 |
+| 20 | C.1 — End-to-end encrypted sync service **[reduced to optional relay]** | 4 | Months + running cost | Multi-device users | EV-1 |
 
 Tiers:
 
@@ -127,6 +130,10 @@ the main audience for chronic-therapy management.
 
 **Proposal.** A setting that enlarges fonts in grids and dialogs,
 increases button size and contrast, and simplifies navigation.
+
+**Follow-up.** The UI modernisation (v2.12.0) added a per-profile
+appearance (Same as Windows, Light, Dark), larger default buttons and
+inline validation errors (`EVOLUTION-DONE.md` §12.4).
 
 **Notes.**
 
@@ -219,6 +226,13 @@ through `.mrz` archives.
 **Why not Tier 1.** High value, but 2–4 person-months, and without
 live sync the phone and PC diverge between manual transfers.
 
+**Update 2026-10-01.** B.1 was approved with mandatory sync
+(`ANALYSIS-B1-MOBILE-SYNC.md`): the desktop side (encrypted sync over a
+folder, OneDrive or Google Drive) shipped in v2.7.0–v2.9.0, and the
+household of devices in v2.12.0. The phone client (Phases 5–7, with
+household step H6) is open and waits for the Android spikes S1–S4
+(draft PR #106).
+
 ### 4.3 Therapy calendar / timeline view **[DONE]**
 
 **Goal.** See at a glance what the table view cannot show: planned
@@ -263,7 +277,11 @@ example an over-the-counter painkiller).
 
 **Notes.** Each profile has its own database
 (`profiles\<id>\medreminder.db`). A shared stock needs a store outside
-the per-profile databases and a rule for concurrent updates. This
+the per-profile databases and a rule for concurrent updates.
+The household of devices (v2.12.0) shares profiles and installation
+settings between PCs, not the stock of one medicine between profiles;
+its household store and operation log are a possible home for a shared
+stock [INFERRED]. This
 contradicts the multi-user isolation baseline (`ANALYSIS-MULTI-USER.md`)
 and is far more than the draft suggests; the effort above is an
 estimate [INFERRED]. Needs an analysis document before any work.
@@ -324,7 +342,12 @@ servers. Fits C.3++ Phase 3, which already lists Nextcloud
 desktop sync client, which already works with the C.3+ synced-folder
 model.
 
-### 6.3 C.3++ Phase 2 — native cloud providers
+### 6.3 C.3++ Phase 2 — native cloud providers **[DONE]**
+
+Shipped for OneDrive and Google Drive inside B.1 Phase 4 (v2.8.0),
+for both cloud backups and sync (`EVOLUTION-DONE.md` §6). Dropbox and
+the enterprise providers remain C.3++ Phase 3, optional
+(`EVOLUTION.md` §6).
 
 OneDrive, Google Drive, Dropbox adapters behind `IArchiveStorage`.
 Decided: do not start before B.1 creates a concrete requirement
@@ -350,12 +373,41 @@ Zero-knowledge sync with a dedicated backend. Documented in
 `EVOLUTION.md` §8. Turns the app into a service with operating cost and
 GDPR obligations; decided not to evaluate before B.1.
 
+**Update 2026-10-01.** B.1 reaches end-to-end encrypted sync without a
+backend, through the user's own storage; C.1 is reduced to an optional
+hosted relay (`EVOLUTION.md` §2.0, §8).
+
 ---
 
 ## 7. Relation to the decided sequence
 
 The decided sequence in `EVOLUTION.md` §2.0 (A2 → B.1 → C.3++ Phase 2
-→ C.1) is unaffected by this note. If the product owner adopts this
+→ C.1 at the time of writing; B.1 mobile phases → C.1 relay as of
+2026-10-01) is unaffected by this note. If the product owner adopts this
 ranking, the Tier 1 items that are new (3.1, 3.2, 3.4, 3.5) are
 independent of the multi-device track and can be inserted before or
 after A2 without breaking any precondition.
+
+---
+
+## 8. Status on 2026-10-01 (v2.12.0)
+
+| # | Proposal | Status |
+| --- | --- | --- |
+| 1 | Package expiry tracking | Not started |
+| 2 | Large text mode | Shipped (#108, v2.9.1); appearance and dark mode added in v2.12.0 |
+| 3 | A2 — barcode scan | Shipped (#72, #110, #111; v2.5.2, v2.10.0) |
+| 4 | Prescription request draft | Shipped (#74) |
+| 5 | Weekly pill-organizer preparation | Not started; interaction with A5 needs a decision |
+| 6 | Guided stock count | Shipped (#73) |
+| 7 | B.1 — mobile companion | Desktop side shipped (v2.7.0–v2.9.0, household v2.12.0); mobile phases 5–7 open |
+| 8 | Therapy timeline | Shipped (#75) |
+| 9 | Printable medication card | Shipped (#107, v2.9.1) |
+| 10–16 | Storage location, shared household stock, encryption at rest, text-to-speech, cost tracking, Windows 11 widget, WebDAV target | Not started |
+| 17 | C.3++ Phase 2 | Shipped inside B.1 Phase 4 (v2.8.0) |
+| 18–19 | Command palette, CLI | Not started |
+| 20 | C.1 | Reduced to an optional hosted relay; not started |
+
+Shipped in the meantime without a rank here: the remote catalogue
+feeds (v2.11.0), the household of devices with a master device and
+the UI modernisation (v2.12.0); see `EVOLUTION-DONE.md` §12.

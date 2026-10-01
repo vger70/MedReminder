@@ -32,6 +32,8 @@ public class OperationCodecTests
         new FactRetracted(M, F, FactKind.StockCount, Guid.Parse("0c0c0c0c-0000-0000-0000-000000000004"), At),
         new MedicineDeleted(M, At),
         new ProfileSettingChanged(ProfileSetting.CaregiverAddress, "carer@example.org"),
+        new EmailNotificationSent(M, F, 3, Guid.Parse("0a0a0a0a-0000-0000-0000-000000000004"), At),
+        new HouseholdLinked(Guid.Parse("0d0d0d0d-0000-0000-0000-000000000005"), At),
     };
 
     [Theory]
@@ -84,6 +86,8 @@ public class OperationCodecTests
         {
             MedicineDeleted => 2,
             ProfileSettingChanged => 3,
+            EmailNotificationSent => 4,
+            HouseholdLinked => 5,
             _ => 1,
         };
 

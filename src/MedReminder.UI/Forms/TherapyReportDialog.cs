@@ -42,7 +42,6 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
         MaximizeBox = true;
-        Font = new Font("Segoe UI", 9.75F);
 
         _reportBox = new TextBox
         {
@@ -86,35 +85,22 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         optionsPanel.Controls.Add(paperLabel);
         optionsPanel.Controls.Add(_paper);
 
-        var copyButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.Copy"), AutoSize = true, Height = 32 };
-        var saveButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.Save"), AutoSize = true, Height = 32 };
-        var pdfButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.SavePdf"), AutoSize = true, Height = 32 };
-        var printButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.Print"), AutoSize = true, Height = 32 };
-        var closeButton = new Button { Text = _loc.Get("Ui.TherapyReportDialog.Close"), DialogResult = DialogResult.OK, AutoSize = true, Height = 32 };
+        var copyButton = DialogLayout.Button(_loc.Get("Ui.TherapyReportDialog.Copy"));
+        var saveButton = DialogLayout.Button(_loc.Get("Ui.TherapyReportDialog.Save"));
+        var pdfButton = DialogLayout.Button(_loc.Get("Ui.TherapyReportDialog.SavePdf"));
+        var printButton = DialogLayout.Button(_loc.Get("Ui.TherapyReportDialog.Print"));
+        var closeButton = DialogLayout.Button(_loc.Get("Ui.TherapyReportDialog.Close"), DialogResult.OK);
 
         copyButton.Click += (_, _) => CopyToClipboard();
         saveButton.Click += (_, _) => SaveToFile();
         pdfButton.Click += (_, _) => SaveAsPdf();
         printButton.Click += (_, _) => PrintReport();
 
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(closeButton);
-        buttonPanel.Controls.Add(printButton);
-        buttonPanel.Controls.Add(pdfButton);
-        buttonPanel.Controls.Add(saveButton);
-        buttonPanel.Controls.Add(copyButton);
+        var buttonPanel = DialogLayout.ButtonBar(this, closeButton, closeButton, printButton, pdfButton, saveButton, copyButton);
 
         Controls.Add(_reportBox);
         Controls.Add(optionsPanel);
         Controls.Add(buttonPanel);
-        AcceptButton = closeButton;
-        CancelButton = closeButton;
     }
 
     // A4 everywhere except regions that use US units (Letter).
@@ -140,7 +126,7 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.TherapyReportDialog.CopyError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -162,7 +148,7 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.TherapyReportDialog.SaveError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -176,7 +162,7 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
     {
         if (!IsPdfPrinterInstalled())
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.TherapyReportDialog.PdfPrinterMissing", PdfPrinterName),
                 _loc.Get("Ui.TherapyReportDialog.PdfPrinterMissing.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -217,14 +203,14 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (InvalidPrinterException)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.TherapyReportDialog.PdfPrinterMissing", PdfPrinterName),
                 _loc.Get("Ui.TherapyReportDialog.PdfPrinterMissing.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.TherapyReportDialog.PdfError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -256,14 +242,14 @@ internal sealed class TherapyReportDialog : MedReminderFormBase
         }
         catch (InvalidPrinterException ex)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.TherapyReportDialog.NoPrinter", ex.Message),
                 _loc.Get("Ui.TherapyReportDialog.NoPrinter.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.TherapyReportDialog.PrintError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }

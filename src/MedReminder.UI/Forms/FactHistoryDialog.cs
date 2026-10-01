@@ -38,7 +38,6 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var hint = new Label
         {
@@ -65,36 +64,16 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
         _list.Columns.Add(_loc.Get("Ui.FactHistoryDialog.Column.Deletion"), 170);
         _list.SelectedIndexChanged += (_, _) => UpdateButtons();
 
-        _deleteButton = new Button
-        {
-            Text = _loc.Get("Ui.FactHistoryDialog.Delete"),
-            AutoSize = true,
-            Height = 32,
-            Enabled = false,
-        };
+        _deleteButton = DialogLayout.Button(_loc.Get("Ui.FactHistoryDialog.Delete"));
+        _deleteButton.Enabled = false;
         _deleteButton.Click += async (_, _) => await DeleteSelectedAsync();
-        var closeButton = new Button
-        {
-            Text = _loc.Get("Common.Close"),
-            DialogResult = DialogResult.OK,
-            AutoSize = true,
-            Height = 32,
-        };
-
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(closeButton);
-        buttons.Controls.Add(_deleteButton);
+        var closeButton = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.OK);
+        // Close is the only way out; Delete sits to its left.
+        var buttons = DialogLayout.ButtonBar(this, closeButton, closeButton, _deleteButton);
 
         Controls.Add(_list);
         Controls.Add(hint);
         Controls.Add(buttons);
-        CancelButton = closeButton;
 
         Shown += async (_, _) => await ReloadAsync();
     }
@@ -116,7 +95,7 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, _loc.Get("Ui.MainForm.Error.FactHistory"),
+            UiMessageBox.Show(this, ex.Message, _loc.Get("Ui.MainForm.Error.FactHistory"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
@@ -142,10 +121,10 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
     {
         if (Selected is not { CanRetract: true } item) return;
 
-        var confirm = MessageBox.Show(this,
+        var confirm = ConfirmDialog.Show(_loc, this,
             _loc.Get("Ui.FactHistoryDialog.Confirm"),
             _loc.Get("Ui.FactHistoryDialog.Confirm.Title"),
-            MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+            MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
         if (confirm != DialogResult.Yes) return;
 
         try
@@ -156,7 +135,7 @@ internal sealed class FactHistoryDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, _loc.Get("Ui.FactHistoryDialog.Error.Delete"),
+            UiMessageBox.Show(this, ex.Message, _loc.Get("Ui.FactHistoryDialog.Error.Delete"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         await ReloadAsync();

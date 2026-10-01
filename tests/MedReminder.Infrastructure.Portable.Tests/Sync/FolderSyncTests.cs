@@ -348,6 +348,29 @@ public sealed class FolderSyncTests : IDisposable
         result.Problems.Should().ContainSingle(p => p.Contains("more than 24 hours ahead", StringComparison.Ordinal));
     }
 
+    // Household step H1: the low-stock email of an epoch is sent once per
+    // group, while every device shows its own toast.
+    [Fact]
+    public async Task An_email_sent_by_one_device_is_not_sent_again_by_another_after_sync()
+    {
+        var a = await CreateGroupAsync();
+        var id = await a.RunAsync(sp => sp.GetRequiredService<AddMedicine>().ExecuteAsync(new AddMedicineCommand(
+            "Ramipril", "tablet", 1m, 2, new DateOnly(2026, 9, 10), 7,
+            NotificationChannels.Windows | NotificationChannels.Email, InitialQuantity: 6m), CancellationToken.None));
+        var b = await JoinAsync(a, "B");
+
+        await a.RunAsync(sp => sp.GetRequiredService<MedicationMonitor>().RunAsync(CancellationToken.None));
+        a.Emails.Sent.Should().ContainSingle();
+        await SyncAllAsync([a, b]);
+
+        await b.RunAsync(sp => sp.GetRequiredService<MedicationMonitor>().RunAsync(CancellationToken.None));
+
+        b.Emails.Sent.Should().BeEmpty();
+        b.Toasts.Shown.Should().ContainSingle();
+        (await b.RunAsync(sp => sp.GetRequiredService<ISentEmailNotificationRepository>()
+            .GetLatestForMedicineAsync(id, CancellationToken.None))).Should().NotBeNull();
+    }
+
     [Fact]
     public async Task A_join_that_fails_leaves_no_device_record_behind()
     {

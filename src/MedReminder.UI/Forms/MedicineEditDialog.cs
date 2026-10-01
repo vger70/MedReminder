@@ -151,7 +151,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
         _nameBox = new MedicineAutocompleteBox { Dock = DockStyle.Fill };
         _ingredientBox = new MedicineAutocompleteBox { Dock = DockStyle.Fill };
@@ -272,7 +271,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(12),
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
+        // The label column fits the longest label in the current
+        // language: a fixed width split German labels mid-word
+        // (ANALYSIS-UI-MODERNIZATION baseline L1).
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Name"), BuildNameRow());
@@ -425,7 +427,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         if (string.IsNullOrWhiteSpace(_nameBox.InputText))
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.Validation.NameRequired"),
                 _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -434,7 +436,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         }
         if (string.IsNullOrWhiteSpace(_unitBox.Text))
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.Validation.UnitRequired"),
                 _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -443,7 +445,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         }
         if (_hasEndDate.Checked && _endDatePicker.Value.Date < _startDatePicker.Value.Date)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.EndBeforeStart"),
                 _loc.Get("Ui.MedicineEditDialog.InconsistentData.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -471,7 +473,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             initialSchedule = _schedulePanel.TryBuildSchedule(out var scheduleError);
             if (initialSchedule is null)
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     scheduleError ?? _loc.Get("Ui.Schedule.Validation.Generic"),
                     _loc.Get("Ui.MedicineEditDialog.InconsistentData.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -698,7 +700,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             // async void handler: never let the exception escape.
             _barcodeContext.Logger.LogError(ex, "Catalogue lookup after a barcode scan failed.");
             if (IsDisposed) return;
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.ScanBarcode.LookupError"),
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -711,7 +713,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _barcodeContext.Logger.LogInformation(
                 "Scanned code not found in the {Country} catalogue.", _catalogueContext.Country.Value);
             // A MessageBox supports Ctrl+C, so the user can copy the code.
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.ScanBarcode.NotInCatalogue", code),
                 _loc.Get("Common.Information"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -904,7 +906,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private static void AddRow(TableLayoutPanel table, string label, Control input)
     {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
+        // Top-aligned with the field's first line: some rows are taller
+        // than their field (L6), and multi-line fields (notes, dose
+        // slots) should keep their label at the top.
+        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Top | AnchorStyles.Left, Margin = new Padding(UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.M, UiTheme.Space.XS) };
         table.RowCount++;
         table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         table.Controls.Add(lbl, 0, table.RowCount - 1);
@@ -980,7 +985,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MedicineEditDialog.Documents.OpenError", ex.Message),
                 _loc.Get("Ui.MedicineEditDialog.MissingData.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);

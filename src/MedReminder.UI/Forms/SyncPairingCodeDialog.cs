@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Household.Remote;
 using MedReminder.Application.Sync.Remote;
 
 namespace MedReminder.UI.Forms;
@@ -7,24 +8,29 @@ namespace MedReminder.UI.Forms;
 // docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §6.1): to join a group without
 // the passphrase, or to take the new key after a rotation. The device
 // name is asked only when joining.
+// Household step H3d: with household set, it takes an installation code
+// (mrpair2) instead of a group code.
 internal sealed class SyncPairingCodeDialog : MedReminderFormBase
 {
+    private readonly Label _error = DialogLayout.ErrorLabel();
     private readonly ILocalizationService _loc;
+    private readonly bool _household;
     private readonly TextBox _code;
     private readonly TextBox? _name;
 
-    public SyncPairingCodeDialog(ILocalizationService localization, string? defaultDeviceName)
+    public SyncPairingCodeDialog(ILocalizationService localization, string? defaultDeviceName, bool household = false)
     {
         _loc = localization;
+        _household = household;
 
         Text = _loc.Get("Ui.SyncDialog.PairingCode.Title");
         Width = 560;
         Height = defaultDeviceName is null ? 280 : 320;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
+        DialogLayout.GrowToContent(this);
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        Font = new Font("Segoe UI", 9.75F);
 
         var layout = new TableLayoutPanel
         {
@@ -37,7 +43,7 @@ internal sealed class SyncPairingCodeDialog : MedReminderFormBase
 
         var hint = new Label
         {
-            Text = _loc.Get("Ui.SyncDialog.PairingCode.Hint"),
+            Text = _loc.Get(household ? "Ui.HouseholdDialog.Code.Hint" : "Ui.SyncDialog.PairingCode.Hint"),
             AutoSize = true,
             MaximumSize = new Size(510, 0),
             Margin = new Padding(0, 0, 0, 10),
@@ -64,29 +70,24 @@ internal sealed class SyncPairingCodeDialog : MedReminderFormBase
         layout.RowCount = row + 1;
         for (var i = 0; i < row; i++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        // Inline error in the filler row, under the code (F9).
+        layout.Controls.Add(_error, 1, row);
 
-        var ok = new Button { Text = _loc.Get("Common.Ok"), AutoSize = true, Height = 32 };
+        var ok = DialogLayout.Button(_loc.Get("Common.Ok"));
         ok.Click += (_, _) => Accept();
-        var cancel = new Button
-        {
-            Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, AutoSize = true, Height = 32,
-        };
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(cancel);
-        buttons.Controls.Add(ok);
+        var cancel = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
+        var buttons = DialogLayout.ButtonBar(this, ok, cancel);
+        // Enter types a new line in the multi-line code box; no default
+        // button, as before.
+        AcceptButton = null;
 
         Controls.Add(layout);
         Controls.Add(buttons);
-        CancelButton = cancel;
     }
 
     public SyncPairingCode? Code { get; private set; }
+
+    public HouseholdPairingCode? HouseholdCode { get; private set; }
 
     public string DeviceName => _name?.Text.Trim() ?? string.Empty;
 
@@ -94,12 +95,17 @@ internal sealed class SyncPairingCodeDialog : MedReminderFormBase
     {
         string? error = null;
         if (_name is not null && DeviceName.Length == 0) error = _loc.Get("Ui.SyncDialog.Passphrase.Error.Name");
+        else if (_household)
+        {
+            if (HouseholdPairingCode.TryParse(_code.Text, out var household)) HouseholdCode = household;
+            else error = _loc.Get("Ui.HouseholdDialog.Code.Invalid");
+        }
         else if (!SyncPairingCode.TryParse(_code.Text, out var code)) error = _loc.Get("Ui.SyncDialog.PairingCode.Invalid");
         else Code = code;
 
         if (error is not null)
         {
-            MessageBox.Show(this, error, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            DialogLayout.ShowError(_error, error, _code);
             return;
         }
         _code.Text = string.Empty;

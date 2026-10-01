@@ -45,7 +45,10 @@ scheduled dose time.
   automatic stock adjustment when "taken".
 - Reference catalogue for medicine look-up (Italy, EU centralised
   authorisations, Spain, France), with links to the official
-  leaflet for Italian medicines.
+  leaflet for Italian medicines. At startup, with the update check
+  on, the catalogue of the reference country and the EU one are
+  refreshed from the monthly remote feed published in this
+  repository (data only, nothing is executed).
 - Printable therapy report for the doctor.
 
 **Notifications**
@@ -66,6 +69,21 @@ scheduled dose time.
 - Several people on one installation, each with a separate
   database; administrator and user roles; optional PIN per profile.
 
+**Several devices**
+
+- Sync of a profile between PCs through an end-to-end encrypted
+  group on OneDrive, Google Drive or a shared folder (no server):
+  medicines, stock, intakes, profile name and recipients; conflicts
+  listed, lost or stolen devices removed with a key change.
+- Shared installation: profiles, roles, PINs, email account, cloud
+  backup policy and reference country replicated to every device;
+  each device holds only the profiles an administrator gives it;
+  devices join with a short-lived code or the installation
+  passphrase.
+- One master device sends every email and runs the cloud backup;
+  planned handover with a wizard, takeover of a lost master, device
+  removal with new installation and profile keys.
+
 **Backup, export and restore**
 
 - Daily automatic backup of every profile's database to a local
@@ -82,17 +100,29 @@ scheduled dose time.
 
 **Application**
 
-- UI localized in English, Italian, French, Spanish and German.
+- Main window with a summary of empty, running-low and suspended
+  medicines (click to filter), a navigation pane and a search box
+  (Ctrl+F).
+- Settings, Sync and Installation windows list their sections on
+  the left; dialogs share one layout, with errors shown under the
+  fields.
+- Per-profile appearance (same as Windows, light, dark; Windows
+  high-contrast themes respected) and text size (normal, large,
+  extra large).
+- UI localized in English, Italian, French, Spanish and German,
+  including message and confirmation buttons.
 - User guide integrated in the app (F1), rendered with WebView2, in
   the same five languages.
 - System tray icon with Open / Check now / Settings / Exit menu;
   closing the window minimizes to tray.
 - Optional automatic startup with Windows (per-user, no UAC).
 - Update check against GitHub Releases (at startup, can be turned
-  off; nothing is downloaded or installed automatically).
+  off; a new version is never downloaded or installed automatically).
+  The same setting governs the remote catalogue refresh.
 - Optional "Support Development" dialog opening Stripe or PayPal
   hosted payment pages; hidden unless configured.
-- Structured rolling log (daily, 30-day retention).
+- Structured rolling log (daily, 30-day retention); optional,
+  administrator-only logging of database queries for diagnostics.
 
 ## Requirements
 
@@ -106,7 +136,7 @@ scheduled dose time.
 
 | Layer | Technology |
 |---|---|
-| UI | WinForms on .NET 10 (`net10.0-windows`) |
+| UI | WinForms on .NET 10 (`net10.0-windows10.0.19041.0`) |
 | Application / Domain | C# 12+, nullable + implicit usings |
 | Persistence | SQLite via EF Core 10 |
 | SMTP | MailKit 4.x |
@@ -131,12 +161,14 @@ MedReminder.sln
 src/
   MedReminder.Domain/           pure entities and calculations  (net10.0)
   MedReminder.Application/      use cases and ports             (net10.0)
-  MedReminder.Infrastructure/   SQLite/MailKit/DPAPI/export     (net10.0-windows)
-  MedReminder.UI/               WinForms + host                 (net10.0-windows)
-  MedReminder.DataImporter/     reference-catalogue import tool
+  MedReminder.Infrastructure.Portable/  SQLite/EF Core, archive cipher, localization (net10.0)
+  MedReminder.Infrastructure/   MailKit/DPAPI/registry/export   (net10.0-windows)
+  MedReminder.UI/               WinForms + host                 (net10.0-windows10.0.19041.0)
+  MedReminder.DataImporter/     reference-catalogue import tool (net10.0)
 tests/
   MedReminder.Domain.Tests/
   MedReminder.Application.Tests/
+  MedReminder.Infrastructure.Portable.Tests/
   MedReminder.Infrastructure.Tests/
   MedReminder.UI.Tests/
   MedReminder.DataImporter.Tests/
@@ -149,6 +181,7 @@ docs/
   EVOLUTION-DONE.md             shipped evolutions
   EXPORT-FORMAT.md              public .mrz archive format
   CATALOGUE-DATA.md             reference-catalogue sources and refresh
+  SYNC-FORMAT.md                sync and installation storage format
   PACKAGING.md                  publishing and distribution
   USER_GUIDE.<lang>.md          user guide (en, it, fr, es, de)
   analysis/                     per-feature design documents
@@ -171,8 +204,9 @@ dotnet test MedReminder.sln -c Release
 ```
 
 Integration tests (`MedReminder.Infrastructure.Tests`) run on Windows
-only (they use DPAPI and the registry). Domain and application tests
-run on any platform with the .NET 10 SDK.
+only (they use DPAPI and the registry); so do the UI tests. Domain,
+application, portable-infrastructure and data-importer tests run on
+any platform with the .NET 10 SDK.
 
 ## How to publish for distribution
 
@@ -238,7 +272,10 @@ Shared, admin-managed:
 | `backup.settings.json` / `backup.state.json` | Automatic backup config (local and cloud-folder targets) + last-tick state |
 | `cloud-backup.protected` | Cloud-folder backup passphrase, DPAPI-encrypted (CurrentUser scope) |
 | `donations.settings.json` | Optional public Payment Link URLs for the Support Development dialog |
-| `user.settings.json` | UI language, reference-catalogue country, update-check preference |
+| `user.settings.json` | UI language, reference-catalogue country, update-check preference, database-query logging (this device only) |
+| `onedrive.protected` / `googledrive.protected` | OneDrive / Google Drive sign-in tokens, DPAPI-encrypted |
+| `household\` | Shared installation: operation log, settings, installation and device keys (DPAPI) |
+| `catalogue\staging\` | Remote catalogue archive while it is imported; emptied every run |
 | `logs/medreminder-YYYYMMDD.log` | Daily rolling log, 30-day retention |
 
 Per-profile, under `profiles\<profile-id>\`:
@@ -246,7 +283,9 @@ Per-profile, under `profiles\<profile-id>\`:
 | File | Content |
 |---|---|
 | `medreminder.db` (+ `-shm`, `-wal`) | This profile's SQLite database |
-| `notifications.settings.json` | This profile's email recipient and optional caregiver address |
+| `notifications.settings.json` | This profile's email recipient, optional caregiver and doctor address |
+| `ui.settings.json` | This profile's text size and appearance |
+| `sync.settings.json` / `sync.protected` | Sync group, device and storage; group key, DPAPI-encrypted (only when sync is on) |
 
 Nothing outside `%LOCALAPPDATA%\MedReminder\` is written by the app,
 except the backup, export and cloud-folder files written to folders
@@ -256,9 +295,9 @@ the logs.
 
 ## How to configure notifications
 
-Open **Settings → Email SMTP** from the main menu:
+Open **Tools → Settings… → Email SMTP**:
 
-1. Fill in host, port, StartTLS, username, sender, recipient.
+1. Fill in host, port, StartTLS, username and sender.
 2. Type the password in the dedicated field (encrypted via DPAPI and
    stored in `smtp.protected`; the settings file never contains the
    plaintext password).
@@ -276,7 +315,7 @@ shared tray icon and modern Windows toast when available.
 
 ## How to back up
 
-**Settings → Backup / Restore**. Automatic-backup settings are
+**Tools → Settings… → Backup / Restore**. Automatic-backup settings are
 visible to administrators only; export, import and restore from a
 cloud folder are available to every profile.
 
@@ -285,8 +324,10 @@ cloud folder are available to every profile.
   is copied (unencrypted `.db`). If the PC is off at the preferred
   time, the backup runs at the next start of the day.
 - **Backup to a cloud-synced folder (encrypted)**: optional second
-  target. Writes an encrypted `.mrz` snapshot of the current profile
-  into a folder the user's cloud client synchronizes. Requires a
+  target. Writes an encrypted `.mrz` snapshot of every profile into a
+  folder the user's cloud client synchronizes, or into OneDrive or
+  Google Drive directly. With a shared installation only the master
+  device writes it. Requires a
   backup passphrase; losing it means the snapshots cannot be
   restored.
 - **Run backup now** / **Export to specific folder…**: on-demand
@@ -332,9 +373,12 @@ Format: `medreminder-YYYYMMDD.log` — one file per day, 30-day
 retention, 10 MB max per file (with automatic alphabetic roll past
 that size).
 
-Default level: `Information`. Contains executed SQL commands (no
-sensitive parameters), scheduler ticks, notification sends, errors
-with stack trace. **Passwords, email content and sensitive
+Default level: `Information`. Contains scheduler ticks, notification
+sends, sync and installation outcomes, errors with stack trace.
+Executed SQL commands (text and duration, never parameter values) are
+written only while **Settings → General → Log database queries
+(diagnostics)** is on; administrators only, applied without a
+restart. **Passwords, email content and sensitive
 dose/quantity values are never written to the logs.**
 
 ## Known limitations
@@ -353,11 +397,14 @@ dose/quantity values are never written to the logs.**
   5s → 30s → 2m, then gives up, logging the error.
 - Single-instance is per-user (one Windows session). A second
   Windows user on the same machine can run their own instance.
-- No real-time sync between devices. The cloud-folder backup is
-  single-writer: restoring on a second PC replaces its data, and
-  changes made on two PCs between restores are not merged.
-- Only the current profile is written to the cloud folder; the local
-  automatic backup covers every profile.
+- The cloud-folder backup is single-writer: restoring on a second PC
+  replaces its data, and changes made on two PCs between restores are
+  not merged. Use sync (Tools → Sync…) to work on several PCs.
+- Every device of a sync group or installation must run the same
+  MedReminder version: newer operation schemas stop older apps.
+- Sync and the installation need a storage every device reaches
+  (OneDrive, Google Drive or a shared folder); MedReminder runs no
+  server.
 
 ## License
 

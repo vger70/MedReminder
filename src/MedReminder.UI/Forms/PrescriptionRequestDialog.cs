@@ -46,13 +46,15 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         string doctorAddress,
         bool smtpConfigured,
         Func<string, string, string, CancellationToken, Task> sendAsync,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        bool isMaster = true)
     {
         ArgumentNullException.ThrowIfNull(draft);
         ArgumentNullException.ThrowIfNull(sendAsync);
         _loc = localization;
         _doctorAddress = doctorAddress?.Trim() ?? string.Empty;
-        _canSend = smtpConfigured && _doctorAddress.Length > 0;
+        // Household step H4c (C5): only the master device sends email.
+        _canSend = smtpConfigured && isMaster && _doctorAddress.Length > 0;
         _sendAsync = sendAsync;
 
         Text = _loc.Get("Ui.PrescriptionRequestDialog.Title");
@@ -63,7 +65,6 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = true;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var recipientValue = new Label
         {
@@ -94,6 +95,8 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             Margin = new Padding(3, 6, 3, 3),
             Text = _loc.Get(_canSend
                 ? "Ui.PrescriptionRequestDialog.Hint"
+                : smtpConfigured && !isMaster
+                    ? "Ui.PrescriptionRequestDialog.Hint.NotMaster"
                 : smtpConfigured
                     ? "Ui.PrescriptionRequestDialog.Hint.NoDoctorAddress"
                     : "Ui.PrescriptionRequestDialog.Hint.NoSmtp"),
@@ -124,30 +127,23 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         table.Controls.Add(_bodyBox, 1, 2);
         table.Controls.Add(hint, 1, 3);
 
-        _copyButton = new Button { Text = _loc.Get("Ui.PrescriptionRequestDialog.Copy"), AutoSize = true, Height = 32 };
-        _mailClientButton = new Button { Text = _loc.Get("Ui.PrescriptionRequestDialog.OpenMailClient"), AutoSize = true, Height = 32 };
-        _sendButton = new Button { Text = _loc.Get("Ui.PrescriptionRequestDialog.Send"), AutoSize = true, Height = 32, Enabled = _canSend };
-        _closeButton = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.Cancel, AutoSize = true, Height = 32 };
+        _copyButton = DialogLayout.Button(_loc.Get("Ui.PrescriptionRequestDialog.Copy"));
+        _mailClientButton = DialogLayout.Button(_loc.Get("Ui.PrescriptionRequestDialog.OpenMailClient"));
+        _sendButton = DialogLayout.Button(_loc.Get("Ui.PrescriptionRequestDialog.Send"));
+        _sendButton.Enabled = _canSend;
+        _closeButton = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.Cancel);
 
         _copyButton.Click += (_, _) => CopyDraft(showConfirmation: true);
         _mailClientButton.Click += (_, _) => OpenInMailClient();
         _sendButton.Click += async (_, _) => await SendAsync();
 
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(_closeButton);
-        buttonPanel.Controls.Add(_sendButton);
-        buttonPanel.Controls.Add(_mailClientButton);
-        buttonPanel.Controls.Add(_copyButton);
+        // Send is the primary action, last on the right (§5.3).
+        var buttonPanel = DialogLayout.ButtonBar(this, _sendButton, _closeButton, _mailClientButton, _copyButton);
+        // No default button: Enter in the subject must not send the email.
+        AcceptButton = null;
 
         Controls.Add(table);
         Controls.Add(buttonPanel);
-        CancelButton = _closeButton;
 
         // Closing while a send is in flight would dispose the controls
         // the continuation writes to; the user waits for the outcome.
@@ -173,7 +169,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         {
             return true;
         }
-        MessageBox.Show(this,
+        UiMessageBox.Show(this,
             _loc.Get("Ui.PrescriptionRequestDialog.EmptyDraft"),
             _loc.Get("Common.Warning"),
             MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -188,7 +184,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             Clipboard.SetText(_subjectBox.Text.Trim() + "\r\n\r\n" + _bodyBox.Text);
             if (showConfirmation)
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.PrescriptionRequestDialog.Copied"),
                     _loc.Get("Common.Information"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -197,7 +193,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.PrescriptionRequestDialog.CopyError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
@@ -212,7 +208,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         {
             if (CopyDraft(showConfirmation: false))
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.PrescriptionRequestDialog.TooLongForMailClient"),
                     _loc.Get("Common.Information"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -230,7 +226,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             // refused the hand-off. The draft is not lost.
             if (CopyDraft(showConfirmation: false))
             {
-                MessageBox.Show(this,
+                UiMessageBox.Show(this,
                     _loc.Get("Ui.PrescriptionRequestDialog.MailClientUnavailable"),
                     _loc.Get("Common.Information"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -242,10 +238,10 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
     {
         if (!_canSend || _sending || !HasDraft()) return;
 
-        var confirm = MessageBox.Show(this,
+        var confirm = ConfirmDialog.Show(_loc, this,
             _loc.Get("Ui.PrescriptionRequestDialog.ConfirmSend", _doctorAddress),
             _loc.Get("Common.Confirm"),
-            MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+            MessageBoxIcon.Question,
             MessageBoxDefaultButton.Button2);
         if (confirm != DialogResult.Yes) return;
 
@@ -255,7 +251,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
             using var cts = new CancellationTokenSource(SendTimeout);
             await _sendAsync(_doctorAddress, _subjectBox.Text.Trim(), _bodyBox.Text, cts.Token);
             SetSending(false);
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.PrescriptionRequestDialog.Sent"),
                 _loc.Get("Common.Information"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -265,7 +261,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         catch (Exception ex)
         {
             SetSending(false);
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.PrescriptionRequestDialog.SendError", ex.Message),
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);

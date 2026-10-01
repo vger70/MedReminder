@@ -19,6 +19,11 @@ public abstract record SyncKeySource
     public sealed record Passphrase(char[] Value) : SyncKeySource;
 
     public sealed record Pairing(SyncPairingCode Code) : SyncKeySource;
+
+    // Household step H3c: a group key the device already has, from a
+    // household grant, offer or escrow. ObtainAsync returns a copy; the
+    // caller zeroes Value after use.
+    public sealed record Known(int KeyVersion, byte[] Value) : SyncKeySource;
 }
 
 // A group key, its version and the generation sealed with it. The caller
@@ -133,6 +138,14 @@ public static class SyncKeys
                     throw new InvalidOperationException("No generation of the sync group uses the key of this pairing code.");
                 }
                 return new SyncGroupKey(version, generation, key);
+            }
+
+            case SyncKeySource.Known known:
+            {
+                var generation = await CurrentGenerationAsync(transport, groupId, known.KeyVersion, cancellationToken, cache);
+                if (generation == 0)
+                    throw new InvalidOperationException("No generation of the sync group uses the key of the household.");
+                return new SyncGroupKey(known.KeyVersion, generation, [.. known.Value]);
             }
 
             default:

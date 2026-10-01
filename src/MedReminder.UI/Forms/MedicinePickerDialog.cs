@@ -27,7 +27,6 @@ internal sealed class MedicinePickerDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var inactiveSuffix = localization.Get("Ui.MedicinePickerDialog.InactiveSuffix");
         var promptLabel = new Label
@@ -52,23 +51,13 @@ internal sealed class MedicinePickerDialog : MedReminderFormBase
         layout.Controls.Add(promptLabel, 0, 0);
         layout.Controls.Add(_list, 0, 1);
 
-        _okButton = new Button { Text = localization.Get("Common.Ok"), Width = 100, Height = 32, Enabled = false };
+        _okButton = DialogLayout.Button(localization.Get("Common.Ok"));
+        _okButton.Enabled = false;
         _okButton.Click += (_, _) => Confirm();
-        var cancelButton = new Button { Text = localization.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 48,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(cancelButton);
-        buttonPanel.Controls.Add(_okButton);
+        var cancelButton = DialogLayout.Button(localization.Get("Common.Cancel"), DialogResult.Cancel);
 
         Controls.Add(layout);
-        Controls.Add(buttonPanel);
-        AcceptButton = _okButton;
-        CancelButton = cancelButton;
+        Controls.Add(DialogLayout.ButtonBar(this, _okButton, cancelButton));
 
         if (_list.Items.Count > 0) _list.SelectedIndex = 0;
     }

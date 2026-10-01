@@ -3,6 +3,7 @@ using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Cloud.GoogleDrive;
 using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Export;
+using MedReminder.Infrastructure.Household;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
@@ -37,6 +38,7 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<IMedicationScheduleHistoryRepository, MedicationScheduleHistoryRepository>();
         services.AddScoped<IMedicationSuspensionRepository, MedicationSuspensionRepository>();
         services.AddScoped<INotificationEventRepository, NotificationEventRepository>();
+        services.AddScoped<ISentEmailNotificationRepository, SentEmailNotificationRepository>();
         services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
         services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();
         services.AddScoped<IDoseReminderEventRepository, DoseReminderEventRepository>();
@@ -77,6 +79,20 @@ public static class PortableInfrastructureServiceCollectionExtensions
 
         // Requires IAppDataLocation and IOptions<UserSettings> from the host.
         services.TryAddSingleton<ILocalizationService, LocalizationService>();
+
+        // Household feature, step H2: one store per installation, next to
+        // the profiles. Requires IAppDataLocation from the host.
+        services.TryAddSingleton<IHouseholdStore>(sp => new SqliteHouseholdStore(
+            Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
+        // Step H3a: the household key, protected by the host's credential
+        // protector (DPAPI on Windows).
+        services.TryAddSingleton<IHouseholdKeyStore>(sp => new ProtectedHouseholdKeyStore(
+            sp.GetRequiredService<ICredentialProtector>(),
+            Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
+        // Step H3b: this device's key pair for the household.
+        services.TryAddSingleton<IDeviceKeyStore>(sp => new ProtectedDeviceKeyStore(
+            sp.GetRequiredService<ICredentialProtector>(),
+            Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
 
         return services;
     }

@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Household;
 using MedReminder.Application.Sync;
 using MedReminder.UI.Services;
 using Microsoft.Extensions.Configuration;
@@ -144,6 +145,11 @@ internal sealed class SyncHostedService : BackgroundService
                     .ExecuteAsync(scope.ServiceProvider.GetRequiredService<ISyncTransport>(), cancellationToken);
                 _log.LogInformation("Sync: started generation {Generation} after an import or a restore.", reset.Generation);
             }
+
+            // Household step H3c: an adopted profile group records the
+            // household that claims it, before the run publishes.
+            if (await scope.ServiceProvider.GetRequiredService<HouseholdLinks>().RecordAsync(cancellationToken))
+                _log.LogInformation("Sync: this profile group was linked to the household.");
 
             var result = await scope.ServiceProvider.GetRequiredService<SyncEngine>().RunAsync(cancellationToken);
             _status.Report(_clock.GetUtcNow(), result);

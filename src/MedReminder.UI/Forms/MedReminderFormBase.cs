@@ -1,3 +1,5 @@
+using MedReminder.UI.UiExtensions;
+
 namespace MedReminder.UI.Forms;
 
 // Base class for every form in the app. Single source of truth for
@@ -17,6 +19,10 @@ internal class MedReminderFormBase : Form
 
     protected MedReminderFormBase()
     {
+        // One base font for every window (F1, D2): derived forms no
+        // longer set their own, and the text size scales it on load.
+        Font = UiTheme.Fonts.Body();
+
         var icon = AppIcon.Default;
         if (icon is not null)
         {
@@ -29,9 +35,49 @@ internal class MedReminderFormBase : Form
     // before that (picker, PIN prompt, first-run wizard) stay at 1.
     internal static float TextScale { get; set; } = 1f;
 
+    // Pixel size for an icon drawn at build time: glyph bitmaps are not
+    // resized by ScaleLayout, so they are rendered at the size they
+    // will be shown, following the display and the text size.
+    protected int ScaledIconSize(int pixelsAt96Dpi) => ScaledLength(pixelsAt96Dpi);
+
+    // A length in 96-DPI pixels at text size Normal, scaled like the
+    // bounds ScaleLayout scales: for sizes set after load or kept
+    // outside the control tree (tool strip text boxes, thresholds).
+    protected int ScaledLength(int pixelsAt96Dpi)
+        => (int)Math.Round(pixelsAt96Dpi * Math.Max(1f, TextScale) * Math.Max(1f, DeviceDpi / BaselineDpi));
+
+    // A date picker laid out once in a narrow cell before the final
+    // layout scrolls its fields to keep the day visible and keeps that
+    // offset after it widens: the first digit of the date was cut.
+    // Setting the format again makes the native control lay the fields
+    // out anew at the final width.
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        ResetDatePickers(this);
+    }
+
+    private static void ResetDatePickers(Control control)
+    {
+        foreach (Control child in control.Controls)
+        {
+            if (child is DateTimePicker { IsHandleCreated: true } picker)
+            {
+                var format = picker.Format;
+                picker.Format = format == DateTimePickerFormat.Long ? DateTimePickerFormat.Short : DateTimePickerFormat.Long;
+                picker.Format = format;
+            }
+            else if (child.HasChildren)
+            {
+                ResetDatePickers(child);
+            }
+        }
+    }
+
     protected override void OnLoad(EventArgs e)
     {
         ScaleLayout();
+        UiThemeApplier.Apply(this);
         // Form.OnLoad centres modal dialogs, so it runs after the
         // resize, and the Load handlers of the derived forms see the
         // final layout (rows they add use the scaled row template).
@@ -66,7 +112,22 @@ internal class MedReminderFormBase : Form
         {
             ResumeLayout(performLayout: true);
         }
+        RelayoutTree(this);
         FitToWorkingArea();
+    }
+
+    // Lays out every container from the innermost outwards. Scaling
+    // runs with the form's layout suspended, and a scrolling panel
+    // whose own size did not change kept the scroll range of its
+    // unscaled content: Settings -> General lost its scroll bar and
+    // the Save button below the fold.
+    internal static void RelayoutTree(Control control)
+    {
+        foreach (Control child in control.Controls)
+        {
+            if (child.HasChildren) RelayoutTree(child);
+        }
+        control.PerformLayout();
     }
 
     // Every font is read before any is changed and then set scaled
@@ -157,6 +218,17 @@ internal class MedReminderFormBase : Form
                 {
                     column.Width = ScaledPixels(column.Width, factor);
                 }
+                break;
+            case Button { AutoSize: true, AutoSizeMode: AutoSizeMode.GrowOnly } button:
+                // An auto-sized button already grew to its text at the
+                // scaled font, and Scale then multiplied that size again;
+                // GrowOnly would keep it. Its size is set to the text alone
+                // (GrowAndShrink stops the preferred size from including
+                // the current one), then GrowOnly is restored.
+                button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+                var preferred = button.GetPreferredSize(Size.Empty);
+                button.AutoSizeMode = AutoSizeMode.GrowOnly;
+                button.Size = preferred;
                 break;
         }
         foreach (Control child in control.Controls)

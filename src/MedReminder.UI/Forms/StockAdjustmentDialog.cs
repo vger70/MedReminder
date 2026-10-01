@@ -29,7 +29,7 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
+        DialogLayout.GrowToContent(this);
 
         var currentLabel = new Label
         {
@@ -83,46 +83,28 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(12),
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        AddRow(table, string.Empty, currentLabel);
-        AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Kind"), _kindBox);
-        AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Quantity"), _quantityBox);
-        AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Notes"), _notesBox);
+        DialogLayout.AddRow(table, string.Empty, currentLabel);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Kind"), _kindBox);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Quantity"), _quantityBox);
+        DialogLayout.AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Notes"), _notesBox);
 
-        var okButton = new Button { Text = _loc.Get("Ui.StockAdjustmentDialog.Apply"), DialogResult = DialogResult.OK, Width = 100, Height = 32 };
-        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
+        var okButton = DialogLayout.Button(_loc.Get("Ui.StockAdjustmentDialog.Apply"), DialogResult.OK);
+        var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
         okButton.Click += (_, _) =>
         {
             var kind = ((KindOption)_kindBox.SelectedItem!).Kind;
             Result = new StockAdjustmentResult(kind, _quantityBox.Value, NullIfBlank(_notesBox.Text));
         };
 
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 48,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(okButton);
-        buttonPanel.Controls.Add(cancelButton);
+        var buttonPanel = DialogLayout.ButtonBar(this, okButton, cancelButton);
 
         Controls.Add(table);
         Controls.Add(buttonPanel);
-        AcceptButton = okButton;
-        CancelButton = cancelButton;
     }
 
-    private static void AddRow(TableLayoutPanel table, string label, Control input)
-    {
-        var lbl = new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(4, 8, 4, 4) };
-        table.RowCount++;
-        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        table.Controls.Add(lbl, 0, table.RowCount - 1);
-        table.Controls.Add(input, 1, table.RowCount - 1);
-    }
 
     private static string? NullIfBlank(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();

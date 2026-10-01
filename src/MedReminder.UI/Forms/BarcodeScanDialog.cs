@@ -74,7 +74,6 @@ internal sealed class BarcodeScanDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         var prompt = NewWrappingLabel(_loc.Get("Ui.BarcodeScanDialog.Prompt"));
         prompt.Font = new Font(Font, FontStyle.Bold);
@@ -141,19 +140,13 @@ internal sealed class BarcodeScanDialog : MedReminderFormBase
         layout.Controls.Add(_webcamPanel, 0, 2);
         layout.Controls.Add(_status, 0, 3);
 
-        var cancelButton = new Button { Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, Width = 100, Height = 32 };
-        var buttonPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 48,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttonPanel.Controls.Add(cancelButton);
+        var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
+        var buttonPanel = DialogLayout.ButtonBar(this, cancelButton, cancelButton);
+        // Enter comes from the barcode scanner; it must not close the dialog.
+        AcceptButton = null;
 
         Controls.Add(layout);
         Controls.Add(buttonPanel);
-        CancelButton = cancelButton;
 
         _idleTimer = new System.Windows.Forms.Timer
         {

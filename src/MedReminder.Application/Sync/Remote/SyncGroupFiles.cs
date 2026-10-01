@@ -43,8 +43,12 @@ public sealed record SyncKeyWrap(
     public const int KeySize = 32;
     private const int SaltSize = 16;
 
+    // purpose: what the wrapped secret is, bound as associated data. "Key"
+    // (the default, the only value before household step H3b) is a group
+    // or household key; "Recovery" the household recovery private key
+    // (recovery.<v>.wrap), so one wrap cannot stand for the other.
     public static SyncKeyWrap Wrap(IArchiveCipher cipher, Guid groupId, int keyVersion, byte[] groupKey,
-        char[] passphrase, Argon2Params parameters)
+        char[] passphrase, Argon2Params parameters, string purpose = "Key")
     {
         ArgumentNullException.ThrowIfNull(cipher);
         ArgumentNullException.ThrowIfNull(parameters);
@@ -52,7 +56,7 @@ public sealed record SyncKeyWrap(
         var wrappingKey = cipher.DeriveKey(passphrase, salt, parameters);
         try
         {
-            var (nonce, tag, ciphertext) = cipher.Encrypt(wrappingKey, groupKey, Aad(groupId, keyVersion));
+            var (nonce, tag, ciphertext) = cipher.Encrypt(wrappingKey, groupKey, Aad(groupId, keyVersion, purpose));
             return new SyncKeyWrap(SyncFileCodec.FormatVersion, groupId, keyVersion,
                 parameters.Iterations, parameters.MemoryKiB, parameters.Parallelism, salt, nonce, tag, ciphertext);
         }
@@ -63,14 +67,14 @@ public sealed record SyncKeyWrap(
     }
 
     // Throws CryptographicException for a wrong passphrase.
-    public byte[] Unwrap(IArchiveCipher cipher, char[] passphrase)
+    public byte[] Unwrap(IArchiveCipher cipher, char[] passphrase, string purpose = "Key")
     {
         ArgumentNullException.ThrowIfNull(cipher);
         var wrappingKey = cipher.DeriveKey(passphrase, Salt,
             new Argon2Params { Iterations = Iterations, MemoryKiB = MemoryKiB, Parallelism = Parallelism });
         try
         {
-            return cipher.Decrypt(wrappingKey, Nonce, Tag, Ciphertext, Aad(GroupId, KeyVersion));
+            return cipher.Decrypt(wrappingKey, Nonce, Tag, Ciphertext, Aad(GroupId, KeyVersion, purpose));
         }
         finally
         {
@@ -84,6 +88,6 @@ public sealed record SyncKeyWrap(
         => JsonSerializer.Deserialize<SyncKeyWrap>(content, SyncFileCodec.Json)
             ?? throw new InvalidDataException("Empty key wrap.");
 
-    private static byte[] Aad(Guid groupId, int keyVersion)
-        => Encoding.UTF8.GetBytes($"MedReminder.Sync.Key|{groupId:N}|{keyVersion}");
+    private static byte[] Aad(Guid groupId, int keyVersion, string purpose)
+        => Encoding.UTF8.GetBytes($"MedReminder.Sync.{purpose}|{groupId:N}|{keyVersion}");
 }

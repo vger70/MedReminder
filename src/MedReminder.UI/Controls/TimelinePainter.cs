@@ -1,4 +1,5 @@
 using System.Drawing.Drawing2D;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Controls;
 
@@ -9,8 +10,9 @@ namespace MedReminder.UI.Controls;
 // periods are solid bars, suspensions are hatched bars with a dashed
 // border, dosage changes are diamonds (filled for a new schedule,
 // hollow for a taper stage), the run-out estimate is a downward
-// triangle on a vertical line, today is a dashed vertical line. With
-// Windows high-contrast mode on, system colours replace the palette.
+// triangle on a vertical line, today is a dashed vertical line. The
+// dark palette follows the app's appearance (UiTheme); with Windows
+// high-contrast mode on, system colours replace both palettes.
 internal static class TimelinePainter
 {
     internal sealed record Palette(
@@ -30,11 +32,11 @@ internal static class TimelinePainter
         Color Today,
         Color Selection);
 
-    private static readonly Palette Standard = new(
-        Background: SystemColors.Window,
+    private static readonly Palette Light = new(
+        Background: UiTheme.Light.Surface,
         AlternateRow: Color.FromArgb(246, 248, 250),
-        Text: SystemColors.WindowText,
-        MutedText: SystemColors.GrayText,
+        Text: UiTheme.Light.Text,
+        MutedText: UiTheme.Light.TextSecondary,
         Grid: Color.FromArgb(222, 226, 230),
         ActiveFill: Color.FromArgb(100, 181, 246),     // #64B5F6
         ActiveBorder: Color.FromArgb(21, 101, 192),    // #1565C0
@@ -45,7 +47,26 @@ internal static class TimelinePainter
         MarkerOutline: Color.White,
         RunOut: Color.FromArgb(198, 40, 40),           // #C62828
         Today: Color.FromArgb(230, 81, 0),             // #E65100
-        Selection: SystemColors.Highlight);
+        Selection: UiTheme.Light.Accent);
+
+    // Same shapes on the dark surface: lighter strokes and markers,
+    // fills kept darker than the text so labels stay readable.
+    private static readonly Palette Dark = new(
+        Background: UiTheme.Dark.Surface,
+        AlternateRow: Color.FromArgb(56, 56, 56),      // #383838
+        Text: UiTheme.Dark.Text,
+        MutedText: UiTheme.Dark.TextSecondary,
+        Grid: Color.FromArgb(74, 74, 74),              // #4A4A4A
+        ActiveFill: Color.FromArgb(46, 110, 184),      // #2E6EB8
+        ActiveBorder: Color.FromArgb(156, 200, 245),   // #9CC8F5
+        SuspendedHatch: Color.FromArgb(189, 189, 189), // #BDBDBD
+        SuspendedBack: Color.FromArgb(58, 58, 58),     // #3A3A3A
+        SuspendedBorder: Color.FromArgb(189, 189, 189),
+        Marker: Color.FromArgb(240, 240, 240),         // #F0F0F0
+        MarkerOutline: Color.FromArgb(32, 32, 32),     // #202020
+        RunOut: Color.FromArgb(242, 139, 130),         // #F28B82
+        Today: Color.FromArgb(255, 166, 87),           // #FFA657
+        Selection: UiTheme.Dark.Accent);
 
     public static Palette Current => SystemInformation.HighContrast
         ? new Palette(
@@ -64,7 +85,7 @@ internal static class TimelinePainter
             RunOut: SystemColors.WindowText,
             Today: SystemColors.HotTrack,
             Selection: SystemColors.Highlight)
-        : Standard;
+        : UiTheme.IsDark ? Dark : Light;
 
     // Line width that follows the text size (1 px at 100 %, 2 px at
     // 200 % scaling).

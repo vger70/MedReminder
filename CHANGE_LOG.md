@@ -52,6 +52,405 @@ Branch: `claude/certum-code-signing`
 ### Docs
 
 - `docs/PACKAGING.md` §25 documents the signed local build.
+## PR #157 — Align STATUS, EVOLUTION and the proposals note with v2.12.0
+
+Link: [vger70/MedReminder#157](https://github.com/vger70/MedReminder/pull/157)
+Branch: `claude/docs-status-evolution-v2-12` → `main`
+
+### Docs
+
+- `docs/STATUS.md`: snapshot at v2.12.0; remote catalogue feeds,
+  household H0–H5 and UI modernisation recorded as shipped; open work
+  adds household step H6, PR #137 and the UI known limitations.
+- `docs/EVOLUTION.md`: multi-user G shipped, I not planned; household
+  impact on the mobile phases; website gap extended to v2.12.
+- `docs/EVOLUTION-DONE.md`: C.3++ Phase 2 shipped through B.1 Phase 4;
+  new §12 for work shipped outside the backlog numbering.
+- `docs/notes/EVOLUTION-PROPOSALS.md`: status marks and a status table
+  at v2.12.0; ranking unchanged.
+
+## PR #156 — Say in the update-check tooltip that the catalogue is downloaded
+
+Link: [vger70/MedReminder#156](https://github.com/vger70/MedReminder/pull/156)
+Branch: `claude/update-check-tooltip-catalogue` → `main`
+
+**Status:** merged (2026-10-01)
+
+### Fixed
+
+- Settings → General → Check for updates on startup: the tooltip, in
+  all five languages, no longer says nothing is downloaded. Since
+  v2.11.0 the setting also downloads the catalogue of the reference
+  country and the EU one when a newer edition is published; a new app
+  version is still never downloaded or installed. The README feature
+  line said the same and is corrected.
+
+## PR #155 — Bring README, ANALYSIS and the user guides in line with v2.12.0
+
+Link: [vger70/MedReminder#155](https://github.com/vger70/MedReminder/pull/155)
+Branch: `claude/docs-refresh-v2-12` → `main`
+
+**Status:** merged (2026-10-01)
+
+### Docs
+
+- README: SQL commands reach the log only while the query-logging
+  option is on; features list the redesigned main window, section
+  lists, appearance, remote catalogue refresh and query logging;
+  repository layout adds `MedReminder.Infrastructure.Portable`;
+  data tables list the appearance and query-logging settings.
+- `docs/ANALYSIS.md`: release line 2.12.x; seven hosted services
+  (adds `HouseholdHostedService`, `MasterProfilesHostedService`);
+  `UiMessageBox`, `ChoiceDialog` and `SectionView` described;
+  query-logging filter in §10; feature-analysis index adds the remote
+  feeds and UI modernisation, household marked shipped.
+- The five user guides list appearance and query logging in the
+  data-folder tree.
+
+## PR #154 — Close the remaining dark-mode gaps
+
+Link: [vger70/MedReminder#154](https://github.com/vger70/MedReminder/pull/154)
+Branch: `claude/ui-dark-mode-gaps` → `main`
+
+### Changed
+
+- Messages, confirmations and multiple-choice questions use
+  MedReminder's own dialogs: they follow the dark theme and show OK,
+  Cancel, Yes and No in the language chosen in MedReminder.
+- The Sync and Installation windows list their sections on the left
+  instead of tabs (Ctrl+Tab moves to the next one).
+
+### Fixed
+
+- Settings check box captions were cut at the minimum window size with
+  Large text; they wrap.
+
+## PR #153 — Add an admin-only option to log database queries
+
+Link: [vger70/MedReminder#153](https://github.com/vger70/MedReminder/pull/153)
+Branch: `claude/db-query-logging` → `main`
+
+### Added
+
+- Settings → General → Log database queries (diagnostics), administrators
+  only: writes each SQL command EF Core runs, with its duration, to the
+  log file. Parameter values stay hidden. Applies without a restart.
+  Device setting `UI:LogDatabaseQueries` in `user.settings.json`, not
+  replicated in the household.
+
+### Fixed
+
+- EF Core command entries ("Executed DbCommand", category
+  `Microsoft.EntityFrameworkCore.Database.Command`) reached the log on
+  every run. They are now written only while the option is on. The
+  filter names `SerilogLoggerProvider`: `AddSerilog` registers a rule for
+  that provider (any category, Trace), which wins over any rule without
+  a provider (`src/MedReminder.UI/Program.cs`).
+
+### Changed
+
+- `UpdateGeneralSettings` requires an administrator to change the option;
+  `HouseholdProjection` keeps it when it rewrites `user.settings.json`.
+
+### Docs
+
+- The five user guides describe the option.
+## PR #152 — Draw text and number box borders in the dark palette
+
+Link: [vger70/MedReminder#152](https://github.com/vger70/MedReminder/pull/152)
+Branch: `claude/ui-dark-textbox-border` → `main`
+
+### Fixed
+
+- In dark mode text boxes and number boxes had a light border; it is
+  now dark grey, and a text box shows the accent colour while it has
+  the focus.
+
+## PR #151 — Document the appearance setting and the UI building blocks
+
+Link: [vger70/MedReminder#151](https://github.com/vger70/MedReminder/pull/151)
+Branch: `claude/ui-phase6-docs` → `main`
+
+### Changed
+
+- The five user guides describe Settings → General → Appearance.
+- `docs/ANALYSIS.md` names the shared dialog layout, the confirmation
+  dialog, the navigation pane and the medicine list filter; the UI
+  modernisation analysis records the final status and the known
+  dark-mode limitations.
+
+## PR #150 — Ask confirmations in the app language and give the wizards the template buttons
+
+Link: [vger70/MedReminder#150](https://github.com/vger70/MedReminder/pull/150)
+Branch: `claude/ui-phase5c-wizards-confirmations` → `main`
+
+### Changed
+
+- Confirmation questions show Yes and No in the language chosen in
+  MedReminder instead of the Windows language.
+- The first-run and handover wizards use the same buttons as the other
+  dialogs, with the main action last; the first-run wizard uses the
+  10 pt base font and shows its errors under the fields.
+
+## PR #149 — Apply the dialog template to the large dialogs
+
+Link: [vger70/MedReminder#149](https://github.com/vger70/MedReminder/pull/149)
+Branch: `claude/ui-phase5b-large-dialogs` → `main`
+
+### Changed
+
+- The export, import, restore from cloud, about, donate, fact history,
+  prescription request, therapy report, barcode scan, sync,
+  installation, profiles (with the new, rename and delete profile
+  dialogs) and restore-into-profile windows use the same button bar
+  as the other dialogs: bottom right, main action last, buttons at
+  least 32 px high that grow with their caption.
+- The profile dialogs no longer use fixed positions: their content
+  stacks and the window grows with Large text; the new-profile errors
+  appear under the fields.
+- The medicine editor, import, restore and profile dialogs use the
+  10 pt base font.
+
+## PR #148 — Add the dialog template and apply it to the small dialogs
+
+Link: [vger70/MedReminder#148](https://github.com/vger70/MedReminder/pull/148)
+Branch: `claude/ui-phase5-dialogs` → `main`
+
+### Changed
+
+- One dialog layout: labels sized to the longest caption, buttons at
+  the bottom right with the main button last, buttons at least 32 px
+  high that grow with their caption, dialogs that grow to their content
+  with Large text. Applied to the stock, stock count, intake, schedule
+  change, administration time, PIN, cloud passphrase, sync passphrase,
+  pairing code, sync group, household profiles and medicine picker
+  dialogs, which also use the 10 pt base font.
+- Validation errors in these dialogs appear under the fields instead
+  of in a message box.
+
+### Fixed
+
+- Name and active ingredient rows in the medicine editor were about
+  twice the field height with Large text at 150 %.
+- The PIN prompt and the first-run and handover wizards were scaled
+  twice above 100 % display scaling.
+- Settings sections taller than the window (General, Notifications)
+  showed no scroll bar, so the Save buttons could not be reached; every
+  section now scrolls as a whole, as Backup does. The
+  Email port and timeout fields were a few pixels wide.
+- The My PIN group in Settings → Notifications was cut at the bottom
+  with Large text.
+- The therapy timeline was sized twice above 100 % display scaling,
+  leaving the chart too short for its first row; date fields no longer
+  cut the first digit.
+
+## PR #147 — Replace the Settings tabs with a section list
+
+Link: [vger70/MedReminder#147](https://github.com/vger70/MedReminder/pull/147)
+Branch: `claude/ui-phase4-settings` → `main`
+
+### Changed
+
+- Settings lists its sections on the left and shows one at a time
+  under a heading; Ctrl+Tab and Ctrl+PageDown move between sections.
+- The Settings window can be resized (minimum 760×520) and uses the
+  10 pt base font.
+- Each Settings section lives in its own source file; no behaviour
+  change.
+
+### Fixed
+
+- Settings tab headers stayed light in dark mode.
+- With Large text at 150 % the Settings Close button was about twice
+  its size; long German section names are no longer cut.
+- Auto-sized buttons in every window are no longer scaled twice at
+  display scaling above 100 %.
+- Settings → Backup: the folder fields take the section's width, so
+  the Browse buttons stay visible, and the passphrase and account rows
+  wrap instead of cutting their text; the storage-location list is
+  wider.
+
+## PR #146 — Redesign the main window around a summary and a navigation pane
+
+Link: [vger70/MedReminder#146](https://github.com/vger70/MedReminder/pull/146)
+Branch: `claude/ui-phase3-main-window` → `main`
+
+### Added
+
+- Summary cards above the medicine list (Empty, Running low, Suspended,
+  All medicines) that filter the list on click.
+- Search box in the toolbar (Ctrl+F) filtering the list by name.
+- Navigation pane on the left for the timeline, therapy report,
+  prescription request, installation and settings windows; icons only
+  in a narrow window.
+- Context menu on the medicine list with the per-medicine commands.
+
+### Changed
+
+- Toolbar reduced to New medicine, Register intake and search; every
+  other command stays in the menus with its shortcut.
+- Status shown as a coloured label; list rows 36 px high.
+- Main-window section of the five user guides rewritten.
+
+### Fixed
+
+- With Large text at 150 % the main window no longer extends past its
+  right edge: the search box was scaled twice and the grid's full
+  column width sized the page. The list columns share the width by
+  weight down to a minimum, so the list no longer scrolls sideways
+  there.
+- Profile picker buttons grow with their captions instead of being cut.
+
+## PR #145 — Fix the dark-mode and layout defects found in the UI baseline
+
+Link: [vger70/MedReminder#145](https://github.com/vger70/MedReminder/pull/145)
+Branch: `claude/ui-phase2-controls` → `main`
+
+### Fixed
+
+- Dark mode: drop-down lists, text box borders and list view grid
+  lines no longer stay light; the autocomplete drop-down selection
+  reads at AA contrast.
+- Wrapped German column headers in the main window are no longer cut;
+  medicine editor labels no longer split mid-word; Settings → General
+  groups are spaced and, with Large text at 150 %, scroll instead of
+  wrapping into a second column; form labels align with the top of
+  their field.
+- The profile picker uses the appearance of the profile used last, and
+  the PIN prompt that of the profile being opened, instead of always
+  following Windows.
+
+### Changed
+
+- One 10 pt base font for every window (was 9 or 9.75 pt).
+- Toolbar and menu icons grow with the text size and display scaling;
+  Segoe Fluent Icons on Windows 11.
+
+### Docs
+
+- `ANALYSIS-UI-MODERNIZATION.md` revision 4: screenshot baseline.
+
+## PR #144 — Add a theme layer with a per-profile light/dark appearance
+
+Link: [vger70/MedReminder#144](https://github.com/vger70/MedReminder/pull/144)
+Branch: `claude/ui-theme-foundation` → `feature/master-slave`
+
+### Added
+
+- Appearance setting (Same as Windows, Light, Dark) in Settings →
+  General, stored per profile in `ui.settings.json` next to the text
+  size and applied at restart; keys in all five dictionaries.
+- `UiTheme`: light, dark and high-contrast palettes (WCAG AA checked
+  by `UiThemeTests`), type and spacing scales.
+- `UiThemeApplier` (buttons, grids) and `UiToolStripRenderer` (menus,
+  toolbars, status bar, tray menu).
+
+### Changed
+
+- Main grid: status shown only in the Status cell, no whole-row tint;
+  error banner, timeline and autocomplete badge use theme colours.
+- `UiColors` is a facade over `UiTheme`.
+
+### Docs
+
+- `ANALYSIS-UI-MODERNIZATION.md` revision 3 (implementation status,
+  dark-mode behaviour verified against .NET 10.0.12); `ANALYSIS.md`
+  boot sequence and runtime data updated.
+
+## PR #143 — Add phase 0 review of the WinForms UI modernization
+
+Link: [vger70/MedReminder#143](https://github.com/vger70/MedReminder/pull/143)
+Branch: `claude/ui-modernization-review` → `feature/master-slave`
+
+### Docs
+
+- New `docs/analysis/ANALYSIS-UI-MODERNIZATION.md`: inventory of the
+  WinForms UI, findings with file references (two base fonts, colours
+  hard-coded in the forms, double status encoding in the main grid, no
+  inline validation), target tokens for light, dark and high contrast
+  with WCAG AA contrast checked, layout proposals for the main window,
+  Settings and dialogs, phased plan with estimates, open decisions.
+- No code changes.
+
+## PR #142 — Rewrite the user guides around tasks and cover the household features
+
+Link: [vger70/MedReminder#142](https://github.com/vger70/MedReminder/pull/142)
+Branch: `claude/household-user-guides` → `feature/master-slave`
+
+### Docs
+
+- User guides (en, it, fr, es, de) rewritten with one structure: contents
+  with stable anchors, "where to find what", a "Several computers"
+  chapter (sync, shared installation, master device, handover, device
+  removal), intake and administration-time sections, and problems and
+  answers keyed on the app's messages.
+- Menu paths aligned with the UI dictionaries; removed the outdated
+  "does not sync between devices" and duplicate low-stock email
+  statements; data layout lists `household\`, `sync.*` and
+  `cloud-backup.protected`.
+- `README.md`: several-devices features, cloud backup of every profile,
+  sync and household runtime files, updated known limitations.
+
+---
+
+## PR #141 — Merge main into feature/master-slave
+
+Link: [vger70/MedReminder#141](https://github.com/vger70/MedReminder/pull/141)
+Branch: `claude/merge-main-into-master-slave` → `feature/master-slave`
+
+### Changed
+
+- The household integration branch takes `main` up to v2.11.0 (remote
+  catalogue feeds #130–#135, database updates), so the manual tests
+  run on the code the final merge (#129) ships.
+
+### Docs
+
+- `CLAUDE.md`: `main`'s wording, with the household integration-branch
+  rule and the `household/` and `setup/` runtime folders.
+- User guides: the admin-only reference country and the catalogue
+  self-update paragraph, both kept.
+
+---
+
+## PR #138 — Record unchanged recipients a legacy profile group has no version of
+
+Link: [vger70/MedReminder#138](https://github.com/vger70/MedReminder/pull/138)
+Branch: `claude/replicate-unchanged-recipients` → `feature/master-slave`
+
+### Fixed
+
+- Settings → Notifications: saving unchanged addresses now records the
+  addresses the profile group has no version of (a group created before
+  P8). Before, the save returned early, so a device that joined the
+  installation kept empty recipients even after a re-save and a sync.
+  Found by manual test H3c/H3d-1
+  (`src/MedReminder.Application/UseCases/ProfileSettingsUseCases.cs`).
+
+### Docs
+
+- `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`: H3c/H3d-1 checks the
+  recipients on the joined device, and the re-save for a legacy group.
+
+---
+
+## PR #136 — Show the pairing code on request instead of hiding its window from capture
+
+Link: [vger70/MedReminder#136](https://github.com/vger70/MedReminder/pull/136)
+Branch: `claude/pairing-code-show-on-request` → `feature/master-slave`
+
+### Fixed
+
+- The pairing code window (Pair a device, Add a device, the new key
+  after a removal) was invisible in remote-control sessions such as
+  RustDesk or Remote Desktop, and the application looked frozen. It now
+  opens normally, with the QR and text code hidden until **Show the
+  code**; the window is no longer excluded from screen capture.
+
+### Docs
+
+- User guides (5 languages), `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`,
+  `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`.
 
 ---
 
@@ -230,6 +629,355 @@ Branch: `claude/aifa-catalog-auto-update-jrkles`
   briefing.
 
 ---
+
+## PR #129 — Household of devices with a master device (H1–H5)
+
+Link: [vger70/MedReminder#129](https://github.com/vger70/MedReminder/pull/129)
+Branch: `feature/master-slave` → `main`
+
+**Status:** merged (2026-09-30), after the manual tests
+(`docs/analysis/HOUSEHOLD-MANUAL-TESTS.md`).
+
+### Added
+
+- The final merge of the household feature: PRs #116–#128 listed
+  below. An installation is shared between devices (profiles, roles,
+  PINs, installation settings), each device holds only the profiles an
+  administrator gives it, one master device sends email and runs the
+  cloud backup, and a device can be removed.
+
+### Changed
+
+- Tools → Sync… is shown to administrators only.
+- Profile operation schemas 4 and 5: every device of a sync group needs
+  this version.
+
+---
+
+## PR #128 — Rotate the profile keys of a removed device (household H5b)
+
+Link: [vger70/MedReminder#128](https://github.com/vger70/MedReminder/pull/128)
+Branch: `claude/household-h5b-profile-rotation` → `feature/master-slave`
+
+### Added
+
+- Removing a device also changes the keys of the profiles it held; the
+  other devices take the new keys from the installation without typing
+  anything (at start, or in the master's background checks; an open
+  profile asks to restart).
+- A device that does not hold every profile of the device to remove
+  refuses the removal and names the missing profiles.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`, analysis revision 15,
+  `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md` (H5b section).
+
+---
+
+## PR #127 — Remove a device from the installation (household H5a)
+
+Link: [vger70/MedReminder#127](https://github.com/vger70/MedReminder/pull/127)
+Branch: `claude/household-h5-device-removal` → `feature/master-slave`
+
+### Added
+
+- Tools → Installation → Devices → Remove device…: the removed device
+  keeps what it has and receives nothing new. The installation moves to
+  a new key, passphrase and recovery key; every other device takes the
+  new key once, with the new passphrase or a code (D-15 option A), and
+  keeps its changes made meanwhile. Removing the master makes the
+  removing device the master.
+
+### Docs
+
+- User guides (5 languages), `docs/SYNC-FORMAT.md` §9.3,
+  `docs/ANALYSIS.md`, analysis revision 14 (D-15 decided),
+  `docs/analysis/HOUSEHOLD-MANUAL-TESTS.md` (manual tests H1–H5).
+
+---
+
+## PR #126 — Check every profile on the master device (household H4c)
+
+Link: [vger70/MedReminder#126](https://github.com/vger70/MedReminder/pull/126)
+Branch: `claude/household-h4c-master-profiles` → `feature/master-slave`
+
+### Added
+
+- The master device checks every profile it holds, also those not open:
+  it syncs them, and sends their low-stock and dose emails to each
+  profile's recipients.
+
+### Changed
+
+- On a device that is not the master, a prescription request opens in
+  the mail client only, and the email connection test is refused with an
+  explanation.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`, analysis revision 13.
+
+---
+
+## PR #125 — Confirm the master handover with a wizard on the elected device (household H4b)
+
+Link: [vger70/MedReminder#125](https://github.com/vger70/MedReminder/pull/125)
+Branch: `claude/household-h4b-handover` → `feature/master-slave`
+
+### Added
+
+- Handover wizard on the elected device: settings of the installation,
+  email connection test, cloud backup sign-in and passphrase (typed
+  again, never copied), download of the profiles the master needs, and
+  recovery of the others with the installation passphrase. The device
+  becomes master only after an administrator confirms it.
+- An election grants the elected device the profiles the electing
+  device holds.
+- Takeover: an election made while the master is not seen for more than
+  24 hours.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`, analysis revision 12.
+
+---
+
+## PR #124 — Send email and run the cloud backup from the master device only (household H4a)
+
+Link: [vger70/MedReminder#124](https://github.com/vger70/MedReminder/pull/124)
+Branch: `claude/household-h4a-master` → `feature/master-slave`
+
+### Added
+
+- Master device: the device that publishes the installation is the
+  master; an administrator moves the role from Tools → Installation →
+  Devices → Make master…. The outgoing master releases at its next sync;
+  a master not seen for 25 hours is taken over.
+- Only the master sends email reminders (low stock, dose) and runs the
+  cloud backup, and only while it has synced the installation in the
+  last 24 hours. Without a master, every device sends as before.
+
+### Docs
+
+- User guides (5 languages), `docs/SYNC-FORMAT.md` §9.3,
+  `docs/ANALYSIS.md`, analysis revision 11.
+
+---
+
+## PR #123 — Join an existing installation from the first-run wizard (household H3d-2)
+
+Link: [vger70/MedReminder#123](https://github.com/vger70/MedReminder/pull/123)
+Branch: `claude/household-h3d2-first-run-join` → `feature/master-slave`
+
+### Added
+
+- The first-run wizard offers "Join an existing installation…": a new
+  PC joins with a code or with the installation passphrase and an
+  administrator's PIN, and starts with the profiles it received.
+
+### Docs
+
+- User guides (5 languages), `docs/ANALYSIS.md`, `CLAUDE.md` §5
+  (`setup\` folder), analysis revision 10.
+
+---
+
+## PR #122 — Manage the installation from Tools → Installation (household H3d-1)
+
+Link: [vger70/MedReminder#122](https://github.com/vger70/MedReminder/pull/122)
+Branch: `claude/household-h3d-ui` → `feature/master-slave`
+
+### Added
+
+- Tools → Installation… (administrators only): publish the
+  installation, list its devices, add a device with a code for the
+  selected profiles, join an existing installation with a code or with
+  the installation passphrase and an administrator's PIN.
+- The household syncs in the background every 15 minutes.
+
+### Changed
+
+- Tools → Sync… is shown to administrators only.
+- The storage choice and the pairing dialogs are shared by the sync and
+  installation windows.
+
+### Docs
+
+- User guides (5 languages): the installation section; email settings
+  are shared by every device until the master device arrives.
+- `docs/ANALYSIS.md`; analysis revision 9.
+
+---
+
+## PR #121 — Join an existing installation with a household pairing code (household H3c)
+
+Link: [vger70/MedReminder#121](https://github.com/vger70/MedReminder/pull/121)
+Branch: `claude/household-h3c-join-installation` → `feature/master-slave`
+
+### Added
+
+- Household pairing codes (`mrpair2`): an admin offers the household
+  and selected profiles; the joining device grants those profiles to
+  itself and keeps them after the offer ends.
+- Join with the household passphrase: an admin of the household
+  approves on the new device with an admin PIN; the escrow grants the
+  selected profiles.
+- `JoinInstallation`: each granted profile is built from its sync group
+  in a staging folder, moved to `profiles\<id>\` and added to
+  `profiles.json` under its household id.
+- `HouseholdLinked` (profile operation schema 5): an adopted profile
+  group records the household that claims it; the earliest claim wins.
+
+### Fixed
+
+- The start-up reconciliation no longer records a local role that
+  differs from the household's, which could undo a demotion made on
+  another device.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md` §6, §9.1, §9.5; `docs/ANALYSIS.md`; analysis
+  revision 8.
+
+---
+
+## PR #120 — Grant profile keys per device and escrow them for recovery (household H3b)
+
+Link: [vger70/MedReminder#120](https://github.com/vger70/MedReminder/pull/120)
+Branch: `claude/household-h3b-profile-keys` → `feature/master-slave`
+
+### Added
+
+- Each device has a household key pair (`household/device.protected`,
+  DPAPI); its public key is published in the household.
+- The household has a recovery key pair: the private key is stored on
+  the storage wrapped with the household passphrase
+  (`recovery.<v>.wrap`), so any device can escrow a profile key
+  without knowing the passphrase.
+- Profile group keys are granted per device and escrowed for recovery
+  (`ProfileKeyGranted`, `ProfileKeyRevoked`, `ProfileKeyEscrowed`);
+  publishing and every household run adopt the installation's synced
+  profiles.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md` §9.4, `docs/ANALYSIS.md`, `CLAUDE.md` §5,
+  analysis revision 7.
+
+---
+
+## PR #119 — Replicate the household through a household group (household H3a)
+
+Link: [vger70/MedReminder#119](https://github.com/vger70/MedReminder/pull/119)
+Branch: `claude/household-h3a-household-sync` → `feature/master-slave`
+
+### Added
+
+- The household can be published on a sync storage as a household group
+  and joined with a household passphrase; segments carry profile and
+  settings changes both ways, and a projection writes them into
+  `profiles.json` and the settings files. The SMTP password is in clear
+  only inside the encrypted segments. Not yet reachable from the UI.
+
+### Docs
+
+- `SYNC-FORMAT.md` §9 (household group), `ANALYSIS.md` §5, `CLAUDE.md` §5.
+
+## PR #114 — Add analysis of a household of devices with a master device
+
+Link: [vger70/MedReminder#114](https://github.com/vger70/MedReminder/pull/114)
+Branch: `claude/medreminder-sync-analysis-fquf7h`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`: analysis of one
+  installation spread over several devices (PC, later phone). The
+  first device is master; later devices join through a household sync
+  group that replicates profiles, roles, PIN hashes and installation
+  settings; an admin can elect another master, confirmed by a handover
+  wizard; only the master sends email and runs the scheduled cloud
+  backup. A setup wizard lets a new device join an existing
+  installation; each device holds only the profiles an admin grants
+  it, enforced by per-device key wrapping. Records the duplicate-email
+  defect of today's two-PC setups,
+  proposes changes to the requirements, and splits the work into steps
+  H0 to H6 with open decisions.
+- `docs/ANALYSIS.md` §12: index entry for the new analysis.
+- `CLAUDE.md` §4: PRs of this feature target the integration branch
+  `feature/master-slave`; only the final PR merges it into main.
+## PR #118 — Record installation settings in the household (household H2b)
+
+Link: [vger70/MedReminder#118](https://github.com/vger70/MedReminder/pull/118)
+Branch: `claude/household-h2b-installation-settings` → `feature/master-slave`
+
+### Added
+
+- The SMTP transport and password, the scheduled cloud backup policy and
+  the reference country are recorded in the household
+  (`HouseholdSettingChanged`); the SMTP password only protected with
+  DPAPI. The start-up reconciliation records settings restored by an
+  import or edited by hand.
+
+### Changed
+
+- Settings → Email SMTP, Backup and General save through use cases with
+  the admin checks in the Application layer.
+- The reference country can be changed by an administrator only.
+
+### Docs
+
+- User guides (5 languages), `ANALYSIS.md` §5.2.
+
+## PR #117 — Record profile administration in a local household and allow role changes (household H2a)
+
+Link: [vger70/MedReminder#117](https://github.com/vger70/MedReminder/pull/117)
+Branch: `claude/household-h2a-profile-registry` → `feature/master-slave`
+
+### Added
+
+- Local household store under `%LOCALAPPDATA%\MedReminder\household\`:
+  every profile creation, rename, PIN, role change and deletion is
+  recorded as an HLC-stamped operation with last-writer-wins registers,
+  ready for replication in step H3.
+- Manage profiles → Change role…: an admin makes another profile an
+  administrator or a standard user; the open profile's role stays fixed
+  and one admin always remains.
+- Start-up reconciliation of the household with `profiles.json`.
+
+### Changed
+
+- Profile administration goes through use cases with the admin checks
+  in the Application layer; the UI no longer writes the registry,
+  except the first-run wizard.
+
+### Docs
+
+- User guides (5 languages), `ANALYSIS.md` §5, `CLAUDE.md` §5,
+  `ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`.
+
+## PR #116 — Send each low-stock email once per sync group (household H1)
+
+Link: [vger70/MedReminder#116](https://github.com/vger70/MedReminder/pull/116)
+Branch: `claude/household-h1-email-dedup` → `feature/master-slave`
+
+### Fixed
+
+- Every synced device with email configured sent the same low-stock
+  email. A successful email is now a replicated fact
+  (`SentEmailNotification`, operation `EmailNotificationSent`); a device
+  about to email for an epoch another device already emailed for leaves
+  the email out and still shows its toast. Two devices that notify
+  before either has synced still both send (removed by the master, H4).
+
+### Changed
+
+- Operation schema 4, image schema 3: apps up to v2.10 must be updated
+  on every device of a group.
+
+### Docs
+
+- `SYNC-FORMAT.md`, `ANALYSIS.md`, `ANALYSIS-B1-MOBILE-SYNC.md` §20.
 
 ## PR #115 — Close the join-during-listing-lag limit and ask which group a passphrase opens
 

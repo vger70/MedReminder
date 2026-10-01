@@ -217,6 +217,27 @@ public sealed class KeyRotationSyncTests : IDisposable
         ShouldConverge(await StatesAsync([a, b2]));
     }
 
+    // Household step H5b: after a device removal, a remaining device takes
+    // the rotated key from its household grant (SyncKeySource.Known),
+    // without the passphrase, which nobody knows (random, never shown).
+    [Fact]
+    public async Task A_device_left_behind_takes_the_new_key_granted_by_the_household()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+        var id = await MedicineIdAsync(a);
+        var rotated = await RotateAsync(a);
+        await AddStockAsync(b, id, 6m, "offline on B");
+        var key = a.Keys.Load(rotated.GroupId, rotated.KeyVersion)!;
+
+        var (b2, carried, _) = await RekeyAsync(b, new SyncKeySource.Known(rotated.KeyVersion, key));
+
+        carried.Should().Be(1);
+        b2.Settings.Load()!.KeyVersion.Should().Be(rotated.KeyVersion);
+        await SyncAllAsync([a, b2]);
+        ShouldConverge(await StatesAsync([a, b2]));
+    }
+
     [Fact]
     public async Task A_device_waiting_for_the_new_key_cannot_rotate_or_offer_pairing()
     {

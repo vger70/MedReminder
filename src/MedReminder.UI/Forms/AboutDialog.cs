@@ -55,7 +55,6 @@ internal sealed class AboutDialog : MedReminderFormBase
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         BuildLayout();
     }
@@ -189,21 +188,11 @@ internal sealed class AboutDialog : MedReminderFormBase
             Text = string.Empty,
         };
 
-        _checkUpdatesButton = new Button
-        {
-            Text = _loc.Get("Ui.AboutDialog.CheckForUpdates"),
-            AutoSize = true,
-            Height = 28,
-        };
+        _checkUpdatesButton = DialogLayout.Button(_loc.Get("Ui.AboutDialog.CheckForUpdates"));
+        _checkUpdatesButton.Margin = new Padding(0, 0, UiTheme.Space.S, 0);
         _checkUpdatesButton.Click += async (_, _) => await RunUpdateCheckAsync();
 
-        var okButton = new Button
-        {
-            Text = _loc.Get("Common.Close"),
-            DialogResult = DialogResult.OK,
-            AutoSize = true,
-            Height = 28,
-        };
+        var okButton = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.OK);
 
         var textStack = new FlowLayoutPanel
         {
@@ -270,37 +259,24 @@ internal sealed class AboutDialog : MedReminderFormBase
         updatePanel.Controls.Add(_checkUpdatesButton);
         updatePanel.Controls.Add(_updateStatusLabel);
 
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Fill,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(okButton);
-
-        // Root: 4 rows — header (auto), body (fill), update row
-        // (auto, ~44 px), close button row (auto, ~44 px). Every
-        // AutoSize row is sized against a MinimumSize so the button
-        // rows never collapse to zero — a lesson from the previous
-        // layout where the buttons vanished from view.
+        // Root: 3 rows — header (auto), body (fill), update row
+        // (44 px). The Close button sits in the shared button bar
+        // docked at the bottom of the dialog (§5.3).
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
+            RowCount = 3,
         };
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         root.Controls.Add(header, 0, 0);
         root.Controls.Add(body, 0, 1);
         root.Controls.Add(updatePanel, 0, 2);
-        root.Controls.Add(buttons, 0, 3);
 
         Controls.Add(root);
-        AcceptButton = okButton;
-        CancelButton = okButton;
+        Controls.Add(DialogLayout.ButtonBar(this, okButton, okButton));
     }
 
     private static Control BuildSpacer(int height) => new Panel
@@ -396,10 +372,9 @@ internal static class UpdateCheckPrompt
         var body = loc.Get("Ui.UpdateCheck.NewVersionPrompt",
             result.LatestTag ?? "?",
             result.ReleaseUrl ?? string.Empty);
-        var response = MessageBox.Show(
+        var response = ConfirmDialog.Show(loc, 
             owner, body,
             loc.Get("Ui.UpdateCheck.NewVersionTitle"),
-            MessageBoxButtons.YesNo,
             MessageBoxIcon.Information,
             MessageBoxDefaultButton.Button1);
 

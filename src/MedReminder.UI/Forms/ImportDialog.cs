@@ -57,7 +57,6 @@ internal sealed class ImportDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
         var intro = new Label
         {
@@ -128,30 +127,12 @@ internal sealed class ImportDialog : MedReminderFormBase
             Text = string.Empty,
         };
 
-        _importButton = new Button
-        {
-            Text = _loc.Get("Ui.ImportDialog.ImportButton"),
-            AutoSize = true,
-            Height = 30,
-            Enabled = false,
-        };
+        _importButton = DialogLayout.Button(_loc.Get("Ui.ImportDialog.ImportButton"));
+        _importButton.Enabled = false;
         _importButton.Click += async (_, _) => await RunImportAsync();
-        _cancelButton = new Button
-        {
-            Text = _loc.Get("Common.Cancel"),
-            AutoSize = true,
-            Height = 30,
-        };
+        _cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"));
         _cancelButton.Click += (_, _) => OnCancel();
 
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            Margin = new Padding(0, 8, 0, 0),
-        };
-        buttons.Controls.Add(_importButton);
-        buttons.Controls.Add(_cancelButton);
 
         var layout = new FlowLayoutPanel
         {
@@ -171,10 +152,9 @@ internal sealed class ImportDialog : MedReminderFormBase
         layout.Controls.Add(_confirmOverwriteBox);
         layout.Controls.Add(_progressBar);
         layout.Controls.Add(_statusLabel);
-        layout.Controls.Add(buttons);
 
         Controls.Add(layout);
-        CancelButton = _cancelButton;
+        Controls.Add(DialogLayout.ButtonBar(this, _importButton, _cancelButton));
     }
 
     // True when the import succeeded and the user accepted the restart
@@ -278,10 +258,10 @@ internal sealed class ImportDialog : MedReminderFormBase
 
             // §4.2 step 11: offer a restart so the hosted services pick
             // up the swapped DB cleanly.
-            var restart = MessageBox.Show(this,
+            var restart = ConfirmDialog.Show(_loc, this,
                 _loc.Get("Ui.ImportDialog.Success.RestartPrompt"),
                 _loc.Get("Ui.ImportDialog.Title"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                MessageBoxIcon.Information);
             RestartRequested = restart == DialogResult.Yes;
             DialogResult = DialogResult.OK;
             Close();

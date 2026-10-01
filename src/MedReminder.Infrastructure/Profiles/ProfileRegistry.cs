@@ -187,6 +187,39 @@ public sealed class ProfileRegistry : IProfileRegistry
         }
     }
 
+    public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        lock (_sync)
+        {
+            var doc = LoadOrEmpty();
+            if (doc.Profiles.Any(p => string.Equals(p.Id, id, StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException($"Profile '{id}' already exists.");
+            }
+
+            var now = _clock.GetUtcNow();
+            var entry = new ProfileEntry
+            {
+                Id = id,
+                DisplayName = displayName.Trim(),
+                Role = RoleToString(role),
+                CreatedAt = now,
+                LastUsedAt = now,
+                PinHash = pin?.Hash,
+                PinSalt = pin?.Salt,
+                PinIterations = pin?.Iterations ?? 0,
+            };
+            doc.Profiles.Add(entry);
+            if (string.IsNullOrWhiteSpace(doc.ActiveProfileId))
+            {
+                doc.ActiveProfileId = entry.Id;
+            }
+            Save(doc);
+        }
+    }
+
     public void Rename(string id, string newDisplayName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -339,6 +372,54 @@ public sealed class ProfileRegistry : IProfileRegistry
             // security (§8.2), but there is no reason to leak timing
             // information about the stored hash.
             return CryptographicOperations.FixedTimeEquals(actual, expected);
+        }
+    }
+
+    public void SetRole(string id, ProfileRole role)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        lock (_sync)
+        {
+            var doc = LoadOrEmpty();
+            var entry = FindOrThrow(doc, id);
+            var target = RoleToString(role);
+            if (string.Equals(RoleToString(ParseRole(entry.Role)), target, StringComparison.Ordinal)) return;
+
+            // Invariant: at least one admin must remain (§2.2).
+            if (role != ProfileRole.Admin
+                && !doc.Profiles.Any(p => !string.Equals(p.Id, id, StringComparison.Ordinal) && StringEqualsAdmin(p.Role)))
+            {
+                throw new InvalidOperationException("Cannot demote the last admin profile.");
+            }
+
+            entry.Role = target;
+            Save(doc);
+        }
+    }
+
+    public ProfilePinHash? GetPinHash(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        lock (_sync)
+        {
+            var entry = FindOrThrow(LoadOrEmpty(), id);
+            return string.IsNullOrEmpty(entry.PinHash) || string.IsNullOrEmpty(entry.PinSalt) || entry.PinIterations <= 0
+                ? null
+                : new ProfilePinHash(entry.PinHash, entry.PinSalt, entry.PinIterations);
+        }
+    }
+
+    public void SetPinHash(string id, ProfilePinHash? pin)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        lock (_sync)
+        {
+            var doc = LoadOrEmpty();
+            var entry = FindOrThrow(doc, id);
+            entry.PinHash = pin?.Hash;
+            entry.PinSalt = pin?.Salt;
+            entry.PinIterations = pin?.Iterations ?? 0;
+            Save(doc);
         }
     }
 

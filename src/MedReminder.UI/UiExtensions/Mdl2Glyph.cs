@@ -12,12 +12,17 @@ namespace MedReminder.UI.UiExtensions;
 // "" = Edit, "" = Refresh, etc.
 // Full reference: https://learn.microsoft.com/windows/apps/design/style/segoe-ui-symbol-font
 //
+// Windows 11 ships "Segoe Fluent Icons", which keeps the MDL2 code
+// points with a lighter stroke; it is used when installed, MDL2
+// otherwise (docs/analysis/ANALYSIS-UI-MODERNIZATION.md §4.5).
+//
 // Rendering uses high-quality GDI+: single-pass, anti-aliased
-// grid-fit — on HiDPI displays it is worth calling Create() with a
-// size chosen based on the form's current DeviceDpi.
+// grid-fit — callers pass a size already scaled by the display and
+// the text size (MedReminderFormBase.ScaledIconSize).
 internal static class Mdl2Glyph
 {
-    private const string FontFamily = "Segoe MDL2 Assets";
+    private static readonly string FontFamily =
+        UiTheme.Fonts.IsInstalled("Segoe Fluent Icons") ? "Segoe Fluent Icons" : "Segoe MDL2 Assets";
 
     // Thread-safe cache so we do not rebuild the same image on
     // every UI rebuild. The key includes size and color to support
@@ -105,5 +110,10 @@ internal static class Mdl2Glyph
         public const string StatusCircle = "";  // StatusCircleOuter
         public const string Package = "";       // Package
         public const string Mail = "";          // Mail
+        public const string OpenInNewWindow = "\uE8A7"; // OpenInNewWindow
+        public const string BulletedList = "\uE8FD";    // BulletedList
+        public const string Ringer = "\uEA8F";          // Ringer
+        public const string Power = "\uE7E8";           // PowerButton
+        public const string Devices = "\uE772";         // Devices
     }
 }

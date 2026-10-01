@@ -10,7 +10,8 @@ pattern) or a GitHub issue.
 
 **Split on 2026-09-25.** This file now holds only the open items.
 Shipped items (A1, A3, A5, A6, C.3, C.3+, C.3++ Phase 1, website v1;
-A2 since 2026-09-28) moved to `EVOLUTION-DONE.md`, rewritten to match what was
+A2 since 2026-09-28; C.3++ Phase 2 and the items shipped outside this
+backlog since 2026-10-01) moved to `EVOLUTION-DONE.md`, rewritten to match what was
 implemented. Section numbers are unchanged, so existing
 `EVOLUTION.md §<n>` references elsewhere stay valid: a section that
 moved keeps a one-line pointer here.
@@ -25,6 +26,9 @@ implementation brief now exist
 (`docs/analysis/ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`,
 `docs/prompt/PROMPT-MULTI-USER-ROLES-OVERVIEW.md`, PR #112); work
 starts only after its decisions D1–D7 are confirmed.
+**Update 2026-10-01:** promote / demote (item G) shipped with step H2a
+of the household feature (PR #117, merged into `main` by PR #129,
+v2.12.0); the consolidated admin view (item I) stays not planned.
 
 ---
 
@@ -74,7 +78,11 @@ Deliberately excluded from this document:
 A6 → A5 → remaining items. As of 2026-09-25 A1, A3, A5, A6, C.3,
 C.3+ and C.3++ Phase 1 have shipped (see `EVOLUTION-DONE.md`). As of
 2026-09-28 the desktop side of B.1 (phases 1–4c, v2.7.0–v2.9.0) and
-every A2 phase (v2.5.2 and v2.10.0) have shipped too; current state
+every A2 phase (v2.5.2 and v2.10.0) have shipped too. As of
+2026-10-01 three pieces of work that had no section here have shipped
+as well: the remote catalogue feeds (v2.11.0), the household of
+devices with a master device (desktop steps H0–H5, v2.12.0) and the
+UI modernisation (v2.12.0); see `EVOLUTION-DONE.md` §12. Current state
 in `docs/STATUS.md`.
 
 ### 2.0 Remaining sequence
@@ -85,7 +93,9 @@ in `docs/STATUS.md`.
    (native cloud providers) and reaches the functional goal of C.1
    without a backend. Desktop phases 1–4c shipped in v2.7.0–v2.9.0;
    the mobile phases 5–7 wait for the Android spikes S1–S4 (draft
-   PR #106).
+   PR #106). They also carry household step H6 (household on the
+   phone, phone as master, QR decode on the PC webcam;
+   `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` §13).
 2. **C.1 — hosted relay** (§8). Reduced to an optional extra transport
    for B.1 sync; only if the product owner accepts operating a
    service.
@@ -193,6 +203,10 @@ Phase 4 (`ANALYSIS-B1-MOBILE-SYNC.md` §5.8, §13).
 Drive (Phase 4b), for both cloud backups and sync, in v2.8.0. Only
 the optional Phase 3 providers remain.
 
+**Update 2026-10-01.** Phase 2 is recorded as shipped in
+`EVOLUTION-DONE.md` §6. With a shared installation only the master
+device writes the cloud backup (household step H4a).
+
 ---
 
 ## 7. B.1 — Mobile companion client
@@ -209,6 +223,13 @@ fact ledger, operation log and merge, encrypted sync over a folder,
 OneDrive or Google Drive, pairing and key rotation (phases 1–4c,
 v2.7.0–v2.9.0). Open: Android (Phase 5), iOS (Phase 6), mobile feature
 parity (Phase 7). Phase 5 starts after spikes S1–S4 on Android.
+
+**Update 2026-10-01.** The household feature
+(`ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md`, v2.12.0) changes what the
+mobile phases must cover: a phone joins an installation, not only a
+profile group, and the profile operation schema is now 5. Its
+§16 lists the corrections to the B.1 analysis; step H6 is the mobile
+part.
 
 ### 7.1 Portable code already available
 
@@ -435,8 +456,10 @@ v1 shipped on 2026-09-25 in `vger70/medreminder-website`. See
 the design. A content refresh to align the site with the current
 application is prepared in
 `docs/prompt/PROMPT-WEBSITE-CONTENT-REFRESH.md`; it does not cover
-v2.7–v2.10 (sync, cloud providers, therapy card PDF, text size,
-webcam scan, restock by scan) [INFERRED].
+v2.7–v2.12 (sync, cloud providers, therapy card PDF, text size,
+webcam scan, restock by scan, remote catalogue feeds, shared
+installation and master device, dark mode and the new main window)
+[INFERRED].
 
 ---
 
@@ -522,3 +545,10 @@ webcam scan, restock by scan) [INFERRED].
   with a pointer here; §2.0 sequence without A2; multi-user G/I design
   recorded (PR #112, decisions pending); §10 website gap extended to
   v2.10.
+- 2026-10-01 — review at v2.12.0: multi-user item G shipped with
+  household step H2a, item I still not planned; §2 records the remote
+  catalogue feeds (v2.11.0), the household feature and the UI
+  modernisation (v2.12.0), shipped outside this backlog and summarised
+  in `EVOLUTION-DONE.md` §12; §2.0 and §7 add household step H6 to the
+  mobile phases; §6 points to C.3++ Phase 2 in `EVOLUTION-DONE.md`;
+  §10 website gap extended to v2.12.

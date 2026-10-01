@@ -17,6 +17,8 @@ using MedReminder.UI.Notifications;
 using MedReminder.Application.Overview;
 using MedReminder.UI.Services;
 using MedReminder.UI.Tray;
+using MedReminder.UI.UiExtensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -24,6 +26,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
+using Serilog.Extensions.Logging;
 using WinFormsApp = System.Windows.Forms.Application;
 using WinFormThreadExceptionEventArgs = System.Threading.ThreadExceptionEventArgs;
 using WinFormUnhandledExceptionMode = System.Windows.Forms.UnhandledExceptionMode;
@@ -57,9 +60,15 @@ internal static class Program
     private static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
+        // Windows shown before a profile is known (first-run wizard)
+        // follow Windows; the picker takes the last used profile's
+        // appearance, the PIN prompt and the main window the chosen
+        // profile's (ANALYSIS-UI-MODERNIZATION §4.4).
+        ApplyAppearance(AppearanceMode.System);
         Log.Logger = ConfigureSerilog();
 
         _bootstrapLoc = LocalizationService.CreateStandalone(ReadUserLanguage(), AppDataPaths.GetAppDataDirectory());
+        UiMessageBox.Localization = _bootstrapLoc;
 
         WinFormsApp.SetUnhandledExceptionMode(WinFormUnhandledExceptionMode.CatchException);
         WinFormsApp.ThreadException += OnUnhandledUiException;
@@ -107,7 +116,7 @@ internal static class Program
             //    / first-run wizard). May exit if the user cancels.
             var startMinimized = args.Contains(MinimizedArgument);
             var explicitProfileId = TryReadProfileArg(args);
-            var current = ChooseProfile(registry, explicitProfileId, startMinimized);
+            var current = ChooseProfile(registry, explicitProfileId, startMinimized, args);
             if (current is null)
             {
                 Log.Information("Boot flow ended without a selected profile. Exiting.");
@@ -130,8 +139,15 @@ internal static class Program
             MedReminderFormBase.TextScale = TextSizes.ScaleOf(textSize);
             Log.Information("Text size for this profile: {TextSize}.", textSize);
 
+            var appearance = ProfileUiSettingsFile.ReadAppearance(current.DataDirectory);
+            ApplyAppearance(appearance);
+            Log.Information("Appearance for this profile: {Appearance} (dark: {IsDark}).",
+                appearance, UiTheme.IsDark);
+
             using var host = BuildHost(args, current);
             InitializeDatabase(host);
+            AdoptRotatedProfileKey(host, current);
+            ReconcileHousehold(host);
             host.StartAsync().GetAwaiter().GetResult();
 
             try
@@ -153,6 +169,21 @@ internal static class Program
             try { singleInstance.ReleaseMutex(); } catch { /* already released */ }
             Log.CloseAndFlush();
         }
+    }
+
+    private static void ApplyProfileAppearance(Profile profile)
+        => ApplyAppearance(ProfileUiSettingsFile.ReadAppearance(new CurrentProfile(profile).DataDirectory));
+
+    // Sets the WinForms colour mode and the strip renderer built from
+    // the resulting palette. Applied before the windows it affects are
+    // created; windows already open keep the look they were built with.
+    private static void ApplyAppearance(AppearanceMode mode)
+    {
+        UiTheme.Appearance = mode;
+        WinFormsApp.SetColorMode(UiTheme.ToColorMode(mode));
+        ToolStripManager.Renderer = UiTheme.HighContrast
+            ? new ToolStripProfessionalRenderer()
+            : new UiToolStripRenderer(UiTheme.Palette);
     }
 
     private static void RunMigrationIfNeeded()
@@ -191,21 +222,32 @@ internal static class Program
     // Decides the profile to open. Returns null when the user
     // cancels the picker or the wizard — the caller then exits.
     private static ICurrentProfile? ChooseProfile(
-        ProfileRegistry registry, string? explicitProfileId, bool startMinimized)
+        ProfileRegistry registry, string? explicitProfileId, bool startMinimized, string[] args)
     {
         var profiles = registry.ListProfiles();
 
-        // First-run wizard: no profile exists yet (§12.3).
+        // First-run wizard: no profile exists yet (§12.3). Household step
+        // H3d-2: or the join of an existing installation, after which the
+        // start goes on with the profiles it brought.
         if (profiles.Count == 0)
         {
             ApplySystemLanguageOnFirstRun();
-            using var wizard = new FirstRunWizardForm(registry, _bootstrapLoc);
-            var result = wizard.ShowDialog();
-            if (result != System.Windows.Forms.DialogResult.OK || wizard.CreatedProfile is null)
+            while (true)
             {
-                return null;
+                using var wizard = new FirstRunWizardForm(registry, _bootstrapLoc);
+                var result = wizard.ShowDialog();
+                if (wizard.JoinRequested)
+                {
+                    if (RunFirstRunJoin(args) && registry.ListProfiles().Count > 0) break;
+                    continue;
+                }
+                if (result != System.Windows.Forms.DialogResult.OK || wizard.CreatedProfile is null)
+                {
+                    return null;
+                }
+                return new CurrentProfile(wizard.CreatedProfile);
             }
-            return new CurrentProfile(wizard.CreatedProfile);
+            profiles = registry.ListProfiles();
         }
 
         // --profile <id> from CLI — highest priority (§4.3).
@@ -235,7 +277,14 @@ internal static class Program
             return VerifyPinIfNeeded(registry, profiles[0]);
         }
 
-        // Multiple profiles — picker.
+        // Multiple profiles — picker, drawn with the appearance of the
+        // profile used last: it is the one most likely to be chosen,
+        // and a dark profile no longer starts with a light picker.
+        var lastUsed = ResolveHintedProfile(registry, profiles);
+        if (lastUsed is not null)
+        {
+            ApplyProfileAppearance(lastUsed);
+        }
         using var picker = new ProfilePickerForm(registry, _bootstrapLoc);
         var pickerResult = picker.ShowDialog();
         if (pickerResult != System.Windows.Forms.DialogResult.OK || picker.SelectedProfile is null)
@@ -266,6 +315,8 @@ internal static class Program
         {
             return new CurrentProfile(profile);
         }
+        // The PIN prompt belongs to the profile being opened.
+        ApplyProfileAppearance(profile);
         using var prompt = new PinPromptForm(registry, profile, _bootstrapLoc);
         var result = prompt.ShowDialog();
         if (result != System.Windows.Forms.DialogResult.OK)
@@ -297,26 +348,70 @@ internal static class Program
         return null;
     }
 
+    // Household step H3d-2: the join of an existing installation before any
+    // profile exists. A host is built for the services the join needs and
+    // never started (no hosted service runs); its profile is a placeholder
+    // whose database is never opened (SetupProfile). True when the join
+    // brought at least one profile.
+    private static bool RunFirstRunJoin(string[] args)
+    {
+        var setup = SetupProfile.Create();
+        try
+        {
+            using var host = BuildHost(args, setup);
+            using var scope = host.Services.CreateScope();
+            var sp = scope.ServiceProvider;
+            using var dialog = new HouseholdDialog(
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                sp.GetRequiredService<HouseholdHostedService>(),
+                sp.GetRequiredService<ICloudAccountService>(),
+                setup,
+                sp.GetRequiredService<ILocalizationService>(),
+                sp.GetRequiredService<IApplicationRestarter>(),
+                setup: true);
+            var joined = dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK;
+            Log.Information("First-run join ended; profiles brought: {Joined}.", joined);
+            return joined;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "First-run join failed.");
+            MessageBox.Show(
+                _bootstrapLoc.Get("Ui.App.UnexpectedError.Body", ex.Message),
+                _bootstrapLoc.Get("Ui.App.UnexpectedError.Title"),
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return false;
+        }
+        finally
+        {
+            SetupProfile.Remove(setup);
+        }
+    }
+
+    // The configuration files a profile's services read: the installation
+    // settings and the profile's notifications file (§7.1; absent on a
+    // fresh install, the settings dialog writes it the first time the user
+    // saves a ToAddress). Also used for the profiles the master checks
+    // (household step H4c, MasterProfilesHostedService), without reload.
+    internal static void AddProfileConfiguration(IConfigurationBuilder configuration, ICurrentProfile profile,
+        bool reloadOnChange)
+    {
+        var appDataDir = AppDataPaths.GetAppDataDirectory();
+        configuration
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+            .AddJsonFile(Path.Combine(appDataDir, "smtp.settings.json"), optional: true, reloadOnChange: reloadOnChange)
+            .AddJsonFile(Path.Combine(appDataDir, "backup.settings.json"), optional: true, reloadOnChange: reloadOnChange)
+            .AddJsonFile(Path.Combine(appDataDir, "user.settings.json"), optional: true, reloadOnChange: reloadOnChange)
+            .AddJsonFile(profile.NotificationSettingsPath, optional: true, reloadOnChange: reloadOnChange);
+    }
+
     private static IHost BuildHost(string[] args, ICurrentProfile currentProfile)
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        var appDataDir = AppDataPaths.GetAppDataDirectory();
-        var userSmtpSettingsFile = Path.Combine(appDataDir, "smtp.settings.json");
-        var userBackupSettingsFile = Path.Combine(appDataDir, "backup.settings.json");
-        var userSettingsFile = Path.Combine(appDataDir, "user.settings.json");
-        // Per-profile notifications file (§7.1). Absent on a fresh
-        // install; the settings dialog materialises it the first time
-        // the user saves a ToAddress.
-        var notificationSettingsFile = currentProfile.NotificationSettingsPath;
-
-        builder.Configuration
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-            .AddJsonFile(userSmtpSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(userBackupSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(userSettingsFile, optional: true, reloadOnChange: true)
-            .AddJsonFile(notificationSettingsFile, optional: true, reloadOnChange: true);
+        AddProfileConfiguration(builder.Configuration, currentProfile, reloadOnChange: true);
 
         builder.Services.AddSingleton(TimeProvider.System);
 
@@ -344,7 +439,8 @@ internal static class Program
                 sp.GetRequiredService<TimeProvider>(),
                 sp.GetRequiredService<ILogger<DoseReminderService>>(),
                 sp.GetService<ILocalizationService>(),
-                graceWindow);
+                graceWindow,
+                sp.GetService<IMasterRole>());
         });
 
         builder.Services.RemoveAll<IWindowsNotificationService>();
@@ -373,6 +469,14 @@ internal static class Program
         builder.Services.AddSingleton<MedReminder.UI.Services.SyncStatus>();
         builder.Services.AddSingleton<SyncHostedService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<SyncHostedService>());
+        // Household step H3d: the household group, idle until the
+        // installation is published or joined.
+        builder.Services.AddSingleton<HouseholdHostedService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<HouseholdHostedService>());
+        // Step H4c: the master checks every profile of this device.
+        builder.Services.AddHostedService<MasterProfilesHostedService>();
+        // Step H5b: the rotation of a profile's group after a device removal.
+        builder.Services.AddScoped<IProfileGroupRotation, ProfileGroupRotation>();
 
         var catalogueEnabledRaw = builder.Configuration[
             MedReminder.Application.Catalogue.CatalogueFeatureOptions.SectionName + ":Enabled"];
@@ -389,6 +493,23 @@ internal static class Program
 
         builder.Logging.ClearProviders();
         builder.Logging.AddSerilog(dispose: false);
+        // Settings → General → Log database queries (admin only). EF Core
+        // logs each executed command, SQL text and duration, at Information
+        // under this category. The filter reads the setting at each check,
+        // so a change applies without a restart (user.settings.json is
+        // reloaded on change; EF Core caches the decision for about a
+        // second). Parameter values stay hidden: sensitive data logging is
+        // never enabled. The rule names the Serilog provider: AddSerilog
+        // adds a provider rule (any category, Trace), and a provider rule
+        // wins over any rule without one, whatever its category.
+        var configuration = builder.Configuration;
+        const string logQueriesKey = $"{UserSettings.SectionName}:{nameof(UserSettings.LogDatabaseQueries)}";
+        builder.Logging.AddFilter<SerilogLoggerProvider>(DbLoggerCategory.Database.Command.Name,
+            (LogLevel _) => configuration.GetValue<bool>(logQueriesKey));
+        if (configuration.GetValue<bool>(logQueriesKey))
+        {
+            Log.Information("Database query logging is on.");
+        }
 
         return builder.Build();
     }
@@ -398,6 +519,42 @@ internal static class Program
         using var scope = host.Services.CreateScope();
         var init = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
         init.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    // Household step H5b: before anything uses the open profile's database,
+    // a group key rotated after a device removal is taken from the household
+    // grant. A failure is logged; the sync window shows the key is needed.
+    private static void AdoptRotatedProfileKey(IHost host, ICurrentProfile current)
+    {
+        try
+        {
+            ProfileServices.AdoptRotatedKeyAsync(host.Services, current,
+                host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("MedReminder.Household"),
+                CancellationToken.None).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "The new group key of the profile could not be taken from the household.");
+        }
+    }
+
+    // Household step H2: records in the local household what profiles.json
+    // holds and the household does not (the first-run wizard, the V1
+    // migration, hand edits). A failure is logged and does not stop the
+    // start: the profiles work from profiles.json as before.
+    private static void ReconcileHousehold(IHost host)
+    {
+        try
+        {
+            using var scope = host.Services.CreateScope();
+            var recorded = scope.ServiceProvider.GetRequiredService<MedReminder.Application.UseCases.ReconcileHousehold>()
+                .ExecuteAsync(CancellationToken.None).GetAwaiter().GetResult();
+            if (recorded > 0) Log.Information("Household: {Count} profile changes recorded at start.", recorded);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Household reconciliation failed.");
+        }
     }
 
     private static void RunUi(IHost host, bool startMinimized)
@@ -496,6 +653,7 @@ internal static class Program
         }
 
         _bootstrapLoc = LocalizationService.CreateStandalone(code, AppDataPaths.GetAppDataDirectory());
+        UiMessageBox.Localization = _bootstrapLoc;
         Log.Information("First run: UI language set to {Language} from the system culture.", code);
     }
 

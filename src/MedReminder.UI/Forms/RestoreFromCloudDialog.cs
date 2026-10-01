@@ -74,7 +74,6 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
 
         var intro = new Label
         {
@@ -199,20 +198,10 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
             Value = 0,
         };
 
-        _restoreButton = new Button
-        {
-            Text = _loc.Get("Ui.RestoreCloudDialog.Restore.Button"),
-            AutoSize = true,
-            Height = 30,
-        };
+        _restoreButton = DialogLayout.Button(_loc.Get("Ui.RestoreCloudDialog.Restore.Button"));
         _restoreButton.Click += async (_, _) => await RunRestoreAsync();
 
-        _cancelButton = new Button
-        {
-            Text = _loc.Get("Common.Cancel"),
-            AutoSize = true,
-            Height = 30,
-        };
+        _cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"));
         _cancelButton.Click += (_, _) =>
         {
             if (_running)
@@ -226,14 +215,6 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
             }
         };
 
-        var actions = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            Padding = new Padding(4, 8, 4, 8),
-        };
-        actions.Controls.Add(_restoreButton);
-        actions.Controls.Add(_cancelButton);
 
         var container = new FlowLayoutPanel
         {
@@ -253,10 +234,9 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
         container.Controls.Add(_confirmOverwriteBox);
         container.Controls.Add(_progressBar);
         container.Controls.Add(_statusLabel);
-        container.Controls.Add(actions);
 
         Controls.Add(container);
-        CancelButton = _cancelButton;
+        Controls.Add(DialogLayout.ButtonBar(this, _restoreButton, _cancelButton));
 
         Shown += async (_, _) => await ReloadSnapshotsAsync();
     }
@@ -432,11 +412,10 @@ internal sealed class RestoreFromCloudDialog : MedReminderFormBase
             }
 
             _statusLabel.Text = _loc.Get("Ui.RestoreCloudDialog.Restore.Success");
-            var restart = MessageBox.Show(
+            var restart = ConfirmDialog.Show(_loc, 
                 this,
                 _loc.Get("Ui.RestoreCloudDialog.RestartPrompt"),
                 _loc.Get("Ui.RestoreCloudDialog.RestartPrompt.Title"),
-                MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information);
             RestartRequested = restart == DialogResult.Yes;
             DialogResult = DialogResult.OK;

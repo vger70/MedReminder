@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Runtime.InteropServices;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
 using QRCoder;
@@ -9,27 +8,37 @@ namespace MedReminder.UI.Forms;
 // Shows a pairing offer (B.1 Phase 4c, docs/analysis/
 // ANALYSIS-B1-MOBILE-SYNC.md §6.1): the QR code for a phone, and the same
 // code as text for another PC. The code is a secret while the offer
-// lasts: the dialog says so, and its window is excluded from screen
-// capture (SetWindowDisplayAffinity). It closes itself when the offer
-// expires; the caller ends the offer (deletes the pairing file) after it
-// closes.
+// lasts: it stays hidden until the user asks to show it, and the dialog
+// says who can use it. It closes itself when the offer expires; the caller
+// ends the offer (deletes the pairing file) after it closes.
+//
+// The window used to be excluded from screen capture
+// (SetWindowDisplayAffinity). That hid it entirely in remote-control
+// sessions (Remote Desktop, RustDesk, AnyDesk…), where the application
+// looked frozen behind an invisible modal window, and it is no barrier
+// against a program running as the user, which can read the protected
+// keys directly. Showing the code on request keeps it out of screenshots,
+// recordings and shared screens taken before the user reveals it
+// (product owner, 2026-09-30).
 internal sealed class SyncPairingDialog : MedReminderFormBase
 {
-    // Windows 10 2004+: the window is left out of captures and shown
-    // black in them. Older versions only support WDA_MONITOR.
-    private const uint WdaExcludeFromCapture = 0x11;
-    private const uint WdaMonitor = 0x01;
-
     private readonly ILocalizationService _loc;
-    private readonly SyncPairingOffer _offer;
+    private readonly DateTimeOffset _expiresAt;
     private readonly TimeProvider _clock;
     private readonly Label _remaining;
     private readonly System.Windows.Forms.Timer _timer;
 
     public SyncPairingDialog(ILocalizationService localization, SyncPairingOffer offer, TimeProvider clock)
+        : this(localization, offer.Code.Text, offer.ExpiresAt, clock, "Ui.SyncDialog.Pair.Hint")
+    {
+    }
+
+    // Household step H3d: an installation code (mrpair2) and its hint.
+    public SyncPairingDialog(ILocalizationService localization, string codeText, DateTimeOffset expiresAt,
+        TimeProvider clock, string hintKey)
     {
         _loc = localization;
-        _offer = offer;
+        _expiresAt = expiresAt;
         _clock = clock;
 
         Text = _loc.Get("Ui.SyncDialog.Pair.Title");
@@ -39,50 +48,72 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        Font = new Font("Segoe UI", 9.75F);
 
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, Padding = new Padding(12) };
         layout.Controls.Add(new Label
         {
-            Text = _loc.Get("Ui.SyncDialog.Pair.Hint"),
+            Text = _loc.Get(hintKey),
             AutoSize = true,
             MaximumSize = new Size(510, 0),
             Margin = new Padding(0, 0, 0, 8),
         });
 
+        // Hidden until "Show the code": nothing secret is on screen before.
+        var reveal = new Button
+        {
+            Text = _loc.Get("Ui.SyncDialog.Pair.Reveal"),
+            AutoSize = true,
+            Height = 32,
+            Anchor = AnchorStyles.None,
+            Margin = new Padding(0, 8, 0, 8),
+        };
+        layout.Controls.Add(reveal);
+
         var qr = new PictureBox
         {
-            Image = RenderQr(offer.Code.Text),
+            Image = RenderQr(codeText),
             SizeMode = PictureBoxSizeMode.Zoom,
             Width = 320,
             Height = 320,
             Anchor = AnchorStyles.None,
             BackColor = Color.White,
+            Visible = false,
         };
         layout.Controls.Add(qr);
 
-        layout.Controls.Add(new Label
+        var codeLabel = new Label
         {
             Text = _loc.Get("Ui.SyncDialog.Pair.CodeLabel"),
             AutoSize = true,
             Margin = new Padding(0, 8, 0, 4),
-        });
-        layout.Controls.Add(new TextBox
+            Visible = false,
+        };
+        layout.Controls.Add(codeLabel);
+        var codeBox = new TextBox
         {
-            Text = offer.Code.Text,
+            Text = codeText,
             ReadOnly = true,
             Multiline = true,
             WordWrap = true,
             Height = 48,
             Dock = DockStyle.Fill,
             Font = new Font(FontFamily.GenericMonospace, 9F),
-        });
+            Visible = false,
+        };
+        layout.Controls.Add(codeBox);
+        reveal.Click += (_, _) =>
+        {
+            reveal.Visible = false;
+            qr.Visible = true;
+            codeLabel.Visible = true;
+            codeBox.Visible = true;
+        };
 
         _remaining = new Label { AutoSize = true, Margin = new Padding(0, 8, 0, 0) };
         layout.Controls.Add(_remaining);
         layout.Controls.Add(new Label
         {
-            Text = _loc.Get("Ui.SyncDialog.Pair.Secret"),
+            Text = _loc.Get("Ui.SyncDialog.Pair.Secret") + " " + _loc.Get("Ui.SyncDialog.Pair.RevealHint"),
             AutoSize = true,
             MaximumSize = new Size(510, 0),
             ForeColor = SystemColors.GrayText,
@@ -118,15 +149,9 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
         };
     }
 
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        if (!SetWindowDisplayAffinity(Handle, WdaExcludeFromCapture)) SetWindowDisplayAffinity(Handle, WdaMonitor);
-    }
-
     private void Tick()
     {
-        var left = _offer.ExpiresAt - _clock.GetUtcNow();
+        var left = _expiresAt - _clock.GetUtcNow();
         if (left <= TimeSpan.Zero)
         {
             _timer.Stop();
@@ -147,12 +172,4 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
         using var image = Image.FromStream(stream);
         return new Bitmap(image);
     }
-
-    // DllImport rather than LibraryImport: the project does not allow
-    // unsafe code, which the LibraryImport generator needs.
-#pragma warning disable SYSLIB1054
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
-#pragma warning restore SYSLIB1054
 }

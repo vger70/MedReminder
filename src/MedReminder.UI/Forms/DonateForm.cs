@@ -49,7 +49,6 @@ internal sealed class DonateForm : MedReminderFormBase
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
-        Font = new Font("Segoe UI", 9.75F);
 
         BuildLayout();
         UpdateCustomOptionAvailability();
@@ -134,12 +133,7 @@ internal sealed class DonateForm : MedReminderFormBase
         // Create the primary button before wiring the provider radios:
         // checking the first radio raises CheckedChanged, whose handler
         // calls UpdateContinueButton() — the button must already exist.
-        _continueButton = new Button
-        {
-            AutoSize = true,
-            Height = 30,
-            Padding = new Padding(8, 0, 8, 0),
-        };
+        _continueButton = DialogLayout.Button(string.Empty);
         _continueButton.Click += (_, _) => OnContinue();
 
         foreach (var provider in new[] { DonationProvider.Stripe, DonationProvider.PayPal })
@@ -168,22 +162,7 @@ internal sealed class DonateForm : MedReminderFormBase
             _providerRadios[0].Checked = true;
         }
 
-        var closeButton = new Button
-        {
-            Text = _loc.Get("Ui.Donate.Close"),
-            DialogResult = DialogResult.Cancel,
-            AutoSize = true,
-            Height = 30,
-        };
-
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Fill,
-            Padding = new Padding(0, 8, 0, 0),
-        };
-        buttons.Controls.Add(closeButton);
-        buttons.Controls.Add(_continueButton);
+        var closeButton = DialogLayout.Button(_loc.Get("Ui.Donate.Close"), DialogResult.Cancel);
 
         var body = new FlowLayoutPanel
         {
@@ -200,11 +179,9 @@ internal sealed class DonateForm : MedReminderFormBase
         body.Controls.Add(_customHelp);
         body.Controls.Add(paymentLabel);
         body.Controls.Add(providersPanel);
-        body.Controls.Add(buttons);
 
         Controls.Add(body);
-        CancelButton = closeButton;
-        AcceptButton = _continueButton;
+        Controls.Add(DialogLayout.ButtonBar(this, _continueButton, closeButton));
     }
 
     private DonationProvider? SelectedProvider
@@ -278,7 +255,7 @@ internal sealed class DonateForm : MedReminderFormBase
         {
             // Never claims the payment completed — only that a page was
             // opened (§8.3).
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get(result.UserMessageKey ?? DonationMessageKeys.Launched),
                 _loc.Get("Ui.Donate.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -287,7 +264,7 @@ internal sealed class DonateForm : MedReminderFormBase
 
         var messageKey = result.UserMessageKey
             ?? DonationMessageKeys.ForFailure(result.Reason ?? DonationFailureReason.LaunchFailed);
-        MessageBox.Show(this,
+        UiMessageBox.Show(this,
             _loc.Get(messageKey),
             _loc.Get("Ui.Donate.Title"),
             MessageBoxButtons.OK, MessageBoxIcon.Warning);

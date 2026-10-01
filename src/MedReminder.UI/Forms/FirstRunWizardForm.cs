@@ -13,6 +13,11 @@ namespace MedReminder.UI.Forms;
 // types it in, with a hint that it is recommended for admins
 // (§12.3 step 4). The polish pass (tooltips, wording, extra help
 // text) lands in 15e.
+//
+// Household step H3d-2 (ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §6.1): the
+// profile created here starts a new installation; "Join an existing
+// installation…" closes the wizard with JoinRequested set, and the boot
+// flow runs the join (Program).
 internal sealed class FirstRunWizardForm : MedReminderFormBase
 {
     private readonly IProfileRegistry _registry;
@@ -38,7 +43,6 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         // leave the app without a profile to open. AcceptButton
         // handles the flow; the Cancel button below exits the app.
         ControlBox = false;
-        Font = new System.Drawing.Font("Segoe UI", 9.75F);
         // Layout panels + AutoSize instead of absolute coordinates:
         // the form grows with the DPI scale and with the localized
         // text length, so labels and buttons are never clipped.
@@ -46,7 +50,9 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Padding = new Padding(12);
 
-        var contentWidth = LogicalToDeviceUnits(440);
+        // 96-DPI sizes: MedReminderFormBase scales them with the display
+        // on load (LogicalToDeviceUnits here scaled them twice).
+        var contentWidth = 440;
 
         var welcome = new Label
         {
@@ -83,7 +89,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
             MaximumSize = new System.Drawing.Size(contentWidth, 0),
             Text = _loc.Get("Ui.FirstRunWizardForm.PinOptional"),
         };
-        var pinBoxWidth = (contentWidth - LogicalToDeviceUnits(6)) / 2;
+        var pinBoxWidth = (contentWidth - 6) / 2;
         _pinBox = new TextBox
         {
             Width = pinBoxWidth,
@@ -110,35 +116,25 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         pinRow.Controls.Add(_pinBox);
         pinRow.Controls.Add(_pinConfirmBox);
 
-        _statusLabel = new Label
-        {
-            AutoSize = true,
-            MaximumSize = new System.Drawing.Size(contentWidth, 0),
-            ForeColor = UiColors.Error,
-            Text = string.Empty,
-        };
+        // Inline error under the fields (F9).
+        _statusLabel = DialogLayout.ErrorLabel();
+        _statusLabel.MaximumSize = new System.Drawing.Size(contentWidth, 0);
 
-        _createButton = new Button
-        {
-            Text = _loc.Get("Ui.FirstRunWizardForm.Create"),
-            AutoSize = true,
-            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(110), LogicalToDeviceUnits(34)),
-            Padding = new Padding(8, 2, 8, 2),
-        };
-        var exitButton = new Button
-        {
-            Text = _loc.Get("Common.Exit"),
-            DialogResult = DialogResult.Cancel,
-            AutoSize = true,
-            MinimumSize = new System.Drawing.Size(LogicalToDeviceUnits(110), LogicalToDeviceUnits(34)),
-            Padding = new Padding(8, 2, 8, 2),
-        };
+        _createButton = DialogLayout.Button(_loc.Get("Ui.FirstRunWizardForm.Create"));
+        var exitButton = DialogLayout.Button(_loc.Get("Common.Exit"), DialogResult.Cancel);
         _createButton.Click += (_, _) => TryCreate();
+        var joinButton = DialogLayout.Button(_loc.Get("Ui.FirstRunWizardForm.Join"));
+        joinButton.Click += (_, _) =>
+        {
+            JoinRequested = true;
+            DialogResult = DialogResult.Retry;
+            Close();
+        };
         AcceptButton = _createButton;
         CancelButton = exitButton;
 
-        // RightToLeft: the first control added sits on the far right,
-        // so Exit is added first to keep the [Create] [Exit] order.
+        // RightToLeft: the first control added sits on the far right;
+        // Create, the primary action, is last as in every dialog (§5.3).
         var buttonRow = new FlowLayoutPanel
         {
             AutoSize = true,
@@ -147,8 +143,9 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
             Anchor = AnchorStyles.Right,
             Margin = new Padding(3, 12, 3, 3),
         };
-        buttonRow.Controls.Add(exitButton);
         buttonRow.Controls.Add(_createButton);
+        buttonRow.Controls.Add(exitButton);
+        buttonRow.Controls.Add(joinButton);
 
         var tooltip = new ToolTip { ShowAlways = true };
         tooltip.SetToolTip(_pinBox, _loc.Get("Ui.FirstRunWizardForm.Tooltip.PinRecommended"));
@@ -175,12 +172,15 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
     // must then close the app (§12.3 makes the wizard mandatory).
     public Profile? CreatedProfile { get; private set; }
 
+    // Step H3d-2: the user chose to join an existing installation.
+    public bool JoinRequested { get; private set; }
+
     private void TryCreate()
     {
         var name = _nameBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
-            _statusLabel.Text = _loc.Get("Ui.FirstRunWizardForm.NameRequired");
+            DialogLayout.ShowError(_statusLabel, _loc.Get("Ui.FirstRunWizardForm.NameRequired"));
             _nameBox.Focus();
             return;
         }
@@ -191,7 +191,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         {
             if (!string.Equals(pin, pinConfirm, StringComparison.Ordinal))
             {
-                _statusLabel.Text = _loc.Get("Ui.FirstRunWizardForm.PinMismatch");
+                DialogLayout.ShowError(_statusLabel, _loc.Get("Ui.FirstRunWizardForm.PinMismatch"));
                 _pinConfirmBox.Focus();
                 return;
             }
@@ -215,7 +215,7 @@ internal sealed class FirstRunWizardForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            _statusLabel.Text = ex.Message;
+            DialogLayout.ShowError(_statusLabel, ex.Message);
         }
     }
 }

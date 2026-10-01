@@ -13,6 +13,7 @@ using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Application.Overview;
+using MedReminder.UI.Controls;
 using MedReminder.UI.Tray;
 using MedReminder.UI.UiExtensions;
 using MedReminder.UI.Hosting;
@@ -29,25 +30,6 @@ namespace MedReminder.UI.Forms;
 // between threads or concurrent operations.
 internal sealed class MainForm : MedReminderFormBase
 {
-    // Soft backgrounds applied to the whole row: "atmosphere"
-    // layer that hints at the state without overloading the view.
-    private static readonly Color WarningColor = Color.FromArgb(255, 245, 205);
-    private static readonly Color EmptyColor = Color.FromArgb(255, 210, 210);
-    private static readonly Color SuspendedColor = Color.FromArgb(230, 230, 230);
-
-    // "Status" cell: saturated badge with high-contrast bold text.
-    // "Signal" layer — legible at a glance even when the row is not
-    // focused. Material light 200 / 900 palette to guarantee WCAG
-    // AA contrast on the foreground colors.
-    private static readonly Color StatusOkBack       = Color.FromArgb(200, 230, 201);  // #C8E6C9
-    private static readonly Color StatusOkFore       = Color.FromArgb( 27,  94,  32);  // #1B5E20
-    private static readonly Color StatusWarnBack     = Color.FromArgb(255, 236, 179);  // #FFECB3
-    private static readonly Color StatusWarnFore     = Color.FromArgb( 93,  64,  55);  // #5D4037
-    private static readonly Color StatusEmptyBack    = Color.FromArgb(239, 154, 154);  // #EF9A9A
-    private static readonly Color StatusEmptyFore    = Color.FromArgb(183,  28,  28);  // #B71C1C
-    private static readonly Color StatusSuspendBack  = Color.FromArgb(207, 207, 207);  // #CFCFCF
-    private static readonly Color StatusSuspendFore  = Color.FromArgb( 66,  66,  66);  // #424242
-
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ApplicationTrayIcon _tray;
     private readonly ILogger<MainForm> _log;
@@ -63,6 +45,11 @@ internal sealed class MainForm : MedReminderFormBase
     // deactivated medicines unless _showInactive (session only).
     private List<MedicineListItem> _allRows = [];
     private bool _showInactive;
+    // Summary card filter and search text (ANALYSIS-UI-MODERNIZATION §5.1).
+    private MedicineListBucket _bucket = MedicineListBucket.All;
+    private ToolStripTextBox _searchBox = null!;
+    private NavigationPane _nav = null!;
+    private readonly List<SummaryCard> _cards = [];
     private ToolStripMenuItem _showInactiveItem = null!;
     private ToolStripStatusLabel _statusLabel = null!;
     private ToolStripStatusLabel _lastCheckLabel = null!;
@@ -112,7 +99,6 @@ internal sealed class MainForm : MedReminderFormBase
         Width = 960;
         Height = 560;
         StartPosition = FormStartPosition.CenterScreen;
-        Font = new Font("Segoe UI", 9.75F);
         MinimumSize = new Size(720, 420);
 
         BuildLayout();
@@ -120,6 +106,7 @@ internal sealed class MainForm : MedReminderFormBase
 
         Load += async (_, _) => await ReloadAsync();
         Load += (_, _) => WireSyncRefresh();
+        Load += (_, _) => WireHandoverPrompt();
         Load += (_, _) => TryStartPassiveUpdateCheck();
         FormClosing += OnFormClosing;
     }
@@ -131,30 +118,171 @@ internal sealed class MainForm : MedReminderFormBase
         var statusStrip = BuildStatusStrip();
         _grid = BuildGrid();
         _errorBanner = BuildErrorBanner();
+        _nav = BuildNavigationPane();
 
-        // TableLayout with 5 rows: menu, toolbar, error banner,
-        // grid, status. The MenuStrip must be added to Controls AND
-        // assigned to MainMenuStrip so keyboard shortcuts (Ctrl+N,
-        // F5, Alt+F4) work everywhere.
+        // Page: summary cards above the grid (§5.1).
+        var page = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = new Padding(UiTheme.Space.L, UiTheme.Space.M, UiTheme.Space.L, UiTheme.Space.M),
+            Margin = Padding.Empty,
+        };
+        // A column without a style sizes to its widest child, and the
+        // grid's preferred width is the sum of its columns: at 150 % the
+        // page then grew past the window. Percent keeps it in bounds.
+        page.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        page.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        page.Controls.Add(BuildSummaryCards(), 0, 0);
+        page.Controls.Add(_grid, 0, 1);
+
+        var body = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = Padding.Empty,
+        };
+        body.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        // Without a style the single row sizes to its tallest child, so a
+        // long section grew past the window and its scroll bar never
+        // showed; Percent keeps the row as tall as the table.
+        body.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        body.Controls.Add(_nav, 0, 0);
+        body.Controls.Add(page, 1, 0);
+        _nav.Dock = DockStyle.Left;
+
+        // TableLayout with 5 rows: menu, toolbar, error banner, body
+        // (navigation + page), status. The MenuStrip must be added to
+        // Controls AND assigned to MainMenuStrip so keyboard shortcuts
+        // (Ctrl+N, F5, Alt+F4) work everywhere.
         var container = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 5,
         };
+        container.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // menu
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // toolbar
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // banner (Visible=false)
-        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));// grid
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));// body
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // status
         container.Controls.Add(menuStrip, 0, 0);
         container.Controls.Add(toolStrip, 0, 1);
         container.Controls.Add(_errorBanner, 0, 2);
-        container.Controls.Add(_grid, 0, 3);
+        container.Controls.Add(body, 0, 3);
         container.Controls.Add(statusStrip, 0, 4);
 
         Controls.Add(container);
         MainMenuStrip = menuStrip;
+
+        // Below this width the navigation pane shows icons only.
+        Resize += (_, _) => _nav.Collapsed = ClientSize.Width < ScaledLength(NavCollapseWidth);
+        Load += (_, _) => _nav.Collapsed = ClientSize.Width < ScaledLength(NavCollapseWidth);
+
+        // Control.Scale also scales the text box a tool strip hosts, so
+        // a width scaled at build time was scaled twice; set it once
+        // the layout has been scaled.
+        Load += (_, _) => _searchBox.Width = ScaledLength(SearchBoxWidth);
+    }
+
+    private const int SearchBoxWidth = 240;
+
+    private const int NavCollapseWidth = 900;
+
+    // D3: the medicine list is the page of this window; the other entries
+    // open the windows the menus already open.
+    private NavigationPane BuildNavigationPane()
+    {
+        var nav = new NavigationPane();
+        var medicines = nav.AddItem(_loc.Get("Ui.MainForm.Nav.Medicines"), Mdl2Glyph.Glyphs.BulletedList,
+            opensWindow: false, () => _grid.Focus());
+        medicines.Selected = true;
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Timeline"), Mdl2Glyph.Glyphs.Calendar,
+            opensWindow: true, ShowTherapyTimeline);
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Report"), Mdl2Glyph.Glyphs.Document,
+            opensWindow: true, async () => await ShowTherapyReportAsync());
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.RequestPrescription"), Mdl2Glyph.Glyphs.Mail,
+            opensWindow: true, async () => await ShowPrescriptionRequestAsync());
+        nav.AddSeparator();
+        if (_currentProfile.IsAdmin)
+        {
+            nav.AddItem(MenuCaption("Ui.MainForm.Menu.Tools.Household"), Mdl2Glyph.Glyphs.Home,
+                opensWindow: true, ShowHousehold);
+        }
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Tools.Settings"), Mdl2Glyph.Glyphs.Settings,
+            opensWindow: true, ShowSettings);
+        return nav;
+    }
+
+    // Menu captions carry an access key (&) and an ellipsis; the
+    // navigation pane and the toolbar show the plain caption, so the
+    // same translation serves both.
+    private string MenuCaption(string key)
+        => _loc.Get(key).Replace("&&", "\u0001").Replace("&", string.Empty).Replace("\u0001", "&")
+            .TrimEnd('…', '.').Trim();
+
+    private TableLayoutPanel BuildSummaryCards()
+    {
+        var row = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 4,
+            RowCount = 1,
+            Margin = new Padding(0, 0, 0, UiTheme.Space.M),
+        };
+        foreach (var (bucket, key) in new[]
+        {
+            (MedicineListBucket.Empty, "Ui.MainForm.Summary.Empty"),
+            (MedicineListBucket.Warning, "Ui.MainForm.Summary.Warning"),
+            (MedicineListBucket.Suspended, "Ui.MainForm.Summary.Suspended"),
+            (MedicineListBucket.All, "Ui.MainForm.Summary.All"),
+        })
+        {
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+            var card = new SummaryCard(bucket, _loc.Get(key))
+            {
+                Dock = DockStyle.Fill,
+                Pressed = bucket == _bucket,
+            };
+            card.Click += (_, _) => SelectBucket(card.Bucket);
+            _cards.Add(card);
+            row.Controls.Add(card);
+        }
+        // The last card needs no gap on its right.
+        _cards[^1].Margin = Padding.Empty;
+        return row;
+    }
+
+    // A second click on the active card clears the filter.
+    private void SelectBucket(MedicineListBucket bucket)
+    {
+        _bucket = bucket == _bucket ? MedicineListBucket.All : bucket;
+        foreach (var card in _cards) card.Pressed = card.Bucket == _bucket;
+        ApplyFilters();
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        // Ctrl+F moves to the search box, Esc there clears it.
+        if (keyData == (Keys.Control | Keys.F))
+        {
+            _searchBox.Focus();
+            _searchBox.SelectAll();
+            return true;
+        }
+        if (keyData == Keys.Escape && _searchBox.Focused && _searchBox.Text.Length > 0)
+        {
+            _searchBox.Clear();
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
     }
 
     // ------------------ Menu bar ------------------
@@ -206,7 +334,7 @@ internal sealed class MainForm : MedReminderFormBase
         showInactive.CheckedChanged += (_, _) =>
         {
             _showInactive = showInactive.Checked;
-            ApplyInactiveFilter();
+            ApplyFilters();
         };
         _showInactiveItem = showInactive;
         therapyMenu.DropDownItems.Add(showInactive);
@@ -253,9 +381,18 @@ internal sealed class MainForm : MedReminderFormBase
         toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.CheckNow"),
             Mdl2Glyph.Glyphs.Sync, Keys.Control | Keys.R,
             async () => await RunMonitorAsync()));
-        toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Sync"),
-            Mdl2Glyph.Glyphs.Sync, Keys.None,
-            () => { ShowSync(); return Task.CompletedTask; }));
+        // Household step H3d (ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §4.3):
+        // sync and the installation are administrators' tools, hidden from
+        // other profiles like Manage profiles.
+        if (_currentProfile.IsAdmin)
+        {
+            toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Sync"),
+                Mdl2Glyph.Glyphs.Sync, Keys.None,
+                () => { ShowSync(); return Task.CompletedTask; }));
+            toolsMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Tools.Household"),
+                Mdl2Glyph.Glyphs.Sync, Keys.None,
+                () => { ShowHousehold(); return Task.CompletedTask; }));
+        }
         toolsMenu.DropDownItems.Add(new ToolStripSeparator());
         // Manage profiles… — admin only. The design (§12.2) is
         // clear: non-admin users must not see this entry at all,
@@ -307,15 +444,26 @@ internal sealed class MainForm : MedReminderFormBase
         strip.Items.Add(stockMenu);
         strip.Items.Add(toolsMenu);
         strip.Items.Add(helpMenu);
+
+        // Drop-downs draw item images at their ImageScalingSize; match
+        // it to the scaled glyphs so icons grow with the text.
+        var iconSize = new Size(ScaledIconSize(16), ScaledIconSize(16));
+        foreach (ToolStripItem top in strip.Items)
+        {
+            if (top is ToolStripMenuItem menu)
+            {
+                menu.DropDown.ImageScalingSize = iconSize;
+            }
+        }
         return strip;
     }
 
-    private static ToolStripMenuItem BuildMenuItem(
+    private ToolStripMenuItem BuildMenuItem(
         string text, string glyph, Keys shortcut, Func<Task> action)
     {
         var item = new ToolStripMenuItem(text)
         {
-            Image = Mdl2Glyph.Create(glyph, size: 16),
+            Image = Mdl2Glyph.Create(glyph, size: ScaledIconSize(16)),
         };
         if (shortcut != Keys.None)
         {
@@ -351,7 +499,7 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             _log.LogError(ex, "Failed to open the About dialog.");
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -368,7 +516,7 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             _log.LogError(ex, "Failed to open the Support Development dialog.");
-            MessageBox.Show(this, ex.Message,
+            UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -393,7 +541,7 @@ internal sealed class MainForm : MedReminderFormBase
             switch (result.Status)
             {
                 case UpdateCheckStatus.UpToDate:
-                    MessageBox.Show(this,
+                    UiMessageBox.Show(this,
                         _loc.Get("Ui.UpdateCheck.UpToDate"),
                         _loc.Get("Ui.UpdateCheck.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -405,7 +553,7 @@ internal sealed class MainForm : MedReminderFormBase
 
                 case UpdateCheckStatus.Error:
                 default:
-                    MessageBox.Show(this,
+                    UiMessageBox.Show(this,
                         _loc.Get("Ui.UpdateCheck.Error", result.ErrorMessage ?? string.Empty),
                         _loc.Get("Ui.UpdateCheck.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -416,7 +564,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             UseWaitCursor = false;
             _log.LogWarning(ex, "Manual update check failed.");
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.UpdateCheck.Error", ex.Message),
                 _loc.Get("Ui.UpdateCheck.Title"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -480,7 +628,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            BackColor = UiColors.HighContrast ? SystemColors.Info : Color.FromArgb(255, 220, 220),
+            BackColor = UiColors.HighContrast ? SystemColors.Info : UiTheme.Palette.DangerBack,
             Padding = new Padding(12, 8, 12, 8),
             Visible = false,
         };
@@ -489,7 +637,7 @@ internal sealed class MainForm : MedReminderFormBase
         {
             AutoSize = true,
             Dock = DockStyle.Left,
-            ForeColor = UiColors.HighContrast ? SystemColors.InfoText : Color.FromArgb(120, 0, 0),
+            ForeColor = UiColors.HighContrast ? SystemColors.InfoText : UiTheme.Palette.DangerText,
             Font = new Font(Font, FontStyle.Bold),
             Text = _loc.Get("Ui.MainForm.ErrorBanner.Load"),
         };
@@ -518,56 +666,51 @@ internal sealed class MainForm : MedReminderFormBase
         _errorBanner.Visible = false;
     }
 
-    // Toolbar "quick access": solo 5 azioni frequenti, icone MDL2 sopra
-    // il testo. Tutti gli altri comandi sono raggiungibili dal MenuStrip
-    // + shortcut tastiera. Riduce il rumore visivo (era ~11 bottoni).
+    // Toolbar (D4, F5): the two most frequent actions and the search
+    // box. Every other command stays in the menus with its shortcut, in
+    // the navigation pane and in the grid's context menu.
     private ToolStrip BuildToolStrip()
     {
         var strip = new ToolStrip
         {
             GripStyle = ToolStripGripStyle.Hidden,
-            RenderMode = ToolStripRenderMode.System,
-            Padding = new Padding(6, 4, 6, 4),
-            ImageScalingSize = new Size(24, 24),
+            Padding = new Padding(UiTheme.Space.S, UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.XS),
+            ImageScalingSize = new Size(ScaledIconSize(20), ScaledIconSize(20)),
             AutoSize = true,
         };
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.NewMedicine"),
+        strip.Items.Add(BuildToolbarButton(MenuCaption("Ui.MainForm.Menu.Therapy.NewMedicine"),
             Mdl2Glyph.Glyphs.Add,
             async () => await ShowNewMedicineAsync()));
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.Edit"),
-            Mdl2Glyph.Glyphs.Edit,
-            async () => await ShowEditMedicineAsync()));
-        strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.RegisterIntake"),
+        strip.Items.Add(BuildToolbarButton(MenuCaption("Ui.MainForm.Menu.Therapy.RegisterIntake"),
             Mdl2Glyph.Glyphs.CheckMark,
             async () => await ShowRegisterIntakeAsync()));
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.CheckNow"),
-            Mdl2Glyph.Glyphs.Sync,
-            async () => await RunMonitorAsync()));
-        strip.Items.Add(new ToolStripSeparator());
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.TherapyReport"),
-            Mdl2Glyph.Glyphs.Document,
-            async () => await ShowTherapyReportAsync()));
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.TherapyTimeline"),
-            Mdl2Glyph.Glyphs.Calendar,
-            () => { ShowTherapyTimeline(); return Task.CompletedTask; }));
-        strip.Items.Add(BuildToolbarButton(_loc.Get("Ui.MainForm.Toolbar.RequestPrescription"),
-            Mdl2Glyph.Glyphs.Mail,
-            async () => await ShowPrescriptionRequestAsync()));
+
+        _searchBox = new ToolStripTextBox
+        {
+            Alignment = ToolStripItemAlignment.Right,
+            AutoSize = false,
+            Width = SearchBoxWidth,
+            BorderStyle = BorderStyle.FixedSingle,
+            Margin = new Padding(0, UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.XS),
+            AccessibleName = _loc.Get("Ui.MainForm.Search.Placeholder"),
+        };
+        _searchBox.TextBox.PlaceholderText = _loc.Get("Ui.MainForm.Search.Placeholder");
+        _searchBox.TextChanged += (_, _) => ApplyFilters();
+        strip.Items.Add(_searchBox);
         return strip;
     }
 
-    private static ToolStripButton BuildToolbarButton(
+    private ToolStripButton BuildToolbarButton(
         string text, string glyph, Func<Task> action)
     {
         var b = new ToolStripButton(text)
         {
             DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
-            TextImageRelation = TextImageRelation.ImageAboveText,
-            Image = Mdl2Glyph.Create(glyph, size: 24),
+            TextImageRelation = TextImageRelation.ImageBeforeText,
+            Image = Mdl2Glyph.Create(glyph, size: ScaledIconSize(20)),
             ImageScaling = ToolStripItemImageScaling.None,
             AutoSize = true,
-            Padding = new Padding(4, 2, 4, 2),
+            Padding = new Padding(UiTheme.Space.S, UiTheme.Space.XS, UiTheme.Space.S, UiTheme.Space.XS),
         };
         b.Click += async (_, _) => await action();
         return b;
@@ -643,6 +786,14 @@ internal sealed class MainForm : MedReminderFormBase
             // Raises CheckedChanged, which shows the inactive rows.
             _showInactiveItem.Checked = true;
         }
+        // A card or search filter that hides the medicine is cleared.
+        if (!_rows.Any(r => r.Id == medicineId))
+        {
+            _bucket = MedicineListBucket.All;
+            foreach (var card in _cards) card.Pressed = card.Bucket == _bucket;
+            if (_searchBox.Text.Length > 0) _searchBox.Clear(); // raises ApplyFilters
+            else ApplyFilters();
+        }
         foreach (DataGridViewRow row in _grid.Rows)
         {
             if (row.DataBoundItem is not MedicineListItem item || item.Id != medicineId) continue;
@@ -666,6 +817,7 @@ internal sealed class MainForm : MedReminderFormBase
         MedReminder.Application.Notifications.EmailMessage draft;
         string doctorAddress;
         bool smtpConfigured;
+        bool isMaster;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -678,6 +830,9 @@ internal sealed class MainForm : MedReminderFormBase
                 .GetRequiredService<IOptionsMonitor<NotificationSettings>>().CurrentValue.DoctorAddress;
             smtpConfigured = scope.ServiceProvider
                 .GetRequiredService<IOptionsMonitor<SmtpSettings>>().CurrentValue.IsConfigured;
+            // Household step H4c (C5): a device that is not the master
+            // offers the mail client only.
+            isMaster = await scope.ServiceProvider.GetRequiredService<IMasterRole>().SendsEmailAsync(CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -686,7 +841,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
 
         using var dialog = new PrescriptionRequestDialog(
-            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc);
+            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc, isMaster);
         dialog.ShowDialog(this);
     }
 
@@ -710,12 +865,15 @@ internal sealed class MainForm : MedReminderFormBase
                 _currentProfile.DisplayName))
         {
             TextAlign = ContentAlignment.MiddleLeft,
-            ForeColor = _currentProfile.IsAdmin
-                ? UiColors.Themed(System.Drawing.Color.DarkBlue)
-                : SystemColors.ControlText,
-            Font = new Font("Segoe UI", 9.75F,
-                _currentProfile.IsAdmin ? FontStyle.Bold : FontStyle.Regular),
+            Font = new Font(Font, _currentProfile.IsAdmin ? FontStyle.Bold : FontStyle.Regular),
         };
+        // Only the admin badge gets its own colour; the other label
+        // keeps the default so the strip renderer draws it in the
+        // palette's text colour.
+        if (_currentProfile.IsAdmin)
+        {
+            profileLabel.ForeColor = UiTheme.Palette.Accent;
+        }
         _statusLabel = new ToolStripStatusLabel(_loc.Get("Ui.App.Ready"))
         {
             Spring = true,
@@ -779,10 +937,102 @@ internal sealed class MainForm : MedReminderFormBase
         };
         status.RemoteChangesApplied += handler;
         FormClosed += (_, _) => status.RemoteChangesApplied -= handler;
+
+        // Household step H5b: the profile's group was rotated after a device
+        // removal; the new key is taken at the next start, before the
+        // database is used.
+        EventHandler rotated = (_, _) =>
+        {
+            if (IsDisposed || !IsHandleCreated || !status.NeedsNewKey || _rotatedKeyAsked) return;
+            BeginInvoke(new Func<Task>(OfferRestartForRotatedKeyAsync));
+        };
+        status.Changed += rotated;
+        FormClosed += (_, _) => status.Changed -= rotated;
+    }
+
+    // Household step H4b (§7.2 step 3): when this device is elected master,
+    // an administrator is asked, once per election and session, to run the
+    // handover wizard. Later leaves it in Tools → Installation.
+    private readonly HashSet<Guid> _handoverAsked = [];
+    private bool _newKeyAsked;
+    private HouseholdHostedService? _householdService;
+
+    private void WireHandoverPrompt()
+    {
+        if (!_currentProfile.IsAdmin) return;
+        using var scope = _scopeFactory.CreateScope();
+        var household = scope.ServiceProvider.GetRequiredService<HouseholdHostedService>();
+        _householdService = household;
+        EventHandler handler = (_, _) =>
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            BeginInvoke(new Func<Task>(PromptHandoverAsync));
+        };
+        household.Changed += handler;
+        FormClosed += (_, _) => household.Changed -= handler;
+    }
+
+    private async Task PromptHandoverAsync()
+    {
+        try
+        {
+            MedReminder.Application.Household.HandoverView? view;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                view = await scope.ServiceProvider.GetRequiredService<MedReminder.Application.Household.MasterHandover>()
+                    .PendingAsync(CancellationToken.None);
+            }
+            // Step H5a: a device was removed elsewhere; an administrator
+            // enters the new key in the installation window.
+            if (!_newKeyAsked && _householdService?.LastResult?.NewKeyRequired == true)
+            {
+                _newKeyAsked = true;
+                UiMessageBox.Show(this, _loc.Get("Ui.HouseholdDialog.Status.NewKey"), _loc.Get("Ui.HouseholdDialog.Title"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            if (view is null || !_handoverAsked.Add(view.Election.ElectionId)) return;
+            if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.HandoverWizard.Prompt"), _loc.Get("Ui.HandoverWizard.Title"),
+                    MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                return;
+            }
+            await HandoverWizardForm.ShowIfPendingAsync(this, _scopeFactory, _loc);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
+        }
+    }
+
+    private bool _rotatedKeyAsked;
+
+    private async Task OfferRestartForRotatedKeyAsync()
+    {
+        if (_rotatedKeyAsked) return;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            if (scope.ServiceProvider.GetRequiredService<ISyncSettingsStore>().Load() is not { } settings) return;
+            var key = await scope.ServiceProvider.GetRequiredService<MedReminder.Application.Household.HouseholdKeyring>()
+                .NewerGrantAsync(_currentProfile.Id, settings.GroupId, settings.KeyVersion, CancellationToken.None);
+            if (key is null) return;
+            System.Security.Cryptography.CryptographicOperations.ZeroMemory(key.Key);
+            _rotatedKeyAsked = true;
+            if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.MainForm.RotatedKey.Prompt"), _loc.Get("Ui.HouseholdDialog.Title"),
+                    MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                _restarter.RestartAndExit(["--profile", _currentProfile.Id]);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
+        }
     }
 
     private void ShowSync()
     {
+        if (!_currentProfile.IsAdmin) return;
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -801,6 +1051,28 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.Sync"), ex);
+        }
+    }
+
+    private void ShowHousehold()
+    {
+        if (!_currentProfile.IsAdmin) return;
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var sp = scope.ServiceProvider;
+            using var dialog = new HouseholdDialog(
+                _scopeFactory,
+                sp.GetRequiredService<HouseholdHostedService>(),
+                sp.GetRequiredService<ICloudAccountService>(),
+                _currentProfile,
+                _loc,
+                _restarter);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.Household"), ex);
         }
     }
 
@@ -840,12 +1112,20 @@ internal sealed class MainForm : MedReminderFormBase
             BackgroundColor = SystemColors.Window,
             BorderStyle = BorderStyle.None,
             EnableHeadersVisualStyles = false,
+            AllowUserToResizeRows = false,
         };
+        // 36 px rows at Normal size (§5.1); MedReminderFormBase scales
+        // the row template with the display and the text size.
+        grid.RowTemplate.Height = 36;
+        // Every column fills by weight down to a minimum, so with Large
+        // text at 150 % the list fits the page instead of scrolling
+        // sideways; the name column takes the largest share.
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Medicine"),
             DataPropertyName = nameof(MedicineListItem.Name),
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 250,
             MinimumWidth = 160,
             SortMode = DataGridViewColumnSortMode.Programmatic
         });
@@ -853,19 +1133,25 @@ internal sealed class MainForm : MedReminderFormBase
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Stock"),
             DataPropertyName = nameof(MedicineListItem.StockDisplay),
-            Width = 120,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 120,
+            MinimumWidth = 96,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.DailyRate"),
             DataPropertyName = nameof(MedicineListItem.DailyRateDisplay),
-            Width = 100,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 100,
+            MinimumWidth = 80,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.DaysRemaining"),
             DataPropertyName = nameof(MedicineListItem.DaysRemainingDisplay),
-            Width = 100,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 100,
+            MinimumWidth = 80,
             SortMode = DataGridViewColumnSortMode.Programmatic
         });
 
@@ -873,14 +1159,18 @@ internal sealed class MainForm : MedReminderFormBase
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.RunOut"),
             DataPropertyName = nameof(MedicineListItem.EtaDisplay),
-            Width = 110,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 110,
+            MinimumWidth = 88,
         });
         _statusCellFont = new Font(Font, FontStyle.Bold);
         var statusColumn = new DataGridViewTextBoxColumn
         {
             HeaderText = _loc.Get("Ui.MainForm.Column.Status"),
             DataPropertyName = nameof(MedicineListItem.StatusDisplay),
-            Width = 110,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 110,
+            MinimumWidth = 88,
             DefaultCellStyle = new DataGridViewCellStyle
             {
                 // Alignment and font are column-level: they do not
@@ -972,13 +1262,27 @@ internal sealed class MainForm : MedReminderFormBase
             }
         };
         grid.RowPrePaint += OnRowPrePaint;
+        grid.CellPainting += OnStatusCellPainting;
         grid.CellDoubleClick += async (_, _) => await ShowEditMedicineAsync();
+
+        // Right-click selects the row under the pointer before the
+        // context menu opens, so the command acts on that medicine.
+        grid.CellMouseDown += (_, e) =>
+        {
+            if (e.Button != MouseButtons.Right || e.RowIndex < 0) return;
+            grid.ClearSelection();
+            var row = grid.Rows[e.RowIndex];
+            var cell = row.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible);
+            if (cell is not null) grid.CurrentCell = cell;
+            row.Selected = true;
+        };
+        grid.ContextMenuStrip = BuildGridContextMenu();
         return grid;
     }
 
     private void OnRowPrePaint(object? sender, DataGridViewRowPrePaintEventArgs e)
     {
-        if (e.RowIndex < 0 || e.RowIndex >= _rows.Count) return;
+        if (e.RowIndex < 0 || e.RowIndex >= _grid.Rows.Count) return;
         var row = _grid.Rows[e.RowIndex];
         if (row.DataBoundItem is not MedicineListItem item) return;
 
@@ -987,6 +1291,7 @@ internal sealed class MainForm : MedReminderFormBase
         if (UiColors.HighContrast)
         {
             row.DefaultCellStyle.BackColor = Color.Empty;
+            row.DefaultCellStyle.ForeColor = Color.Empty;
             if (_statusColumnIndex >= 0 && _statusColumnIndex < row.Cells.Count)
             {
                 var style = row.Cells[_statusColumnIndex].Style;
@@ -998,33 +1303,91 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        // Layer 1 — atmosphere across the whole row (soft colors).
-        row.DefaultCellStyle.BackColor = item.Status switch
-        {
-            MedicineRowStatus.Warning => WarningColor,
-            MedicineRowStatus.Empty => EmptyColor,
-            MedicineRowStatus.Suspended or MedicineRowStatus.Inactive => SuspendedColor,
-            _ => SystemColors.Window,
-        };
+        // Status is told once, in the Status cell (ANALYSIS-UI-MODERNIZATION
+        // §5.1, F3): no whole-row tint, which competed with the selection.
+        // Suspended and inactive rows read in secondary text.
+        var palette = UiTheme.Palette;
+        row.DefaultCellStyle.BackColor = Color.Empty;
+        row.DefaultCellStyle.ForeColor = item.Status is MedicineRowStatus.Suspended or MedicineRowStatus.Inactive
+            ? palette.TextSecondary
+            : Color.Empty;
 
-        // Layer 2 — badge on the "Status" cell (saturated bg + fg).
-        // SelectionBackColor / SelectionForeColor mirror the badge
-        // so the signal survives even when the row is selected.
-        if (_statusColumnIndex < 0 || _statusColumnIndex >= row.Cells.Count) return;
+    }
+
+    // Status as a pill (§5.1): tinted rounded background and coloured
+    // text on the row's own background, so the selection highlight and
+    // the status read together. Under high contrast the stock cell is
+    // drawn and the text alone tells the status.
+    private void OnStatusCellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex != _statusColumnIndex || UiColors.HighContrast) return;
+        if (_grid.Rows[e.RowIndex].DataBoundItem is not MedicineListItem item || e.Graphics is null) return;
+
+        var palette = UiTheme.Palette;
         var (bg, fg) = item.Status switch
         {
-            MedicineRowStatus.Ok        => (StatusOkBack,      StatusOkFore),
-            MedicineRowStatus.Warning   => (StatusWarnBack,    StatusWarnFore),
-            MedicineRowStatus.Empty     => (StatusEmptyBack,   StatusEmptyFore),
+            MedicineRowStatus.Ok        => (palette.OkBack,      palette.OkText),
+            MedicineRowStatus.Warning   => (palette.WarningBack, palette.WarningText),
+            MedicineRowStatus.Empty     => (palette.DangerBack,  palette.DangerText),
             MedicineRowStatus.Suspended
-                or MedicineRowStatus.Inactive => (StatusSuspendBack, StatusSuspendFore),
-            _                           => (SystemColors.Window, SystemColors.ControlText),
+                or MedicineRowStatus.Inactive => (palette.NeutralBack, palette.NeutralText),
+            _                           => (palette.Surface,     palette.Text),
         };
-        var cell = row.Cells[_statusColumnIndex];
-        cell.Style.BackColor = bg;
-        cell.Style.ForeColor = fg;
-        cell.Style.SelectionBackColor = bg;
-        cell.Style.SelectionForeColor = fg;
+
+        var selected = (e.State & DataGridViewElementStates.Selected) != 0;
+        e.PaintBackground(e.CellBounds, selected);
+
+        var text = e.FormattedValue as string ?? item.StatusDisplay;
+        var font = e.CellStyle?.Font ?? _grid.Font;
+        var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+            | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis;
+        var textSize = TextRenderer.MeasureText(e.Graphics, text, font, e.CellBounds.Size, flags);
+        var padX = font.Height * 2 / 3;
+        var padY = font.Height / 5;
+        var width = Math.Min(e.CellBounds.Width - 2 * padY, textSize.Width + 2 * padX);
+        var height = Math.Min(e.CellBounds.Height - 2 * padY, textSize.Height + 2 * padY);
+        var pill = new Rectangle(
+            e.CellBounds.X + (e.CellBounds.Width - width) / 2,
+            e.CellBounds.Y + (e.CellBounds.Height - height) / 2,
+            width, height);
+
+        var smoothing = e.Graphics.SmoothingMode;
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using (var path = SummaryCard.RoundedRect(pill, Math.Max(2, height / 6)))
+        using (var brush = new SolidBrush(bg))
+        {
+            e.Graphics.FillPath(brush, path);
+        }
+        e.Graphics.SmoothingMode = smoothing;
+        TextRenderer.DrawText(e.Graphics, text, font, pill, fg, flags);
+        e.Handled = true;
+    }
+
+    // Context menu of the grid (D4): the per-medicine commands of the
+    // Therapy and Stock menus, next to the row they act on.
+    private ContextMenuStrip BuildGridContextMenu()
+    {
+        var menu = new ContextMenuStrip();
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Edit"),
+            Mdl2Glyph.Glyphs.Edit, Keys.None, async () => await ShowEditMedicineAsync()));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RegisterIntake"),
+            Mdl2Glyph.Glyphs.CheckMark, Keys.None, async () => await ShowRegisterIntakeAsync()));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.ChangeSchedule"),
+            Mdl2Glyph.Glyphs.Notebook, Keys.None, async () => await ShowChangeScheduleAsync()));
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.AddPackage"),
+            Mdl2Glyph.Glyphs.Package, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NewPackage)));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
+            Mdl2Glyph.Glyphs.Edit, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.History"),
+            Mdl2Glyph.Glyphs.History, Keys.None, async () => await ShowFactHistoryAsync()));
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deactivate"),
+            Mdl2Glyph.Glyphs.Cancel, Keys.None, async () => await DeactivateSelectedAsync()));
+        menu.ImageScalingSize = new Size(ScaledIconSize(16), ScaledIconSize(16));
+        // Nothing to act on without a row (right-click below the last one).
+        menu.Opening += (_, e) => e.Cancel = GetSelectedRow() is null;
+        return menu;
     }
 
     private void WireTrayHandlers()
@@ -1067,7 +1430,7 @@ internal sealed class MainForm : MedReminderFormBase
             var items = await loader.LoadAsync(CancellationToken.None);
 
             _allRows = items.ToList();
-            ApplyInactiveFilter();
+            ApplyFilters();
             HideErrorBanner();
         }
         catch (Exception ex)
@@ -1078,16 +1441,40 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    // Rebuilds the shown rows from the last load, in load order.
-    private void ApplyInactiveFilter()
+    // Rebuilds the shown rows from the last load, in load order: the
+    // inactive toggle, then the summary card and the search text
+    // (MedicineListFilter). The cards count the rows before the card and
+    // search filters, so each card shows what a click on it would list.
+    private void ApplyFilters()
     {
+        var visible = MedicineListFilter.Visible(_allRows, _showInactive);
+        var summary = MedicineListFilter.Summarize(visible);
+        foreach (var card in _cards)
+        {
+            card.Count = card.Bucket switch
+            {
+                MedicineListBucket.Empty => summary.Empty,
+                MedicineListBucket.Warning => summary.Warning,
+                MedicineListBucket.Suspended => summary.Suspended,
+                _ => summary.All,
+            };
+        }
+
         _rows = new BindingList<MedicineListItem>(
-            _showInactive ? _allRows : _allRows.Where(r => r.IsActive).ToList());
+            MedicineListFilter.Apply(visible, _bucket, _searchBox.Text));
         _grid.DataSource = _rows;
-        var hidden = _allRows.Count - _rows.Count;
-        SetStatus(hidden > 0
-            ? _loc.Get("Ui.MainForm.Status.MedicinesLoadedHidden", _rows.Count, hidden)
-            : _loc.Get("Ui.MainForm.Status.MedicinesLoaded", _rows.Count));
+
+        var hidden = _allRows.Count - visible.Count;
+        if (_rows.Count != visible.Count)
+        {
+            SetStatus(_loc.Get("Ui.MainForm.Status.Filtered", _rows.Count, visible.Count));
+        }
+        else
+        {
+            SetStatus(hidden > 0
+                ? _loc.Get("Ui.MainForm.Status.MedicinesLoadedHidden", _rows.Count, hidden)
+                : _loc.Get("Ui.MainForm.Status.MedicinesLoaded", _rows.Count));
+        }
     }
 
     private MedicineListItem? GetSelectedRow()
@@ -1311,10 +1698,10 @@ internal sealed class MainForm : MedReminderFormBase
         var row = GetSelectedRow();
         if (row is null) return;
 
-        var confirm = MessageBox.Show(this,
+        var confirm = ConfirmDialog.Show(_loc, this,
             _loc.Get("Ui.MainForm.Deactivate.Confirm", row.Name),
             _loc.Get("Ui.MainForm.Deactivate.Confirm.Title"),
-            MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            MessageBoxIcon.Question);
         if (confirm != DialogResult.Yes) return;
 
         try
@@ -1359,10 +1746,10 @@ internal sealed class MainForm : MedReminderFormBase
                 return;
             }
 
-            var confirm = MessageBox.Show(this,
+            var confirm = ConfirmDialog.Show(_loc, this,
                 _loc.Get("Ui.MainForm.Delete.Confirm", row.Name),
                 _loc.Get("Ui.MainForm.Delete.Title"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+                MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
             if (confirm != DialogResult.Yes) return;
 
             DeleteMedicineOutcome outcome;
@@ -1382,7 +1769,7 @@ internal sealed class MainForm : MedReminderFormBase
     }
 
     private void ShowDeleteRefused(string name)
-        => MessageBox.Show(this,
+        => UiMessageBox.Show(this,
             _loc.Get("Ui.MainForm.Delete.HasFacts", name),
             _loc.Get("Ui.MainForm.Delete.Title"),
             MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1549,7 +1936,7 @@ internal sealed class MainForm : MedReminderFormBase
         // medicines carry the national code only (§5C.3).
         if (content.NationalCode is not { } nationalCode)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MainForm.RestockScan.NoNationalCode", code),
                 _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
@@ -1599,25 +1986,20 @@ internal sealed class MainForm : MedReminderFormBase
             : await LookupReferenceByNationalCodeAsync(catalogue.Country, nationalCode, CancellationToken.None);
         if (catalogue is null || reference is null)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MainForm.RestockScan.NotFound", nationalCode),
                 _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             return null;
         }
 
-        var addNew = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.MainForm.RestockScan.AddNew"), _loc.Get("Ui.MainForm.RestockScan.AddNew.Description"));
-        var link = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.MainForm.RestockScan.Link"), _loc.Get("Ui.MainForm.RestockScan.Link.Description"));
-        var page = new TaskDialogPage
-        {
-            Caption = _loc.Get("Ui.MainForm.RestockScan.PickTitle"),
-            Heading = _loc.Get("Ui.MainForm.RestockScan.NoMatch.Heading", nationalCode),
-            Text = _loc.Get("Ui.MainForm.RestockScan.NoMatch.Text", reference.CommercialName),
-            Icon = TaskDialogIcon.Information,
-            Buttons = { addNew, link, TaskDialogButton.Cancel },
-        };
-        var choice = TaskDialog.ShowDialog(this, page);
+        const int addNew = 0, link = 1;
+        var choice = ChoiceDialog.Show(this, _loc, _loc.Get("Ui.MainForm.RestockScan.PickTitle"),
+            _loc.Get("Ui.MainForm.RestockScan.NoMatch.Heading", nationalCode),
+            _loc.Get("Ui.MainForm.RestockScan.NoMatch.Text", reference.CommercialName),
+        [
+            (_loc.Get("Ui.MainForm.RestockScan.AddNew"), _loc.Get("Ui.MainForm.RestockScan.AddNew.Description")),
+            (_loc.Get("Ui.MainForm.RestockScan.Link"), _loc.Get("Ui.MainForm.RestockScan.Link.Description")),
+        ]);
 
         if (choice == addNew)
         {
@@ -1634,7 +2016,7 @@ internal sealed class MainForm : MedReminderFormBase
         }
         if (unlinked.Count == 0)
         {
-            MessageBox.Show(this,
+            UiMessageBox.Show(this,
                 _loc.Get("Ui.MainForm.RestockScan.NoUnlinked"),
                 _loc.Get("Common.Information"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             return null;
@@ -1796,6 +2178,6 @@ internal sealed class MainForm : MedReminderFormBase
     private void ShowError(string title, Exception ex)
     {
         _log.LogError(ex, "{Title}", title);
-        MessageBox.Show(this, ex.Message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        UiMessageBox.Show(this, ex.Message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 }

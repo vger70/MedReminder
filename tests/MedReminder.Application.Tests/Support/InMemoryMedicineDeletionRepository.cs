@@ -25,6 +25,7 @@ internal sealed class InMemoryMedicineDeletionRepository : IMedicineDeletionRepo
         _scope.Suspensions.RemoveForMedicine(medicineId);
         _scope.Retractions.RemoveForMedicine(medicineId);
         _scope.Notifications.RemoveForMedicine(medicineId);
+        _scope.SentEmails.RemoveForMedicine(medicineId);
         _scope.DoseEvents.RemoveForMedicine(medicineId);
         _scope.SyncVersions.RemoveForMedicine(medicineId);
         _scope.SyncConflicts.RemoveForMedicine(medicineId);

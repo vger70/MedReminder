@@ -4,8 +4,10 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
 using MedReminder.Application.Sync.Remote;
 using MedReminder.Domain.Sync;
+using MedReminder.UI.Controls;
 using MedReminder.UI.Hosting;
 using MedReminder.UI.Services;
+using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MedReminder.UI.Forms;
@@ -79,16 +81,16 @@ internal sealed class SyncDialog : MedReminderFormBase
         _restarter = restarter;
 
         Text = _loc.Get("Ui.SyncDialog.Title");
-        Width = 880;
+        Width = 1080;
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
-        Font = new Font("Segoe UI", 9.75F);
 
-        var tabs = new TabControl { Dock = DockStyle.Fill };
+        // Section list instead of tabs: tab headers stay light in dark mode.
+        var sections = new SectionView();
 
         // Status
-        var statusPage = new TabPage(_loc.Get("Ui.SyncDialog.Tab.Status")) { Padding = new Padding(12) };
+        var statusPage = new Panel { Padding = new Padding(12) };
         _statusText = new Label { Dock = DockStyle.Fill, AutoSize = false };
         _enable = Action("Ui.SyncDialog.Enable", async () => await EnableAsync());
         _join = Action("Ui.SyncDialog.Join", async () => await JoinAsync());
@@ -111,19 +113,19 @@ internal sealed class SyncDialog : MedReminderFormBase
         statusPage.Controls.Add(statusButtons);
 
         // Devices
-        var devicesPage = new TabPage(_loc.Get("Ui.SyncDialog.Tab.Devices")) { Padding = new Padding(12) };
+        var devicesPage = new Panel { Padding = new Padding(12) };
         _devices = List(
             ("Ui.SyncDialog.Devices.Name", 220), ("Ui.SyncDialog.Devices.Platform", 110),
             ("Ui.SyncDialog.Devices.Version", 110), ("Ui.SyncDialog.Devices.LastSeen", 170));
         _devices.SelectedIndexChanged += (_, _) => UpdateDeviceButtons();
         _removeDevice = Action("Ui.SyncDialog.RemoveDevice", async () => await RemoveDeviceAsync());
-        var deviceButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
+        var deviceButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, UiTheme.Space.S, 0, 0) };
         deviceButtons.Controls.Add(_removeDevice);
         devicesPage.Controls.Add(_devices);
         devicesPage.Controls.Add(deviceButtons);
 
         // Conflicts
-        var conflictsPage = new TabPage(_loc.Get("Ui.SyncDialog.Tab.Conflicts")) { Padding = new Padding(12) };
+        var conflictsPage = new Panel { Padding = new Padding(12) };
         _conflicts = List(
             ("Ui.SyncDialog.Conflicts.Detected", 130), ("Ui.SyncDialog.Conflicts.Medicine", 150),
             ("Ui.SyncDialog.Conflicts.Kind", 200), ("Ui.SyncDialog.Conflicts.Field", 110),
@@ -131,25 +133,19 @@ internal sealed class SyncDialog : MedReminderFormBase
         _conflicts.SelectedIndexChanged += (_, _) => UpdateConflictButtons();
         _restore = Action("Ui.SyncDialog.Conflicts.Restore", async () => await RestoreAsync());
         _dismiss = Action("Ui.SyncDialog.Conflicts.Dismiss", async () => await DismissAsync());
-        var conflictButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48 };
+        var conflictButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, UiTheme.Space.S, 0, 0) };
         conflictButtons.Controls.AddRange([_restore, _dismiss]);
         conflictsPage.Controls.Add(_conflicts);
         conflictsPage.Controls.Add(conflictButtons);
 
-        tabs.TabPages.AddRange([statusPage, devicesPage, conflictsPage]);
+        sections.AddSection(_loc.Get("Ui.SyncDialog.Tab.Status"), Mdl2Glyph.Glyphs.Info, statusPage);
+        sections.AddSection(_loc.Get("Ui.SyncDialog.Tab.Devices"), Mdl2Glyph.Glyphs.Devices, devicesPage);
+        sections.AddSection(_loc.Get("Ui.SyncDialog.Tab.Conflicts"), Mdl2Glyph.Glyphs.Warning, conflictsPage);
 
-        var close = _close = new Button { Text = _loc.Get("Common.Close"), DialogResult = DialogResult.OK, AutoSize = true, Height = 32 };
-        var bottom = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        bottom.Controls.Add(close);
-        Controls.Add(tabs);
+        var close = _close = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.OK);
+        var bottom = DialogLayout.ButtonBar(this, close, close);
+        Controls.Add(sections);
         Controls.Add(bottom);
-        CancelButton = close;
 
         _status.Changed += OnStatusChanged;
         FormClosed += (_, _) => _status.Changed -= OnStatusChanged;
@@ -386,8 +382,8 @@ internal sealed class SyncDialog : MedReminderFormBase
                 if (choice.ShowDialog(this) != DialogResult.OK || choice.SelectedGroupId is not { } chosen) return;
                 group = chosen;
             }
-            if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
-                    _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+            if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
+                    _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxIcon.Warning,
                     MessageBoxDefaultButton.Button2) != DialogResult.Yes)
             {
                 return;
@@ -421,8 +417,8 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task RebuildAsync()
     {
         if (!IsEnabled) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Rebuild.Confirm"), _loc.Get("Ui.SyncDialog.Rebuild"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.Rebuild.Confirm"), _loc.Get("Ui.SyncDialog.Rebuild"),
+                MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
         }
@@ -443,8 +439,8 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task DisableAsync()
     {
         if (!IsEnabled) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Disable.Confirm"), _loc.Get("Ui.SyncDialog.Disable"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.Disable.Confirm"), _loc.Get("Ui.SyncDialog.Disable"),
+                MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
         }
@@ -470,24 +466,10 @@ internal sealed class SyncDialog : MedReminderFormBase
         using var dialog = new SyncPairingCodeDialog(_loc, Environment.MachineName);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Code is not { } code) return;
 
-        SyncTarget? target;
-        if (code.Provider is { } provider)
-        {
-            if (!_accounts.IsAvailable(provider))
-            {
-                Error(_loc.Get(ProviderKey("Ui.SyncDialog.PairingCode.ProviderUnavailable", provider)));
-                return;
-            }
-            var account = await SignInAsync(provider, null);
-            target = account is null ? null : SyncTarget.ForCloud(account.Provider, account.Id);
-        }
-        else
-        {
-            target = PickFolder() is { } folder ? SyncTarget.ForFolder(folder) : null;
-        }
+        var target = await Picker.ForCodeAsync(code.Provider);
         if (target is null) return;
-        if (MessageBox.Show(this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
-                _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+        if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.SyncDialog.Join.Confirm", _profile.DisplayName),
+                _loc.Get("Ui.SyncDialog.Join.ConfirmTitle"), MessageBoxIcon.Warning,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
@@ -563,8 +545,8 @@ internal sealed class SyncDialog : MedReminderFormBase
         var confirm = removedDevice is null
             ? _loc.Get("Ui.SyncDialog.Rotate.Confirm")
             : _loc.Get("Ui.SyncDialog.RemoveDevice.Confirm", removedDevice);
-        if (MessageBox.Show(this, confirm, _loc.Get(removedDevice is null ? "Ui.SyncDialog.Rotate" : "Ui.SyncDialog.RemoveDevice"),
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        if (ConfirmDialog.Show(_loc, this, confirm, _loc.Get(removedDevice is null ? "Ui.SyncDialog.Rotate" : "Ui.SyncDialog.RemoveDevice"),
+                MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             return;
         }
@@ -604,21 +586,13 @@ internal sealed class SyncDialog : MedReminderFormBase
     private async Task NewKeyAsync()
     {
         if (!IsEnabled) return;
-        var passphraseChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.SyncDialog.NewKey.Passphrase"), _loc.Get("Ui.SyncDialog.NewKey.PassphraseNote"));
-        var codeChoice = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.SyncDialog.NewKey.Code"), _loc.Get("Ui.SyncDialog.NewKey.CodeNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = Text,
-            Heading = _loc.Get("Ui.SyncDialog.NewKey.Heading"),
-            Text = _loc.Get("Ui.SyncDialog.NewKey.Text"),
-            AllowCancel = true,
-        };
-        page.Buttons.Add(passphraseChoice);
-        page.Buttons.Add(codeChoice);
-        page.Buttons.Add(TaskDialogButton.Cancel);
-        var choice = TaskDialog.ShowDialog(this, page);
+        const int passphraseChoice = 0, codeChoice = 1;
+        var choice = ChoiceDialog.Show(this, _loc, Text, _loc.Get("Ui.SyncDialog.NewKey.Heading"),
+            _loc.Get("Ui.SyncDialog.NewKey.Text"),
+        [
+            (_loc.Get("Ui.SyncDialog.NewKey.Passphrase"), _loc.Get("Ui.SyncDialog.NewKey.PassphraseNote")),
+            (_loc.Get("Ui.SyncDialog.NewKey.Code"), _loc.Get("Ui.SyncDialog.NewKey.CodeNote")),
+        ]);
 
         SyncKeySource source;
         if (choice == passphraseChoice)
@@ -723,54 +697,12 @@ internal sealed class SyncDialog : MedReminderFormBase
         }
     }
 
-    // Where the group lives: a provider account (sign-in now) or a folder.
-    // Null when the user cancels.
-    private async Task<SyncTarget?> ChooseTargetAsync()
-    {
-        var providers = new[] { CloudProvider.OneDrive, CloudProvider.GoogleDrive }.Where(_accounts.IsAvailable).ToList();
-        if (providers.Count == 0)
-        {
-            return PickFolder() is { } only ? SyncTarget.ForFolder(only) : null;
-        }
+    private StorageTargetPicker Picker => new(this, _accounts, _loc, Text);
 
-        var buttons = providers.ToDictionary(p => p, p => new TaskDialogCommandLinkButton(
-            _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true)),
-            _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true) + "Note")));
-        var folder = new TaskDialogCommandLinkButton(
-            _loc.Get("Ui.SyncDialog.Target.Folder"), _loc.Get("Ui.SyncDialog.Target.FolderNote"));
-        var page = new TaskDialogPage
-        {
-            Caption = Text,
-            Heading = _loc.Get("Ui.SyncDialog.Target.Heading"),
-            AllowCancel = true,
-        };
-        foreach (var button in buttons.Values) page.Buttons.Add(button);
-        page.Buttons.Add(folder);
-        page.Buttons.Add(TaskDialogButton.Cancel);
+    private Task<SyncTarget?> ChooseTargetAsync() => Picker.ChooseAsync();
 
-        var choice = TaskDialog.ShowDialog(this, page);
-        if (choice == folder) return PickFolder() is { } picked ? SyncTarget.ForFolder(picked) : null;
-        var chosen = buttons.FirstOrDefault(b => b.Value == choice);
-        if (chosen.Value is null) return null;
-
-        var account = await SignInAsync(chosen.Key, null);
-        return account is null ? null : SyncTarget.ForCloud(account.Provider, account.Id);
-    }
-
-    // Sign-in in the system browser; null when it fails or is cancelled.
-    private async Task<CloudAccount?> SignInAsync(CloudProvider provider, string? accountId)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-        try
-        {
-            return await _accounts.SignInAsync(provider, accountId, timeout.Token);
-        }
-        catch (Exception ex)
-        {
-            Error(_loc.Get(ProviderKey("Ui.SyncDialog.SignIn.Failed", provider), ex.Message));
-            return null;
-        }
-    }
+    private Task<CloudAccount?> SignInAsync(CloudProvider provider, string? accountId)
+        => Picker.SignInAsync(provider, accountId);
 
     private async Task SignInAgainAsync()
     {
@@ -787,26 +719,13 @@ internal sealed class SyncDialog : MedReminderFormBase
         await RefreshAllAsync();
     }
 
-    // The OneDrive keys of Phase 4a are the unsuffixed ones; Google Drive
-    // adds ".GoogleDrive". Target keys are named after the provider.
-    private static string ProviderKey(string key, CloudProvider provider, bool suffixOnly = false)
-        => suffixOnly
-            ? $"{key}.{provider}"
-            : provider == CloudProvider.GoogleDrive ? $"{key}.GoogleDrive" : key;
-
-    private string? PickFolder()
-    {
-        using var browser = new FolderBrowserDialog
-        {
-            Description = _loc.Get("Ui.SyncDialog.Folder"),
-            UseDescriptionForTitle = true,
-        };
-        return browser.ShowDialog(this) == DialogResult.OK ? browser.SelectedPath : null;
-    }
+    private static string ProviderKey(string key, CloudProvider provider)
+        => StorageTargetPicker.ProviderKey(key, provider);
 
     private Button Action(string key, Func<Task> action)
     {
-        var button = new Button { Text = _loc.Get(key), AutoSize = true, Height = 32 };
+        var button = DialogLayout.Button(_loc.Get(key));
+        button.Margin = new Padding(0, 0, UiTheme.Space.S, 0);
         button.Click += async (_, _) =>
         {
             button.Enabled = false;
@@ -860,11 +779,11 @@ internal sealed class SyncDialog : MedReminderFormBase
     // ran): the message is dropped rather than thrown from the action.
     private void Info(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void Error(string message)
     {
-        if (!IsDisposed) MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        if (!IsDisposed) UiMessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 }

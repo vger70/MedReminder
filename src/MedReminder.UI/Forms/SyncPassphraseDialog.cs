@@ -14,6 +14,7 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
     // wrap is protected by the passphrase alone (§5.4).
     public const int MinimumLength = 10;
 
+    private readonly Label _error = DialogLayout.ErrorLabel();
     private readonly ILocalizationService _loc;
     private readonly bool _confirm;
     private readonly TextBox? _name;
@@ -32,9 +33,9 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
         Height = (confirm ? 340 : 290) - (askName ? 0 : 40);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
+        DialogLayout.GrowToContent(this);
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        Font = new Font("Segoe UI", 9.75F);
 
         var layout = new TableLayoutPanel
         {
@@ -78,27 +79,16 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
         layout.RowCount = contentRows + 1;
         for (var i = 0; i < contentRows; i++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        // Inline error in the filler row, under the fields (F9).
+        layout.Controls.Add(_error, 1, contentRows);
 
-        var ok = new Button { Text = _loc.Get("Common.Ok"), AutoSize = true, Height = 32 };
+        var ok = DialogLayout.Button(_loc.Get("Common.Ok"));
         ok.Click += (_, _) => Accept();
-        var cancel = new Button
-        {
-            Text = _loc.Get("Common.Cancel"), DialogResult = DialogResult.Cancel, AutoSize = true, Height = 32,
-        };
-        var buttons = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.RightToLeft,
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        buttons.Controls.Add(cancel);
-        buttons.Controls.Add(ok);
+        var cancel = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
+        var buttons = DialogLayout.ButtonBar(this, ok, cancel);
 
         Controls.Add(layout);
         Controls.Add(buttons);
-        AcceptButton = ok;
-        CancelButton = cancel;
     }
 
     public string DeviceName => _name?.Text.Trim() ?? string.Empty;
@@ -122,7 +112,7 @@ internal sealed class SyncPassphraseDialog : MedReminderFormBase
 
         if (error is not null)
         {
-            MessageBox.Show(this, error, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            DialogLayout.ShowError(_error, error);
             return;
         }
         DialogResult = DialogResult.OK;
