@@ -594,7 +594,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Days of automatic backup retention. Older files are deleted after a successful backup.\n\n0 = no automatic deletion (discouraged: the folder grows indefinitely).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Open File Explorer to choose the backup folder.",
   "Ui.SettingsDialog.Tooltip.Language": "Interface language for menus, dialogs and email notifications.\nWindows toast notifications always follow the system language.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "When enabled, MedReminder contacts the public GitHub Releases API at startup and shows a message when a newer stable release is available. Nothing is downloaded or installed automatically.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "When enabled, MedReminder contacts the public GitHub Releases API at startup and shows a message when a newer stable release is available; the new version is never downloaded or installed automatically. It also downloads the medicine catalogue of the reference country and the EU one when a newer edition is published (data only).",
 
   "Ui.HelpViewer.Title": "User guide — MedReminder",
   "Ui.HelpViewer.Back": "Back",
