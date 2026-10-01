@@ -137,28 +137,55 @@ days of therapy (consumer sources, §6).
 **Benefit — high for Italian users**, and a differentiator: none of the
 surveyed apps shows it **[INFERRED — survey not exhaustive]**. When a
 medicine is in shortage the user must act earlier than the normal
-threshold suggests.
+threshold suggests. The list also announces shortages and permanent
+withdrawals **before** they start (see below), which gives the user
+time to talk to the doctor.
 
-**Data.** AIFA publishes the list of medicines in temporary shortage
-as CSV and ODS: name, active ingredient, form, package, holder, start
-and expected end of the shortage, availability of equivalents, reason.
-The AIC code appears in the published PDF lists; its presence and
-format in the CSV were not verified (the AIFA site was not reachable
-from the review environment) **[UNCERTAIN]**.
+**Data (verified on the file of 29/09/2026, 2 514 rows).**
+
+| Aspect | Finding | Consequence for the parser |
+|---|---|---|
+| Encoding | Windows-1252 (curly quotes, accented letters); not UTF-8 | Decode as cp1252 in the workflow; publish UTF-8 |
+| Preamble | Two free-text lines (disclaimer, "aggiornato al dd/mm/yyyy") before the header | Skip to the header row; take the list date from line 2 |
+| Format | `;` separator, 13 columns, quoted fields with embedded CR, LF and doubled quotes (42 rows); mixed line endings | Real CSV parser, never split on lines |
+| Columns | Nome medicinale; Codice AIC; Principio attivo; Forma farmaceutica e dosaggio; Titolare AIC; Data inizio; Fine presunta; Equivalente; Motivazioni; Suggerimenti/Indicazioni AIFA; Nota AIFA; Classe di rimborsabilità; Codice ATC | — |
+| Codice AIC | Always 9 digits with leading zeros (package level), the same key as `CODICE_AIC` in the shipped AIFA catalogue and as `Medicine.NationalCode`; 2 508 of 2 512 distinct codes are in catalogue 202609 | Exact string match; no product-level fallback needed for a first cut |
+| Duplicates | 2 codes appear twice with identical content | Deduplicate on the code |
+| Data inizio | Always present (`dd/mm/yyyy`); 294 rows start after the list date, up to 2029, mostly announced production problems (130) or permanent withdrawal (116) | Show "shortage expected from …" for a future start |
+| Fine presunta | Empty in 2 020 rows (80 %); 27 rows carry a date already past, and AIFA states that rows stay listed after that date until the holder reports the actual end | Show the end date only as "expected", never as "resolved"; presence in the list is the only status |
+| Equivalente | `Sì` (1 930) / `No` (584) | Neutral wording only (below) |
+| Motivazioni | Free text, 41 distinct values, 28 of them on 5 or more rows (production problems, high demand, permanent or temporary withdrawal, commercial or regulatory reasons) | Map the recurring values to localised categories; fall back to the raw Italian text |
+| Suggerimenti, Nota AIFA | Free Italian text (19 distinct suggestions; notes on 139 rows), partly addressed to hospitals | Do not show in the first cut; link to the AIFA page instead |
+| Codice ATC | Always present | Not needed for matching |
 
 **Plan.**
 
-1. Workflow `download_aifa_shortages.yaml`, modelled on the existing
-   `download_*.yaml` workflows, publishing a normalised JSON feed under
-   `data/it/`; documented in `docs/CATALOGUE-DATA.md`.
-2. Client: reuse the remote-feed refresh (same setting, data only,
-   nothing executed, `docs/ANALYSIS.md` §9.5).
-3. Matching on `Medicine.NationalCode`; package-level and product-level
-   AIC handling to be decided once the CSV is inspected.
-4. UI: badge "in shortage until …" with the fixed text "ask your doctor
-   or pharmacist". No substitute is suggested, to stay clear of any
-   clinical role.
-5. Phase 2: EMA shortage catalogue (ESMP) and the national catalogues
+1. Workflow `download_aifa_shortages.yaml` and a parser in
+   `scripts/feeds/` next to `aifa.py`, with tests on a fixture that
+   reproduces the anomalies above (cp1252, preamble, embedded line
+   breaks, duplicates). Output: a small UTF-8 JSON feed under
+   `data/it/` with the list date and, per AIC, start, expected end,
+   equivalent flag and reason category; manifest like `latest.json`.
+   Documented in `docs/CATALOGUE-DATA.md`.
+2. Frequency: the list is updated more often than monthly (search
+   results showed versions of 25/09 and 29/09/2026); a weekly workflow
+   run is enough **[INFERRED]**. The feed is about 0.9 MB as CSV, much less
+   as filtered JSON.
+3. Client: reuse the remote-feed refresh (same setting, data only,
+   nothing executed, `docs/ANALYSIS.md` §9.5). Store the feed with the
+   reference catalogue, not in the profile database: no sync, no
+   export, no schema patch on the profile side.
+4. Matching on `Medicine.NationalCode` for Italian profiles only.
+5. UI: badge "in shortage" or "shortage expected from …" in the list
+   and the summary; detail with expected end (or "not communicated"),
+   category of reason, and the fixed text "ask your doctor or
+   pharmacist". When `Equivalente = Sì`, add "AIFA reports that
+   equivalent medicines are available". No product is named or
+   suggested, to stay clear of any clinical role.
+6. Notification: one toast or email per medicine when it enters the
+   list (and once more when a future shortage starts), deduplicated
+   per AIC and start date.
+7. Phase 2: EMA shortage catalogue (ESMP) and the national catalogues
    for France and Spain; access format not verified **[UNCERTAIN]**.
 
 **Effort.** 1–1.5 weeks for Italy.
@@ -302,7 +329,7 @@ per-event opt-in is the item deferred in
 - Dosecast: <https://dosecast.com/features/>
 - Medicine-cabinet apps: <https://mojapteczka.pl/blog/en/best-medicine-cabinet-apps-2026-ranking/>,
   <https://caringvillage.com/blog/caregiver-tech/medication-management-apps/>
-- AIFA shortages: <https://www.aifa.gov.it/en/farmaci-carenti>,
+- AIFA shortages (CSV of 29/09/2026 reviewed): <https://www.aifa.gov.it/en/farmaci-carenti>,
   <https://www.aifa.gov.it/documents/20142/847339/elenco_medicinali_carenti.csv>
 - EMA ESMP: <https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/medicine-shortages-availability-issues/european-shortages-monitoring-platform-esmp>
 - Italian electronic prescription validity (consumer sources):

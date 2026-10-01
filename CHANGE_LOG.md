@@ -43,6 +43,8 @@ Branch: `claude/evolution-proposals-2` → `main`
   toast actions, coverage planner, administrative deadlines, `.ics`
   export, caregiver opt-in and digest), each with an implementation
   plan; re-assessment of expiry tracking and pill-organizer preparation.
+- Shortage notice (§3.3) based on the reviewed AIFA shortage CSV of
+  29/09/2026: format, anomalies and matching on the 9-digit AIC.
 - `docs/notes/EVOLUTION-PROPOSALS.md`: pointer to the second round.
 
 ---
