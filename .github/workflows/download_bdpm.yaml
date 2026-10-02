@@ -5,7 +5,7 @@ on:
     # Same days as download_aifa.yaml, staggered by 40 minutes. Once the
     # month's version is published, scripts/feeds/bdpm.py exits
     # without changes.
-    - cron: '40 3 2,9,16,23 * *'
+    - cron: '47 3 2,9,16,23 * *'
   workflow_dispatch:
     inputs:
       force:

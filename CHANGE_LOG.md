@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #172 — Move feed workflow schedules off the top of the hour
+
+Link: [vger70/MedReminder#172](https://github.com/vger70/MedReminder/pull/172)
+Branch: `claude/vigilant-hypatia-yby7iu` → `main`
+
+### Fixed
+
+- No feed workflow started on 2 October 2026, the first scheduled day:
+  GitHub delays or drops `schedule` runs at minute 0 under load. Same
+  days and stagger, 7 minutes later: `download_aifa.yaml` 03:07,
+  `download_aemps.yaml` 03:27, `download_bdpm.yaml` 03:47,
+  `download_ema.yaml` 04:07, `download_aifa_shortages.yaml` 04:27 UTC.
+
+### Docs
+
+- `download_aifa_shortages.yaml` comment no longer says "twice a
+  week"; `docs/CATALOGUE-DATA.md` lists the new times.
 ## PR #171 — Record the second round of proposals in the status snapshot
 
 Link: [vger70/MedReminder#171](https://github.com/vger70/MedReminder/pull/171)

@@ -2,9 +2,11 @@ name: Download AIFA shortage list
 
 on:
   schedule:
-    # Twice a week: AIFA updates the list several times a month. A run
-    # on a list already published exits without changes.
-    - cron: '20 4 2,9,16,23 * *'
+    # Same days as download_aifa.yaml, an hour and 20 minutes later: AIFA
+    # updates the list several times a month and a weekly run picks up
+    # the latest one. A run on a list already published exits without
+    # changes.
+    - cron: '27 4 2,9,16,23 * *'
   workflow_dispatch:
     inputs:
       force:

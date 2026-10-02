@@ -5,7 +5,7 @@ on:
     # Same days as download_aifa.yaml, staggered by an hour. Once the
     # month's version is published, scripts/feeds/ema.py exits
     # without changes.
-    - cron: '0 4 2,9,16,23 * *'
+    - cron: '7 4 2,9,16,23 * *'
   workflow_dispatch:
     inputs:
       force:
