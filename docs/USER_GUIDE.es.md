@@ -618,8 +618,16 @@ abierto:
 
 - **Destinatario (to)** — quién recibe los avisos de este perfil.
 - **E-mail del cuidador (opcional)** — un familiar o cuidador que recibe
-  una copia de cada aviso, en el mismo correo (ambas direcciones son
-  visibles para los dos). Debe ser distinta del destinatario.
+  una copia de los avisos, en el mismo correo (ambas direcciones son
+  visibles para los dos). Debe ser distinta del destinatario. En
+  **Copia al cuidador** eliges qué avisos recibe (todos mientras no lo
+  cambies): stock bajo, recordatorios de dosis, de recetas y de
+  vencimientos, avisos de desabastecimiento. **Enviar al cuidador un
+  resumen semanal del stock** añade, cada 7 días, un correo solo al
+  cuidador con el stock, el estado y la fecha de agotamiento de cada
+  medicamento activo, y nada sobre las dosis tomadas. Lo envía el PC
+  que manda los correos, una vez por perfil aunque el perfil esté
+  sincronizado en varios PC.
 - **E-mail del médico (opcional)** — se usa solo para las solicitudes de
   receta que envías tú; los avisos automáticos nunca van ahí.
 

@@ -76,8 +76,9 @@ scheduled dose time.
   (Windows / Email / Both / None).
 - Optional dose-time reminder per medicine (toast and/or email at
   each timed slot, at most once per slot per day).
-- Optional caregiver email address per profile: receives a copy of
-  every email the profile receives.
+- Optional caregiver email address per profile: receives a copy of the
+  kinds of email the profile chooses (all by default) and, if asked, a
+  weekly stock summary without dose data.
 - Second warning at half of the warning threshold when the stock has
   not been replenished since the first one.
 - Structural notification de-duplication via `StockEpoch`: after a

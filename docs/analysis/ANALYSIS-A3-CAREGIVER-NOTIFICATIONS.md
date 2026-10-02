@@ -450,7 +450,10 @@ the current mock and extend it).
    this is acceptable.
 4. **Per-event opt-in (deferred).** `EVOLUTION.md` §3.3 lists an
    optional per-event opt-in. Confirmed **out** of the first cut
-   in §1.3; reopen only on user demand.
+   in §1.3; reopen only on user demand. Done later with
+   `EmailMessage.Kind` and the `CaregiverEmails` setting
+   (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.8, PR #170); the default
+   keeps the Simple option of item 1.
 
 ---
 

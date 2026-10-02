@@ -633,9 +633,17 @@ Profil:
 
 - **Empfänger (to)** — wer die Warnungen dieses Profils erhält.
 - **E-Mail der Betreuungsperson (optional)** — ein Angehöriger oder eine
-  Pflegekraft, die eine Kopie jeder Warnung erhält, in derselben E-Mail
+  Pflegekraft, die eine Kopie der Warnungen erhält, in derselben E-Mail
   (beide Adressen sind für beide sichtbar). Sie muss sich vom Empfänger
-  unterscheiden.
+  unterscheiden. Unter **Kopie an die Betreuungsperson** wählst du, welche
+  Warnungen sie erhält (alle, solange du nichts änderst): Bestand,
+  Dosis-, Rezept- und Fristerinnerungen, Lieferengpass-Hinweise. **Der
+  Betreuungsperson eine wöchentliche Bestandsübersicht senden** schickt
+  alle 7 Tage eine E-Mail nur an die Betreuungsperson mit Bestand,
+  Status und Datum, an dem der Vorrat aufgebraucht ist, für jedes aktive
+  Medikament, und nichts über eingenommene Dosen. Sie kommt von dem PC,
+  der die E-Mails versendet, einmal pro Profil, auch wenn das Profil auf
+  mehreren PCs synchronisiert ist.
 - **E-Mail des Arztes (optional)** — nur für Rezeptanforderungen, die du
   selbst sendest; automatische Warnungen gehen nie dorthin.
 

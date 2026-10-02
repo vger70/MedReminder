@@ -584,8 +584,16 @@ their rules: if the test fails, check your provider's instructions.
 
 - **Recipient (to)** — who receives this profile's reminders.
 - **Caregiver e-mail (optional)** — a family member or carer who gets a
-  copy of every reminder, in the same email (both addresses are
-  visible to both). It must differ from the recipient.
+  copy of the reminders, in the same email (both addresses are
+  visible to both). It must differ from the recipient. Under
+  **Copy to the caregiver** choose which reminders they get (all of
+  them until you change it): low-stock warnings, dose reminders,
+  prescription and deadline reminders, shortage notices.
+  **Send the caregiver a weekly stock summary** adds, every 7 days, an
+  email to the caregiver alone with the stock, status and run-out date
+  of each active medicine, and nothing about the doses taken. It is
+  sent by the PC that sends the emails, once per profile even when the
+  profile is synced on several PCs.
 - **Doctor e-mail (optional)** — used only for prescription requests
   you send yourself; automatic reminders never go there.
 

@@ -30,7 +30,43 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #170 — Let the caregiver receive chosen emails and a weekly summary
+
+Link: [vger70/MedReminder#170](https://github.com/vger70/MedReminder/pull/170)
+Branch: `claude/caregiver-digest` → `main`
+
+### Added
+
+- Caregiver per-kind copies (`docs/notes/EVOLUTION-PROPOSALS-2.md`
+  §3.8; A3 §11 item 4): `EmailKind` on every automated email and the
+  `CaregiverEmails` setting; the MailKit adapter copies only the chosen
+  kinds. Default: every kind, as before.
+- Weekly stock summary to the caregiver only (`CaregiverDigest`): stock,
+  status and run-out date of each active medicine, no dose data; sent
+  from a device that sends email, in the periodic check.
+- Settings → Notifications: a box per kind and the weekly summary.
+- Strings `Ui.SettingsDialog.Notifications.Caregiver.*`,
+  `Notifications.Digest.*` in all five dictionaries; caregiver help text
+  updated; user guides in five languages.
+
+### Changed
+
+- New replicated profile settings `CaregiverEmails`, `CaregiverDigest`,
+  `CaregiverDigestSentOn` (no operation schema bump: an older app keeps
+  their versions without projecting them).
+- Export: additive `caregiverEmails`, `caregiverDigest` in
+  `notificationSettings`.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`
+  §9.2, A3 analysis §11, `README.md`, proposal status.
+
+---
+
 ## PR #169 — Export coming dates to a calendar file
+
+**Status:** merged (2026-10-02)
 
 Link: [vger70/MedReminder#169](https://github.com/vger70/MedReminder/pull/169)
 Branch: `claude/calendar-export` → `main`
