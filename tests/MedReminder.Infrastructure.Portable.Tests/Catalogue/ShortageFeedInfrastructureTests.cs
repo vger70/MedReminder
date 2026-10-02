@@ -42,8 +42,8 @@ public sealed class ShortageFeedInfrastructureTests : IDisposable
         manifest!.Version.Should().Be("20260929");
         Encoding.UTF8.GetString(bytes).Should().Be(ListJson);
         endpoint.Urls.Should().Equal(
-            "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/shortages/latest.json",
-            "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/shortages/shortages-20260929.json");
+            "https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/shortages/latest.json",
+            "https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/shortages/shortages-20260929.json");
     }
 
     [Fact]

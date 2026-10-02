@@ -39,8 +39,8 @@ startup (each country in its own transaction, per
 country never blocks the others.
 
 The same four catalogues are also published monthly by GitHub
-workflows under `data/<country>/` on `main`, and the app refreshes
-from there at startup without a new release (§2.1). The embedded
+workflows under `data/<country>/` on the `feeds` branch (§1.1), and
+the app refreshes from there at startup without a new release (§2.1). The embedded
 snapshots stay the offline baseline:
 
 | Country | Workflow (UTC, days 2, 9, 16, 23) | Script | Published |
@@ -55,8 +55,44 @@ archives. The scripts share `scripts/feeds/common.py` (retries, run
 timestamp, row floors, publication); their unit tests
 (`scripts/feeds/tests/`) run in `scripts_tests.yaml`. The four
 workflows share the concurrency group `catalogue-feeds-publish`, so
-their pushes to `main` never race. Each script changes nothing under
-`data/` until every check has passed.
+their pushes never race. Each script changes nothing under `data/`
+until every check has passed.
+
+### 1.1 The `feeds` branch
+
+Every published archive used to stay in `main`'s history: about 9.5 MB
+a month for the four catalogues, whatever the retention in `data/`.
+The published files now live on the `feeds` branch, which always holds
+a single parentless commit (`data/`, `.gitattributes`, a `README.md`).
+Each publish replaces that commit, so the branch costs the current
+files only; the replaced archives become unreachable and GitHub
+removes them at its own garbage collection.
+
+- Clients read
+  `https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/`
+  (`CatalogueFeedOptions.DefaultBaseUrl`, `Catalogue:RemoteFeed:BaseUrl`
+  in `appsettings.json`).
+- Each workflow runs `scripts/feeds/feeds_branch.sh load` before its
+  script, so the script decides what is new against the published
+  state, then `feeds_branch.sh publish "<message>"`. Publishing uses a
+  temporary index and `--force-with-lease`; the checkout of `main` is
+  not touched. A publish whose content equals the branch is skipped.
+  Only a run on the default branch publishes; a run dispatched from
+  another branch does not replace what clients download.
+- The first run of any feed workflow after the merge creates the
+  branch from `main`'s `data/`. Run one by hand (without `force`)
+  before releasing a client that reads `feeds`.
+- **Transition.** Releases up to v2.12.1 read `main/data/`. Until they
+  are out of use, the "Mirror to main" step keeps committing the same
+  files to `main`. Then set the repository variable
+  `FEEDS_MAIN_MIRROR` to `false` (Settings → Secrets and variables →
+  Actions → Variables): the step is skipped and `main` stops growing.
+  `data/` on `main` can then be removed in a normal commit; its history
+  stays unless rewritten, which is not planned.
+- The embedded snapshots under
+  `src/MedReminder.Infrastructure/Assets/Catalogue/` add about 9.3 MB
+  to `main` at each refresh. With the remote feeds they are only the
+  offline baseline: refresh them a few times a year, not every month.
 
 ---
 
@@ -117,7 +153,7 @@ writes the same manifest in its own `data/<country>/` folder:
   (`PA_confezioni.csv`) data rows, or has fewer than 90% of the rows
   recorded under `rows` by the previous run. If AIFA genuinely shrinks
   a file by more than 10%, lower the previous count in
-  `data/it/latest.json` by hand and re-run.
+  `data/it/latest.json` on the `feeds` branch by hand and re-run.
 - `data/it/` keeps the 3 newest archives.
 - **Republishing a month** (any feed). A forced run in the same month
   overwrites `<prefix>-<yyyymm>.zip` and writes a new `generated` and `sha256`. Clients
@@ -159,7 +195,7 @@ Client behaviour, the same for every feed (`RemoteCatalogueRefresher`,
 ### 2.2 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/it/aifa-<yyyymm>.zip` from `main`. It already has the layout the
+   `data/it/aifa-<yyyymm>.zip` from the `feeds` branch. It already has the layout the
    parser expects (both CSV files at the root; an extra `atc.csv` in
    older archives is ignored):
 
@@ -260,7 +296,7 @@ rows below 1 800, or either below 90% of the previous run (recorded in
 ### 3.2 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/eu/ema-epar-<yyyymm>.zip` from `main`. It already has the
+   `data/eu/ema-epar-<yyyymm>.zip` from the `feeds` branch. It already has the
    layout the parser expects:
 
    ```
@@ -482,7 +518,7 @@ embedded path alone.
 ### 5.2 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/es/aemps-<yyyymm>.zip` from `main`:
+   `data/es/aemps-<yyyymm>.zip` from the `feeds` branch:
 
    ```
    aemps-<yyyymm>.zip
@@ -600,7 +636,7 @@ run.
 ### 6.3 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/fr/bdpm-<yyyymm>.zip` from `main`:
+   `data/fr/bdpm-<yyyymm>.zip` from the `feeds` branch:
 
    ```
    bdpm-<yyyymm>.zip
@@ -661,7 +697,7 @@ the user once (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3).
 | Source | AIFA, `elenco_medicinali_carenti.csv` ("Carenze e indisponibilità"); CC BY 4.0, cited in the app as "AIFA list of medicines in shortage of <date>" |
 | Workflow | `download_aifa_shortages.yaml`, daily at 04:27 UTC (a run on a list already published exits without changes), concurrency group `catalogue-feeds-publish` |
 | Script | `scripts/feeds/aifa_shortages.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_shortages.py`, fixture `tests/fixtures/catalogue/aifa-shortages-sample.csv` |
-| Published | `data/it/shortages/shortages-<yyyymmdd>.json` (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`); the 3 newest files are kept |
+| Published | `data/it/shortages/shortages-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`); the 3 newest files are kept |
 | Client | `ShortageRefresher` with `GitHubRawShortageFeedClient`, after the catalogue feeds, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:ShortagesEnabled` (default true), `ShortagesMaxDownloadBytes` (default 4 MiB) |
 | Stored | `%LOCALAPPDATA%\MedReminder\catalogue\shortages\shortages-it.json`, shared by every profile; not in any profile database, not synced, not exported |
 | Line endings | `.gitattributes` marks `data/**/*.json` as `-text`: a checkout with `core.autocrlf` must not turn LF into CRLF, or the file no longer matches the manifest's size and SHA-256 |
