@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #176 — Show all About data sources and stop text box border flicker
+
+Link: [vger70/MedReminder#176](https://github.com/vger70/MedReminder/pull/176)
+Branch: `claude/fonti-dati-textbox-issues-c699a3` → `main`
+
+### Fixed
+
+- The About dialog's data-source attributions could not be read in
+  full: the dialog is taller and the last attribution keeps a bottom
+  gap, which a scrolling `FlowLayoutPanel` drops
+  (`src/MedReminder.UI/Forms/AboutDialog.cs`).
+- In dark mode the text box border flickered on mouse hover: Windows
+  repainted the frame in the hot state before the palette border was
+  drawn over it. Without visible scroll bars the frame is now drawn
+  once, by the palette painter
+  (`src/MedReminder.UI/UiExtensions/ThemedBorder.cs`).
+
 ## PR #175 — Hide a maximized main window to the tray on the first close
 
 Link: [vger70/MedReminder#175](https://github.com/vger70/MedReminder/pull/175)
