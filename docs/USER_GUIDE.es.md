@@ -118,6 +118,7 @@ clic derecho en el icono y elige **Salir**.
 | Pedir una receta | **Terapia → Solicitar receta…** |
 | Seguir una receta hasta la farmacia | **Terapia → Recetas…** |
 | Recordar un plan terapéutico, una exención o un control | **Terapia → Vencimientos administrativos…** |
+| Ver las próximas fechas en Outlook, Google Calendar o en el teléfono | **Terapia → Exportar al calendario…** |
 | Comprobar el stock para un viaje o hasta la próxima visita a la farmacia | **Terapia → Planificar stock…** |
 | Configurar correo, idioma, copia de seguridad | **Herramientas → Configuración…** |
 | Añadir una persona | **Herramientas → Gestionar perfiles…** (administrador) |
@@ -536,6 +537,27 @@ en que lo marcaste.
 
 Los vencimientos se copian en los demás PC de un perfil sincronizado y
 se incluyen en la exportación cifrada.
+
+### Exportar las fechas a un calendario
+
+**Terapia → Exportar al calendario…** guarda un archivo `.ics` con las
+próximas fechas: para cada medicamento activo el día en que solicitar
+la receta (la fecha de agotamiento menos el umbral de aviso) y la fecha
+de agotamiento, el último día para recoger cada receta y los
+vencimientos administrativos abiertos. Abre el archivo con Outlook,
+Google Calendar o el calendario del teléfono. Los eventos son
+recordatorios, no citas: no te marcan como ocupado. Al exportar de
+nuevo más adelante se actualizan los mismos eventos, sin copias.
+
+Los calendarios suelen guardarse en línea en otra empresa, así que los
+eventos solo dicen qué hacer ("MedReminder: se agota un
+medicamento"). Marca **Incluir los nombres de los medicamentos y las
+descripciones de los vencimientos** si quieres los nombres en el
+calendario; la opción se pregunta en cada exportación.
+
+Cada correo de stock bajo lleva también la fecha de agotamiento como
+archivo de calendario (`medreminder.ics`), con el mismo título
+genérico.
 
 ---
 

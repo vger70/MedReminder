@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Reflection;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Coverage;
 using MedReminder.Application.Deadlines;
@@ -378,6 +379,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deadlines"),
             Mdl2Glyph.Glyphs.Ringer, Keys.None,
             async () => await ShowDeadlinesAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.ExportCalendar"),
+            Mdl2Glyph.Glyphs.Calendar, Keys.None,
+            () => { ShowCalendarExport(); return Task.CompletedTask; }));
 
         // Scorte
         var stockMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Stock"));
@@ -971,6 +975,19 @@ internal sealed class MainForm : MedReminderFormBase
         {
             ShowError(_loc.Get("Ui.MainForm.Error.OpenPrescriptions"), ex);
         }
+    }
+
+    // Therapy → Export to calendar… (EVOLUTION-PROPOSALS-2 §3.7). The
+    // events are read in their own DI scope when the user exports.
+    private void ShowCalendarExport()
+    {
+        using var dialog = new CalendarExportDialog(async includeNames =>
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<CalendarExportQuery>()
+                .WriteAsync(includeNames, CancellationToken.None);
+        }, _loc);
+        dialog.ShowDialog(this);
     }
 
     // Therapy → Deadlines… (EVOLUTION-PROPOSALS-2 §3.6). Each action runs

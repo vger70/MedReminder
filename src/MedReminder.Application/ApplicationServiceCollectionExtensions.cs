@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Coverage;
 using MedReminder.Application.Deadlines;
@@ -132,6 +133,8 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<DeleteDeadline>();
         services.AddScoped<DeadlineListQuery>();
         services.AddScoped<DeadlineReminders>();
+        // Calendar export (EVOLUTION-PROPOSALS-2 §3.7).
+        services.AddScoped<CalendarExportQuery>();
         // Shortage list (EVOLUTION-PROPOSALS-2 §3.3).
         services.AddScoped<ShortageRefresher>();
         services.AddScoped<ShortageNotices>();

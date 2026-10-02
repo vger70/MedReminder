@@ -120,6 +120,7 @@ Beenden klicke mit der rechten Maustaste auf das Symbol und wähle
 | Ein Rezept anfordern | **Therapie → Rezept anfordern…** |
 | Ein Rezept bis zur Apotheke verfolgen | **Therapie → Rezepte…** |
 | An einen Therapieplan, eine Befreiung oder einen Kontrolltermin erinnert werden | **Therapie → Fristen…** |
+| Die nächsten Termine in Outlook, Google Kalender oder auf dem Telefon sehen | **Therapie → In Kalender exportieren…** |
 | Den Vorrat für eine Reise oder bis zum nächsten Apothekenbesuch prüfen | **Therapie → Vorrat planen…** |
 | E-Mail, Sprache, Sicherung einrichten | **Extras → Einstellungen…** |
 | Eine Person hinzufügen | **Extras → Profile verwalten…** (Administrator) |
@@ -551,6 +552,28 @@ nicht von dem Tag, an dem du sie markiert hast.
 
 Fristen werden auf die anderen PCs eines synchronisierten Profils
 kopiert und in den verschlüsselten Export aufgenommen.
+
+### Termine in einen Kalender exportieren
+
+**Therapie → In Kalender exportieren…** speichert eine `.ics`-Datei mit
+den kommenden Terminen: für jedes aktive Medikament den Tag, an dem du
+das Rezept anfordern solltest (das Datum, an dem der Vorrat aufgebraucht
+ist, minus die Warnschwelle), und dieses Datum selbst, den letzten Tag
+zum Einlösen jedes Rezepts und die offenen Fristen. Öffne die Datei mit
+Outlook, Google Kalender oder dem Kalender deines Telefons. Die Termine
+sind Erinnerungen, keine Verabredungen: sie markieren dich nicht als
+beschäftigt. Ein späterer Export aktualisiert dieselben Termine, statt
+Kopien anzulegen.
+
+Kalender werden oft online bei einem anderen Unternehmen gespeichert,
+deshalb sagen die Termine nur, was zu tun ist („MedReminder: ein
+Medikament geht zu Ende“). Setze das Häkchen bei **Medikamentennamen
+und Beschreibungen der Fristen einschließen**, wenn du die Namen im
+Kalender willst; die Wahl wird bei jedem Export abgefragt.
+
+Jede Bestandswarnung per E-Mail enthält außerdem das Datum, an dem der
+Vorrat aufgebraucht ist, als Kalenderdatei (`medreminder.ics`), mit
+demselben allgemeinen Titel.
 
 ---
 

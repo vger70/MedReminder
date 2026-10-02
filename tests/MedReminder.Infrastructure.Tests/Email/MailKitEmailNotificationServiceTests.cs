@@ -1,9 +1,11 @@
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
 using MedReminder.Application.Notifications;
 using MedReminder.Infrastructure.Email;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MimeKit;
 using Xunit;
 
 namespace MedReminder.Infrastructure.Tests.Email;
@@ -200,6 +202,33 @@ public class MailKitEmailNotificationServiceTests
 
         var ok = await sut.TestConnectionAsync(CancellationToken.None);
         ok.Should().BeFalse();
+    }
+
+    // EVOLUTION-PROPOSALS-2 §3.7: a calendar event travels as an .ics
+    // attachment next to the text; a message without one stays plain.
+    [Fact]
+    public void BuildMimeMessage_attaches_the_calendar_event()
+    {
+        var notifications = new NotificationSettings { ToAddress = "user@example.org" };
+        var sut = BuildService(notifications);
+        var calendarEvent = new CalendarEvent("runout-1@medreminder", new DateOnly(2026, 10, 20), "MedReminder: a medicine runs out");
+
+        var mime = sut.BuildMimeMessage(ValidSmtp(), notifications,
+            new EmailMessage("s", "b", CalendarEvent: calendarEvent));
+
+        mime.TextBody.Should().Be("b");
+        var attachment = mime.Attachments.OfType<MimePart>().Should().ContainSingle().Subject;
+        attachment.FileName.Should().Be("medreminder.ics");
+        attachment.ContentType.MimeType.Should().Be("text/calendar");
+        attachment.ContentType.Parameters["method"].Should().Be("PUBLISH");
+        using var content = new MemoryStream();
+        attachment.Content!.DecodeTo(content);
+        var ics = System.Text.Encoding.UTF8.GetString(content.ToArray());
+        ics.Should().Contain("DTSTART;VALUE=DATE:20261020\r\n")
+            .And.Contain("UID:runout-1@medreminder");
+
+        sut.BuildMimeMessage(ValidSmtp(), notifications, new EmailMessage("s", "b"))
+            .Body.Should().BeOfType<TextPart>();
     }
 
     private sealed class StaticOptionsMonitor<T> : IOptionsMonitor<T>

@@ -117,6 +117,7 @@ uscire, fai clic destro sull'icona e scegli **Esci**.
 | Chiedere una ricetta | **Terapia → Richiedi ricetta…** |
 | Seguire una ricetta fino alla farmacia | **Terapia → Ricette…** |
 | Ricordare un piano terapeutico, un'esenzione o un controllo | **Terapia → Scadenze amministrative…** |
+| Vedere le prossime date in Outlook, Google Calendar o sul telefono | **Terapia → Esporta nel calendario…** |
 | Controllare la scorta per un viaggio o fino al prossimo passaggio in farmacia | **Terapia → Pianifica scorte…** |
 | Configurare email, lingua, backup | **Strumenti → Impostazioni…** |
 | Aggiungere una persona | **Strumenti → Gestisci profili…** (amministratore) |
@@ -535,6 +536,26 @@ l'hai segnata.
 
 Le scadenze vengono copiate sugli altri PC di un profilo sincronizzato
 e incluse nell'esportazione cifrata.
+
+### Esportare le date in un calendario
+
+**Terapia → Esporta nel calendario…** salva un file `.ics` con le
+prossime date: per ogni medicina attiva il giorno in cui richiedere la
+ricetta (la data di esaurimento meno la soglia di avviso) e la data di
+esaurimento, l'ultimo giorno per ritirare ogni ricetta e le scadenze
+amministrative aperte. Apri il file con Outlook, Google Calendar o il
+calendario del telefono. Gli eventi sono promemoria, non appuntamenti:
+non ti segnano come occupato. Esportando di nuovo più avanti gli stessi
+eventi vengono aggiornati, senza copie.
+
+I calendari sono spesso conservati online da un'altra azienda, quindi
+gli eventi dicono solo cosa fare ("MedReminder: una medicina
+finisce"). Spunta **Includi i nomi delle medicine e le descrizioni
+delle scadenze** se vuoi i nomi nel calendario; la scelta viene chiesta
+a ogni esportazione.
+
+Ogni email di scorta bassa contiene anche la data di esaurimento come
+file di calendario (`medreminder.ics`), con lo stesso titolo generico.
 
 ---
 

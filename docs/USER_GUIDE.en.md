@@ -112,6 +112,7 @@ right-click the icon and choose **Exit**.
 | Ask for a prescription | **Therapy → Request prescription…** |
 | Keep track of a prescription until the pharmacy | **Therapy → Prescriptions…** |
 | Be reminded of a therapeutic plan, an exemption or a check-up | **Therapy → Administrative deadlines…** |
+| See the coming dates in Outlook, Google Calendar or on the phone | **Therapy → Export to calendar…** |
 | Check the stock for a trip or until the next pharmacy visit | **Therapy → Plan supply…** |
 | Set up email, language, backup | **Tools → Settings…** |
 | Add a person | **Tools → Manage profiles…** (administrator) |
@@ -508,6 +509,25 @@ date, counted from the previous date, not from the day you marked it.
 
 Deadlines are copied to the other PCs of a synced profile and included
 in the encrypted export.
+
+### Export the dates to a calendar
+
+**Therapy → Export to calendar…** saves an `.ics` file with the coming
+dates: for each active medicine the day to request the prescription
+(the run-out date minus the warning threshold) and the run-out date,
+the last day to collect each prescription and the open administrative
+deadlines. Open the file with Outlook, Google Calendar or the calendar
+of your phone. The events are reminders, not appointments: they do not
+make you busy. Exporting again later updates the same events instead of
+adding copies.
+
+Calendars are often stored online by another company, so the events
+only say what to do ("MedReminder: a medicine runs out"). Tick
+**Include medicine names and deadline descriptions** if you want the
+names in the calendar; the choice is asked at every export.
+
+Each low-stock email also carries the run-out date as a calendar file
+(`medreminder.ics`), with the same generic title.
 
 ---
 

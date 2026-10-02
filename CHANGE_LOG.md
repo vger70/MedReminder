@@ -30,7 +30,37 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #169 — Export coming dates to a calendar file
+
+Link: [vger70/MedReminder#169](https://github.com/vger70/MedReminder/pull/169)
+Branch: `claude/calendar-export` → `main`
+
+### Added
+
+- Calendar export (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.7):
+  Therapy → Export to calendar… saves an `.ics` file with the day to
+  request each prescription, the run-out dates, the last day to collect
+  each prescription and the open administrative deadlines. Generic
+  titles by default; names only when ticked at export time. Stable
+  UIDs, so a new export updates the same events.
+- `IcsWriter` (RFC 5545), `CalendarEntries`, `CalendarExportQuery` in
+  `MedReminder.Application/Calendar`.
+- Low-stock emails carry the run-out date as `medreminder.ics`, with a
+  generic title (`EmailMessage.CalendarEvent`, multipart MIME in
+  `MailKitEmailNotificationService`).
+- Strings `Ui.CalendarExportDialog.*`, `Calendar.*`,
+  `Ui.MainForm.Menu.Therapy.ExportCalendar` in all five dictionaries;
+  section in the five user guides.
+
+### Docs
+
+- `docs/ANALYSIS.md` §9.2, `README.md`, proposal status.
+
+---
+
 ## PR #168 — Add recurring administrative deadlines with reminders
+
+**Status:** merged (2026-10-02)
 
 Link: [vger70/MedReminder#168](https://github.com/vger70/MedReminder/pull/168)
 Branch: `claude/admin-deadlines` → `main`
@@ -73,7 +103,12 @@ Branch: `claude/admin-deadlines` → `main`
 
 - `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
   `README.md`, proposal status in `EVOLUTION-PROPOSALS-2.md`.
+
+---
+
 ## PR #167 — Keep feed JSON files byte for byte in every checkout
+
+**Status:** merged (2026-10-02)
 
 Link: [vger70/MedReminder#167](https://github.com/vger70/MedReminder/pull/167)
 Branch: `claude/shortage-feed-line-endings` → `main`

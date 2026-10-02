@@ -60,6 +60,11 @@ scheduled dose time.
 - Administrative deadlines: therapeutic plans, exemption renewals,
   check-ups, optionally tied to a medicine and recurring every N months,
   with a reminder from a notice period set by the user.
+- Calendar export (`.ics`): the day to request each prescription, the
+  run-out dates, the last day to collect a prescription and the
+  administrative deadlines, for Outlook, Google Calendar or a phone;
+  generic titles unless the user asks for the names. Low-stock emails
+  carry the run-out date as a calendar attachment.
 - Supply planner: for a period chosen by the user (a trip, the days
   until the next pharmacy visit) the quantity each active medicine needs,
   the stock left when it starts and the packages to get; print, PDF or

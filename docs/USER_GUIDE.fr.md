@@ -121,6 +121,7 @@ quitter, fais un clic droit sur l'icône et choisis **Quitter**.
 | Demander une ordonnance | **Traitement → Demander une ordonnance…** |
 | Suivre une ordonnance jusqu'à la pharmacie | **Traitement → Ordonnances…** |
 | Être prévenu d'un plan thérapeutique, d'une exonération ou d'un contrôle | **Traitement → Échéances administratives…** |
+| Voir les prochaines dates dans Outlook, Google Agenda ou sur le téléphone | **Traitement → Exporter vers le calendrier…** |
 | Vérifier le stock pour un voyage ou jusqu'au prochain passage à la pharmacie | **Traitement → Planifier le stock…** |
 | Configurer e-mail, langue, sauvegarde | **Outils → Paramètres…** |
 | Ajouter une personne | **Outils → Gérer les profils…** (administrateur) |
@@ -553,6 +554,28 @@ depuis le jour où vous l'avez marquée.
 
 Les échéances sont copiées sur les autres PC d'un profil synchronisé et
 incluses dans l'export chiffré.
+
+### Exporter les dates vers un agenda
+
+**Traitement → Exporter vers le calendrier…** enregistre un fichier
+`.ics` avec les prochaines dates : pour chaque médicament actif le jour
+où demander l'ordonnance (la date d'épuisement moins le seuil d'alerte)
+et la date d'épuisement, le dernier jour pour retirer chaque
+ordonnance et les échéances administratives ouvertes. Ouvrez le
+fichier avec Outlook, Google Agenda ou l'agenda de votre téléphone. Les
+événements sont des rappels, pas des rendez-vous : ils ne vous
+marquent pas comme occupé. Un nouvel export met à jour les mêmes
+événements au lieu d'ajouter des copies.
+
+Les agendas sont souvent stockés en ligne par une autre entreprise :
+les événements indiquent donc seulement quoi faire (« MedReminder : un
+médicament s'épuise »). Cochez **Inclure les noms des médicaments et
+les descriptions des échéances** si vous voulez les noms dans
+l'agenda ; le choix est demandé à chaque export.
+
+Chaque e-mail de stock faible contient aussi la date d'épuisement sous
+forme de fichier d'agenda (`medreminder.ics`), avec le même titre
+générique.
 
 ---
 
