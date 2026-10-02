@@ -224,6 +224,40 @@ public sealed class DatabaseInitializer
             CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PrescriptionReminderEvents_PrescriptionId_ValidUntil""
                 ON ""PrescriptionReminderEvents"" (""PrescriptionId"", ""ValidUntil"");", cancellationToken);
 
+        // Administrative deadlines (docs/notes/EVOLUTION-PROPOSALS-2.md
+        // §3.6): the deadlines (replicated) and the reminders this device
+        // showed (not replicated).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""Deadlines"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_Deadlines"" PRIMARY KEY,
+                ""MedicineId"" TEXT NULL,
+                ""Kind"" INTEGER NOT NULL,
+                ""Label"" TEXT NULL,
+                ""DueOn"" TEXT NOT NULL,
+                ""LeadDays"" INTEGER NOT NULL,
+                ""RepeatMonths"" INTEGER NULL,
+                ""Channels"" INTEGER NOT NULL,
+                ""DoneOn"" TEXT NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                ""UpdatedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_Deadlines_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_Deadlines_MedicineId""
+                ON ""Deadlines"" (""MedicineId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""DeadlineReminderEvents"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_DeadlineReminderEvents"" PRIMARY KEY,
+                ""DeadlineId"" TEXT NOT NULL,
+                ""MedicineId"" TEXT NULL,
+                ""DueOn"" TEXT NOT NULL,
+                ""FiredAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DeadlineReminderEvents_DeadlineId_DueOn""
+                ON ""DeadlineReminderEvents"" (""DeadlineId"", ""DueOn"");", cancellationToken);
+
         // Shortage notices this device showed (docs/notes/
         // EVOLUTION-PROPOSALS-2.md §3.3; not replicated).
         await ExecuteRawSqlAsync(@"

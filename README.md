@@ -57,6 +57,9 @@ scheduled dose time.
 - Prescriptions followed from the request to the pharmacy: requested,
   issued (code, packages, valid until), collected; a reminder before an
   issued prescription lapses uncollected.
+- Administrative deadlines: therapeutic plans, exemption renewals,
+  check-ups, optionally tied to a medicine and recurring every N months,
+  with a reminder from a notice period set by the user.
 - Supply planner: for a period chosen by the user (a trip, the days
   until the next pharmacy visit) the quantity each active medicine needs,
   the stock left when it starts and the packages to get; print, PDF or

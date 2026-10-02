@@ -1,7 +1,9 @@
 using FluentAssertions;
 using MedReminder.Application.Sync;
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 using Xunit;
@@ -37,6 +39,10 @@ public class OperationCodecTests
         new HouseholdLinked(Guid.Parse("0d0d0d0d-0000-0000-0000-000000000005"), At),
         new PrescriptionChanged(M, F, new DateOnly(2026, 9, 20), new DateOnly(2026, 9, 22), "1234ABCD5678",
             2, new DateOnly(2026, 10, 21), null, false, At),
+        new DeadlineChanged(M, F, DeadlineKind.TherapeuticPlan, "Plan AIFA", new DateOnly(2027, 3, 31), 30, 12,
+            NotificationChannels.Both, null, false, At),
+        new DeadlineChanged(Guid.Empty, F, DeadlineKind.Other, "Disability card", new DateOnly(2027, 1, 15), 0, null,
+            NotificationChannels.Windows, new DateOnly(2027, 1, 10), false, At),
     };
 
     [Theory]
@@ -94,6 +100,7 @@ public class OperationCodecTests
             EmailNotificationSent => 4,
             HouseholdLinked => 5,
             PrescriptionChanged => 7,
+            DeadlineChanged => 8,
             _ => 1,
         };
 

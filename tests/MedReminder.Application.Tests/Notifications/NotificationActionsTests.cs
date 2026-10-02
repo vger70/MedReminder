@@ -22,6 +22,7 @@ public class NotificationActionsTests
         {
             new NotificationAction(NotificationActionKind.Open, "p1", Medicine),
             new NotificationAction(NotificationActionKind.OpenPrescriptions, "p1", Medicine),
+            new NotificationAction(NotificationActionKind.OpenDeadlines, "p1", Guid.Empty),
             new NotificationAction(NotificationActionKind.Snooze, "p1", Medicine, new TimeOnly(8, 30)),
             new NotificationAction(NotificationActionKind.RequestPrescription, "p1", Medicine),
         };
@@ -76,6 +77,9 @@ public class NotificationActionsTests
             .Kind.Should().Be(NotificationActionKind.Open);
         NotificationActionArguments.Parse(NotificationActionArguments.ForBody(NotificationTarget.Prescription(Medicine), "p"))!
             .Kind.Should().Be(NotificationActionKind.OpenPrescriptions);
+        NotificationActionArguments.ButtonsFor(NotificationTarget.Deadline(null), "p").Should().BeEmpty();
+        NotificationActionArguments.Parse(NotificationActionArguments.ForBody(NotificationTarget.Deadline(null), "p"))!
+            .Should().Be(new NotificationAction(NotificationActionKind.OpenDeadlines, "p", Guid.Empty));
     }
 
     [Fact]

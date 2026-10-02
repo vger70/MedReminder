@@ -84,7 +84,7 @@ motivo.
   *Registrar toma* y, a la derecha, un cuadro de búsqueda (**Ctrl+F**)
   que filtra la lista por nombre.
 - **Navegación** a la izquierda: *Medicamentos* (esta lista), luego
-  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*, *Planificar stock*, *Recetas*,
+  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*, *Planificar stock*, *Recetas*, *Vencimientos administrativos*,
   *Instalación* (administradores) y *Configuración*, que se abren en su
   propia ventana. Si la ventana es estrecha, solo muestra los iconos.
 - **Resumen** encima de la lista: cuántos medicamentos están
@@ -117,6 +117,7 @@ clic derecho en el icono y elige **Salir**.
 | Imprimir la terapia para un médico | **Terapia → Ficha de terapia…** |
 | Pedir una receta | **Terapia → Solicitar receta…** |
 | Seguir una receta hasta la farmacia | **Terapia → Recetas…** |
+| Recordar un plan terapéutico, una exención o un control | **Terapia → Vencimientos administrativos…** |
 | Comprobar el stock para un viaje o hasta la próxima visita a la farmacia | **Terapia → Planificar stock…** |
 | Configurar correo, idioma, copia de seguridad | **Herramientas → Configuración…** |
 | Añadir una persona | **Herramientas → Gestionar perfiles…** (administrador) |
@@ -505,6 +506,37 @@ instalación es compartida). El recordatorio no incluye el código.
 Las recetas se copian a los otros PC de un perfil sincronizado y se
 incluyen en la exportación cifrada.
 
+### Vencimientos administrativos
+
+**Terapia → Vencimientos administrativos…** reúne las fechas que no
+tienen que ver con el stock: la renovación de un plan terapéutico o de
+una exención, un control periódico o cualquier otra cosa que
+describas. Para cada vencimiento:
+
+- **Tipo** y **Descripción**: la descripción es opcional, salvo para el
+  tipo *Otro*;
+- **Medicamento**: el medicamento al que se refiere, o *(ninguno)* para
+  un vencimiento de todo el perfil;
+- **Fecha** y **Avisar días antes**: el recordatorio empieza ese número
+  de días antes de la fecha (14 por defecto);
+- **Repetir cada … meses**: para un vencimiento que vuelve, como una
+  renovación anual;
+- **Avisar por**: notificación de Windows y/o correo electrónico.
+
+MedReminder no aplica reglas propias a estas fechas: los plazos de validez
+cambian según el plan y la región, así que introduce la fecha que
+figura en tus documentos.
+
+Desde la antelación fijada recibes un recordatorio por fecha, por los
+canales elegidos (el correo solo desde el [dispositivo maestro](#master)
+cuando la instalación es compartida); un vencimiento pasado se muestra
+en rojo. **Hecho** cierra un vencimiento único; uno recurrente pasa a
+su fecha siguiente, contada desde la fecha anterior y no desde el día
+en que lo marcaste.
+
+Los vencimientos se copian en los demás PC de un perfil sincronizado y
+se incluyen en la exportación cifrada.
+
 ---
 
 <a id="notifications"></a>
@@ -523,7 +555,7 @@ incluyen en la exportación cifrada.
   primera revisión recibe solo el segundo aviso. Tras una caja nueva, el
   ciclo vuelve a empezar.
 - **Desde la notificación de Windows**: un clic abre MedReminder en ese
-  medicamento (en las recetas, para un recordatorio de receta). Un
+  medicamento (en las recetas, para un recordatorio de receta; en los vencimientos, para un recordatorio de vencimiento). Un
   aviso de stock tiene **Preparar la solicitud**, que abre la solicitud
   al médico; un recordatorio de dosis tiene **Recuérdamelo en 15
   minutos**, que lo repite más tarde, aunque MedReminder se haya cerrado

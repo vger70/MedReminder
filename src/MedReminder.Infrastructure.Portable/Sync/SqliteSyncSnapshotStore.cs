@@ -14,7 +14,7 @@ namespace MedReminder.Infrastructure.Sync;
 //
 //   - derived stock rows (every device derives them, §3.4);
 //   - NotificationEvents, DoseReminderEvents, PrescriptionReminderEvents,
-//     ShortageNoticeEvents (device-local, §4.2);
+//     DeadlineReminderEvents, ShortageNoticeEvents (device-local, §4.2);
 //   - the hint conflicts and SyncPeers (local notices, local progress).
 //     Register conflicts stay: they follow from the register versions
 //     and every device lists the same ones, a joining device included;
@@ -37,7 +37,9 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
     //      older app would read a second-stage email as a first-stage one.
     //   5: Prescriptions (prescription lifecycle), replicated: an older
     //      app would drop them.
-    public const int CurrentSchemaVersion = 5;
+    //   6: Deadlines (administrative deadlines), replicated: an older app
+    //      would drop them.
+    public const int CurrentSchemaVersion = 6;
 
     private static readonly string[] NotReplicated =
     [
@@ -45,6 +47,7 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
         @"DELETE FROM ""NotificationEvents"";",
         @"DELETE FROM ""DoseReminderEvents"";",
         @"DELETE FROM ""PrescriptionReminderEvents"";",
+        @"DELETE FROM ""DeadlineReminderEvents"";",
         @"DELETE FROM ""ShortageNoticeEvents"";",
         @"DELETE FROM ""SyncConflicts"" WHERE ""Kind"" IN (4, 5, 6);",
         @"DELETE FROM ""SyncPeers"";",

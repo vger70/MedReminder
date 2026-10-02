@@ -80,7 +80,7 @@ choice. If you install from the MSI package, the permission window says
 - **Toolbar** below the menus: *New medicine*, *Register intake* and a
   search box on the right (**Ctrl+F**) that filters the list by name.
 - **Navigation** on the left: *Medicines* (this list), then *Therapy
-  timeline*, *Therapy report*, *Request prescription*, *Plan supply*, *Prescriptions*, *Installation*
+  timeline*, *Therapy report*, *Request prescription*, *Plan supply*, *Prescriptions*, *Administrative deadlines*, *Installation*
   (administrators) and *Settings*, which open their own windows. In a
   narrow window it shows icons only.
 - **Summary** above the list: how many medicines are *Empty*, *Running
@@ -111,6 +111,7 @@ right-click the icon and choose **Exit**.
 | Print the therapy for a doctor | **Therapy → Therapy report…** |
 | Ask for a prescription | **Therapy → Request prescription…** |
 | Keep track of a prescription until the pharmacy | **Therapy → Prescriptions…** |
+| Be reminded of a therapeutic plan, an exemption or a check-up | **Therapy → Administrative deadlines…** |
 | Check the stock for a trip or until the next pharmacy visit | **Therapy → Plan supply…** |
 | Set up email, language, backup | **Tools → Settings…** |
 | Add a person | **Tools → Manage profiles…** (administrator) |
@@ -479,6 +480,35 @@ installation is shared). The reminder does not include the code.
 Prescriptions are copied to the other PCs of a synced profile and
 included in the encrypted export.
 
+### Administrative deadlines
+
+**Therapy → Administrative deadlines…** keeps the dates that are not
+about stock: the renewal of a therapeutic plan or of an exemption, a
+periodic check-up, or anything else you describe. For each deadline:
+
+- **Kind** and **Description**: the description is optional, except
+  for the kind *Other*;
+- **Medicine**: the medicine it concerns, or *(none)* for a deadline of
+  the whole profile;
+- **Date** and **Remind days before**: the reminder starts that many
+  days before the date (14 by default);
+- **Repeat every … months**: for a deadline that comes back, such as a
+  yearly renewal;
+- **Notify by**: Windows notification and/or email.
+
+MedReminder has no rule of its own for these dates: validity periods
+differ by plan and region, so enter the date printed on your
+documents.
+
+From the notice period on, you get one reminder per date, through the
+channels you chose (the email only from the [master device](#master)
+when the installation is shared); an overdue deadline is shown in red.
+**Done** closes a one-off deadline; a recurring one moves to its next
+date, counted from the previous date, not from the day you marked it.
+
+Deadlines are copied to the other PCs of a synced profile and included
+in the encrypted export.
+
 ---
 
 <a id="notifications"></a>
@@ -496,7 +526,7 @@ included in the encrypted export.
   A medicine that is already below half when it is first checked gets
   only the second reminder. After a new package the cycle starts again.
 - **From the Windows notification**: click it to open MedReminder on
-  that medicine (on the prescriptions for a prescription reminder). A
+  that medicine (on the prescriptions for a prescription reminder, on the deadlines for a deadline reminder). A
   low-stock warning has **Prepare request**, which opens the request to
   the doctor; a dose reminder has **Remind me in 15 minutes**, which
   shows it again later, even if MedReminder is closed meanwhile.

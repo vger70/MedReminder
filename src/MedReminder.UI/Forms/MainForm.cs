@@ -3,6 +3,7 @@ using System.Reflection;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Coverage;
+using MedReminder.Application.Deadlines;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
@@ -222,6 +223,8 @@ internal sealed class MainForm : MedReminderFormBase
             opensWindow: true, ShowCoveragePlanner);
         nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Prescriptions"), Mdl2Glyph.Glyphs.Notebook,
             opensWindow: true, async () => await ShowPrescriptionsAsync());
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Deadlines"), Mdl2Glyph.Glyphs.Ringer,
+            opensWindow: true, async () => await ShowDeadlinesAsync());
         nav.AddSeparator();
         if (_currentProfile.IsAdmin)
         {
@@ -372,6 +375,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Prescriptions"),
             Mdl2Glyph.Glyphs.Notebook, Keys.None,
             async () => await ShowPrescriptionsAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deadlines"),
+            Mdl2Glyph.Glyphs.Ringer, Keys.None,
+            async () => await ShowDeadlinesAsync()));
 
         // Scorte
         var stockMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Stock"));
@@ -964,6 +970,68 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.OpenPrescriptions"), ex);
+        }
+    }
+
+    // Therapy → Deadlines… (EVOLUTION-PROPOSALS-2 §3.6). Each action runs
+    // in its own DI scope.
+    private async Task ShowDeadlinesAsync()
+    {
+        try
+        {
+            List<(Guid Id, string Name)> medicines;
+            DateOnly today;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                medicines = (await scope.ServiceProvider.GetRequiredService<IMedicineRepository>()
+                        .ListActiveAsync(CancellationToken.None))
+                    .OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(m => (m.Id, m.Name))
+                    .ToList();
+                today = scope.ServiceProvider.GetRequiredService<DeadlineListQuery>().LocalToday();
+            }
+
+            var actions = new DeadlinesDialogActions(
+                Load: async () =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<DeadlineListQuery>()
+                        .LoadAsync(CancellationToken.None);
+                },
+                CreateEditor: existing =>
+                {
+                    // A deadline of a deactivated medicine keeps its
+                    // medicine in the list.
+                    var options = existing?.MedicineId is { } linked && medicines.All(m => m.Id != linked)
+                        ? [.. medicines, (linked, _allRows.FirstOrDefault(r => r.Id == linked)?.Name ?? string.Empty)]
+                        : medicines;
+                    return new DeadlineEditDialog(options, null, existing, today, _loc);
+                },
+                Save: async command =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<SaveDeadline>()
+                        .ExecuteAsync(command, CancellationToken.None);
+                },
+                Complete: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<CompleteDeadline>()
+                        .ExecuteAsync(id, today, CancellationToken.None);
+                },
+                Delete: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<DeleteDeadline>()
+                        .ExecuteAsync(id, CancellationToken.None);
+                });
+
+            using var dialog = new DeadlinesDialog(actions, _loc);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenDeadlines"), ex);
         }
     }
 
@@ -1610,6 +1678,9 @@ internal sealed class MainForm : MedReminderFormBase
                 break;
             case NotificationActionKind.OpenPrescriptions:
                 await ShowPrescriptionsAsync();
+                break;
+            case NotificationActionKind.OpenDeadlines:
+                await ShowDeadlinesAsync();
                 break;
             case NotificationActionKind.RequestPrescription:
                 SelectGridRow(action.MedicineId);

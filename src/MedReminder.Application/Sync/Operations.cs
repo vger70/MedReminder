@@ -1,3 +1,4 @@
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
@@ -27,6 +28,7 @@ internal static class Operations
         EmailNotificationSent e => e.NotificationId,
         HouseholdLinked h => h.HouseholdId,
         PrescriptionChanged p => p.PrescriptionId,
+        DeadlineChanged d => d.DeadlineId,
         _ => body.MedicineId,
     };
 
@@ -81,6 +83,10 @@ internal static class Operations
     public static PrescriptionChanged Prescription(Prescription p, bool deleted)
         => new(p.MedicineId, p.Id, p.RequestedOn, p.IssuedOn, p.Code, p.Packages, p.ValidUntil, p.CollectedOn,
             deleted, p.UpdatedAt);
+
+    public static DeadlineChanged Deadline(Deadline d, bool deleted)
+        => new(d.MedicineId ?? Guid.Empty, d.Id, d.Kind, d.Label, d.DueOn, d.LeadDays, d.RepeatMonths, d.Channels,
+            d.DoneOn, deleted, d.UpdatedAt);
 
     public static FactRetracted Retraction(FactRetraction retraction)
         => new(retraction.MedicineId, retraction.Id, retraction.Kind, retraction.FactId, retraction.RecordedAt);

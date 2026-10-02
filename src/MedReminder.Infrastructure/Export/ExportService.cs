@@ -321,6 +321,9 @@ internal sealed class ExportService : IExportService
         payload.Prescriptions = (await db.Prescriptions.AsNoTracking()
             .OrderBy(p => p.Id).ToListAsync(cancellationToken))
             .Select(ExportMapper.ToDto).ToList();
+        payload.Deadlines = (await db.Deadlines.AsNoTracking()
+            .OrderBy(d => d.Id).ToListAsync(cancellationToken))
+            .Select(ExportMapper.ToDto).ToList();
         var cutoff = await db.LedgerCutoffs.AsNoTracking()
             .SingleOrDefaultAsync(cancellationToken);
         payload.LedgerCutoff = cutoff is null ? null : ExportMapper.ToDto(cutoff);
@@ -444,20 +447,34 @@ internal sealed class ExportService : IExportService
         return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
     }
 
+    // Windows can keep a just-closed file locked for a short while (an
+    // antivirus or the search indexer scanning the new .db), so the
+    // deletion is retried a few times before giving up.
+    private const int DeleteAttempts = 5;
+
     private void TryDeleteDirectory(string directory)
     {
-        try
+        for (var attempt = 1; ; attempt++)
         {
-            if (Directory.Exists(directory))
+            try
             {
-                Directory.Delete(directory, recursive: true);
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, recursive: true);
+                }
+                return;
             }
-        }
-        catch (Exception ex)
-        {
-            // A leftover temp snapshot is harmless; do not fail the
-            // export over it. Log without any payload detail.
-            _log.LogWarning(ex, "Could not delete the temporary export snapshot directory.");
+            catch (Exception ex) when (attempt < DeleteAttempts && ex is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(100 * attempt);
+            }
+            catch (Exception ex)
+            {
+                // A leftover temp snapshot is harmless; do not fail the
+                // export over it. Log without any payload detail.
+                _log.LogWarning(ex, "Could not delete the temporary export snapshot directory.");
+                return;
+            }
         }
     }
 }

@@ -84,7 +84,7 @@ motivo.
   assunzione* e, a destra, una casella di ricerca (**Ctrl+F**) che
   filtra l'elenco per nome.
 - **Navigazione** a sinistra: *Medicine* (questo elenco), poi *Linea del
-  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Pianifica scorte*, *Ricette*, *Installazione*
+  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Pianifica scorte*, *Ricette*, *Scadenze amministrative*, *Installazione*
   (amministratori) e *Impostazioni*, che si aprono in una finestra
   propria. Se la finestra è stretta mostra solo le icone.
 - **Riepilogo** sopra l'elenco: quante medicine sono *Esaurite*, *In
@@ -116,6 +116,7 @@ uscire, fai clic destro sull'icona e scegli **Esci**.
 | Stampare la terapia per un medico | **Terapia → Scheda terapia…** |
 | Chiedere una ricetta | **Terapia → Richiedi ricetta…** |
 | Seguire una ricetta fino alla farmacia | **Terapia → Ricette…** |
+| Ricordare un piano terapeutico, un'esenzione o un controllo | **Terapia → Scadenze amministrative…** |
 | Controllare la scorta per un viaggio o fino al prossimo passaggio in farmacia | **Terapia → Pianifica scorte…** |
 | Configurare email, lingua, backup | **Strumenti → Impostazioni…** |
 | Aggiungere una persona | **Strumenti → Gestisci profili…** (amministratore) |
@@ -504,6 +505,37 @@ condivisa). Il promemoria non contiene il codice.
 Le ricette vengono copiate sugli altri PC di un profilo sincronizzato e
 incluse nell'esportazione cifrata.
 
+### Scadenze amministrative
+
+**Terapia → Scadenze amministrative…** raccoglie le date che non
+riguardano le scorte: il rinnovo di un piano terapeutico o di
+un'esenzione, un controllo periodico o qualsiasi altra cosa tu
+descriva. Per ogni scadenza:
+
+- **Tipo** e **Descrizione**: la descrizione è facoltativa, tranne per
+  il tipo *Altro*;
+- **Medicina**: la medicina a cui si riferisce, oppure *(nessuna)* per
+  una scadenza di tutto il profilo;
+- **Data** e **Avvisa giorni prima**: il promemoria parte quel numero
+  di giorni prima della data (14 di base);
+- **Ripeti ogni … mesi**: per una scadenza che si ripete, come un
+  rinnovo annuale;
+- **Avvisa con**: notifica di Windows e/o email.
+
+MedReminder non applica regole proprie a queste date: le validità
+cambiano secondo il piano e la regione, quindi inserisci la data
+riportata sui tuoi documenti.
+
+Dal preavviso in poi ricevi un promemoria per ogni data, sui canali
+scelti (l'email solo dal [dispositivo master](#master) se
+l'installazione è condivisa); una scadenza superata è mostrata in
+rosso. **Fatta** chiude una scadenza singola; una ricorrente passa alla
+data successiva, contata dalla data precedente e non dal giorno in cui
+l'hai segnata.
+
+Le scadenze vengono copiate sugli altri PC di un profilo sincronizzato
+e incluse nell'esportazione cifrata.
+
 ---
 
 <a id="notifications"></a>
@@ -522,7 +554,7 @@ incluse nell'esportazione cifrata.
   riceve solo il secondo avviso. Dopo una nuova confezione il ciclo
   riparte.
 - **Dalla notifica di Windows**: un clic apre MedReminder su quella
-  medicina (sulle ricette, per un promemoria di ricetta). Un avviso di
+  medicina (sulle ricette, per un promemoria di ricetta; sulle scadenze, per un promemoria di scadenza). Un avviso di
   scorta ha **Prepara la richiesta**, che apre la richiesta al medico;
   un promemoria di dose ha **Ricordamelo tra 15 minuti**, che lo
   ripropone più tardi, anche se nel frattempo MedReminder è chiuso. Le

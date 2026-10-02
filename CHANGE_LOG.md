@@ -30,6 +30,49 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #168 — Add recurring administrative deadlines with reminders
+
+Link: [vger70/MedReminder#168](https://github.com/vger70/MedReminder/pull/168)
+Branch: `claude/admin-deadlines` → `main`
+
+### Added
+
+- Administrative deadlines (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.6):
+  therapeutic plan, exemption renewal, check-up or other, optionally
+  tied to a medicine, with a notice period, an optional recurrence in
+  months and their own channels. No regulatory default: every date is
+  entered by the user.
+- Therapy → Administrative deadlines… (`DeadlinesDialog`,
+  `DeadlineEditDialog`); "Done" closes a one-off deadline and moves a
+  recurring one to its next date, counted from the previous date.
+- `DeadlineReminders` in the periodic check: one reminder per deadline
+  and date on this device (`DeadlineReminderEvents`, device-local),
+  email only where this device sends email; the toast opens the list.
+- Strings `Ui.DeadlinesDialog.*`, `Ui.DeadlineEditDialog.*`,
+  `Deadlines.*`, `Notifications.Deadline.*` in all five dictionaries;
+  section in the five user guides.
+
+### Changed
+
+- Sync: `DeadlineChanged`, one last-writer-wins register per deadline
+  (operation schema 8, image schema 6). Every device of a sync group
+  must run this version before deadlines are used.
+- Boot patch for `Deadlines` and `DeadlineReminderEvents`; deadlines of
+  a medicine are removed with it; reminders left out of sync images.
+- Export: additive `deadlines` field (schema version stays 2).
+
+### Fixed
+
+- The export retries the deletion of its temporary snapshot folder:
+  Windows can keep the just-closed snapshot locked for a moment, which
+  left the folder behind (`ExportServiceTests.Export_deletes_its_temporary_snapshot`).
+- Carries the `.gitattributes` of PR #167 (feed JSON files kept byte for
+  byte), so the shortage feed test passes on this branch too.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
+  `README.md`, proposal status in `EVOLUTION-PROPOSALS-2.md`.
 ## PR #167 — Keep feed JSON files byte for byte in every checkout
 
 Link: [vger70/MedReminder#167](https://github.com/vger70/MedReminder/pull/167)
