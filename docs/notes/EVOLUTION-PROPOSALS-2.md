@@ -298,6 +298,16 @@ reminders with no clinical content.
 
 ### 3.7 Calendar export (`.ics`)
 
+**Status.** Implemented in PR #169 (Therapy → Export to calendar…).
+Events: request-by day (run-out minus warning threshold) and run-out
+date per active medicine, last day of each prescription to collect,
+open deadlines; stable UIDs, so a new export updates the events. The
+writer is pure formatting and lives in `MedReminder.Application`
+(`Calendar/IcsWriter`), shared by the file export and the MailKit
+adapter. The low-stock email always carries the run-out event with a
+generic title, without a setting: the notification settings are
+replicated and a new device-local flag there was not worth the cost.
+
 **Benefit — medium.** An immediate mobile substitute while B.1 waits for
 its spikes: run-out dates and "request prescription by" dates reach the
 phone through Outlook or Google Calendar.

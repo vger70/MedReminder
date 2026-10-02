@@ -783,6 +783,16 @@ the retry decorator does not back off, and the subject, body and
 recipient are never logged; only the outcome and the exception type
 are.
 
+A low-stock email carries the medicine's run-out date as an all-day
+calendar event (`EmailMessage.CalendarEvent`): the adapter sends a
+`multipart/mixed` message with the text and `medreminder.ics`
+(`text/calendar; method=PUBLISH`, written by `IcsWriter`, RFC 5545). The
+event title is generic and never names the medicine, because calendars
+usually live on a third-party cloud. Therapy → Export to calendar…
+writes the same kind of file for every coming date
+(`CalendarExportQuery`); names appear only when the user asks at export
+time.
+
 ### 9.3 Localization
 
 UI strings are keyed dictionaries in `assets/localization/strings.<lang>.json`
