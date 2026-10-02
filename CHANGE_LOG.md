@@ -73,6 +73,21 @@ Branch: `claude/admin-deadlines` → `main`
 
 - `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
   `README.md`, proposal status in `EVOLUTION-PROPOSALS-2.md`.
+## PR #167 — Keep feed JSON files byte for byte in every checkout
+
+Link: [vger70/MedReminder#167](https://github.com/vger70/MedReminder/pull/167)
+Branch: `claude/shortage-feed-line-endings` → `main`
+
+### Fixed
+
+- `.gitattributes` marks `data/**/*.json` as `-text` and `data/**/*.zip`
+  as binary: with `core.autocrlf=true` Git added a CR to the published
+  shortage list, which then failed the size and SHA-256 check against
+  `latest.json` (`ShortageFeedTests.The_published_feed_parses`).
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §8 documents the line-ending rule.
 
 ---
 
