@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #174 — Run the AIFA shortage workflow daily
+
+Link: [vger70/MedReminder#174](https://github.com/vger70/MedReminder/pull/174)
+Branch: `claude/vigilant-hypatia-yby7iu` → `main`
+
+### Changed
+
+- `download_aifa_shortages.yaml` runs daily at 04:27 UTC instead of
+  on days 2, 9, 16 and 23: AIFA updates the list on no fixed day, so a
+  new list now reaches clients within a day. Runs on a list already
+  published commit nothing.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §8.
 ## PR #173 — Publish the catalogue feeds on a single-commit feeds branch
 
 Link: [vger70/MedReminder#173](https://github.com/vger70/MedReminder/pull/173)

@@ -695,7 +695,7 @@ the user once (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3).
 | Item | Value |
 |---|---|
 | Source | AIFA, `elenco_medicinali_carenti.csv` ("Carenze e indisponibilità"); CC BY 4.0, cited in the app as "AIFA list of medicines in shortage of <date>" |
-| Workflow | `download_aifa_shortages.yaml`, days 2, 9, 16 and 23 at 04:27 UTC, concurrency group `catalogue-feeds-publish` |
+| Workflow | `download_aifa_shortages.yaml`, daily at 04:27 UTC (a run on a list already published exits without changes), concurrency group `catalogue-feeds-publish` |
 | Script | `scripts/feeds/aifa_shortages.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_shortages.py`, fixture `tests/fixtures/catalogue/aifa-shortages-sample.csv` |
 | Published | `data/it/shortages/shortages-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`); the 3 newest files are kept |
 | Client | `ShortageRefresher` with `GitHubRawShortageFeedClient`, after the catalogue feeds, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:ShortagesEnabled` (default true), `ShortagesMaxDownloadBytes` (default 4 MiB) |
