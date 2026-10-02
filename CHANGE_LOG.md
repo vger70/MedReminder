@@ -30,6 +30,35 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #173 — Publish the catalogue feeds on a single-commit feeds branch
+
+Link: [vger70/MedReminder#173](https://github.com/vger70/MedReminder/pull/173)
+Branch: `claude/feeds-branch` → `main`
+
+### Changed
+
+- Feed files are published on the `feeds` branch, which holds a single
+  parentless commit replaced at each publish, instead of accumulating
+  about 9.5 MB of archives a month in `main`'s history.
+  `scripts/feeds/feeds_branch.sh` (`load`, `publish`) is called by the
+  five `download_*.yaml` workflows; only runs on the default branch
+  publish.
+- The client reads
+  `https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/`
+  (`CatalogueFeedOptions.DefaultBaseUrl`, `appsettings.json`).
+
+### Build
+
+- "Mirror to main" step keeps `main/data/` current for releases up to
+  v2.12.1 until the repository variable `FEEDS_MAIN_MIRROR` is `false`.
+- `scripts/feeds/tests/test_feeds_branch.py`.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §1.1, `docs/ANALYSIS.md`.
+
+---
+
 ## PR #172 — Move feed workflow schedules off the top of the hour
 
 Link: [vger70/MedReminder#172](https://github.com/vger70/MedReminder/pull/172)
