@@ -325,6 +325,14 @@ phone through Outlook or Google Calendar.
 
 ### 3.8 Caregiver per-event opt-in and periodic digest
 
+**Status.** Implemented in PR #170 (Settings → Notifications).
+`EmailKind` on every automated email; `CaregiverEmails` (copied kinds,
+all by default) and `CaregiverDigest` (weekly) are replicated profile
+settings, like the addresses, and need no operation schema bump; the
+weekly summary goes to the caregiver only, from a device that sends
+email, and `CaregiverDigestSentOn` keeps the other devices of a synced
+profile from sending it again once they have synced.
+
 **Benefit — medium** for relatives following from a distance. The
 per-event opt-in is the item deferred in
 `ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md` §11 item 4.

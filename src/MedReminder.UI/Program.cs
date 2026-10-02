@@ -467,6 +467,9 @@ internal static class Program
         builder.Services.AddSingleton<ICameraCaptureService, MedReminder.UI.Camera.WindowsCameraCaptureService>();
 
         builder.Services.AddScoped<MedicineOverviewLoader>();
+        // Weekly caregiver summary (EVOLUTION-PROPOSALS-2 §3.8): needs the
+        // overview loader, so it is registered with it.
+        builder.Services.AddScoped<MedReminder.Application.Notifications.CaregiverDigest>();
 
         builder.Services.AddHostedService<MedicationMonitorHostedService>();
         builder.Services.AddHostedService<DoseReminderHostedService>();

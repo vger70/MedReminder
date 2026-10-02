@@ -231,6 +231,56 @@ public class MailKitEmailNotificationServiceTests
             .Body.Should().BeOfType<TextPart>();
     }
 
+    // EVOLUTION-PROPOSALS-2 §3.8: the caregiver gets only the kinds the
+    // profile chose; every kind while the setting is empty.
+    [Theory]
+    [InlineData("", EmailKind.DoseReminder, true)]
+    [InlineData("LowStock", EmailKind.LowStock, true)]
+    [InlineData("LowStock", EmailKind.DoseReminder, false)]
+    [InlineData("None", EmailKind.LowStock, false)]
+    public void BuildMimeMessage_copies_the_caregiver_only_for_the_chosen_kinds(
+        string chosen, EmailKind kind, bool copied)
+    {
+        var notifications = new NotificationSettings
+        {
+            ToAddress = "user@example.org",
+            CaregiverAddress = "caregiver@example.org",
+            CaregiverEmails = chosen,
+        };
+        var sut = BuildService(notifications);
+
+        var mime = sut.BuildMimeMessage(ValidSmtp(), notifications, new EmailMessage("s", "b", Kind: kind));
+
+        mime.To.Mailboxes.Select(m => m.Address).Should().Equal(
+            copied ? ["user@example.org", "caregiver@example.org"] : ["user@example.org"]);
+    }
+
+    [Fact]
+    public void BuildMimeMessage_sends_the_digest_to_the_caregiver_only()
+    {
+        var notifications = new NotificationSettings
+        {
+            ToAddress = "user@example.org",
+            CaregiverAddress = "caregiver@example.org",
+            CaregiverEmails = "None",
+        };
+        var sut = BuildService(notifications);
+
+        var mime = sut.BuildMimeMessage(ValidSmtp(), notifications, new EmailMessage("s", "b", Kind: EmailKind.Digest));
+
+        mime.To.Mailboxes.Select(m => m.Address).Should().Equal("caregiver@example.org");
+    }
+
+    [Fact]
+    public async Task SendAsync_refuses_a_digest_without_caregiver()
+    {
+        var sut = BuildService(new NotificationSettings { ToAddress = "user@example.org" });
+
+        var act = () => sut.SendAsync(new EmailMessage("s", "b", Kind: EmailKind.Digest), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
     private sealed class StaticOptionsMonitor<T> : IOptionsMonitor<T>
     {
         private readonly T _value;

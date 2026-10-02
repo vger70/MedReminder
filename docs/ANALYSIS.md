@@ -783,6 +783,15 @@ the retry decorator does not back off, and the subject, body and
 recipient are never logged; only the outcome and the exception type
 are.
 
+Every automated email carries an `EmailKind` (`LowStock`,
+`DoseReminder`, `Prescription`, `Deadline`, `Shortage`, `Digest`). The
+adapter copies it to the caregiver only for the kinds in the profile's
+`CaregiverEmails` (every kind when empty, as before), and sends a
+`Digest` (`CaregiverDigest`, the weekly stock summary, no dose data) to
+the caregiver only. The summary runs in the monitor pass on a device
+that sends email; the day it was sent is the replicated profile
+setting `CaregiverDigestSentOn`.
+
 A low-stock email carries the medicine's run-out date as an all-day
 calendar event (`EmailMessage.CalendarEvent`): the adapter sends a
 `multipart/mixed` message with the text and `medreminder.ics`

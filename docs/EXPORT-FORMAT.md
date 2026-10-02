@@ -281,6 +281,8 @@ numbers.
 | `toAddress` | string | primary recipient (may be empty) |
 | `caregiverAddress` | string | optional secondary recipient (may be empty) |
 | `doctorAddress` | string | optional recipient of user-initiated prescription requests (may be empty). Added after `schemaVersion` 1 shipped, as an additive field (§5): archives without it import with `""`. |
+| `caregiverEmails` | string | kinds of email copied to the caregiver (`""` every kind, `None`, or a comma list of `LowStock`, `DoseReminder`, `Prescription`, `Deadline`, `Shortage`). Additive (§5): archives without it import with `""`. |
+| `caregiverDigest` | string | `Weekly` sends the caregiver a weekly stock summary; `""` or `Off` does not. Additive (§5). The day of the last summary is not exported. |
 
 ### 3.10 `shared`
 

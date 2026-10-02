@@ -2,6 +2,7 @@ using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Export;
+using MedReminder.Application.Notifications;
 using MedReminder.Application.UseCases;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Settings;
@@ -17,6 +18,11 @@ namespace MedReminder.UI.Forms;
 // SettingsDialog.cs).
 internal sealed partial class SettingsDialog
 {
+    // Caregiver options (EVOLUTION-PROPOSALS-2 §3.8): one box per kind
+    // of email copied to the caregiver, and the weekly summary.
+    private readonly Dictionary<EmailKind, CheckBox> _caregiverKinds = new();
+    private CheckBox _caregiverDigest = null!;
+
     // Notifications section (Increment 15d).
     // Per-profile "where do the emails go" tab (§7.4). Visible to
     // every profile: an admin sees it in addition to the Email tab
@@ -40,6 +46,8 @@ internal sealed partial class SettingsDialog
             ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Help"),
         };
+
+        var caregiverOptions = BuildCaregiverOptions(current);
 
         _doctorBox = new TextBox { Dock = DockStyle.Fill, Text = current.DoctorAddress };
 
@@ -92,6 +100,7 @@ internal sealed partial class SettingsDialog
         };
         container.Controls.Add(table);
         container.Controls.Add(caregiverHelp);
+        container.Controls.Add(caregiverOptions);
         container.Controls.Add(doctorHelp);
         container.Controls.Add(buttons);
         container.Controls.Add(explanation);
@@ -102,6 +111,52 @@ internal sealed partial class SettingsDialog
 
         page.Controls.Add(container);
         return page;
+    }
+
+    private Control BuildCaregiverOptions(NotificationSettings current)
+    {
+        var copied = CaregiverEmails.Parse(current.CaregiverEmails);
+        var group = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            AutoSize = true,
+            WrapContents = false,
+            Margin = new Padding(0, UiTheme.Space.S, 0, UiTheme.Space.S),
+        };
+        group.Controls.Add(new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.Caregiver.Kinds"),
+        });
+        foreach (var kind in CaregiverEmails.Choices)
+        {
+            var box = new CheckBox
+            {
+                AutoSize = true,
+                Text = _loc.Get("Ui.SettingsDialog.Notifications.Caregiver.Kind." + kind),
+                Checked = copied.Contains(kind),
+                Margin = new Padding(UiTheme.Space.L, 0, 0, 0),
+            };
+            _caregiverKinds[kind] = box;
+            group.Controls.Add(box);
+        }
+        _caregiverDigest = new CheckBox
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.Caregiver.Digest"),
+            Checked = CaregiverDigestFrequency.IsWeekly(current.CaregiverDigest),
+            Margin = new Padding(0, UiTheme.Space.S, 0, 0),
+        };
+        group.Controls.Add(_caregiverDigest);
+        group.Controls.Add(new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.Caregiver.Digest.Help"),
+        });
+        return group;
     }
 
     // Self-service PIN management for the current profile. Renders
@@ -248,7 +303,9 @@ internal sealed partial class SettingsDialog
             await using (var scope = _scopes.CreateAsyncScope())
             {
                 await scope.ServiceProvider.GetRequiredService<UpdateNotificationSettings>()
-                    .ExecuteAsync(toAddress, caregiverAddress, doctorAddress, CancellationToken.None);
+                    .ExecuteAsync(toAddress, caregiverAddress, doctorAddress, CancellationToken.None,
+                        caregiverEmails: CaregiverEmails.Format(_caregiverKinds.Where(k => k.Value.Checked).Select(k => k.Key)),
+                        caregiverDigest: _caregiverDigest.Checked ? CaregiverDigestFrequency.Weekly : CaregiverDigestFrequency.Off);
             }
             if (IsDisposed) return;
             UiMessageBox.Show(this,
