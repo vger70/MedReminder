@@ -228,6 +228,12 @@ public sealed class ExportedNotificationSettings
     // Added with the prescription request feature. Optional: archives
     // produced before it lack the field and import with "" (§5).
     public string DoctorAddress { get; set; } = string.Empty;
+
+    // Caregiver options (EVOLUTION-PROPOSALS-2 §3.8). Additive: archives
+    // without them import with "" (every kind copied, no digest). The day
+    // of the last digest is not exported.
+    public string CaregiverEmails { get; set; } = string.Empty;
+    public string CaregiverDigest { get; set; } = string.Empty;
 }
 
 // Opt-in non-DB files (§3.4). A section is null unless the user opted

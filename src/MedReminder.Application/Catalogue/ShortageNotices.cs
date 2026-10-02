@@ -86,7 +86,7 @@ public sealed class ShortageNotices
                     var detail = ShortageTexts.Detail(notice, list.ListDate, _localization);
                     await _email.SendAsync(new EmailMessage(title,
                         body + "\n\n" + detail.Replace(Environment.NewLine, "\n") + "\n\n"
-                        + _localization.Get("Notifications.Email.Footer")), cancellationToken);
+                        + _localization.Get("Notifications.Email.Footer"), Kind: EmailKind.Shortage), cancellationToken);
                     any = true;
                 }
                 catch (Exception ex)

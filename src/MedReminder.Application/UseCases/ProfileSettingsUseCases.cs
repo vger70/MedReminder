@@ -31,8 +31,10 @@ public sealed class UpdateNotificationSettings
         _uow = uow;
     }
 
+    // caregiverEmails and caregiverDigest (docs/notes/
+    // EVOLUTION-PROPOSALS-2.md §3.8): null leaves the setting as it is.
     public Task ExecuteAsync(string toAddress, string caregiverAddress, string doctorAddress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, string? caregiverEmails = null, string? caregiverDigest = null)
         => WriteGate.RunExclusiveAsync(async ct =>
         {
             var current = _store.Read();
@@ -42,6 +44,8 @@ public sealed class UpdateNotificationSettings
                 [ProfileSetting.CaregiverAddress] = caregiverAddress?.Trim() ?? string.Empty,
                 [ProfileSetting.DoctorAddress] = doctorAddress?.Trim() ?? string.Empty,
             };
+            if (caregiverEmails is not null) wanted[ProfileSetting.CaregiverEmails] = caregiverEmails.Trim();
+            if (caregiverDigest is not null) wanted[ProfileSetting.CaregiverDigest] = caregiverDigest.Trim();
             var changes = wanted
                 .Where(w => !string.Equals(current.GetValueOrDefault(w.Key) ?? string.Empty, w.Value, StringComparison.Ordinal))
                 .ToDictionary(w => w.Key, w => w.Value, StringComparer.Ordinal);
