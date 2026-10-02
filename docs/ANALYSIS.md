@@ -434,7 +434,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
-    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal) and appearance (System / Light / Dark; absent = System)
+    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal) and appearance (System / Light / Dark; absent = System), main window size, position and maximized state (absent = default size, centred)
     sync.settings.json           sync group, device, generation, folder or cloud account (B.1; absent while sync is off)
     sync.protected               sync group key, DPAPI CurrentUser (B.1)
 ```

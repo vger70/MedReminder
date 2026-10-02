@@ -1189,7 +1189,7 @@ außer den Sicherungs- und Exportdateien, die du selbst ablegst.
     └── <Profil>\
         ├── medreminder.db     Medikamente und Bestand des Profils
         ├── notifications.settings.json   Empfänger
-        ├── ui.settings.json   Textgröße und Darstellung
+        ├── ui.settings.json   Textgröße, Darstellung, Fenstergröße
         └── sync.*             Synchronisierungseinstellungen (nur wenn genutzt)
 ```
 

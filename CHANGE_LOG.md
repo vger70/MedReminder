@@ -30,10 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #176 — Show all About data sources and stop text box border flicker
+## PR #176 — Show all About data sources, stop text box border flicker, remember the main window placement
 
 Link: [vger70/MedReminder#176](https://github.com/vger70/MedReminder/pull/176)
 Branch: `claude/fonti-dati-textbox-issues-c699a3` → `main`
+
+### Added
+
+- The main window reopens at the size, position and maximized state
+  it had when last closed, per profile. The placement is saved in
+  `profiles\<id>\ui.settings.json` on every close, the hide to the tray
+  included; one whose title bar is on no current screen is ignored
+  (`src/MedReminder.UI/Forms/MainForm.cs`).
+- `ProfileUiSettingsFile` now changes only the properties it writes
+  and keeps the others, so the placement, the text size and the
+  appearance never overwrite one another.
 
 ### Fixed
 

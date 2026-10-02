@@ -103,6 +103,68 @@ public sealed class ProfileUiSettingsFileTests : IDisposable
         ProfileUiSettingsFile.ReadAppearance(_dir).Should().Be(AppearanceMode.System);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Main_window_placement_round_trips_through_the_profile_file(bool maximized)
+    {
+        var placement = new MainWindowPlacement(-8, 40, 1280, 720, maximized);
+
+        ProfileUiSettingsFile.WriteMainWindow(_dir, placement);
+
+        ProfileUiSettingsFile.ReadMainWindow(_dir).Should().Be(placement);
+        File.Exists(FilePath + ".tmp").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Missing_placement_reads_as_null()
+    {
+        ProfileUiSettingsFile.WriteTextSize(_dir, TextSize.Large);
+
+        ProfileUiSettingsFile.ReadMainWindow(_dir).Should().BeNull();
+    }
+
+    [Fact]
+    public void Writing_the_placement_keeps_the_other_preferences_and_unknown_keys()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, "{ \"TextSize\": \"Large\", \"Appearance\": \"Dark\", \"Future\": 1 }");
+
+        ProfileUiSettingsFile.WriteMainWindow(_dir, new MainWindowPlacement(0, 0, 900, 600, false));
+        ProfileUiSettingsFile.Write(_dir, TextSize.ExtraLarge, AppearanceMode.Light);
+
+        ProfileUiSettingsFile.ReadTextSize(_dir).Should().Be(TextSize.ExtraLarge);
+        ProfileUiSettingsFile.ReadAppearance(_dir).Should().Be(AppearanceMode.Light);
+        ProfileUiSettingsFile.ReadMainWindow(_dir).Should().Be(new MainWindowPlacement(0, 0, 900, 600, false));
+        File.ReadAllText(FilePath).Should().Contain("\"Future\": 1");
+    }
+
+    [Theory]
+    [InlineData("{ \"MainWindow\": { \"X\": 0, \"Y\": 0, \"Width\": 900 } }")]
+    [InlineData("{ \"MainWindow\": { \"X\": \"a\", \"Y\": 0, \"Width\": 900, \"Height\": 600 } }")]
+    [InlineData("{ \"MainWindow\": { \"X\": 0, \"Y\": 0, \"Width\": 0, \"Height\": 600 } }")]
+    [InlineData("{ \"MainWindow\": [] }")]
+    [InlineData("{ \"TextSize\": \"Large\", \"textsize\": \"Normal\" }")]
+    [InlineData("not json")]
+    public void Damaged_placement_reads_as_null(string content)
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, content);
+
+        ProfileUiSettingsFile.ReadMainWindow(_dir).Should().BeNull();
+    }
+
+    [Fact]
+    public void Writing_over_a_damaged_file_replaces_it()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, "not json");
+
+        ProfileUiSettingsFile.WriteAppearance(_dir, AppearanceMode.Dark);
+
+        ProfileUiSettingsFile.ReadAppearance(_dir).Should().Be(AppearanceMode.Dark);
+    }
+
     [Fact]
     public void Normal_keeps_the_default_look()
     {

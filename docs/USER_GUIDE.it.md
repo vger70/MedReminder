@@ -1155,7 +1155,7 @@ i file di backup ed esportazione che posizioni tu.
     └── <profilo>\
         ├── medreminder.db     medicine e scorte del profilo
         ├── notifications.settings.json   destinatari
-        ├── ui.settings.json   dimensione del testo e aspetto
+        ├── ui.settings.json   dimensione del testo, aspetto, dimensioni della finestra
         └── sync.*             impostazioni di sincronizzazione (solo se usata)
 ```
 

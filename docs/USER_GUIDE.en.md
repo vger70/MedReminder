@@ -1086,7 +1086,7 @@ backup and export files you place yourself.
     └── <profile>\
         ├── medreminder.db     the profile's medicines and stock
         ├── notifications.settings.json   recipients
-        ├── ui.settings.json   text size and appearance
+        ├── ui.settings.json   text size, appearance, window size
         └── sync.*             sync settings (only when used)
 ```
 
