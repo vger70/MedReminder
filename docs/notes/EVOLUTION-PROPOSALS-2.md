@@ -266,6 +266,16 @@ for time zones.
 
 ### 3.6 Recurring administrative deadlines
 
+**Status.** Implemented in PR #168 (Therapy → Administrative
+deadlines…). The whole deadline is one replicated register
+(`DeadlineChanged`, operation schema 8, image schema 6), with its own
+channels and an optional medicine; the reminder starts from a notice
+period set by the user, once per deadline and date and device; "Done"
+closes a one-off deadline and moves a recurring one to its next date,
+counted from the previous date. It did not ship with §3.2 under one
+schema bump: §3.2 merged first, so devices of a sync group must be
+updated once more.
+
 Therapeutic plan (piano terapeutico), exemption renewal, periodic
 check-ups tied to a medicine.
 

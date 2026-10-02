@@ -86,7 +86,7 @@ demselben Grund „Unbekannter Herausgeber“.
   erfassen* und rechts ein Suchfeld (**Strg+F**), das die Liste nach
   Namen filtert.
 - **Navigation** links: *Medikamente* (diese Liste), dann
-  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Vorrat planen*, *Rezepte*, *Installation*
+  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Vorrat planen*, *Rezepte*, *Fristen*, *Installation*
   (Administratoren) und *Einstellungen*, die ein eigenes Fenster öffnen.
   In einem schmalen Fenster zeigt sie nur die Symbole.
 - **Übersicht** über der Liste: wie viele Medikamente *Leer*, *Bald
@@ -119,6 +119,7 @@ Beenden klicke mit der rechten Maustaste auf das Symbol und wähle
 | Die Therapie für einen Arzt drucken | **Therapie → Therapieplan…** |
 | Ein Rezept anfordern | **Therapie → Rezept anfordern…** |
 | Ein Rezept bis zur Apotheke verfolgen | **Therapie → Rezepte…** |
+| An einen Therapieplan, eine Befreiung oder einen Kontrolltermin erinnert werden | **Therapie → Fristen…** |
 | Den Vorrat für eine Reise oder bis zum nächsten Apothekenbesuch prüfen | **Therapie → Vorrat planen…** |
 | E-Mail, Sprache, Sicherung einrichten | **Extras → Einstellungen…** |
 | Eine Person hinzufügen | **Extras → Profile verwalten…** (Administrator) |
@@ -520,6 +521,37 @@ Erinnerung enthält den Code nicht.
 Rezepte werden auf die anderen PCs eines synchronisierten Profils
 kopiert und in den verschlüsselten Export aufgenommen.
 
+### Fristen
+
+**Therapie → Fristen…** sammelt die Termine, die nicht den Vorrat
+betreffen: die Verlängerung eines Therapieplans oder einer Befreiung,
+einen regelmäßigen Kontrolltermin oder alles andere, was du
+beschreibst. Für jede Frist:
+
+- **Art** und **Beschreibung**: die Beschreibung ist optional, außer
+  bei der Art *Sonstiges*;
+- **Medikament**: das betroffene Medikament oder *(keines)* für eine
+  Frist des ganzen Profils;
+- **Datum** und **Tage vorher erinnern**: die Erinnerung beginnt so
+  viele Tage vor dem Datum (standardmäßig 14);
+- **Wiederholen alle … Monate**: für eine Frist, die wiederkehrt, etwa
+  eine jährliche Verlängerung;
+- **Benachrichtigen per**: Windows-Benachrichtigung und/oder E-Mail.
+
+MedReminder kennt für diese Termine keine eigenen Regeln: die
+Gültigkeit unterscheidet sich je nach Plan und Region, gib also das
+Datum aus deinen Unterlagen ein.
+
+Ab der Vorlaufzeit erhältst du eine Erinnerung pro Datum über die
+gewählten Kanäle (die E-Mail nur vom [Master-Gerät](#master), wenn die
+Installation geteilt ist); eine überfällige Frist wird rot angezeigt.
+**Erledigt** schließt eine einmalige Frist ab; eine wiederkehrende
+springt auf ihr nächstes Datum, gerechnet vom vorherigen Datum und
+nicht von dem Tag, an dem du sie markiert hast.
+
+Fristen werden auf die anderen PCs eines synchronisierten Profils
+kopiert und in den verschlüsselten Export aufgenommen.
+
 ---
 
 <a id="notifications"></a>
@@ -538,7 +570,7 @@ kopiert und in den verschlüsselten Export aufgenommen.
   ersten Prüfung schon unter der Hälfte liegt, bekommt nur die zweite
   Erinnerung. Nach einer neuen Packung beginnt der Zyklus von vorn.
 - **Aus der Windows-Benachrichtigung**: ein Klick öffnet MedReminder
-  bei diesem Medikament (bei den Rezepten, für eine Rezepterinnerung).
+  bei diesem Medikament (bei den Rezepten, für eine Rezepterinnerung; bei den Fristen, für eine Fristerinnerung).
   Eine Bestandswarnung hat **Anfrage vorbereiten**, das die Anfrage an
   den Arzt öffnet; eine Dosiserinnerung hat **In 15 Minuten erinnern**,
   das sie später erneut zeigt, auch wenn MedReminder inzwischen

@@ -87,7 +87,7 @@ installes depuis le paquet MSI, la fenêtre d'autorisation indique
   qui filtre la liste par nom.
 - **Navigation** à gauche : *Médicaments* (cette liste), puis
   *Chronologie du traitement*, *Fiche de traitement*, *Demander une
-  ordonnance*, *Planifier le stock*, *Ordonnances*, *Installation* (administrateurs) et *Paramètres*, qui
+  ordonnance*, *Planifier le stock*, *Ordonnances*, *Échéances administratives*, *Installation* (administrateurs) et *Paramètres*, qui
   s'ouvrent dans leur propre fenêtre. Dans une fenêtre étroite, elle
   n'affiche que les icônes.
 - **Résumé** au-dessus de la liste : combien de médicaments sont
@@ -120,6 +120,7 @@ quitter, fais un clic droit sur l'icône et choisis **Quitter**.
 | Imprimer le traitement pour un médecin | **Traitement → Fiche de traitement…** |
 | Demander une ordonnance | **Traitement → Demander une ordonnance…** |
 | Suivre une ordonnance jusqu'à la pharmacie | **Traitement → Ordonnances…** |
+| Être prévenu d'un plan thérapeutique, d'une exonération ou d'un contrôle | **Traitement → Échéances administratives…** |
 | Vérifier le stock pour un voyage ou jusqu'au prochain passage à la pharmacie | **Traitement → Planifier le stock…** |
 | Configurer e-mail, langue, sauvegarde | **Outils → Paramètres…** |
 | Ajouter une personne | **Outils → Gérer les profils…** (administrateur) |
@@ -522,6 +523,37 @@ si l'installation est partagée). Le rappel ne contient pas le code.
 Les ordonnances sont copiées sur les autres PC d'un profil synchronisé
 et incluses dans l'export chiffré.
 
+### Échéances administratives
+
+**Traitement → Échéances administratives…** regroupe les dates qui ne
+concernent pas le stock : le renouvellement d'un plan thérapeutique ou
+d'une exonération, un contrôle périodique, ou toute autre chose que
+vous décrivez. Pour chaque échéance :
+
+- **Type** et **Description** : la description est facultative, sauf
+  pour le type *Autre* ;
+- **Médicament** : le médicament concerné, ou *(aucun)* pour une
+  échéance de tout le profil ;
+- **Date** et **Prévenir jours avant** : le rappel commence ce nombre
+  de jours avant la date (14 par défaut) ;
+- **Répéter tous les … mois** : pour une échéance qui revient, comme un
+  renouvellement annuel ;
+- **Prévenir par** : notification Windows et/ou e-mail.
+
+MedReminder n'applique aucune règle propre à ces dates : les durées de
+validité varient selon le plan et la région, saisissez donc la date
+indiquée sur vos documents.
+
+À partir du préavis, vous recevez un rappel par date, sur les canaux
+choisis (l'e-mail uniquement depuis l'[appareil maître](#master) quand
+l'installation est partagée) ; une échéance dépassée s'affiche en
+rouge. **Faite** clôt une échéance unique ; une échéance récurrente
+passe à sa date suivante, comptée depuis la date précédente et non
+depuis le jour où vous l'avez marquée.
+
+Les échéances sont copiées sur les autres PC d'un profil synchronisé et
+incluses dans l'export chiffré.
+
 ---
 
 <a id="notifications"></a>
@@ -540,7 +572,7 @@ et incluses dans l'export chiffré.
   vérification reçoit seulement le deuxième rappel. Après une nouvelle
   boîte, le cycle recommence.
 - **Depuis la notification Windows** : un clic ouvre MedReminder sur ce
-  médicament (sur les ordonnances, pour un rappel d'ordonnance). Une
+  médicament (sur les ordonnances, pour un rappel d'ordonnance ; sur les échéances, pour un rappel d'échéance). Une
   alerte de stock a **Préparer la demande**, qui ouvre la demande au
   médecin ; un rappel de dose a **Me le rappeler dans 15 minutes**, qui
   le reprend plus tard, même si MedReminder est fermé entre-temps. Les

@@ -140,6 +140,7 @@ against `manifest.payload.sha256Base64` after decryption.
   "stockCounts": [ … ],
   "ledgerCutoff": { … },
   "prescriptions": [ … ],
+  "deadlines": [ … ],
   "notificationSettings": { … },
   "shared": { … }
 }
@@ -347,6 +348,26 @@ a prescription are device-local and not exported.
 | `packages` | int? | 1 to 99 |
 | `validUntil` | DateOnly? | last day the pharmacy accepts it |
 | `collectedOn` | DateOnly? | |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
+
+### 3.15 `deadlines[]`
+
+Added after `schemaVersion` 2 shipped, as an additive field (§5):
+archives without it import with no deadlines. Deadline reminders are
+device-local and not exported.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `medicineId` | Guid? | parent medicine; `null` for a deadline of the profile |
+| `kind` | string | `TherapeuticPlan`, `ExemptionRenewal`, `CheckUp`, `Other` |
+| `label` | string? | free text, at most 80 characters; required for `Other` |
+| `dueOn` | DateOnly | date of the deadline |
+| `leadDays` | int | 0 to 180: days before `dueOn` when the reminder starts |
+| `repeatMonths` | int? | 1 to 120; `null` for a one-off deadline |
+| `channels` | string | `NotificationChannels` name: `None`, `Email`, `Windows`, `Both` |
+| `doneOn` | DateOnly? | set on a one-off deadline once done |
 | `recordedAt` | DateTimeOffset | |
 | `updatedAt` | DateTimeOffset | |
 

@@ -245,11 +245,12 @@ Content, before compression:
 The database is the profile database of the writing device (MedReminder
 schema; `docs/ANALYSIS.md` §4.1) without what is not replicated:
 derived stock movements (`Origin` 3), notification, dose-reminder,
-prescription-reminder and shortage-notice events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
+prescription-reminder, deadline-reminder and shortage-notice events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
 the reference catalogue. It keeps the facts, the frozen (`Legacy`)
 movements and the cutoff, the register versions (`SyncFieldVersions`),
 the tombstones (`FactRetractions`), the low-stock emails sent by any
 device (`SentEmailNotifications`), the prescriptions (`Prescriptions`),
+the administrative deadlines (`Deadlines`),
 the register conflicts and the operation log (`SyncOperations`).
 
 Image schema versions: 1, the original image; 2, the operation log may
@@ -257,7 +258,8 @@ hold `MedicineDeleted`, so a medicine can be absent from the image
 while later operations for it exist (they are skipped, §6); 3, the
 image holds `SentEmailNotifications`, which an older app would drop;
 4, `SentEmailNotifications` carry `Stage`, which an older app would
-drop; 5, the image holds `Prescriptions`, which an older app would drop.
+drop; 5, the image holds `Prescriptions`, which an older app would drop;
+6, the image holds `Deadlines`, which an older app would drop.
 
 A device joins from the newest checkpoint whose `vector` covers every
 device folder's first remaining segment (`vector[d] >= first − 1`), or
@@ -267,7 +269,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 7)
+## 6. Operation catalogue (schema versions 1 to 8)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -294,11 +296,13 @@ nothing.
 | `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
 | `EmailNotificationSent` (version 4; version 6 for `stage` 2) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt`, `stage` (from version 6; absent = 1) | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`) at that warning stage: the receiving device does not send it again at that stage or an earlier one |
 | `PrescriptionChanged` (version 7) | `prescriptionId`, `requestedOn`, `issuedOn`, `code`, `packages`, `validUntil`, `collectedOn` (dates `null` when not known), `deleted`, `recordedAt` | the whole state of one prescription, written when it is recorded, changed or deleted; last writer wins per prescription (register `Prescription` of the prescription id, its value the payload), no conflict entry; when the winner has `deleted` true the prescription is removed, and a later write brings it back |
+| `DeadlineChanged` (version 8) | `deadlineId`, `kind` (`TherapeuticPlan`, `ExemptionRenewal`, `CheckUp`, `Other`), `label`, `dueOn`, `leadDays`, `repeatMonths` (`null` for a one-off deadline), `channels` (`None`, `Email`, `Windows`, `Both`), `doneOn`, `deleted`, `recordedAt` | the whole state of one administrative deadline, with the rules of `PrescriptionChanged` (register `Deadline` of the deadline id); `medicineId` is empty for a deadline of the profile |
 | `HouseholdLinked` (version 5) | `householdId`, `linkedAt` | fact; the household that adopted the group (§9); the earliest by HLC wins; profile-level (`medicineId` empty) |
 
 Every type is schema version 1 except `MedicineDeleted`, version 2,
 `ProfileSettingChanged`, version 3, `EmailNotificationSent`, version 4,
-`HouseholdLinked`, version 5, and `PrescriptionChanged`, version 7. A
+`HouseholdLinked`, version 5, `PrescriptionChanged`, version 7, and
+`DeadlineChanged`, version 8. A
 second-stage `EmailNotificationSent` (the second low-stock warning, sent
 at half of the medicine's warning threshold) is written with version 6, so only that operation stops an
 older app; a first-stage one keeps version 4 and its `stage` field,

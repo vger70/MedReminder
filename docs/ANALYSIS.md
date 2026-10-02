@@ -193,6 +193,8 @@ is used.
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
 | `Prescription` (`Prescriptions`) | A prescription from request to collection (replicated, one register per prescription) | `RequestedOn?`, `IssuedOn?`, `Code?`, `Packages?`, `ValidUntil?`, `CollectedOn?` |
 | `PrescriptionReminderEvent` (`PrescriptionReminderEvents`) | Reminder to collect, device-local dedup | unique `(PrescriptionId, ValidUntil)` |
+| `Deadline` (`Deadlines`) | Administrative deadline: therapeutic plan, exemption renewal, check-up (replicated, one register per deadline) | `MedicineId?`, `Kind`, `Label?`, `DueOn`, `LeadDays`, `RepeatMonths?`, `Channels`, `DoneOn?` |
+| `DeadlineReminderEvent` (`DeadlineReminderEvents`) | Deadline reminder, device-local dedup | unique `(DeadlineId, DueOn)` |
 | `ShortageNoticeEvent` (`ShortageNoticeEvents`) | Shortage notice shown, device-local dedup | unique `(MedicineId, Code, Start)` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
@@ -669,7 +671,9 @@ start:
    (household step H1); then `NotificationEvents.Stage` and
    `SentEmailNotifications.Stage` (second low-stock warning, default 1);
    then `Prescriptions` and `PrescriptionReminderEvents` (prescription
-   lifecycle); then `ShortageNoticeEvents` (shortage notices);
+   lifecycle); then `Deadlines` and `DeadlineReminderEvents`
+   (administrative deadlines); then `ShortageNoticeEvents` (shortage
+   notices);
    then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);
