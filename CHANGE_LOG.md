@@ -30,7 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #171 — Record the second round of proposals in the status snapshot
+
+Link: [vger70/MedReminder#171](https://github.com/vger70/MedReminder/pull/171)
+Branch: `claude/status-proposals-2` → `main`
+
+### Docs
+
+- `docs/STATUS.md` §2.9: the eight proposals of
+  `EVOLUTION-PROPOSALS-2.md` with their PRs and sync / format impact;
+  §3.3 and §4 updated (release and the update of every synced device).
+
+---
+
 ## PR #170 — Let the caregiver receive chosen emails and a weekly summary
+
+**Status:** merged (2026-10-02)
 
 Link: [vger70/MedReminder#170](https://github.com/vger70/MedReminder/pull/170)
 Branch: `claude/caregiver-digest` → `main`

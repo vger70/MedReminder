@@ -22,6 +22,10 @@ Reviewed again on 2026-10-01 at v2.12.0, after #113–#155 (remote
 catalogue feeds, household of devices with a master device, UI
 modernisation, database-query logging): all sections.
 
+Updated on 2026-10-02 after #160 and #162–#170 (the eight proposals of
+`docs/notes/EVOLUTION-PROPOSALS-2.md`, on `main` after v2.12.1, not yet
+released): §2.9, §3.3, §4.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -174,6 +178,30 @@ Also in v2.12.0: Settings → General → Log database queries
 (diagnostics), administrators only (#153). The user guides were
 rewritten around tasks and the household features (#142).
 
+### 2.9 Proposals from `EVOLUTION-PROPOSALS-2.md` (on `main`, unreleased)
+
+Second round of proposals (#160), benchmarked against similar apps and
+implemented in the recommended order 1 → 5 → 2 → 4 → 3, then 6, 7, 8.
+Each item has a status paragraph in the proposals note.
+
+| Rank | Proposal | PR | Sync / format impact |
+|---|---|---|---|
+| 1 | Second low-stock warning at half of the warning threshold | #162 | `Stage` on notification events and sent emails; `EmailNotificationSent` version 6 for a second-stage email; image schema 4 |
+| 5 | Supply planner for a chosen period (Therapy → Plan supply…) | #163 | none |
+| 2 | Prescription lifecycle: requested, issued, collected; reminder before "valid until" (Therapy → Prescriptions…) | #164 | `PrescriptionChanged`, operation schema 7; image schema 5; export field `prescriptions` |
+| 4 | Actions in Windows notifications: open the medicine or the list, prepare the prescription request, snooze a dose reminder by 15 minutes | #165 | none |
+| 3 | AIFA shortage list: Supply column, notice once per shortage (Italy) | #166, #167 | none (reference data under `data/it/shortages/`); #167 keeps feed files byte for byte (`.gitattributes`) |
+| 6 | Administrative deadlines (therapeutic plan, exemption renewal, check-up), optional recurrence (Therapy → Administrative deadlines…) | #168 | `DeadlineChanged`, operation schema 8; image schema 6; export field `deadlines` |
+| 7 | Calendar export (`.ics`, Therapy → Export to calendar…); run-out date attached to low-stock emails | #169 | none |
+| 8 | Caregiver: copies per kind of email, weekly stock summary | #170 | replicated profile settings `CaregiverEmails`, `CaregiverDigest`, `CaregiverDigestSentOn` (no schema bump); additive export fields |
+
+Every device of a sync group must run a build with operation schema 8
+and image schema 6 before prescriptions or deadlines are used; an older
+app stops at the first operation it cannot read (R7). The Windows-only
+test projects (`Infrastructure.Tests`, `UI.Tests`) were run by the
+maintainer up to #168; for #169 and #170 the run on Windows is pending
+`[UNCERTAIN]`.
+
 ---
 
 ## 3. Open work
@@ -221,7 +249,9 @@ developer-days `[INFERRED — from the §13.1 estimates]`.
 
 ### 3.3 Proposals with an implementation prompt ready
 
-None for the application. `docs/prompt/` holds only the two website
+None for the application. Every proposal of
+`EVOLUTION-PROPOSALS-2.md` §3 has shipped (§2.9); its §4 and §5
+(re-assessed backlog items, proposals not recommended) remain notes. `docs/prompt/` holds only the two website
 prompts (§3.5). The others are in `docs/prompt/Completed/`, including
 the multi-user roles prompt (item G shipped with household step H2a;
 item I was not built) and the two remote-feed prompts.
@@ -270,6 +300,11 @@ medicine between profiles: proposal 11 is still open.
 ---
 
 ## 4. Suggested next steps `[INFERRED]`
+
+0. Run the Windows-only tests on `main`, then release the
+   `EVOLUTION-PROPOSALS-2` features (§2.9) as a new minor version; the
+   release notes must say that every device of a sync group has to be
+   updated before prescriptions or deadlines are used.
 
 The household feature shipped after its manual tests (§2.7). Every
 device of a sync group or installation must run v2.12.0 or later
