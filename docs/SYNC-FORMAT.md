@@ -310,7 +310,14 @@ which an older app ignores, is 1.
 
 Profile settings (`ProfileSettingChanged.setting`): `DisplayName` (the
 profile's name, never empty), `ToAddress`, `CaregiverAddress`,
-`DoctorAddress` (notification recipients, `""` for none). They are
+`DoctorAddress` (notification recipients, `""` for none),
+`CaregiverEmails` (the kinds of email copied to the caregiver: `""` for
+every kind, `None`, or `LowStock`, `DoseReminder`, `Prescription`,
+`Deadline`, `Shortage` separated by commas), `CaregiverDigest` (`""` or
+`Off`, or `Weekly`) and `CaregiverDigestSentOn` (`yyyy-MM-dd` of the
+last weekly summary sent by any device, so the others do not send it
+again). An app that does not know a setting keeps its versions and
+does not project it, so these three need no schema version. They are
 registers of the profile in the image's `SyncFieldVersions`
 (`MedicineId` and `EntityId` empty, register `Profile.<setting>`); the
 device that writes a genesis records the values it holds as genesis

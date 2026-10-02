@@ -112,7 +112,7 @@ public static class NotificationTexts
             body.Append("— MedReminder (organizational reminder, not a medical device).");
         }
 
-        return new EmailMessage(subject, body.ToString());
+        return new EmailMessage(subject, body.ToString(), Kind: EmailKind.LowStock);
     }
 
     private static string FormatSlotForEmail(MedicationAdministrationSlot slot, string unit, CultureInfo c)

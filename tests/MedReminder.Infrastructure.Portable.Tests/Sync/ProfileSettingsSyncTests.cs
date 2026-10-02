@@ -69,6 +69,32 @@ public sealed class ProfileSettingsSyncTests : IDisposable
         values[ProfileSetting.DoctorAddress].Should().Be("doctor@example.org");
     }
 
+    // EVOLUTION-PROPOSALS-2 §3.8: the caregiver options and the day of
+    // the last summary travel like the recipients.
+    [Fact]
+    public async Task Caregiver_options_and_the_last_summary_reach_the_other_device()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+
+        await a.RunAsync(sp => sp.GetRequiredService<UpdateNotificationSettings>().ExecuteAsync(
+            "patient@example.org", "carer@example.org", string.Empty, CancellationToken.None,
+            caregiverEmails: "LowStock,Prescription", caregiverDigest: "Weekly"));
+        await a.RunAsync(async sp =>
+        {
+            await sp.GetRequiredService<IOperationLog>().AppendAsync(
+                [new ProfileSettingChanged(ProfileSetting.CaregiverDigestSentOn, "2026-09-10")], CancellationToken.None);
+            await sp.GetRequiredService<MedReminderDbContext>().SaveChangesAsync();
+        });
+        await a.SyncAsync();
+        await b.SyncAsync();
+
+        var values = b.ProfileSettings.Read();
+        values[ProfileSetting.CaregiverEmails].Should().Be("LowStock,Prescription");
+        values[ProfileSetting.CaregiverDigest].Should().Be("Weekly");
+        values[ProfileSetting.CaregiverDigestSentOn].Should().Be("2026-09-10");
+    }
+
     [Fact]
     public async Task Saving_unchanged_recipients_records_nothing()
     {

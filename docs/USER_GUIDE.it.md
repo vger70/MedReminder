@@ -614,8 +614,16 @@ prova fallisce, controlla le istruzioni del tuo provider.
 
 - **Destinatario (to)** — chi riceve gli avvisi di questo profilo.
 - **E-mail assistente (facoltativa)** — un familiare o un assistente che
-  riceve una copia di ogni avviso, nella stessa email (i due indirizzi
-  sono visibili a entrambi). Deve essere diverso dal destinatario.
+  riceve una copia degli avvisi, nella stessa email (i due indirizzi
+  sono visibili a entrambi). Deve essere diverso dal destinatario. In
+  **Copia all'assistente** scegli quali avvisi riceve (tutti finché non
+  cambi): scorta bassa, promemoria delle dosi, delle ricette e delle
+  scadenze, avvisi di carenza. **Invia all'assistente un riepilogo
+  settimanale delle scorte** aggiunge, ogni 7 giorni, un'email al solo
+  assistente con scorta, stato e data di esaurimento di ogni medicina
+  attiva, e niente sulle dosi assunte. La invia il PC che manda le
+  email, una volta per profilo anche se il profilo è sincronizzato su
+  più PC.
 - **E-mail del medico (facoltativa)** — usata solo per le richieste di
   ricetta che invii tu; gli avvisi automatici non ci vanno mai.
 

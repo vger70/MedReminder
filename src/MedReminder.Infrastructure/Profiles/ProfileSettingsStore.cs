@@ -10,7 +10,8 @@ namespace MedReminder.Infrastructure.Profiles;
 // the profile's notifications.settings.json, the file the configuration
 // reloads (IOptionsMonitor<NotificationSettings>). Same file shape as
 // before: { "Notifications": { "ToAddress", "CaregiverAddress",
-// "DoctorAddress" } }. Addresses are not logged.
+// "DoctorAddress", "CaregiverEmails", "CaregiverDigest",
+// "CaregiverDigestSentOn" } }. Addresses are not logged.
 internal sealed class ProfileSettingsStore : IProfileSettingsStore
 {
     private const string Section = NotificationSettings.SectionName;
@@ -37,6 +38,9 @@ internal sealed class ProfileSettingsStore : IProfileSettingsStore
                 [ProfileSetting.ToAddress] = notifications.ToAddress,
                 [ProfileSetting.CaregiverAddress] = notifications.CaregiverAddress,
                 [ProfileSetting.DoctorAddress] = notifications.DoctorAddress,
+                [ProfileSetting.CaregiverEmails] = notifications.CaregiverEmails,
+                [ProfileSetting.CaregiverDigest] = notifications.CaregiverDigest,
+                [ProfileSetting.CaregiverDigestSentOn] = notifications.CaregiverDigestSentOn,
             };
         }
     }
@@ -62,6 +66,9 @@ internal sealed class ProfileSettingsStore : IProfileSettingsStore
                     case ProfileSetting.ToAddress: notifications.ToAddress = value; break;
                     case ProfileSetting.CaregiverAddress: notifications.CaregiverAddress = value; break;
                     case ProfileSetting.DoctorAddress: notifications.DoctorAddress = value; break;
+                    case ProfileSetting.CaregiverEmails: notifications.CaregiverEmails = value; break;
+                    case ProfileSetting.CaregiverDigest: notifications.CaregiverDigest = value; break;
+                    case ProfileSetting.CaregiverDigestSentOn: notifications.CaregiverDigestSentOn = value; break;
                     default: throw new ArgumentException($"Unknown profile setting '{key}'.", nameof(changes));
                 }
             }
@@ -82,6 +89,9 @@ internal sealed class ProfileSettingsStore : IProfileSettingsStore
         result.ToAddress = StringOf(section, nameof(NotificationSettings.ToAddress));
         result.CaregiverAddress = StringOf(section, nameof(NotificationSettings.CaregiverAddress));
         result.DoctorAddress = StringOf(section, nameof(NotificationSettings.DoctorAddress));
+        result.CaregiverEmails = StringOf(section, nameof(NotificationSettings.CaregiverEmails));
+        result.CaregiverDigest = StringOf(section, nameof(NotificationSettings.CaregiverDigest));
+        result.CaregiverDigestSentOn = StringOf(section, nameof(NotificationSettings.CaregiverDigestSentOn));
         return result;
     }
 

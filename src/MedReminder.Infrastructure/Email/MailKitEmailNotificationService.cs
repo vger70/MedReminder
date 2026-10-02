@@ -69,7 +69,11 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
             throw new InvalidOperationException("SMTP configuration is incomplete.");
         }
         var isExplicit = message.ExplicitRecipient is not null;
-        if (!isExplicit && string.IsNullOrWhiteSpace(notifications.ToAddress))
+        if (message.Kind == EmailKind.Digest && string.IsNullOrWhiteSpace(notifications.CaregiverAddress))
+        {
+            throw new InvalidOperationException("No caregiver is configured for the current profile.");
+        }
+        if (!isExplicit && message.Kind != EmailKind.Digest && string.IsNullOrWhiteSpace(notifications.ToAddress))
         {
             throw new InvalidOperationException(
                 "Notification recipient is not configured for the current profile.");
@@ -175,6 +179,16 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
             return mime;
         }
 
+        // The weekly summary (EVOLUTION-PROPOSALS-2 §3.8) is written for
+        // the caregiver: it goes to that address only.
+        if (message.Kind == EmailKind.Digest)
+        {
+            mime.To.Add(MailboxAddress.Parse(AddressParserOptions, notifications.CaregiverAddress.Trim()));
+            mime.Subject = message.Subject;
+            mime.Body = BuildBody(message);
+            return mime;
+        }
+
         mime.To.Add(MailboxAddress.Parse(notifications.ToAddress));
 
         // A3 (docs/analysis/ANALYSIS-A3-CAREGIVER-NOTIFICATIONS.md §4.2,
@@ -186,7 +200,10 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         // so the message is not built with the same address twice —
         // save-time UI validation is the primary defence; this guards
         // hand-edited JSON.
-        if (!string.IsNullOrWhiteSpace(notifications.CaregiverAddress))
+        // EVOLUTION-PROPOSALS-2 §3.8: only the kinds of email the profile
+        // chose for the caregiver (every kind unless set).
+        if (!string.IsNullOrWhiteSpace(notifications.CaregiverAddress)
+            && CaregiverEmails.Copies(notifications.CaregiverEmails, message.Kind))
         {
             var caregiver = notifications.CaregiverAddress.Trim();
             if (!string.Equals(caregiver, notifications.ToAddress.Trim(),

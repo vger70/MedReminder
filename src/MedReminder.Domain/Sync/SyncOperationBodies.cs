@@ -220,5 +220,18 @@ public static class ProfileSetting
     public const string CaregiverAddress = "CaregiverAddress";
     public const string DoctorAddress = "DoctorAddress";
 
-    public static readonly IReadOnlyList<string> All = [DisplayName, ToAddress, CaregiverAddress, DoctorAddress];
+    // Caregiver per-email-kind copies and weekly digest (docs/notes/
+    // EVOLUTION-PROPOSALS-2.md §3.8). An app that does not know a name
+    // keeps its version and does not project it, so no schema bump.
+    // CaregiverEmails: "" (every kind, the behaviour before the setting),
+    // "None", or EmailKind names separated by commas.
+    public const string CaregiverEmails = "CaregiverEmails";
+    // "" or "Off", or "Weekly".
+    public const string CaregiverDigest = "CaregiverDigest";
+    // Day of the last digest sent by any device (yyyy-MM-dd), so the
+    // devices of a group do not send it again.
+    public const string CaregiverDigestSentOn = "CaregiverDigestSentOn";
+
+    public static readonly IReadOnlyList<string> All =
+        [DisplayName, ToAddress, CaregiverAddress, DoctorAddress, CaregiverEmails, CaregiverDigest, CaregiverDigestSentOn];
 }

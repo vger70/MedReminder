@@ -195,7 +195,7 @@ public sealed class DoseReminderService
         {
             var (subject, emailBody) = NotificationTexts.BuildDoseReminder(
                 medicine, slotTime, localization: _localization);
-            var msg = new EmailMessage(subject, emailBody);
+            var msg = new EmailMessage(subject, emailBody, Kind: EmailKind.DoseReminder);
             try
             {
                 await _email.SendAsync(msg, cancellationToken);

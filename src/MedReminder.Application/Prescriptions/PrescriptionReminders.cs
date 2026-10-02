@@ -83,7 +83,8 @@ public sealed class PrescriptionReminders
             {
                 try
                 {
-                    await _email.SendAsync(new EmailMessage(title, BuildEmailBody(body)), cancellationToken);
+                    await _email.SendAsync(new EmailMessage(title, BuildEmailBody(body), Kind: EmailKind.Prescription),
+                        cancellationToken);
                     any = true;
                 }
                 catch (Exception ex)

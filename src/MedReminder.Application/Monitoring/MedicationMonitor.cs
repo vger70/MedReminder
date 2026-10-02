@@ -55,6 +55,7 @@ public sealed class MedicationMonitor
     private readonly PrescriptionReminders? _prescriptionReminders;
     private readonly ShortageNotices? _shortageNotices;
     private readonly DeadlineReminders? _deadlineReminders;
+    private readonly CaregiverDigest? _caregiverDigest;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -74,8 +75,10 @@ public sealed class MedicationMonitor
         IMasterRole? master = null,
         PrescriptionReminders? prescriptionReminders = null,
         ShortageNotices? shortageNotices = null,
-        DeadlineReminders? deadlineReminders = null)
+        DeadlineReminders? deadlineReminders = null,
+        CaregiverDigest? caregiverDigest = null)
     {
+        _caregiverDigest = caregiverDigest;
         _deadlineReminders = deadlineReminders;
         _shortageNotices = shortageNotices;
         _prescriptionReminders = prescriptionReminders;
@@ -188,6 +191,11 @@ public sealed class MedicationMonitor
         if (_deadlineReminders is not null)
         {
             await _deadlineReminders.RunAsync(today, sendsEmail, cancellationToken);
+        }
+        // Weekly summary for the caregiver (EVOLUTION-PROPOSALS-2 §3.8).
+        if (_caregiverDigest is not null)
+        {
+            await _caregiverDigest.RunAsync(today, sendsEmail, cancellationToken);
         }
 
         await _uow.SaveChangesAsync(cancellationToken);

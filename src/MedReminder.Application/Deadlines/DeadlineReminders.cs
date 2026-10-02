@@ -84,7 +84,8 @@ public sealed class DeadlineReminders
             {
                 try
                 {
-                    await _email.SendAsync(new EmailMessage(title, BuildEmailBody(body)), cancellationToken);
+                    await _email.SendAsync(new EmailMessage(title, BuildEmailBody(body), Kind: EmailKind.Deadline),
+                        cancellationToken);
                     any = true;
                 }
                 catch (Exception ex)

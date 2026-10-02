@@ -635,8 +635,16 @@ instructions de ton fournisseur.
 
 - **Destinataire (to)** — qui reçoit les alertes de ce profil.
 - **E-mail de l'aidant (facultatif)** — un proche ou un aidant qui
-  reçoit une copie de chaque alerte, dans le même e-mail (les deux
+  reçoit une copie des alertes, dans le même e-mail (les deux
   adresses sont visibles des deux). Elle doit différer du destinataire.
+  Sous **Copie à l'aidant**, choisissez les alertes qu'il reçoit
+  (toutes tant que vous ne changez rien) : stock faible, rappels de
+  dose, d'ordonnance et d'échéance, avis de pénurie. **Envoyer à
+  l'aidant un résumé hebdomadaire du stock** ajoute, tous les 7 jours,
+  un e-mail à l'aidant seul avec le stock, l'état et la date
+  d'épuisement de chaque médicament actif, et rien sur les doses
+  prises. Il est envoyé par le PC qui envoie les e-mails, une fois par
+  profil même si le profil est synchronisé sur plusieurs PC.
 - **E-mail du médecin (facultatif)** — utilisé seulement pour les
   demandes d'ordonnance que tu envoies toi-même ; les alertes
   automatiques n'y vont jamais.
