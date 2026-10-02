@@ -12,7 +12,7 @@ public sealed class CatalogueFeedOptions
 {
     public const string SectionName = "Catalogue:RemoteFeed";
 
-    public const string DefaultBaseUrl = "https://raw.githubusercontent.com/vger70/MedReminder/main/data/";
+    public const string DefaultBaseUrl = "https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/";
 
     private const long MiB = 1024L * 1024;
 
