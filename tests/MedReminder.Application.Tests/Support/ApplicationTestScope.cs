@@ -1,6 +1,7 @@
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Deadlines;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
@@ -28,6 +29,8 @@ internal sealed class ApplicationTestScope
     public InMemoryDoseReminderEventRepository DoseEvents { get; } = new();
     public InMemoryPrescriptionRepository Prescriptions { get; } = new();
     public InMemoryPrescriptionReminderEventRepository PrescriptionReminderEvents { get; } = new();
+    public InMemoryDeadlineRepository Deadlines { get; } = new();
+    public InMemoryDeadlineReminderEventRepository DeadlineReminderEvents { get; } = new();
     public InMemoryShortageListStore Shortages { get; } = new();
     public InMemoryShortageNoticeEventRepository ShortageNoticeEvents { get; } = new();
     public InMemoryMedicineActivityRepository Activity { get; } = new();
@@ -69,6 +72,11 @@ internal sealed class ApplicationTestScope
     public DeletePrescription DeletePrescription { get; }
     public PrescriptionListQuery PrescriptionList { get; }
     public PrescriptionReminders PrescriptionReminders { get; }
+    public SaveDeadline SaveDeadline { get; }
+    public CompleteDeadline CompleteDeadline { get; }
+    public DeleteDeadline DeleteDeadline { get; }
+    public DeadlineListQuery DeadlineList { get; }
+    public DeadlineReminders DeadlineReminders { get; }
     public ShortageNotices ShortageNotices { get; }
     public SyncGenesis Genesis { get; }
 
@@ -108,7 +116,7 @@ internal sealed class ApplicationTestScope
         ApplyRemote = new ApplyRemoteOperations(
             SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
             Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock, sentEmails: SentEmails,
-            prescriptions: Prescriptions);
+            prescriptions: Prescriptions, deadlines: Deadlines);
 
         SavePrescription = new SavePrescription(Medicines, Prescriptions, Operations, Uow, Clock);
         CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);
@@ -118,6 +126,14 @@ internal sealed class ApplicationTestScope
             Prescriptions, PrescriptionReminderEvents, Medicines, Email, Windows, Clock,
             NullLogger<PrescriptionReminders>.Instance);
 
+        SaveDeadline = new SaveDeadline(Medicines, Deadlines, Operations, Uow, Clock);
+        CompleteDeadline = new CompleteDeadline(Deadlines, SaveDeadline);
+        DeleteDeadline = new DeleteDeadline(Deadlines, Operations, Uow, Clock);
+        DeadlineList = new DeadlineListQuery(Deadlines, Medicines, Clock);
+        DeadlineReminders = new DeadlineReminders(
+            Deadlines, DeadlineReminderEvents, Medicines, Email, Windows, Clock,
+            NullLogger<DeadlineReminders>.Instance);
+
         ShortageNotices = new ShortageNotices(Shortages, ShortageNoticeEvents, Medicines, Email, Windows,
             new JsonDictionaryLocalizationService("en"), Clock, NullLogger<ShortageNotices>.Instance);
 
@@ -126,7 +142,8 @@ internal sealed class ApplicationTestScope
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance,
             sentEmails: SentEmails, operationLog: Operations, master: Master,
-            prescriptionReminders: PrescriptionReminders, shortageNotices: ShortageNotices);
+            prescriptionReminders: PrescriptionReminders, shortageNotices: ShortageNotices,
+            deadlineReminders: DeadlineReminders);
     }
 
     // Turns operation capture on, as enabling sync will (Phase 3d).
