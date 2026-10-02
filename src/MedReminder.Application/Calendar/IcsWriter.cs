@@ -43,7 +43,7 @@ public static class IcsWriter
     private static string Date(DateOnly day) => day.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
 
     // RFC 5545 §3.3.11: backslash, semicolon, comma and line breaks.
-    internal static string Escape(string value)
+    private static string Escape(string value)
     {
         var sb = new StringBuilder(value.Length);
         for (var i = 0; i < value.Length; i++)
