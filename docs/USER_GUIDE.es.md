@@ -1164,7 +1164,7 @@ tú.
     └── <perfil>\
         ├── medreminder.db     medicamentos y stock del perfil
         ├── notifications.settings.json   destinatarios
-        ├── ui.settings.json   tamaño del texto y apariencia
+        ├── ui.settings.json   tamaño del texto, apariencia, tamaño de la ventana
         └── sync.*             configuración de sincronización (solo si se usa)
 ```
 

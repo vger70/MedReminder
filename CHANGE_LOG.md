@@ -30,6 +30,34 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #176 — Show all About data sources, stop text box border flicker, remember the main window placement
+
+Link: [vger70/MedReminder#176](https://github.com/vger70/MedReminder/pull/176)
+Branch: `claude/fonti-dati-textbox-issues-c699a3` → `main`
+
+### Added
+
+- The main window reopens at the size, position and maximized state
+  it had when last closed, per profile. The placement is saved in
+  `profiles\<id>\ui.settings.json` on every close, the hide to the tray
+  included; one whose title bar is on no current screen is ignored
+  (`src/MedReminder.UI/Forms/MainForm.cs`).
+- `ProfileUiSettingsFile` now changes only the properties it writes
+  and keeps the others, so the placement, the text size and the
+  appearance never overwrite one another.
+
+### Fixed
+
+- The About dialog's data-source attributions could not be read in
+  full: the dialog is taller and the last attribution keeps a bottom
+  gap, which a scrolling `FlowLayoutPanel` drops
+  (`src/MedReminder.UI/Forms/AboutDialog.cs`).
+- In dark mode the text box border flickered on mouse hover: Windows
+  repainted the frame in the hot state before the palette border was
+  drawn over it. Without visible scroll bars the frame is now drawn
+  once, by the palette painter
+  (`src/MedReminder.UI/UiExtensions/ThemedBorder.cs`).
+
 ## PR #175 — Hide a maximized main window to the tray on the first close
 
 Link: [vger70/MedReminder#175](https://github.com/vger70/MedReminder/pull/175)

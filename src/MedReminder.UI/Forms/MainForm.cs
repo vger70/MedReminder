@@ -18,6 +18,7 @@ using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
+using MedReminder.Infrastructure.Settings;
 using MedReminder.Application.Overview;
 using MedReminder.UI.Controls;
 using MedReminder.UI.Notifications;
@@ -73,6 +74,14 @@ internal sealed class MainForm : MedReminderFormBase
 
     private readonly bool _closeToTray = true;
     private bool _reallyExit;
+    // Normal or Maximized: the state to save and to restore from the tray
+    // while the window is minimized.
+    private FormWindowState _lastShownState = FormWindowState.Normal;
+    // Saved placement, applied in OnLoad. A separate flag because the
+    // layout scaling resizes the normal window first, which resets
+    // _lastShownState.
+    private Rectangle? _savedBounds;
+    private bool _startMaximized;
 
     // Sorting state for the "Days remaining" column. The DataGridView
     private SortOrder _sortOrderDaysRemaining = SortOrder.None;
@@ -107,6 +116,11 @@ internal sealed class MainForm : MedReminderFormBase
         Height = 560;
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(720, 420);
+        ApplySavedPlacement();
+        Resize += (_, _) =>
+        {
+            if (WindowState != FormWindowState.Minimized) _lastShownState = WindowState;
+        };
 
         BuildLayout();
         WireTrayHandlers();
@@ -1735,16 +1749,73 @@ internal sealed class MainForm : MedReminderFormBase
     private void RestoreFromTray()
     {
         Show();
-        // Only a minimized window (start in tray) is brought back to
-        // Normal; a maximized one hidden to the tray comes back maximized.
-        if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+        // A minimized window (start in tray) comes back in its last shown
+        // state, the saved one at start; a maximized one hidden to the
+        // tray comes back maximized.
+        if (WindowState == FormWindowState.Minimized) WindowState = _lastShownState;
         ShowInTaskbar = true;
         BringToFront();
         Activate();
     }
 
+    // Opens the window where this profile last left it. A placement whose
+    // title bar is on no current screen (monitor unplugged, resolution
+    // changed) is ignored and the window opens centred at its default size.
+    // Applied in OnLoad.
+    private void ApplySavedPlacement()
+    {
+        var saved = ProfileUiSettingsFile.ReadMainWindow(_currentProfile.DataDirectory);
+        if (saved is null) return;
+
+        var bounds = new Rectangle(saved.X, saved.Y, saved.Width, saved.Height);
+        var titleBar = new Rectangle(bounds.X, bounds.Y, bounds.Width, SystemInformation.CaptionHeight);
+        if (!Screen.AllScreens.Any(s => s.WorkingArea.IntersectsWith(titleBar))) return;
+
+        StartPosition = FormStartPosition.Manual;
+        _savedBounds = bounds;
+        _startMaximized = saved.Maximized;
+        if (saved.Maximized) _lastShownState = FormWindowState.Maximized;
+    }
+
+    // The base OnLoad scales the default size by the display DPI and the
+    // text size; the saved bounds are already final, so they are applied
+    // after it, or the window would grow at every start. They are set on
+    // the normal window and maximized after, so they stay its restore
+    // bounds. A window started in the tray stays minimized and comes back
+    // maximized from RestoreFromTray.
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        if (_savedBounds is not { } bounds) return;
+        Bounds = bounds;
+        if (_startMaximized && WindowState == FormWindowState.Normal)
+        {
+            WindowState = FormWindowState.Maximized;
+        }
+    }
+
+    // Saved on every close, the hide to the tray included, so the file
+    // is current whichever way the app later ends. A minimized window
+    // saves its normal bounds and its last shown state.
+    private void SavePlacement()
+    {
+        var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+        if (bounds.Width <= 0 || bounds.Height <= 0) return;
+        try
+        {
+            ProfileUiSettingsFile.WriteMainWindow(_currentProfile.DataDirectory, new MainWindowPlacement(
+                bounds.X, bounds.Y, bounds.Width, bounds.Height,
+                _lastShownState == FormWindowState.Maximized));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.LogWarning(ex, "Saving the main window placement failed.");
+        }
+    }
+
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {
+        SavePlacement();
         if (_reallyExit || e.CloseReason != CloseReason.UserClosing || !_closeToTray)
         {
             return;
