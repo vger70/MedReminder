@@ -30,6 +30,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #175 — Hide a maximized main window to the tray on the first close
+
+Link: [vger70/MedReminder#175](https://github.com/vger70/MedReminder/pull/175)
+Branch: `claude/fix-maximized-close-to-tray` → `main`
+
+### Fixed
+
+- Closing a maximized main window hid it and showed it again at once;
+  only a second close sent it to the tray. Setting `ShowInTaskbar` on
+  close recreated the window handle, which re-showed a maximized
+  window; the assignment is removed (`src/MedReminder.UI/Forms/MainForm.cs`).
+- Restoring from the tray keeps a maximized window maximized instead
+  of resetting it to Normal.
+
 ## PR #174 — Run the AIFA shortage workflow daily
 
 Link: [vger70/MedReminder#174](https://github.com/vger70/MedReminder/pull/174)

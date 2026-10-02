@@ -1735,7 +1735,9 @@ internal sealed class MainForm : MedReminderFormBase
     private void RestoreFromTray()
     {
         Show();
-        WindowState = FormWindowState.Normal;
+        // Only a minimized window (start in tray) is brought back to
+        // Normal; a maximized one hidden to the tray comes back maximized.
+        if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
         ShowInTaskbar = true;
         BringToFront();
         Activate();
@@ -1747,9 +1749,11 @@ internal sealed class MainForm : MedReminderFormBase
         {
             return;
         }
+        // A hidden window has no taskbar button. ShowInTaskbar is left
+        // alone: changing it recreates the handle, and WinForms re-applies
+        // a Maximized state with ShowWindow, which showed the window again.
         e.Cancel = true;
         Hide();
-        ShowInTaskbar = false;
     }
 
     // ------------------ Data loading ------------------
