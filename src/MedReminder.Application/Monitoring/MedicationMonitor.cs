@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Deadlines;
 using MedReminder.Application.Notifications;
@@ -254,6 +255,13 @@ public sealed class MedicationMonitor
                 administrationSlots: slots,
                 localization: _localization,
                 stage: stage);
+            // The run-out date as a calendar event (EVOLUTION-PROPOSALS-2
+            // §3.7), with a generic title: calendars live on third-party
+            // clouds.
+            if (eta is { } runOut)
+            {
+                message = message with { CalendarEvent = CalendarEntries.RunOut(medicine.Id, runOut, null, _localization) };
+            }
             try
             {
                 await _email.SendAsync(message, cancellationToken);

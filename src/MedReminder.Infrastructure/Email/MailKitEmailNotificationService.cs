@@ -1,6 +1,8 @@
+using System.Text;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
 using MedReminder.Application.Notifications;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -26,6 +28,7 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
     private readonly IOptionsMonitor<NotificationSettings> _notificationMonitor;
     private readonly ISmtpCredentialStore _credentialStore;
     private readonly ILogger<MailKitEmailNotificationService> _log;
+    private readonly TimeProvider _clock;
 
     // MimeKit accepts a bare local part (e.g. "not-an-email") as a
     // valid mailbox by default (ParserOptions.AllowAddressesWithoutDomain
@@ -35,6 +38,8 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
     // (A3 §4.3). The save-time UI validation in SettingsDialog mirrors
     // this rule with its own ParserOptions so the dialog accepts exactly
     // what the adapter accepts.
+    internal const string CalendarAttachmentName = "medreminder.ics";
+
     internal static readonly ParserOptions AddressParserOptions = new()
     {
         AllowAddressesWithoutDomain = false,
@@ -44,8 +49,10 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         IOptionsMonitor<SmtpSettings> smtpMonitor,
         IOptionsMonitor<NotificationSettings> notificationMonitor,
         ISmtpCredentialStore credentialStore,
-        ILogger<MailKitEmailNotificationService> log)
+        ILogger<MailKitEmailNotificationService> log,
+        TimeProvider? clock = null)
     {
+        _clock = clock ?? TimeProvider.System;
         _smtpMonitor = smtpMonitor;
         _notificationMonitor = notificationMonitor;
         _credentialStore = credentialStore;
@@ -164,7 +171,7 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         {
             mime.To.Add(MailboxAddress.Parse(AddressParserOptions, explicitRecipient.Trim()));
             mime.Subject = message.Subject;
-            mime.Body = new TextPart("plain") { Text = message.Body };
+            mime.Body = BuildBody(message);
             return mime;
         }
 
@@ -198,7 +205,27 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         }
 
         mime.Subject = message.Subject;
-        mime.Body = new TextPart("plain") { Text = message.Body };
+        mime.Body = BuildBody(message);
         return mime;
+    }
+
+    // The text, plus the calendar event as an .ics attachment when the
+    // message carries one (docs/notes/EVOLUTION-PROPOSALS-2.md §3.7).
+    private MimeEntity BuildBody(EmailMessage message)
+    {
+        var text = new TextPart("plain") { Text = message.Body };
+        if (message.CalendarEvent is not { } calendarEvent) return text;
+
+        var ics = Encoding.UTF8.GetBytes(IcsWriter.Write([calendarEvent], _clock.GetUtcNow()));
+        var attachment = new MimePart("text", "calendar")
+        {
+            Content = new MimeContent(new MemoryStream(ics)),
+            ContentDisposition = new ContentDisposition(ContentDisposition.Attachment),
+            ContentTransferEncoding = ContentEncoding.Base64,
+            FileName = CalendarAttachmentName,
+        };
+        attachment.ContentType.Charset = "utf-8";
+        attachment.ContentType.Parameters.Add("method", "PUBLISH");
+        return new Multipart("mixed") { text, attachment };
     }
 }
