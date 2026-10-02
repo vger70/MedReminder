@@ -42,6 +42,8 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<INotificationEventRepository, NotificationEventRepository>();
         services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
         services.AddScoped<IPrescriptionReminderEventRepository, PrescriptionReminderEventRepository>();
+        services.AddScoped<IDeadlineRepository, DeadlineRepository>();
+        services.AddScoped<IDeadlineReminderEventRepository, DeadlineReminderEventRepository>();
         services.AddScoped<IShortageNoticeEventRepository, ShortageNoticeEventRepository>();
         // Shortage list (EVOLUTION-PROPOSALS-2 §3.3): one file for every
         // profile, so the store is a singleton like the client.

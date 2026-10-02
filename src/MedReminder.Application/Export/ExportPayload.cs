@@ -40,6 +40,10 @@ public sealed class ExportPayload
     // of schema version 2: archives without it import with none.
     public IList<ExportedPrescription> Prescriptions { get; set; } = new List<ExportedPrescription>();
 
+    // Administrative deadlines (EVOLUTION-PROPOSALS-2 §3.6). Additive
+    // field of schema version 2: archives without it import with none.
+    public IList<ExportedDeadline> Deadlines { get; set; } = new List<ExportedDeadline>();
+
     // Per-profile notification settings (§3.2). Travels implicitly
     // with the profile.
     public ExportedNotificationSettings? NotificationSettings { get; set; }
@@ -294,6 +298,23 @@ public sealed class ExportedPrescription
     public int? Packages { get; set; }
     public DateOnly? ValidUntil { get; set; }
     public DateOnly? CollectedOn { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public sealed class ExportedDeadline
+{
+    public Guid Id { get; set; }
+    public Guid? MedicineId { get; set; }
+    // DeadlineKind member name.
+    public string Kind { get; set; } = string.Empty;
+    public string? Label { get; set; }
+    public DateOnly DueOn { get; set; }
+    public int LeadDays { get; set; }
+    public int? RepeatMonths { get; set; }
+    // NotificationChannels member name.
+    public string Channels { get; set; } = string.Empty;
+    public DateOnly? DoneOn { get; set; }
     public DateTimeOffset RecordedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

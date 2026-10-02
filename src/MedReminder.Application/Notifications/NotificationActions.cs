@@ -16,6 +16,10 @@ public sealed record NotificationTarget(NotificationKind Kind, Guid MedicineId, 
     public static NotificationTarget Prescription(Guid medicineId) => new(NotificationKind.Prescription, medicineId);
 
     public static NotificationTarget Shortage(Guid medicineId) => new(NotificationKind.Shortage, medicineId);
+
+    // Guid.Empty for a deadline of the profile.
+    public static NotificationTarget Deadline(Guid? medicineId)
+        => new(NotificationKind.Deadline, medicineId ?? Guid.Empty);
 }
 
 public enum NotificationKind
@@ -24,6 +28,7 @@ public enum NotificationKind
     LowStock,
     Prescription,
     Shortage,
+    Deadline,
 }
 
 // What the user asked for from a toast. Only actions with no effect on
@@ -36,6 +41,8 @@ public enum NotificationActionKind
     Open,
     // Body click on a prescription reminder: the prescriptions window.
     OpenPrescriptions,
+    // Body click on a deadline reminder: the deadlines window.
+    OpenDeadlines,
     // Dose reminder button: the same reminder again in SnoozeMinutes.
     Snooze,
     // Low-stock button: the prescription request draft of the medicine.
@@ -65,7 +72,12 @@ public static class NotificationActionArguments
     // The arguments of the toast body for a target.
     public static IReadOnlyDictionary<string, string> ForBody(NotificationTarget target, string profileId)
         => Format(new NotificationAction(
-            target.Kind == NotificationKind.Prescription ? NotificationActionKind.OpenPrescriptions : NotificationActionKind.Open,
+            target.Kind switch
+            {
+                NotificationKind.Prescription => NotificationActionKind.OpenPrescriptions,
+                NotificationKind.Deadline => NotificationActionKind.OpenDeadlines,
+                _ => NotificationActionKind.Open,
+            },
             profileId, target.MedicineId, target.SlotTime));
 
     // The buttons a target offers, in order.
@@ -116,6 +128,7 @@ public static class NotificationActionArguments
     {
         NotificationActionKind.Open => "open",
         NotificationActionKind.OpenPrescriptions => "prescriptions",
+        NotificationActionKind.OpenDeadlines => "deadlines",
         NotificationActionKind.Snooze => "snooze",
         NotificationActionKind.RequestPrescription => "request",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
@@ -125,6 +138,7 @@ public static class NotificationActionArguments
     {
         "open" => NotificationActionKind.Open,
         "prescriptions" => NotificationActionKind.OpenPrescriptions,
+        "deadlines" => NotificationActionKind.OpenDeadlines,
         "snooze" => NotificationActionKind.Snooze,
         "request" => NotificationActionKind.RequestPrescription,
         _ => null,

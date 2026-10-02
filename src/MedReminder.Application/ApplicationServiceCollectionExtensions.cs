@@ -1,6 +1,7 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Coverage;
+using MedReminder.Application.Deadlines;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Household;
 using MedReminder.Application.Ledger;
@@ -125,6 +126,12 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<DeletePrescription>();
         services.AddScoped<PrescriptionListQuery>();
         services.AddScoped<PrescriptionReminders>();
+        // Administrative deadlines (EVOLUTION-PROPOSALS-2 §3.6).
+        services.AddScoped<SaveDeadline>();
+        services.AddScoped<CompleteDeadline>();
+        services.AddScoped<DeleteDeadline>();
+        services.AddScoped<DeadlineListQuery>();
+        services.AddScoped<DeadlineReminders>();
         // Shortage list (EVOLUTION-PROPOSALS-2 §3.3).
         services.AddScoped<ShortageRefresher>();
         services.AddScoped<ShortageNotices>();

@@ -1,5 +1,6 @@
 using MedReminder.Application.Export;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Prescriptions;
@@ -310,6 +311,36 @@ internal static class ExportMapper
         Packages = d.Packages,
         ValidUntil = d.ValidUntil,
         CollectedOn = d.CollectedOn,
+        RecordedAt = d.RecordedAt,
+        UpdatedAt = d.UpdatedAt,
+    };
+
+    public static ExportedDeadline ToDto(Deadline d) => new()
+    {
+        Id = d.Id,
+        MedicineId = d.MedicineId,
+        Kind = d.Kind.ToString(),
+        Label = d.Label,
+        DueOn = d.DueOn,
+        LeadDays = d.LeadDays,
+        RepeatMonths = d.RepeatMonths,
+        Channels = d.Channels.ToString(),
+        DoneOn = d.DoneOn,
+        RecordedAt = d.RecordedAt,
+        UpdatedAt = d.UpdatedAt,
+    };
+
+    public static Deadline ToEntity(ExportedDeadline d) => new()
+    {
+        Id = d.Id,
+        MedicineId = d.MedicineId,
+        Kind = ParseEnum<DeadlineKind>(d.Kind),
+        Label = d.Label,
+        DueOn = d.DueOn,
+        LeadDays = d.LeadDays,
+        RepeatMonths = d.RepeatMonths,
+        Channels = ParseEnum<NotificationChannels>(d.Channels),
+        DoneOn = d.DoneOn,
         RecordedAt = d.RecordedAt,
         UpdatedAt = d.UpdatedAt,
     };

@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Deadlines;
 using MedReminder.Application.Notifications;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
@@ -52,6 +53,7 @@ public sealed class MedicationMonitor
     private readonly IMasterRole? _master;
     private readonly PrescriptionReminders? _prescriptionReminders;
     private readonly ShortageNotices? _shortageNotices;
+    private readonly DeadlineReminders? _deadlineReminders;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -70,8 +72,10 @@ public sealed class MedicationMonitor
         IOperationLog? operationLog = null,
         IMasterRole? master = null,
         PrescriptionReminders? prescriptionReminders = null,
-        ShortageNotices? shortageNotices = null)
+        ShortageNotices? shortageNotices = null,
+        DeadlineReminders? deadlineReminders = null)
     {
+        _deadlineReminders = deadlineReminders;
         _shortageNotices = shortageNotices;
         _prescriptionReminders = prescriptionReminders;
         _master = master;
@@ -178,6 +182,11 @@ public sealed class MedicationMonitor
         if (_shortageNotices is not null)
         {
             await _shortageNotices.RunAsync(today, sendsEmail, cancellationToken);
+        }
+        // Administrative deadlines (EVOLUTION-PROPOSALS-2 §3.6).
+        if (_deadlineReminders is not null)
+        {
+            await _deadlineReminders.RunAsync(today, sendsEmail, cancellationToken);
         }
 
         await _uow.SaveChangesAsync(cancellationToken);

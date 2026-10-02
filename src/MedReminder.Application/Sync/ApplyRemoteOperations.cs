@@ -1,6 +1,7 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Ledger;
 using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
@@ -69,6 +70,7 @@ public sealed class ApplyRemoteOperations
     private readonly TimeProvider _clock;
     private readonly IProfileSettingsStore? _profileSettings;
     private readonly IPrescriptionRepository? _prescriptions;
+    private readonly IDeadlineRepository? _deadlines;
     private readonly ISentEmailNotificationRepository? _sentEmails;
 
     // Facts added or updated in this batch, by id: the context tracks
@@ -100,9 +102,11 @@ public sealed class ApplyRemoteOperations
         TimeProvider clock,
         IProfileSettingsStore? profileSettings = null,
         ISentEmailNotificationRepository? sentEmails = null,
-        IPrescriptionRepository? prescriptions = null)
+        IPrescriptionRepository? prescriptions = null,
+        IDeadlineRepository? deadlines = null)
     {
         _prescriptions = prescriptions;
+        _deadlines = deadlines;
         _profileSettings = profileSettings;
         _sentEmails = sentEmails;
         _settings = settings;
@@ -257,8 +261,10 @@ public sealed class ApplyRemoteOperations
                 // The log row is the state (HouseholdLinks).
             }
             else if (body is MedicineDeleted) touched.Remove(body.MedicineId);
-            // A sent email or a prescription changes no fact of the ledger.
-            else if (body is not (EmailNotificationSent or PrescriptionChanged)) touched.Add(body.MedicineId);
+            // A sent email, a prescription or a deadline changes no fact of
+            // the ledger.
+            else if (body is not (EmailNotificationSent or PrescriptionChanged or DeadlineChanged))
+                touched.Add(body.MedicineId);
             applied++;
         }
 
@@ -346,6 +352,9 @@ public sealed class ApplyRemoteOperations
             case PrescriptionChanged prescription:
                 await ApplyPrescriptionAsync(prescription, timestamp, ct);
                 return;
+            case DeadlineChanged deadline:
+                await ApplyDeadlineAsync(deadline, timestamp, ct);
+                return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");
         }
@@ -408,6 +417,48 @@ public sealed class ApplyRemoteOperations
         row.Packages = state.Packages;
         row.ValidUntil = state.ValidUntil;
         row.CollectedOn = state.CollectedOn;
+        row.UpdatedAt = state.RecordedAt;
+    }
+
+    // A deadline is one register, like a prescription. A deadline of a
+    // medicine needs the medicine (causal order); a deadline of the
+    // profile (Guid.Empty) needs none.
+    private async Task ApplyDeadlineAsync(DeadlineChanged change, HybridTimestamp timestamp, CancellationToken ct)
+    {
+        if (change.MedicineId != Guid.Empty) await GetMedicineAsync(change.MedicineId, ct);
+        await RecordRegistersAsync(change, timestamp, ct);
+        if (_deadlines is null) return;
+        var winner = await _registers.WinnerAsync(change.DeadlineId, SyncRegisters.DeadlineState, ct);
+        var state = winner?.Value is { } value ? SyncRegisters.ParseDeadline(value) : change;
+        var row = await _deadlines.GetAsync(change.DeadlineId, ct);
+        if (state.Deleted)
+        {
+            if (row is not null) await _deadlines.RemoveAsync(row, ct);
+            return;
+        }
+        if (row is null)
+        {
+            row = new Deadline { Id = state.DeadlineId, RecordedAt = state.RecordedAt };
+            CopyState(state, row);
+            await _deadlines.AddAsync(row, ct);
+        }
+        else
+        {
+            CopyState(state, row);
+            await _deadlines.UpdateAsync(row, ct);
+        }
+    }
+
+    private static void CopyState(DeadlineChanged state, Deadline row)
+    {
+        row.MedicineId = state.MedicineId == Guid.Empty ? null : state.MedicineId;
+        row.Kind = state.Kind;
+        row.Label = state.Label;
+        row.DueOn = state.DueOn;
+        row.LeadDays = state.LeadDays;
+        row.RepeatMonths = state.RepeatMonths;
+        row.Channels = state.Channels;
+        row.DoneOn = state.DoneOn;
         row.UpdatedAt = state.RecordedAt;
     }
 

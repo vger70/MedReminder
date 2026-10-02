@@ -23,6 +23,9 @@ public sealed class SyncRegisters
     // The whole state of a prescription, as the payload of the
     // PrescriptionChanged that wrote it (last writer wins).
     public const string PrescriptionState = "Prescription";
+    // The whole state of a deadline, as the payload of the
+    // DeadlineChanged that wrote it (last writer wins).
+    public const string DeadlineState = "Deadline";
 
     private readonly ISyncFieldVersionRepository _versions;
     private readonly ISyncConflictRepository _conflicts;
@@ -74,6 +77,8 @@ public sealed class SyncRegisters
             [new RegisterWrite(ProfileSettingsProjection.Entity, ProfileSettingsProjection.Register(p.Setting), p.Value, null)],
         PrescriptionChanged p =>
             [new RegisterWrite(p.PrescriptionId, PrescriptionState, OperationCodec.Serialize(p).Payload, null)],
+        DeadlineChanged d =>
+            [new RegisterWrite(d.DeadlineId, DeadlineState, OperationCodec.Serialize(d).Payload, null)],
         _ => [],
     };
 
@@ -97,6 +102,11 @@ public sealed class SyncRegisters
     public static PrescriptionChanged ParsePrescription(string value)
         => (PrescriptionChanged)OperationCodec.Deserialize(
             nameof(PrescriptionChanged), OperationCodec.CurrentSchemaVersion, value);
+
+    // The deadline a DeadlineState version holds.
+    public static DeadlineChanged ParseDeadline(string value)
+        => (DeadlineChanged)OperationCodec.Deserialize(
+            nameof(DeadlineChanged), OperationCodec.CurrentSchemaVersion, value);
 
     public static HybridTimestamp? BaseOf(SyncOperationBody body) => body switch
     {

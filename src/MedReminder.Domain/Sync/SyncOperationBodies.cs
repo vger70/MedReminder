@@ -1,5 +1,7 @@
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Domain.Sync;
@@ -181,6 +183,23 @@ public sealed record PrescriptionChanged(
     int? Packages,
     DateOnly? ValidUntil,
     DateOnly? CollectedOn,
+    bool Deleted,
+    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+
+// An administrative deadline as a whole (operation schema version 8;
+// docs/notes/EVOLUTION-PROPOSALS-2.md §3.6), with the same rules as
+// PrescriptionChanged: last writer wins per deadline, Deleted removes
+// it. MedicineId is Guid.Empty for a deadline of the profile.
+public sealed record DeadlineChanged(
+    Guid MedicineId,
+    Guid DeadlineId,
+    DeadlineKind Kind,
+    string? Label,
+    DateOnly DueOn,
+    int LeadDays,
+    int? RepeatMonths,
+    NotificationChannels Channels,
+    DateOnly? DoneOn,
     bool Deleted,
     DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
 
