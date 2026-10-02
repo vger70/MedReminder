@@ -61,6 +61,14 @@ Branch: `claude/admin-deadlines` → `main`
   a medicine are removed with it; reminders left out of sync images.
 - Export: additive `deadlines` field (schema version stays 2).
 
+### Fixed
+
+- The export retries the deletion of its temporary snapshot folder:
+  Windows can keep the just-closed snapshot locked for a moment, which
+  left the folder behind (`ExportServiceTests.Export_deletes_its_temporary_snapshot`).
+- Carries the `.gitattributes` of PR #167 (feed JSON files kept byte for
+  byte), so the shortage feed test passes on this branch too.
+
 ### Docs
 
 - `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
