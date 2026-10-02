@@ -16,7 +16,7 @@ on:
 permissions:
   contents: write
 
-# Every feed workflow pushes to main: one at a time.
+# Every feed workflow pushes to the feeds branch and main: one at a time.
 concurrency:
   group: catalogue-feeds-publish
   cancel-in-progress: false
@@ -36,22 +36,39 @@ jobs:
         run: |
           pip install requests beautifulsoup4
 
+      - name: Load the published feeds
+        # The feeds branch is the published state: the script decides
+        # what is new against it, not against main.
+        run: |
+          bash scripts/feeds/feeds_branch.sh load
+
       - name: Generate files
         env:
           FORCE_REFRESH: ${{ inputs.force }}
         run: |
           python scripts/feeds/bdpm.py
 
-      - name: Commit changes
+      - name: Publish to the feeds branch
+        # A run dispatched from another branch must not replace what
+        # clients download.
+        if: github.ref_name == github.event.repository.default_branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          bash scripts/feeds/feeds_branch.sh publish "BDPM database update $(date -u +%Y%m)"
+
+      - name: Mirror to main
+        # Releases up to v2.12.1 read the feeds from main/data/. Set the
+        # repository variable FEEDS_MAIN_MIRROR to 'false' once they are
+        # out of use (docs/CATALOGUE-DATA.md §1.1).
+        if: vars.FEEDS_MAIN_MIRROR != 'false'
+        run: |
           git add data/fr/
           git diff --staged --quiet && exit 0
           git commit -m "BDPM database update $(date -u +%Y%m)"
 
           # Another push may have landed since the checkout: rebase once
           # and retry once.
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-          git push || { git pull --rebase origin "${GITHUB_REF_NAME}" && git push; }
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push || { git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push; }

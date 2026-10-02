@@ -828,7 +828,8 @@ with the `--minimized` argument. Per-user, no elevation.
   `CheckForUpdatesOnStartup` setting plus `Catalogue:RemoteFeed:Enabled`,
   `RemoteCatalogueRefresher` runs for the reference country's feed
   (IT, ES or FR) and the EU feed (`CatalogueFeedSelection`). For each,
-  it reads `data/<country>/latest.json` from the repository and, when
+  it reads `data/<country>/latest.json` from the repository's `feeds`
+  branch and, when
   its version is newer than the open profile's catalogue for that
   country, downloads `<prefix>-<yyyymm>.zip` (`aifa`, `ema-epar`,
   `aemps`, `bdpm`; HTTPS, no redirects, size cap, SHA-256 when

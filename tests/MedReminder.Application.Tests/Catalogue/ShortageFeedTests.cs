@@ -145,7 +145,7 @@ public class ShortageFeedTests
         options.ShortagesEnabled = false;
         CatalogueFeedSelection.IncludesShortages("IT", options).Should().BeFalse();
         new CatalogueFeedOptions().ShortageManifestUrl()
-            .Should().Be("https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/shortages/latest.json");
+            .Should().Be("https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/shortages/latest.json");
     }
 
     [Fact]
