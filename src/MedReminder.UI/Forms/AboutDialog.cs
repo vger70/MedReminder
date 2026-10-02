@@ -47,9 +47,10 @@ internal sealed class AboutDialog : MedReminderFormBase
         Text = _loc.Get("Ui.AboutDialog.Title");
         // Sized to fit the longest label the dialog carries (the
         // GitHub source-code URL) without clipping in any of the
-        // shipped languages.
+        // shipped languages. The height lets the disclaimer and every
+        // data-source attribution show without scrolling.
         Width = 680;
-        Height = 560;
+        Height = 700;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -177,6 +178,10 @@ internal sealed class AboutDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = sourceLabelMaxSize,
+            // A scrolling FlowLayoutPanel ignores its bottom padding, so
+            // the last label carries the gap itself: otherwise, scrolled
+            // to the end, its last line sits clipped against the edge.
+            Margin = new Padding(3, 3, 3, 8),
             Text = _loc.Get("about.dataSources.bdpm"),
         };
 
