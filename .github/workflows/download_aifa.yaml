@@ -4,8 +4,10 @@ on:
   schedule:
     # On the 2nd, 9th, 16th and 23rd: a run that fails because AIFA is
     # down is retried a week later. Once the month's version is
-    # published, scripts/feeds/aifa.py exits without changes.
-    - cron: '0 3 2,9,16,23 * *'
+    # published, scripts/feeds/aifa.py exits without changes. Minute 7,
+    # not 0: GitHub delays or drops scheduled runs at the top of the hour
+    # under load (none of the 2 October 2026 runs started).
+    - cron: '7 3 2,9,16,23 * *'
   workflow_dispatch:
     inputs:
       force:

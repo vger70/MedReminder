@@ -45,10 +45,10 @@ snapshots stay the offline baseline:
 
 | Country | Workflow (UTC, days 2, 9, 16, 23) | Script | Published |
 |---------|-----------------------------------|--------|-----------|
-| `it` | `download_aifa.yaml`, 03:00 | `scripts/feeds/aifa.py` | `data/it/aifa-<yyyymm>.zip` |
-| `es` | `download_aemps.yaml`, 03:20 | `scripts/feeds/aemps.py` | `data/es/aemps-<yyyymm>.zip` |
-| `fr` | `download_bdpm.yaml`, 03:40 | `scripts/feeds/bdpm.py` | `data/fr/bdpm-<yyyymm>.zip` |
-| `eu` | `download_ema.yaml`, 04:00 | `scripts/feeds/ema.py` | `data/eu/ema-epar-<yyyymm>.zip` |
+| `it` | `download_aifa.yaml`, 03:07 | `scripts/feeds/aifa.py` | `data/it/aifa-<yyyymm>.zip` |
+| `es` | `download_aemps.yaml`, 03:27 | `scripts/feeds/aemps.py` | `data/es/aemps-<yyyymm>.zip` |
+| `fr` | `download_bdpm.yaml`, 03:47 | `scripts/feeds/bdpm.py` | `data/fr/bdpm-<yyyymm>.zip` |
+| `eu` | `download_ema.yaml`, 04:07 | `scripts/feeds/ema.py` | `data/eu/ema-epar-<yyyymm>.zip` |
 
 Each folder also holds `latest.json` (§2.1) and keeps the 3 newest
 archives. The scripts share `scripts/feeds/common.py` (retries, run
@@ -66,8 +66,8 @@ The Italian catalogue has two delivery paths:
 
 - **Remote feed (monthly, no release needed).** The workflow
   `.github/workflows/download_aifa.yaml` runs on days 2, 9, 16 and 23
-  of each month (and on demand), builds `data/it/aifa-<yyyymm>.zip` and
-  rewrites `data/it/latest.json`. The first successful run of the month
+  of each month at 03:07 UTC (and on demand), builds
+  `data/it/aifa-<yyyymm>.zip` and rewrites `data/it/latest.json`. The first successful run of the month
   publishes; later runs find the month's version in `latest.json` and
   exit without changes. HTTP errors from AIFA (429, 5xx, timeouts,
   resets) are retried five times over about 5.5 minutes before a run
@@ -210,7 +210,7 @@ Two delivery paths, as for Italy:
 
 - **Remote feed (monthly, no release needed).**
   `.github/workflows/download_ema.yaml` runs `scripts/feeds/ema.py` on
-  days 2, 9, 16 and 23 at 04:00 UTC (and on demand, with the same
+  days 2, 9, 16 and 23 at 04:07 UTC (and on demand, with the same
   `force` input as AIFA) and publishes `data/eu/ema-epar-<yyyymm>.zip`
   and `data/eu/latest.json` (§2.1). No manual step.
 - **Embedded snapshot (per release, optional)**, §3.2.
@@ -437,7 +437,7 @@ Two delivery paths, as for Italy:
 
 - **Remote feed (monthly, no release needed).**
   `.github/workflows/download_aemps.yaml` runs `scripts/feeds/aemps.py`
-  on days 2, 9, 16 and 23 at 03:20 UTC (and on demand, with the same
+  on days 2, 9, 16 and 23 at 03:27 UTC (and on demand, with the same
   `force` input as AIFA) and publishes `data/es/aemps-<yyyymm>.zip` and
   `data/es/latest.json` (§2.1). No manual step.
 - **Embedded snapshot (per release, optional)**, §5.2.
@@ -534,7 +534,7 @@ Two delivery paths, as for Italy:
 
 - **Remote feed (monthly, no release needed).**
   `.github/workflows/download_bdpm.yaml` runs `scripts/feeds/bdpm.py`
-  on days 2, 9, 16 and 23 at 03:40 UTC (and on demand, with the same
+  on days 2, 9, 16 and 23 at 03:47 UTC (and on demand, with the same
   `force` input as AIFA) and publishes `data/fr/bdpm-<yyyymm>.zip` and
   `data/fr/latest.json` (§2.1). No manual step.
 - **Embedded snapshot (per release, optional)**, §6.3.
@@ -659,7 +659,7 @@ the user once (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3).
 | Item | Value |
 |---|---|
 | Source | AIFA, `elenco_medicinali_carenti.csv` ("Carenze e indisponibilità"); CC BY 4.0, cited in the app as "AIFA list of medicines in shortage of <date>" |
-| Workflow | `download_aifa_shortages.yaml`, Mondays and Thursdays 04:30 UTC, concurrency group `catalogue-feeds-publish` |
+| Workflow | `download_aifa_shortages.yaml`, days 2, 9, 16 and 23 at 04:27 UTC, concurrency group `catalogue-feeds-publish` |
 | Script | `scripts/feeds/aifa_shortages.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_shortages.py`, fixture `tests/fixtures/catalogue/aifa-shortages-sample.csv` |
 | Published | `data/it/shortages/shortages-<yyyymmdd>.json` (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`); the 3 newest files are kept |
 | Client | `ShortageRefresher` with `GitHubRawShortageFeedClient`, after the catalogue feeds, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:ShortagesEnabled` (default true), `ShortagesMaxDownloadBytes` (default 4 MiB) |
