@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #184 — Record packages and their expiry (package expiry, phase 1)
+
+Link: [vger70/MedReminder#184](https://github.com/vger70/MedReminder/pull/184)
+
+Branch: `feature/package-expiry` → `main`
+
+### Added
+
+- Packages of a medicine with printed expiry, in-use period after opening, opening date, batch and closure (`StockPackage`), beside the stock ledger: a package never moves the stock.
+- Expiry rules: the effective expiry is the earlier of the printed date and the end of the in-use period; status with configurable lead days (`PackageExpiryRules`). A derived allocation marks the packages the current stock no longer covers as used up, so finished boxes are never warned about (`PackageAllocation`).
+- Save, discard (closure and stock correction saved together) and delete use cases (`Application/Packages`).
+- Sync operation `PackageChanged` (schema version 11) and sync image version 8; `StockPackages` table through an idempotent boot patch; export field `stockPackages[]`; packages removed with the medicine.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.17; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: default in-use period from the latest package instead of a medicine field, phase contents.
+
 ## PR #183 — Add analysis of package expiry tracking
 
 Link: [vger70/MedReminder#183](https://github.com/vger70/MedReminder/pull/183)
