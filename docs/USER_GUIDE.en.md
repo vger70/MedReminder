@@ -346,7 +346,7 @@ without a time use the time of their moment (**Therapy → Dose
 times…**); a slot with a typed description and no time is counted at
 the end of the day. Hovering over the stock shows the start-of-day
 value. The recorded stock, the history and the run-out date are
-updated after midnight; when you register an intake, that day counts
+updated after midnight, while the days left follow the stock shown; when you register an intake, that day counts
 the quantity you registered.
 
 <a id="add-package"></a>

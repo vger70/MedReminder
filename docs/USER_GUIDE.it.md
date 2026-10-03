@@ -362,7 +362,8 @@ gli orari senza ora vale l'orario del loro momento (**Terapia → Orari
 delle dosi…**); un orario descritto liberamente, senza ora, viene
 contato a fine giornata. Passando il mouse sulla scorta vedi il valore
 a inizio giornata. La scorta registrata, lo storico e la data di
-esaurimento si aggiornano dopo mezzanotte; se registri un'assunzione,
+esaurimento si aggiornano dopo mezzanotte, mentre i giorni residui
+seguono la scorta mostrata; se registri un'assunzione,
 quel giorno conta la quantità registrata.
 
 <a id="add-package"></a>

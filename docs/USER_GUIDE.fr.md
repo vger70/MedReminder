@@ -376,7 +376,8 @@ passée. Les horaires sans heure prennent l'heure de leur moment
 (**Traitement → Heures des prises…**) ; un horaire décrit librement,
 sans heure, est compté en fin de journée. En survolant le stock, tu
 vois la valeur du début de journée. Le stock enregistré, l'historique
-et la date d'épuisement sont mis à jour après minuit ; si tu
+et la date d'épuisement sont mis à jour après minuit, tandis que les
+jours restants suivent le stock affiché ; si tu
 enregistres une prise, ce jour compte la quantité enregistrée.
 
 <a id="add-package"></a>

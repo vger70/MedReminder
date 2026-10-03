@@ -77,7 +77,16 @@ public sealed class MedicineOverviewLoader
             var rate = result.DailyRate;
             var isSuspended = result.IsSuspendedToday;
             var forecast = result.RunOut;
-            var status = ComputeStatus(m.IsActive, isSuspended, currentStock, forecast.DaysRemaining, m.ThresholdDays);
+            // The run-out date counts today's whole plan from the
+            // start-of-day stock, so it does not move when a dose time
+            // passes. The days left count from the stock shown: once
+            // today's doses are due, the days fully covered after them
+            // (101 tablets, 1 a day, after the 07:30 dose: 100 days, run
+            // out on day 101 as before).
+            var daysRemaining = forecast.DaysRemaining is not null && due > 0m && rate > 0m
+                ? (int)decimal.Floor(currentStock / rate)
+                : forecast.DaysRemaining;
+            var status = ComputeStatus(m.IsActive, isSuspended, currentStock, daysRemaining, m.ThresholdDays);
 
             items.Add(new MedicineListItem
             {
@@ -89,7 +98,7 @@ public sealed class MedicineOverviewLoader
                 DueTodaySoFar = ledgerStock - currentStock,
                 DailyRate = rate,
                 DailyRateDisplay = rate <= 0m ? "—" : $"{rate:0.##}/{_loc.Get("Ui.MainForm.Column.DailyRate.Unit")}",
-                DaysRemaining = forecast.DaysRemaining,
+                DaysRemaining = daysRemaining,
                 EstimatedRunOutDate = forecast.EstimatedRunOutDate,
                 ThresholdDays = m.ThresholdDays,
                 IsSuspended = isSuspended,

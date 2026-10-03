@@ -341,7 +341,7 @@ place (display-only effect). Unmatched labels stay without preset.
 | Grid tooltip | Both | New: start-of-day value and doses due today |
 | Stock adjustment dialog | Shows estimated; validates on ledger | Display only |
 | `ReconcileStock` / count dialog | Ledger + `DueSoFar` as default taken | Share function |
-| `RunOutForecast` / `MedicineForecast` | Ledger (start of day) | None (rate change via §5.1) |
+| `RunOutForecast` / `MedicineForecast` | Ledger (start of day) for the run-out date; the list's days left use the estimated stock (`floor(estimated / rate)` once a dose is due) | List only |
 | `CoveragePlanner` | Ledger | `IsPrn` (§5.1) |
 | `MedicationMonitor` low-stock alerts | Ledger | None |
 | `DoseReminderService` | — | Skip as-needed slots |

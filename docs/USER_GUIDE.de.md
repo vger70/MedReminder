@@ -376,7 +376,8 @@ Einnahmezeiten ohne Uhrzeit verwenden die Uhrzeit ihres Zeitpunkts
 ohne Uhrzeit wird am Tagesende gezählt. Fährst du mit der Maus über den
 Bestand, siehst du den Wert zu Tagesbeginn. Der erfasste Bestand, der
 Verlauf und das Datum, an dem der Vorrat ausgeht, werden nach
-Mitternacht aktualisiert; erfasst du eine Einnahme, zählt an diesem
+Mitternacht aktualisiert, die verbleibenden Tage folgen dem angezeigten
+Bestand; erfasst du eine Einnahme, zählt an diesem
 Tag die erfasste Menge.
 
 <a id="add-package"></a>

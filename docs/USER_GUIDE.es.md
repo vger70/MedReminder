@@ -365,7 +365,8 @@ sin hora usan la hora de su momento (**Terapia → Horarios de las
 dosis…**); un horario con descripción libre y sin hora se cuenta al
 final del día. Al pasar el ratón por el stock ves el valor al inicio
 del día. El stock registrado, el historial y la fecha de agotamiento
-se actualizan después de medianoche; si registras una toma, ese día
+se actualizan después de medianoche, mientras que los días restantes
+siguen el stock mostrado; si registras una toma, ese día
 cuenta la cantidad registrada.
 
 <a id="add-package"></a>
