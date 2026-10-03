@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.UseCases;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.UI.Forms;
@@ -16,11 +17,20 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
     private readonly ComboBox _kindBox;
     private readonly NumericUpDown _quantityBox;
     private readonly TextBox _notesBox;
+    private readonly PackageDefaults? _packageDefaults;
+    private readonly NumericUpDown? _countBox;
+    private readonly DateTimePicker? _expiryPicker;
+    private readonly NumericUpDown? _useWithinBox;
+    private readonly CheckBox? _openedToday;
+    private readonly TextBox? _batchBox;
 
+    // packageDefaults: the expiry fields of a new package
+    // (ANALYSIS-PACKAGE-EXPIRY.md §5.1); null leaves them out.
     public StockAdjustmentDialog(string medicineName, decimal currentStock, string unit,
         StockOperationKind defaultKind, ILocalizationService localization,
-        decimal? initialQuantity = null)
+        decimal? initialQuantity = null, PackageDefaults? packageDefaults = null)
     {
+        _packageDefaults = packageDefaults;
         _loc = localization;
         Text = _loc.Get("Ui.StockAdjustmentDialog.Title");
         Width = 480;
@@ -91,12 +101,32 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
         DialogLayout.AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Quantity"), _quantityBox);
         DialogLayout.AddRow(table, _loc.Get("Ui.StockAdjustmentDialog.Field.Notes"), _notesBox);
 
+        // The package fields stay in place and are enabled only for a new
+        // package, so the dialog does not change size with the kind.
+        if (packageDefaults is { } defaults)
+        {
+            _countBox = new NumericUpDown { Minimum = 1, Maximum = NewPackagesInput.MaxCount, Value = 1, Width = 80 };
+            _expiryPicker = PackageInputs.ExpiryPicker(defaults.ExpiresOn, defaults.Today);
+            _useWithinBox = PackageInputs.UseWithinBox(defaults.UseWithinDays);
+            _openedToday = new CheckBox { AutoSize = true, Text = _loc.Get("Ui.Packages.Field.OpenedToday") };
+            _batchBox = PackageInputs.BatchBox(defaults.Batch);
+            DialogLayout.AddRow(table, _loc.Get("Ui.Packages.Field.Count"), _countBox);
+            DialogLayout.AddRow(table, _loc.Get("Ui.Packages.Field.Expiry"), _expiryPicker);
+            DialogLayout.AddRow(table, _loc.Get("Ui.Packages.Field.UseWithin"), DialogLayout.Row(_useWithinBox,
+                new Label { AutoSize = true, Text = _loc.Get("Ui.Packages.Field.UseWithin.Hint"), Padding = new Padding(0, 4, 0, 0) }));
+            DialogLayout.AddRow(table, string.Empty, _openedToday);
+            DialogLayout.AddRow(table, _loc.Get("Ui.Packages.Field.Batch"), _batchBox);
+            _kindBox.SelectedIndexChanged += (_, _) => UpdatePackageFields();
+            UpdatePackageFields();
+        }
+
         var okButton = DialogLayout.Button(_loc.Get("Ui.StockAdjustmentDialog.Apply"), DialogResult.OK);
         var cancelButton = DialogLayout.Button(_loc.Get("Common.Cancel"), DialogResult.Cancel);
         okButton.Click += (_, _) =>
         {
             var kind = ((KindOption)_kindBox.SelectedItem!).Kind;
-            Result = new StockAdjustmentResult(kind, _quantityBox.Value, NullIfBlank(_notesBox.Text));
+            Result = new StockAdjustmentResult(kind, _quantityBox.Value, NullIfBlank(_notesBox.Text),
+                kind == StockOperationKind.NewPackage ? ReadPackages() : null);
         };
 
         var buttonPanel = DialogLayout.ButtonBar(this, okButton, cancelButton);
@@ -105,6 +135,27 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
         Controls.Add(buttonPanel);
     }
 
+
+    private void UpdatePackageFields()
+    {
+        var enabled = ((KindOption)_kindBox.SelectedItem!).Kind == StockOperationKind.NewPackage;
+        foreach (Control? control in new Control?[] { _countBox, _expiryPicker, _useWithinBox, _openedToday, _batchBox })
+        {
+            if (control is not null) control.Enabled = enabled;
+        }
+    }
+
+    // Null when nothing about the packages was entered: the load stays a
+    // plain stock movement, as before the feature.
+    private NewPackagesInput? ReadPackages()
+    {
+        if (_packageDefaults is null) return null;
+        var expiresOn = PackageInputs.ReadExpiry(_expiryPicker!, _packageDefaults.ExpiresOn);
+        var useWithin = PackageInputs.ReadUseWithin(_useWithinBox!);
+        var batch = NullIfBlank(_batchBox!.Text);
+        if (expiresOn is null && useWithin is null && batch is null && !_openedToday!.Checked) return null;
+        return new NewPackagesInput((int)_countBox!.Value, expiresOn, useWithin, _openedToday!.Checked, batch);
+    }
 
     private static string? NullIfBlank(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();
@@ -126,10 +177,15 @@ internal enum StockOperationKind
     NegativeCorrection,
 }
 
+// What the package fields start from: the in-use period of the
+// medicine's latest package, and the expiry and batch of a scan.
+internal sealed record PackageDefaults(DateOnly Today, int? UseWithinDays, DateOnly? ExpiresOn, string? Batch);
+
 internal sealed record StockAdjustmentResult(
     StockOperationKind Kind,
     decimal Quantity,
-    string? Notes)
+    string? Notes,
+    NewPackagesInput? Packages = null)
 {
     public bool IsPositive => Kind is StockOperationKind.NewPackage
         or StockOperationKind.ManualAdd

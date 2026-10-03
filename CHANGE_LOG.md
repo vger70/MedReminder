@@ -30,6 +30,48 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #185 — Enter packages and show their expiry (package expiry, phase 2)
+
+Link: [vger70/MedReminder#185](https://github.com/vger70/MedReminder/pull/185)
+
+Branch: `feature/package-expiry-ui` → `feature/package-expiry` (stacked on #184)
+
+### Added
+
+- New-package load with optional package fields: count, month/year expiry (last day of the month), use within N days of opening, opened today, batch; packages linked to the movement and saved with it (`AddStock`, `StockAdjustmentDialog`). A load with no package data stays a plain stock movement.
+- Restock by scan pre-fills expiry and batch from the DataMatrix; in-use period and size default to the latest package.
+- Stock → Packages and expiry: list of a medicine's packages with status, dates, quantity in stock and batch; New, Edit, Opened today, Finished, Discard (quantity left removed from the stock), Delete (`PackagesDialog`, `PackageEditDialog`, `PackageListQuery`).
+- Main list column Expiry: earliest expiry among the packages in stock, status in words and colour.
+- New UI strings in all five dictionaries.
+
+### Docs
+
+- `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: packages created only when the expiry section is filled; no package fields in the initial load; phase 2 contents.
+
+## PR #184 — Record packages and their expiry (package expiry, phase 1)
+
+Link: [vger70/MedReminder#184](https://github.com/vger70/MedReminder/pull/184)
+
+Branch: `feature/package-expiry` → `main`
+
+### Added
+
+- Packages of a medicine with printed expiry, in-use period after opening, opening date, batch and closure (`StockPackage`), beside the stock ledger: a package never moves the stock.
+- Expiry rules: the effective expiry is the earlier of the printed date and the end of the in-use period; status with configurable lead days (`PackageExpiryRules`). A derived allocation marks the packages the current stock no longer covers as used up, so finished boxes are never warned about (`PackageAllocation`).
+- Save, discard (closure and stock correction saved together) and delete use cases (`Application/Packages`).
+- Sync operation `PackageChanged` (schema version 11) and sync image version 8; `StockPackages` table through an idempotent boot patch; export field `stockPackages[]`; packages removed with the medicine.
+
+### Fixed
+
+- A discard is final: a save can neither set nor clear it, and a sync merge keeps it whatever concurrent edit wins the package register, since its stock correction is a separate fact.
+- A refused discard leaves the package unchanged; the stock is checked once (`AdjustStockDown.PrepareAsync`) and everything is saved together.
+- A closure name unknown to this version imports as Finished instead of making the archive unreadable.
+- A printed expiry more than 20 years from today is refused.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.17; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: default in-use period from the latest package instead of a medicine field, phase contents, final discard.
+
 ## PR #183 — Add analysis of package expiry tracking
 
 Link: [vger70/MedReminder#183](https://github.com/vger70/MedReminder/pull/183)

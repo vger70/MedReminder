@@ -72,6 +72,7 @@ public sealed class ApplyRemoteOperations
     private readonly IProfileSettingsStore? _profileSettings;
     private readonly IPrescriptionRepository? _prescriptions;
     private readonly IDeadlineRepository? _deadlines;
+    private readonly IStockPackageRepository? _packages;
     private readonly ISentEmailNotificationRepository? _sentEmails;
 
     // Facts added or updated in this batch, by id: the context tracks
@@ -104,10 +105,12 @@ public sealed class ApplyRemoteOperations
         IProfileSettingsStore? profileSettings = null,
         ISentEmailNotificationRepository? sentEmails = null,
         IPrescriptionRepository? prescriptions = null,
-        IDeadlineRepository? deadlines = null)
+        IDeadlineRepository? deadlines = null,
+        IStockPackageRepository? packages = null)
     {
         _prescriptions = prescriptions;
         _deadlines = deadlines;
+        _packages = packages;
         _profileSettings = profileSettings;
         _sentEmails = sentEmails;
         _settings = settings;
@@ -262,9 +265,9 @@ public sealed class ApplyRemoteOperations
                 // The log row is the state (HouseholdLinks).
             }
             else if (body is MedicineDeleted) touched.Remove(body.MedicineId);
-            // A sent email, a prescription or a deadline changes no fact of
-            // the ledger.
-            else if (body is not (EmailNotificationSent or PrescriptionChanged or DeadlineChanged))
+            // A sent email, a prescription, a deadline or a package changes
+            // no fact of the ledger.
+            else if (body is not (EmailNotificationSent or PrescriptionChanged or DeadlineChanged or PackageChanged))
                 touched.Add(body.MedicineId);
             applied++;
         }
@@ -361,6 +364,9 @@ public sealed class ApplyRemoteOperations
                 return;
             case DeadlineChanged deadline:
                 await ApplyDeadlineAsync(deadline, timestamp, ct);
+                return;
+            case PackageChanged package:
+                await ApplyPackageAsync(package, timestamp, ct);
                 return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");
@@ -466,6 +472,61 @@ public sealed class ApplyRemoteOperations
         row.RepeatMonths = state.RepeatMonths;
         row.Channels = state.Channels;
         row.DoneOn = state.DoneOn;
+        row.UpdatedAt = state.RecordedAt;
+    }
+
+    // A package is one register, like a prescription, with one exception:
+    // a discard is final. It also wrote a stock correction, a separate
+    // fact, so a concurrent edit that wins the register must not reopen
+    // the package. The latest discard by HLC keeps its closure whatever
+    // version wins; the result depends only on the set of versions, so
+    // every device agrees. A deletion still removes the package.
+    private async Task ApplyPackageAsync(PackageChanged change, HybridTimestamp timestamp, CancellationToken ct)
+    {
+        await GetMedicineAsync(change.MedicineId, ct);
+        await RecordRegistersAsync(change, timestamp, ct);
+        if (_packages is null) return;
+        var versions = await _registers.ListAsync(change.PackageId, SyncRegisters.PackageState, ct);
+        var winner = versions.MaxBy(v => v.Version);
+        var state = winner?.Value is { } value ? SyncRegisters.ParsePackage(value) : change;
+        var row = await _packages.GetAsync(change.PackageId, ct);
+        if (state.Deleted)
+        {
+            if (row is not null) await _packages.RemoveAsync(row, ct);
+            return;
+        }
+        if (state.Closure != PackageClosure.Discarded
+            && versions
+                .Where(v => v.Value is not null)
+                .OrderByDescending(v => v.Version)
+                .Select(v => SyncRegisters.ParsePackage(v.Value!))
+                .FirstOrDefault(p => p.Closure == PackageClosure.Discarded) is { } discard)
+        {
+            state = state with { ClosedOn = discard.ClosedOn, Closure = PackageClosure.Discarded };
+        }
+        if (row is null)
+        {
+            row = new StockPackage { Id = state.PackageId, MedicineId = state.MedicineId, RecordedAt = state.RecordedAt };
+            CopyState(state, row);
+            await _packages.AddAsync(row, ct);
+        }
+        else
+        {
+            CopyState(state, row);
+            await _packages.UpdateAsync(row, ct);
+        }
+    }
+
+    private static void CopyState(PackageChanged state, StockPackage row)
+    {
+        row.MovementId = state.MovementId;
+        row.Quantity = state.Quantity;
+        row.ExpiresOn = state.ExpiresOn;
+        row.UseWithinDays = state.UseWithinDays;
+        row.OpenedOn = state.OpenedOn;
+        row.Batch = state.Batch;
+        row.ClosedOn = state.ClosedOn;
+        row.Closure = state.Closure;
         row.UpdatedAt = state.RecordedAt;
     }
 

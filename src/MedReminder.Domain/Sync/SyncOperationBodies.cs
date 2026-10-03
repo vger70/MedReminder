@@ -222,6 +222,24 @@ public sealed record DeadlineChanged(
     bool Deleted,
     DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
 
+// A package of a medicine as a whole (operation schema version 11;
+// docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md §7.1), with the rules of
+// PrescriptionChanged: last writer wins per package, Deleted removes it.
+// A discarded package's stock correction is its own StockEntryRecorded.
+public sealed record PackageChanged(
+    Guid MedicineId,
+    Guid PackageId,
+    Guid? MovementId,
+    decimal Quantity,
+    DateOnly? ExpiresOn,
+    int? UseWithinDays,
+    DateOnly? OpenedOn,
+    string? Batch,
+    DateOnly? ClosedOn,
+    PackageClosure? Closure,
+    bool Deleted,
+    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+
 // A replicated setting of the profile (operation schema version 3,
 // closing P8 of docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §2, §4.2):
 // its display name and the notification recipients. Last writer wins

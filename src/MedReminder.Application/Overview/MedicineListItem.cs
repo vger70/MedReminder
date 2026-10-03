@@ -1,3 +1,5 @@
+using MedReminder.Domain.Stock;
+
 namespace MedReminder.Application.Overview;
 
 // Row of the main grid (spec §13). Flat structure optimized for
@@ -43,6 +45,13 @@ public sealed class MedicineListItem
     public string SupplyDisplay { get; set; } = string.Empty;
     public string SupplyDetail { get; set; } = string.Empty;
     public bool HasShortage => SupplyDisplay.Length > 0;
+
+    // Earliest effective expiry among the packages still in stock
+    // (ANALYSIS-PACKAGE-EXPIRY.md §5.4), its status and its text; null
+    // and empty when no package has an expiry.
+    public DateOnly? NextExpiry { get; set; }
+    public PackageExpiryStatus? NextExpiryStatus { get; set; }
+    public string ExpiryDisplay { get; set; } = string.Empty;
 }
 
 public enum MedicineRowStatus

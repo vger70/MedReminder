@@ -355,6 +355,48 @@ internal static class ExportMapper
         Times = d.Times,
     };
 
+    public static ExportedStockPackage ToDto(StockPackage p) => new()
+    {
+        Id = p.Id,
+        MedicineId = p.MedicineId,
+        MovementId = p.MovementId,
+        Quantity = p.Quantity,
+        ExpiresOn = p.ExpiresOn,
+        UseWithinDays = p.UseWithinDays,
+        OpenedOn = p.OpenedOn,
+        Batch = p.Batch,
+        ClosedOn = p.ClosedOn,
+        Closure = p.Closure?.ToString(),
+        RecordedAt = p.RecordedAt,
+        UpdatedAt = p.UpdatedAt,
+    };
+
+    public static StockPackage ToEntity(ExportedStockPackage p) => new()
+    {
+        Id = p.Id,
+        MedicineId = p.MedicineId,
+        MovementId = p.MovementId,
+        Quantity = p.Quantity,
+        ExpiresOn = p.ExpiresOn,
+        UseWithinDays = p.UseWithinDays,
+        OpenedOn = p.OpenedOn,
+        Batch = p.Batch,
+        ClosedOn = p.ClosedOn,
+        Closure = p.Closure is null ? null : ClosureOf(p.Closure),
+        RecordedAt = p.RecordedAt,
+        UpdatedAt = p.UpdatedAt,
+    };
+
+    // A closure a newer app may add is read as Finished: the package left
+    // the cabinet, and Finished moves no stock. Refusing it would make the
+    // whole archive unreadable for one value.
+    private static PackageClosure ClosureOf(string value)
+        => Enum.TryParse<PackageClosure>(value, ignoreCase: false, out var closure)
+            && Enum.IsDefined(closure)
+            && !int.TryParse(value, out _)
+                ? closure
+                : PackageClosure.Finished;
+
     public static ExportedDeadline ToDto(Deadline d) => new()
     {
         Id = d.Id,

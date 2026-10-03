@@ -10,6 +10,7 @@ using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Notifications;
+using MedReminder.Application.Packages;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UpdateChecking;
@@ -417,6 +418,9 @@ internal sealed class MainForm : MedReminderFormBase
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.RestockFromBarcode"),
             Mdl2Glyph.Glyphs.Package, Keys.None,
             async () => await RestockFromBarcodeAsync()));
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Packages"),
+            Mdl2Glyph.Glyphs.Calendar, Keys.None,
+            async () => await ShowPackagesAsync()));
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Warning, Keys.None,
             async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
@@ -1457,6 +1461,16 @@ internal sealed class MainForm : MedReminderFormBase
             FillWeight = 120,
             MinimumWidth = 88,
         });
+        // Earliest expiry of the packages in stock (ANALYSIS-PACKAGE-EXPIRY
+        // §5.4); the status is in the text and in the colour.
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            HeaderText = _loc.Get("Ui.MainForm.Column.Expiry"),
+            DataPropertyName = nameof(MedicineListItem.ExpiryDisplay),
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 120,
+            MinimumWidth = 88,
+        });
         grid.DataSource = _rows;
         grid.CellFormatting += (s, e) =>
         {
@@ -1486,6 +1500,18 @@ internal sealed class MainForm : MedReminderFormBase
                 {
                     style.ForeColor = UiTheme.Palette.WarningText;
                 }
+            }
+            else if (property == nameof(MedicineListItem.ExpiryDisplay)
+                && e.RowIndex >= 0
+                && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem { NextExpiryStatus: { } expiryStatus }
+                && !UiColors.HighContrast && e.CellStyle is { } expiryStyle)
+            {
+                expiryStyle.ForeColor = expiryStatus switch
+                {
+                    PackageExpiryStatus.Expired => UiTheme.Palette.DangerText,
+                    PackageExpiryStatus.ExpiringSoon => UiTheme.Palette.WarningText,
+                    _ => expiryStyle.ForeColor,
+                };
             }
         };
         grid.ColumnHeaderMouseClick += (s, e) =>
@@ -1672,6 +1698,8 @@ internal sealed class MainForm : MedReminderFormBase
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.AddPackage"),
             Mdl2Glyph.Glyphs.Package, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NewPackage)));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Packages"),
+            Mdl2Glyph.Glyphs.Calendar, Keys.None, async () => await ShowPackagesAsync()));
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Edit, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.History"),
@@ -2449,13 +2477,31 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    private async Task ShowStockDialogAsync(StockOperationKind defaultKind, decimal? initialQuantity = null)
+    // scanned: the barcode read by a restock scan, whose expiry and batch
+    // pre-fill the package fields (ANALYSIS-PACKAGE-EXPIRY.md §5.1).
+    private async Task ShowStockDialogAsync(StockOperationKind defaultKind, decimal? initialQuantity = null,
+        BarcodeContent? scanned = null)
     {
         var row = GetSelectedRow();
         if (row is null) return;
 
+        PackageDefaults packageDefaults;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var packages = scope.ServiceProvider.GetRequiredService<PackageListQuery>();
+            packageDefaults = new PackageDefaults(packages.LocalToday(),
+                (await packages.NewPackageDefaultsAsync(row.Id, CancellationToken.None)).UseWithinDays,
+                scanned?.Expiry, scanned?.Batch);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.ReadMedicine"), ex);
+            return;
+        }
+
         using var dialog = new StockAdjustmentDialog(
-            row.Name, row.CurrentStock, row.Unit, defaultKind, _loc, initialQuantity);
+            row.Name, row.CurrentStock, row.Unit, defaultKind, _loc, initialQuantity, packageDefaults);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
         var newPackage = false;
 
@@ -2466,7 +2512,8 @@ internal sealed class MainForm : MedReminderFormBase
             {
                 var addStock = scope.ServiceProvider.GetRequiredService<AddStock>();
                 await addStock.ExecuteAsync(
-                    new AddStockCommand(row.Id, dialog.Result.Quantity, dialog.Result.ToMovementKind(), dialog.Result.Notes),
+                    new AddStockCommand(row.Id, dialog.Result.Quantity, dialog.Result.ToMovementKind(), dialog.Result.Notes,
+                        dialog.Result.Packages),
                     CancellationToken.None);
                 newPackage = dialog.Result.ToMovementKind() == StockMovementKind.NewPackage;
             }
@@ -2485,6 +2532,65 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
         if (newPackage) await OfferPrescriptionCollectedAsync(row.Id, row.Name);
+    }
+
+    // Stock → Packages… (ANALYSIS-PACKAGE-EXPIRY.md §5.3): the packages of
+    // the selected medicine, each action in its own DI scope.
+    private async Task ShowPackagesAsync()
+    {
+        var row = GetSelectedRow();
+        if (row is null) return;
+        try
+        {
+            DateOnly today;
+            NewPackageDefaults defaults;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                var query = scope.ServiceProvider.GetRequiredService<PackageListQuery>();
+                today = query.LocalToday();
+                defaults = await query.NewPackageDefaultsAsync(row.Id, CancellationToken.None);
+            }
+
+            var actions = new PackagesDialogActions(
+                Load: async () =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<PackageListQuery>()
+                        .LoadAsync(row.Id, CancellationToken.None);
+                },
+                CreateEditor: existing => new PackageEditDialog(row.Id, row.Name, row.Unit, existing,
+                    defaults.UseWithinDays, defaults.Quantity, today, _loc),
+                Save: async command =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<SaveStockPackage>()
+                        .ExecuteAsync(command, CancellationToken.None);
+                },
+                Discard: async (id, quantityLeft) =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<DiscardStockPackage>()
+                        .ExecuteAsync(new DiscardStockPackageCommand(id, today, quantityLeft), CancellationToken.None);
+                },
+                Delete: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<DeleteStockPackage>()
+                        .ExecuteAsync(id, CancellationToken.None);
+                });
+
+            bool changed;
+            using (var dialog = new PackagesDialog(row.Name, row.Unit, today, actions, _loc))
+            {
+                dialog.ShowDialog(this);
+                changed = dialog.Changed;
+            }
+            if (changed) await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenPackages"), ex);
+        }
     }
 
     // Restock by scan (A2 phase 3, flow b): the scanned national code
@@ -2537,7 +2643,7 @@ internal sealed class MainForm : MedReminderFormBase
 
             SelectGridRow(candidate.MedicineId);
             if (GetSelectedRow()?.Id != candidate.MedicineId) return;
-            await ShowStockDialogAsync(StockOperationKind.NewPackage, candidate.LastNewPackageQuantity);
+            await ShowStockDialogAsync(StockOperationKind.NewPackage, candidate.LastNewPackageQuantity, content);
         }
         catch (Exception ex)
         {

@@ -1,7 +1,9 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.DoseTimes;
+using MedReminder.Application.Packages;
 using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.Overview;
 
@@ -22,6 +24,7 @@ public sealed class MedicineOverviewLoader
     private readonly ILocalizationService _loc;
     private readonly IShortageListStore? _shortages;
     private readonly DueToday? _dueToday;
+    private readonly IStockPackageRepository? _packages;
 
     public MedicineOverviewLoader(
         IMedicineRepository medicines,
@@ -32,10 +35,12 @@ public sealed class MedicineOverviewLoader
         TimeProvider clock,
         ILocalizationService localization,
         IShortageListStore? shortages = null,
-        DueToday? dueToday = null)
+        DueToday? dueToday = null,
+        IStockPackageRepository? packages = null)
     {
         _shortages = shortages;
         _dueToday = dueToday;
+        _packages = packages;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -111,6 +116,18 @@ public sealed class MedicineOverviewLoader
                 items[^1].SupplyDisplay = ShortageTexts.Display(notice, _loc);
                 items[^1].SupplyDetail = ShortageTexts.Detail(notice, shortages.ListDate, _loc);
             }
+            if (_packages is not null)
+            {
+                var packages = PackageListQuery.Build(
+                    await _packages.ListForMedicineAsync(m.Id, cancellationToken), currentStock, today,
+                    PackageLeadDays.Default);
+                if (PackageListQuery.NextExpiring(packages) is { EffectiveExpiry: { } expiry } next)
+                {
+                    items[^1].NextExpiry = expiry;
+                    items[^1].NextExpiryStatus = next.Status;
+                    items[^1].ExpiryDisplay = ExpiryText(expiry, next.Status);
+                }
+            }
         }
 
         return items;
@@ -135,6 +152,18 @@ public sealed class MedicineOverviewLoader
         MedicineRowStatus.Warning => _loc.Get("Domain.Medicine.Status.Warning"),
         _ => _loc.Get("Domain.Medicine.Status.Ok"),
     };
+
+    // The status is told in words as well as colour.
+    private string ExpiryText(DateOnly expiry, PackageExpiryStatus status)
+    {
+        var date = expiry.ToString("d", _loc.CurrentCulture);
+        return status switch
+        {
+            PackageExpiryStatus.Expired => _loc.Get("Packages.Expiry.Expired", date),
+            PackageExpiryStatus.ExpiringSoon => _loc.Get("Packages.Expiry.Soon", date),
+            _ => date,
+        };
+    }
 
     private DateOnly LocalToday()
     {

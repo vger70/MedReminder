@@ -4,6 +4,7 @@ using MedReminder.Application.Catalogue;
 using MedReminder.Application.Deadlines;
 using MedReminder.Application.Migrations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Packages;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
 using MedReminder.Application.UseCases;
@@ -32,6 +33,7 @@ internal sealed class ApplicationTestScope
     public InMemoryPrescriptionReminderEventRepository PrescriptionReminderEvents { get; } = new();
     public InMemoryDeadlineRepository Deadlines { get; } = new();
     public InMemoryDeadlineReminderEventRepository DeadlineReminderEvents { get; } = new();
+    public InMemoryStockPackageRepository Packages { get; } = new();
     public InMemoryShortageListStore Shortages { get; } = new();
     public InMemoryShortageNoticeEventRepository ShortageNoticeEvents { get; } = new();
     public InMemoryMedicineActivityRepository Activity { get; } = new();
@@ -83,6 +85,10 @@ internal sealed class ApplicationTestScope
     public DeadlineListQuery DeadlineList { get; }
     public DeadlineReminders DeadlineReminders { get; }
     public ShortageNotices ShortageNotices { get; }
+    public SaveStockPackage SaveStockPackage { get; }
+    public DiscardStockPackage DiscardStockPackage { get; }
+    public DeleteStockPackage DeleteStockPackage { get; }
+    public PackageListQuery PackageList { get; }
     public SyncGenesis Genesis { get; }
 
     public ApplicationTestScope(DateTimeOffset? now = null)
@@ -106,7 +112,7 @@ internal sealed class ApplicationTestScope
         Deletion = new InMemoryMedicineDeletionRepository(this);
         DeleteMedicine = new DeleteMedicine(
             Medicines, Stock, Intakes, Counts, Suspensions, Deletion, Operations, Uow, Clock);
-        AddStock = new AddStock(Medicines, Stock, Operations, Uow, Clock);
+        AddStock = new AddStock(Medicines, Stock, Operations, Uow, Clock, Packages);
         AdjustStockDown = new AdjustStockDown(Medicines, Stock, Operations, Uow, Clock);
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Operations, Uow, Clock);
         ResumeMedication = new ResumeMedication(Medicines, Suspensions, Operations, Uow, Clock);
@@ -124,7 +130,12 @@ internal sealed class ApplicationTestScope
         ApplyRemote = new ApplyRemoteOperations(
             SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
             Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock, sentEmails: SentEmails,
-            prescriptions: Prescriptions, deadlines: Deadlines);
+            prescriptions: Prescriptions, deadlines: Deadlines, packages: Packages);
+
+        SaveStockPackage = new SaveStockPackage(Medicines, Packages, Operations, Uow, Clock);
+        DiscardStockPackage = new DiscardStockPackage(Packages, Operations, Uow, AdjustStockDown, Clock);
+        DeleteStockPackage = new DeleteStockPackage(Packages, Operations, Uow, Clock);
+        PackageList = new PackageListQuery(Packages, Stock, Clock);
 
         SavePrescription = new SavePrescription(Medicines, Prescriptions, Operations, Uow, Clock);
         CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);
