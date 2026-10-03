@@ -30,6 +30,24 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #185 — Enter packages and show their expiry (package expiry, phase 2)
+
+Link: [vger70/MedReminder#185](https://github.com/vger70/MedReminder/pull/185)
+
+Branch: `feature/package-expiry-ui` → `feature/package-expiry` (stacked on #184)
+
+### Added
+
+- New-package load with optional package fields: count, month/year expiry (last day of the month), use within N days of opening, opened today, batch; packages linked to the movement and saved with it (`AddStock`, `StockAdjustmentDialog`). A load with no package data stays a plain stock movement.
+- Restock by scan pre-fills expiry and batch from the DataMatrix; in-use period and size default to the latest package.
+- Stock → Packages and expiry: list of a medicine's packages with status, dates, quantity in stock and batch; New, Edit, Opened today, Finished, Discard (quantity left removed from the stock), Delete (`PackagesDialog`, `PackageEditDialog`, `PackageListQuery`).
+- Main list column Expiry: earliest expiry among the packages in stock, status in words and colour.
+- New UI strings in all five dictionaries.
+
+### Docs
+
+- `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: packages created only when the expiry section is filled; no package fields in the initial load; phase 2 contents.
+
 ## PR #184 — Record packages and their expiry (package expiry, phase 1)
 
 Link: [vger70/MedReminder#184](https://github.com/vger70/MedReminder/pull/184)
