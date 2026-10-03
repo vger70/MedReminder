@@ -18,6 +18,7 @@ public sealed class SyncRegisters
 {
     public const string IsActive = "IsActive";
     public const string EndDate = "EndDate";
+    public const string StartDate = "StartDate";
     public const string SlotSet = "SlotSet";
     public const string LatestSchedule = "LatestSchedule";
     // The whole state of a prescription, as the payload of the
@@ -60,6 +61,10 @@ public sealed class SyncRegisters
         ],
         MedicineFieldChanged f =>
             [new RegisterWrite(f.MedicineId, f.Field, f.Value, SyncConflictKind.MedicineField)],
+        // No conflict entry: restoring a losing value goes through
+        // MedicineFieldCodec, which does not carry the start date.
+        MedicineStartChanged s =>
+            [new RegisterWrite(s.MedicineId, StartDate, Date(s.StartDate), null)],
         MedicineActivityChanged a =>
             [new RegisterWrite(a.MedicineId, IsActive, a.Active ? "true" : "false", null)],
         ScheduleRowRecorded s =>

@@ -79,6 +79,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // this carries the value MainForm computed from the stock ledger.
     private readonly decimal _currentStock;
     private readonly ListView _slotsList;
+    private readonly Control _slotsPanel;
     private readonly Label _slotsSummary;
     private readonly List<AdministrationSlotEntry> _slots = new();
     private readonly EditMode _mode;
@@ -323,7 +324,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             AddRow(table, string.Empty, _isActiveBox);
         }
 
-        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.SlotsOptional"), BuildSlotsPanel());
+        _slotsPanel = BuildSlotsPanel();
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.SlotsOptional"), _slotsPanel);
         AddRow(table, string.Empty, _slotsSummary);
         UpdateSlotsSummary();
 
@@ -517,14 +519,16 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // Disables the Simple-mode inputs (dose, admin/day, slot buttons)
     // whenever the user flips into Advanced, so it is unambiguous
     // which set of controls drives the projection. Called from the
-    // SchedulePanel.ModeChanged event.
+    // SchedulePanel.ModeChanged event. The whole slot panel goes with
+    // the list: Advanced mode saves no slots (OnConfirmClick), so a slot
+    // added there would be dropped on save.
     private void SyncSimpleControlsEnabled()
     {
         if (_schedulePanel is null) return;
         var simple = !_schedulePanel.AdvancedSelected;
         _doseBox.Enabled = simple;
         _adminPerDayBox.Enabled = simple;
-        _slotsList.Enabled = simple;
+        _slotsPanel.Enabled = simple;
     }
 
     // Picking a catalogue row on either side populates the sibling
@@ -1094,7 +1098,8 @@ internal sealed record MedicineEditResult(
         IsActive: IsActive,
         RemindOnDose: RemindOnDose,
         AdministrationSlots: MapSlots() ?? [],
-        Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId));
+        Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId),
+        StartDate: StartDate);
 
     private IReadOnlyList<AdministrationSlotInput>? MapSlots()
     {

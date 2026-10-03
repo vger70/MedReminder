@@ -30,6 +30,33 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #TBD — Fix the dose times order, slots lost in Advanced mode and the start date not saved
+
+Branch: `claude/bug-orari-terapia-a59517` → `main`
+
+### Fixed
+
+- Therapy → Dose times lists the presets by time of day; presets
+  without a time come last (`DoseTimesDialog`).
+- Edit medicine: in Advanced schedule mode the whole slot panel is
+  disabled, not only the list. The add / edit / remove buttons stayed
+  active, and the slots added there were dropped on save, so they were
+  missing when the dialog was opened again (`MedicineEditDialog`).
+- Edit medicine: a changed therapy start date is saved. It was shown
+  as editable but `UpdateMedicine` ignored it. The schedule row in
+  force and, for an earlier date, the slot set in force are recorded
+  again from the new date, so the days gained are consumed with the
+  same plan and a cyclic or tapering regime counts from the new date
+  (`UpdateMedicine`, `TherapyStartChange`).
+
+### Changed
+
+- Sync: new operation `MedicineStartChanged`, schema version 10 (an
+  older app stops at it, R7). `StartDate` is no longer immutable
+  (`docs/SYNC-FORMAT.md` §6).
+
+---
+
 ## PR #178 — Count the days left from the stock shown in the list
 
 Link: [vger70/MedReminder#178](https://github.com/vger70/MedReminder/pull/178)
