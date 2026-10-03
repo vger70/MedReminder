@@ -47,6 +47,46 @@ Branch: `claude/user-guide-smtp-providers` → `main`
 - Clarifies the port rule applied by the email service: `587` with
   *Use StartTLS* ticked, `465` with it unticked.
 
+---
+
+## PR #190 — Add the AIFA equivalent medicines list and a Codifa info link
+
+Link: [vger70/MedReminder#190](https://github.com/vger70/MedReminder/pull/190)
+
+**Status:** merged (2026-10-03)
+
+Branch: `claude/inspiring-bardeen-d79c0q` → `main`
+
+### Added
+
+- AIFA transparency list feed (`scripts/feeds/aifa_equivalents.py`, `download_aifa_equivalents.yaml`), published on the `feeds` branch under `data/it/equivalents/`, downloaded with Italy as reference country (`EquivalenceRefresher`) and stored once for every profile (`catalogue\equivalents\equivalents-it.json`).
+- Equivalent medicines window (`EquivalentsDialog`, `EquivalentsQuery`): the group of the package, its members cheapest first with public price, difference over the reference price, AIFA note verbatim, shortage state, and the packages already in stock in the profile. Join through a valid AIC only.
+- Codifa page link (`MedicineInfoLink`) built from a check-digit-validated AIC, in the edit dialog and the grid context menu, with "Equivalent medicines (AIFA)".
+- The shortage tooltip points to the equivalents window when the package is listed.
+- New UI strings in all five dictionaries.
+
+### Changed
+
+- The information row of the medicine edit dialog ("Information", formerly "AIFA documents") exists for every medicine; leaflet and SPC keep their Italian-catalogue condition.
+- Product names are now shown, in the equivalents window only: a decision recorded in `docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3. The shortage message still names no product.
+- The shortage and transparency lists share one transport, store and refresh (`DatedListFeed`, `GitHubRawDatedListFeedClient`, `JsonFileDatedListStore`) and one Python publisher (`common.publish_dated_list`), instead of two copies.
+
+### Fixed
+
+- A forced republish of a list date already stored on a client is downloaded again: the refresh compares the stored file's SHA-256 with the manifest, not only the list date. Applies to the shortage list too.
+- The stored list caches a failed parse per file version instead of re-reading a damaged file on every load.
+- The equivalents check of the edit dialog and of the main list runs off the UI thread.
+- One AIC rule (`ItalianPharmacode.NormalizeAic`) for the Codifa link, the menu, the edit dialog and the shortage tooltip, which no longer points to a disabled menu item for a code failing the check digit.
+- "Already at home" also lists another medicine record of the same package.
+- The Codifa menu item no longer shares its access key with "Correct stock" (en, it, fr, es).
+- The equivalents window no longer shows an error over itself when closed while loading.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §9, `docs/ANALYSIS.md`, `CLAUDE.md` §5, the analysis status, user guides in the five languages.
+
+---
+
 ## PR #189 — Analyse AIFA equivalent-medicine lists and a Codifa info link
 
 Link: [vger70/MedReminder#189](https://github.com/vger70/MedReminder/pull/189)

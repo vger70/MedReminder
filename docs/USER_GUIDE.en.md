@@ -343,8 +343,45 @@ communicated, and it may change), the reason, whether AIFA reports
 equivalent medicines, and the date of the list. You also get one
 notification per shortage, on the medicine's channels.
 
-MedReminder names no substitute: ask your doctor or pharmacist, and
-request the prescription in good time.
+The shortage message itself names no substitute: ask your doctor or
+pharmacist, and request the prescription in good time. When the package
+is also in the AIFA transparency list, the cell points to **Equivalent
+medicines (AIFA)** (see below).
+
+### Information links and equivalent medicines (Italy)
+
+For a medicine with an Italian package code (AIC), the **Information**
+row of the medicine window offers up to four links:
+
+- **Package leaflet** and **Summary of product characteristics**: the
+  AIFA documents, with Italy as reference country, when the catalogue
+  has them;
+- **Codifa page**: the public page of the package on codifa.it
+  (composition, class, dispensing, price where known), opened in the
+  browser. It works with any reference country;
+- **Equivalent medicines**: shown when the package is in the AIFA
+  transparency list.
+
+The same two last commands are in the context menu of the list
+(right-click on a medicine): **Equivalent medicines (AIFA)…** and
+**Open Codifa page**. They are greyed out for a medicine without AIC.
+
+**Equivalent medicines (AIFA).** With Italy as reference country,
+MedReminder downloads the AIFA transparency list together with the
+catalogue (monthly list, checked once a day). The window shows the
+group of the package (active ingredient, units, strength, route), the
+reference price of the national health service and every package of
+the group, cheapest first, with its public price, the difference you
+pay over the reference price, its supply state, whether you already
+have it at home in another medicine of the profile, and the AIFA note
+verbatim. A note can restrict the substitution (for example "not
+substitutable with …"): read it. Your medicine is in bold.
+
+A package missing from the list is not "without equivalents": it may
+be patented, in class C or simply not listed. Substitution is decided
+by your doctor and pharmacist; the list does not consider excipients or
+allergies. Class C medicines have no public price list and show no
+price.
 
 ---
 

@@ -199,6 +199,12 @@ time to talk to the doctor.
    pharmacist". When `Equivalente = Sì`, add "AIFA reports that
    equivalent medicines are available". No product is named or
    suggested, to stay clear of any clinical role.
+   Update (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.6): the shortage
+   message still names no product, but the separate Equivalent
+   medicines window now lists the packages of the AIFA transparency
+   list by name, with prices and notes. It publishes a public AIFA list
+   without ranking or suggestion; the tooltip of a listed package
+   points to that window.
 6. Notification: one toast or email per medicine when it enters the
    list (and once more when a future shortage starts), deduplicated
    per AIC and start date.

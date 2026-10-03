@@ -373,8 +373,50 @@ communiquée, et elle peut changer), le motif, si l'AIFA signale des
 médicaments équivalents et la date de la liste. Tu reçois aussi une
 notification par pénurie, par les canaux du médicament.
 
-MedReminder n'indique aucun substitut : demande à ton médecin ou à ton
-pharmacien, et demande l'ordonnance à temps.
+Le message de pénurie n'indique aucun substitut : demande à ton médecin
+ou à ton pharmacien, et demande l'ordonnance à temps. Si le
+conditionnement figure aussi dans la liste de transparence de l'AIFA,
+la cellule renvoie à **Médicaments équivalents (AIFA)** (voir
+ci-dessous).
+
+### Liens d'information et médicaments équivalents (Italie)
+
+Pour un médicament avec un code de conditionnement italien (AIC), la
+ligne **Informations** de la fenêtre du médicament propose jusqu'à
+quatre liens :
+
+- **Notice patient** et **Résumé des caractéristiques du produit** : les
+  documents de l'AIFA, avec l'Italie comme pays de référence, quand le
+  catalogue les contient ;
+- **Page Codifa** : la page publique du conditionnement sur codifa.it
+  (composition, classe, mode de délivrance, prix s'il est connu),
+  ouverte dans le navigateur. Elle fonctionne quel que soit le pays de
+  référence ;
+- **Médicaments équivalents** : affiché quand le conditionnement figure
+  dans la liste de transparence de l'AIFA.
+
+Les deux dernières commandes sont aussi dans le menu contextuel de la
+liste (clic droit sur un médicament) : **Médicaments équivalents
+(AIFA)…** et **Ouvrir la page Codifa**. Elles sont grisées pour un
+médicament sans AIC.
+
+**Médicaments équivalents (AIFA).** Avec l'Italie comme pays de
+référence, MedReminder télécharge la liste de transparence de l'AIFA
+avec le catalogue (liste mensuelle, vérifiée une fois par jour). La
+fenêtre montre le groupe du conditionnement (substance active, unités,
+dosage, voie d'administration), le prix de référence du service de
+santé et chaque conditionnement du groupe, du moins cher au plus cher,
+avec son prix public, la différence payée en plus du prix de référence,
+sa disponibilité, si tu l'as déjà à la maison dans un autre médicament
+du profil, et la note de l'AIFA telle quelle. Une note peut limiter la
+substitution (par exemple « non substituable avec … ») : lis-la. Ton
+médicament est en gras.
+
+Un conditionnement absent de la liste n'est pas « sans équivalent » :
+il peut être sous brevet, en classe C ou simplement non listé. La
+substitution est décidée par ton médecin et ton pharmacien ; la liste
+ne tient pas compte des excipients ni des allergies. Les médicaments de
+classe C n'ont pas de prix public et n'affichent aucun prix.
 
 ---
 

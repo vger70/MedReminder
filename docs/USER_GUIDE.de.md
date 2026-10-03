@@ -372,8 +372,46 @@ gleichwertige Arzneimittel meldet und das Datum der Liste zu lesen. Du
 bekommst außerdem eine Benachrichtigung pro Engpass über die Kanäle des
 Medikaments.
 
-MedReminder nennt keinen Ersatz: frage deinen Arzt oder Apotheker und
-fordere das Rezept rechtzeitig an.
+Die Engpassmeldung nennt keinen Ersatz: frage deinen Arzt oder
+Apotheker und fordere das Rezept rechtzeitig an. Steht die Packung auch
+in der AIFA-Transparenzliste, verweist die Zelle auf **Gleichwertige
+Arzneimittel (AIFA)** (siehe unten).
+
+### Informationslinks und gleichwertige Arzneimittel (Italien)
+
+Für ein Medikament mit italienischem Packungscode (AIC) bietet die
+Zeile **Informationen** im Medikamentenfenster bis zu vier Links:
+
+- **Packungsbeilage** und **Fachinformation**: die Dokumente der AIFA,
+  mit Italien als Referenzland, wenn der Katalog sie enthält;
+- **Codifa-Seite**: die öffentliche Seite der Packung auf codifa.it
+  (Zusammensetzung, Klasse, Abgabeform, Preis falls bekannt), im
+  Browser geöffnet. Sie funktioniert mit jedem Referenzland;
+- **Gleichwertige Arzneimittel**: erscheint, wenn die Packung in der
+  AIFA-Transparenzliste steht.
+
+Die beiden letzten Befehle stehen auch im Kontextmenü der Liste
+(Rechtsklick auf ein Medikament): **Gleichwertige Arzneimittel
+(AIFA)…** und **Codifa-Seite öffnen**. Ohne AIC sind sie ausgegraut.
+
+**Gleichwertige Arzneimittel (AIFA).** Mit Italien als Referenzland lädt
+MedReminder die AIFA-Transparenzliste zusammen mit dem Katalog herunter
+(monatliche Liste, einmal am Tag geprüft). Das Fenster zeigt die Gruppe
+der Packung (Wirkstoff, Einheiten, Stärke, Anwendungsart), den
+Referenzpreis des Gesundheitsdienstes und jede Packung der Gruppe, die
+günstigste zuerst, mit öffentlichem Preis, der Differenz, die du über
+den Referenzpreis hinaus zahlst, der Verfügbarkeit, ob du sie schon in
+einem anderen Medikament des Profils zu Hause hast, und dem
+unveränderten AIFA-Hinweis. Ein Hinweis kann den Austausch einschränken
+(zum Beispiel „nicht austauschbar mit …“): lies ihn. Dein Medikament
+ist fett gedruckt.
+
+Eine Packung, die nicht auf der Liste steht, ist nicht „ohne
+Gleichwertiges“: Sie kann patentgeschützt, in Klasse C oder einfach
+nicht gelistet sein. Über einen Austausch entscheiden dein Arzt und dein
+Apotheker; die Liste berücksichtigt weder Hilfsstoffe noch Allergien.
+Arzneimittel der Klasse C haben keinen öffentlichen Preis und zeigen
+keinen Preis.
 
 ---
 

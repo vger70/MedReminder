@@ -30,6 +30,13 @@ public static class ItalianPharmacode
         return aic[8] - '0' == ComputeCheckDigit(aic[..8]);
     }
 
+    // The trimmed code when it is a valid AIC, else null. The one rule
+    // every AIC-only feature uses (Codifa link, equivalents, menus), so
+    // they never disagree on which medicines qualify. A national-code
+    // field can also hold an EMA, Spanish or French code: those are null.
+    public static string? NormalizeAic(string? code)
+        => code?.Trim() is { } trimmed && IsValidAic(trimmed) ? trimmed : null;
+
     // Decodes the 6-character Code 32 form into the 9-digit AIC.
     // Returns null when a character is outside the alphabet, the value
     // exceeds 9 digits, or the check digit does not match.

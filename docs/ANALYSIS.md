@@ -456,6 +456,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   logs\medreminder-<date>.log    Serilog, daily files
   catalogue\staging\             remote catalogue archive while it is downloaded and imported; emptied every run
   catalogue\shortages\shortages-it.json   AIFA shortage list, shared by every profile (EVOLUTION-PROPOSALS-2 §3.3)
+  catalogue\equivalents\equivalents-it.json   AIFA transparency list (equivalent medicines), shared by every profile
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
   household\
     household.db                 household operation log and registers (household feature, step H2)

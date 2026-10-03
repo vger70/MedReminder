@@ -9,6 +9,9 @@ public sealed class MedicineListItem
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    // Package code (AIC for Italy), when linked: drives the Codifa link
+    // and the equivalents of the grid's context menu.
+    public string? NationalCode { get; set; }
     public string Unit { get; set; } = string.Empty;
     // Estimated stock now: the start-of-day ledger stock minus today's
     // doses already due (ANALYSIS-INTRADAY-CONSUMPTION.md §4). Equal to

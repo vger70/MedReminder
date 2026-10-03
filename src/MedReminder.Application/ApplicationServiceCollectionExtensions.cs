@@ -153,6 +153,9 @@ public static class ApplicationServiceCollectionExtensions
         // Shortage list (EVOLUTION-PROPOSALS-2 §3.3).
         services.AddScoped<ShortageRefresher>();
         services.AddScoped<ShortageNotices>();
+        // Equivalent medicines (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2).
+        services.AddScoped<EquivalenceRefresher>();
+        services.AddScoped<EquivalentsQuery>();
 
         // Reference catalogue (M1). The country-profile provider owns
         // the "national ∪ EU" rule; use cases are cheap façades over

@@ -19,9 +19,7 @@ Usage: python scripts/feeds/aifa_shortages.py [--input FILE]
 
 import argparse
 import csv
-import hashlib
 import io
-import json
 import re
 import sys
 import tempfile
@@ -66,11 +64,7 @@ REASONS = [
 
 
 def decode(raw):
-    """UTF-8 when the bytes are valid UTF-8, else Windows-1252."""
-    try:
-        return raw.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        return raw.decode("cp1252")
+    return common.decode_text(raw)
 
 
 def reason_category(text):
@@ -153,31 +147,8 @@ def build_document(list_date, entries, generated):
 
 def publish(data_dir, list_date, document, generated):
     """Write shortages-<yyyymmdd>.json, then latest.json; keep the newest files."""
-    data_dir = Path(data_dir)
-    data_dir.mkdir(parents=True, exist_ok=True)
-    version = f"{list_date:%Y%m%d}"
-    name = f"{PREFIX}-{version}.json"
-    payload = (json.dumps(document, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
-    (data_dir / name).write_bytes(payload)
-
-    manifest = {
-        "country": COUNTRY,
-        "version": version,
-        "file": name,
-        "generated": generated.isoformat(),
-        "sha256": hashlib.sha256(payload).hexdigest(),
-        "size": len(payload),
-        "rows": {"entries": len(document["entries"])},
-    }
-    with open(data_dir / "latest.json", "w", encoding="utf-8", newline="\n") as fh:
-        json.dump(manifest, fh, indent=2)
-        fh.write("\n")
-
-    files = sorted(data_dir.glob(f"{PREFIX}-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].json"))
-    for old in files[:-RETAINED_FILES]:
-        old.unlink()
-    print(f"Published {data_dir / name} ({len(payload):,} bytes)")
-    return manifest
+    return common.publish_dated_list(data_dir, PREFIX, COUNTRY, list_date, document, generated,
+                                     {"entries": len(document["entries"])}, RETAINED_FILES)
 
 
 def download(session):

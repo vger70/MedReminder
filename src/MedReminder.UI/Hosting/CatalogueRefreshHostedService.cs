@@ -177,6 +177,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         var skipLevel = atStartup ? LogLevel.Information : LogLevel.Debug;
         IReadOnlyList<CatalogueFeedDescriptor> feeds;
         bool shortages;
+        bool equivalents;
         try
         {
             // Gates first, so a disabled step neither waits for the
@@ -197,6 +198,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
 
             feeds = CatalogueFeedSelection.Select(userSettings.ReferenceCountry, feedOptions);
             shortages = CatalogueFeedSelection.IncludesShortages(userSettings.ReferenceCountry, feedOptions);
+            equivalents = CatalogueFeedSelection.IncludesEquivalents(userSettings.ReferenceCountry, feedOptions);
             if (feeds.Count == 0)
             {
                 _log.Log(skipLevel, "No remote catalogue feed enabled for the reference country; skipping.");
@@ -225,6 +227,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
 
         await RefreshFeedsAsync(feeds, RefreshFeedAsync, _log, cancellationToken);
         if (shortages) await RefreshShortagesAsync(cancellationToken);
+        if (equivalents) await RefreshEquivalentsAsync(cancellationToken);
         return true;
     }
 
@@ -245,6 +248,25 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         catch (Exception ex)
         {
             _log.LogWarning(ex, "Shortage list refresh failed; list unchanged.");
+        }
+    }
+
+    // The equivalents list (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.4)
+    // after the shortage list, under the same rules.
+    private async Task RefreshEquivalentsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = _services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<EquivalenceRefresher>().RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Equivalents list refresh failed; list unchanged.");
         }
     }
 

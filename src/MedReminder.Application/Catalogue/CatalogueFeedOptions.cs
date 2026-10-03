@@ -47,19 +47,23 @@ public sealed class CatalogueFeedOptions
 
     public long ShortagesMaxDownloadBytes { get; set; } = 4 * MiB;
 
-    public string ShortageManifestUrl() => ShortageFolder() + "latest.json";
+    // Equivalent medicines list (AIFA "Lista di trasparenza";
+    // docs/analysis/ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md §2.4), under
+    // `{BaseUrl}it/equivalents/`. Same conditions as the shortage list.
+    public bool EquivalentsEnabled { get; set; } = true;
 
-    // `file` must already be validated by ShortageFeedParser.
-    public string ShortageFileUrl(string file) => ShortageFolder() + file;
+    public long EquivalentsMaxDownloadBytes { get; set; } = 4 * MiB;
 
-    private string ShortageFolder()
+    // Folder of an Italian dated list (shortages, equivalents), ending
+    // with '/'. `feed` comes from a DatedListFeedDefinition, not from data.
+    public string ItalianFeedFolder(string feed)
     {
         var baseUrl = BaseUrl ?? string.Empty;
         if (!baseUrl.EndsWith('/'))
         {
             baseUrl += "/";
         }
-        return baseUrl + "it/shortages/";
+        return baseUrl + "it/" + feed + "/";
     }
 
     public int DownloadTimeoutSeconds { get; set; } = 120;
