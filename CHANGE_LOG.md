@@ -30,6 +30,31 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #190 — Add the AIFA equivalent medicines list and a Codifa info link
+
+Link: [vger70/MedReminder#190](https://github.com/vger70/MedReminder/pull/190)
+
+Branch: `claude/inspiring-bardeen-d79c0q` → `main`
+
+### Added
+
+- AIFA transparency list feed (`scripts/feeds/aifa_equivalents.py`, `download_aifa_equivalents.yaml`), published on the `feeds` branch under `data/it/equivalents/`, downloaded with Italy as reference country (`EquivalenceRefresher`) and stored once for every profile (`catalogue\equivalents\equivalents-it.json`).
+- Equivalent medicines window (`EquivalentsDialog`, `EquivalentsQuery`): the group of the package, its members cheapest first with public price, difference over the reference price, AIFA note verbatim, shortage state, and the packages already in stock in the profile. Join through a valid AIC only.
+- Codifa page link (`MedicineInfoLink`) built from a check-digit-validated AIC, in the edit dialog and the grid context menu, with "Equivalent medicines (AIFA)".
+- The shortage tooltip points to the equivalents window when the package is listed.
+- New UI strings in all five dictionaries.
+
+### Changed
+
+- The information row of the medicine edit dialog ("Information", formerly "AIFA documents") exists for every medicine; leaflet and SPC keep their Italian-catalogue condition.
+- Product names are now shown, in the equivalents window only: a decision recorded in `docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3. The shortage message still names no product.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §9, `docs/ANALYSIS.md`, `CLAUDE.md` §5, the analysis status, user guides in the five languages.
+
+---
+
 ## PR #189 — Analyse AIFA equivalent-medicine lists and a Codifa info link
 
 Link: [vger70/MedReminder#189](https://github.com/vger70/MedReminder/pull/189)
