@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #177 — Add analysis for intraday stock that follows dose times
+
+Link: [vger70/MedReminder#177](https://github.com/vger70/MedReminder/pull/177)
+Branch: `feature/intraday-consumption` → `main`
+
+### Docs
+
+- New `docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`: the stock shown
+  in the main window is the start-of-day value, so a dose already taken
+  still appears in it. The analysis recommends a read-side projection
+  that subtracts the doses already due today, resolved from slot times
+  or user-editable time-of-day presets, and leaves the ledger, sync,
+  counts and forecasts unchanged.
+
+---
+
 ## PR #176 — Show all About data sources, stop text box border flicker, remember the main window placement
 
 Link: [vger70/MedReminder#176](https://github.com/vger70/MedReminder/pull/176)
