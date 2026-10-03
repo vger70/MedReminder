@@ -122,8 +122,51 @@ public class PackageExpiryNoticeTests
 
         var email = _scope.Email.Sent.Should().ContainSingle().Subject;
         email.Kind.Should().Be(EmailKind.PackageExpiry);
-        email.Body.Should().Contain("First").And.Contain("Third");
-        email.Body.Should().NotContain("Second", "Second was notified by its toast already");
+        email.Body.Should().Contain("First").And.Contain("Second").And.Contain("Third");
+        _scope.Windows.Sent.Should().ContainSingle("the toast of Second is not shown again");
+    }
+
+    [Fact]
+    public async Task A_package_expiring_soon_is_notified_after_the_expired_one_of_the_same_medicine()
+    {
+        var medicine = await AddMedicineAsync();
+        await PackageAsync(medicine, new DateOnly(2026, 9, 1));
+        await PackageAsync(medicine, new DateOnly(2026, 9, 30));
+
+        await RunAsync();
+        await RunAsync();
+        await RunAsync();
+
+        _scope.Windows.Sent.Select(s => s.Title).Should().HaveCount(2)
+            .And.Satisfy(t => t.Contains("has expired"), t => t.Contains("expires soon"));
+    }
+
+    [Fact]
+    public async Task A_failed_email_is_tried_again_without_showing_the_toast_again()
+    {
+        var medicine = await AddMedicineAsync(channels: NotificationChannels.Both);
+        await PackageAsync(medicine, new DateOnly(2026, 9, 1));
+        _scope.Email.ShouldFail = true;
+
+        (await RunAsync()).Should().Be(1, "the toast was shown");
+
+        _scope.Email.ShouldFail = false;
+        (await RunAsync()).Should().Be(1, "the email was sent");
+
+        _scope.Windows.Sent.Should().ContainSingle();
+        _scope.Email.Sent.Should().ContainSingle();
+        (await RunAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task A_small_load_split_in_packages_is_not_rounded_to_zero()
+    {
+        var medicine = await AddMedicineAsync();
+
+        await _scope.AddStock.ExecuteAsync(new AddStockCommand(medicine, 0.01m, StockMovementKind.NewPackage,
+            Packages: new NewPackagesInput(2, new DateOnly(2027, 3, 31), null, false, null)), default);
+
+        _scope.Packages.All.Should().HaveCount(2).And.OnlyContain(p => p.Quantity == 0.005m);
     }
 
     [Fact]
@@ -188,6 +231,48 @@ public class PackageExpiryNoticeTests
         (await _scope.SyncOperations.ListAllAsync(default))
             .Count(o => o.Type == "ProfileSettingChanged" && o.Payload.Contains("PackageExpiryLeadDays"))
             .Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("181", "3")]
+    [InlineData("30", "31")]
+    [InlineData("-1", "3")]
+    [InlineData("ten", "3")]
+    public async Task Lead_days_out_of_range_are_refused(string printed, string inUse)
+    {
+        var update = new UpdateNotificationSettings(_scope.ProfileSettings, _scope.Registers, _scope.Operations, _scope.Uow);
+
+        var act = () => update.ExecuteAsync("", "", "", default, packageExpiryLeadDays: printed,
+            packageInUseLeadDays: inUse);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+        _scope.ProfileSettings.Read()[ProfileSetting.PackageExpiryLeadDays].Should().BeEmpty();
+    }
+
+    [Fact]
+    public void A_default_lead_is_stored_as_empty_so_a_later_default_applies()
+    {
+        PackageSettings.FormatPrinted(PackageLeadDays.DefaultPrinted).Should().BeEmpty();
+        PackageSettings.FormatInUse(PackageLeadDays.DefaultInUse).Should().BeEmpty();
+        PackageSettings.FormatPrinted(45).Should().Be("45");
+        PackageSettings.FormatInUse(0).Should().Be("0");
+    }
+
+    [Fact]
+    public void The_caregiver_digest_tells_the_expired_package_of_an_inactive_medicine()
+    {
+        var loc = new JsonDictionaryLocalizationService("en");
+        var item = new MedicineListItem
+        {
+            Name = "Old cream", Unit = "g", IsActive = false, StatusDisplay = "Inactive",
+            NextExpiry = new DateOnly(2026, 9, 1), NextExpiryStatus = PackageExpiryStatus.Expired,
+            ExpiryDisplay = "9/1/2026 (expired)",
+        };
+
+        var message = CaregiverDigest.Build("Mario", Today, [item], loc);
+
+        message.Body.Should().Contain(loc.Get("Notifications.Digest.InactiveExpiry", "Old cream", "9/1/2026 (expired)"));
+        message.Body.Should().Contain(loc.Get("Notifications.Digest.Empty"), "no active medicine is listed");
     }
 
     [Fact]

@@ -272,9 +272,13 @@ Device-local, not replicated, like `DeadlineReminderEvent`:
 | `PackageId`, `MedicineId` | `MedicineId` lets medicine deletion clean up |
 | `EffectiveExpiry` | a changed date (box opened, date corrected) gets new notices |
 | `Stage` | `1 = ExpiringSoon`, `2 = Expired` |
+| `Channel` | `Windows` or `Email`: each channel records its own notice, so a failed email is retried without showing the toast again |
 | `FiredAt` | |
 
-Unique on (`PackageId`, `EffectiveExpiry`, `Stage`).
+Unique on (`PackageId`, `EffectiveExpiry`, `Stage`, `Channel`). A
+notice names the expired packages of a medicine when it has any,
+otherwise those expiring soon; only the packages it names are recorded,
+so the others get their own notice on a later pass.
 
 ---
 

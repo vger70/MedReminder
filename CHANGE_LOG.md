@@ -40,7 +40,11 @@ Branch: `feature/package-expiry-notices` → `main` (on top of #184 and #185)
 
 - "Expires soon" and "expired" notices per package, once per stage on each device, on the medicine's channels: one toast per medicine (opens its packages), one email per pass for all medicines from the device that sends email; inactive medicines included, used-up and closed packages left out, failed attempts retried (`PackageExpiryNotices`, `PackageExpiryNoticeEvents`).
 - Email kind `PackageExpiry` for the caregiver copy; weekly digest line for a medicine with a package expiring or expired.
-- Configurable lead days in Settings → Notifications: before the printed expiry (default 30) and before the end of the in-use period (default 3); replicated and exported; also used by the package list and the main list.
+- Configurable lead days in Settings → Notifications: before the printed expiry (default 30) and before the end of the in-use period (default 3); stored empty at the default, validated, replicated and exported; also used by the package list and the main list, which now allocates packages on the same ledger stock as the notices.
+
+### Fixed
+
+- A small new-package load split in several packages is no longer rounded to zero and refused.
 - New UI and notification strings in all five dictionaries.
 
 ### Docs

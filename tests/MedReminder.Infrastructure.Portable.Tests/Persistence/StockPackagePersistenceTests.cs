@@ -131,18 +131,23 @@ public class StockPackagePersistenceTests
             await new PackageExpiryNoticeEventRepository(ctx).AddAsync(new PackageExpiryNoticeEvent
             {
                 PackageId = package, MedicineId = Guid.NewGuid(), EffectiveExpiry = Today,
-                Stage = PackageExpiryNoticeEvent.SoonStage, FiredAt = Clock.GetUtcNow(),
+                Stage = PackageExpiryNoticeEvent.SoonStage, Channel = NotificationChannels.Windows,
+                FiredAt = Clock.GetUtcNow(),
             }, CancellationToken.None);
             await ctx.SaveChangesAsync();
         }
         await using (var ctx = fixture.CreateContext())
         {
             var repo = new PackageExpiryNoticeEventRepository(ctx);
-            (await repo.ExistsAsync(package, Today, PackageExpiryNoticeEvent.SoonStage, CancellationToken.None))
+            var soon = PackageExpiryNoticeEvent.SoonStage;
+            (await repo.ExistsAsync(package, Today, soon, NotificationChannels.Windows, CancellationToken.None))
                 .Should().BeTrue();
-            (await repo.ExistsAsync(package, Today, PackageExpiryNoticeEvent.ExpiredStage, CancellationToken.None))
+            (await repo.ExistsAsync(package, Today, soon, NotificationChannels.Email, CancellationToken.None))
                 .Should().BeFalse();
-            (await repo.ExistsAsync(package, Today.AddDays(1), PackageExpiryNoticeEvent.SoonStage, CancellationToken.None))
+            (await repo.ExistsAsync(package, Today, PackageExpiryNoticeEvent.ExpiredStage, NotificationChannels.Windows,
+                    CancellationToken.None))
+                .Should().BeFalse();
+            (await repo.ExistsAsync(package, Today.AddDays(1), soon, NotificationChannels.Windows, CancellationToken.None))
                 .Should().BeFalse();
         }
     }

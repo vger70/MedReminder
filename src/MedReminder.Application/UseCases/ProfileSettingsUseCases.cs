@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Household;
+using MedReminder.Application.Packages;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Household;
 using MedReminder.Domain.Sync;
@@ -37,6 +38,20 @@ public sealed class UpdateNotificationSettings
     public Task ExecuteAsync(string toAddress, string caregiverAddress, string doctorAddress,
         CancellationToken cancellationToken, string? caregiverEmails = null, string? caregiverDigest = null,
         string? packageExpiryLeadDays = null, string? packageInUseLeadDays = null)
+    {
+        // A replicated value every device reads alike: refused here rather
+        // than clamped differently later.
+        if (packageExpiryLeadDays is not null && !PackageSettings.IsValidPrinted(packageExpiryLeadDays))
+            throw new ArgumentException("The printed-expiry lead days are out of range.", nameof(packageExpiryLeadDays));
+        if (packageInUseLeadDays is not null && !PackageSettings.IsValidInUse(packageInUseLeadDays))
+            throw new ArgumentException("The in-use lead days are out of range.", nameof(packageInUseLeadDays));
+        return ExecuteCoreAsync(toAddress, caregiverAddress, doctorAddress, cancellationToken, caregiverEmails,
+            caregiverDigest, packageExpiryLeadDays, packageInUseLeadDays);
+    }
+
+    private Task ExecuteCoreAsync(string toAddress, string caregiverAddress, string doctorAddress,
+        CancellationToken cancellationToken, string? caregiverEmails, string? caregiverDigest,
+        string? packageExpiryLeadDays, string? packageInUseLeadDays)
         => WriteGate.RunExclusiveAsync(async ct =>
         {
             var current = _store.Read();

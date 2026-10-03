@@ -360,8 +360,8 @@ internal sealed partial class SettingsDialog
                     .ExecuteAsync(toAddress, caregiverAddress, doctorAddress, CancellationToken.None,
                         caregiverEmails: CaregiverEmails.Format(_caregiverKinds.Where(k => k.Value.Checked).Select(k => k.Key)),
                         caregiverDigest: _caregiverDigest.Checked ? CaregiverDigestFrequency.Weekly : CaregiverDigestFrequency.Off,
-                        packageExpiryLeadDays: PackageSettings.Format((int)_expiryLeadDays.Value),
-                        packageInUseLeadDays: PackageSettings.Format((int)_inUseLeadDays.Value));
+                        packageExpiryLeadDays: PackageSettings.FormatPrinted((int)_expiryLeadDays.Value),
+                        packageInUseLeadDays: PackageSettings.FormatInUse((int)_inUseLeadDays.Value));
             }
             if (IsDisposed) return;
             UiMessageBox.Show(this,

@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,9 +49,11 @@ internal sealed class PackageExpiryNoticeEventRepository : IPackageExpiryNoticeE
         _db = db;
     }
 
-    public Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, CancellationToken cancellationToken)
+    public Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, NotificationChannels channel,
+        CancellationToken cancellationToken)
         => _db.PackageExpiryNoticeEvents.AnyAsync(
-            e => e.PackageId == packageId && e.EffectiveExpiry == effectiveExpiry && e.Stage == stage, cancellationToken);
+            e => e.PackageId == packageId && e.EffectiveExpiry == effectiveExpiry && e.Stage == stage
+                && e.Channel == channel, cancellationToken);
 
     public async Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken cancellationToken)
         => await _db.PackageExpiryNoticeEvents.AddAsync(notice, cancellationToken);

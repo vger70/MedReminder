@@ -405,11 +405,13 @@ public sealed class DatabaseInitializer
                 ""MedicineId"" TEXT NOT NULL,
                 ""EffectiveExpiry"" TEXT NOT NULL,
                 ""Stage"" INTEGER NOT NULL,
+                ""Channel"" INTEGER NOT NULL,
                 ""FiredAt"" INTEGER NOT NULL
             );", cancellationToken);
         await ExecuteRawSqlAsync(@"
-            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PackageExpiryNoticeEvents_PackageId_EffectiveExpiry_Stage""
-                ON ""PackageExpiryNoticeEvents"" (""PackageId"", ""EffectiveExpiry"", ""Stage"");", cancellationToken);
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PackageExpiryNoticeEvents_PackageId_EffectiveExpiry_Stage_Channel""
+                ON ""PackageExpiryNoticeEvents"" (""PackageId"", ""EffectiveExpiry"", ""Stage"", ""Channel"");",
+            cancellationToken);
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the

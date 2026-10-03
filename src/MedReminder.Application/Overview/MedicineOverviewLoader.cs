@@ -60,7 +60,8 @@ public sealed class MedicineOverviewLoader
         var items = new List<MedicineListItem>(medicines.Count);
         var shortages = _shortages?.Load();
         var doseTimes = _dueToday is null ? null : await _dueToday.LoadSettingsAsync(cancellationToken);
-        var leadDays = _packages is null ? PackageLeadDays.Default : PackageSettings.LeadDays(_settings);
+        // Read once, and only when some medicine has packages.
+        PackageLeadDays? leadDays = null;
 
         foreach (var m in medicines)
         {
@@ -120,10 +121,13 @@ public sealed class MedicineOverviewLoader
                 items[^1].SupplyDisplay = ShortageTexts.Display(notice, _loc);
                 items[^1].SupplyDetail = ShortageTexts.Detail(notice, shortages.ListDate, _loc);
             }
-            if (_packages is not null)
+            if (_packages is not null
+                && await _packages.ListForMedicineAsync(m.Id, cancellationToken) is { Count: > 0 } stored)
             {
-                var packages = PackageListQuery.Build(
-                    await _packages.ListForMedicineAsync(m.Id, cancellationToken), currentStock, today, leadDays);
+                // The ledger stock, as the package list and the expiry
+                // notices use, so the three agree on the used-up packages.
+                leadDays ??= PackageSettings.LeadDays(_settings);
+                var packages = PackageListQuery.Build(stored, ledgerStock, today, leadDays);
                 if (PackageListQuery.NextExpiring(packages) is { EffectiveExpiry: { } expiry } next)
                 {
                     items[^1].NextExpiry = expiry;

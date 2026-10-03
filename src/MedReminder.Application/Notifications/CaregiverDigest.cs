@@ -63,7 +63,7 @@ public sealed class CaregiverDigest
         if (!IsDue(settings, today)) return false;
 
         var profileName = settings.GetValueOrDefault(ProfileSetting.DisplayName) ?? string.Empty;
-        var medicines = (await _overview.LoadAsync(cancellationToken)).Where(m => m.IsActive).ToList();
+        var medicines = await _overview.LoadAsync(cancellationToken);
         var message = Build(profileName, today, medicines, _localization);
         try
         {
@@ -86,6 +86,8 @@ public sealed class CaregiverDigest
         return true;
     }
 
+    // Every active medicine of the list; an inactive one only for a package
+    // expiring or expired, since its packages stay in the cabinet.
     public static EmailMessage Build(string profileName, DateOnly today, IReadOnlyList<MedicineListItem> medicines,
         ILocalizationService loc)
     {
@@ -94,8 +96,9 @@ public sealed class CaregiverDigest
         var c = loc.CurrentCulture;
         var body = new StringBuilder();
         body.Append(loc.Get("Notifications.Digest.Intro", profileName, today.ToString("d", c))).Append("\n\n");
-        if (medicines.Count == 0) body.Append(loc.Get("Notifications.Digest.Empty")).Append('\n');
-        foreach (var m in medicines.OrderBy(m => m.DaysRemaining ?? int.MaxValue)
+        var active = medicines.Where(m => m.IsActive).ToList();
+        if (active.Count == 0) body.Append(loc.Get("Notifications.Digest.Empty")).Append('\n');
+        foreach (var m in active.OrderBy(m => m.DaysRemaining ?? int.MaxValue)
                      .ThenBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase))
         {
             var stock = string.Format(c, "{0:0.##} {1}", m.CurrentStock, m.Unit).TrimEnd();
@@ -108,6 +111,13 @@ public sealed class CaregiverDigest
             {
                 body.Append(loc.Get("Notifications.Digest.Expiry", m.ExpiryDisplay)).Append('\n');
             }
+        }
+        foreach (var m in medicines
+                     .Where(m => !m.IsActive
+                         && m.NextExpiryStatus is PackageExpiryStatus.Expired or PackageExpiryStatus.ExpiringSoon)
+                     .OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            body.Append(loc.Get("Notifications.Digest.InactiveExpiry", m.Name, m.ExpiryDisplay)).Append('\n');
         }
         body.Append('\n').Append(loc.Get("Notifications.Digest.Why", profileName));
         body.Append("\n\n").Append(loc.Get("Notifications.Email.Footer"));

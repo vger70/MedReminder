@@ -1421,5 +1421,6 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry": "Scadenza delle confezioni",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Printed": "giorni prima della scadenza stampata",
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "giorni prima della fine del periodo dopo l'apertura",
-  "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Quando arriva l'avviso \"in scadenza\". Con 0 resta solo l'avviso di confezione scaduta."
+  "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Quando arriva l'avviso \"in scadenza\". Con 0 resta solo l'avviso di confezione scaduta.",
+  "Notifications.Digest.InactiveExpiry": "- {0} (non in uso): scadenza confezione {1}"
 }

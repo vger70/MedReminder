@@ -38,6 +38,7 @@ internal sealed class PackageExpiryNoticeEventConfiguration : IEntityTypeConfigu
     {
         builder.ToTable("PackageExpiryNoticeEvents");
         builder.HasKey(e => e.Id);
-        builder.HasIndex(e => new { e.PackageId, e.EffectiveExpiry, e.Stage }).IsUnique();
+        builder.Property(e => e.Channel).HasConversion<int>();
+        builder.HasIndex(e => new { e.PackageId, e.EffectiveExpiry, e.Stage, e.Channel }).IsUnique();
     }
 }
