@@ -1,11 +1,11 @@
 {
   "country": "IT",
-  "version": "20260929",
-  "file": "shortages-20260929.json",
-  "generated": "2026-10-01T20:48:50.595884+00:00",
-  "sha256": "5d5e94ceadacf716fd14fca40977382728a47777c6d29825f1657e30c0f6b5c3",
-  "size": 253377,
+  "version": "20261002",
+  "file": "shortages-20261002.json",
+  "generated": "2026-10-03T09:58:17.995450+00:00",
+  "sha256": "cf2d1688d95bce3513f3b72dc9c498a3055cfdace3c43fc463e3e018fc6c3073",
+  "size": 250469,
   "rows": {
-    "entries": 2512
+    "entries": 2484
   }
 }
