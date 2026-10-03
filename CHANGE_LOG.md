@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #177 — Stop consuming as-needed doses automatically; time-of-day presets
+## PR #177 — Stock that follows the dose times; as-needed doses never consumed automatically
 
 Link: [vger70/MedReminder#177](https://github.com/vger70/MedReminder/pull/177)
 Branch: `feature/intraday-consumption` → `main`
@@ -85,6 +85,15 @@ Branch: `feature/intraday-consumption` → `main`
   their description in any UI language (`SlotPresetBackfill`). Display
   only and device-local: the times never change stored stock and are
   not synchronized; the archive carries them as additive fields.
+- The stock column of the main list is an estimate during the day: the
+  start-of-day stock minus today's doses whose time has passed (slot
+  time, else its preset time, else the default times of medicines
+  without slots). It used to show one dose more than the box held
+  until midnight. The run-out forecast, the coverage plan and the
+  recorded stock keep the start-of-day value, so nothing is counted
+  twice; a tooltip shows both values. The list refreshes the estimates
+  every minute in place, and the count dialog suggests the same
+  quantity as taken (`IntradayConsumption`, `DueToday`).
 
 ---
 

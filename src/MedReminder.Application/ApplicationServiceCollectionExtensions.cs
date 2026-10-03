@@ -115,6 +115,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<SlotPresetBackfill>();
         services.AddScoped<DoseTimeSettingsQuery>();
         services.AddScoped<SaveDoseTimeSettings>();
+        services.AddScoped<DueToday>();
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();
         services.AddScoped<DoseReminderService>();

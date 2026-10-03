@@ -42,6 +42,7 @@
   "Ui.MainForm.Column.Stock": "Stock",
   "Ui.MainForm.Column.DailyRate": "Cons./jour",
   "Ui.MainForm.Column.DailyRate.Unit": "jour",
+  "Ui.MainForm.Stock.EstimateTooltip": "Estimation : {0} {2} en début de journée moins {1} {2} des doses du jour dont l'heure est passée. Le stock enregistré est mis à jour après minuit.",
   "Ui.MainForm.Column.DaysRemaining": "Jours restants",
   "Ui.MainForm.Column.RunOut": "Épuisement",
   "Ui.MainForm.Column.Status": "État",

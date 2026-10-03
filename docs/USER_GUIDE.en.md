@@ -340,6 +340,15 @@ request the prescription in good time.
 MedReminder lowers the stock by itself every day according to the
 schedule. You only record what changes the stock in another way.
 
+During the day the stock column shows an estimate: the stock at the
+start of the day minus today's doses whose time has passed. Slots
+without a time use the time of their moment (**Therapy → Dose
+times…**); a slot with a typed description and no time is counted at
+the end of the day. Hovering over the stock shows the start-of-day
+value. The recorded stock, the history and the run-out date are
+updated after midnight; when you register an intake, that day counts
+the quantity you registered.
+
 <a id="add-package"></a>
 ### Add a package
 

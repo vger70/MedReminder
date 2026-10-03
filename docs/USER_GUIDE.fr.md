@@ -370,6 +370,15 @@ pharmacien, et demande l'ordonnance à temps.
 MedReminder diminue le stock tout seul chaque jour selon le schéma. Tu
 n'enregistres que ce qui modifie le stock autrement.
 
+Pendant la journée, la colonne du stock affiche une estimation : le
+stock en début de journée moins les doses du jour dont l'heure est
+passée. Les horaires sans heure prennent l'heure de leur moment
+(**Traitement → Heures des prises…**) ; un horaire décrit librement,
+sans heure, est compté en fin de journée. En survolant le stock, tu
+vois la valeur du début de journée. Le stock enregistré, l'historique
+et la date d'épuisement sont mis à jour après minuit ; si tu
+enregistres une prise, ce jour compte la quantité enregistrée.
+
 <a id="add-package"></a>
 ### Ajouter une boîte
 

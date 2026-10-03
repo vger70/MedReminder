@@ -133,6 +133,7 @@ internal sealed class MainForm : MedReminderFormBase
             // After the first load, so an action can select its medicine.
             WireToastActions();
         };
+        Load += (_, _) => WireEstimateRefresh();
         Load += (_, _) => WireSyncRefresh();
         Load += (_, _) => WireHandoverPrompt();
         Load += (_, _) => TryStartPassiveUpdateCheck();
@@ -1460,6 +1461,17 @@ internal sealed class MainForm : MedReminderFormBase
                 e.Value ??= "—";
                 e.FormattingApplied = true;
             }
+            else if (property == nameof(MedicineListItem.StockDisplay)
+                && e.RowIndex >= 0
+                && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem stockItem)
+            {
+                // The estimate is explained where it is shown
+                // (ANALYSIS-INTRADAY-CONSUMPTION.md §7).
+                grid.Rows[e.RowIndex].Cells[e.ColumnIndex].ToolTipText = stockItem.DueTodaySoFar > 0m
+                    ? _loc.Get("Ui.MainForm.Stock.EstimateTooltip",
+                        stockItem.LedgerStock.ToString("0.##"), stockItem.DueTodaySoFar.ToString("0.##"), stockItem.Unit)
+                    : string.Empty;
+            }
             else if (property == nameof(MedicineListItem.SupplyDisplay)
                 && e.RowIndex >= 0
                 && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem { HasShortage: true } item)
@@ -1842,6 +1854,7 @@ internal sealed class MainForm : MedReminderFormBase
             var loader = scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>();
             var items = await loader.LoadAsync(CancellationToken.None);
 
+            _loadedDay = DateOnly.FromDateTime(DateTime.Today);
             _allRows = items.ToList();
             ApplyFilters();
             HideErrorBanner();
@@ -1854,14 +1867,86 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    // Rebuilds the shown rows from the last load, in load order: the
-    // inactive toggle, then the summary card and the search text
-    // (MedicineListFilter). The cards count the rows before the card and
-    // search filters, so each card shows what a click on it would list.
-    private void ApplyFilters()
+    // The stock column subtracts today's doses as their time passes
+    // (ANALYSIS-INTRADAY-CONSUMPTION.md §4): every minute while the window
+    // is shown, and when it is activated, the estimates are recomputed.
+    // Rows are updated in place, so the selection, the sort and the
+    // scroll position stay; a list whose medicines changed is reloaded.
+    // After midnight the catch-up books yesterday first, so the estimate
+    // never starts from the day before yesterday.
+    private System.Windows.Forms.Timer? _estimateTimer;
+    private DateOnly _loadedDay;
+    private bool _refreshingEstimates;
+
+    private void WireEstimateRefresh()
     {
-        var visible = MedicineListFilter.Visible(_allRows, _showInactive);
-        var summary = MedicineListFilter.Summarize(visible);
+        _estimateTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
+        _estimateTimer.Tick += async (_, _) => await RefreshEstimatesAsync();
+        _estimateTimer.Start();
+        Activated += async (_, _) => await RefreshEstimatesAsync();
+        FormClosed += (_, _) => _estimateTimer.Dispose();
+    }
+
+    private async Task RefreshEstimatesAsync()
+    {
+        if (_refreshingEstimates || !Visible || WindowState == FormWindowState.Minimized) return;
+        // A dialog of this window may hold a row: refresh once it closes.
+        if (OwnedForms.Any(f => f.Visible && f.Modal)) return;
+        _refreshingEstimates = true;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            if (DateOnly.FromDateTime(DateTime.Today) != _loadedDay)
+            {
+                await scope.ServiceProvider.GetRequiredService<ConsumptionCatchUp>().RunAsync(CancellationToken.None);
+            }
+            var items = await scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>()
+                .LoadAsync(CancellationToken.None);
+            _loadedDay = DateOnly.FromDateTime(DateTime.Today);
+
+            var byId = items.ToDictionary(i => i.Id);
+            if (byId.Count != _allRows.Count || _allRows.Any(r => !byId.ContainsKey(r.Id)))
+            {
+                _allRows = items.ToList();
+                ApplyFilters();
+                return;
+            }
+            var changed = false;
+            foreach (var row in _allRows)
+            {
+                var fresh = byId[row.Id];
+                if (row.CurrentStock == fresh.CurrentStock && row.Status == fresh.Status
+                    && row.DaysRemaining == fresh.DaysRemaining && row.EstimatedRunOutDate == fresh.EstimatedRunOutDate)
+                {
+                    continue;
+                }
+                row.CurrentStock = fresh.CurrentStock;
+                row.LedgerStock = fresh.LedgerStock;
+                row.DueTodaySoFar = fresh.DueTodaySoFar;
+                row.DaysRemaining = fresh.DaysRemaining;
+                row.EstimatedRunOutDate = fresh.EstimatedRunOutDate;
+                row.Status = fresh.Status;
+                row.StatusDisplay = fresh.StatusDisplay;
+                changed = true;
+            }
+            if (!changed) return;
+            UpdateCards();
+            _grid.Invalidate();
+        }
+        catch (Exception ex)
+        {
+            // The next tick tries again; the list keeps its last values.
+            _log.LogWarning(ex, "Refreshing the stock estimates failed.");
+        }
+        finally
+        {
+            _refreshingEstimates = false;
+        }
+    }
+
+    private void UpdateCards()
+    {
+        var summary = MedicineListFilter.Summarize(MedicineListFilter.Visible(_allRows, _showInactive));
         foreach (var card in _cards)
         {
             card.Count = card.Bucket switch
@@ -1872,6 +1957,16 @@ internal sealed class MainForm : MedReminderFormBase
                 _ => summary.All,
             };
         }
+    }
+
+    // Rebuilds the shown rows from the last load, in load order: the
+    // inactive toggle, then the summary card and the search text
+    // (MedicineListFilter). The cards count the rows before the card and
+    // search filters, so each card shows what a click on it would list.
+    private void ApplyFilters()
+    {
+        var visible = MedicineListFilter.Visible(_allRows, _showInactive);
+        UpdateCards();
 
         _rows = new BindingList<MedicineListItem>(
             MedicineListFilter.Apply(visible, _bucket, _searchBox.Text));

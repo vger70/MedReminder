@@ -369,6 +369,16 @@ fordere das Rezept rechtzeitig an.
 MedReminder senkt den Bestand jeden Tag selbst nach dem Schema. Du
 erfasst nur, was den Bestand auf andere Weise ändert.
 
+Im Laufe des Tages zeigt die Bestandsspalte eine Schätzung: den Bestand
+zu Tagesbeginn minus die heutigen Dosen, deren Uhrzeit vorbei ist.
+Einnahmezeiten ohne Uhrzeit verwenden die Uhrzeit ihres Zeitpunkts
+(**Therapie → Einnahmezeiten…**); eine frei beschriebene Einnahmezeit
+ohne Uhrzeit wird am Tagesende gezählt. Fährst du mit der Maus über den
+Bestand, siehst du den Wert zu Tagesbeginn. Der erfasste Bestand, der
+Verlauf und das Datum, an dem der Vorrat ausgeht, werden nach
+Mitternacht aktualisiert; erfasst du eine Einnahme, zählt an diesem
+Tag die erfasste Menge.
+
 <a id="add-package"></a>
 ### Packung hinzufügen
 

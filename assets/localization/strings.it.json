@@ -42,6 +42,7 @@
   "Ui.MainForm.Column.Stock": "Scorta",
   "Ui.MainForm.Column.DailyRate": "Consumo/gg",
   "Ui.MainForm.Column.DailyRate.Unit": "gg",
+  "Ui.MainForm.Stock.EstimateTooltip": "Stima: {0} {2} a inizio giornata meno {1} {2} delle dosi di oggi con orario già passato. La scorta registrata si aggiorna dopo mezzanotte.",
   "Ui.MainForm.Column.DaysRemaining": "Giorni residui",
   "Ui.MainForm.Column.RunOut": "Esaurimento",
   "Ui.MainForm.Column.Status": "Stato",

@@ -359,6 +359,15 @@ solicita la receta a tiempo.
 MedReminder reduce el stock solo cada día según el esquema. Solo
 registras lo que cambia el stock de otra manera.
 
+Durante el día la columna del stock muestra una estimación: el stock al
+inicio del día menos las dosis de hoy cuya hora ya pasó. Los horarios
+sin hora usan la hora de su momento (**Terapia → Horarios de las
+dosis…**); un horario con descripción libre y sin hora se cuenta al
+final del día. Al pasar el ratón por el stock ves el valor al inicio
+del día. El stock registrado, el historial y la fecha de agotamiento
+se actualizan después de medianoche; si registras una toma, ese día
+cuenta la cantidad registrada.
+
 <a id="add-package"></a>
 ### Añadir una caja
 

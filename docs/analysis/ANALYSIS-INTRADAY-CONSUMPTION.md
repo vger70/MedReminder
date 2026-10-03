@@ -411,7 +411,13 @@ declared intended use]`
 
 ## 12. Implementation phases
 
-Status: phases 1 and 2 implemented. Phase 2 deviates from §9 in one
+Status: phases 1, 2 and 3 implemented. Phase 3 resolves the open
+point of §5 on counts: a count today that does not materialize the day
+leaves the ledger at counted + taken, so the estimate equals the count
+when the user accepts the suggested quantity, which is the same
+`DueSoFar`. After midnight the list runs the catch-up before it
+recomputes, so the estimate never starts from the day before
+yesterday. Phase 2 deviates from §9 in one
 point: the presets have their own window (Therapy → Dose times…)
 instead of a page of the settings dialog. Built-in presets live in code
 and the table stores only the user's changes and additions. The backfill runs from `ConsumptionCatchUp`

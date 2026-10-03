@@ -356,6 +356,15 @@ richiedi la ricetta per tempo.
 MedReminder abbassa da solo le scorte ogni giorno secondo lo schema.
 Registri solo ciò che cambia le scorte in altro modo.
 
+Durante la giornata la colonna della scorta mostra una stima: la scorta
+a inizio giornata meno le dosi di oggi il cui orario è già passato. Per
+gli orari senza ora vale l'orario del loro momento (**Terapia → Orari
+delle dosi…**); un orario descritto liberamente, senza ora, viene
+contato a fine giornata. Passando il mouse sulla scorta vedi il valore
+a inizio giornata. La scorta registrata, lo storico e la data di
+esaurimento si aggiornano dopo mezzanotte; se registri un'assunzione,
+quel giorno conta la quantità registrata.
+
 <a id="add-package"></a>
 ### Aggiungere una confezione
 
