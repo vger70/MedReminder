@@ -145,6 +145,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<SaveStockPackage>();
         services.AddScoped<DiscardStockPackage>();
         services.AddScoped<DeleteStockPackage>();
+        services.AddScoped<PackageListQuery>();
         // Calendar export (EVOLUTION-PROPOSALS-2 §3.7).
         services.AddScoped<CalendarExportQuery>();
         // Shortage list (EVOLUTION-PROPOSALS-2 §3.3).

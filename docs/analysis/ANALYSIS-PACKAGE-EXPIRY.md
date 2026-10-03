@@ -147,12 +147,12 @@ common case for Italian users.
 | `Closure` | `PackageClosure?` | `Finished` or `Discarded`; set together with `ClosedOn` |
 | `RecordedAt`, `UpdatedAt` | `DateTimeOffset` | |
 
-A package with neither `ExpiresOn` nor `UseWithinDays` is still
-recorded when the medicine already has tracked packages: the
-allocation (§3.4) needs every known box to be right. When the user
-leaves the whole expiry section empty and the medicine has no tracked
-package, no row is created: users who never use the feature keep
-today's behaviour `[INFERRED]`.
+A load creates packages only when the user fills something in the
+expiry section (expiry, in-use period, batch or "opened today");
+otherwise it stays a plain stock movement, so users who never use the
+feature keep today's behaviour. Stock left untracked this way is
+consumed after the tracked packages (§3.4), which errs toward warning
+(P2, 2026-10-03).
 
 ### 3.2 Effective expiry — `PackageExpiryRules` (pure)
 
@@ -375,8 +375,11 @@ one only delays future notices.
 
 ### 5.1 Adding a package — `StockAdjustmentDialog`
 
-When the kind is `NewPackage` (and in the initial load of
-`MedicineEditDialog`), an optional **Expiry** group:
+When the kind is `NewPackage`, optional package fields (enabled only
+for that kind, so the dialog keeps its size). The initial load of
+`MedicineEditDialog` has none: packages already in the cabinet are
+entered with **New…** in the package list (§5.3), which records a box
+without a stock movement.
 
 - **Number of packages** (default 1). The quantity stays the total;
   each box gets `total / n`. Creates `n` `StockPackage` rows sharing
@@ -525,7 +528,7 @@ Each phase is one PR to `main`, buildable and shippable on its own.
 | Phase | Content | Effort |
 | --- | --- | --- |
 | P1 | Domain (`StockPackage`, rules, allocation), `StockPackages` table, repository, use cases (save, discard, delete), sync op v11 and image v8, export, deletion; no UI | 4–5 days |
-| P2 | Package list query (allocation, default in-use period), `StockAdjustmentDialog` expiry group with packages linked to their movement, `PackagesDialog`, main-window column, scan pre-fill, localization | 4–5 days |
+| P2 | Package list query (allocation, default in-use period and size from the latest package), `StockAdjustmentDialog` package fields with packages linked to their movement, `PackagesDialog` and `PackageEditDialog`, main-window column, scan pre-fill, localization; lead days at their defaults until P3 | 4–5 days |
 | P3 | `PackageExpiryNoticeEvents` table, `PackageExpiryNotices` in `MedicationMonitor`, toast target, `EmailKind`, caregiver digest line, lead-day settings (profile setting, sync, settings tab) | 3–4 days |
 | P4 | User guides (5 languages), `ANALYSIS.md`, cross-medicine "Expiring packages" view if kept | 1–2 days |
 
