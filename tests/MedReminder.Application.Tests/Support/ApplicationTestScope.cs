@@ -139,8 +139,9 @@ internal sealed class ApplicationTestScope
         DiscardStockPackage = new DiscardStockPackage(Packages, Operations, Uow, AdjustStockDown, Clock);
         DeleteStockPackage = new DeleteStockPackage(Packages, Operations, Uow, Clock);
         PackageList = new PackageListQuery(Packages, Stock, Clock, ProfileSettings);
-        PackageExpiryNotices = new PackageExpiryNotices(Medicines, Packages, Stock, PackageNoticeEvents, Email, Windows,
-            Clock, NullLogger<PackageExpiryNotices>.Instance, settings: ProfileSettings);
+        PackageExpiryNotices = new PackageExpiryNotices(
+            new ExpiringPackagesQuery(Medicines, Packages, Stock, Clock, ProfileSettings), PackageNoticeEvents, Email,
+            Windows, Clock, NullLogger<PackageExpiryNotices>.Instance);
 
         SavePrescription = new SavePrescription(Medicines, Prescriptions, Operations, Uow, Clock);
         CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);

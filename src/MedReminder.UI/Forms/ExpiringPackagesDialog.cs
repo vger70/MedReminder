@@ -14,13 +14,15 @@ internal sealed class ExpiringPackagesDialog : MedReminderFormBase
 {
     private readonly ILocalizationService _loc;
     private readonly Func<Task<IReadOnlyList<ExpiringPackageItem>>> _load;
-    private readonly Func<ExpiringPackageItem, Task> _openPackages;
+    private readonly Func<ExpiringPackageItem, IWin32Window, Task<bool>> _openPackages;
     private readonly Label _hint;
     private readonly ListView _list;
     private readonly Button _openButton;
 
+    // openPackages shows the packages of the medicine over the given
+    // owner and returns whether anything changed.
     public ExpiringPackagesDialog(Func<Task<IReadOnlyList<ExpiringPackageItem>>> load,
-        Func<ExpiringPackageItem, Task> openPackages, ILocalizationService localization)
+        Func<ExpiringPackageItem, IWin32Window, Task<bool>> openPackages, ILocalizationService localization)
     {
         _loc = localization;
         _load = load;
@@ -35,11 +37,10 @@ internal sealed class ExpiringPackagesDialog : MedReminderFormBase
         _hint = new Label
         {
             Dock = DockStyle.Top,
-            AutoSize = false,
-            Height = 48,
             Padding = new Padding(UiTheme.Space.L, UiTheme.Space.S, UiTheme.Space.L, 0),
             Text = _loc.Get("Ui.ExpiringPackagesDialog.Hint"),
         };
+        DialogLayout.GrowWithText(_hint);
 
         _openButton = DialogLayout.Button(_loc.Get("Ui.ExpiringPackagesDialog.Open"));
         _openButton.Enabled = false;
@@ -105,9 +106,14 @@ internal sealed class ExpiringPackagesDialog : MedReminderFormBase
             row.SubItems.Add(item.EffectiveExpiry?.ToString("d", c) ?? string.Empty);
             row.SubItems.Add($"{item.Allocated.ToString("0.##", c)} {entry.Unit}".TrimEnd());
             row.SubItems.Add(item.Package.Batch ?? string.Empty);
-            row.ForeColor = item.Status == PackageExpiryStatus.Expired
-                ? UiTheme.Palette.DangerText
-                : UiTheme.Palette.WarningText;
+            // High contrast keeps the theme's colours; the Status column
+            // tells the state in words.
+            if (!UiColors.HighContrast)
+            {
+                row.ForeColor = item.Status == PackageExpiryStatus.Expired
+                    ? UiTheme.Palette.DangerText
+                    : UiTheme.Palette.WarningText;
+            }
             _list.Items.Add(row);
         }
         _list.EndUpdate();
@@ -117,7 +123,6 @@ internal sealed class ExpiringPackagesDialog : MedReminderFormBase
     private async Task OpenAsync()
     {
         if (Selected is not { } entry) return;
-        await _openPackages(entry);
-        if (!IsDisposed) await ReloadAsync();
+        if (await _openPackages(entry, this) && !IsDisposed) await ReloadAsync();
     }
 }

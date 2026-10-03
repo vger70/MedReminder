@@ -136,6 +136,26 @@ internal static class DialogLayout
         }
     }
 
+    // A label docked across a resizable dialog whose height follows its
+    // wrapped text, so a longer translation or a larger text size is not
+    // cut. Recomputed when the width, the text or the font changes.
+    public static void GrowWithText(Label label)
+    {
+        ArgumentNullException.ThrowIfNull(label);
+        label.AutoSize = false;
+        void Fit()
+        {
+            var width = Math.Max(1, label.ClientSize.Width - label.Padding.Horizontal);
+            var text = TextRenderer.MeasureText(label.Text, label.Font, new Size(width, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
+            var height = text.Height + label.Padding.Vertical + UiTheme.Space.S;
+            if (label.Height != height) label.Height = height;
+        }
+        label.Resize += (_, _) => Fit();
+        label.TextChanged += (_, _) => Fit();
+        label.FontChanged += (_, _) => Fit();
+    }
+
     // Content of a simple dialog stacked top to bottom, filling the form
     // above the button bar. Replaces fixed positions, which did not move
     // when a wrapped label grew with the text size.

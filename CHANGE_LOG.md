@@ -38,8 +38,13 @@ Branch: `feature/package-expiry-overview` → `main`
 
 ### Added
 
-- Stock → Expiring packages: the expired and expiring packages of every medicine, inactive ones included, expired first; Open packages opens the package list of the medicine (`ExpiringPackagesQuery`, `ExpiringPackagesDialog`).
+- Stock → Expiring packages: the expired and expiring packages of every medicine, inactive ones included, expired first; Open packages opens the package list of the medicine over the view (`ExpiringPackagesQuery`, `ExpiringPackagesDialog`).
 - New UI strings in all five dictionaries.
+
+### Changed
+
+- The expiry notices read the packages through `ExpiringPackagesQuery`, so the view and the notices cannot disagree.
+- The package list and the new view keep the theme colours under high contrast, and their hint grows with its text (`DialogLayout.GrowWithText`); the main list reloads once, only after a change.
 
 ### Docs
 

@@ -2578,33 +2578,29 @@ internal sealed class MainForm : MedReminderFormBase
         await ShowPackagesAsync(medicine.Id, medicine.Name, medicine.Unit);
     }
 
-    // Also opened from a package expiry toast, for a medicine that may be
-    // inactive and hidden from the list.
     // Stock → Expiring packages… (ANALYSIS-PACKAGE-EXPIRY.md §5.4): the
-    // cabinet view across medicines; each medicine's packages open from it.
+    // cabinet view across medicines; each medicine's packages open from
+    // it, owned by the view, and the main list reloads after a change.
     private async Task ShowExpiringPackagesAsync()
     {
-        var changed = false;
-        using (var dialog = new ExpiringPackagesDialog(
+        using var dialog = new ExpiringPackagesDialog(
             async () =>
             {
                 await using var scope = _scopeFactory.CreateAsyncScope();
                 return await scope.ServiceProvider.GetRequiredService<ExpiringPackagesQuery>()
                     .LoadAsync(CancellationToken.None);
             },
-            async entry =>
-            {
-                await ShowPackagesAsync(entry.MedicineId, entry.MedicineName, entry.Unit);
-                changed = true;
-            },
-            _loc))
-        {
-            dialog.ShowDialog(this);
-        }
-        if (changed) await ReloadAsync();
+            (entry, owner) => ShowPackagesAsync(entry.MedicineId, entry.MedicineName, entry.Unit, owner),
+            _loc);
+        dialog.ShowDialog(this);
     }
 
-    private async Task ShowPackagesAsync(Guid medicineId, string medicineName, string unit)
+    // Also opened from a package expiry toast, for a medicine that may be
+    // inactive and hidden from the list, and from the expiring packages
+    // view (owner). Returns whether anything changed; the main list has
+    // then been reloaded.
+    private async Task<bool> ShowPackagesAsync(Guid medicineId, string medicineName, string unit,
+        IWin32Window? owner = null)
     {
         var row = (Id: medicineId, Name: medicineName, Unit: unit);
         try
@@ -2649,14 +2645,16 @@ internal sealed class MainForm : MedReminderFormBase
             bool changed;
             using (var dialog = new PackagesDialog(row.Name, row.Unit, today, actions, _loc))
             {
-                dialog.ShowDialog(this);
+                dialog.ShowDialog(owner ?? this);
                 changed = dialog.Changed;
             }
             if (changed) await ReloadAsync();
+            return changed;
         }
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.OpenPackages"), ex);
+            return false;
         }
     }
 
