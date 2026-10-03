@@ -56,6 +56,9 @@ Branch: `feature/days-left-from-shown-stock` → `main`
   migrations and the new schema patches.
 - `docs/EVOLUTION-DONE.md` §12.5, `ANALYSIS-A5` §1.3 and the status of
   `ANALYSIS-INTRADAY-CONSUMPTION.md` updated for the shipped feature.
+- `docs/STATUS.md` reviewed at v2.14.0: releases v2.12.1–v2.14.0, the
+  dose-time stock (§2.11), codebase figures, open pull requests, code
+  signing and next steps.
 
 ---
 
