@@ -90,7 +90,7 @@ Goals:
 - **The time-of-day description is free text.** The slot dialog fills
   its combo with localized preset strings and stores the chosen *text*
   in `TimingLabel` (`AdministrationSlotDialog.cs:87-91`). `[VERIFIED]`
-- **Slots take precedence over the schedule.** `DailyConsumption.RateOn`
+- **Slots take precedence over the schedule** (FixedDaily only since 2026-10, see `ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md`). `DailyConsumption.RateOn`
   returns the sum of slot doses whenever slots exist, before looking at
   the schedule. Consequences: `[VERIFIED]`
   - a slot labeled "As needed" is consumed every day (P2);

@@ -242,7 +242,7 @@ public sealed class ReconcileStock
         var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
 
         var defaultTaken = _dueToday is null
-            ? DefaultTakenToday(todayScheduled, slots)
+            ? DefaultTakenToday(todayScheduled, schedule, slots)
             : Math.Min(todayScheduled, await _dueToday.ComputeAsync(
                 medicine, schedule, suspensions, slots,
                 await _dueToday.LoadSettingsAsync(cancellationToken), cancellationToken));
@@ -261,12 +261,17 @@ public sealed class ReconcileStock
     // as a suggestion only. Without slots (or without times) nothing
     // can be inferred and the suggestion is 0. As-needed slots are not
     // part of today's scheduled quantity.
-    private decimal DefaultTakenToday(decimal todayScheduled, IReadOnlyList<MedicationAdministrationSlot> slots)
+    private decimal DefaultTakenToday(
+        decimal todayScheduled,
+        IReadOnlyList<MedicationScheduleHistory> schedule,
+        IReadOnlyList<MedicationAdministrationSlot> slots)
     {
         if (todayScheduled <= 0m || slots.Count == 0) return 0m;
-        var now = TimeOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(_clock.GetUtcNow(), _clock.LocalTimeZone).DateTime);
-        var taken = slots.Where(s => !s.IsAsNeeded && s.Time is { } t && t <= now).Sum(s => s.Dose);
+        var local = TimeZoneInfo.ConvertTime(_clock.GetUtcNow(), _clock.LocalTimeZone).DateTime;
+        var now = TimeOnly.FromDateTime(local);
+        var taken = DailyConsumption.SlotQuantities(DateOnly.FromDateTime(local), schedule, slots)
+            .Where(x => !x.Slot.IsAsNeeded && x.Slot.Time is { } t && t <= now)
+            .Sum(x => x.Quantity);
         return Math.Min(taken, todayScheduled);
     }
 }

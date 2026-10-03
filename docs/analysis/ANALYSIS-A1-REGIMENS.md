@@ -239,6 +239,10 @@ Given day D and the schedule history H:
   3. Return S.RateOn(D, E.EffectiveFrom).
 ```
 
+Superseded (2026-10) by `ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md`: under a
+non-FixedDaily schedule the schedule sets the quantity and the slots
+split it in proportion to their doses. Original text:
+
 Slot interaction stays as today:
 
 - If `administrationSlots` is non-empty for the medicine, return the

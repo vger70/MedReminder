@@ -12,6 +12,8 @@ namespace MedReminder.Domain.Calculations;
 //  - slot with Time: that time;
 //  - slot without Time: the time of its preset (presetTime), none when
 //    the preset is unknown or has no time;
+//  - quantity of a slot: DailyConsumption.SlotQuantities (its dose, or
+//    its share of the quantity of a non-FixedDaily schedule);
 //  - no slots, FixedDaily with 1 to 4 administrations: today's quantity
 //    in equal doses at the default times of that count;
 //  - no slots, other non-PRN schedules: today's quantity at the default
@@ -56,11 +58,11 @@ public static class IntradayConsumption
         if (slots.Count > 0)
         {
             due = 0m;
-            foreach (var slot in slots)
+            foreach (var (slot, quantity) in DailyConsumption.SlotQuantities(today, schedule, slots))
             {
                 if (slot.IsAsNeeded) continue;
                 var time = slot.Time ?? (slot.PresetId is { } id ? presetTime(id) : null);
-                if (time is { } t && t <= now) due += slot.Dose;
+                if (time is { } t && t <= now) due += quantity;
             }
         }
         else

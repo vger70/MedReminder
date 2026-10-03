@@ -30,6 +30,16 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #TBD — Administration slots with advanced schedules
+
+Branch: `feature/slots-with-advanced-schedules` (stacked on #179)
+
+### Changed
+
+- Under a non-FixedDaily schedule the schedule sets the daily quantity and the slots split it in proportion to their doses; cyclic pause days are no longer consumed. Slots stay editable in Advanced mode (`docs/analysis/ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md`).
+
+---
+
 ## PR #179 — Fix the dose times order, slots lost in Advanced mode and the start date not saved
 
 Link: [vger70/MedReminder#179](https://github.com/vger70/MedReminder/pull/179)

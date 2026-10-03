@@ -79,7 +79,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // this carries the value MainForm computed from the stock ledger.
     private readonly decimal _currentStock;
     private readonly ListView _slotsList;
-    private readonly Control _slotsPanel;
     private readonly Label _slotsSummary;
     private readonly List<AdministrationSlotEntry> _slots = new();
     private readonly EditMode _mode;
@@ -324,8 +323,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             AddRow(table, string.Empty, _isActiveBox);
         }
 
-        _slotsPanel = BuildSlotsPanel();
-        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.SlotsOptional"), _slotsPanel);
+        AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.SlotsOptional"), BuildSlotsPanel());
         AddRow(table, string.Empty, _slotsSummary);
         UpdateSlotsSummary();
 
@@ -484,13 +482,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             }
         }
 
-        // In Advanced mode slots × non-fixed combinations are out of
-        // scope (§3.1): switching to Advanced drops the slots so the
-        // schedule owns the daily rate. A therapy that opened in
-        // Advanced keeps the slots it has (the panel is disabled), so an
-        // unrelated edit does not clear them.
-        var seededAdvanced = _seedSchedule is not null and not FixedDailySchedule;
-        List<AdministrationSlotEntry> slots = initialSchedule is null || seededAdvanced ? [.. _slots] : [];
+        // Slots are kept in both modes: in Advanced mode the schedule
+        // sets the day's quantity and the slots place it in the day
+        // (docs/analysis/ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md).
+        List<AdministrationSlotEntry> slots = [.. _slots];
 
         // A5 save-time clamp (ANALYSIS-A5 §5.3): RemindOnDose may be
         // true only while the checkbox is actually enabled — i.e. a
@@ -523,19 +518,18 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             InitialSchedule: initialSchedule);
     }
 
-    // Disables the Simple-mode inputs (dose, admin/day, slot buttons)
-    // whenever the user flips into Advanced, so it is unambiguous
-    // which set of controls drives the projection. Called from the
-    // SchedulePanel.ModeChanged event. The whole slot panel goes with
-    // the list: Advanced mode saves no slots (OnConfirmClick), so a slot
-    // added there would be dropped on save.
+    // Disables the Simple-mode inputs (dose, admin/day) whenever the
+    // user flips into Advanced, so it is unambiguous which set of
+    // controls drives the projection. The slots stay editable: they
+    // place the schedule's quantity in the day. Called from the
+    // SchedulePanel.ModeChanged event.
     private void SyncSimpleControlsEnabled()
     {
         if (_schedulePanel is null) return;
         var simple = !_schedulePanel.AdvancedSelected;
         _doseBox.Enabled = simple;
         _adminPerDayBox.Enabled = simple;
-        _slotsPanel.Enabled = simple;
+        UpdateSlotsSummary();
     }
 
     // Picking a catalogue row on either side populates the sibling
@@ -899,6 +893,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (_slots.All(s => s.IsAsNeeded))
         {
             _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryAsNeeded", _slots.Count);
+            return;
+        }
+        // Advanced mode: the schedule sets the quantity, the slot doses
+        // only split it.
+        if (_schedulePanel is { AdvancedSelected: true })
+        {
+            _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryShared", _slots.Count);
             return;
         }
         var total = _slots.Where(s => !s.IsAsNeeded).Sum(s => s.Dose);
