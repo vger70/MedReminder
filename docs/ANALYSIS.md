@@ -197,6 +197,8 @@ is used.
 | `Deadline` (`Deadlines`) | Administrative deadline: therapeutic plan, exemption renewal, check-up (replicated, one register per deadline) | `MedicineId?`, `Kind`, `Label?`, `DueOn`, `LeadDays`, `RepeatMonths?`, `Channels`, `DoneOn?` |
 | `DeadlineReminderEvent` (`DeadlineReminderEvents`) | Deadline reminder, device-local dedup | unique `(DeadlineId, DueOn)` |
 | `ShortageNoticeEvent` (`ShortageNoticeEvents`) | Shortage notice shown, device-local dedup | unique `(MedicineId, Code, Start)` |
+| `StockPackage` (`StockPackages`) | One physical package and its expiry, beside the stock ledger: it never moves the stock (replicated, one register per package; a discard is final) | `MovementId?`, `Quantity`, `ExpiresOn?`, `UseWithinDays?`, `OpenedOn?`, `Batch?`, `ClosedOn?`, `Closure?` |
+| `PackageExpiryNoticeEvent` (`PackageExpiryNoticeEvents`) | Package expiry notice, device-local dedup per channel | unique `(PackageId, EffectiveExpiry, Stage, Channel)` |
 | `DoseTimePreset` (`DoseTimePresets`) | Time-of-day preset ("In the morning" = 08:00), device-local, display only; built-ins live in code, rows hold the user's changes and additions | `BuiltInKey?`, `Label?`, `Time?`, `IsAsNeeded`, `Order`, `IsHidden` |
 | `DoseTimeDefault` (`DoseTimeDefaults`) | Times of the doses of a medicine without slots, by administrations per day (1 to 4), device-local, display only | `AdministrationsPerDay` (key), `Times` |
 
@@ -712,7 +714,8 @@ start:
    slot column marks `AsNeededSlots` pending); then `DoseTimePresets`,
    `DoseTimeDefaults` and `MedicationAdministrationSlots.PresetId`
    (time-of-day presets; adding the column marks `SlotPresets`
-   pending).
+   pending); then `StockPackages` and `PackageExpiryNoticeEvents`
+   (package expiry).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.
@@ -819,13 +822,24 @@ recipient are never logged; only the outcome and the exception type
 are.
 
 Every automated email carries an `EmailKind` (`LowStock`,
-`DoseReminder`, `Prescription`, `Deadline`, `Shortage`, `Digest`). The
+`DoseReminder`, `Prescription`, `Deadline`, `Shortage`, `Digest`,
+`PackageExpiry`). The
 adapter copies it to the caregiver only for the kinds in the profile's
 `CaregiverEmails` (every kind when empty, as before), and sends a
 `Digest` (`CaregiverDigest`, the weekly stock summary, no dose data) to
 the caregiver only. The summary runs in the monitor pass on a device
 that sends email; the day it was sent is the replicated profile
 setting `CaregiverDigestSentOn`.
+
+Package expiry notices (`PackageExpiryNotices`, in the monitor pass):
+"expires soon" from the lead days on (profile settings
+`PackageExpiryLeadDays`, default 30, and `PackageInUseLeadDays`,
+default 3) and "expired" the day after the effective expiry, once per
+package, effective expiry, stage and channel; inactive medicines
+included, used-up packages left out (`PackageAllocation`). One toast per
+medicine, opening its packages; one email per pass for all medicines
+from the device that sends email. See
+[`ANALYSIS-PACKAGE-EXPIRY.md`](analysis/ANALYSIS-PACKAGE-EXPIRY.md).
 
 A low-stock email carries the medicine's run-out date as an all-day
 calendar event (`EmailMessage.CalendarEvent`): the adapter sends a
@@ -977,6 +991,7 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-DRUG-CATALOGUE.md`](analysis/ANALYSIS-DRUG-CATALOGUE.md) | Reference medicine catalogue |
 | [`ANALYSIS-CATALOGUE-REMOTE-FEED.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md) | Remote AIFA catalogue feed refreshed at startup |
 | [`ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md) | Remote EU (EMA), ES (AEMPS) and FR (BDPM) catalogue feeds |
+| [`ANALYSIS-PACKAGE-EXPIRY.md`](analysis/ANALYSIS-PACKAGE-EXPIRY.md) | Packages and their expiry: printed and in-use expiry, allocation of the stock to packages, expiry notices, cabinet view (phases P1–P4 shipped) |
 | [`ANALYSIS-UI-MODERNIZATION.md`](analysis/ANALYSIS-UI-MODERNIZATION.md) | UI restyling and redesign: theme, dark mode, main window, Settings sections, dialog template |
 | [`ANALYSIS-WEBSITE.md`](analysis/ANALYSIS-WEBSITE.md) | Public website |
 

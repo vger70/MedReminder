@@ -424,8 +424,9 @@ closed / used up".
   medicine's packages in stock, with status colour and text
   ("expired", "in 12 days"). Empty when nothing is tracked.
 - Menu **Stock → Expiring packages**: one list across all medicines of
-  the profile (the cabinet view), expired first. Later phase (§10,
-  Q7).
+  the profile (the cabinet view), inactive ones included, expired
+  first; **Open packages…** opens the package list of the medicine
+  (`ExpiringPackagesQuery`, `ExpiringPackagesDialog`; P4).
 
 ### 5.5 Settings
 
@@ -541,7 +542,7 @@ Each phase is one PR to `main`, buildable and shippable on its own.
 | P1 | Domain (`StockPackage`, rules, allocation), `StockPackages` table, repository, use cases (save, discard, delete), sync op v11 and image v8, export, deletion; no UI | 4–5 days |
 | P2 | Package list query (allocation, default in-use period and size from the latest package), `StockAdjustmentDialog` package fields with packages linked to their movement, `PackagesDialog` and `PackageEditDialog`, main-window column, scan pre-fill, localization; lead days at their defaults until P3 | 4–5 days |
 | P3 | `PackageExpiryNoticeEvents` table, `PackageExpiryNotices` in `MedicationMonitor`, toast target (opens the package list), `EmailKind.PackageExpiry`, caregiver digest line, lead-day settings (profile setting, sync, export, settings tab) also used by the package list and the main list | 3–4 days |
-| P4 | User guides (5 languages), `ANALYSIS.md`, cross-medicine "Expiring packages" view if kept | 1–2 days |
+| P4 | User guides (5 languages), `ANALYSIS.md`, cross-medicine "Expiring packages" view | 1–2 days |
 
 Total about 3 weeks, in line with the 2–3 weeks of
 `EVOLUTION-PROPOSALS.md`.
@@ -560,7 +561,7 @@ Settled by the product owner on 2026-10-03.
 | Q4 | Discard writes the negative correction? | Yes, pre-filled with the allocated quantity, user confirms (§3.5) |
 | Q5 | Accept the FEFO allocation to hide used-up boxes? | Yes (§3.4) |
 | Q6 | Several boxes in one addition → one row each? | Yes (§5.1) |
-| Q7 | Cross-medicine "Expiring packages" view in P2 or later? | Later (P4), the column first |
+| Q7 | Cross-medicine "Expiring packages" view in P2 or later? | Later (P4), the column first; built in P4 |
 
 ---
 

@@ -1423,5 +1423,12 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "giorni prima della fine del periodo dopo l'apertura",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Quando arriva l'avviso \"in scadenza\". Con 0 resta solo l'avviso di confezione scaduta.",
   "Notifications.Digest.InactiveExpiry": "- {0} (non in uso): scadenza confezione {1}",
-  "Packages.Error.ExpiresOn": "Controlla la scadenza: è a più di 20 anni da oggi."
+  "Packages.Error.ExpiresOn": "Controlla la scadenza: è a più di 20 anni da oggi.",
+  "Ui.MainForm.Menu.Stock.ExpiringPackages": "Confezioni in scadenza…",
+  "Ui.ExpiringPackagesDialog.Title": "Confezioni in scadenza",
+  "Ui.ExpiringPackagesDialog.Hint": "Le confezioni scadute o in scadenza di tutte le medicine, prima le scadute. Apri le confezioni di una medicina per segnarle aperte, finite o smaltite.",
+  "Ui.ExpiringPackagesDialog.Empty": "Nessuna confezione scaduta o in scadenza.",
+  "Ui.ExpiringPackagesDialog.Column.Medicine": "Medicina",
+  "Ui.ExpiringPackagesDialog.Open": "Apri confezioni…",
+  "Ui.ExpiringPackagesDialog.Inactive": "{0} (non in uso)"
 }

@@ -29,6 +29,7 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
 3. [Trovare una medicina: catalogo e codice a barre](#catalogue)
 4. [Scorte](#stock)
    - [Aggiungere una confezione](#add-package) ·
+     [Confezioni e scadenze](#packages) ·
      [Registrare un'assunzione](#intake) ·
      [Correggere le scorte](#correct) · [Contare le scorte](#count) ·
      [Storico](#history)
@@ -393,6 +394,56 @@ quel giorno conta la quantità registrata.
 Una nuova confezione fa ripartire il ciclo di avviso: quando le scorte
 scendono di nuovo sotto la soglia, ricevi un nuovo avviso.
 
+Con **Nuova confezione** puoi anche registrare la scadenza, tutti campi
+facoltativi:
+
+- **Confezioni** — quante scatole uguali hai comprato; la quantità viene
+  divisa tra loro.
+- **Scadenza (mese/anno)** — spunta la casella e scegli mese e anno come
+  sono stampati. Una scadenza `03/2027` vale fino al 31 marzo 2027.
+- **Da usare entro … giorni dall'apertura** — per colliri, sciroppi,
+  insuline in uso e simili, come indicato nel foglietto; 0 se non c'è.
+  Viene proposto il valore dell'ultima confezione della medicina.
+- **Aperta oggi** — se apri subito la prima scatola.
+- **Lotto** — facoltativo.
+
+Con **Scorte → Rifornisci da codice a barre** un codice DataMatrix
+compila da solo scadenza e lotto. Se lasci vuoti tutti questi campi, la
+confezione aggiunge solo quantità, come prima.
+
+<a id="packages"></a>
+### Confezioni e scadenze
+
+**Scorte → Confezioni e scadenze…** (anche dal menu del tasto destro)
+elenca le scatole della medicina selezionata con stato, scadenza
+stampata, data di apertura, data entro cui usarla e quantità in scorta.
+
+- Una confezione scade alla fine del mese stampato, o prima, se è aperta
+  e finiscono i giorni dall'apertura (aperta il 1° marzo, 28 giorni:
+  usare entro il 28 marzo).
+- L'app considera usate per prime la confezione aperta e poi quelle che
+  scadono prima. Quelle che la scorta non copre più sono **Esaurite** e
+  non danno avvisi, anche se non le segni finite. Se usi le scatole in
+  un altro ordine, segna quella in uso con **Aperta oggi** o chiudi
+  quella giusta.
+- **Nuova…** registra una scatola che hai già nell'armadietto, senza
+  cambiare la scorta.
+- **Aperta oggi**, **Finita**: aggiornano la confezione, la scorta non
+  cambia.
+- **Smaltisci…**: per una scatola buttata, tipicamente scaduta. La
+  quantità rimasta (proposta dall'app) viene tolta dalla scorta. Lo
+  smaltimento è definitivo: se ti sei sbagliato, elimina la confezione e
+  riaggiungi le unità con una correzione in eccesso.
+- **Elimina**: solo per una confezione inserita per errore; la scorta
+  non cambia.
+
+La colonna **Scadenza** della finestra principale mostra la prima
+scadenza tra le confezioni in scorta, con *(scaduta)* o *(in scadenza)*.
+**Scorte → Confezioni in scadenza…** riunisce in un solo elenco le
+confezioni scadute o in scadenza di tutte le medicine, anche di quelle
+non più in uso, prima le scadute; **Apri confezioni…** apre quelle della
+medicina scelta. Per gli avvisi vedi [Notifiche ed email](#notifications).
+
 <a id="intake"></a>
 ### Registrare un'assunzione
 
@@ -629,8 +680,16 @@ file di calendario (`medreminder.ics`), con lo stesso titolo generico.
   secondo a 5). Una medicina che al primo controllo è già sotto la metà
   riceve solo il secondo avviso. Dopo una nuova confezione il ciclo
   riparte.
+- **Scadenza delle confezioni**: una confezione registrata con scadenza
+  dà un avviso *in scadenza* 30 giorni prima della scadenza stampata (3
+  giorni prima della fine del periodo dopo l'apertura) e un avviso
+  *scaduta* il giorno dopo, una volta ciascuno, sui canali della
+  medicina, anche se la medicina non è più in uso. Le confezioni esaurite
+  o chiuse non danno avvisi. Gli anticipi si cambiano in **Strumenti →
+  Impostazioni… → Notifiche → Scadenza delle confezioni**; con 0 resta
+  solo l'avviso di confezione scaduta.
 - **Dalla notifica di Windows**: un clic apre MedReminder su quella
-  medicina (sulle ricette, per un promemoria di ricetta; sulle scadenze, per un promemoria di scadenza). Un avviso di
+  medicina (sulle ricette, per un promemoria di ricetta; sulle scadenze, per un promemoria di scadenza; sulle confezioni, per un avviso di scadenza di una confezione). Un avviso di
   scorta ha **Prepara la richiesta**, che apre la richiesta al medico;
   un promemoria di dose ha **Ricordamelo tra 15 minuti**, che lo
   ripropone più tardi, anche se nel frattempo MedReminder è chiuso. Le
@@ -673,14 +732,18 @@ prova fallisce, controlla le istruzioni del tuo provider.
   sono visibili a entrambi). Deve essere diverso dal destinatario. In
   **Copia all'assistente** scegli quali avvisi riceve (tutti finché non
   cambi): scorta bassa, promemoria delle dosi, delle ricette e delle
-  scadenze, avvisi di carenza. **Invia all'assistente un riepilogo
-  settimanale delle scorte** aggiunge, ogni 7 giorni, un'email al solo
-  assistente con scorta, stato e data di esaurimento di ogni medicina
-  attiva, e niente sulle dosi assunte. La invia il PC che manda le
+  scadenze, avvisi di carenza, avvisi di scadenza delle confezioni.
+  **Invia all'assistente un riepilogo settimanale delle scorte**
+  aggiunge, ogni 7 giorni, un'email al solo assistente con scorta, stato
+  e data di esaurimento di ogni medicina attiva e le confezioni scadute o
+  in scadenza, e niente sulle dosi assunte. La invia il PC che manda le
   email, una volta per profilo anche se il profilo è sincronizzato su
   più PC.
 - **E-mail del medico (facoltativa)** — usata solo per le richieste di
   ricetta che invii tu; gli avvisi automatici non ci vanno mai.
+- **Scadenza delle confezioni** — quanti giorni prima arriva l'avviso
+  *in scadenza*: prima della scadenza stampata (predefinito 30) e prima
+  della fine del periodo dopo l'apertura (predefinito 3).
 
 Fai clic su **Salva destinatari**. Nella stessa sezione, **Il mio PIN**
 permette di impostare o cambiare il PIN del tuo profilo.

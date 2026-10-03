@@ -42,11 +42,10 @@ internal sealed class PackagesDialog : MedReminderFormBase
         var hint = new Label
         {
             Dock = DockStyle.Top,
-            AutoSize = false,
-            Height = 48,
             Padding = new Padding(UiTheme.Space.L, UiTheme.Space.S, UiTheme.Space.L, 0),
             Text = _loc.Get("Ui.PackagesDialog.Hint"),
         };
+        DialogLayout.GrowWithText(hint);
 
         _list = new ListView
         {
@@ -146,13 +145,18 @@ internal sealed class PackagesDialog : MedReminderFormBase
             row.SubItems.Add(item.EffectiveExpiry?.ToString("d", c) ?? string.Empty);
             row.SubItems.Add(p.IsClosed ? string.Empty : $"{item.Allocated.ToString("0.##", c)} / {p.Quantity.ToString("0.##", c)} {_unit}".TrimEnd());
             row.SubItems.Add(p.Batch ?? string.Empty);
-            row.ForeColor = item.Status switch
+            // High contrast keeps the theme's colours; the Status column
+            // tells the state in words.
+            if (!UiColors.HighContrast)
             {
-                PackageExpiryStatus.Expired => UiTheme.Palette.DangerText,
-                PackageExpiryStatus.ExpiringSoon => UiTheme.Palette.WarningText,
-                PackageExpiryStatus.UsedUp or PackageExpiryStatus.Closed => UiTheme.Palette.TextSecondary,
-                _ => row.ForeColor,
-            };
+                row.ForeColor = item.Status switch
+                {
+                    PackageExpiryStatus.Expired => UiTheme.Palette.DangerText,
+                    PackageExpiryStatus.ExpiringSoon => UiTheme.Palette.WarningText,
+                    PackageExpiryStatus.UsedUp or PackageExpiryStatus.Closed => UiTheme.Palette.TextSecondary,
+                    _ => row.ForeColor,
+                };
+            }
             _list.Items.Add(row);
             if (p.Id == select) row.Selected = true;
         }

@@ -30,7 +30,8 @@ in der App zu lesen. Die technische Architektur ist in
      [Bearbeiten, deaktivieren, löschen](#edit-medicine)
 3. [Ein Medikament finden: Katalog und Barcode](#catalogue)
 4. [Bestand](#stock)
-   - [Packung hinzufügen](#add-package) · [Einnahme erfassen](#intake) ·
+   - [Packung hinzufügen](#add-package) · [Packungen und Verfall](#packages) ·
+     [Einnahme erfassen](#intake) ·
      [Bestand korrigieren](#correct) · [Bestand zählen](#count) ·
      [Verlauf](#history)
 5. [Therapieverlauf, Therapieplan und Rezeptanforderung](#documents)
@@ -407,6 +408,59 @@ Tag die erfasste Menge.
 Eine neue Packung startet den Warnzyklus neu: Fällt der Bestand wieder
 unter die Schwelle, bekommst du eine neue Warnung.
 
+Mit **Neue Packung** kannst du auch das Verfallsdatum erfassen; alle
+Felder sind optional:
+
+- **Packungen** — wie viele gleiche Packungen du gekauft hast; die Menge
+  wird auf sie verteilt.
+- **Verfall (Monat/Jahr)** — Kästchen ankreuzen und Monat und Jahr wie
+  aufgedruckt wählen. Ein Verfall `03/2027` gilt bis zum 31. März 2027.
+- **Verwenden innerhalb von … Tagen nach dem Öffnen** — für Augentropfen,
+  Säfte, Insulin in Gebrauch und Ähnliches, laut Beipackzettel; 0, wenn
+  es keine Frist gibt. Vorgeschlagen wird der Wert der letzten Packung
+  des Medikaments.
+- **Heute geöffnet** — wenn du die erste Packung gleich öffnest.
+- **Charge** — optional.
+
+Mit **Bestand → Per Barcode auffüllen…** füllt ein DataMatrix-Code
+Verfall und Charge selbst aus. Lässt du alle diese Felder leer, fügt die
+Packung nur Menge hinzu, wie bisher.
+
+<a id="packages"></a>
+### Packungen und Verfall
+
+**Bestand → Packungen und Verfall…** (auch im Rechtsklickmenü) listet
+die Packungen des ausgewählten Medikaments mit Status, aufgedrucktem
+Verfall, Öffnungsdatum, Verwendungsdatum und Menge im Bestand.
+
+- Eine Packung verfällt am Ende des aufgedruckten Monats oder früher,
+  wenn sie geöffnet ist und die Tage nach dem Öffnen abgelaufen sind
+  (geöffnet am 1. März, 28 Tage: verwenden bis 28. März).
+- Die App nimmt an, dass zuerst die geöffnete Packung verbraucht wird,
+  dann die, die zuerst verfallen. Packungen, die der Bestand nicht mehr
+  abdeckt, sind **Aufgebraucht** und lösen keine Warnung aus, auch wenn
+  du sie nie als beendet markierst. Verwendest du die Packungen in einer
+  anderen Reihenfolge, markiere die gerade benutzte mit **Heute
+  geöffnet** oder schließe die richtige.
+- **Neu…** erfasst eine Packung, die schon im Schrank liegt, ohne den
+  Bestand zu ändern.
+- **Heute geöffnet**, **Beendet**: aktualisieren die Packung; der
+  Bestand ändert sich nicht.
+- **Entsorgen…**: für eine weggeworfene, meist abgelaufene Packung. Die
+  restliche Menge (von der App vorgeschlagen) wird vom Bestand
+  abgezogen. Das ist endgültig: Bei einem Irrtum lösche die Packung und
+  füge die Einheiten mit einer positiven Korrektur wieder hinzu.
+- **Löschen**: nur für eine versehentlich erfasste Packung; der Bestand
+  ändert sich nicht.
+
+Die Spalte **Verfall** im Hauptfenster zeigt das erste Verfallsdatum der
+Packungen im Bestand, mit *(abgelaufen)* oder *(läuft bald ab)*.
+**Bestand → Ablaufende Packungen…** fasst die abgelaufenen und bald
+ablaufenden Packungen aller Medikamente zusammen, auch der nicht mehr
+verwendeten, die abgelaufenen zuerst; **Packungen öffnen…** öffnet die
+des gewählten Medikaments. Zu den Warnungen siehe
+[Benachrichtigungen und E-Mail](#notifications).
+
 <a id="intake"></a>
 ### Einnahme erfassen
 
@@ -650,8 +704,17 @@ demselben allgemeinen Titel.
   erste Warnung bei 10 Tagen, zweite bei 5). Ein Medikament, das bei der
   ersten Prüfung schon unter der Hälfte liegt, bekommt nur die zweite
   Erinnerung. Nach einer neuen Packung beginnt der Zyklus von vorn.
+- **Verfall der Packungen**: Eine Packung mit Verfallsdatum löst 30
+  Tage vor dem aufgedruckten Verfall (3 Tage vor dem Ende der Frist nach
+  dem Öffnen) einen Hinweis *läuft bald ab* aus und am Tag danach einen
+  Hinweis *abgelaufen*, jeweils einmal, über die Kanäle des Medikaments,
+  auch wenn es nicht mehr verwendet wird. Aufgebrauchte oder
+  geschlossene Packungen lösen keinen Hinweis aus. Die Vorlaufzeiten
+  änderst du unter **Extras → Einstellungen… → Benachrichtigungen →
+  Verfall der Packungen**; bei 0 bleibt nur der Hinweis auf eine
+  abgelaufene Packung.
 - **Aus der Windows-Benachrichtigung**: ein Klick öffnet MedReminder
-  bei diesem Medikament (bei den Rezepten, für eine Rezepterinnerung; bei den Fristen, für eine Fristerinnerung).
+  bei diesem Medikament (bei den Rezepten, für eine Rezepterinnerung; bei den Fristen, für eine Fristerinnerung; bei den Packungen, für einen Verfallshinweis).
   Eine Bestandswarnung hat **Anfrage vorbereiten**, das die Anfrage an
   den Arzt öffnet; eine Dosiserinnerung hat **In 15 Minuten erinnern**,
   das sie später erneut zeigt, auch wenn MedReminder inzwischen
@@ -695,15 +758,20 @@ Profil:
   (beide Adressen sind für beide sichtbar). Sie muss sich vom Empfänger
   unterscheiden. Unter **Kopie an die Betreuungsperson** wählst du, welche
   Warnungen sie erhält (alle, solange du nichts änderst): Bestand,
-  Dosis-, Rezept- und Fristerinnerungen, Lieferengpass-Hinweise. **Der
-  Betreuungsperson eine wöchentliche Bestandsübersicht senden** schickt
-  alle 7 Tage eine E-Mail nur an die Betreuungsperson mit Bestand,
-  Status und Datum, an dem der Vorrat aufgebraucht ist, für jedes aktive
-  Medikament, und nichts über eingenommene Dosen. Sie kommt von dem PC,
+  Dosis-, Rezept- und Fristerinnerungen, Lieferengpass-Hinweise,
+  Hinweise zum Verfall von Packungen. **Der Betreuungsperson eine
+  wöchentliche Bestandsübersicht senden** schickt alle 7 Tage eine
+  E-Mail nur an die Betreuungsperson mit Bestand, Status und Datum, an
+  dem der Vorrat aufgebraucht ist, für jedes aktive Medikament und den
+  abgelaufenen oder bald ablaufenden Packungen, und nichts über
+  eingenommene Dosen. Sie kommt von dem PC,
   der die E-Mails versendet, einmal pro Profil, auch wenn das Profil auf
   mehreren PCs synchronisiert ist.
 - **E-Mail des Arztes (optional)** — nur für Rezeptanforderungen, die du
   selbst sendest; automatische Warnungen gehen nie dorthin.
+- **Verfall der Packungen** — wie viele Tage vorher der Hinweis *läuft
+  bald ab* kommt: vor dem aufgedruckten Verfall (Standard 30) und vor dem
+  Ende der Frist nach dem Öffnen (Standard 3).
 
 Klicke auf **Empfänger speichern**. Im selben Bereich kannst du unter
 **Meine PIN** die PIN deines eigenen Profils festlegen oder ändern.

@@ -28,39 +28,30 @@ namespace MedReminder.Application.Packages;
 // saves. Only ids are logged: no medicine name, no batch.
 public sealed class PackageExpiryNotices
 {
-    private readonly IMedicineRepository _medicines;
-    private readonly IStockPackageRepository _packages;
-    private readonly IStockMovementRepository _stock;
+    private readonly ExpiringPackagesQuery _expiring;
     private readonly IPackageExpiryNoticeEventRepository _events;
     private readonly IEmailNotificationService _email;
     private readonly IWindowsNotificationService _windows;
     private readonly TimeProvider _clock;
     private readonly ILogger<PackageExpiryNotices> _log;
     private readonly ILocalizationService? _localization;
-    private readonly IProfileSettingsStore? _settings;
 
     public PackageExpiryNotices(
-        IMedicineRepository medicines,
-        IStockPackageRepository packages,
-        IStockMovementRepository stock,
+        ExpiringPackagesQuery expiring,
         IPackageExpiryNoticeEventRepository events,
         IEmailNotificationService email,
         IWindowsNotificationService windows,
         TimeProvider clock,
         ILogger<PackageExpiryNotices> log,
-        ILocalizationService? localization = null,
-        IProfileSettingsStore? settings = null)
+        ILocalizationService? localization = null)
     {
-        _medicines = medicines;
-        _packages = packages;
-        _stock = stock;
+        _expiring = expiring;
         _events = events;
         _email = email;
         _windows = windows;
         _clock = clock;
         _log = log;
         _localization = localization;
-        _settings = settings;
     }
 
     private sealed record Due(PackageListItem Item, int Stage);
@@ -71,22 +62,17 @@ public sealed class PackageExpiryNotices
     // channel). The caller saves.
     public async Task<int> RunAsync(DateOnly today, bool sendsEmail, CancellationToken cancellationToken)
     {
-        // Read once, and only when some medicine has packages.
-        PackageLeadDays? leadDays = null;
         var forEmail = new List<MedicineNotice>();
         var count = 0;
+        NotificationChannels ChannelsOf(Medicine medicine) => sendsEmail
+            ? medicine.NotificationChannels
+            : medicine.NotificationChannels & ~NotificationChannels.Email;
 
-        foreach (var medicine in await _medicines.ListAllAsync(cancellationToken))
+        foreach (var (medicine, items) in await _expiring.LoadByMedicineAsync(
+                     today, m => ChannelsOf(m) != NotificationChannels.None, cancellationToken))
         {
-            var channels = medicine.NotificationChannels;
-            if (!sendsEmail) channels &= ~NotificationChannels.Email;
-            if (channels == NotificationChannels.None) continue;
-            var packages = await _packages.ListForMedicineAsync(medicine.Id, cancellationToken);
-            if (packages.Count == 0) continue;
-
-            leadDays ??= PackageSettings.LeadDays(_settings);
-            var stock = MedicineStock.Current(await _stock.ListForMedicineAsync(medicine.Id, cancellationToken));
-            var candidates = DueOf(PackageListQuery.Build(packages, stock, today, leadDays));
+            var channels = ChannelsOf(medicine);
+            var candidates = DueOf(items);
             if (candidates.Count == 0) continue;
 
             if ((channels & NotificationChannels.Windows) != 0)

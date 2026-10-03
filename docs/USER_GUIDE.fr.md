@@ -30,7 +30,8 @@ dans l'application. L'architecture technique est décrite dans
      [Modifier, désactiver, supprimer](#edit-medicine)
 3. [Trouver un médicament : catalogue et code-barres](#catalogue)
 4. [Stock](#stock)
-   - [Ajouter une boîte](#add-package) · [Enregistrer une prise](#intake) ·
+   - [Ajouter une boîte](#add-package) · [Boîtes et péremption](#packages) ·
+     [Enregistrer une prise](#intake) ·
      [Corriger le stock](#correct) · [Compter le stock](#count) ·
      [Historique](#history)
 5. [Chronologie, fiche de traitement et demande d'ordonnance](#documents)
@@ -407,6 +408,59 @@ enregistres une prise, ce jour compte la quantité enregistrée.
 Une nouvelle boîte relance le cycle d'alerte : quand le stock repasse
 sous le seuil, tu reçois une nouvelle alerte.
 
+Avec **Nouvelle boîte**, tu peux aussi enregistrer la péremption ; tous
+les champs sont facultatifs :
+
+- **Boîtes** — combien de boîtes identiques tu as achetées ; la quantité
+  est répartie entre elles.
+- **Péremption (mois/année)** — coche la case et choisis le mois et
+  l'année imprimés. Une péremption `03/2027` vaut jusqu'au 31 mars 2027.
+- **À utiliser dans … jours après ouverture** — pour les collyres,
+  sirops, insulines en cours et autres, selon la notice ; 0 s'il n'y en
+  a pas. La valeur de la dernière boîte du médicament est proposée.
+- **Ouverte aujourd'hui** — si tu ouvres tout de suite la première
+  boîte.
+- **Lot** — facultatif.
+
+Avec **Stock → Réapprovisionner par code-barres…**, un code DataMatrix
+remplit tout seul la péremption et le lot. Si tu laisses tous ces champs
+vides, la boîte ajoute seulement une quantité, comme avant.
+
+<a id="packages"></a>
+### Boîtes et péremption
+
+**Stock → Boîtes et péremption…** (aussi depuis le menu du clic droit)
+liste les boîtes du médicament sélectionné avec l'état, la péremption
+imprimée, la date d'ouverture, la date limite d'utilisation et la
+quantité en stock.
+
+- Une boîte est périmée à la fin du mois imprimé, ou plus tôt quand elle
+  est ouverte et que ses jours après ouverture sont écoulés (ouverte le
+  1er mars, 28 jours : à utiliser jusqu'au 28 mars).
+- L'app considère que la boîte ouverte est utilisée d'abord, puis celles
+  qui périment en premier. Celles que le stock ne couvre plus sont
+  **Épuisées** et ne donnent pas d'alerte, même si tu ne les indiques
+  pas terminées. Si tu utilises les boîtes dans un autre ordre, indique
+  celle en cours avec **Ouverte aujourd'hui** ou ferme la bonne.
+- **Nouvelle…** enregistre une boîte que tu as déjà dans l'armoire, sans
+  changer le stock.
+- **Ouverte aujourd'hui**, **Terminée** : mettent à jour la boîte ; le
+  stock ne change pas.
+- **Jeter…** : pour une boîte jetée, en général périmée. La quantité
+  restante (proposée par l'app) est retirée du stock. C'est définitif :
+  en cas d'erreur, supprime la boîte et rajoute les unités avec une
+  correction positive.
+- **Supprimer** : seulement pour une boîte saisie par erreur ; le stock
+  ne change pas.
+
+La colonne **Péremption** de la fenêtre principale montre la première
+péremption parmi les boîtes en stock, avec *(périmée)* ou *(bientôt
+périmée)*. **Stock → Boîtes bientôt périmées…** réunit les boîtes
+périmées ou bientôt périmées de tous les médicaments, y compris ceux qui
+ne sont plus utilisés, les périmées d'abord ; **Ouvrir les boîtes…**
+ouvre celles du médicament choisi. Pour les alertes, voir
+[Notifications et e-mail](#notifications).
+
 <a id="intake"></a>
 ### Enregistrer une prise
 
@@ -650,8 +704,16 @@ générique.
   deuxième à 5). Un médicament déjà sous la moitié lors de la première
   vérification reçoit seulement le deuxième rappel. Après une nouvelle
   boîte, le cycle recommence.
+- **Péremption des boîtes** : une boîte enregistrée avec une péremption
+  donne une alerte *bientôt périmée* 30 jours avant la péremption
+  imprimée (3 jours avant la fin de la période après ouverture) et une
+  alerte *périmée* le lendemain, une fois chacune, sur les canaux du
+  médicament, même s'il n'est plus utilisé. Les boîtes épuisées ou
+  fermées ne donnent pas d'alerte. Les délais se changent dans
+  **Outils → Paramètres… → Notifications → Péremption des boîtes** ;
+  avec 0, seule l'alerte de boîte périmée reste.
 - **Depuis la notification Windows** : un clic ouvre MedReminder sur ce
-  médicament (sur les ordonnances, pour un rappel d'ordonnance ; sur les échéances, pour un rappel d'échéance). Une
+  médicament (sur les ordonnances, pour un rappel d'ordonnance ; sur les échéances, pour un rappel d'échéance ; sur les boîtes, pour une alerte de péremption). Une
   alerte de stock a **Préparer la demande**, qui ouvre la demande au
   médecin ; un rappel de dose a **Me le rappeler dans 15 minutes**, qui
   le reprend plus tard, même si MedReminder est fermé entre-temps. Les
@@ -695,15 +757,18 @@ instructions de ton fournisseur.
   adresses sont visibles des deux). Elle doit différer du destinataire.
   Sous **Copie à l'aidant**, choisissez les alertes qu'il reçoit
   (toutes tant que vous ne changez rien) : stock faible, rappels de
-  dose, d'ordonnance et d'échéance, avis de pénurie. **Envoyer à
-  l'aidant un résumé hebdomadaire du stock** ajoute, tous les 7 jours,
-  un e-mail à l'aidant seul avec le stock, l'état et la date
-  d'épuisement de chaque médicament actif, et rien sur les doses
-  prises. Il est envoyé par le PC qui envoie les e-mails, une fois par
+  dose, d'ordonnance et d'échéance, avis de pénurie, avis de péremption
+  des boîtes. **Envoyer à l'aidant un résumé hebdomadaire du stock**
+  ajoute, tous les 7 jours, un e-mail à l'aidant seul avec le stock,
+  l'état et la date d'épuisement de chaque médicament actif et les
+  boîtes périmées ou bientôt périmées, et rien sur les doses prises. Il est envoyé par le PC qui envoie les e-mails, une fois par
   profil même si le profil est synchronisé sur plusieurs PC.
 - **E-mail du médecin (facultatif)** — utilisé seulement pour les
   demandes d'ordonnance que tu envoies toi-même ; les alertes
   automatiques n'y vont jamais.
+- **Péremption des boîtes** — combien de jours avant arrive l'alerte
+  *bientôt périmée* : avant la péremption imprimée (30 par défaut) et
+  avant la fin de la période après ouverture (3 par défaut).
 
 Clique sur **Enregistrer les destinataires**. Dans la même section,
 **Mon code PIN** permet de définir ou changer le PIN de ton propre
