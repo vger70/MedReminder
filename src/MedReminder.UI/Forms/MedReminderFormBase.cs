@@ -46,34 +46,6 @@ internal class MedReminderFormBase : Form
     protected int ScaledLength(int pixelsAt96Dpi)
         => (int)Math.Round(pixelsAt96Dpi * Math.Max(1f, TextScale) * Math.Max(1f, DeviceDpi / BaselineDpi));
 
-    // A date picker laid out once in a narrow cell before the final
-    // layout scrolls its fields to keep the day visible and keeps that
-    // offset after it widens: the first digit of the date was cut.
-    // Setting the format again makes the native control lay the fields
-    // out anew at the final width.
-    protected override void OnShown(EventArgs e)
-    {
-        base.OnShown(e);
-        ResetDatePickers(this);
-    }
-
-    private static void ResetDatePickers(Control control)
-    {
-        foreach (Control child in control.Controls)
-        {
-            if (child is DateTimePicker { IsHandleCreated: true } picker)
-            {
-                var format = picker.Format;
-                picker.Format = format == DateTimePickerFormat.Long ? DateTimePickerFormat.Short : DateTimePickerFormat.Long;
-                picker.Format = format;
-            }
-            else if (child.HasChildren)
-            {
-                ResetDatePickers(child);
-            }
-        }
-    }
-
     protected override void OnLoad(EventArgs e)
     {
         ScaleLayout();

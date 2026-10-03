@@ -146,6 +146,10 @@ internal static class UiTheme
 
         public static string MonoFamily => FirstInstalled("Cascadia Mono", "Consolas");
 
+        // Static Segoe UI for date pickers, which cut the first digit
+        // with the variable fonts (UiThemeApplier).
+        public const string DatePickerFamily = "Segoe UI";
+
         // Fonts are created on each call: the caller owns the instance,
         // as with the `new Font(...)` calls this replaces.
         public static Font Body() => new(BodyFamily, BodySize);

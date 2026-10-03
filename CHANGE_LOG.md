@@ -43,6 +43,27 @@ Branch: `claude/voci-ordinamento-menu-laterale-544d36` → `main`
 
 ---
 
+## PR #181 — Give date pickers static Segoe UI so the first digit is not cut
+
+Link: [vger70/MedReminder#181](https://github.com/vger70/MedReminder/pull/181)
+Branch: `claude/zero-formatting-date-controls-a7f941` → `main`
+
+### Fixed
+
+- The first digit of the date is no longer cut in the date fields of
+  every window (medicine editor, prescriptions, deadlines, coverage
+  planner and others). The native date picker lays its fields out
+  wrongly with the variable Segoe UI fonts used on Windows 11; date
+  pickers now use static Segoe UI at the same size, so the text size
+  still applies (`UiThemeApplier`, `UiTheme.Fonts.DatePickerFamily`).
+
+### Removed
+
+- The format reset on show in `MedReminderFormBase`, which did not
+  address the cause.
+
+---
+
 ## PR #TBD — Administration slots with advanced schedules
 
 Branch: `feature/slots-with-advanced-schedules` (stacked on #179)
