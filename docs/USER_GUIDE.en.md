@@ -34,6 +34,7 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
      [History](#history)
 5. [Timeline, report and prescription requests](#documents)
 6. [Notifications and email](#notifications)
+   - [Email settings for common providers](#smtp-providers)
 7. [Several people: profiles and roles](#profiles)
 8. [Protect your data: backup and export](#backup)
 9. [Several computers](#devices)
@@ -713,7 +714,7 @@ Each low-stock email also carries the run-out date as a calendar file
 | Field | What to enter |
 |---|---|
 | **Host** | Your provider's outgoing server, e.g. `smtp.gmail.com` |
-| **Port** | Usually `587` (with *Use StartTLS*) or `465` |
+| **Port** | `587` with *Use StartTLS* ticked, or `465` with *Use StartTLS* not ticked |
 | **Username** / **New password** | Your email account. The password is stored encrypted and never written to the logs |
 | **Sender (from)** / **Sender name** | Who the emails come from |
 | **Timeout (s)** | Seconds before giving up |
@@ -721,11 +722,8 @@ Each low-stock email also carries the run-out date as a calendar file
 Click **Test connection** (it logs in without sending anything), then
 **Save SMTP settings**.
 
-*Example with Gmail:* turn on two-step verification in your Google
-account, create an app password at `myaccount.google.com/apppasswords`,
-then use Host `smtp.gmail.com`, Port `587`, StartTLS on, your Gmail
-address as Username and the app password as password. Providers change
-their rules: if the test fails, check your provider's instructions.
+The values for Gmail and the other common providers, and how to get an
+app password, are in [Email settings for common providers](#smtp-providers).
 
 ### Step 2 — the recipients (each profile)
 
@@ -753,6 +751,74 @@ their rules: if the test fails, check your provider's instructions.
 
 Click **Save recipients**. In the same section, **My PIN** lets you set or
 change the PIN of your own profile.
+
+<a id="smtp-providers"></a>
+### Email settings for common providers
+
+Many providers no longer accept, in programs, the password you use for
+webmail. They ask for an **app password**: a separate password, created
+by the provider for one program only and revocable at any time. Enter it
+in **New password**. If you revoke it, MedReminder stops sending until
+you enter a new one.
+
+One rule covers port and encryption:
+
+| Port | *Use StartTLS* |
+|---|---|
+| `587` | ticked |
+| `465` | not ticked (the connection is encrypted from the start) |
+
+With every provider below, **Username** is your full email address. Use
+the same address as **Sender (from)**: many providers refuse a sender
+different from the account.
+
+| Provider | Host | Port | Password |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | App password (see below) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | App password, from the *Security* page of your Yahoo account |
+| iCloud Mail | `smtp.mail.me.com` | `587` | App-specific password, from `account.apple.com` → *Sign-In and Security*; requires two-factor authentication |
+| Libero Mail | `smtp.libero.it` | `465` | Account password; with two-step verification on, an app password from *Gestione Account* |
+| Aruba (including domain mailboxes) | `smtps.aruba.it` | `465` | Mailbox password |
+| GMX | `mail.gmx.net` | `587` | Account password; first turn on *POP3/IMAP* in the webmail email settings |
+| WEB.DE | `smtp.web.de` | `587` | Account password; first turn on *POP3/IMAP* in the webmail email settings |
+| Orange | `smtp.orange.fr` | `465` | Account password; if it is refused, check in your Orange customer area whether a dedicated password is required |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft accepts only modern
+sign-in (OAuth2) for these accounts, which MedReminder does not support;
+an app password does not work either. The same usually applies to
+Microsoft 365 work or school accounts. Use another account for sending,
+for example a Gmail address dedicated to MedReminder.
+
+#### Gmail: create the app password
+
+1. Sign in at `myaccount.google.com` with the Gmail account that will
+   send the emails.
+2. Open **Security**. If **2-Step Verification** is off, turn it on
+   with the guided procedure (phone or authenticator app). Without it,
+   app passwords do not exist.
+3. Open `myaccount.google.com/apppasswords`, or search for "App
+   passwords" in the account search box. Google may ask for your
+   password again.
+4. Type a name that reminds you what it is for, for example
+   `MedReminder`, and click **Create**.
+5. Google shows a 16-letter password in four groups. Copy it and paste
+   it into **New password**, without spaces. Google does not show it
+   again: if you lose it, delete it on the same page and create another.
+6. In MedReminder enter Host `smtp.gmail.com`, Port `587`, *Use
+   StartTLS* ticked, and your Gmail address as **Username** and as
+   **Sender (from)**. Click **Test connection**, then **Save SMTP
+   settings**.
+
+If the page says the setting is not available, usually 2-Step
+Verification is off or uses security keys only, the account is enrolled
+in Advanced Protection, or it is a work or school account whose
+administrator turned app passwords off. If you change your Google
+account password, Google revokes your app passwords: create a new one
+and enter it in MedReminder.
+
+Providers change their rules and addresses. If **Test connection** fails
+with the values above, check your provider's help page (search for
+"SMTP settings").
 
 ---
 

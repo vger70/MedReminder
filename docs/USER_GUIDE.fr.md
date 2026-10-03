@@ -36,6 +36,7 @@ dans l'application. L'architecture technique est décrite dans
      [Historique](#history)
 5. [Chronologie, fiche de traitement et demande d'ordonnance](#documents)
 6. [Notifications et e-mail](#notifications)
+   - [Paramètres e-mail des principaux fournisseurs](#smtp-providers)
 7. [Plusieurs personnes : profils et rôles](#profiles)
 8. [Protéger tes données : sauvegarde et export](#backup)
 9. [Plusieurs ordinateurs](#devices)
@@ -773,7 +774,7 @@ générique.
 | Champ | Quoi saisir |
 |---|---|
 | **Hôte** | Le serveur d'envoi de ton fournisseur, par exemple `smtp.gmail.com` |
-| **Port** | En général `587` (avec *Utiliser StartTLS*) ou `465` |
+| **Port** | `587` avec *Utiliser StartTLS* coché, ou `465` avec *Utiliser StartTLS* décoché |
 | **Nom d'utilisateur** / **Nouveau mot de passe** | Ton compte e-mail. Le mot de passe est enregistré chiffré et n'apparaît jamais dans les journaux |
 | **Expéditeur (from)** / **Nom d'expéditeur** | De qui viennent les e-mails |
 | **Délai (s)** | Secondes avant d'abandonner |
@@ -781,13 +782,9 @@ générique.
 Clique sur **Tester la connexion** (il se connecte sans rien envoyer),
 puis sur **Enregistrer les paramètres SMTP**.
 
-*Exemple avec Gmail :* active la validation en deux étapes de ton compte
-Google, crée un mot de passe d'application sur
-`myaccount.google.com/apppasswords`, puis utilise l'hôte
-`smtp.gmail.com`, le port `587`, StartTLS activé, ton adresse Gmail
-comme nom d'utilisateur et le mot de passe d'application. Les
-fournisseurs changent leurs règles : si le test échoue, consulte les
-instructions de ton fournisseur.
+Les valeurs pour Gmail et les autres fournisseurs courants, et la façon
+d'obtenir un mot de passe d'application, sont dans
+[Paramètres e-mail des principaux fournisseurs](#smtp-providers).
 
 ### Étape 2 — les destinataires (chaque profil)
 
@@ -815,6 +812,80 @@ instructions de ton fournisseur.
 Clique sur **Enregistrer les destinataires**. Dans la même section,
 **Mon code PIN** permet de définir ou changer le PIN de ton propre
 profil.
+
+<a id="smtp-providers"></a>
+### Paramètres e-mail des principaux fournisseurs
+
+Beaucoup de fournisseurs n'acceptent plus, dans les programmes, le mot
+de passe de ton webmail. Ils demandent un **mot de passe
+d'application** : un mot de passe distinct, créé par le fournisseur pour
+un seul programme et révocable à tout moment. Saisis-le dans **Nouveau
+mot de passe**. Si tu le révoques, MedReminder n'envoie plus rien tant
+que tu n'en saisis pas un nouveau.
+
+Une seule règle pour le port et le chiffrement :
+
+| Port | *Utiliser StartTLS* |
+|---|---|
+| `587` | coché |
+| `465` | décoché (la connexion est chiffrée dès le début) |
+
+Avec tous les fournisseurs ci-dessous, le **Nom d'utilisateur** est ton
+adresse e-mail complète. Utilise la même adresse comme **Expéditeur
+(from)** : beaucoup de fournisseurs refusent un expéditeur différent du
+compte.
+
+| Fournisseur | Hôte | Port | Mot de passe |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | Mot de passe d'application (voir plus bas) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | Mot de passe d'application, depuis la page *Sécurité* du compte Yahoo |
+| iCloud Mail | `smtp.mail.me.com` | `587` | Mot de passe pour app, depuis `account.apple.com` → *Connexion et sécurité* ; exige l'identification à deux facteurs |
+| Libero Mail | `smtp.libero.it` | `465` | Mot de passe du compte ; avec la validation en deux étapes, un mot de passe d'application depuis *Gestione Account* |
+| Aruba (y compris boîtes de domaine) | `smtps.aruba.it` | `465` | Mot de passe de la boîte |
+| GMX | `mail.gmx.net` | `587` | Mot de passe du compte ; active d'abord *POP3/IMAP* dans les paramètres e-mail du webmail |
+| WEB.DE | `smtp.web.de` | `587` | Mot de passe du compte ; active d'abord *POP3/IMAP* dans les paramètres e-mail du webmail |
+| Orange | `smtp.orange.fr` | `465` | Mot de passe du compte ; s'il est refusé, vérifie dans ton espace client Orange si un mot de passe dédié est nécessaire |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft n'accepte pour ces
+comptes que la connexion moderne (OAuth2), que MedReminder ne prend pas
+en charge ; un mot de passe d'application ne fonctionne pas non plus. Il
+en va en général de même pour les comptes professionnels ou scolaires
+Microsoft 365. Utilise un autre compte pour l'envoi, par exemple une
+adresse Gmail réservée à MedReminder.
+
+#### Gmail : créer le mot de passe d'application
+
+1. Connecte-toi sur `myaccount.google.com` avec le compte Gmail qui
+   enverra les e-mails.
+2. Ouvre **Sécurité**. Si la **Validation en deux étapes** n'est pas
+   activée, active-la avec la procédure guidée (téléphone ou application
+   d'authentification). Sans elle, les mots de passe d'application
+   n'existent pas.
+3. Ouvre `myaccount.google.com/apppasswords`, ou cherche « Mots de passe
+   des applications » dans la zone de recherche du compte. Google peut
+   te redemander ton mot de passe.
+4. Saisis un nom qui rappelle son usage, par exemple `MedReminder`, et
+   clique sur **Créer**.
+5. Google affiche un mot de passe de 16 lettres en quatre groupes.
+   Copie-le et colle-le dans **Nouveau mot de passe**, sans espaces.
+   Google ne l'affiche plus : si tu le perds, supprime-le sur la même
+   page et crées-en un autre.
+6. Dans MedReminder, saisis l'hôte `smtp.gmail.com`, le port `587`,
+   *Utiliser StartTLS* coché, et ton adresse Gmail comme **Nom
+   d'utilisateur** et comme **Expéditeur (from)**. Clique sur **Tester
+   la connexion**, puis sur **Enregistrer les paramètres SMTP**.
+
+Si la page indique que l'option n'est pas disponible, en général la
+validation en deux étapes n'est pas activée ou n'utilise que des clés de
+sécurité, le compte est inscrit au Programme Protection Avancée, ou
+c'est un compte professionnel ou scolaire dont l'administrateur a
+désactivé les mots de passe d'application. Si tu changes le mot de passe
+de ton compte Google, Google révoque les mots de passe d'application :
+crées-en un nouveau et saisis-le dans MedReminder.
+
+Les fournisseurs changent leurs règles et leurs adresses. Si **Tester la
+connexion** échoue avec les valeurs ci-dessus, consulte la page d'aide
+de ton fournisseur (cherche « paramètres SMTP »).
 
 ---
 
