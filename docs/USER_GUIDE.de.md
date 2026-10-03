@@ -218,6 +218,13 @@ Medikamentenfenster **Schema** auf **Erweitert** und wähle einen
 Mit **Erweitert** werden die Dosisfelder oben im Fenster nicht
 verwendet. Wechsle zurück zu **Einfach** für eine feste Tagesdosis.
 
+**Einnahmezeiten gelten auch mit Erweitert.** Das Schema legt fest, wie
+viel du an jedem Tag nimmst; die [Einnahmezeiten](#slots) legen fest,
+wann. Die Tagesmenge wird im Verhältnis ihrer Dosen auf die Zeiten
+verteilt: Bei zwei Zeiten mit je 1 ergibt ein ausschleichender Tag mit 4
+die Aufteilung 2 + 2, ein Tag mit 1 ergibt 0,5 + 0,5. An einem
+Pausentag des Zyklus ist nichts fällig und es kommt keine Erinnerung.
+
 **Die Therapie ändert sich?** Nutze **Therapie → Dosis/Häufigkeit
 ändern…** und wähle das Datum **Gültig ab**. Das alte Schema bleibt für
 die Tage davor gültig. Liegt das Datum in der Vergangenheit, wird der

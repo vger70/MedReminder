@@ -187,6 +187,7 @@
   "Ui.MedicineEditDialog.Slots.SummaryNone": "No slots configured: the medicine will use \"dose × administrations per day\" as set above.",
   "Ui.MedicineEditDialog.Slots.Summary": "{0} slots defined — daily total: {1} {2}. Daily consumption will be computed from these times.",
   "Ui.MedicineEditDialog.Slots.SummaryAsNeeded": "{0} slots, all as needed: no automatic consumption; the stock decreases only with the intakes you record.",
+  "Ui.MedicineEditDialog.Slots.SummaryShared": "{0} slots: the advanced schedule sets the daily quantity; the slots split it in proportion to their doses.",
   "Ui.MedicineEditDialog.Slots.AsNeededLabel": "{0} (as needed)",
   "Ui.MedicineEditDialog.Field.Package": "Package",
   "Ui.MedicineEditDialog.Field.Documents": "AIFA documents",

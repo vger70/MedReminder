@@ -187,6 +187,7 @@
   "Ui.MedicineEditDialog.Slots.SummaryNone": "Aucun créneau configuré : le médicament utilisera « dose × prises par jour » défini ci-dessus.",
   "Ui.MedicineEditDialog.Slots.Summary": "{0} créneaux définis — total journalier : {1} {2}. La consommation journalière sera calculée à partir de ces horaires.",
   "Ui.MedicineEditDialog.Slots.SummaryAsNeeded": "{0} créneaux, tous au besoin : aucune consommation automatique ; le stock ne diminue qu'avec les prises enregistrées.",
+  "Ui.MedicineEditDialog.Slots.SummaryShared": "{0} créneaux : le schéma avancé fixe la quantité du jour ; les créneaux la répartissent en proportion de leurs doses.",
   "Ui.MedicineEditDialog.Slots.AsNeededLabel": "{0} (au besoin)",
   "Ui.MedicineEditDialog.Field.Package": "Conditionnement",
   "Ui.MedicineEditDialog.Field.Documents": "Documents AIFA",

@@ -159,6 +159,9 @@ public class TherapyStartChangeTests
         var group = _a.EnableSync(Guid.Parse("0a000000-0000-0000-0000-000000000000"));
         _b.SyncSettingsStore.Save(group with { DeviceId = Guid.Parse("0b000000-0000-0000-0000-000000000000") });
         var id = await SeedAsync();
+        // Distinct recording instants: "the latest recorded row" must not
+        // be decided by a tie on a frozen clock.
+        _a.Clock.AdvanceBy(TimeSpan.FromMinutes(1));
         await _a.ChangeMedicationSchedule.ExecuteAsync(
             new ChangeMedicationScheduleCommand(id, 2m, 1, new DateOnly(2026, 9, 12)), default);
         await _b.ApplyRemote.ExecuteAsync(await _a.SyncOperations.ListAllAsync(default), default);
