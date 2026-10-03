@@ -30,7 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — Slot description presets by time of day, resizable navigation pane
+## PR #182 — Slot description presets by time of day, resizable navigation pane
+
+Link: [vger70/MedReminder#182](https://github.com/vger70/MedReminder/pull/182)
 
 Branch: `claude/voci-ordinamento-menu-laterale-544d36` → `main`
 
