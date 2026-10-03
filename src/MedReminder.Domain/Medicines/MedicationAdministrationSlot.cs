@@ -12,9 +12,13 @@ namespace MedReminder.Domain.Medicines;
 // Only the current set is used by today's calculations.
 //
 // Composition rule with MedicationScheduleHistory:
-//  - if a medicine HAS slots, daily consumption = SUM(slot.Dose) over
-//    the slots that are not as-needed (IsAsNeeded); when every slot is
-//    as-needed, daily consumption is 0, as for a PRN schedule.
+//  - if a medicine HAS slots and its schedule is FixedDaily, daily
+//    consumption = SUM(slot.Dose) over the slots that are not
+//    as-needed (IsAsNeeded); when every slot is as-needed, daily
+//    consumption is 0, as for a PRN schedule.
+//  - with any other schedule (weekly, cyclic, tapering) the schedule
+//    gives the day's quantity and the slots split it in proportion to
+//    their doses: the slots say when, the schedule how much.
 //  - if it has no slots, the legacy formula is used:
 //    Medicine.DosePerAdministration × Medicine.AdministrationsPerDay
 //    (Increment 1..9 behavior).

@@ -6,7 +6,7 @@ describes the on-disk format only. The design rationale (merge rules,
 security model, phases) is in
 [`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md).
 
-Format version: **1**. Operation catalogue: schema version **9**.
+Format version: **1**. Operation catalogue: schema version **10**.
 Database image: schema version **7**.
 
 ---
@@ -272,7 +272,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 9)
+## 6. Operation catalogue (schema versions 1 to 10)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -286,6 +286,7 @@ nothing.
 |---|---|---|
 | `MedicineCreated` | `startDate`, `createdAt`, `fields[]` (`field`, `value`) | new medicine; every field versioned at the operation's timestamp |
 | `MedicineFieldChanged` | `field`, `value`, `baseVersion` | last writer wins per field |
+| `MedicineStartChanged` (version 10) | `startDate` | last writer wins (register `StartDate` of the medicine), no conflict entry; the schedule row and slot set that make the plan follow the new date are their own `ScheduleRowRecorded` and `SlotSetRecorded` |
 | `MedicineActivityChanged` | `changeId`, `day`, `active`, `recordedAt` | dated fact; the current value is the latest by timestamp |
 | `ScheduleRowRecorded` | `rowId`, `effectiveFrom`, `dosePerAdministration`, `administrationsPerDay`, `scheduleKind`, `schedulePayload`, `recordedAt`, `baseVersion` | fact; the latest row of a date wins |
 | `SlotSetRecorded` (version 9 when a slot has `isAsNeeded` true) | `setId`, `effectiveFrom`, `recordedAt`, `slots[]` (`slotId`, `dose`, `time`, `timingLabel`, `order`, `isAsNeeded` (from version 9; absent = false), `presetId` (display only, any version; absent = null)), `baseVersion` | fact; the latest set in force applies; an as-needed slot is never consumed automatically |
@@ -304,8 +305,8 @@ nothing.
 
 Every type is schema version 1 except `MedicineDeleted`, version 2,
 `ProfileSettingChanged`, version 3, `EmailNotificationSent`, version 4,
-`HouseholdLinked`, version 5, `PrescriptionChanged`, version 7, and
-`DeadlineChanged`, version 8. A
+`HouseholdLinked`, version 5, `PrescriptionChanged`, version 7,
+`DeadlineChanged`, version 8, and `MedicineStartChanged`, version 10. A
 second-stage `EmailNotificationSent` (the second low-stock warning, sent
 at half of the medicine's warning threshold) is written with version 6, so only that operation stops an
 older app; a first-stage one keeps version 4 and its `stage` field,

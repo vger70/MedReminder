@@ -48,6 +48,7 @@ public class OperationCodecTests
             NotificationChannels.Both, null, false, At),
         new DeadlineChanged(Guid.Empty, F, DeadlineKind.Other, "Disability card", new DateOnly(2027, 1, 15), 0, null,
             NotificationChannels.Windows, new DateOnly(2027, 1, 10), false, At),
+        new MedicineStartChanged(M, new DateOnly(2026, 9, 5)),
     };
 
     [Theory]
@@ -108,6 +109,7 @@ public class OperationCodecTests
             DeadlineChanged => 8,
             IntakeRecorded { IsExtra: true } => 9,
             SlotSetRecorded set when set.Slots.Any(s => s.IsAsNeeded) => 9,
+            MedicineStartChanged => 10,
             _ => 1,
         };
 

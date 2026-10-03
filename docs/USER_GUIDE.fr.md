@@ -218,6 +218,13 @@ la fenêtre du médicament, mets **Schéma** sur **Avancé** et choisis un
 Avec **Avancé**, les champs de dose en haut de la fenêtre ne sont pas
 utilisés. Reviens à **Simple** pour une dose quotidienne fixe.
 
+**Les horaires de prise fonctionnent aussi avec Avancé.** Le schéma fixe
+la quantité de chaque jour ; les [horaires de prise](#slots) fixent le
+moment. La quantité du jour est répartie entre les horaires en
+proportion de leurs doses : avec deux horaires de 1, un jour dégressif
+de 4 donne 2 + 2, un jour de 1 donne 0,5 + 0,5. Un jour de pause du
+cycle, il n'y a rien à prendre et aucun rappel.
+
 **Le traitement change ?** Utilise **Traitement → Changer
 dose/fréquence…** et choisis la date **Effectif à partir de**. L'ancien
 schéma reste valable pour les jours précédents. Si la date est passée,

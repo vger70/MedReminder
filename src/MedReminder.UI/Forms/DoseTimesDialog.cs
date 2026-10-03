@@ -109,7 +109,8 @@ internal sealed class DoseTimesDialog : MedReminderFormBase
     {
         _list.BeginUpdate();
         _list.Items.Clear();
-        foreach (var p in _presets)
+        // By time of day; presets without a time last, in their order.
+        foreach (var p in _presets.OrderBy(p => p.Time is null).ThenBy(p => p.Time).ThenBy(p => p.Order))
         {
             var row = new ListViewItem(NameOf(p)) { Tag = p };
             row.SubItems.Add(p.Time?.ToString("HH:mm") ?? "—");

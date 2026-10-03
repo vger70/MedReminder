@@ -305,7 +305,7 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   never handles its day for automatic consumption, the frozen-day
   reversal or a count-day materialization.
 - Switching a medicine to `Prn` (`ChangeMedicationSchedule`) records an
-  empty slot set from the same day, since slots take precedence over
+  empty slot set from the same day, since (under FixedDaily) slots take precedence over
   the schedule.
 - One-time data migrations that need Application logic are marked by
   the schema patch, or by an archive import, in `PendingDataMigrations`

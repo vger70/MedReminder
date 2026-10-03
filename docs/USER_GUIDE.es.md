@@ -212,6 +212,13 @@ régimen**:
 Con **Avanzado**, los campos de dosis de la parte superior de la
 ventana no se usan. Vuelve a **Simple** para una dosis diaria fija.
 
+**Los horarios de administración también funcionan con Avanzado.** El
+esquema fija cuánto tomar cada día; los [horarios de administración](#slots)
+fijan cuándo. La cantidad del día se reparte entre los horarios en
+proporción a sus dosis: con dos horarios de 1, un día decreciente de 4
+da 2 + 2, un día de 1 da 0,5 + 0,5. En un día de pausa del ciclo no hay
+nada que tomar y no llega ningún recordatorio.
+
 **¿Cambia la terapia?** Usa **Terapia → Cambiar dosis/frecuencia…** y
 elige la fecha **Efectivo desde**. El esquema anterior sigue siendo
 válido para los días previos. Si la fecha está en el pasado, el consumo
