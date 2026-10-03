@@ -30,19 +30,25 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #177 — Add analysis for intraday stock that follows dose times
+## PR #177 — Add analysis for intraday stock and as-needed doses
 
 Link: [vger70/MedReminder#177](https://github.com/vger70/MedReminder/pull/177)
 Branch: `feature/intraday-consumption` → `main`
 
 ### Docs
 
-- New `docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`: the stock shown
+- New `docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`. The stock shown
   in the main window is the start-of-day value, so a dose already taken
-  still appears in it. The analysis recommends a read-side projection
-  that subtracts the doses already due today, resolved from slot times
-  or user-editable time-of-day presets, and leaves the ledger, sync,
-  counts and forecasts unchanged.
+  still appears in it; the analysis chooses a read-side projection that
+  subtracts the doses already due today, resolved from slot times or
+  user-editable time-of-day presets, and leaves the ledger, sync, counts
+  and forecasts unchanged.
+- The same analysis covers as-needed doses: a slot described as "As
+  needed", or a PRN medicine that kept its slots, is consumed every day
+  today. It specifies a per-slot as-needed flag excluded from automatic
+  consumption, applied from today only so that past stock counts keep
+  their value, and an extra-intake flag so that recording an as-needed
+  tablet no longer cancels the day's scheduled consumption.
 
 ---
 

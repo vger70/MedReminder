@@ -1,4 +1,4 @@
-# ANALYSIS — Intraday consumption: stock that follows the dose times
+# ANALYSIS — Intraday consumption and as-needed doses
 
 Design document, **prior** to implementation. Work proceeds on branch
 `feature/intraday-consumption`.
@@ -10,135 +10,274 @@ pending confirmation).
 
 ---
 
-## 1. Problem
+## 1. Problems
 
-The stock shown in the main window is the stock **at the start of the
-current day**. A user who took this morning's tablet and opens the app
-sees one dose more than the box holds, and has to remember that today's
-doses are booked only after midnight. The number is correct by its own
-definition, but nothing in the UI states that definition, and it
-contradicts what the user sees in the box.
+**P1 — The stock shown lags the doses already taken.** The main window
+shows the stock **at the start of the current day**. A user who took
+this morning's tablet sees one dose more than the box holds and has to
+remember that today's doses are booked only after midnight.
 
-Goal: for every scheduled (not as-needed) medicine, the stock shown
-drops when each dose time passes. Slots with an explicit time use it.
-Slots without a time use the time of their time-of-day preset
-("in the morning" = 08:00, "before lunch" = 13:00, ...), which the user
-can edit and extend. Slots whose time cannot be resolved keep today's
-behavior: the dose is booked at end of day.
+**P2 — As-needed doses are consumed every day.** A medicine taken only
+when needed (e.g. paracetamol for a headache) whose slot is described
+as "As needed" loses one dose per day, although the user takes it only
+on some days and records those intakes by hand.
+
+Goals:
+
+- G1: for every scheduled medicine the stock shown drops when each dose
+  time passes. Slots with an explicit time use it; slots without a time
+  use the time of their time-of-day preset ("in the morning" = 08:00,
+  "before lunch" = 13:00, ...), which the user can edit and extend.
+  Doses whose time cannot be resolved keep today's behavior: booked at
+  end of day.
+- G2: an as-needed dose is never consumed automatically. Stock decreases
+  only when the user records it.
 
 ## 2. Current behavior
+
+### 2.1 Stock and ledger
 
 - **Automatic consumption is booked per whole day, after the day
   ends.** `LedgerDeriver.Derive` builds rule 2 with
   `autoThrough: today.AddDays(-1)`
   (`src/MedReminder.Domain/Ledger/LedgerDeriver.cs:41`). One row per day,
-  id `auto:{yyyy-MM-dd}`, `OccurredAt` = local midday (`LocalMidday`).
-  `[VERIFIED]`
+  id `auto:{yyyy-MM-dd}`, `OccurredAt` = local midday. `[VERIFIED]`
 - **The displayed stock is the stored ledger sum.**
   `MedicineOverviewLoader` uses `MedicineStock.Current(movements)`
-  (`src/MedReminder.Application/Overview/MedicineOverviewLoader.cs:54`);
-  derived rows are written by `ConsumptionCatchUp` /
-  `LedgerSynchronizer`. During day D the value excludes every dose of
-  D. `[VERIFIED]`
-- **Intakes are the exception.** A non-legacy `Taken` intake books its
-  quantity on its day immediately (rule 1), and any intake on a day
-  suppresses rule 2 for that day. `[VERIFIED]`
-- **Slot times are not used by the ledger.**
-  `MedicationAdministrationSlot.Time` (`TimeOnly?`) feeds sorting, texts
-  and the A5 dose reminders only; `ANALYSIS-A5-DOSE-TIME-REMINDER.md`
-  §1.3 explicitly keeps the reminder away from stock. `[VERIFIED]`
+  (`src/MedReminder.Application/Overview/MedicineOverviewLoader.cs:54`).
+  During day D the value excludes every dose of D. `[VERIFIED]`
+- **The ledger is re-derived from facts over its whole post-freeze
+  history.** Every day after `LedgerCutoff.CutoffDay` is recomputed by
+  `LedgerSynchronizer` on each catch-up. A change to how a past day's
+  quantity is computed changes stored stock retroactively. `[VERIFIED]`
+- **Stock counts store a fixed correction.** `EvaluateCount` stores
+  `correction = counted − (startOfDay − takenToday)`; the derivation
+  replays the stored value (`CountReevaluation` recomputes it only for
+  counts recorded with sync enabled). A retroactive change to automatic
+  consumption **before** a count therefore shifts the stock after that
+  count by the same amount, and the user's counted value is lost.
+  `[VERIFIED]` Consequence: every rule change in this document must be
+  **non-retroactive**.
+- **The count dialog already computes "doses due so far today".**
+  `ReconcileStock.DefaultTakenToday` sums the doses of timed slots whose
+  time has passed, capped at today's scheduled quantity
+  (`src/MedReminder.Application/UseCases/ReconcileStock.cs:249`). It is
+  the seed of the projection in §4 and must share its code. `[VERIFIED]`
+- **A count today without materializing the day** leaves the ledger at
+  `counted + takenToday`; midnight subtracts the full day.
+  `[VERIFIED]` (ReconcileStock header).
+
+### 2.2 Intakes
+
+- A non-legacy `Taken` intake books its quantity immediately (rule 1).
+- **Any intake on a day suppresses the whole day's automatic
+  consumption** (rule 2 skips days in `IntakeDays`). `[VERIFIED]`
+  The intake dialog proposes `DosePerAdministration`
+  (`MainForm.cs:2266`). For a medicine with three scheduled doses, one
+  recorded intake of one tablet books one tablet for the day instead of
+  three. This trap already exists; G2 makes it frequent, because the
+  natural way to record an extra as-needed tablet is the intake dialog.
+- `AdjustStockDown` writes a `NegativeCorrection` user entry and does
+  not interfere with rule 2. `[VERIFIED]`
+
+### 2.3 Slots, schedules and as-needed
+
+- `MedicationAdministrationSlot.Time` (`TimeOnly?`) feeds sorting, texts,
+  the count dialog seed and the A5 dose reminders; the ledger ignores
+  it. `[VERIFIED]`
 - **The time-of-day description is free text.** The slot dialog fills
   its combo with localized preset strings and stores the chosen *text*
-  in `TimingLabel` (`src/MedReminder.UI/Forms/AdministrationSlotDialog.cs:87-91`),
-  not a preset key. A label typed in Italian cannot be mapped reliably
-  once the UI language changes or the user edits the text. `[VERIFIED]`
-- **"As needed" is only modeled at schedule level.** `PrnSchedule`
-  returns rate 0; a slot labeled "As needed" is summed into the daily
-  rate like any other slot (`DailyConsumption.RateOn`). `[VERIFIED]`
+  in `TimingLabel` (`AdministrationSlotDialog.cs:87-91`). `[VERIFIED]`
+- **Slots take precedence over the schedule.** `DailyConsumption.RateOn`
+  returns the sum of slot doses whenever slots exist, before looking at
+  the schedule. Consequences: `[VERIFIED]`
+  - a slot labeled "As needed" is consumed every day (P2);
+  - a medicine switched to `PrnSchedule` through the change-schedule
+    dialog keeps its slots (`ChangeMedicationSchedule` does not touch
+    slots) and keeps being consumed every day. On creation the edit
+    dialog clears slots in advanced mode (`MedicineEditDialog.cs:504`),
+    so only a later schedule change hits this path.
+- The correct as-needed model already exists: `PrnSchedule`
+  ("Al bisogno (PRN)"), rate 0, no automatic consumption, no forecast.
+  It applies to the whole medicine only; there is no per-slot
+  equivalent. `[VERIFIED]`
+- Non-`FixedDaily` schedules (`Weekly`, `Cyclic`, `Tapering`,
+  `SteppedTapering`) express a quantity per day, not a number of
+  administrations. `[VERIFIED]`
+- `DoseReminderService` reminds every timed slot, as-needed ones
+  included (`DoseReminderService.cs:110`). `[VERIFIED]`
 
-## 3. Options
+### 2.4 UI refresh
 
-### Option A — intraday rows in the ledger
+The main grid reloads on load, after user actions and on F5
+(`MainForm.ReloadAsync`); there is no periodic refresh. `[VERIFIED]`
+Today the grid can already show yesterday's value after midnight until
+something reloads it.
 
-Rule 2 books today's due slots as separate derived rows
-(`auto:{day}:{slotKey}`, `OccurredAt` = day + slot time);
-`Derive` takes `DateTimeOffset now` instead of `DateOnly today`.
+## 3. Options for P1
 
-Consequences:
+### Option A — intraday rows in the ledger (rejected)
 
-- The ledger invariant "same facts, same day, same zone: same rows on
-  every device" (B.1 §4.3) becomes "same instant". Devices of a
-  household converge at end of day but can differ intraday by clock
-  skew. `[INFERRED]`
-- Every consumer that adds today's plan to the stock double counts:
-  `RunOutForecast` (ETA one day early in the evening), `CoveragePlanner`
-  (`Plan(today, from-1)`), `LedgerDeriver.CountBaseline` /
-  `ReconcileStock` (count-day scheduled quantity). Each must move to
-  "remaining doses of today".
-- Today's rows collapse into one daily row at midnight: derived-row
-  churn every day, and slot-set changes during the day re-key rows.
-- Parity harness, B.1 sync documents and the A5 §1.3 boundary must be
-  revised.
+Rule 2 books today's due slots as separate derived rows. This changes
+the deterministic derivation ("same facts, same day" becomes "same
+instant"), makes forecast, coverage and counts double count today's
+doses, churns derived rows daily, and needs a revision of the B.1 sync
+documents and the parity harness.
 
-### Option B — read-side projection (recommended)
+### Option B — read-side projection (chosen)
 
-The ledger stays exactly as it is. A pure domain function computes the
-quantity of today's doses already due at `now`; the overview shows
-`max(0, ledgerStock − dueSoFar)`. At midnight rule 2 books the whole
-day and `dueSoFar` restarts from zero, so the displayed value is
+The ledger is unchanged. A pure domain function computes the quantity
+of today's doses already due at `now`; the grid shows
+`EstimatedStockNow = max(0, ledgerStock − dueSoFar)`. At midnight rule 2
+books the whole day and `dueSoFar` restarts from zero: the value is
 continuous across the day boundary.
 
-Why it is preferred:
-
-- It solves the reported problem (what the user *sees*) without
-  touching the deterministic ledger, stock epochs, sync, counts,
-  coverage or the parity harness.
-- It is reversible and carries no data migration for stock.
-- Forecast and coverage keep using the start-of-day stock, which is
-  mathematically consistent with "today's plan still ahead", so they
-  need no change.
-
 Cost: the movement history still shows one automatic row per day,
-booked after midnight; the code has two named notions of stock
-(`LedgerStock`, `EstimatedStockNow`). Both are acceptable for a
-display-oriented feature.
+booked after midnight; the code carries two named notions of stock
+(`LedgerStock`, `EstimatedStockNow`).
 
-**Decision: Option B.** Option A is reconsidered only if a later
-feature needs intraday rows in the history or in synced data.
+## 4. Projection (P1)
 
-## 4. Effective dose time
-
-### 4.1 Resolution order, per slot
+### 4.1 Effective dose time, per slot
 
 1. `Slot.Time` when set.
-2. Otherwise the time of the slot's time-of-day preset (`PresetId`).
-3. Otherwise: no intraday time — the dose stays in the end-of-day
-   booking (it never contributes to `dueSoFar`).
+2. Otherwise the time of the slot's preset (`PresetId`, §6).
+3. Otherwise none: the dose stays in the end-of-day booking and never
+   contributes to `dueSoFar`.
 
-A slot whose preset is marked as-needed never contributes to
-`dueSoFar`.
+As-needed slots (§5) never contribute.
 
 ### 4.2 Medicines without slots
 
-Legacy dose × administrations-per-day and A1 schedules (`Weekly`,
-`Cyclic`, `Tapering`) have no slots. Today's rate
-(`DailyConsumption.RateOn`) is split in `AdministrationsPerDay` equal
-doses at default times:
+- `FixedDaily` (dose × N): N equal doses at default times, editable in
+  the same settings page as the presets:
 
-| Administrations per day | Times |
-|---|---|
-| 1 | 08:00 |
-| 2 | 08:00, 20:00 |
-| 3 | 08:00, 13:00, 20:00 |
-| 4 | 08:00, 12:00, 16:00, 20:00 |
-| > 4 | end-of-day booking (no projection) |
+  | Administrations per day | Times |
+  |---|---|
+  | 1 | 08:00 |
+  | 2 | 08:00, 20:00 |
+  | 3 | 08:00, 13:00, 20:00 |
+  | 4 | 08:00, 12:00, 16:00, 20:00 |
+  | > 4 | end-of-day booking (no projection) |
 
-`PrnSchedule` (rate 0) is never projected. `[UNCERTAIN]` Whether
-`AdministrationsPerDay` is meaningful for non-FixedDaily schedules must
-be checked per kind at implementation time; when it is not, the whole
-day's rate is placed at 08:00.
+- `Weekly`, `Cyclic`, `Tapering`, `SteppedTapering`: the whole day's
+  rate at the single-dose default time (08:00).
+- `PrnSchedule`: never projected.
 
-### 4.3 Time-of-day presets (user editable)
+### 4.3 Rules
+
+`IntradayConsumption.DueSoFar(now, zone, ...)` returns 0 when, for
+today (local day of `now`), any of these holds:
+
+- the medicine is inactive, suspended, before `StartDate` or after
+  `EndDate`;
+- a **scheduled** intake exists for today (rule 1 booked it and rule 2
+  will skip the day). An extra intake (§5.3) does not count;
+- a stock count today materialized the day;
+- legacy consumption exists for today.
+
+Otherwise it sums the doses (§4.1, §4.2) whose effective time is
+`<= now`, capped at today's planned quantity
+(`ConsumptionMaterializer.Plan` for today), so it never exceeds what
+midnight books.
+
+`ReconcileStock.DefaultTakenToday` is replaced by the same function, so
+the count dialog suggests the same quantity the grid subtracts. With a
+count today that did not materialize the day, ledger =
+`counted + takenToday` and `EstimatedStockNow = counted + takenToday −
+dueSoFar`, which equals the counted value when the user accepted the
+suggestion. `[VERIFIED by reading ReconcileStock; to be covered by a
+test]`
+
+### 4.4 DST and time zone
+
+- Spring-forward: a time that does not exist that day is due from the
+  first valid local instant after it.
+- Fall-back: comparison on local wall-clock time; due from the first
+  occurrence.
+- Zone change: `now` and slot times are local; no special handling.
+
+## 5. As-needed (P2)
+
+### 5.1 Model
+
+`MedicationAdministrationSlot` gains `IsAsNeeded` (bool). It is stored
+**on the slot**, not read from the preset: slot sets are immutable
+history, and a later edit of a preset must not change past days.
+Picking the "As needed" preset (or a custom preset marked as-needed)
+sets the flag; the user can also tick it directly in the slot dialog.
+
+`DailyConsumption.RateOn`, slot branch:
+
+- slots exist and at least one is not as-needed → sum of the
+  non-as-needed doses;
+- slots exist and all are as-needed → **0** (the medicine behaves as
+  PRN: no automatic consumption, no forecast);
+- no slots → schedule, as today.
+
+Every consumer of the rate follows (ledger rule 2, forecast, coverage,
+timeline, calendar export, monitor). Additional changes:
+
+- `DoseReminderService`: skip as-needed slots; the "remind on dose"
+  option counts only timed, non-as-needed slots.
+- `CoveragePlanner.IsPrn`: also true when all current slots are
+  as-needed, so the report shows "as needed: not calculated".
+- Therapy card and reports: as-needed slots shown as such, without
+  contributing to the daily total.
+
+### 5.2 Non-retroactivity
+
+Old slot rows have `IsAsNeeded = false`, so the new rule changes no past
+day by itself. Existing data is corrected **from today**:
+
+- **Backfill** (startup, Application layer, idempotent): for each
+  medicine whose current slot set contains a slot whose `TimingLabel`
+  matches, trimmed and case-insensitive, the "As needed" preset string
+  in any of the five dictionaries, record a **new slot set with
+  `EffectiveFrom = today`** carrying the same slots with
+  `IsAsNeeded = true`, through the regular slot-change path so it
+  produces its sync operation. Past days keep their consumption; counts
+  keep their meaning.
+- **PRN with slots**: `ChangeMedicationSchedule` to `PrnSchedule`
+  records an empty slot set effective the same day. The backfill does
+  the same for medicines whose schedule in force is PRN and that still
+  have slots.
+
+The stock already lost to past daily consumption of as-needed doses is
+**not** given back automatically. Recovering it retroactively would
+shift every later count (§2.1). The user restores it with one stock
+count; the release notes and user guides say so.
+
+### 5.3 Recording an as-needed dose
+
+For a PRN-only medicine (schedule PRN or all slots as-needed) the intake
+dialog works as today: there is no plan to suppress.
+
+For a **mixed** medicine (scheduled doses plus an as-needed slot) an
+extra tablet recorded as an intake would suppress the day's scheduled
+consumption (§2.2). Recommended fix:
+
+- `MedicationIntake` gains `IsExtra` (bool, default false). Ledger
+  rule 1 books it as today; rule 2 skips a day only for intakes with
+  `IsExtra = false`. Old intakes are `false`: non-retroactive.
+- The intake dialog shows "Extra dose (as needed)" for medicines with a
+  plan; it is preselected when the medicine has an as-needed slot.
+- Sync: `Operations.Intake` carries the flag. `[UNCERTAIN]` A household
+  device on an older version would read an extra intake as scheduled and
+  suppress the day; the operation codec's handling of unknown fields and
+  the minimum-version policy must be checked at implementation time.
+
+Alternative without ledger change: guide the user to "Remove stock"
+(`AdjustStockDown`) for extra doses. Rejected as primary path: the
+intake dialog is where users record a dose, and the trap is silent.
+
+### 5.4 Low-stock alerts for as-needed medicines
+
+With rate 0 there is no forecast, so no low-stock warning: only the
+Empty status at zero. This is today's PRN behavior and stays out of
+scope; a minimum-quantity threshold is a candidate follow-up.
+
+## 6. Time-of-day presets (user editable)
 
 New per-profile table `DoseTimePresets`:
 
@@ -148,11 +287,11 @@ New per-profile table `DoseTimePresets`:
 | `BuiltInKey` | TEXT NULL | e.g. `Morning`; null for user presets |
 | `Label` | TEXT NULL | User text for custom presets; null for built-ins (localized at display time) |
 | `Time` | TEXT NULL (`TimeOnly`) | Null = no intraday time |
-| `IsAsNeeded` | INTEGER | Excluded from projection |
+| `IsAsNeeded` | INTEGER | Default for the slot flag only (§5.1) |
 | `Order` | INTEGER | Display order |
 | `IsHidden` | INTEGER | Built-ins cannot be deleted, only hidden |
 
-Built-in defaults, editable by the user:
+Built-in defaults, editable:
 
 | Built-in key | Default time |
 |---|---|
@@ -170,151 +309,118 @@ Built-in defaults, editable by the user:
 | `Night` | 23:30 |
 | `AsNeeded` | — (`IsAsNeeded = 1`) |
 
-`Night` defaults to 23:30 rather than an early-morning time so that the
-dose is projected on the day it belongs to. The user can change it.
-
 `MedicationAdministrationSlot` gains `PresetId GUID NULL`. `TimingLabel`
-stays as the display text (and for free-form descriptions); `PresetId`
-is the structured reference used for the time.
+stays as display text and for free-form descriptions. Editing a preset
+time changes only the projection (display), never stored stock, so it
+may apply to existing slots immediately.
 
-## 5. Projection rules
+Backfill of `PresetId` for timed purposes: existing slots whose label
+matches a built-in preset string in any language get the preset id in
+place (display-only effect). Unmatched labels stay without preset.
 
-`IntradayConsumption.DueSoFar(now, zone, ...)` returns 0 when any of the
-following holds for today (local day of `now`):
+## 7. Consumers
 
-- the medicine is inactive, suspended today, before `StartDate` or after
-  `EndDate`;
-- an intake exists for today (rule 1 already booked it; rule 2 will
-  skip the day);
-- a stock count today materialized the day (rule 3 already booked the
-  scheduled quantity);
-- legacy consumption exists for today.
-
-Otherwise it sums the doses (§4) whose effective time is `<= now`.
-
-The sum is capped at today's planned quantity used by rule 2
-(`ConsumptionMaterializer.Plan` for today) so the projection never
-exceeds what midnight will book.
-
-`[UNCERTAIN]` A count recorded today *without* materializing the day
-resets the ledger to the counted value while rule 2 will still book the
-full day at midnight. The projection then subtracts the doses already
-due, which matches what midnight will do. To be confirmed against
-`ReconcileStock` semantics with a dedicated test.
-
-## 6. Consumers
-
-| Consumer | Stock used | Change |
+| Consumer | Stock / rate used | Change |
 |---|---|---|
 | `MedicineOverviewLoader` (grid, Empty status) | Estimated now | Yes |
-| Overview tooltip | Both | New: "includes N doses due today" |
-| `RunOutForecast` / `MedicineForecast` | Ledger (start of day) | None |
-| `CoveragePlanner` | Ledger | None |
-| `MedicationMonitor` low-stock alerts | Ledger | None (`[INFERRED]` alert timing tied to forecast; changing it is out of scope) |
-| `ReconcileStock` / count dialog | Ledger + count-day scheduled | None |
-| `AdjustStockDown` | Ledger | None |
-| `TherapyTimeline`, calendar export, reports | Ledger | None |
-| `DoseReminderService` | Ledger | None |
+| Grid tooltip | Both | New: start-of-day value and doses due today |
+| Stock adjustment dialog | Shows estimated; validates on ledger | Display only |
+| `ReconcileStock` / count dialog | Ledger + `DueSoFar` as default taken | Share function |
+| `RunOutForecast` / `MedicineForecast` | Ledger (start of day) | None (rate change via §5.1) |
+| `CoveragePlanner` | Ledger | `IsPrn` (§5.1) |
+| `MedicationMonitor` low-stock alerts | Ledger | None |
+| `DoseReminderService` | — | Skip as-needed slots |
+| `TherapyTimeline`, calendar export, reports | Ledger | As-needed display |
 
-The overview refreshes on its own timer: the displayed value is
-recomputed at the next refresh after a dose time, not exactly at the
-minute. `[UNCERTAIN]` Current refresh cadence of the grid to be
-checked; a one-minute refresh tick limited to the projection is enough.
-
-## 7. Edge cases
-
-- **DST spring-forward**: a time that does not exist on that day (e.g.
-  02:30) counts as due from the first valid local instant after it.
-- **DST fall-back**: comparison is on local wall-clock time of `now`;
-  a dose at 02:30 is due from the first occurrence.
-- **Slot set changed today**: the projection uses the set in force
-  today (`SlotsOn(today)` semantics); the value can jump when the user
-  edits slots, which is expected.
-- **Medicine created today after a dose time**: the projection subtracts
-  that dose immediately. The stock entered at creation may already
-  exclude it. This is the same double booking rule 2 performs today at
-  midnight, only earlier; the creation dialog should say the stock is
-  "before today's doses". `[INFERRED]`
-- **Time zone change**: `now` and slot times are local; no special
-  handling.
+Refresh: the grid reloads on window activation and restore from tray,
+and on a one-minute tick while visible, recomputing only the projection
+when no data changed. This also fixes the stale value after midnight.
 
 ## 8. Persistence, sync, export
 
-- **Schema**: `DoseTimePresets` table and `MedicationAdministrationSlots.PresetId`
-  added through idempotent boot patches in `DatabaseInitializer`
-  (CLAUDE.md §7); built-ins seeded idempotently by deterministic id.
-- **Backfill**: existing slots whose `TimingLabel` matches, trimmed and
-  case-insensitive, a built-in preset string in any of the five
-  dictionaries (`assets/localization/strings.<lang>.json`) get the
-  corresponding `PresetId`. Unmatched labels stay without preset (end of
-  day). Runs once at startup, idempotent.
-- **Sync (B.1 / household)**: `SlotValue` gains `PresetId`. Built-in ids
-  resolve on every device. Custom presets need their own sync operation;
-  until it exists, a slot that references an unknown preset falls back
-  to end of day on that device. Because the projection is display-only,
-  this divergence never affects stored stock. `[INFERRED]`
-- **Export / import**: `ExportPayload` carries presets and `PresetId`;
-  `ExportPayloadUpgrader` treats older payloads as "no preset".
-- **Backups**: covered by the profile database.
+- **Schema** (idempotent boot patches in `DatabaseInitializer`,
+  CLAUDE.md §7): `DoseTimePresets`;
+  `MedicationAdministrationSlots.PresetId`, `.IsAsNeeded`;
+  `MedicationIntakes.IsExtra`. Built-ins seeded by deterministic id.
+- **Backfills**: §5.2 (as-needed, new slot sets, sync operations) and §6
+  (`PresetId`, in place). Both idempotent; the as-needed one runs in the
+  Application layer because it records facts and operations.
+- **Sync**: `SlotValue` gains `PresetId` and `IsAsNeeded`; intake
+  operation gains `IsExtra`. Built-in preset ids resolve on every
+  device. Custom presets need their own sync operation; until then a
+  slot referencing an unknown preset has no projection time on that
+  device (display-only divergence).
+- **Export / import**: `ExportPayload` carries presets and the new
+  fields; `ExportPayloadUpgrader` maps older payloads to defaults
+  (`false` / null).
+- **Parity harness**: new cases for as-needed slots and extra intakes.
 
 ## 9. UI
 
-- Slot dialog: the description combo lists the presets (built-in names
-  localized, custom names as typed, time shown alongside). Selecting a
-  preset sets `PresetId` and the description text; typing free text
-  clears `PresetId`.
-- Settings: new "Dose times" page to edit preset times, add, rename,
-  reorder and hide presets, and mark a preset as as-needed.
-- Main grid: the stock column shows the estimated stock; a tooltip
-  states the start-of-day value and the doses already due today.
-- New string keys added to all five `strings.<lang>.json`; user guides
-  updated in all languages.
+- Slot dialog: description combo lists presets (built-ins localized,
+  custom as typed, time alongside); "As needed" checkbox; choosing a
+  preset sets `PresetId`, the label and the as-needed default; typing
+  free text clears `PresetId`.
+- Settings: "Dose times" page — edit preset times, add, rename,
+  reorder, hide, mark as-needed; default times for medicines without
+  slots (§4.2).
+- Intake dialog: "Extra dose (as needed)" option (§5.3).
+- Main grid: estimated stock with tooltip; slot summary excludes
+  as-needed doses from the daily total.
+- New string keys in all five `strings.<lang>.json`; user guides updated
+  in all languages, including the one-time stock count advice (§5.2).
 
 ## 10. Medical-device boundary
 
-The projection is an inventory estimate driven by the planned schedule.
-It records nothing about whether a dose was taken, adds no
-acknowledgement and no missed-dose logic, so the line drawn in
-`ANALYSIS-A5-DOSE-TIME-REMINDER.md` §1.3 holds: reminders still do not
-book stock, and no stock movement depends on the user's behavior.
-UI wording must say "estimated" and must not imply that the app knows
-the dose was taken. `[INFERRED — MDR classification depends on the
+The projection is an inventory estimate from the planned schedule. It
+records nothing about whether a dose was taken; an extra intake is a
+stock entry the user makes, as intakes are today. The line in
+`ANALYSIS-A5-DOSE-TIME-REMINDER.md` §1.3 holds: reminders do not book
+stock. UI wording says "estimated" and never implies the app knows a
+dose was taken. `[INFERRED — MDR classification depends on the
 declared intended use]`
 
 ## 11. Out of scope
 
 - Option A (intraday ledger rows).
-- Excluding as-needed **slots** from the daily rate in
-  `DailyConsumption.RateOn`. Today an "As needed" slot is consumed
-  daily; fixing it changes stored stock and forecasts and deserves its
-  own change.
-- Changing low-stock alert timing.
+- Retroactive restitution of past as-needed consumption (§5.2).
+- Minimum-quantity alerts for as-needed medicines (§5.4).
+- Per-slot intake tracking (which scheduled dose an intake refers to).
 
-## 12. Implementation steps
+## 12. Implementation phases
 
-1. **Domain**: `DoseTimePreset` entity; `PresetId` on the slot;
-   `EffectiveDoseTime` resolution (§4); `IntradayConsumption.DueSoFar`
-   (§5). Pure, unit-tested (DST, caps, exclusions, defaults table).
-2. **Persistence**: boot patches, seeding, repository, backfill.
-3. **Application**: overview loader exposes `LedgerStock`,
-   `EstimatedStockNow`, `DueTodaySoFar`; preset use cases (list, add,
-   edit, hide).
-4. **Sync / export**: `SlotValue.PresetId`, payload and upgrader.
-5. **UI**: slot dialog, settings page, grid column and tooltip, refresh
-   tick, localization keys, user guides.
+Each phase is shippable and tested on its own.
+
+1. **As-needed (P2)** — changes stored stock from today, so it ships
+   first: slot and intake fields, `RateOn`, ledger rule 2 with
+   `IsExtra`, change-schedule to PRN clears slots, backfill, reminder
+   and coverage changes, slot and intake dialogs, sync and export.
+2. **Presets** — table, seeding, `PresetId` backfill, settings page,
+   slot dialog combo.
+3. **Projection (P1)** — `IntradayConsumption`, overview fields and
+   tooltip, count dialog reuse, grid refresh.
 
 ## 13. Tests
 
-- `IntradayConsumption`: before / at / after each slot time; slot with
-  time vs preset vs unresolved; as-needed preset; no-slot defaults for
-  1–4 and > 4 administrations; suspended, inactive, outside window;
-  intake today; materialized count today; cap at planned quantity; DST
-  both directions.
+- `DailyConsumption`: mixed slots; all as-needed → 0; no slots
+  unchanged; old slots (flag false) unchanged.
+- Ledger: as-needed slot set effective today leaves past days identical
+  (same rows, same ids, same quantities); count before the change keeps
+  its counted value; extra intake does not suppress rule 2; scheduled
+  intake still does; old intakes unchanged.
+- Backfill: labels in each of the five languages, trimmed and
+  case-varied; unmatched label untouched; PRN with slots; second run
+  is a no-op; operation produced once.
+- `IntradayConsumption`: before / at / after each slot time; time vs
+  preset vs unresolved; as-needed excluded; no-slot defaults 1–4 and
+  > 4; non-FixedDaily at 08:00; suspended, inactive, outside window;
+  scheduled vs extra intake today; materialized count today; cap;
+  DST both directions.
 - Continuity: estimated stock at 23:59 on D equals estimated stock at
   00:00 on D+1 after the ledger books D.
-- Backfill: labels in each of the five languages, trimmed and
-  case-varied; unmatched label untouched; second run is a no-op.
-- Export round trip with and without presets; old payload upgrade.
+- Count dialog default equals grid projection.
+- Export round trip with and without the new fields; old payload
+  upgrade.
 
 ## 14. Decisions
 
@@ -322,11 +428,16 @@ Confirmed by the user:
 
 1. Structured preset reference on the slot rather than parsing the
    label text.
-2. Preset times editable, and the user can add presets.
-3. A slot without a resolvable time keeps the end-of-day booking.
+2. Preset times editable; the user can add presets.
+3. A dose without a resolvable time keeps the end-of-day booking.
+4. Option B (read-side projection).
+5. Default times for 1–4 administrations without slots (§4.2).
+6. `Night` default at 23:30.
+7. As-needed doses are never consumed automatically; the user records
+   them.
 
 Still to confirm:
 
-4. Option B (read-side projection) instead of Option A (§3).
-5. Default times for 1–4 administrations without slots (§4.2).
-6. `Night` default at 23:30 (§4.3).
+8. Non-retroactive correction of as-needed data, with a one-time stock
+   count to recover past over-consumption (§5.2).
+9. `IsExtra` on intakes for mixed medicines (§5.3).
