@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #191 — Add an SMTP provider section to the user guides
+
+Link: [vger70/MedReminder#191](https://github.com/vger70/MedReminder/pull/191)
+
+Branch: `claude/user-guide-smtp-providers` → `main`
+
+### Docs
+
+- New subsection *Email settings for common providers* in section 6 of
+  `docs/USER_GUIDE.{en,it,fr,es,de}.md`: host, port and password type
+  for Gmail, Yahoo Mail, iCloud Mail, Libero Mail, Aruba, GMX, WEB.DE
+  and Orange, with step-by-step creation of a Gmail app password.
+- States that Outlook.com / Hotmail accounts cannot be used, since they
+  require OAuth2 for SMTP and MedReminder signs in with a password.
+- Clarifies the port rule applied by the email service: `587` with
+  *Use StartTLS* ticked, `465` with it unticked.
+
 ## PR #189 — Analyse AIFA equivalent-medicine lists and a Codifa info link
 
 Link: [vger70/MedReminder#189](https://github.com/vger70/MedReminder/pull/189)

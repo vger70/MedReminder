@@ -35,6 +35,7 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
      [Storico](#history)
 5. [Linea del tempo, scheda terapia e richiesta ricetta](#documents)
 6. [Notifiche ed email](#notifications)
+   - [Parametri email dei principali provider](#smtp-providers)
 7. [Più persone: profili e ruoli](#profiles)
 8. [Proteggere i dati: backup ed esportazione](#backup)
 9. [Più computer](#devices)
@@ -707,7 +708,7 @@ file di calendario (`medreminder.ics`), con lo stesso titolo generico.
 | Campo | Cosa inserire |
 |---|---|
 | **Host** | Il server di posta in uscita del tuo provider, per esempio `smtp.gmail.com` |
-| **Porta** | Di solito `587` (con *Usa StartTLS*) o `465` |
+| **Porta** | `587` con *Usa StartTLS* spuntato, oppure `465` con *Usa StartTLS* non spuntato |
 | **Username** / **Nuova password** | Il tuo account email. La password è salvata cifrata e non finisce mai nei log |
 | **Mittente (from)** / **Nome mittente** | Da chi arrivano le email |
 | **Timeout (s)** | Secondi prima di rinunciare |
@@ -715,12 +716,9 @@ file di calendario (`medreminder.ics`), con lo stesso titolo generico.
 Fai clic su **Prova connessione** (accede senza inviare nulla), poi su
 **Salva impostazioni SMTP**.
 
-*Esempio con Gmail:* attiva la verifica in due passaggi nell'account
-Google, crea una password per le app su
-`myaccount.google.com/apppasswords`, poi usa Host `smtp.gmail.com`,
-Porta `587`, StartTLS attivo, il tuo indirizzo Gmail come Username e la
-password per le app come password. I provider cambiano le regole: se la
-prova fallisce, controlla le istruzioni del tuo provider.
+I valori per Gmail e per gli altri provider più diffusi, e come ottenere
+una password per le app, sono in
+[Parametri email dei principali provider](#smtp-providers).
 
 ### Passo 2 — i destinatari (per ogni profilo)
 
@@ -747,6 +745,74 @@ prova fallisce, controlla le istruzioni del tuo provider.
 
 Fai clic su **Salva destinatari**. Nella stessa sezione, **Il mio PIN**
 permette di impostare o cambiare il PIN del tuo profilo.
+
+<a id="smtp-providers"></a>
+### Parametri email dei principali provider
+
+Molti provider non accettano più, nei programmi, la password con cui
+accedi alla webmail. Chiedono una **password per le app**: una password
+separata, generata dal provider per un solo programma e revocabile in
+qualsiasi momento. Va inserita in **Nuova password**. Se la revochi,
+MedReminder smette di inviare finché non ne inserisci una nuova.
+
+Per porta e cifratura vale una sola regola:
+
+| Porta | *Usa StartTLS* |
+|---|---|
+| `587` | spuntato |
+| `465` | non spuntato (la connessione è cifrata fin dall'inizio) |
+
+Con tutti i provider qui sotto **Username** è l'indirizzo email completo.
+Usa lo stesso indirizzo come **Mittente (from)**: molti provider
+rifiutano un mittente diverso dall'account.
+
+| Provider | Host | Porta | Password |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | Password per le app (vedi sotto) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | Password per le app, dalla pagina *Sicurezza* dell'account Yahoo |
+| iCloud Mail | `smtp.mail.me.com` | `587` | Password specifica per l'app, da `account.apple.com` → *Accesso e sicurezza*; richiede l'autenticazione a due fattori |
+| Libero Mail | `smtp.libero.it` | `465` | Password dell'account; con la verifica in due passaggi attiva, una password per app da *Gestione Account* |
+| Aruba (anche caselle di dominio) | `smtps.aruba.it` | `465` | Password della casella |
+| GMX | `mail.gmx.net` | `587` | Password dell'account; prima attiva *POP3/IMAP* nelle impostazioni email della webmail |
+| WEB.DE | `smtp.web.de` | `587` | Password dell'account; prima attiva *POP3/IMAP* nelle impostazioni email della webmail |
+| Orange | `smtp.orange.fr` | `465` | Password dell'account; se viene rifiutata, controlla nello spazio cliente Orange se serve una password dedicata |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft accetta per questi
+account solo l'accesso moderno (OAuth2), che MedReminder non supporta;
+nemmeno una password per le app funziona. Lo stesso vale, di norma, per
+gli account di lavoro o scuola Microsoft 365. Usa un altro account per
+l'invio, per esempio un indirizzo Gmail dedicato a MedReminder.
+
+#### Gmail: creare la password per le app
+
+1. Accedi a `myaccount.google.com` con l'account Gmail che invierà le
+   email.
+2. Apri **Sicurezza**. Se la **Verifica in due passaggi** non è attiva,
+   attivala seguendo la procedura guidata (telefono o app di
+   autenticazione). Senza di essa le password per le app non esistono.
+3. Apri `myaccount.google.com/apppasswords`, oppure cerca "Password per
+   le app" nella casella di ricerca dell'account. Google può chiederti
+   di nuovo la password.
+4. Scrivi un nome che ricordi a cosa serve, per esempio `MedReminder`, e
+   fai clic su **Crea**.
+5. Google mostra una password di 16 lettere, in quattro gruppi. Copiala e
+   incollala in **Nuova password**, senza spazi. Google non la mostra
+   più: se la perdi, eliminala dalla stessa pagina e creane un'altra.
+6. In MedReminder inserisci Host `smtp.gmail.com`, Porta `587`, *Usa
+   StartTLS* spuntato, il tuo indirizzo Gmail come **Username** e come
+   **Mittente (from)**. Fai clic su **Prova connessione**, poi su
+   **Salva impostazioni SMTP**.
+
+Se la pagina dice che l'opzione non è disponibile, di solito la verifica
+in due passaggi non è attiva, usa solo chiavi di sicurezza, l'account è
+iscritto alla Protezione avanzata, oppure è un account di lavoro o
+scuola il cui amministratore ha disattivato le password per le app. Se
+cambi la password dell'account Google, Google revoca le password per le
+app: creane una nuova e inseriscila in MedReminder.
+
+I provider cambiano regole e indirizzi. Se **Prova connessione**
+fallisce con i valori sopra, controlla la pagina di aiuto del tuo
+provider (cerca "impostazioni SMTP").
 
 ---
 
