@@ -70,12 +70,13 @@ in der App zu lesen. Die technische Architektur ist in
    Windows-Infobereich (neben der Uhr) bleibt sichtbar, solange die App
    läuft.
 
-**Windows SmartScreen.** Das Programm ist nicht digital signiert. Beim
-allerersten Start kann Windows ein blaues Fenster „Der Computer wurde
-durch Windows geschützt“ zeigen: Klicke auf **Weitere Informationen**,
-dann auf **Trotzdem ausführen**. Windows merkt sich die Wahl. Bei der
-Installation über das MSI-Paket zeigt das Berechtigungsfenster aus
-demselben Grund „Unbekannter Herausgeber“.
+**Windows SmartScreen.** Das Programm ist mit einem Certum-Zertifikat
+digital signiert. Solange das Zertifikat noch keine Reputation
+aufgebaut hat, kann Windows beim allerersten Start trotzdem ein blaues
+Fenster „Der Computer wurde durch Windows geschützt“ zeigen: Klicke auf
+**Weitere Informationen**, dann auf **Trotzdem ausführen**. Windows
+merkt sich die Wahl. Bei der Installation über das MSI-Paket zeigt das
+Berechtigungsfenster den verifizierten Herausgeber.
 
 <a id="main-window"></a>
 ### Das Hauptfenster
@@ -94,6 +95,8 @@ demselben Grund „Unbekannter Herausgeber“.
   Feld zeigt nur diese Medikamente; ein zweiter Klick zeigt wieder alle.
 - **Medikamentenliste** in der Mitte: eine Zeile pro Medikament, mit
   Bestand, verbleibenden Tagen und voraussichtlichem Ende des Bestands.
+  Im Laufe des Tages ziehen Bestand und verbleibende Tage die heutigen
+  Dosen, deren Uhrzeit vorbei ist, bereits ab ([Details](#stock-estimate)).
   Die Spalte **Status** zeigt den Zustand als farbige Markierung. Ein
   Rechtsklick auf eine Zeile bietet die Befehle für dieses Medikament
   (bearbeiten, Einnahme erfassen, Packung hinzufügen…); Doppelklick
@@ -115,6 +118,8 @@ Beenden klicke mit der rechten Maustaste auf das Symbol und wähle
 | Dosis oder Häufigkeit ändern | **Therapie → Dosis/Häufigkeit ändern…** |
 | Eine gekaufte Packung erfassen | **Bestand → Packung hinzufügen…** oder **Bestand → Per Barcode auffüllen…** |
 | Den Bestand an das anpassen, was ich wirklich habe | **Bestand → Bestand zählen…** |
+| Eine Bedarfsdosis erfassen | **Therapie → Einnahme erfassen…** (Option *Zusätzliche Dosis bei Bedarf*, wenn das Medikament auch geplante Dosen hat) |
+| Die Uhrzeit von „Morgens“, „Vor dem Mittagessen“… ändern | **Therapie → Einnahmezeiten…** |
 | Einen falschen Eintrag rückgängig machen | **Bestand → Verlauf…** |
 | Die Therapie für einen Arzt drucken | **Therapie → Therapieplan…** |
 | Ein Rezept anfordern | **Therapie → Rezept anfordern…** |
@@ -369,6 +374,7 @@ fordere das Rezept rechtzeitig an.
 MedReminder senkt den Bestand jeden Tag selbst nach dem Schema. Du
 erfasst nur, was den Bestand auf andere Weise ändert.
 
+<a id="stock-estimate"></a>
 Im Laufe des Tages zeigt die Bestandsspalte eine Schätzung: den Bestand
 zu Tagesbeginn minus die heutigen Dosen, deren Uhrzeit vorbei ist.
 Einnahmezeiten ohne Uhrzeit verwenden die Uhrzeit ihres Zeitpunkts
@@ -376,7 +382,8 @@ Einnahmezeiten ohne Uhrzeit verwenden die Uhrzeit ihres Zeitpunkts
 ohne Uhrzeit wird am Tagesende gezählt. Fährst du mit der Maus über den
 Bestand, siehst du den Wert zu Tagesbeginn. Der erfasste Bestand, der
 Verlauf und das Datum, an dem der Vorrat ausgeht, werden nach
-Mitternacht aktualisiert; erfasst du eine Einnahme, zählt an diesem
+Mitternacht aktualisiert, die verbleibenden Tage folgen dem angezeigten
+Bestand; erfasst du eine Einnahme, zählt an diesem
 Tag die erfasste Menge.
 
 <a id="add-package"></a>
@@ -428,8 +435,10 @@ die App korrigieren:
    Bestand, die Abweichung und wie sich das voraussichtliche Ende
    ändert.
 3. Trage unter **Heute bereits eingenommen** ein, was du heute beim
-   Zählen schon genommen hattest (die App schlägt die Dosen vor, deren
-   Uhrzeit vorbei ist).
+   Zählen schon genommen hattest. Die App schlägt die Dosen vor, deren
+   Uhrzeit vorbei ist, also die, die die Liste schon vom Bestand
+   abgezogen hat; Einnahmezeiten ohne Uhrzeit verwenden die Uhrzeit
+   ihres Zeitpunkts.
 4. Klicke auf **Zählung erfassen**.
 
 Die App erfasst eine Korrektur, damit der Bestand dem Gezählten
@@ -625,6 +634,9 @@ demselben allgemeinen Titel.
   Medikament unter seine **Warnschwelle**, warnt es dich **einmal**,
   über die für dieses Medikament gewählten Kanäle: eine
   Windows-Benachrichtigung und/oder eine E-Mail.
+  Die Prüfung verwendet den erfassten Bestand, nicht die Schätzung der
+  Liste: An dem Tag, an dem die Schwelle unterschritten wird, kann die
+  Liste den Warnstatus einige Stunden vor der Warnung zeigen.
 - Wurde keine neue Packung hinzugefügt, wenn die verbleibenden Tage
   **die Hälfte der Schwelle** erreichen, folgt eine **zweite
   Erinnerung** über dieselben Kanäle (bei einer Schwelle von 10 Tagen:

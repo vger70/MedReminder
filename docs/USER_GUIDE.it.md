@@ -68,12 +68,13 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
    notifica di Windows (vicino all'orologio) resta visibile finché l'app
    è in esecuzione.
 
-**Windows SmartScreen.** Il programma non è firmato digitalmente. Al
-primo avvio Windows può mostrare una finestra blu "Windows ha protetto
-il PC": fai clic su **Ulteriori informazioni**, poi su **Esegui
-comunque**. Windows ricorda la scelta. Se installi dal pacchetto MSI,
-la finestra dei permessi indica "Autore sconosciuto" per lo stesso
-motivo.
+**Windows SmartScreen.** Il programma è firmato digitalmente con un
+certificato Certum. Finché il certificato non ha accumulato
+reputazione, al primo avvio Windows può comunque mostrare una finestra
+blu "Windows ha protetto il PC": fai clic su **Ulteriori
+informazioni**, poi su **Esegui comunque**. Windows ricorda la scelta.
+Se installi dal pacchetto MSI, la finestra dei permessi mostra
+l'autore verificato.
 
 <a id="main-window"></a>
 ### La finestra principale
@@ -91,7 +92,9 @@ motivo.
   esaurimento*, *Sospese*, e il totale. Fai clic su un riquadro per
   vedere solo quelle medicine; un secondo clic le mostra tutte.
 - **Elenco delle medicine** al centro: una riga per medicina, con le
-  scorte, i giorni rimanenti e la data stimata di esaurimento. La
+  scorte, i giorni rimanenti e la data stimata di esaurimento. Durante
+  la giornata scorte e giorni rimanenti tolgono già le dosi di oggi il
+  cui orario è passato ([dettagli](#stock-estimate)). La
   colonna **Stato** mostra lo stato con un'etichetta colorata. Il clic
   destro su una riga offre i comandi per quella medicina (modifica,
   registra assunzione, aggiungi confezione…); doppio clic o **F2** la
@@ -112,6 +115,8 @@ uscire, fai clic destro sull'icona e scegli **Esci**.
 | Cambiare dose o frequenza | **Terapia → Cambia dose/frequenza…** |
 | Registrare una confezione comprata | **Scorte → Aggiungi confezione…** o **Scorte → Rifornisci da codice a barre…** |
 | Allineare le scorte a quello che ho davvero | **Scorte → Conta scorte…** |
+| Registrare una dose presa al bisogno | **Terapia → Registra assunzione…** (opzione *Dose extra al bisogno* se la medicina ha anche dosi programmate) |
+| Cambiare l'orario di "Al mattino", "Prima di pranzo"… | **Terapia → Orari delle dosi…** |
 | Annullare una registrazione sbagliata | **Scorte → Storico…** |
 | Stampare la terapia per un medico | **Terapia → Scheda terapia…** |
 | Chiedere una ricetta | **Terapia → Richiedi ricetta…** |
@@ -356,13 +361,15 @@ richiedi la ricetta per tempo.
 MedReminder abbassa da solo le scorte ogni giorno secondo lo schema.
 Registri solo ciò che cambia le scorte in altro modo.
 
+<a id="stock-estimate"></a>
 Durante la giornata la colonna della scorta mostra una stima: la scorta
 a inizio giornata meno le dosi di oggi il cui orario è già passato. Per
 gli orari senza ora vale l'orario del loro momento (**Terapia → Orari
 delle dosi…**); un orario descritto liberamente, senza ora, viene
 contato a fine giornata. Passando il mouse sulla scorta vedi il valore
 a inizio giornata. La scorta registrata, lo storico e la data di
-esaurimento si aggiornano dopo mezzanotte; se registri un'assunzione,
+esaurimento si aggiornano dopo mezzanotte, mentre i giorni residui
+seguono la scorta mostrata; se registri un'assunzione,
 quel giorno conta la quantità registrata.
 
 <a id="add-package"></a>
@@ -413,8 +420,9 @@ lascia che l'app corregga:
 2. Scrivi la **Quantità contata**. La finestra mostra le scorte
    previste, la differenza e come cambia la data di esaurimento.
 3. In **Già assunto oggi** inserisci quanto avevi già preso oggi al
-   momento del conteggio (l'app propone le dosi il cui orario è
-   passato).
+   momento del conteggio. L'app propone le dosi il cui orario è
+   passato, le stesse che l'elenco ha già tolto dalla scorta; per gli
+   orari senza ora vale l'orario del loro momento.
 4. Fai clic su **Registra conteggio**.
 
 L'app registra una correzione perché le scorte coincidano con quanto
@@ -605,6 +613,9 @@ file di calendario (`medreminder.ics`), con lo stesso titolo generico.
   scende sotto la sua **soglia di avviso**, ti avvisa **una volta**, con
   i canali scelti per quella medicina: una notifica di Windows e/o
   un'email.
+  Il controllo usa la scorta registrata, non la stima dell'elenco: nel
+  giorno in cui la soglia viene superata, l'elenco può mostrare *In
+  esaurimento* qualche ora prima dell'avviso.
 - Se quando i giorni residui arrivano a **metà della soglia** non è stata
   aggiunta una nuova confezione, segue un **secondo avviso** sugli
   stessi canali (con una soglia di 10 giorni: primo avviso a 10 giorni,

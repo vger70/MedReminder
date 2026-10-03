@@ -68,12 +68,12 @@ de la aplicación. La arquitectura técnica se describe en
    notificación de Windows (junto al reloj) sigue visible mientras la
    aplicación está en marcha.
 
-**Windows SmartScreen.** El programa no está firmado digitalmente. En el
-primer inicio Windows puede mostrar una ventana azul "Windows protegió
-su PC": haz clic en **Más información** y luego en **Ejecutar de todas
-formas**. Windows recuerda la elección. Si instalas desde el paquete
-MSI, la ventana de permisos indica "Editor desconocido" por el mismo
-motivo.
+**Windows SmartScreen.** El programa está firmado digitalmente con un
+certificado Certum. Mientras el certificado no haya ganado reputación,
+en el primer inicio Windows aún puede mostrar una ventana azul "Windows
+protegió su PC": haz clic en **Más información** y luego en **Ejecutar
+de todas formas**. Windows recuerda la elección. Si instalas desde el
+paquete MSI, la ventana de permisos muestra el editor verificado.
 
 <a id="main-window"></a>
 ### La ventana principal
@@ -92,7 +92,9 @@ motivo.
   recuadro para ver solo esos medicamentos; un segundo clic los muestra
   todos.
 - **Lista de medicamentos** en el centro: una fila por medicamento, con
-  el stock, los días restantes y la fecha estimada de agotamiento. La
+  el stock, los días restantes y la fecha estimada de agotamiento.
+  Durante el día el stock y los días restantes ya descuentan las dosis
+  de hoy cuya hora pasó ([detalles](#stock-estimate)). La
   columna **Estado** muestra el estado con una etiqueta de color. El
   clic derecho en una fila ofrece los comandos para ese medicamento
   (editar, registrar toma, añadir envase…); doble clic o **F2** lo
@@ -113,6 +115,8 @@ clic derecho en el icono y elige **Salir**.
 | Cambiar dosis o frecuencia | **Terapia → Cambiar dosis/frecuencia…** |
 | Registrar una caja comprada | **Stock → Añadir caja…** o **Stock → Reponer por código de barras…** |
 | Ajustar el stock a lo que realmente tengo | **Stock → Contar existencias…** |
+| Registrar una dosis tomada si es necesario | **Terapia → Registrar toma…** (opción *Dosis extra si es necesario* si el medicamento también tiene dosis programadas) |
+| Cambiar la hora de "Por la mañana", "Antes de comer"… | **Terapia → Horarios de las dosis…** |
 | Deshacer un registro erróneo | **Stock → Historial…** |
 | Imprimir la terapia para un médico | **Terapia → Ficha de terapia…** |
 | Pedir una receta | **Terapia → Solicitar receta…** |
@@ -359,13 +363,15 @@ solicita la receta a tiempo.
 MedReminder reduce el stock solo cada día según el esquema. Solo
 registras lo que cambia el stock de otra manera.
 
+<a id="stock-estimate"></a>
 Durante el día la columna del stock muestra una estimación: el stock al
 inicio del día menos las dosis de hoy cuya hora ya pasó. Los horarios
 sin hora usan la hora de su momento (**Terapia → Horarios de las
 dosis…**); un horario con descripción libre y sin hora se cuenta al
 final del día. Al pasar el ratón por el stock ves el valor al inicio
 del día. El stock registrado, el historial y la fecha de agotamiento
-se actualizan después de medianoche; si registras una toma, ese día
+se actualizan después de medianoche, mientras que los días restantes
+siguen el stock mostrado; si registras una toma, ese día
 cuenta la cantidad registrada.
 
 <a id="add-package"></a>
@@ -415,7 +421,9 @@ deja que la aplicación corrija:
 2. Escribe la **Cantidad contada**. La ventana muestra el stock
    esperado, la diferencia y cómo cambia la fecha de agotamiento.
 3. En **Ya tomado hoy**, indica lo que ya habías tomado hoy cuando
-   contaste (la aplicación propone las dosis cuya hora ya pasó).
+   contaste. La aplicación propone las dosis cuya hora ya pasó, las
+   mismas que la lista ya descontó del stock; los horarios sin hora
+   usan la hora de su momento.
 4. Haz clic en **Registrar recuento**.
 
 La aplicación registra una corrección para que el stock sea igual a lo
@@ -607,6 +615,9 @@ genérico.
   medicamento baja de su **umbral de aviso**, te avisa **una vez**, por
   los canales elegidos para ese medicamento: una notificación de
   Windows y/o un correo.
+  La revisión usa el stock registrado, no la estimación de la lista: el
+  día en que se cruza el umbral, la lista puede mostrar el estado de
+  aviso unas horas antes del aviso.
 - Si cuando los días restantes llegan a **la mitad del umbral** no se ha
   añadido una caja nueva, sigue un **segundo aviso** por los mismos
   canales (con un umbral de 10 días: primer aviso a los 10 días, segundo

@@ -58,18 +58,38 @@ public class IntradayStockTests
     }
 
     [Fact]
-    public async Task The_forecast_keeps_the_start_of_day_stock()
+    public async Task The_run_out_date_stays_and_the_days_left_follow_the_stock_shown()
     {
         var scope = new ApplicationTestScope(At(13, 7));
-        var id = await SeedAsync(scope);
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Eutirox", "compresse", 1m, 1, new DateOnly(2026, 9, 13), 7, NotificationChannels.Windows,
+            InitialQuantity: 101m,
+            AdministrationSlots: [new AdministrationSlotInput(1m, new TimeOnly(7, 30), null)]), default);
+
         var before = await RowAsync(scope, id);
+        before.CurrentStock.Should().Be(101m);
+        before.DaysRemaining.Should().Be(101, "today's dose is still ahead");
+        before.EstimatedRunOutDate.Should().Be(new DateOnly(2026, 12, 23));
 
-        scope.Clock.SetUtcNow(At(13, 21));
+        scope.Clock.SetUtcNow(At(13, 10, 50));
         var after = await RowAsync(scope, id);
-
-        after.CurrentStock.Should().Be(before.CurrentStock - 2m);
-        after.DaysRemaining.Should().Be(before.DaysRemaining);
+        after.CurrentStock.Should().Be(100m);
+        after.DaysRemaining.Should().Be(100, "the days fully covered after today's dose");
         after.EstimatedRunOutDate.Should().Be(before.EstimatedRunOutDate);
+    }
+
+    [Fact]
+    public async Task Partly_due_days_count_the_days_the_stock_shown_covers()
+    {
+        var scope = new ApplicationTestScope(At(13, 12));
+        // Two a day at 08:00 and 20:00; Sep 10..12 booked: 24 left.
+        var id = await SeedAsync(scope);
+
+        var row = await RowAsync(scope, id);
+
+        row.CurrentStock.Should().Be(23m);
+        row.DaysRemaining.Should().Be(11);
+        row.EstimatedRunOutDate.Should().Be(new DateOnly(2026, 9, 25));
     }
 
     [Fact]
