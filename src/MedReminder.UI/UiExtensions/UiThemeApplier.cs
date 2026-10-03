@@ -12,18 +12,40 @@ namespace MedReminder.UI.UiExtensions;
 //
 // Sizes are left alone: moving to the 32 px button height and the
 // spacing scale is done window by window (step 2), where each layout
-// can be checked. Under a Windows high-contrast theme nothing changes:
-// the stock rendering already follows the system colours.
+// can be checked. Under a Windows high-contrast theme no colour
+// changes: the stock rendering already follows the system colours.
+// Date pickers get a static font in every theme (UiTheme.Fonts).
 internal static class UiThemeApplier
 {
     public static void Apply(Control root)
     {
-        if (UiTheme.HighContrast) return;
         var accept = root.FindForm()?.AcceptButton as Button;
         ApplyTree(root, UiTheme.Palette, accept);
     }
 
     private static void ApplyTree(Control control, UiPalette palette, Button? accept)
+    {
+        if (control is DateTimePicker picker)
+        {
+            UseDatePickerFont(picker);
+        }
+        else if (!UiTheme.HighContrast)
+        {
+            StyleControl(control, palette, accept);
+        }
+
+        foreach (Control child in control.Controls)
+        {
+            ApplyTree(child, palette, accept);
+        }
+
+        // A handler per container: children added after the form loaded
+        // are themed as they arrive, and bring their own handler along.
+        control.ControlAdded -= OnControlAdded;
+        control.ControlAdded += OnControlAdded;
+    }
+
+    private static void StyleControl(Control control, UiPalette palette, Button? accept)
     {
         switch (control)
         {
@@ -46,23 +68,24 @@ internal static class UiThemeApplier
                 StyleListView(list, palette);
                 break;
         }
-
-        foreach (Control child in control.Controls)
-        {
-            ApplyTree(child, palette, accept);
-        }
-
-        // A handler per container: children added after the form loaded
-        // are themed as they arrive, and bring their own handler along.
-        control.ControlAdded -= OnControlAdded;
-        control.ControlAdded += OnControlAdded;
     }
 
     private static void OnControlAdded(object? sender, ControlEventArgs e)
     {
-        if (e.Control is null || UiTheme.HighContrast) return;
+        if (e.Control is null) return;
         var accept = e.Control.FindForm()?.AcceptButton as Button;
         ApplyTree(e.Control, UiTheme.Palette, accept);
+    }
+
+    // The native date picker lays its fields out wrongly with the
+    // variable Segoe UI fonts: the first digit of the date is cut on
+    // the left. The size and style already set (text size included)
+    // are kept; only the family changes.
+    private static void UseDatePickerFont(DateTimePicker picker)
+    {
+        var font = picker.Font;
+        if (string.Equals(font.Name, UiTheme.Fonts.DatePickerFamily, StringComparison.OrdinalIgnoreCase)) return;
+        picker.Font = new Font(UiTheme.Fonts.DatePickerFamily, font.Size, font.Style, font.Unit, font.GdiCharSet, font.GdiVerticalFont);
     }
 
     public static void StyleButton(Button button, UiPalette palette, bool primary)

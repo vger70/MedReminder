@@ -106,7 +106,8 @@ UI  ──►  Application  ──►  Domain
   96-DPI pixels and do not set `AutoScaleMode`. Colours, fonts and
   spacing come from `UiTheme` (light, dark and high-contrast palettes;
   `UiColors` is a facade over it); on load the base form also themes
-  buttons and grids through `UiThemeApplier`, and
+  buttons and grids through `UiThemeApplier`, which also gives date
+  pickers static Segoe UI (the variable fonts cut their first digit), and
   `UiToolStripRenderer` draws every menu and toolbar
   (`docs/analysis/ANALYSIS-UI-MODERNIZATION.md`). Dialogs share
   `DialogLayout` (form table, button bar with the primary action last,
