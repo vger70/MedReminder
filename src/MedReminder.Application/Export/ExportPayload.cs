@@ -256,6 +256,11 @@ public sealed class ExportedNotificationSettings
     // of the last digest is not exported.
     public string CaregiverEmails { get; set; } = string.Empty;
     public string CaregiverDigest { get; set; } = string.Empty;
+
+    // Lead days of the package expiry notices (ANALYSIS-PACKAGE-EXPIRY.md
+    // §4.6). Additive: archives without them import with "" (defaults).
+    public string PackageExpiryLeadDays { get; set; } = string.Empty;
+    public string PackageInUseLeadDays { get; set; } = string.Empty;
 }
 
 // Opt-in non-DB files (§3.4). A section is null unless the user opted

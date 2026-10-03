@@ -245,7 +245,7 @@ Content, before compression:
 The database is the profile database of the writing device (MedReminder
 schema; `docs/ANALYSIS.md` §4.1) without what is not replicated:
 derived stock movements (`Origin` 3), notification, dose-reminder,
-prescription-reminder, deadline-reminder and shortage-notice events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
+prescription-reminder, deadline-reminder, shortage-notice and package-expiry-notice events, hint conflicts (kinds 4 to 6), sync progress (`SyncPeers`) and
 the reference catalogue. It keeps the facts, the frozen (`Legacy`)
 movements and the cutoff, the register versions (`SyncFieldVersions`),
 the tombstones (`FactRetractions`), the low-stock emails sent by any
@@ -321,11 +321,15 @@ profile's name, never empty), `ToAddress`, `CaregiverAddress`,
 `DoctorAddress` (notification recipients, `""` for none),
 `CaregiverEmails` (the kinds of email copied to the caregiver: `""` for
 every kind, `None`, or `LowStock`, `DoseReminder`, `Prescription`,
-`Deadline`, `Shortage` separated by commas), `CaregiverDigest` (`""` or
-`Off`, or `Weekly`) and `CaregiverDigestSentOn` (`yyyy-MM-dd` of the
-last weekly summary sent by any device, so the others do not send it
-again). An app that does not know a setting keeps its versions and
-does not project it, so these three need no schema version. They are
+`Deadline`, `Shortage`, `PackageExpiry` separated by commas),
+`CaregiverDigest` (`""` or `Off`, or `Weekly`), `CaregiverDigestSentOn`
+(`yyyy-MM-dd` of the last weekly summary sent by any device, so the
+others do not send it again), `PackageExpiryLeadDays` and
+`PackageInUseLeadDays` (days before a package's printed expiry, and
+before the end of its in-use period, when it is "expiring soon": an
+invariant integer, 0 to 180 and 0 to 30, `""` for the defaults 30 and
+3). An app that does not know a setting keeps its versions and
+does not project it, so these settings need no schema version. They are
 registers of the profile in the image's `SyncFieldVersions`
 (`MedicineId` and `EntityId` empty, register `Profile.<setting>`); the
 device that writes a genesis records the values it holds as genesis

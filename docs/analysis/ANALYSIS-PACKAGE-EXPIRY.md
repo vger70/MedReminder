@@ -275,9 +275,13 @@ Device-local, not replicated, like `DeadlineReminderEvent`:
 | `PackageId`, `MedicineId` | `MedicineId` lets medicine deletion clean up |
 | `EffectiveExpiry` | a changed date (box opened, date corrected) gets new notices |
 | `Stage` | `1 = ExpiringSoon`, `2 = Expired` |
+| `Channel` | `Windows` or `Email`: each channel records its own notice, so a failed email is retried without showing the toast again |
 | `FiredAt` | |
 
-Unique on (`PackageId`, `EffectiveExpiry`, `Stage`).
+Unique on (`PackageId`, `EffectiveExpiry`, `Stage`, `Channel`). A
+notice names the expired packages of a medicine when it has any,
+otherwise those expiring soon; only the packages it names are recorded,
+so the others get their own notice on a later pass.
 
 ---
 
@@ -536,7 +540,7 @@ Each phase is one PR to `main`, buildable and shippable on its own.
 | --- | --- | --- |
 | P1 | Domain (`StockPackage`, rules, allocation), `StockPackages` table, repository, use cases (save, discard, delete), sync op v11 and image v8, export, deletion; no UI | 4–5 days |
 | P2 | Package list query (allocation, default in-use period and size from the latest package), `StockAdjustmentDialog` package fields with packages linked to their movement, `PackagesDialog` and `PackageEditDialog`, main-window column, scan pre-fill, localization; lead days at their defaults until P3 | 4–5 days |
-| P3 | `PackageExpiryNoticeEvents` table, `PackageExpiryNotices` in `MedicationMonitor`, toast target, `EmailKind`, caregiver digest line, lead-day settings (profile setting, sync, settings tab) | 3–4 days |
+| P3 | `PackageExpiryNoticeEvents` table, `PackageExpiryNotices` in `MedicationMonitor`, toast target (opens the package list), `EmailKind.PackageExpiry`, caregiver digest line, lead-day settings (profile setting, sync, export, settings tab) also used by the package list and the main list | 3–4 days |
 | P4 | User guides (5 languages), `ANALYSIS.md`, cross-medicine "Expiring packages" view if kept | 1–2 days |
 
 Total about 3 weeks, in line with the 2–3 weeks of

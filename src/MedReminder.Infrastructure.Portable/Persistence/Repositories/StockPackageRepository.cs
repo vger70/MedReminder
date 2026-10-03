@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,4 +38,23 @@ internal sealed class StockPackageRepository : IStockPackageRepository
         _db.StockPackages.Remove(package);
         return Task.CompletedTask;
     }
+}
+
+internal sealed class PackageExpiryNoticeEventRepository : IPackageExpiryNoticeEventRepository
+{
+    private readonly MedReminderDbContext _db;
+
+    public PackageExpiryNoticeEventRepository(MedReminderDbContext db)
+    {
+        _db = db;
+    }
+
+    public Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, NotificationChannels channel,
+        CancellationToken cancellationToken)
+        => _db.PackageExpiryNoticeEvents.AnyAsync(
+            e => e.PackageId == packageId && e.EffectiveExpiry == effectiveExpiry && e.Stage == stage
+                && e.Channel == channel, cancellationToken);
+
+    public async Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken cancellationToken)
+        => await _db.PackageExpiryNoticeEvents.AddAsync(notice, cancellationToken);
 }

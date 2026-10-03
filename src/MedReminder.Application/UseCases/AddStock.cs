@@ -120,7 +120,8 @@ public sealed class AddStock
     {
         var now = _clock.GetUtcNow();
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, _clock.LocalTimeZone).DateTime);
-        var each = Math.Round(cmd.Quantity / input.Count, 2);
+        // Not rounded: a small load split in many boxes must not give 0.
+        var each = cmd.Quantity / input.Count;
         var batch = string.IsNullOrWhiteSpace(input.Batch) ? null : input.Batch.Trim();
         var packages = new List<StockPackage>(input.Count);
         for (var i = 0; i < input.Count; i++)

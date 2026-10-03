@@ -20,6 +20,8 @@ public sealed record NotificationTarget(NotificationKind Kind, Guid MedicineId, 
     // Guid.Empty for a deadline of the profile.
     public static NotificationTarget Deadline(Guid? medicineId)
         => new(NotificationKind.Deadline, medicineId ?? Guid.Empty);
+
+    public static NotificationTarget PackageExpiry(Guid medicineId) => new(NotificationKind.PackageExpiry, medicineId);
 }
 
 public enum NotificationKind
@@ -29,6 +31,7 @@ public enum NotificationKind
     Prescription,
     Shortage,
     Deadline,
+    PackageExpiry,
 }
 
 // What the user asked for from a toast. Only actions with no effect on
@@ -43,6 +46,8 @@ public enum NotificationActionKind
     OpenPrescriptions,
     // Body click on a deadline reminder: the deadlines window.
     OpenDeadlines,
+    // Body click on a package expiry notice: the packages of the medicine.
+    OpenPackages,
     // Dose reminder button: the same reminder again in SnoozeMinutes.
     Snooze,
     // Low-stock button: the prescription request draft of the medicine.
@@ -76,6 +81,7 @@ public static class NotificationActionArguments
             {
                 NotificationKind.Prescription => NotificationActionKind.OpenPrescriptions,
                 NotificationKind.Deadline => NotificationActionKind.OpenDeadlines,
+                NotificationKind.PackageExpiry => NotificationActionKind.OpenPackages,
                 _ => NotificationActionKind.Open,
             },
             profileId, target.MedicineId, target.SlotTime));
@@ -129,6 +135,7 @@ public static class NotificationActionArguments
         NotificationActionKind.Open => "open",
         NotificationActionKind.OpenPrescriptions => "prescriptions",
         NotificationActionKind.OpenDeadlines => "deadlines",
+        NotificationActionKind.OpenPackages => "packages",
         NotificationActionKind.Snooze => "snooze",
         NotificationActionKind.RequestPrescription => "request",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
@@ -139,6 +146,7 @@ public static class NotificationActionArguments
         "open" => NotificationActionKind.Open,
         "prescriptions" => NotificationActionKind.OpenPrescriptions,
         "deadlines" => NotificationActionKind.OpenDeadlines,
+        "packages" => NotificationActionKind.OpenPackages,
         "snooze" => NotificationActionKind.Snooze,
         "request" => NotificationActionKind.RequestPrescription,
         _ => null,

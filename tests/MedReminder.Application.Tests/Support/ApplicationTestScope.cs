@@ -34,6 +34,8 @@ internal sealed class ApplicationTestScope
     public InMemoryDeadlineRepository Deadlines { get; } = new();
     public InMemoryDeadlineReminderEventRepository DeadlineReminderEvents { get; } = new();
     public InMemoryStockPackageRepository Packages { get; } = new();
+    public InMemoryPackageExpiryNoticeEventRepository PackageNoticeEvents { get; } = new();
+    public InMemoryProfileSettingsStore ProfileSettings { get; } = new();
     public InMemoryShortageListStore Shortages { get; } = new();
     public InMemoryShortageNoticeEventRepository ShortageNoticeEvents { get; } = new();
     public InMemoryMedicineActivityRepository Activity { get; } = new();
@@ -89,6 +91,7 @@ internal sealed class ApplicationTestScope
     public DiscardStockPackage DiscardStockPackage { get; }
     public DeleteStockPackage DeleteStockPackage { get; }
     public PackageListQuery PackageList { get; }
+    public PackageExpiryNotices PackageExpiryNotices { get; }
     public SyncGenesis Genesis { get; }
 
     public ApplicationTestScope(DateTimeOffset? now = null)
@@ -135,7 +138,9 @@ internal sealed class ApplicationTestScope
         SaveStockPackage = new SaveStockPackage(Medicines, Packages, Operations, Uow, Clock);
         DiscardStockPackage = new DiscardStockPackage(Packages, Operations, Uow, AdjustStockDown, Clock);
         DeleteStockPackage = new DeleteStockPackage(Packages, Operations, Uow, Clock);
-        PackageList = new PackageListQuery(Packages, Stock, Clock);
+        PackageList = new PackageListQuery(Packages, Stock, Clock, ProfileSettings);
+        PackageExpiryNotices = new PackageExpiryNotices(Medicines, Packages, Stock, PackageNoticeEvents, Email, Windows,
+            Clock, NullLogger<PackageExpiryNotices>.Instance, settings: ProfileSettings);
 
         SavePrescription = new SavePrescription(Medicines, Prescriptions, Operations, Uow, Clock);
         CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);
@@ -162,7 +167,7 @@ internal sealed class ApplicationTestScope
             NullLogger<MedicationMonitor>.Instance,
             sentEmails: SentEmails, operationLog: Operations, master: Master,
             prescriptionReminders: PrescriptionReminders, shortageNotices: ShortageNotices,
-            deadlineReminders: DeadlineReminders);
+            deadlineReminders: DeadlineReminders, packageExpiryNotices: PackageExpiryNotices);
     }
 
     // Turns operation capture on, as enabling sync will (Phase 3d).

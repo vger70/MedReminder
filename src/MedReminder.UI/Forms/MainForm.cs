@@ -1763,6 +1763,19 @@ internal sealed class MainForm : MedReminderFormBase
             case NotificationActionKind.OpenDeadlines:
                 await ShowDeadlinesAsync();
                 break;
+            case NotificationActionKind.OpenPackages:
+                // Notices include inactive medicines, which the list may
+                // hide: the packages open from the stored medicine then.
+                SelectGridRow(action.MedicineId);
+                if (GetSelectedRow() is { } row && row.Id == action.MedicineId)
+                {
+                    await ShowPackagesAsync(row.Id, row.Name, row.Unit);
+                }
+                else
+                {
+                    await ShowPackagesOfStoredMedicineAsync(action.MedicineId);
+                }
+                break;
             case NotificationActionKind.RequestPrescription:
                 SelectGridRow(action.MedicineId);
                 if (GetSelectedRow()?.Id == action.MedicineId) await ShowPrescriptionRequestAsync();
@@ -2538,8 +2551,34 @@ internal sealed class MainForm : MedReminderFormBase
     // the selected medicine, each action in its own DI scope.
     private async Task ShowPackagesAsync()
     {
-        var row = GetSelectedRow();
-        if (row is null) return;
+        if (GetSelectedRow() is not { } selected) return;
+        await ShowPackagesAsync(selected.Id, selected.Name, selected.Unit);
+    }
+
+    private async Task ShowPackagesOfStoredMedicineAsync(Guid medicineId)
+    {
+        Medicine? medicine;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            medicine = await scope.ServiceProvider.GetRequiredService<IMedicineRepository>()
+                .GetAsync(medicineId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenPackages"), ex);
+            return;
+        }
+        // Deleted since the toast was shown: nothing to open.
+        if (medicine is null) return;
+        await ShowPackagesAsync(medicine.Id, medicine.Name, medicine.Unit);
+    }
+
+    // Also opened from a package expiry toast, for a medicine that may be
+    // inactive and hidden from the list.
+    private async Task ShowPackagesAsync(Guid medicineId, string medicineName, string unit)
+    {
+        var row = (Id: medicineId, Name: medicineName, Unit: unit);
         try
         {
             DateOnly today;

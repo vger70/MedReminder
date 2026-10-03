@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Household;
+using MedReminder.Application.Packages;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Household;
 using MedReminder.Domain.Sync;
@@ -32,9 +33,25 @@ public sealed class UpdateNotificationSettings
     }
 
     // caregiverEmails and caregiverDigest (docs/notes/
-    // EVOLUTION-PROPOSALS-2.md §3.8): null leaves the setting as it is.
+    // EVOLUTION-PROPOSALS-2.md §3.8), and the package expiry lead days
+    // (ANALYSIS-PACKAGE-EXPIRY.md §4.6): null leaves the setting as it is.
     public Task ExecuteAsync(string toAddress, string caregiverAddress, string doctorAddress,
-        CancellationToken cancellationToken, string? caregiverEmails = null, string? caregiverDigest = null)
+        CancellationToken cancellationToken, string? caregiverEmails = null, string? caregiverDigest = null,
+        string? packageExpiryLeadDays = null, string? packageInUseLeadDays = null)
+    {
+        // A replicated value every device reads alike: refused here rather
+        // than clamped differently later.
+        if (packageExpiryLeadDays is not null && !PackageSettings.IsValidPrinted(packageExpiryLeadDays))
+            throw new ArgumentException("The printed-expiry lead days are out of range.", nameof(packageExpiryLeadDays));
+        if (packageInUseLeadDays is not null && !PackageSettings.IsValidInUse(packageInUseLeadDays))
+            throw new ArgumentException("The in-use lead days are out of range.", nameof(packageInUseLeadDays));
+        return ExecuteCoreAsync(toAddress, caregiverAddress, doctorAddress, cancellationToken, caregiverEmails,
+            caregiverDigest, packageExpiryLeadDays, packageInUseLeadDays);
+    }
+
+    private Task ExecuteCoreAsync(string toAddress, string caregiverAddress, string doctorAddress,
+        CancellationToken cancellationToken, string? caregiverEmails, string? caregiverDigest,
+        string? packageExpiryLeadDays, string? packageInUseLeadDays)
         => WriteGate.RunExclusiveAsync(async ct =>
         {
             var current = _store.Read();
@@ -46,6 +63,10 @@ public sealed class UpdateNotificationSettings
             };
             if (caregiverEmails is not null) wanted[ProfileSetting.CaregiverEmails] = caregiverEmails.Trim();
             if (caregiverDigest is not null) wanted[ProfileSetting.CaregiverDigest] = caregiverDigest.Trim();
+            if (packageExpiryLeadDays is not null)
+                wanted[ProfileSetting.PackageExpiryLeadDays] = packageExpiryLeadDays.Trim();
+            if (packageInUseLeadDays is not null)
+                wanted[ProfileSetting.PackageInUseLeadDays] = packageInUseLeadDays.Trim();
             var changes = wanted
                 .Where(w => !string.Equals(current.GetValueOrDefault(w.Key) ?? string.Empty, w.Value, StringComparison.Ordinal))
                 .ToDictionary(w => w.Key, w => w.Value, StringComparer.Ordinal);

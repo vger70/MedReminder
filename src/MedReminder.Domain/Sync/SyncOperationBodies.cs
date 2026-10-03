@@ -269,6 +269,15 @@ public static class ProfileSetting
     // devices of a group do not send it again.
     public const string CaregiverDigestSentOn = "CaregiverDigestSentOn";
 
+    // Days before a package expires when it is "expiring soon"
+    // (docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md §4.6), as an invariant
+    // integer; "" for the default. One for a printed expiry, one for the
+    // end of an in-use period. Unknown to an older app: kept, not
+    // projected, as above.
+    public const string PackageExpiryLeadDays = "PackageExpiryLeadDays";
+    public const string PackageInUseLeadDays = "PackageInUseLeadDays";
+
     public static readonly IReadOnlyList<string> All =
-        [DisplayName, ToAddress, CaregiverAddress, DoctorAddress, CaregiverEmails, CaregiverDigest, CaregiverDigestSentOn];
+        [DisplayName, ToAddress, CaregiverAddress, DoctorAddress, CaregiverEmails, CaregiverDigest, CaregiverDigestSentOn,
+            PackageExpiryLeadDays, PackageInUseLeadDays];
 }

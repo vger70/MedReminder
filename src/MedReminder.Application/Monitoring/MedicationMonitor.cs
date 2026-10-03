@@ -3,6 +3,7 @@ using MedReminder.Application.Calendar;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Deadlines;
 using MedReminder.Application.Notifications;
+using MedReminder.Application.Packages;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Calculations;
@@ -56,6 +57,7 @@ public sealed class MedicationMonitor
     private readonly ShortageNotices? _shortageNotices;
     private readonly DeadlineReminders? _deadlineReminders;
     private readonly CaregiverDigest? _caregiverDigest;
+    private readonly PackageExpiryNotices? _packageExpiryNotices;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -76,9 +78,11 @@ public sealed class MedicationMonitor
         PrescriptionReminders? prescriptionReminders = null,
         ShortageNotices? shortageNotices = null,
         DeadlineReminders? deadlineReminders = null,
-        CaregiverDigest? caregiverDigest = null)
+        CaregiverDigest? caregiverDigest = null,
+        PackageExpiryNotices? packageExpiryNotices = null)
     {
         _caregiverDigest = caregiverDigest;
+        _packageExpiryNotices = packageExpiryNotices;
         _deadlineReminders = deadlineReminders;
         _shortageNotices = shortageNotices;
         _prescriptionReminders = prescriptionReminders;
@@ -191,6 +195,11 @@ public sealed class MedicationMonitor
         if (_deadlineReminders is not null)
         {
             await _deadlineReminders.RunAsync(today, sendsEmail, cancellationToken);
+        }
+        // Packages expiring or expired (ANALYSIS-PACKAGE-EXPIRY.md §4).
+        if (_packageExpiryNotices is not null)
+        {
+            await _packageExpiryNotices.RunAsync(today, sendsEmail, cancellationToken);
         }
         // Weekly summary for the caregiver (EVOLUTION-PROPOSALS-2 §3.8).
         if (_caregiverDigest is not null)

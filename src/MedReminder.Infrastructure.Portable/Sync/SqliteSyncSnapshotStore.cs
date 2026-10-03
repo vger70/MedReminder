@@ -14,7 +14,8 @@ namespace MedReminder.Infrastructure.Sync;
 //
 //   - derived stock rows (every device derives them, §3.4);
 //   - NotificationEvents, DoseReminderEvents, PrescriptionReminderEvents,
-//     DeadlineReminderEvents, ShortageNoticeEvents (device-local, §4.2);
+//     DeadlineReminderEvents, ShortageNoticeEvents, PackageExpiryNoticeEvents
+//     (device-local, §4.2);
 //   - the hint conflicts and SyncPeers (local notices, local progress).
 //     Register conflicts stay: they follow from the register versions
 //     and every device lists the same ones, a joining device included;
@@ -55,6 +56,7 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
         @"DELETE FROM ""PrescriptionReminderEvents"";",
         @"DELETE FROM ""DeadlineReminderEvents"";",
         @"DELETE FROM ""ShortageNoticeEvents"";",
+        @"DELETE FROM ""PackageExpiryNoticeEvents"";",
         // Device-local time-of-day presets (DoseTimePreset).
         @"DELETE FROM ""DoseTimePresets"";",
         @"DELETE FROM ""DoseTimeDefaults"";",

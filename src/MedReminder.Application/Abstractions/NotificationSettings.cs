@@ -39,4 +39,10 @@ public sealed class NotificationSettings
     public string CaregiverEmails { get; set; } = string.Empty;
     public string CaregiverDigest { get; set; } = string.Empty;
     public string CaregiverDigestSentOn { get; set; } = string.Empty;
+
+    // Lead days of the package expiry notices (docs/analysis/
+    // ANALYSIS-PACKAGE-EXPIRY.md §4.6), replicated like the addresses:
+    // invariant integers, "" for the default (PackageSettings).
+    public string PackageExpiryLeadDays { get; set; } = string.Empty;
+    public string PackageInUseLeadDays { get; set; } = string.Empty;
 }

@@ -1,3 +1,4 @@
+using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.Abstractions;
@@ -15,4 +16,14 @@ public interface IStockPackageRepository
     Task UpdateAsync(StockPackage package, CancellationToken cancellationToken);
 
     Task RemoveAsync(StockPackage package, CancellationToken cancellationToken);
+}
+
+// Package expiry notices shown by this device (not replicated), keyed on
+// (PackageId, EffectiveExpiry, Stage, Channel).
+public interface IPackageExpiryNoticeEventRepository
+{
+    Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, NotificationChannels channel,
+        CancellationToken cancellationToken);
+
+    Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken cancellationToken);
 }
