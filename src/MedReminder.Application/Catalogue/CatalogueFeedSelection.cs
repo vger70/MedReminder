@@ -32,9 +32,23 @@ public static class CatalogueFeedSelection
     public static bool IncludesShortages(string? referenceCountry, CatalogueFeedOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        return options.ShortagesEnabled && IsItaly(referenceCountry);
+    }
+
+    // Whether the equivalents list is refreshed with the feeds: it lists
+    // Italian package codes, so under the same rule as the shortages.
+    public static bool IncludesEquivalents(string? referenceCountry, CatalogueFeedOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.EquivalentsEnabled && IsItaly(referenceCountry);
+    }
+
+    // An invalid value falls back to IT, as above.
+    private static bool IsItaly(string? referenceCountry)
+    {
         var reference = CountryCode.TryParse(referenceCountry, out var parsed)
             ? parsed
             : CatalogueFeedDescriptor.Italy.Country;
-        return options.ShortagesEnabled && reference == CatalogueFeedDescriptor.Italy.Country;
+        return reference == CatalogueFeedDescriptor.Italy.Country;
     }
 }

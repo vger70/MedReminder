@@ -358,8 +358,45 @@ Passa il mouse sulla cella per leggere l'inizio, la fine prevista
 medicinali equivalenti e la data dell'elenco. Ricevi anche una notifica
 per ogni carenza, sui canali della medicina.
 
-MedReminder non indica sostituti: chiedi al medico o al farmacista e
-richiedi la ricetta per tempo.
+Il messaggio di carenza non indica sostituti: chiedi al medico o al
+farmacista e richiedi la ricetta per tempo. Se la confezione è anche
+nella Lista di trasparenza AIFA, la cella rimanda a **Farmaci
+equivalenti (AIFA)** (vedi sotto).
+
+### Link informativi e farmaci equivalenti (Italia)
+
+Per una medicina con codice AIC, la riga **Informazioni** della
+finestra della medicina offre fino a quattro link:
+
+- **Foglietto illustrativo** e **Riassunto delle caratteristiche del
+  prodotto**: i documenti AIFA, con l'Italia come paese di riferimento,
+  quando il catalogo li riporta;
+- **Scheda Codifa**: la pagina pubblica della confezione su codifa.it
+  (composizione, classe, regime di fornitura, prezzo se noto), aperta
+  nel browser. Funziona con qualsiasi paese di riferimento;
+- **Farmaci equivalenti**: compare quando la confezione è nella Lista
+  di trasparenza AIFA.
+
+Gli ultimi due comandi sono anche nel menu contestuale della lista
+(clic destro su una medicina): **Farmaci equivalenti (AIFA)…** e **Apri
+scheda Codifa**. Sono disattivati per una medicina senza AIC.
+
+**Farmaci equivalenti (AIFA).** Con l'Italia come paese di riferimento,
+MedReminder scarica la Lista di trasparenza AIFA insieme al catalogo
+(lista mensile, controllata una volta al giorno). La finestra mostra il
+gruppo della confezione (principio attivo, unità, dosaggio, via di
+somministrazione), il prezzo di riferimento SSN e tutte le confezioni
+del gruppo, dalla meno cara, con prezzo al pubblico, differenza che
+paghi oltre il prezzo di riferimento, disponibilità, se l'hai già in
+casa in un'altra medicina del profilo e la nota AIFA così com'è. Una
+nota può limitare la sostituzione (per esempio "non sostituibile
+con …"): leggila. La tua medicina è in grassetto.
+
+Una confezione assente dalla lista non è "senza equivalenti": può
+essere coperta da brevetto, in classe C o semplicemente non elencata.
+La sostituzione la decidono il medico e il farmacista; la lista non
+considera eccipienti o allergie. I farmaci di classe C non hanno un
+listino pubblico e non mostrano prezzo.
 
 ---
 

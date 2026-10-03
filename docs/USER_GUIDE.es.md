@@ -360,8 +360,47 @@ medicamentos equivalentes y la fecha de la lista. También recibes una
 notificación por cada desabastecimiento, por los canales del
 medicamento.
 
-MedReminder no indica sustitutos: consulta a tu médico o farmacéutico y
-solicita la receta a tiempo.
+El aviso de desabastecimiento no indica sustitutos: consulta a tu
+médico o farmacéutico y solicita la receta a tiempo. Si el envase
+también está en la lista de transparencia de la AIFA, la celda remite a
+**Medicamentos equivalentes (AIFA)** (ver abajo).
+
+### Enlaces informativos y medicamentos equivalentes (Italia)
+
+Para un medicamento con código de envase italiano (AIC), la fila
+**Información** de la ventana del medicamento ofrece hasta cuatro
+enlaces:
+
+- **Prospecto** y **Ficha técnica**: los documentos de la AIFA, con
+  Italia como país de referencia, cuando el catálogo los incluye;
+- **Página de Codifa**: la página pública del envase en codifa.it
+  (composición, clase, régimen de dispensación, precio si se conoce),
+  abierta en el navegador. Funciona con cualquier país de referencia;
+- **Medicamentos equivalentes**: aparece cuando el envase está en la
+  lista de transparencia de la AIFA.
+
+Los dos últimos comandos están también en el menú contextual de la
+lista (clic derecho sobre un medicamento): **Medicamentos equivalentes
+(AIFA)…** y **Abrir página de Codifa**. Están desactivados para un
+medicamento sin AIC.
+
+**Medicamentos equivalentes (AIFA).** Con Italia como país de
+referencia, MedReminder descarga la lista de transparencia de la AIFA
+junto con el catálogo (lista mensual, comprobada una vez al día). La
+ventana muestra el grupo del envase (principio activo, unidades, dosis,
+vía de administración), el precio de referencia del servicio de salud y
+cada envase del grupo, del más barato al más caro, con su precio
+público, la diferencia que pagas sobre el precio de referencia, su
+disponibilidad, si ya lo tienes en casa en otro medicamento del perfil
+y la nota de la AIFA tal cual. Una nota puede limitar la sustitución
+(por ejemplo "no sustituible con …"): léela. Tu medicamento aparece en
+negrita.
+
+Un envase que no está en la lista no es "sin equivalentes": puede estar
+patentado, en clase C o simplemente no figurar. La sustitución la
+deciden tu médico y tu farmacéutico; la lista no tiene en cuenta
+excipientes ni alergias. Los medicamentos de clase C no tienen precio
+público y no muestran precio.
 
 ---
 

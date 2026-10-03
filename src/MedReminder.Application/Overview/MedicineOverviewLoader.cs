@@ -26,6 +26,7 @@ public sealed class MedicineOverviewLoader
     private readonly DueToday? _dueToday;
     private readonly IStockPackageRepository? _packages;
     private readonly IProfileSettingsStore? _settings;
+    private readonly IEquivalenceListStore? _equivalents;
 
     public MedicineOverviewLoader(
         IMedicineRepository medicines,
@@ -38,8 +39,10 @@ public sealed class MedicineOverviewLoader
         IShortageListStore? shortages = null,
         DueToday? dueToday = null,
         IStockPackageRepository? packages = null,
-        IProfileSettingsStore? settings = null)
+        IProfileSettingsStore? settings = null,
+        IEquivalenceListStore? equivalents = null)
     {
+        _equivalents = equivalents;
         _shortages = shortages;
         _dueToday = dueToday;
         _packages = packages;
@@ -59,6 +62,7 @@ public sealed class MedicineOverviewLoader
         var medicines = await _medicines.ListAllAsync(cancellationToken);
         var items = new List<MedicineListItem>(medicines.Count);
         var shortages = _shortages?.Load();
+        var equivalents = shortages is null ? null : _equivalents?.Load();
         var doseTimes = _dueToday is null ? null : await _dueToday.LoadSettingsAsync(cancellationToken);
         // Read once, and only when some medicine has packages.
         PackageLeadDays? leadDays = null;
@@ -102,6 +106,7 @@ public sealed class MedicineOverviewLoader
             {
                 Id = m.Id,
                 Name = m.Name,
+                NationalCode = m.NationalCode,
                 Unit = m.Unit,
                 CurrentStock = currentStock,
                 LedgerStock = ledgerStock,
@@ -120,6 +125,12 @@ public sealed class MedicineOverviewLoader
             {
                 items[^1].SupplyDisplay = ShortageTexts.Display(notice, _loc);
                 items[^1].SupplyDetail = ShortageTexts.Detail(notice, shortages.ListDate, _loc);
+                // The equivalents of a package in shortage
+                // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.6, U2).
+                if (equivalents?.FindGroup(m.NationalCode) is not null)
+                {
+                    items[^1].SupplyDetail += Environment.NewLine + _loc.Get("Shortage.Detail.SeeEquivalents");
+                }
             }
             if (_packages is not null
                 && await _packages.ListForMedicineAsync(m.Id, cancellationToken) is { Count: > 0 } stored)

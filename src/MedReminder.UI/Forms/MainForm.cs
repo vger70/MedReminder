@@ -1708,12 +1708,28 @@ internal sealed class MainForm : MedReminderFormBase
             Mdl2Glyph.Glyphs.Edit, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.History"),
             Mdl2Glyph.Glyphs.History, Keys.None, async () => await ShowFactHistoryAsync()));
+        // Information on the package of an Italian medicine
+        // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.6 and §3.3): offered
+        // only when the row carries a valid AIC.
+        var equivalents = BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Equivalents"),
+            Mdl2Glyph.Glyphs.BulletedList, Keys.None, async () => await ShowSelectedEquivalentsAsync());
+        menu.Items.Add(equivalents);
+        var codifa = BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.OpenCodifa"),
+            Mdl2Glyph.Glyphs.OpenInNewWindow, Keys.None, () => { OpenSelectedCodifaPage(); return Task.CompletedTask; });
+        menu.Items.Add(codifa);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deactivate"),
             Mdl2Glyph.Glyphs.Cancel, Keys.None, async () => await DeactivateSelectedAsync()));
         menu.ImageScalingSize = new Size(ScaledIconSize(16), ScaledIconSize(16));
-        // Nothing to act on without a row (right-click below the last one).
-        menu.Opening += (_, e) => e.Cancel = GetSelectedRow() is null;
+        menu.Opening += (_, e) =>
+        {
+            // Nothing to act on without a row (right-click below the last one).
+            var row = GetSelectedRow();
+            e.Cancel = row is null;
+            var hasAic = MedicineInfoLink.ForNationalCode(row?.NationalCode) is not null;
+            equivalents.Enabled = hasAic;
+            codifa.Enabled = hasAic;
+        };
         return menu;
     }
 
@@ -2146,7 +2162,8 @@ internal sealed class MainForm : MedReminderFormBase
             catalogueContext: BuildCatalogueContext(),
             barcodeContext: BuildBarcodeScanContext(),
             initialReference: initialReference,
-            doseTimes: await LoadDoseTimesAsync());
+            doseTimes: await LoadDoseTimesAsync(),
+            equivalents: BuildEquivalentsContext(null));
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -2225,7 +2242,8 @@ internal sealed class MainForm : MedReminderFormBase
             catalogueContext: BuildCatalogueContext(),
             currentStock: row.CurrentStock,
             barcodeContext: BuildBarcodeScanContext(),
-            doseTimes: await LoadDoseTimesAsync());
+            doseTimes: await LoadDoseTimesAsync(),
+            equivalents: BuildEquivalentsContext(row.Id));
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -2826,6 +2844,58 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.StockCount"), ex);
+        }
+    }
+
+    // Equivalent medicines of the selected row's package
+    // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.6, U1 to U3).
+    private async Task ShowSelectedEquivalentsAsync()
+    {
+        var row = GetSelectedRow();
+        if (row?.NationalCode is not { } code || MedicineInfoLink.ForNationalCode(code) is null) return;
+        await ShowEquivalentsAsync(code.Trim(), row.Id, row.Name, this);
+    }
+
+    private Task ShowEquivalentsAsync(string nationalCode, Guid? medicineId, string medicineName, IWin32Window owner)
+    {
+        async Task<EquivalentsView> LoadAsync()
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<EquivalentsQuery>()
+                .LoadAsync(nationalCode, medicineId, CancellationToken.None);
+        }
+
+        using var dialog = new EquivalentsDialog(medicineName, LoadAsync, _loc);
+        dialog.ShowDialog(owner);
+        return Task.CompletedTask;
+    }
+
+    // Context for the edit dialog's "Equivalent medicines" link. The
+    // list store is a singleton, so IsListed resolves it once.
+    private EquivalentsContext BuildEquivalentsContext(Guid? medicineId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var store = scope.ServiceProvider.GetRequiredService<IEquivalenceListStore>();
+        return new EquivalentsContext(
+            IsListed: code => code?.Trim() is { } c && ItalianPharmacode.IsValidAic(c) && store.Load()?.FindGroup(c) is not null,
+            Show: (code, name, owner) => ShowEquivalentsAsync(code, medicineId, name, owner));
+    }
+
+    // Codifa page of the selected row's package (§3.3). The URL is built
+    // from a validated AIC only.
+    private void OpenSelectedCodifaPage()
+    {
+        if (MedicineInfoLink.ForNationalCode(GetSelectedRow()?.NationalCode) is not { } url) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            UiMessageBox.Show(this,
+                _loc.Get("Ui.MedicineEditDialog.Documents.OpenError", ex.Message),
+                _loc.Get("Ui.MedicineEditDialog.Documents.Codifa"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 

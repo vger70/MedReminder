@@ -1,6 +1,21 @@
 # ANALYSIS — Italian equivalent medicines and medicine information link
 
-Status: analysis only, nothing implemented. Date: 2026-10-03.
+Status: §3 (Codifa link) and phases E1 and E2 of §2 (feed, equivalents
+window, uses U1 to U3) implemented; E3 (U4, U5), E4 and U6 remain
+proposals. Date: 2026-10-03.
+
+Implementation notes:
+
+- The equivalents window opens from the grid context menu and from an
+  "Equivalent medicines" link in the information row of the edit dialog
+  (next to leaflet, SPC and Codifa), instead of a separate button.
+- U3 is shown in the equivalents window only; the low-stock warning is
+  unchanged.
+- U2: the shortage tooltip of a package in the list points to the
+  equivalents window; every member of the group in shortage is marked
+  in the window.
+- The feed is not mirrored to `main/data/`: only releases that read the
+  `feeds` branch know it.
 
 Two requests from the product owner:
 

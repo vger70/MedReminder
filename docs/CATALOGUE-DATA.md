@@ -719,6 +719,42 @@ today is shown as an announced shortage.
 
 ---
 
+## 9. Equivalent medicines (Italy — AIFA "Lista di trasparenza")
+
+Not a catalogue: the monthly list of off-patent class A medicines with
+at least one equivalent, grouped, with reference and public prices.
+Used by the Equivalent medicines window and the shortage tooltip
+(`docs/analysis/ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md` §2).
+
+| Item | Value |
+|---|---|
+| Source | AIFA, `Lista_farmaci_equivalenti.csv` ("Liste dei farmaci", stable name); cited in the app as "AIFA transparency list of <date>". Licence: CC BY 4.0 inferred from the AIFA open-data page, to confirm before release (analysis §2.1) |
+| Workflow | `download_aifa_equivalents.yaml`, daily at 04:41 UTC (a run on a list already published exits without changes), concurrency group `catalogue-feeds-publish`; no mirror to main |
+| Script | `scripts/feeds/aifa_equivalents.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_equivalents.py`, fixture `tests/fixtures/catalogue/aifa-equivalents-sample.csv` |
+| Published | `data/it/equivalents/equivalents-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.groups`, `rows.packages`); the 3 newest files are kept |
+| Client | `EquivalenceRefresher` with `GitHubRawEquivalenceFeedClient`, after the shortage list, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:EquivalentsEnabled` (default true), `EquivalentsMaxDownloadBytes` (default 4 MiB) |
+| Stored | `%LOCALAPPDATA%\MedReminder\catalogue\equivalents\equivalents-it.json`, shared by every profile; not in any profile database, not synced, not exported |
+
+Source file format (checked on the list of 15/09/2026, 8,560 rows,
+1,010 groups): Windows-1252, `;` separator, columns `Principio attivo;
+Confezione di riferimento; ATC; AIC; Farmaco; Confezione; Ditta; Prezzo
+riferimento SSN; Prezzo Pubblico <d month yyyy>; Differenza; Nota;
+Codice gruppo equivalenza`. The script:
+
+- left-pads `AIC` to 9 digits (the file drops the leading zeros);
+- reads the list date from the name of the public-price column, matched
+  by its `Prezzo Pubblico` prefix;
+- converts prices (`5,63 €`) to cents;
+- rejects a package listed in two groups;
+- keeps `Nota` verbatim: a note can restrict substitution inside the
+  group.
+
+The client joins the list with a medicine only through
+`Medicine.NationalCode` when it is a valid AIC, never by name or active
+ingredient.
+
+---
+
 ## 7. Suspended countries (M4b: UK / MHRA and DE / BfArM)
 
 Not shipping. Both remaining target countries on the M4 shortlist

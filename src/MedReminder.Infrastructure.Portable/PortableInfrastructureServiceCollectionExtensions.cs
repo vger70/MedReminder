@@ -54,6 +54,10 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddOptions();
         services.TryAddSingleton<IShortageFeedClient, GitHubRawShortageFeedClient>();
         services.TryAddSingleton<IShortageListStore, JsonFileShortageListStore>();
+        // Equivalents list (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.4):
+        // shared by every profile, as the shortage list.
+        services.TryAddSingleton<IEquivalenceFeedClient, GitHubRawEquivalenceFeedClient>();
+        services.TryAddSingleton<IEquivalenceListStore, JsonFileEquivalenceListStore>();
         services.AddScoped<ISentEmailNotificationRepository, SentEmailNotificationRepository>();
         services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
         services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();
