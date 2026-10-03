@@ -68,12 +68,13 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
    notifica di Windows (vicino all'orologio) resta visibile finché l'app
    è in esecuzione.
 
-**Windows SmartScreen.** Il programma non è firmato digitalmente. Al
-primo avvio Windows può mostrare una finestra blu "Windows ha protetto
-il PC": fai clic su **Ulteriori informazioni**, poi su **Esegui
-comunque**. Windows ricorda la scelta. Se installi dal pacchetto MSI,
-la finestra dei permessi indica "Autore sconosciuto" per lo stesso
-motivo.
+**Windows SmartScreen.** Il programma è firmato digitalmente con un
+certificato Certum. Finché il certificato non ha accumulato
+reputazione, al primo avvio Windows può comunque mostrare una finestra
+blu "Windows ha protetto il PC": fai clic su **Ulteriori
+informazioni**, poi su **Esegui comunque**. Windows ricorda la scelta.
+Se installi dal pacchetto MSI, la finestra dei permessi mostra
+l'autore verificato.
 
 <a id="main-window"></a>
 ### La finestra principale

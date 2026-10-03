@@ -70,12 +70,13 @@ in der App zu lesen. Die technische Architektur ist in
    Windows-Infobereich (neben der Uhr) bleibt sichtbar, solange die App
    läuft.
 
-**Windows SmartScreen.** Das Programm ist nicht digital signiert. Beim
-allerersten Start kann Windows ein blaues Fenster „Der Computer wurde
-durch Windows geschützt“ zeigen: Klicke auf **Weitere Informationen**,
-dann auf **Trotzdem ausführen**. Windows merkt sich die Wahl. Bei der
-Installation über das MSI-Paket zeigt das Berechtigungsfenster aus
-demselben Grund „Unbekannter Herausgeber“.
+**Windows SmartScreen.** Das Programm ist mit einem Certum-Zertifikat
+digital signiert. Solange das Zertifikat noch keine Reputation
+aufgebaut hat, kann Windows beim allerersten Start trotzdem ein blaues
+Fenster „Der Computer wurde durch Windows geschützt“ zeigen: Klicke auf
+**Weitere Informationen**, dann auf **Trotzdem ausführen**. Windows
+merkt sich die Wahl. Bei der Installation über das MSI-Paket zeigt das
+Berechtigungsfenster den verifizierten Herausgeber.
 
 <a id="main-window"></a>
 ### Das Hauptfenster

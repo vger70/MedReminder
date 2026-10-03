@@ -258,9 +258,12 @@ dotnet publish src\MedReminder.UI -c Release ^
 
 ## Windows SmartScreen warning on first run
 
-The distributed binaries are **not code-signed**. The first time you
-launch `MedReminder.exe` — or open the MSI installer — Windows
-SmartScreen shows a blue dialog:
+MedReminder's own executables and libraries, and the MSI, are
+code-signed with a Certum Open
+Source Code Signing certificate (SHA-256, RFC 3161 timestamp;
+`docs/PACKAGING.md` §25). Until the certificate has built up
+reputation, Windows SmartScreen can still show a blue dialog the first
+time you launch `MedReminder.exe` or open the MSI installer:
 
 > Windows protected your PC
 > Microsoft Defender SmartScreen prevented an unrecognized app from
@@ -268,16 +271,13 @@ SmartScreen shows a blue dialog:
 
 Click **More info**, then **Run anyway**. Windows remembers your
 choice for that specific file — subsequent launches do not prompt
-again.
+again. The UAC dialog raised by the MSI shows the verified publisher.
 
-The UAC dialog raised by the MSI shows "Unknown Publisher" for the
-same reason. That is expected.
-
-MedReminder currently opts out of the recurring cost of a code-signing
-certificate. This does not affect the functionality or integrity of
-the binaries: they are built by the public GitHub Actions workflow
+The binaries are built by the public GitHub Actions workflow
 [`dotnet-desktop.yml`](.github/workflows/dotnet-desktop.yml) from the
-tagged source in this repository.
+tagged source in this repository, then rebuilt locally from the same
+tag and signed (`publish-signed-release.ps1`); the signed files replace
+the release assets.
 
 ## Where data is stored
 

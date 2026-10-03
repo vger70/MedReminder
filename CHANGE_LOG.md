@@ -59,6 +59,10 @@ Branch: `feature/days-left-from-shown-stock` → `main`
 - `docs/STATUS.md` reviewed at v2.14.0: releases v2.12.1–v2.14.0, the
   dose-time stock (§2.11), codebase figures, open pull requests, code
   signing and next steps.
+- `README.md` and the five user guides: the binaries and the MSI are
+  code-signed (Certum); SmartScreen can still warn on the first run
+  until the certificate has reputation, and the MSI shows the verified
+  publisher instead of "Unknown Publisher".
 
 ---
 

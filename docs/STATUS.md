@@ -204,9 +204,7 @@ Every device of a sync group must run a build with operation schema 8
 and image schema 6 before prescriptions or deadlines are used; an older
 app stops at the first operation it cannot read (R7). Released in
 v2.13.0. The Windows-only test projects (`Infrastructure.Tests`,
-`UI.Tests`) were run by the maintainer up to #168; whether they were
-run for #169 and #170 before the release cannot be verified from this
-repository `[UNCERTAIN]`.
+`UI.Tests`) were run by the maintainer before v2.14.0.
 
 ### 2.10 Changes v2.12.1 – v2.13.1
 
@@ -233,12 +231,10 @@ summary in `EVOLUTION-DONE.md` §12.5.
 Every device of a sync group must run v2.14.0 before anyone records an
 extra intake or flags an as-needed slot; an older app stops at the
 first operation of schema 9 (R7). Past as-needed consumption is not
-given back: one stock count per affected medicine recovers it. For
-#177 and #178 the Domain, Application and Infrastructure.Portable tests
-ran on Linux and the Windows projects compiled with
-`EnableWindowsTargeting`; whether `Infrastructure.Tests` and `UI.Tests`
-were run on Windows before v2.14.0 cannot be verified from this
-repository `[UNCERTAIN]`.
+given back: one stock count per affected medicine recovers it. The
+maintainer ran the Windows-only test projects on #177 before v2.14.0;
+for #178 the Domain and Application tests ran on Linux and the run on
+Windows is pending.
 
 ---
 
@@ -315,11 +311,12 @@ tracking.
 
 - **Automatic update** (`docs/AUTO_UPDATE.md`): design proposal, not
   implemented.
-- **Code signing**: the signed local build (#137) and the release script
-  (#158) are on `main`. `README.md` still says the distributed binaries
-  are not code-signed; whether the assets of v2.12.1–v2.14.0 were
-  replaced by signed ones cannot be verified from this repository
-  `[UNCERTAIN]`.
+- **Code signing**: done. The signed local build (#137) and the release
+  script (#158) are on `main`, and the published executables are
+  signed (Certum, confirmed by the maintainer on 2026-10-03). CI still
+  publishes unsigned packages that the script replaces with the signed
+  ones (`docs/PACKAGING.md` §25); signing in CI is open. `README.md` and
+  the user guides now describe signed binaries (#178).
 - **Microsoft Store**: PR #161 (self-contained MSI) is open.
 - **UI, known limitations** (`ANALYSIS-UI-MODERNIZATION.md` §6b): in
   dark mode the date and time pickers keep a white field (a dark picker
@@ -350,8 +347,8 @@ tracking.
 
 ## 4. Suggested next steps `[INFERRED]`
 
-0. Run the Windows-only tests on `main` (v2.14.0) and on PR #178, then
-   merge #178 and release it as a patch version. The release notes of
+0. Run the Windows-only tests on PR #178, then merge it and release it
+   as a patch version. The release notes of
    v2.14.x must say that every device of a sync group has to be updated
    before extra intakes or as-needed slots are used, and that one stock
    count recovers past as-needed consumption.
@@ -363,8 +360,7 @@ profile operation schemas 4 and 5).
 
 1. Desktop: confirm webcam decoding on a real pack with a webcam of
    sufficient resolution (A2 checklist item 7). Decide on PR #161
-   (Microsoft Store MSI); align `README.md` with the signed releases if
-   the published assets are signed.
+   (Microsoft Store MSI).
 2. UI: replace the date and time pickers if a fully dark mode is
    wanted (§3.5).
 3. Website content refresh for v2.7–v2.14; the screenshots in

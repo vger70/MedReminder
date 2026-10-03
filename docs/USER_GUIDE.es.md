@@ -68,12 +68,12 @@ de la aplicación. La arquitectura técnica se describe en
    notificación de Windows (junto al reloj) sigue visible mientras la
    aplicación está en marcha.
 
-**Windows SmartScreen.** El programa no está firmado digitalmente. En el
-primer inicio Windows puede mostrar una ventana azul "Windows protegió
-su PC": haz clic en **Más información** y luego en **Ejecutar de todas
-formas**. Windows recuerda la elección. Si instalas desde el paquete
-MSI, la ventana de permisos indica "Editor desconocido" por el mismo
-motivo.
+**Windows SmartScreen.** El programa está firmado digitalmente con un
+certificado Certum. Mientras el certificado no haya ganado reputación,
+en el primer inicio Windows aún puede mostrar una ventana azul "Windows
+protegió su PC": haz clic en **Más información** y luego en **Ejecutar
+de todas formas**. Windows recuerda la elección. Si instalas desde el
+paquete MSI, la ventana de permisos muestra el editor verificado.
 
 <a id="main-window"></a>
 ### La ventana principal

@@ -66,11 +66,12 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
 3. The main window opens. The MedReminder icon in the Windows
    notification area (near the clock) stays visible while the app runs.
 
-**Windows SmartScreen.** The program is not code-signed. On the very
-first launch Windows may show a blue "Windows protected your PC"
+**Windows SmartScreen.** The program is code-signed with a Certum
+certificate. Until the certificate has built up reputation, on the very
+first launch Windows may still show a blue "Windows protected your PC"
 window: click **More info**, then **Run anyway**. Windows remembers the
-choice. If you install from the MSI package, the permission window says
-"Unknown Publisher" for the same reason.
+choice. If you install from the MSI package, the permission window
+shows the verified publisher.
 
 <a id="main-window"></a>
 ### The main window

@@ -70,12 +70,13 @@ dans l'application. L'architecture technique est décrite dans
    notification de Windows (près de l'horloge) reste visible tant que
    l'application tourne.
 
-**Windows SmartScreen.** Le programme n'est pas signé numériquement. Au
-tout premier lancement, Windows peut afficher une fenêtre bleue « PC
-protégé par Windows » : clique sur **Informations complémentaires**,
-puis sur **Exécuter quand même**. Windows retient ce choix. Si tu
-installes depuis le paquet MSI, la fenêtre d'autorisation indique
-« Éditeur inconnu » pour la même raison.
+**Windows SmartScreen.** Le programme est signé numériquement avec un
+certificat Certum. Tant que le certificat n'a pas acquis de
+réputation, au tout premier lancement Windows peut encore afficher une
+fenêtre bleue « PC protégé par Windows » : clique sur **Informations
+complémentaires**, puis sur **Exécuter quand même**. Windows retient ce
+choix. Si tu installes depuis le paquet MSI, la fenêtre d'autorisation
+affiche l'éditeur vérifié.
 
 <a id="main-window"></a>
 ### La fenêtre principale
