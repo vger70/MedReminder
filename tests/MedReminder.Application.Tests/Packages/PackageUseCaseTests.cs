@@ -132,6 +132,55 @@ public class PackageUseCaseTests
     }
 
     [Fact]
+    public async Task A_refused_discard_leaves_the_package_and_the_stock_as_they_were()
+    {
+        // Opened today: a discard dated yesterday is before the opening.
+        var id = await _scope.SaveStockPackage.ExecuteAsync(Command(), default);
+
+        var act = () => _scope.DiscardStockPackage.ExecuteAsync(
+            new DiscardStockPackageCommand(id, Today.AddDays(-1), 4m), default);
+
+        (await act.Should().ThrowAsync<InvalidStockPackageException>()).Which.Error
+            .Should().Be(PackageError.ClosedBeforeOpened);
+        var package = _scope.Packages.All.Single();
+        package.ClosedOn.Should().BeNull();
+        package.Closure.Should().BeNull();
+        (await StockAsync()).Should().Be(30m);
+    }
+
+    [Fact]
+    public async Task A_save_cannot_discard_a_package()
+    {
+        var id = await _scope.SaveStockPackage.ExecuteAsync(Command(), default);
+
+        var act = () => _scope.SaveStockPackage.ExecuteAsync(
+            Command(id, closedOn: Today, closure: PackageClosure.Discarded), default);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _scope.Packages.All.Single().IsClosed.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task A_discarded_package_stays_discarded_but_its_other_fields_can_change()
+    {
+        var id = await _scope.SaveStockPackage.ExecuteAsync(Command(), default);
+        await _scope.DiscardStockPackage.ExecuteAsync(new DiscardStockPackageCommand(id, Today, 4m), default);
+
+        var reopen = () => _scope.SaveStockPackage.ExecuteAsync(Command(id), default);
+        var finish = () => _scope.SaveStockPackage.ExecuteAsync(
+            Command(id, closedOn: Today, closure: PackageClosure.Finished), default);
+
+        await reopen.Should().ThrowAsync<InvalidOperationException>();
+        await finish.Should().ThrowAsync<InvalidOperationException>();
+        await _scope.SaveStockPackage.ExecuteAsync(
+            Command(id, batch: "L9", closedOn: Today, closure: PackageClosure.Discarded), default);
+        var package = _scope.Packages.All.Single();
+        package.Closure.Should().Be(PackageClosure.Discarded);
+        package.Batch.Should().Be("L9");
+        (await StockAsync()).Should().Be(26m);
+    }
+
+    [Fact]
     public async Task Deleting_a_package_leaves_the_stock_alone()
     {
         var id = await _scope.SaveStockPackage.ExecuteAsync(Command(), default);

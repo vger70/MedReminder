@@ -1426,5 +1426,6 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry.Printed": "days before the printed expiry",
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "days before the end of the period after opening",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "When the \"expires soon\" notice comes. 0 keeps only the notice that a package has expired.",
-  "Notifications.Digest.InactiveExpiry": "- {0} (not in use): package expiry {1}"
+  "Notifications.Digest.InactiveExpiry": "- {0} (not in use): package expiry {1}",
+  "Packages.Error.ExpiresOn": "Check the expiry: it is more than 20 years from today."
 }

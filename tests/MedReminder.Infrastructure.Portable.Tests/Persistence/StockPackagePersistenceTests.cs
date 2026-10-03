@@ -196,6 +196,20 @@ public class StockPackagePersistenceTests
             .Closure.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("Returned")]
+    [InlineData("7")]
+    public void A_closure_from_a_newer_app_imports_as_finished(string closure)
+    {
+        var dto = ExportMapper.ToDto(new StockPackage
+        {
+            MedicineId = Guid.NewGuid(), Quantity = 1m, ClosedOn = Today, Closure = PackageClosure.Finished,
+        });
+        dto.Closure = closure;
+
+        ExportMapper.ToEntity(dto).Closure.Should().Be(PackageClosure.Finished);
+    }
+
     private static SaveStockPackage Save(MedReminderDbContext ctx)
         => new(new MedicineRepository(ctx), new StockPackageRepository(ctx), TestOperationLog.For(ctx),
             new UnitOfWork(ctx), Clock);
@@ -205,7 +219,7 @@ public class StockPackagePersistenceTests
         var log = TestOperationLog.For(ctx);
         var uow = new UnitOfWork(ctx);
         var stock = new StockMovementRepository(ctx, Clock);
-        return new DiscardStockPackage(new StockPackageRepository(ctx), stock, log, uow,
+        return new DiscardStockPackage(new StockPackageRepository(ctx), log, uow,
             new AdjustStockDown(new MedicineRepository(ctx), stock, log, uow, Clock), Clock);
     }
 

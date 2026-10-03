@@ -426,7 +426,7 @@ without it import with no packages.
 | `openedOn` | DateOnly? | first opening |
 | `batch` | string? | lot, at most 20 characters |
 | `closedOn` | DateOnly? | day the package left the cabinet; set together with `closure` |
-| `closure` | string? | `Finished` or `Discarded`; `null` while the package is open |
+| `closure` | string? | `Finished` or `Discarded`; `null` while the package is open. A name this version does not know imports as `Finished` |
 | `recordedAt` | DateTimeOffset | |
 | `updatedAt` | DateTimeOffset | |
 

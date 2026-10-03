@@ -382,10 +382,20 @@ internal static class ExportMapper
         OpenedOn = p.OpenedOn,
         Batch = p.Batch,
         ClosedOn = p.ClosedOn,
-        Closure = p.Closure is null ? null : ParseEnum<PackageClosure>(p.Closure),
+        Closure = p.Closure is null ? null : ClosureOf(p.Closure),
         RecordedAt = p.RecordedAt,
         UpdatedAt = p.UpdatedAt,
     };
+
+    // A closure a newer app may add is read as Finished: the package left
+    // the cabinet, and Finished moves no stock. Refusing it would make the
+    // whole archive unreadable for one value.
+    private static PackageClosure ClosureOf(string value)
+        => Enum.TryParse<PackageClosure>(value, ignoreCase: false, out var closure)
+            && Enum.IsDefined(closure)
+            && !int.TryParse(value, out _)
+                ? closure
+                : PackageClosure.Finished;
 
     public static ExportedDeadline ToDto(Deadline d) => new()
     {

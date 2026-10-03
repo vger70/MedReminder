@@ -1421,5 +1421,6 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry.Printed": "días antes de la caducidad impresa",
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "días antes del fin del periodo tras la apertura",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Cuándo llega el aviso \"caduca pronto\". Con 0 queda solo el aviso de caja caducada.",
-  "Notifications.Digest.InactiveExpiry": "- {0} (sin uso): caducidad de una caja {1}"
+  "Notifications.Digest.InactiveExpiry": "- {0} (sin uso): caducidad de una caja {1}",
+  "Packages.Error.ExpiresOn": "Revise la caducidad: está a más de 20 años de hoy."
 }

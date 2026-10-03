@@ -84,6 +84,15 @@ public sealed class SaveStockPackage
                 throw new InvalidOperationException($"Package {cmd.Id} belongs to another medicine.");
         }
 
+        // Discarding moves the stock, so it goes through DiscardStockPackage
+        // only, and it is final: a save neither sets nor clears it, which
+        // also lets a sync merge keep a discard whatever other edit wins.
+        var wasDiscarded = package.Closure == PackageClosure.Discarded;
+        if (!wasDiscarded && cmd.Closure == PackageClosure.Discarded)
+            throw new InvalidOperationException("A package is discarded with DiscardStockPackage, not saved as discarded.");
+        if (wasDiscarded && (cmd.Closure != PackageClosure.Discarded || cmd.ClosedOn != package.ClosedOn))
+            throw new InvalidOperationException("A discarded package stays discarded.");
+
         package.MovementId = isNew ? cmd.MovementId : cmd.MovementId ?? package.MovementId;
         package.Quantity = cmd.Quantity;
         package.ExpiresOn = cmd.ExpiresOn;
@@ -109,7 +118,10 @@ public sealed class SaveStockPackage
 
 // A package thrown away (§3.5): it is closed as Discarded on a day and
 // the units still in it leave the stock as a negative correction. Both
-// are saved together. QuantityLeft 0: the package was already empty.
+// are saved together; everything is checked before anything changes.
+// Final: a discard cannot be undone (SaveStockPackage refuses it), so a
+// discard by mistake is corrected by deleting the package and adding the
+// units back. QuantityLeft 0: the package was already empty.
 public sealed record DiscardStockPackageCommand(
     Guid PackageId,
     DateOnly DiscardedOn,
@@ -119,7 +131,6 @@ public sealed record DiscardStockPackageCommand(
 public sealed class DiscardStockPackage
 {
     private readonly IStockPackageRepository _packages;
-    private readonly IStockMovementRepository _stock;
     private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly AdjustStockDown _adjust;
@@ -127,14 +138,12 @@ public sealed class DiscardStockPackage
 
     public DiscardStockPackage(
         IStockPackageRepository packages,
-        IStockMovementRepository stock,
         IOperationLog operations,
         IUnitOfWork uow,
         AdjustStockDown adjust,
         TimeProvider clock)
     {
         _packages = packages;
-        _stock = stock;
         _operations = operations;
         _uow = uow;
         _adjust = adjust;
@@ -152,30 +161,34 @@ public sealed class DiscardStockPackage
                 ?? throw new InvalidOperationException($"Package {cmd.PackageId} not found.");
             if (package.IsClosed)
                 throw new InvalidOperationException($"Package {cmd.PackageId} is already closed.");
-            // Checked before any change, so a refused correction leaves the
-            // package open.
-            var current = MedicineStock.Current(await _stock.ListForMedicineAsync(package.MedicineId, ct));
-            if (MedicineStock.WouldGoNegative(current, -cmd.QuantityLeft))
-                throw new InvalidOperationException(
-                    $"The correction would push the stock below zero (current: {current}).");
+
+            // Everything is checked before the tracked package changes, so a
+            // refused discard leaves it as it was.
+            var candidate = new StockPackage
+            {
+                MedicineId = package.MedicineId,
+                Quantity = package.Quantity,
+                ExpiresOn = package.ExpiresOn,
+                UseWithinDays = package.UseWithinDays,
+                OpenedOn = package.OpenedOn,
+                Batch = package.Batch,
+                ClosedOn = cmd.DiscardedOn,
+                Closure = PackageClosure.Discarded,
+            };
+            if (PackageExpiryRules.Validate(candidate, SaveStockPackage.LocalDay(_clock)) is { } error)
+                throw new InvalidStockPackageException(error);
+            var correction = cmd.QuantityLeft > 0m
+                ? await _adjust.PrepareAsync(
+                    new AdjustStockDownCommand(package.MedicineId, cmd.QuantityLeft, cmd.Notes), ct)
+                : null;
 
             package.ClosedOn = cmd.DiscardedOn;
             package.Closure = PackageClosure.Discarded;
             package.UpdatedAt = _clock.GetUtcNow();
-            if (PackageExpiryRules.Validate(package, SaveStockPackage.LocalDay(_clock)) is { } error)
-                throw new InvalidStockPackageException(error);
-
             await _packages.UpdateAsync(package, ct);
             await _operations.AppendAsync([Operations.Package(package, deleted: false)], ct);
-            if (cmd.QuantityLeft > 0m)
-            {
-                await _adjust.ExecuteCoreAsync(
-                    new AdjustStockDownCommand(package.MedicineId, cmd.QuantityLeft, cmd.Notes), ct);
-            }
-            else
-            {
-                await _uow.SaveChangesAsync(ct);
-            }
+            if (correction is not null) await _adjust.RecordAsync(correction, ct);
+            await _uow.SaveChangesAsync(ct);
             return true;
         }, cancellationToken);
     }

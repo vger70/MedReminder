@@ -1421,5 +1421,6 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry.Printed": "jours avant la péremption imprimée",
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "jours avant la fin de la période après ouverture",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Quand l'avis « bientôt périmée » arrive. Avec 0, seul l'avis de boîte périmée reste.",
-  "Notifications.Digest.InactiveExpiry": "- {0} (plus utilisé) : péremption d'une boîte {1}"
+  "Notifications.Digest.InactiveExpiry": "- {0} (plus utilisé) : péremption d'une boîte {1}",
+  "Packages.Error.ExpiresOn": "Vérifiez la péremption : elle est à plus de 20 ans d'aujourd'hui."
 }

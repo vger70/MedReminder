@@ -1421,5 +1421,6 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry.Printed": "Tage vor dem aufgedruckten Verfall",
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "Tage vor dem Ende der Frist nach dem Öffnen",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Wann der Hinweis „läuft bald ab“ kommt. Bei 0 bleibt nur der Hinweis, dass eine Packung abgelaufen ist.",
-  "Notifications.Digest.InactiveExpiry": "- {0} (nicht in Verwendung): Verfall einer Packung {1}"
+  "Notifications.Digest.InactiveExpiry": "- {0} (nicht in Verwendung): Verfall einer Packung {1}",
+  "Packages.Error.ExpiresOn": "Prüfen Sie das Verfallsdatum: Es liegt mehr als 20 Jahre von heute entfernt."
 }
