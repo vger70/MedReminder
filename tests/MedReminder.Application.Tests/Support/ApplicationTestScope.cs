@@ -88,6 +88,7 @@ internal sealed class ApplicationTestScope
     public SaveStockPackage SaveStockPackage { get; }
     public DiscardStockPackage DiscardStockPackage { get; }
     public DeleteStockPackage DeleteStockPackage { get; }
+    public PackageListQuery PackageList { get; }
     public SyncGenesis Genesis { get; }
 
     public ApplicationTestScope(DateTimeOffset? now = null)
@@ -111,7 +112,7 @@ internal sealed class ApplicationTestScope
         Deletion = new InMemoryMedicineDeletionRepository(this);
         DeleteMedicine = new DeleteMedicine(
             Medicines, Stock, Intakes, Counts, Suspensions, Deletion, Operations, Uow, Clock);
-        AddStock = new AddStock(Medicines, Stock, Operations, Uow, Clock);
+        AddStock = new AddStock(Medicines, Stock, Operations, Uow, Clock, Packages);
         AdjustStockDown = new AdjustStockDown(Medicines, Stock, Operations, Uow, Clock);
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Operations, Uow, Clock);
         ResumeMedication = new ResumeMedication(Medicines, Suspensions, Operations, Uow, Clock);
@@ -134,6 +135,7 @@ internal sealed class ApplicationTestScope
         SaveStockPackage = new SaveStockPackage(Medicines, Packages, Operations, Uow, Clock);
         DiscardStockPackage = new DiscardStockPackage(Packages, Stock, Operations, Uow, AdjustStockDown, Clock);
         DeleteStockPackage = new DeleteStockPackage(Packages, Operations, Uow, Clock);
+        PackageList = new PackageListQuery(Packages, Stock, Clock);
 
         SavePrescription = new SavePrescription(Medicines, Prescriptions, Operations, Uow, Clock);
         CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);
