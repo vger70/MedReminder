@@ -1,6 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 using MedReminder.Domain.Catalogue;
+using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Application.Catalogue;
 
@@ -9,54 +11,44 @@ namespace MedReminder.Application.Catalogue;
 // scripts/feeds/aifa_shortages.py under data/it/shortages/ as
 // `shortages-<yyyymmdd>.json` with a `latest.json` manifest. Versioned
 // by the list date, because AIFA updates the list several times a month.
-public sealed record ShortageFeedManifest(string Version, string File, string Sha256, long Size)
+// Transport, store and refresh are the shared dated-list ones
+// (DatedListFeed.cs).
+public sealed class ShortageFeedDefinition : DatedListFeedDefinition<ShortageList>
 {
-    // The list date the version stands for.
-    public DateOnly ListDate => DateOnly.ParseExact(Version, "yyyyMMdd", CultureInfo.InvariantCulture);
+    public static readonly ShortageFeedDefinition Instance = new();
+
+    private ShortageFeedDefinition()
+    {
+    }
+
+    public override string Name => "Shortage";
+
+    public override string Folder => "shortages";
+
+    public override string FilePrefix => ShortageFeedParser.FilePrefix;
+
+    public override long MaxDownloadBytes(CatalogueFeedOptions options) => options.ShortagesMaxDownloadBytes;
+
+    public override bool TryParseList(string json, [NotNullWhen(true)] out ShortageList? list, out string? error)
+        => ShortageFeedParser.TryParseList(json, out list, out error);
+
+    public override DateOnly ListDateOf(ShortageList list) => list.ListDate;
+
+    public override string Describe(ShortageList list) => $"{list.Count} entries";
 }
 
 // Pure parsers, testable without HTTP. Unknown fields are ignored.
 public static class ShortageFeedParser
 {
-    public const string Country = "IT";
+    public const string Country = DatedFeedManifestParser.Country;
     public const string FilePrefix = "shortages-";
 
-    public static bool TryParseManifest(string json, out ShortageFeedManifest? manifest, out string? error)
-    {
-        ArgumentNullException.ThrowIfNull(json);
-        manifest = null;
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return Fail("The manifest is not a JSON object.", out error);
-            if (String(root, "country") != Country) return Fail($"The manifest is not for {Country}.", out error);
-            var version = String(root, "version");
-            if (version is null || !DateOnly.TryParseExact(version, "yyyyMMdd", CultureInfo.InvariantCulture,
-                    DateTimeStyles.None, out _))
-                return Fail("The manifest has no valid 'version' (yyyymmdd).", out error);
-            var file = String(root, "file");
-            if (file != FilePrefix + version + ".json")
-                return Fail($"The manifest 'file' does not match '{FilePrefix}{version}.json'.", out error);
-            var sha = String(root, "sha256");
-            if (sha is not { Length: 64 } || !sha.All(char.IsAsciiHexDigit))
-                return Fail("The manifest 'sha256' is not 64 hexadecimal characters.", out error);
-            if (!root.TryGetProperty("size", out var size) || size.ValueKind != JsonValueKind.Number
-                || !size.TryGetInt64(out var bytes) || bytes <= 0)
-                return Fail("The manifest 'size' is not a positive integer.", out error);
-            manifest = new ShortageFeedManifest(version, file, sha.ToLowerInvariant(), bytes);
-            error = null;
-            return true;
-        }
-        catch (JsonException ex)
-        {
-            return Fail("Malformed manifest: " + ex.Message, out error);
-        }
-    }
+    public static bool TryParseManifest(string json, out DatedFeedManifest? manifest, out string? error)
+        => DatedFeedManifestParser.TryParse(json, FilePrefix, out manifest, out error);
 
     // The list a feed file holds. Rejects a file for another country, a
     // missing or malformed field, or a code that is not 9 digits.
-    public static bool TryParseList(string json, out ShortageList? list, out string? error)
+    public static bool TryParseList(string json, [NotNullWhen(true)] out ShortageList? list, out string? error)
     {
         ArgumentNullException.ThrowIfNull(json);
         list = null;
@@ -122,22 +114,21 @@ public static class ShortageFeedParser
     }
 }
 
-// Transport of the shortage feed. Never throws from GetManifestAsync
-// except on cancellation; DownloadAsync throws on any failure.
-public interface IShortageFeedClient
+// Transport of the shortage feed.
+public interface IShortageFeedClient : IDatedListFeedClient<ShortageList>
 {
-    Task<ShortageFeedManifest?> GetManifestAsync(CancellationToken cancellationToken);
-
-    Task<byte[]> DownloadAsync(ShortageFeedManifest manifest, CancellationToken cancellationToken);
 }
 
-// The shortage list kept on this PC, shared by every profile (it is
-// public reference data, not profile data).
-public interface IShortageListStore
+// The shortage list kept on this PC, shared by every profile.
+public interface IShortageListStore : IDatedListStore<ShortageList>
 {
-    // Null when no list was stored yet or the stored file is unreadable.
-    ShortageList? Load();
+}
 
-    // Stores a list file already checked by ShortageFeedParser.
-    void Save(byte[] listJson);
+// Refresh of the shortage list (EVOLUTION-PROPOSALS-2 §3.3).
+public sealed class ShortageRefresher : DatedListRefresher<ShortageList>
+{
+    public ShortageRefresher(IShortageFeedClient feed, IShortageListStore store, ILogger<ShortageRefresher> log)
+        : base(ShortageFeedDefinition.Instance, feed, store, log)
+    {
+    }
 }

@@ -123,3 +123,18 @@ def test_publish_keeps_the_three_newest_files(tmp_path):
     assert sorted(p.name for p in tmp_path.glob("equivalents-*.json")) == [
         "equivalents-20260815.json", "equivalents-20260901.json", "equivalents-20260915.json",
     ]
+
+
+def test_a_republish_of_the_same_list_date_changes_the_hash(tmp_path):
+    # Clients holding a list date download it again when its SHA-256
+    # changes: a forced run must produce a new one.
+    list_date, groups = aifa_equivalents.parse(sample_text())
+    first_run = common.run_time()
+    first = aifa_equivalents.publish(
+        tmp_path, list_date, aifa_equivalents.build_document(list_date, groups, first_run), first_run)
+    second_run = first_run.replace(microsecond=(first_run.microsecond + 1) % 1_000_000)
+    second = aifa_equivalents.publish(
+        tmp_path, list_date, aifa_equivalents.build_document(list_date, groups, second_run), second_run)
+
+    assert second["version"] == first["version"]
+    assert second["sha256"] != first["sha256"]

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using MedReminder.Application.Catalogue;
 using MedReminder.Domain.Catalogue;
@@ -11,6 +12,9 @@ internal sealed class InMemoryShortageListStore : IShortageListStore
     public ShortageList? List { get; set; }
 
     public ShortageList? Load() => List;
+
+    // The hash of the last saved file, as the file store reports it.
+    public string? StoredSha256() => Stored is null || List is null ? null : Convert.ToHexStringLower(SHA256.HashData(Stored));
 
     public void Save(byte[] listJson)
     {

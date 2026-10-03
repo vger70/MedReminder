@@ -201,3 +201,48 @@ def publish(data_dir, country, version, zip_path, file_count, rows, generated):
 
     print(f"Published {data_dir / zip_path.name} ({manifest['size']:,} bytes)")
     return manifest
+
+
+def decode_text(raw):
+    """UTF-8 when the bytes are valid UTF-8, else Windows-1252 (AIFA CSVs)."""
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return raw.decode("cp1252")
+
+
+def publish_dated_list(data_dir, prefix, country, list_date, document, generated, rows,
+                       retained=RETAINED_ARCHIVES):
+    """Publish a dated JSON list (the shortage and transparency lists).
+
+    Writes <prefix>-<yyyymmdd>.json (the list date), then latest.json
+    with its size and SHA-256, the files the app checks; keeps the
+    `retained` newest lists. A republish of the same date gets a new
+    SHA-256 (`generated` changes), which clients holding that date
+    download again.
+    """
+    data_dir = Path(data_dir)
+    data_dir.mkdir(parents=True, exist_ok=True)
+    version = f"{list_date:%Y%m%d}"
+    name = f"{prefix}-{version}.json"
+    payload = (json.dumps(document, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    (data_dir / name).write_bytes(payload)
+
+    manifest = {
+        "country": country,
+        "version": version,
+        "file": name,
+        "generated": generated.isoformat(),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "size": len(payload),
+        "rows": rows,
+    }
+    with open(data_dir / "latest.json", "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(manifest, fh, indent=2)
+        fh.write("\n")
+
+    files = sorted(data_dir.glob(f"{prefix}-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].json"))
+    for old in files[:-retained]:
+        old.unlink()
+    print(f"Published {data_dir / name} ({len(payload):,} bytes)")
+    return manifest

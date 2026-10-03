@@ -1726,7 +1726,7 @@ internal sealed class MainForm : MedReminderFormBase
             // Nothing to act on without a row (right-click below the last one).
             var row = GetSelectedRow();
             e.Cancel = row is null;
-            var hasAic = MedicineInfoLink.ForNationalCode(row?.NationalCode) is not null;
+            var hasAic = ItalianPharmacode.NormalizeAic(row?.NationalCode) is not null;
             equivalents.Enabled = hasAic;
             codifa.Enabled = hasAic;
         };
@@ -2852,8 +2852,8 @@ internal sealed class MainForm : MedReminderFormBase
     private async Task ShowSelectedEquivalentsAsync()
     {
         var row = GetSelectedRow();
-        if (row?.NationalCode is not { } code || MedicineInfoLink.ForNationalCode(code) is null) return;
-        await ShowEquivalentsAsync(code.Trim(), row.Id, row.Name, this);
+        if (ItalianPharmacode.NormalizeAic(row?.NationalCode) is not { } code) return;
+        await ShowEquivalentsAsync(code, row!.Id, row.Name, this);
     }
 
     private Task ShowEquivalentsAsync(string nationalCode, Guid? medicineId, string medicineName, IWin32Window owner)
@@ -2870,16 +2870,15 @@ internal sealed class MainForm : MedReminderFormBase
         return Task.CompletedTask;
     }
 
-    // Context for the edit dialog's "Equivalent medicines" link. The
-    // list store is a singleton, so IsListed resolves it once.
-    private EquivalentsContext BuildEquivalentsContext(Guid? medicineId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var store = scope.ServiceProvider.GetRequiredService<IEquivalenceListStore>();
-        return new EquivalentsContext(
-            IsListed: code => code?.Trim() is { } c && ItalianPharmacode.IsValidAic(c) && store.Load()?.FindGroup(c) is not null,
-            Show: (code, name, owner) => ShowEquivalentsAsync(code, medicineId, name, owner));
-    }
+    // Context for the edit dialog's "Equivalent medicines" link. The check
+    // runs on the thread pool: its first call parses the stored list.
+    private EquivalentsContext BuildEquivalentsContext(Guid? medicineId) => new(
+        IsListedAsync: code => Task.Run(() =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<EquivalentsQuery>().IsListed(code);
+        }),
+        Show: (code, name, owner) => ShowEquivalentsAsync(code, medicineId, name, owner));
 
     // Codifa page of the selected row's package (§3.3). The URL is built
     // from a validated AIC only.

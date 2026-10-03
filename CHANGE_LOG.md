@@ -48,6 +48,17 @@ Branch: `claude/inspiring-bardeen-d79c0q` → `main`
 
 - The information row of the medicine edit dialog ("Information", formerly "AIFA documents") exists for every medicine; leaflet and SPC keep their Italian-catalogue condition.
 - Product names are now shown, in the equivalents window only: a decision recorded in `docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3. The shortage message still names no product.
+- The shortage and transparency lists share one transport, store and refresh (`DatedListFeed`, `GitHubRawDatedListFeedClient`, `JsonFileDatedListStore`) and one Python publisher (`common.publish_dated_list`), instead of two copies.
+
+### Fixed
+
+- A forced republish of a list date already stored on a client is downloaded again: the refresh compares the stored file's SHA-256 with the manifest, not only the list date. Applies to the shortage list too.
+- The stored list caches a failed parse per file version instead of re-reading a damaged file on every load.
+- The equivalents check of the edit dialog and of the main list runs off the UI thread.
+- One AIC rule (`ItalianPharmacode.NormalizeAic`) for the Codifa link, the menu, the edit dialog and the shortage tooltip, which no longer points to a disabled menu item for a code failing the check digit.
+- "Already at home" also lists another medicine record of the same package.
+- The Codifa menu item no longer shares its access key with "Correct stock" (en, it, fr, es).
+- The equivalents window no longer shows an error over itself when closed while loading.
 
 ### Docs
 

@@ -3,6 +3,7 @@ using MedReminder.Application.Catalogue;
 using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Packages;
 using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.Overview;
@@ -62,7 +63,10 @@ public sealed class MedicineOverviewLoader
         var medicines = await _medicines.ListAllAsync(cancellationToken);
         var items = new List<MedicineListItem>(medicines.Count);
         var shortages = _shortages?.Load();
-        var equivalents = shortages is null ? null : _equivalents?.Load();
+        // Read only for a listed AIC in shortage, off the calling thread:
+        // the first read after start-up parses the whole file.
+        EquivalenceList? equivalents = null;
+        var equivalentsRead = false;
         var doseTimes = _dueToday is null ? null : await _dueToday.LoadSettingsAsync(cancellationToken);
         // Read once, and only when some medicine has packages.
         PackageLeadDays? leadDays = null;
@@ -126,10 +130,20 @@ public sealed class MedicineOverviewLoader
                 items[^1].SupplyDisplay = ShortageTexts.Display(notice, _loc);
                 items[^1].SupplyDetail = ShortageTexts.Detail(notice, shortages.ListDate, _loc);
                 // The equivalents of a package in shortage
-                // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.6, U2).
-                if (equivalents?.FindGroup(m.NationalCode) is not null)
+                // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.6, U2), under the
+                // AIC rule of the menu that opens them.
+                if (_equivalents is not null && ItalianPharmacode.NormalizeAic(m.NationalCode) is { } aic)
                 {
-                    items[^1].SupplyDetail += Environment.NewLine + _loc.Get("Shortage.Detail.SeeEquivalents");
+                    if (!equivalentsRead)
+                    {
+                        var store = _equivalents;
+                        equivalents = await Task.Run(() => store.Load(), cancellationToken);
+                        equivalentsRead = true;
+                    }
+                    if (equivalents?.FindGroup(aic) is not null)
+                    {
+                        items[^1].SupplyDetail += Environment.NewLine + _loc.Get("Shortage.Detail.SeeEquivalents");
+                    }
                 }
             }
             if (_packages is not null

@@ -101,11 +101,45 @@ public class EquivalenceFeedTests
         feed.Manifest = Manifest(ListJson);
         feed.Body = ListJson;
 
-        (await refresher.RunAsync(default)).Should().Be(EquivalenceRefreshOutcome.Updated);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.Updated);
         store.List!.ListDate.Should().Be(new DateOnly(2026, 9, 15));
 
-        (await refresher.RunAsync(default)).Should().Be(EquivalenceRefreshOutcome.UpToDate);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.UpToDate);
         feed.Downloads.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task A_republished_list_of_the_same_date_is_downloaded_again()
+    {
+        var (refresher, feed, store) = Refresher();
+        feed.Manifest = Manifest(ListJson);
+        feed.Body = ListJson;
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.Updated);
+
+        // A forced run of the workflow after a fix: same list date, other
+        // content, so another hash.
+        var fixedJson = ListJson.Replace("BAYER S.P.A.", "BAYER S.P.A. (fixed)");
+        feed.Manifest = Manifest(fixedJson);
+        feed.Body = fixedJson;
+
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.Updated);
+        store.List!.FindGroup("026622050")!.Members.Single(m => m.Code == "026622050").Holder
+            .Should().Be("BAYER S.P.A. (fixed)");
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.UpToDate);
+        feed.Downloads.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task An_older_list_than_the_stored_one_is_not_downloaded()
+    {
+        var (refresher, feed, store) = Refresher();
+        store.Save(Encoding.UTF8.GetBytes(ListJson));
+        var older = ListJson.Replace("2026-09-15", "2026-08-15");
+        feed.Manifest = Manifest(older, version: "20260815");
+        feed.Body = older;
+
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.UpToDate);
+        feed.Downloads.Should().Be(0);
     }
 
     [Fact]
@@ -115,7 +149,7 @@ public class EquivalenceFeedTests
         feed.Manifest = Manifest(ListJson);
         feed.Body = ListJson.Replace("BAYER", "OTHER");
 
-        (await refresher.RunAsync(default)).Should().Be(EquivalenceRefreshOutcome.Rejected);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.Rejected);
         store.Stored.Should().BeNull();
     }
 
@@ -127,7 +161,7 @@ public class EquivalenceFeedTests
         feed.Body = other;
         feed.Manifest = Manifest(other, version: "20260915");
 
-        (await refresher.RunAsync(default)).Should().Be(EquivalenceRefreshOutcome.Rejected);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.Rejected);
         store.Stored.Should().BeNull();
     }
 
@@ -137,7 +171,7 @@ public class EquivalenceFeedTests
         var (refresher, feed, _) = Refresher();
         feed.Manifest = null;
 
-        (await refresher.RunAsync(default)).Should().Be(EquivalenceRefreshOutcome.ManifestUnavailable);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.ManifestUnavailable);
     }
 
     [Fact]
@@ -150,8 +184,8 @@ public class EquivalenceFeedTests
         options.EquivalentsEnabled = false;
         CatalogueFeedSelection.IncludesEquivalents("IT", options).Should().BeFalse();
         CatalogueFeedSelection.IncludesShortages("IT", options).Should().BeTrue("the two lists are switched separately");
-        new CatalogueFeedOptions().EquivalenceManifestUrl()
-            .Should().Be("https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/equivalents/latest.json");
+        new CatalogueFeedOptions().ItalianFeedFolder(EquivalenceFeedDefinition.Instance.Folder)
+            .Should().Be("https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/equivalents/");
     }
 
     [Theory]
@@ -200,6 +234,21 @@ public class EquivalenceFeedTests
     }
 
     [Fact]
+    public async Task Another_record_of_the_same_package_with_stock_is_at_home()
+    {
+        var scope = new ApplicationTestScope(new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero));
+        var store = new InMemoryEquivalenceListStore { List = Parsed() };
+        var current = await AddAsync(scope, "Norvasc", "002783013", stock: 5m);
+        await AddAsync(scope, "Norvasc (old therapy)", "002783013", stock: 20m);
+        var query = new EquivalentsQuery(store, scope.Medicines, scope.Stock, scope.Clock);
+
+        var view = await query.LoadAsync("002783013", current, default);
+
+        view.Current!.AtHome.Should().Equal("Norvasc (old therapy)");
+        view.AtHome.Should().ContainSingle().Which.IsCurrent.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task The_query_joins_only_on_a_valid_AIC_and_tells_why_nothing_is_shown()
     {
         var scope = new ApplicationTestScope(new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero));
@@ -242,6 +291,40 @@ public class EquivalenceFeedTests
         row.NationalCode.Should().Be("026622050");
         row.SupplyDetail.Should().EndWith(loc.Get("Shortage.Detail.SeeEquivalents"));
         items.Single(i => i.Id == other).SupplyDetail.Should().NotContain(loc.Get("Shortage.Detail.SeeEquivalents"));
+    }
+
+    [Fact]
+    public async Task The_shortage_tooltip_does_not_point_to_equivalents_for_a_code_failing_the_check_digit()
+    {
+        // The menu that opens the equivalents is disabled for such a code.
+        const string invalid = "026622051";
+        var scope = new ApplicationTestScope(new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero));
+        ShortageFeedParser.TryParseList(
+            "{\"country\":\"IT\",\"listDate\":\"2026-09-29\",\"entries\":[" +
+            "{\"aic\":\"" + invalid + "\",\"start\":\"2026-08-01\",\"expectedEnd\":null,\"equivalent\":true,\"reason\":\"production\"}]}",
+            out var shortages, out _).Should().BeTrue();
+        scope.Shortages.List = shortages;
+        EquivalenceFeedParser.TryParseList(ListJson.Replace("026622050", invalid), out var list, out _).Should().BeTrue();
+        var id = await AddAsync(scope, "Adalat", invalid, stock: 10m);
+        var loc = new JsonDictionaryLocalizationService("en");
+        var loader = new MedicineOverviewLoader(scope.Medicines, scope.Stock, scope.Schedules, scope.Suspensions,
+            scope.Slots, scope.Clock, loc, scope.Shortages,
+            equivalents: new InMemoryEquivalenceListStore { List = list });
+
+        var row = (await loader.LoadAsync(default)).Single(i => i.Id == id);
+
+        row.HasShortage.Should().BeTrue();
+        row.SupplyDetail.Should().NotContain(loc.Get("Shortage.Detail.SeeEquivalents"));
+    }
+
+    [Theory]
+    [InlineData(" 038253035 ", "038253035")]
+    [InlineData("038253036", null)]
+    [InlineData("EU/1/96/007/001", null)]
+    [InlineData(null, null)]
+    public void One_rule_says_which_codes_are_AICs(string? code, string? expected)
+    {
+        ItalianPharmacode.NormalizeAic(code).Should().Be(expected);
     }
 
     [Theory]
@@ -304,10 +387,10 @@ public class EquivalenceFeedTests
         public string Body { get; set; } = string.Empty;
         public int Downloads { get; private set; }
 
-        public Task<EquivalenceFeedManifest?> GetManifestAsync(CancellationToken cancellationToken)
+        public Task<DatedFeedManifest?> GetManifestAsync(CancellationToken cancellationToken)
             => Task.FromResult(Manifest is not null && EquivalenceFeedParser.TryParseManifest(Manifest, out var m, out _) ? m : null);
 
-        public Task<byte[]> DownloadAsync(EquivalenceFeedManifest manifest, CancellationToken cancellationToken)
+        public Task<byte[]> DownloadAsync(DatedFeedManifest manifest, CancellationToken cancellationToken)
         {
             Downloads++;
             return Task.FromResult(Encoding.UTF8.GetBytes(Body));

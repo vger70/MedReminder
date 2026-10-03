@@ -28,8 +28,10 @@ public sealed record EquivalentsView(
 {
     public EquivalentRow? Current => Rows.FirstOrDefault(r => r.IsCurrent);
 
-    // The other packages of the group already in stock in the profile.
-    public IReadOnlyList<EquivalentRow> AtHome => Rows.Where(r => !r.IsCurrent && r.AtHome.Count > 0).ToList();
+    // The packages of the group already in stock in the profile's other
+    // medicines, the medicine's own package included when another
+    // medicine record carries the same code.
+    public IReadOnlyList<EquivalentRow> AtHome => Rows.Where(r => r.AtHome.Count > 0).ToList();
 }
 
 // One package of the group. `Shortage` is its state in the stored
@@ -67,16 +69,17 @@ public sealed class EquivalentsQuery
         _shortages = shortages;
     }
 
-    // Whether the stored list has a group for the code; cheap (the store
-    // caches the parsed file).
+    // Whether the stored list has a group for the code. The first call
+    // after start-up reads and parses the stored file: call it off the UI
+    // thread. Later calls hit the store's cache.
     public bool IsListed(string? nationalCode)
-        => Normalize(nationalCode) is { } code && _equivalents.Load()?.FindGroup(code) is not null;
+        => ItalianPharmacode.NormalizeAic(nationalCode) is { } code && _equivalents.Load()?.FindGroup(code) is not null;
 
     // `medicineId` is the medicine the code belongs to, when saved: it
     // is not reported as an equivalent "at home" of itself.
     public async Task<EquivalentsView> LoadAsync(string? nationalCode, Guid? medicineId, CancellationToken cancellationToken)
     {
-        if (Normalize(nationalCode) is not { } code)
+        if (ItalianPharmacode.NormalizeAic(nationalCode) is not { } code)
             return new EquivalentsView(EquivalentsState.NoCode, null, null, null, [], null);
         if (_equivalents.Load() is not { } list)
             return new EquivalentsView(EquivalentsState.NoList, code, null, null, [], null);
@@ -97,8 +100,9 @@ public sealed class EquivalentsQuery
     }
 
     // Names of the profile's medicines, other than `excluded`, whose code
-    // is in the group and whose stock is above zero, by code. Inactive
-    // medicines count: their packages are still at home.
+    // is in the group and whose stock is above zero, by code; the
+    // medicine's own code included (a second record of the same package).
+    // Inactive medicines count: their packages are still at home.
     private async Task<Dictionary<string, IReadOnlyList<string>>> InStockByCodeAsync(
         EquivalenceGroup group, Guid? excluded, CancellationToken cancellationToken)
     {
@@ -106,7 +110,7 @@ public sealed class EquivalentsQuery
         foreach (var medicine in await _medicines.ListAllAsync(cancellationToken))
         {
             if (medicine.Id == excluded) continue;
-            if (Normalize(medicine.NationalCode) is not { } code || !group.Contains(code)) continue;
+            if (ItalianPharmacode.NormalizeAic(medicine.NationalCode) is not { } code || !group.Contains(code)) continue;
             var movements = await _stock.ListForMedicineAsync(medicine.Id, cancellationToken);
             if (MedicineStock.Current(movements) <= 0m) continue;
             if (!found.TryGetValue(code, out var names))
@@ -118,11 +122,6 @@ public sealed class EquivalentsQuery
         }
         return found.ToDictionary(e => e.Key, e => (IReadOnlyList<string>)e.Value, StringComparer.Ordinal);
     }
-
-    // The code when it is a valid AIC (the field can also hold an EMA,
-    // Spanish or French code).
-    private static string? Normalize(string? nationalCode)
-        => nationalCode?.Trim() is { } code && ItalianPharmacode.IsValidAic(code) ? code : null;
 
     private DateOnly LocalToday()
     {

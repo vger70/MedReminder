@@ -41,11 +41,12 @@ internal sealed record BarcodeScanContext(
 
 // Equivalent medicines of the package in the dialog
 // (docs/analysis/ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md §2.6, U1).
-// IsListed tells whether the stored AIFA list has a group for a code;
-// Show opens the equivalents of a code, titled with the medicine name,
-// over the given owner.
+// IsListedAsync tells whether the stored AIFA list has a group for an
+// AIC; it runs off the UI thread, since its first call parses the whole
+// list. Show opens the equivalents of a code, titled with the medicine
+// name, over the given owner.
 internal sealed record EquivalentsContext(
-    Func<string?, bool> IsListed,
+    Func<string, Task<bool>> IsListedAsync,
     Func<string, string, IWin32Window, Task> Show);
 
 // Dialog used both for "new medicine" (Mode=Create) and for "edit"
@@ -127,6 +128,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private readonly LinkLabel _codifaLink;
     private readonly LinkLabel _equivalentsLink;
     private readonly EquivalentsContext? _equivalents;
+    // AIC whose equivalents check is current; a check finishing for
+    // another code (the user picked a new row meanwhile) is ignored.
+    private string? _equivalentsCheckCode;
+    private bool _equivalentsListed;
     private string? _pendingSeedNationalCode;
 
     // Barcode scan (A2). Both non-null only when the catalogue is on
@@ -1035,23 +1040,39 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _codifaLink.Tag = codifa;
         _codifaLink.Visible = codifa is not null;
 
+        var aic = ItalianPharmacode.NormalizeAic(_linkedNationalCode);
+        if (aic != _equivalentsCheckCode)
+        {
+            _equivalentsCheckCode = aic;
+            _equivalentsListed = false;
+            if (aic is not null && _equivalents is not null) _ = CheckEquivalentsAsync(aic);
+        }
+        _equivalentsLink.Visible = _equivalentsListed;
+
+        // A local: Visible reads false while the dialog is not shown yet.
+        var any = _leafletLink?.Tag is not null || _spcLink?.Tag is not null || codifa is not null || _equivalentsListed;
+        _documentsRow.Visible = any;
+        _documentsLabel.Visible = any;
+    }
+
+    // Shows the equivalents link once the background check confirms the
+    // AIC is in the stored list, if the dialog still shows that AIC.
+    private async Task CheckEquivalentsAsync(string aic)
+    {
         bool listed;
         try
         {
-            listed = codifa is not null && _equivalents?.IsListed(_linkedNationalCode) == true;
+            listed = await _equivalents!.IsListedAsync(aic);
         }
         catch
         {
             // Best-effort, as the catalogue lookup: an unreadable list only
             // hides the link.
-            listed = false;
+            return;
         }
-        _equivalentsLink.Visible = listed;
-
-        // A local: Visible reads false while the dialog is not shown yet.
-        var any = _leafletLink?.Tag is not null || _spcLink?.Tag is not null || codifa is not null || listed;
-        _documentsRow.Visible = any;
-        _documentsLabel.Visible = any;
+        if (IsDisposed || !listed || aic != _equivalentsCheckCode) return;
+        _equivalentsListed = true;
+        RefreshDocumentsRow();
     }
 
     private async Task ShowEquivalentsAsync()

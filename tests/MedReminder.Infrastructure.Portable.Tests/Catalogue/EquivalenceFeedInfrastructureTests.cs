@@ -91,6 +91,43 @@ public sealed class EquivalenceFeedInfrastructureTests : IDisposable
         store.Load().Should().BeNull();
     }
 
+    [Fact]
+    public void The_store_reports_the_hash_of_a_valid_file_only()
+    {
+        var path = Path.Combine(_directory, "catalogue", "equivalents", "equivalents-it.json");
+        var store = new JsonFileEquivalenceListStore(path);
+        store.StoredSha256().Should().BeNull();
+
+        var bytes = Encoding.UTF8.GetBytes(ListJson);
+        store.Save(bytes);
+        store.StoredSha256().Should().Be(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)));
+
+        File.WriteAllText(path, "{ damaged");
+        File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddMinutes(1));
+        store.StoredSha256().Should().BeNull("a damaged file must be replaced by the next refresh");
+    }
+
+    [Fact]
+    public void A_damaged_file_is_parsed_once_per_version()
+    {
+        var path = Path.Combine(_directory, "catalogue", "equivalents", "equivalents-it.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "{ damaged");
+        var stamp = DateTime.UtcNow.AddMinutes(-1);
+        File.SetLastWriteTimeUtc(path, stamp);
+        var store = new JsonFileEquivalenceListStore(path);
+        store.Load().Should().BeNull();
+
+        // Same timestamp, other content: a cached failure does not read
+        // the file again.
+        File.WriteAllText(path, ListJson);
+        File.SetLastWriteTimeUtc(path, stamp);
+        store.Load().Should().BeNull();
+
+        File.SetLastWriteTimeUtc(path, stamp.AddMinutes(2));
+        store.Load().Should().NotBeNull();
+    }
+
     private static GitHubRawEquivalenceFeedClient Build(HttpMessageHandler handler, Action<CatalogueFeedOptions>? configure = null)
     {
         var options = new CatalogueFeedOptions { Enabled = true };

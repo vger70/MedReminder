@@ -86,6 +86,8 @@ internal sealed class EquivalentsDialog : MedReminderFormBase
         }
         catch (Exception ex)
         {
+            // Closed while loading: nothing to report to.
+            if (IsDisposed) return;
             UiMessageBox.Show(this, ex.Message, _loc.Get("Ui.EquivalentsDialog.Error.Load"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
@@ -126,15 +128,19 @@ internal sealed class EquivalentsDialog : MedReminderFormBase
         };
         // U3: the packages of the group already in stock. A note on
         // either package can restrict the substitution: it is shown
-        // instead of a plain "equivalent".
+        // instead of a plain "equivalent". The medicine's own package, in
+        // stock in another medicine record, needs no note.
         var currentNote = view.Current?.Package.Note;
         foreach (var home in view.AtHome)
         {
             var names = string.Join(", ", home.AtHome);
-            var notes = new[] { home.Package.Note, home.IsCurrent ? null : currentNote }
-                .Where(n => !string.IsNullOrWhiteSpace(n))
-                .Distinct()
-                .ToList();
+            var notes = home.IsCurrent
+                ? []
+                : new[] { home.Package.Note, currentNote }
+                    .OfType<string>()
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct()
+                    .ToList();
             lines.Add(notes.Count == 0
                 ? _loc.Get("Ui.EquivalentsDialog.AtHome", names, home.Package.Name)
                 : _loc.Get("Ui.EquivalentsDialog.AtHome.Note", names, home.Package.Name, string.Join(" / ", notes)));
@@ -152,8 +158,10 @@ internal sealed class EquivalentsDialog : MedReminderFormBase
         row.SubItems.Add(package.PublicPrice is { } price ? Price(price) : "—");
         row.SubItems.Add(package.Difference is { } difference ? Price(difference) : "—");
         row.SubItems.Add(entry.Shortage is { } shortage ? ShortageTexts.Display(shortage, _loc) : string.Empty);
+        // The medicine's own row also names the other records of the same
+        // package with stock left.
         row.SubItems.Add(entry.IsCurrent
-            ? _loc.Get("Ui.EquivalentsDialog.ThisMedicine")
+            ? string.Join(", ", entry.AtHome.Prepend(_loc.Get("Ui.EquivalentsDialog.ThisMedicine")))
             : string.Join(", ", entry.AtHome));
         row.SubItems.Add(package.Note ?? string.Empty);
         if (package.HasNote) row.ToolTipText = package.Note;

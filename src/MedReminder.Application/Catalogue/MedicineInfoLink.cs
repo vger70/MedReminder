@@ -11,7 +11,7 @@ public static class MedicineInfoLink
     private const string CodifaDetailBase = "https://codifa.it/farmaci/dettaglio/";
 
     public static Uri? ForNationalCode(string? nationalCode) =>
-        nationalCode?.Trim() is { } code && ItalianPharmacode.IsValidAic(code)
+        ItalianPharmacode.NormalizeAic(nationalCode) is { } code
             ? new Uri(CodifaDetailBase + code)
             : null;
 }

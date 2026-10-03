@@ -1,6 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 using MedReminder.Domain.Catalogue;
+using Microsoft.Extensions.Logging;
 
 namespace MedReminder.Application.Catalogue;
 
@@ -8,56 +10,45 @@ namespace MedReminder.Application.Catalogue;
 // §2.4): the AIFA "Lista di trasparenza", published by
 // scripts/feeds/aifa_equivalents.py under data/it/equivalents/ as
 // `equivalents-<yyyymmdd>.json` with a `latest.json` manifest. Versioned
-// by the list date, as the shortage feed.
-public sealed record EquivalenceFeedManifest(string Version, string File, string Sha256, long Size)
+// by the list date, as the shortage feed, with the same transport, store
+// and refresh (DatedListFeed.cs).
+public sealed class EquivalenceFeedDefinition : DatedListFeedDefinition<EquivalenceList>
 {
-    // The list date the version stands for.
-    public DateOnly ListDate => DateOnly.ParseExact(Version, "yyyyMMdd", CultureInfo.InvariantCulture);
+    public static readonly EquivalenceFeedDefinition Instance = new();
+
+    private EquivalenceFeedDefinition()
+    {
+    }
+
+    public override string Name => "Equivalents";
+
+    public override string Folder => "equivalents";
+
+    public override string FilePrefix => EquivalenceFeedParser.FilePrefix;
+
+    public override long MaxDownloadBytes(CatalogueFeedOptions options) => options.EquivalentsMaxDownloadBytes;
+
+    public override bool TryParseList(string json, [NotNullWhen(true)] out EquivalenceList? list, out string? error)
+        => EquivalenceFeedParser.TryParseList(json, out list, out error);
+
+    public override DateOnly ListDateOf(EquivalenceList list) => list.ListDate;
+
+    public override string Describe(EquivalenceList list) => $"{list.GroupCount} groups, {list.PackageCount} packages";
 }
 
 // Pure parsers, testable without HTTP. Unknown fields are ignored.
 public static class EquivalenceFeedParser
 {
-    public const string Country = "IT";
+    public const string Country = DatedFeedManifestParser.Country;
     public const string FilePrefix = "equivalents-";
 
-    public static bool TryParseManifest(string json, out EquivalenceFeedManifest? manifest, out string? error)
-    {
-        ArgumentNullException.ThrowIfNull(json);
-        manifest = null;
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return Fail("The manifest is not a JSON object.", out error);
-            if (String(root, "country") != Country) return Fail($"The manifest is not for {Country}.", out error);
-            var version = String(root, "version");
-            if (version is null || !DateOnly.TryParseExact(version, "yyyyMMdd", CultureInfo.InvariantCulture,
-                    DateTimeStyles.None, out _))
-                return Fail("The manifest has no valid 'version' (yyyymmdd).", out error);
-            var file = String(root, "file");
-            if (file != FilePrefix + version + ".json")
-                return Fail($"The manifest 'file' does not match '{FilePrefix}{version}.json'.", out error);
-            var sha = String(root, "sha256");
-            if (sha is not { Length: 64 } || !sha.All(char.IsAsciiHexDigit))
-                return Fail("The manifest 'sha256' is not 64 hexadecimal characters.", out error);
-            if (!root.TryGetProperty("size", out var size) || size.ValueKind != JsonValueKind.Number
-                || !size.TryGetInt64(out var bytes) || bytes <= 0)
-                return Fail("The manifest 'size' is not a positive integer.", out error);
-            manifest = new EquivalenceFeedManifest(version, file, sha.ToLowerInvariant(), bytes);
-            error = null;
-            return true;
-        }
-        catch (JsonException ex)
-        {
-            return Fail("Malformed manifest: " + ex.Message, out error);
-        }
-    }
+    public static bool TryParseManifest(string json, out DatedFeedManifest? manifest, out string? error)
+        => DatedFeedManifestParser.TryParse(json, FilePrefix, out manifest, out error);
 
     // The list a feed file holds. Rejects a file for another country, a
     // group without code or members, a code that is not 9 digits, or a
     // price that is not a whole number of cents.
-    public static bool TryParseList(string json, out EquivalenceList? list, out string? error)
+    public static bool TryParseList(string json, [NotNullWhen(true)] out EquivalenceList? list, out string? error)
     {
         ArgumentNullException.ThrowIfNull(json);
         list = null;
@@ -138,22 +129,21 @@ public static class EquivalenceFeedParser
     }
 }
 
-// Transport of the equivalents feed. Never throws from GetManifestAsync
-// except on cancellation; DownloadAsync throws on any failure.
-public interface IEquivalenceFeedClient
+// Transport of the equivalents feed.
+public interface IEquivalenceFeedClient : IDatedListFeedClient<EquivalenceList>
 {
-    Task<EquivalenceFeedManifest?> GetManifestAsync(CancellationToken cancellationToken);
-
-    Task<byte[]> DownloadAsync(EquivalenceFeedManifest manifest, CancellationToken cancellationToken);
 }
 
-// The equivalents list kept on this PC, shared by every profile (it is
-// public reference data, not profile data).
-public interface IEquivalenceListStore
+// The equivalents list kept on this PC, shared by every profile.
+public interface IEquivalenceListStore : IDatedListStore<EquivalenceList>
 {
-    // Null when no list was stored yet or the stored file is unreadable.
-    EquivalenceList? Load();
+}
 
-    // Stores a list file already checked by EquivalenceFeedParser.
-    void Save(byte[] listJson);
+// Refresh of the equivalents list (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.4).
+public sealed class EquivalenceRefresher : DatedListRefresher<EquivalenceList>
+{
+    public EquivalenceRefresher(IEquivalenceFeedClient feed, IEquivalenceListStore store, ILogger<EquivalenceRefresher> log)
+        : base(EquivalenceFeedDefinition.Instance, feed, store, log)
+    {
+    }
 }

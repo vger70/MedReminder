@@ -96,10 +96,10 @@ public class ShortageFeedTests
         feed.Manifest = Manifest(ListJson);
         feed.Body = ListJson;
 
-        (await refresher.RunAsync(default)).Should().Be(ShortageRefreshOutcome.Updated);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.Updated);
         store.List!.ListDate.Should().Be(new DateOnly(2026, 9, 29));
 
-        (await refresher.RunAsync(default)).Should().Be(ShortageRefreshOutcome.UpToDate);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.UpToDate);
         feed.Downloads.Should().Be(1);
     }
 
@@ -110,7 +110,7 @@ public class ShortageFeedTests
         feed.Manifest = Manifest(ListJson);
         feed.Body = ListJson.Replace("production", "demand");
 
-        (await refresher.RunAsync(default)).Should().Be(ShortageRefreshOutcome.Rejected);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.Rejected);
         store.Stored.Should().BeNull();
     }
 
@@ -122,7 +122,7 @@ public class ShortageFeedTests
         feed.Body = other;
         feed.Manifest = Manifest(other, version: "20260929");
 
-        (await refresher.RunAsync(default)).Should().Be(ShortageRefreshOutcome.Rejected);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.Rejected);
         store.Stored.Should().BeNull();
     }
 
@@ -132,7 +132,7 @@ public class ShortageFeedTests
         var (refresher, feed, _) = Refresher();
         feed.Manifest = null;
 
-        (await refresher.RunAsync(default)).Should().Be(ShortageRefreshOutcome.ManifestUnavailable);
+        (await refresher.RunAsync(default)).Should().Be(DatedListRefreshOutcome.ManifestUnavailable);
     }
 
     [Fact]
@@ -144,8 +144,8 @@ public class ShortageFeedTests
         CatalogueFeedSelection.IncludesShortages("FR", options).Should().BeFalse();
         options.ShortagesEnabled = false;
         CatalogueFeedSelection.IncludesShortages("IT", options).Should().BeFalse();
-        new CatalogueFeedOptions().ShortageManifestUrl()
-            .Should().Be("https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/shortages/latest.json");
+        new CatalogueFeedOptions().ItalianFeedFolder(ShortageFeedDefinition.Instance.Folder)
+            .Should().Be("https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/shortages/");
     }
 
     [Fact]
@@ -266,10 +266,10 @@ public class ShortageFeedTests
         public string Body { get; set; } = string.Empty;
         public int Downloads { get; private set; }
 
-        public Task<ShortageFeedManifest?> GetManifestAsync(CancellationToken cancellationToken)
+        public Task<DatedFeedManifest?> GetManifestAsync(CancellationToken cancellationToken)
             => Task.FromResult(Manifest is not null && ShortageFeedParser.TryParseManifest(Manifest, out var m, out _) ? m : null);
 
-        public Task<byte[]> DownloadAsync(ShortageFeedManifest manifest, CancellationToken cancellationToken)
+        public Task<byte[]> DownloadAsync(DatedFeedManifest manifest, CancellationToken cancellationToken)
         {
             Downloads++;
             return Task.FromResult(Encoding.UTF8.GetBytes(Body));
