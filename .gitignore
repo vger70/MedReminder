@@ -83,3 +83,4 @@ __pycache__/
 
 ## Local release builds (release.ps1 -LocalBuild)
 dist/
+/graphify-out
