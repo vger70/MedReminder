@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #187 — Add the expiring packages view and document package expiry (package expiry, phase 4)
+
+Link: [vger70/MedReminder#187](https://github.com/vger70/MedReminder/pull/187)
+
+Branch: `feature/package-expiry-overview` → `main`
+
+### Added
+
+- Stock → Expiring packages: the expired and expiring packages of every medicine, inactive ones included, expired first; Open packages opens the package list of the medicine (`ExpiringPackagesQuery`, `ExpiringPackagesDialog`).
+- New UI strings in all five dictionaries.
+
+### Docs
+
+- User guides in the five languages: package fields when adding a package, "Packages and expiry" section, expiry notices, lead-day settings, caregiver copy and weekly summary.
+- `docs/ANALYSIS.md`: package tables, schema patches, expiry notices, link to the analysis; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: the cross-medicine view built in P4.
+
 ## PR #186 — Warn about expiring and expired packages (package expiry, phase 3)
 
 Link: [vger70/MedReminder#186](https://github.com/vger70/MedReminder/pull/186)
