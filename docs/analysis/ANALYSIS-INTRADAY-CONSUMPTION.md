@@ -171,8 +171,8 @@ today (local day of `now`), any of these holds:
 
 - the medicine is inactive, suspended, before `StartDate` or after
   `EndDate`;
-- a **scheduled** intake exists for today (rule 1 booked it and rule 2
-  will skip the day). An extra intake (§5.3) does not count;
+- a non-extra intake of any status exists for today (rule 2 will skip
+  the day). An extra intake (§5.3) does not count;
 - a stock count today materialized the day;
 - legacy consumption exists for today.
 
@@ -220,6 +220,8 @@ timeline, calendar export, monitor). Additional changes:
 
 - `DoseReminderService`: skip as-needed slots; the "remind on dose"
   option counts only timed, non-as-needed slots.
+- Medicine edit dialog: the slot summary's daily total excludes
+  as-needed doses.
 - `CoveragePlanner.IsPrn`: also true when all current slots are
   as-needed, so the report shows "as needed: not calculated".
 - Therapy card and reports: as-needed slots shown as such, without
@@ -238,6 +240,11 @@ day by itself. Existing data is corrected **from today**:
   `IsAsNeeded = true`, through the regular slot-change path so it
   produces its sync operation. Past days keep their consumption; counts
   keep their meaning.
+- Every device of a household runs the backfill (the master role gates
+  e-mail only, any device records facts). The new set and its slots use
+  deterministic ids derived from the medicine id and the replaced set
+  id, so the copies converge: `ApplyRemoteOperations` skips a
+  `SlotSetRecorded` whose set id is already known. `[VERIFIED]`
 - **PRN with slots**: `ChangeMedicationSchedule` to `PrnSchedule`
   records an empty slot set effective the same day. The backfill does
   the same for medicines whose schedule in force is PRN and that still
@@ -257,15 +264,23 @@ For a **mixed** medicine (scheduled doses plus an as-needed slot) an
 extra tablet recorded as an intake would suppress the day's scheduled
 consumption (§2.2). Recommended fix:
 
-- `MedicationIntake` gains `IsExtra` (bool, default false). Ledger
-  rule 1 books it as today; rule 2 skips a day only for intakes with
-  `IsExtra = false`. Old intakes are `false`: non-retroactive.
+- `MedicationIntake` and `LedgerIntake` gain `IsExtra` (bool, default
+  false), allowed only with status `Taken`. Ledger rule 1 books it as
+  today. Every rule that reads "the day has an intake" uses only intakes
+  with `IsExtra = false`: rule 2 (automatic consumption), rule 1b (the
+  reversal of frozen legacy consumption), rule 3 (an intake removing a
+  count-day materialization) and `CountDayScheduled`. Old intakes are
+  `false`: non-retroactive.
 - The intake dialog shows "Extra dose (as needed)" for medicines with a
   plan; it is preselected when the medicine has an as-needed slot.
-- Sync: `Operations.Intake` carries the flag. `[UNCERTAIN]` A household
-  device on an older version would read an extra intake as scheduled and
-  suppress the day; the operation codec's handling of unknown fields and
-  the minimum-version policy must be checked at implementation time.
+- Sync: `IntakeRecorded` carries the flag. JSON deserialization ignores
+  unknown properties, so an older device would silently read an extra
+  intake as scheduled. The codec already has the remedy (R7,
+  `OperationCodec`, precedent: version 6 for
+  `EmailNotificationSent.Stage`): an intake with `IsExtra = true` is
+  written with a new schema version 9, any other intake keeps version 1.
+  An older device stops applying at that operation instead of
+  misreading it. `[VERIFIED]`
 
 Alternative without ledger change: guide the user to "Remove stock"
 (`AdjustStockDown`) for extra doses. Rejected as primary path: the
@@ -346,7 +361,10 @@ when no data changed. This also fixes the stale value after midnight.
   (`PresetId`, in place). Both idempotent; the as-needed one runs in the
   Application layer because it records facts and operations.
 - **Sync**: `SlotValue` gains `PresetId` and `IsAsNeeded`; intake
-  operation gains `IsExtra`. Built-in preset ids resolve on every
+  operation gains `IsExtra`. A `SlotSetRecorded` with an as-needed slot
+  and an `IntakeRecorded` with `IsExtra` are written with schema
+  version 9 (§5.3); `PresetId` alone is display-only and needs no
+  version bump. Built-in preset ids resolve on every
   device. Custom presets need their own sync operation; until then a
   slot referencing an unknown preset has no projection time on that
   device (display-only divergence).
@@ -386,6 +404,8 @@ declared intended use]`
 - Retroactive restitution of past as-needed consumption (§5.2).
 - Minimum-quantity alerts for as-needed medicines (§5.4).
 - Per-slot intake tracking (which scheduled dose an intake refers to).
+- A5 dose reminders at preset times: reminders keep firing only for
+  slots with an explicit time.
 
 ## 12. Implementation phases
 
@@ -406,15 +426,20 @@ Each phase is shippable and tested on its own.
   unchanged; old slots (flag false) unchanged.
 - Ledger: as-needed slot set effective today leaves past days identical
   (same rows, same ids, same quantities); count before the change keeps
-  its counted value; extra intake does not suppress rule 2; scheduled
-  intake still does; old intakes unchanged.
+  its counted value; extra intake does not suppress rule 2, does not
+  trigger the rule 1b reversal and does not remove a count-day
+  materialization; non-extra intake still does all three; old intakes
+  unchanged.
+- Sync: version 9 written only for as-needed slot sets and extra
+  intakes; backfill run on two devices converges to one set.
 - Backfill: labels in each of the five languages, trimmed and
   case-varied; unmatched label untouched; PRN with slots; second run
   is a no-op; operation produced once.
 - `IntradayConsumption`: before / at / after each slot time; time vs
   preset vs unresolved; as-needed excluded; no-slot defaults 1–4 and
   > 4; non-FixedDaily at 08:00; suspended, inactive, outside window;
-  scheduled vs extra intake today; materialized count today; cap;
+  non-extra (any status) vs extra intake today; materialized count
+  today; cap;
   DST both directions.
 - Continuity: estimated stock at 23:59 on D equals estimated stock at
   00:00 on D+1 after the ledger books D.
@@ -435,8 +460,6 @@ Confirmed by the user:
 6. `Night` default at 23:30.
 7. As-needed doses are never consumed automatically; the user records
    them.
-
-Still to confirm:
 
 8. Non-retroactive correction of as-needed data, with a one-time stock
    count to recover past over-consumption (§5.2).
