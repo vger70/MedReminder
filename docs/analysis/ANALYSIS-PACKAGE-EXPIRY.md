@@ -182,12 +182,23 @@ Status on a given day:
 | `ExpiringSoon` | `today >= EffectiveExpiry - LeadDays` |
 | `Valid` | otherwise, or no effective expiry |
 
-Lead days (constants in `PackageExpiryRules`, no setting):
+Lead days are two profile settings (product owner, 2026-10-03: they
+must be configurable), passed to the rules as parameters:
 
-- `PrintedLeadDays = 30` when the effective expiry comes from the
-  printed date: enough to use that box first or get a new one.
-- `InUseLeadDays = 3` when it comes from the opening: a 28-day period
-  with a 30-day lead would warn the day the bottle is opened.
+| Setting | Applies when the effective expiry comes from | Default | Range |
+| --- | --- | --- | --- |
+| `PackageExpiryLeadDays` | the printed date | 30 | 0–180 |
+| `PackageInUseLeadDays` | the opening | 3 | 0–30 |
+
+- 30 days before a printed expiry leaves time to use that box first or
+  get a new one.
+- The in-use lead is separate because a 28-day period with a 30-day
+  lead would warn the day the bottle is opened.
+- 0 turns the "expiring soon" notice off for that source; the
+  "expired" notice stays.
+
+Defaults and ranges are constants in `PackageExpiryRules`; a stored
+value outside the range is clamped on read.
 
 Validation (`PackageExpiryRules.Validate`, `null` when consistent, like
 `DeadlineRules.Validate`): `Quantity > 0`; `UseWithinDays` 1–365;
@@ -316,7 +327,7 @@ Unlike prescription reminders, expiry notices are sent for **inactive**
 medicines too: a suspended or finished therapy often leaves boxes in
 the cabinet, which is exactly where expired medicines accumulate. A
 medicine with `NotificationChannels.None` is never notified (the user
-opted out). To confirm (§10, Q1).
+opted out). Confirmed (§10, Q1).
 
 ### 4.4 Batching
 
@@ -342,6 +353,23 @@ no advice:
 The email footer stays `Notifications.Email.Footer` ("organizational
 reminder, not a medical device"). Logs carry the package and medicine
 ids only, never name or batch.
+
+### 4.6 Lead-day settings
+
+`NotificationSettings` (per profile, `notifications.settings.json`)
+gains `PackageExpiryLeadDays` and `PackageInUseLeadDays` (§3.2), next
+to `CaregiverEmails`. They are replicated like the other profile
+settings: a `ProfileSettingChanged` per changed value, last writer
+wins, projected by `ProfileSettingsProjection`. An app that does not
+know a setting keeps its versions and does not project it
+(`docs/SYNC-FORMAT.md`) `[VERIFIED]`, so no schema version is needed.
+An empty value (files written before the settings) reads as the
+default.
+
+Changing a lead day does not reset notices: the dedup key (§3.6) is
+the package, its effective expiry and the stage, not the lead. A
+longer lead makes packages due that were not yet notified; a shorter
+one only delays future notices.
 
 ---
 
@@ -393,7 +421,15 @@ closed / used up".
   the profile (the cabinet view), expired first. Later phase (§10,
   Q7).
 
-### 5.5 Accessibility
+### 5.5 Settings
+
+`SettingsDialog`, Notifications tab: a "Package expiry" group with two
+`NumericUpDown` controls, "Warn N days before the printed expiry"
+(0–180) and "Warn N days before the end of the in-use period" (0–30),
+with a note that 0 keeps only the "expired" notice. Saved through
+`ProfileSettingsUseCases`, like the caregiver options.
+
+### 5.6 Accessibility
 
 Status in text as well as colour; date pickers with the static Segoe
 UI font of #181; every control reachable by keyboard.
@@ -438,7 +474,8 @@ parent. The snapshot image gains `StockPackages`, with an image
 version bump (an older app would drop them).
 `PackageExpiryNoticeEvent` is device-local and not in the image.
 `MedicineFieldChanged` of `UseWithinDaysAfterOpening` is version 11
-too (§3.3). `docs/SYNC-FORMAT.md` updated.
+too (§3.3). The two lead-day settings are new `ProfileSettingChanged`
+names, no schema version (§4.6). `docs/SYNC-FORMAT.md` updated.
 
 Concurrent edits on two devices (one marks opened, the other
 discarded) resolve by LWW on the whole record. Acceptable for a
@@ -449,7 +486,9 @@ two-to-three device household; a field-level merge is not justified
 
 `packages[]` additive in the archive (`docs/EXPORT-FORMAT.md` §5
 rule: archives without it import with no packages), plus
-`useWithinDaysAfterOpening` on the medicine. Notice events are not
+`useWithinDaysAfterOpening` on the medicine, and the two lead-day
+settings in the profile settings section (additive, missing = default).
+Notice events are not
 exported, like the other reminder events.
 
 ### 7.3 Household / master device
@@ -464,8 +503,9 @@ that has the profile open.
 
 - **Domain** — `PackageExpiryRules`: last day of month for every month
   and leap February; in-use period (day 1 = opening day); `min` of the
-  two terms; status boundaries at lead day, expiry day, day after;
-  validation. `PackageAllocation`: order (opened first, expiry
+  two terms; status boundaries at lead day, expiry day, day after,
+  with the default leads, custom leads and lead 0; out-of-range lead
+  clamped; validation. `PackageAllocation`: order (opened first, expiry
   ascending, null last), partial last box, stock 0 → all used up,
   untracked stock, closed boxes ignored.
 - **Application** — `PackageExpiryNotices`: one notice per stage,
@@ -474,7 +514,10 @@ that has the profile open.
   skipped, batching per medicine; `AddStock` with packages (n boxes,
   quantity split); `DiscardPackage` atomic movement + closure;
   `PackageChanged` encode/decode and LWW apply; version 11 for the new
-  medicine field; export round-trip.
+  medicine field; lead-day settings saved as `ProfileSettingChanged`,
+  projected from a remote operation, empty value read as default, a
+  longer lead making a not-yet-notified package due; export
+  round-trip.
 - **Infrastructure.Portable** — boot patch on a v2.14 database and on a
   new one, run twice; deletion cascade.
 - **Barcode** — scan pre-fill with a DataMatrix carrying AI `17` with
@@ -490,20 +533,22 @@ Each phase is one PR to `main`, buildable and shippable on its own.
 | --- | --- | --- |
 | P1 | Domain (`StockPackage`, rules, allocation), persistence, repositories, sync op v11, export, deletion; no UI | 4–5 days |
 | P2 | `StockAdjustmentDialog` expiry group, medicine field, `PackagesDialog`, main-window column, scan pre-fill, localization | 4–5 days |
-| P3 | `PackageExpiryNotices` in `MedicationMonitor`, toast target, `EmailKind`, caregiver digest line | 2–3 days |
+| P3 | `PackageExpiryNotices` in `MedicationMonitor`, toast target, `EmailKind`, caregiver digest line, lead-day settings (profile setting, sync, settings tab) | 3–4 days |
 | P4 | User guides (5 languages), `ANALYSIS.md`, cross-medicine "Expiring packages" view if kept | 1–2 days |
 
-Total about 2.5–3 weeks, in line with the 2–3 weeks of
+Total about 3 weeks, in line with the 2–3 weeks of
 `EVOLUTION-PROPOSALS.md`.
 
 ---
 
-## 10. Decisions to confirm
+## 10. Decisions
 
-| # | Question | Proposed default |
+Settled by the product owner on 2026-10-03.
+
+| # | Question | Decision |
 | --- | --- | --- |
 | Q1 | Notify packages of inactive medicines? | Yes (§4.3) |
-| Q2 | Lead days fixed or a profile setting? | Fixed: 30 printed, 3 in-use (§3.2) |
+| Q2 | Lead days fixed or a profile setting? | Profile settings, defaults 30 printed and 3 in-use (§3.2, §4.6) |
 | Q3 | Repeat the expired notice? | No; persistent UI state instead (§4.1) |
 | Q4 | Discard writes the negative correction? | Yes, pre-filled with the allocated quantity, user confirms (§3.5) |
 | Q5 | Accept the FEFO allocation to hide used-up boxes? | Yes (§3.4) |
