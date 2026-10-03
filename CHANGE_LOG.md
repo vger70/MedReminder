@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #189 — Analyse AIFA equivalent-medicine lists and a Codifa info link
+
+Link: [vger70/MedReminder#189](https://github.com/vger70/MedReminder/pull/189)
+
+Branch: `claude/italian-medicine-catalog-integration-b1e933` → `main`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md`: integration of the AIFA transparency list (equivalent medicines with reference and public prices) on the shortage feed design, with its uses; a Codifa page link built from a valid AIC for the medicine edit dialog and the grid context menu. Non-medicinal products are out of scope for lack of an open Italian database.
+
+---
+
 ## PR #188 — Give the export snapshot test a scratch folder of its own
 
 Link: [vger70/MedReminder#188](https://github.com/vger70/MedReminder/pull/188)
