@@ -111,6 +111,28 @@ public class PackageSyncTests
     }
 
     [Fact]
+    public async Task A_discard_survives_a_later_concurrent_edit_on_both_devices()
+    {
+        var id = await _a.SaveStockPackage.ExecuteAsync(Command(null), default);
+        await ExchangeAsync();
+
+        // A discards; B, not yet synced, opens the same package later.
+        _a.Clock.AdvanceBy(TimeSpan.FromMinutes(1));
+        _b.Clock.AdvanceBy(TimeSpan.FromMinutes(2));
+        await _a.DiscardStockPackage.ExecuteAsync(new DiscardStockPackageCommand(id, Today, 2m), default);
+        await _b.SaveStockPackage.ExecuteAsync(Command(id, Today), default);
+        await ExchangeAsync();
+
+        foreach (var scope in new[] { _a, _b })
+        {
+            var p = scope.Packages.All.Should().ContainSingle().Subject;
+            p.Closure.Should().Be(PackageClosure.Discarded, "the stock correction of the discard stays");
+            p.ClosedOn.Should().Be(Today);
+            p.OpenedOn.Should().Be(Today, "the rest of B's later edit wins");
+        }
+    }
+
+    [Fact]
     public async Task Deleting_the_medicine_removes_its_packages_on_the_other_device()
     {
         // A medicine with no recorded stock can be deleted.

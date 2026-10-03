@@ -1408,5 +1408,6 @@
   "Ui.DiscardPackageDialog.Title": "Smaltisci confezione",
   "Ui.DiscardPackageDialog.QuantityLeft": "Quantità rimasta",
   "Ui.DiscardPackageDialog.Hint": "La quantità rimasta nella confezione viene tolta dalla scorta. Inserisci 0 se la confezione era già vuota.",
-  "Ui.DiscardPackageDialog.Confirm": "Smaltisci"
+  "Ui.DiscardPackageDialog.Confirm": "Smaltisci",
+  "Packages.Error.ExpiresOn": "Controlla la scadenza: è a più di 20 anni da oggi."
 }

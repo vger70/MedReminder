@@ -61,9 +61,16 @@ Branch: `feature/package-expiry` → `main`
 - Save, discard (closure and stock correction saved together) and delete use cases (`Application/Packages`).
 - Sync operation `PackageChanged` (schema version 11) and sync image version 8; `StockPackages` table through an idempotent boot patch; export field `stockPackages[]`; packages removed with the medicine.
 
+### Fixed
+
+- A discard is final: a save can neither set nor clear it, and a sync merge keeps it whatever concurrent edit wins the package register, since its stock correction is a separate fact.
+- A refused discard leaves the package unchanged; the stock is checked once (`AdjustStockDown.PrepareAsync`) and everything is saved together.
+- A closure name unknown to this version imports as Finished instead of making the archive unreadable.
+- A printed expiry more than 20 years from today is refused.
+
 ### Docs
 
-- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.17; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: default in-use period from the latest package instead of a medicine field, phase contents.
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.17; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: default in-use period from the latest package instead of a medicine field, phase contents, final discard.
 
 ## PR #183 — Add analysis of package expiry tracking
 

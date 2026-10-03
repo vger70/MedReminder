@@ -1412,5 +1412,6 @@
   "Ui.DiscardPackageDialog.Title": "Discard package",
   "Ui.DiscardPackageDialog.QuantityLeft": "Quantity left",
   "Ui.DiscardPackageDialog.Hint": "The quantity left in the package is removed from the stock. Enter 0 if the package was already empty.",
-  "Ui.DiscardPackageDialog.Confirm": "Discard"
+  "Ui.DiscardPackageDialog.Confirm": "Discard",
+  "Packages.Error.ExpiresOn": "Check the expiry: it is more than 20 years from today."
 }

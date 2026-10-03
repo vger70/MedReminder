@@ -13,6 +13,11 @@ public static class PackageExpiryRules
 
     public const decimal MaxQuantity = 100000m;
 
+    // A printed expiry further than this from today, before or after, is
+    // a typing or reading error (an unparsed 0001, a 2207): medicines
+    // expire within a few years, and an expired box is rarely kept longer.
+    public const int MaxExpiryYearsFromToday = 20;
+
     // Last day a printed MM/YYYY expiry allows.
     public static DateOnly EndOfMonth(int year, int month)
         => new(year, month, DateTime.DaysInMonth(year, month));
@@ -70,6 +75,9 @@ public static class PackageExpiryRules
             return PackageError.Quantity;
         if (package.UseWithinDays is { } days && (days < 1 || days > MaxUseWithinDays))
             return PackageError.UseWithinDays;
+        if (package.ExpiresOn is { } expiresOn
+            && (expiresOn < today.AddYears(-MaxExpiryYearsFromToday) || expiresOn > today.AddYears(MaxExpiryYearsFromToday)))
+            return PackageError.ExpiresOn;
         if (package.OpenedOn > today || package.ClosedOn > today)
             return PackageError.FutureDate;
         if ((package.ClosedOn is null) != (package.Closure is null))
@@ -107,4 +115,5 @@ public enum PackageError
     Closure,
     ClosedBeforeOpened,
     Batch,
+    ExpiresOn,
 }

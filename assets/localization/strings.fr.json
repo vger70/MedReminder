@@ -1407,5 +1407,6 @@
   "Ui.DiscardPackageDialog.Title": "Jeter la boîte",
   "Ui.DiscardPackageDialog.QuantityLeft": "Quantité restante",
   "Ui.DiscardPackageDialog.Hint": "La quantité restante dans la boîte est retirée du stock. Saisissez 0 si la boîte était déjà vide.",
-  "Ui.DiscardPackageDialog.Confirm": "Jeter"
+  "Ui.DiscardPackageDialog.Confirm": "Jeter",
+  "Packages.Error.ExpiresOn": "Vérifiez la péremption : elle est à plus de 20 ans d'aujourd'hui."
 }

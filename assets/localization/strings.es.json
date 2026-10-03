@@ -1407,5 +1407,6 @@
   "Ui.DiscardPackageDialog.Title": "Desechar caja",
   "Ui.DiscardPackageDialog.QuantityLeft": "Cantidad restante",
   "Ui.DiscardPackageDialog.Hint": "La cantidad que queda en la caja se resta del stock. Introduzca 0 si la caja ya estaba vacía.",
-  "Ui.DiscardPackageDialog.Confirm": "Desechar"
+  "Ui.DiscardPackageDialog.Confirm": "Desechar",
+  "Packages.Error.ExpiresOn": "Revise la caducidad: está a más de 20 años de hoy."
 }

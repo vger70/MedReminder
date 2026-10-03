@@ -161,6 +161,11 @@ public class PackageExpiryRulesTests
         closedBeforeOpened.Closure = PackageClosure.Finished;
         PackageExpiryRules.Validate(closedBeforeOpened, Today).Should().Be(PackageError.ClosedBeforeOpened);
 
+        PackageExpiryRules.Validate(Package(expiresOn: new DateOnly(1, 1, 31)), Today).Should().Be(PackageError.ExpiresOn);
+        PackageExpiryRules.Validate(Package(expiresOn: new DateOnly(2207, 3, 31)), Today).Should().Be(PackageError.ExpiresOn);
+        PackageExpiryRules.Validate(Package(expiresOn: Today.AddYears(-20)), Today).Should().BeNull();
+        PackageExpiryRules.Validate(Package(expiresOn: Today.AddYears(20)), Today).Should().BeNull();
+
         var longBatch = Package();
         longBatch.Batch = new string('L', PackageExpiryRules.MaxBatchLength + 1);
         PackageExpiryRules.Validate(longBatch, Today).Should().Be(PackageError.Batch);

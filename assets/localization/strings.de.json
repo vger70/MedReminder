@@ -1407,5 +1407,6 @@
   "Ui.DiscardPackageDialog.Title": "Packung entsorgen",
   "Ui.DiscardPackageDialog.QuantityLeft": "Restmenge",
   "Ui.DiscardPackageDialog.Hint": "Die in der Packung verbliebene Menge wird vom Bestand abgezogen. Geben Sie 0 ein, wenn die Packung bereits leer war.",
-  "Ui.DiscardPackageDialog.Confirm": "Entsorgen"
+  "Ui.DiscardPackageDialog.Confirm": "Entsorgen",
+  "Packages.Error.ExpiresOn": "Prüfen Sie das Verfallsdatum: Es liegt mehr als 20 Jahre von heute entfernt."
 }

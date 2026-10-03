@@ -260,8 +260,11 @@ close the right one. Documented in the user guide.
   `Closure = Discarded`, and a `NegativeCorrection` of the quantity
   still in the box. The dialog pre-fills it with the allocated
   quantity (§3.4); the user confirms or edits it (0 allowed: the box
-  was already empty). One use case, `DiscardPackage`, writes both in
-  one unit of work under `WriteGate`, like `AddStock`.
+  was already empty). One use case, `DiscardStockPackage`, checks
+  everything first and writes both in one unit of work under
+  `WriteGate`, like `AddStock`. A discard is final: a save can neither
+  set nor clear it, and a discard by mistake is corrected by deleting
+  the package and adding the units back (review of #184, 2026-10-03).
 
 ### 3.6 Dedup — `PackageExpiryNoticeEvent`
 
@@ -474,9 +477,13 @@ version bump (an older app would drop them).
 two lead-day settings are new `ProfileSettingChanged` names, no schema
 version (§4.6). `docs/SYNC-FORMAT.md` updated.
 
-Concurrent edits on two devices (one marks opened, the other
-discarded) resolve by LWW on the whole record. Acceptable for a
-two-to-three device household; a field-level merge is not justified
+Concurrent edits on two devices resolve by LWW on the whole record,
+with one exception: a discard is final. It also wrote a stock
+correction, a separate fact, so when any version of the register is a
+discard, the package stays discarded (the latest discard by HLC gives
+the closure date) whatever version wins; the other fields follow the
+winner. The result depends only on the set of versions, so every
+device agrees. A field-level merge is otherwise not justified
 `[INFERRED]`.
 
 ### 7.2 Export / import

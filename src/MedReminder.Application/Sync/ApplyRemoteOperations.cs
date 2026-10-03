@@ -475,19 +475,34 @@ public sealed class ApplyRemoteOperations
         row.UpdatedAt = state.RecordedAt;
     }
 
-    // A package is one register, like a prescription.
+    // A package is one register, like a prescription, with one exception:
+    // a discard is final. It also wrote a stock correction, a separate
+    // fact, so a concurrent edit that wins the register must not reopen
+    // the package. The latest discard by HLC keeps its closure whatever
+    // version wins; the result depends only on the set of versions, so
+    // every device agrees. A deletion still removes the package.
     private async Task ApplyPackageAsync(PackageChanged change, HybridTimestamp timestamp, CancellationToken ct)
     {
         await GetMedicineAsync(change.MedicineId, ct);
         await RecordRegistersAsync(change, timestamp, ct);
         if (_packages is null) return;
-        var winner = await _registers.WinnerAsync(change.PackageId, SyncRegisters.PackageState, ct);
+        var versions = await _registers.ListAsync(change.PackageId, SyncRegisters.PackageState, ct);
+        var winner = versions.MaxBy(v => v.Version);
         var state = winner?.Value is { } value ? SyncRegisters.ParsePackage(value) : change;
         var row = await _packages.GetAsync(change.PackageId, ct);
         if (state.Deleted)
         {
             if (row is not null) await _packages.RemoveAsync(row, ct);
             return;
+        }
+        if (state.Closure != PackageClosure.Discarded
+            && versions
+                .Where(v => v.Value is not null)
+                .OrderByDescending(v => v.Version)
+                .Select(v => SyncRegisters.ParsePackage(v.Value!))
+                .FirstOrDefault(p => p.Closure == PackageClosure.Discarded) is { } discard)
+        {
+            state = state with { ClosedOn = discard.ClosedOn, Closure = PackageClosure.Discarded };
         }
         if (row is null)
         {
