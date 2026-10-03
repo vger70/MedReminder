@@ -28,7 +28,8 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
      [Edit, deactivate, delete](#edit-medicine)
 3. [Find a medicine: catalogue and barcode](#catalogue)
 4. [Stock](#stock)
-   - [Add a package](#add-package) · [Register an intake](#intake) ·
+   - [Add a package](#add-package) · [Packages and expiry](#packages) ·
+     [Register an intake](#intake) ·
      [Correct stock](#correct) · [Count stock](#count) ·
      [History](#history)
 5. [Timeline, report and prescription requests](#documents)
@@ -376,6 +377,56 @@ the quantity you registered.
 A new package restarts the warning cycle: when the stock falls below
 the threshold again, you get a new warning.
 
+With **New package** you can also record the expiry; every field is
+optional:
+
+- **Packages** — how many identical boxes you bought; the quantity is
+  split between them.
+- **Expiry (month/year)** — tick the box and choose month and year as
+  printed. An expiry of `03/2027` is good until 31 March 2027.
+- **Use within … days of opening** — for eye drops, syrups, insulin in
+  use and the like, as the leaflet says; 0 if there is none. The value
+  of the medicine's latest package is proposed.
+- **Opened today** — if you open the first box right away.
+- **Batch** — optional.
+
+With **Stock → Restock from barcode…** a DataMatrix code fills in expiry
+and batch by itself. If you leave all these fields empty, the package
+only adds quantity, as before.
+
+<a id="packages"></a>
+### Packages and expiry
+
+**Stock → Packages and expiry…** (also from the right-click menu) lists
+the boxes of the selected medicine with status, printed expiry, opening
+date, use-until date and quantity in stock.
+
+- A package expires at the end of the printed month, or earlier once it
+  is open and its days after opening run out (opened on 1 March, 28
+  days: use until 28 March).
+- The app assumes the open package is used first, then the ones that
+  expire first. Those the stock no longer covers are **Used up** and
+  give no warning, even if you never mark them finished. If you use the
+  boxes in another order, mark the one in use with **Opened today** or
+  close the right one.
+- **New…** records a box you already have in the cabinet, without
+  changing the stock.
+- **Opened today**, **Finished**: update the package; the stock does not
+  change.
+- **Discard…**: for a box thrown away, typically expired. The quantity
+  left (proposed by the app) is removed from the stock. A discard is
+  final: if you made a mistake, delete the package and add the units
+  back with a positive correction.
+- **Delete**: only for a package entered by mistake; the stock does not
+  change.
+
+The **Expiry** column of the main window shows the first expiry among
+the packages in stock, with *(expired)* or *(expires soon)*. **Stock →
+Expiring packages…** gathers the expired and expiring packages of every
+medicine, including those no longer in use, expired first; **Open
+packages…** opens the ones of the chosen medicine. For the notices see
+[Notifications and email](#notifications).
+
 <a id="intake"></a>
 ### Register an intake
 
@@ -598,8 +649,16 @@ Each low-stock email also carries the run-out date as a calendar file
   (with a threshold of 10 days: first warning at 10 days, second at 5).
   A medicine that is already below half when it is first checked gets
   only the second reminder. After a new package the cycle starts again.
+- **Package expiry**: a package recorded with an expiry gives an
+  *expires soon* notice 30 days before the printed expiry (3 days
+  before the end of the period after opening) and an *expired* notice
+  the day after, once each, on the medicine's channels, even when the
+  medicine is no longer in use. Used-up or closed packages give no
+  notice. The lead days are changed in **Tools → Settings… →
+  Notifications → Package expiry**; with 0 only the expired notice is
+  left.
 - **From the Windows notification**: click it to open MedReminder on
-  that medicine (on the prescriptions for a prescription reminder, on the deadlines for a deadline reminder). A
+  that medicine (on the prescriptions for a prescription reminder, on the deadlines for a deadline reminder, on the packages for a package expiry notice). A
   low-stock warning has **Prepare request**, which opens the request to
   the doctor; a dose reminder has **Remind me in 15 minutes**, which
   shows it again later, even if MedReminder is closed meanwhile.
@@ -641,14 +700,19 @@ their rules: if the test fails, check your provider's instructions.
   visible to both). It must differ from the recipient. Under
   **Copy to the caregiver** choose which reminders they get (all of
   them until you change it): low-stock warnings, dose reminders,
-  prescription and deadline reminders, shortage notices.
+  prescription and deadline reminders, shortage notices, package expiry
+  notices.
   **Send the caregiver a weekly stock summary** adds, every 7 days, an
   email to the caregiver alone with the stock, status and run-out date
-  of each active medicine, and nothing about the doses taken. It is
+  of each active medicine and the packages expired or expiring soon,
+  and nothing about the doses taken. It is
   sent by the PC that sends the emails, once per profile even when the
   profile is synced on several PCs.
 - **Doctor e-mail (optional)** — used only for prescription requests
   you send yourself; automatic reminders never go there.
+- **Package expiry** — how many days before the *expires soon* notice
+  comes: before the printed expiry (default 30) and before the end of
+  the period after opening (default 3).
 
 Click **Save recipients**. In the same section, **My PIN** lets you set or
 change the PIN of your own profile.

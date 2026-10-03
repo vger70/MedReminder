@@ -1422,5 +1422,12 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "días antes del fin del periodo tras la apertura",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Cuándo llega el aviso \"caduca pronto\". Con 0 queda solo el aviso de caja caducada.",
   "Notifications.Digest.InactiveExpiry": "- {0} (sin uso): caducidad de una caja {1}",
-  "Packages.Error.ExpiresOn": "Revise la caducidad: está a más de 20 años de hoy."
+  "Packages.Error.ExpiresOn": "Revise la caducidad: está a más de 20 años de hoy.",
+  "Ui.MainForm.Menu.Stock.ExpiringPackages": "Cajas que caducan…",
+  "Ui.ExpiringPackagesDialog.Title": "Cajas que caducan",
+  "Ui.ExpiringPackagesDialog.Hint": "Las cajas caducadas o que caducan pronto de todos los medicamentos, primero las caducadas. Abra las cajas de un medicamento para marcarlas abiertas, terminadas o desechadas.",
+  "Ui.ExpiringPackagesDialog.Empty": "Ninguna caja caducada o que caduque pronto.",
+  "Ui.ExpiringPackagesDialog.Column.Medicine": "Medicamento",
+  "Ui.ExpiringPackagesDialog.Open": "Abrir cajas…",
+  "Ui.ExpiringPackagesDialog.Inactive": "{0} (sin uso)"
 }

@@ -29,7 +29,8 @@ de la aplicación. La arquitectura técnica se describe en
      [Editar, desactivar, eliminar](#edit-medicine)
 3. [Encontrar un medicamento: catálogo y código de barras](#catalogue)
 4. [Stock](#stock)
-   - [Añadir una caja](#add-package) · [Registrar una toma](#intake) ·
+   - [Añadir una caja](#add-package) · [Cajas y caducidad](#packages) ·
+     [Registrar una toma](#intake) ·
      [Corregir el stock](#correct) · [Contar existencias](#count) ·
      [Historial](#history)
 5. [Cronología, ficha de terapia y solicitud de receta](#documents)
@@ -395,6 +396,58 @@ cuenta la cantidad registrada.
 Una caja nueva reinicia el ciclo de aviso: cuando el stock vuelve a
 bajar del umbral, recibes un aviso nuevo.
 
+Con **Nueva caja** también puedes registrar la caducidad; todos los
+campos son opcionales:
+
+- **Cajas** — cuántas cajas iguales compraste; la cantidad se reparte
+  entre ellas.
+- **Caducidad (mes/año)** — marca la casilla y elige mes y año como
+  vienen impresos. Una caducidad `03/2027` vale hasta el 31 de marzo de
+  2027.
+- **Usar en … días tras la apertura** — para colirios, jarabes,
+  insulinas en uso y similares, según el prospecto; 0 si no hay. Se
+  propone el valor de la última caja del medicamento.
+- **Abierta hoy** — si abres enseguida la primera caja.
+- **Lote** — opcional.
+
+Con **Stock → Reponer por código de barras…** un código DataMatrix
+rellena solo la caducidad y el lote. Si dejas vacíos todos estos
+campos, la caja solo añade cantidad, como antes.
+
+<a id="packages"></a>
+### Cajas y caducidad
+
+**Stock → Cajas y caducidad…** (también desde el menú del clic derecho)
+lista las cajas del medicamento seleccionado con el estado, la caducidad
+impresa, la fecha de apertura, la fecha límite de uso y la cantidad en
+stock.
+
+- Una caja caduca al final del mes impreso, o antes si está abierta y
+  se agotan sus días tras la apertura (abierta el 1 de marzo, 28 días:
+  usar hasta el 28 de marzo).
+- La app considera que se usa primero la caja abierta y después las que
+  caducan antes. Las que el stock ya no cubre quedan **Agotadas** y no
+  dan avisos, aunque no las marques terminadas. Si usas las cajas en
+  otro orden, marca la que estás usando con **Abierta hoy** o cierra la
+  correcta.
+- **Nueva…** registra una caja que ya tienes en el botiquín, sin cambiar
+  el stock.
+- **Abierta hoy**, **Terminada**: actualizan la caja; el stock no
+  cambia.
+- **Desechar…**: para una caja tirada, normalmente caducada. La cantidad
+  que queda (propuesta por la app) se resta del stock. Es definitivo: si
+  te equivocaste, elimina la caja y vuelve a añadir las unidades con una
+  corrección positiva.
+- **Eliminar**: solo para una caja introducida por error; el stock no
+  cambia.
+
+La columna **Caducidad** de la ventana principal muestra la primera
+caducidad entre las cajas en stock, con *(caducada)* o *(caduca
+pronto)*. **Stock → Cajas que caducan…** reúne las cajas caducadas o que
+caducan pronto de todos los medicamentos, también de los que ya no se
+usan, primero las caducadas; **Abrir cajas…** abre las del medicamento
+elegido. Para los avisos, ver [Notificaciones y correo](#notifications).
+
 <a id="intake"></a>
 ### Registrar una toma
 
@@ -631,8 +684,16 @@ genérico.
   a los 5). Un medicamento que ya está por debajo de la mitad en la
   primera revisión recibe solo el segundo aviso. Tras una caja nueva, el
   ciclo vuelve a empezar.
+- **Caducidad de las cajas**: una caja registrada con caducidad da un
+  aviso *caduca pronto* 30 días antes de la caducidad impresa (3 días
+  antes del fin del periodo tras la apertura) y un aviso *caducada* el
+  día siguiente, una vez cada uno, por los canales del medicamento,
+  aunque ya no esté en uso. Las cajas agotadas o cerradas no dan avisos.
+  Los plazos se cambian en **Herramientas → Configuración… →
+  Notificaciones → Caducidad de las cajas**; con 0 queda solo el aviso
+  de caja caducada.
 - **Desde la notificación de Windows**: un clic abre MedReminder en ese
-  medicamento (en las recetas, para un recordatorio de receta; en los vencimientos, para un recordatorio de vencimiento). Un
+  medicamento (en las recetas, para un recordatorio de receta; en los vencimientos, para un recordatorio de vencimiento; en las cajas, para un aviso de caducidad). Un
   aviso de stock tiene **Preparar la solicitud**, que abre la solicitud
   al médico; un recordatorio de dosis tiene **Recuérdamelo en 15
   minutos**, que lo repite más tarde, aunque MedReminder se haya cerrado
@@ -677,14 +738,18 @@ abierto:
   visibles para los dos). Debe ser distinta del destinatario. En
   **Copia al cuidador** eliges qué avisos recibe (todos mientras no lo
   cambies): stock bajo, recordatorios de dosis, de recetas y de
-  vencimientos, avisos de desabastecimiento. **Enviar al cuidador un
-  resumen semanal del stock** añade, cada 7 días, un correo solo al
-  cuidador con el stock, el estado y la fecha de agotamiento de cada
-  medicamento activo, y nada sobre las dosis tomadas. Lo envía el PC
+  vencimientos, avisos de desabastecimiento, avisos de caducidad de las
+  cajas. **Enviar al cuidador un resumen semanal del stock** añade, cada
+  7 días, un correo solo al cuidador con el stock, el estado y la fecha
+  de agotamiento de cada medicamento activo y las cajas caducadas o que
+  caducan pronto, y nada sobre las dosis tomadas. Lo envía el PC
   que manda los correos, una vez por perfil aunque el perfil esté
   sincronizado en varios PC.
 - **E-mail del médico (opcional)** — se usa solo para las solicitudes de
   receta que envías tú; los avisos automáticos nunca van ahí.
+- **Caducidad de las cajas** — cuántos días antes llega el aviso
+  *caduca pronto*: antes de la caducidad impresa (30 por defecto) y
+  antes del fin del periodo tras la apertura (3 por defecto).
 
 Haz clic en **Guardar destinatarios**. En la misma sección, **Mi PIN**
 permite establecer o cambiar el PIN de tu propio perfil.

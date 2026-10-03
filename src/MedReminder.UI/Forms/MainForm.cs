@@ -421,6 +421,10 @@ internal sealed class MainForm : MedReminderFormBase
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Packages"),
             Mdl2Glyph.Glyphs.Calendar, Keys.None,
             async () => await ShowPackagesAsync()));
+        // Independent of the selected row: every medicine of the profile.
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.ExpiringPackages"),
+            Mdl2Glyph.Glyphs.Warning, Keys.None,
+            async () => await ShowExpiringPackagesAsync()));
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Warning, Keys.None,
             async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
@@ -2576,6 +2580,30 @@ internal sealed class MainForm : MedReminderFormBase
 
     // Also opened from a package expiry toast, for a medicine that may be
     // inactive and hidden from the list.
+    // Stock → Expiring packages… (ANALYSIS-PACKAGE-EXPIRY.md §5.4): the
+    // cabinet view across medicines; each medicine's packages open from it.
+    private async Task ShowExpiringPackagesAsync()
+    {
+        var changed = false;
+        using (var dialog = new ExpiringPackagesDialog(
+            async () =>
+            {
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                return await scope.ServiceProvider.GetRequiredService<ExpiringPackagesQuery>()
+                    .LoadAsync(CancellationToken.None);
+            },
+            async entry =>
+            {
+                await ShowPackagesAsync(entry.MedicineId, entry.MedicineName, entry.Unit);
+                changed = true;
+            },
+            _loc))
+        {
+            dialog.ShowDialog(this);
+        }
+        if (changed) await ReloadAsync();
+    }
+
     private async Task ShowPackagesAsync(Guid medicineId, string medicineName, string unit)
     {
         var row = (Id: medicineId, Name: medicineName, Unit: unit);

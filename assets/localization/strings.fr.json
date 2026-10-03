@@ -1422,5 +1422,12 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "jours avant la fin de la période après ouverture",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Quand l'avis « bientôt périmée » arrive. Avec 0, seul l'avis de boîte périmée reste.",
   "Notifications.Digest.InactiveExpiry": "- {0} (plus utilisé) : péremption d'une boîte {1}",
-  "Packages.Error.ExpiresOn": "Vérifiez la péremption : elle est à plus de 20 ans d'aujourd'hui."
+  "Packages.Error.ExpiresOn": "Vérifiez la péremption : elle est à plus de 20 ans d'aujourd'hui.",
+  "Ui.MainForm.Menu.Stock.ExpiringPackages": "Boîtes bientôt périmées…",
+  "Ui.ExpiringPackagesDialog.Title": "Boîtes bientôt périmées",
+  "Ui.ExpiringPackagesDialog.Hint": "Les boîtes périmées ou bientôt périmées de tous les médicaments, les périmées d'abord. Ouvrez les boîtes d'un médicament pour les indiquer ouvertes, terminées ou jetées.",
+  "Ui.ExpiringPackagesDialog.Empty": "Aucune boîte périmée ou bientôt périmée.",
+  "Ui.ExpiringPackagesDialog.Column.Medicine": "Médicament",
+  "Ui.ExpiringPackagesDialog.Open": "Ouvrir les boîtes…",
+  "Ui.ExpiringPackagesDialog.Inactive": "{0} (plus utilisé)"
 }

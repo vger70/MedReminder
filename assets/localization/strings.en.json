@@ -1427,5 +1427,12 @@
   "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "days before the end of the period after opening",
   "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "When the \"expires soon\" notice comes. 0 keeps only the notice that a package has expired.",
   "Notifications.Digest.InactiveExpiry": "- {0} (not in use): package expiry {1}",
-  "Packages.Error.ExpiresOn": "Check the expiry: it is more than 20 years from today."
+  "Packages.Error.ExpiresOn": "Check the expiry: it is more than 20 years from today.",
+  "Ui.MainForm.Menu.Stock.ExpiringPackages": "Expiring packages…",
+  "Ui.ExpiringPackagesDialog.Title": "Expiring packages",
+  "Ui.ExpiringPackagesDialog.Hint": "Packages expired or expiring soon, of every medicine, the expired ones first. Open the packages of a medicine to mark them opened, finished or discarded.",
+  "Ui.ExpiringPackagesDialog.Empty": "No package is expired or expiring soon.",
+  "Ui.ExpiringPackagesDialog.Column.Medicine": "Medicine",
+  "Ui.ExpiringPackagesDialog.Open": "Open packages…",
+  "Ui.ExpiringPackagesDialog.Inactive": "{0} (not in use)"
 }
