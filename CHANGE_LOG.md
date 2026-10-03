@@ -30,6 +30,16 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #183 — Add analysis of package expiry tracking
+
+Link: [vger70/MedReminder#183](https://github.com/vger70/MedReminder/pull/183)
+
+Branch: `claude/package-expiry-analysis-1388ce` → `main`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: design of optional package expiry (printed `MM/YYYY`, valid to the last day of the month) and in-use period after opening, a `StockPackage` register beside the immutable stock ledger with a derived first-expiring-first-out allocation, expiring-soon and expired notices on the medicine's toast and email channels, sync, export, UI, tests, phased plan and decisions to confirm.
+
 ## PR #182 — Slot description presets by time of day, resizable navigation pane
 
 Link: [vger70/MedReminder#182](https://github.com/vger70/MedReminder/pull/182)
