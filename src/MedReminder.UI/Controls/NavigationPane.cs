@@ -16,14 +16,17 @@ internal sealed class NavigationPane : FlowLayoutPanel
     private const int ItemHeight = 40;
     private const int DefaultExpandedWidth = 240;
 
-    private readonly int _expandedWidth;
+    private readonly int _minExpandedWidth;
+    private int _expandedWidth;
 
     private readonly ToolTip _tips = new();
     private bool _collapsed;
+    private bool _resizing;
 
     // Settings passes a wider pane for its longer German captions.
     public NavigationPane(int expandedWidth = DefaultExpandedWidth)
     {
+        _minExpandedWidth = expandedWidth;
         _expandedWidth = expandedWidth;
         FlowDirection = FlowDirection.TopDown;
         WrapContents = false;
@@ -75,11 +78,33 @@ internal sealed class NavigationPane : FlowLayoutPanel
         }
     }
 
+    // The user widens the pane by dragging its right edge; it never gets
+    // narrower than the width it was built with.
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Resizable { get; init; }
+
+    // Width of the expanded pane at 96 DPI and text size Normal, at least
+    // the width the pane was built with.
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int ExpandedWidth
+    {
+        get => _expandedWidth;
+        set
+        {
+            var width = Math.Max(_minExpandedWidth, value);
+            if (width == _expandedWidth) return;
+            _expandedWidth = width;
+            if (!_collapsed) ApplyWidth();
+        }
+    }
+
+    private int ScaledItemHeight => Controls.OfType<NavigationItem>().FirstOrDefault()?.Height ?? ItemHeight;
+
     // Widths follow the scaled item height, so collapsing and expanding
     // after MedReminderFormBase has scaled the pane keep the proportions.
     private void ApplyWidth()
     {
-        var itemHeight = Controls.OfType<NavigationItem>().FirstOrDefault()?.Height ?? ItemHeight;
+        var itemHeight = ScaledItemHeight;
         var itemWidth = _collapsed
             ? itemHeight
             : (int)Math.Round(itemHeight * (_expandedWidth - Padding.Horizontal) / (float)ItemHeight);
@@ -95,6 +120,52 @@ internal sealed class NavigationPane : FlowLayoutPanel
         }
         Width = itemWidth + Padding.Horizontal + (VerticalScroll.Visible ? SystemInformation.VerticalScrollBarWidth : 0);
         ResumeLayout(performLayout: true);
+    }
+
+    // The grip is the right padding, next to the divider: the items never
+    // cover it.
+    private bool OnGrip(Point location)
+        => Resizable && !_collapsed && location.X >= ClientSize.Width - Math.Max(Padding.Right, 4);
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left && OnGrip(e.Location)) _resizing = true;
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        if (_resizing)
+        {
+            // The page keeps at least half of the window.
+            var maxClientWidth = Parent is { } parent ? parent.ClientSize.Width / 2 : int.MaxValue;
+            var clientWidth = Math.Min(e.X + 1, maxClientWidth);
+            var scale = ScaledItemHeight / (float)ItemHeight;
+            ExpandedWidth = (int)Math.Round((clientWidth - Padding.Horizontal) / scale) + Padding.Horizontal;
+        }
+        else
+        {
+            Cursor = OnGrip(e.Location) ? Cursors.SizeWE : Cursors.Default;
+        }
+        base.OnMouseMove(e);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        _resizing = false;
+        base.OnMouseUp(e);
+    }
+
+    protected override void OnMouseCaptureChanged(EventArgs e)
+    {
+        _resizing = false;
+        base.OnMouseCaptureChanged(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        if (!_resizing) Cursor = Cursors.Default;
+        base.OnMouseLeave(e);
     }
 
     protected override void OnPaint(PaintEventArgs e)

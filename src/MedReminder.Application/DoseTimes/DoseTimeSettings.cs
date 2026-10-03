@@ -29,6 +29,11 @@ public sealed record DoseTimeSettings(
 
     public EffectiveDoseTimePreset? Find(Guid id) => Presets.FirstOrDefault(p => p.Id == id);
 
+    // By time of day, as the user picks them; presets without a time
+    // last, in their order.
+    public static IEnumerable<EffectiveDoseTimePreset> ByTimeOfDay(IEnumerable<EffectiveDoseTimePreset> presets)
+        => presets.OrderBy(p => p.Time is null).ThenBy(p => p.Time).ThenBy(p => p.Order);
+
     // Built-ins first in their code order, then the presets the user
     // added in the order they were added.
     public static DoseTimeSettings Merge(

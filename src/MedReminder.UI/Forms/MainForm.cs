@@ -227,7 +227,7 @@ internal sealed class MainForm : MedReminderFormBase
     // open the windows the menus already open.
     private NavigationPane BuildNavigationPane()
     {
-        var nav = new NavigationPane();
+        var nav = new NavigationPane { Resizable = true };
         var medicines = nav.AddItem(_loc.Get("Ui.MainForm.Nav.Medicines"), Mdl2Glyph.Glyphs.BulletedList,
             opensWindow: false, () => _grid.Focus());
         medicines.Selected = true;
@@ -251,6 +251,11 @@ internal sealed class MainForm : MedReminderFormBase
         }
         nav.AddItem(MenuCaption("Ui.MainForm.Menu.Tools.Settings"), Mdl2Glyph.Glyphs.Settings,
             opensWindow: true, ShowSettings);
+        // Set after the items, before the form scales the pane.
+        if (ProfileUiSettingsFile.ReadNavigationWidth(_currentProfile.DataDirectory) is { } width)
+        {
+            nav.ExpandedWidth = width;
+        }
         return nav;
     }
 
@@ -1823,6 +1828,7 @@ internal sealed class MainForm : MedReminderFormBase
             ProfileUiSettingsFile.WriteMainWindow(_currentProfile.DataDirectory, new MainWindowPlacement(
                 bounds.X, bounds.Y, bounds.Width, bounds.Height,
                 _lastShownState == FormWindowState.Maximized));
+            ProfileUiSettingsFile.WriteNavigationWidth(_currentProfile.DataDirectory, _nav.ExpandedWidth);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

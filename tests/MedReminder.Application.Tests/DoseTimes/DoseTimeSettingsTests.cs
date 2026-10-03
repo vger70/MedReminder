@@ -45,6 +45,25 @@ public class DoseTimeSettingsTests
     }
 
     [Fact]
+    public void By_time_of_day_places_user_presets_among_the_built_ins()
+    {
+        var stored = new[]
+        {
+            new DoseTimePreset { Label = "A pranzo", Time = new TimeOnly(13, 0), Order = 0 },
+            new DoseTimePreset { Label = "Senza orario", Time = null, Order = 1 },
+        };
+
+        var names = DoseTimeSettings.ByTimeOfDay(DoseTimeSettings.Merge(stored, []).Presets)
+            .Select(p => p.BuiltInKey ?? p.Label)
+            .ToList();
+
+        // Same time: built-in order first, then the user preset.
+        names.IndexOf("A pranzo").Should().Be(names.IndexOf("BeforeLunch") + 1);
+        names.IndexOf("MorningEmptyStomach").Should().BeLessThan(names.IndexOf("Morning"));
+        names.Should().EndWith([BuiltInDoseTimePresets.AsNeededKey, "Senza orario"]);
+    }
+
+    [Fact]
     public async Task Save_stores_only_what_differs_from_the_built_ins()
     {
         var scope = new ApplicationTestScope();

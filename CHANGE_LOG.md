@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #182 — Slot description presets by time of day, resizable navigation pane
+
+Link: [vger70/MedReminder#182](https://github.com/vger70/MedReminder/pull/182)
+
+Branch: `claude/voci-ordinamento-menu-laterale-544d36` → `main`
+
+### Changed
+
+- The description dropdown of the administration slot dialog lists the time-of-day presets by time, as the dose times dialog already did: user presets no longer trail the built-ins, presets without a time come last (`DoseTimeSettings.ByTimeOfDay`).
+- The main window navigation pane can be widened by dragging its right edge, never narrower than its default width and at most half the window. The width is saved per profile in `ui.settings.json` (`NavigationWidth`, at 96 DPI) when the window closes.
+
+---
+
 ## PR #181 — Give date pickers static Segoe UI so the first digit is not cut
 
 Link: [vger70/MedReminder#181](https://github.com/vger70/MedReminder/pull/181)
