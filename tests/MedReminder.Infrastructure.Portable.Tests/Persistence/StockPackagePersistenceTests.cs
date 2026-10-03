@@ -112,6 +112,42 @@ public class StockPackagePersistenceTests
     }
 
     [Fact]
+    public async Task A_notice_is_found_by_package_expiry_and_stage_after_the_patch()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync(@"DROP TABLE ""PackageExpiryNoticeEvents"";");
+        }
+        for (var run = 0; run < 2; run++)
+        {
+            await using var ctx = fixture.CreateContext();
+            await new DatabaseInitializer(ctx, NullLogger<DatabaseInitializer>.Instance, Clock)
+                .InitializeAsync(CancellationToken.None);
+        }
+        var package = Guid.NewGuid();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await new PackageExpiryNoticeEventRepository(ctx).AddAsync(new PackageExpiryNoticeEvent
+            {
+                PackageId = package, MedicineId = Guid.NewGuid(), EffectiveExpiry = Today,
+                Stage = PackageExpiryNoticeEvent.SoonStage, FiredAt = Clock.GetUtcNow(),
+            }, CancellationToken.None);
+            await ctx.SaveChangesAsync();
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            var repo = new PackageExpiryNoticeEventRepository(ctx);
+            (await repo.ExistsAsync(package, Today, PackageExpiryNoticeEvent.SoonStage, CancellationToken.None))
+                .Should().BeTrue();
+            (await repo.ExistsAsync(package, Today, PackageExpiryNoticeEvent.ExpiredStage, CancellationToken.None))
+                .Should().BeFalse();
+            (await repo.ExistsAsync(package, Today.AddDays(1), PackageExpiryNoticeEvent.SoonStage, CancellationToken.None))
+                .Should().BeFalse();
+        }
+    }
+
+    [Fact]
     public async Task Deleting_the_medicine_removes_its_packages()
     {
         using var fixture = new SqliteInMemoryFixture();

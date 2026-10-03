@@ -1412,5 +1412,18 @@
   "Ui.DiscardPackageDialog.Title": "Discard package",
   "Ui.DiscardPackageDialog.QuantityLeft": "Quantity left",
   "Ui.DiscardPackageDialog.Hint": "The quantity left in the package is removed from the stock. Enter 0 if the package was already empty.",
-  "Ui.DiscardPackageDialog.Confirm": "Discard"
+  "Ui.DiscardPackageDialog.Confirm": "Discard",
+  "Notifications.PackageExpiry.Expired.Title": "{0}: a package has expired",
+  "Notifications.PackageExpiry.Expired.Body": "A package of {0} expired on {1}. Check it and mark it in MedReminder.",
+  "Notifications.PackageExpiry.Expired.Body.Many": "{1} packages of {0} have expired, the first on {2}. Check them and mark them in MedReminder.",
+  "Notifications.PackageExpiry.Soon.Title": "{0}: a package expires soon",
+  "Notifications.PackageExpiry.Soon.Body": "A package of {0} expires on {1}. Use it first or check it.",
+  "Notifications.PackageExpiry.Soon.Body.Many": "{1} packages of {0} expire soon, the first on {2}. Use them first or check them.",
+  "Notifications.PackageExpiry.Email.Subject": "MedReminder: packages to check",
+  "Notifications.Digest.Expiry": "  package expiry: {0}",
+  "Ui.SettingsDialog.Notifications.Caregiver.Kind.PackageExpiry": "Package expiry notices",
+  "Ui.SettingsDialog.Notifications.PackageExpiry": "Package expiry",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.Printed": "days before the printed expiry",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "days before the end of the period after opening",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "When the \"expires soon\" notice comes. 0 keeps only the notice that a package has expired."
 }

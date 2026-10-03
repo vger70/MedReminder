@@ -1407,5 +1407,18 @@
   "Ui.DiscardPackageDialog.Title": "Desechar caja",
   "Ui.DiscardPackageDialog.QuantityLeft": "Cantidad restante",
   "Ui.DiscardPackageDialog.Hint": "La cantidad que queda en la caja se resta del stock. Introduzca 0 si la caja ya estaba vacía.",
-  "Ui.DiscardPackageDialog.Confirm": "Desechar"
+  "Ui.DiscardPackageDialog.Confirm": "Desechar",
+  "Notifications.PackageExpiry.Expired.Title": "{0}: una caja ha caducado",
+  "Notifications.PackageExpiry.Expired.Body": "Una caja de {0} caducó el {1}. Revísela y márquela en MedReminder.",
+  "Notifications.PackageExpiry.Expired.Body.Many": "{1} cajas de {0} han caducado, la primera el {2}. Revíselas y márquelas en MedReminder.",
+  "Notifications.PackageExpiry.Soon.Title": "{0}: una caja caduca pronto",
+  "Notifications.PackageExpiry.Soon.Body": "Una caja de {0} caduca el {1}. Úsela primero o revísela.",
+  "Notifications.PackageExpiry.Soon.Body.Many": "{1} cajas de {0} caducan pronto, la primera el {2}. Úselas primero o revíselas.",
+  "Notifications.PackageExpiry.Email.Subject": "MedReminder: cajas que revisar",
+  "Notifications.Digest.Expiry": "  caducidad de una caja: {0}",
+  "Ui.SettingsDialog.Notifications.Caregiver.Kind.PackageExpiry": "Avisos de caducidad de las cajas",
+  "Ui.SettingsDialog.Notifications.PackageExpiry": "Caducidad de las cajas",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.Printed": "días antes de la caducidad impresa",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "días antes del fin del periodo tras la apertura",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Cuándo llega el aviso \"caduca pronto\". Con 0 queda solo el aviso de caja caducada."
 }

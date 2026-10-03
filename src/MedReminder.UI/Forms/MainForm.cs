@@ -1763,6 +1763,12 @@ internal sealed class MainForm : MedReminderFormBase
             case NotificationActionKind.OpenDeadlines:
                 await ShowDeadlinesAsync();
                 break;
+            case NotificationActionKind.OpenPackages:
+                // An inactive medicine hidden from the list is not
+                // selected: the window just comes forward.
+                SelectGridRow(action.MedicineId);
+                if (GetSelectedRow()?.Id == action.MedicineId) await ShowPackagesAsync();
+                break;
             case NotificationActionKind.RequestPrescription:
                 SelectGridRow(action.MedicineId);
                 if (GetSelectedRow()?.Id == action.MedicineId) await ShowPrescriptionRequestAsync();

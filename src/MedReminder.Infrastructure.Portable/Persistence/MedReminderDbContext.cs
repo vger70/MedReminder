@@ -44,6 +44,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<Deadline> Deadlines => Set<Deadline>();
     public DbSet<DeadlineReminderEvent> DeadlineReminderEvents => Set<DeadlineReminderEvent>();
     public DbSet<StockPackage> StockPackages => Set<StockPackage>();
+    public DbSet<PackageExpiryNoticeEvent> PackageExpiryNoticeEvents => Set<PackageExpiryNoticeEvent>();
     public DbSet<DoseTimePreset> DoseTimePresets => Set<DoseTimePreset>();
     public DbSet<DoseTimeDefault> DoseTimeDefaults => Set<DoseTimeDefault>();
     public DbSet<MedReminder.Domain.Catalogue.ShortageNoticeEvent> ShortageNoticeEvents
@@ -75,6 +76,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new DeadlineConfiguration());
         modelBuilder.ApplyConfiguration(new DeadlineReminderEventConfiguration());
         modelBuilder.ApplyConfiguration(new StockPackageConfiguration());
+        modelBuilder.ApplyConfiguration(new PackageExpiryNoticeEventConfiguration());
         modelBuilder.ApplyConfiguration(new ShortageNoticeEventConfiguration());
         modelBuilder.ApplyConfiguration(new DoseTimePresetConfiguration());
         modelBuilder.ApplyConfiguration(new DoseTimeDefaultConfiguration());

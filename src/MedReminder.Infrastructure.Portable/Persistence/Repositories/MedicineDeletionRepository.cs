@@ -54,6 +54,8 @@ internal sealed class MedicineDeletionRepository : IMedicineDeletionRepository
             await _db.DeadlineReminderEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.StockPackages.RemoveRange(
             await _db.StockPackages.Where(p => p.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.PackageExpiryNoticeEvents.RemoveRange(
+            await _db.PackageExpiryNoticeEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.ShortageNoticeEvents.RemoveRange(
             await _db.ShortageNoticeEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.SyncFieldVersions.RemoveRange(

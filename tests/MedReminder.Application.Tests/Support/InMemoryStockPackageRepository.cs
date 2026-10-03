@@ -36,3 +36,21 @@ internal sealed class InMemoryStockPackageRepository : IStockPackageRepository
 
     public void RemoveForMedicine(Guid medicineId) => _items.RemoveAll(p => p.MedicineId == medicineId);
 }
+
+internal sealed class InMemoryPackageExpiryNoticeEventRepository : IPackageExpiryNoticeEventRepository
+{
+    private readonly List<PackageExpiryNoticeEvent> _items = new();
+
+    public IReadOnlyList<PackageExpiryNoticeEvent> All => _items;
+
+    public Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, CancellationToken cancellationToken)
+        => Task.FromResult(_items.Any(e => e.PackageId == packageId && e.EffectiveExpiry == effectiveExpiry && e.Stage == stage));
+
+    public Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken cancellationToken)
+    {
+        _items.Add(notice);
+        return Task.CompletedTask;
+    }
+
+    public void RemoveForMedicine(Guid medicineId) => _items.RemoveAll(e => e.MedicineId == medicineId);
+}

@@ -3,6 +3,7 @@ using System.Text;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Overview;
 using MedReminder.Application.Sync;
+using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 using Microsoft.Extensions.Logging;
 
@@ -102,6 +103,11 @@ public sealed class CaregiverDigest
                     ? loc.Get("Notifications.Digest.Line", m.Name, stock, m.StatusDisplay, days, runOut.ToString("d", c))
                     : loc.Get("Notifications.Digest.LineNoForecast", m.Name, stock, m.StatusDisplay))
                 .Append('\n');
+            // A package expiring or expired (ANALYSIS-PACKAGE-EXPIRY.md §4.2).
+            if (m.NextExpiryStatus is PackageExpiryStatus.Expired or PackageExpiryStatus.ExpiringSoon)
+            {
+                body.Append(loc.Get("Notifications.Digest.Expiry", m.ExpiryDisplay)).Append('\n');
+            }
         }
         body.Append('\n').Append(loc.Get("Notifications.Digest.Why", profileName));
         body.Append("\n\n").Append(loc.Get("Notifications.Email.Footer"));

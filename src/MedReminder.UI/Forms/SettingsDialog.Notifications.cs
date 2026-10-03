@@ -3,7 +3,9 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Export;
 using MedReminder.Application.Notifications;
+using MedReminder.Application.Packages;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Settings;
 using MedReminder.Infrastructure.Storage;
@@ -22,6 +24,10 @@ internal sealed partial class SettingsDialog
     // of email copied to the caregiver, and the weekly summary.
     private readonly Dictionary<EmailKind, CheckBox> _caregiverKinds = new();
     private CheckBox _caregiverDigest = null!;
+
+    // Lead days of the package expiry notices (ANALYSIS-PACKAGE-EXPIRY.md §5.5).
+    private NumericUpDown _expiryLeadDays = null!;
+    private NumericUpDown _inUseLeadDays = null!;
 
     // Notifications section (Increment 15d).
     // Per-profile "where do the emails go" tab (§7.4). Visible to
@@ -102,6 +108,7 @@ internal sealed partial class SettingsDialog
         container.Controls.Add(caregiverHelp);
         container.Controls.Add(caregiverOptions);
         container.Controls.Add(doctorHelp);
+        container.Controls.Add(BuildPackageExpiryOptions(current));
         container.Controls.Add(buttons);
         container.Controls.Add(explanation);
         container.Controls.Add(BuildMyPinSection());
@@ -155,6 +162,53 @@ internal sealed partial class SettingsDialog
             MaximumSize = new System.Drawing.Size(560, 0),
             ForeColor = UiColors.Hint,
             Text = _loc.Get("Ui.SettingsDialog.Notifications.Caregiver.Digest.Help"),
+        });
+        return group;
+    }
+
+    // How many days before a package expires the "expiring soon" notice
+    // comes: one value for the printed expiry, one for the end of the
+    // in-use period after opening. 0 keeps only the "expired" notice.
+    private Control BuildPackageExpiryOptions(NotificationSettings current)
+    {
+        var leadDays = PackageSettings.LeadDays(current.PackageExpiryLeadDays, current.PackageInUseLeadDays);
+        _expiryLeadDays = new NumericUpDown
+        {
+            Minimum = 0, Maximum = PackageLeadDays.MaxPrinted, Value = leadDays.Printed, Width = 80,
+        };
+        _inUseLeadDays = new NumericUpDown
+        {
+            Minimum = 0, Maximum = PackageLeadDays.MaxInUse, Value = leadDays.InUse, Width = 80,
+        };
+        var group = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            AutoSize = true,
+            WrapContents = false,
+            Margin = new Padding(0, UiTheme.Space.M, 0, UiTheme.Space.S),
+        };
+        group.Controls.Add(new Label
+        {
+            AutoSize = true,
+            Font = new System.Drawing.Font(Font, System.Drawing.FontStyle.Bold),
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.PackageExpiry"),
+        });
+        group.Controls.Add(DialogLayout.Row(_expiryLeadDays, new Label
+        {
+            AutoSize = true, Padding = new Padding(0, 4, 0, 0),
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.PackageExpiry.Printed"),
+        }));
+        group.Controls.Add(DialogLayout.Row(_inUseLeadDays, new Label
+        {
+            AutoSize = true, Padding = new Padding(0, 4, 0, 0),
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.PackageExpiry.InUse"),
+        }));
+        group.Controls.Add(new Label
+        {
+            AutoSize = true,
+            MaximumSize = new System.Drawing.Size(560, 0),
+            ForeColor = UiColors.Hint,
+            Text = _loc.Get("Ui.SettingsDialog.Notifications.PackageExpiry.Help"),
         });
         return group;
     }
@@ -305,7 +359,9 @@ internal sealed partial class SettingsDialog
                 await scope.ServiceProvider.GetRequiredService<UpdateNotificationSettings>()
                     .ExecuteAsync(toAddress, caregiverAddress, doctorAddress, CancellationToken.None,
                         caregiverEmails: CaregiverEmails.Format(_caregiverKinds.Where(k => k.Value.Checked).Select(k => k.Key)),
-                        caregiverDigest: _caregiverDigest.Checked ? CaregiverDigestFrequency.Weekly : CaregiverDigestFrequency.Off);
+                        caregiverDigest: _caregiverDigest.Checked ? CaregiverDigestFrequency.Weekly : CaregiverDigestFrequency.Off,
+                        packageExpiryLeadDays: PackageSettings.Format((int)_expiryLeadDays.Value),
+                        packageInUseLeadDays: PackageSettings.Format((int)_inUseLeadDays.Value));
             }
             if (IsDisposed) return;
             UiMessageBox.Show(this,

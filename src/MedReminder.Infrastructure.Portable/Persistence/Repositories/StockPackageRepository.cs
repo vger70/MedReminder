@@ -38,3 +38,20 @@ internal sealed class StockPackageRepository : IStockPackageRepository
         return Task.CompletedTask;
     }
 }
+
+internal sealed class PackageExpiryNoticeEventRepository : IPackageExpiryNoticeEventRepository
+{
+    private readonly MedReminderDbContext _db;
+
+    public PackageExpiryNoticeEventRepository(MedReminderDbContext db)
+    {
+        _db = db;
+    }
+
+    public Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, CancellationToken cancellationToken)
+        => _db.PackageExpiryNoticeEvents.AnyAsync(
+            e => e.PackageId == packageId && e.EffectiveExpiry == effectiveExpiry && e.Stage == stage, cancellationToken);
+
+    public async Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken cancellationToken)
+        => await _db.PackageExpiryNoticeEvents.AddAsync(notice, cancellationToken);
+}

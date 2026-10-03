@@ -1407,5 +1407,18 @@
   "Ui.DiscardPackageDialog.Title": "Packung entsorgen",
   "Ui.DiscardPackageDialog.QuantityLeft": "Restmenge",
   "Ui.DiscardPackageDialog.Hint": "Die in der Packung verbliebene Menge wird vom Bestand abgezogen. Geben Sie 0 ein, wenn die Packung bereits leer war.",
-  "Ui.DiscardPackageDialog.Confirm": "Entsorgen"
+  "Ui.DiscardPackageDialog.Confirm": "Entsorgen",
+  "Notifications.PackageExpiry.Expired.Title": "{0}: eine Packung ist abgelaufen",
+  "Notifications.PackageExpiry.Expired.Body": "Eine Packung {0} ist am {1} abgelaufen. Prüfen Sie sie und vermerken Sie es in MedReminder.",
+  "Notifications.PackageExpiry.Expired.Body.Many": "{1} Packungen {0} sind abgelaufen, die erste am {2}. Prüfen Sie sie und vermerken Sie es in MedReminder.",
+  "Notifications.PackageExpiry.Soon.Title": "{0}: eine Packung läuft bald ab",
+  "Notifications.PackageExpiry.Soon.Body": "Eine Packung {0} läuft am {1} ab. Verwenden Sie sie zuerst oder prüfen Sie sie.",
+  "Notifications.PackageExpiry.Soon.Body.Many": "{1} Packungen {0} laufen bald ab, die erste am {2}. Verwenden Sie sie zuerst oder prüfen Sie sie.",
+  "Notifications.PackageExpiry.Email.Subject": "MedReminder: Packungen prüfen",
+  "Notifications.Digest.Expiry": "  Verfall einer Packung: {0}",
+  "Ui.SettingsDialog.Notifications.Caregiver.Kind.PackageExpiry": "Hinweise zum Verfall von Packungen",
+  "Ui.SettingsDialog.Notifications.PackageExpiry": "Verfall der Packungen",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.Printed": "Tage vor dem aufgedruckten Verfall",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.InUse": "Tage vor dem Ende der Frist nach dem Öffnen",
+  "Ui.SettingsDialog.Notifications.PackageExpiry.Help": "Wann der Hinweis „läuft bald ab“ kommt. Bei 0 bleibt nur der Hinweis, dass eine Packung abgelaufen ist."
 }

@@ -14,6 +14,8 @@ public enum EmailKind
     Shortage,
     // The weekly stock summary: to the caregiver only.
     Digest,
+    // Packages expiring or expired (docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md §4.2).
+    PackageExpiry,
 }
 
 // The CaregiverEmails profile setting: which kinds of email are copied
@@ -25,7 +27,8 @@ public static class CaregiverEmails
 
     // The kinds a caregiver can choose, in display order.
     public static readonly IReadOnlyList<EmailKind> Choices =
-        [EmailKind.LowStock, EmailKind.DoseReminder, EmailKind.Prescription, EmailKind.Deadline, EmailKind.Shortage];
+        [EmailKind.LowStock, EmailKind.DoseReminder, EmailKind.Prescription, EmailKind.Deadline, EmailKind.Shortage,
+            EmailKind.PackageExpiry];
 
     public static IReadOnlySet<EmailKind> Parse(string? value)
     {

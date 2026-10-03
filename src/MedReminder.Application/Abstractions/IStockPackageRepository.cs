@@ -16,3 +16,12 @@ public interface IStockPackageRepository
 
     Task RemoveAsync(StockPackage package, CancellationToken cancellationToken);
 }
+
+// Package expiry notices shown by this device (not replicated), keyed on
+// (PackageId, EffectiveExpiry, Stage).
+public interface IPackageExpiryNoticeEventRepository
+{
+    Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, CancellationToken cancellationToken);
+
+    Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken cancellationToken);
+}

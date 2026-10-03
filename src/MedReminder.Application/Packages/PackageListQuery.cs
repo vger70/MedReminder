@@ -19,19 +19,22 @@ public sealed record PackageListItem(
 
 public sealed record NewPackageDefaults(int? UseWithinDays, decimal? Quantity);
 
-// Read side of the packages of a medicine. Lead days are the defaults
-// until the profile settings exist (P3).
+// Read side of the packages of a medicine. Lead days come from the
+// profile settings (PackageSettings), the defaults without a store.
 public sealed class PackageListQuery
 {
     private readonly IStockPackageRepository _packages;
     private readonly IStockMovementRepository _stock;
     private readonly TimeProvider _clock;
+    private readonly IProfileSettingsStore? _settings;
 
-    public PackageListQuery(IStockPackageRepository packages, IStockMovementRepository stock, TimeProvider clock)
+    public PackageListQuery(IStockPackageRepository packages, IStockMovementRepository stock, TimeProvider clock,
+        IProfileSettingsStore? settings = null)
     {
         _packages = packages;
         _stock = stock;
         _clock = clock;
+        _settings = settings;
     }
 
     public DateOnly LocalToday()
@@ -42,7 +45,7 @@ public sealed class PackageListQuery
     {
         var packages = await _packages.ListForMedicineAsync(medicineId, cancellationToken);
         var stock = MedicineStock.Current(await _stock.ListForMedicineAsync(medicineId, cancellationToken));
-        return Build(packages, stock, LocalToday(), PackageLeadDays.Default);
+        return Build(packages, stock, LocalToday(), PackageSettings.LeadDays(_settings));
     }
 
     // The in-use period and size of the medicine's latest package: the

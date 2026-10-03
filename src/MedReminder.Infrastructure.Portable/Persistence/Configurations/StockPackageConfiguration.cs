@@ -29,3 +29,15 @@ internal sealed class StockPackageConfiguration : IEntityTypeConfiguration<Stock
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+// Device-local: no foreign key, like DeadlineReminderEvents; removed with
+// the medicine by MedicineDeletionRepository.
+internal sealed class PackageExpiryNoticeEventConfiguration : IEntityTypeConfiguration<PackageExpiryNoticeEvent>
+{
+    public void Configure(EntityTypeBuilder<PackageExpiryNoticeEvent> builder)
+    {
+        builder.ToTable("PackageExpiryNoticeEvents");
+        builder.HasKey(e => e.Id);
+        builder.HasIndex(e => new { e.PackageId, e.EffectiveExpiry, e.Stage }).IsUnique();
+    }
+}

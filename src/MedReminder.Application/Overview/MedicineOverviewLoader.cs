@@ -25,6 +25,7 @@ public sealed class MedicineOverviewLoader
     private readonly IShortageListStore? _shortages;
     private readonly DueToday? _dueToday;
     private readonly IStockPackageRepository? _packages;
+    private readonly IProfileSettingsStore? _settings;
 
     public MedicineOverviewLoader(
         IMedicineRepository medicines,
@@ -36,11 +37,13 @@ public sealed class MedicineOverviewLoader
         ILocalizationService localization,
         IShortageListStore? shortages = null,
         DueToday? dueToday = null,
-        IStockPackageRepository? packages = null)
+        IStockPackageRepository? packages = null,
+        IProfileSettingsStore? settings = null)
     {
         _shortages = shortages;
         _dueToday = dueToday;
         _packages = packages;
+        _settings = settings;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -57,6 +60,7 @@ public sealed class MedicineOverviewLoader
         var items = new List<MedicineListItem>(medicines.Count);
         var shortages = _shortages?.Load();
         var doseTimes = _dueToday is null ? null : await _dueToday.LoadSettingsAsync(cancellationToken);
+        var leadDays = _packages is null ? PackageLeadDays.Default : PackageSettings.LeadDays(_settings);
 
         foreach (var m in medicines)
         {
@@ -119,8 +123,7 @@ public sealed class MedicineOverviewLoader
             if (_packages is not null)
             {
                 var packages = PackageListQuery.Build(
-                    await _packages.ListForMedicineAsync(m.Id, cancellationToken), currentStock, today,
-                    PackageLeadDays.Default);
+                    await _packages.ListForMedicineAsync(m.Id, cancellationToken), currentStock, today, leadDays);
                 if (PackageListQuery.NextExpiring(packages) is { EffectiveExpiry: { } expiry } next)
                 {
                     items[^1].NextExpiry = expiry;

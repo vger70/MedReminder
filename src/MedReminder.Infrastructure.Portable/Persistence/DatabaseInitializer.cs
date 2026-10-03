@@ -397,6 +397,19 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_StockPackages_MedicineId""
                 ON ""StockPackages"" (""MedicineId"");", cancellationToken);
+        // Package expiry notices this device showed (not replicated).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""PackageExpiryNoticeEvents"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_PackageExpiryNoticeEvents"" PRIMARY KEY,
+                ""PackageId"" TEXT NOT NULL,
+                ""MedicineId"" TEXT NOT NULL,
+                ""EffectiveExpiry"" TEXT NOT NULL,
+                ""Stage"" INTEGER NOT NULL,
+                ""FiredAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PackageExpiryNoticeEvents_PackageId_EffectiveExpiry_Stage""
+                ON ""PackageExpiryNoticeEvents"" (""PackageId"", ""EffectiveExpiry"", ""Stage"");", cancellationToken);
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the
