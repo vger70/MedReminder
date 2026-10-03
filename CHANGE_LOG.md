@@ -44,6 +44,19 @@ Branch: `feature/days-left-from-shown-stock` → `main`
   and the status rules are unchanged; the status uses the days shown
   (`MedicineOverviewLoader`).
 
+### Docs
+
+- User guides (five languages): the main list section says that stock
+  and days left already leave out today's doses due; the "where to
+  find" table lists recording an as-needed dose and the dose times; the
+  count steps say the suggestion matches the list; the alerts section
+  says notifications use the recorded stock.
+- `docs/ANALYSIS.md`: as-needed slots, extra intakes, the device-local
+  time-of-day presets, `IntradayConsumption`, the one-time data
+  migrations and the new schema patches.
+- `docs/EVOLUTION-DONE.md` §12.5, `ANALYSIS-A5` §1.3 and the status of
+  `ANALYSIS-INTRADAY-CONSUMPTION.md` updated for the shipped feature.
+
 ---
 
 ## PR #177 — Stock that follows the dose times; as-needed doses never consumed automatically

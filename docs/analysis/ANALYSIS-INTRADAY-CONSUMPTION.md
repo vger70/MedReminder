@@ -1,7 +1,9 @@
 # ANALYSIS — Intraday consumption and as-needed doses
 
-Design document, **prior** to implementation. Work proceeds on branch
-`feature/intraday-consumption`.
+Design document written before implementation. Shipped in v2.14.0
+(PR #177); the days-left follow-up is PR #178. §12 records the
+implementation status and the points where it departs from this
+design.
 
 Epistemic classification, aligned with the sibling documents:
 `[VERIFIED]` (checked against the current tree, commit `6d1aa20`),
@@ -411,19 +413,33 @@ declared intended use]`
 
 ## 12. Implementation phases
 
-Status: phases 1, 2 and 3 implemented. Phase 3 resolves the open
-point of §5 on counts: a count today that does not materialize the day
-leaves the ledger at counted + taken, so the estimate equals the count
-when the user accepts the suggested quantity, which is the same
-`DueSoFar`. After midnight the list runs the catch-up before it
-recomputes, so the estimate never starts from the day before
-yesterday. Phase 2 deviates from §9 in one
-point: the presets have their own window (Therapy → Dose times…)
-instead of a page of the settings dialog. Built-in presets live in code
-and the table stores only the user's changes and additions. The backfill runs from `ConsumptionCatchUp`
-while the `PendingDataMigrations` marker set by the schema patch (or by
-an archive import) is present; imported archives are marked too, since
-they may predate the flag.
+Status: phases 1, 2 and 3 shipped in v2.14.0 (PR #177); PR #178
+follows up on the days left.
+
+- **Backfills.** They run from `ConsumptionCatchUp` while the
+  `PendingDataMigrations` marker set by the schema patch (or by an
+  archive import) is present; imported archives are marked too, since
+  they may predate the flags.
+- **Presets (phase 2).** Deviation from §9: the presets have their own
+  window (Therapy → Dose times…) instead of a page of the settings
+  dialog. Built-in presets live in code and the table stores only the
+  user's changes and additions.
+- **Counts (phase 3).** Resolves the open point of §5: a count today
+  that does not materialize the day leaves the ledger at counted +
+  taken, so the estimate equals the count when the user accepts the
+  suggested quantity, which is the same `DueSoFar`.
+- **Midnight (phase 3).** The list runs the catch-up before it
+  recomputes after midnight, so the estimate never starts from the day
+  before yesterday.
+- **Days left (PR #178).** §3 kept the whole forecast on the
+  start-of-day stock. In use, the list then showed a stock of 100 and
+  101 days left after the morning dose. The days left now come from the
+  estimated stock (`floor(estimated / rate)` once a dose is due); the
+  run-out date stays on the start-of-day stock and does not move during
+  the day. The list's status uses the days shown; the low-stock
+  monitor keeps the recorded stock, so on the day a threshold is
+  crossed the list can show the warning status a few hours before the
+  notification.
 
 Each phase is shippable and tested on its own.
 

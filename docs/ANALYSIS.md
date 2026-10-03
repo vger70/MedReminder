@@ -176,12 +176,12 @@ is used.
 | `Medicine` (`Medicines`) | Aggregate root | `Name`, `Unit`, `DosePerAdministration`, `AdministrationsPerDay`, `StartDate`, `EndDate?`, `ThresholdDays`, `IsActive`, `StockEpoch`, `NotificationChannels`, `RemindOnDose`, catalogue link (`NationalCode`, `AtcCode`, `LinkedReferenceMedicineId`) |
 | `StockMovement` (`StockMovements`) | Immutable stock ledger | `Kind`, `QuantityDelta`, `OccurredAt`, `StockEpoch`, `Origin` |
 | `MedicationScheduleHistory` (`MedicationScheduleHistories`) | Versioned schedule | `EffectiveFrom`, legacy dose × frequency, `ScheduleKind`, `SchedulePayload` (JSON) |
-| `MedicationAdministrationSlot` (`MedicationAdministrationSlots`) | Individual daily intakes | `SetId`, `Dose`, `Time?`, `TimingLabel`, `Order` |
+| `MedicationAdministrationSlot` (`MedicationAdministrationSlots`) | Individual daily intakes | `SetId`, `Dose`, `Time?`, `TimingLabel`, `Order`, `IsAsNeeded` (never consumed automatically), `PresetId?` (time-of-day preset, display only) |
 | `MedicationAdministrationSlotSet` (`MedicationAdministrationSlotSets`) | Recorded version of a medicine's slots | `EffectiveFrom`, `RecordedAt`; the current slots are those of the latest recorded set |
 | `StockCount` (`StockCounts`) | Stock-count fact written by `ReconcileStock` (B.1 Phase 2c-2) | `CountDay`, `CountedQuantity`, `TakenToday`, `ThresholdAtCount`, `RecordedAt`, stored outcome (`Correction`, `MaterializesCountDay`, `AdvancesEpoch`, ...) |
 | `LedgerCutoff` (`LedgerCutoff`) | Single row: ledger freeze of a pre-B.1 database | `CutoffDay`, `FrozenAt` |
 | `MedicationSuspension` (`MedicationSuspensions`) | Therapy pause | `StartDate`, `EndDate?` (null = open) |
-| `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity`, `RecordedAt` |
+| `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity`, `RecordedAt`, `IsExtra` (an extra dose on top of the plan, `Taken` only) |
 | `MedicineActivityChange` (`MedicineActivityChanges`) | Dated activation / deactivation (B.1 Phase 2c-2) | `Day`, `Active`, `RecordedAt` |
 | `FactRetraction` (`FactRetractions`) | Tombstone of a retracted fact (B.1 Phase 2d) | `FactId` (unique), `Kind`, `RecordedAt` |
 | `SyncOperation` (`SyncOperations`) | Local operation log for sync (B.1 Phase 3a); empty while sync is disabled. From Phase 3b it also records the operations applied from other devices | HLC (`HlcPhysicalMs`, `HlcCounter`, `DeviceId`), `Generation`, `Type`, `SchemaVersion`, `MedicineId`, `Payload` (JSON), `SegmentSeq?` |
@@ -196,6 +196,8 @@ is used.
 | `Deadline` (`Deadlines`) | Administrative deadline: therapeutic plan, exemption renewal, check-up (replicated, one register per deadline) | `MedicineId?`, `Kind`, `Label?`, `DueOn`, `LeadDays`, `RepeatMonths?`, `Channels`, `DoneOn?` |
 | `DeadlineReminderEvent` (`DeadlineReminderEvents`) | Deadline reminder, device-local dedup | unique `(DeadlineId, DueOn)` |
 | `ShortageNoticeEvent` (`ShortageNoticeEvents`) | Shortage notice shown, device-local dedup | unique `(MedicineId, Code, Start)` |
+| `DoseTimePreset` (`DoseTimePresets`) | Time-of-day preset ("In the morning" = 08:00), device-local, display only; built-ins live in code, rows hold the user's changes and additions | `BuiltInKey?`, `Label?`, `Time?`, `IsAsNeeded`, `Order`, `IsHidden` |
+| `DoseTimeDefault` (`DoseTimeDefaults`) | Times of the doses of a medicine without slots, by administrations per day (1 to 4), device-local, display only | `AdministrationsPerDay` (key), `Times` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
 `Consumption`, `PositiveCorrection`, `NegativeCorrection`.
@@ -235,7 +237,9 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   zero. Never stored.
 - **`DailyConsumption`** — daily rate for a given day, resolved in
   this order:
-  1. if the medicine has administration slots: sum of slot doses;
+  1. if the medicine has administration slots: sum of the doses of the
+     slots that are not as-needed (0 when every slot is as-needed: the
+     medicine behaves as PRN);
   2. otherwise the `MedicationScheduleHistory` entry with the latest
      `EffectiveFrom <= day`, dispatched through `ScheduleCodec` to a
      `Schedule` shape: `FixedDaily`, `Weekly`, `Cyclic`, `Tapering`,
@@ -246,6 +250,16 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
 - **`RunOutForecast`** — days remaining and run-out date; `null` when
   suspended today or when the rate is zero; `(0, today)` when stock is
   zero.
+- **`IntradayConsumption`** — today's doses whose time of day has passed
+  (slot time, else the time of its preset, else the default times of a
+  medicine without slots; as-needed slots and doses without a time
+  never count; zero when an intake or a count already booked today).
+  A read-side estimate: the main list shows the ledger stock minus it
+  and counts the days left from that value, while the run-out date, the
+  coverage plan, the low-stock monitor and the recorded stock keep the
+  start-of-day stock. The count dialog suggests the same quantity as
+  taken today
+  ([`analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`](analysis/ANALYSIS-INTRADAY-CONSUMPTION.md)).
 - **`NotificationCycle`** — decides whether a low-stock warning is
   due and at which stage: inside `ThresholdDays`, not suppressed by
   `EndDate` (therapy ending before run-out), and no successful
@@ -286,7 +300,21 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   automatic consumption up to **yesterday** on days with no intake of
   any status, when the medicine is active on that day (activity
   history), in the therapy window and not suspended. `RegisterIntake`
-  and `ReconcileStock` synchronize their medicine at once.
+  and `ReconcileStock` synchronize their medicine at once. An extra
+  intake (`IsExtra`) books its quantity and is otherwise ignored: it
+  never handles its day for automatic consumption, the frozen-day
+  reversal or a count-day materialization.
+- Switching a medicine to `Prn` (`ChangeMedicationSchedule`) records an
+  empty slot set from the same day, since slots take precedence over
+  the schedule.
+- One-time data migrations that need Application logic are marked by
+  the schema patch, or by an archive import, in `PendingDataMigrations`
+  and run by `ConsumptionCatchUp` before it derives:
+  `AsNeededSlotBackfill` (slots described "As needed" in any language
+  become as-needed from today, through a new slot set with
+  deterministic ids, so past days and recorded counts do not change)
+  and `SlotPresetBackfill` (existing slots are linked to their built-in
+  preset in place).
 - The first intake recorded for a day carrying `Legacy` consumption
   reverses it with a `PositiveCorrection`; on a derived day the
   automatic row is simply no longer produced. `StockEpoch` is not
@@ -677,7 +705,13 @@ start:
    then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);
-   then `SyncPeers` (B.1 Phase 3c).
+   then `SyncPeers` (B.1 Phase 3c); then `PendingDataMigrations`,
+   `MedicationAdministrationSlots.IsAsNeeded` and
+   `MedicationIntakes.IsExtra` (as-needed doses, default 0; adding the
+   slot column marks `AsNeededSlots` pending); then `DoseTimePresets`,
+   `DoseTimeDefaults` and `MedicationAdministrationSlots.PresetId`
+   (time-of-day presets; adding the column marks `SlotPresets`
+   pending).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.

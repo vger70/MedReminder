@@ -95,7 +95,9 @@ installes depuis le paquet MSI, la fenêtre d'autorisation indique
   une case pour n'afficher que ces médicaments ; un second clic les
   affiche tous.
 - **Liste des médicaments** au centre : une ligne par médicament, avec
-  le stock, les jours restants et la date estimée de fin de stock. La
+  le stock, les jours restants et la date estimée de fin de stock.
+  Pendant la journée, le stock et les jours restants déduisent déjà
+  les doses du jour dont l'heure est passée ([détails](#stock-estimate)). La
   colonne **État** montre l'état avec une étiquette colorée. Le clic
   droit sur une ligne propose les commandes pour ce médicament
   (modifier, enregistrer une prise, ajouter une boîte…) ; double-clic
@@ -116,6 +118,8 @@ quitter, fais un clic droit sur l'icône et choisis **Quitter**.
 | Changer la dose ou la fréquence | **Traitement → Changer dose/fréquence…** |
 | Enregistrer une boîte achetée | **Stock → Ajouter boîte…** ou **Stock → Réapprovisionner par code-barres…** |
 | Aligner le stock sur ce que j'ai vraiment | **Stock → Compter le stock…** |
+| Enregistrer une dose prise au besoin | **Traitement → Enregistrer prise…** (option *Dose supplémentaire au besoin* si le médicament a aussi des doses prévues) |
+| Changer l'heure de « Le matin », « Avant le déjeuner »… | **Traitement → Heures des prises…** |
 | Annuler une saisie erronée | **Stock → Historique…** |
 | Imprimer le traitement pour un médecin | **Traitement → Fiche de traitement…** |
 | Demander une ordonnance | **Traitement → Demander une ordonnance…** |
@@ -370,6 +374,7 @@ pharmacien, et demande l'ordonnance à temps.
 MedReminder diminue le stock tout seul chaque jour selon le schéma. Tu
 n'enregistres que ce qui modifie le stock autrement.
 
+<a id="stock-estimate"></a>
 Pendant la journée, la colonne du stock affiche une estimation : le
 stock en début de journée moins les doses du jour dont l'heure est
 passée. Les horaires sans heure prennent l'heure de leur moment
@@ -428,8 +433,9 @@ l'application corriger :
 2. Saisis la **Quantité comptée**. La fenêtre affiche le stock attendu,
    l'écart et l'effet sur la date de fin.
 3. Dans **Déjà pris aujourd'hui**, indique ce que tu avais déjà pris
-   aujourd'hui au moment du comptage (l'application propose les doses
-   dont l'heure est passée).
+   aujourd'hui au moment du comptage. L'application propose les doses
+   dont l'heure est passée, celles que la liste a déjà déduites du
+   stock ; les horaires sans heure prennent l'heure de leur moment.
 4. Clique sur **Enregistrer le comptage**.
 
 L'application enregistre une correction pour que le stock soit égal à
@@ -627,6 +633,9 @@ générique.
   médicament passe sous son **seuil d'alerte**, il te prévient **une
   fois**, par les canaux choisis pour ce médicament : une notification
   Windows et/ou un e-mail.
+  La vérification utilise le stock enregistré, pas l'estimation de la
+  liste : le jour où le seuil est franchi, la liste peut afficher
+  l'état d'alerte quelques heures avant l'avertissement.
 - Si aucune nouvelle boîte n'a été ajoutée quand les jours restants
   atteignent **la moitié du seuil**, un **deuxième rappel** suit par les
   mêmes canaux (avec un seuil de 10 jours : première alerte à 10 jours,

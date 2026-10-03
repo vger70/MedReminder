@@ -87,7 +87,9 @@ choice. If you install from the MSI package, the permission window says
   low*, *Suspended*, and all of them. Click a box to show only those
   medicines; click it again to show all.
 - **Medicine list** in the middle: one row per medicine, with the stock,
-  the days remaining and the estimated run-out date. The **Status**
+  the days remaining and the estimated run-out date. During the day the
+  stock and the days remaining already leave out today's doses whose
+  time has passed ([details](#stock-estimate)). The **Status**
   column shows the state as a coloured label. Right-click a row for the
   commands on that medicine (edit, register intake, add package…);
   double-click or **F2** edits it.
@@ -107,6 +109,8 @@ right-click the icon and choose **Exit**.
 | Change dose or frequency | **Therapy → Change dose/frequency…** |
 | Record a purchased package | **Stock → Add package…** or **Stock → Restock from barcode…** |
 | Fix the stock to what I really have | **Stock → Count stock…** |
+| Record a dose taken as needed | **Therapy → Register intake…** (option *Extra dose as needed* when the medicine also has scheduled doses) |
+| Change the time of "In the morning", "Before lunch"… | **Therapy → Dose times…** |
 | Undo a mistaken entry | **Stock → History…** |
 | Print the therapy for a doctor | **Therapy → Therapy report…** |
 | Ask for a prescription | **Therapy → Request prescription…** |
@@ -340,6 +344,7 @@ request the prescription in good time.
 MedReminder lowers the stock by itself every day according to the
 schedule. You only record what changes the stock in another way.
 
+<a id="stock-estimate"></a>
 During the day the stock column shows an estimate: the stock at the
 start of the day minus today's doses whose time has passed. Slots
 without a time use the time of their moment (**Therapy → Dose
@@ -395,7 +400,9 @@ the app fix it:
 2. Type the **Counted quantity**. The window shows the expected stock,
    the difference and how the run-out date changes.
 3. In **Already taken today**, enter what you had already taken today
-   when you counted (the app suggests the doses whose time has passed).
+   when you counted. The app suggests the doses whose time has passed,
+   the same ones the list already left out of the stock; slots without
+   a time use the time of their moment.
 4. Click **Record count**.
 
 The app records one correction so that the stock equals what you
@@ -575,6 +582,9 @@ Each low-stock email also carries the run-out date as a calendar file
   falls below its **warning threshold**, it warns you **once**, through
   the channels chosen for that medicine: a Windows notification and/or
   an email.
+  The check uses the recorded stock, not the list's estimate: on the
+  day the threshold is crossed, the list can show *Running low* a few
+  hours before the warning.
 - If no new package has been added when the days left reach **half of
   the threshold**, a **second reminder** follows on the same channels
   (with a threshold of 10 days: first warning at 10 days, second at 5).
