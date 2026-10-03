@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #178 — Count the days left from the stock shown in the list
+
+Link: [vger70/MedReminder#178](https://github.com/vger70/MedReminder/pull/178)
+Branch: `feature/days-left-from-shown-stock` → `main`
+
+### Fixed
+
+- The days left in the main list now follow the stock shown: once a
+  dose time has passed they count the days fully covered after it.
+  They used to come from the start-of-day stock, so after the morning
+  dose 100 tablets at one a day still read 101 days. The run-out date
+  and the status rules are unchanged; the status uses the days shown
+  (`MedicineOverviewLoader`).
+
+---
+
 ## PR #177 — Stock that follows the dose times; as-needed doses never consumed automatically
 
 **Status:** merged (2026-10-03)
