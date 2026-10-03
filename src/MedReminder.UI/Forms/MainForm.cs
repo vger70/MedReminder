@@ -6,6 +6,7 @@ using MedReminder.Application.Catalogue;
 using MedReminder.Application.Coverage;
 using MedReminder.Application.Deadlines;
 using MedReminder.Application.Donations;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Notifications;
@@ -375,6 +376,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RegisterIntake"),
             Mdl2Glyph.Glyphs.CheckMark, Keys.Control | Keys.I,
             async () => await ShowRegisterIntakeAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.DoseTimes"),
+            Mdl2Glyph.Glyphs.History, Keys.None,
+            async () => await ShowDoseTimesAsync()));
         therapyMenu.DropDownItems.Add(new ToolStripSeparator());
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Report"),
             Mdl2Glyph.Glyphs.Document, Keys.Control | Keys.P,
@@ -1953,13 +1957,50 @@ internal sealed class MainForm : MedReminderFormBase
         return await query.GetByNationalCodeAsync(country, nationalCode, cancellationToken);
     }
 
+    // Time-of-day presets of the profile for the slot dialog; the
+    // built-ins when they cannot be read (display only).
+    private async Task<DoseTimeSettings> LoadDoseTimesAsync()
+    {
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<DoseTimeSettingsQuery>()
+                .LoadAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Dose time presets could not be read; using the built-in ones.");
+            return DoseTimeSettings.BuiltIn;
+        }
+    }
+
+    // Therapy → Dose times… (ANALYSIS-INTRADAY-CONSUMPTION.md §6).
+    private async Task ShowDoseTimesAsync()
+    {
+        using var dialog = new DoseTimesDialog(await LoadDoseTimesAsync(), _loc);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<SaveDoseTimeSettings>()
+                .ExecuteAsync(dialog.Result, CancellationToken.None);
+            _log.LogInformation("Dose time presets saved.");
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.DoseTimesDialog.Error.Save"), ex);
+        }
+    }
+
     private async Task ShowNewMedicineAsync(ReferenceMedicine? initialReference = null)
     {
         using var dialog = new MedicineEditDialog(
             MedicineEditDialog.EditMode.Create, _loc,
             catalogueContext: BuildCatalogueContext(),
             barcodeContext: BuildBarcodeScanContext(),
-            initialReference: initialReference);
+            initialReference: initialReference,
+            doseTimes: await LoadDoseTimesAsync());
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -1992,7 +2033,7 @@ internal sealed class MainForm : MedReminderFormBase
 
             var slots = await slotRepo.ListForMedicineAsync(row.Id, CancellationToken.None);
             IReadOnlyList<AdministrationSlotEntry> seedSlots =
-                [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel, s.IsAsNeeded))];
+                [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel, s.IsAsNeeded, s.PresetId))];
 
             // Reconstruct the therapy's current schedule from the most
             // recent history entry, so the edit dialog opens
@@ -2037,7 +2078,8 @@ internal sealed class MainForm : MedReminderFormBase
             MedicineEditDialog.EditMode.Edit, _loc, seed,
             catalogueContext: BuildCatalogueContext(),
             currentStock: row.CurrentStock,
-            barcodeContext: BuildBarcodeScanContext());
+            barcodeContext: BuildBarcodeScanContext(),
+            doseTimes: await LoadDoseTimesAsync());
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try

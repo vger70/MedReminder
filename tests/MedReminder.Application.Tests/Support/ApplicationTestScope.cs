@@ -40,6 +40,7 @@ internal sealed class ApplicationTestScope
     public InMemoryFactRetractionRepository Retractions { get; } = new();
     public InMemoryUnitOfWork Uow { get; } = new();
     public InMemoryPendingDataMigrations PendingMigrations { get; } = new();
+    public InMemoryDoseTimePresetRepository DoseTimePresets { get; } = new();
     public InMemorySyncSettingsStore SyncSettingsStore { get; } = new();
     public InMemorySyncOperationRepository SyncOperations { get; } = new();
     public InMemorySyncFieldVersionRepository SyncVersions { get; } = new();
@@ -67,6 +68,7 @@ internal sealed class ApplicationTestScope
     public FactHistoryQuery FactHistory { get; }
     public RetractFact RetractFact { get; }
     public AsNeededSlotBackfill AsNeededBackfill { get; }
+    public SlotPresetBackfill PresetBackfill { get; }
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
     public ApplyRemoteOperations ApplyRemote { get; }
@@ -113,7 +115,8 @@ internal sealed class ApplicationTestScope
 
         AsNeededBackfill = new AsNeededSlotBackfill(
             PendingMigrations, Medicines, Schedules, Slots, Operations, Uow, Clock);
-        ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow, AsNeededBackfill);
+        PresetBackfill = new SlotPresetBackfill(PendingMigrations, Medicines, Slots, Uow);
+        ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow, AsNeededBackfill, PresetBackfill);
         ReconcileStock = new ReconcileStock(
             Medicines, Schedules, Suspensions, Slots, Counts, Ledger, Operations, Uow, Clock);
 

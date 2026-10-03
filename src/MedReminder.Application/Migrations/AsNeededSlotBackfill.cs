@@ -93,6 +93,7 @@ public sealed class AsNeededSlotBackfill
                         TimingLabel = x.Slot.TimingLabel,
                         Order = x.Slot.Order,
                         IsAsNeeded = x.AsNeeded,
+                        PresetId = x.Slot.PresetId,
                     })
                     .ToList();
             }
@@ -125,6 +126,7 @@ public sealed class AsNeededSlotBackfill
                     TimingLabel = s.TimingLabel,
                     Order = s.Order,
                     IsAsNeeded = s.IsAsNeeded,
+                    PresetId = s.PresetId,
                 })
                 .ToList();
             await _slots.AddSetAsync(set, slots, cancellationToken);

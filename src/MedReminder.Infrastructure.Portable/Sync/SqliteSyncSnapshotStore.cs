@@ -53,6 +53,9 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
         @"DELETE FROM ""PrescriptionReminderEvents"";",
         @"DELETE FROM ""DeadlineReminderEvents"";",
         @"DELETE FROM ""ShortageNoticeEvents"";",
+        // Device-local time-of-day presets (DoseTimePreset).
+        @"DELETE FROM ""DoseTimePresets"";",
+        @"DELETE FROM ""DoseTimeDefaults"";",
         @"DELETE FROM ""SyncConflicts"" WHERE ""Kind"" IN (4, 5, 6);",
         @"DELETE FROM ""SyncPeers"";",
         @"DELETE FROM ""reference_medicine_ingredients"";",

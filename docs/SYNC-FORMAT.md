@@ -288,7 +288,7 @@ nothing.
 | `MedicineFieldChanged` | `field`, `value`, `baseVersion` | last writer wins per field |
 | `MedicineActivityChanged` | `changeId`, `day`, `active`, `recordedAt` | dated fact; the current value is the latest by timestamp |
 | `ScheduleRowRecorded` | `rowId`, `effectiveFrom`, `dosePerAdministration`, `administrationsPerDay`, `scheduleKind`, `schedulePayload`, `recordedAt`, `baseVersion` | fact; the latest row of a date wins |
-| `SlotSetRecorded` (version 9 when a slot has `isAsNeeded` true) | `setId`, `effectiveFrom`, `recordedAt`, `slots[]` (`slotId`, `dose`, `time`, `timingLabel`, `order`, `isAsNeeded` (from version 9; absent = false)), `baseVersion` | fact; the latest set in force applies; an as-needed slot is never consumed automatically |
+| `SlotSetRecorded` (version 9 when a slot has `isAsNeeded` true) | `setId`, `effectiveFrom`, `recordedAt`, `slots[]` (`slotId`, `dose`, `time`, `timingLabel`, `order`, `isAsNeeded` (from version 9; absent = false), `presetId` (display only, any version; absent = null)), `baseVersion` | fact; the latest set in force applies; an as-needed slot is never consumed automatically |
 | `StockEntryRecorded` | `movementId`, `kind`, `quantityDelta`, `occurredAt`, `notes` | fact |
 | `IntakeRecorded` (version 9 when `isExtra` is true) | `intakeId`, `day`, `status`, `quantity`, `scheduledAt`, `actualAt`, `notes`, `recordedAt`, `isExtra` (from version 9; absent = false) | fact; an extra intake books its quantity and leaves the day's automatic consumption in place |
 | `StockCountRecorded` | `countId`, `countDay`, `countedQuantity`, `takenToday`, `thresholdAtCount`, `recordedAt`, `notes`, stored outcome | fact; its outcome is evaluated again on the facts recorded before it |

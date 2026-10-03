@@ -50,6 +50,11 @@ public sealed class MedicationAdministrationSlot
     // false.
     public bool IsAsNeeded { get; init; }
 
+    // Time-of-day preset the description was picked from (DoseTimePreset
+    // id), used to place a slot without Time in the day. Display only.
+    // Null for a typed description and for rows written before presets.
+    public Guid? PresetId { get; set; }
+
     // Display order: the UI shows slots ordered by
     // (Time NULLS LAST, Order), so entries "without time" stay at the
     // end or in the order chosen by the user.

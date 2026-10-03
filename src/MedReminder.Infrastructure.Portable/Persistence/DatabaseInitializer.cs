@@ -350,6 +350,30 @@ public sealed class DatabaseInitializer
         }
         await AddColumnIfMissingAsync(
             "MedicationIntakes", "IsExtra", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
+
+        // Time-of-day presets (ANALYSIS-INTRADAY-CONSUMPTION.md §6),
+        // device-local. Existing slots get their preset from their
+        // description once (SlotPresetBackfill).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""DoseTimePresets"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_DoseTimePresets"" PRIMARY KEY,
+                ""BuiltInKey"" TEXT NULL,
+                ""Label"" TEXT NULL,
+                ""Time"" TEXT NULL,
+                ""IsAsNeeded"" INTEGER NOT NULL,
+                ""Order"" INTEGER NOT NULL,
+                ""IsHidden"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""DoseTimeDefaults"" (
+                ""AdministrationsPerDay"" INTEGER NOT NULL CONSTRAINT ""PK_DoseTimeDefaults"" PRIMARY KEY,
+                ""Times"" TEXT NOT NULL
+            );", cancellationToken);
+        if (await AddColumnIfMissingAsync("MedicationAdministrationSlots", "PresetId", "TEXT NULL", cancellationToken))
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                PendingDataMigrations.MarkPendingSql, [SlotPresetBackfill.MigrationName], cancellationToken);
+        }
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the

@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #177 — Stop consuming as-needed doses automatically (intraday stock, phase 1)
+## PR #177 — Stop consuming as-needed doses automatically; time-of-day presets
 
 Link: [vger70/MedReminder#177](https://github.com/vger70/MedReminder/pull/177)
 Branch: `feature/intraday-consumption` → `main`
@@ -77,6 +77,14 @@ Branch: `feature/intraday-consumption` → `main`
   with operation schema version 9, and the database image goes to
   schema version 7, so an older device stops instead of misreading
   them. The archive carries both flags as additive fields.
+- Time-of-day presets: **Therapy → Dose times…** sets the time of each
+  moment ("In the morning" = 08:00, "Before lunch" = 13:00, …), hides
+  unused ones, adds the user's own, and sets the times of medicines
+  without slots (1 to 4 a day). A slot picked from a preset keeps a
+  reference to it (`PresetId`); existing slots are linked once from
+  their description in any UI language (`SlotPresetBackfill`). Display
+  only and device-local: the times never change stored stock and are
+  not synchronized; the archive carries them as additive fields.
 
 ---
 

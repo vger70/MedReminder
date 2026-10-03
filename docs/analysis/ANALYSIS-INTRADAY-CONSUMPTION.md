@@ -411,7 +411,10 @@ declared intended use]`
 
 ## 12. Implementation phases
 
-Status: phase 1 implemented. The backfill runs from `ConsumptionCatchUp`
+Status: phases 1 and 2 implemented. Phase 2 deviates from §9 in one
+point: the presets have their own window (Therapy → Dose times…)
+instead of a page of the settings dialog. Built-in presets live in code
+and the table stores only the user's changes and additions. The backfill runs from `ConsumptionCatchUp`
 while the `PendingDataMigrations` marker set by the schema patch (or by
 an archive import) is present; imported archives are marked too, since
 they may predate the flag.

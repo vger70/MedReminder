@@ -185,6 +185,16 @@ mit der Beschreibung „Bei Bedarf“ ab diesem Tag als Bedarfsdosen. Vorher
 wurden sie täglich abgezogen: Ist der angezeigte Bestand niedriger als
 der tatsächliche, mach eine [Zählung](#count), um ihn anzugleichen.
 
+**Therapie → Einnahmezeiten…** listet die Zeitpunkte des Tages mit
+ihrer Uhrzeit („Morgens“ = 08:00, „Vor dem Mittagessen“ = 13:00, …) und
+die Uhrzeiten für Medikamente ohne Einnahmezeiten (1 pro Tag = 08:00,
+2 pro Tag = 08:00 und 20:00, …). Du kannst die Uhrzeiten ändern, nicht
+genutzte Zeitpunkte ausblenden und eigene hinzufügen; im Fenster der
+Einnahmezeit zeigt die Wahl eines Zeitpunkts seine Uhrzeit. Diese
+Uhrzeiten legen die Dosen nur in den Tag und ändern nie den erfassten
+Bestand. Sie gelten für diesen Computer: sie werden nicht
+synchronisiert.
+
 <a id="regimens"></a>
 ### Komplexe Schemata
 

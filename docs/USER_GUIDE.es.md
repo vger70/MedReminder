@@ -181,6 +181,15 @@ Desde la versión que introdujo esta opción, los horarios descritos como
 descontaban cada día: si el stock mostrado es menor que el real, haz un
 [recuento](#count) para realinearlo.
 
+**Terapia → Horarios de las dosis…** muestra los momentos del día con
+su hora ("Por la mañana" = 08:00, "Antes de comer" = 13:00, …) y las
+horas usadas para los medicamentos sin horarios (1 al día = 08:00, 2
+al día = 08:00 y 20:00, …). Puedes cambiar las horas, ocultar los
+momentos que no usas y añadir los tuyos; en la ventana del horario, al
+elegir un momento ves su hora. Estas horas solo sitúan las dosis en el
+día y nunca cambian el stock registrado. Valen para este ordenador: no
+se sincronizan.
+
 <a id="regimens"></a>
 ### Regímenes complejos
 

@@ -44,6 +44,12 @@ public sealed class ExportPayload
     // field of schema version 2: archives without it import with none.
     public IList<ExportedDeadline> Deadlines { get; set; } = new List<ExportedDeadline>();
 
+    // Time-of-day presets and per-day default times
+    // (ANALYSIS-INTRADAY-CONSUMPTION.md §6). Additive fields of schema
+    // version 2: archives without them import with the built-ins.
+    public IList<ExportedDoseTimePreset> DoseTimePresets { get; set; } = new List<ExportedDoseTimePreset>();
+    public IList<ExportedDoseTimeDefault> DoseTimeDefaults { get; set; } = new List<ExportedDoseTimeDefault>();
+
     // Per-profile notification settings (§3.2). Travels implicitly
     // with the profile.
     public ExportedNotificationSettings? NotificationSettings { get; set; }
@@ -142,6 +148,9 @@ public sealed class ExportedAdministrationSlot
     // Additive field (docs/EXPORT-FORMAT.md §5): archives without it
     // import with false.
     public bool IsAsNeeded { get; set; }
+
+    // Additive field: archives without it import with null.
+    public Guid? PresetId { get; set; }
 }
 
 public sealed class ExportedAdministrationSlotSet
@@ -314,6 +323,24 @@ public sealed class ExportedPrescription
     public DateOnly? CollectedOn { get; set; }
     public DateTimeOffset RecordedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public sealed class ExportedDoseTimePreset
+{
+    public Guid Id { get; set; }
+    public string? BuiltInKey { get; set; }
+    public string? Label { get; set; }
+    public TimeOnly? Time { get; set; }
+    public bool IsAsNeeded { get; set; }
+    public int Order { get; set; }
+    public bool IsHidden { get; set; }
+}
+
+public sealed class ExportedDoseTimeDefault
+{
+    public int AdministrationsPerDay { get; set; }
+    // "HH:mm" values separated by ';'.
+    public string Times { get; set; } = string.Empty;
 }
 
 public sealed class ExportedDeadline

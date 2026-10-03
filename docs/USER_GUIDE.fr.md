@@ -185,6 +185,16 @@ Depuis la version qui a introduit cette option, les horaires décrits
 étaient déduits chaque jour : si le stock affiché est inférieur au stock
 réel, fais un [comptage](#count) pour le réaligner.
 
+**Traitement → Heures des prises…** liste les moments de la journée
+avec leur heure (« Le matin » = 08:00, « Avant le déjeuner » = 13:00, …)
+et les heures utilisées pour les médicaments sans horaires (1 par jour
+= 08:00, 2 par jour = 08:00 et 20:00, …). Tu peux changer les heures,
+masquer les moments que tu n'utilises pas et ajouter les tiens ; dans
+la fenêtre de l'horaire, choisir un moment affiche son heure. Ces
+heures servent seulement à placer les doses dans la journée et ne
+modifient jamais le stock enregistré. Elles valent pour cet
+ordinateur : elles ne sont pas synchronisées.
+
 <a id="regimens"></a>
 ### Schémas complexes
 

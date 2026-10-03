@@ -78,9 +78,11 @@ public sealed record SlotSetRecorded(
 // IsAsNeeded (operation schema version 9, docs/analysis/
 // ANALYSIS-INTRADAY-CONSUMPTION.md §5.3): a set carrying an as-needed
 // slot is written with version 9, so an older device stops at it
-// instead of consuming that slot every day.
+// instead of consuming that slot every day. PresetId is display only
+// (§6): an older device may ignore it, so it needs no version.
 public sealed record SlotValue(
-    Guid SlotId, decimal Dose, TimeOnly? Time, string? TimingLabel, int Order, bool IsAsNeeded = false);
+    Guid SlotId, decimal Dose, TimeOnly? Time, string? TimingLabel, int Order, bool IsAsNeeded = false,
+    Guid? PresetId = null);
 
 // A user stock entry: InitialLoad, NewPackage, ManualAdd,
 // PositiveCorrection (AddStock) or NegativeCorrection (AdjustStockDown).

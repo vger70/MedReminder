@@ -39,12 +39,14 @@ internal static class ProfileDatabaseBuilder
         // omit newer columns, which take their defaults (§4.3).
         await db.Database.EnsureCreatedAsync(cancellationToken);
 
-        // The archive may come from a version before the as-needed flag:
-        // its slots are corrected from today on first use
-        // (AsNeededSlotBackfill, idempotent).
+        // The archive may come from a version before the as-needed flag
+        // and the presets: its slots are corrected on first use
+        // (AsNeededSlotBackfill, SlotPresetBackfill, both idempotent).
         await db.Database.ExecuteSqlRawAsync(PendingDataMigrations.CreateTableSql, cancellationToken);
         await db.Database.ExecuteSqlRawAsync(
             PendingDataMigrations.MarkPendingSql, [AsNeededSlotBackfill.MigrationName], cancellationToken);
+        await db.Database.ExecuteSqlRawAsync(
+            PendingDataMigrations.MarkPendingSql, [SlotPresetBackfill.MigrationName], cancellationToken);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
@@ -66,6 +68,8 @@ internal static class ProfileDatabaseBuilder
         db.StockCounts.AddRange(payload.StockCounts.Select(ExportMapper.ToEntity));
         db.Prescriptions.AddRange((payload.Prescriptions ?? []).Select(ExportMapper.ToEntity));
         db.Deadlines.AddRange((payload.Deadlines ?? []).Select(ExportMapper.ToEntity));
+        db.DoseTimePresets.AddRange((payload.DoseTimePresets ?? []).Select(ExportMapper.ToEntity));
+        db.DoseTimeDefaults.AddRange((payload.DoseTimeDefaults ?? []).Select(ExportMapper.ToEntity));
         if (payload.LedgerCutoff is not null)
         {
             db.LedgerCutoffs.Add(ExportMapper.ToEntity(payload.LedgerCutoff));

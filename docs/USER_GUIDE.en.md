@@ -172,6 +172,14 @@ needed" are treated as as-needed from that day on. Before, they were
 deducted every day: if the stock shown is lower than the real one, do a
 [count](#count) to realign it.
 
+**Therapy → Dose times…** lists the moments of the day with their time
+("In the morning" = 08:00, "Before lunch" = 13:00, …) and the times
+used for medicines without slots (1 a day = 08:00, 2 a day = 08:00 and
+20:00, …). You can change the times, hide the moments you do not use
+and add your own; in the slot window, picking a moment shows its time.
+These times only place doses in the day and never change the stock
+recorded. They apply to this computer: they are not synchronized.
+
 <a id="regimens"></a>
 ### Complex regimens
 

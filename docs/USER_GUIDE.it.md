@@ -180,6 +180,15 @@ come "Al bisogno" vengono considerati al bisogno da quel giorno in poi.
 Prima venivano scalati ogni giorno: se la scorta mostrata è più bassa di
 quella reale, fai un [conteggio](#count) per riallinearla.
 
+**Terapia → Orari delle dosi…** elenca i momenti della giornata con il
+loro orario ("Al mattino" = 08:00, "Prima di pranzo" = 13:00, …) e gli
+orari usati per le medicine senza orari (1 al giorno = 08:00, 2 al
+giorno = 08:00 e 20:00, …). Puoi cambiare gli orari, nascondere i
+momenti che non usi e aggiungerne di tuoi; nella finestra dell'orario,
+scegliendo un momento vedi il suo orario. Questi orari servono solo a
+collocare le dosi nella giornata e non cambiano mai la scorta
+registrata. Valgono per questo computer: non vengono sincronizzati.
+
 <a id="regimens"></a>
 ### Regimi complessi
 

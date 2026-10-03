@@ -128,6 +128,7 @@ internal static class ExportMapper
         TimingLabel = s.TimingLabel,
         Order = s.Order,
         IsAsNeeded = s.IsAsNeeded,
+        PresetId = s.PresetId,
     };
 
     // SetId is resolved by ExportPayloadUpgrader before mapping; a
@@ -142,6 +143,7 @@ internal static class ExportMapper
         TimingLabel = d.TimingLabel,
         Order = d.Order,
         IsAsNeeded = d.IsAsNeeded,
+        PresetId = d.PresetId,
     };
 
     public static ExportedAdministrationSlotSet ToDto(MedicationAdministrationSlotSet s) => new()
@@ -317,6 +319,40 @@ internal static class ExportMapper
         CollectedOn = d.CollectedOn,
         RecordedAt = d.RecordedAt,
         UpdatedAt = d.UpdatedAt,
+    };
+
+    public static ExportedDoseTimePreset ToDto(DoseTimePreset p) => new()
+    {
+        Id = p.Id,
+        BuiltInKey = p.BuiltInKey,
+        Label = p.Label,
+        Time = p.Time,
+        IsAsNeeded = p.IsAsNeeded,
+        Order = p.Order,
+        IsHidden = p.IsHidden,
+    };
+
+    public static DoseTimePreset ToEntity(ExportedDoseTimePreset d) => new()
+    {
+        Id = d.Id,
+        BuiltInKey = d.BuiltInKey,
+        Label = d.Label,
+        Time = d.Time,
+        IsAsNeeded = d.IsAsNeeded,
+        Order = d.Order,
+        IsHidden = d.IsHidden,
+    };
+
+    public static ExportedDoseTimeDefault ToDto(DoseTimeDefault d) => new()
+    {
+        AdministrationsPerDay = d.AdministrationsPerDay,
+        Times = d.Times,
+    };
+
+    public static DoseTimeDefault ToEntity(ExportedDoseTimeDefault d) => new()
+    {
+        AdministrationsPerDay = d.AdministrationsPerDay,
+        Times = d.Times,
     };
 
     public static ExportedDeadline ToDto(Deadline d) => new()

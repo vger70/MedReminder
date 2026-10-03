@@ -27,6 +27,10 @@ public interface IMedicationAdministrationSlotRepository
         MedicationAdministrationSlotSet set,
         IReadOnlyList<MedicationAdministrationSlot> slots,
         CancellationToken cancellationToken);
+
+    // Sets the time-of-day preset of existing slots, by slot id
+    // (SlotPresetBackfill). Display only; does not call SaveChangesAsync.
+    Task SetPresetIdsAsync(IReadOnlyDictionary<Guid, Guid> presetBySlot, CancellationToken cancellationToken);
 }
 
 public sealed record AdministrationSlotSetEntry(

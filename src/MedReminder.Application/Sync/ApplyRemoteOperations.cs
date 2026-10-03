@@ -535,6 +535,7 @@ public sealed class ApplyRemoteOperations
                 TimingLabel = s.TimingLabel,
                 Order = s.Order,
                 IsAsNeeded = s.IsAsNeeded,
+                PresetId = s.PresetId,
             })], ct);
         }
         await _registers.RecordAsync(set.MedicineId, set, timestamp, ct);
