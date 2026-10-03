@@ -255,25 +255,18 @@ public sealed class ExportServiceTests : IDisposable
     {
         await SeedAsync();
         var archivePath = NewArchivePath();
-        var export = CreateExportService(new FakeCredentialStore());
-
-        // Snapshot pre-existing scratch dirs (from other concurrent
-        // tests / prior runs) so the assertion only sees what THIS
-        // export leaves behind.
-        var before = Directory
-            .EnumerateDirectories(Path.GetTempPath(), "MedReminder-export-*")
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // A scratch root of this test's own: %TEMP% is shared with the
+        // exports of other test classes running in parallel, whose
+        // in-flight snapshot folders made a diff of %TEMP% fail.
+        var scratchRoot = Directory.CreateDirectory(Path.Combine(_sharedDirectory, "scratch")).FullName;
+        var export = CreateExportService(new FakeCredentialStore(), scratchRoot: scratchRoot);
         try
         {
             await export.ExportAsync(
                 new ExportOptions { DestinationPath = archivePath },
                 Passphrase.ToCharArray(), null, CancellationToken.None);
 
-            // This export's own temp snapshot directory must be gone.
-            var after = Directory
-                .EnumerateDirectories(Path.GetTempPath(), "MedReminder-export-*")
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            after.Except(before).Should().BeEmpty();
+            Directory.EnumerateFileSystemEntries(scratchRoot).Should().BeEmpty();
         }
         finally
         {
@@ -389,7 +382,8 @@ public sealed class ExportServiceTests : IDisposable
     private ExportService CreateExportService(
         ISmtpCredentialStore credentialStore,
         ICurrentProfile? currentProfile = null,
-        IProfileRegistry? profileRegistry = null)
+        IProfileRegistry? profileRegistry = null,
+        string? scratchRoot = null)
     {
         var backupContext = CreateProfileContext();
         var backupService = new BackupService(
@@ -397,7 +391,7 @@ public sealed class ExportServiceTests : IDisposable
             new DatabaseExclusiveAccess());
         return new ExportService(
             currentProfile ?? _profile, backupService, _cipher, credentialStore, TimeProvider.System,
-            NullLogger<ExportService>.Instance, _sharedDirectory, profileRegistry);
+            NullLogger<ExportService>.Instance, _sharedDirectory, profileRegistry, scratchRoot);
     }
 
     private IProfileRegistry TwoProfileRegistry() => new FakeProfileRegistry(
