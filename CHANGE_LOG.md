@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #188 — Give the export snapshot test a scratch folder of its own
+
+Link: [vger70/MedReminder#188](https://github.com/vger70/MedReminder/pull/188)
+
+Branch: `claude/fix-flaky-export-test` → `main`
+
+### Fixed
+
+- `ExportServiceTests.Export_deletes_its_temporary_snapshot` failed intermittently: it diffed `%TEMP%`, where the exports of `ExportImportRoundTripTests`, running in parallel, create their own snapshot folders. The test overload of `ExportService` takes an optional scratch root (the app keeps `%TEMP%`), and the test checks that its own root is empty after the export.
+
+---
+
 ## PR #187 — Add the expiring packages view and document package expiry (package expiry, phase 4)
 
 Link: [vger70/MedReminder#187](https://github.com/vger70/MedReminder/pull/187)
