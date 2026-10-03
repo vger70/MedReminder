@@ -155,6 +155,32 @@ public sealed class ProfileUiSettingsFileTests : IDisposable
     }
 
     [Fact]
+    public void Navigation_width_round_trips_and_keeps_the_placement()
+    {
+        var placement = new MainWindowPlacement(0, 0, 900, 600, false);
+        ProfileUiSettingsFile.WriteMainWindow(_dir, placement);
+
+        ProfileUiSettingsFile.WriteNavigationWidth(_dir, 320);
+
+        ProfileUiSettingsFile.ReadNavigationWidth(_dir).Should().Be(320);
+        ProfileUiSettingsFile.ReadMainWindow(_dir).Should().Be(placement);
+    }
+
+    [Theory]
+    [InlineData("{ }")]
+    [InlineData("{ \"NavigationWidth\": 0 }")]
+    [InlineData("{ \"NavigationWidth\": \"wide\" }")]
+    [InlineData("{ \"NavigationWidth\": {} }")]
+    [InlineData("not json")]
+    public void Missing_or_damaged_navigation_width_reads_as_null(string content)
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, content);
+
+        ProfileUiSettingsFile.ReadNavigationWidth(_dir).Should().BeNull();
+    }
+
+    [Fact]
     public void Writing_over_a_damaged_file_replaces_it()
     {
         Directory.CreateDirectory(_dir);

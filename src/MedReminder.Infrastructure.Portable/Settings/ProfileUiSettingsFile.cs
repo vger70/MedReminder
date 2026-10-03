@@ -9,11 +9,12 @@ namespace MedReminder.Infrastructure.Settings;
 // EVOLUTION-PROPOSALS.md §3.2, docs/analysis/ANALYSIS-UI-MODERNIZATION.md
 // §4.4). Shape:
 //   { "TextSize": "Large", "Appearance": "Dark",
-//     "MainWindow": { "X": 100, "Y": 80, "Width": 1200, "Height": 700, "Maximized": true } }
+//     "MainWindow": { "X": 100, "Y": 80, "Width": 1200, "Height": 700, "Maximized": true },
+//     "NavigationWidth": 300 }
 // Text size and appearance are read once at boot, before the main
 // window is created, so they are not part of the reloadable
-// configuration; the main window placement is written each time the
-// window closes. A missing, unreadable or unknown value reads as the
+// configuration; the main window placement and the width of its
+// navigation pane (at 96 DPI) are written each time the window closes. A missing, unreadable or unknown value reads as the
 // default: a UI preference must never block the app from opening.
 public static class ProfileUiSettingsFile
 {
@@ -22,6 +23,7 @@ public static class ProfileUiSettingsFile
     private const string TextSizeProperty = "TextSize";
     private const string AppearanceProperty = "Appearance";
     private const string MainWindowProperty = "MainWindow";
+    private const string NavigationWidthProperty = "NavigationWidth";
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
     private static readonly JsonNodeOptions NodeOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -57,6 +59,18 @@ public static class ProfileUiSettingsFile
             return null;
         }
     }
+
+    // Null when no width was saved or the saved one is not a positive
+    // number: the pane then keeps its default width.
+    public static int? ReadNavigationWidth(string profileDirectory)
+        => ReadRoot(profileDirectory)?[NavigationWidthProperty] is JsonValue value
+           && value.TryGetValue<int>(out var width)
+           && width > 0
+            ? width
+            : null;
+
+    public static void WriteNavigationWidth(string profileDirectory, int width)
+        => Update(profileDirectory, root => root[NavigationWidthProperty] = width);
 
     public static void WriteTextSize(string profileDirectory, TextSize size)
         => Update(profileDirectory, root => root[TextSizeProperty] = size.ToString());

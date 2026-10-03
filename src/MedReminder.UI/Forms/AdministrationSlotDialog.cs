@@ -33,7 +33,7 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
     {
         _loc = localization;
         _seed = seed;
-        _presets = [.. (doseTimes ?? DoseTimeSettings.BuiltIn).Presets
+        _presets = [.. DoseTimeSettings.ByTimeOfDay((doseTimes ?? DoseTimeSettings.BuiltIn).Presets)
             .Select(p => (p, p.BuiltInKey is { } key
                 ? _loc.Get("Ui.AdministrationSlotDialog.Preset." + key)
                 : p.Label ?? string.Empty))];
