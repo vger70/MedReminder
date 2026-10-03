@@ -30,7 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — Fix the dose times order, slots lost in Advanced mode and the start date not saved
+## PR #179 — Fix the dose times order, slots lost in Advanced mode and the start date not saved
+
+Link: [vger70/MedReminder#179](https://github.com/vger70/MedReminder/pull/179)
 
 Branch: `claude/bug-orari-terapia-a59517` → `main`
 
