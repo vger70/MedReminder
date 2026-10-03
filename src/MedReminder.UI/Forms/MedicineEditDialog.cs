@@ -465,12 +465,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (_channelWindows.Checked) channels |= NotificationChannels.Windows;
         if (_channelEmail.Checked) channels |= NotificationChannels.Email;
 
-        // A5 save-time clamp (ANALYSIS-A5 §5.3): RemindOnDose may be
-        // true only while the checkbox is actually enabled — i.e. a
-        // timed slot exists AND stock > 0. A disabled checkbox always
-        // persists false regardless of any stale seeded value.
-        var remindOnDose = _remindOnDose.Enabled && _remindOnDose.Checked;
-
         // A1: build the Schedule value object when Advanced is
         // selected. Simple mode keeps InitialSchedule = null so
         // AddMedicine constructs FixedDaily from Dose × Admin
@@ -490,6 +484,22 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             }
         }
 
+        // In Advanced mode slots × non-fixed combinations are out of
+        // scope (§3.1): switching to Advanced drops the slots so the
+        // schedule owns the daily rate. A therapy that opened in
+        // Advanced keeps the slots it has (the panel is disabled), so an
+        // unrelated edit does not clear them.
+        var seededAdvanced = _seedSchedule is not null and not FixedDailySchedule;
+        List<AdministrationSlotEntry> slots = initialSchedule is null || seededAdvanced ? [.. _slots] : [];
+
+        // A5 save-time clamp (ANALYSIS-A5 §5.3): RemindOnDose may be
+        // true only while the checkbox is actually enabled — i.e. a
+        // timed slot exists AND stock > 0 — and the saved slots still
+        // hold a timed one. A disabled checkbox always persists false
+        // regardless of any stale seeded value.
+        var remindOnDose = _remindOnDose.Enabled && _remindOnDose.Checked
+            && slots.Any(s => s.Time.HasValue && !s.IsAsNeeded);
+
         Result = new MedicineEditResult(
             Name: _nameBox.InputText.Trim(),
             ActiveIngredient: NullIfBlank(_ingredientBox.InputText),
@@ -506,10 +516,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             NotificationChannels: channels,
             IsActive: _isActiveBox.Checked,
             RemindOnDose: remindOnDose,
-            // In Advanced mode slots × non-fixed combinations are out
-            // of scope (§3.1) — drop the slots so the schedule owns
-            // the daily rate uniquely.
-            Slots: initialSchedule is null ? [.. _slots] : new List<AdministrationSlotEntry>(),
+            Slots: slots,
             NationalCode: _linkedNationalCode,
             AtcCode: _linkedAtcCode,
             LinkedReferenceMedicineId: _linkedReferenceMedicineId,

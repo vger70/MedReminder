@@ -40,15 +40,18 @@ Branch: `claude/bug-orari-terapia-a59517` → `main`
 
 - Therapy → Dose times lists the presets by time of day; presets
   without a time come last (`DoseTimesDialog`).
-- Edit medicine: in Advanced schedule mode the whole slot panel is
-  disabled, not only the list. The add / edit / remove buttons stayed
-  active, and the slots added there were dropped on save, so they were
-  missing when the dialog was opened again (`MedicineEditDialog`).
+- Edit medicine: slots no longer disappear. A therapy that opens in
+  Advanced schedule mode keeps its slots on save (an unrelated edit
+  used to clear them), and in Advanced mode the whole slot panel is
+  disabled, so no slot can be added there and then dropped
+  (`MedicineEditDialog`). RemindOnDose is saved only when the saved
+  slots hold a timed one.
 - Edit medicine: a changed therapy start date is saved. It was shown
-  as editable but `UpdateMedicine` ignored it. The schedule row in
-  force and, for an earlier date, the slot set in force are recorded
-  again from the new date, so the days gained are consumed with the
-  same plan and a cyclic or tapering regime counts from the new date
+  as editable but `UpdateMedicine` ignored it. The initial schedule
+  row is recorded again from the new date when the date moves earlier,
+  or later for a cyclic or tapering plan still in force; a schedule
+  change made after the start is never re-anchored. For an earlier
+  date the slot set in force is copied to cover only the days gained
   (`UpdateMedicine`, `TherapyStartChange`).
 
 ### Changed

@@ -2,6 +2,7 @@ using FluentAssertions;
 using MedReminder.Application.Sync;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Sync;
 using Xunit;
@@ -72,6 +73,59 @@ public class TherapyStartChangeTests
         await MoveStartAsync(_a, id, Start, new DateOnly(2026, 9, 12));
 
         (await StockAsync(_a, id)).Should().Be(30m - 1 * 2m);
+    }
+
+    [Fact]
+    public async Task A_later_start_records_no_row_for_a_fixed_daily_plan()
+    {
+        var id = await SeedAsync();
+
+        await MoveStartAsync(_a, id, Start, new DateOnly(2026, 9, 12));
+
+        (await _a.Schedules.ListForMedicineAsync(id, default)).Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task A_later_start_never_re_anchors_a_change_recorded_after_the_old_start()
+    {
+        var id = await _a.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Prednisone", "compresse", 1m, 1, new DateOnly(2026, 9, 1), 7, NotificationChannels.Windows,
+            InitialQuantity: 100m), default);
+        await _a.ChangeMedicationSchedule.ExecuteAsync(new ChangeMedicationScheduleCommand(
+            id, 4m, 1, new DateOnly(2026, 9, 5), new TaperingSchedule(4m, 1m, 1m, 2)), default);
+        var rows = (await _a.Schedules.ListForMedicineAsync(id, default)).Count;
+
+        await MoveStartAsync(_a, id, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 10));
+
+        (await _a.Schedules.ListForMedicineAsync(id, default)).Should().HaveCount(rows);
+    }
+
+    [Fact]
+    public async Task A_later_start_re_anchors_a_cyclic_initial_plan()
+    {
+        var id = await _a.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Pill", "compresse", 1m, 1, Start, 7, NotificationChannels.Windows,
+            InitialQuantity: 30m, InitialSchedule: new CyclicSchedule(21, 7, 1m)), default);
+
+        await MoveStartAsync(_a, id, Start, new DateOnly(2026, 9, 12));
+
+        (await _a.Schedules.ListForMedicineAsync(id, default)).Select(r => r.EffectiveFrom)
+            .Should().Contain(new DateOnly(2026, 9, 12));
+    }
+
+    [Fact]
+    public async Task The_slot_copy_never_outranks_the_set_it_copies()
+    {
+        IReadOnlyList<AdministrationSlotInput> slots = [new AdministrationSlotInput(3m, new TimeOnly(8, 0), null)];
+        var id = await SeedAsync(slots);
+        var original = (await _a.Slots.ListSetsForMedicineAsync(id, default)).Single().Set;
+
+        await MoveStartAsync(_a, id, Start, new DateOnly(2026, 9, 5), slots);
+
+        var copy = (await _a.Slots.ListSetsForMedicineAsync(id, default)).Single(e => e.Set.Id != original.Id).Set;
+        copy.EffectiveFrom.Should().Be(new DateOnly(2026, 9, 5));
+        copy.RecordedAt.Should().BeBefore(original.RecordedAt);
+        (await _a.Slots.ListForMedicineAsync(id, default)).Select(s => s.SetId).Should().AllBeEquivalentTo(original.Id);
     }
 
     [Fact]

@@ -53,21 +53,7 @@ public static class DailyConsumption
             }
         }
 
-        MedicationScheduleHistory? latest = null;
-        foreach (var entry in scheduleHistory)
-        {
-            if (entry.EffectiveFrom > date) continue;
-            // '>=': of two rows with the same EffectiveFrom the later
-            // one in recording order wins, as in LedgerDeriver
-            // (ANALYSIS-B1-MOBILE-SYNC.md §17). Callers pass rows in
-            // recording order within a date.
-            if (latest is null || entry.EffectiveFrom >= latest.EffectiveFrom)
-            {
-                latest = entry;
-            }
-        }
-
-        if (latest is null) return 0m;
+        if (RowInForce(date, scheduleHistory) is not { } latest) return 0m;
 
         var schedule = ScheduleCodec.Deserialize(
             latest.ScheduleKind,
@@ -75,5 +61,26 @@ public static class DailyConsumption
             latest.DosePerAdministration,
             latest.AdministrationsPerDay);
         return schedule.RateOn(date, latest.EffectiveFrom);
+    }
+
+    // The schedule row in force on `date`: the latest EffectiveFrom on or
+    // before it. '>=': of two rows with the same EffectiveFrom the later
+    // one in recording order wins, as in LedgerDeriver
+    // (ANALYSIS-B1-MOBILE-SYNC.md §17). Callers pass rows in recording
+    // order within a date.
+    public static MedicationScheduleHistory? RowInForce(
+        DateOnly date, IEnumerable<MedicationScheduleHistory> scheduleHistory)
+    {
+        ArgumentNullException.ThrowIfNull(scheduleHistory);
+        MedicationScheduleHistory? latest = null;
+        foreach (var entry in scheduleHistory)
+        {
+            if (entry.EffectiveFrom > date) continue;
+            if (latest is null || entry.EffectiveFrom >= latest.EffectiveFrom)
+            {
+                latest = entry;
+            }
+        }
+        return latest;
     }
 }

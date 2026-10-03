@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
+using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Sync;
 
@@ -9,19 +10,24 @@ namespace MedReminder.Application.UseCases;
 // (UpdateMedicine). Schedule rows and slot sets are facts and stay as
 // they are; new ones are recorded instead, so they replicate like any
 // other row:
-//   - schedule: the row in force on the new start (the earliest row
-//     when the start moves before every row) is recorded again,
-//     effective from the new start. The days gained get a schedule,
-//     and a cyclic or tapering regime counts its days from the new
-//     start. When that row is not the latest recorded, the latest is
-//     recorded again after it, unchanged, so the schedule summary
-//     (the most recently recorded row, on every device) stays the same.
+//   - schedule: the row effective from the old start (the initial
+//     plan) is recorded again, effective from the new start, when the
+//     start moves earlier (the days gained get a schedule) or when it
+//     moves later and the initial plan is still the one in force there
+//     and counts days from its start (cyclic, tapering). A schedule
+//     change recorded after the old start is never re-anchored. When
+//     the copied row is not the latest recorded, the latest is recorded
+//     again after it, unchanged, so the schedule summary (the most
+//     recently recorded row, on every device) stays the same.
 //   - slots: when the start moves earlier, the set in force on the old
-//     start is recorded again, effective from the new start, just after
-//     the original, so every later set keeps its precedence. A set in
-//     force before a start moved later is in force from it.
-// Limit: a cyclic or tapering row effective from the old start, moved
-// earlier, still counts from the old start on the days after it.
+//     start is recorded again, effective from the new start, just
+//     before the original: it covers only the days gained and never
+//     competes with a set recorded after the original. A set in force
+//     before a start moved later is in force from it.
+// Limits: a cyclic or tapering row moved earlier still counts from the
+// old start on the days after it; two devices moving the start at the
+// same time each record their copy, and the losing device's copy stays
+// among the facts.
 internal static class TherapyStartChange
 {
     public static async Task<IReadOnlyList<SyncOperationBody>> RecordAsync(
@@ -35,23 +41,26 @@ internal static class TherapyStartChange
         var start = medicine.StartDate;
         var operations = new List<SyncOperationBody> { new MedicineStartChanged(medicine.Id, start) };
 
-        var rows = await schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
-        if (rows.Count > 0)
+        var rows = (await schedules.ListForMedicineAsync(medicine.Id, cancellationToken))
+            .OrderBy(r => r.EffectiveFrom)
+            .ThenBy(r => r.RecordedAt)
+            .ThenBy(r => r.Id)
+            .ToList();
+        if (DailyConsumption.RowInForce(previousStart, rows) is { } initial
+            && initial.EffectiveFrom == previousStart
+            && (start < previousStart
+                || (CountsFromStart(initial.ScheduleKind) && DailyConsumption.RowInForce(start, rows) == initial)))
         {
-            var source = RowInForce(rows, start) ?? RowInForce(rows, rows.Min(r => r.EffectiveFrom))!;
-            if (source.EffectiveFrom != start)
-            {
-                var anchored = CopyOf(source, start, now);
-                await schedules.AddAsync(anchored, cancellationToken);
-                operations.Add(Operations.ScheduleRow(anchored));
+            var anchored = CopyOf(initial, start, now);
+            await schedules.AddAsync(anchored, cancellationToken);
+            operations.Add(Operations.ScheduleRow(anchored));
 
-                var latest = rows.OrderBy(r => r.RecordedAt).ThenBy(r => r.Id).Last();
-                if (latest.Id != source.Id)
-                {
-                    var summary = CopyOf(latest, latest.EffectiveFrom, now.AddTicks(1));
-                    await schedules.AddAsync(summary, cancellationToken);
-                    operations.Add(Operations.ScheduleRow(summary));
-                }
+            var latest = rows.OrderBy(r => r.RecordedAt).ThenBy(r => r.Id).Last();
+            if (latest.Id != initial.Id)
+            {
+                var summary = CopyOf(latest, latest.EffectiveFrom, now.AddTicks(1));
+                await schedules.AddAsync(summary, cancellationToken);
+                operations.Add(Operations.ScheduleRow(summary));
             }
         }
 
@@ -69,7 +78,7 @@ internal static class TherapyStartChange
                 {
                     MedicineId = medicine.Id,
                     EffectiveFrom = start,
-                    RecordedAt = source.Set.RecordedAt.AddTicks(1),
+                    RecordedAt = source.Set.RecordedAt.AddTicks(-1),
                 };
                 var copied = source.Slots
                     .Select(s => new MedicationAdministrationSlot
@@ -92,16 +101,8 @@ internal static class TherapyStartChange
         return operations;
     }
 
-    // The latest EffectiveFrom on or before `day`, then the latest
-    // recorded, as DailyConsumption.
-    private static MedicationScheduleHistory? RowInForce(
-        IReadOnlyList<MedicationScheduleHistory> rows, DateOnly day)
-        => rows
-            .Where(r => r.EffectiveFrom <= day)
-            .OrderBy(r => r.EffectiveFrom)
-            .ThenBy(r => r.RecordedAt)
-            .ThenBy(r => r.Id)
-            .LastOrDefault();
+    private static bool CountsFromStart(ScheduleKind kind)
+        => kind is ScheduleKind.Cyclic or ScheduleKind.Tapering or ScheduleKind.SteppedTapering;
 
     private static MedicationScheduleHistory CopyOf(
         MedicationScheduleHistory row, DateOnly effectiveFrom, DateTimeOffset recordedAt)
