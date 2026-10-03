@@ -68,6 +68,7 @@ internal static class ProfileDatabaseBuilder
         db.StockCounts.AddRange(payload.StockCounts.Select(ExportMapper.ToEntity));
         db.Prescriptions.AddRange((payload.Prescriptions ?? []).Select(ExportMapper.ToEntity));
         db.Deadlines.AddRange((payload.Deadlines ?? []).Select(ExportMapper.ToEntity));
+        db.StockPackages.AddRange((payload.StockPackages ?? []).Select(ExportMapper.ToEntity));
         db.DoseTimePresets.AddRange((payload.DoseTimePresets ?? []).Select(ExportMapper.ToEntity));
         db.DoseTimeDefaults.AddRange((payload.DoseTimeDefaults ?? []).Select(ExportMapper.ToEntity));
         if (payload.LedgerCutoff is not null)

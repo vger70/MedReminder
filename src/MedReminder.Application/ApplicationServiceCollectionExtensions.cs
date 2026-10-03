@@ -9,6 +9,7 @@ using MedReminder.Application.Household;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Migrations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Packages;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
@@ -140,6 +141,10 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<DeleteDeadline>();
         services.AddScoped<DeadlineListQuery>();
         services.AddScoped<DeadlineReminders>();
+        // Package expiry (ANALYSIS-PACKAGE-EXPIRY.md).
+        services.AddScoped<SaveStockPackage>();
+        services.AddScoped<DiscardStockPackage>();
+        services.AddScoped<DeleteStockPackage>();
         // Calendar export (EVOLUTION-PROPOSALS-2 §3.7).
         services.AddScoped<CalendarExportQuery>();
         // Shortage list (EVOLUTION-PROPOSALS-2 §3.3).

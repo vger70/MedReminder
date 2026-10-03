@@ -27,6 +27,9 @@ public sealed class SyncRegisters
     // The whole state of a deadline, as the payload of the
     // DeadlineChanged that wrote it (last writer wins).
     public const string DeadlineState = "Deadline";
+    // The whole state of a package, as the payload of the PackageChanged
+    // that wrote it (last writer wins).
+    public const string PackageState = "Package";
 
     private readonly ISyncFieldVersionRepository _versions;
     private readonly ISyncConflictRepository _conflicts;
@@ -84,6 +87,8 @@ public sealed class SyncRegisters
             [new RegisterWrite(p.PrescriptionId, PrescriptionState, OperationCodec.Serialize(p).Payload, null)],
         DeadlineChanged d =>
             [new RegisterWrite(d.DeadlineId, DeadlineState, OperationCodec.Serialize(d).Payload, null)],
+        PackageChanged p =>
+            [new RegisterWrite(p.PackageId, PackageState, OperationCodec.Serialize(p).Payload, null)],
         _ => [],
     };
 
@@ -112,6 +117,11 @@ public sealed class SyncRegisters
     public static DeadlineChanged ParseDeadline(string value)
         => (DeadlineChanged)OperationCodec.Deserialize(
             nameof(DeadlineChanged), OperationCodec.CurrentSchemaVersion, value);
+
+    // The package a PackageState version holds.
+    public static PackageChanged ParsePackage(string value)
+        => (PackageChanged)OperationCodec.Deserialize(
+            nameof(PackageChanged), OperationCodec.CurrentSchemaVersion, value);
 
     public static HybridTimestamp? BaseOf(SyncOperationBody body) => body switch
     {

@@ -205,21 +205,19 @@ Validation (`PackageExpiryRules.Validate`, `null` when consistent, like
 `OpenedOn` not in the future; `ClosedOn >= OpenedOn`; `ClosedOn` and
 `Closure` both set or both null; `Batch` length.
 
-### 3.3 In-use period on the medicine
+### 3.3 Default in-use period
 
-New nullable field `Medicine.UseWithinDaysAfterOpening` (`int?`): the
-default copied into each new package of the medicine, editable in the
-package. Replicated as a `MedicineFieldChanged` field
-(`MedicineFieldCodec`, new field name `UseWithinDaysAfterOpening`).
+The in-use period of a new package is pre-filled from the latest
+package recorded for the same medicine, and stays editable. No field
+on `Medicine` (revised during P1, 2026-10-03).
 
-An older app **cannot** ignore it: `MedicineFieldCodec.Set` throws
-`ArgumentException` on an unknown field name, and
-`ApplyRemoteOperations` calls it for every `MedicineFieldChanged`
-`[VERIFIED]`. So `OperationCodec.SchemaVersionOf` returns version 11
-for a `MedicineFieldChanged` of this field (the same per-content
-versioning as a second-stage `EmailNotificationSent`, version 6),
-which stops an older app on that operation instead of failing inside
-it. The other fields keep version 1.
+A medicine field was considered and dropped: an older app **cannot**
+ignore an unknown medicine field. `MedicineFieldCodec.Set` throws
+`ArgumentException` on an unknown name, and `ApplyRemoteOperations`
+calls it for every `MedicineFieldChanged` and for the fields of every
+`MedicineCreated` `[VERIFIED]`. A new field would need its own
+operation type, as `MedicineStartChanged` did, for a default the last
+package already gives.
 
 The reference catalogue does not carry in-use periods (AIFA open data
 has no such column) `[UNCERTAIN]`: no automatic fill.
@@ -387,9 +385,8 @@ When the kind is `NewPackage` (and in the initial load of
 - **Expiry** — checkbox + `DateTimePicker` with custom format
   `MM/yyyy` (month/year only; stored as last day of month). Unchecked
   = not entered.
-- **Use within … days after opening** — pre-filled from
-  `Medicine.UseWithinDaysAfterOpening`; empty = none. Changing it here
-  offers to save it on the medicine.
+- **Use within … days after opening** — pre-filled from the latest
+  package of the medicine (§3.3); empty = none.
 - **Opened today** — checkbox, for a box opened right away.
 - **Batch** — optional text.
 
@@ -399,8 +396,7 @@ empty.
 
 ### 5.2 Medicine dialog
 
-`MedicineEditDialog`: new optional field "Use within N days after
-opening".
+No change (§3.3).
 
 ### 5.3 Package list — new `PackagesDialog`
 
@@ -441,16 +437,15 @@ UI font of #181; every control reachable by keyboard.
 Additive, idempotent boot patches in `DatabaseInitializer`
 (`CLAUDE.md` §7; `EnsureCreated()` cannot upgrade):
 
-- `CREATE TABLE IF NOT EXISTS stock_packages (...)`, index on
-  `medicine_id`.
-- `CREATE TABLE IF NOT EXISTS package_expiry_notice_events (...)`,
-  unique index on (`package_id`, `effective_expiry`, `stage`).
-- `ALTER TABLE medicines ADD COLUMN use_within_days_after_opening
-  INTEGER NULL`, guarded by a `pragma_table_info` check.
+- `CREATE TABLE IF NOT EXISTS "StockPackages" (...)`, index on
+  `MedicineId` (P1). Quantity as text, like
+  `StockMovements.QuantityDelta`; `Closure` as an integer.
+- `CREATE TABLE IF NOT EXISTS "PackageExpiryNoticeEvents" (...)`,
+  unique index on (`PackageId`, `EffectiveExpiry`, `Stage`) (P3).
 
 EF configurations next to `DeadlineConfiguration`. Repositories
-`IStockPackageRepository`, `IPackageExpiryNoticeEventRepository` in
-`Application/Abstractions`, implemented in
+`IStockPackageRepository` (P1) and `IPackageExpiryNoticeEventRepository`
+(P3) in `Application/Abstractions`, implemented in
 `Infrastructure.Portable`.
 
 `MedicineDeletionRepository` deletes both tables' rows of the
@@ -472,10 +467,9 @@ state of one package plus `deleted`, last writer wins per package
 of `PrescriptionChanged` / `DeadlineChanged`. `medicineId` is the
 parent. The snapshot image gains `StockPackages`, with an image
 version bump (an older app would drop them).
-`PackageExpiryNoticeEvent` is device-local and not in the image.
-`MedicineFieldChanged` of `UseWithinDaysAfterOpening` is version 11
-too (§3.3). The two lead-day settings are new `ProfileSettingChanged`
-names, no schema version (§4.6). `docs/SYNC-FORMAT.md` updated.
+`PackageExpiryNoticeEvent` is device-local and not in the image. The
+two lead-day settings are new `ProfileSettingChanged` names, no schema
+version (§4.6). `docs/SYNC-FORMAT.md` updated.
 
 Concurrent edits on two devices (one marks opened, the other
 discarded) resolve by LWW on the whole record. Acceptable for a
@@ -484,12 +478,11 @@ two-to-three device household; a field-level merge is not justified
 
 ### 7.2 Export / import
 
-`packages[]` additive in the archive (`docs/EXPORT-FORMAT.md` §5
-rule: archives without it import with no packages), plus
-`useWithinDaysAfterOpening` on the medicine, and the two lead-day
-settings in the profile settings section (additive, missing = default).
-Notice events are not
-exported, like the other reminder events.
+`stockPackages[]` additive in the archive (`docs/EXPORT-FORMAT.md`
+§3.17; archives without it import with no packages), and the two
+lead-day settings in the profile settings section (additive, missing =
+default). Notice events are not exported, like the other reminder
+events.
 
 ### 7.3 Household / master device
 
@@ -512,9 +505,9 @@ that has the profile open.
   expired skips soon, failed channel retried, `sendsEmail` false drops
   email, `None` channel skipped, inactive medicine notified, used-up
   skipped, batching per medicine; `AddStock` with packages (n boxes,
-  quantity split); `DiscardPackage` atomic movement + closure;
-  `PackageChanged` encode/decode and LWW apply; version 11 for the new
-  medicine field; lead-day settings saved as `ProfileSettingChanged`,
+  quantity split); `DiscardStockPackage` atomic movement + closure;
+  `PackageChanged` encode/decode and LWW apply; lead-day settings saved
+  as `ProfileSettingChanged`,
   projected from a remote operation, empty value read as default, a
   longer lead making a not-yet-notified package due; export
   round-trip.
@@ -531,9 +524,9 @@ Each phase is one PR to `main`, buildable and shippable on its own.
 
 | Phase | Content | Effort |
 | --- | --- | --- |
-| P1 | Domain (`StockPackage`, rules, allocation), persistence, repositories, sync op v11, export, deletion; no UI | 4–5 days |
-| P2 | `StockAdjustmentDialog` expiry group, medicine field, `PackagesDialog`, main-window column, scan pre-fill, localization | 4–5 days |
-| P3 | `PackageExpiryNotices` in `MedicationMonitor`, toast target, `EmailKind`, caregiver digest line, lead-day settings (profile setting, sync, settings tab) | 3–4 days |
+| P1 | Domain (`StockPackage`, rules, allocation), `StockPackages` table, repository, use cases (save, discard, delete), sync op v11 and image v8, export, deletion; no UI | 4–5 days |
+| P2 | Package list query (allocation, default in-use period), `StockAdjustmentDialog` expiry group with packages linked to their movement, `PackagesDialog`, main-window column, scan pre-fill, localization | 4–5 days |
+| P3 | `PackageExpiryNoticeEvents` table, `PackageExpiryNotices` in `MedicationMonitor`, toast target, `EmailKind`, caregiver digest line, lead-day settings (profile setting, sync, settings tab) | 3–4 days |
 | P4 | User guides (5 languages), `ANALYSIS.md`, cross-medicine "Expiring packages" view if kept | 1–2 days |
 
 Total about 3 weeks, in line with the 2–3 weeks of
@@ -565,5 +558,5 @@ Settled by the product owner on 2026-10-03.
 | Stock drift (missed intakes) hides or shows boxes wrongly | Stock count (`ReconcileStock`) already corrects the stock; the allocation follows it |
 | Notification fatigue | One notice per stage, batching per medicine, no repetition |
 | `MM/yyyy` picker misread as a full date | Picker shows month/year only; list shows `MM/yyyy`, and the effective expiry as a full date only when it comes from the opening |
-| Older app drops packages or fails on the new field | Schema version 11 stops the older app on those operations, as with v7/v8 |
+| Older app drops packages | Operation schema version 11 and image version 8 stop the older app, as with v7/v8 |
 | Wrong in-use convention (day 1 vs day 0) | Conservative reading; user can edit the date |

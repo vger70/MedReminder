@@ -50,6 +50,8 @@ internal static class SyncStateDescriber
                 sb.AppendLine($"P {p.Id} {p.MedicineId} {p.RequestedOn:O} {p.IssuedOn:O} {p.Code} {p.Packages} {p.ValidUntil:O} {p.CollectedOn:O}");
             foreach (var d in (await db.Deadlines.AsNoTracking().ToListAsync()).OrderBy(d => d.Id))
                 sb.AppendLine($"D {d.Id} {d.MedicineId} {d.Kind} {d.Label} {d.DueOn:O} {d.LeadDays} {d.RepeatMonths} {d.Channels} {d.DoneOn:O}");
+            foreach (var p in (await db.StockPackages.AsNoTracking().ToListAsync()).OrderBy(p => p.Id))
+                sb.AppendLine($"K {p.Id} {p.MedicineId} {p.MovementId} {p.Quantity} {p.ExpiresOn:O} {p.UseWithinDays} {p.OpenedOn:O} {p.Batch} {p.ClosedOn:O} {p.Closure}");
             foreach (var e in (await db.SentEmailNotifications.AsNoTracking().ToListAsync()).OrderBy(e => e.Id))
                 sb.AppendLine($"E {e.Id} {e.MedicineId} {e.StockEpoch} {e.EpochFactId} {e.SentAt:O} {e.Stage}");
             foreach (var c in (await db.SyncConflicts.AsNoTracking().ToListAsync())

@@ -374,6 +374,29 @@ public sealed class DatabaseInitializer
             await _db.Database.ExecuteSqlRawAsync(
                 PendingDataMigrations.MarkPendingSql, [SlotPresetBackfill.MigrationName], cancellationToken);
         }
+
+        // Packages and their expiry (docs/analysis/
+        // ANALYSIS-PACKAGE-EXPIRY.md §6), replicated.
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""StockPackages"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_StockPackages"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""MovementId"" TEXT NULL,
+                ""Quantity"" TEXT NOT NULL,
+                ""ExpiresOn"" TEXT NULL,
+                ""UseWithinDays"" INTEGER NULL,
+                ""OpenedOn"" TEXT NULL,
+                ""Batch"" TEXT NULL,
+                ""ClosedOn"" TEXT NULL,
+                ""Closure"" INTEGER NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                ""UpdatedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_StockPackages_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_StockPackages_MedicineId""
+                ON ""StockPackages"" (""MedicineId"");", cancellationToken);
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the

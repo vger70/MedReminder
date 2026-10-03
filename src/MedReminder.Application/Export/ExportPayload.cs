@@ -44,6 +44,11 @@ public sealed class ExportPayload
     // field of schema version 2: archives without it import with none.
     public IList<ExportedDeadline> Deadlines { get; set; } = new List<ExportedDeadline>();
 
+    // Packages and their expiry (ANALYSIS-PACKAGE-EXPIRY.md §7.2).
+    // Additive field of schema version 2: archives without it import with
+    // none.
+    public IList<ExportedStockPackage> StockPackages { get; set; } = new List<ExportedStockPackage>();
+
     // Time-of-day presets and per-day default times
     // (ANALYSIS-INTRADAY-CONSUMPTION.md §6). Additive fields of schema
     // version 2: archives without them import with the built-ins.
@@ -341,6 +346,23 @@ public sealed class ExportedDoseTimeDefault
     public int AdministrationsPerDay { get; set; }
     // "HH:mm" values separated by ';'.
     public string Times { get; set; } = string.Empty;
+}
+
+public sealed class ExportedStockPackage
+{
+    public Guid Id { get; set; }
+    public Guid MedicineId { get; set; }
+    public Guid? MovementId { get; set; }
+    public decimal Quantity { get; set; }
+    public DateOnly? ExpiresOn { get; set; }
+    public int? UseWithinDays { get; set; }
+    public DateOnly? OpenedOn { get; set; }
+    public string? Batch { get; set; }
+    public DateOnly? ClosedOn { get; set; }
+    // PackageClosure member name; null for an open package.
+    public string? Closure { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 
 public sealed class ExportedDeadline

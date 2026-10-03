@@ -29,6 +29,7 @@ internal static class Operations
         HouseholdLinked h => h.HouseholdId,
         PrescriptionChanged p => p.PrescriptionId,
         DeadlineChanged d => d.DeadlineId,
+        PackageChanged p => p.PackageId,
         _ => body.MedicineId,
     };
 
@@ -87,6 +88,10 @@ internal static class Operations
     public static DeadlineChanged Deadline(Deadline d, bool deleted)
         => new(d.MedicineId ?? Guid.Empty, d.Id, d.Kind, d.Label, d.DueOn, d.LeadDays, d.RepeatMonths, d.Channels,
             d.DoneOn, deleted, d.UpdatedAt);
+
+    public static PackageChanged Package(StockPackage p, bool deleted)
+        => new(p.MedicineId, p.Id, p.MovementId, p.Quantity, p.ExpiresOn, p.UseWithinDays, p.OpenedOn, p.Batch,
+            p.ClosedOn, p.Closure, deleted, p.UpdatedAt);
 
     public static FactRetracted Retraction(FactRetraction retraction)
         => new(retraction.MedicineId, retraction.Id, retraction.Kind, retraction.FactId, retraction.RecordedAt);

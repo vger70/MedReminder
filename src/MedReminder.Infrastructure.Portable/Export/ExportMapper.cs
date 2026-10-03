@@ -355,6 +355,38 @@ internal static class ExportMapper
         Times = d.Times,
     };
 
+    public static ExportedStockPackage ToDto(StockPackage p) => new()
+    {
+        Id = p.Id,
+        MedicineId = p.MedicineId,
+        MovementId = p.MovementId,
+        Quantity = p.Quantity,
+        ExpiresOn = p.ExpiresOn,
+        UseWithinDays = p.UseWithinDays,
+        OpenedOn = p.OpenedOn,
+        Batch = p.Batch,
+        ClosedOn = p.ClosedOn,
+        Closure = p.Closure?.ToString(),
+        RecordedAt = p.RecordedAt,
+        UpdatedAt = p.UpdatedAt,
+    };
+
+    public static StockPackage ToEntity(ExportedStockPackage p) => new()
+    {
+        Id = p.Id,
+        MedicineId = p.MedicineId,
+        MovementId = p.MovementId,
+        Quantity = p.Quantity,
+        ExpiresOn = p.ExpiresOn,
+        UseWithinDays = p.UseWithinDays,
+        OpenedOn = p.OpenedOn,
+        Batch = p.Batch,
+        ClosedOn = p.ClosedOn,
+        Closure = p.Closure is null ? null : ParseEnum<PackageClosure>(p.Closure),
+        RecordedAt = p.RecordedAt,
+        UpdatedAt = p.UpdatedAt,
+    };
+
     public static ExportedDeadline ToDto(Deadline d) => new()
     {
         Id = d.Id,

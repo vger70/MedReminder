@@ -141,6 +141,7 @@ against `manifest.payload.sha256Base64` after decryption.
   "ledgerCutoff": { … },
   "prescriptions": [ … ],
   "deadlines": [ … ],
+  "stockPackages": [ … ],
   "notificationSettings": { … },
   "shared": { … }
 }
@@ -403,6 +404,29 @@ user added.
 |---|---|---|
 | `administrationsPerDay` | int | 1 to 4 |
 | `times` | string | `HH:mm` values separated by `;` |
+
+### 3.17 `stockPackages[]`
+
+The physical packages of a medicine and their expiry
+(`docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`). A parallel inventory: they
+never change the stock, which stays the sum of `stockMovements`. Added
+after `schemaVersion` 2 shipped, as an additive field (§5): archives
+without it import with no packages.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `medicineId` | Guid | parent medicine |
+| `movementId` | Guid? | the `NewPackage` or `InitialLoad` movement that brought it in; may refer to a retracted movement |
+| `quantity` | decimal | units in the package when full, greater than 0 |
+| `expiresOn` | DateOnly? | printed expiry; a printed `MM/YYYY` is the last day of that month |
+| `useWithinDays` | int? | 1 to 365: in-use period after opening, the opening day being day 1 |
+| `openedOn` | DateOnly? | first opening |
+| `batch` | string? | lot, at most 20 characters |
+| `closedOn` | DateOnly? | day the package left the cabinet; set together with `closure` |
+| `closure` | string? | `Finished` or `Discarded`; `null` while the package is open |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
 
 ---
 

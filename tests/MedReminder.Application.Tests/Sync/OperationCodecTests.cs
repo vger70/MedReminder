@@ -49,6 +49,10 @@ public class OperationCodecTests
         new DeadlineChanged(Guid.Empty, F, DeadlineKind.Other, "Disability card", new DateOnly(2027, 1, 15), 0, null,
             NotificationChannels.Windows, new DateOnly(2027, 1, 10), false, At),
         new MedicineStartChanged(M, new DateOnly(2026, 9, 5)),
+        new PackageChanged(M, F, Guid.Parse("0e0e0e0e-0000-0000-0000-000000000006"), 28m,
+            new DateOnly(2027, 3, 31), 28, new DateOnly(2026, 9, 20), "L2345", null, null, false, At),
+        new PackageChanged(M, F, null, 10m, null, null, null, null, new DateOnly(2026, 9, 27),
+            PackageClosure.Discarded, false, At),
     };
 
     [Theory]
@@ -92,6 +96,22 @@ public class OperationCodecTests
             "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}");
     }
 
+    [Fact]
+    public void Package_payload_format_is_stable()
+    {
+        var (_, payload) = OperationCodec.Serialize(new PackageChanged(M, F, null, 28m,
+            new DateOnly(2027, 3, 31), 28, new DateOnly(2026, 9, 20), null, new DateOnly(2026, 9, 27),
+            PackageClosure.Finished, false, At));
+
+        payload.Should().Be(
+            "{\"packageId\":\"0f0f0f0f-0000-0000-0000-000000000002\",\"movementId\":null," +
+            "\"quantity\":28,\"expiresOn\":\"2027-03-31\",\"useWithinDays\":28," +
+            "\"openedOn\":\"2026-09-20\",\"batch\":null,\"closedOn\":\"2026-09-27\"," +
+            "\"closure\":\"Finished\",\"deleted\":false," +
+            "\"recordedAt\":\"2026-09-27T10:15:30+02:00\"," +
+            "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}");
+    }
+
     // Only the type added in a version is written with it, so an older
     // app keeps reading every other operation.
     [Theory]
@@ -110,6 +130,7 @@ public class OperationCodecTests
             IntakeRecorded { IsExtra: true } => 9,
             SlotSetRecorded set when set.Slots.Any(s => s.IsAsNeeded) => 9,
             MedicineStartChanged => 10,
+            PackageChanged => 11,
             _ => 1,
         };
 

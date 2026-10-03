@@ -43,7 +43,9 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
     //      MedicationIntakes.IsExtra (ANALYSIS-INTRADAY-CONSUMPTION.md §5):
     //      an older app would consume as-needed slots every day and read
     //      extra intakes as scheduled ones.
-    public const int CurrentSchemaVersion = 7;
+    //   8: StockPackages (package expiry), replicated: an older app would
+    //      drop them.
+    public const int CurrentSchemaVersion = 8;
 
     private static readonly string[] NotReplicated =
     [

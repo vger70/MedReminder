@@ -43,7 +43,9 @@ public sealed class AdjustStockDown
         await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
     }
 
-    private async Task ExecuteCoreAsync(AdjustStockDownCommand cmd, CancellationToken cancellationToken)
+    // Callers hold WriteGate; cmd.Quantity is positive. Saves the unit of
+    // work, so changes a caller made before it are saved with it.
+    internal async Task ExecuteCoreAsync(AdjustStockDownCommand cmd, CancellationToken cancellationToken)
     {
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
