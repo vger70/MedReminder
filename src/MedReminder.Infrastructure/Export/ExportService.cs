@@ -39,6 +39,7 @@ internal sealed class ExportService : IExportService
     private readonly TimeProvider _clock;
     private readonly ILogger<ExportService> _log;
     private readonly string _sharedDirectory;
+    private readonly string _scratchRoot;
 
     public ExportService(
         ICurrentProfile currentProfile,
@@ -54,7 +55,9 @@ internal sealed class ExportService : IExportService
     }
 
     // Test overload: lets a test point the shared-settings reader at a
-    // temporary folder instead of %LOCALAPPDATA%.
+    // temporary folder instead of %LOCALAPPDATA%, and the scratch folder
+    // of the snapshot at a folder of its own instead of %TEMP%, which
+    // other tests share.
     internal ExportService(
         ICurrentProfile currentProfile,
         IBackupService backupService,
@@ -63,8 +66,10 @@ internal sealed class ExportService : IExportService
         TimeProvider clock,
         ILogger<ExportService> log,
         string sharedDirectory,
-        IProfileRegistry? profileRegistry = null)
+        IProfileRegistry? profileRegistry = null,
+        string? scratchRoot = null)
     {
+        _scratchRoot = scratchRoot ?? Path.GetTempPath();
         _currentProfile = currentProfile;
         _profileRegistry = profileRegistry;
         _backupService = backupService;
@@ -107,7 +112,7 @@ internal sealed class ExportService : IExportService
         progress?.Report(0);
 
         var scratchDirectory = Path.Combine(
-            Path.GetTempPath(), "MedReminder-export-" + Guid.NewGuid().ToString("N"));
+            _scratchRoot, "MedReminder-export-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratchDirectory);
 
         byte[]? key = null;
