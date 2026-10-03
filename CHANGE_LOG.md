@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #186 — Warn about expiring and expired packages (package expiry, phase 3)
+
+Link: [vger70/MedReminder#186](https://github.com/vger70/MedReminder/pull/186)
+
+Branch: `feature/package-expiry-notices` → `main` (on top of #184 and #185)
+
+### Added
+
+- "Expires soon" and "expired" notices per package, once per stage on each device, on the medicine's channels: one toast per medicine (opens its packages), one email per pass for all medicines from the device that sends email; inactive medicines included, used-up and closed packages left out, failed attempts retried (`PackageExpiryNotices`, `PackageExpiryNoticeEvents`).
+- Email kind `PackageExpiry` for the caregiver copy; weekly digest line for a medicine with a package expiring or expired.
+- Configurable lead days in Settings → Notifications: before the printed expiry (default 30) and before the end of the in-use period (default 3); replicated and exported; also used by the package list and the main list.
+- New UI and notification strings in all five dictionaries.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md` and `docs/EXPORT-FORMAT.md`: new profile settings and email kind; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: phase 3 contents.
+
 ## PR #185 — Enter packages and show their expiry (package expiry, phase 2)
 
 Link: [vger70/MedReminder#185](https://github.com/vger70/MedReminder/pull/185)
