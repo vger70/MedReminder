@@ -35,6 +35,7 @@ de la aplicación. La arquitectura técnica se describe en
      [Historial](#history)
 5. [Cronología, ficha de terapia y solicitud de receta](#documents)
 6. [Notificaciones y correo](#notifications)
+   - [Configuración de correo de los principales proveedores](#smtp-providers)
 7. [Varias personas: perfiles y roles](#profiles)
 8. [Proteger tus datos: copia de seguridad y exportación](#backup)
 9. [Varios ordenadores](#devices)
@@ -711,7 +712,7 @@ genérico.
 | Campo | Qué introducir |
 |---|---|
 | **Servidor** | El servidor de salida de tu proveedor, por ejemplo `smtp.gmail.com` |
-| **Puerto** | Normalmente `587` (con *Usar StartTLS*) o `465` |
+| **Puerto** | `587` con *Usar StartTLS* marcado, o `465` con *Usar StartTLS* sin marcar |
 | **Nombre de usuario** / **Nueva contraseña** | Tu cuenta de correo. La contraseña se guarda cifrada y nunca aparece en los registros |
 | **Remitente (from)** / **Nombre del remitente** | De quién llegan los correos |
 | **Timeout (s)** | Segundos antes de desistir |
@@ -719,13 +720,9 @@ genérico.
 Haz clic en **Probar conexión** (inicia sesión sin enviar nada) y luego
 en **Guardar configuración SMTP**.
 
-*Ejemplo con Gmail:* activa la verificación en dos pasos en tu cuenta de
-Google, crea una contraseña de aplicación en
-`myaccount.google.com/apppasswords` y usa Servidor `smtp.gmail.com`,
-Puerto `587`, StartTLS activado, tu dirección de Gmail como nombre de
-usuario y la contraseña de aplicación como contraseña. Los proveedores
-cambian sus reglas: si la prueba falla, consulta las instrucciones de
-tu proveedor.
+Los valores para Gmail y los demás proveedores habituales, y cómo
+obtener una contraseña de aplicación, están en
+[Configuración de correo de los principales proveedores](#smtp-providers).
 
 ### Paso 2 — los destinatarios (cada perfil)
 
@@ -753,6 +750,77 @@ abierto:
 
 Haz clic en **Guardar destinatarios**. En la misma sección, **Mi PIN**
 permite establecer o cambiar el PIN de tu propio perfil.
+
+<a id="smtp-providers"></a>
+### Configuración de correo de los principales proveedores
+
+Muchos proveedores ya no aceptan, en los programas, la contraseña con la
+que entras en el webmail. Piden una **contraseña de aplicación**: una
+contraseña aparte, creada por el proveedor para un solo programa y
+revocable en cualquier momento. Introdúcela en **Nueva contraseña**. Si
+la revocas, MedReminder deja de enviar hasta que introduzcas una nueva.
+
+Para el puerto y el cifrado hay una sola regla:
+
+| Puerto | *Usar StartTLS* |
+|---|---|
+| `587` | marcado |
+| `465` | sin marcar (la conexión está cifrada desde el principio) |
+
+Con todos los proveedores de abajo, el **Nombre de usuario** es tu
+dirección de correo completa. Usa la misma dirección como **Remitente
+(from)**: muchos proveedores rechazan un remitente distinto de la
+cuenta.
+
+| Proveedor | Servidor | Puerto | Contraseña |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | Contraseña de aplicación (ver abajo) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | Contraseña de aplicación, desde la página *Seguridad* de la cuenta Yahoo |
+| iCloud Mail | `smtp.mail.me.com` | `587` | Contraseña específica para apps, desde `account.apple.com` → *Inicio de sesión y seguridad*; requiere la autenticación de doble factor |
+| Libero Mail | `smtp.libero.it` | `465` | Contraseña de la cuenta; con la verificación en dos pasos activa, una contraseña de aplicación desde *Gestione Account* |
+| Aruba (también buzones de dominio) | `smtps.aruba.it` | `465` | Contraseña del buzón |
+| GMX | `mail.gmx.net` | `587` | Contraseña de la cuenta; antes activa *POP3/IMAP* en la configuración de correo del webmail |
+| WEB.DE | `smtp.web.de` | `587` | Contraseña de la cuenta; antes activa *POP3/IMAP* en la configuración de correo del webmail |
+| Orange | `smtp.orange.fr` | `465` | Contraseña de la cuenta; si se rechaza, comprueba en tu área de cliente de Orange si hace falta una contraseña dedicada |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft solo acepta para estas
+cuentas el inicio de sesión moderno (OAuth2), que MedReminder no admite;
+tampoco funciona una contraseña de aplicación. Lo mismo suele valer para
+las cuentas profesionales o educativas de Microsoft 365. Usa otra cuenta
+para el envío, por ejemplo una dirección de Gmail dedicada a
+MedReminder.
+
+#### Gmail: crear la contraseña de aplicación
+
+1. Inicia sesión en `myaccount.google.com` con la cuenta de Gmail que
+   enviará los correos.
+2. Abre **Seguridad**. Si la **Verificación en dos pasos** no está
+   activada, actívala con el procedimiento guiado (teléfono o aplicación
+   de autenticación). Sin ella no existen las contraseñas de aplicación.
+3. Abre `myaccount.google.com/apppasswords`, o busca "Contraseñas de
+   aplicaciones" en el cuadro de búsqueda de la cuenta. Google puede
+   pedirte de nuevo la contraseña.
+4. Escribe un nombre que recuerde para qué sirve, por ejemplo
+   `MedReminder`, y haz clic en **Crear**.
+5. Google muestra una contraseña de 16 letras en cuatro grupos. Cópiala
+   y pégala en **Nueva contraseña**, sin espacios. Google no vuelve a
+   mostrarla: si la pierdes, elimínala en la misma página y crea otra.
+6. En MedReminder introduce Servidor `smtp.gmail.com`, Puerto `587`,
+   *Usar StartTLS* marcado, y tu dirección de Gmail como **Nombre de
+   usuario** y como **Remitente (from)**. Haz clic en **Probar
+   conexión** y luego en **Guardar configuración SMTP**.
+
+Si la página dice que la opción no está disponible, normalmente la
+verificación en dos pasos no está activada o solo usa llaves de
+seguridad, la cuenta está inscrita en la Protección Avanzada, o es una
+cuenta profesional o educativa cuyo administrador ha desactivado las
+contraseñas de aplicación. Si cambias la contraseña de tu cuenta de
+Google, Google revoca las contraseñas de aplicación: crea una nueva e
+introdúcela en MedReminder.
+
+Los proveedores cambian sus reglas y direcciones. Si **Probar conexión**
+falla con los valores de arriba, consulta la página de ayuda de tu
+proveedor (busca "configuración SMTP").
 
 ---
 

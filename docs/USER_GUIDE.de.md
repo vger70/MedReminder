@@ -36,6 +36,7 @@ in der App zu lesen. Die technische Architektur ist in
      [Verlauf](#history)
 5. [Therapieverlauf, Therapieplan und Rezeptanforderung](#documents)
 6. [Benachrichtigungen und E-Mail](#notifications)
+   - [E-Mail-Einstellungen gängiger Anbieter](#smtp-providers)
 7. [Mehrere Personen: Profile und Rollen](#profiles)
 8. [Daten schützen: Sicherung und Export](#backup)
 9. [Mehrere Computer](#devices)
@@ -732,7 +733,7 @@ demselben allgemeinen Titel.
 | Feld | Was eintragen |
 |---|---|
 | **Host** | Der Postausgangsserver deines Anbieters, z. B. `smtp.gmail.com` |
-| **Port** | Meist `587` (mit *StartTLS verwenden*) oder `465` |
+| **Port** | `587` mit aktiviertem *StartTLS verwenden* oder `465` mit deaktiviertem *StartTLS verwenden* |
 | **Benutzername** / **Neues Passwort** | Dein E-Mail-Konto. Das Passwort wird verschlüsselt gespeichert und nie protokolliert |
 | **Absender (from)** / **Absendername** | Von wem die E-Mails kommen |
 | **Zeitüberschreitung (s)** | Sekunden bis zum Abbruch |
@@ -740,12 +741,9 @@ demselben allgemeinen Titel.
 Klicke auf **Verbindung testen** (meldet sich an, ohne etwas zu
 senden), dann auf **SMTP-Einstellungen speichern**.
 
-*Beispiel mit Gmail:* Aktiviere die Bestätigung in zwei Schritten im
-Google-Konto, erstelle ein App-Passwort unter
-`myaccount.google.com/apppasswords` und verwende Host `smtp.gmail.com`,
-Port `587`, StartTLS an, deine Gmail-Adresse als Benutzername und das
-App-Passwort als Passwort. Anbieter ändern ihre Regeln: Schlägt der Test
-fehl, sieh in der Anleitung deines Anbieters nach.
+Die Werte für Gmail und die anderen gängigen Anbieter und wie du ein
+App-Passwort erhältst, stehen unter
+[E-Mail-Einstellungen gängiger Anbieter](#smtp-providers).
 
 ### Schritt 2 — die Empfänger (jedes Profil)
 
@@ -775,6 +773,78 @@ Profil:
 
 Klicke auf **Empfänger speichern**. Im selben Bereich kannst du unter
 **Meine PIN** die PIN deines eigenen Profils festlegen oder ändern.
+
+<a id="smtp-providers"></a>
+### E-Mail-Einstellungen gängiger Anbieter
+
+Viele Anbieter akzeptieren in Programmen nicht mehr das Passwort, mit
+dem du dich im Webmail anmeldest. Sie verlangen ein **App-Passwort**:
+ein eigenes Passwort, das der Anbieter für ein einzelnes Programm
+erzeugt und das jederzeit widerrufen werden kann. Trage es unter **Neues
+Passwort** ein. Widerrufst du es, sendet MedReminder nichts mehr, bis du
+ein neues einträgst.
+
+Für Port und Verschlüsselung gilt eine einzige Regel:
+
+| Port | *StartTLS verwenden* |
+|---|---|
+| `587` | aktiviert |
+| `465` | deaktiviert (die Verbindung ist von Anfang an verschlüsselt) |
+
+Bei allen Anbietern unten ist der **Benutzername** deine vollständige
+E-Mail-Adresse. Verwende dieselbe Adresse als **Absender (from)**:
+viele Anbieter lehnen einen Absender ab, der nicht zum Konto gehört.
+
+| Anbieter | Host | Port | Passwort |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | App-Passwort (siehe unten) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | App-Passwort, auf der Seite *Sicherheit* des Yahoo-Kontos |
+| iCloud Mail | `smtp.mail.me.com` | `587` | App-spezifisches Passwort, unter `account.apple.com` → *Anmeldung und Sicherheit*; erfordert die Zwei-Faktor-Authentifizierung |
+| Libero Mail | `smtp.libero.it` | `465` | Kontopasswort; bei aktiver Bestätigung in zwei Schritten ein App-Passwort aus *Gestione Account* |
+| Aruba (auch Domain-Postfächer) | `smtps.aruba.it` | `465` | Passwort des Postfachs |
+| GMX | `mail.gmx.net` | `587` | Kontopasswort; vorher *POP3/IMAP* in den E-Mail-Einstellungen des Webmails einschalten |
+| WEB.DE | `smtp.web.de` | `587` | Kontopasswort; vorher *POP3/IMAP* in den E-Mail-Einstellungen des Webmails einschalten |
+| Orange | `smtp.orange.fr` | `465` | Kontopasswort; wird es abgelehnt, im Orange-Kundenbereich prüfen, ob ein eigenes Passwort nötig ist |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft akzeptiert für diese
+Konten nur die moderne Anmeldung (OAuth2), die MedReminder nicht
+unterstützt; auch ein App-Passwort funktioniert nicht. Dasselbe gilt in
+der Regel für Geschäfts- oder Schulkonten von Microsoft 365. Verwende
+ein anderes Konto zum Senden, zum Beispiel eine eigene Gmail-Adresse für
+MedReminder.
+
+#### Gmail: App-Passwort erstellen
+
+1. Melde dich unter `myaccount.google.com` mit dem Gmail-Konto an, das
+   die E-Mails senden soll.
+2. Öffne **Sicherheit**. Ist die **Bestätigung in zwei Schritten** aus,
+   schalte sie mit dem geführten Ablauf ein (Telefon oder
+   Authenticator-App). Ohne sie gibt es keine App-Passwörter.
+3. Öffne `myaccount.google.com/apppasswords` oder suche im Suchfeld des
+   Kontos nach „App-Passwörter". Google fragt eventuell erneut nach dem
+   Passwort.
+4. Gib einen Namen ein, der an den Zweck erinnert, zum Beispiel
+   `MedReminder`, und klicke auf **Erstellen**.
+5. Google zeigt ein Passwort aus 16 Buchstaben in vier Gruppen. Kopiere
+   es und füge es ohne Leerzeichen unter **Neues Passwort** ein. Google
+   zeigt es nicht noch einmal: Geht es verloren, lösche es auf derselben
+   Seite und erstelle ein neues.
+6. Trage in MedReminder Host `smtp.gmail.com`, Port `587`, *StartTLS
+   verwenden* aktiviert und deine Gmail-Adresse als **Benutzername** und
+   als **Absender (from)** ein. Klicke auf **Verbindung testen**, dann
+   auf **SMTP-Einstellungen speichern**.
+
+Meldet die Seite, dass die Einstellung nicht verfügbar ist, ist meist
+die Bestätigung in zwei Schritten aus oder nutzt nur Sicherheitsschlüssel,
+das Konto ist im Erweiterten Sicherheitsprogramm, oder es ist ein
+Geschäfts- oder Schulkonto, dessen Administrator App-Passwörter
+abgeschaltet hat. Änderst du das Passwort deines Google-Kontos, widerruft
+Google die App-Passwörter: Erstelle ein neues und trage es in
+MedReminder ein.
+
+Anbieter ändern ihre Regeln und Adressen. Schlägt **Verbindung testen**
+mit den Werten oben fehl, sieh auf der Hilfeseite deines Anbieters nach
+(Suche nach „SMTP-Einstellungen").
 
 ---
 
