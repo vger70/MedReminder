@@ -2208,7 +2208,10 @@ internal sealed class MainForm : MedReminderFormBase
             {
                 var change = scope.ServiceProvider.GetRequiredService<ChangeMedicationSchedule>();
                 var today = DateOnly.FromDateTime(DateTime.Today);
-                var effectiveFrom = today < seed.StartDate ? seed.StartDate : today;
+                // The start date saved just above, which the dialog may
+                // have changed.
+                var start = dialog.Result.StartDate;
+                var effectiveFrom = today < start ? start : today;
                 var (displayDose, displayFreq) = ScheduleDisplayValues(chosen, seed);
                 await change.ExecuteAsync(
                     new ChangeMedicationScheduleCommand(row.Id, displayDose, displayFreq, effectiveFrom, chosen),

@@ -202,6 +202,13 @@ window, set **Schedule** to **Advanced** and choose a **Regime type**:
 With **Advanced**, the dose fields at the top of the window are not
 used. Switch back to **Simple** for a fixed daily dose.
 
+**Administration times also work with Advanced.** The schedule sets how
+much to take each day; the [administration times](#slots) set when. The
+day's quantity is split among the times in proportion to their doses:
+with two times of 1 each, a tapering day of 4 gives 2 + 2, a day of 1
+gives 0.5 + 0.5. On a cyclic pause day nothing is due and no reminder
+is shown.
+
 **The therapy changes?** Use **Therapy → Change dose/frequency…** and
 pick the **Effective from** date. The old schedule stays valid for the
 days before that date. If the date is in the past, the consumption

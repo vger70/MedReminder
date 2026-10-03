@@ -463,12 +463,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (_channelWindows.Checked) channels |= NotificationChannels.Windows;
         if (_channelEmail.Checked) channels |= NotificationChannels.Email;
 
-        // A5 save-time clamp (ANALYSIS-A5 §5.3): RemindOnDose may be
-        // true only while the checkbox is actually enabled — i.e. a
-        // timed slot exists AND stock > 0. A disabled checkbox always
-        // persists false regardless of any stale seeded value.
-        var remindOnDose = _remindOnDose.Enabled && _remindOnDose.Checked;
-
         // A1: build the Schedule value object when Advanced is
         // selected. Simple mode keeps InitialSchedule = null so
         // AddMedicine constructs FixedDaily from Dose × Admin
@@ -488,6 +482,19 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             }
         }
 
+        // Slots are kept in both modes: in Advanced mode the schedule
+        // sets the day's quantity and the slots place it in the day
+        // (docs/analysis/ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md).
+        List<AdministrationSlotEntry> slots = [.. _slots];
+
+        // A5 save-time clamp (ANALYSIS-A5 §5.3): RemindOnDose may be
+        // true only while the checkbox is actually enabled — i.e. a
+        // timed slot exists AND stock > 0 — and the saved slots still
+        // hold a timed one. A disabled checkbox always persists false
+        // regardless of any stale seeded value.
+        var remindOnDose = _remindOnDose.Enabled && _remindOnDose.Checked
+            && slots.Any(s => s.Time.HasValue && !s.IsAsNeeded);
+
         Result = new MedicineEditResult(
             Name: _nameBox.InputText.Trim(),
             ActiveIngredient: NullIfBlank(_ingredientBox.InputText),
@@ -504,19 +511,17 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             NotificationChannels: channels,
             IsActive: _isActiveBox.Checked,
             RemindOnDose: remindOnDose,
-            // In Advanced mode slots × non-fixed combinations are out
-            // of scope (§3.1) — drop the slots so the schedule owns
-            // the daily rate uniquely.
-            Slots: initialSchedule is null ? [.. _slots] : new List<AdministrationSlotEntry>(),
+            Slots: slots,
             NationalCode: _linkedNationalCode,
             AtcCode: _linkedAtcCode,
             LinkedReferenceMedicineId: _linkedReferenceMedicineId,
             InitialSchedule: initialSchedule);
     }
 
-    // Disables the Simple-mode inputs (dose, admin/day, slot buttons)
-    // whenever the user flips into Advanced, so it is unambiguous
-    // which set of controls drives the projection. Called from the
+    // Disables the Simple-mode inputs (dose, admin/day) whenever the
+    // user flips into Advanced, so it is unambiguous which set of
+    // controls drives the projection. The slots stay editable: they
+    // place the schedule's quantity in the day. Called from the
     // SchedulePanel.ModeChanged event.
     private void SyncSimpleControlsEnabled()
     {
@@ -524,7 +529,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         var simple = !_schedulePanel.AdvancedSelected;
         _doseBox.Enabled = simple;
         _adminPerDayBox.Enabled = simple;
-        _slotsList.Enabled = simple;
+        UpdateSlotsSummary();
     }
 
     // Picking a catalogue row on either side populates the sibling
@@ -890,6 +895,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryAsNeeded", _slots.Count);
             return;
         }
+        // Advanced mode: the schedule sets the quantity, the slot doses
+        // only split it.
+        if (_schedulePanel is { AdvancedSelected: true })
+        {
+            _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryShared", _slots.Count);
+            return;
+        }
         var total = _slots.Where(s => !s.IsAsNeeded).Sum(s => s.Dose);
         _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.Summary",
             _slots.Count, total.ToString("0.##"), EffectiveUnit());
@@ -1094,7 +1106,8 @@ internal sealed record MedicineEditResult(
         IsActive: IsActive,
         RemindOnDose: RemindOnDose,
         AdministrationSlots: MapSlots() ?? [],
-        Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId));
+        Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId),
+        StartDate: StartDate);
 
     private IReadOnlyList<AdministrationSlotInput>? MapSlots()
     {

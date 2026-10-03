@@ -212,6 +212,13 @@ finestra della medicina imposta **Schema** su **Avanzato** e scegli un
 Con **Avanzato** i campi della dose in alto nella finestra non vengono
 usati. Torna a **Semplice** per una dose giornaliera fissa.
 
+**Gli orari di somministrazione valgono anche con Avanzato.** Lo schema
+decide quanto prendere ogni giorno; gli [orari di somministrazione](#slots)
+decidono quando. La quantità del giorno è ripartita tra gli orari in
+proporzione alle loro dosi: con due orari da 1, un giorno a scalare da 4
+dà 2 + 2, un giorno da 1 dà 0,5 + 0,5. In un giorno di pausa del ciclo
+non c'è nulla da prendere e non arriva alcun promemoria.
+
 **La terapia cambia?** Usa **Terapia → Cambia dose/frequenza…** e scegli
 la data **Effettiva dal**. Lo schema precedente resta valido per i
 giorni prima di quella data. Se la data è nel passato, il consumo già

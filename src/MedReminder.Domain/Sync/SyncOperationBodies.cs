@@ -47,6 +47,14 @@ public sealed record MedicineFieldChanged(
     string? Value,
     HybridTimestamp? BaseVersion = null) : SyncOperationBody(MedicineId);
 
+// The therapy start date, last writer wins (UpdateMedicine). Not a
+// MedicineFieldChanged field: an older app fails on an unknown field,
+// while an unknown operation type stops it cleanly (R7). The schedule
+// rows and slot sets that follow the new date travel as their own facts.
+public sealed record MedicineStartChanged(
+    Guid MedicineId,
+    DateOnly StartDate) : SyncOperationBody(MedicineId);
+
 // A dated activation / deactivation (activity history, D15).
 public sealed record MedicineActivityChanged(
     Guid MedicineId,

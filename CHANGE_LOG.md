@@ -51,6 +51,48 @@ Branch: `claude/zero-formatting-date-controls-a7f941` → `main`
 
 ---
 
+## PR #TBD — Administration slots with advanced schedules
+
+Branch: `feature/slots-with-advanced-schedules` (stacked on #179)
+
+### Changed
+
+- Under a non-FixedDaily schedule the schedule sets the daily quantity and the slots split it in proportion to their doses; cyclic pause days are no longer consumed. Slots stay editable in Advanced mode (`docs/analysis/ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md`).
+
+---
+
+## PR #179 — Fix the dose times order, slots lost in Advanced mode and the start date not saved
+
+Link: [vger70/MedReminder#179](https://github.com/vger70/MedReminder/pull/179)
+
+Branch: `claude/bug-orari-terapia-a59517` → `main`
+
+### Fixed
+
+- Therapy → Dose times lists the presets by time of day; presets
+  without a time come last (`DoseTimesDialog`).
+- Edit medicine: slots no longer disappear. A therapy that opens in
+  Advanced schedule mode keeps its slots on save (an unrelated edit
+  used to clear them), and in Advanced mode the whole slot panel is
+  disabled, so no slot can be added there and then dropped
+  (`MedicineEditDialog`). RemindOnDose is saved only when the saved
+  slots hold a timed one.
+- Edit medicine: a changed therapy start date is saved. It was shown
+  as editable but `UpdateMedicine` ignored it. The initial schedule
+  row is recorded again from the new date when the date moves earlier,
+  or later for a cyclic or tapering plan still in force; a schedule
+  change made after the start is never re-anchored. For an earlier
+  date the slot set in force is copied to cover only the days gained
+  (`UpdateMedicine`, `TherapyStartChange`).
+
+### Changed
+
+- Sync: new operation `MedicineStartChanged`, schema version 10 (an
+  older app stops at it, R7). `StartDate` is no longer immutable
+  (`docs/SYNC-FORMAT.md` §6).
+
+---
+
 ## PR #178 — Count the days left from the stock shown in the list
 
 Link: [vger70/MedReminder#178](https://github.com/vger70/MedReminder/pull/178)

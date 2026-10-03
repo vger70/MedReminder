@@ -187,6 +187,7 @@
   "Ui.MedicineEditDialog.Slots.SummaryNone": "Nessuno slot configurato: la medicina userà \"dose × somministrazioni al giorno\" indicato sopra.",
   "Ui.MedicineEditDialog.Slots.Summary": "{0} slot definiti — totale giornaliero: {1} {2}. Il consumo giornaliero sarà calcolato da questi orari.",
   "Ui.MedicineEditDialog.Slots.SummaryAsNeeded": "{0} slot, tutti al bisogno: nessun consumo automatico; la scorta scende solo con le assunzioni registrate.",
+  "Ui.MedicineEditDialog.Slots.SummaryShared": "{0} slot: lo schema avanzato decide la quantità del giorno; gli slot la ripartiscono in proporzione alle loro dosi.",
   "Ui.MedicineEditDialog.Slots.AsNeededLabel": "{0} (al bisogno)",
   "Ui.MedicineEditDialog.Field.Package": "Confezione",
   "Ui.MedicineEditDialog.Field.Documents": "Documenti AIFA",

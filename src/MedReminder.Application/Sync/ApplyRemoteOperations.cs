@@ -1,3 +1,4 @@
+using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Ledger;
 using MedReminder.Domain.Calculations;
@@ -295,6 +296,12 @@ public sealed class ApplyRemoteOperations
                 var medicine = await GetMedicineAsync(changed.MedicineId, ct);
                 var winner = await _registers.WinnerAsync(changed.MedicineId, changed.Field, ct);
                 MedicineFieldCodec.Set(medicine, changed.Field, winner!.Value);
+                return;
+            case MedicineStartChanged start:
+                await RecordRegistersAsync(body, timestamp, ct);
+                (await GetMedicineAsync(start.MedicineId, ct)).StartDate = DateOnly.ParseExact(
+                    (await _registers.WinnerAsync(start.MedicineId, SyncRegisters.StartDate, ct))!.Value!,
+                    "yyyy-MM-dd", CultureInfo.InvariantCulture);
                 return;
             case MedicineActivityChanged activity:
                 if (await IsNewFactAsync(activity.MedicineId, activity.ChangeId, ct))

@@ -187,6 +187,7 @@
   "Ui.MedicineEditDialog.Slots.SummaryNone": "Keine Zeitpunkte konfiguriert: das Medikament verwendet „Dosis × Einnahmen pro Tag“ wie oben angegeben.",
   "Ui.MedicineEditDialog.Slots.Summary": "{0} Zeitpunkte definiert — Tagesmenge: {1} {2}. Der Tagesverbrauch wird aus diesen Zeitpunkten berechnet.",
   "Ui.MedicineEditDialog.Slots.SummaryAsNeeded": "{0} Zeitpunkte, alle bei Bedarf: kein automatischer Verbrauch; der Bestand sinkt nur mit erfassten Einnahmen.",
+  "Ui.MedicineEditDialog.Slots.SummaryShared": "{0} Zeitpunkte: Das erweiterte Schema legt die Tagesmenge fest; die Zeitpunkte teilen sie im Verhältnis ihrer Dosen auf.",
   "Ui.MedicineEditDialog.Slots.AsNeededLabel": "{0} (bei Bedarf)",
   "Ui.MedicineEditDialog.Field.Package": "Packung",
   "Ui.MedicineEditDialog.Field.Documents": "AIFA-Dokumente",

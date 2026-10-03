@@ -101,7 +101,7 @@ internal sealed class ApplicationTestScope
             FactHistory, Medicines, Stock, Intakes, Counts, Suspensions, Retractions, Ledger, Operations, Uow, Clock);
 
         AddMedicine = new AddMedicine(Medicines, Schedules, Slots, Stock, Operations, Uow, Clock);
-        UpdateMedicine = new UpdateMedicine(Medicines, Slots, Activity, Operations, Uow, Clock);
+        UpdateMedicine = new UpdateMedicine(Medicines, Schedules, Slots, Activity, Operations, Uow, Clock);
         DeactivateMedicine = new DeactivateMedicine(Medicines, Activity, Operations, Uow, Clock);
         Deletion = new InMemoryMedicineDeletionRepository(this);
         DeleteMedicine = new DeleteMedicine(
