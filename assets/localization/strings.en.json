@@ -184,6 +184,8 @@
   "Ui.MedicineEditDialog.Slots.Remove": "Remove slot",
   "Ui.MedicineEditDialog.Slots.SummaryNone": "No slots configured: the medicine will use \"dose × administrations per day\" as set above.",
   "Ui.MedicineEditDialog.Slots.Summary": "{0} slots defined — daily total: {1} {2}. Daily consumption will be computed from these times.",
+  "Ui.MedicineEditDialog.Slots.SummaryAsNeeded": "{0} slots, all as needed: no automatic consumption; the stock decreases only with the intakes you record.",
+  "Ui.MedicineEditDialog.Slots.AsNeededLabel": "{0} (as needed)",
   "Ui.MedicineEditDialog.Field.Package": "Package",
   "Ui.MedicineEditDialog.Field.Documents": "AIFA documents",
   "Ui.MedicineEditDialog.Documents.Leaflet": "Package leaflet",
@@ -319,6 +321,7 @@
   "Ui.AdministrationSlotDialog.Preset.BeforeSleep": "Before sleep",
   "Ui.AdministrationSlotDialog.Preset.Night": "During the night",
   "Ui.AdministrationSlotDialog.Preset.AsNeeded": "As needed",
+  "Ui.AdministrationSlotDialog.AsNeeded": "As needed: never deducted automatically, I record each intake",
   "Ui.AdministrationSlotDialog.Title.New": "New administration slot",
   "Ui.AdministrationSlotDialog.Title.Edit": "Edit slot",
   "Ui.AdministrationSlotDialog.Row.Time": "Time",
@@ -346,6 +349,7 @@
   "Ui.IntakeDialog.Status.Skipped": "Skipped",
   "Ui.IntakeDialog.Status.Cancelled": "Cancelled",
   "Ui.IntakeDialog.Field.Notes": "Notes",
+  "Ui.IntakeDialog.Extra": "Extra dose as needed (the day's scheduled doses still count)",
   "Ui.IntakeDialog.Note": "Taken: stock decreases by Quantity.\nSkipped: no stock change; automatic consumption skips this day.\nCancelled: audit trail, no stock change.",
   "Ui.IntakeDialog.Save": "Register",
 
@@ -814,6 +818,7 @@
   "Notifications.DoseReminder.Body": "{0} — scheduled dose at {1}",
 
   "Reports.Therapy.Header": "Therapy sheet — MedReminder",
+  "Reports.Therapy.AsNeeded": "as needed",
   "Reports.Therapy.Date": "Date: {0}",
   "Reports.Therapy.NoMedicines": "No active medicine.",
   "Reports.Therapy.Fallback.Times": "{0} {1} × {2} times a day",

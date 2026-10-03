@@ -13,7 +13,10 @@ namespace MedReminder.Domain.Ledger;
 //
 // Rules, each with its own day range (C = facts.CutoffDay):
 //  1  Intake consumption: every non-legacy Taken intake books its
-//     quantity on its day.
+//     quantity on its day. An extra intake (IsExtra, an as-needed dose
+//     on top of the plan) books its quantity and is otherwise ignored:
+//     it never "handles" its day for rules 1b, 2 and 3
+//     (docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md §5.3).
 //  1b Reversal: the first non-legacy intake recorded for a day that
 //     carries legacy consumption and no legacy intake reverses that
 //     consumption, as RegisterIntake does today. Frozen rows are never
@@ -186,7 +189,8 @@ public static class LedgerDeriver
         {
             if (intake.IsLegacy) continue;
 
-            if (!legacyIntakeDays.Contains(intake.Day)
+            if (!intake.IsExtra
+                && !legacyIntakeDays.Contains(intake.Day)
                 && reversedDays.Add(intake.Day)
                 && view.LegacyConsumptionByDay.TryGetValue(intake.Day, out var legacyConsumed)
                 && legacyConsumed > 0m)
@@ -284,7 +288,8 @@ public static class LedgerDeriver
                 .Select(g => g.MaxBy(x => x.index).row)
                 .ToList();
 
-            IntakeDays = facts.Intakes.Select(i => i.Day).ToHashSet();
+            // Days an intake handles: extra intakes do not (rule 1).
+            IntakeDays = facts.Intakes.Where(i => !i.IsExtra).Select(i => i.Day).ToHashSet();
 
             LegacyConsumptionByDay = facts.LegacyMovements
                 .Where(m => m.Kind == StockMovementKind.Consumption)

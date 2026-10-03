@@ -37,6 +37,7 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
     private readonly DateTimePicker _timePicker;
     private readonly NumericUpDown _doseBox;
     private readonly ComboBox _labelBox;
+    private readonly CheckBox _asNeeded;
 
     public AdministrationSlotDialog(
         string unit, decimal suggestedDose, ILocalizationService localization,
@@ -90,6 +91,21 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         }
         _labelBox.Text = seed?.TimingLabel ?? string.Empty;
 
+        // As-needed dose: never consumed automatically
+        // (ANALYSIS-INTRADAY-CONSUMPTION.md §5.1). Picking the "As
+        // needed" preset ticks it.
+        _asNeeded = new CheckBox
+        {
+            Text = _loc.Get("Ui.AdministrationSlotDialog.AsNeeded"),
+            AutoSize = true,
+            Checked = seed?.IsAsNeeded ?? false,
+        };
+        var asNeededPreset = _loc.Get("Ui.AdministrationSlotDialog.Preset.AsNeeded");
+        _labelBox.SelectedIndexChanged += (_, _) =>
+        {
+            if (string.Equals(_labelBox.Text, asNeededPreset, StringComparison.Ordinal)) _asNeeded.Checked = true;
+        };
+
         var note = new Label
         {
             AutoSize = true,
@@ -112,6 +128,7 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
         DialogLayout.AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Time"), BuildTimeRow());
         DialogLayout.AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Dose"), BuildDoseRow(unit));
         DialogLayout.AddRow(table, _loc.Get("Ui.AdministrationSlotDialog.Row.Description"), _labelBox);
+        DialogLayout.AddRow(table, string.Empty, _asNeeded);
         DialogLayout.AddRow(table, string.Empty, _error);
         DialogLayout.AddRow(table, string.Empty, note);
 
@@ -155,14 +172,15 @@ internal sealed class AdministrationSlotDialog : MedReminderFormBase
 
         TimeOnly? time = hasTime ? TimeOnly.FromDateTime(_timePicker.Value) : null;
         var label = hasLabel ? _labelBox.Text.Trim() : null;
-        Result = new AdministrationSlotEntry(time, _doseBox.Value, label);
+        Result = new AdministrationSlotEntry(time, _doseBox.Value, label, _asNeeded.Checked);
     }
 
 }
 
 // Slot row kept by MedicineEditDialog. UI-side DTO that gets
 // translated into AdministrationSlotInput for the use case.
-internal sealed record AdministrationSlotEntry(TimeOnly? Time, decimal Dose, string? TimingLabel)
+internal sealed record AdministrationSlotEntry(
+    TimeOnly? Time, decimal Dose, string? TimingLabel, bool IsAsNeeded = false)
 {
     public string TimeDisplay => Time?.ToString("HH:mm") ?? "—";
 

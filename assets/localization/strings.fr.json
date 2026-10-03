@@ -184,6 +184,8 @@
   "Ui.MedicineEditDialog.Slots.Remove": "Supprimer le créneau",
   "Ui.MedicineEditDialog.Slots.SummaryNone": "Aucun créneau configuré : le médicament utilisera « dose × prises par jour » défini ci-dessus.",
   "Ui.MedicineEditDialog.Slots.Summary": "{0} créneaux définis — total journalier : {1} {2}. La consommation journalière sera calculée à partir de ces horaires.",
+  "Ui.MedicineEditDialog.Slots.SummaryAsNeeded": "{0} créneaux, tous au besoin : aucune consommation automatique ; le stock ne diminue qu'avec les prises enregistrées.",
+  "Ui.MedicineEditDialog.Slots.AsNeededLabel": "{0} (au besoin)",
   "Ui.MedicineEditDialog.Field.Package": "Conditionnement",
   "Ui.MedicineEditDialog.Field.Documents": "Documents AIFA",
   "Ui.MedicineEditDialog.Documents.Leaflet": "Notice patient",
@@ -318,6 +320,7 @@
   "Ui.AdministrationSlotDialog.Preset.BeforeSleep": "Avant de dormir",
   "Ui.AdministrationSlotDialog.Preset.Night": "Pendant la nuit",
   "Ui.AdministrationSlotDialog.Preset.AsNeeded": "Au besoin",
+  "Ui.AdministrationSlotDialog.AsNeeded": "Au besoin : jamais déduit automatiquement, j'enregistre chaque prise",
   "Ui.AdministrationSlotDialog.Title.New": "Nouveau créneau de prise",
   "Ui.AdministrationSlotDialog.Title.Edit": "Modifier le créneau",
   "Ui.AdministrationSlotDialog.Row.Time": "Heure",
@@ -345,6 +348,7 @@
   "Ui.IntakeDialog.Status.Skipped": "Sautée",
   "Ui.IntakeDialog.Status.Cancelled": "Annulée",
   "Ui.IntakeDialog.Field.Notes": "Notes",
+  "Ui.IntakeDialog.Extra": "Dose supplémentaire au besoin (les doses prévues du jour restent comptées)",
   "Ui.IntakeDialog.Note": "Prise : le stock diminue de la Quantité.\nSautée : aucun changement de stock ; la consommation automatique saute ce jour.\nAnnulée : trace d'audit, aucun changement de stock.",
   "Ui.IntakeDialog.Save": "Enregistrer",
 
@@ -813,6 +817,7 @@
   "Notifications.DoseReminder.Body": "{0} — prise programmée à {1}",
 
   "Reports.Therapy.Header": "Fiche de traitement — MedReminder",
+  "Reports.Therapy.AsNeeded": "au besoin",
   "Reports.Therapy.Date": "Date : {0}",
   "Reports.Therapy.NoMedicines": "Aucun médicament actif.",
   "Reports.Therapy.Fallback.Times": "{0} {1} × {2} fois par jour",

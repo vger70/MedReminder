@@ -13,6 +13,7 @@ using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Prescriptions;
@@ -1990,7 +1991,8 @@ internal sealed class MainForm : MedReminderFormBase
             if (medicine is null) return;
 
             var slots = await slotRepo.ListForMedicineAsync(row.Id, CancellationToken.None);
-            IReadOnlyList<AdministrationSlotEntry> seedSlots = [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel))];
+            IReadOnlyList<AdministrationSlotEntry> seedSlots =
+                [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel, s.IsAsNeeded))];
 
             // Reconstruct the therapy's current schedule from the most
             // recent history entry, so the edit dialog opens
@@ -2255,15 +2257,27 @@ internal sealed class MainForm : MedReminderFormBase
         var row = GetSelectedRow();
         if (row is null) return;
 
-        // The dialog's default dose is the medicine's current one.
+        // The dialog's default dose is the medicine's current one, or the
+        // as-needed slot's dose when the medicine has one. A medicine
+        // with a plan offers "extra dose" (ANALYSIS-INTRADAY-CONSUMPTION
+        // §5.3), preselected when it has an as-needed slot.
         decimal suggestedQuantity;
+        bool offerExtra;
+        bool extraByDefault;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var repo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
             var medicine = await repo.GetAsync(row.Id, CancellationToken.None);
             if (medicine is null) return;
-            suggestedQuantity = medicine.DosePerAdministration;
+            var slots = await scope.ServiceProvider.GetRequiredService<IMedicationAdministrationSlotRepository>()
+                .ListForMedicineAsync(row.Id, CancellationToken.None);
+            var schedule = await scope.ServiceProvider.GetRequiredService<IMedicationScheduleHistoryRepository>()
+                .ListForMedicineAsync(row.Id, CancellationToken.None);
+            var asNeeded = slots.FirstOrDefault(s => s.IsAsNeeded);
+            suggestedQuantity = asNeeded?.Dose ?? medicine.DosePerAdministration;
+            offerExtra = DailyConsumption.RateOn(DateOnly.FromDateTime(DateTime.Today), schedule, slots) > 0m;
+            extraByDefault = offerExtra && asNeeded is not null;
         }
         catch (Exception ex)
         {
@@ -2271,7 +2285,7 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity, _loc);
+        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity, _loc, offerExtra, extraByDefault);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try

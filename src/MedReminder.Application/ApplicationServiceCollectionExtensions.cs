@@ -6,6 +6,7 @@ using MedReminder.Application.Deadlines;
 using MedReminder.Application.Donations;
 using MedReminder.Application.Household;
 using MedReminder.Application.Ledger;
+using MedReminder.Application.Migrations;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
@@ -109,6 +110,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<FactHistoryQuery>();
         services.AddScoped<RetractFact>();
 
+        services.AddScoped<AsNeededSlotBackfill>();
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();
         services.AddScoped<DoseReminderService>();

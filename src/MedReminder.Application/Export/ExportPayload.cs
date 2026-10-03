@@ -138,6 +138,10 @@ public sealed class ExportedAdministrationSlot
     public TimeOnly? Time { get; set; }
     public string? TimingLabel { get; set; }
     public int Order { get; set; }
+
+    // Additive field (docs/EXPORT-FORMAT.md §5): archives without it
+    // import with false.
+    public bool IsAsNeeded { get; set; }
 }
 
 public sealed class ExportedAdministrationSlotSet
@@ -187,6 +191,10 @@ public sealed class ExportedIntake
     public string Status { get; set; } = string.Empty;
 
     public string? Notes { get; set; }
+
+    // Additive field (docs/EXPORT-FORMAT.md §5): archives without it
+    // import with false.
+    public bool IsExtra { get; set; }
 }
 
 public sealed class ExportedNotificationEvent

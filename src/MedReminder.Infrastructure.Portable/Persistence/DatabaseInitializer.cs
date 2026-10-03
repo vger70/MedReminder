@@ -1,7 +1,9 @@
 using System.Data.Common;
 using System.Globalization;
+using MedReminder.Application.Migrations;
 using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Catalogue;
+using MedReminder.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -334,6 +336,20 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SyncConflicts_MedicineId""
                 ON ""SyncConflicts"" (""MedicineId"");", cancellationToken);
+
+        // As-needed slots and extra intakes (docs/analysis/
+        // ANALYSIS-INTRADAY-CONSUMPTION.md §5). Rows written before read
+        // false: no past day changes. The slots of the upgraded database
+        // are then corrected from today by AsNeededSlotBackfill.
+        await ExecuteRawSqlAsync(PendingDataMigrations.CreateTableSql, cancellationToken);
+        if (await AddColumnIfMissingAsync(
+                "MedicationAdministrationSlots", "IsAsNeeded", "INTEGER NOT NULL DEFAULT 0", cancellationToken))
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                PendingDataMigrations.MarkPendingSql, [AsNeededSlotBackfill.MigrationName], cancellationToken);
+        }
+        await AddColumnIfMissingAsync(
+            "MedicationIntakes", "IsExtra", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the

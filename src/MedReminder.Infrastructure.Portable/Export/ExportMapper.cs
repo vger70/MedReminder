@@ -127,6 +127,7 @@ internal static class ExportMapper
         Time = s.Time,
         TimingLabel = s.TimingLabel,
         Order = s.Order,
+        IsAsNeeded = s.IsAsNeeded,
     };
 
     // SetId is resolved by ExportPayloadUpgrader before mapping; a
@@ -140,6 +141,7 @@ internal static class ExportMapper
         Time = d.Time,
         TimingLabel = d.TimingLabel,
         Order = d.Order,
+        IsAsNeeded = d.IsAsNeeded,
     };
 
     public static ExportedAdministrationSlotSet ToDto(MedicationAdministrationSlotSet s) => new()
@@ -220,6 +222,7 @@ internal static class ExportMapper
         Quantity = i.Quantity,
         Status = i.Status.ToString(),
         Notes = i.Notes,
+        IsExtra = i.IsExtra,
     };
 
     public static MedicationIntake ToEntity(ExportedIntake d) => new()
@@ -232,6 +235,7 @@ internal static class ExportMapper
         Quantity = d.Quantity,
         Status = ParseEnum<IntakeStatus>(d.Status),
         Notes = d.Notes,
+        IsExtra = d.IsExtra,
     };
 
     public static ExportedNotificationEvent ToDto(NotificationEvent e) => new()

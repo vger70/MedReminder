@@ -6,8 +6,11 @@ namespace MedReminder.Domain.Calculations;
 //
 // Three models compose (spec §9, Increment 10, A1):
 //   A) Slot model — takes precedence when the medicine HAS slots
-//      defined: daily consumption is the SUM of the slots' doses,
-//      independent of the day ("current retroactive" semantics).
+//      defined: daily consumption is the SUM of the doses of the slots
+//      that are not as-needed, independent of the day ("current
+//      retroactive" semantics). When every slot is as-needed the rate
+//      is 0: the medicine behaves as PRN (docs/analysis/
+//      ANALYSIS-INTRADAY-CONSUMPTION.md §5.1).
 //   B) Schedule model (A1) — used when the medicine has no slots and
 //      the applicable MedicationScheduleHistory entry carries a
 //      non-FixedDaily ScheduleKind. Dispatches via ScheduleCodec to
@@ -41,7 +44,7 @@ public static class DailyConsumption
             var slotCount = 0;
             foreach (var slot in administrationSlots)
             {
-                slotSum += slot.Dose;
+                if (!slot.IsAsNeeded) slotSum += slot.Dose;
                 slotCount++;
             }
             if (slotCount > 0)

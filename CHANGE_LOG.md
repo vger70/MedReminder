@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #177 — Add analysis for intraday stock and as-needed doses
+## PR #177 — Stop consuming as-needed doses automatically (intraday stock, phase 1)
 
 Link: [vger70/MedReminder#177](https://github.com/vger70/MedReminder/pull/177)
 Branch: `feature/intraday-consumption` → `main`
@@ -49,6 +49,34 @@ Branch: `feature/intraday-consumption` → `main`
   consumption, applied from today only so that past stock counts keep
   their value, and an extra-intake flag so that recording an as-needed
   tablet no longer cancels the day's scheduled consumption.
+
+### Added
+
+- Per-slot "As needed" flag (slot dialog checkbox, ticked by the "As
+  needed" description). An as-needed dose is never consumed
+  automatically, is left out of the daily total, forecast and coverage
+  plan, and gets no dose reminder; a medicine whose slots are all as
+  needed behaves as PRN (`DailyConsumption`, `CoveragePlanner`,
+  `DoseReminderService`).
+- "Extra dose as needed" in the intake dialog for medicines with a
+  plan: the dose is deducted and the day's scheduled consumption stays.
+  The ledger ignores extra intakes when deciding whether a day is
+  handled (automatic consumption, frozen-day reversal, count-day
+  materialization, count dialog).
+
+### Changed
+
+- Switching a medicine to PRN clears its slots from the same day; slots
+  used to take precedence and kept being consumed every day.
+- One-time correction of existing data, from today only: slots
+  described as "As needed" in any UI language are flagged, and PRN
+  medicines that kept slots lose them. Past days are not rewritten, so
+  recorded stock counts keep their value; the user guides suggest one
+  count to recover past over-consumption (`AsNeededSlotBackfill`).
+- Sync: an extra intake or a slot set with an as-needed slot is written
+  with operation schema version 9, and the database image goes to
+  schema version 7, so an older device stops instead of misreading
+  them. The archive carries both flags as additive fields.
 
 ---
 

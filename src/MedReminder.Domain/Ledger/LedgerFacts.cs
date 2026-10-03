@@ -63,7 +63,8 @@ public sealed record LedgerIntake(
     decimal Quantity,
     DateTimeOffset RecordedAt,
     bool IsLegacy,
-    string? Notes = null);
+    string? Notes = null,
+    bool IsExtra = false);
 
 // One recorded slot set (MedicationAdministrationSlotSet and its rows).
 public sealed record LedgerSlotSet(

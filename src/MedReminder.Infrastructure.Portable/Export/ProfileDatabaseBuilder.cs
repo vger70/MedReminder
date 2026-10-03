@@ -1,5 +1,7 @@
 using MedReminder.Application.Export;
+using MedReminder.Application.Migrations;
 using MedReminder.Infrastructure.Persistence;
+using MedReminder.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -36,6 +38,13 @@ internal static class ProfileDatabaseBuilder
         // has already been checked as <= current; older archives simply
         // omit newer columns, which take their defaults (§4.3).
         await db.Database.EnsureCreatedAsync(cancellationToken);
+
+        // The archive may come from a version before the as-needed flag:
+        // its slots are corrected from today on first use
+        // (AsNeededSlotBackfill, idempotent).
+        await db.Database.ExecuteSqlRawAsync(PendingDataMigrations.CreateTableSql, cancellationToken);
+        await db.Database.ExecuteSqlRawAsync(
+            PendingDataMigrations.MarkPendingSql, [AsNeededSlotBackfill.MigrationName], cancellationToken);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 

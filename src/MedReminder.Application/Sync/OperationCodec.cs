@@ -18,13 +18,15 @@ namespace MedReminder.Application.Sync;
 // 3 adds ProfileSettingChanged; 4 adds EmailNotificationSent; 5 adds
 // HouseholdLinked; 6 adds EmailNotificationSent.Stage, written only for
 // a second-stage email (a first-stage one keeps version 4); 7 adds
-// PrescriptionChanged; 8 adds DeadlineChanged.
+// PrescriptionChanged; 8 adds DeadlineChanged; 9 adds
+// IntakeRecorded.IsExtra and SlotValue.IsAsNeeded, written only for an
+// extra intake or a set with an as-needed slot (the others keep 1).
 // Each operation is written with the lowest version that can carry it,
 // so the operations an older app understands keep version 1 and only the
 // new type stops it (R7).
 public static class OperationCodec
 {
-    public const int CurrentSchemaVersion = 8;
+    public const int CurrentSchemaVersion = 9;
 
     private static readonly (string Name, Type Type)[] Catalogue =
     [
@@ -72,6 +74,8 @@ public static class OperationCodec
         HouseholdLinked => 5,
         PrescriptionChanged => 7,
         DeadlineChanged => 8,
+        IntakeRecorded { IsExtra: true } => 9,
+        SlotSetRecorded set when set.Slots.Any(s => s.IsAsNeeded) => 9,
         _ => 1,
     };
 

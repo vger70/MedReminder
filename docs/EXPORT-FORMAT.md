@@ -225,6 +225,7 @@ numbers.
 | `time` | TimeOnly? | |
 | `timingLabel` | string? | |
 | `order` | int | |
+| `isAsNeeded` | bool | as-needed dose, never consumed automatically. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false` |
 
 ### 3.5 `medicationSuspensions[]`
 
@@ -248,6 +249,7 @@ numbers.
 | `quantity` | decimal | |
 | `status` | string | `Taken` / `Skipped` / `Cancelled` / `ManualCorrection` |
 | `notes` | string? | |
+| `isExtra` | bool | extra dose on top of the plan (`Taken` only); it does not replace the day's automatic consumption. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false` |
 
 ### 3.7 `notificationEvents[]`
 

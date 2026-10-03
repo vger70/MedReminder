@@ -12,7 +12,9 @@ namespace MedReminder.Domain.Medicines;
 // Only the current set is used by today's calculations.
 //
 // Composition rule with MedicationScheduleHistory:
-//  - if a medicine HAS slots, daily consumption = SUM(slot.Dose).
+//  - if a medicine HAS slots, daily consumption = SUM(slot.Dose) over
+//    the slots that are not as-needed (IsAsNeeded); when every slot is
+//    as-needed, daily consumption is 0, as for a PRN schedule.
 //  - if it has no slots, the legacy formula is used:
 //    Medicine.DosePerAdministration × Medicine.AdministrationsPerDay
 //    (Increment 1..9 behavior).
@@ -39,6 +41,14 @@ public sealed class MedicationAdministrationSlot
     // "before sleep", "after dinner on a full stomach", etc.). Picked
     // from a preset or typed.
     public string? TimingLabel { get; init; }
+
+    // As-needed dose (docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md
+    // §5.1): taken only when needed and recorded by the user, never
+    // consumed automatically. Stored on the slot, not read from a
+    // preset, because slot sets are history: a later edit elsewhere
+    // must not change past days. Rows written before the flag read
+    // false.
+    public bool IsAsNeeded { get; init; }
 
     // Display order: the UI shows slots ordered by
     // (Time NULLS LAST, Order), so entries "without time" stay at the

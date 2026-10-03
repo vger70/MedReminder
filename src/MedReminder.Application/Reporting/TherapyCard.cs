@@ -63,6 +63,7 @@ public static class TherapyCardBuilder
     private const string ColumnNotesEn = "Notes";
     private const string PeriodFromEn = "from {0}";
     private const string PeriodUntilEn = "until {0}";
+    private const string AsNeededEn = "as needed";
 
     public static TherapyCard Build(
         IReadOnlyList<TherapyReportEntry> entries,
@@ -126,7 +127,7 @@ public static class TherapyCardBuilder
         {
             foreach (var slot in entry.Slots.OrderBy(SortKey))
             {
-                dosage.Add(FormatSlot(slot, m.Unit, c));
+                dosage.Add(FormatSlot(slot, m.Unit, c, loc));
             }
         }
         else
@@ -166,7 +167,8 @@ public static class TherapyCardBuilder
             Notes: options.IncludeNotes && !string.IsNullOrWhiteSpace(m.Notes) ? m.Notes : null);
     }
 
-    private static string FormatSlot(MedicationAdministrationSlot slot, string unit, CultureInfo c)
+    private static string FormatSlot(
+        MedicationAdministrationSlot slot, string unit, CultureInfo c, ILocalizationService? loc)
     {
         var text = slot.Dose.ToString("0.##", c) + " " + unit;
         if (!string.IsNullOrWhiteSpace(slot.TimingLabel))
@@ -176,6 +178,16 @@ public static class TherapyCardBuilder
         if (slot.Time is { } t)
         {
             text += " (" + t.ToString("HH:mm", c) + ")";
+        }
+        if (slot.IsAsNeeded)
+        {
+            // Not repeated when the label already says it (the "As
+            // needed" preset).
+            var marker = loc?.Get("Reports.Therapy.AsNeeded") ?? AsNeededEn;
+            if (!string.Equals(slot.TimingLabel?.Trim(), marker, StringComparison.OrdinalIgnoreCase))
+            {
+                text += " (" + marker + ")";
+            }
         }
         return text;
     }

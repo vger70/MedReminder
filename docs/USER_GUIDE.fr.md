@@ -172,6 +172,19 @@ de traitement et, s'ils ont une heure, peuvent te rappeler la prise.
 
 Sans horaires, le médicament utilise « dose × prises par jour ».
 
+Une dose prise seulement en cas de besoin (par exemple un antalgique
+contre le mal de tête) se marque **Au besoin** dans la fenêtre de
+l'horaire : la description *Au besoin* la coche d'elle-même. Une dose au
+besoin n'est jamais déduite automatiquement et ne compte pas dans le
+total journalier : le stock ne diminue que lorsque tu enregistres la
+prise. Si tous les horaires d'un médicament sont au besoin, il se
+comporte comme un schéma *Au besoin (PRN)*.
+
+Depuis la version qui a introduit cette option, les horaires décrits
+« Au besoin » sont traités comme tels à partir de ce jour. Avant, ils
+étaient déduits chaque jour : si le stock affiché est inférieur au stock
+réel, fais un [comptage](#count) pour le réaligner.
+
 <a id="regimens"></a>
 ### Schémas complexes
 
@@ -370,6 +383,12 @@ jour et la quantité. Les jours normaux, ce n'est pas nécessaire.
 Utilise-le quand un jour diffère du schéma : dès que tu enregistres une
 prise pour un jour, la déduction automatique de ce jour est remplacée
 par ce que tu as enregistré.
+
+Pour une dose en plus du schéma, par exemple une dose au besoin, coche
+**Dose supplémentaire au besoin** : la quantité est déduite et les doses
+prévues du jour restent comptées. L'option n'apparaît que pour les
+médicaments avec un schéma et elle est déjà cochée si le médicament a un
+horaire au besoin.
 
 <a id="correct"></a>
 ### Corriger le stock

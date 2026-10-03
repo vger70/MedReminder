@@ -758,7 +758,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // whenever the slots or the initial-stock field change.
     private void UpdateRemindOnDoseAvailability()
     {
-        var hasTimedSlot = _slots.Any(s => s.Time.HasValue);
+        // As-needed slots get no reminder (DoseReminderService).
+        var hasTimedSlot = _slots.Any(s => s.Time.HasValue && !s.IsAsNeeded);
         var hasStock = CurrentStockForGate() > 0m;
         var enabled = Medicine.CanRemindOnDose(hasTimedSlot, CurrentStockForGate());
 
@@ -859,7 +860,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         {
             var row = new ListViewItem(slot.TimeDisplay);
             row.SubItems.Add(slot.Dose.ToString("0.##"));
-            row.SubItems.Add(slot.LabelDisplay);
+            row.SubItems.Add(slot.IsAsNeeded
+                ? _loc.Get("Ui.MedicineEditDialog.Slots.AsNeededLabel", slot.LabelDisplay)
+                : slot.LabelDisplay);
             _slotsList.Items.Add(row);
         }
         _slotsList.EndUpdate();
@@ -875,7 +878,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryNone");
             return;
         }
-        var total = _slots.Sum(s => s.Dose);
+        // As-needed doses are not part of the daily consumption.
+        if (_slots.All(s => s.IsAsNeeded))
+        {
+            _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryAsNeeded", _slots.Count);
+            return;
+        }
+        var total = _slots.Where(s => !s.IsAsNeeded).Sum(s => s.Dose);
         _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.Summary",
             _slots.Count, total.ToString("0.##"), EffectiveUnit());
     }
@@ -1084,6 +1093,6 @@ internal sealed record MedicineEditResult(
     private IReadOnlyList<AdministrationSlotInput>? MapSlots()
     {
         if (Slots is null || Slots.Count == 0) return null;
-        return Slots.Select(s => new AdministrationSlotInput(s.Dose, s.Time, s.TimingLabel)).ToList();
+        return Slots.Select(s => new AdministrationSlotInput(s.Dose, s.Time, s.TimingLabel, s.IsAsNeeded)).ToList();
     }
 }

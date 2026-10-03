@@ -184,6 +184,8 @@
   "Ui.MedicineEditDialog.Slots.Remove": "Rimuovi slot",
   "Ui.MedicineEditDialog.Slots.SummaryNone": "Nessuno slot configurato: la medicina userà \"dose × somministrazioni al giorno\" indicato sopra.",
   "Ui.MedicineEditDialog.Slots.Summary": "{0} slot definiti — totale giornaliero: {1} {2}. Il consumo giornaliero sarà calcolato da questi orari.",
+  "Ui.MedicineEditDialog.Slots.SummaryAsNeeded": "{0} slot, tutti al bisogno: nessun consumo automatico; la scorta scende solo con le assunzioni registrate.",
+  "Ui.MedicineEditDialog.Slots.AsNeededLabel": "{0} (al bisogno)",
   "Ui.MedicineEditDialog.Field.Package": "Confezione",
   "Ui.MedicineEditDialog.Field.Documents": "Documenti AIFA",
   "Ui.MedicineEditDialog.Documents.Leaflet": "Foglietto illustrativo",
@@ -319,6 +321,7 @@
   "Ui.AdministrationSlotDialog.Preset.BeforeSleep": "Prima di dormire",
   "Ui.AdministrationSlotDialog.Preset.Night": "Durante la notte",
   "Ui.AdministrationSlotDialog.Preset.AsNeeded": "Al bisogno",
+  "Ui.AdministrationSlotDialog.AsNeeded": "Al bisogno: non scalare automaticamente, registro io ogni assunzione",
   "Ui.AdministrationSlotDialog.Title.New": "Nuovo slot di somministrazione",
   "Ui.AdministrationSlotDialog.Title.Edit": "Modifica slot",
   "Ui.AdministrationSlotDialog.Row.Time": "Orario",
@@ -346,6 +349,7 @@
   "Ui.IntakeDialog.Status.Skipped": "Saltata",
   "Ui.IntakeDialog.Status.Cancelled": "Annullata",
   "Ui.IntakeDialog.Field.Notes": "Note",
+  "Ui.IntakeDialog.Extra": "Dose extra al bisogno (le dosi programmate del giorno restano)",
   "Ui.IntakeDialog.Note": "Assunta: la scorta scende di Quantità.\nSaltata: nessuna variazione di scorta; il consumo automatico salta questa giornata.\nAnnullata: audit trail, nessuna variazione di scorta.",
   "Ui.IntakeDialog.Save": "Registra",
 
@@ -814,6 +818,7 @@
   "Notifications.DoseReminder.Body": "{0} — dose programmata alle {1}",
 
   "Reports.Therapy.Header": "Scheda terapia — MedReminder",
+  "Reports.Therapy.AsNeeded": "al bisogno",
   "Reports.Therapy.Date": "Data: {0}",
   "Reports.Therapy.NoMedicines": "Nessuna medicina attiva.",
   "Reports.Therapy.Fallback.Times": "{0} {1} × {2} volte al giorno",

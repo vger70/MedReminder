@@ -160,6 +160,18 @@ therapy report, and timed slots can remind you at dose time.
 
 Without slots, the medicine uses "dose × administrations per day".
 
+A dose taken only when needed (for example a painkiller for a
+headache) is marked **As needed** in the slot window: the *As needed*
+description ticks it for you. An as-needed dose is never deducted
+automatically and is not part of the daily total: the stock decreases
+only when you register the intake. If every slot of a medicine is as
+needed, the medicine behaves like an *As needed (PRN)* schedule.
+
+From the version that introduced this option, slots described as "As
+needed" are treated as as-needed from that day on. Before, they were
+deducted every day: if the stock shown is lower than the real one, do a
+[count](#count) to realign it.
+
 <a id="regimens"></a>
 ### Complex regimens
 
@@ -342,6 +354,12 @@ intake as **Taken**, **Skipped** or **Cancelled**, with the day and the
 quantity. You do not need it on normal days. Use it when a day differs
 from the schedule: once you register an intake for a day, that day's
 automatic deduction is replaced by what you registered.
+
+For a dose on top of the schedule, for example an as-needed one, tick
+**Extra dose as needed**: the quantity is deducted and the day's
+scheduled doses still count. The option appears only for medicines with
+a schedule and is already ticked when the medicine has an as-needed
+slot.
 
 <a id="correct"></a>
 ### Correct stock

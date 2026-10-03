@@ -125,7 +125,8 @@ public sealed class LedgerFactsLoader
             intake.Quantity,
             intake.RecordedAt,
             IsLegacy: frozenAt is { } f && intake.RecordedAt < f,
-            intake.Notes);
+            intake.Notes,
+            intake.IsExtra);
 
     public static StockCountAnchor ToAnchor(StockCount c)
         => new(

@@ -172,6 +172,19 @@ wenn sie eine Uhrzeit haben, an die Einnahme erinnern.
 Ohne Einnahmezeiten verwendet das Medikament „Dosis × Einnahmen pro
 Tag“.
 
+Eine Dosis, die nur bei Bedarf genommen wird (zum Beispiel ein
+Schmerzmittel bei Kopfschmerzen), markierst du im Fenster der
+Einnahmezeit als **Bei Bedarf**: die Beschreibung *Bei Bedarf* setzt das
+Häkchen von selbst. Eine Bedarfsdosis wird nie automatisch abgezogen und
+zählt nicht zur Tagesmenge: der Bestand sinkt nur, wenn du die Einnahme
+erfasst. Sind alle Einnahmezeiten eines Medikaments bei Bedarf, verhält
+es sich wie ein Schema *Bei Bedarf (PRN)*.
+
+Ab der Version, die diese Option eingeführt hat, gelten Einnahmezeiten
+mit der Beschreibung „Bei Bedarf“ ab diesem Tag als Bedarfsdosen. Vorher
+wurden sie täglich abgezogen: Ist der angezeigte Bestand niedriger als
+der tatsächliche, mach eine [Zählung](#count), um ihn anzugleichen.
+
 <a id="regimens"></a>
 ### Komplexe Schemata
 
@@ -369,6 +382,12 @@ Symbolleiste) erfasst eine Einnahme als **Eingenommen**,
 Tagen brauchst du das nicht. Nutze es, wenn ein Tag vom Schema abweicht:
 Sobald du für einen Tag eine Einnahme erfasst, ersetzt sie den
 automatischen Abzug dieses Tages.
+
+Für eine Dosis zusätzlich zum Schema, zum Beispiel eine Bedarfsdosis,
+setze **Zusätzliche Dosis bei Bedarf**: die Menge wird abgezogen und die
+geplanten Dosen des Tages bleiben. Die Option erscheint nur bei
+Medikamenten mit einem Schema und ist bereits gesetzt, wenn das
+Medikament eine Einnahmezeit bei Bedarf hat.
 
 <a id="correct"></a>
 ### Bestand korrigieren

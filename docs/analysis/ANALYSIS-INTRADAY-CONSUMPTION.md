@@ -364,7 +364,9 @@ when no data changed. This also fixes the stale value after midnight.
   operation gains `IsExtra`. A `SlotSetRecorded` with an as-needed slot
   and an `IntakeRecorded` with `IsExtra` are written with schema
   version 9 (§5.3); `PresetId` alone is display-only and needs no
-  version bump. Built-in preset ids resolve on every
+  version bump. The database image a joining device starts from goes
+  to schema version 7 for the same reason (an older app would read the
+  image without the two flags). Built-in preset ids resolve on every
   device. Custom presets need their own sync operation; until then a
   slot referencing an unknown preset has no projection time on that
   device (display-only divergence).
@@ -408,6 +410,11 @@ declared intended use]`
   slots with an explicit time.
 
 ## 12. Implementation phases
+
+Status: phase 1 implemented. The backfill runs from `ConsumptionCatchUp`
+while the `PendingDataMigrations` marker set by the schema patch (or by
+an archive import) is present; imported archives are marked too, since
+they may predate the flag.
 
 Each phase is shippable and tested on its own.
 

@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Ledger;
+using MedReminder.Application.Migrations;
 
 namespace MedReminder.Application.Monitoring;
 
@@ -22,15 +23,18 @@ public sealed class ConsumptionCatchUp
     private readonly IMedicineRepository _medicines;
     private readonly LedgerSynchronizer _ledger;
     private readonly IUnitOfWork _uow;
+    private readonly AsNeededSlotBackfill? _asNeededBackfill;
 
     public ConsumptionCatchUp(
         IMedicineRepository medicines,
         LedgerSynchronizer ledger,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        AsNeededSlotBackfill? asNeededBackfill = null)
     {
         _medicines = medicines;
         _ledger = ledger;
         _uow = uow;
+        _asNeededBackfill = asNeededBackfill;
     }
 
     // Returns the number of derived rows created.
@@ -39,6 +43,10 @@ public sealed class ConsumptionCatchUp
 
     private async Task<int> RunCoreAsync(CancellationToken cancellationToken)
     {
+        // One-time data migration, before the first derivation that
+        // would book the day with the old as-needed data.
+        if (_asNeededBackfill is not null) await _asNeededBackfill.RunAsync(cancellationToken);
+
         var medicines = await _medicines.ListAllAsync(cancellationToken);
 
         var created = 0;

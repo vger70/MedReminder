@@ -167,6 +167,19 @@ se hanno un'ora, possono ricordarti la dose.
 
 Senza orari, la medicina usa "dose × somministrazioni al giorno".
 
+Una dose presa solo quando serve (per esempio un antidolorifico per il
+mal di testa) va segnata **Al bisogno** nella finestra dell'orario: la
+descrizione *Al bisogno* la spunta da sola. Una dose al bisogno non viene
+mai scalata automaticamente e non fa parte del totale giornaliero: la
+scorta scende solo quando registri l'assunzione. Se tutti gli orari di
+una medicina sono al bisogno, la medicina si comporta come uno schema
+*Al bisogno (PRN)*.
+
+Dalla versione che ha introdotto questa opzione, gli orari descritti
+come "Al bisogno" vengono considerati al bisogno da quel giorno in poi.
+Prima venivano scalati ogni giorno: se la scorta mostrata è più bassa di
+quella reale, fai un [conteggio](#count) per riallinearla.
+
 <a id="regimens"></a>
 ### Regimi complessi
 
@@ -357,6 +370,12 @@ con il giorno e la quantità. Nei giorni normali non serve. Usala quando
 un giorno è diverso dallo schema: appena registri un'assunzione per un
 giorno, lo scalo automatico di quel giorno viene sostituito da quello
 che hai registrato.
+
+Per una dose in più rispetto allo schema, per esempio una dose al
+bisogno, spunta **Dose extra al bisogno**: la quantità viene scalata e le
+dosi programmate del giorno restano. L'opzione compare solo per le
+medicine con uno schema ed è già spuntata se la medicina ha un orario al
+bisogno.
 
 <a id="correct"></a>
 ### Correggere le scorte

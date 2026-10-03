@@ -17,6 +17,7 @@ internal sealed class MedicationAdministrationSlotConfiguration
         builder.Property(s => s.Time);
         builder.Property(s => s.TimingLabel).HasMaxLength(200);
         builder.Property(s => s.Order);
+        builder.Property(s => s.IsAsNeeded);
 
         builder.HasIndex(s => s.MedicineId);
         builder.HasIndex(s => new { s.MedicineId, s.Order });

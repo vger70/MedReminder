@@ -60,7 +60,44 @@ public class DailyConsumptionSlotTests
         DailyConsumption.RateOn(Today, schedule, slots).Should().Be(0m);
     }
 
-    private static MedicationAdministrationSlot Slot(decimal dose, TimeOnly? time = null, string? label = null)
+    [Fact]
+    public void As_needed_slots_are_not_part_of_the_daily_consumption()
+    {
+        var schedule = new[] { DomainFactory.Schedule(new DateOnly(2026, 9, 1), 1m, 2) };
+        var slots = new[]
+        {
+            Slot(dose: 1m, time: new TimeOnly(8, 0)),
+            Slot(dose: 1m, time: new TimeOnly(20, 0)),
+            Slot(dose: 1m, label: "Al bisogno", asNeeded: true),
+        };
+
+        DailyConsumption.RateOn(Today, schedule, slots).Should().Be(2m);
+    }
+
+    [Fact]
+    public void Only_as_needed_slots_mean_no_automatic_consumption()
+    {
+        // Same contract as a PRN schedule: slots still win over the
+        // legacy dose x frequency, so the rate is 0, not 2.
+        var schedule = new[] { DomainFactory.Schedule(new DateOnly(2026, 9, 1), 1m, 2) };
+        var slots = new[] { Slot(dose: 1m, label: "Al bisogno", asNeeded: true) };
+
+        DailyConsumption.RateOn(Today, schedule, slots).Should().Be(0m);
+    }
+
+    [Fact]
+    public void An_as_needed_label_without_the_flag_is_still_consumed()
+    {
+        // Rows written before the flag keep their past behavior: the
+        // label alone changes nothing (ANALYSIS-INTRADAY-CONSUMPTION §5.2).
+        var schedule = new[] { DomainFactory.Schedule(new DateOnly(2026, 9, 1), 1m, 2) };
+        var slots = new[] { Slot(dose: 1m, label: "Al bisogno") };
+
+        DailyConsumption.RateOn(Today, schedule, slots).Should().Be(1m);
+    }
+
+    private static MedicationAdministrationSlot Slot(
+        decimal dose, TimeOnly? time = null, string? label = null, bool asNeeded = false)
     {
         return new MedicationAdministrationSlot
         {
@@ -68,6 +105,7 @@ public class DailyConsumptionSlotTests
             Dose = dose,
             Time = time,
             TimingLabel = label,
+            IsAsNeeded = asNeeded,
         };
     }
 }

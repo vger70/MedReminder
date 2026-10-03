@@ -52,7 +52,7 @@ internal static class Operations
     public static SlotSetRecorded SlotSet(
         MedicationAdministrationSlotSet set, IReadOnlyList<MedicationAdministrationSlot> slots)
         => new(set.MedicineId, set.Id, set.EffectiveFrom, set.RecordedAt,
-            [.. slots.Select(s => new SlotValue(s.Id, s.Dose, s.Time, s.TimingLabel, s.Order))]);
+            [.. slots.Select(s => new SlotValue(s.Id, s.Dose, s.Time, s.TimingLabel, s.Order, s.IsAsNeeded))]);
 
     public static StockEntryRecorded StockEntry(StockMovement movement)
         => new(movement.MedicineId, movement.Id, movement.Kind, movement.QuantityDelta,
@@ -60,7 +60,7 @@ internal static class Operations
 
     public static IntakeRecorded Intake(MedicationIntake intake)
         => new(intake.MedicineId, intake.Id, intake.Day, intake.Status, intake.Quantity,
-            intake.ScheduledAt, intake.ActualAt, intake.Notes, intake.RecordedAt);
+            intake.ScheduledAt, intake.ActualAt, intake.Notes, intake.RecordedAt, intake.IsExtra);
 
     public static StockCountRecorded Count(StockCount count)
         => new(count.MedicineId, count.Id, count.CountDay, count.CountedQuantity, count.TakenToday,

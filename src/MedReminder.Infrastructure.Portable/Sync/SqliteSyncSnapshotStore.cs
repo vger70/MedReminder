@@ -39,7 +39,11 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
     //      app would drop them.
     //   6: Deadlines (administrative deadlines), replicated: an older app
     //      would drop them.
-    public const int CurrentSchemaVersion = 6;
+    //   7: MedicationAdministrationSlots.IsAsNeeded and
+    //      MedicationIntakes.IsExtra (ANALYSIS-INTRADAY-CONSUMPTION.md §5):
+    //      an older app would consume as-needed slots every day and read
+    //      extra intakes as scheduled ones.
+    public const int CurrentSchemaVersion = 7;
 
     private static readonly string[] NotReplicated =
     [

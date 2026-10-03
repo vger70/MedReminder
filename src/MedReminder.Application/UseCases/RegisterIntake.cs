@@ -12,7 +12,8 @@ public sealed record RegisterIntakeCommand(
     DateOnly Day,
     IntakeStatus Status,
     decimal Quantity,
-    string? Notes = null);
+    string? Notes = null,
+    bool IsExtra = false);
 
 // Records a single intake (spec §6) as a fact (B.1 Phase 2c-2): the
 // MedicationIntake row, recorded now. The stock rows follow from the
@@ -25,6 +26,10 @@ public sealed record RegisterIntakeCommand(
 //    carrying frozen (Legacy) consumption, the first intake books a
 //    PositiveCorrection that reverses it, since frozen rows are never
 //    edited.
+//  - IsExtra (Taken only): an extra dose on top of the plan, typically
+//    an as-needed one. It books its quantity and leaves the day's
+//    automatic consumption in place (docs/analysis/
+//    ANALYSIS-INTRADAY-CONSUMPTION.md §5.3).
 // StockEpoch is not incremented: this is not a refill.
 public sealed class RegisterIntake
 {
@@ -64,6 +69,8 @@ public sealed class RegisterIntake
     {
         if (cmd.Quantity <= 0m)
             throw new ArgumentException("Intake quantity must be positive.", nameof(cmd));
+        if (cmd.IsExtra && cmd.Status != IntakeStatus.Taken)
+            throw new ArgumentException("Only a taken intake can be an extra dose.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
@@ -78,13 +85,15 @@ public sealed class RegisterIntake
             ActualAt = cmd.Status == IntakeStatus.Taken ? now : null,
             Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim(),
             RecordedAt = now,
+            IsExtra = cmd.IsExtra,
         };
 
         var before = await _ledger.LoadFactsAsync(medicine, cancellationToken);
         var after = before with
         {
             Intakes = [.. before.Intakes, new LedgerIntake(
-                intake.Id, intake.Day, intake.Status, intake.Quantity, now, IsLegacy: false, intake.Notes)],
+                intake.Id, intake.Day, intake.Status, intake.Quantity, now, IsLegacy: false, intake.Notes,
+                intake.IsExtra)],
         };
 
         if (cmd.Status == IntakeStatus.Taken)

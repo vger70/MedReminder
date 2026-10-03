@@ -245,13 +245,14 @@ public sealed class ReconcileStock
 
     // Sum of the doses of timed slots whose time has already passed,
     // as a suggestion only. Without slots (or without times) nothing
-    // can be inferred and the suggestion is 0.
+    // can be inferred and the suggestion is 0. As-needed slots are not
+    // part of today's scheduled quantity.
     private decimal DefaultTakenToday(decimal todayScheduled, IReadOnlyList<MedicationAdministrationSlot> slots)
     {
         if (todayScheduled <= 0m || slots.Count == 0) return 0m;
         var now = TimeOnly.FromDateTime(
             TimeZoneInfo.ConvertTime(_clock.GetUtcNow(), _clock.LocalTimeZone).DateTime);
-        var taken = slots.Where(s => s.Time is { } t && t <= now).Sum(s => s.Dose);
+        var taken = slots.Where(s => !s.IsAsNeeded && s.Time is { } t && t <= now).Sum(s => s.Dose);
         return Math.Min(taken, todayScheduled);
     }
 }

@@ -184,6 +184,8 @@
   "Ui.MedicineEditDialog.Slots.Remove": "Zeitpunkt entfernen",
   "Ui.MedicineEditDialog.Slots.SummaryNone": "Keine Zeitpunkte konfiguriert: das Medikament verwendet „Dosis × Einnahmen pro Tag“ wie oben angegeben.",
   "Ui.MedicineEditDialog.Slots.Summary": "{0} Zeitpunkte definiert — Tagesmenge: {1} {2}. Der Tagesverbrauch wird aus diesen Zeitpunkten berechnet.",
+  "Ui.MedicineEditDialog.Slots.SummaryAsNeeded": "{0} Zeitpunkte, alle bei Bedarf: kein automatischer Verbrauch; der Bestand sinkt nur mit erfassten Einnahmen.",
+  "Ui.MedicineEditDialog.Slots.AsNeededLabel": "{0} (bei Bedarf)",
   "Ui.MedicineEditDialog.Field.Package": "Packung",
   "Ui.MedicineEditDialog.Field.Documents": "AIFA-Dokumente",
   "Ui.MedicineEditDialog.Documents.Leaflet": "Packungsbeilage",
@@ -318,6 +320,7 @@
   "Ui.AdministrationSlotDialog.Preset.BeforeSleep": "Vor dem Schlafen",
   "Ui.AdministrationSlotDialog.Preset.Night": "In der Nacht",
   "Ui.AdministrationSlotDialog.Preset.AsNeeded": "Bei Bedarf",
+  "Ui.AdministrationSlotDialog.AsNeeded": "Bei Bedarf: nie automatisch abgezogen, ich erfasse jede Einnahme",
   "Ui.AdministrationSlotDialog.Title.New": "Neuer Einnahmezeitpunkt",
   "Ui.AdministrationSlotDialog.Title.Edit": "Zeitpunkt bearbeiten",
   "Ui.AdministrationSlotDialog.Row.Time": "Uhrzeit",
@@ -345,6 +348,7 @@
   "Ui.IntakeDialog.Status.Skipped": "Übersprungen",
   "Ui.IntakeDialog.Status.Cancelled": "Storniert",
   "Ui.IntakeDialog.Field.Notes": "Notizen",
+  "Ui.IntakeDialog.Extra": "Zusätzliche Dosis bei Bedarf (die geplanten Dosen des Tages bleiben)",
   "Ui.IntakeDialog.Note": "Eingenommen: der Bestand sinkt um die Menge.\nÜbersprungen: keine Bestandsänderung; der automatische Verbrauch überspringt diesen Tag.\nStorniert: Prüfspur, keine Bestandsänderung.",
   "Ui.IntakeDialog.Save": "Erfassen",
 
@@ -813,6 +817,7 @@
   "Notifications.DoseReminder.Body": "{0} — geplante Dosis um {1}",
 
   "Reports.Therapy.Header": "Therapieplan — MedReminder",
+  "Reports.Therapy.AsNeeded": "bei Bedarf",
   "Reports.Therapy.Date": "Datum: {0}",
   "Reports.Therapy.NoMedicines": "Kein aktives Medikament.",
   "Reports.Therapy.Fallback.Times": "{0} {1} × {2} Mal am Tag",
