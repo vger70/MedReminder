@@ -6,6 +6,7 @@ using MedReminder.Application.Catalogue;
 using MedReminder.Application.Coverage;
 using MedReminder.Application.Deadlines;
 using MedReminder.Application.Donations;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Notifications;
@@ -13,6 +14,7 @@ using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Prescriptions;
@@ -131,6 +133,7 @@ internal sealed class MainForm : MedReminderFormBase
             // After the first load, so an action can select its medicine.
             WireToastActions();
         };
+        Load += (_, _) => WireEstimateRefresh();
         Load += (_, _) => WireSyncRefresh();
         Load += (_, _) => WireHandoverPrompt();
         Load += (_, _) => TryStartPassiveUpdateCheck();
@@ -374,6 +377,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RegisterIntake"),
             Mdl2Glyph.Glyphs.CheckMark, Keys.Control | Keys.I,
             async () => await ShowRegisterIntakeAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.DoseTimes"),
+            Mdl2Glyph.Glyphs.History, Keys.None,
+            async () => await ShowDoseTimesAsync()));
         therapyMenu.DropDownItems.Add(new ToolStripSeparator());
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Report"),
             Mdl2Glyph.Glyphs.Document, Keys.Control | Keys.P,
@@ -1455,6 +1461,17 @@ internal sealed class MainForm : MedReminderFormBase
                 e.Value ??= "—";
                 e.FormattingApplied = true;
             }
+            else if (property == nameof(MedicineListItem.StockDisplay)
+                && e.RowIndex >= 0
+                && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem stockItem)
+            {
+                // The estimate is explained where it is shown
+                // (ANALYSIS-INTRADAY-CONSUMPTION.md §7).
+                grid.Rows[e.RowIndex].Cells[e.ColumnIndex].ToolTipText = stockItem.DueTodaySoFar > 0m
+                    ? _loc.Get("Ui.MainForm.Stock.EstimateTooltip",
+                        stockItem.LedgerStock.ToString("0.##"), stockItem.DueTodaySoFar.ToString("0.##"), stockItem.Unit)
+                    : string.Empty;
+            }
             else if (property == nameof(MedicineListItem.SupplyDisplay)
                 && e.RowIndex >= 0
                 && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem { HasShortage: true } item)
@@ -1837,6 +1854,7 @@ internal sealed class MainForm : MedReminderFormBase
             var loader = scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>();
             var items = await loader.LoadAsync(CancellationToken.None);
 
+            _loadedDay = DateOnly.FromDateTime(DateTime.Today);
             _allRows = items.ToList();
             ApplyFilters();
             HideErrorBanner();
@@ -1849,14 +1867,86 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    // Rebuilds the shown rows from the last load, in load order: the
-    // inactive toggle, then the summary card and the search text
-    // (MedicineListFilter). The cards count the rows before the card and
-    // search filters, so each card shows what a click on it would list.
-    private void ApplyFilters()
+    // The stock column subtracts today's doses as their time passes
+    // (ANALYSIS-INTRADAY-CONSUMPTION.md §4): every minute while the window
+    // is shown, and when it is activated, the estimates are recomputed.
+    // Rows are updated in place, so the selection, the sort and the
+    // scroll position stay; a list whose medicines changed is reloaded.
+    // After midnight the catch-up books yesterday first, so the estimate
+    // never starts from the day before yesterday.
+    private System.Windows.Forms.Timer? _estimateTimer;
+    private DateOnly _loadedDay;
+    private bool _refreshingEstimates;
+
+    private void WireEstimateRefresh()
     {
-        var visible = MedicineListFilter.Visible(_allRows, _showInactive);
-        var summary = MedicineListFilter.Summarize(visible);
+        _estimateTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
+        _estimateTimer.Tick += async (_, _) => await RefreshEstimatesAsync();
+        _estimateTimer.Start();
+        Activated += async (_, _) => await RefreshEstimatesAsync();
+        FormClosed += (_, _) => _estimateTimer.Dispose();
+    }
+
+    private async Task RefreshEstimatesAsync()
+    {
+        if (_refreshingEstimates || !Visible || WindowState == FormWindowState.Minimized) return;
+        // A dialog of this window may hold a row: refresh once it closes.
+        if (OwnedForms.Any(f => f.Visible && f.Modal)) return;
+        _refreshingEstimates = true;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            if (DateOnly.FromDateTime(DateTime.Today) != _loadedDay)
+            {
+                await scope.ServiceProvider.GetRequiredService<ConsumptionCatchUp>().RunAsync(CancellationToken.None);
+            }
+            var items = await scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>()
+                .LoadAsync(CancellationToken.None);
+            _loadedDay = DateOnly.FromDateTime(DateTime.Today);
+
+            var byId = items.ToDictionary(i => i.Id);
+            if (byId.Count != _allRows.Count || _allRows.Any(r => !byId.ContainsKey(r.Id)))
+            {
+                _allRows = items.ToList();
+                ApplyFilters();
+                return;
+            }
+            var changed = false;
+            foreach (var row in _allRows)
+            {
+                var fresh = byId[row.Id];
+                if (row.CurrentStock == fresh.CurrentStock && row.Status == fresh.Status
+                    && row.DaysRemaining == fresh.DaysRemaining && row.EstimatedRunOutDate == fresh.EstimatedRunOutDate)
+                {
+                    continue;
+                }
+                row.CurrentStock = fresh.CurrentStock;
+                row.LedgerStock = fresh.LedgerStock;
+                row.DueTodaySoFar = fresh.DueTodaySoFar;
+                row.DaysRemaining = fresh.DaysRemaining;
+                row.EstimatedRunOutDate = fresh.EstimatedRunOutDate;
+                row.Status = fresh.Status;
+                row.StatusDisplay = fresh.StatusDisplay;
+                changed = true;
+            }
+            if (!changed) return;
+            UpdateCards();
+            _grid.Invalidate();
+        }
+        catch (Exception ex)
+        {
+            // The next tick tries again; the list keeps its last values.
+            _log.LogWarning(ex, "Refreshing the stock estimates failed.");
+        }
+        finally
+        {
+            _refreshingEstimates = false;
+        }
+    }
+
+    private void UpdateCards()
+    {
+        var summary = MedicineListFilter.Summarize(MedicineListFilter.Visible(_allRows, _showInactive));
         foreach (var card in _cards)
         {
             card.Count = card.Bucket switch
@@ -1867,6 +1957,16 @@ internal sealed class MainForm : MedReminderFormBase
                 _ => summary.All,
             };
         }
+    }
+
+    // Rebuilds the shown rows from the last load, in load order: the
+    // inactive toggle, then the summary card and the search text
+    // (MedicineListFilter). The cards count the rows before the card and
+    // search filters, so each card shows what a click on it would list.
+    private void ApplyFilters()
+    {
+        var visible = MedicineListFilter.Visible(_allRows, _showInactive);
+        UpdateCards();
 
         _rows = new BindingList<MedicineListItem>(
             MedicineListFilter.Apply(visible, _bucket, _searchBox.Text));
@@ -1952,13 +2052,50 @@ internal sealed class MainForm : MedReminderFormBase
         return await query.GetByNationalCodeAsync(country, nationalCode, cancellationToken);
     }
 
+    // Time-of-day presets of the profile for the slot dialog; the
+    // built-ins when they cannot be read (display only).
+    private async Task<DoseTimeSettings> LoadDoseTimesAsync()
+    {
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<DoseTimeSettingsQuery>()
+                .LoadAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Dose time presets could not be read; using the built-in ones.");
+            return DoseTimeSettings.BuiltIn;
+        }
+    }
+
+    // Therapy → Dose times… (ANALYSIS-INTRADAY-CONSUMPTION.md §6).
+    private async Task ShowDoseTimesAsync()
+    {
+        using var dialog = new DoseTimesDialog(await LoadDoseTimesAsync(), _loc);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<SaveDoseTimeSettings>()
+                .ExecuteAsync(dialog.Result, CancellationToken.None);
+            _log.LogInformation("Dose time presets saved.");
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.DoseTimesDialog.Error.Save"), ex);
+        }
+    }
+
     private async Task ShowNewMedicineAsync(ReferenceMedicine? initialReference = null)
     {
         using var dialog = new MedicineEditDialog(
             MedicineEditDialog.EditMode.Create, _loc,
             catalogueContext: BuildCatalogueContext(),
             barcodeContext: BuildBarcodeScanContext(),
-            initialReference: initialReference);
+            initialReference: initialReference,
+            doseTimes: await LoadDoseTimesAsync());
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -1990,7 +2127,8 @@ internal sealed class MainForm : MedReminderFormBase
             if (medicine is null) return;
 
             var slots = await slotRepo.ListForMedicineAsync(row.Id, CancellationToken.None);
-            IReadOnlyList<AdministrationSlotEntry> seedSlots = [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel))];
+            IReadOnlyList<AdministrationSlotEntry> seedSlots =
+                [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel, s.IsAsNeeded, s.PresetId))];
 
             // Reconstruct the therapy's current schedule from the most
             // recent history entry, so the edit dialog opens
@@ -2035,7 +2173,8 @@ internal sealed class MainForm : MedReminderFormBase
             MedicineEditDialog.EditMode.Edit, _loc, seed,
             catalogueContext: BuildCatalogueContext(),
             currentStock: row.CurrentStock,
-            barcodeContext: BuildBarcodeScanContext());
+            barcodeContext: BuildBarcodeScanContext(),
+            doseTimes: await LoadDoseTimesAsync());
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -2255,15 +2394,27 @@ internal sealed class MainForm : MedReminderFormBase
         var row = GetSelectedRow();
         if (row is null) return;
 
-        // The dialog's default dose is the medicine's current one.
+        // The dialog's default dose is the medicine's current one, or the
+        // as-needed slot's dose when the medicine has one. A medicine
+        // with a plan offers "extra dose" (ANALYSIS-INTRADAY-CONSUMPTION
+        // §5.3), preselected when it has an as-needed slot.
         decimal suggestedQuantity;
+        bool offerExtra;
+        bool extraByDefault;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var repo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
             var medicine = await repo.GetAsync(row.Id, CancellationToken.None);
             if (medicine is null) return;
-            suggestedQuantity = medicine.DosePerAdministration;
+            var slots = await scope.ServiceProvider.GetRequiredService<IMedicationAdministrationSlotRepository>()
+                .ListForMedicineAsync(row.Id, CancellationToken.None);
+            var schedule = await scope.ServiceProvider.GetRequiredService<IMedicationScheduleHistoryRepository>()
+                .ListForMedicineAsync(row.Id, CancellationToken.None);
+            var asNeeded = slots.FirstOrDefault(s => s.IsAsNeeded);
+            suggestedQuantity = asNeeded?.Dose ?? medicine.DosePerAdministration;
+            offerExtra = DailyConsumption.RateOn(DateOnly.FromDateTime(DateTime.Today), schedule, slots) > 0m;
+            extraByDefault = offerExtra && asNeeded is not null;
         }
         catch (Exception ex)
         {
@@ -2271,7 +2422,7 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity, _loc);
+        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity, _loc, offerExtra, extraByDefault);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try

@@ -30,6 +30,73 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #177 — Stock that follows the dose times; as-needed doses never consumed automatically
+
+Link: [vger70/MedReminder#177](https://github.com/vger70/MedReminder/pull/177)
+Branch: `feature/intraday-consumption` → `main`
+
+### Docs
+
+- New `docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`. The stock shown
+  in the main window is the start-of-day value, so a dose already taken
+  still appears in it; the analysis chooses a read-side projection that
+  subtracts the doses already due today, resolved from slot times or
+  user-editable time-of-day presets, and leaves the ledger, sync, counts
+  and forecasts unchanged.
+- The same analysis covers as-needed doses: a slot described as "As
+  needed", or a PRN medicine that kept its slots, is consumed every day
+  today. It specifies a per-slot as-needed flag excluded from automatic
+  consumption, applied from today only so that past stock counts keep
+  their value, and an extra-intake flag so that recording an as-needed
+  tablet no longer cancels the day's scheduled consumption.
+
+### Added
+
+- Per-slot "As needed" flag (slot dialog checkbox, ticked by the "As
+  needed" description). An as-needed dose is never consumed
+  automatically, is left out of the daily total, forecast and coverage
+  plan, and gets no dose reminder; a medicine whose slots are all as
+  needed behaves as PRN (`DailyConsumption`, `CoveragePlanner`,
+  `DoseReminderService`).
+- "Extra dose as needed" in the intake dialog for medicines with a
+  plan: the dose is deducted and the day's scheduled consumption stays.
+  The ledger ignores extra intakes when deciding whether a day is
+  handled (automatic consumption, frozen-day reversal, count-day
+  materialization, count dialog).
+
+### Changed
+
+- Switching a medicine to PRN clears its slots from the same day; slots
+  used to take precedence and kept being consumed every day.
+- One-time correction of existing data, from today only: slots
+  described as "As needed" in any UI language are flagged, and PRN
+  medicines that kept slots lose them. Past days are not rewritten, so
+  recorded stock counts keep their value; the user guides suggest one
+  count to recover past over-consumption (`AsNeededSlotBackfill`).
+- Sync: an extra intake or a slot set with an as-needed slot is written
+  with operation schema version 9, and the database image goes to
+  schema version 7, so an older device stops instead of misreading
+  them. The archive carries both flags as additive fields.
+- Time-of-day presets: **Therapy → Dose times…** sets the time of each
+  moment ("In the morning" = 08:00, "Before lunch" = 13:00, …), hides
+  unused ones, adds the user's own, and sets the times of medicines
+  without slots (1 to 4 a day). A slot picked from a preset keeps a
+  reference to it (`PresetId`); existing slots are linked once from
+  their description in any UI language (`SlotPresetBackfill`). Display
+  only and device-local: the times never change stored stock and are
+  not synchronized; the archive carries them as additive fields.
+- The stock column of the main list is an estimate during the day: the
+  start-of-day stock minus today's doses whose time has passed (slot
+  time, else its preset time, else the default times of medicines
+  without slots). It used to show one dose more than the box held
+  until midnight. The run-out forecast, the coverage plan and the
+  recorded stock keep the start-of-day value, so nothing is counted
+  twice; a tooltip shows both values. The list refreshes the estimates
+  every minute in place, and the count dialog suggests the same
+  quantity as taken (`IntradayConsumption`, `DueToday`).
+
+---
+
 ## PR #176 — Show all About data sources, stop text box border flicker, remember the main window placement
 
 Link: [vger70/MedReminder#176](https://github.com/vger70/MedReminder/pull/176)

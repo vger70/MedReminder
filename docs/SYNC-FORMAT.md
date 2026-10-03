@@ -6,8 +6,8 @@ describes the on-disk format only. The design rationale (merge rules,
 security model, phases) is in
 [`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`](analysis/ANALYSIS-B1-MOBILE-SYNC.md).
 
-Format version: **1**. Operation catalogue: schema version **7**.
-Database image: schema version **5**.
+Format version: **1**. Operation catalogue: schema version **9**.
+Database image: schema version **7**.
 
 ---
 
@@ -259,7 +259,10 @@ while later operations for it exist (they are skipped, §6); 3, the
 image holds `SentEmailNotifications`, which an older app would drop;
 4, `SentEmailNotifications` carry `Stage`, which an older app would
 drop; 5, the image holds `Prescriptions`, which an older app would drop;
-6, the image holds `Deadlines`, which an older app would drop.
+6, the image holds `Deadlines`, which an older app would drop; 7, slots
+carry `IsAsNeeded` and intakes `IsExtra`, which an older app would drop
+(it would consume as-needed slots every day and read extra intakes as
+scheduled ones).
 
 A device joins from the newest checkpoint whose `vector` covers every
 device folder's first remaining segment (`vector[d] >= first − 1`), or
@@ -269,7 +272,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 8)
+## 6. Operation catalogue (schema versions 1 to 9)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -285,9 +288,9 @@ nothing.
 | `MedicineFieldChanged` | `field`, `value`, `baseVersion` | last writer wins per field |
 | `MedicineActivityChanged` | `changeId`, `day`, `active`, `recordedAt` | dated fact; the current value is the latest by timestamp |
 | `ScheduleRowRecorded` | `rowId`, `effectiveFrom`, `dosePerAdministration`, `administrationsPerDay`, `scheduleKind`, `schedulePayload`, `recordedAt`, `baseVersion` | fact; the latest row of a date wins |
-| `SlotSetRecorded` | `setId`, `effectiveFrom`, `recordedAt`, `slots[]` (`slotId`, `dose`, `time`, `timingLabel`, `order`), `baseVersion` | fact; the latest set in force applies |
+| `SlotSetRecorded` (version 9 when a slot has `isAsNeeded` true) | `setId`, `effectiveFrom`, `recordedAt`, `slots[]` (`slotId`, `dose`, `time`, `timingLabel`, `order`, `isAsNeeded` (from version 9; absent = false), `presetId` (display only, any version; absent = null)), `baseVersion` | fact; the latest set in force applies; an as-needed slot is never consumed automatically |
 | `StockEntryRecorded` | `movementId`, `kind`, `quantityDelta`, `occurredAt`, `notes` | fact |
-| `IntakeRecorded` | `intakeId`, `day`, `status`, `quantity`, `scheduledAt`, `actualAt`, `notes`, `recordedAt` | fact |
+| `IntakeRecorded` (version 9 when `isExtra` is true) | `intakeId`, `day`, `status`, `quantity`, `scheduledAt`, `actualAt`, `notes`, `recordedAt`, `isExtra` (from version 9; absent = false) | fact; an extra intake books its quantity and leaves the day's automatic consumption in place |
 | `StockCountRecorded` | `countId`, `countDay`, `countedQuantity`, `takenToday`, `thresholdAtCount`, `recordedAt`, `notes`, stored outcome | fact; its outcome is evaluated again on the facts recorded before it |
 | `SuspensionRecorded` | `suspensionId`, `startDate`, `endDate`, `reason`, `recordedAt` | fact |
 | `SuspensionEndChanged` | `suspensionId`, `endDate` | last writer wins |

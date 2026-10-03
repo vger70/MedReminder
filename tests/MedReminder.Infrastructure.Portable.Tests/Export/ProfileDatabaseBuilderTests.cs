@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MedReminder.Application.Migrations;
 using MedReminder.Application.Export;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Stock;
@@ -39,6 +40,9 @@ public sealed class ProfileDatabaseBuilderTests : IDisposable
         medicines.Should().ContainSingle(m => m.Name == "Sample" && m.StockEpoch == 2);
         MedicineStock.Current(movements).Should().Be(28m);
         schedule.Should().ContainSingle();
+        // The archive may predate the as-needed flag.
+        (await new PendingDataMigrations(db).IsPendingAsync(AsNeededSlotBackfill.MigrationName, default))
+            .Should().BeTrue();
     }
 
     [Fact]

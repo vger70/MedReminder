@@ -33,6 +33,11 @@ public class OperationEmissionGuardTests
         // device's conflict list.
         "DisableSync",
         "DismissSyncConflict",
+        // Device-local time-of-day presets and the in-place, display-only
+        // link of slots to them (ANALYSIS-INTRADAY-CONSUMPTION.md §6):
+        // every device runs the same link itself.
+        "SaveDoseTimeSettings",
+        "SlotPresetBackfill",
     };
 
     [Fact]

@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Domain.Calculations;
 
 namespace MedReminder.Application.Overview;
@@ -20,6 +21,7 @@ public sealed class MedicineOverviewLoader
     private readonly TimeProvider _clock;
     private readonly ILocalizationService _loc;
     private readonly IShortageListStore? _shortages;
+    private readonly DueToday? _dueToday;
 
     public MedicineOverviewLoader(
         IMedicineRepository medicines,
@@ -29,9 +31,11 @@ public sealed class MedicineOverviewLoader
         IMedicationAdministrationSlotRepository slots,
         TimeProvider clock,
         ILocalizationService localization,
-        IShortageListStore? shortages = null)
+        IShortageListStore? shortages = null,
+        DueToday? dueToday = null)
     {
         _shortages = shortages;
+        _dueToday = dueToday;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -47,19 +51,29 @@ public sealed class MedicineOverviewLoader
         var medicines = await _medicines.ListAllAsync(cancellationToken);
         var items = new List<MedicineListItem>(medicines.Count);
         var shortages = _shortages?.Load();
+        var doseTimes = _dueToday is null ? null : await _dueToday.LoadSettingsAsync(cancellationToken);
 
         foreach (var m in medicines)
         {
             var movements = await _stock.ListForMedicineAsync(m.Id, cancellationToken);
-            var currentStock = MedicineStock.Current(movements);
+            var ledgerStock = MedicineStock.Current(movements);
 
             var schedule = await _schedules.ListForMedicineAsync(m.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);
             var suspensions = await _suspensions.ListForMedicineAsync(m.Id, cancellationToken);
 
+            // The list shows the stock after today's doses already due
+            // (ANALYSIS-INTRADAY-CONSUMPTION.md §4); the forecast keeps
+            // the start-of-day stock, which today's whole plan still
+            // starts from, so it does not count those doses twice.
+            var due = _dueToday is null || doseTimes is null
+                ? 0m
+                : await _dueToday.ComputeAsync(m, schedule, suspensions, slots, doseTimes, cancellationToken);
+            var currentStock = Math.Max(0m, ledgerStock - due);
+
             // Shared with the therapy timeline so both views show the
             // same run-out date.
-            var result = MedicineForecast.Compute(today, currentStock, schedule, slots, suspensions);
+            var result = MedicineForecast.Compute(today, ledgerStock, schedule, slots, suspensions);
             var rate = result.DailyRate;
             var isSuspended = result.IsSuspendedToday;
             var forecast = result.RunOut;
@@ -71,6 +85,8 @@ public sealed class MedicineOverviewLoader
                 Name = m.Name,
                 Unit = m.Unit,
                 CurrentStock = currentStock,
+                LedgerStock = ledgerStock,
+                DueTodaySoFar = ledgerStock - currentStock,
                 DailyRate = rate,
                 DailyRateDisplay = rate <= 0m ? "—" : $"{rate:0.##}/{_loc.Get("Ui.MainForm.Column.DailyRate.Unit")}",
                 DaysRemaining = forecast.DaysRemaining,

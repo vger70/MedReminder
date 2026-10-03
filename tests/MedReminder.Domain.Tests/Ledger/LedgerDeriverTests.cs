@@ -142,6 +142,110 @@ public class LedgerDeriverTests
     }
 
     [Fact]
+    public void An_extra_intake_books_its_quantity_and_keeps_the_automatic_consumption()
+    {
+        var day = Start.AddDays(3);
+        var facts = Facts() with
+        {
+            Intakes = [Extra(day, 1m)],
+        };
+
+        var rows = LedgerDeriver.Derive(facts, Today, Utc).DerivedRows.Where(r => r.Day == day).ToList();
+
+        rows.Should().HaveCount(2);
+        rows.Should().ContainSingle(r => r.Rule == DerivedRule.IntakeConsumption && r.Delta == -1m);
+        rows.Should().ContainSingle(r => r.Rule == DerivedRule.AutomaticConsumption && r.Delta == -1m);
+    }
+
+    [Fact]
+    public void An_extra_intake_does_not_reverse_frozen_consumption()
+    {
+        var day = Start.AddDays(3);
+        var legacy = new StockMovement
+        {
+            MedicineId = MedicineId,
+            OccurredAt = At(day, 12),
+            Kind = StockMovementKind.Consumption,
+            QuantityDelta = -1m,
+            StockEpoch = 1,
+            Origin = StockMovementOrigin.Legacy,
+        };
+        var facts = Facts(cutoff: Start.AddDays(4)) with
+        {
+            LegacyMovements = [legacy],
+            Intakes = [Extra(day, 1m)],
+        };
+
+        var rows = LedgerDeriver.Derive(facts, Today, Utc).DerivedRows.Where(r => r.Day == day).ToList();
+
+        rows.Should().ContainSingle().Which.Rule.Should().Be(DerivedRule.IntakeConsumption);
+
+        var scheduled = facts with
+        {
+            Intakes = [new LedgerIntake(Guid.NewGuid(), day, IntakeStatus.Taken, 1m, At(day, 20), IsLegacy: false)],
+        };
+        LedgerDeriver.Derive(scheduled, Today, Utc).DerivedRows
+            .Should().Contain(r => r.Day == day && r.Rule == DerivedRule.FrozenDayReversal,
+                "a scheduled intake still reverses the frozen day");
+    }
+
+    [Fact]
+    public void An_extra_intake_keeps_a_count_day_materialization()
+    {
+        var day = Start.AddDays(4);
+        var count = new StockCountAnchor(Guid.NewGuid(), day, At(day, 21),
+            45m, 1m, 5, 46m, 1m, 0m, true, false);
+        var facts = Facts() with { Counts = [count], Intakes = [Extra(day, 1m)] };
+
+        var rows = LedgerDeriver.Derive(facts, Today, Utc).DerivedRows.Where(r => r.Day == day).ToList();
+
+        rows.Should().Contain(r => r.Rule == DerivedRule.CountDayConsumption);
+        rows.Should().Contain(r => r.Rule == DerivedRule.IntakeConsumption);
+    }
+
+    [Fact]
+    public void A_count_can_still_mark_the_scheduled_dose_after_an_extra_intake()
+    {
+        var facts = Facts() with { Intakes = [Extra(Today, 1m)] };
+
+        LedgerDeriver.CountDayScheduled(facts, Today, Utc).Should().Be(1m);
+        (facts with { Intakes = [new LedgerIntake(Guid.NewGuid(), Today, IntakeStatus.Taken, 1m, At(Today, 9), false)] })
+            .Should().Match<LedgerFacts>(f => LedgerDeriver.CountDayScheduled(f, Today, Utc) == 0m);
+    }
+
+    [Fact]
+    public void An_as_needed_slot_set_from_today_leaves_past_days_unchanged()
+    {
+        // The backfill (ANALYSIS-INTRADAY-CONSUMPTION §5.2): a slot that
+        // was consumed every day is flagged as-needed from today only.
+        MedicationAdministrationSlot Slot(decimal dose, bool asNeeded) =>
+            new() { MedicineId = MedicineId, Dose = dose, IsAsNeeded = asNeeded };
+        var before = Facts() with
+        {
+            SlotSets = [new LedgerSlotSet(Start, At(Start, 8), [Slot(1m, false), Slot(1m, false)])],
+        };
+        var after = before with
+        {
+            SlotSets =
+            [
+                .. before.SlotSets,
+                new LedgerSlotSet(Today, At(Today, 9), [Slot(1m, false), Slot(1m, true)]),
+            ],
+        };
+
+        var past = LedgerDeriver.Derive(before, Today, Utc);
+        var now = LedgerDeriver.Derive(after, Today, Utc);
+        now.DerivedRows.Should().BeEquivalentTo(past.DerivedRows);
+
+        var tomorrow = LedgerDeriver.Derive(after, Today.AddDays(1), Utc).DerivedRows
+            .Single(r => r.Day == Today);
+        tomorrow.Delta.Should().Be(-1m, "only the scheduled slot is consumed from today");
+    }
+
+    private static LedgerIntake Extra(DateOnly day, decimal quantity)
+        => new(Guid.NewGuid(), day, IntakeStatus.Taken, quantity, At(day, 15), IsLegacy: false, IsExtra: true);
+
+    [Fact]
     public void DailyConsumption_takes_the_later_of_two_rows_with_the_same_date()
     {
         // §17: callers pass rows in recording order within a date.

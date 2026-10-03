@@ -332,6 +332,30 @@ public class ReconcileStockTests
     }
 
     [Fact]
+    public async Task An_as_needed_slot_is_not_suggested_as_taken_today()
+    {
+        var scope = new ApplicationTestScope(FixedNow);   // 12:00 local
+        var id = await scope.AddMedicine.ExecuteAsync(
+            new AddMedicineCommand(
+                "Enalapril", "compresse", 1m, 2,
+                new DateOnly(2026, 9, 10), 7,
+                NotificationChannels.Windows,
+                InitialQuantity: 30m,
+                AdministrationSlots:
+                [
+                    new AdministrationSlotInput(1m, new TimeOnly(8, 0), null),
+                    new AdministrationSlotInput(1m, new TimeOnly(9, 0), "Al bisogno", IsAsNeeded: true),
+                    new AdministrationSlotInput(1m, new TimeOnly(20, 0), null),
+                ]),
+            CancellationToken.None);
+
+        var snapshot = await scope.ReconcileStock.LoadAsync(id, CancellationToken.None);
+
+        snapshot.TodayScheduledQuantity.Should().Be(2m);
+        snapshot.DefaultTakenToday.Should().Be(1m);
+    }
+
+    [Fact]
     public async Task Load_writes_nothing_and_matches_execute()
     {
         var scope = new ApplicationTestScope(FixedNow);

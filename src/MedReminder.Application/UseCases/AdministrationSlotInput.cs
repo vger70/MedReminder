@@ -9,7 +9,9 @@ namespace MedReminder.Application.UseCases;
 public sealed record AdministrationSlotInput(
     decimal Dose,
     TimeOnly? Time,
-    string? TimingLabel);
+    string? TimingLabel,
+    bool IsAsNeeded = false,
+    Guid? PresetId = null);
 
 // Builds the slot rows of a new slot set from the command inputs
 // (shared by AddMedicine and UpdateMedicine).
@@ -30,6 +32,8 @@ internal static class AdministrationSlotSetBuilder
                 Time = input.Time,
                 TimingLabel = string.IsNullOrWhiteSpace(input.TimingLabel) ? null : input.TimingLabel.Trim(),
                 Order = i,
+                IsAsNeeded = input.IsAsNeeded,
+                PresetId = input.PresetId,
             });
         }
         return slots;

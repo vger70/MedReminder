@@ -1,6 +1,7 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Sync;
 
 namespace MedReminder.Application.UseCases;
 
@@ -16,6 +17,11 @@ namespace MedReminder.Application.UseCases;
 // NewDosePerAdministration and NewAdministrationsPerDay (existing
 // behavior). When set it is persisted verbatim; the legacy fields
 // become display-only summary values on the Medicine entity.
+//
+// A change to PrnSchedule also clears the slots from the same day, by
+// recording an empty slot set: slots take precedence over the schedule
+// in DailyConsumption, so slots left in place would keep being consumed
+// every day (docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md §5.2).
 public sealed record ChangeMedicationScheduleCommand(
     Guid MedicineId,
     decimal NewDosePerAdministration,
@@ -27,6 +33,7 @@ public sealed class ChangeMedicationSchedule
 {
     private readonly IMedicineRepository _medicines;
     private readonly IMedicationScheduleHistoryRepository _schedules;
+    private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
@@ -34,12 +41,14 @@ public sealed class ChangeMedicationSchedule
     public ChangeMedicationSchedule(
         IMedicineRepository medicines,
         IMedicationScheduleHistoryRepository schedules,
+        IMedicationAdministrationSlotRepository slots,
         IOperationLog operations,
         IUnitOfWork uow,
         TimeProvider clock)
     {
         _medicines = medicines;
         _schedules = schedules;
+        _slots = slots;
         _operations = operations;
         _uow = uow;
         _clock = clock;
@@ -98,9 +107,29 @@ public sealed class ChangeMedicationSchedule
         medicine.AdministrationsPerDay = cmd.NewAdministrationsPerDay;
         medicine.UpdatedAt = _clock.GetUtcNow();
 
+        var operations = new List<SyncOperationBody> { Operations.ScheduleRow(entry) };
+        var current = effectiveSchedule is PrnSchedule
+            ? (await _slots.ListSetsForMedicineAsync(medicine.Id, cancellationToken)).LastOrDefault()
+            : null;
+        if (current is { Slots.Count: > 0 })
+        {
+            var cleared = new MedicationAdministrationSlotSet
+            {
+                MedicineId = medicine.Id,
+                EffectiveFrom = cmd.EffectiveFrom,
+                // The latest recorded set is the current one: never tie
+                // with the set it replaces.
+                RecordedAt = entry.RecordedAt > current.Set.RecordedAt
+                    ? entry.RecordedAt
+                    : current.Set.RecordedAt.AddTicks(1),
+            };
+            await _slots.AddSetAsync(cleared, [], cancellationToken);
+            operations.Add(Operations.SlotSet(cleared, []));
+        }
+
         await _schedules.AddAsync(entry, cancellationToken);
         await _medicines.UpdateAsync(medicine, cancellationToken);
-        await _operations.AppendAsync([Operations.ScheduleRow(entry)], cancellationToken);
+        await _operations.AppendAsync(operations, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
     }
 }

@@ -166,6 +166,35 @@ public class CoveragePlannerTests
     }
 
     [Fact]
+    public void A_medicine_whose_slots_are_all_as_needed_is_not_computed()
+    {
+        var m = Medicine();
+        var slots = new[]
+        {
+            new MedicationAdministrationSlot { MedicineId = m.Id, Dose = 1m, Order = 0, IsAsNeeded = true },
+        };
+        var row = CoveragePlanner.BuildRow(Input(m, 3m, slots: slots), Today, Today, Today.AddDays(6));
+
+        row.Needed.Should().Be(0m);
+        row.Status.Should().Be(CoverageStatus.AsNeeded);
+    }
+
+    [Fact]
+    public void An_as_needed_slot_beside_scheduled_ones_is_left_out_of_the_need()
+    {
+        var m = Medicine();
+        var slots = new[]
+        {
+            new MedicationAdministrationSlot { MedicineId = m.Id, Dose = 1m, Order = 0 },
+            new MedicationAdministrationSlot { MedicineId = m.Id, Dose = 1m, Order = 1, IsAsNeeded = true },
+        };
+        var row = CoveragePlanner.BuildRow(Input(m, 0m, slots: slots), Today, Today, Today.AddDays(3));
+
+        row.Needed.Should().Be(4m);
+        row.Status.Should().Be(CoverageStatus.Short);
+    }
+
+    [Fact]
     public void A_medicine_not_taken_in_the_period_is_marked_as_such()
     {
         var m = Medicine(start: Today.AddDays(30));

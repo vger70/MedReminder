@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Calculations;
@@ -132,7 +133,8 @@ public sealed class ReconcileStock
         LedgerSynchronizer ledger,
         IOperationLog operations,
         IUnitOfWork uow,
-        TimeProvider clock)
+        TimeProvider clock,
+        DueToday? dueToday = null)
     {
         _medicines = medicines;
         _schedules = schedules;
@@ -143,7 +145,13 @@ public sealed class ReconcileStock
         _operations = operations;
         _uow = uow;
         _clock = clock;
+        _dueToday = dueToday;
     }
+
+    // Today's doses already due, as the main list subtracts them
+    // (ANALYSIS-INTRADAY-CONSUMPTION.md §4.3); without it, the timed
+    // slots only.
+    private readonly DueToday? _dueToday;
 
     // Writes nothing. The start-of-day ledger is derived in memory.
     public async Task<StockCountSnapshot> LoadAsync(Guid medicineId, CancellationToken cancellationToken)
@@ -233,25 +241,32 @@ public sealed class ReconcileStock
         var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
         var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
 
+        var defaultTaken = _dueToday is null
+            ? DefaultTakenToday(todayScheduled, slots)
+            : Math.Min(todayScheduled, await _dueToday.ComputeAsync(
+                medicine, schedule, suspensions, slots,
+                await _dueToday.LoadSettingsAsync(cancellationToken), cancellationToken));
+
         return new StockCountSnapshot(
             medicine.Id,
             today,
             start,
             todayScheduled,
-            DefaultTakenToday(todayScheduled, slots),
+            defaultTaken,
             DailyConsumption.RateOn(today, schedule, slots),
             SuspensionState.IsSuspendedOn(today, suspensions));
     }
 
     // Sum of the doses of timed slots whose time has already passed,
     // as a suggestion only. Without slots (or without times) nothing
-    // can be inferred and the suggestion is 0.
+    // can be inferred and the suggestion is 0. As-needed slots are not
+    // part of today's scheduled quantity.
     private decimal DefaultTakenToday(decimal todayScheduled, IReadOnlyList<MedicationAdministrationSlot> slots)
     {
         if (todayScheduled <= 0m || slots.Count == 0) return 0m;
         var now = TimeOnly.FromDateTime(
             TimeZoneInfo.ConvertTime(_clock.GetUtcNow(), _clock.LocalTimeZone).DateTime);
-        var taken = slots.Where(s => s.Time is { } t && t <= now).Sum(s => s.Dose);
+        var taken = slots.Where(s => !s.IsAsNeeded && s.Time is { } t && t <= now).Sum(s => s.Dose);
         return Math.Min(taken, todayScheduled);
     }
 }

@@ -12,6 +12,9 @@ namespace MedReminder.UI.Forms;
 //   Skipped         → no, but the day is marked as "handled"
 //   Cancelled       → no, cancels a previously recorded intake
 //                     (historical / audit use).
+// For a medicine with a plan, "Extra dose (as needed)" records a taken
+// dose on top of the plan: it leaves the day's automatic consumption
+// in place (docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md §5.3).
 internal sealed class IntakeDialog : MedReminderFormBase
 {
     public IntakeResult? Result { get; private set; }
@@ -21,8 +24,11 @@ internal sealed class IntakeDialog : MedReminderFormBase
     private readonly NumericUpDown _quantityBox;
     private readonly DateTimePicker _dayPicker;
     private readonly TextBox _notesBox;
+    private readonly CheckBox? _extraBox;
 
-    public IntakeDialog(string medicineName, string unit, decimal suggestedQuantity, ILocalizationService localization)
+    public IntakeDialog(
+        string medicineName, string unit, decimal suggestedQuantity, ILocalizationService localization,
+        bool offerExtra = false, bool extraByDefault = false)
     {
         _loc = localization;
         Text = _loc.Get("Ui.IntakeDialog.Title");
@@ -54,6 +60,23 @@ internal sealed class IntakeDialog : MedReminderFormBase
             new StatusOption(IntakeStatus.Cancelled, _loc.Get("Ui.IntakeDialog.Status.Cancelled")),
         });
         _statusBox.SelectedIndex = 0;
+
+        if (offerExtra)
+        {
+            _extraBox = new CheckBox
+            {
+                Text = _loc.Get("Ui.IntakeDialog.Extra"),
+                AutoSize = true,
+                Checked = extraByDefault,
+            };
+            // Only a taken dose can be an extra one.
+            _statusBox.SelectedIndexChanged += (_, _) =>
+            {
+                var taken = ((StatusOption)_statusBox.SelectedItem!).Status == IntakeStatus.Taken;
+                _extraBox.Enabled = taken;
+                if (!taken) _extraBox.Checked = false;
+            };
+        }
 
         _quantityBox = new NumericUpDown
         {
@@ -104,6 +127,10 @@ internal sealed class IntakeDialog : MedReminderFormBase
 
         DialogLayout.AddRow(table, string.Empty, header);
         DialogLayout.AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Status"), _statusBox);
+        if (_extraBox is not null)
+        {
+            DialogLayout.AddRow(table, string.Empty, _extraBox);
+        }
         DialogLayout.AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Amount"), _quantityBox);
         DialogLayout.AddRow(table, _loc.Get("Ui.IntakeDialog.Field.When"), _dayPicker);
         DialogLayout.AddRow(table, _loc.Get("Ui.IntakeDialog.Field.Notes"), _notesBox);
@@ -124,7 +151,7 @@ internal sealed class IntakeDialog : MedReminderFormBase
         var status = ((StatusOption)_statusBox.SelectedItem!).Status;
         var day = DateOnly.FromDateTime(_dayPicker.Value.Date);
         Result = new IntakeResult(status, _quantityBox.Value, day,
-            NullIfBlank(_notesBox.Text));
+            NullIfBlank(_notesBox.Text), IsExtra: status == IntakeStatus.Taken && _extraBox?.Checked == true);
     }
 
 
@@ -141,8 +168,9 @@ internal sealed record IntakeResult(
     IntakeStatus Status,
     decimal Quantity,
     DateOnly Day,
-    string? Notes)
+    string? Notes,
+    bool IsExtra = false)
 {
     public RegisterIntakeCommand ToCommand(Guid medicineId)
-        => new(medicineId, Day, Status, Quantity, Notes);
+        => new(medicineId, Day, Status, Quantity, Notes, IsExtra);
 }

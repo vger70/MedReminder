@@ -26,7 +26,12 @@ public class OperationCodecTests
         new SlotSetRecorded(M, F, new DateOnly(2026, 9, 27), At,
             [new SlotValue(Guid.Parse("0a0a0a0a-0000-0000-0000-000000000003"), 1.5m, new TimeOnly(8, 30), "breakfast", 0)]),
         new StockEntryRecorded(M, F, StockMovementKind.NegativeCorrection, -2.25m, At, "broken"),
+        new SlotSetRecorded(M, F, new DateOnly(2026, 9, 27), At,
+            [new SlotValue(Guid.Parse("0a0a0a0a-0000-0000-0000-000000000003"), 1.5m, new TimeOnly(8, 30), "breakfast", 0),
+                new SlotValue(Guid.Parse("0a0a0a0a-0000-0000-0000-000000000005"), 1m, null, "as needed", 1,
+                    IsAsNeeded: true)]),
         new IntakeRecorded(M, F, new DateOnly(2026, 9, 26), IntakeStatus.Skipped, 1m, null, null, null, At),
+        new IntakeRecorded(M, F, new DateOnly(2026, 9, 26), IntakeStatus.Taken, 1m, null, At, null, At, IsExtra: true),
         new StockCountRecorded(M, F, new DateOnly(2026, 9, 27), 40m, 1m, 7, At, "counted",
             42m, 2m, -1m, false, true),
         new SuspensionRecorded(M, F, new DateOnly(2026, 9, 28), null, "trip", At),
@@ -101,6 +106,8 @@ public class OperationCodecTests
             HouseholdLinked => 5,
             PrescriptionChanged => 7,
             DeadlineChanged => 8,
+            IntakeRecorded { IsExtra: true } => 9,
+            SlotSetRecorded set when set.Slots.Any(s => s.IsAsNeeded) => 9,
             _ => 1,
         };
 
@@ -134,6 +141,28 @@ public class OperationCodecTests
         var back = OperationCodec.Deserialize("EmailNotificationSent", 4, payload);
 
         back.Should().BeOfType<EmailNotificationSent>().Which.Stage.Should().Be(1);
+    }
+
+    // As-needed doses (schema version 9): payloads written before the
+    // flags read as a scheduled intake and a scheduled slot.
+    [Fact]
+    public void Payloads_without_the_as_needed_flags_read_false()
+    {
+        const string intake =
+            "{\"intakeId\":\"0f0f0f0f-0000-0000-0000-000000000002\",\"day\":\"2026-09-26\"," +
+            "\"status\":\"Taken\",\"quantity\":1,\"scheduledAt\":null,\"actualAt\":null,\"notes\":null," +
+            "\"recordedAt\":\"2026-09-27T10:15:30+02:00\"," +
+            "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}";
+        const string set =
+            "{\"setId\":\"0f0f0f0f-0000-0000-0000-000000000002\",\"effectiveFrom\":\"2026-09-27\"," +
+            "\"recordedAt\":\"2026-09-27T10:15:30+02:00\",\"slots\":[{\"slotId\":" +
+            "\"0a0a0a0a-0000-0000-0000-000000000003\",\"dose\":1,\"time\":null,\"timingLabel\":\"x\",\"order\":0}]," +
+            "\"baseVersion\":null,\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}";
+
+        OperationCodec.Deserialize("IntakeRecorded", 1, intake)
+            .Should().BeOfType<IntakeRecorded>().Which.IsExtra.Should().BeFalse();
+        OperationCodec.Deserialize("SlotSetRecorded", 1, set)
+            .Should().BeOfType<SlotSetRecorded>().Which.Slots.Single().IsAsNeeded.Should().BeFalse();
     }
 
     // A first-stage email keeps schema version 4 although its payload now

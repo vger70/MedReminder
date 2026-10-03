@@ -8,7 +8,14 @@ public sealed class MedicineListItem
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Unit { get; set; } = string.Empty;
+    // Estimated stock now: the start-of-day ledger stock minus today's
+    // doses already due (ANALYSIS-INTRADAY-CONSUMPTION.md §4). Equal to
+    // LedgerStock when nothing is due yet.
     public decimal CurrentStock { get; set; }
+    // Stored stock: today's automatic consumption is booked after
+    // midnight, so during the day this is the start-of-day value.
+    public decimal LedgerStock { get; set; }
+    public decimal DueTodaySoFar { get; set; }
     public decimal DailyRate { get; set; }
     public int? DaysRemaining { get; set; }
     public DateOnly? EstimatedRunOutDate { get; set; }

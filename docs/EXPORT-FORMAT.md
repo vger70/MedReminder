@@ -225,6 +225,8 @@ numbers.
 | `time` | TimeOnly? | |
 | `timingLabel` | string? | |
 | `order` | int | |
+| `isAsNeeded` | bool | as-needed dose, never consumed automatically. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false` |
+| `presetId` | Guid? | time-of-day preset the description was picked from (§3.16). Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `null` |
 
 ### 3.5 `medicationSuspensions[]`
 
@@ -248,6 +250,7 @@ numbers.
 | `quantity` | decimal | |
 | `status` | string | `Taken` / `Skipped` / `Cancelled` / `ManualCorrection` |
 | `notes` | string? | |
+| `isExtra` | bool | extra dose on top of the plan (`Taken` only); it does not replace the day's automatic consumption. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false` |
 
 ### 3.7 `notificationEvents[]`
 
@@ -372,6 +375,34 @@ device-local and not exported.
 | `doneOn` | DateOnly? | set on a one-off deadline once done |
 | `recordedAt` | DateTimeOffset | |
 | `updatedAt` | DateTimeOffset | |
+
+### 3.16 `doseTimePresets[]` and `doseTimeDefaults[]`
+
+Time-of-day presets and the default times of medicines without slots
+(`docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md` §4.2, §6). Display
+only: they place doses in the day and never change stock. Added after
+`schemaVersion` 2 shipped, as additive fields (§5): archives without
+them import with the built-in presets and times.
+
+`doseTimePresets[]`: only built-ins the user changed and presets the
+user added.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | name-based for a built-in |
+| `builtInKey` | string? | `Morning`, `BeforeLunch`, …; null for a preset the user added |
+| `label` | string? | text of a preset the user added |
+| `time` | TimeOnly? | null: no time of day |
+| `isAsNeeded` | bool | default of the slot flag when the preset is picked |
+| `order` | int | order among the presets the user added |
+| `isHidden` | bool | hidden from the slot dialog |
+
+`doseTimeDefaults[]`: only the counts the user changed.
+
+| Field | Type | Notes |
+|---|---|---|
+| `administrationsPerDay` | int | 1 to 4 |
+| `times` | string | `HH:mm` values separated by `;` |
 
 ---
 

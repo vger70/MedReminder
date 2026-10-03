@@ -172,6 +172,29 @@ wenn sie eine Uhrzeit haben, an die Einnahme erinnern.
 Ohne Einnahmezeiten verwendet das Medikament „Dosis × Einnahmen pro
 Tag“.
 
+Eine Dosis, die nur bei Bedarf genommen wird (zum Beispiel ein
+Schmerzmittel bei Kopfschmerzen), markierst du im Fenster der
+Einnahmezeit als **Bei Bedarf**: die Beschreibung *Bei Bedarf* setzt das
+Häkchen von selbst. Eine Bedarfsdosis wird nie automatisch abgezogen und
+zählt nicht zur Tagesmenge: der Bestand sinkt nur, wenn du die Einnahme
+erfasst. Sind alle Einnahmezeiten eines Medikaments bei Bedarf, verhält
+es sich wie ein Schema *Bei Bedarf (PRN)*.
+
+Ab der Version, die diese Option eingeführt hat, gelten Einnahmezeiten
+mit der Beschreibung „Bei Bedarf“ ab diesem Tag als Bedarfsdosen. Vorher
+wurden sie täglich abgezogen: Ist der angezeigte Bestand niedriger als
+der tatsächliche, mach eine [Zählung](#count), um ihn anzugleichen.
+
+**Therapie → Einnahmezeiten…** listet die Zeitpunkte des Tages mit
+ihrer Uhrzeit („Morgens“ = 08:00, „Vor dem Mittagessen“ = 13:00, …) und
+die Uhrzeiten für Medikamente ohne Einnahmezeiten (1 pro Tag = 08:00,
+2 pro Tag = 08:00 und 20:00, …). Du kannst die Uhrzeiten ändern, nicht
+genutzte Zeitpunkte ausblenden und eigene hinzufügen; im Fenster der
+Einnahmezeit zeigt die Wahl eines Zeitpunkts seine Uhrzeit. Diese
+Uhrzeiten legen die Dosen nur in den Tag und ändern nie den erfassten
+Bestand. Sie gelten für diesen Computer: sie werden nicht
+synchronisiert.
+
 <a id="regimens"></a>
 ### Komplexe Schemata
 
@@ -346,6 +369,16 @@ fordere das Rezept rechtzeitig an.
 MedReminder senkt den Bestand jeden Tag selbst nach dem Schema. Du
 erfasst nur, was den Bestand auf andere Weise ändert.
 
+Im Laufe des Tages zeigt die Bestandsspalte eine Schätzung: den Bestand
+zu Tagesbeginn minus die heutigen Dosen, deren Uhrzeit vorbei ist.
+Einnahmezeiten ohne Uhrzeit verwenden die Uhrzeit ihres Zeitpunkts
+(**Therapie → Einnahmezeiten…**); eine frei beschriebene Einnahmezeit
+ohne Uhrzeit wird am Tagesende gezählt. Fährst du mit der Maus über den
+Bestand, siehst du den Wert zu Tagesbeginn. Der erfasste Bestand, der
+Verlauf und das Datum, an dem der Vorrat ausgeht, werden nach
+Mitternacht aktualisiert; erfasst du eine Einnahme, zählt an diesem
+Tag die erfasste Menge.
+
 <a id="add-package"></a>
 ### Packung hinzufügen
 
@@ -369,6 +402,12 @@ Symbolleiste) erfasst eine Einnahme als **Eingenommen**,
 Tagen brauchst du das nicht. Nutze es, wenn ein Tag vom Schema abweicht:
 Sobald du für einen Tag eine Einnahme erfasst, ersetzt sie den
 automatischen Abzug dieses Tages.
+
+Für eine Dosis zusätzlich zum Schema, zum Beispiel eine Bedarfsdosis,
+setze **Zusätzliche Dosis bei Bedarf**: die Menge wird abgezogen und die
+geplanten Dosen des Tages bleiben. Die Option erscheint nur bei
+Medikamenten mit einem Schema und ist bereits gesetzt, wenn das
+Medikament eine Einnahmezeit bei Bedarf hat.
 
 <a id="correct"></a>
 ### Bestand korrigieren

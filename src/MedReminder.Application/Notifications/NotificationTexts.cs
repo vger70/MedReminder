@@ -127,6 +127,10 @@ public static class NotificationTexts
         {
             sb.Append(" (").Append(t.ToString("HH:mm", c)).Append(')');
         }
+        if (slot.IsAsNeeded)
+        {
+            sb.Append(" (as needed)");
+        }
         return sb.ToString();
     }
 

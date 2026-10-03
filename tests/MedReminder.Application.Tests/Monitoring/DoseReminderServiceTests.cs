@@ -66,6 +66,27 @@ public class DoseReminderServiceTests
     }
 
     [Fact]
+    public async Task An_as_needed_slot_gets_no_reminder()
+    {
+        var scope = new ApplicationTestScope(JustAfterSlot);
+        await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            Name: "Enalapril", Unit: "compresse", DosePerAdministration: 1m, AdministrationsPerDay: 1,
+            StartDate: Today, ThresholdDays: 7, NotificationChannels: NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots:
+            [
+                new AdministrationSlotInput(1m, new TimeOnly(7, 0), null),
+                new AdministrationSlotInput(1m, SlotTime, "Al bisogno", IsAsNeeded: true),
+            ],
+            RemindOnDose: true), CancellationToken.None);
+
+        var result = await scope.BuildDoseReminder().RunAsync(CancellationToken.None);
+
+        result.FiredCount.Should().Be(0);
+        scope.Windows.Sent.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Does_not_fire_before_slot_time()
     {
         var scope = new ApplicationTestScope(new DateTimeOffset(2026, 9, 13, 8, 0, 0, TimeSpan.Zero));

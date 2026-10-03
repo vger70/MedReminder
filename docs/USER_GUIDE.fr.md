@@ -172,6 +172,29 @@ de traitement et, s'ils ont une heure, peuvent te rappeler la prise.
 
 Sans horaires, le médicament utilise « dose × prises par jour ».
 
+Une dose prise seulement en cas de besoin (par exemple un antalgique
+contre le mal de tête) se marque **Au besoin** dans la fenêtre de
+l'horaire : la description *Au besoin* la coche d'elle-même. Une dose au
+besoin n'est jamais déduite automatiquement et ne compte pas dans le
+total journalier : le stock ne diminue que lorsque tu enregistres la
+prise. Si tous les horaires d'un médicament sont au besoin, il se
+comporte comme un schéma *Au besoin (PRN)*.
+
+Depuis la version qui a introduit cette option, les horaires décrits
+« Au besoin » sont traités comme tels à partir de ce jour. Avant, ils
+étaient déduits chaque jour : si le stock affiché est inférieur au stock
+réel, fais un [comptage](#count) pour le réaligner.
+
+**Traitement → Heures des prises…** liste les moments de la journée
+avec leur heure (« Le matin » = 08:00, « Avant le déjeuner » = 13:00, …)
+et les heures utilisées pour les médicaments sans horaires (1 par jour
+= 08:00, 2 par jour = 08:00 et 20:00, …). Tu peux changer les heures,
+masquer les moments que tu n'utilises pas et ajouter les tiens ; dans
+la fenêtre de l'horaire, choisir un moment affiche son heure. Ces
+heures servent seulement à placer les doses dans la journée et ne
+modifient jamais le stock enregistré. Elles valent pour cet
+ordinateur : elles ne sont pas synchronisées.
+
 <a id="regimens"></a>
 ### Schémas complexes
 
@@ -347,6 +370,15 @@ pharmacien, et demande l'ordonnance à temps.
 MedReminder diminue le stock tout seul chaque jour selon le schéma. Tu
 n'enregistres que ce qui modifie le stock autrement.
 
+Pendant la journée, la colonne du stock affiche une estimation : le
+stock en début de journée moins les doses du jour dont l'heure est
+passée. Les horaires sans heure prennent l'heure de leur moment
+(**Traitement → Heures des prises…**) ; un horaire décrit librement,
+sans heure, est compté en fin de journée. En survolant le stock, tu
+vois la valeur du début de journée. Le stock enregistré, l'historique
+et la date d'épuisement sont mis à jour après minuit ; si tu
+enregistres une prise, ce jour compte la quantité enregistrée.
+
 <a id="add-package"></a>
 ### Ajouter une boîte
 
@@ -370,6 +402,12 @@ jour et la quantité. Les jours normaux, ce n'est pas nécessaire.
 Utilise-le quand un jour diffère du schéma : dès que tu enregistres une
 prise pour un jour, la déduction automatique de ce jour est remplacée
 par ce que tu as enregistré.
+
+Pour une dose en plus du schéma, par exemple une dose au besoin, coche
+**Dose supplémentaire au besoin** : la quantité est déduite et les doses
+prévues du jour restent comptées. L'option n'apparaît que pour les
+médicaments avec un schéma et elle est déjà cochée si le médicament a un
+horaire au besoin.
 
 <a id="correct"></a>
 ### Corriger le stock

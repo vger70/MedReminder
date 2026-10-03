@@ -160,6 +160,26 @@ therapy report, and timed slots can remind you at dose time.
 
 Without slots, the medicine uses "dose × administrations per day".
 
+A dose taken only when needed (for example a painkiller for a
+headache) is marked **As needed** in the slot window: the *As needed*
+description ticks it for you. An as-needed dose is never deducted
+automatically and is not part of the daily total: the stock decreases
+only when you register the intake. If every slot of a medicine is as
+needed, the medicine behaves like an *As needed (PRN)* schedule.
+
+From the version that introduced this option, slots described as "As
+needed" are treated as as-needed from that day on. Before, they were
+deducted every day: if the stock shown is lower than the real one, do a
+[count](#count) to realign it.
+
+**Therapy → Dose times…** lists the moments of the day with their time
+("In the morning" = 08:00, "Before lunch" = 13:00, …) and the times
+used for medicines without slots (1 a day = 08:00, 2 a day = 08:00 and
+20:00, …). You can change the times, hide the moments you do not use
+and add your own; in the slot window, picking a moment shows its time.
+These times only place doses in the day and never change the stock
+recorded. They apply to this computer: they are not synchronized.
+
 <a id="regimens"></a>
 ### Complex regimens
 
@@ -320,6 +340,15 @@ request the prescription in good time.
 MedReminder lowers the stock by itself every day according to the
 schedule. You only record what changes the stock in another way.
 
+During the day the stock column shows an estimate: the stock at the
+start of the day minus today's doses whose time has passed. Slots
+without a time use the time of their moment (**Therapy → Dose
+times…**); a slot with a typed description and no time is counted at
+the end of the day. Hovering over the stock shows the start-of-day
+value. The recorded stock, the history and the run-out date are
+updated after midnight; when you register an intake, that day counts
+the quantity you registered.
+
 <a id="add-package"></a>
 ### Add a package
 
@@ -342,6 +371,12 @@ intake as **Taken**, **Skipped** or **Cancelled**, with the day and the
 quantity. You do not need it on normal days. Use it when a day differs
 from the schedule: once you register an intake for a day, that day's
 automatic deduction is replaced by what you registered.
+
+For a dose on top of the schedule, for example an as-needed one, tick
+**Extra dose as needed**: the quantity is deducted and the day's
+scheduled doses still count. The option appears only for medicines with
+a schedule and is already ticked when the medicine has an as-needed
+slot.
 
 <a id="correct"></a>
 ### Correct stock

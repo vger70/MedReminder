@@ -75,7 +75,14 @@ public sealed record SlotSetRecorded(
     IReadOnlyList<SlotValue> Slots,
     HybridTimestamp? BaseVersion = null) : SyncOperationBody(MedicineId);
 
-public sealed record SlotValue(Guid SlotId, decimal Dose, TimeOnly? Time, string? TimingLabel, int Order);
+// IsAsNeeded (operation schema version 9, docs/analysis/
+// ANALYSIS-INTRADAY-CONSUMPTION.md §5.3): a set carrying an as-needed
+// slot is written with version 9, so an older device stops at it
+// instead of consuming that slot every day. PresetId is display only
+// (§6): an older device may ignore it, so it needs no version.
+public sealed record SlotValue(
+    Guid SlotId, decimal Dose, TimeOnly? Time, string? TimingLabel, int Order, bool IsAsNeeded = false,
+    Guid? PresetId = null);
 
 // A user stock entry: InitialLoad, NewPackage, ManualAdd,
 // PositiveCorrection (AddStock) or NegativeCorrection (AdjustStockDown).
@@ -96,7 +103,11 @@ public sealed record IntakeRecorded(
     DateTimeOffset? ScheduledAt,
     DateTimeOffset? ActualAt,
     string? Notes,
-    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+    DateTimeOffset RecordedAt,
+    // Operation schema version 9 (ANALYSIS-INTRADAY-CONSUMPTION.md
+    // §5.3): an extra intake is written with version 9, so an older
+    // device stops at it instead of reading it as a scheduled intake.
+    bool IsExtra = false) : SyncOperationBody(MedicineId);
 
 // The count inputs and the outcome evaluated on the recording device.
 // Phase 3b decides how the outcome is re-evaluated when facts from other

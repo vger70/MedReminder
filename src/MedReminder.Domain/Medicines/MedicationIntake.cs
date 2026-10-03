@@ -26,6 +26,13 @@ public sealed class MedicationIntake
 
     public string? Notes { get; set; }
 
+    // Extra dose taken on top of the plan, typically an as-needed one
+    // (docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md §5.3). Only with
+    // status Taken. It books its quantity like any intake but does not
+    // replace the day's automatic consumption. Rows written before the
+    // flag read false.
+    public bool IsExtra { get; init; }
+
     // Recording instant (B.1 Phase 2c-2). Intakes recorded before the
     // ledger freeze (LedgerCutoff.FrozenAt) are Legacy: their stock
     // movements are frozen rows. Older rows read back as

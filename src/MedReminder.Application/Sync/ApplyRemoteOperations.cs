@@ -534,6 +534,8 @@ public sealed class ApplyRemoteOperations
                 Time = s.Time,
                 TimingLabel = s.TimingLabel,
                 Order = s.Order,
+                IsAsNeeded = s.IsAsNeeded,
+                PresetId = s.PresetId,
             })], ct);
         }
         await _registers.RecordAsync(set.MedicineId, set, timestamp, ct);
@@ -578,14 +580,18 @@ public sealed class ApplyRemoteOperations
             ActualAt = intake.ActualAt,
             Notes = intake.Notes,
             RecordedAt = intake.RecordedAt,
+            IsExtra = intake.IsExtra,
         };
         await _intakes.AddAsync(added, ct);
         _trackedFacts[added.Id] = added;
 
         // §4.5 hint: intakes of one day from different devices that
         // together exceed the day's scheduled quantity.
-        var sameDay = existing.Where(i => i.Day == intake.Day && i.Status == IntakeStatus.Taken).ToList();
-        if (intake.Status != IntakeStatus.Taken || sameDay.Count == 0) return;
+        // Extra intakes are on top of the plan by definition.
+        var sameDay = existing
+            .Where(i => i.Day == intake.Day && i.Status == IntakeStatus.Taken && !i.IsExtra)
+            .ToList();
+        if (intake.Status != IntakeStatus.Taken || intake.IsExtra || sameDay.Count == 0) return;
         var planned = await PlannedQuantityAsync(medicine, intake.Day, ct);
         var total = sameDay.Sum(i => i.Quantity) + intake.Quantity;
         if (total <= planned) return;

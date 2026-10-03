@@ -2,6 +2,7 @@ using MedReminder.Application.Ledger;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Deadlines;
+using MedReminder.Application.Migrations;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
@@ -38,6 +39,8 @@ internal sealed class ApplicationTestScope
     public InMemoryLedgerCutoffRepository Cutoff { get; } = new();
     public InMemoryFactRetractionRepository Retractions { get; } = new();
     public InMemoryUnitOfWork Uow { get; } = new();
+    public InMemoryPendingDataMigrations PendingMigrations { get; } = new();
+    public InMemoryDoseTimePresetRepository DoseTimePresets { get; } = new();
     public InMemorySyncSettingsStore SyncSettingsStore { get; } = new();
     public InMemorySyncOperationRepository SyncOperations { get; } = new();
     public InMemorySyncFieldVersionRepository SyncVersions { get; } = new();
@@ -64,6 +67,8 @@ internal sealed class ApplicationTestScope
     public LedgerSynchronizer Ledger { get; }
     public FactHistoryQuery FactHistory { get; }
     public RetractFact RetractFact { get; }
+    public AsNeededSlotBackfill AsNeededBackfill { get; }
+    public SlotPresetBackfill PresetBackfill { get; }
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
     public ApplyRemoteOperations ApplyRemote { get; }
@@ -105,10 +110,13 @@ internal sealed class ApplicationTestScope
         AdjustStockDown = new AdjustStockDown(Medicines, Stock, Operations, Uow, Clock);
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Operations, Uow, Clock);
         ResumeMedication = new ResumeMedication(Medicines, Suspensions, Operations, Uow, Clock);
-        ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Operations, Uow, Clock);
+        ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Slots, Operations, Uow, Clock);
         RegisterIntake = new RegisterIntake(Medicines, Intakes, Ledger, Operations, Uow, Clock);
 
-        ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow);
+        AsNeededBackfill = new AsNeededSlotBackfill(
+            PendingMigrations, Medicines, Schedules, Slots, Operations, Uow, Clock);
+        PresetBackfill = new SlotPresetBackfill(PendingMigrations, Medicines, Slots, Uow);
+        ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow, AsNeededBackfill, PresetBackfill);
         ReconcileStock = new ReconcileStock(
             Medicines, Schedules, Suspensions, Slots, Counts, Ledger, Operations, Uow, Clock);
 

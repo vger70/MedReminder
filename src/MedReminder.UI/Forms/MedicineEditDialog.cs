@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
@@ -121,6 +122,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // user had picked it (restock by scan, "Add as a new medicine").
     private readonly ReferenceMedicine? _initialReference;
 
+    // Time-of-day presets offered by the slot dialog (null: built-ins).
+    private readonly DoseTimeSettings? _doseTimes;
+
     public MedicineEditDialog(
         EditMode mode,
         ILocalizationService localization,
@@ -128,8 +132,10 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         CatalogueAutocompleteContext? catalogueContext = null,
         decimal currentStock = 0m,
         BarcodeScanContext? barcodeContext = null,
-        ReferenceMedicine? initialReference = null)
+        ReferenceMedicine? initialReference = null,
+        DoseTimeSettings? doseTimes = null)
     {
+        _doseTimes = doseTimes;
         _initialReference = mode == EditMode.Create ? initialReference : null;
         _loc = localization;
         _mode = mode;
@@ -758,7 +764,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // whenever the slots or the initial-stock field change.
     private void UpdateRemindOnDoseAvailability()
     {
-        var hasTimedSlot = _slots.Any(s => s.Time.HasValue);
+        // As-needed slots get no reminder (DoseReminderService).
+        var hasTimedSlot = _slots.Any(s => s.Time.HasValue && !s.IsAsNeeded);
         var hasStock = CurrentStockForGate() > 0m;
         var enabled = Medicine.CanRemindOnDose(hasTimedSlot, CurrentStockForGate());
 
@@ -822,7 +829,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private void AddSlot()
     {
-        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc);
+        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc, doseTimes: _doseTimes);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
         _slots.Add(dialog.Result);
         RefreshSlotsList();
@@ -832,7 +839,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         var index = SelectedSlotIndex();
         if (index < 0) return;
-        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc, _slots[index]);
+        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc, _slots[index], _doseTimes);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
         _slots[index] = dialog.Result;
         RefreshSlotsList();
@@ -859,7 +866,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         {
             var row = new ListViewItem(slot.TimeDisplay);
             row.SubItems.Add(slot.Dose.ToString("0.##"));
-            row.SubItems.Add(slot.LabelDisplay);
+            row.SubItems.Add(slot.IsAsNeeded
+                ? _loc.Get("Ui.MedicineEditDialog.Slots.AsNeededLabel", slot.LabelDisplay)
+                : slot.LabelDisplay);
             _slotsList.Items.Add(row);
         }
         _slotsList.EndUpdate();
@@ -875,7 +884,13 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryNone");
             return;
         }
-        var total = _slots.Sum(s => s.Dose);
+        // As-needed doses are not part of the daily consumption.
+        if (_slots.All(s => s.IsAsNeeded))
+        {
+            _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryAsNeeded", _slots.Count);
+            return;
+        }
+        var total = _slots.Where(s => !s.IsAsNeeded).Sum(s => s.Dose);
         _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.Summary",
             _slots.Count, total.ToString("0.##"), EffectiveUnit());
     }
@@ -1084,6 +1099,6 @@ internal sealed record MedicineEditResult(
     private IReadOnlyList<AdministrationSlotInput>? MapSlots()
     {
         if (Slots is null || Slots.Count == 0) return null;
-        return Slots.Select(s => new AdministrationSlotInput(s.Dose, s.Time, s.TimingLabel)).ToList();
+        return Slots.Select(s => new AdministrationSlotInput(s.Dose, s.Time, s.TimingLabel, s.IsAsNeeded, s.PresetId)).ToList();
     }
 }

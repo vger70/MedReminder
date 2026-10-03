@@ -168,6 +168,28 @@ recordarte la dosis.
 
 Sin horarios, el medicamento usa "dosis × tomas al día".
 
+Una dosis que se toma solo cuando hace falta (por ejemplo un analgésico
+para el dolor de cabeza) se marca **Si es necesario** en la ventana del
+horario: la descripción *Si es necesario* la marca sola. Una dosis si es
+necesario nunca se descuenta automáticamente y no forma parte del total
+diario: el stock solo baja cuando registras la toma. Si todos los
+horarios de un medicamento son si es necesario, se comporta como un
+esquema *Si es necesario (PRN)*.
+
+Desde la versión que introdujo esta opción, los horarios descritos como
+"Si es necesario" se tratan como tales a partir de ese día. Antes se
+descontaban cada día: si el stock mostrado es menor que el real, haz un
+[recuento](#count) para realinearlo.
+
+**Terapia → Horarios de las dosis…** muestra los momentos del día con
+su hora ("Por la mañana" = 08:00, "Antes de comer" = 13:00, …) y las
+horas usadas para los medicamentos sin horarios (1 al día = 08:00, 2
+al día = 08:00 y 20:00, …). Puedes cambiar las horas, ocultar los
+momentos que no usas y añadir los tuyos; en la ventana del horario, al
+elegir un momento ves su hora. Estas horas solo sitúan las dosis en el
+día y nunca cambian el stock registrado. Valen para este ordenador: no
+se sincronizan.
+
 <a id="regimens"></a>
 ### Regímenes complejos
 
@@ -337,6 +359,15 @@ solicita la receta a tiempo.
 MedReminder reduce el stock solo cada día según el esquema. Solo
 registras lo que cambia el stock de otra manera.
 
+Durante el día la columna del stock muestra una estimación: el stock al
+inicio del día menos las dosis de hoy cuya hora ya pasó. Los horarios
+sin hora usan la hora de su momento (**Terapia → Horarios de las
+dosis…**); un horario con descripción libre y sin hora se cuenta al
+final del día. Al pasar el ratón por el stock ves el valor al inicio
+del día. El stock registrado, el historial y la fecha de agotamiento
+se actualizan después de medianoche; si registras una toma, ese día
+cuenta la cantidad registrada.
+
 <a id="add-package"></a>
 ### Añadir una caja
 
@@ -359,6 +390,12 @@ toma como **Tomada**, **Saltada** o **Cancelada**, con el día y la
 cantidad. Los días normales no hace falta. Úsalo cuando un día es
 distinto del esquema: en cuanto registras una toma para un día, el
 descuento automático de ese día se sustituye por lo que registraste.
+
+Para una dosis además del esquema, por ejemplo una dosis si es
+necesario, marca **Dosis extra si es necesario**: la cantidad se
+descuenta y las dosis programadas del día se mantienen. La opción solo
+aparece para medicamentos con un esquema y ya viene marcada si el
+medicamento tiene un horario si es necesario.
 
 <a id="correct"></a>
 ### Corregir el stock
