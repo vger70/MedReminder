@@ -702,6 +702,38 @@ Auf synchronisierten PCs aktualisiere MedReminder auf allen PCs des
 Profils, bevor du ein Wiederholungsrezept erfasst: eine ältere Version
 hält die Synchronisierung an, bis sie aktualisiert wird.
 
+### Regionaler Rezeptdienst
+
+Mit Italien als Referenzland haben **Therapie → Rezepte…** und das
+Fenster der Rezeptanforderung die Schaltfläche **Regionaler
+Rezeptdienst**. Sie öffnet den Dienst deiner Region, in dem die für
+dich ausgestellten elektronischen Rezepte angezeigt werden, damit du
+die Rezeptnummer kopieren kannst, statt auf sie zu warten.
+
+- Beim ersten Mal wählst du deine Region oder autonome Provinz. Sie
+  wird mit dem Profil gespeichert; ändere sie über die Schaltfläche
+  (**Region ändern…**) oder unter Einstellungen → Benachrichtigungen.
+- **Im Browser öffnen** öffnet das regionale Portal in deinem
+  gewohnten Browser.
+- **Auf dem Telefon öffnen** zeigt einen QR-Code der regionalen App,
+  oder des Portals, wenn es keine App gibt: Scanne ihn mit der Kamera
+  des Telefons und melde dich auf dem Telefon an.
+
+Die Zeile unter der Schaltfläche nennt den Dienst und die Anmeldung
+(SPID, CIE oder TS-CNS). Du meldest dich beim regionalen Dienst an,
+nie in MedReminder: MedReminder sieht weder deine Zugangsdaten noch
+deine Gesundheitsakte und importiert nichts daraus. Eine betreuende
+Person meldet sich mit eigenen Zugangsdaten und einer im regionalen
+Dienst eingerichteten Vollmacht an. Ist für deine Region kein Dienst
+verzeichnet, öffne selbst das Portal der Gesundheitsakte (Fascicolo
+Sanitario Elettronico) deiner Region.
+
+**NRE einfügen** neben **Rezeptcode** im Rezeptfenster schreibt die
+elektronische Rezeptnummer (NRE, 15 Buchstaben oder Ziffern), die du
+im regionalen Dienst kopiert hast, ohne Leerzeichen, und füllt ein
+leeres **Ausgestellt am** mit dem heutigen Datum. MedReminder liest
+die Zwischenablage nur, wenn du klickst.
+
 ### Fristen
 
 **Therapie → Fristen…** sammelt die Termine, die nicht den Vorrat

@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text;
 using MedReminder.Application.Catalogue;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Prescriptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -169,6 +170,22 @@ public sealed class GitHubRawEquivalenceFeedClient : GitHubRawDatedListFeedClien
     internal GitHubRawEquivalenceFeedClient(HttpMessageHandler handler, IOptionsMonitor<CatalogueFeedOptions> options,
         ILogger<GitHubRawEquivalenceFeedClient> log, bool ownsClient = false)
         : base(EquivalenceFeedDefinition.Instance, handler, options, log, ownsClient)
+    {
+    }
+}
+
+public sealed class GitHubRawRegionalServicesFeedClient : GitHubRawDatedListFeedClient<RegionalServicesList>,
+    IRegionalServicesFeedClient
+{
+    public GitHubRawRegionalServicesFeedClient(IOptionsMonitor<CatalogueFeedOptions> options,
+        ILogger<GitHubRawRegionalServicesFeedClient> log)
+        : base(RegionalServicesFeedDefinition.Instance, options, log)
+    {
+    }
+
+    internal GitHubRawRegionalServicesFeedClient(HttpMessageHandler handler, IOptionsMonitor<CatalogueFeedOptions> options,
+        ILogger<GitHubRawRegionalServicesFeedClient> log, bool ownsClient = false)
+        : base(RegionalServicesFeedDefinition.Instance, handler, options, log, ownsClient)
     {
     }
 }

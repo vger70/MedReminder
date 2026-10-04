@@ -2,6 +2,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Infrastructure.Catalogue;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -178,6 +179,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         IReadOnlyList<CatalogueFeedDescriptor> feeds;
         bool shortages;
         bool equivalents;
+        bool regionalServices;
         try
         {
             // Gates first, so a disabled step neither waits for the
@@ -199,6 +201,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             feeds = CatalogueFeedSelection.Select(userSettings.ReferenceCountry, feedOptions);
             shortages = CatalogueFeedSelection.IncludesShortages(userSettings.ReferenceCountry, feedOptions);
             equivalents = CatalogueFeedSelection.IncludesEquivalents(userSettings.ReferenceCountry, feedOptions);
+            regionalServices = CatalogueFeedSelection.IncludesRegionalServices(userSettings.ReferenceCountry, feedOptions);
             if (feeds.Count == 0)
             {
                 _log.Log(skipLevel, "No remote catalogue feed enabled for the reference country; skipping.");
@@ -228,37 +231,34 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         await RefreshFeedsAsync(feeds, RefreshFeedAsync, _log, cancellationToken);
         if (shortages) await RefreshShortagesAsync(cancellationToken);
         if (equivalents) await RefreshEquivalentsAsync(cancellationToken);
+        if (regionalServices) await RefreshRegionalServicesAsync(cancellationToken);
         return true;
     }
 
-    // The shortage list (EVOLUTION-PROPOSALS-2 §3.3) after the catalogues.
-    // A file outside the profile database: no scope holds the database
-    // longer than the refresher needs.
-    private async Task RefreshShortagesAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await using var scope = _services.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<ShortageRefresher>().RunAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _log.LogWarning(ex, "Shortage list refresh failed; list unchanged.");
-        }
-    }
+    // The Italian dated lists after the catalogues, in this order: the
+    // shortage list (EVOLUTION-PROPOSALS-2 §3.3), the equivalents list
+    // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.4) and the regional
+    // services list (PROMPT-REGIONAL-PRESCRIPTION-SERVICES §3.1).
+    private Task RefreshShortagesAsync(CancellationToken cancellationToken)
+        => RefreshDatedListAsync<ShortageRefresher, ShortageList>("Shortage", cancellationToken);
 
-    // The equivalents list (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.4)
-    // after the shortage list, under the same rules.
-    private async Task RefreshEquivalentsAsync(CancellationToken cancellationToken)
+    private Task RefreshEquivalentsAsync(CancellationToken cancellationToken)
+        => RefreshDatedListAsync<EquivalenceRefresher, EquivalenceList>("Equivalents", cancellationToken);
+
+    private Task RefreshRegionalServicesAsync(CancellationToken cancellationToken)
+        => RefreshDatedListAsync<RegionalServicesRefresher, RegionalServicesList>("Regional services",
+            cancellationToken);
+
+    // A file outside the profile database: no scope holds the database
+    // longer than the refresher needs. A failure leaves the list as it is.
+    private async Task RefreshDatedListAsync<TRefresher, TList>(string name, CancellationToken cancellationToken)
+        where TRefresher : DatedListRefresher<TList>
+        where TList : class
     {
         try
         {
             await using var scope = _services.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<EquivalenceRefresher>().RunAsync(cancellationToken);
+            await scope.ServiceProvider.GetRequiredService<TRefresher>().RunAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -266,7 +266,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "Equivalents list refresh failed; list unchanged.");
+            _log.LogWarning(ex, "{List} list refresh failed; list unchanged.", name);
         }
     }
 

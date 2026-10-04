@@ -651,6 +651,36 @@ On synced PCs, update MedReminder on every PC of the profile before
 recording a repeatable prescription: an older version stops syncing
 until it is updated.
 
+### Regional prescription service
+
+With Italy as reference country, **Therapy → Prescriptions…** and the
+prescription request window have a **Regional prescription service**
+button. It opens the service of your region where the electronic
+prescriptions issued to you are shown, so you can copy the
+prescription number instead of waiting for it.
+
+- The first time, choose your region or autonomous province. It is
+  saved with the profile; change it from the button (**Change region…**)
+  or in Settings → Notifications.
+- **Open in browser** opens the regional portal in your usual browser.
+- **Open on phone** shows a QR code of the regional app, or of the
+  portal when there is no app: scan it with the phone camera and sign
+  in on the phone.
+
+The line under the button names the service and how to sign in (SPID,
+CIE or TS-CNS). You sign in on the regional service, never in
+MedReminder: MedReminder does not see your credentials or your health
+record and imports nothing from it. A caregiver signs in with their
+own credentials and a delegation set up on the regional service. When
+no service is listed for your region, open the health record portal
+(Fascicolo Sanitario Elettronico) of your region yourself.
+
+**Paste NRE**, next to **Prescription code** in the prescription
+window, writes the electronic prescription number (NRE, 15 letters or
+digits) you copied from the regional service, without spaces, and
+fills an empty **Issued on** with today. MedReminder reads the
+clipboard only when you click it.
+
 ### Administrative deadlines
 
 **Therapy → Administrative deadlines…** keeps the dates that are not

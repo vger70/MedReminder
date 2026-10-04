@@ -10,8 +10,9 @@ namespace MedReminder.UI.Forms;
 // every prescription of the profile, the ones to collect first, with
 // New, Edit, Collected today and Delete. For a repeatable prescription,
 // "Dispensations" shows collected / allowed and "Collected today" records
-// a dispensation. The data and the writes come
-// from the caller, so the dialog holds no Application logic. The
+// a dispensation. "Regional prescription service" opens the service of
+// the profile's region (RegionalServicePanel). The data and the writes
+// come from the caller, so the dialog holds no Application logic. The
 // prescription code is shown, never logged.
 internal sealed class PrescriptionsDialog : MedReminderFormBase
 {
@@ -22,7 +23,8 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
     private readonly Button _collectButton;
     private readonly Button _deleteButton;
 
-    public PrescriptionsDialog(PrescriptionsDialogActions actions, ILocalizationService localization)
+    public PrescriptionsDialog(PrescriptionsDialogActions actions, ILocalizationService localization,
+        RegionalServiceActions? regional = null)
     {
         _loc = localization;
         _actions = actions;
@@ -76,6 +78,8 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
 
         Controls.Add(_list);
         Controls.Add(hint);
+        // Above the button bar: docked after it in z-order.
+        if (regional is not null) Controls.Add(new RegionalServicePanel(regional, _loc));
         Controls.Add(buttons);
         DialogLayout.KeepButtonsVisible(this, buttons);
 

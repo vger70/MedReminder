@@ -54,7 +54,16 @@ public sealed class CatalogueFeedOptions
 
     public long EquivalentsMaxDownloadBytes { get; set; } = 4 * MiB;
 
-    // Folder of an Italian dated list (shortages, equivalents), ending
+    // Regional prescription services list (docs/prompt/
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.1), under
+    // `{BaseUrl}it/regional-services/`. Same conditions as the shortage
+    // list; a few kilobytes.
+    public bool RegionalServicesEnabled { get; set; } = true;
+
+    public long RegionalServicesMaxDownloadBytes { get; set; } = 256 * 1024;
+
+    // Folder of an Italian dated list (shortages, equivalents, regional
+    // services), ending
     // with '/'. `feed` comes from a DatedListFeedDefinition, not from data.
     public string ItalianFeedFolder(string feed)
     {

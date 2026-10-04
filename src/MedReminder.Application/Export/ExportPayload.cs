@@ -261,6 +261,10 @@ public sealed class ExportedNotificationSettings
     // §4.6). Additive: archives without them import with "" (defaults).
     public string PackageExpiryLeadDays { get; set; } = string.Empty;
     public string PackageInUseLeadDays { get; set; } = string.Empty;
+
+    // Italian region of the profile (PROMPT-REGIONAL-PRESCRIPTION-SERVICES
+    // §3.2). Additive: archives without it import with "" (no region).
+    public string Region { get; set; } = string.Empty;
 }
 
 // Opt-in non-DB files (§3.4). A section is null unless the user opted

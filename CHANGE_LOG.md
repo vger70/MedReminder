@@ -30,6 +30,28 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #199 — Link the prescription windows to the regional prescription services
+
+Link: [vger70/MedReminder#199](https://github.com/vger70/MedReminder/pull/199)
+Branch: `claude/inspiring-pascal-povp02` → `claude/brave-turing-e4a7z7` (stacked on PR #197)
+
+### Added
+
+- "Regional prescription service" in Therapy → Prescriptions… and in the prescription request: opens the health record service of the profile's region in the default browser, or shows the regional app link (or the portal) as a QR code for the phone; names the service and the sign-in methods and states that MedReminder never sees the credentials or the health record. Asks for the region the first time; hidden when the reference country is not Italy; a region without a listed service gets a pointer to its health record portal, never a guessed link.
+- "Paste NRE" in the prescription editor: reads the clipboard only on click, accepts only a 15-character electronic prescription number (`NreCode`, spaces and dashes dropped, upper case, no invented check digit) and fills an empty issue date with today.
+- Regional services list: hand-maintained `scripts/feeds/regional_services_it.json` (19 regions and autonomous provinces found on official pages, all marked not yet verified for prescriptions; Campania and Sicily not yet), validated and published by `scripts/feeds/regional_services.py` to `data/it/regional-services/` on the `feeds` branch through `publish_regional_services.yaml`, which also checks every URL monthly or on demand and opens an issue for the failures. The version is the source's `listDate`, which every change must move, so the app always prefers the newer of the downloaded and shipped lists. The validator and the app's parser apply the same rules. The app refreshes it with the shortage list and ships a copy for the first start.
+- Profile setting `Region` (ISTAT code, 21 regions and autonomous provinces), replicated without an operation schema bump and editable in Settings → Notifications; written only by `UpdateProfileRegion` and only when it changes, so saving other settings on a device not yet synced never clears it; additive export field `notificationSettings.region`.
+
+### Security
+
+- Links are opened only through `RegionalServiceLinkLauncher`: exactly one of the links of the region's entry, unchanged, through the existing shell launcher. Log lines name neither the URL nor the region. No embedded browser, no sign-in, no reading of the regional pages; the NRE is never logged.
+
+### Docs
+
+- `CLAUDE.md` §5, `docs/CATALOGUE-DATA.md` §1.1 and §10, `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.9, the five user guides.
+
+---
+
 ## PR #198 — Add implementation prompt for the guided setup
 
 Link: [vger70/MedReminder#198](https://github.com/vger70/MedReminder/pull/198)

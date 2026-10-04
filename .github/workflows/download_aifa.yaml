@@ -62,7 +62,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           bash scripts/feeds/feeds_branch.sh publish "AIFA database update $(date -u +%Y%m)" \
-            "data/it" ":(exclude)data/it/shortages" ":(exclude)data/it/equivalents"
+            "data/it" ":(exclude)data/it/shortages" ":(exclude)data/it/equivalents" \
+            ":(exclude)data/it/regional-services"
 
       - name: Mirror to main
         # Releases up to v2.12.1 read the feeds from main/data/. Set the
@@ -70,8 +71,10 @@ jobs:
         # out of use (docs/CATALOGUE-DATA.md §1.1).
         if: vars.FEEDS_MAIN_MIRROR != 'false'
         run: |
-          # The shortage and equivalents feeds own their subfolders.
-          git add -- data/it/ ':(exclude)data/it/shortages' ':(exclude)data/it/equivalents'
+          # The shortage, equivalents and regional services feeds own
+          # their subfolders.
+          git add -- data/it/ ':(exclude)data/it/shortages' ':(exclude)data/it/equivalents' \
+            ':(exclude)data/it/regional-services'
           git diff --staged --quiet && exit 0
           git commit -m "AIFA database update $(date -u +%Y%m)"
 
