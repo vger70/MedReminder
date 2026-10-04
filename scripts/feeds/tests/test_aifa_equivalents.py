@@ -138,3 +138,44 @@ def test_a_republish_of_the_same_list_date_changes_the_hash(tmp_path):
 
     assert second["version"] == first["version"]
     assert second["sha256"] != first["sha256"]
+
+
+class FakeResponse:
+    def __init__(self, status, content=b"", headers=None):
+        self.status_code = status
+        self.content = content
+        self.headers = headers or {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(self.status_code)
+
+
+def run_main(monkeypatch, tmp_path, response):
+    monkeypatch.setattr(aifa_equivalents, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(aifa_equivalents, "MIN_PACKAGES", 1)
+    sent = {}
+
+    class Session:
+        def get(self, url, headers=None, timeout=None):
+            sent.update(headers)
+            return response
+
+    monkeypatch.setattr(common, "session", Session)
+    monkeypatch.setenv("FORCE_REFRESH", "false")
+    assert aifa_equivalents.main([]) == 0
+    return sent
+
+
+def test_main_uses_the_validators_and_skips_the_same_list(monkeypatch, tmp_path, capsys):
+    response = FakeResponse(200, SAMPLE.read_bytes(), {"ETag": '"e1"'})
+    run_main(monkeypatch, tmp_path, response)
+    published = (tmp_path / "latest.json").read_bytes()
+    assert json.loads(published)["source"] == {"etag": '"e1"'}
+
+    sent = run_main(monkeypatch, tmp_path, FakeResponse(304))
+    assert sent["If-None-Match"] == '"e1"'
+
+    run_main(monkeypatch, tmp_path, response)
+    assert "already published" in capsys.readouterr().out
+    assert (tmp_path / "latest.json").read_bytes() == published

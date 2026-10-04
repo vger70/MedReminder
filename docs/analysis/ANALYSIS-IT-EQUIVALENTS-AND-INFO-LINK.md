@@ -136,7 +136,7 @@ Same shape as §8 of `docs/CATALOGUE-DATA.md`, so no new mechanism:
 | Item | Proposal |
 |---|---|
 | Script | `scripts/feeds/aifa_equivalents.py`: download, pad AIC, parse prices to cents, keep `Nota` verbatim, write JSON; sanity checks on row count against the previous run (as for the catalogue) |
-| Workflow | `download_aifa_equivalents.yaml`, daily, exits without changes when the list date is unchanged; concurrency group `catalogue-feeds-publish` |
+| Workflow | `download_aifa_equivalents.yaml`, daily; publishes only a newer list date or a correction of the same date, never an older one (`docs/CATALOGUE-DATA.md` §9); own concurrency group |
 | Published | `data/it/equivalents/equivalents-<yyyymmdd>.json` + `latest.json` on the `feeds` branch |
 | Client | `EquivalenceRefresher` next to `ShortageRefresher`; Italy as reference country only; same settings (remote feeds on, automatic update check on); own size cap |
 | Stored | `%LOCALAPPDATA%\MedReminder\catalogue\equivalents\equivalents-it.json`, shared by every profile; not in any profile database, not synced, not exported |

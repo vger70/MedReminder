@@ -3,12 +3,13 @@ name: Download AIFA equivalent medicines list
 on:
   schedule:
     # Daily: AIFA publishes the transparency list monthly, around the
-    # 15th, on no fixed day, so a new list reaches clients within a day.
-    # The version is the list date AIFA writes in the price column; a
-    # run on a list already published exits without changes and commits
-    # nothing. 04:41, after the shortage feed, which shares the
-    # concurrency group.
-    - cron: '41 4 * * *'
+    # 15th, on no fixed day. A new list is on the feed within a day;
+    # clients check the feed once a day, so they show it within about
+    # two days. The version is the list date AIFA writes in the price
+    # column. The run first asks AIFA whether the file changed (ETag /
+    # Last-Modified); a list already published, or older than it, is
+    # not published.
+    - cron: '41 4 * * 0'
   workflow_dispatch:
     inputs:
       force:
@@ -19,9 +20,12 @@ on:
 permissions:
   contents: write
 
-# Every feed workflow pushes to the feeds branch: one at a time.
+# One run of this feed at a time. Feeds run concurrently with each
+# other: each publishes only its own paths, and feeds_branch.sh rebuilds
+# a publish whose lease was lost. A shared group would let a queued run
+# of one feed cancel the queued run of another.
 concurrency:
-  group: catalogue-feeds-publish
+  group: feed-${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
@@ -60,4 +64,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          bash scripts/feeds/feeds_branch.sh publish "AIFA equivalent medicines list update $(date -u +%Y%m%d)"
+          bash scripts/feeds/feeds_branch.sh publish "AIFA equivalent medicines list update $(date -u +%Y%m%d)" \
+            "data/it/equivalents"

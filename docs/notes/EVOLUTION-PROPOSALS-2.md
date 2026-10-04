@@ -185,8 +185,10 @@ time to talk to the doctor.
    equivalent flag and reason category; manifest like `latest.json`.
    Documented in `docs/CATALOGUE-DATA.md`.
 2. Frequency: the list is updated more often than monthly (search
-   results showed versions of 25/09 and 29/09/2026); a weekly workflow
-   run is enough **[INFERRED]**. The feed is about 0.9 MB as CSV, much less
+   results showed versions of 25/09 and 29/09/2026) on no fixed day.
+   A weekly run delayed a new list by up to a week; the workflow runs
+   daily since PR #174 and asks AIFA first whether the file changed
+   (`docs/CATALOGUE-DATA.md` §8). The feed is about 0.9 MB as CSV, much less
    as filtered JSON.
 3. Client: reuse the remote-feed refresh (same setting, data only,
    nothing executed, `docs/ANALYSIS.md` §9.5). Store the feed with the

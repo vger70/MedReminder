@@ -55,6 +55,87 @@ Branch: `claude/catalogue-daily-refresh` → `main`
 ### Docs
 
 - `ANALYSIS-CATALOGUE-REMOTE-FEED.md` §4.5 and new §11.6.
+## PR #200 — Correct the guided setup prompt against the code
+
+Link: [vger70/MedReminder#200](https://github.com/vger70/MedReminder/pull/200)
+Branch: `claude/wizardly-goldberg-9atod5` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-GUIDED-SETUP.md`: names the real use cases (`UpdateNotificationSettings`, `RenameProfile`) and requires keeping the doctor address when saving; the wizard opens by itself for any profile with no medicines until a device-local `GuidedSetupShown` flag is set; maps the user's address to `CaregiverAddress` when they look after someone; warns when email is the only channel and cannot be sent; adds the Settings initial-section parameter and matching tests.
+
+---
+
+## PR #198 — Add implementation prompt for the guided setup
+
+**Status:** merged (2026-10-04)
+
+Link: [vger70/MedReminder#198](https://github.com/vger70/MedReminder/pull/198)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-GUIDED-SETUP.md`: brief for a skippable guided setup after a new installation, from an empty list or from Help (who the medicines are for, first medicines through the existing dialog, warning lead time and channel, user and caregiver email, summary); device-local settings only, no schema, sync or export change.
+
+---
+
+## PR #196 — Add implementation prompt for regional prescription services
+
+**Status:** merged (2026-10-04)
+
+Link: [vger70/MedReminder#196](https://github.com/vger70/MedReminder/pull/196)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md`: brief for a button that opens the profile's regional prescription service (browser, or QR code for the phone app) and a "Paste NRE" field; sign-in with SPID, CIE or TS-CNS stays on the regional service, no embedded browser; regional list as a hand-maintained dated feed with a monthly URL check, region as a replicated profile setting. It missed PR #195, which merged first.
+
+---
+
+## PR #195 — Add implementation prompt for repeatable prescriptions
+
+**Status:** merged (2026-10-04)
+
+Link: [vger70/MedReminder#195](https://github.com/vger70/MedReminder/pull/195)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-REPEATABLE-PRESCRIPTION.md`: brief for a prescription with several dispensations over a long validity (Italian Law 182/2025 art. 62, implementing decree not verified, so the model stays parametric); dispensations in their own sync register so concurrent records are not lost, single prescriptions unchanged at operation schema 7, boot patch, additive export fields, low-stock text when a dispensation is left, UI, tests.
+
+---
+
+## PR #193 — Harden the daily dated-list feeds and let feeds publish concurrently
+
+Link: [vger70/MedReminder#193](https://github.com/vger70/MedReminder/pull/193)
+Branch: `claude/shortage-feed-review-fixes` → `main`
+
+### Fixed
+
+- Shortage and equivalents feeds: an older list date than the
+  published one is refused, even when forced; the same date with other
+  content is republished; pruning never deletes the file `latest.json`
+  names (`scripts/feeds/common.py`).
+- A shared concurrency group let a queued run of one feed cancel
+  another's: each workflow has its own group, and
+  `feeds_branch.sh publish` replaces only the feed's own paths and
+  rebuilds a publish whose lease was lost.
+- The AIFA mirror to `main` no longer commits the shortage and
+  equivalents subfolders.
+
+### Changed
+
+- Dated-list runs send ETag / Last-Modified (stored as `source` in
+  `latest.json`, ignored by clients) and stop on 304 instead of
+  downloading the CSV every day.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §1.1, §8, §9; PR #174 entry and workflow
+  comments: a new list is on the feed within a day, on clients within
+  about two days; `docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3.
+
+---
 
 ## PR #191 — Add an SMTP provider section to the user guides
 
@@ -463,12 +544,16 @@ Branch: `claude/vigilant-hypatia-yby7iu` → `main`
 
 - `download_aifa_shortages.yaml` runs daily at 04:27 UTC instead of
   on days 2, 9, 16 and 23: AIFA updates the list on no fixed day, so a
-  new list now reaches clients within a day. Runs on a list already
+  new list is now on the feed within a day, and on clients, which
+  check once a day, within about two days. Runs on a list already
   published commit nothing.
 
 ### Docs
 
 - `docs/CATALOGUE-DATA.md` §8.
+
+---
+
 ## PR #173 — Publish the catalogue feeds on a single-commit feeds branch
 
 Link: [vger70/MedReminder#173](https://github.com/vger70/MedReminder/pull/173)

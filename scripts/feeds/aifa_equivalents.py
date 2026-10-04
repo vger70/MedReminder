@@ -180,20 +180,23 @@ def build_document(list_date, groups, generated):
     }
 
 
-def publish(data_dir, list_date, document, generated):
+def publish(data_dir, list_date, document, generated, source=None):
     """Write equivalents-<yyyymmdd>.json, then latest.json; keep the newest files."""
     return common.publish_dated_list(data_dir, PREFIX, COUNTRY, list_date, document, generated,
                                      {"groups": len(document["groups"]), "packages": package_count(document["groups"])},
-                                     RETAINED_FILES)
+                                     RETAINED_FILES, source)
 
 
-def download(session):
+def download(session, force=False):
+    """(bytes, source validators), or (None, None) when AIFA reports the
+    file unchanged since the published list."""
     print(f"Download {CSV_URL}")
-    response = session.get(CSV_URL, headers=common.browser_headers(), timeout=120)
-    response.raise_for_status()
+    response = common.conditional_get(session, CSV_URL, common.browser_headers(), DATA_DIR, force)
+    if response is None:
+        return None, None
     if common.looks_like_html(response.content):
         raise common.FeedError("the server returned HTML instead of CSV")
-    return response.content
+    return response.content, common.source_of(response)
 
 
 def main(argv=None):
@@ -202,17 +205,28 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     run = common.run_time()
-    raw = Path(args.input).read_bytes() if args.input else download(common.session())
+    force = common.force_refresh()
+    if args.input:
+        raw, source = Path(args.input).read_bytes(), None
+    else:
+        raw, source = download(common.session(), force)
+        if raw is None:
+            print("AIFA reports the file unchanged since the published list; nothing to do.")
+            return 0
     list_date, groups = parse(decode(raw))
+    document = build_document(list_date, groups, run)
 
-    manifest = common.read_manifest(DATA_DIR)
-    if manifest.get("version") == f"{list_date:%Y%m%d}" and not common.force_refresh():
-        print(f"List of {list_date} is already published; nothing to do.")
+    skip = common.dated_list_skip_reason(DATA_DIR, list_date, document, force)
+    if skip:
+        if common.record_source(DATA_DIR, source):
+            print("Recorded the new validators of the AIFA file.")
+        print(f"{skip[0].upper()}{skip[1:]}; nothing to do.")
         return 0
+    manifest = common.read_manifest(DATA_DIR)
     previous = manifest.get("rows", {}).get("packages") if isinstance(manifest.get("rows"), dict) else None
     check_count(package_count(groups), previous)
 
-    publish(DATA_DIR, list_date, build_document(list_date, groups, run), run)
+    publish(DATA_DIR, list_date, document, run, source)
     return 0
 
 
