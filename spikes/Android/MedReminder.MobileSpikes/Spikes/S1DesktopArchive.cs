@@ -31,7 +31,8 @@ internal static class S1DesktopArchive
                 $"schema {p.SchemaVersion}; medicines {p.Medicines.Count}, stock movements {p.StockMovements.Count}, "
                 + $"schedule rows {p.MedicationScheduleHistory.Count}, slot sets {p.MedicationAdministrationSlotSets.Count}, "
                 + $"slots {p.MedicationAdministrationSlots.Count}, suspensions {p.MedicationSuspensions.Count}, "
-                + $"intakes {p.MedicationIntakes.Count}, stock counts {p.StockCounts.Count}");
+                + $"intakes {p.MedicationIntakes.Count}, stock counts {p.StockCounts.Count}, "
+                + $"prescriptions {p.Prescriptions.Count}, deadlines {p.Deadlines.Count}, packages {p.StockPackages.Count}");
         });
     }
 }

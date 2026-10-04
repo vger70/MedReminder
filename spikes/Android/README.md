@@ -25,9 +25,9 @@ projects through `AddMedReminderPortableInfrastructure`. The spikes
 therefore measure the code a Phase 5 client would run. The app
 inherits `Directory.Build.props` unchanged.
 
-**Status:** written without an Android toolchain: the authoring
-environment could not download the .NET SDK or the Android SDK. The
-first build may need small fixes; report the compiler errors.
+**Status (2026-10-04, aligned with `main` at v2.16.0):** the app builds,
+and the S1–S3 logic passes off-device. What remains is the run on real
+devices. See [Pre-check without a device](#pre-check-without-a-device).
 
 ## Prerequisites
 
@@ -85,23 +85,54 @@ have accepted mitigations.
 | S3 | Every S3 check passes in the Release build with the default settings. The full-trimming run is recorded; a failure there is a finding, not a blocker, as long as the default passes |
 | S4 | The publish succeeds with `Directory.Build.props` unchanged. A signed APK is produced, installs, starts, and passes S1 and S3. Otherwise the exclusion goes to the product owner (D11) |
 
-Two S3 findings are likely enough to check explicitly:
+What to look for in S3 and S4, given the pre-check below:
 
 - **Reflection JSON.** `ArchiveReader` (manifest, payload) and the sync
-  codec use reflection-based `System.Text.Json`. If the check
-  *Reflection-based System.Text.Json* fails in Release, S1b fails too.
-  The mitigations are source-generated `JsonSerializerContext`s in the
-  portable code, or `JsonSerializerIsReflectionEnabledByDefault=true`
-  in the mobile project. Record which one the evidence supports.
+  codec use reflection-based `System.Text.Json`. The .NET for Android
+  Release default sets `JsonSerializerIsReflectionEnabledByDefault=true`
+  (pre-check), so with the default settings the check *Reflection-based
+  System.Text.Json* is expected to pass. Under full trimming the
+  serializer is kept, but the members of the serialized types may be
+  trimmed (IL2026 warnings on `ArchiveReader`, `JsonSyncSettingsStore`
+  and `ScheduleCodec`). S1b and the JSON check in the
+  `-TrimMode full` APK show whether that happens. The mitigation would
+  be source-generated `JsonSerializerContext`s in the portable code.
 - **EF Core under trimming.** EF Core builds its model with reflection.
   A failure in *DatabaseInitializer on a new database* in Release,
-  but not in Debug, is the P13 risk itself.
+  but not in Debug, is the P13 risk itself. Under full trimming EF Core,
+  EF Core Relational, EF Core Sqlite and SQLitePCLRaw report trim
+  warnings (IL2104), and so do the entity configurations and the
+  `MedReminderDbContext` constructor (IL2026).
 
-For S4, `StripReleaseDebugArtifacts` runs `AfterTargets="Build;Publish"`,
-and MSBuild runs a target once per build. During a publish it may
-therefore run after *Build* only, before the publish folder is filled
-`[INFERRED — to verify]`. The script lists what the target deleted and
-what is left, so this is visible in the S4 report.
+## Pre-check without a device
+
+Run on 2026-10-04 on Linux, on the merge of this branch with `main`
+(v2.16.0). Toolchain:
+- .NET SDK 10.0.112 (Ubuntu package);
+- workloads `android` 36.1.69 and `maui-android` 10.0.110;
+- OpenJDK 21.
+
+The Android SDK download is blocked in that environment. In its place
+the build used:
+- the Robolectric `android-all` 16 jar (API 36) from Maven Central, as
+  `android.jar`;
+- `zipalign` and `apksigner` from the Ubuntu packages.
+
+The APKs built there were not installed on a device. Build on Windows
+with the real Android SDK for the device runs.
+
+| Check | Result |
+|---|---|
+| Debug build | Succeeds, no warnings |
+| Release publish, default settings | Succeeds, no warnings. Defaults: `PublishTrimmed=true`, `TrimMode=partial`, `RunAOTCompilation=true`, `AndroidEnableProfiledAot=true`, `JsonSerializerIsReflectionEnabledByDefault=true`. Signed APK 41.6 MB |
+| `StripReleaseDebugArtifacts` on that publish | Runs unchanged, deletes 2 candidates (`MedReminder.MobileSpikes.pdb`, `.xml`) from the output folder. No `*.pdb` / `*.xml` left in the output or publish folders. The APK is produced after the strip |
+| Release publish, `-p:SpikeTrimMode=full` | Succeeds with 54 IL2026 and 8 IL2104 trim warnings (EF Core, SQLitePCLRaw, reflection JSON). Signed APK 36.3 MB |
+| S1–S3 logic on CoreCLR (linux-x64), production cipher and persistence | Every check passes. AES-GCM and Argon2id known answers equal the references. Argon2id default about 0.4–0.5 s on the build machine. 32 tables created. `journal_mode` WAL, SQLite 3.53.3 |
+
+The earlier note that `StripReleaseDebugArtifacts` might run before the
+publish folder is filled did not show up in this build: nothing was
+left to strip. It still has to be confirmed on Windows, where the
+target was designed.
 
 ## Privacy
 

@@ -40,7 +40,19 @@ internal static class S3EfCoreSqlite
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ILocalizationService, KeyEchoLocalization>();
         services.AddMedReminderPortableInfrastructure(databasePath);
-        services.AddScoped<MedicineOverviewLoader>();
+        // Built by hand: the optional dependencies the container would
+        // otherwise resolve (shortage and equivalents lists, profile
+        // settings) need IAppDataLocation and the feeds, which the spike
+        // does not have. The package repository stays, for its EF query.
+        services.AddScoped(sp => new MedicineOverviewLoader(
+            sp.GetRequiredService<IMedicineRepository>(),
+            sp.GetRequiredService<IStockMovementRepository>(),
+            sp.GetRequiredService<IMedicationScheduleHistoryRepository>(),
+            sp.GetRequiredService<IMedicationSuspensionRepository>(),
+            sp.GetRequiredService<IMedicationAdministrationSlotRepository>(),
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<ILocalizationService>(),
+            packages: sp.GetRequiredService<IStockPackageRepository>()));
 
         await using var provider = services.BuildServiceProvider(validateScopes: true);
 
