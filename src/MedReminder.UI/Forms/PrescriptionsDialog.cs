@@ -8,7 +8,9 @@ namespace MedReminder.UI.Forms;
 
 // Therapy → Prescriptions… (docs/notes/EVOLUTION-PROPOSALS-2.md §3.2):
 // every prescription of the profile, the ones to collect first, with
-// New, Edit, Collected today and Delete. The data and the writes come
+// New, Edit, Collected today and Delete. For a repeatable prescription,
+// "Dispensations" shows collected / allowed and "Collected today" records
+// a dispensation. The data and the writes come
 // from the caller, so the dialog holds no Application logic. The
 // prescription code is shown, never logged.
 internal sealed class PrescriptionsDialog : MedReminderFormBase
@@ -56,6 +58,7 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
         _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Packages"), 70);
         _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Code"), 140);
         _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Collected"), 95);
+        _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Dispensations"), 95);
         _list.SelectedIndexChanged += (_, _) => UpdateButtons();
         _list.DoubleClick += async (_, _) => await EditAsync();
 
@@ -91,7 +94,10 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
         var selected = Selected;
         _editButton.Enabled = selected is not null;
         _deleteButton.Enabled = selected is not null;
-        _collectButton.Enabled = selected is { Status: PrescriptionStatus.ToCollect or PrescriptionStatus.Expired };
+        // A repeatable prescription takes a dispensation only within its
+        // validity; a single one can still be marked collected when expired.
+        _collectButton.Enabled = selected is { Status: PrescriptionStatus.ToCollect }
+            || selected is { Status: PrescriptionStatus.Expired, Prescription.IsRepeatable: false };
     }
 
     private async Task ReloadAsync(Guid? select = null)
@@ -121,7 +127,10 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
             row.SubItems.Add(Date(p.ValidUntil, c));
             row.SubItems.Add(p.Packages?.ToString(c) ?? string.Empty);
             row.SubItems.Add(p.Code ?? string.Empty);
-            row.SubItems.Add(Date(p.CollectedOn, c));
+            row.SubItems.Add(p.IsRepeatable ? Date(item.Dispensations.LastOrDefault()?.CollectedOn, c) : Date(p.CollectedOn, c));
+            row.SubItems.Add(p.IsRepeatable
+                ? string.Format(c, "{0} / {1}", item.Dispensations.Count, p.Dispensations)
+                : string.Empty);
             row.ForeColor = item.Status switch
             {
                 PrescriptionStatus.Expired => UiTheme.Palette.DangerText,
@@ -147,7 +156,7 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
     private async Task EditAsync()
     {
         if (Selected is not { } item) return;
-        using var dialog = _actions.CreateEditor(item.Prescription);
+        using var dialog = _actions.CreateEditor(item);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
         await SaveAsync(dialog.Result);
     }
@@ -171,7 +180,7 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
         if (Selected is not { } item) return;
         try
         {
-            await _actions.Collect(item.Prescription.Id);
+            await _actions.Collect(item);
             Changed = true;
             await ReloadAsync(item.Prescription.Id);
         }
@@ -208,7 +217,7 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
 // What the dialog asks of its caller (MainForm), each in its own scope.
 internal sealed record PrescriptionsDialogActions(
     Func<Task<IReadOnlyList<PrescriptionListItem>>> Load,
-    Func<Prescription?, PrescriptionEditDialog> CreateEditor,
+    Func<PrescriptionListItem?, PrescriptionEditDialog> CreateEditor,
     Func<SavePrescriptionCommand, Task<Guid>> Save,
-    Func<Guid, Task> Collect,
+    Func<PrescriptionListItem, Task> Collect,
     Func<Guid, Task> Delete);

@@ -118,6 +118,53 @@ public sealed class ProfileDatabaseBuilderTests : IDisposable
         (await db.Medicines.SingleAsync()).LedgerBaselineEpoch.Should().Be(2);
     }
 
+    // Repeatable prescriptions (docs/EXPORT-FORMAT.md §3.14): the
+    // additive fields travel through payload.json and the database; a
+    // prescription written without them imports as a single one.
+    [Fact]
+    public async Task Repeatable_prescriptions_round_trip_and_older_entries_import_as_single()
+    {
+        var payload = TestArchiveWriter.SamplePayload();
+        var medicineId = payload.Medicines.Single().Id;
+        var at = new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero);
+        var repeatable = new ExportedPrescription
+        {
+            Id = Guid.NewGuid(), MedicineId = medicineId, IssuedOn = new DateOnly(2026, 10, 1),
+            ValidUntil = new DateOnly(2027, 9, 30), RecordedAt = at, UpdatedAt = at, Dispensations = 12,
+            DispensationRecords =
+            [
+                new ExportedPrescriptionDispensation
+                {
+                    Id = Guid.NewGuid(), CollectedOn = new DateOnly(2026, 10, 1), Packages = 1, RecordedAt = at, UpdatedAt = at,
+                },
+            ],
+        };
+        payload.Prescriptions = [repeatable];
+        var json = System.Text.Json.JsonSerializer.Serialize(payload, ExportJson.Options);
+        json.Should().Contain("\"dispensations\": 12").And.Contain("\"dispensationRecords\"");
+        var singleId = Guid.NewGuid();
+        // An entry as an older app wrote it: neither field.
+        var legacy = $$"""
+            {"id":"{{singleId}}","medicineId":"{{medicineId}}","issuedOn":"2026-09-01","validUntil":"2026-09-30",
+             "recordedAt":"2026-09-01T09:00:00+00:00","updatedAt":"2026-09-01T09:00:00+00:00"}
+            """;
+        var back = System.Text.Json.JsonSerializer.Deserialize<ExportPayload>(json, ExportJson.Options)!;
+        back.Prescriptions.Add(System.Text.Json.JsonSerializer.Deserialize<ExportedPrescription>(legacy, ExportJson.Options)!);
+        var path = Path.Combine(_directory, "medreminder.db");
+
+        await ProfileDatabaseBuilder.BuildAsync(path, back, default);
+
+        await using var db = Open(path);
+        (await db.Prescriptions.SingleAsync(p => p.Id == repeatable.Id)).Dispensations.Should().Be(12);
+        var single = await db.Prescriptions.SingleAsync(p => p.Id == singleId);
+        single.Dispensations.Should().BeNull();
+        single.IsRepeatable.Should().BeFalse();
+        var dispensation = await db.PrescriptionDispensations.SingleAsync();
+        dispensation.PrescriptionId.Should().Be(repeatable.Id);
+        dispensation.MedicineId.Should().Be(medicineId);
+        dispensation.Packages.Should().Be(1);
+    }
+
     private static MedReminderDbContext Open(string path)
         => new(new DbContextOptionsBuilder<MedReminderDbContext>()
             .UseSqlite(SqliteConnectionStrings.ForFile(path))
