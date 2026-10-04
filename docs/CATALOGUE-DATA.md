@@ -76,7 +76,8 @@ removes them at its own garbage collection.
   script, so the script decides what is new against the published
   state, then `feeds_branch.sh publish "<message>" <pathspec>...`
   with the paths the feed owns (`data/es`; `data/it` without
-  `data/it/shortages` and `data/it/equivalents` for AIFA). A publish
+  `data/it/shortages`, `data/it/equivalents` and
+  `data/it/regional-services` for AIFA). A publish
   starts from the branch as it is at push time and replaces only those
   paths, on a temporary index; the checkout of `main` is not touched.
   The push uses `--force-with-lease`: when another feed published in
@@ -760,6 +761,55 @@ Codice gruppo equivalenza`. The script:
 The client joins the list with a medicine only through
 `Medicine.NationalCode` when it is a valid AIC, never by name or active
 ingredient.
+
+---
+
+## 10. Regional prescription services (Italy)
+
+Not a catalogue and not downloaded from a source: the health record
+service of each Italian region or autonomous province where the issued
+electronic prescriptions are shown, maintained by hand. The
+prescription windows open the service of the profile's region in the
+browser, or show its app link as a QR code
+(`docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md`). MedReminder
+never signs in, never embeds a browser and never reads the service.
+
+| Item | Value |
+|---|---|
+| Source | `scripts/feeds/regional_services_it.json` on `main`, edited by hand after a person checked each service on official regional pages; `verifiedOn` records the day. An entry whose prescriptions were not seen has `showsPrescriptions: false`; a region with no confirmed service has no entry (no URL is guessed) |
+| Workflow | `publish_regional_services.yaml`: publishes when the source changes on `main` (or on a manual run); on the 3rd of each month requests every URL (HTTP status only, HEAD then GET when HEAD is refused) and opens an issue listing the failures, or comments on the open one. It never edits the list. Concurrency group `feed-<workflow name>`; no mirror to main |
+| Script | `scripts/feeds/regional_services.py` (`--validate-only`, `--check-urls REPORT`); tests in `scripts/feeds/tests/test_regional_services.py` |
+| Published | `data/it/regional-services/regional-services-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the date of the publish) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.services`); an unchanged source is not published again on a later day; the 3 newest files are kept |
+| Shipped | the source file is embedded in `MedReminder.Infrastructure.Portable` (`MedReminder.Infrastructure.Assets.regional-services-it.json`) for the first start and for an installation that never downloads feeds; the downloaded list is used unless the shipped copy has a later `listDate` |
+| Client | `RegionalServicesRefresher` with `GitHubRawRegionalServicesFeedClient`, after the equivalents list, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:RegionalServicesEnabled` (default true), `RegionalServicesMaxDownloadBytes` (default 256 KiB) |
+| Stored | `%LOCALAPPDATA%\MedReminder\catalogue\regional-services\regional-services-it.json`, shared by every profile; not in any profile database, not synced, not exported. The profile's region is a replicated profile setting (`docs/SYNC-FORMAT.md`) |
+
+List format: `{ "country": "IT", "listDate": "yyyy-mm-dd", "services":
+[ … ] }`, one entry per region code:
+
+| Field | Notes |
+|---|---|
+| `regionCode` | ISTAT region code; Trentino-Alto Adige (04) is replaced by its autonomous provinces, `21` Bolzano and `22` Trento, as in the national open data that split the region (21 codes) |
+| `region`, `service` | names shown to the user (at most 200 characters) |
+| `webUrl` | the portal page, `https`, no credentials or port |
+| `iosAppUrl`, `androidAppUrl` | store links of the regional app, `https`, or `null` |
+| `signIn` | non-empty subset of `SPID`, `CIE`, `TS-CNS` |
+| `showsPrescriptions` | `true` only when the prescriptions were seen on the service |
+| `familyDelegation` | `true` when the service documents a delegation for a caregiver |
+| `verifiedOn` | day the entry was checked, never in the future |
+
+The validator (publisher) and the parser (client) refuse a missing,
+unknown or repeated `regionCode`, a URL that is not `https`, an unknown
+`signIn` value and a missing field; the validator also refuses a
+`verifiedOn` or `listDate` in the future. The client opens only an
+`https` URL whose host appears in the current list, unchanged
+(`RegionalServiceLinkLauncher`).
+
+Initial content (2026-10-04): 19 entries found through web searches of
+official regional pages; the pages could not be opened from the build
+environment, so the first monthly check, or a manual run of
+`--check-urls`, is the confirmation. Campania and Sicily have no entry
+yet: no official service URL was confirmed.
 
 ---
 

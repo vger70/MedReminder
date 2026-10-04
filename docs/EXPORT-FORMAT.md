@@ -289,6 +289,7 @@ numbers.
 | `caregiverDigest` | string | `Weekly` sends the caregiver a weekly stock summary; `""` or `Off` does not. Additive (§5). The day of the last summary is not exported. |
 | `packageExpiryLeadDays` | string | days before a package's printed expiry when it is "expiring soon", an integer 0 to 180; `""` for the default 30. Additive (§5). |
 | `packageInUseLeadDays` | string | days before the end of a package's in-use period, an integer 0 to 30; `""` for the default 3. Additive (§5). |
+| `region` | string | Italian region of the profile, whose prescription service the prescription windows open: an ISTAT region code (`01` to `20` without `04`, `21` Bolzano, `22` Trento); `""` when not set. Additive (§5): archives without it import with `""`. |
 
 ### 3.10 `shared`
 

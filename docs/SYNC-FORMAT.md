@@ -339,7 +339,10 @@ others do not send it again), `PackageExpiryLeadDays` and
 `PackageInUseLeadDays` (days before a package's printed expiry, and
 before the end of its in-use period, when it is "expiring soon": an
 invariant integer, 0 to 180 and 0 to 30, `""` for the defaults 30 and
-3). An app that does not know a setting keeps its versions and
+3), `Region` (the Italian region whose prescription service the
+prescription windows open: an ISTAT region code, `01` to `20` without
+`04`, plus `21` Bolzano and `22` Trento, `""` when not set; a writer
+refuses any other value). An app that does not know a setting keeps its versions and
 does not project it, so these settings need no schema version. They are
 registers of the profile in the image's `SyncFieldVersions`
 (`MedicineId` and `EntityId` empty, register `Profile.<setting>`); the

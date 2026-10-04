@@ -707,6 +707,39 @@ Sur des PC synchronisés, mets à jour MedReminder sur tous les PC du
 profil avant d'enregistrer une ordonnance renouvelable : une version
 plus ancienne arrête la synchronisation jusqu'à sa mise à jour.
 
+### Service régional des ordonnances
+
+Avec l'Italie comme pays de référence, **Traitement → Ordonnances…** et
+la fenêtre de demande d'ordonnance ont un bouton **Service régional des
+ordonnances**. Il ouvre le service de votre région où sont affichées
+les ordonnances électroniques émises pour vous, pour copier le numéro
+de l'ordonnance au lieu de l'attendre.
+
+- La première fois, choisissez votre région ou province autonome. Elle
+  est enregistrée avec le profil ; changez-la depuis le bouton
+  (**Changer de région…**) ou dans Paramètres → Notifications.
+- **Ouvrir dans le navigateur** ouvre le portail régional dans votre
+  navigateur habituel.
+- **Ouvrir sur le téléphone** affiche un code QR de l'application
+  régionale, ou du portail s'il n'y a pas d'application : scannez-le
+  avec l'appareil photo du téléphone et connectez-vous sur le
+  téléphone.
+
+La ligne sous le bouton indique le service et comment se connecter
+(SPID, CIE ou TS-CNS). Vous vous connectez sur le service régional,
+jamais dans MedReminder : MedReminder ne voit ni vos identifiants ni
+votre dossier de santé et n'en importe rien. Un aidant se connecte avec
+ses propres identifiants et une délégation configurée sur le service
+régional. Si aucun service n'est répertorié pour votre région, ouvrez
+vous-même le portail du dossier de santé (Fascicolo Sanitario
+Elettronico) de votre région.
+
+**Coller le NRE**, à côté de **Code de l'ordonnance** dans la fenêtre
+de l'ordonnance, écrit le numéro d'ordonnance électronique (NRE, 15
+lettres ou chiffres) copié depuis le service régional, sans espaces, et
+remplit **Émise le** avec la date du jour s'il est vide. MedReminder ne
+lit le presse-papiers que lorsque vous cliquez.
+
 ### Échéances administratives
 
 **Traitement → Échéances administratives…** regroupe les dates qui ne

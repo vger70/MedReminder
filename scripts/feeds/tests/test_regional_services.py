@@ -77,6 +77,8 @@ def mutate(change):
     (lambda d: d["services"][0].update(iosAppUrl="ftp://example.org/app"), "not an https URL"),
     (lambda d: d["services"][0].update(webUrl="not a url"), "not an https URL"),
     (lambda d: d["services"][0].update(webUrl="https://user:pw@example.org/"), "credentials"),
+    (lambda d: d["services"][0].update(webUrl="https://example.org:8443/"), "a port"),
+    (lambda d: d["services"][0].update(webUrl="https://example.org:port/"), "not an https URL"),
     (lambda d: d["services"][0].update(signIn=["SPID", "Password"]), "unknown 'signIn'"),
     (lambda d: d["services"][0].update(signIn=[]), "no 'signIn'"),
     (lambda d: d["services"][0].update(verifiedOn="2026-10-05"), "in the future"),

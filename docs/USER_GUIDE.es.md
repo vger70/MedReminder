@@ -683,6 +683,37 @@ En PC sincronizados, actualiza MedReminder en todos los PC del perfil
 antes de registrar una receta repetible: una versión anterior detiene
 la sincronización hasta que se actualiza.
 
+### Servicio regional de recetas
+
+Con Italia como país de referencia, **Terapia → Recetas…** y la ventana
+de solicitud de receta tienen un botón **Servicio regional de
+recetas**. Abre el servicio de tu región donde se muestran las recetas
+electrónicas emitidas a tu nombre, para que copies el número de la
+receta en lugar de esperarlo.
+
+- La primera vez, elige tu región o provincia autónoma. Se guarda con
+  el perfil; cámbiala desde el botón (**Cambiar región…**) o en
+  Configuración → Notificaciones.
+- **Abrir en el navegador** abre el portal regional en tu navegador
+  habitual.
+- **Abrir en el teléfono** muestra un código QR de la app regional, o
+  del portal si no hay app: escanéalo con la cámara del teléfono e
+  inicia sesión en el teléfono.
+
+La línea bajo el botón indica el servicio y cómo iniciar sesión (SPID,
+CIE o TS-CNS). Inicias sesión en el servicio regional, nunca en
+MedReminder: MedReminder no ve tus credenciales ni tu historia clínica
+y no importa nada de ella. Un cuidador inicia sesión con sus propias
+credenciales y una delegación activada en el servicio regional. Si no
+hay ningún servicio para tu región, abre tú mismo el portal de la
+historia clínica (Fascicolo Sanitario Elettronico) de tu región.
+
+**Pegar NRE**, junto a **Código de la receta** en la ventana de la
+receta, escribe el número de receta electrónica (NRE, 15 letras o
+cifras) que copiaste del servicio regional, sin espacios, y rellena
+**Emitida el** con la fecha de hoy si está vacía. MedReminder lee el
+portapapeles solo cuando haces clic.
+
 ### Vencimientos administrativos
 
 **Terapia → Vencimientos administrativos…** reúne las fechas que no

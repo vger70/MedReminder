@@ -75,10 +75,14 @@ def _date(value, what):
 def _https(value, what):
     if not isinstance(value, str) or not value:
         raise ListError(f"{what} is not a URL")
-    parts = urlsplit(value)
+    try:
+        parts = urlsplit(value)
+        port = parts.port
+    except ValueError:
+        raise ListError(f"{what} is not an https URL") from None
     if parts.scheme != "https" or not parts.hostname:
         raise ListError(f"{what} is not an https URL")
-    if parts.username or parts.password or parts.port:
+    if parts.username or parts.password or port:
         raise ListError(f"{what} carries credentials or a port")
 
 
