@@ -34,6 +34,12 @@ internal sealed partial class SettingsDialog
     // null when the reference country is not Italy and the row is hidden.
     private ComboBox? _regionBox;
 
+    // The choice shown when the tab was built: the region is saved only
+    // when the user picks another one, so a value not synced yet, or one
+    // this version does not list, is never cleared by saving another
+    // setting.
+    private RegionChoice? _regionLoaded;
+
     // Notifications section (Increment 15d).
     // Per-profile "where do the emails go" tab (§7.4). Visible to
     // every profile: an admin sees it in addition to the Email tab
@@ -147,6 +153,7 @@ internal sealed partial class SettingsDialog
         box.Items.Add(new RegionChoice(string.Empty, _loc.Get("Ui.SettingsDialog.Notifications.Region.None")));
         foreach (var (code, name) in RegionNames.All(_loc)) box.Items.Add(new RegionChoice(code, name));
         box.SelectedItem = box.Items.Cast<RegionChoice>().FirstOrDefault(r => r.Code == current?.Trim()) ?? box.Items[0];
+        _regionLoaded = box.SelectedItem as RegionChoice;
         return box;
     }
 
@@ -396,8 +403,13 @@ internal sealed partial class SettingsDialog
                         caregiverEmails: CaregiverEmails.Format(_caregiverKinds.Where(k => k.Value.Checked).Select(k => k.Key)),
                         caregiverDigest: _caregiverDigest.Checked ? CaregiverDigestFrequency.Weekly : CaregiverDigestFrequency.Off,
                         packageExpiryLeadDays: PackageSettings.FormatPrinted((int)_expiryLeadDays.Value),
-                        packageInUseLeadDays: PackageSettings.FormatInUse((int)_inUseLeadDays.Value),
-                        region: (_regionBox?.SelectedItem as RegionChoice)?.Code);
+                        packageInUseLeadDays: PackageSettings.FormatInUse((int)_inUseLeadDays.Value));
+                if (_regionBox?.SelectedItem is RegionChoice region && region != _regionLoaded)
+                {
+                    await scope.ServiceProvider.GetRequiredService<UpdateProfileRegion>()
+                        .ExecuteAsync(region.Code, CancellationToken.None);
+                    _regionLoaded = region;
+                }
             }
             if (IsDisposed) return;
             UiMessageBox.Show(this,

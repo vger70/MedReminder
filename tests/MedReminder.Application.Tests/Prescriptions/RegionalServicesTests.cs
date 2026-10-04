@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using FluentAssertions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Donations;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
@@ -66,6 +67,14 @@ public sealed class RegionalServicesTests
     [InlineData("\"showsPrescriptions\":false", "\"showsPrescriptions\":\"no\"")]
     [InlineData("\"verifiedOn\":\"2026-09-30\"", "\"verifiedOn\":\"30/09/2026\"")]
     [InlineData("\"service\":\"Salute Lazio\",", "")]
+    [InlineData("\"webUrl\":\"https://www.sanitakmzero.it/\"", "\"webUrl\":\"https://www.sanitakmzero.it:0/\"")]
+    [InlineData("\"webUrl\":\"https://www.sanitakmzero.it/\"", "\"webUrl\":\"https://@www.sanitakmzero.it/\"")]
+    [InlineData("\"webUrl\":\"https://www.sanitakmzero.it/\"", "\"webUrl\":\"https://localhost/\"")]
+    [InlineData("\"webUrl\":\"https://www.sanitakmzero.it/\"", "\"webUrl\":\"https://exa_mple.org/\"")]
+    [InlineData("\"webUrl\":\"https://www.sanitakmzero.it/\"", "\"webUrl\":\"https://example.org/a b\"")]
+    [InlineData("\"webUrl\":\"https://www.sanitakmzero.it/\"", "\"webUrl\":\"https://esempio.it/città\"")]
+    [InlineData("\"verifiedOn\":\"2026-09-30\"", "\"verifiedOn\":\"20260930\"")]
+    [InlineData("\"signIn\":[\"SPID\"]", "\"signIn\":[{}]")]
     public void An_invalid_list_is_rejected(string from, string to)
     {
         ListJson.Should().Contain(from);
@@ -73,6 +82,19 @@ public sealed class RegionalServicesTests
             .Should().BeFalse();
         list.Should().BeNull();
         error.Should().NotBeNullOrEmpty();
+    }
+
+    // The publisher's validator accepts these too (test_regional_services.py):
+    // the two sides must agree, or every client refuses a published list.
+    [Fact]
+    public void The_default_port_an_at_sign_in_the_path_and_200_utf16_units_are_accepted()
+    {
+        var json = ListJson
+            .Replace("\"webUrl\":\"https://www.sanitakmzero.it/\"", "\"webUrl\":\"https://www.sanitakmzero.it:443/a@b\"")
+            .Replace("\"service\":\"Salute Lazio\"", "\"service\":\"" + string.Concat(Enumerable.Repeat("\U0001D412", 100)) + "\"");
+        RegionalServicesFeedParser.TryParseList(json, out _, out var error).Should().BeTrue(error);
+        RegionalServicesFeedParser.TryParseList(json.Replace("\U0001D412\"", "\U0001D412\U0001D412\""), out _, out _)
+            .Should().BeFalse("201 characters above the BMP are 202 UTF-16 units");
     }
 
     [Fact]
@@ -155,47 +177,50 @@ public sealed class RegionalServicesTests
     }
 
     [Theory]
-    [InlineData("https://www.salutelazio.it/", true)]
-    [InlineData("https://WWW.SALUTELAZIO.IT/", true)]
-    [InlineData("https://apps.apple.com/it/app/salutelazio/id1201847471", true)]
-    [InlineData("http://www.salutelazio.it/", false)]
-    [InlineData("https://www.salutelazio.it.example.org/", false)]
-    [InlineData("https://example.org/", false)]
-    [InlineData("https://user:pw@www.salutelazio.it/", false)]
-    [InlineData("file:///C:/Windows/System32/calc.exe", false)]
-    [InlineData("www.salutelazio.it", false)]
-    [InlineData("not a url", false)]
-    [InlineData("", false)]
-    [InlineData(null, false)]
-    public void The_launcher_opens_only_https_urls_of_the_list(string? url, bool opened)
+    [InlineData("12", "https://www.salutelazio.it/", true)]
+    [InlineData("12", "https://WWW.SALUTELAZIO.IT/", true)]
+    [InlineData("12", "https://apps.apple.com/it/app/salutelazio/id1201847471", true)]
+    [InlineData("12", "https://apps.apple.com/it/app/another-app/id1", false)]
+    [InlineData("12", "https://www.salutelazio.it/other-page", false)]
+    [InlineData("12", "https://www.salutelazio.it/?q=1", false)]
+    [InlineData("05", "https://www.salutelazio.it/", false)]
+    [InlineData("15", "https://www.salutelazio.it/", false)]
+    [InlineData("12", "http://www.salutelazio.it/", false)]
+    [InlineData("12", "https://www.salutelazio.it.example.org/", false)]
+    [InlineData("12", "https://user:pw@www.salutelazio.it/", false)]
+    [InlineData("12", "file:///C:/Windows/System32/calc.exe", false)]
+    [InlineData("12", "www.salutelazio.it", false)]
+    [InlineData("12", "not a url", false)]
+    [InlineData("12", "", false)]
+    [InlineData("12", null, false)]
+    public void The_launcher_opens_only_the_links_of_the_region(string region, string? url, bool opened)
     {
-        var opener = new RecordingOpener();
+        var browser = new RecordingLauncher();
         var log = new ListLogger();
-        var launcher = new RegionalServiceLinkLauncher(new MemoryStore(Parse()), opener, log);
+        var launcher = new RegionalServiceLinkLauncher(new MemoryStore(Parse()), browser, log);
 
-        launcher.Open("12", url).Should().Be(opened);
+        launcher.Open(region, url).Should().Be(opened);
 
-        opener.Opened.Should().HaveCount(opened ? 1 : 0);
+        browser.Opened.Should().HaveCount(opened ? 1 : 0);
         if (opened)
         {
-            opener.Opened[0].AbsoluteUri.Should().Be(new Uri(url!).AbsoluteUri, "nothing is added to the URL");
-            log.Lines.Should().ContainSingle().Which.Should().Be("Regional service opened: 12");
+            browser.Opened[0].AbsoluteUri.Should().Be(new Uri(url!).AbsoluteUri, "nothing is added to the URL");
+            log.Lines.Should().Equal("Regional service opened.");
         }
         else
         {
-            log.Lines.Should().ContainSingle().Which.Should().StartWith("Regional service link refused for region 12");
-            if (!string.IsNullOrEmpty(url)) log.Lines[0].Should().NotContain(url, "the URL is not logged");
+            log.Lines.Should().Equal("Regional service link refused: not a link of the list.");
         }
     }
 
     [Fact]
-    public void A_browser_that_cannot_start_is_reported_not_thrown()
+    public void A_browser_that_cannot_start_is_reported_without_the_url_or_the_region()
     {
         var log = new ListLogger();
-        var launcher = new RegionalServiceLinkLauncher(new MemoryStore(Parse()), new RecordingOpener(fail: true), log);
+        var launcher = new RegionalServiceLinkLauncher(new MemoryStore(Parse()), new RecordingLauncher(fail: true), log);
 
         launcher.Open("12", "https://www.salutelazio.it/").Should().BeFalse();
-        log.Lines.Should().ContainSingle().Which.Should().Contain("could not be opened for region 12");
+        log.Lines.Should().Equal("Regional service could not be opened in the browser.");
     }
 
     [Fact]
@@ -220,27 +245,34 @@ public sealed class RegionalServicesTests
     public async Task An_unknown_region_is_refused(string region)
     {
         var update = new UpdateProfileRegion(_scope.ProfileSettings, _scope.Operations, _scope.Uow);
-        var settings = new UpdateNotificationSettings(_scope.ProfileSettings, _scope.Registers, _scope.Operations, _scope.Uow);
 
         await FluentActions.Invoking(() => update.ExecuteAsync(region, default)).Should().ThrowAsync<ArgumentException>();
-        await FluentActions.Invoking(() => settings.ExecuteAsync("", "", "", default, region: region))
-            .Should().ThrowAsync<ArgumentException>();
         _scope.ProfileSettings.Read()[ProfileSetting.Region].Should().BeEmpty();
     }
 
     [Fact]
-    public async Task The_settings_dialog_saves_and_clears_the_region()
+    public async Task The_region_can_be_cleared()
     {
+        var update = new UpdateProfileRegion(_scope.ProfileSettings, _scope.Operations, _scope.Uow);
+
+        await update.ExecuteAsync("20", default);
+        await update.ExecuteAsync("", default);
+
+        _scope.ProfileSettings.Read()[ProfileSetting.Region].Should().BeEmpty();
+    }
+
+    // Saving other notification settings never records the region, so a
+    // device that has not received a region set elsewhere cannot clear it.
+    [Fact]
+    public async Task Saving_the_notification_settings_does_not_record_the_region()
+    {
+        _scope.EnableSync();
         var settings = new UpdateNotificationSettings(_scope.ProfileSettings, _scope.Registers, _scope.Operations, _scope.Uow);
 
-        await settings.ExecuteAsync("", "", "", default, region: "20");
-        _scope.ProfileSettings.Read()[ProfileSetting.Region].Should().Be("20");
+        await settings.ExecuteAsync("a@example.org", "", "", default);
 
-        await settings.ExecuteAsync("", "", "", default);
-        _scope.ProfileSettings.Read()[ProfileSetting.Region].Should().Be("20", "null leaves the region as it is");
-
-        await settings.ExecuteAsync("", "", "", default, region: "");
-        _scope.ProfileSettings.Read()[ProfileSetting.Region].Should().BeEmpty();
+        (await _scope.SyncOperations.ListAllAsync(default))
+            .Should().NotContain(o => o.Type == "ProfileSettingChanged" && o.Payload.Contains("\"Region\""));
     }
 
     private sealed class MemoryStore(RegionalServicesList? list) : IRegionalServicesListStore
@@ -272,14 +304,15 @@ public sealed class RegionalServicesTests
             => Task.FromResult(_bytes);
     }
 
-    private sealed class RecordingOpener(bool fail = false) : IUrlOpener
+    private sealed class RecordingLauncher(bool fail = false) : IUrlLauncher
     {
         public List<Uri> Opened { get; } = [];
 
-        public void Open(Uri uri)
+        public bool TryLaunch(Uri httpsUrl, out string? error)
         {
-            if (fail) throw new InvalidOperationException("no browser");
-            Opened.Add(uri);
+            error = fail ? "cannot start https://www.salutelazio.it/" : null;
+            if (!fail) Opened.Add(httpsUrl);
+            return !fail;
         }
     }
 

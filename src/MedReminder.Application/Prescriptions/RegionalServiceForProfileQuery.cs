@@ -1,5 +1,6 @@
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Donations;
 using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Sync;
 using Microsoft.Extensions.Logging;
@@ -60,62 +61,53 @@ public sealed class RegionalServiceForProfileQuery
 }
 
 // Opens a link of the regional services list
-// (docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2): only an
-// absolute https URL whose host is in the current list, as published,
-// with nothing added. Anything else is refused and logged without the
-// URL. A successful open logs the region code only, never a
-// prescription code.
+// (docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2): only a URL
+// that is exactly one of the links of the region's entry in the current
+// list (its web page or an app link), with nothing added. Anything else
+// is refused. The log names neither the URL nor the region: which
+// health service a person is registered with, and when they open it, is
+// personal data (CLAUDE.md §5).
 public sealed class RegionalServiceLinkLauncher
 {
     private readonly IRegionalServicesListStore _list;
-    private readonly IUrlOpener _opener;
+    private readonly IUrlLauncher _launcher;
     private readonly ILogger<RegionalServiceLinkLauncher> _log;
 
-    public RegionalServiceLinkLauncher(IRegionalServicesListStore list, IUrlOpener opener,
+    public RegionalServiceLinkLauncher(IRegionalServicesListStore list, IUrlLauncher launcher,
         ILogger<RegionalServiceLinkLauncher> log)
     {
         _list = list;
-        _opener = opener;
+        _launcher = launcher;
         _log = log;
     }
 
     // False when the link was refused or the browser could not be started.
     public bool Open(string regionCode, string? url)
     {
-        if (!IsAllowed(url, out var uri))
+        if (!IsAllowed(regionCode, url, out var uri))
         {
-            _log.LogWarning("Regional service link refused for region {Region}: not an https URL of the list.",
-                ItalianRegions.IsValid(regionCode) ? regionCode : "?");
+            _log.LogWarning("Regional service link refused: not a link of the list.");
             return false;
         }
-        try
+        if (!_launcher.TryLaunch(uri, out _))
         {
-            _opener.Open(uri);
-        }
-        catch (Exception ex)
-        {
-            _log.LogWarning("Regional service could not be opened for region {Region}: {Error}",
-                regionCode, ex.GetType().Name);
+            // The shell's message may name the URL: not logged.
+            _log.LogWarning("Regional service could not be opened in the browser.");
             return false;
         }
-        _log.LogInformation("Regional service opened: {Region}", regionCode);
+        _log.LogInformation("Regional service opened.");
         return true;
     }
 
-    // An https URL of a host the current list links to.
-    public bool IsAllowed(string? url, out Uri uri)
+    // One of the links of the region's entry, compared as absolute URIs.
+    public bool IsAllowed(string regionCode, string? url, out Uri uri)
     {
         uri = null!;
         if (RegionalServicesFeedParser.ParseHttps(url) is not { } parsed) return false;
-        if (_list.Load() is not { } list || !list.Hosts.Contains(parsed.IdnHost)) return false;
+        if (_list.Load()?.Find(regionCode) is not { } service) return false;
+        if (!service.Links().Any(link => string.Equals(link.AbsoluteUri, parsed.AbsoluteUri, StringComparison.Ordinal)))
+            return false;
         uri = parsed;
         return true;
     }
-}
-
-// Hands a URL to the default browser (the shell on Windows). Implemented
-// by the UI.
-public interface IUrlOpener
-{
-    void Open(Uri uri);
 }

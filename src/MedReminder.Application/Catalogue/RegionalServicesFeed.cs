@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Prescriptions;
 using Microsoft.Extensions.Logging;
@@ -12,9 +13,10 @@ namespace MedReminder.Application.Catalogue;
 // service of each Italian region, maintained by hand in
 // scripts/feeds/regional_services_it.json and published by
 // scripts/feeds/regional_services.py under data/it/regional-services/ as
-// `regional-services-<yyyymmdd>.json` (the date of the publish) with a
-// `latest.json` manifest. Same transport, store and refresh as the
-// shortage list (DatedListFeed.cs); a copy ships with the application.
+// `regional-services-<yyyymmdd>.json` (the source's listDate, moved on
+// every change) with a `latest.json` manifest. Same transport, store and
+// refresh as the shortage list (DatedListFeed.cs); a copy ships with the
+// application.
 public sealed class RegionalServicesFeedDefinition : DatedListFeedDefinition<RegionalServicesList>
 {
     public static readonly RegionalServicesFeedDefinition Instance = new();
@@ -40,8 +42,10 @@ public sealed class RegionalServicesFeedDefinition : DatedListFeedDefinition<Reg
 }
 
 // Pure parsers, testable without HTTP. Unknown fields are ignored. The
-// same rules as the publisher's validator, so a list the publisher
-// refuses never reaches a profile, and a hand-edited copy is refused too.
+// same rules as the publisher's validator (scripts/feeds/
+// regional_services.py), in both directions: a list the publisher
+// accepts is never refused here (every client would keep a stale list or
+// none), and a hand-edited copy the publisher would refuse is refused.
 public static class RegionalServicesFeedParser
 {
     public const string Country = DatedFeedManifestParser.Country;
@@ -121,15 +125,31 @@ public static class RegionalServicesFeedParser
         return methods;
     }
 
-    // An absolute https URL without credentials or an explicit port.
+    // An absolute https URL: printable ASCII only, an ASCII DNS host with
+    // a dot, no credentials, no port other than 443.
     internal static Uri? ParseHttps(string? text)
-        => Uri.TryCreate(text, UriKind.Absolute, out var uri)
+        => text is { Length: > 0 }
+           && text.All(c => c is > ' ' and < '\u007F')
+           && Uri.TryCreate(text, UriKind.Absolute, out var uri)
            && uri.Scheme == Uri.UriSchemeHttps
            && uri.IsDefaultPort
-           && string.IsNullOrEmpty(uri.UserInfo)
-           && !string.IsNullOrEmpty(uri.Host)
+           && !Authority(text).Contains('@')
+           && HostPattern.IsMatch(uri.Host)
             ? uri
             : null;
+
+    // What follows "https://" up to the path, query or fragment.
+    private static string Authority(string url)
+    {
+        var rest = url[(url.IndexOf("://", StringComparison.Ordinal) + 3)..];
+        var end = rest.IndexOfAny(['/', '?', '#']);
+        return end < 0 ? rest : rest[..end];
+    }
+
+    // The publisher's HOST pattern: an ASCII DNS name with at least one dot.
+    private static readonly Regex HostPattern = new(
+        "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$",
+        RegexOptions.CultureInvariant);
 
     private static Uri? Https(JsonElement element, string name) => ParseHttps(String(element, name));
 
@@ -189,8 +209,9 @@ public sealed class RegionalServicesRefresher : DatedListRefresher<RegionalServi
 
 // Which of two lists a profile reads: the downloaded one, unless the
 // application ships a newer copy (an update installed after the last
-// download). The same date keeps the downloaded one, which the feed
-// checked.
+// download). Both carry the source's listDate, which the publisher
+// requires to move on every change, so the same date means the same
+// content and keeps the downloaded one.
 public static class RegionalServicesListChoice
 {
     public static RegionalServicesList? Newest(RegionalServicesList? downloaded, RegionalServicesList? shipped)

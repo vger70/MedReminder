@@ -15,6 +15,10 @@ on:
         description: 'Republish the list even if already published'
         type: boolean
         default: false
+      check_urls:
+        description: 'Check the URLs and report the failures instead of publishing'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -28,7 +32,7 @@ concurrency:
 jobs:
   publish:
     # A push of the source, or a manual run: validate and publish.
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && !inputs.check_urls
     runs-on: ubuntu-24.04
 
     steps:
@@ -65,7 +69,8 @@ jobs:
             "data/it/regional-services"
 
   check-urls:
-    if: github.event_name == 'schedule'
+    # Monthly, or a manual run with check_urls ticked.
+    if: github.event_name == 'schedule' || inputs.check_urls
     runs-on: ubuntu-24.04
 
     steps:
@@ -90,6 +95,7 @@ jobs:
         run: |
           report="$RUNNER_TEMP/regional-services-report.md"
           [ -s "$report" ] || { echo "Every URL answered."; exit 0; }
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
           title="Regional services list: URLs that do not answer"
           existing="$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')"
           if [ -n "$existing" ]; then

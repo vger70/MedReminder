@@ -1,9 +1,9 @@
 namespace MedReminder.Domain.Prescriptions;
 
-// The Italian electronic prescription number (NRE, "numero di ricetta
-// elettronica"; docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md
-// §3.2): 15 letters or digits, printed on the paper slip as two groups
-// and shown by the regional services, often with spaces or dashes. No
+// The Italian electronic prescription number (NRE;
+// docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2): 15 letters
+// or digits, printed on the paper slip as two groups and shown by the
+// regional services, often with spaces or dashes. No
 // check digit: no public specification of one was found, so none is
 // verified. Never logged, as the prescription code.
 public readonly record struct NreCode

@@ -461,11 +461,6 @@ internal static class Program
         builder.Services.RemoveAll<IWindowsNotificationService>();
         builder.Services.AddSingleton<TrayBalloonNotificationService>();
         builder.Services.AddSingleton<IWindowsNotificationService, ToastWindowsNotificationService>();
-        // Regional prescription service links (PROMPT-REGIONAL-PRESCRIPTION-
-        // SERVICES §3.2): the default browser, after RegionalServiceLinkLauncher
-        // has checked the URL.
-        builder.Services.AddSingleton<MedReminder.Application.Prescriptions.IUrlOpener,
-            MedReminder.UI.Services.ShellUrlOpener>();
         builder.Services.AddSingleton<ApplicationTrayIcon>();
         // Webcam barcode scan (A2 phase 2). Singleton: it serializes
         // camera sessions; each session releases the camera on exit.

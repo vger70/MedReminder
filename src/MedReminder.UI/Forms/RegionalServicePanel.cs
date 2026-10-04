@@ -41,7 +41,8 @@ internal sealed class RegionalServicePanel : FlowLayoutPanel
         {
             AutoSize = true,
             ForeColor = UiColors.Hint,
-            MaximumSize = new Size(760, 0),
+            // Wraps to the panel width (FitInfo), whatever the dialog width.
+            MaximumSize = new Size(400, 0),
             Margin = new Padding(0, 0, 0, UiTheme.Space.XS),
         };
 
@@ -57,8 +58,17 @@ internal sealed class RegionalServicePanel : FlowLayoutPanel
 
         Controls.Add(_button);
         Controls.Add(_info);
+        SizeChanged += (_, _) => FitInfo();
         Disposed += (_, _) => _menu.Dispose();
         Reload();
+    }
+
+    // The info line wraps to the width the dock gives the panel, so a
+    // narrow window or a larger text size does not cut it.
+    private void FitInfo()
+    {
+        var width = Math.Max(200, ClientSize.Width - Padding.Horizontal - _info.Margin.Horizontal);
+        if (_info.MaximumSize.Width != width) _info.MaximumSize = new Size(width, 0);
     }
 
     // Reads the profile's region and the list again.
@@ -270,15 +280,24 @@ internal sealed class RegionalServiceQrDialog : MedReminderFormBase
             Height = 300,
             BackColor = Color.White,
         };
-        var choices = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
-        foreach (var (key, url) in targets)
+        // A choice only when there is more than the web page: no control is
+        // built that the form would not own and dispose.
+        Control choices = new Panel { Height = 0, Width = 0 };
+        RadioButton? first = null;
+        if (targets.Count > 1)
         {
-            var choice = new RadioButton { AutoSize = true, Text = localization.Get(key), Tag = url };
-            choice.CheckedChanged += (_, _) =>
+            var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+            foreach (var (key, url) in targets)
             {
-                if (choice.Checked) ShowQr(url);
-            };
-            choices.Controls.Add(choice);
+                var choice = new RadioButton { AutoSize = true, Text = localization.Get(key) };
+                choice.CheckedChanged += (_, _) =>
+                {
+                    if (choice.Checked) ShowQr(url);
+                };
+                row.Controls.Add(choice);
+                first ??= choice;
+            }
+            choices = row;
         }
         var scan = new Label
         {
@@ -296,11 +315,12 @@ internal sealed class RegionalServiceQrDialog : MedReminderFormBase
 
         var close = DialogLayout.Button(localization.Get("Common.Close"), DialogResult.OK);
         var buttons = DialogLayout.ButtonBar(this, close, close);
-        Controls.Add(DialogLayout.Stack(choices.Controls.Count > 1 ? choices : new Panel { Height = 0 }, _qr, scan, privacy));
+        Controls.Add(DialogLayout.Stack(choices, _qr, scan, privacy));
         Controls.Add(buttons);
         FormClosed += (_, _) => _qr.Image?.Dispose();
 
-        ((RadioButton)choices.Controls[0]).Checked = true;
+        if (first is not null) first.Checked = true;
+        else ShowQr(service.WebUrl);
     }
 
     private void ShowQr(Uri url)

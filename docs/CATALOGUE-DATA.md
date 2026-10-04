@@ -776,11 +776,11 @@ never signs in, never embeds a browser and never reads the service.
 
 | Item | Value |
 |---|---|
-| Source | `scripts/feeds/regional_services_it.json` on `main`, edited by hand after a person checked each service on official regional pages; `verifiedOn` records the day. An entry whose prescriptions were not seen has `showsPrescriptions: false`; a region with no confirmed service has no entry (no URL is guessed) |
-| Workflow | `publish_regional_services.yaml`: publishes when the source changes on `main` (or on a manual run); on the 3rd of each month requests every URL (HTTP status only, HEAD then GET when HEAD is refused) and opens an issue listing the failures, or comments on the open one. It never edits the list. Concurrency group `feed-<workflow name>`; no mirror to main |
+| Source | `scripts/feeds/regional_services_it.json` on `main`, edited by hand; `verifiedOn` records the day an entry was checked. `showsPrescriptions` is `true` only after a person saw the prescriptions on the service, and the app says the service is not verified for prescriptions otherwise; a region with no confirmed service has no entry (no URL is guessed). Every change moves `listDate` to the day of the change (Italian time) |
+| Workflow | `publish_regional_services.yaml`: publishes when the source changes on `main` (or on a manual run); on the 3rd of each month, or on a manual run with `check_urls` ticked, requests every URL (HTTP status only, HEAD then GET when HEAD is refused), writes the failures to the run summary and opens an issue listing them, or comments on the open one. It never edits the list. Concurrency group `feed-<workflow name>`; no mirror to main |
 | Script | `scripts/feeds/regional_services.py` (`--validate-only`, `--check-urls REPORT`); tests in `scripts/feeds/tests/test_regional_services.py` |
-| Published | `data/it/regional-services/regional-services-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the date of the publish) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.services`); an unchanged source is not published again on a later day; the 3 newest files are kept |
-| Shipped | the source file is embedded in `MedReminder.Infrastructure.Portable` (`MedReminder.Infrastructure.Assets.regional-services-it.json`) for the first start and for an installation that never downloads feeds; the downloaded list is used unless the shipped copy has a later `listDate` |
+| Published | `data/it/regional-services/regional-services-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the source's `listDate`) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.services`); unchanged content is not published again; changed content without a later `listDate` than the published list fails the run; the 3 newest files are kept |
+| Shipped | the source file is embedded in `MedReminder.Infrastructure.Portable` (`MedReminder.Infrastructure.Assets.regional-services-it.json`) for the first start and for an installation that never downloads feeds; the downloaded list is used unless the shipped copy has a later `listDate`, which is why every change must move it |
 | Client | `RegionalServicesRefresher` with `GitHubRawRegionalServicesFeedClient`, after the equivalents list, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:RegionalServicesEnabled` (default true), `RegionalServicesMaxDownloadBytes` (default 256 KiB) |
 | Stored | `%LOCALAPPDATA%\MedReminder\catalogue\regional-services\regional-services-it.json`, shared by every profile; not in any profile database, not synced, not exported. The profile's region is a replicated profile setting (`docs/SYNC-FORMAT.md`) |
 
@@ -798,18 +798,27 @@ List format: `{ "country": "IT", "listDate": "yyyy-mm-dd", "services":
 | `familyDelegation` | `true` when the service documents a delegation for a caregiver |
 | `verifiedOn` | day the entry was checked, never in the future |
 
-The validator (publisher) and the parser (client) refuse a missing,
-unknown or repeated `regionCode`, a URL that is not `https`, an unknown
-`signIn` value and a missing field; the validator also refuses a
-`verifiedOn` or `listDate` in the future. The client opens only an
-`https` URL whose host appears in the current list, unchanged
-(`RegionalServiceLinkLauncher`).
+The validator (publisher) and the parser (client,
+`RegionalServicesFeedParser`) apply the same rules, so a published list
+is never refused by a client: a known, unrepeated `regionCode`; names of
+1 to 200 UTF-16 units; URLs of printable ASCII, `https`, an ASCII DNS
+host with a dot, no credentials, no port other than 443; a non-empty,
+unrepeated `signIn` from the three values; booleans; dates written
+exactly `yyyy-mm-dd`. The validator also refuses a `verifiedOn` or
+`listDate` later than today in Italy. Tests on both sides cover the
+same edge cases.
+
+The client opens or shows only a URL that is exactly one of the links
+of the region's entry (`RegionalServiceLinkLauncher`, through the shell
+launcher also used for donations). Its log lines name neither the URL
+nor the region: the health service a person is registered with is
+personal data.
 
 Initial content (2026-10-04): 19 entries found through web searches of
-official regional pages; the pages could not be opened from the build
-environment, so the first monthly check, or a manual run of
-`--check-urls`, is the confirmation. Campania and Sicily have no entry
-yet: no official service URL was confirmed.
+official regional pages, all with `showsPrescriptions: false`: the
+pages could not be opened from the build environment. A person checks
+each service, then sets the flag and moves `listDate`. Campania and
+Sicily have no entry yet: no official service URL was confirmed.
 
 ---
 

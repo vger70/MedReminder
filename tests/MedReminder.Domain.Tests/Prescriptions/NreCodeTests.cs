@@ -45,7 +45,7 @@ public class RegionalServicesListTests
         [SignInMethod.Spid], true, false, new DateOnly(2026, 10, 4));
 
     [Fact]
-    public void Finds_by_code_and_collects_every_host()
+    public void Finds_by_code_and_lists_the_links_of_an_entry()
     {
         var list = new RegionalServicesList(CountryCode.Parse("IT"), new DateOnly(2026, 10, 4),
         [
@@ -57,8 +57,9 @@ public class RegionalServicesListTests
         list.Find(" 12 ")!.Service.Should().Be("Service 12");
         list.Find("15").Should().BeNull();
         list.Find(null).Should().BeNull();
-        list.Hosts.Should().BeEquivalentTo("www.salutelazio.it", "apps.apple.com", "www.sanitakmzero.it");
-        list.Hosts.Contains("WWW.SALUTELAZIO.IT").Should().BeTrue();
+        list.Find("12")!.Links().Select(u => u.AbsoluteUri)
+            .Should().Equal("https://www.salutelazio.it/", "https://apps.apple.com/it/app/x/id1");
+        list.Find("05")!.Links().Should().ContainSingle();
     }
 
     [Fact]

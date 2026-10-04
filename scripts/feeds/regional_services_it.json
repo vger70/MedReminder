@@ -10,7 +10,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": true,
       "verifiedOn": "2026-10-04"
     },
@@ -22,7 +22,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -34,7 +34,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -46,7 +46,7 @@
       "iosAppUrl": "https://apps.apple.com/it/app/sanit%C3%A0-km-zero-ricette/id1150462735",
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -58,7 +58,7 @@
       "iosAppUrl": "https://apps.apple.com/it/app/sesamo-fse/id1445657352",
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -70,7 +70,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -82,7 +82,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": true,
       "verifiedOn": "2026-10-04"
     },
@@ -94,7 +94,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -106,7 +106,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -118,7 +118,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -130,7 +130,7 @@
       "iosAppUrl": "https://apps.apple.com/it/app/salutelazio/id1201847471",
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": true,
       "verifiedOn": "2026-10-04"
     },
@@ -142,7 +142,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -154,7 +154,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -166,7 +166,7 @@
       "iosAppUrl": "https://apps.apple.com/it/app/pugliasalute/id1120537176",
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -178,7 +178,7 @@
       "iosAppUrl": "https://apps.apple.com/it/app/salute-basilicata/id1616633761",
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -190,7 +190,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -202,7 +202,7 @@
       "iosAppUrl": "https://apps.apple.com/it/app/fascicolo-sanitario-sardegna/id1669261359",
       "androidAppUrl": "https://play.google.com/store/apps/details?id=it.sardegnait.fsesardegna",
       "signIn": ["SPID", "CIE"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": true,
       "verifiedOn": "2026-10-04"
     },
@@ -214,7 +214,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID", "CIE", "TS-CNS"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     },
@@ -226,7 +226,7 @@
       "iosAppUrl": null,
       "androidAppUrl": null,
       "signIn": ["SPID"],
-      "showsPrescriptions": true,
+      "showsPrescriptions": false,
       "familyDelegation": false,
       "verifiedOn": "2026-10-04"
     }

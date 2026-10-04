@@ -45,6 +45,13 @@ def sample():
     return copy.deepcopy(SAMPLE)
 
 
+def test_the_default_port_and_an_at_sign_in_the_path_are_accepted():
+    document = sample()
+    document["services"][0]["webUrl"] = "https://www.salutelazio.it:443/a@b"
+    document["services"][0]["service"] = "𝐒" * 100
+    regional_services.validate(document, TODAY)
+
+
 def test_the_sample_is_valid_and_an_entry_may_have_a_web_url_only():
     services = regional_services.validate(sample(), TODAY)
     assert [s["regionCode"] for s in services] == ["12", "05"]
@@ -78,7 +85,16 @@ def mutate(change):
     (lambda d: d["services"][0].update(webUrl="not a url"), "not an https URL"),
     (lambda d: d["services"][0].update(webUrl="https://user:pw@example.org/"), "credentials"),
     (lambda d: d["services"][0].update(webUrl="https://example.org:8443/"), "a port"),
+    (lambda d: d["services"][0].update(webUrl="https://example.org:0/"), "a port"),
     (lambda d: d["services"][0].update(webUrl="https://example.org:port/"), "not an https URL"),
+    (lambda d: d["services"][0].update(webUrl="https://@example.org/"), "credentials"),
+    (lambda d: d["services"][0].update(webUrl="https://localhost/"), "not an https URL"),
+    (lambda d: d["services"][0].update(webUrl="https://exa_mple.org/"), "not an https URL"),
+    (lambda d: d["services"][0].update(webUrl="https://example.org/a b"), "not an https URL"),
+    (lambda d: d["services"][0].update(webUrl="https://esempio.it/città"), "not an https URL"),
+    (lambda d: d["services"][0].update(signIn=[{}]), "unknown 'signIn'"),
+    (lambda d: d["services"][0].update(verifiedOn="20261004"), "not a yyyy-mm-dd date"),
+    (lambda d: d["services"][0].update(service="𝐒" * 101), "no valid 'service'"),
     (lambda d: d["services"][0].update(signIn=["SPID", "Password"]), "unknown 'signIn'"),
     (lambda d: d["services"][0].update(signIn=[]), "no 'signIn'"),
     (lambda d: d["services"][0].update(verifiedOn="2026-10-05"), "in the future"),
@@ -95,9 +111,9 @@ def test_validate_refuses_each_invalid_case(change, message):
 
 
 def test_publish_writes_the_list_and_a_manifest_with_size_and_sha256(tmp_path):
-    document = regional_services.build_document(sample(), RUN.date(), RUN)
+    document = regional_services.build_document(sample(), RUN)
 
-    manifest = regional_services.publish(tmp_path, RUN.date(), document, RUN)
+    manifest = regional_services.publish(tmp_path, date(2026, 10, 4), document, RUN)
 
     written = tmp_path / "regional-services-20261004.json"
     payload = written.read_bytes()
@@ -114,31 +130,59 @@ def test_publish_writes_the_list_and_a_manifest_with_size_and_sha256(tmp_path):
     assert published["services"] == SAMPLE["services"]
 
 
-def test_an_unchanged_source_is_not_published_again_on_a_later_day(tmp_path):
-    first = regional_services.build_document(sample(), RUN.date(), RUN)
-    regional_services.publish(tmp_path, RUN.date(), first, RUN)
+def published_sample(tmp_path):
+    regional_services.publish(tmp_path, date(2026, 10, 4), regional_services.build_document(sample(), RUN), RUN)
+
+
+def test_an_unchanged_source_is_not_published_again(tmp_path):
+    published_sample(tmp_path)
     later = datetime(2026, 11, 2, tzinfo=timezone.utc)
 
-    again = regional_services.build_document(sample(), later.date(), later)
+    again = regional_services.build_document(sample(), later)
 
     assert regional_services.skip_reason(tmp_path, again, force=False) == "the list is already published"
     assert regional_services.skip_reason(tmp_path, again, force=True) is None
 
 
-def test_a_changed_source_is_published(tmp_path):
-    first = regional_services.build_document(sample(), RUN.date(), RUN)
-    regional_services.publish(tmp_path, RUN.date(), first, RUN)
+def test_a_change_with_a_later_list_date_is_published(tmp_path):
+    published_sample(tmp_path)
     changed = sample()
+    changed["listDate"] = "2026-10-20"
     changed["services"][1]["showsPrescriptions"] = True
 
-    document = regional_services.build_document(changed, RUN.date(), RUN)
+    document = regional_services.build_document(changed, RUN)
 
     assert regional_services.skip_reason(tmp_path, document, force=False) is None
 
 
+@pytest.mark.parametrize("list_date", ["2026-10-04", "2026-09-30"])
+def test_a_change_without_a_later_list_date_is_refused(tmp_path, list_date):
+    # The app keeps the newer of the downloaded and shipped lists by date:
+    # a changed list with the same or an older date could lose to a stale one.
+    published_sample(tmp_path)
+    changed = sample()
+    changed["listDate"] = list_date
+    changed["services"][1]["showsPrescriptions"] = True
+
+    document = regional_services.build_document(changed, RUN)
+
+    with pytest.raises(regional_services.ListError, match="move 'listDate'"):
+        regional_services.skip_reason(tmp_path, document, force=True)
+
+
 def test_nothing_published_yet_publishes(tmp_path):
-    document = regional_services.build_document(sample(), RUN.date(), RUN)
+    document = regional_services.build_document(sample(), RUN)
     assert regional_services.skip_reason(tmp_path / "missing", document, force=False) is None
+
+
+def test_dates_are_checked_against_the_italian_day():
+    # 00:30 in Rome on 5 October is still 4 October in UTC.
+    run = datetime(2026, 10, 4, 22, 30, tzinfo=timezone.utc)
+    assert regional_services.local_today(run) == date(2026, 10, 5)
+    document = sample()
+    document["listDate"] = "2026-10-05"
+    document["services"][0]["verifiedOn"] = "2026-10-05"
+    regional_services.validate(document, regional_services.local_today(run))
 
 
 class FakeResponse:

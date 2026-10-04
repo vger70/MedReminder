@@ -34,15 +34,13 @@ public sealed class UpdateNotificationSettings
     }
 
     // caregiverEmails and caregiverDigest (docs/notes/
-    // EVOLUTION-PROPOSALS-2.md §3.8), the package expiry lead days
-    // (ANALYSIS-PACKAGE-EXPIRY.md §4.6) and the region (docs/prompt/
-    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2): null leaves the
-    // setting as it is.
+    // EVOLUTION-PROPOSALS-2.md §3.8), and the package expiry lead days
+    // (ANALYSIS-PACKAGE-EXPIRY.md §4.6): null leaves the setting as it is.
+    // The region has its own use case, UpdateProfileRegion.
     public Task ExecuteAsync(string toAddress, string caregiverAddress, string doctorAddress,
         CancellationToken cancellationToken, string? caregiverEmails = null, string? caregiverDigest = null,
-        string? packageExpiryLeadDays = null, string? packageInUseLeadDays = null, string? region = null)
+        string? packageExpiryLeadDays = null, string? packageInUseLeadDays = null)
     {
-        UpdateProfileRegion.Check(region);
         // A replicated value every device reads alike: refused here rather
         // than clamped differently later.
         if (packageExpiryLeadDays is not null && !PackageSettings.IsValidPrinted(packageExpiryLeadDays))
@@ -50,12 +48,12 @@ public sealed class UpdateNotificationSettings
         if (packageInUseLeadDays is not null && !PackageSettings.IsValidInUse(packageInUseLeadDays))
             throw new ArgumentException("The in-use lead days are out of range.", nameof(packageInUseLeadDays));
         return ExecuteCoreAsync(toAddress, caregiverAddress, doctorAddress, cancellationToken, caregiverEmails,
-            caregiverDigest, packageExpiryLeadDays, packageInUseLeadDays, region);
+            caregiverDigest, packageExpiryLeadDays, packageInUseLeadDays);
     }
 
     private Task ExecuteCoreAsync(string toAddress, string caregiverAddress, string doctorAddress,
         CancellationToken cancellationToken, string? caregiverEmails, string? caregiverDigest,
-        string? packageExpiryLeadDays, string? packageInUseLeadDays, string? region)
+        string? packageExpiryLeadDays, string? packageInUseLeadDays)
         => WriteGate.RunExclusiveAsync(async ct =>
         {
             var current = _store.Read();
@@ -71,7 +69,6 @@ public sealed class UpdateNotificationSettings
                 wanted[ProfileSetting.PackageExpiryLeadDays] = packageExpiryLeadDays.Trim();
             if (packageInUseLeadDays is not null)
                 wanted[ProfileSetting.PackageInUseLeadDays] = packageInUseLeadDays.Trim();
-            if (region is not null) wanted[ProfileSetting.Region] = region.Trim();
             var changes = wanted
                 .Where(w => !string.Equals(current.GetValueOrDefault(w.Key) ?? string.Empty, w.Value, StringComparison.Ordinal))
                 .ToDictionary(w => w.Key, w => w.Value, StringComparer.Ordinal);
@@ -99,10 +96,14 @@ public sealed class UpdateNotificationSettings
 }
 
 // The region of the profile (docs/prompt/
-// PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2, §3.3), chosen from the
-// prescription windows the first time the regional service is asked
-// for. A ProfileSettingChanged operation, as the addresses: the other
-// devices of the profile's sync group get it. "" clears it.
+// PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2, §3.3), the only write
+// path of the setting: chosen from the prescription windows the first
+// time the regional service is asked for, or changed in Settings. A
+// ProfileSettingChanged operation, as the addresses: the other devices
+// of the profile's sync group get it. Recorded only when the value
+// changes, never as a side effect of saving another setting, so a device
+// that has not synced yet cannot clear a region set elsewhere. "" clears
+// it.
 public sealed class UpdateProfileRegion
 {
     private readonly IProfileSettingsStore _store;
@@ -118,19 +119,12 @@ public sealed class UpdateProfileRegion
 
     // A replicated value every device reads alike: a code outside the 21
     // regions and provinces is refused, not stored.
-    internal static void Check(string? region)
-    {
-        if (region is null) return;
-        var trimmed = region.Trim();
-        if (trimmed.Length > 0 && !ItalianRegions.IsValid(trimmed))
-            throw new ArgumentException("The region is not an Italian region code.", nameof(region));
-    }
-
     public Task ExecuteAsync(string region, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(region);
-        Check(region);
         var value = region.Trim();
+        if (value.Length > 0 && !ItalianRegions.IsValid(value))
+            throw new ArgumentException("The region is not an Italian region code.", nameof(region));
         return WriteGate.RunExclusiveAsync(async ct =>
         {
             if (string.Equals(_store.Read().GetValueOrDefault(ProfileSetting.Region) ?? string.Empty, value,

@@ -5,11 +5,20 @@ The list is maintained by hand in scripts/feeds/regional_services_it.json:
 one entry per region or autonomous province whose health record service
 (web portal, regional app) was checked by a person. This script
 validates it and publishes data/it/regional-services/
-regional-services-<yyyymmdd>.json (the date of the publish) with a
-latest.json manifest, the files the app reads
-(docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.1,
-docs/CATALOGUE-DATA.md). The app ships a copy of the source file, so
+regional-services-<yyyymmdd>.json with a latest.json manifest, the files
+the app reads (docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.1,
+docs/CATALOGUE-DATA.md §10). The app ships a copy of the source file, so
 the source is also a valid list document.
+
+The version is the source's `listDate`, which the maintainer moves to
+the day of every change: the app picks the newer of the downloaded and
+the shipped list by that date, so a changed list must never keep the
+date of an earlier one. A change published without a later `listDate`
+is refused.
+
+The rules match the app's parser (RegionalServicesFeedParser): a list
+this script accepts is never refused by a client, which would then keep
+an older list or none.
 
 The list is data only: the app opens `webUrl` in the default browser
 or shows an app link as a QR code, nothing else. Nothing is ever
@@ -29,10 +38,12 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo
 
 import common
 
@@ -53,6 +64,13 @@ SIGN_IN = {"SPID", "CIE", "TS-CNS"}
 URL_FIELDS = ("webUrl", "iosAppUrl", "androidAppUrl")
 MAX_TEXT = 200
 
+# The maintainer writes dates in Italian local time; the run is in UTC.
+LOCAL_ZONE = ZoneInfo("Europe/Rome")
+
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# An ASCII DNS name with at least one dot, as System.Uri reads it.
+HOST = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]")
+
 
 class ListError(ValueError):
     """The source list is invalid; the message names the entry."""
@@ -63,8 +81,14 @@ def load_source(path=SOURCE):
         return json.load(fh)
 
 
+def local_today(now=None):
+    """Today in Italy, the day the maintainer writes in the dates."""
+    return (now or datetime.now(LOCAL_ZONE)).astimezone(LOCAL_ZONE).date()
+
+
 def _date(value, what):
-    if not isinstance(value, str):
+    # Exactly yyyy-mm-dd: date.fromisoformat also accepts 20261004.
+    if not isinstance(value, str) or not DATE.fullmatch(value):
         raise ListError(f"{what} is not a yyyy-mm-dd date")
     try:
         return date.fromisoformat(value)
@@ -75,20 +99,28 @@ def _date(value, what):
 def _https(value, what):
     if not isinstance(value, str) or not value:
         raise ListError(f"{what} is not a URL")
+    if any(c.isspace() or ord(c) < 0x20 or ord(c) == 0x7F for c in value) or not value.isascii():
+        raise ListError(f"{what} is not an https URL")
     try:
         parts = urlsplit(value)
         port = parts.port
     except ValueError:
         raise ListError(f"{what} is not an https URL") from None
-    if parts.scheme != "https" or not parts.hostname:
+    if parts.scheme != "https" or not parts.hostname or not HOST.fullmatch(parts.hostname):
         raise ListError(f"{what} is not an https URL")
-    if parts.username or parts.password or port:
+    # The default port may be written; any other is refused, as by the app.
+    if parts.username is not None or parts.password is not None or port not in (None, 443):
         raise ListError(f"{what} carries credentials or a port")
+
+
+def _utf16_length(value):
+    """The length .NET's string.Length gives."""
+    return len(value.encode("utf-16-le")) // 2
 
 
 def _text(entry, field, label):
     value = entry.get(field)
-    if not isinstance(value, str) or not value.strip() or len(value) > MAX_TEXT:
+    if not isinstance(value, str) or not value.strip() or _utf16_length(value) > MAX_TEXT:
         raise ListError(f"{label} has no valid '{field}'")
     return value
 
@@ -130,7 +162,7 @@ def validate(document, today):
         if not isinstance(sign_in, list) or not sign_in:
             raise ListError(f"{label} has no 'signIn'")
         for method in sign_in:
-            if method not in SIGN_IN:
+            if not isinstance(method, str) or method not in SIGN_IN:
                 raise ListError(f"{label} has an unknown 'signIn' value {method!r}")
         if len(set(sign_in)) != len(sign_in):
             raise ListError(f"{label} lists a 'signIn' value twice")
@@ -142,10 +174,9 @@ def validate(document, today):
     return services
 
 
-def build_document(source, list_date, generated):
-    """The published list: the source with the publish date."""
+def build_document(source, generated):
+    """The published list: the source, with the time of the run."""
     document = dict(source)
-    document["listDate"] = list_date.isoformat()
     document["generated"] = generated.isoformat()
     return document
 
@@ -153,22 +184,25 @@ def build_document(source, list_date, generated):
 def skip_reason(data_dir, document, force):
     """Why the list must not be published, or None to publish it.
 
-    The version is the publish date, so an unchanged source published on
-    an earlier day is still current: the content is compared without
-    `listDate` and `generated`.
+    The same content is already published (a forced run publishes it
+    again under the same date). A change must carry a later `listDate`
+    than the published list: raises ListError otherwise, so the app,
+    which keeps the newer list by date, never prefers a stale copy.
     """
-    if force:
-        return None
     manifest = common.read_manifest(data_dir)
+    version = manifest.get("version") if manifest else None
     published = common._published_content(data_dir, manifest) if manifest else None
-    if published is None:
+    if not isinstance(version, str) or published is None:
         return None
+    list_date = _date(document.get("listDate"), "'listDate'")
     content = dict(document)
-    for field in ("listDate", "generated"):
-        content.pop(field, None)
-        published.pop(field, None)
+    content.pop("generated", None)
     if published == content:
-        return "the list is already published"
+        return None if force else "the list is already published"
+    if f"{list_date:%Y%m%d}" <= version:
+        raise ListError(
+            f"the list changed but 'listDate' {list_date} is not later than the published list ({version}); "
+            "move 'listDate' to the day of the change")
     return None
 
 
@@ -241,23 +275,23 @@ def main(argv=None):
 
     run = common.run_time()
     source = load_source(args.source)
-    services = validate(source, run.date())
+    services = validate(source, local_today(run))
     print(f"The list is valid: {len(services)} services.")
     if args.validate_only:
         return 0
 
     if args.check_urls:
         failures = check_urls(services, common.session())
-        Path(args.check_urls).write_text(report(failures, run.date().isoformat()), encoding="utf-8")
+        Path(args.check_urls).write_text(report(failures, local_today(run).isoformat()), encoding="utf-8")
         print(f"{len(failures)} URL(s) failed.")
         return 0
 
-    document = build_document(source, run.date(), run)
+    document = build_document(source, run)
     skip = skip_reason(DATA_DIR, document, common.force_refresh())
     if skip:
         print(f"{skip[0].upper()}{skip[1:]}; nothing to do.")
         return 0
-    publish(DATA_DIR, run.date(), document, run)
+    publish(DATA_DIR, date.fromisoformat(source["listDate"]), document, run)
     return 0
 
 

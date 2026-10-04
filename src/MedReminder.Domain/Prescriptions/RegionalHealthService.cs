@@ -20,12 +20,12 @@ public sealed record RegionalHealthService(
     bool FamilyDelegation,
     DateOnly VerifiedOn)
 {
-    // Every https host the entry links to.
-    public IEnumerable<string> Hosts()
+    // Every link of the entry: the only URLs MedReminder opens or shows.
+    public IEnumerable<Uri> Links()
     {
-        yield return WebUrl.IdnHost;
-        if (IosAppUrl is not null) yield return IosAppUrl.IdnHost;
-        if (AndroidAppUrl is not null) yield return AndroidAppUrl.IdnHost;
+        yield return WebUrl;
+        if (IosAppUrl is not null) yield return IosAppUrl;
+        if (AndroidAppUrl is not null) yield return AndroidAppUrl;
     }
 }
 
@@ -49,8 +49,6 @@ public sealed class RegionalServicesList
         ListDate = listDate;
         _services = new Dictionary<string, RegionalHealthService>(StringComparer.Ordinal);
         foreach (var service in services) _services[service.RegionCode] = service;
-        Hosts = _services.Values.SelectMany(s => s.Hosts())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public CountryCode Country { get; }
@@ -61,9 +59,6 @@ public sealed class RegionalServicesList
     public int Count => _services.Count;
 
     public IEnumerable<RegionalHealthService> Services => _services.Values;
-
-    // Every host an entry links to: a link to any other host is refused.
-    public IReadOnlySet<string> Hosts { get; }
 
     public RegionalHealthService? Find(string? regionCode)
         => regionCode is not null && _services.TryGetValue(regionCode.Trim(), out var service) ? service : null;
