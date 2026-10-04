@@ -652,6 +652,37 @@ instalación es compartida). El recordatorio no incluye el código.
 Las recetas se copian a los otros PC de un perfil sincronizado y se
 incluyen en la exportación cifrada.
 
+### Recetas repetibles
+
+Algunas recetas cubren varias dispensaciones en la farmacia durante una
+validez larga, por ejemplo un año de terapia retirado mes a mes. Marca
+**Receta repetible** en la ventana de la receta para registrarla como
+una sola receta:
+
+- **Dispensaciones previstas**: cuántas veces la farmacia la dispensa
+  (de 2 a 12);
+- **Válida hasta** se rellena para 12 meses desde la fecha de emisión;
+  compruébala en tu receta y cámbiala si es distinta;
+- **Dispensaciones retiradas** sustituye a *Retirada el*: añade cada
+  dispensación con el día y, si lo conoces, el número de envases.
+  **Retirada hoy** en la lista registra una con un clic, y tras un
+  nuevo envase MedReminder propone registrarla con la fecha de hoy.
+
+La lista muestra las dispensaciones como retiradas / previstas, por
+ejemplo `3 / 12`. Una receta repetible sigue *Por retirar* mientras
+queden dispensaciones y dure la validez; está *Retirada* cuando se han
+retirado todas y *Caducada* si la validez termina antes. Cuando el stock
+baja, el aviso indica cuántas dispensaciones quedan y hasta cuándo, en
+lugar de sugerir una receta nueva, y su botón abre la receta. El
+recordatorio antes de *Válida hasta* llega solo si quedan
+dispensaciones e indica cuántas se perderían. MedReminder no comprueba
+el intervalo entre dispensaciones: sigue las indicaciones de tu
+farmacéutico.
+
+En PC sincronizados, actualiza MedReminder en todos los PC del perfil
+antes de registrar una receta repetible: una versión anterior detiene
+la sincronización hasta que se actualiza.
+
 ### Vencimientos administrativos
 
 **Terapia → Vencimientos administrativos…** reúne las fechas que no

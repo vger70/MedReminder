@@ -670,6 +670,38 @@ Erinnerung enthält den Code nicht.
 Rezepte werden auf die anderen PCs eines synchronisierten Profils
 kopiert und in den verschlüsselten Export aufgenommen.
 
+### Wiederholungsrezepte
+
+Manche Rezepte umfassen mehrere Abgaben in der Apotheke über eine lange
+Gültigkeit, zum Beispiel ein Jahr Therapie, das monatsweise eingelöst
+wird. Setze im Rezeptfenster das Häkchen **Wiederholungsrezept**, um es
+als ein einziges Rezept zu erfassen:
+
+- **Vorgesehene Abgaben**: wie oft die Apotheke es abgibt (2 bis 12);
+- **Gültig bis** wird für 12 Monate ab dem Ausstellungsdatum
+  ausgefüllt; prüfe es anhand deines Rezepts und ändere es, wenn es
+  abweicht;
+- **Eingelöste Abgaben** ersetzt *Eingelöst am*: füge jede Abgabe mit dem
+  Tag und, falls bekannt, der Anzahl der Packungen hinzu. **Heute
+  eingelöst** in der Liste erfasst eine mit einem Klick, und nach einer
+  neuen Packung bietet MedReminder an, sie mit dem heutigen Datum zu
+  erfassen.
+
+Die Liste zeigt die Abgaben als eingelöst / vorgesehen, zum Beispiel
+`3 / 12`. Ein Wiederholungsrezept bleibt *Einzulösen*, solange Abgaben
+übrig sind und die Gültigkeit läuft; es ist *Eingelöst*, wenn alle
+eingelöst sind, und *Abgelaufen*, wenn die Gültigkeit vorher endet. Wenn
+der Vorrat zur Neige geht, nennt die Warnung, wie viele Abgaben übrig
+sind und bis wann, statt ein neues Rezept vorzuschlagen, und ihre
+Schaltfläche öffnet das Rezept. Die Erinnerung vor *Gültig bis* kommt
+nur, solange Abgaben übrig sind, und nennt, wie viele verfallen würden.
+MedReminder prüft den Abstand zwischen den Abgaben nicht: folge den
+Hinweisen deines Apothekers.
+
+Auf synchronisierten PCs aktualisiere MedReminder auf allen PCs des
+Profils, bevor du ein Wiederholungsrezept erfasst: eine ältere Version
+hält die Synchronisierung an, bis sie aktualisiert wird.
+
 ### Fristen
 
 **Therapie → Fristen…** sammelt die Termine, die nicht den Vorrat

@@ -674,6 +674,39 @@ si l'installation est partagée). Le rappel ne contient pas le code.
 Les ordonnances sont copiées sur les autres PC d'un profil synchronisé
 et incluses dans l'export chiffré.
 
+### Ordonnances renouvelables
+
+Certaines ordonnances couvrent plusieurs délivrances en pharmacie sur
+une longue validité, par exemple une année de traitement retirée un
+mois à la fois. Coche **Ordonnance renouvelable** dans la fenêtre de
+l'ordonnance pour l'enregistrer comme une seule ordonnance :
+
+- **Délivrances prévues** : combien de fois la pharmacie la délivre (de
+  2 à 12) ;
+- **Valable jusqu'au** est rempli pour 12 mois à partir de la date
+  d'émission ; vérifie-le sur ton ordonnance et corrige-le s'il est
+  différent ;
+- **Délivrances retirées** remplace *Retirée le* : ajoute chaque
+  délivrance avec le jour et, si tu le connais, le nombre de boîtes.
+  **Retirée aujourd'hui** dans la liste en enregistre une en un clic, et
+  après une nouvelle boîte MedReminder propose de l'enregistrer à la
+  date du jour.
+
+La liste affiche les délivrances sous la forme retirées / prévues, par
+exemple `3 / 12`. Une ordonnance renouvelable reste *À retirer* tant
+qu'il reste des délivrances et que la validité dure ; elle est
+*Retirée* quand toutes ont été retirées et *Expirée* si la validité se
+termine avant. Quand le stock baisse, l'alerte indique combien de
+délivrances restent et jusqu'à quand, au lieu de suggérer une nouvelle
+ordonnance, et son bouton ouvre l'ordonnance. Le rappel avant *Valable
+jusqu'au* n'arrive que s'il reste des délivrances et indique combien
+seraient perdues. MedReminder ne contrôle pas l'intervalle entre les
+délivrances : suis les indications de ton pharmacien.
+
+Sur des PC synchronisés, mets à jour MedReminder sur tous les PC du
+profil avant d'enregistrer une ordonnance renouvelable : une version
+plus ancienne arrête la synchronisation jusqu'à sa mise à jour.
+
 ### Échéances administratives
 
 **Traitement → Échéances administratives…** regroupe les dates qui ne

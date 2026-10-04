@@ -355,9 +355,26 @@ a prescription are device-local and not exported.
 | `code` | string? | prescription code as printed, at most 64 characters |
 | `packages` | int? | 1 to 99 |
 | `validUntil` | DateOnly? | last day the pharmacy accepts it |
-| `collectedOn` | DateOnly? | |
+| `collectedOn` | DateOnly? | `null` on a repeatable prescription |
 | `recordedAt` | DateTimeOffset | |
 | `updatedAt` | DateTimeOffset | |
+| `dispensations` | int? | additive; number of dispensations allowed, 2 to 12 for a repeatable prescription; absent or `null` (or 1) = single prescription |
+| `dispensationRecords[]` | array? | additive; written only for a repeatable prescription, oldest first |
+
+`dispensationRecords[]` items:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `collectedOn` | DateOnly | day collected at the pharmacy |
+| `packages` | int? | 1 to 99 |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
+
+Archives without `dispensations` and `dispensationRecords` import as
+single prescriptions; the payload `schemaVersion` is unchanged (§5). A
+dispensation whose prescription is no longer in the profile (left by a
+concurrent deletion on another device) is not exported.
 
 ### 3.15 `deadlines[]`
 

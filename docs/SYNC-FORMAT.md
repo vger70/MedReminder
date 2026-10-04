@@ -251,7 +251,8 @@ movements and the cutoff, the register versions (`SyncFieldVersions`),
 the tombstones (`FactRetractions`), the low-stock emails sent by any
 device (`SentEmailNotifications`), the prescriptions (`Prescriptions`),
 the administrative deadlines (`Deadlines`), the packages
-(`StockPackages`),
+(`StockPackages`), the dispensations of repeatable prescriptions
+(`PrescriptionDispensations`),
 the register conflicts and the operation log (`SyncOperations`).
 
 Image schema versions: 1, the original image; 2, the operation log may
@@ -264,7 +265,9 @@ drop; 5, the image holds `Prescriptions`, which an older app would drop;
 carry `IsAsNeeded` and intakes `IsExtra`, which an older app would drop
 (it would consume as-needed slots every day and read extra intakes as
 scheduled ones); 8, the image holds `StockPackages`, which an older app
-would drop.
+would drop; 9, prescriptions carry `Dispensations` and the image holds
+`PrescriptionDispensations`, which an older app would drop (it would
+read a repeatable prescription as a single one).
 
 A device joins from the newest checkpoint whose `vector` covers every
 device folder's first remaining segment (`vector[d] >= first − 1`), or
@@ -274,7 +277,7 @@ segments after that vector. A reader refuses an image whose
 
 ---
 
-## 6. Operation catalogue (schema versions 1 to 11)
+## 6. Operation catalogue (schema versions 1 to 12)
 
 One operation per user fact or per changed register; derived values
 (consumption, count corrections, stock epoch, the current schedule on
@@ -301,7 +304,8 @@ nothing.
 | `MedicineDeleted` (version 2) | `recordedAt` | the medicine and every row that refers to it are removed; any operation for the medicine, before or after it in any order, is logged and not applied |
 | `ProfileSettingChanged` (version 3) | `setting`, `value` | last writer wins per setting, no conflict entry; profile-level (`medicineId` empty) |
 | `EmailNotificationSent` (version 4; version 6 for `stage` 2) | `notificationId`, `stockEpoch`, `epochFactId`, `sentAt`, `stage` (from version 6; absent = 1) | fact; a low-stock email sent for that stock epoch of the medicine (the epoch is `epochFactId` when set, else `stockEpoch`) at that warning stage: the receiving device does not send it again at that stage or an earlier one |
-| `PrescriptionChanged` (version 7) | `prescriptionId`, `requestedOn`, `issuedOn`, `code`, `packages`, `validUntil`, `collectedOn` (dates `null` when not known), `deleted`, `recordedAt` | the whole state of one prescription, written when it is recorded, changed or deleted; last writer wins per prescription (register `Prescription` of the prescription id, its value the payload), no conflict entry; when the winner has `deleted` true the prescription is removed, and a later write brings it back |
+| `PrescriptionChanged` (version 7; version 12 when `dispensations` is greater than 1) | `prescriptionId`, `requestedOn`, `issuedOn`, `code`, `packages`, `validUntil`, `collectedOn` (dates `null` when not known), `deleted`, `recordedAt`, `dispensations` (from version 12; `null` or 1 = single prescription, absent = `null`) | the whole state of one prescription, written when it is recorded, changed or deleted, and only when one of its fields changed; last writer wins per prescription (register `Prescription` of the prescription id, its value the payload), no conflict entry; when the winner has `deleted` true the prescription is removed, and a later write brings it back. A repeatable prescription (`dispensations` greater than 1) has `collectedOn` `null`: its collections are `DispensationChanged` |
+| `DispensationChanged` (version 12) | `dispensationId`, `prescriptionId`, `collectedOn`, `packages` (`null` when not known), `deleted`, `recordedAt` | the whole state of one dispensation of a repeatable prescription, with the rules of `PrescriptionChanged` (register `Dispensation` of the dispensation id); not part of the prescription's register, so two devices recording a dispensation concurrently both keep theirs. The row follows its own register only: a dispensation whose prescription is deleted (concurrently on another device) is kept and ignored, and comes back into use if a later write restores the prescription. Deleting a prescription locally writes a deletion for each of its dispensations |
 | `DeadlineChanged` (version 8) | `deadlineId`, `kind` (`TherapeuticPlan`, `ExemptionRenewal`, `CheckUp`, `Other`), `label`, `dueOn`, `leadDays`, `repeatMonths` (`null` for a one-off deadline), `channels` (`None`, `Email`, `Windows`, `Both`), `doneOn`, `deleted`, `recordedAt` | the whole state of one administrative deadline, with the rules of `PrescriptionChanged` (register `Deadline` of the deadline id); `medicineId` is empty for a deadline of the profile |
 | `PackageChanged` (version 11) | `packageId`, `movementId` (the movement that brought the package in, `null` when none), `quantity`, `expiresOn`, `useWithinDays`, `openedOn`, `batch`, `closedOn`, `closure` (`Finished`, `Discarded`, `null` while open), `deleted`, `recordedAt` | the whole state of one package of the medicine, with the rules of `PrescriptionChanged` (register `Package` of the package id), except that a discard is final: when any version of the register has `closure` `Discarded` and the winner is not a deletion, the package stays discarded with the `closedOn` of the latest such version by HLC, the other fields following the winner; a package never moves the stock: the correction of a discarded package is its own `StockEntryRecorded` |
 | `HouseholdLinked` (version 5) | `householdId`, `linkedAt` | fact; the household that adopted the group (§9); the earliest by HLC wins; profile-level (`medicineId` empty) |
@@ -309,8 +313,15 @@ nothing.
 Every type is schema version 1 except `MedicineDeleted`, version 2,
 `ProfileSettingChanged`, version 3, `EmailNotificationSent`, version 4,
 `HouseholdLinked`, version 5, `PrescriptionChanged`, version 7,
-`DeadlineChanged`, version 8, `MedicineStartChanged`, version 10, and
-`PackageChanged`, version 11. A
+`DeadlineChanged`, version 8, `MedicineStartChanged`, version 10,
+`PackageChanged`, version 11, and `DispensationChanged`, version 12. A
+`PrescriptionChanged` of a repeatable prescription is written with
+version 12, so only that operation stops an older app; a single
+prescription keeps version 7 and its `dispensations` field, which an
+older app ignores, is `null` or 1. Every device of a sync group must run
+a version that reads schema 12 before anyone records a repeatable
+prescription: an older device stops at the first such operation until it
+is updated (R7). A
 second-stage `EmailNotificationSent` (the second low-stock warning, sent
 at half of the medicine's warning threshold) is written with version 6, so only that operation stops an
 older app; a first-stage one keeps version 4 and its `stage` field,

@@ -30,6 +30,30 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #197 — Add repeatable prescriptions with several dispensations
+
+Link: [vger70/MedReminder#197](https://github.com/vger70/MedReminder/pull/197)
+Branch: `claude/brave-turing-e4a7z7` → `main`
+
+### Added
+
+- Repeatable prescription: `Prescription.Dispensations` (2 to 12; null or 1 keeps the single prescription unchanged) and the `PrescriptionDispensation` entity; status, dispensations left, reminder and validation rules in `PrescriptionRules` (defaults 12 dispensations and 12 months, parametric, no rule of a specific law).
+- Sync: `DispensationChanged` (one register per dispensation, so concurrent records on two devices are both kept) and `PrescriptionChanged.dispensations`; operation schema 12 only for repeatable prescriptions and dispensations, single prescriptions keep version 7; image schema 9. Every device of a sync group must run this version before anyone records a repeatable prescription.
+- Persistence: idempotent boot patch for `Prescriptions.Dispensations` and the `PrescriptionDispensations` table (foreign key on the medicine only, so a dispensation outlives a prescription deleted concurrently elsewhere); removed with the medicine and with the prescription.
+- UI: "Repeatable prescription" in the prescription editor with the dispensations allowed and the list of dispensations (Add, Edit, Remove); "Dispensations" column (collected / allowed); "Collected today" and the offer after a new package record a dispensation.
+- Export: additive `prescriptions[].dispensations` and `prescriptions[].dispensationRecords[]`; older archives import as single prescriptions.
+
+### Changed
+
+- Low-stock toast and email point to the dispensations left and the last valid day instead of a new prescription, and the toast button opens the prescriptions; the reminder before "valid until" of a repeatable prescription fires only with dispensations left and says how many would be lost.
+- Saving a prescription writes its sync register only when a field changed, so recording a dispensation never overrides a concurrent edit on another device.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.14, `docs/ANALYSIS.md` and the five user guides.
+
+---
+
 ## PR #195 — Add implementation prompt for repeatable prescriptions
 
 Link: [vger70/MedReminder#195](https://github.com/vger70/MedReminder/pull/195)

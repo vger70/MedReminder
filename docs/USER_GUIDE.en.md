@@ -620,6 +620,37 @@ installation is shared). The reminder does not include the code.
 Prescriptions are copied to the other PCs of a synced profile and
 included in the encrypted export.
 
+### Repeatable prescriptions
+
+Some prescriptions cover several dispensations at the pharmacy over a
+long validity, for example a year of therapy collected one month at a
+time. Tick **Repeatable prescription** in the prescription window to
+record one as a single prescription:
+
+- **Dispensations allowed**: how many times the pharmacy dispenses it
+  (2 to 12);
+- **Valid until** is filled in for 12 months from the issue date; check
+  it against your prescription and change it if it differs;
+- **Dispensations collected** replaces *Collected on*: add each
+  dispensation with the day and, if you know it, the number of packages.
+  **Collected today** in the list records one in one click, and after a
+  new package MedReminder offers to record it with today's date.
+
+The list shows the dispensations as collected / allowed, for example
+`3 / 12`. A repeatable prescription stays *To collect* while
+dispensations are left and its validity lasts; it is *Collected* once
+all are collected and *Expired* if the validity ends first. When the
+stock runs low, the warning says how many dispensations are left and
+until when, instead of suggesting a new prescription, and its button
+opens the prescription. The reminder before *Valid until* comes only
+while dispensations are left and says how many would be lost.
+MedReminder does not check the interval between dispensations: follow
+your pharmacist's indications.
+
+On synced PCs, update MedReminder on every PC of the profile before
+recording a repeatable prescription: an older version stops syncing
+until it is updated.
+
 ### Administrative deadlines
 
 **Therapy → Administrative deadlines…** keeps the dates that are not
