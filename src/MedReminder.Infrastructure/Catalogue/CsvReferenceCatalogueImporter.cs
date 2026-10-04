@@ -1,4 +1,5 @@
 using System.Data.Common;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Infrastructure.Catalogue.Parsers;
@@ -16,6 +17,10 @@ namespace MedReminder.Infrastructure.Catalogue;
 //     minimum is rejected before any row is deleted.
 //   - transactional replace: on a newer snapshot the country's rows
 //     are deleted and re-inserted in one transaction.
+//   - the write gate: every database access (version read, replace
+//     transaction) runs under IDatabaseExclusiveAccess, whoever the
+//     caller is, so use cases and database swaps wait for it; the
+//     snapshot is parsed outside the gate.
 //   - active-ingredient interning: same (country, name_norm) yields
 //     one reference_active_ingredients row shared across every
 //     medicine that lists it.
@@ -24,15 +29,18 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
     private readonly MedReminderDbContext _db;
     private readonly IReadOnlyList<IReferenceSnapshotParser> _parsers;
     private readonly TimeProvider _clock;
+    private readonly IDatabaseExclusiveAccess _exclusiveAccess;
 
     internal CsvReferenceCatalogueImporter(
         MedReminderDbContext db,
         IEnumerable<IReferenceSnapshotParser> parsers,
-        TimeProvider clock)
+        TimeProvider clock,
+        IDatabaseExclusiveAccess exclusiveAccess)
     {
         _db = db;
         _parsers = parsers.ToArray();
         _clock = clock;
+        _exclusiveAccess = exclusiveAccess;
     }
 
     public Task<ImportReport> ImportAsync(
@@ -60,36 +68,16 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
             ?? throw new NotSupportedException(
                 $"No parser strategy registered for country '{expectedCountry}'.");
 
-        var (connection, opened) = await OpenWithSchemaAsync(cancellationToken);
-        try
+        // Version first, so a snapshot that is not newer is never parsed:
+        // every boot replays the embedded snapshots.
+        var current = await GetImportStateAsync(expectedCountry, cancellationToken);
+        if (!SnapshotVersion.IsNewer(snapshotVersion, current.Version))
         {
-            return await ImportCoreAsync(
-                connection, parser, snapshot, expectedCountry, snapshotVersion, minimumRowCount, cancellationToken);
-        }
-        finally
-        {
-            await CloseIfOpenedAsync(connection, opened);
-        }
-    }
-
-    private async Task<ImportReport> ImportCoreAsync(
-        DbConnection connection,
-        IReferenceSnapshotParser parser,
-        Stream snapshot,
-        CountryCode expectedCountry,
-        string snapshotVersion,
-        int minimumRowCount,
-        CancellationToken cancellationToken)
-    {
-        var state = await ReadStateAsync(connection, expectedCountry, cancellationToken);
-        if (!SnapshotVersion.IsNewer(snapshotVersion, state.Version))
-        {
-            return new ImportReport(
-                Inserted: 0, Updated: 0, Deleted: 0, Skipped: 0,
-                SnapshotVersion: state.Version ?? snapshotVersion,
-                CompletedAt: _clock.GetUtcNow());
+            return NotImported(current, snapshotVersion);
         }
 
+        // Parsed outside the gate: the use cases and the database swaps
+        // wait only for the replace transaction, not for the parse.
         var report = new ParseReport();
         var rows = new List<ReferenceMedicineRow>();
         await foreach (var row in parser.ParseAsync(snapshot, report, cancellationToken))
@@ -111,44 +99,55 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
                 $"at least {minimumRowCount} are required. The catalogue was left unchanged.");
         }
 
-        await using var tx = await connection.BeginTransactionAsync(cancellationToken);
+        return await _exclusiveAccess.RunExclusiveAsync(
+            ct => WithConnectionAsync(async connection =>
+            {
+                // Read again under the gate: another import may have
+                // committed while this one was parsing.
+                var state = await ReadStateAsync(connection, expectedCountry, ct);
+                if (!SnapshotVersion.IsNewer(snapshotVersion, state.Version))
+                {
+                    return NotImported(state, snapshotVersion);
+                }
 
-        var deleted = await DeleteCountryAsync(connection, tx, expectedCountry, cancellationToken);
-        var inserted = await InsertAsync(connection, tx, rows, snapshotVersion, cancellationToken);
+                await using var tx = await connection.BeginTransactionAsync(ct);
+                var deleted = await DeleteCountryAsync(connection, tx, expectedCountry, ct);
+                var inserted = await InsertAsync(connection, tx, rows, snapshotVersion, ct);
+                await tx.CommitAsync(ct);
 
-        await tx.CommitAsync(cancellationToken);
-
-        return new ImportReport(
-            Inserted: inserted,
-            Updated: 0,
-            Deleted: deleted,
-            Skipped: report.Skipped,
-            SnapshotVersion: snapshotVersion,
-            CompletedAt: _clock.GetUtcNow());
+                return new ImportReport(
+                    Inserted: inserted,
+                    Updated: 0,
+                    Deleted: deleted,
+                    Skipped: report.Skipped,
+                    SnapshotVersion: snapshotVersion,
+                    CompletedAt: _clock.GetUtcNow());
+            }, ct),
+            cancellationToken);
     }
 
-    public async Task<CatalogueImportState> GetImportStateAsync(
+    public Task<CatalogueImportState> GetImportStateAsync(
         CountryCode country,
         CancellationToken cancellationToken)
-    {
-        var (connection, opened) = await OpenWithSchemaAsync(cancellationToken);
-        try
-        {
-            return await ReadStateAsync(connection, country, cancellationToken);
-        }
-        finally
-        {
-            await CloseIfOpenedAsync(connection, opened);
-        }
-    }
+        => _exclusiveAccess.RunExclusiveAsync(
+            ct => WithConnectionAsync(connection => ReadStateAsync(connection, country, ct), ct),
+            cancellationToken);
 
-    // Returns whether this call opened the connection. A connection the
-    // importer opened is closed again when the call ends: the remote
-    // refresh keeps its scope alive across a download of up to two
-    // minutes, and an open handle would make a database swap (backup
-    // restore, archive import, sync join) fail on Windows meanwhile.
-    private async Task<(DbConnection Connection, bool Opened)> OpenWithSchemaAsync(
-        CancellationToken cancellationToken)
+    private ImportReport NotImported(CatalogueImportState state, string snapshotVersion) =>
+        new(Inserted: 0, Updated: 0, Deleted: 0, Skipped: 0,
+            SnapshotVersion: state.Version ?? snapshotVersion,
+            CompletedAt: _clock.GetUtcNow());
+
+    // Runs inside the gate. A connection this call opens is closed again
+    // before the gate is released. With pooling on, Close returns it to
+    // the pool rather than releasing the file handle; the database swaps
+    // call SqliteConnection.ClearAllPools first, which releases idle
+    // pooled connections but not one still open. Without the close, the
+    // scope of the remote refresh would keep the connection open from
+    // the version read through the download, and a swap would fail on
+    // Windows meanwhile. A connection the caller opened is left as is.
+    private async Task<T> WithConnectionAsync<T>(
+        Func<DbConnection, Task<T>> action, CancellationToken cancellationToken)
     {
         var connection = _db.Database.GetDbConnection();
         var opened = false;
@@ -158,27 +157,21 @@ public sealed class CsvReferenceCatalogueImporter : IReferenceCatalogueImporter
             opened = true;
         }
 
-        // The DDL step in DatabaseInitializer normally runs at boot.
-        // Running it here too keeps the importer usable in isolation
-        // (tests that instantiate it against a fresh DbContext), and
-        // it is a cheap no-op afterwards (CREATE * IF NOT EXISTS).
         try
         {
+            // The DDL step in DatabaseInitializer normally runs at boot.
+            // Running it here too keeps the importer usable in isolation
+            // (tests that instantiate it against a fresh DbContext), and
+            // it is a cheap no-op afterwards (CREATE * IF NOT EXISTS).
             await CatalogueSchema.ApplyAsync(connection, cancellationToken);
+            return await action(connection);
         }
-        catch
+        finally
         {
-            await CloseIfOpenedAsync(connection, opened);
-            throw;
-        }
-        return (connection, opened);
-    }
-
-    private static async Task CloseIfOpenedAsync(DbConnection connection, bool opened)
-    {
-        if (opened)
-        {
-            await connection.CloseAsync();
+            if (opened)
+            {
+                await connection.CloseAsync();
+            }
         }
     }
 

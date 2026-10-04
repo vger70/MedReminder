@@ -193,7 +193,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IReferenceCatalogueImporter>(sp => new CsvReferenceCatalogueImporter(
             sp.GetRequiredService<MedReminderDbContext>(),
             sp.GetServices<IReferenceSnapshotParser>(),
-            sp.GetRequiredService<TimeProvider>()));
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<IDatabaseExclusiveAccess>()));
 
         // Remote AIFA feed (docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md).
         // Singleton client so the HttpClient is reused; the refresher

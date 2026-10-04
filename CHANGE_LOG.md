@@ -30,6 +30,31 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #192 — Fix the review findings on the daily catalogue check
+
+Link: [vger70/MedReminder#192](https://github.com/vger70/MedReminder/pull/192)
+Branch: `claude/catalogue-daily-refresh` → `main`
+
+### Fixed
+
+- `CsvReferenceCatalogueImporter` takes `WriteGate` itself for the
+  version read and the replace transaction, so the embedded boot import
+  is gated too; the snapshot is parsed outside the gate.
+- Archive import and backup restore set the sync reset marker under the
+  gate, right before the swap: a cancel while waiting no longer blocks
+  sync on an unchanged database.
+- `BackupService.ImportProfileAsync` swaps through `ProfileDatabaseSwap`
+  instead of a copy of it.
+- The daily catalogue check no longer drifts to every 25 hours.
+
+### Changed
+
+- Setting label "Check for app and catalogue updates (GitHub)" in the
+  five dictionaries and user guides.
+
+### Docs
+
+- `ANALYSIS-CATALOGUE-REMOTE-FEED.md` §4.5 and new §11.6.
 ## PR #200 — Correct the guided setup prompt against the code
 
 Link: [vger70/MedReminder#200](https://github.com/vger70/MedReminder/pull/200)
