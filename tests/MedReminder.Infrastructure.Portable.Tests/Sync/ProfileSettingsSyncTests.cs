@@ -220,6 +220,51 @@ public sealed class ProfileSettingsSyncTests : IDisposable
         b.ProfileSettings.Read()[ProfileSetting.ToAddress].Should().Be("patient@example.org");
     }
 
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES §3.2: the region travels like
+    // the recipients, without an operation schema bump.
+    [Fact]
+    public async Task The_region_reaches_the_other_device()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+
+        await a.RunAsync(sp => sp.GetRequiredService<UpdateProfileRegion>().ExecuteAsync("12", CancellationToken.None));
+        (await a.SyncAsync()).OperationsPublished.Should().Be(1);
+        (await b.SyncAsync()).OperationsApplied.Should().Be(1);
+
+        b.ProfileSettings.Read()[ProfileSetting.Region].Should().Be("12");
+
+        await b.RunAsync(sp => sp.GetRequiredService<UpdateProfileRegion>().ExecuteAsync("", CancellationToken.None));
+        await b.SyncAsync();
+        await a.SyncAsync();
+        a.ProfileSettings.Read()[ProfileSetting.Region].Should().BeEmpty();
+    }
+
+    // What an older app does with Region: a setting name it does not know
+    // is applied and kept as a register, never projected, and the sync
+    // goes on.
+    [Fact]
+    public async Task A_setting_unknown_to_the_device_is_kept_and_not_projected()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+        const string future = "SettingOfALaterVersion";
+
+        await a.RunAsync(async sp =>
+        {
+            await sp.GetRequiredService<IOperationLog>().AppendAsync(
+                [new ProfileSettingChanged(future, "value")], CancellationToken.None);
+            await sp.GetRequiredService<MedReminderDbContext>().SaveChangesAsync();
+        });
+        await a.SyncAsync();
+        (await b.SyncAsync()).OperationsApplied.Should().Be(1);
+
+        b.ProfileSettings.Read().Should().NotContainKey(future);
+        var kept = await b.RunAsync(sp => sp.GetRequiredService<SyncRegisters>().WinnerAsync(
+            ProfileSettingsProjection.Entity, ProfileSettingsProjection.Register(future), CancellationToken.None));
+        kept!.Value.Should().Be("value");
+    }
+
     private async Task<SyncDevice> CreateGroupAsync(Action<SyncDevice>? beforeSync = null)
     {
         var device = Track(new SyncDevice("A", Path.Combine(_root, "A.db"), Now, settings: null));

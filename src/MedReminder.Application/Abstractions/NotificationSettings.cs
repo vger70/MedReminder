@@ -45,4 +45,11 @@ public sealed class NotificationSettings
     // invariant integers, "" for the default (PackageSettings).
     public string PackageExpiryLeadDays { get; set; } = string.Empty;
     public string PackageInUseLeadDays { get; set; } = string.Empty;
+
+    // Italian region of the profile (docs/prompt/
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2), replicated like the
+    // addresses: an ISTAT code of Domain.Prescriptions.ItalianRegions,
+    // "" when not set. Kept in this file because every replicated
+    // profile setting but the name lives here.
+    public string Region { get; set; } = string.Empty;
 }

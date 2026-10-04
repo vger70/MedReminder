@@ -59,6 +59,10 @@ public static class PortableInfrastructureServiceCollectionExtensions
         // shared by every profile, as the shortage list.
         services.TryAddSingleton<IEquivalenceFeedClient, GitHubRawEquivalenceFeedClient>();
         services.TryAddSingleton<IEquivalenceListStore, JsonFileEquivalenceListStore>();
+        // Regional prescription services (PROMPT-REGIONAL-PRESCRIPTION-
+        // SERVICES §3.1): shared by every profile, with a shipped copy.
+        services.TryAddSingleton<IRegionalServicesFeedClient, GitHubRawRegionalServicesFeedClient>();
+        services.TryAddSingleton<IRegionalServicesListStore, JsonFileRegionalServicesListStore>();
         services.AddScoped<ISentEmailNotificationRepository, SentEmailNotificationRepository>();
         services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
         services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();

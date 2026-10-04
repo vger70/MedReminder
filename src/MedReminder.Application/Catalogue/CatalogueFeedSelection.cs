@@ -43,8 +43,17 @@ public static class CatalogueFeedSelection
         return options.EquivalentsEnabled && IsItaly(referenceCountry);
     }
 
-    // An invalid value falls back to IT, as above.
-    private static bool IsItaly(string? referenceCountry)
+    // Whether the regional services list is refreshed with the feeds: it
+    // names Italian regional services, so under the same rule.
+    public static bool IncludesRegionalServices(string? referenceCountry, CatalogueFeedOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.RegionalServicesEnabled && IsItaly(referenceCountry);
+    }
+
+    // Italy as reference country. An invalid value falls back to IT, as
+    // above.
+    public static bool IsItaly(string? referenceCountry)
     {
         var reference = CountryCode.TryParse(referenceCountry, out var parsed)
             ? parsed

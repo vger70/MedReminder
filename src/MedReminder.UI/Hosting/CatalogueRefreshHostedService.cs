@@ -178,6 +178,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         IReadOnlyList<CatalogueFeedDescriptor> feeds;
         bool shortages;
         bool equivalents;
+        bool regionalServices;
         try
         {
             // Gates first, so a disabled step neither waits for the
@@ -199,6 +200,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             feeds = CatalogueFeedSelection.Select(userSettings.ReferenceCountry, feedOptions);
             shortages = CatalogueFeedSelection.IncludesShortages(userSettings.ReferenceCountry, feedOptions);
             equivalents = CatalogueFeedSelection.IncludesEquivalents(userSettings.ReferenceCountry, feedOptions);
+            regionalServices = CatalogueFeedSelection.IncludesRegionalServices(userSettings.ReferenceCountry, feedOptions);
             if (feeds.Count == 0)
             {
                 _log.Log(skipLevel, "No remote catalogue feed enabled for the reference country; skipping.");
@@ -228,6 +230,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         await RefreshFeedsAsync(feeds, RefreshFeedAsync, _log, cancellationToken);
         if (shortages) await RefreshShortagesAsync(cancellationToken);
         if (equivalents) await RefreshEquivalentsAsync(cancellationToken);
+        if (regionalServices) await RefreshRegionalServicesAsync(cancellationToken);
         return true;
     }
 
@@ -267,6 +270,25 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         catch (Exception ex)
         {
             _log.LogWarning(ex, "Equivalents list refresh failed; list unchanged.");
+        }
+    }
+
+    // The regional services list (PROMPT-REGIONAL-PRESCRIPTION-SERVICES
+    // §3.1) after the equivalents list, under the same rules.
+    private async Task RefreshRegionalServicesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = _services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<RegionalServicesRefresher>().RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Regional services list refresh failed; list unchanged.");
         }
     }
 

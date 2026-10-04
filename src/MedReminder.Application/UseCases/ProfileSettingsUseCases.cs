@@ -3,6 +3,7 @@ using MedReminder.Application.Household;
 using MedReminder.Application.Packages;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Household;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Sync;
 
 namespace MedReminder.Application.UseCases;
@@ -33,12 +34,15 @@ public sealed class UpdateNotificationSettings
     }
 
     // caregiverEmails and caregiverDigest (docs/notes/
-    // EVOLUTION-PROPOSALS-2.md §3.8), and the package expiry lead days
-    // (ANALYSIS-PACKAGE-EXPIRY.md §4.6): null leaves the setting as it is.
+    // EVOLUTION-PROPOSALS-2.md §3.8), the package expiry lead days
+    // (ANALYSIS-PACKAGE-EXPIRY.md §4.6) and the region (docs/prompt/
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2): null leaves the
+    // setting as it is.
     public Task ExecuteAsync(string toAddress, string caregiverAddress, string doctorAddress,
         CancellationToken cancellationToken, string? caregiverEmails = null, string? caregiverDigest = null,
-        string? packageExpiryLeadDays = null, string? packageInUseLeadDays = null)
+        string? packageExpiryLeadDays = null, string? packageInUseLeadDays = null, string? region = null)
     {
+        UpdateProfileRegion.Check(region);
         // A replicated value every device reads alike: refused here rather
         // than clamped differently later.
         if (packageExpiryLeadDays is not null && !PackageSettings.IsValidPrinted(packageExpiryLeadDays))
@@ -46,12 +50,12 @@ public sealed class UpdateNotificationSettings
         if (packageInUseLeadDays is not null && !PackageSettings.IsValidInUse(packageInUseLeadDays))
             throw new ArgumentException("The in-use lead days are out of range.", nameof(packageInUseLeadDays));
         return ExecuteCoreAsync(toAddress, caregiverAddress, doctorAddress, cancellationToken, caregiverEmails,
-            caregiverDigest, packageExpiryLeadDays, packageInUseLeadDays);
+            caregiverDigest, packageExpiryLeadDays, packageInUseLeadDays, region);
     }
 
     private Task ExecuteCoreAsync(string toAddress, string caregiverAddress, string doctorAddress,
         CancellationToken cancellationToken, string? caregiverEmails, string? caregiverDigest,
-        string? packageExpiryLeadDays, string? packageInUseLeadDays)
+        string? packageExpiryLeadDays, string? packageInUseLeadDays, string? region)
         => WriteGate.RunExclusiveAsync(async ct =>
         {
             var current = _store.Read();
@@ -67,6 +71,7 @@ public sealed class UpdateNotificationSettings
                 wanted[ProfileSetting.PackageExpiryLeadDays] = packageExpiryLeadDays.Trim();
             if (packageInUseLeadDays is not null)
                 wanted[ProfileSetting.PackageInUseLeadDays] = packageInUseLeadDays.Trim();
+            if (region is not null) wanted[ProfileSetting.Region] = region.Trim();
             var changes = wanted
                 .Where(w => !string.Equals(current.GetValueOrDefault(w.Key) ?? string.Empty, w.Value, StringComparison.Ordinal))
                 .ToDictionary(w => w.Key, w => w.Value, StringComparer.Ordinal);
@@ -91,6 +96,52 @@ public sealed class UpdateNotificationSettings
             if (changes.Count > 0) _store.Write(changes);
             return true;
         }, cancellationToken);
+}
+
+// The region of the profile (docs/prompt/
+// PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2, §3.3), chosen from the
+// prescription windows the first time the regional service is asked
+// for. A ProfileSettingChanged operation, as the addresses: the other
+// devices of the profile's sync group get it. "" clears it.
+public sealed class UpdateProfileRegion
+{
+    private readonly IProfileSettingsStore _store;
+    private readonly IOperationLog _operations;
+    private readonly IUnitOfWork _uow;
+
+    public UpdateProfileRegion(IProfileSettingsStore store, IOperationLog operations, IUnitOfWork uow)
+    {
+        _store = store;
+        _operations = operations;
+        _uow = uow;
+    }
+
+    // A replicated value every device reads alike: a code outside the 21
+    // regions and provinces is refused, not stored.
+    internal static void Check(string? region)
+    {
+        if (region is null) return;
+        var trimmed = region.Trim();
+        if (trimmed.Length > 0 && !ItalianRegions.IsValid(trimmed))
+            throw new ArgumentException("The region is not an Italian region code.", nameof(region));
+    }
+
+    public Task ExecuteAsync(string region, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(region);
+        Check(region);
+        var value = region.Trim();
+        return WriteGate.RunExclusiveAsync(async ct =>
+        {
+            if (string.Equals(_store.Read().GetValueOrDefault(ProfileSetting.Region) ?? string.Empty, value,
+                    StringComparison.Ordinal))
+                return true;
+            await _operations.AppendAsync([new ProfileSettingChanged(ProfileSetting.Region, value)], ct);
+            await _uow.SaveChangesAsync(ct);
+            _store.Write(new Dictionary<string, string?>(StringComparer.Ordinal) { [ProfileSetting.Region] = value });
+            return true;
+        }, cancellationToken);
+    }
 }
 
 // A profile synced with other devices is renamed only while it is open:

@@ -297,7 +297,14 @@ public static class ProfileSetting
     public const string PackageExpiryLeadDays = "PackageExpiryLeadDays";
     public const string PackageInUseLeadDays = "PackageInUseLeadDays";
 
+    // Italian region of the profile, whose prescription service the
+    // prescription windows open (docs/prompt/
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2): an ISTAT code of
+    // Prescriptions.ItalianRegions, "" when not set. Unknown to an older
+    // app: kept, not projected, as above.
+    public const string Region = "Region";
+
     public static readonly IReadOnlyList<string> All =
         [DisplayName, ToAddress, CaregiverAddress, DoctorAddress, CaregiverEmails, CaregiverDigest, CaregiverDigestSentOn,
-            PackageExpiryLeadDays, PackageInUseLeadDays];
+            PackageExpiryLeadDays, PackageInUseLeadDays, Region];
 }
