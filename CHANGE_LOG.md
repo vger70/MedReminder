@@ -30,6 +30,38 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #193 — Harden the daily dated-list feeds and let feeds publish concurrently
+
+Link: [vger70/MedReminder#193](https://github.com/vger70/MedReminder/pull/193)
+Branch: `claude/shortage-feed-review-fixes` → `main`
+
+### Fixed
+
+- Shortage and equivalents feeds: an older list date than the
+  published one is refused, even when forced; the same date with other
+  content is republished; pruning never deletes the file `latest.json`
+  names (`scripts/feeds/common.py`).
+- A shared concurrency group let a queued run of one feed cancel
+  another's: each workflow has its own group, and
+  `feeds_branch.sh publish` replaces only the feed's own paths and
+  rebuilds a publish whose lease was lost.
+- The AIFA mirror to `main` no longer commits the shortage and
+  equivalents subfolders.
+
+### Changed
+
+- Dated-list runs send ETag / Last-Modified (stored as `source` in
+  `latest.json`, ignored by clients) and stop on 304 instead of
+  downloading the CSV every day.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §1.1, §8, §9; PR #174 entry and workflow
+  comments: a new list is on the feed within a day, on clients within
+  about two days; `docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3.
+
+---
+
 ## PR #191 — Add an SMTP provider section to the user guides
 
 Link: [vger70/MedReminder#191](https://github.com/vger70/MedReminder/pull/191)
@@ -437,12 +469,16 @@ Branch: `claude/vigilant-hypatia-yby7iu` → `main`
 
 - `download_aifa_shortages.yaml` runs daily at 04:27 UTC instead of
   on days 2, 9, 16 and 23: AIFA updates the list on no fixed day, so a
-  new list now reaches clients within a day. Runs on a list already
+  new list is now on the feed within a day, and on clients, which
+  check once a day, within about two days. Runs on a list already
   published commit nothing.
 
 ### Docs
 
 - `docs/CATALOGUE-DATA.md` §8.
+
+---
+
 ## PR #173 — Publish the catalogue feeds on a single-commit feeds branch
 
 Link: [vger70/MedReminder#173](https://github.com/vger70/MedReminder/pull/173)

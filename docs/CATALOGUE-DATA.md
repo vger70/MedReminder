@@ -53,10 +53,10 @@ snapshots stay the offline baseline:
 Each folder also holds `latest.json` (§2.1) and keeps the 3 newest
 archives. The scripts share `scripts/feeds/common.py` (retries, run
 timestamp, row floors, publication); their unit tests
-(`scripts/feeds/tests/`) run in `scripts_tests.yaml`. The four
-workflows share the concurrency group `catalogue-feeds-publish`, so
-their pushes never race. Each script changes nothing under `data/`
-until every check has passed.
+(`scripts/feeds/tests/`) run in `scripts_tests.yaml`. Each workflow
+has its own concurrency group (`feed-<workflow name>`) and publishes
+only its own paths, so feeds may run at the same time (§1.1). Each
+script changes nothing under `data/` until every check has passed.
 
 ### 1.1 The `feeds` branch
 
@@ -74,9 +74,17 @@ removes them at its own garbage collection.
   in `appsettings.json`).
 - Each workflow runs `scripts/feeds/feeds_branch.sh load` before its
   script, so the script decides what is new against the published
-  state, then `feeds_branch.sh publish "<message>"`. Publishing uses a
-  temporary index and `--force-with-lease`; the checkout of `main` is
-  not touched. A publish whose content equals the branch is skipped.
+  state, then `feeds_branch.sh publish "<message>" <pathspec>...`
+  with the paths the feed owns (`data/es`; `data/it` without
+  `data/it/shortages` and `data/it/equivalents` for AIFA). A publish
+  starts from the branch as it is at push time and replaces only those
+  paths, on a temporary index; the checkout of `main` is not touched.
+  The push uses `--force-with-lease`: when another feed published in
+  between, the publish is rebuilt on the new branch (up to 5 attempts).
+  A publish whose content equals the branch is skipped. Feeds therefore
+  need no shared concurrency group: with one, GitHub keeps a single
+  pending run per group, and a queued run of one feed would cancel the
+  queued run of another.
   Only a run on the default branch publishes; a run dispatched from
   another branch does not replace what clients download.
 - The first run of any feed workflow after the merge creates the
@@ -695,9 +703,9 @@ the user once (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3).
 | Item | Value |
 |---|---|
 | Source | AIFA, `elenco_medicinali_carenti.csv` ("Carenze e indisponibilità"); CC BY 4.0, cited in the app as "AIFA list of medicines in shortage of <date>" |
-| Workflow | `download_aifa_shortages.yaml`, daily at 04:27 UTC (a run on a list already published exits without changes), concurrency group `catalogue-feeds-publish` |
+| Workflow | `download_aifa_shortages.yaml`, daily at 04:27 UTC; checks with ETag / Last-Modified whether AIFA changed the file, then publishes only a newer list date, or the same date with other content (a correction); an older date is refused, even when forced. A new list is on the feed within a day and on clients, which check once a day, within about two days. Concurrency group `feed-<workflow name>` |
 | Script | `scripts/feeds/aifa_shortages.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_shortages.py`, fixture `tests/fixtures/catalogue/aifa-shortages-sample.csv` |
-| Published | `data/it/shortages/shortages-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`); the 3 newest files are kept |
+| Published | `data/it/shortages/shortages-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`, `source` with the ETag / Last-Modified of the AIFA file, ignored by clients); the 3 newest files are kept, never the one `latest.json` names |
 | Client | `ShortageRefresher` with `GitHubRawShortageFeedClient`, after the catalogue feeds, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:ShortagesEnabled` (default true), `ShortagesMaxDownloadBytes` (default 4 MiB) |
 | Stored | `%LOCALAPPDATA%\MedReminder\catalogue\shortages\shortages-it.json`, shared by every profile; not in any profile database, not synced, not exported |
 | Line endings | `.gitattributes` marks `data/**/*.json` as `-text`: a checkout with `core.autocrlf` must not turn LF into CRLF, or the file no longer matches the manifest's size and SHA-256 |
@@ -729,9 +737,9 @@ Used by the Equivalent medicines window and the shortage tooltip
 | Item | Value |
 |---|---|
 | Source | AIFA, `Lista_farmaci_equivalenti.csv` ("Liste dei farmaci", stable name); cited in the app as "AIFA transparency list of <date>". Licence: CC BY 4.0 inferred from the AIFA open-data page, to confirm before release (analysis §2.1) |
-| Workflow | `download_aifa_equivalents.yaml`, daily at 04:41 UTC (a run on a list already published exits without changes), concurrency group `catalogue-feeds-publish`; no mirror to main |
+| Workflow | `download_aifa_equivalents.yaml`, daily at 04:41 UTC; checks with ETag / Last-Modified whether AIFA changed the file, then publishes only a newer list date, or the same date with other content (a correction); an older date is refused, even when forced. Concurrency group `feed-<workflow name>`; no mirror to main |
 | Script | `scripts/feeds/aifa_equivalents.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_equivalents.py`, fixture `tests/fixtures/catalogue/aifa-equivalents-sample.csv` |
-| Published | `data/it/equivalents/equivalents-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.groups`, `rows.packages`); the 3 newest files are kept |
+| Published | `data/it/equivalents/equivalents-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.groups`, `rows.packages`, `source` as for the shortage list); the 3 newest files are kept, never the one `latest.json` names |
 | Client | `EquivalenceRefresher` with `GitHubRawEquivalenceFeedClient`, after the shortage list, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:EquivalentsEnabled` (default true), `EquivalentsMaxDownloadBytes` (default 4 MiB) |
 | Stored | `%LOCALAPPDATA%\MedReminder\catalogue\equivalents\equivalents-it.json`, shared by every profile; not in any profile database, not synced, not exported |
 

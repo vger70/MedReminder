@@ -211,8 +211,118 @@ def decode_text(raw):
         return raw.decode("cp1252")
 
 
+# Validators of the source file, kept in latest.json so the next run can
+# ask the source whether the file changed (clients ignore the field).
+SOURCE_FIELD = "source"
+
+
+def conditional_get(session, url, headers, data_dir, force=False):
+    """GET `url`, or None when the source answers 304 Not Modified.
+
+    The ETag and Last-Modified of the file behind the published list are
+    sent back as If-None-Match / If-Modified-Since, so a daily run on an
+    unchanged list costs one small request instead of a full download.
+    A source that ignores them answers 200 and the run goes on as
+    before. Returns the response, whose validators are passed to
+    publish_dated_list or record_source.
+    """
+    headers = dict(headers)
+    source = read_manifest(data_dir).get(SOURCE_FIELD)
+    if not force and isinstance(source, dict):
+        if isinstance(source.get("etag"), str):
+            headers["If-None-Match"] = source["etag"]
+        if isinstance(source.get("lastModified"), str):
+            headers["If-Modified-Since"] = source["lastModified"]
+    response = session.get(url, headers=headers, timeout=120)
+    if response.status_code == 304:
+        return None
+    response.raise_for_status()
+    return response
+
+
+def source_of(response):
+    """The validators of a response, for latest.json; None without any."""
+    if response is None:
+        return None
+    source = {}
+    if response.headers.get("ETag"):
+        source["etag"] = response.headers["ETag"]
+    if response.headers.get("Last-Modified"):
+        source["lastModified"] = response.headers["Last-Modified"]
+    return source or None
+
+
+def record_source(data_dir, source):
+    """Store new validators in latest.json without republishing the list.
+
+    Called when the source file changed but the published list did not
+    (another column, a re-export): without it every later run would
+    download the file again. Only `source` changes, so clients, which
+    compare the list date and SHA-256, see nothing new. True when the
+    manifest was rewritten.
+    """
+    manifest = read_manifest(data_dir)
+    if not manifest or not source or manifest.get(SOURCE_FIELD) == source:
+        return False
+    manifest[SOURCE_FIELD] = source
+    _write_manifest(Path(data_dir), manifest)
+    return True
+
+
+def _write_manifest(data_dir, manifest):
+    with open(data_dir / "latest.json", "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(manifest, fh, indent=2)
+        fh.write("\n")
+
+
+def _published_content(data_dir, manifest):
+    """The published list without `generated`, or None if unreadable."""
+    name = manifest.get("file")
+    if not isinstance(name, str) or "/" in name or "\\" in name:
+        return None
+    try:
+        with open(Path(data_dir) / name, encoding="utf-8") as fh:
+            document = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(document, dict):
+        return None
+    document.pop("generated", None)
+    return document
+
+
+def dated_list_skip_reason(data_dir, list_date, document, force):
+    """Why a dated list must not be published, or None to publish it.
+
+    The version is the list date the source writes in the file, so:
+    - an older date than the published one is a stale copy of the
+      source (a cache or mirror lagging behind): publishing it would
+      roll the feed back, so it is refused even when forced;
+    - the same date with the same content is already published, unless
+      the run is forced;
+    - the same date with other content is a correction the source made
+      without changing the date: it is published, and clients holding
+      that date download it again because its SHA-256 differs.
+    `document` is compared without its `generated` timestamp.
+    """
+    manifest = read_manifest(data_dir)
+    version = f"{list_date:%Y%m%d}"
+    published = manifest.get("version")
+    if not isinstance(published, str) or len(published) != 8 or not published.isdigit():
+        return None
+    if version < published:
+        return f"list of {list_date} is older than the published list ({published}); refusing to roll back"
+    if version > published or force:
+        return None
+    content = dict(document)
+    content.pop("generated", None)
+    if _published_content(data_dir, manifest) == content:
+        return f"list of {list_date} is already published"
+    return None
+
+
 def publish_dated_list(data_dir, prefix, country, list_date, document, generated, rows,
-                       retained=RETAINED_ARCHIVES):
+                       retained=RETAINED_ARCHIVES, source=None):
     """Publish a dated JSON list (the shortage and transparency lists).
 
     Writes <prefix>-<yyyymmdd>.json (the list date), then latest.json
@@ -237,12 +347,14 @@ def publish_dated_list(data_dir, prefix, country, list_date, document, generated
         "size": len(payload),
         "rows": rows,
     }
-    with open(data_dir / "latest.json", "w", encoding="utf-8", newline="\n") as fh:
-        json.dump(manifest, fh, indent=2)
-        fh.write("\n")
+    if source:
+        manifest[SOURCE_FIELD] = source
+    _write_manifest(data_dir, manifest)
 
+    # Never delete the file latest.json names, even when a forced run
+    # publishes a date older than the retained ones.
     files = sorted(data_dir.glob(f"{prefix}-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].json"))
-    for old in files[:-retained]:
+    for old in [f for f in files if f.name != name][:-(retained - 1) or None]:
         old.unlink()
     print(f"Published {data_dir / name} ({len(payload):,} bytes)")
     return manifest
