@@ -83,13 +83,7 @@ public static class IntradayConsumption
         IReadOnlyList<MedicationScheduleHistory> schedule,
         IReadOnlyDictionary<int, IReadOnlyList<TimeOnly>> defaultTimes)
     {
-        MedicationScheduleHistory? inForce = null;
-        foreach (var row in schedule)
-        {
-            if (row.EffectiveFrom > today) continue;
-            if (inForce is null || row.EffectiveFrom >= inForce.EffectiveFrom) inForce = row;
-        }
-        if (inForce is null) return [];
+        if (DailyConsumption.RowInForce(today, schedule) is not { } inForce) return [];
 
         var count = inForce.ScheduleKind == ScheduleKind.FixedDaily ? inForce.AdministrationsPerDay : 1;
         return defaultTimes.TryGetValue(count, out var times) && times.Count == count ? times : [];

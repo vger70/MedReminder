@@ -279,7 +279,7 @@ the whole **European Union** (EMA).
   device. With IT, ES or FR the list also contains the EU medicines;
   with **EU** it contains only those. A medicine may appear twice
   (national and EU): pick the one that matches your box.
-- **Automatic updates.** When **Check for updates automatically
+- **Automatic updates.** When **Check for app and catalogue updates
   (GitHub)** is on (Settings → General), MedReminder downloads at start,
   and once a day while it stays open, the latest monthly list of your
   country and the EU list, if newer. Without an internet connection
@@ -331,7 +331,7 @@ you can add a new medicine or link the code to an existing one.
 
 With Italy as reference country, MedReminder downloads the AIFA list of
 medicines in shortage together with the catalogue (at startup and once
-a day, when **Check for updates automatically** is on). A medicine
+a day, when **Check for app and catalogue updates** is on). A medicine
 whose package (AIC code, filled in from the catalogue or the barcode)
 is on the list shows in the **Supply** column of the list:
 
@@ -1268,7 +1268,7 @@ All in **Tools → Settings…**. The sections are listed on the left;
   only on Windows 11 with dark mode on; with a Windows high-contrast
   theme its colours are used. Applies after a restart. Date fields stay
   light in Dark.
-- **General → Check for updates automatically (GitHub)**: checks for a
+- **General → Check for app and catalogue updates (GitHub)**: checks for a
   new version at start (nothing is installed by itself) and updates the
   catalogue at start and once a day.
   **? → Check for updates…** checks now.

@@ -690,7 +690,7 @@
   "Ui.SettingsDialog.General.RestartPrompt.Title": "Restart required",
   "Ui.SettingsDialog.General.Note": "Windows toast notifications always use the system language.\nEmail notifications and the user guide use the language selected here.",
   "Ui.SettingsDialog.General.Saved": "Preferences saved.",
-  "Ui.SettingsDialog.General.CheckUpdates": "Check for updates automatically (GitHub)",
+  "Ui.SettingsDialog.General.CheckUpdates": "Check for app and catalogue updates (GitHub)",
   "Ui.SettingsDialog.General.LogQueries": "Log database queries (diagnostics)",
   "Ui.SettingsDialog.General.LogQueries.Help": "Writes every SQL command the app runs to the log file, without the values. For troubleshooting only: it makes the log grow quickly. Applied immediately.",
   "Ui.SettingsDialog.General.LogQueries.AdminOnly": "Query logging is a diagnostic option: an administrator changes it.",

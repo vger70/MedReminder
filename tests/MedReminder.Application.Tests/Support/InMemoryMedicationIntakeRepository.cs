@@ -35,6 +35,10 @@ internal sealed class InMemoryMedicationIntakeRepository : IMedicationIntakeRepo
         return Task.FromResult(result);
     }
 
+    public Task<IReadOnlyList<Guid>> ListMedicinesWithDayIntakeAsync(DateOnly day, CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyList<Guid>>(
+            [.. _items.Where(i => i.Day == day && !i.IsExtra).Select(i => i.MedicineId).Distinct()]);
+
     public Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken)
     {
         _items.Add(intake);

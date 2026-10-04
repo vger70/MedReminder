@@ -458,7 +458,7 @@ deviations).
 
 - As-needed slots are never consumed automatically and get no
   reminder; a medicine whose slots are all as needed behaves as PRN;
-  switching to PRN clears the slots.
+  under a PRN schedule the slots consume nothing.
 - "Extra dose as needed" in the intake dialog: the dose is deducted and
   the day's scheduled consumption stays.
 - Therapy → Dose times…: editable and user-defined time-of-day presets,

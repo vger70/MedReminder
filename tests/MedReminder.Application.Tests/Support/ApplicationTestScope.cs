@@ -121,12 +121,13 @@ internal sealed class ApplicationTestScope
         AdjustStockDown = new AdjustStockDown(Medicines, Stock, Operations, Uow, Clock);
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Operations, Uow, Clock);
         ResumeMedication = new ResumeMedication(Medicines, Suspensions, Operations, Uow, Clock);
-        ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Slots, Operations, Uow, Clock);
+        ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Operations, Uow, Clock);
         RegisterIntake = new RegisterIntake(Medicines, Intakes, Ledger, Operations, Uow, Clock);
 
+        var dictionaries = new JsonDictionaryLocalizationService("en");
         AsNeededBackfill = new AsNeededSlotBackfill(
-            PendingMigrations, Medicines, Schedules, Slots, Operations, Uow, Clock);
-        PresetBackfill = new SlotPresetBackfill(PendingMigrations, Medicines, Slots, Uow);
+            PendingMigrations, Medicines, Slots, Operations, Uow, Clock, dictionaries);
+        PresetBackfill = new SlotPresetBackfill(PendingMigrations, Medicines, Slots, Uow, dictionaries);
         ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow, AsNeededBackfill, PresetBackfill);
         ReconcileStock = new ReconcileStock(
             Medicines, Schedules, Suspensions, Slots, Counts, Ledger, Operations, Uow, Clock);

@@ -689,7 +689,7 @@
   "Ui.SettingsDialog.General.RestartPrompt.Title": "Reinicio necesario",
   "Ui.SettingsDialog.General.Note": "Las notificaciones toast de Windows siempre usan el idioma del sistema.\nLas notificaciones e-mail y la guía de usuario usan el idioma seleccionado aquí.",
   "Ui.SettingsDialog.General.Saved": "Preferencias guardadas.",
-  "Ui.SettingsDialog.General.CheckUpdates": "Buscar actualizaciones automáticamente (GitHub)",
+  "Ui.SettingsDialog.General.CheckUpdates": "Buscar actualizaciones de la aplicación y los catálogos (GitHub)",
   "Ui.SettingsDialog.General.LogQueries": "Registrar las consultas de la base de datos (diagnóstico)",
   "Ui.SettingsDialog.General.LogQueries.Help": "Escribe en el archivo de registro cada comando SQL que ejecuta la aplicación, sin los valores. Solo para diagnosticar problemas: el registro crece rápidamente. Se aplica de inmediato.",
   "Ui.SettingsDialog.General.LogQueries.AdminOnly": "El registro de consultas es una opción de diagnóstico: la cambia un administrador.",

@@ -142,7 +142,7 @@ internal static class ExportMapper
         Time = d.Time,
         TimingLabel = d.TimingLabel,
         Order = d.Order,
-        IsAsNeeded = d.IsAsNeeded,
+        IsAsNeeded = d.IsAsNeeded ?? false,
         PresetId = d.PresetId,
     };
 

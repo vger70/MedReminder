@@ -33,8 +33,9 @@ namespace MedReminder.UI.Hosting;
 // ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §5): the step waits for
 // MainForm's startup update check (at most RemoteFeedSignalTimeout),
 // then runs RemoteCatalogueRefresher once per feed when both
-// Catalogue:RemoteFeed:Enabled and the user's "check for updates
-// automatically" setting (UserSettings.CheckForUpdatesOnStartup) are on.
+// Catalogue:RemoteFeed:Enabled and the user's "check for app and
+// catalogue updates" setting (UserSettings.CheckForUpdatesOnStartup)
+// are on.
 //
 // The remote step then repeats during the session: a tick every
 // TickInterval runs it again once RemoteCheckInterval has passed since
@@ -55,6 +56,12 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
     private static readonly TimeSpan RemoteFeedSignalTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan TickInterval = TimeSpan.FromHours(1);
     internal static readonly TimeSpan RemoteCheckInterval = TimeSpan.FromHours(24);
+
+    // The ticks come from a monotonic timer, the times compared from the
+    // wall clock: a tick can read a few ms short of 24 h after the one
+    // that ran the step. Half a tick of slack keeps the check on the
+    // 24th tick instead of drifting to the 25th.
+    private static readonly TimeSpan DueSlack = TickInterval / 2;
 
     // Ordered so IT runs first (default reference country), then the
     // supranational EU catalogue, then the M4 national additions
@@ -135,11 +142,11 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
     }
 
     // Due when the remote step never ran in this session (a gate was
-    // off), when RemoteCheckInterval has passed, or when the clock went
-    // back before the last run (a manual clock change would otherwise
-    // hold the check back by the same amount).
+    // off), when RemoteCheckInterval has passed (less DueSlack), or when
+    // the clock went back before the last run (a manual clock change
+    // would otherwise hold the check back by the same amount).
     internal static bool IsRemoteCheckDue(DateTimeOffset? lastRun, DateTimeOffset now) =>
-        lastRun is not { } last || now < last || now - last >= RemoteCheckInterval;
+        lastRun is not { } last || now < last || now - last >= RemoteCheckInterval - DueSlack;
 
     // Returns false when the catalogue feature is off. The scope, and
     // with it the SQLite connection the importer opened, is disposed
@@ -194,7 +201,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             var userSettings = _services.GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue;
             if (!userSettings.CheckForUpdatesOnStartup)
             {
-                _log.Log(skipLevel, "Remote catalogue feeds skipped: checking for updates automatically is off.");
+                _log.Log(skipLevel, "Remote catalogue feeds skipped: checking for app and catalogue updates is off.");
                 return false;
             }
 

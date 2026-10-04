@@ -1,5 +1,6 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Reporting;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Medicines;
 
@@ -63,7 +64,7 @@ public static class NotificationTexts
                 body.Append(localization.Get("Notifications.Email.Dosage.Section")).Append('\n');
                 foreach (var slot in slots.OrderBy(s => s.Time.HasValue ? 0 : 1).ThenBy(s => s.Time).ThenBy(s => s.Order))
                 {
-                    body.Append("  - ").Append(FormatSlotForEmail(slot, medicine.Unit, c)).Append('\n');
+                    body.Append("  - ").Append(FormatSlotForEmail(slot, medicine.Unit, c, localization)).Append('\n');
                 }
             }
             if (!string.IsNullOrWhiteSpace(medicine.DoctorName))
@@ -114,7 +115,7 @@ public static class NotificationTexts
                 body.Append("Dosage:").Append('\n');
                 foreach (var slot in slots.OrderBy(s => s.Time.HasValue ? 0 : 1).ThenBy(s => s.Time).ThenBy(s => s.Order))
                 {
-                    body.Append("  - ").Append(FormatSlotForEmail(slot, medicine.Unit, c)).Append('\n');
+                    body.Append("  - ").Append(FormatSlotForEmail(slot, medicine.Unit, c, localization)).Append('\n');
                 }
             }
             if (!string.IsNullOrWhiteSpace(medicine.DoctorName))
@@ -142,7 +143,8 @@ public static class NotificationTexts
         return new EmailMessage(subject, body.ToString(), Kind: EmailKind.LowStock);
     }
 
-    private static string FormatSlotForEmail(MedicationAdministrationSlot slot, string unit, CultureInfo c)
+    private static string FormatSlotForEmail(
+        MedicationAdministrationSlot slot, string unit, CultureInfo c, ILocalizationService? loc)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append(slot.Dose.ToString("0.##", c)).Append(' ').Append(unit);
@@ -154,10 +156,7 @@ public static class NotificationTexts
         {
             sb.Append(" (").Append(t.ToString("HH:mm", c)).Append(')');
         }
-        if (slot.IsAsNeeded)
-        {
-            sb.Append(" (as needed)");
-        }
+        sb.Append(SlotTexts.AsNeededSuffix(slot, loc));
         return sb.ToString();
     }
 

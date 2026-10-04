@@ -49,10 +49,85 @@ Branch: `claude/inspiring-pascal-povp02` → `claude/brave-turing-e4a7z7` (stack
 ### Docs
 
 - `CLAUDE.md` §5, `docs/CATALOGUE-DATA.md` §1.1 and §10, `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.9, the five user guides.
+## PR #194 — Fix the review findings of the dose-time stock and as-needed doses
+
+Link: [vger70/MedReminder#194](https://github.com/vger70/MedReminder/pull/194)
+Branch: `feature/intraday-review-fixes` → `main`
+
+### Fixed
+
+- Switching a medicine to PRN no longer drops its slots, nor does the
+  one-time as-needed backfill: under a PRN schedule slots consume
+  nothing (since #182), and clearing them lost as-needed slots the edit
+  dialog had just saved, or emptied today's slots for a PRN change
+  dated later. The supply planner shows a PRN medicine with slots as
+  as-needed.
+- An imported archive is marked for the one-time backfills only when it
+  was written before the as-needed flag or the presets, so re-importing
+  a current archive keeps the user's choices (`ProfileDatabaseBuilder`).
+- Main list: the first load of a new day runs the catch-up whichever
+  load comes first; a refresh overtaken by a reload is discarded;
+  activation refreshes at most every 30 seconds; a change of status or
+  days left applies the card filter and the column sort again, and
+  every reload keeps the selection and the scroll position
+  (`MainForm`).
+- The low-stock email marks as-needed slots in its own language.
+
+### Changed
+
+- `DueToday` reads today's booked medicines with one query for intakes
+  and one for counts instead of every intake and count of each
+  medicine; `PendingDataMigrations` is part of the EF model.
+- The backfills read the preset texts from the dictionaries instead of
+  copies in the code (`BuiltInPresetLabels`).
+- The schedule row in force comes from `DailyConsumption.RowInForce`
+  everywhere; the therapy timeline now applies the ledger's tie rule
+  (the later recorded row of a date wins).
+
+### Docs
+
+- `ANALYSIS.md`, `EXPORT-FORMAT.md`, `EVOLUTION-DONE.md` §12.5,
+  `STATUS.md` §2.11 and the status of
+  `analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`.
+## PR #192 — Fix the review findings on the daily catalogue check
+
+Link: [vger70/MedReminder#192](https://github.com/vger70/MedReminder/pull/192)
+Branch: `claude/catalogue-daily-refresh` → `main`
+
+### Fixed
+
+- `CsvReferenceCatalogueImporter` takes `WriteGate` itself for the
+  version read and the replace transaction, so the embedded boot import
+  is gated too; the snapshot is parsed outside the gate.
+- Archive import and backup restore set the sync reset marker under the
+  gate, right before the swap: a cancel while waiting no longer blocks
+  sync on an unchanged database.
+- `BackupService.ImportProfileAsync` swaps through `ProfileDatabaseSwap`
+  instead of a copy of it.
+- The daily catalogue check no longer drifts to every 25 hours.
+
+### Changed
+
+- Setting label "Check for app and catalogue updates (GitHub)" in the
+  five dictionaries and user guides.
+
+### Docs
+
+- `ANALYSIS-CATALOGUE-REMOTE-FEED.md` §4.5 and new §11.6.
+## PR #200 — Correct the guided setup prompt against the code
+
+Link: [vger70/MedReminder#200](https://github.com/vger70/MedReminder/pull/200)
+Branch: `claude/wizardly-goldberg-9atod5` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-GUIDED-SETUP.md`: names the real use cases (`UpdateNotificationSettings`, `RenameProfile`) and requires keeping the doctor address when saving; the wizard opens by itself for any profile with no medicines until a device-local `GuidedSetupShown` flag is set; maps the user's address to `CaregiverAddress` when they look after someone; warns when email is the only channel and cannot be sent; adds the Settings initial-section parameter and matching tests.
 
 ---
 
 ## PR #198 — Add implementation prompt for the guided setup
+
+**Status:** merged (2026-10-04)
 
 Link: [vger70/MedReminder#198](https://github.com/vger70/MedReminder/pull/198)
 Branch: `claude/project-thread-i2a3y8` → `main`

@@ -166,6 +166,26 @@ public class CoveragePlannerTests
     }
 
     [Fact]
+    public void A_prn_medicine_that_kept_scheduled_slots_is_as_needed()
+    {
+        // Under PRN the slots only place a quantity it does not have.
+        var m = Medicine();
+        var schedule = new[]
+        {
+            new MedicationScheduleHistory
+            {
+                MedicineId = m.Id, EffectiveFrom = m.StartDate, DosePerAdministration = 1m,
+                AdministrationsPerDay = 1, ScheduleKind = ScheduleKind.Prn,
+            },
+        };
+        var slots = new[] { new MedicationAdministrationSlot { MedicineId = m.Id, Dose = 1m, Order = 0 } };
+        var row = CoveragePlanner.BuildRow(Input(m, 3m, schedule: schedule, slots: slots), Today, Today, Today.AddDays(6));
+
+        row.Needed.Should().Be(0m);
+        row.Status.Should().Be(CoverageStatus.AsNeeded);
+    }
+
+    [Fact]
     public void A_medicine_whose_slots_are_all_as_needed_is_not_computed()
     {
         var m = Medicine();

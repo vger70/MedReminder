@@ -36,13 +36,12 @@ public enum RemoteCatalogueRefreshOutcome
 // failure is logged and reported through the outcome, never thrown:
 // the app must stay usable offline.
 //
-// The import runs under WriteGate: its transaction replaces the whole
-// catalogue of the country and holds the SQLite write lock meanwhile,
-// so the use cases wait for it instead of failing with SQLITE_BUSY
-// after the busy timeout. The database swaps (backup restore, archive
-// import, sync join) take the same gate through IDatabaseExclusiveAccess,
-// and the importer closes the connection it opened before the gate is
-// released, so no handle stays open during the download.
+// The importer takes WriteGate itself (through IDatabaseExclusiveAccess)
+// for the version read and for the replace transaction, which holds the
+// SQLite write lock: the use cases and the database swaps (backup
+// restore, archive import, sync join) wait for it instead of failing
+// with SQLITE_BUSY or on an open file. The gate is not reentrant, so
+// this class must never call the importer under WriteGate.
 // Only the open profile is updated; other profiles refresh at their own
 // next start or daily check (§4.4).
 public sealed class RemoteCatalogueRefresher
@@ -101,10 +100,7 @@ public sealed class RemoteCatalogueRefresher
         CatalogueImportState state;
         try
         {
-            // Under the gate like the import: a database swap must not
-            // move the file while this read holds it open.
-            state = await WriteGate.RunExclusiveAsync(
-                ct => _importer.GetImportStateAsync(feed.Country, ct), cancellationToken);
+            state = await _importer.GetImportStateAsync(feed.Country, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -215,9 +211,7 @@ public sealed class RemoteCatalogueRefresher
         // not data (decision D4).
         var minimumRowCount = Math.Max(1, state.RowCount / 2);
         stopwatch.Restart();
-        var report = await WriteGate.RunExclusiveAsync(
-            ct => _importer.ImportAsync(snapshot, feed.Country, label, minimumRowCount, ct),
-            cancellationToken);
+        var report = await _importer.ImportAsync(snapshot, feed.Country, label, minimumRowCount, cancellationToken);
 
         _log.LogInformation(
             "Reference-catalogue import for {Country} complete: inserted={Inserted}, deleted={Deleted}, skipped={Skipped}, version={Version}, completedAt={CompletedAt}, source=remote feed, elapsedMs={Elapsed}.",

@@ -690,7 +690,7 @@
   "Ui.SettingsDialog.General.RestartPrompt.Title": "Riavvio richiesto",
   "Ui.SettingsDialog.General.Note": "Le notifiche toast di Windows seguono sempre la lingua di sistema.\nLe notifiche email e la guida utente usano la lingua selezionata qui.",
   "Ui.SettingsDialog.General.Saved": "Preferenze salvate.",
-  "Ui.SettingsDialog.General.CheckUpdates": "Controlla aggiornamenti automaticamente (GitHub)",
+  "Ui.SettingsDialog.General.CheckUpdates": "Controlla aggiornamenti di app e cataloghi (GitHub)",
   "Ui.SettingsDialog.General.LogQueries": "Registra le query del database (diagnostica)",
   "Ui.SettingsDialog.General.LogQueries.Help": "Scrive nel file di log ogni comando SQL eseguito dall'app, senza i valori. Solo per la diagnosi dei problemi: il log cresce rapidamente. Applicato subito.",
   "Ui.SettingsDialog.General.LogQueries.AdminOnly": "La registrazione delle query è un'opzione di diagnostica: la cambia un amministratore.",

@@ -1601,13 +1601,9 @@ internal sealed class MainForm : MedReminderFormBase
                     _sortOrderDaysRemaining = SortOrder.Ascending;
                 }
 
-                var items = ((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
-
-                items = _sortOrderDaysRemaining == SortOrder.Ascending
-                    ? [.. items.OrderBy(x => x.DaysRemaining ?? int.MaxValue)]
-                    : [.. items.OrderByDescending(x => x.DaysRemaining ?? int.MinValue)];
-
-                grid.DataSource = new BindingList<MedicineListItem>(items);
+                var items = Sorted((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
+                _rows = new BindingList<MedicineListItem>(items);
+                grid.DataSource = _rows;
 
                 column.HeaderCell.SortGlyphDirection = _sortOrderDaysRemaining;
 
@@ -1632,14 +1628,12 @@ internal sealed class MainForm : MedReminderFormBase
                     _sortOrderName = SortOrder.Ascending;
                 }
 
-                var items = ((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
-                items = _sortOrderName == SortOrder.Ascending
-                    ? [.. items.OrderBy(x => x.Name)]
-                    : [.. items.OrderByDescending(x => x.Name)];
+                var items = Sorted((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
 
                 column.HeaderCell.SortGlyphDirection = _sortOrderName;
 
-                grid.DataSource = new BindingList<MedicineListItem>(items);
+                _rows = new BindingList<MedicineListItem>(items);
+                grid.DataSource = _rows;
 
                 grid.Columns.Cast<DataGridViewColumn>()
                     .FirstOrDefault(c => c.DataPropertyName == nameof(MedicineListItem.DaysRemainingDisplay))
@@ -1978,13 +1972,17 @@ internal sealed class MainForm : MedReminderFormBase
     private async Task ReloadAsync()
     {
         SetStatus(_loc.Get("Ui.MainForm.Status.Loading"));
+        // A refresh of the estimates started before this load is
+        // discarded when it completes (RefreshEstimatesAsync).
+        _loadVersion++;
+        _reloading = true;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
+            await CatchUpOnNewDayAsync(scope.ServiceProvider);
             var loader = scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>();
             var items = await loader.LoadAsync(CancellationToken.None);
 
-            _loadedDay = DateOnly.FromDateTime(DateTime.Today);
             _allRows = items.ToList();
             ApplyFilters();
             HideErrorBanner();
@@ -1995,44 +1993,76 @@ internal sealed class MainForm : MedReminderFormBase
             SetStatus(_loc.Get("Ui.MainForm.Status.LoadError"));
             ShowErrorBanner(_loc.Get("Ui.MainForm.LoadBanner.Failure", ex.Message));
         }
+        finally
+        {
+            _reloading = false;
+        }
+    }
+
+    // The ledger books a day after it ends, at the next catch-up of the
+    // monitor (every 30 minutes by default). The first load of a new day
+    // runs it at once, whichever path loads, so the estimate never starts
+    // from the day before yesterday. A failure is logged; the load goes
+    // on and the next one tries again.
+    private async Task CatchUpOnNewDayAsync(IServiceProvider services)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        if (today == _caughtUpDay) return;
+        try
+        {
+            await services.GetRequiredService<ConsumptionCatchUp>().RunAsync(CancellationToken.None);
+            _caughtUpDay = today;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "The consumption catch-up before loading the list failed.");
+        }
     }
 
     // The stock column subtracts today's doses as their time passes
     // (ANALYSIS-INTRADAY-CONSUMPTION.md §4): every minute while the window
-    // is shown, and when it is activated, the estimates are recomputed.
-    // Rows are updated in place, so the selection, the sort and the
-    // scroll position stay; a list whose medicines changed is reloaded.
-    // After midnight the catch-up books yesterday first, so the estimate
-    // never starts from the day before yesterday.
+    // is shown, and when it is activated (at most every 30 seconds), the
+    // estimates are recomputed. When nothing a filter or the sort reads
+    // changed, rows are updated in place; otherwise the filters and the
+    // sort are applied again (ApplyFilters keeps the selection). A
+    // refresh that a reload overtook is discarded.
+    private static readonly TimeSpan ActivationRefreshInterval = TimeSpan.FromSeconds(30);
     private System.Windows.Forms.Timer? _estimateTimer;
-    private DateOnly _loadedDay;
+    private DateOnly _caughtUpDay;
     private bool _refreshingEstimates;
+    private bool _reloading;
+    private int _loadVersion;
+    private DateTime _lastEstimateRefresh = DateTime.MinValue;
 
     private void WireEstimateRefresh()
     {
         _estimateTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
         _estimateTimer.Tick += async (_, _) => await RefreshEstimatesAsync();
         _estimateTimer.Start();
-        Activated += async (_, _) => await RefreshEstimatesAsync();
+        Activated += async (_, _) =>
+        {
+            if (DateTime.UtcNow - _lastEstimateRefresh >= ActivationRefreshInterval) await RefreshEstimatesAsync();
+        };
         FormClosed += (_, _) => _estimateTimer.Dispose();
     }
 
     private async Task RefreshEstimatesAsync()
     {
-        if (_refreshingEstimates || !Visible || WindowState == FormWindowState.Minimized) return;
+        if (_refreshingEstimates || _reloading || !Visible || WindowState == FormWindowState.Minimized) return;
         // A dialog of this window may hold a row: refresh once it closes.
         if (OwnedForms.Any(f => f.Visible && f.Modal)) return;
         _refreshingEstimates = true;
+        _lastEstimateRefresh = DateTime.UtcNow;
+        var version = _loadVersion;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
-            if (DateOnly.FromDateTime(DateTime.Today) != _loadedDay)
-            {
-                await scope.ServiceProvider.GetRequiredService<ConsumptionCatchUp>().RunAsync(CancellationToken.None);
-            }
+            await CatchUpOnNewDayAsync(scope.ServiceProvider);
             var items = await scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>()
                 .LoadAsync(CancellationToken.None);
-            _loadedDay = DateOnly.FromDateTime(DateTime.Today);
+            // A reload started meanwhile has newer rows (an intake just
+            // recorded, a medicine just added): keep them.
+            if (version != _loadVersion || _reloading) return;
 
             var byId = items.ToDictionary(i => i.Id);
             if (byId.Count != _allRows.Count || _allRows.Any(r => !byId.ContainsKey(r.Id)))
@@ -2042,24 +2072,28 @@ internal sealed class MainForm : MedReminderFormBase
                 return;
             }
             var changed = false;
+            var refilter = false;
             foreach (var row in _allRows)
             {
                 var fresh = byId[row.Id];
                 if (row.CurrentStock == fresh.CurrentStock && row.Status == fresh.Status
-                    && row.DaysRemaining == fresh.DaysRemaining && row.EstimatedRunOutDate == fresh.EstimatedRunOutDate)
+                    && row.DaysRemaining == fresh.DaysRemaining && row.EstimatedRunOutDate == fresh.EstimatedRunOutDate
+                    && row.DailyRate == fresh.DailyRate && row.IsSuspended == fresh.IsSuspended
+                    && row.IsActive == fresh.IsActive && row.SupplyDisplay == fresh.SupplyDisplay)
                 {
                     continue;
                 }
-                row.CurrentStock = fresh.CurrentStock;
-                row.LedgerStock = fresh.LedgerStock;
-                row.DueTodaySoFar = fresh.DueTodaySoFar;
-                row.DaysRemaining = fresh.DaysRemaining;
-                row.EstimatedRunOutDate = fresh.EstimatedRunOutDate;
-                row.Status = fresh.Status;
-                row.StatusDisplay = fresh.StatusDisplay;
+                refilter |= row.Status != fresh.Status || row.IsActive != fresh.IsActive
+                    || row.DaysRemaining != fresh.DaysRemaining || row.SupplyDisplay != fresh.SupplyDisplay;
+                CopyRefreshedValues(row, fresh);
                 changed = true;
             }
             if (!changed) return;
+            if (refilter)
+            {
+                ApplyFilters();
+                return;
+            }
             UpdateCards();
             _grid.Invalidate();
         }
@@ -2072,6 +2106,26 @@ internal sealed class MainForm : MedReminderFormBase
         {
             _refreshingEstimates = false;
         }
+    }
+
+    // Every value of a row the loader computes; the identity and the
+    // names stay.
+    private static void CopyRefreshedValues(MedicineListItem row, MedicineListItem fresh)
+    {
+        row.CurrentStock = fresh.CurrentStock;
+        row.LedgerStock = fresh.LedgerStock;
+        row.DueTodaySoFar = fresh.DueTodaySoFar;
+        row.DailyRate = fresh.DailyRate;
+        row.DailyRateDisplay = fresh.DailyRateDisplay;
+        row.DaysRemaining = fresh.DaysRemaining;
+        row.EstimatedRunOutDate = fresh.EstimatedRunOutDate;
+        row.ThresholdDays = fresh.ThresholdDays;
+        row.IsSuspended = fresh.IsSuspended;
+        row.IsActive = fresh.IsActive;
+        row.Status = fresh.Status;
+        row.StatusDisplay = fresh.StatusDisplay;
+        row.SupplyDisplay = fresh.SupplyDisplay;
+        row.SupplyDetail = fresh.SupplyDetail;
     }
 
     private void UpdateCards()
@@ -2093,14 +2147,19 @@ internal sealed class MainForm : MedReminderFormBase
     // inactive toggle, then the summary card and the search text
     // (MedicineListFilter). The cards count the rows before the card and
     // search filters, so each card shows what a click on it would list.
+    // The column sort chosen by the user is applied again, and the
+    // selected medicine and the scroll position stay when still listed.
     private void ApplyFilters()
     {
         var visible = MedicineListFilter.Visible(_allRows, _showInactive);
         UpdateCards();
 
+        var selectedId = GetSelectedRow()?.Id;
+        var firstRow = _grid.Rows.Count > 0 ? _grid.FirstDisplayedScrollingRowIndex : -1;
         _rows = new BindingList<MedicineListItem>(
-            MedicineListFilter.Apply(visible, _bucket, _searchBox.Text));
+            [.. Sorted(MedicineListFilter.Apply(visible, _bucket, _searchBox.Text))]);
         _grid.DataSource = _rows;
+        RestoreView(selectedId, firstRow);
 
         var hidden = _allRows.Count - visible.Count;
         if (_rows.Count != visible.Count)
@@ -2112,6 +2171,44 @@ internal sealed class MainForm : MedReminderFormBase
             SetStatus(hidden > 0
                 ? _loc.Get("Ui.MainForm.Status.MedicinesLoadedHidden", _rows.Count, hidden)
                 : _loc.Get("Ui.MainForm.Status.MedicinesLoaded", _rows.Count));
+        }
+    }
+
+    // The rows in the order of the sorted column, if any (header click).
+    private IEnumerable<MedicineListItem> Sorted(IEnumerable<MedicineListItem> rows) => _sortColumn switch
+    {
+        nameof(MedicineListItem.DaysRemainingDisplay) => _sortOrderDaysRemaining == SortOrder.Descending
+            ? rows.OrderByDescending(x => x.DaysRemaining ?? int.MinValue)
+            : rows.OrderBy(x => x.DaysRemaining ?? int.MaxValue),
+        nameof(MedicineListItem.Name) => _sortOrderName == SortOrder.Descending
+            ? rows.OrderByDescending(x => x.Name)
+            : rows.OrderBy(x => x.Name),
+        _ => rows,
+    };
+
+    private void RestoreView(Guid? selectedId, int firstRow)
+    {
+        if (_grid.Rows.Count == 0) return;
+        if (firstRow >= 0)
+        {
+            try
+            {
+                _grid.FirstDisplayedScrollingRowIndex = Math.Min(firstRow, _grid.Rows.Count - 1);
+            }
+            catch (InvalidOperationException)
+            {
+                // The grid has no room to scroll (window being laid out).
+            }
+        }
+        if (selectedId is not { } id) return;
+        foreach (DataGridViewRow row in _grid.Rows)
+        {
+            if (row.DataBoundItem is not MedicineListItem item || item.Id != id) continue;
+            _grid.ClearSelection();
+            var cell = row.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible);
+            if (cell is not null) _grid.CurrentCell = cell;
+            row.Selected = true;
+            return;
         }
     }
 

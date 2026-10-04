@@ -4,61 +4,67 @@ using MedReminder.Domain.Medicines;
 
 namespace MedReminder.Application.DoseTimes;
 
+// What IntradayConsumption needs besides one medicine's schedule, read
+// once per screen: the instant, the time-of-day settings and the
+// medicines whose today the ledger already booked.
+public sealed record DueTodayContext(
+    DateTime LocalNow,
+    DoseTimeSettings Settings,
+    IReadOnlySet<Guid> BookedToday)
+{
+    public DateOnly Today => DateOnly.FromDateTime(LocalNow);
+}
+
 // Today's doses already due at the current time
 // (IntradayConsumption, docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md
-// §4): reads what the domain function needs besides the schedule. Shared
-// by the main list and the stock-count dialog, so the count suggests
-// the quantity the list subtracts. Load the settings once per screen
-// with LoadSettingsAsync and pass them to each call.
+// §4). Shared by the main list and the stock-count dialog, so the count
+// suggests the quantity the list subtracts. LoadAsync runs three
+// queries whatever the number of medicines; Compute is pure.
 public sealed class DueToday
 {
     private readonly IMedicationIntakeRepository _intakes;
     private readonly IStockCountRepository _counts;
-    private readonly IDoseTimePresetRepository? _presets;
+    private readonly DoseTimeSettingsQuery? _settings;
     private readonly TimeProvider _clock;
 
     public DueToday(
         IMedicationIntakeRepository intakes,
         IStockCountRepository counts,
         TimeProvider clock,
-        IDoseTimePresetRepository? presets = null)
+        DoseTimeSettingsQuery? settings = null)
     {
         _intakes = intakes;
         _counts = counts;
         _clock = clock;
-        _presets = presets;
+        _settings = settings;
     }
 
-    public async Task<DoseTimeSettings> LoadSettingsAsync(CancellationToken cancellationToken)
-        => _presets is null
-            ? DoseTimeSettings.BuiltIn
-            : await new DoseTimeSettingsQuery(_presets).LoadAsync(cancellationToken);
-
-    public DateTime LocalNow() => TimeZoneInfo.ConvertTime(_clock.GetUtcNow(), _clock.LocalTimeZone).DateTime;
-
-    public async Task<decimal> ComputeAsync(
-        Medicine medicine,
-        IReadOnlyList<MedicationScheduleHistory> schedule,
-        IReadOnlyList<MedicationSuspension> suspensions,
-        IReadOnlyList<MedicationAdministrationSlot> slots,
-        DoseTimeSettings settings,
-        CancellationToken cancellationToken)
+    public async Task<DueTodayContext> LoadAsync(CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(medicine);
-        ArgumentNullException.ThrowIfNull(settings);
-
-        var now = LocalNow();
+        var now = TimeZoneInfo.ConvertTime(_clock.GetUtcNow(), _clock.LocalTimeZone).DateTime;
         var today = DateOnly.FromDateTime(now);
+        var settings = _settings is null ? DoseTimeSettings.BuiltIn : await _settings.LoadAsync(cancellationToken);
 
         // The ledger already booked today: an intake that handles the
         // day, or a count that materialized it.
-        var booked = (await _intakes.ListForMedicineAsync(medicine.Id, cancellationToken))
-                .Any(i => i.Day == today && !i.IsExtra)
-            || (await _counts.ListForMedicineAsync(medicine.Id, cancellationToken))
-                .Any(c => c.CountDay == today && c.MaterializesCountDay);
+        var booked = new HashSet<Guid>(await _intakes.ListMedicinesWithDayIntakeAsync(today, cancellationToken));
+        booked.UnionWith(await _counts.ListMedicinesWithMaterializedCountAsync(today, cancellationToken));
 
+        return new DueTodayContext(now, settings, booked);
+    }
+
+    public static decimal Compute(
+        DueTodayContext context,
+        Medicine medicine,
+        IReadOnlyList<MedicationScheduleHistory> schedule,
+        IReadOnlyList<MedicationSuspension> suspensions,
+        IReadOnlyList<MedicationAdministrationSlot> slots)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(medicine);
         return IntradayConsumption.DueSoFar(
-            medicine, today, TimeOnly.FromDateTime(now), schedule, suspensions, slots, booked,
-            id => settings.Find(id)?.Time, settings.Defaults);
+            medicine, context.Today, TimeOnly.FromDateTime(context.LocalNow), schedule, suspensions, slots,
+            context.BookedToday.Contains(medicine.Id),
+            id => context.Settings.Find(id)?.Time, context.Settings.Defaults);
     }
 }

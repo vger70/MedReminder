@@ -265,7 +265,6 @@ public class EndToEndUseCaseTests
             await new ChangeMedicationSchedule(
                 new MedicineRepository(ctx),
                 new MedicationScheduleHistoryRepository(ctx),
-                new MedicationAdministrationSlotRepository(ctx),
                 TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 clock).ExecuteAsync(
                     new ChangeMedicationScheduleCommand(medicineId, 1m, 2, new DateOnly(2026, 9, 8)),

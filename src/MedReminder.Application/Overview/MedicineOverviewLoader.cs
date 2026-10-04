@@ -67,7 +67,7 @@ public sealed class MedicineOverviewLoader
         // the first read after start-up parses the whole file.
         EquivalenceList? equivalents = null;
         var equivalentsRead = false;
-        var doseTimes = _dueToday is null ? null : await _dueToday.LoadSettingsAsync(cancellationToken);
+        var dueContext = _dueToday is null ? null : await _dueToday.LoadAsync(cancellationToken);
         // Read once, and only when some medicine has packages.
         PackageLeadDays? leadDays = null;
 
@@ -84,9 +84,7 @@ public sealed class MedicineOverviewLoader
             // (ANALYSIS-INTRADAY-CONSUMPTION.md §4); the forecast keeps
             // the start-of-day stock, which today's whole plan still
             // starts from, so it does not count those doses twice.
-            var due = _dueToday is null || doseTimes is null
-                ? 0m
-                : await _dueToday.ComputeAsync(m, schedule, suspensions, slots, doseTimes, cancellationToken);
+            var due = dueContext is null ? 0m : DueToday.Compute(dueContext, m, schedule, suspensions, slots);
             var currentStock = Math.Max(0m, ledgerStock - due);
 
             // Shared with the therapy timeline so both views show the
