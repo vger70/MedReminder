@@ -47,6 +47,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<PackageExpiryNoticeEvent> PackageExpiryNoticeEvents => Set<PackageExpiryNoticeEvent>();
     public DbSet<DoseTimePreset> DoseTimePresets => Set<DoseTimePreset>();
     public DbSet<DoseTimeDefault> DoseTimeDefaults => Set<DoseTimeDefault>();
+    internal DbSet<Repositories.PendingDataMigration> PendingDataMigrations => Set<Repositories.PendingDataMigration>();
     public DbSet<MedReminder.Domain.Catalogue.ShortageNoticeEvent> ShortageNoticeEvents
         => Set<MedReminder.Domain.Catalogue.ShortageNoticeEvent>();
 
@@ -80,6 +81,11 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new ShortageNoticeEventConfiguration());
         modelBuilder.ApplyConfiguration(new DoseTimePresetConfiguration());
         modelBuilder.ApplyConfiguration(new DoseTimeDefaultConfiguration());
+        modelBuilder.Entity<Repositories.PendingDataMigration>(b =>
+        {
+            b.ToTable("PendingDataMigrations");
+            b.HasKey(m => m.Name);
+        });
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

@@ -8,14 +8,13 @@ namespace MedReminder.Application.Migrations;
 
 // One-time correction of the as-needed data of a profile upgraded to
 // per-slot as-needed doses (docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md
-// §5.2). Before the flag existed, a slot described as "As needed" and a
-// PRN medicine that kept its slots were consumed every day. For each
-// medicine:
+// §5.2). Before the flag existed, a slot described as "As needed" was
+// consumed every day. For each medicine:
 //   - current slots include one whose label is the "As needed" preset in
 //     any UI language, not yet flagged: a new slot set, effective today,
-//     with those slots flagged as-needed;
-//   - otherwise, schedule in force today is PRN and slots exist: a new,
-//     empty slot set effective today.
+//     with those slots flagged as-needed.
+// The slots of a PRN medicine stay: under a non-FixedDaily schedule they
+// only place the schedule's quantity, which PRN does not have.
 // Past days keep their consumption, so recorded stock counts keep their
 // value; the user recovers past over-consumption with one count.
 //
@@ -29,40 +28,31 @@ public sealed class AsNeededSlotBackfill
 {
     public const string MigrationName = "AsNeededSlots";
 
-    // Value of "Ui.AdministrationSlotDialog.Preset.AsNeeded" in every
-    // assets/localization/strings.<lang>.json (pinned by a test).
-    public static readonly IReadOnlyList<string> AsNeededPresetLabels =
-        ["As needed", "Al bisogno", "Au besoin", "Si es necesario", "Bei Bedarf"];
-
     private readonly IPendingDataMigrations _migrations;
     private readonly IMedicineRepository _medicines;
-    private readonly IMedicationScheduleHistoryRepository _schedules;
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
+    private readonly BuiltInPresetLabels _labels;
 
     public AsNeededSlotBackfill(
         IPendingDataMigrations migrations,
         IMedicineRepository medicines,
-        IMedicationScheduleHistoryRepository schedules,
         IMedicationAdministrationSlotRepository slots,
         IOperationLog operations,
         IUnitOfWork uow,
-        TimeProvider clock)
+        TimeProvider clock,
+        ILocalizationService localization)
     {
+        _labels = new BuiltInPresetLabels(localization);
         _migrations = migrations;
         _medicines = medicines;
-        _schedules = schedules;
         _slots = slots;
         _operations = operations;
         _uow = uow;
         _clock = clock;
     }
-
-    public static bool IsAsNeededLabel(string? label)
-        => label is not null
-           && AsNeededPresetLabels.Any(p => string.Equals(p, label.Trim(), StringComparison.OrdinalIgnoreCase));
 
     // Returns the number of medicines whose slots were changed.
     public async Task<int> RunAsync(CancellationToken cancellationToken)
@@ -81,10 +71,10 @@ public sealed class AsNeededSlotBackfill
             if (current is null || current.Slots.Count == 0) continue;
 
             IReadOnlyList<MedicationAdministrationSlot>? replacement = null;
-            if (current.Slots.Any(s => !s.IsAsNeeded && IsAsNeededLabel(s.TimingLabel)))
+            if (current.Slots.Any(s => !s.IsAsNeeded && _labels.IsAsNeeded(s.TimingLabel)))
             {
                 replacement = current.Slots
-                    .Select(s => (Slot: s, AsNeeded: s.IsAsNeeded || IsAsNeededLabel(s.TimingLabel)))
+                    .Select(s => (Slot: s, AsNeeded: s.IsAsNeeded || _labels.IsAsNeeded(s.TimingLabel)))
                     .Select(x => new MedicationAdministrationSlot
                     {
                         MedicineId = medicine.Id,
@@ -96,10 +86,6 @@ public sealed class AsNeededSlotBackfill
                         PresetId = x.Slot.PresetId,
                     })
                     .ToList();
-            }
-            else if (IsPrnOn(today, await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken)))
-            {
-                replacement = [];
             }
             if (replacement is null) continue;
 
@@ -141,18 +127,5 @@ public sealed class AsNeededSlotBackfill
         }
         await _migrations.CompleteAsync(MigrationName, cancellationToken);
         return changed;
-    }
-
-    // Schedule row in force on `day`: the latest EffectiveFrom, then the
-    // latest recorded (rows come in recording order), as DailyConsumption.
-    private static bool IsPrnOn(DateOnly day, IReadOnlyList<MedicationScheduleHistory> rows)
-    {
-        MedicationScheduleHistory? inForce = null;
-        foreach (var row in rows)
-        {
-            if (row.EffectiveFrom > day) continue;
-            if (inForce is null || row.EffectiveFrom >= inForce.EffectiveFrom) inForce = row;
-        }
-        return inForce?.ScheduleKind == ScheduleKind.Prn;
     }
 }

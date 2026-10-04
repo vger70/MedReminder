@@ -52,7 +52,9 @@ public sealed class ExportPayload
     // Time-of-day presets and per-day default times
     // (ANALYSIS-INTRADAY-CONSUMPTION.md §6). Additive fields of schema
     // version 2: archives without them import with the built-ins.
-    public IList<ExportedDoseTimePreset> DoseTimePresets { get; set; } = new List<ExportedDoseTimePreset>();
+    // Null in an archive written before the presets: its slots are then
+    // linked to the presets on first use (SlotPresetBackfill).
+    public IList<ExportedDoseTimePreset>? DoseTimePresets { get; set; }
     public IList<ExportedDoseTimeDefault> DoseTimeDefaults { get; set; } = new List<ExportedDoseTimeDefault>();
 
     // Per-profile notification settings (§3.2). Travels implicitly
@@ -150,9 +152,10 @@ public sealed class ExportedAdministrationSlot
     public string? TimingLabel { get; set; }
     public int Order { get; set; }
 
-    // Additive field (docs/EXPORT-FORMAT.md §5): archives without it
-    // import with false.
-    public bool IsAsNeeded { get; set; }
+    // Additive field (docs/EXPORT-FORMAT.md §5): null in an archive
+    // written before it, whose slots import as scheduled and are then
+    // corrected once (AsNeededSlotBackfill).
+    public bool? IsAsNeeded { get; set; }
 
     // Additive field: archives without it import with null.
     public Guid? PresetId { get; set; }

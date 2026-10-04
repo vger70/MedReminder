@@ -5,6 +5,7 @@ using MedReminder.Application.Migrations;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Export;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
@@ -146,5 +147,51 @@ public class AsNeededPersistenceTests
         public TestTime(DateTimeOffset now) => _now = now.ToUniversalTime();
         public override DateTimeOffset GetUtcNow() => _now;
         public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+    }
+}
+
+// Review fixes of PR #177 on real SQLite: the list reads the medicines
+// whose today is already booked in one query each.
+public class IntradayRepositoryTests
+{
+    private static readonly DateOnly Today = new(2026, 9, 13);
+
+    private static async Task<Guid> SeedMedicineAsync(MedReminderDbContext ctx)
+    {
+        var medicine = new Medicine
+        {
+            Name = "Enalapril", Unit = "compresse", StartDate = new DateOnly(2026, 9, 1),
+            DosePerAdministration = 1m, AdministrationsPerDay = 1,
+        };
+        ctx.Medicines.Add(medicine);
+        await ctx.SaveChangesAsync();
+        return medicine.Id;
+    }
+
+    [Fact]
+    public async Task Todays_booked_medicines_come_from_one_query_each()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var scheduled = await SeedMedicineAsync(ctx);
+        var extra = await SeedMedicineAsync(ctx);
+        var counted = await SeedMedicineAsync(ctx);
+        ctx.MedicationIntakes.Add(new MedicationIntake
+            { MedicineId = scheduled, Day = Today, Quantity = 1m, Status = IntakeStatus.Taken });
+        ctx.MedicationIntakes.Add(new MedicationIntake
+            { MedicineId = extra, Day = Today, Quantity = 1m, Status = IntakeStatus.Taken, IsExtra = true });
+        ctx.MedicationIntakes.Add(new MedicationIntake
+            { MedicineId = extra, Day = Today.AddDays(-1), Quantity = 1m, Status = IntakeStatus.Taken });
+        ctx.StockCounts.Add(new StockCount
+        {
+            MedicineId = counted, CountDay = Today, CountedQuantity = 5m, TakenToday = 1m, ThresholdAtCount = 7,
+            RecordedAt = new DateTimeOffset(2026, 9, 13, 20, 0, 0, TimeSpan.Zero), MaterializesCountDay = true,
+        });
+        await ctx.SaveChangesAsync();
+
+        (await new MedicationIntakeRepository(ctx).ListMedicinesWithDayIntakeAsync(Today, default))
+            .Should().Equal(scheduled);
+        (await new StockCountRepository(ctx).ListMedicinesWithMaterializedCountAsync(Today, default))
+            .Should().Equal(counted);
     }
 }

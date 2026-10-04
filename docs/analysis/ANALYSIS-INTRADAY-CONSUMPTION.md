@@ -414,12 +414,14 @@ declared intended use]`
 ## 12. Implementation phases
 
 Status: phases 1, 2 and 3 shipped in v2.14.0 (PR #177); PR #178
-follows up on the days left.
+follows up on the days left; a later PR fixes the review findings of
+#177 (last bullet).
 
 - **Backfills.** They run from `ConsumptionCatchUp` while the
-  `PendingDataMigrations` marker set by the schema patch (or by an
-  archive import) is present; imported archives are marked too, since
-  they may predate the flags.
+  `PendingDataMigrations` marker set by the schema patch is present. An
+  imported archive is marked only when it was written before the data
+  the backfill corrects: slots without `isAsNeeded`, or no
+  `doseTimePresets`. An archive written since keeps the user's choices.
 - **Presets (phase 2).** Deviation from §9: the presets have their own
   window (Therapy → Dose times…) instead of a page of the settings
   dialog. Built-in presets live in code and the table stores only the
@@ -440,12 +442,30 @@ follows up on the days left.
   monitor keeps the recorded stock, so on the day a threshold is
   crossed the list can show the warning status a few hours before the
   notification.
+- **Review of #177.**
+  - PRN: §5.2 no longer applies. Since `ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md`,
+    slots under a non-FixedDaily schedule only place its quantity, and
+    PRN has none. The change to PRN therefore no longer touches the
+    slots, and neither does the backfill. Clearing them dropped as-needed
+    slots the edit dialog had just saved, and a PRN change dated later
+    emptied today's slots at once.
+  - The list's refresh: the catch-up after midnight runs on whichever
+    load comes first; a refresh overtaken by a reload is discarded;
+    activation refreshes at most every 30 seconds; a change of status or
+    days left applies the card filter and the sort again, keeping the
+    selection and the scroll.
+  - `DueToday` reads the booked days of all medicines in one query each
+    instead of every intake and count of each medicine.
+  - The as-needed marker of the low-stock email is in the email's
+    language.
+  - The backfills read the preset texts from the dictionaries instead
+    of copies in the code.
 
 Each phase is shippable and tested on its own.
 
 1. **As-needed (P2)** — changes stored stock from today, so it ships
    first: slot and intake fields, `RateOn`, ledger rule 2 with
-   `IsExtra`, change-schedule to PRN clears slots, backfill, reminder
+   `IsExtra`, backfill, reminder
    and coverage changes, slot and intake dialogs, sync and export.
 2. **Presets** — table, seeding, `PresetId` backfill, settings page,
    slot dialog combo.

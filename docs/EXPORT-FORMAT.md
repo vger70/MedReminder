@@ -226,7 +226,7 @@ numbers.
 | `time` | TimeOnly? | |
 | `timingLabel` | string? | |
 | `order` | int | |
-| `isAsNeeded` | bool | as-needed dose, never consumed automatically. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false` |
+| `isAsNeeded` | bool | as-needed dose, never consumed automatically. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false`, and their slots described "As needed" are flagged once from the day of the import, as on an upgraded database |
 | `presetId` | Guid? | time-of-day preset the description was picked from (§3.16). Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `null` |
 
 ### 3.5 `medicationSuspensions[]`
@@ -385,7 +385,8 @@ Time-of-day presets and the default times of medicines without slots
 (`docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md` §4.2, §6). Display
 only: they place doses in the day and never change stock. Added after
 `schemaVersion` 2 shipped, as additive fields (§5): archives without
-them import with the built-in presets and times.
+them import with the built-in presets and times, and their slots are
+linked once to the built-in preset their description names.
 
 `doseTimePresets[]`: only built-ins the user changed and presets the
 user added.

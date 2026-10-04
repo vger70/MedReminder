@@ -21,6 +21,15 @@ internal sealed class StockCountRepository : IStockCountRepository
             .OrderBy(c => c.RecordedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Guid>> ListMedicinesWithMaterializedCountAsync(
+        DateOnly day, CancellationToken cancellationToken)
+        => await _db.StockCounts
+            .AsNoTracking()
+            .Where(c => c.CountDay == day && c.MaterializesCountDay)
+            .Select(c => c.MedicineId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(StockCount count, CancellationToken cancellationToken)
         => await _db.StockCounts.AddAsync(count, cancellationToken);
 

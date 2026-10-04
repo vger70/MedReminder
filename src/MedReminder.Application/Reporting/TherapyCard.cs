@@ -63,7 +63,6 @@ public static class TherapyCardBuilder
     private const string ColumnNotesEn = "Notes";
     private const string PeriodFromEn = "from {0}";
     private const string PeriodUntilEn = "until {0}";
-    private const string AsNeededEn = "as needed";
 
     public static TherapyCard Build(
         IReadOnlyList<TherapyReportEntry> entries,
@@ -179,17 +178,7 @@ public static class TherapyCardBuilder
         {
             text += " (" + t.ToString("HH:mm", c) + ")";
         }
-        if (slot.IsAsNeeded)
-        {
-            // Not repeated when the label already says it (the "As
-            // needed" preset).
-            var marker = loc?.Get("Reports.Therapy.AsNeeded") ?? AsNeededEn;
-            if (!string.Equals(slot.TimingLabel?.Trim(), marker, StringComparison.OrdinalIgnoreCase))
-            {
-                text += " (" + marker + ")";
-            }
-        }
-        return text;
+        return text + SlotTexts.AsNeededSuffix(slot, loc);
     }
 
     // Sorts slots with an explicit time first (chronological order),

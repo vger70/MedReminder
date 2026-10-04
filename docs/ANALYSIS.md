@@ -307,12 +307,15 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   intake (`IsExtra`) books its quantity and is otherwise ignored: it
   never handles its day for automatic consumption, the frozen-day
   reversal or a count-day materialization.
-- Switching a medicine to `Prn` (`ChangeMedicationSchedule`) records an
-  empty slot set from the same day, since (under FixedDaily) slots take precedence over
-  the schedule.
-- One-time data migrations that need Application logic are marked by
-  the schema patch, or by an archive import, in `PendingDataMigrations`
-  and run by `ConsumptionCatchUp` before it derives:
+- Switching a medicine to `Prn` (`ChangeMedicationSchedule`) leaves its
+  slots as they are: under a non-FixedDaily schedule they only place the
+  schedule's quantity in the day, and PRN has none, so they are not
+  consumed, reminded or estimated; as-needed slots keep their meaning.
+- One-time data migrations that need Application logic are marked in
+  `PendingDataMigrations` (a table of the model) by the schema patch
+  that upgrades a database, or by the import of an archive written
+  before the data they correct, and run by `ConsumptionCatchUp` before
+  it derives:
   `AsNeededSlotBackfill` (slots described "As needed" in any language
   become as-needed from today, through a new slot set with
   deterministic ids, so past days and recorded counts do not change)

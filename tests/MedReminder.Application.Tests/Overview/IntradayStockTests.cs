@@ -18,7 +18,7 @@ public class IntradayStockTests
     private static DateTimeOffset At(int day, int hour, int minute = 0) => new(2026, 9, day, hour, minute, 0, TimeSpan.Zero);
 
     private static DueToday Due(ApplicationTestScope scope)
-        => new(scope.Intakes, scope.Counts, scope.Clock, scope.DoseTimePresets);
+        => new(scope.Intakes, scope.Counts, scope.Clock, new DoseTimeSettingsQuery(scope.DoseTimePresets));
 
     private static async Task<MedicineListItem> RowAsync(ApplicationTestScope scope, Guid id)
     {
@@ -76,6 +76,30 @@ public class IntradayStockTests
         after.CurrentStock.Should().Be(100m);
         after.DaysRemaining.Should().Be(100, "the days fully covered after today's dose");
         after.EstimatedRunOutDate.Should().Be(before.EstimatedRunOutDate);
+    }
+
+    [Fact]
+    public async Task The_days_left_and_the_status_follow_the_stock_shown()
+    {
+        // Two tablets left at the start of the day, one at 08:00 and one at
+        // 20:00: at 21:00 the row shows 0, Empty and 0 days, never 1 day.
+        var scope = new ApplicationTestScope(At(13, 7));
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Enalapril", "compresse", 1m, 2, new DateOnly(2026, 9, 13), 7, NotificationChannels.Windows,
+            InitialQuantity: 2m,
+            AdministrationSlots:
+            [
+                new AdministrationSlotInput(1m, new TimeOnly(8, 0), null),
+                new AdministrationSlotInput(1m, new TimeOnly(20, 0), null),
+            ]), default);
+
+        scope.Clock.SetUtcNow(At(13, 21));
+        var row = await RowAsync(scope, id);
+
+        row.LedgerStock.Should().Be(2m);
+        row.CurrentStock.Should().Be(0m);
+        row.DaysRemaining.Should().Be(0);
+        row.Status.Should().Be(MedicineRowStatus.Empty);
     }
 
     [Fact]

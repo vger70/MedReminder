@@ -39,14 +39,21 @@ internal static class ProfileDatabaseBuilder
         // omit newer columns, which take their defaults (§4.3).
         await db.Database.EnsureCreatedAsync(cancellationToken);
 
-        // The archive may come from a version before the as-needed flag
-        // and the presets: its slots are corrected on first use
-        // (AsNeededSlotBackfill, SlotPresetBackfill, both idempotent).
-        await db.Database.ExecuteSqlRawAsync(PendingDataMigrations.CreateTableSql, cancellationToken);
-        await db.Database.ExecuteSqlRawAsync(
-            PendingDataMigrations.MarkPendingSql, [AsNeededSlotBackfill.MigrationName], cancellationToken);
-        await db.Database.ExecuteSqlRawAsync(
-            PendingDataMigrations.MarkPendingSql, [SlotPresetBackfill.MigrationName], cancellationToken);
+        // An archive written before the as-needed flag or the presets has
+        // its slots corrected on first use, as an upgraded database; one
+        // written since carries both and is imported as it is, so the
+        // user's choices stay (an "As needed" slot left unticked, PRN
+        // slots).
+        if (payload.MedicationAdministrationSlots.Any(s => s.IsAsNeeded is null))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                PendingDataMigrations.MarkPendingSql, [AsNeededSlotBackfill.MigrationName], cancellationToken);
+        }
+        if (payload.DoseTimePresets is null && payload.MedicationAdministrationSlots.Count > 0)
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                PendingDataMigrations.MarkPendingSql, [SlotPresetBackfill.MigrationName], cancellationToken);
+        }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
