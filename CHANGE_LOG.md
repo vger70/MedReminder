@@ -30,6 +30,17 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #198 — Add implementation prompt for the guided setup
+
+Link: [vger70/MedReminder#198](https://github.com/vger70/MedReminder/pull/198)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-GUIDED-SETUP.md`: brief for a skippable guided setup after a new installation, from an empty list or from Help (who the medicines are for, first medicines through the existing dialog, warning lead time and channel, user and caregiver email, summary); device-local settings only, no schema, sync or export change.
+
+---
+
 ## PR #197 — Add repeatable prescriptions with several dispensations
 
 Link: [vger70/MedReminder#197](https://github.com/vger70/MedReminder/pull/197)
@@ -56,7 +67,22 @@ Branch: `claude/brave-turing-e4a7z7` → `main`
 
 ---
 
+## PR #196 — Add implementation prompt for regional prescription services
+
+**Status:** merged (2026-10-04)
+
+Link: [vger70/MedReminder#196](https://github.com/vger70/MedReminder/pull/196)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md`: brief for a button that opens the profile's regional prescription service (browser, or QR code for the phone app) and a "Paste NRE" field; sign-in with SPID, CIE or TS-CNS stays on the regional service, no embedded browser; regional list as a hand-maintained dated feed with a monthly URL check, region as a replicated profile setting. It missed PR #195, which merged first.
+
+---
+
 ## PR #195 — Add implementation prompt for repeatable prescriptions
+
+**Status:** merged (2026-10-04)
 
 Link: [vger70/MedReminder#195](https://github.com/vger70/MedReminder/pull/195)
 Branch: `claude/project-thread-i2a3y8` → `main`
