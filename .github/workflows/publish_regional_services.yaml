@@ -1,0 +1,105 @@
+name: Publish regional services list
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/feeds/regional_services_it.json'
+  schedule:
+    # Monthly: request every URL of the list and open an issue listing
+    # the ones that fail. The check never edits the list.
+    - cron: '41 5 3 * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Republish the list even if already published'
+        type: boolean
+        default: false
+      check_urls:
+        description: 'Check the URLs and report the failures instead of publishing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+# One run of this feed at a time (see download_aifa_shortages.yaml).
+concurrency:
+  group: feed-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # A push of the source, or a manual run: validate and publish.
+    if: github.event_name != 'schedule' && !inputs.check_urls
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Load the published feeds
+        run: |
+          bash scripts/feeds/feeds_branch.sh load
+
+      - name: Generate files
+        env:
+          FORCE_REFRESH: ${{ inputs.force }}
+        run: |
+          python scripts/feeds/regional_services.py
+
+      - name: Publish to the feeds branch
+        # A run dispatched from another branch must not replace what
+        # clients download. No mirror to main: no release reads this
+        # list from main/data/.
+        if: github.ref_name == github.event.repository.default_branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          bash scripts/feeds/feeds_branch.sh publish "Regional services list update $(date -u +%Y%m%d)" \
+            "data/it/regional-services"
+
+  check-urls:
+    # Monthly, or a manual run with check_urls ticked.
+    if: github.event_name == 'schedule' || inputs.check_urls
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Check the URLs
+        run: |
+          python scripts/feeds/regional_services.py --check-urls "$RUNNER_TEMP/regional-services-report.md"
+
+      - name: Open an issue for the failing URLs
+        # One open issue at a time: a later failing check comments on it.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          report="$RUNNER_TEMP/regional-services-report.md"
+          [ -s "$report" ] || { echo "Every URL answered."; exit 0; }
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          title="Regional services list: URLs that do not answer"
+          existing="$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file "$report"
+          else
+            gh issue create --title "$title" --body-file "$report"
+          fi

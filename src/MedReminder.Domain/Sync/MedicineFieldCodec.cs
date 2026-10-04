@@ -10,8 +10,8 @@ namespace MedReminder.Domain.Sync;
 // culture-invariant text form. Operations carry field values as text, so
 // last-writer-wins per field needs one rule for every field.
 //
-// Not listed, and why: IsActive (activity history), StartDate
-// (immutable), DosePerAdministration and AdministrationsPerDay (derived
+// Not listed, and why: IsActive (activity history), StartDate (its own
+// operation, MedicineStartChanged), DosePerAdministration and AdministrationsPerDay (derived
 // from the schedule history), StockEpoch, LedgerBaselineEpoch and
 // StockEpochFactId (derived), CreatedAt and UpdatedAt (local metadata).
 //

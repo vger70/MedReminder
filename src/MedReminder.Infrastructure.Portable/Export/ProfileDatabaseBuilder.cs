@@ -1,5 +1,7 @@
 using MedReminder.Application.Export;
+using MedReminder.Application.Migrations;
 using MedReminder.Infrastructure.Persistence;
+using MedReminder.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -37,6 +39,22 @@ internal static class ProfileDatabaseBuilder
         // omit newer columns, which take their defaults (§4.3).
         await db.Database.EnsureCreatedAsync(cancellationToken);
 
+        // An archive written before the as-needed flag or the presets has
+        // its slots corrected on first use, as an upgraded database; one
+        // written since carries both and is imported as it is, so the
+        // user's choices stay (an "As needed" slot left unticked, PRN
+        // slots).
+        if (payload.MedicationAdministrationSlots.Any(s => s.IsAsNeeded is null))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                PendingDataMigrations.MarkPendingSql, [AsNeededSlotBackfill.MigrationName], cancellationToken);
+        }
+        if (payload.DoseTimePresets is null && payload.MedicationAdministrationSlots.Count > 0)
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                PendingDataMigrations.MarkPendingSql, [SlotPresetBackfill.MigrationName], cancellationToken);
+        }
+
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
         // Parents first (Medicines), then dependents — every dependent
@@ -55,6 +73,13 @@ internal static class ProfileDatabaseBuilder
         db.NotificationEvents.AddRange(payload.NotificationEvents.Select(ExportMapper.ToEntity));
         db.DoseReminderEvents.AddRange(payload.DoseReminderEvents.Select(ExportMapper.ToEntity));
         db.StockCounts.AddRange(payload.StockCounts.Select(ExportMapper.ToEntity));
+        db.Prescriptions.AddRange((payload.Prescriptions ?? []).Select(ExportMapper.ToEntity));
+        db.PrescriptionDispensations.AddRange(
+            (payload.Prescriptions ?? []).SelectMany(ExportMapper.ToDispensationEntities));
+        db.Deadlines.AddRange((payload.Deadlines ?? []).Select(ExportMapper.ToEntity));
+        db.StockPackages.AddRange((payload.StockPackages ?? []).Select(ExportMapper.ToEntity));
+        db.DoseTimePresets.AddRange((payload.DoseTimePresets ?? []).Select(ExportMapper.ToEntity));
+        db.DoseTimeDefaults.AddRange((payload.DoseTimeDefaults ?? []).Select(ExportMapper.ToEntity));
         if (payload.LedgerCutoff is not null)
         {
             db.LedgerCutoffs.Add(ExportMapper.ToEntity(payload.LedgerCutoff));

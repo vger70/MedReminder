@@ -28,11 +28,13 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
      [Edit, deactivate, delete](#edit-medicine)
 3. [Find a medicine: catalogue and barcode](#catalogue)
 4. [Stock](#stock)
-   - [Add a package](#add-package) · [Register an intake](#intake) ·
+   - [Add a package](#add-package) · [Packages and expiry](#packages) ·
+     [Register an intake](#intake) ·
      [Correct stock](#correct) · [Count stock](#count) ·
      [History](#history)
 5. [Timeline, report and prescription requests](#documents)
 6. [Notifications and email](#notifications)
+   - [Email settings for common providers](#smtp-providers)
 7. [Several people: profiles and roles](#profiles)
 8. [Protect your data: backup and export](#backup)
 9. [Several computers](#devices)
@@ -66,11 +68,12 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
 3. The main window opens. The MedReminder icon in the Windows
    notification area (near the clock) stays visible while the app runs.
 
-**Windows SmartScreen.** The program is not code-signed. On the very
-first launch Windows may show a blue "Windows protected your PC"
+**Windows SmartScreen.** The program is code-signed with a Certum
+certificate. Until the certificate has built up reputation, on the very
+first launch Windows may still show a blue "Windows protected your PC"
 window: click **More info**, then **Run anyway**. Windows remembers the
-choice. If you install from the MSI package, the permission window says
-"Unknown Publisher" for the same reason.
+choice. If you install from the MSI package, the permission window
+shows the verified publisher.
 
 <a id="main-window"></a>
 ### The main window
@@ -80,14 +83,16 @@ choice. If you install from the MSI package, the permission window says
 - **Toolbar** below the menus: *New medicine*, *Register intake* and a
   search box on the right (**Ctrl+F**) that filters the list by name.
 - **Navigation** on the left: *Medicines* (this list), then *Therapy
-  timeline*, *Therapy report*, *Request prescription*, *Installation*
+  timeline*, *Therapy report*, *Request prescription*, *Plan supply*, *Prescriptions*, *Administrative deadlines*, *Installation*
   (administrators) and *Settings*, which open their own windows. In a
   narrow window it shows icons only.
 - **Summary** above the list: how many medicines are *Empty*, *Running
   low*, *Suspended*, and all of them. Click a box to show only those
   medicines; click it again to show all.
 - **Medicine list** in the middle: one row per medicine, with the stock,
-  the days remaining and the estimated run-out date. The **Status**
+  the days remaining and the estimated run-out date. During the day the
+  stock and the days remaining already leave out today's doses whose
+  time has passed ([details](#stock-estimate)). The **Status**
   column shows the state as a coloured label. Right-click a row for the
   commands on that medicine (edit, register intake, add package…);
   double-click or **F2** edits it.
@@ -107,9 +112,15 @@ right-click the icon and choose **Exit**.
 | Change dose or frequency | **Therapy → Change dose/frequency…** |
 | Record a purchased package | **Stock → Add package…** or **Stock → Restock from barcode…** |
 | Fix the stock to what I really have | **Stock → Count stock…** |
+| Record a dose taken as needed | **Therapy → Register intake…** (option *Extra dose as needed* when the medicine also has scheduled doses) |
+| Change the time of "In the morning", "Before lunch"… | **Therapy → Dose times…** |
 | Undo a mistaken entry | **Stock → History…** |
 | Print the therapy for a doctor | **Therapy → Therapy report…** |
 | Ask for a prescription | **Therapy → Request prescription…** |
+| Keep track of a prescription until the pharmacy | **Therapy → Prescriptions…** |
+| Be reminded of a therapeutic plan, an exemption or a check-up | **Therapy → Administrative deadlines…** |
+| See the coming dates in Outlook, Google Calendar or on the phone | **Therapy → Export to calendar…** |
+| Check the stock for a trip or until the next pharmacy visit | **Therapy → Plan supply…** |
 | Set up email, language, backup | **Tools → Settings…** |
 | Add a person | **Tools → Manage profiles…** (administrator) |
 | Use MedReminder on another PC | **Tools → Sync…** and **Tools → Installation…** (administrator) |
@@ -156,6 +167,26 @@ therapy report, and timed slots can remind you at dose time.
 
 Without slots, the medicine uses "dose × administrations per day".
 
+A dose taken only when needed (for example a painkiller for a
+headache) is marked **As needed** in the slot window: the *As needed*
+description ticks it for you. An as-needed dose is never deducted
+automatically and is not part of the daily total: the stock decreases
+only when you register the intake. If every slot of a medicine is as
+needed, the medicine behaves like an *As needed (PRN)* schedule.
+
+From the version that introduced this option, slots described as "As
+needed" are treated as as-needed from that day on. Before, they were
+deducted every day: if the stock shown is lower than the real one, do a
+[count](#count) to realign it.
+
+**Therapy → Dose times…** lists the moments of the day with their time
+("In the morning" = 08:00, "Before lunch" = 13:00, …) and the times
+used for medicines without slots (1 a day = 08:00, 2 a day = 08:00 and
+20:00, …). You can change the times, hide the moments you do not use
+and add your own; in the slot window, picking a moment shows its time.
+These times only place doses in the day and never change the stock
+recorded. They apply to this computer: they are not synchronized.
+
 <a id="regimens"></a>
 ### Complex regimens
 
@@ -172,6 +203,13 @@ window, set **Schedule** to **Advanced** and choose a **Regime type**:
 
 With **Advanced**, the dose fields at the top of the window are not
 used. Switch back to **Simple** for a fixed daily dose.
+
+**Administration times also work with Advanced.** The schedule sets how
+much to take each day; the [administration times](#slots) set when. The
+day's quantity is split among the times in proportion to their doses:
+with two times of 1 each, a tapering day of 4 gives 2 + 2, a day of 1
+gives 0.5 + 0.5. On a cyclic pause day nothing is due and no reminder
+is shown.
 
 **The therapy changes?** Use **Therapy → Change dose/frequency…** and
 pick the **Effective from** date. The old schedule stays valid for the
@@ -241,7 +279,7 @@ the whole **European Union** (EMA).
   device. With IT, ES or FR the list also contains the EU medicines;
   with **EU** it contains only those. A medicine may appear twice
   (national and EU): pick the one that matches your box.
-- **Automatic updates.** When **Check for updates automatically
+- **Automatic updates.** When **Check for app and catalogue updates
   (GitHub)** is on (Settings → General), MedReminder downloads at start,
   and once a day while it stays open, the latest monthly list of your
   country and the EU list, if newer. Without an internet connection
@@ -289,6 +327,62 @@ box and the matching medicine opens in the stock window, already set to
 *New package* with the usual quantity. If no medicine has that code,
 you can add a new medicine or link the code to an existing one.
 
+### Medicines in shortage (Italy)
+
+With Italy as reference country, MedReminder downloads the AIFA list of
+medicines in shortage together with the catalogue (at startup and once
+a day, when **Check for app and catalogue updates** is on). A medicine
+whose package (AIC code, filled in from the catalogue or the barcode)
+is on the list shows in the **Supply** column of the list:
+
+- *In shortage*: AIFA lists the package as hard to find;
+- *Shortage from …*: AIFA announces a shortage from that date.
+
+Hover over the cell to read the start, the expected end (often not
+communicated, and it may change), the reason, whether AIFA reports
+equivalent medicines, and the date of the list. You also get one
+notification per shortage, on the medicine's channels.
+
+The shortage message itself names no substitute: ask your doctor or
+pharmacist, and request the prescription in good time. When the package
+is also in the AIFA transparency list, the cell points to **Equivalent
+medicines (AIFA)** (see below).
+
+### Information links and equivalent medicines (Italy)
+
+For a medicine with an Italian package code (AIC), the **Information**
+row of the medicine window offers up to four links:
+
+- **Package leaflet** and **Summary of product characteristics**: the
+  AIFA documents, with Italy as reference country, when the catalogue
+  has them;
+- **Codifa page**: the public page of the package on codifa.it
+  (composition, class, dispensing, price where known), opened in the
+  browser. It works with any reference country;
+- **Equivalent medicines**: shown when the package is in the AIFA
+  transparency list.
+
+The same two last commands are in the context menu of the list
+(right-click on a medicine): **Equivalent medicines (AIFA)…** and
+**Open Codifa page**. They are greyed out for a medicine without AIC.
+
+**Equivalent medicines (AIFA).** With Italy as reference country,
+MedReminder downloads the AIFA transparency list together with the
+catalogue (monthly list, checked once a day). The window shows the
+group of the package (active ingredient, units, strength, route), the
+reference price of the national health service and every package of
+the group, cheapest first, with its public price, the difference you
+pay over the reference price, its supply state, whether you already
+have it at home in another medicine of the profile, and the AIFA note
+verbatim. A note can restrict the substitution (for example "not
+substitutable with …"): read it. Your medicine is in bold.
+
+A package missing from the list is not "without equivalents": it may
+be patented, in class C or simply not listed. Substitution is decided
+by your doctor and pharmacist; the list does not consider excipients or
+allergies. Class C medicines have no public price list and show no
+price.
+
 ---
 
 <a id="stock"></a>
@@ -296,6 +390,16 @@ you can add a new medicine or link the code to an existing one.
 
 MedReminder lowers the stock by itself every day according to the
 schedule. You only record what changes the stock in another way.
+
+<a id="stock-estimate"></a>
+During the day the stock column shows an estimate: the stock at the
+start of the day minus today's doses whose time has passed. Slots
+without a time use the time of their moment (**Therapy → Dose
+times…**); a slot with a typed description and no time is counted at
+the end of the day. Hovering over the stock shows the start-of-day
+value. The recorded stock, the history and the run-out date are
+updated after midnight, while the days left follow the stock shown; when you register an intake, that day counts
+the quantity you registered.
 
 <a id="add-package"></a>
 ### Add a package
@@ -311,6 +415,56 @@ schedule. You only record what changes the stock in another way.
 A new package restarts the warning cycle: when the stock falls below
 the threshold again, you get a new warning.
 
+With **New package** you can also record the expiry; every field is
+optional:
+
+- **Packages** — how many identical boxes you bought; the quantity is
+  split between them.
+- **Expiry (month/year)** — tick the box and choose month and year as
+  printed. An expiry of `03/2027` is good until 31 March 2027.
+- **Use within … days of opening** — for eye drops, syrups, insulin in
+  use and the like, as the leaflet says; 0 if there is none. The value
+  of the medicine's latest package is proposed.
+- **Opened today** — if you open the first box right away.
+- **Batch** — optional.
+
+With **Stock → Restock from barcode…** a DataMatrix code fills in expiry
+and batch by itself. If you leave all these fields empty, the package
+only adds quantity, as before.
+
+<a id="packages"></a>
+### Packages and expiry
+
+**Stock → Packages and expiry…** (also from the right-click menu) lists
+the boxes of the selected medicine with status, printed expiry, opening
+date, use-until date and quantity in stock.
+
+- A package expires at the end of the printed month, or earlier once it
+  is open and its days after opening run out (opened on 1 March, 28
+  days: use until 28 March).
+- The app assumes the open package is used first, then the ones that
+  expire first. Those the stock no longer covers are **Used up** and
+  give no warning, even if you never mark them finished. If you use the
+  boxes in another order, mark the one in use with **Opened today** or
+  close the right one.
+- **New…** records a box you already have in the cabinet, without
+  changing the stock.
+- **Opened today**, **Finished**: update the package; the stock does not
+  change.
+- **Discard…**: for a box thrown away, typically expired. The quantity
+  left (proposed by the app) is removed from the stock. A discard is
+  final: if you made a mistake, delete the package and add the units
+  back with a positive correction.
+- **Delete**: only for a package entered by mistake; the stock does not
+  change.
+
+The **Expiry** column of the main window shows the first expiry among
+the packages in stock, with *(expired)* or *(expires soon)*. **Stock →
+Expiring packages…** gathers the expired and expiring packages of every
+medicine, including those no longer in use, expired first; **Open
+packages…** opens the ones of the chosen medicine. For the notices see
+[Notifications and email](#notifications).
+
 <a id="intake"></a>
 ### Register an intake
 
@@ -319,6 +473,12 @@ intake as **Taken**, **Skipped** or **Cancelled**, with the day and the
 quantity. You do not need it on normal days. Use it when a day differs
 from the schedule: once you register an intake for a day, that day's
 automatic deduction is replaced by what you registered.
+
+For a dose on top of the schedule, for example an as-needed one, tick
+**Extra dose as needed**: the quantity is deducted and the day's
+scheduled doses still count. The option appears only for medicines with
+a schedule and is already ticked when the medicine has an as-needed
+slot.
 
 <a id="correct"></a>
 ### Correct stock
@@ -337,7 +497,9 @@ the app fix it:
 2. Type the **Counted quantity**. The window shows the expected stock,
    the difference and how the run-out date changes.
 3. In **Already taken today**, enter what you had already taken today
-   when you counted (the app suggests the doses whose time has passed).
+   when you counted. The app suggests the doses whose time has passed,
+   the same ones the list already left out of the stock; slots without
+   a time use the time of their moment.
 4. Click **Record count**.
 
 The app records one correction so that the stock equals what you
@@ -390,6 +552,28 @@ ingredient, dosage, therapy period, doctor.
 
 MedReminder keeps no copy of what you save or print.
 
+### Plan supply (trip or pharmacy visit)
+
+**Therapy → Plan supply…** answers the question "do I have enough until
+…?". Choose the period with **From** and **To**, for example the days
+of a trip or the days until your next visit to the pharmacy (default:
+the next 14 days, today included). For each active medicine the window
+shows:
+
+- **Needed in the period**: the quantity the period uses, following the
+  schedule, suspensions, the therapy end date and the administration
+  times;
+- **Stock at the start**: the stock today minus the expected use until
+  the period starts (*runs out before* if nothing will be left);
+- **Missing**: what the period needs beyond that stock, or *covered*;
+- **Packages to get**: how many packages cover what is missing, sized
+  like the last new package you recorded (— if none was recorded).
+
+Medicines that are not covered are listed first. As-needed medicines
+are shown but not computed, since their use is not planned. **Print…**,
+**Save as PDF…** and **Copy to clipboard** work as for the therapy
+report. The window changes nothing: the figures are estimates.
+
 ### Request a prescription
 
 Select a medicine, then **Therapy → Request prescription…**. MedReminder
@@ -408,6 +592,143 @@ everything before sending.
 
 MedReminder never sends a request by itself.
 
+### Follow a prescription to the pharmacy
+
+**Therapy → Prescriptions…** lists the prescriptions you recorded, the
+ones still to collect first. For each one you can note, when you know
+them:
+
+- **Requested on**: when you asked the doctor. **Mark as requested** in
+  the request window records it for you with today's date;
+- **Issued on**, **Prescription code** and **Packages**: from the
+  prescription the doctor issued;
+- **Valid until**: the last day the pharmacy accepts it. It is filled
+  in for 30 days from the issue date, the usual validity of an Italian
+  electronic prescription; check it against your prescription and
+  change it if it differs;
+- **Collected on**: when you took it to the pharmacy. **Collected
+  today** does it in one click. When you add a new package of a
+  medicine with a prescription still to collect, MedReminder asks
+  whether the package came from it.
+
+A prescription that is issued and not collected is *To collect*; after
+its last valid day it is *Expired*. From 3 days before that day you
+get a reminder, once, through the medicine's notification channels
+(the email only from the [master device](#master) when the
+installation is shared). The reminder does not include the code.
+
+Prescriptions are copied to the other PCs of a synced profile and
+included in the encrypted export.
+
+### Repeatable prescriptions
+
+Some prescriptions cover several dispensations at the pharmacy over a
+long validity, for example a year of therapy collected one month at a
+time. Tick **Repeatable prescription** in the prescription window to
+record one as a single prescription:
+
+- **Dispensations allowed**: how many times the pharmacy dispenses it
+  (2 to 12);
+- **Valid until** is filled in for 12 months from the issue date; check
+  it against your prescription and change it if it differs;
+- **Dispensations collected** replaces *Collected on*: add each
+  dispensation with the day and, if you know it, the number of packages.
+  **Collected today** in the list records one in one click, and after a
+  new package MedReminder offers to record it with today's date.
+
+The list shows the dispensations as collected / allowed, for example
+`3 / 12`. A repeatable prescription stays *To collect* while
+dispensations are left and its validity lasts; it is *Collected* once
+all are collected and *Expired* if the validity ends first. When the
+stock runs low, the warning says how many dispensations are left and
+until when, instead of suggesting a new prescription, and its button
+opens the prescription. The reminder before *Valid until* comes only
+while dispensations are left and says how many would be lost.
+MedReminder does not check the interval between dispensations: follow
+your pharmacist's indications.
+
+On synced PCs, update MedReminder on every PC of the profile before
+recording a repeatable prescription: an older version stops syncing
+until it is updated.
+
+### Regional prescription service
+
+With Italy as reference country, **Therapy → Prescriptions…** and the
+prescription request window have a **Regional prescription service**
+button. It opens the service of your region where the electronic
+prescriptions issued to you are shown, so you can copy the
+prescription number instead of waiting for it.
+
+- The first time, choose your region or autonomous province. It is
+  saved with the profile; change it from the button (**Change region…**)
+  or in Settings → Notifications.
+- **Open in browser** opens the regional portal in your usual browser.
+- **Open on phone** shows a QR code of the regional app, or of the
+  portal when there is no app: scan it with the phone camera and sign
+  in on the phone.
+
+The line under the button names the service and how to sign in (SPID,
+CIE or TS-CNS). You sign in on the regional service, never in
+MedReminder: MedReminder does not see your credentials or your health
+record and imports nothing from it. A caregiver signs in with their
+own credentials and a delegation set up on the regional service. When
+no service is listed for your region, open the health record portal
+(Fascicolo Sanitario Elettronico) of your region yourself.
+
+**Paste NRE**, next to **Prescription code** in the prescription
+window, writes the electronic prescription number (NRE, 15 letters or
+digits) you copied from the regional service, without spaces, and
+fills an empty **Issued on** with today. MedReminder reads the
+clipboard only when you click it.
+
+### Administrative deadlines
+
+**Therapy → Administrative deadlines…** keeps the dates that are not
+about stock: the renewal of a therapeutic plan or of an exemption, a
+periodic check-up, or anything else you describe. For each deadline:
+
+- **Kind** and **Description**: the description is optional, except
+  for the kind *Other*;
+- **Medicine**: the medicine it concerns, or *(none)* for a deadline of
+  the whole profile;
+- **Date** and **Remind days before**: the reminder starts that many
+  days before the date (14 by default);
+- **Repeat every … months**: for a deadline that comes back, such as a
+  yearly renewal;
+- **Notify by**: Windows notification and/or email.
+
+MedReminder has no rule of its own for these dates: validity periods
+differ by plan and region, so enter the date printed on your
+documents.
+
+From the notice period on, you get one reminder per date, through the
+channels you chose (the email only from the [master device](#master)
+when the installation is shared); an overdue deadline is shown in red.
+**Done** closes a one-off deadline; a recurring one moves to its next
+date, counted from the previous date, not from the day you marked it.
+
+Deadlines are copied to the other PCs of a synced profile and included
+in the encrypted export.
+
+### Export the dates to a calendar
+
+**Therapy → Export to calendar…** saves an `.ics` file with the coming
+dates: for each active medicine the day to request the prescription
+(the run-out date minus the warning threshold) and the run-out date,
+the last day to collect each prescription and the open administrative
+deadlines. Open the file with Outlook, Google Calendar or the calendar
+of your phone. The events are reminders, not appointments: they do not
+make you busy. Exporting again later updates the same events instead of
+adding copies.
+
+Calendars are often stored online by another company, so the events
+only say what to do ("MedReminder: a medicine runs out"). Tick
+**Include medicine names and deadline descriptions** if you want the
+names in the calendar; the choice is asked at every export.
+
+Each low-stock email also carries the run-out date as a calendar file
+(`medreminder.ics`), with the same generic title.
+
 ---
 
 <a id="notifications"></a>
@@ -418,7 +739,30 @@ MedReminder never sends a request by itself.
 - Every 30 minutes MedReminder checks the medicines. When a medicine
   falls below its **warning threshold**, it warns you **once**, through
   the channels chosen for that medicine: a Windows notification and/or
-  an email. After a new package the cycle starts again.
+  an email.
+  The check uses the recorded stock, not the list's estimate: on the
+  day the threshold is crossed, the list can show *Running low* a few
+  hours before the warning.
+- If no new package has been added when the days left reach **half of
+  the threshold**, a **second reminder** follows on the same channels
+  (with a threshold of 10 days: first warning at 10 days, second at 5).
+  A medicine that is already below half when it is first checked gets
+  only the second reminder. After a new package the cycle starts again.
+- **Package expiry**: a package recorded with an expiry gives an
+  *expires soon* notice 30 days before the printed expiry (3 days
+  before the end of the period after opening) and an *expired* notice
+  the day after, once each, on the medicine's channels, even when the
+  medicine is no longer in use. Used-up or closed packages give no
+  notice. The lead days are changed in **Tools → Settings… →
+  Notifications → Package expiry**; with 0 only the expired notice is
+  left.
+- **From the Windows notification**: click it to open MedReminder on
+  that medicine (on the prescriptions for a prescription reminder, on the deadlines for a deadline reminder, on the packages for a package expiry notice). A
+  low-stock warning has **Prepare request**, which opens the request to
+  the doctor; a dose reminder has **Remind me in 15 minutes**, which
+  shows it again later, even if MedReminder is closed meanwhile.
+  Intakes are not recorded from the notification: use **Therapy →
+  Register intake…**.
 - **Tools → Check now** (**Ctrl+R**, or the tray menu) runs
   the check immediately.
 - MedReminder must be running to send reminders. Turn on automatic
@@ -431,7 +775,7 @@ MedReminder never sends a request by itself.
 | Field | What to enter |
 |---|---|
 | **Host** | Your provider's outgoing server, e.g. `smtp.gmail.com` |
-| **Port** | Usually `587` (with *Use StartTLS*) or `465` |
+| **Port** | `587` with *Use StartTLS* ticked, or `465` with *Use StartTLS* not ticked |
 | **Username** / **New password** | Your email account. The password is stored encrypted and never written to the logs |
 | **Sender (from)** / **Sender name** | Who the emails come from |
 | **Timeout (s)** | Seconds before giving up |
@@ -439,11 +783,8 @@ MedReminder never sends a request by itself.
 Click **Test connection** (it logs in without sending anything), then
 **Save SMTP settings**.
 
-*Example with Gmail:* turn on two-step verification in your Google
-account, create an app password at `myaccount.google.com/apppasswords`,
-then use Host `smtp.gmail.com`, Port `587`, StartTLS on, your Gmail
-address as Username and the app password as password. Providers change
-their rules: if the test fails, check your provider's instructions.
+The values for Gmail and the other common providers, and how to get an
+app password, are in [Email settings for common providers](#smtp-providers).
 
 ### Step 2 — the recipients (each profile)
 
@@ -451,13 +792,94 @@ their rules: if the test fails, check your provider's instructions.
 
 - **Recipient (to)** — who receives this profile's reminders.
 - **Caregiver e-mail (optional)** — a family member or carer who gets a
-  copy of every reminder, in the same email (both addresses are
-  visible to both). It must differ from the recipient.
+  copy of the reminders, in the same email (both addresses are
+  visible to both). It must differ from the recipient. Under
+  **Copy to the caregiver** choose which reminders they get (all of
+  them until you change it): low-stock warnings, dose reminders,
+  prescription and deadline reminders, shortage notices, package expiry
+  notices.
+  **Send the caregiver a weekly stock summary** adds, every 7 days, an
+  email to the caregiver alone with the stock, status and run-out date
+  of each active medicine and the packages expired or expiring soon,
+  and nothing about the doses taken. It is
+  sent by the PC that sends the emails, once per profile even when the
+  profile is synced on several PCs.
 - **Doctor e-mail (optional)** — used only for prescription requests
   you send yourself; automatic reminders never go there.
+- **Package expiry** — how many days before the *expires soon* notice
+  comes: before the printed expiry (default 30) and before the end of
+  the period after opening (default 3).
 
 Click **Save recipients**. In the same section, **My PIN** lets you set or
 change the PIN of your own profile.
+
+<a id="smtp-providers"></a>
+### Email settings for common providers
+
+Many providers no longer accept, in programs, the password you use for
+webmail. They ask for an **app password**: a separate password, created
+by the provider for one program only and revocable at any time. Enter it
+in **New password**. If you revoke it, MedReminder stops sending until
+you enter a new one.
+
+One rule covers port and encryption:
+
+| Port | *Use StartTLS* |
+|---|---|
+| `587` | ticked |
+| `465` | not ticked (the connection is encrypted from the start) |
+
+With every provider below, **Username** is your full email address. Use
+the same address as **Sender (from)**: many providers refuse a sender
+different from the account.
+
+| Provider | Host | Port | Password |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | App password (see below) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | App password, from the *Security* page of your Yahoo account |
+| iCloud Mail | `smtp.mail.me.com` | `587` | App-specific password, from `account.apple.com` → *Sign-In and Security*; requires two-factor authentication |
+| Libero Mail | `smtp.libero.it` | `465` | Account password; with two-step verification on, an app password from *Gestione Account* |
+| Aruba (including domain mailboxes) | `smtps.aruba.it` | `465` | Mailbox password |
+| GMX | `mail.gmx.net` | `587` | Account password; first turn on *POP3/IMAP* in the webmail email settings |
+| WEB.DE | `smtp.web.de` | `587` | Account password; first turn on *POP3/IMAP* in the webmail email settings |
+| Orange | `smtp.orange.fr` | `465` | Account password; if it is refused, check in your Orange customer area whether a dedicated password is required |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft accepts only modern
+sign-in (OAuth2) for these accounts, which MedReminder does not support;
+an app password does not work either. The same usually applies to
+Microsoft 365 work or school accounts. Use another account for sending,
+for example a Gmail address dedicated to MedReminder.
+
+#### Gmail: create the app password
+
+1. Sign in at `myaccount.google.com` with the Gmail account that will
+   send the emails.
+2. Open **Security**. If **2-Step Verification** is off, turn it on
+   with the guided procedure (phone or authenticator app). Without it,
+   app passwords do not exist.
+3. Open `myaccount.google.com/apppasswords`, or search for "App
+   passwords" in the account search box. Google may ask for your
+   password again.
+4. Type a name that reminds you what it is for, for example
+   `MedReminder`, and click **Create**.
+5. Google shows a 16-letter password in four groups. Copy it and paste
+   it into **New password**, without spaces. Google does not show it
+   again: if you lose it, delete it on the same page and create another.
+6. In MedReminder enter Host `smtp.gmail.com`, Port `587`, *Use
+   StartTLS* ticked, and your Gmail address as **Username** and as
+   **Sender (from)**. Click **Test connection**, then **Save SMTP
+   settings**.
+
+If the page says the setting is not available, usually 2-Step
+Verification is off or uses security keys only, the account is enrolled
+in Advanced Protection, or it is a work or school account whose
+administrator turned app passwords off. If you change your Google
+account password, Google revokes your app passwords: create a new one
+and enter it in MedReminder.
+
+Providers change their rules and addresses. If **Test connection** fails
+with the values above, check your provider's help page (search for
+"SMTP settings").
 
 ---
 
@@ -846,7 +1268,7 @@ All in **Tools → Settings…**. The sections are listed on the left;
   only on Windows 11 with dark mode on; with a Windows high-contrast
   theme its colours are used. Applies after a restart. Date fields stay
   light in Dark.
-- **General → Check for updates automatically (GitHub)**: checks for a
+- **General → Check for app and catalogue updates (GitHub)**: checks for a
   new version at start (nothing is installed by itself) and updates the
   catalogue at start and once a day.
   **? → Check for updates…** checks now.
@@ -945,7 +1367,7 @@ backup and export files you place yourself.
     └── <profile>\
         ├── medreminder.db     the profile's medicines and stock
         ├── notifications.settings.json   recipients
-        ├── ui.settings.json   text size and appearance
+        ├── ui.settings.json   text size, appearance, window size
         └── sync.*             sync settings (only when used)
 ```
 

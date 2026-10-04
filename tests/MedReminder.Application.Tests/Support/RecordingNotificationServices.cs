@@ -23,6 +23,8 @@ internal sealed class RecordingEmailNotificationService : IEmailNotificationServ
 internal sealed class RecordingWindowsNotificationService : IWindowsNotificationService
 {
     public List<(string Title, string Body)> Sent { get; } = new();
+    // The target of each notification shown with one, in order.
+    public List<NotificationTarget> Targets { get; } = new();
     public bool ShouldFail { get; set; }
 
     public Task ShowAsync(string title, string body, CancellationToken cancellationToken)
@@ -30,5 +32,11 @@ internal sealed class RecordingWindowsNotificationService : IWindowsNotification
         if (ShouldFail) throw new InvalidOperationException("Fake toast failure.");
         Sent.Add((title, body));
         return Task.CompletedTask;
+    }
+
+    public async Task ShowAsync(string title, string body, NotificationTarget target, CancellationToken cancellationToken)
+    {
+        await ShowAsync(title, body, cancellationToken);
+        Targets.Add(target);
     }
 }

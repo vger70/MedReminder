@@ -106,7 +106,8 @@ UI  ──►  Application  ──►  Domain
   96-DPI pixels and do not set `AutoScaleMode`. Colours, fonts and
   spacing come from `UiTheme` (light, dark and high-contrast palettes;
   `UiColors` is a facade over it); on load the base form also themes
-  buttons and grids through `UiThemeApplier`, and
+  buttons and grids through `UiThemeApplier`, which also gives date
+  pickers static Segoe UI (the variable fonts cut their first digit), and
   `UiToolStripRenderer` draws every menu and toolbar
   (`docs/analysis/ANALYSIS-UI-MODERNIZATION.md`). Dialogs share
   `DialogLayout` (form table, button bar with the primary action last,
@@ -176,21 +177,31 @@ is used.
 | `Medicine` (`Medicines`) | Aggregate root | `Name`, `Unit`, `DosePerAdministration`, `AdministrationsPerDay`, `StartDate`, `EndDate?`, `ThresholdDays`, `IsActive`, `StockEpoch`, `NotificationChannels`, `RemindOnDose`, catalogue link (`NationalCode`, `AtcCode`, `LinkedReferenceMedicineId`) |
 | `StockMovement` (`StockMovements`) | Immutable stock ledger | `Kind`, `QuantityDelta`, `OccurredAt`, `StockEpoch`, `Origin` |
 | `MedicationScheduleHistory` (`MedicationScheduleHistories`) | Versioned schedule | `EffectiveFrom`, legacy dose × frequency, `ScheduleKind`, `SchedulePayload` (JSON) |
-| `MedicationAdministrationSlot` (`MedicationAdministrationSlots`) | Individual daily intakes | `SetId`, `Dose`, `Time?`, `TimingLabel`, `Order` |
+| `MedicationAdministrationSlot` (`MedicationAdministrationSlots`) | Individual daily intakes | `SetId`, `Dose`, `Time?`, `TimingLabel`, `Order`, `IsAsNeeded` (never consumed automatically), `PresetId?` (time-of-day preset, display only) |
 | `MedicationAdministrationSlotSet` (`MedicationAdministrationSlotSets`) | Recorded version of a medicine's slots | `EffectiveFrom`, `RecordedAt`; the current slots are those of the latest recorded set |
 | `StockCount` (`StockCounts`) | Stock-count fact written by `ReconcileStock` (B.1 Phase 2c-2) | `CountDay`, `CountedQuantity`, `TakenToday`, `ThresholdAtCount`, `RecordedAt`, stored outcome (`Correction`, `MaterializesCountDay`, `AdvancesEpoch`, ...) |
 | `LedgerCutoff` (`LedgerCutoff`) | Single row: ledger freeze of a pre-B.1 database | `CutoffDay`, `FrozenAt` |
 | `MedicationSuspension` (`MedicationSuspensions`) | Therapy pause | `StartDate`, `EndDate?` (null = open) |
-| `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity`, `RecordedAt` |
+| `MedicationIntake` (`MedicationIntakes`) | User-recorded intake | `Day`, `Status` (`Taken`, `Skipped`, `Cancelled`, `ManualCorrection`), `Quantity`, `RecordedAt`, `IsExtra` (an extra dose on top of the plan, `Taken` only) |
 | `MedicineActivityChange` (`MedicineActivityChanges`) | Dated activation / deactivation (B.1 Phase 2c-2) | `Day`, `Active`, `RecordedAt` |
 | `FactRetraction` (`FactRetractions`) | Tombstone of a retracted fact (B.1 Phase 2d) | `FactId` (unique), `Kind`, `RecordedAt` |
 | `SyncOperation` (`SyncOperations`) | Local operation log for sync (B.1 Phase 3a); empty while sync is disabled. From Phase 3b it also records the operations applied from other devices | HLC (`HlcPhysicalMs`, `HlcCounter`, `DeviceId`), `Generation`, `Type`, `SchemaVersion`, `MedicineId`, `Payload` (JSON), `SegmentSeq?` |
 | `SyncFieldVersion` (`SyncFieldVersions`) | Every version of a last-writer-wins register (B.1 Phase 3b) | `EntityId`, `Register`, HLC, `Value`, base HLC |
 | `SyncConflict` (`SyncConflicts`) | Local conflict list, §4.5 cases only (B.1 Phase 3b) | `Kind`, `SubjectId`, `Register`, winning / losing value and device |
 | `SyncPeer` (`SyncPeers`) | Sync progress per device of the group (B.1 Phase 3c) | `DeviceId`, `Generation`, `Seq` (applied, or published for this device), checkpoint counters |
-| `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success` |
-| `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt` |
+| `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success`, `Stage` |
+| `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt`, `Stage` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
+| `Prescription` (`Prescriptions`) | A prescription from request to collection (replicated, one register per prescription); `Dispensations` > 1 makes it repeatable, collected through its dispensations instead of `CollectedOn` | `RequestedOn?`, `IssuedOn?`, `Code?`, `Packages?`, `ValidUntil?`, `CollectedOn?`, `Dispensations?` (null or 1: single) |
+| `PrescriptionDispensation` (`PrescriptionDispensations`) | One collection at the pharmacy under a repeatable prescription (replicated, one register per dispensation, so concurrent records on two devices are both kept); foreign key on the medicine only, so a dispensation outlives a deleted prescription (it is ignored, and back in use if a concurrent edit restores the prescription); removed with the medicine | `PrescriptionId`, `MedicineId`, `CollectedOn`, `Packages?`; index on `PrescriptionId` and on `MedicineId` |
+| `PrescriptionReminderEvent` (`PrescriptionReminderEvents`) | Reminder to collect, device-local dedup | unique `(PrescriptionId, ValidUntil)` |
+| `Deadline` (`Deadlines`) | Administrative deadline: therapeutic plan, exemption renewal, check-up (replicated, one register per deadline) | `MedicineId?`, `Kind`, `Label?`, `DueOn`, `LeadDays`, `RepeatMonths?`, `Channels`, `DoneOn?` |
+| `DeadlineReminderEvent` (`DeadlineReminderEvents`) | Deadline reminder, device-local dedup | unique `(DeadlineId, DueOn)` |
+| `ShortageNoticeEvent` (`ShortageNoticeEvents`) | Shortage notice shown, device-local dedup | unique `(MedicineId, Code, Start)` |
+| `StockPackage` (`StockPackages`) | One physical package and its expiry, beside the stock ledger: it never moves the stock (replicated, one register per package; a discard is final) | `MovementId?`, `Quantity`, `ExpiresOn?`, `UseWithinDays?`, `OpenedOn?`, `Batch?`, `ClosedOn?`, `Closure?` |
+| `PackageExpiryNoticeEvent` (`PackageExpiryNoticeEvents`) | Package expiry notice, device-local dedup per channel | unique `(PackageId, EffectiveExpiry, Stage, Channel)` |
+| `DoseTimePreset` (`DoseTimePresets`) | Time-of-day preset ("In the morning" = 08:00), device-local, display only; built-ins live in code, rows hold the user's changes and additions | `BuiltInKey?`, `Label?`, `Time?`, `IsAsNeeded`, `Order`, `IsHidden` |
+| `DoseTimeDefault` (`DoseTimeDefaults`) | Times of the doses of a medicine without slots, by administrations per day (1 to 4), device-local, display only | `AdministrationsPerDay` (key), `Times` |
 
 `StockMovementKind`: `InitialLoad`, `NewPackage`, `ManualAdd`,
 `Consumption`, `PositiveCorrection`, `NegativeCorrection`.
@@ -230,7 +241,9 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   zero. Never stored.
 - **`DailyConsumption`** — daily rate for a given day, resolved in
   this order:
-  1. if the medicine has administration slots: sum of slot doses;
+  1. if the medicine has administration slots: sum of the doses of the
+     slots that are not as-needed (0 when every slot is as-needed: the
+     medicine behaves as PRN);
   2. otherwise the `MedicationScheduleHistory` entry with the latest
      `EffectiveFrom <= day`, dispatched through `ScheduleCodec` to a
      `Schedule` shape: `FixedDaily`, `Weekly`, `Cyclic`, `Tapering`,
@@ -241,11 +254,25 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
 - **`RunOutForecast`** — days remaining and run-out date; `null` when
   suspended today or when the rate is zero; `(0, today)` when stock is
   zero.
+- **`IntradayConsumption`** — today's doses whose time of day has passed
+  (slot time, else the time of its preset, else the default times of a
+  medicine without slots; as-needed slots and doses without a time
+  never count; zero when an intake or a count already booked today).
+  A read-side estimate: the main list shows the ledger stock minus it
+  and counts the days left from that value, while the run-out date, the
+  coverage plan, the low-stock monitor and the recorded stock keep the
+  start-of-day stock. The count dialog suggests the same quantity as
+  taken today
+  ([`analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`](analysis/ANALYSIS-INTRADAY-CONSUMPTION.md)).
 - **`NotificationCycle`** — decides whether a low-stock warning is
-  due: inside `ThresholdDays`, not suppressed by `EndDate` (therapy
-  ending before run-out), and no successful `NotificationEvent` on the
-  current `StockEpoch`. `EmailAlreadySent` tells whether any device of
-  the sync group already emailed for the current epoch
+  due and at which stage: inside `ThresholdDays`, not suppressed by
+  `EndDate` (therapy ending before run-out), and no successful
+  `NotificationEvent` on the current `StockEpoch` at the same or a later
+  stage. Stage 1 is due at the threshold; stage 2 (second warning) at
+  half of it, rounded down, while the epoch has not changed. A medicine
+  that enters the window already below half gets stage 2 only.
+  `EmailAlreadySent` tells whether any device of the sync group already
+  emailed for the current epoch at that stage or a later one
   (`SentEmailNotification`): the monitor then leaves the email channel
   out and still shows its toast.
 - **`SuspensionState`** — whether a date falls in a suspension.
@@ -277,7 +304,24 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
   automatic consumption up to **yesterday** on days with no intake of
   any status, when the medicine is active on that day (activity
   history), in the therapy window and not suspended. `RegisterIntake`
-  and `ReconcileStock` synchronize their medicine at once.
+  and `ReconcileStock` synchronize their medicine at once. An extra
+  intake (`IsExtra`) books its quantity and is otherwise ignored: it
+  never handles its day for automatic consumption, the frozen-day
+  reversal or a count-day materialization.
+- Switching a medicine to `Prn` (`ChangeMedicationSchedule`) leaves its
+  slots as they are: under a non-FixedDaily schedule they only place the
+  schedule's quantity in the day, and PRN has none, so they are not
+  consumed, reminded or estimated; as-needed slots keep their meaning.
+- One-time data migrations that need Application logic are marked in
+  `PendingDataMigrations` (a table of the model) by the schema patch
+  that upgrades a database, or by the import of an archive written
+  before the data they correct, and run by `ConsumptionCatchUp` before
+  it derives:
+  `AsNeededSlotBackfill` (slots described "As needed" in any language
+  become as-needed from today, through a new slot set with
+  deterministic ids, so past days and recorded counts do not change)
+  and `SlotPresetBackfill` (existing slots are linked to their built-in
+  preset in place).
 - The first intake recorded for a day carrying `Legacy` consumption
   reverses it with a `PositiveCorrection`; on a derived day the
   automatic row is simply no longer produced. `StockEpoch` is not
@@ -382,7 +426,8 @@ and [`CATALOGUE-DATA.md`](CATALOGUE-DATA.md).
 - `UpdateMedicine` takes an optional `Baseline` (the values the edit
   dialog loaded): with it, only the fields the user changed are written,
   and unchanged slots record no new slot set.
-- One low-stock notification per epoch that succeeded on at least one
+- At most two low-stock notifications per epoch (stage 1 at the
+  threshold, stage 2 at half of it) that succeeded on at least one
   channel, the epoch identified by `EpochFactId` when the event has one
   (B.1 Phase 2d), else by `StockEpoch`; a failed attempt does not block
   a retry on the next tick.
@@ -414,6 +459,8 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   localization\strings.<lang>.json   optional user overrides of the UI dictionaries
   logs\medreminder-<date>.log    Serilog, daily files
   catalogue\staging\             remote catalogue archive while it is downloaded and imported; emptied every run
+  catalogue\shortages\shortages-it.json   AIFA shortage list, shared by every profile (EVOLUTION-PROPOSALS-2 §3.3)
+  catalogue\equivalents\equivalents-it.json   AIFA transparency list (equivalent medicines), shared by every profile
   backups\pre-migration-<ts>\    one-off V1→V2 migration snapshot
   household\
     household.db                 household operation log and registers (household feature, step H2)
@@ -423,7 +470,7 @@ Everything lives under `%LOCALAPPDATA%\MedReminder\`
   profiles\<profileId>\
     medreminder.db               SQLite database of the profile (+ -wal, -shm)
     notifications.settings.json  per-profile recipient, caregiver and doctor address
-    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal) and appearance (System / Light / Dark; absent = System)
+    ui.settings.json             per-profile text size (Normal / Large / ExtraLarge; absent = Normal) and appearance (System / Light / Dark; absent = System), main window size, position and maximized state (absent = default size, centred)
     sync.settings.json           sync group, device, generation, folder or cloud account (B.1; absent while sync is off)
     sync.protected               sync group key, DPAPI CurrentUser (B.1)
 ```
@@ -657,10 +704,25 @@ start:
    to every import); then the B.1 Phase 2d patch: `FactRetractions`,
    `MedicationSuspensions.RecordedAt`, `Medicines.StockEpochFactId`,
    `NotificationEvents.EpochFactId`; then `SentEmailNotifications`
-   (household step H1); then `SyncOperations` with its two
+   (household step H1); then `NotificationEvents.Stage` and
+   `SentEmailNotifications.Stage` (second low-stock warning, default 1);
+   then `Prescriptions` and `PrescriptionReminderEvents` (prescription
+   lifecycle); then `Deadlines` and `DeadlineReminderEvents`
+   (administrative deadlines); then `ShortageNoticeEvents` (shortage
+   notices);
+   then `SyncOperations` with its two
    indexes (B.1 Phase 3a); then `SyncFieldVersions` and `SyncConflicts`
    (B.1 Phase 3b); then `SyncOperations.EntityId` (B.1 Phase 3b-2);
-   then `SyncPeers` (B.1 Phase 3c).
+   then `SyncPeers` (B.1 Phase 3c); then `PendingDataMigrations`,
+   `MedicationAdministrationSlots.IsAsNeeded` and
+   `MedicationIntakes.IsExtra` (as-needed doses, default 0; adding the
+   slot column marks `AsNeededSlots` pending); then `DoseTimePresets`,
+   `DoseTimeDefaults` and `MedicationAdministrationSlots.PresetId`
+   (time-of-day presets; adding the column marks `SlotPresets`
+   pending); then `StockPackages` and `PackageExpiryNoticeEvents`
+   (package expiry); then `Prescriptions.Dispensations` (null on older
+   rows: single prescriptions) and `PrescriptionDispensations`
+   (repeatable prescriptions).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.
@@ -766,6 +828,36 @@ the retry decorator does not back off, and the subject, body and
 recipient are never logged; only the outcome and the exception type
 are.
 
+Every automated email carries an `EmailKind` (`LowStock`,
+`DoseReminder`, `Prescription`, `Deadline`, `Shortage`, `Digest`,
+`PackageExpiry`). The
+adapter copies it to the caregiver only for the kinds in the profile's
+`CaregiverEmails` (every kind when empty, as before), and sends a
+`Digest` (`CaregiverDigest`, the weekly stock summary, no dose data) to
+the caregiver only. The summary runs in the monitor pass on a device
+that sends email; the day it was sent is the replicated profile
+setting `CaregiverDigestSentOn`.
+
+Package expiry notices (`PackageExpiryNotices`, in the monitor pass):
+"expires soon" from the lead days on (profile settings
+`PackageExpiryLeadDays`, default 30, and `PackageInUseLeadDays`,
+default 3) and "expired" the day after the effective expiry, once per
+package, effective expiry, stage and channel; inactive medicines
+included, used-up packages left out (`PackageAllocation`). One toast per
+medicine, opening its packages; one email per pass for all medicines
+from the device that sends email. See
+[`ANALYSIS-PACKAGE-EXPIRY.md`](analysis/ANALYSIS-PACKAGE-EXPIRY.md).
+
+A low-stock email carries the medicine's run-out date as an all-day
+calendar event (`EmailMessage.CalendarEvent`): the adapter sends a
+`multipart/mixed` message with the text and `medreminder.ics`
+(`text/calendar; method=PUBLISH`, written by `IcsWriter`, RFC 5545). The
+event title is generic and never names the medicine, because calendars
+usually live on a third-party cloud. Therapy → Export to calendar…
+writes the same kind of file for every coming date
+(`CalendarExportQuery`); names appear only when the user asks at export
+time.
+
 ### 9.3 Localization
 
 UI strings are keyed dictionaries in `assets/localization/strings.<lang>.json`
@@ -792,7 +884,8 @@ with the `--minimized` argument. Per-user, no elevation.
   `CheckForUpdatesOnStartup` setting plus `Catalogue:RemoteFeed:Enabled`,
   `RemoteCatalogueRefresher` runs for the reference country's feed
   (IT, ES or FR) and the EU feed (`CatalogueFeedSelection`). For each,
-  it reads `data/<country>/latest.json` from the repository and, when
+  it reads `data/<country>/latest.json` from the repository's `feeds`
+  branch and, when
   its version is newer than the open profile's catalogue for that
   country, downloads `<prefix>-<yyyymm>.zip` (`aifa`, `ema-epar`,
   `aemps`, `bdpm`; HTTPS, no redirects, size cap, SHA-256 when
@@ -905,6 +998,7 @@ Where the implementation departed from the plan:
 | [`ANALYSIS-DRUG-CATALOGUE.md`](analysis/ANALYSIS-DRUG-CATALOGUE.md) | Reference medicine catalogue |
 | [`ANALYSIS-CATALOGUE-REMOTE-FEED.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEED.md) | Remote AIFA catalogue feed refreshed at startup |
 | [`ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md`](analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md) | Remote EU (EMA), ES (AEMPS) and FR (BDPM) catalogue feeds |
+| [`ANALYSIS-PACKAGE-EXPIRY.md`](analysis/ANALYSIS-PACKAGE-EXPIRY.md) | Packages and their expiry: printed and in-use expiry, allocation of the stock to packages, expiry notices, cabinet view (phases P1–P4 shipped) |
 | [`ANALYSIS-UI-MODERNIZATION.md`](analysis/ANALYSIS-UI-MODERNIZATION.md) | UI restyling and redesign: theme, dark mode, main window, Settings sections, dialog template |
 | [`ANALYSIS-WEBSITE.md`](analysis/ANALYSIS-WEBSITE.md) | Public website |
 

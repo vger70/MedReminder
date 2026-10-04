@@ -29,4 +29,27 @@ public sealed class NotificationSettings
     // notifications. Empty (the default, and the value for files
     // written before the field existed) means no doctor configured.
     public string DoctorAddress { get; set; } = string.Empty;
+
+    // Caregiver options (docs/notes/EVOLUTION-PROPOSALS-2.md §3.8),
+    // replicated like the addresses. CaregiverEmails: the kinds of
+    // email copied to the caregiver (Notifications.CaregiverEmails;
+    // "" = every kind). CaregiverDigest: "Weekly" sends the stock
+    // summary. CaregiverDigestSentOn: day of the last summary sent by
+    // any device of the profile (yyyy-MM-dd).
+    public string CaregiverEmails { get; set; } = string.Empty;
+    public string CaregiverDigest { get; set; } = string.Empty;
+    public string CaregiverDigestSentOn { get; set; } = string.Empty;
+
+    // Lead days of the package expiry notices (docs/analysis/
+    // ANALYSIS-PACKAGE-EXPIRY.md §4.6), replicated like the addresses:
+    // invariant integers, "" for the default (PackageSettings).
+    public string PackageExpiryLeadDays { get; set; } = string.Empty;
+    public string PackageInUseLeadDays { get; set; } = string.Empty;
+
+    // Italian region of the profile (docs/prompt/
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2), replicated like the
+    // addresses: an ISTAT code of Domain.Prescriptions.ItalianRegions,
+    // "" when not set. Kept in this file because every replicated
+    // profile setting but the name lives here.
+    public string Region { get; set; } = string.Empty;
 }

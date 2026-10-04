@@ -17,6 +17,11 @@ public interface IMedicationIntakeRepository
         DateOnly toInclusive,
         CancellationToken cancellationToken);
 
+    // Medicines with an intake on `day` that handles the day, i.e. not an
+    // extra one (ANALYSIS-INTRADAY-CONSUMPTION.md §5.3). One query for the
+    // whole list.
+    Task<IReadOnlyList<Guid>> ListMedicinesWithDayIntakeAsync(DateOnly day, CancellationToken cancellationToken);
+
     Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken);
 
     // Retraction of a mistaken intake (RetractFact, B.1 Phase 2d).

@@ -1629,7 +1629,8 @@ Phase 2 implements the derivation from the prototype and its tests.
 - 2026-09-26 — review against the code: stock-count anchor carries
   `takenToday` and reuses the `ReconcileStock` formula; intake
   consumption derived through today; one cutoff set by the Phase 2
-  patch; `StartDate` immutable and schedule summary from the latest
+  patch; `StartDate` immutable (editable since 2026-10, operation
+  `MedicineStartChanged`) and schedule summary from the latest
   recorded row; checkpoint content; dependency vector at seal time;
   associated data needs an `IArchiveCipher` extension; revocation
   requires a new passphrase; tail-truncation mitigation; write gate on

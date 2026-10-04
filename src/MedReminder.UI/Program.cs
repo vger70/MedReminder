@@ -73,6 +73,11 @@ internal static class Program
         WinFormsApp.SetUnhandledExceptionMode(WinFormUnhandledExceptionMode.CatchException);
         WinFormsApp.ThreadException += OnUnhandledUiException;
 
+        // Before anything else: Windows may have launched the app for a
+        // toast click, which the router keeps until the main window is up
+        // (EVOLUTION-PROPOSALS-2 §3.4).
+        ToastActivationRouter.Initialize();
+
         using var singleInstance = new Mutex(initiallyOwned: false, SingleInstanceMutexName);
         bool acquired = false;
         try
@@ -82,6 +87,14 @@ internal static class Program
         catch (AbandonedMutexException)
         {
             acquired = true;
+        }
+
+        if (!acquired && ToastActivationRouter.LaunchedByToast)
+        {
+            // The running instance receives the click itself.
+            Log.Information("Toast activation while another instance runs. Exiting.");
+            Log.CloseAndFlush();
+            return;
         }
 
         if (!acquired)
@@ -114,7 +127,9 @@ internal static class Program
 
             // 3) Decide which profile to open (picker / hint / --profile
             //    / first-run wizard). May exit if the user cancels.
-            var startMinimized = args.Contains(MinimizedArgument);
+            // A toast click that launched the app opens the window itself
+            // when its action needs one; "Remind me later" needs none.
+            var startMinimized = args.Contains(MinimizedArgument) || ToastActivationRouter.LaunchedByToast;
             var explicitProfileId = TryReadProfileArg(args);
             var current = ChooseProfile(registry, explicitProfileId, startMinimized, args);
             if (current is null)
@@ -452,6 +467,9 @@ internal static class Program
         builder.Services.AddSingleton<ICameraCaptureService, MedReminder.UI.Camera.WindowsCameraCaptureService>();
 
         builder.Services.AddScoped<MedicineOverviewLoader>();
+        // Weekly caregiver summary (EVOLUTION-PROPOSALS-2 §3.8): needs the
+        // overview loader, so it is registered with it.
+        builder.Services.AddScoped<MedReminder.Application.Notifications.CaregiverDigest>();
 
         builder.Services.AddHostedService<MedicationMonitorHostedService>();
         builder.Services.AddHostedService<DoseReminderHostedService>();

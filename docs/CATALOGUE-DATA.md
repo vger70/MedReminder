@@ -39,24 +39,69 @@ startup (each country in its own transaction, per
 country never blocks the others.
 
 The same four catalogues are also published monthly by GitHub
-workflows under `data/<country>/` on `main`, and the app refreshes
-from there at startup without a new release (§2.1). The embedded
+workflows under `data/<country>/` on the `feeds` branch (§1.1), and
+the app refreshes from there at startup without a new release (§2.1). The embedded
 snapshots stay the offline baseline:
 
 | Country | Workflow (UTC, days 2, 9, 16, 23) | Script | Published |
 |---------|-----------------------------------|--------|-----------|
-| `it` | `download_aifa.yaml`, 03:00 | `scripts/feeds/aifa.py` | `data/it/aifa-<yyyymm>.zip` |
-| `es` | `download_aemps.yaml`, 03:20 | `scripts/feeds/aemps.py` | `data/es/aemps-<yyyymm>.zip` |
-| `fr` | `download_bdpm.yaml`, 03:40 | `scripts/feeds/bdpm.py` | `data/fr/bdpm-<yyyymm>.zip` |
-| `eu` | `download_ema.yaml`, 04:00 | `scripts/feeds/ema.py` | `data/eu/ema-epar-<yyyymm>.zip` |
+| `it` | `download_aifa.yaml`, 03:07 | `scripts/feeds/aifa.py` | `data/it/aifa-<yyyymm>.zip` |
+| `es` | `download_aemps.yaml`, 03:27 | `scripts/feeds/aemps.py` | `data/es/aemps-<yyyymm>.zip` |
+| `fr` | `download_bdpm.yaml`, 03:47 | `scripts/feeds/bdpm.py` | `data/fr/bdpm-<yyyymm>.zip` |
+| `eu` | `download_ema.yaml`, 04:07 | `scripts/feeds/ema.py` | `data/eu/ema-epar-<yyyymm>.zip` |
 
 Each folder also holds `latest.json` (§2.1) and keeps the 3 newest
 archives. The scripts share `scripts/feeds/common.py` (retries, run
 timestamp, row floors, publication); their unit tests
-(`scripts/feeds/tests/`) run in `scripts_tests.yaml`. The four
-workflows share the concurrency group `catalogue-feeds-publish`, so
-their pushes to `main` never race. Each script changes nothing under
-`data/` until every check has passed.
+(`scripts/feeds/tests/`) run in `scripts_tests.yaml`. Each workflow
+has its own concurrency group (`feed-<workflow name>`) and publishes
+only its own paths, so feeds may run at the same time (§1.1). Each
+script changes nothing under `data/` until every check has passed.
+
+### 1.1 The `feeds` branch
+
+Every published archive used to stay in `main`'s history: about 9.5 MB
+a month for the four catalogues, whatever the retention in `data/`.
+The published files now live on the `feeds` branch, which always holds
+a single parentless commit (`data/`, `.gitattributes`, a `README.md`).
+Each publish replaces that commit, so the branch costs the current
+files only; the replaced archives become unreachable and GitHub
+removes them at its own garbage collection.
+
+- Clients read
+  `https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/`
+  (`CatalogueFeedOptions.DefaultBaseUrl`, `Catalogue:RemoteFeed:BaseUrl`
+  in `appsettings.json`).
+- Each workflow runs `scripts/feeds/feeds_branch.sh load` before its
+  script, so the script decides what is new against the published
+  state, then `feeds_branch.sh publish "<message>" <pathspec>...`
+  with the paths the feed owns (`data/es`; `data/it` without
+  `data/it/shortages`, `data/it/equivalents` and
+  `data/it/regional-services` for AIFA). A publish
+  starts from the branch as it is at push time and replaces only those
+  paths, on a temporary index; the checkout of `main` is not touched.
+  The push uses `--force-with-lease`: when another feed published in
+  between, the publish is rebuilt on the new branch (up to 5 attempts).
+  A publish whose content equals the branch is skipped. Feeds therefore
+  need no shared concurrency group: with one, GitHub keeps a single
+  pending run per group, and a queued run of one feed would cancel the
+  queued run of another.
+  Only a run on the default branch publishes; a run dispatched from
+  another branch does not replace what clients download.
+- The first run of any feed workflow after the merge creates the
+  branch from `main`'s `data/`. Run one by hand (without `force`)
+  before releasing a client that reads `feeds`.
+- **Transition.** Releases up to v2.12.1 read `main/data/`. Until they
+  are out of use, the "Mirror to main" step keeps committing the same
+  files to `main`. Then set the repository variable
+  `FEEDS_MAIN_MIRROR` to `false` (Settings → Secrets and variables →
+  Actions → Variables): the step is skipped and `main` stops growing.
+  `data/` on `main` can then be removed in a normal commit; its history
+  stays unless rewritten, which is not planned.
+- The embedded snapshots under
+  `src/MedReminder.Infrastructure/Assets/Catalogue/` add about 9.3 MB
+  to `main` at each refresh. With the remote feeds they are only the
+  offline baseline: refresh them a few times a year, not every month.
 
 ---
 
@@ -66,8 +111,8 @@ The Italian catalogue has two delivery paths:
 
 - **Remote feed (monthly, no release needed).** The workflow
   `.github/workflows/download_aifa.yaml` runs on days 2, 9, 16 and 23
-  of each month (and on demand), builds `data/it/aifa-<yyyymm>.zip` and
-  rewrites `data/it/latest.json`. The first successful run of the month
+  of each month at 03:07 UTC (and on demand), builds
+  `data/it/aifa-<yyyymm>.zip` and rewrites `data/it/latest.json`. The first successful run of the month
   publishes; later runs find the month's version in `latest.json` and
   exit without changes. HTTP errors from AIFA (429, 5xx, timeouts,
   resets) are retried five times over about 5.5 minutes before a run
@@ -117,7 +162,7 @@ writes the same manifest in its own `data/<country>/` folder:
   (`PA_confezioni.csv`) data rows, or has fewer than 90% of the rows
   recorded under `rows` by the previous run. If AIFA genuinely shrinks
   a file by more than 10%, lower the previous count in
-  `data/it/latest.json` by hand and re-run.
+  `data/it/latest.json` on the `feeds` branch by hand and re-run.
 - `data/it/` keeps the 3 newest archives.
 - **Republishing a month** (any feed). A forced run in the same month
   overwrites `<prefix>-<yyyymm>.zip` and writes a new `generated` and `sha256`. Clients
@@ -159,7 +204,7 @@ Client behaviour, the same for every feed (`RemoteCatalogueRefresher`,
 ### 2.2 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/it/aifa-<yyyymm>.zip` from `main`. It already has the layout the
+   `data/it/aifa-<yyyymm>.zip` from the `feeds` branch. It already has the layout the
    parser expects (both CSV files at the root; an extra `atc.csv` in
    older archives is ignored):
 
@@ -210,7 +255,7 @@ Two delivery paths, as for Italy:
 
 - **Remote feed (monthly, no release needed).**
   `.github/workflows/download_ema.yaml` runs `scripts/feeds/ema.py` on
-  days 2, 9, 16 and 23 at 04:00 UTC (and on demand, with the same
+  days 2, 9, 16 and 23 at 04:07 UTC (and on demand, with the same
   `force` input as AIFA) and publishes `data/eu/ema-epar-<yyyymm>.zip`
   and `data/eu/latest.json` (§2.1). No manual step.
 - **Embedded snapshot (per release, optional)**, §3.2.
@@ -260,7 +305,7 @@ rows below 1 800, or either below 90% of the previous run (recorded in
 ### 3.2 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/eu/ema-epar-<yyyymm>.zip` from `main`. It already has the
+   `data/eu/ema-epar-<yyyymm>.zip` from the `feeds` branch. It already has the
    layout the parser expects:
 
    ```
@@ -437,7 +482,7 @@ Two delivery paths, as for Italy:
 
 - **Remote feed (monthly, no release needed).**
   `.github/workflows/download_aemps.yaml` runs `scripts/feeds/aemps.py`
-  on days 2, 9, 16 and 23 at 03:20 UTC (and on demand, with the same
+  on days 2, 9, 16 and 23 at 03:27 UTC (and on demand, with the same
   `force` input as AIFA) and publishes `data/es/aemps-<yyyymm>.zip` and
   `data/es/latest.json` (§2.1). No manual step.
 - **Embedded snapshot (per release, optional)**, §5.2.
@@ -482,7 +527,7 @@ embedded path alone.
 ### 5.2 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/es/aemps-<yyyymm>.zip` from `main`:
+   `data/es/aemps-<yyyymm>.zip` from the `feeds` branch:
 
    ```
    aemps-<yyyymm>.zip
@@ -534,7 +579,7 @@ Two delivery paths, as for Italy:
 
 - **Remote feed (monthly, no release needed).**
   `.github/workflows/download_bdpm.yaml` runs `scripts/feeds/bdpm.py`
-  on days 2, 9, 16 and 23 at 03:40 UTC (and on demand, with the same
+  on days 2, 9, 16 and 23 at 03:47 UTC (and on demand, with the same
   `force` input as AIFA) and publishes `data/fr/bdpm-<yyyymm>.zip` and
   `data/fr/latest.json` (§2.1). No manual step.
 - **Embedded snapshot (per release, optional)**, §6.3.
@@ -600,7 +645,7 @@ run.
 ### 6.3 Embedded snapshot
 
 1. **Take the archive published by the workflow**:
-   `data/fr/bdpm-<yyyymm>.zip` from `main`:
+   `data/fr/bdpm-<yyyymm>.zip` from the `feeds` branch:
 
    ```
    bdpm-<yyyymm>.zip
@@ -647,6 +692,133 @@ Mapping notes:
   are skipped, mirroring the Omeopatico filter in
   `AifaSnapshotParser` — homeopathic products carry no meaningful
   active-ingredient signal for the autocomplete.
+
+---
+
+## 8. Shortage list (Italy — AIFA "farmaci carenti")
+
+Not a catalogue: the list of medicines in temporary shortage, used to
+mark the medicines of a profile whose package is listed and to notify
+the user once (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3).
+
+| Item | Value |
+|---|---|
+| Source | AIFA, `elenco_medicinali_carenti.csv` ("Carenze e indisponibilità"); CC BY 4.0, cited in the app as "AIFA list of medicines in shortage of <date>" |
+| Workflow | `download_aifa_shortages.yaml`, daily at 04:27 UTC; checks with ETag / Last-Modified whether AIFA changed the file, then publishes only a newer list date, or the same date with other content (a correction); an older date is refused, even when forced. A new list is on the feed within a day and on clients, which check once a day, within about two days. Concurrency group `feed-<workflow name>` |
+| Script | `scripts/feeds/aifa_shortages.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_shortages.py`, fixture `tests/fixtures/catalogue/aifa-shortages-sample.csv` |
+| Published | `data/it/shortages/shortages-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.entries`, `source` with the ETag / Last-Modified of the AIFA file, ignored by clients); the 3 newest files are kept, never the one `latest.json` names |
+| Client | `ShortageRefresher` with `GitHubRawShortageFeedClient`, after the catalogue feeds, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:ShortagesEnabled` (default true), `ShortagesMaxDownloadBytes` (default 4 MiB) |
+| Stored | `%LOCALAPPDATA%\MedReminder\catalogue\shortages\shortages-it.json`, shared by every profile; not in any profile database, not synced, not exported |
+| Line endings | `.gitattributes` marks `data/**/*.json` as `-text`: a checkout with `core.autocrlf` must not turn LF into CRLF, or the file no longer matches the manifest's size and SHA-256 |
+
+Source file format (checked on the list of 29/09/2026, 2,514 rows):
+Windows-1252, two free-text lines before the header (the second holds
+"aggiornato al dd/mm/yyyy", the list date), `;` separator, 13 columns,
+quoted fields with line breaks and doubled quotes, two codes listed
+twice. The 9-digit `Codice AIC` is the package code of the catalogue
+(`Medicine.NationalCode`). The script publishes per code only the
+start, the expected end (often empty), whether AIFA reports
+equivalents, and a reason category (`production`, `demand`,
+`withdrawn`, `suspended`, `commercial`, `regulatory`, `other`). AIFA's
+free-text suggestions and notes are not published.
+
+A listed shortage stays current after its expected end: AIFA keeps a
+medicine listed until the holder confirms the end. A start later than
+today is shown as an announced shortage.
+
+---
+
+## 9. Equivalent medicines (Italy — AIFA "Lista di trasparenza")
+
+Not a catalogue: the monthly list of off-patent class A medicines with
+at least one equivalent, grouped, with reference and public prices.
+Used by the Equivalent medicines window and the shortage tooltip
+(`docs/analysis/ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md` §2).
+
+| Item | Value |
+|---|---|
+| Source | AIFA, `Lista_farmaci_equivalenti.csv` ("Liste dei farmaci", stable name); cited in the app as "AIFA transparency list of <date>". Licence: CC BY 4.0 inferred from the AIFA open-data page, to confirm before release (analysis §2.1) |
+| Workflow | `download_aifa_equivalents.yaml`, daily at 04:41 UTC; checks with ETag / Last-Modified whether AIFA changed the file, then publishes only a newer list date, or the same date with other content (a correction); an older date is refused, even when forced. Concurrency group `feed-<workflow name>`; no mirror to main |
+| Script | `scripts/feeds/aifa_equivalents.py` (`--input FILE` publishes a file already downloaded); tests in `scripts/feeds/tests/test_aifa_equivalents.py`, fixture `tests/fixtures/catalogue/aifa-equivalents-sample.csv` |
+| Published | `data/it/equivalents/equivalents-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the list date) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.groups`, `rows.packages`, `source` as for the shortage list); the 3 newest files are kept, never the one `latest.json` names |
+| Client | `EquivalenceRefresher` with `GitHubRawEquivalenceFeedClient`, after the shortage list, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:EquivalentsEnabled` (default true), `EquivalentsMaxDownloadBytes` (default 4 MiB) |
+| Stored | `%LOCALAPPDATA%\MedReminder\catalogue\equivalents\equivalents-it.json`, shared by every profile; not in any profile database, not synced, not exported |
+
+Source file format (checked on the list of 15/09/2026, 8,560 rows,
+1,010 groups): Windows-1252, `;` separator, columns `Principio attivo;
+Confezione di riferimento; ATC; AIC; Farmaco; Confezione; Ditta; Prezzo
+riferimento SSN; Prezzo Pubblico <d month yyyy>; Differenza; Nota;
+Codice gruppo equivalenza`. The script:
+
+- left-pads `AIC` to 9 digits (the file drops the leading zeros);
+- reads the list date from the name of the public-price column, matched
+  by its `Prezzo Pubblico` prefix;
+- converts prices (`5,63 €`) to cents;
+- rejects a package listed in two groups;
+- keeps `Nota` verbatim: a note can restrict substitution inside the
+  group.
+
+The client joins the list with a medicine only through
+`Medicine.NationalCode` when it is a valid AIC, never by name or active
+ingredient.
+
+---
+
+## 10. Regional prescription services (Italy)
+
+Not a catalogue and not downloaded from a source: the health record
+service of each Italian region or autonomous province where the issued
+electronic prescriptions are shown, maintained by hand. The
+prescription windows open the service of the profile's region in the
+browser, or show its app link as a QR code
+(`docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md`). MedReminder
+never signs in, never embeds a browser and never reads the service.
+
+| Item | Value |
+|---|---|
+| Source | `scripts/feeds/regional_services_it.json` on `main`, edited by hand; `verifiedOn` records the day an entry was checked. `showsPrescriptions` is `true` only after a person saw the prescriptions on the service, and the app says the service is not verified for prescriptions otherwise; a region with no confirmed service has no entry (no URL is guessed). Every change moves `listDate` to the day of the change (Italian time) |
+| Workflow | `publish_regional_services.yaml`: publishes when the source changes on `main` (or on a manual run); on the 3rd of each month, or on a manual run with `check_urls` ticked, requests every URL (HTTP status only, HEAD then GET when HEAD is refused), writes the failures to the run summary and opens an issue listing them, or comments on the open one. It never edits the list. Concurrency group `feed-<workflow name>`; no mirror to main |
+| Script | `scripts/feeds/regional_services.py` (`--validate-only`, `--check-urls REPORT`); tests in `scripts/feeds/tests/test_regional_services.py` |
+| Published | `data/it/regional-services/regional-services-<yyyymmdd>.json` on the `feeds` branch (§1.1) (the source's `listDate`) and `latest.json` (`version`, `file`, `sha256`, `size`, `rows.services`); unchanged content is not published again; changed content without a later `listDate` than the published list fails the run; the 3 newest files are kept |
+| Shipped | the source file is embedded in `MedReminder.Infrastructure.Portable` (`MedReminder.Infrastructure.Assets.regional-services-it.json`) for the first start and for an installation that never downloads feeds; the downloaded list is used unless the shipped copy has a later `listDate`, which is why every change must move it |
+| Client | `RegionalServicesRefresher` with `GitHubRawRegionalServicesFeedClient`, after the equivalents list, only with Italy as reference country and the same settings (remote feeds on, automatic update check on); `Catalogue:RemoteFeed:RegionalServicesEnabled` (default true), `RegionalServicesMaxDownloadBytes` (default 256 KiB) |
+| Stored | `%LOCALAPPDATA%\MedReminder\catalogue\regional-services\regional-services-it.json`, shared by every profile; not in any profile database, not synced, not exported. The profile's region is a replicated profile setting (`docs/SYNC-FORMAT.md`) |
+
+List format: `{ "country": "IT", "listDate": "yyyy-mm-dd", "services":
+[ … ] }`, one entry per region code:
+
+| Field | Notes |
+|---|---|
+| `regionCode` | ISTAT region code; Trentino-Alto Adige (04) is replaced by its autonomous provinces, `21` Bolzano and `22` Trento, as in the national open data that split the region (21 codes) |
+| `region`, `service` | names shown to the user (at most 200 characters) |
+| `webUrl` | the portal page, `https`, no credentials or port |
+| `iosAppUrl`, `androidAppUrl` | store links of the regional app, `https`, or `null` |
+| `signIn` | non-empty subset of `SPID`, `CIE`, `TS-CNS` |
+| `showsPrescriptions` | `true` only when the prescriptions were seen on the service |
+| `familyDelegation` | `true` when the service documents a delegation for a caregiver |
+| `verifiedOn` | day the entry was checked, never in the future |
+
+The validator (publisher) and the parser (client,
+`RegionalServicesFeedParser`) apply the same rules, so a published list
+is never refused by a client: a known, unrepeated `regionCode`; names of
+1 to 200 UTF-16 units; URLs of printable ASCII, `https`, an ASCII DNS
+host with a dot, no credentials, no port other than 443; a non-empty,
+unrepeated `signIn` from the three values; booleans; dates written
+exactly `yyyy-mm-dd`. The validator also refuses a `verifiedOn` or
+`listDate` later than today in Italy. Tests on both sides cover the
+same edge cases.
+
+The client opens or shows only a URL that is exactly one of the links
+of the region's entry (`RegionalServiceLinkLauncher`, through the shell
+launcher also used for donations). Its log lines name neither the URL
+nor the region: the health service a person is registered with is
+personal data.
+
+Initial content (2026-10-04): 19 entries found through web searches of
+official regional pages, all with `showsPrescriptions: false`: the
+pages could not be opened from the build environment. A person checks
+each service, then sets the flag and moves `listDate`. Campania and
+Sicily have no entry yet: no official service URL was confirmed.
 
 ---
 

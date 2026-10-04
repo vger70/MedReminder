@@ -1,6 +1,11 @@
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
+using MedReminder.Application.Deadlines;
+using MedReminder.Application.Migrations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Packages;
+using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Medicines;
@@ -24,11 +29,23 @@ internal sealed class ApplicationTestScope
     public InMemoryNotificationEventRepository Notifications { get; } = new();
     public InMemorySentEmailNotificationRepository SentEmails { get; } = new();
     public InMemoryDoseReminderEventRepository DoseEvents { get; } = new();
+    public InMemoryPrescriptionRepository Prescriptions { get; } = new();
+    public InMemoryPrescriptionReminderEventRepository PrescriptionReminderEvents { get; } = new();
+    public InMemoryPrescriptionDispensationRepository Dispensations { get; } = new();
+    public InMemoryDeadlineRepository Deadlines { get; } = new();
+    public InMemoryDeadlineReminderEventRepository DeadlineReminderEvents { get; } = new();
+    public InMemoryStockPackageRepository Packages { get; } = new();
+    public InMemoryPackageExpiryNoticeEventRepository PackageNoticeEvents { get; } = new();
+    public InMemoryProfileSettingsStore ProfileSettings { get; } = new();
+    public InMemoryShortageListStore Shortages { get; } = new();
+    public InMemoryShortageNoticeEventRepository ShortageNoticeEvents { get; } = new();
     public InMemoryMedicineActivityRepository Activity { get; } = new();
     public InMemoryStockCountRepository Counts { get; } = new();
     public InMemoryLedgerCutoffRepository Cutoff { get; } = new();
     public InMemoryFactRetractionRepository Retractions { get; } = new();
     public InMemoryUnitOfWork Uow { get; } = new();
+    public InMemoryPendingDataMigrations PendingMigrations { get; } = new();
+    public InMemoryDoseTimePresetRepository DoseTimePresets { get; } = new();
     public InMemorySyncSettingsStore SyncSettingsStore { get; } = new();
     public InMemorySyncOperationRepository SyncOperations { get; } = new();
     public InMemorySyncFieldVersionRepository SyncVersions { get; } = new();
@@ -55,9 +72,28 @@ internal sealed class ApplicationTestScope
     public LedgerSynchronizer Ledger { get; }
     public FactHistoryQuery FactHistory { get; }
     public RetractFact RetractFact { get; }
+    public AsNeededSlotBackfill AsNeededBackfill { get; }
+    public SlotPresetBackfill PresetBackfill { get; }
     public ConsumptionCatchUp ConsumptionCatchUp { get; }
     public MedicationMonitor Monitor { get; }
     public ApplyRemoteOperations ApplyRemote { get; }
+    public SavePrescription SavePrescription { get; }
+    public CollectPrescription CollectPrescription { get; }
+    public RecordDispensation RecordDispensation { get; }
+    public DeletePrescription DeletePrescription { get; }
+    public PrescriptionListQuery PrescriptionList { get; }
+    public PrescriptionReminders PrescriptionReminders { get; }
+    public SaveDeadline SaveDeadline { get; }
+    public CompleteDeadline CompleteDeadline { get; }
+    public DeleteDeadline DeleteDeadline { get; }
+    public DeadlineListQuery DeadlineList { get; }
+    public DeadlineReminders DeadlineReminders { get; }
+    public ShortageNotices ShortageNotices { get; }
+    public SaveStockPackage SaveStockPackage { get; }
+    public DiscardStockPackage DiscardStockPackage { get; }
+    public DeleteStockPackage DeleteStockPackage { get; }
+    public PackageListQuery PackageList { get; }
+    public PackageExpiryNotices PackageExpiryNotices { get; }
     public SyncGenesis Genesis { get; }
 
     public ApplicationTestScope(DateTimeOffset? now = null)
@@ -76,32 +112,68 @@ internal sealed class ApplicationTestScope
             FactHistory, Medicines, Stock, Intakes, Counts, Suspensions, Retractions, Ledger, Operations, Uow, Clock);
 
         AddMedicine = new AddMedicine(Medicines, Schedules, Slots, Stock, Operations, Uow, Clock);
-        UpdateMedicine = new UpdateMedicine(Medicines, Slots, Activity, Operations, Uow, Clock);
+        UpdateMedicine = new UpdateMedicine(Medicines, Schedules, Slots, Activity, Operations, Uow, Clock);
         DeactivateMedicine = new DeactivateMedicine(Medicines, Activity, Operations, Uow, Clock);
         Deletion = new InMemoryMedicineDeletionRepository(this);
         DeleteMedicine = new DeleteMedicine(
             Medicines, Stock, Intakes, Counts, Suspensions, Deletion, Operations, Uow, Clock);
-        AddStock = new AddStock(Medicines, Stock, Operations, Uow, Clock);
+        AddStock = new AddStock(Medicines, Stock, Operations, Uow, Clock, Packages);
         AdjustStockDown = new AdjustStockDown(Medicines, Stock, Operations, Uow, Clock);
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Operations, Uow, Clock);
         ResumeMedication = new ResumeMedication(Medicines, Suspensions, Operations, Uow, Clock);
         ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Operations, Uow, Clock);
         RegisterIntake = new RegisterIntake(Medicines, Intakes, Ledger, Operations, Uow, Clock);
 
-        ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow);
+        var dictionaries = new JsonDictionaryLocalizationService("en");
+        AsNeededBackfill = new AsNeededSlotBackfill(
+            PendingMigrations, Medicines, Slots, Operations, Uow, Clock, dictionaries);
+        PresetBackfill = new SlotPresetBackfill(PendingMigrations, Medicines, Slots, Uow, dictionaries);
+        ConsumptionCatchUp = new ConsumptionCatchUp(Medicines, Ledger, Uow, AsNeededBackfill, PresetBackfill);
         ReconcileStock = new ReconcileStock(
             Medicines, Schedules, Suspensions, Slots, Counts, Ledger, Operations, Uow, Clock);
 
         Genesis = new SyncGenesis(Medicines, Suspensions, SyncVersions, Uow);
         ApplyRemote = new ApplyRemoteOperations(
             SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
-            Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock, sentEmails: SentEmails);
+            Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock, sentEmails: SentEmails,
+            prescriptions: Prescriptions, deadlines: Deadlines, packages: Packages, dispensations: Dispensations);
+
+        SaveStockPackage = new SaveStockPackage(Medicines, Packages, Operations, Uow, Clock);
+        DiscardStockPackage = new DiscardStockPackage(Packages, Operations, Uow, AdjustStockDown, Clock);
+        DeleteStockPackage = new DeleteStockPackage(Packages, Operations, Uow, Clock);
+        PackageList = new PackageListQuery(Packages, Stock, Clock, ProfileSettings);
+        PackageExpiryNotices = new PackageExpiryNotices(
+            new ExpiringPackagesQuery(Medicines, Packages, Stock, Clock, ProfileSettings), PackageNoticeEvents, Email,
+            Windows, Clock, NullLogger<PackageExpiryNotices>.Instance);
+
+        SavePrescription = new SavePrescription(Medicines, Prescriptions, Dispensations, Operations, Uow, Clock);
+        CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);
+        RecordDispensation = new RecordDispensation(Prescriptions, SavePrescription);
+        DeletePrescription = new DeletePrescription(Prescriptions, Operations, Uow, Clock);
+        PrescriptionList = new PrescriptionListQuery(Prescriptions, Dispensations, Medicines, Clock);
+        PrescriptionReminders = new PrescriptionReminders(
+            Prescriptions, Dispensations, PrescriptionReminderEvents, Medicines, Email, Windows, Clock,
+            NullLogger<PrescriptionReminders>.Instance);
+
+        SaveDeadline = new SaveDeadline(Medicines, Deadlines, Operations, Uow, Clock);
+        CompleteDeadline = new CompleteDeadline(Deadlines, SaveDeadline);
+        DeleteDeadline = new DeleteDeadline(Deadlines, Operations, Uow, Clock);
+        DeadlineList = new DeadlineListQuery(Deadlines, Medicines, Clock);
+        DeadlineReminders = new DeadlineReminders(
+            Deadlines, DeadlineReminderEvents, Medicines, Email, Windows, Clock,
+            NullLogger<DeadlineReminders>.Instance);
+
+        ShortageNotices = new ShortageNotices(Shortages, ShortageNoticeEvents, Medicines, Email, Windows,
+            new JsonDictionaryLocalizationService("en"), Clock, NullLogger<ShortageNotices>.Instance);
 
         Monitor = new MedicationMonitor(
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance,
-            sentEmails: SentEmails, operationLog: Operations, master: Master);
+            sentEmails: SentEmails, operationLog: Operations, master: Master,
+            prescriptionReminders: PrescriptionReminders, shortageNotices: ShortageNotices,
+            deadlineReminders: DeadlineReminders, packageExpiryNotices: PackageExpiryNotices,
+            prescriptions: Prescriptions, dispensations: Dispensations);
     }
 
     // Turns operation capture on, as enabling sync will (Phase 3d).

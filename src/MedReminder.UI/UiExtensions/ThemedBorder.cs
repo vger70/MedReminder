@@ -25,6 +25,9 @@ internal sealed class ThemedBorder : NativeWindow
     private const uint RdwInvalidate = 0x0001;
     private const uint RdwFrame = 0x0400;
     private const uint RdwUpdateNow = 0x0100;
+    private const int GwlStyle = -16;
+    private const int WsVScroll = 0x00200000;
+    private const int WsHScroll = 0x00100000;
 
     // Keeps each painter alive as long as its control and prevents a
     // second one on the same control.
@@ -63,6 +66,19 @@ internal sealed class ThemedBorder : NativeWindow
 
     protected override void WndProc(ref Message m)
     {
+        // A themed edit control repaints its frame in the hot state
+        // whenever the mouse enters or leaves it. Letting Windows draw
+        // that frame and painting over it afterwards made the border
+        // flicker on hover, so the frame is drawn here alone. Scroll
+        // bars live in the non-client area too: with any visible,
+        // Windows still paints first so they appear.
+        if (m.Msg == WmNcPaint && _nonClient && !HasScrollBars())
+        {
+            PaintNonClientBorder();
+            m.Result = IntPtr.Zero;
+            return;
+        }
+
         base.WndProc(ref m);
         switch (m.Msg)
         {
@@ -76,6 +92,12 @@ internal sealed class ThemedBorder : NativeWindow
                 Redraw();
                 break;
         }
+    }
+
+    private bool HasScrollBars()
+    {
+        var style = GetWindowLong(Handle, GwlStyle);
+        return (style & (WsVScroll | WsHScroll)) != 0;
     }
 
     private void Redraw()
@@ -147,6 +169,9 @@ internal sealed class ThemedBorder : NativeWindow
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetDC(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hWnd, int index);
 
     [DllImport("user32.dll")]
     private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDc);

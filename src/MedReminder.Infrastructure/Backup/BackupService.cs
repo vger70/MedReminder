@@ -1,11 +1,9 @@
-using System.Data;
 using System.Text.RegularExpressions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 
 namespace MedReminder.Infrastructure.Backup;
 
@@ -211,58 +209,36 @@ internal sealed class BackupService : IBackupService
             throw new FileNotFoundException("Backup file not found.", sourceFilePath);
         }
 
-        var target = ResolveProfileDatabasePath(profileId);
-        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-
-        // B.1 Phase 3d (§5.7): a restored synced profile starts a new
-        // sync generation; marked before the database is replaced.
-        MedReminder.Infrastructure.Sync.JsonSyncSettingsStore.MarkResetPending(Path.GetDirectoryName(target)!);
-
-        // Under the exclusive access, like ProfileDatabaseSwap: the
-        // remote catalogue import may hold the database open meanwhile.
-        return _exclusiveAccess.RunExclusiveAsync(_ =>
-        {
-            ReplaceProfileDatabase(target, sourceFilePath);
-            return Task.CompletedTask;
-        }, cancellationToken);
+        return ImportProfileCoreAsync(profileId, sourceFilePath, cancellationToken);
     }
 
-    private void ReplaceProfileDatabase(string target, string sourceFilePath)
+    // The backup is copied next to the profile database outside the
+    // gate, then swapped in by ProfileDatabaseSwap like an archive import
+    // (safety copy <db>.bak-<timestamp>, WAL / SHM dropped).
+    private async Task ImportProfileCoreAsync(
+        string profileId, string sourceFilePath, CancellationToken cancellationToken)
     {
-        SqliteConnection.ClearAllPools();
+        var target = ResolveProfileDatabasePath(profileId);
+        var directory = Path.GetDirectoryName(target)!;
+        Directory.CreateDirectory(directory);
 
-        // Also close the DbContext connection when the target belongs
-        // to the currently-active profile (i.e. the DbContext's own
-        // path); a background-profile import does not need it.
-        if (string.Equals(target, DatabasePath, StringComparison.OrdinalIgnoreCase))
+        var temp = Path.Combine(directory, $"medreminder.restore-{Guid.NewGuid():N}.db");
+        try
         {
-            try
-            {
-                var conn = _db.Database.GetDbConnection();
-                if (conn.State != ConnectionState.Closed)
-                {
-                    conn.Close();
-                }
-            }
-            catch
-            {
-                // ClearAllPools has already done the heavy lifting.
-            }
+            File.Copy(sourceFilePath, temp, overwrite: false);
+
+            // B.1 Phase 3d (§5.7): a restored synced profile starts a new
+            // sync generation; marked under the gate right before the
+            // database is replaced.
+            await ProfileDatabaseSwap.ReplaceAsync(
+                _exclusiveAccess, _db, target, temp, _clock, cancellationToken,
+                beforeSwap: () => MedReminder.Infrastructure.Sync.JsonSyncSettingsStore.MarkResetPending(directory));
         }
-
-        if (File.Exists(target))
+        finally
         {
-            var backupName = $"{target}.bak-{_clock.GetUtcNow():yyyyMMddHHmmss}";
-            File.Move(target, backupName, overwrite: false);
-        }
-        File.Copy(sourceFilePath, target, overwrite: false);
-
-        foreach (var suffix in new[] { "-wal", "-shm" })
-        {
-            var side = target + suffix;
-            if (File.Exists(side))
+            if (File.Exists(temp))
             {
-                try { File.Delete(side); } catch { /* ignore */ }
+                try { File.Delete(temp); } catch { /* best effort */ }
             }
         }
     }

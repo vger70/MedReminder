@@ -106,8 +106,10 @@ public sealed class DoseReminderService
             var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
             if (SuspensionState.IsSuspendedOn(today, suspensions)) continue;
 
-            // Evaluate each timed slot.
-            foreach (var slot in slots.Where(s => s.Time.HasValue))
+            // Evaluate each timed slot. As-needed slots are taken only
+            // when needed: no reminder (ANALYSIS-INTRADAY-CONSUMPTION.md
+            // §5.1).
+            foreach (var slot in slots.Where(s => s.Time.HasValue && !s.IsAsNeeded))
             {
                 var slotTime = slot.Time!.Value;
                 var fireLocal = new DateTimeOffset(
@@ -180,7 +182,8 @@ public sealed class DoseReminderService
                 medicine, slotTime, localization: _localization);
             try
             {
-                await _windows.ShowAsync(title, body, cancellationToken);
+                await _windows.ShowAsync(title, body,
+                    NotificationTarget.DoseReminder(medicine.Id, slotTime), cancellationToken);
                 dispatched |= NotificationChannels.Windows;
             }
             catch (Exception ex)
@@ -194,7 +197,7 @@ public sealed class DoseReminderService
         {
             var (subject, emailBody) = NotificationTexts.BuildDoseReminder(
                 medicine, slotTime, localization: _localization);
-            var msg = new EmailMessage(subject, emailBody);
+            var msg = new EmailMessage(subject, emailBody, Kind: EmailKind.DoseReminder);
             try
             {
                 await _email.SendAsync(msg, cancellationToken);

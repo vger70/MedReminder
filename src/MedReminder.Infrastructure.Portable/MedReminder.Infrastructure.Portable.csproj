@@ -32,6 +32,16 @@
     <ProjectReference Include="..\MedReminder.Application\MedReminder.Application.csproj" />
   </ItemGroup>
 
+  <!-- The regional services list shipped with the application
+       (docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.1): the
+       hand-maintained source the feed publishes, so both stay identical. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\scripts\feeds\regional_services_it.json">
+      <Link>Assets\regional-services-it.json</Link>
+      <LogicalName>MedReminder.Infrastructure.Assets.regional-services-it.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <PropertyGroup>
     <NoWarn>$(NoWarn);IDE0011</NoWarn>
   </PropertyGroup>

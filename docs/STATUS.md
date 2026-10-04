@@ -1,7 +1,7 @@
-# Development status — 2026-10-01
+# Development status — 2026-10-03
 
 Snapshot of what has shipped and what remains open, taken at
-`main` = v2.12.0 plus #155 and #156 (commit `d37de16`). Sources: `CHANGE_LOG.md`,
+`main` = v2.14.0 (commit `0999afa`), with PR #178 open. Sources: `CHANGE_LOG.md`,
 `docs/EVOLUTION.md`, `docs/EVOLUTION-DONE.md`,
 `docs/notes/EVOLUTION-PROPOSALS.md`,
 `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`, the GitHub tracker.
@@ -22,6 +22,15 @@ Reviewed again on 2026-10-01 at v2.12.0, after #113–#155 (remote
 catalogue feeds, household of devices with a master device, UI
 modernisation, database-query logging): all sections.
 
+Updated on 2026-10-02 after #160 and #162–#170 (the eight proposals of
+`docs/notes/EVOLUTION-PROPOSALS-2.md`, on `main` after v2.12.1, not yet
+released): §2.9, §3.3, §4.
+
+Reviewed again on 2026-10-03 at v2.14.0, after #158, #159 and
+#171–#177 (releases v2.12.1 to v2.14.0, signed release script, feeds
+branch, stock that follows the dose times) and with #178 open: all
+sections.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -31,11 +40,11 @@ verified against the tree or the tracker.
 
 | Item | Value |
 |---|---|
-| Latest release | v2.12.0 (2026-10-01); v2.11.0 on 2026-09-29 |
+| Latest release | v2.14.0 (2026-10-03); v2.13.0 and v2.13.1 on 2026-10-02; v2.12.1 on 2026-10-01 |
 | Projects | Domain, Application, Infrastructure.Portable (`net10.0`); Infrastructure (`net10.0-windows`); UI (WinForms, `net10.0-windows10.0.19041.0`); DataImporter |
-| Source files | 446 `.cs` under `src/` |
-| Test projects | 6 (one per project, plus UI and DataImporter); 192 `.cs` files, 1122 `[Fact]`/`[Theory]` attributes |
-| Open pull requests | #137 — local Certum-signed release build in `release.ps1` (based on `509e2e4`, before v2.12.0); #106 — Android spikes S1–S4 (draft, not to be merged) |
+| Source files | 510 `.cs` under `src/` |
+| Test projects | 6 (one per project, plus UI and DataImporter); 230 `.cs` files, 1341 `[Fact]`/`[Theory]` attributes |
+| Open pull requests | #178 — days left from the stock shown, documentation of the dose-time stock (follow-up to #177); #161 — self-contained MSI for the Microsoft Store; #106 — Android spikes S1–S4 (draft, not to be merged) |
 | Open issues | #11 — Simplified Chinese localization (catalogue search disabled) |
 | UI languages | en, it, fr, es, de |
 
@@ -174,6 +183,59 @@ Also in v2.12.0: Settings → General → Log database queries
 (diagnostics), administrators only (#153). The user guides were
 rewritten around tasks and the household features (#142).
 
+### 2.9 Proposals from `EVOLUTION-PROPOSALS-2.md` (v2.13.0)
+
+Second round of proposals (#160), benchmarked against similar apps and
+implemented in the recommended order 1 → 5 → 2 → 4 → 3, then 6, 7, 8.
+Each item has a status paragraph in the proposals note.
+
+| Rank | Proposal | PR | Sync / format impact |
+|---|---|---|---|
+| 1 | Second low-stock warning at half of the warning threshold | #162 | `Stage` on notification events and sent emails; `EmailNotificationSent` version 6 for a second-stage email; image schema 4 |
+| 5 | Supply planner for a chosen period (Therapy → Plan supply…) | #163 | none |
+| 2 | Prescription lifecycle: requested, issued, collected; reminder before "valid until" (Therapy → Prescriptions…) | #164 | `PrescriptionChanged`, operation schema 7; image schema 5; export field `prescriptions` |
+| 4 | Actions in Windows notifications: open the medicine or the list, prepare the prescription request, snooze a dose reminder by 15 minutes | #165 | none |
+| 3 | AIFA shortage list: Supply column, notice once per shortage (Italy) | #166, #167 | none (reference data under `data/it/shortages/`); #167 keeps feed files byte for byte (`.gitattributes`) |
+| 6 | Administrative deadlines (therapeutic plan, exemption renewal, check-up), optional recurrence (Therapy → Administrative deadlines…) | #168 | `DeadlineChanged`, operation schema 8; image schema 6; export field `deadlines` |
+| 7 | Calendar export (`.ics`, Therapy → Export to calendar…); run-out date attached to low-stock emails | #169 | none |
+| 8 | Caregiver: copies per kind of email, weekly stock summary | #170 | replicated profile settings `CaregiverEmails`, `CaregiverDigest`, `CaregiverDigestSentOn` (no schema bump); additive export fields |
+
+Every device of a sync group must run a build with operation schema 8
+and image schema 6 before prescriptions or deadlines are used; an older
+app stops at the first operation it cannot read (R7). Released in
+v2.13.0. The Windows-only test projects (`Infrastructure.Tests`,
+`UI.Tests`) were run by the maintainer before v2.14.0.
+
+### 2.10 Changes v2.12.1 – v2.13.1
+
+| PR | Content | Release |
+|---|---|---|
+| #137, #158 | Local Certum-signed release build in `release.ps1`; `publish-signed-release.ps1` chains the GitHub release, the CI wait, the signed build with `signtool verify` and the upload of the signed assets | v2.12.1 |
+| #159 | Remote catalogue feeds checked once a day while the app stays open | v2.12.1 |
+| #171 | Status snapshot of the second round of proposals | — |
+| #172–#174 | Feed workflows moved off the top of the hour; feeds published on a single-commit `feeds` branch instead of `main`'s history; AIFA shortage list fetched daily | v2.13.0 |
+| #175, #176 | A maximized main window goes to the tray on the first close; the main window reopens at its last size, position and state, per profile; all data sources listed in About; text box borders no longer flicker | v2.13.1 |
+
+### 2.11 Stock that follows the dose times; as-needed doses (v2.14.0)
+
+Analysis and status: `analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`;
+summary in `EVOLUTION-DONE.md` §12.5.
+
+| PR | Content | Sync / format impact |
+|---|---|---|
+| #177 | As-needed slots never consumed automatically, no reminder; under PRN the slots consume nothing; "Extra dose as needed" in the intake dialog; existing "As needed" slots corrected once from today | `IntakeRecorded.IsExtra` and `SlotValue.IsAsNeeded`, operation schema 9; image schema 7; additive export fields `isAsNeeded`, `isExtra` |
+| #177 | Therapy → Dose times…: editable and user-defined time-of-day presets, times of medicines without slots; slots keep their preset (`PresetId`) | device-local, not replicated; `SlotValue.PresetId` display only (no version); additive export fields |
+| #177 | Main list: stock after today's doses whose time has passed, refreshed every minute; run-out date, coverage, recorded stock and low-stock monitor keep the start-of-day stock | none |
+| #178 (open) | Days left counted from the stock shown; user guides and architecture documents updated | none |
+
+Every device of a sync group must run v2.14.0 before anyone records an
+extra intake or flags an as-needed slot; an older app stops at the
+first operation of schema 9 (R7). Past as-needed consumption is not
+given back: one stock count per affected medicine recovers it. The
+maintainer ran the Windows-only test projects on #177 before v2.14.0;
+for #178 the Domain and Application tests ran on Linux and the run on
+Windows is pending.
+
 ---
 
 ## 3. Open work
@@ -221,7 +283,9 @@ developer-days `[INFERRED — from the §13.1 estimates]`.
 
 ### 3.3 Proposals with an implementation prompt ready
 
-None for the application. `docs/prompt/` holds only the two website
+None for the application. Every proposal of
+`EVOLUTION-PROPOSALS-2.md` §3 has shipped (§2.9); its §4 and §5
+(re-assessed backlog items, proposals not recommended) remain notes. `docs/prompt/` holds only the two website
 prompts (§3.5). The others are in `docs/prompt/Completed/`, including
 the multi-user roles prompt (item G shipped with household step H2a;
 item I was not built) and the two remote-feed prompts.
@@ -237,13 +301,23 @@ WebDAV target, command palette, CLI). The household of devices (§2.7)
 shares profiles and settings between PCs, not the stock of one
 medicine between profiles: proposal 11 is still open.
 
+Left out of the dose-time feature (§2.11, `EVOLUTION-DONE.md` §12.5):
+minimum-quantity alerts for as-needed medicines (they have no
+forecast, so no low-stock warning), time-of-day presets synchronized
+between devices, dose reminders at preset times, per-slot intake
+tracking.
+
 ### 3.5 Other open items
 
 - **Automatic update** (`docs/AUTO_UPDATE.md`): design proposal, not
   implemented.
-- **Code signing**: PR #137 (local Certum-signed release build in
-  `release.ps1`) is open and predates v2.12.0; the published binaries
-  are still unsigned (`README.md`).
+- **Code signing**: done. The signed local build (#137) and the release
+  script (#158) are on `main`, and the published executables are
+  signed (Certum, confirmed by the maintainer on 2026-10-03). CI still
+  publishes unsigned packages that the script replaces with the signed
+  ones (`docs/PACKAGING.md` §25); signing in CI is open. `README.md` and
+  the user guides now describe signed binaries (#178).
+- **Microsoft Store**: PR #161 (self-contained MSI) is open.
 - **UI, known limitations** (`ANALYSIS-UI-MODERNIZATION.md` §6b): in
   dark mode the date and time pickers keep a white field (a dark picker
   needs a replacement control); the Windows MessageBox remains on the
@@ -252,10 +326,12 @@ medicine between profiles: proposal 11 is still open.
 - **Issue #11**: Simplified Chinese localization.
 - **Website**: `PROMPT-WEBSITE-CONTENT-REFRESH.md` is live on the site;
   whether `PROMPT-WEBSITE-V2.6-REFRESH.md` has been applied cannot be
-  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.12
+  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.14
   (sync, cloud providers, therapy card PDF, text size, webcam scan,
   restock by scan, remote catalogue feeds, shared installation and
-  master device, dark mode and the new main window) `[INFERRED]`.
+  master device, dark mode and the new main window, the
+  `EVOLUTION-PROPOSALS-2` features, stock that follows the dose times
+  and as-needed doses) `[INFERRED]`.
 - **Multi-user I** (`ANALYSIS-MULTI-USER-ROLES-OVERVIEW.md`): a
   read-only "All profiles" stock view for an admin. Not planned. Item G
   (role change) shipped (§2.2).
@@ -271,17 +347,23 @@ medicine between profiles: proposal 11 is still open.
 
 ## 4. Suggested next steps `[INFERRED]`
 
+0. Run the Windows-only tests on PR #178, then merge it and release it
+   as a patch version. The release notes of
+   v2.14.x must say that every device of a sync group has to be updated
+   before extra intakes or as-needed slots are used, and that one stock
+   count recovers past as-needed consumption.
+
 The household feature shipped after its manual tests (§2.7). Every
 device of a sync group or installation must run v2.12.0 or later
 before anyone uses the household features (older apps cannot read
 profile operation schemas 4 and 5).
 
 1. Desktop: confirm webcam decoding on a real pack with a webcam of
-   sufficient resolution (A2 checklist item 7). Decide on PR #137
-   (code signing): bring it up to date with `main` or close it.
+   sufficient resolution (A2 checklist item 7). Decide on PR #161
+   (Microsoft Store MSI).
 2. UI: replace the date and time pickers if a fully dark mode is
    wanted (§3.5).
-3. Website content refresh for v2.7–v2.12; the screenshots in
+3. Website content refresh for v2.7–v2.14; the screenshots in
    particular predate the new main window and dark mode.
 4. Mobile: build and run the S1–S4 spike app of draft PR #106 on
    Android before committing to Phase 5; S1 and S3 are the go / no-go

@@ -29,11 +29,13 @@ de la aplicación. La arquitectura técnica se describe en
      [Editar, desactivar, eliminar](#edit-medicine)
 3. [Encontrar un medicamento: catálogo y código de barras](#catalogue)
 4. [Stock](#stock)
-   - [Añadir una caja](#add-package) · [Registrar una toma](#intake) ·
+   - [Añadir una caja](#add-package) · [Cajas y caducidad](#packages) ·
+     [Registrar una toma](#intake) ·
      [Corregir el stock](#correct) · [Contar existencias](#count) ·
      [Historial](#history)
 5. [Cronología, ficha de terapia y solicitud de receta](#documents)
 6. [Notificaciones y correo](#notifications)
+   - [Configuración de correo de los principales proveedores](#smtp-providers)
 7. [Varias personas: perfiles y roles](#profiles)
 8. [Proteger tus datos: copia de seguridad y exportación](#backup)
 9. [Varios ordenadores](#devices)
@@ -68,12 +70,12 @@ de la aplicación. La arquitectura técnica se describe en
    notificación de Windows (junto al reloj) sigue visible mientras la
    aplicación está en marcha.
 
-**Windows SmartScreen.** El programa no está firmado digitalmente. En el
-primer inicio Windows puede mostrar una ventana azul "Windows protegió
-su PC": haz clic en **Más información** y luego en **Ejecutar de todas
-formas**. Windows recuerda la elección. Si instalas desde el paquete
-MSI, la ventana de permisos indica "Editor desconocido" por el mismo
-motivo.
+**Windows SmartScreen.** El programa está firmado digitalmente con un
+certificado Certum. Mientras el certificado no haya ganado reputación,
+en el primer inicio Windows aún puede mostrar una ventana azul "Windows
+protegió su PC": haz clic en **Más información** y luego en **Ejecutar
+de todas formas**. Windows recuerda la elección. Si instalas desde el
+paquete MSI, la ventana de permisos muestra el editor verificado.
 
 <a id="main-window"></a>
 ### La ventana principal
@@ -84,7 +86,7 @@ motivo.
   *Registrar toma* y, a la derecha, un cuadro de búsqueda (**Ctrl+F**)
   que filtra la lista por nombre.
 - **Navegación** a la izquierda: *Medicamentos* (esta lista), luego
-  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*,
+  *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*, *Planificar stock*, *Recetas*, *Vencimientos administrativos*,
   *Instalación* (administradores) y *Configuración*, que se abren en su
   propia ventana. Si la ventana es estrecha, solo muestra los iconos.
 - **Resumen** encima de la lista: cuántos medicamentos están
@@ -92,7 +94,9 @@ motivo.
   recuadro para ver solo esos medicamentos; un segundo clic los muestra
   todos.
 - **Lista de medicamentos** en el centro: una fila por medicamento, con
-  el stock, los días restantes y la fecha estimada de agotamiento. La
+  el stock, los días restantes y la fecha estimada de agotamiento.
+  Durante el día el stock y los días restantes ya descuentan las dosis
+  de hoy cuya hora pasó ([detalles](#stock-estimate)). La
   columna **Estado** muestra el estado con una etiqueta de color. El
   clic derecho en una fila ofrece los comandos para ese medicamento
   (editar, registrar toma, añadir envase…); doble clic o **F2** lo
@@ -113,9 +117,15 @@ clic derecho en el icono y elige **Salir**.
 | Cambiar dosis o frecuencia | **Terapia → Cambiar dosis/frecuencia…** |
 | Registrar una caja comprada | **Stock → Añadir caja…** o **Stock → Reponer por código de barras…** |
 | Ajustar el stock a lo que realmente tengo | **Stock → Contar existencias…** |
+| Registrar una dosis tomada si es necesario | **Terapia → Registrar toma…** (opción *Dosis extra si es necesario* si el medicamento también tiene dosis programadas) |
+| Cambiar la hora de "Por la mañana", "Antes de comer"… | **Terapia → Horarios de las dosis…** |
 | Deshacer un registro erróneo | **Stock → Historial…** |
 | Imprimir la terapia para un médico | **Terapia → Ficha de terapia…** |
 | Pedir una receta | **Terapia → Solicitar receta…** |
+| Seguir una receta hasta la farmacia | **Terapia → Recetas…** |
+| Recordar un plan terapéutico, una exención o un control | **Terapia → Vencimientos administrativos…** |
+| Ver las próximas fechas en Outlook, Google Calendar o en el teléfono | **Terapia → Exportar al calendario…** |
+| Comprobar el stock para un viaje o hasta la próxima visita a la farmacia | **Terapia → Planificar stock…** |
 | Configurar correo, idioma, copia de seguridad | **Herramientas → Configuración…** |
 | Añadir una persona | **Herramientas → Gestionar perfiles…** (administrador) |
 | Usar MedReminder en otro PC | **Herramientas → Sincronización…** y **Herramientas → Instalación…** (administrador) |
@@ -164,6 +174,28 @@ recordarte la dosis.
 
 Sin horarios, el medicamento usa "dosis × tomas al día".
 
+Una dosis que se toma solo cuando hace falta (por ejemplo un analgésico
+para el dolor de cabeza) se marca **Si es necesario** en la ventana del
+horario: la descripción *Si es necesario* la marca sola. Una dosis si es
+necesario nunca se descuenta automáticamente y no forma parte del total
+diario: el stock solo baja cuando registras la toma. Si todos los
+horarios de un medicamento son si es necesario, se comporta como un
+esquema *Si es necesario (PRN)*.
+
+Desde la versión que introdujo esta opción, los horarios descritos como
+"Si es necesario" se tratan como tales a partir de ese día. Antes se
+descontaban cada día: si el stock mostrado es menor que el real, haz un
+[recuento](#count) para realinearlo.
+
+**Terapia → Horarios de las dosis…** muestra los momentos del día con
+su hora ("Por la mañana" = 08:00, "Antes de comer" = 13:00, …) y las
+horas usadas para los medicamentos sin horarios (1 al día = 08:00, 2
+al día = 08:00 y 20:00, …). Puedes cambiar las horas, ocultar los
+momentos que no usas y añadir los tuyos; en la ventana del horario, al
+elegir un momento ves su hora. Estas horas solo sitúan las dosis en el
+día y nunca cambian el stock registrado. Valen para este ordenador: no
+se sincronizan.
+
 <a id="regimens"></a>
 ### Regímenes complejos
 
@@ -181,6 +213,13 @@ régimen**:
 
 Con **Avanzado**, los campos de dosis de la parte superior de la
 ventana no se usan. Vuelve a **Simple** para una dosis diaria fija.
+
+**Los horarios de administración también funcionan con Avanzado.** El
+esquema fija cuánto tomar cada día; los [horarios de administración](#slots)
+fijan cuándo. La cantidad del día se reparte entre los horarios en
+proporción a sus dosis: con dos horarios de 1, un día decreciente de 4
+da 2 + 2, un día de 1 da 0,5 + 0,5. En un día de pausa del ciclo no hay
+nada que tomar y no llega ningún recordatorio.
 
 **¿Cambia la terapia?** Usa **Terapia → Cambiar dosis/frecuencia…** y
 elige la fecha **Efectivo desde**. El esquema anterior sigue siendo
@@ -251,12 +290,12 @@ medicamentos autorizados para toda la **Unión Europea** (EMA).
   contiene también los medicamentos de la UE; con **EU**, solo esos. Un
   medicamento puede aparecer dos veces (nacional y UE): elige el que
   coincide con tu caja.
-- **Actualización automática.** Cuando **Buscar actualizaciones
-  automáticamente (GitHub)** está activado (Configuración → General),
-  MedReminder descarga al iniciar, y una vez al día mientras siga
-  abierto, la última lista mensual de tu país y la de la UE, si son más
-  recientes. Sin conexión no cambia nada. Con varios perfiles solo se
-  actualiza el abierto; los demás, la primera vez que se abren.
+- **Actualización automática.** Cuando **Buscar actualizaciones de la
+  aplicación y los catálogos (GitHub)** está activado (Configuración →
+  General), MedReminder descarga al iniciar, y una vez al día mientras
+  siga abierto, la última lista mensual de tu país y la de la UE, si son
+  más recientes. Sin conexión no cambia nada. Con varios perfiles solo
+  se actualiza el abierto; los demás, la primera vez que se abren.
 
 **Fuentes.** Datos abiertos de AIFA (CC BY 4.0); datos EMA EPAR (aviso
 jurídico de la EMA, Decisión de la Comisión 2011/833/UE); AEMPS CIMA
@@ -302,6 +341,68 @@ ventana de stock, ya en *Nueva caja* con la cantidad habitual. Si ningún
 medicamento tiene ese código, puedes añadir un medicamento nuevo o
 vincular el código a uno existente.
 
+### Medicamentos en desabastecimiento (Italia)
+
+Con Italia como país de referencia, MedReminder descarga la lista AIFA
+de medicamentos en desabastecimiento junto con el catálogo (al inicio y
+una vez al día, si **Buscar actualizaciones de la aplicación y los
+catálogos** está activo). Un medicamento cuya caja (código AIC,
+rellenado desde el catálogo o el código de barras) está en la lista lo
+muestra en la columna **Disponibilidad** de la lista:
+
+- *En desabastecimiento*: AIFA indica la caja como difícil de
+  encontrar;
+- *Desabastecimiento desde el …*: AIFA anuncia un desabastecimiento
+  desde esa fecha.
+
+Pasa el ratón por la celda para leer el inicio, el fin previsto (a
+menudo no comunicado, y puede cambiar), el motivo, si AIFA indica
+medicamentos equivalentes y la fecha de la lista. También recibes una
+notificación por cada desabastecimiento, por los canales del
+medicamento.
+
+El aviso de desabastecimiento no indica sustitutos: consulta a tu
+médico o farmacéutico y solicita la receta a tiempo. Si el envase
+también está en la lista de transparencia de la AIFA, la celda remite a
+**Medicamentos equivalentes (AIFA)** (ver abajo).
+
+### Enlaces informativos y medicamentos equivalentes (Italia)
+
+Para un medicamento con código de envase italiano (AIC), la fila
+**Información** de la ventana del medicamento ofrece hasta cuatro
+enlaces:
+
+- **Prospecto** y **Ficha técnica**: los documentos de la AIFA, con
+  Italia como país de referencia, cuando el catálogo los incluye;
+- **Página de Codifa**: la página pública del envase en codifa.it
+  (composición, clase, régimen de dispensación, precio si se conoce),
+  abierta en el navegador. Funciona con cualquier país de referencia;
+- **Medicamentos equivalentes**: aparece cuando el envase está en la
+  lista de transparencia de la AIFA.
+
+Los dos últimos comandos están también en el menú contextual de la
+lista (clic derecho sobre un medicamento): **Medicamentos equivalentes
+(AIFA)…** y **Abrir página de Codifa**. Están desactivados para un
+medicamento sin AIC.
+
+**Medicamentos equivalentes (AIFA).** Con Italia como país de
+referencia, MedReminder descarga la lista de transparencia de la AIFA
+junto con el catálogo (lista mensual, comprobada una vez al día). La
+ventana muestra el grupo del envase (principio activo, unidades, dosis,
+vía de administración), el precio de referencia del servicio de salud y
+cada envase del grupo, del más barato al más caro, con su precio
+público, la diferencia que pagas sobre el precio de referencia, su
+disponibilidad, si ya lo tienes en casa en otro medicamento del perfil
+y la nota de la AIFA tal cual. Una nota puede limitar la sustitución
+(por ejemplo "no sustituible con …"): léela. Tu medicamento aparece en
+negrita.
+
+Un envase que no está en la lista no es "sin equivalentes": puede estar
+patentado, en clase C o simplemente no figurar. La sustitución la
+deciden tu médico y tu farmacéutico; la lista no tiene en cuenta
+excipientes ni alergias. Los medicamentos de clase C no tienen precio
+público y no muestran precio.
+
 ---
 
 <a id="stock"></a>
@@ -309,6 +410,17 @@ vincular el código a uno existente.
 
 MedReminder reduce el stock solo cada día según el esquema. Solo
 registras lo que cambia el stock de otra manera.
+
+<a id="stock-estimate"></a>
+Durante el día la columna del stock muestra una estimación: el stock al
+inicio del día menos las dosis de hoy cuya hora ya pasó. Los horarios
+sin hora usan la hora de su momento (**Terapia → Horarios de las
+dosis…**); un horario con descripción libre y sin hora se cuenta al
+final del día. Al pasar el ratón por el stock ves el valor al inicio
+del día. El stock registrado, el historial y la fecha de agotamiento
+se actualizan después de medianoche, mientras que los días restantes
+siguen el stock mostrado; si registras una toma, ese día
+cuenta la cantidad registrada.
 
 <a id="add-package"></a>
 ### Añadir una caja
@@ -324,6 +436,58 @@ registras lo que cambia el stock de otra manera.
 Una caja nueva reinicia el ciclo de aviso: cuando el stock vuelve a
 bajar del umbral, recibes un aviso nuevo.
 
+Con **Nueva caja** también puedes registrar la caducidad; todos los
+campos son opcionales:
+
+- **Cajas** — cuántas cajas iguales compraste; la cantidad se reparte
+  entre ellas.
+- **Caducidad (mes/año)** — marca la casilla y elige mes y año como
+  vienen impresos. Una caducidad `03/2027` vale hasta el 31 de marzo de
+  2027.
+- **Usar en … días tras la apertura** — para colirios, jarabes,
+  insulinas en uso y similares, según el prospecto; 0 si no hay. Se
+  propone el valor de la última caja del medicamento.
+- **Abierta hoy** — si abres enseguida la primera caja.
+- **Lote** — opcional.
+
+Con **Stock → Reponer por código de barras…** un código DataMatrix
+rellena solo la caducidad y el lote. Si dejas vacíos todos estos
+campos, la caja solo añade cantidad, como antes.
+
+<a id="packages"></a>
+### Cajas y caducidad
+
+**Stock → Cajas y caducidad…** (también desde el menú del clic derecho)
+lista las cajas del medicamento seleccionado con el estado, la caducidad
+impresa, la fecha de apertura, la fecha límite de uso y la cantidad en
+stock.
+
+- Una caja caduca al final del mes impreso, o antes si está abierta y
+  se agotan sus días tras la apertura (abierta el 1 de marzo, 28 días:
+  usar hasta el 28 de marzo).
+- La app considera que se usa primero la caja abierta y después las que
+  caducan antes. Las que el stock ya no cubre quedan **Agotadas** y no
+  dan avisos, aunque no las marques terminadas. Si usas las cajas en
+  otro orden, marca la que estás usando con **Abierta hoy** o cierra la
+  correcta.
+- **Nueva…** registra una caja que ya tienes en el botiquín, sin cambiar
+  el stock.
+- **Abierta hoy**, **Terminada**: actualizan la caja; el stock no
+  cambia.
+- **Desechar…**: para una caja tirada, normalmente caducada. La cantidad
+  que queda (propuesta por la app) se resta del stock. Es definitivo: si
+  te equivocaste, elimina la caja y vuelve a añadir las unidades con una
+  corrección positiva.
+- **Eliminar**: solo para una caja introducida por error; el stock no
+  cambia.
+
+La columna **Caducidad** de la ventana principal muestra la primera
+caducidad entre las cajas en stock, con *(caducada)* o *(caduca
+pronto)*. **Stock → Cajas que caducan…** reúne las cajas caducadas o que
+caducan pronto de todos los medicamentos, también de los que ya no se
+usan, primero las caducadas; **Abrir cajas…** abre las del medicamento
+elegido. Para los avisos, ver [Notificaciones y correo](#notifications).
+
 <a id="intake"></a>
 ### Registrar una toma
 
@@ -332,6 +496,12 @@ toma como **Tomada**, **Saltada** o **Cancelada**, con el día y la
 cantidad. Los días normales no hace falta. Úsalo cuando un día es
 distinto del esquema: en cuanto registras una toma para un día, el
 descuento automático de ese día se sustituye por lo que registraste.
+
+Para una dosis además del esquema, por ejemplo una dosis si es
+necesario, marca **Dosis extra si es necesario**: la cantidad se
+descuenta y las dosis programadas del día se mantienen. La opción solo
+aparece para medicamentos con un esquema y ya viene marcada si el
+medicamento tiene un horario si es necesario.
 
 <a id="correct"></a>
 ### Corregir el stock
@@ -351,7 +521,9 @@ deja que la aplicación corrija:
 2. Escribe la **Cantidad contada**. La ventana muestra el stock
    esperado, la diferencia y cómo cambia la fecha de agotamiento.
 3. En **Ya tomado hoy**, indica lo que ya habías tomado hoy cuando
-   contaste (la aplicación propone las dosis cuya hora ya pasó).
+   contaste. La aplicación propone las dosis cuya hora ya pasó, las
+   mismas que la lista ya descontó del stock; los horarios sin hora
+   usan la hora de su momento.
 4. Haz clic en **Registrar recuento**.
 
 La aplicación registra una corrección para que el stock sea igual a lo
@@ -408,6 +580,29 @@ principio activo, posología, periodo de terapia, médico.
 
 MedReminder no guarda ninguna copia de lo que guardas o imprimes.
 
+### Planificar el stock (viaje o farmacia)
+
+**Terapia → Planificar stock…** responde a la pregunta «¿tengo
+suficiente hasta…?». Elige el periodo con **Desde** y **Hasta**, por
+ejemplo los días de un viaje o los días hasta tu próxima visita a la
+farmacia (por defecto: los próximos 14 días, hoy incluido). Para cada
+medicamento activo la ventana muestra:
+
+- **Necesario en el periodo**: la cantidad que se consume en el periodo,
+  según la pauta, las suspensiones, la fecha de fin de la terapia y los
+  horarios de toma;
+- **Stock al inicio**: el stock de hoy menos el consumo previsto hasta
+  el inicio del periodo (*se agota antes* si no quedará nada);
+- **Falta**: lo que se necesita además de ese stock, o *cubierto*;
+- **Cajas a conseguir**: cuántas cajas cubren lo que falta, del tamaño
+  de la última caja nueva registrada (— si no se registró ninguna).
+
+Los medicamentos no cubiertos aparecen primero. Los medicamentos a
+demanda se listan pero no se calculan, porque su consumo no está
+planificado. **Imprimir…**, **Guardar como PDF…** y **Copiar al
+portapapeles** funcionan como en la ficha de terapia. La ventana no
+modifica nada: las cifras son estimaciones.
+
 ### Solicitar una receta
 
 Selecciona un medicamento y luego **Terapia → Solicitar receta…**.
@@ -429,6 +624,148 @@ Puedes modificarlo todo antes de enviarlo.
 
 MedReminder nunca envía una solicitud por sí solo.
 
+### Seguir una receta hasta la farmacia
+
+**Terapia → Recetas…** lista las recetas registradas, primero las que
+están por retirar. Para cada una puedes anotar, cuando los conozcas:
+
+- **Solicitada el**: cuándo se la pediste al médico. **Marcar como
+  solicitada** en la ventana de solicitud la registra por ti con la
+  fecha de hoy;
+- **Emitida el**, **Código de la receta** y **Cajas**: de la receta que
+  emitió el médico;
+- **Válida hasta**: el último día en que la farmacia la acepta. Se
+  rellena para 30 días desde la fecha de emisión, la validez habitual
+  de la receta electrónica italiana; compruébala en tu receta y
+  corrígela si es distinta;
+- **Retirada el**: cuándo la llevaste a la farmacia. **Retirada hoy**
+  lo hace con un clic. Cuando añades una caja nueva de un medicamento
+  con una receta aún por retirar, MedReminder pregunta si la caja viene
+  de ella.
+
+Una receta emitida y no retirada está *Por retirar*; tras su último día
+de validez está *Caducada*. Desde 3 días antes de ese día recibes un
+recordatorio, una vez, por los canales de notificación del medicamento
+(el correo solo desde el [dispositivo principal](#master) si la
+instalación es compartida). El recordatorio no incluye el código.
+
+Las recetas se copian a los otros PC de un perfil sincronizado y se
+incluyen en la exportación cifrada.
+
+### Recetas repetibles
+
+Algunas recetas cubren varias dispensaciones en la farmacia durante una
+validez larga, por ejemplo un año de terapia retirado mes a mes. Marca
+**Receta repetible** en la ventana de la receta para registrarla como
+una sola receta:
+
+- **Dispensaciones previstas**: cuántas veces la farmacia la dispensa
+  (de 2 a 12);
+- **Válida hasta** se rellena para 12 meses desde la fecha de emisión;
+  compruébala en tu receta y cámbiala si es distinta;
+- **Dispensaciones retiradas** sustituye a *Retirada el*: añade cada
+  dispensación con el día y, si lo conoces, el número de envases.
+  **Retirada hoy** en la lista registra una con un clic, y tras un
+  nuevo envase MedReminder propone registrarla con la fecha de hoy.
+
+La lista muestra las dispensaciones como retiradas / previstas, por
+ejemplo `3 / 12`. Una receta repetible sigue *Por retirar* mientras
+queden dispensaciones y dure la validez; está *Retirada* cuando se han
+retirado todas y *Caducada* si la validez termina antes. Cuando el stock
+baja, el aviso indica cuántas dispensaciones quedan y hasta cuándo, en
+lugar de sugerir una receta nueva, y su botón abre la receta. El
+recordatorio antes de *Válida hasta* llega solo si quedan
+dispensaciones e indica cuántas se perderían. MedReminder no comprueba
+el intervalo entre dispensaciones: sigue las indicaciones de tu
+farmacéutico.
+
+En PC sincronizados, actualiza MedReminder en todos los PC del perfil
+antes de registrar una receta repetible: una versión anterior detiene
+la sincronización hasta que se actualiza.
+
+### Servicio regional de recetas
+
+Con Italia como país de referencia, **Terapia → Recetas…** y la ventana
+de solicitud de receta tienen un botón **Servicio regional de
+recetas**. Abre el servicio de tu región donde se muestran las recetas
+electrónicas emitidas a tu nombre, para que copies el número de la
+receta en lugar de esperarlo.
+
+- La primera vez, elige tu región o provincia autónoma. Se guarda con
+  el perfil; cámbiala desde el botón (**Cambiar región…**) o en
+  Configuración → Notificaciones.
+- **Abrir en el navegador** abre el portal regional en tu navegador
+  habitual.
+- **Abrir en el teléfono** muestra un código QR de la app regional, o
+  del portal si no hay app: escanéalo con la cámara del teléfono e
+  inicia sesión en el teléfono.
+
+La línea bajo el botón indica el servicio y cómo iniciar sesión (SPID,
+CIE o TS-CNS). Inicias sesión en el servicio regional, nunca en
+MedReminder: MedReminder no ve tus credenciales ni tu historia clínica
+y no importa nada de ella. Un cuidador inicia sesión con sus propias
+credenciales y una delegación activada en el servicio regional. Si no
+hay ningún servicio para tu región, abre tú mismo el portal de la
+historia clínica (Fascicolo Sanitario Elettronico) de tu región.
+
+**Pegar NRE**, junto a **Código de la receta** en la ventana de la
+receta, escribe el número de receta electrónica (NRE, 15 letras o
+cifras) que copiaste del servicio regional, sin espacios, y rellena
+**Emitida el** con la fecha de hoy si está vacía. MedReminder lee el
+portapapeles solo cuando haces clic.
+
+### Vencimientos administrativos
+
+**Terapia → Vencimientos administrativos…** reúne las fechas que no
+tienen que ver con el stock: la renovación de un plan terapéutico o de
+una exención, un control periódico o cualquier otra cosa que
+describas. Para cada vencimiento:
+
+- **Tipo** y **Descripción**: la descripción es opcional, salvo para el
+  tipo *Otro*;
+- **Medicamento**: el medicamento al que se refiere, o *(ninguno)* para
+  un vencimiento de todo el perfil;
+- **Fecha** y **Avisar días antes**: el recordatorio empieza ese número
+  de días antes de la fecha (14 por defecto);
+- **Repetir cada … meses**: para un vencimiento que vuelve, como una
+  renovación anual;
+- **Avisar por**: notificación de Windows y/o correo electrónico.
+
+MedReminder no aplica reglas propias a estas fechas: los plazos de validez
+cambian según el plan y la región, así que introduce la fecha que
+figura en tus documentos.
+
+Desde la antelación fijada recibes un recordatorio por fecha, por los
+canales elegidos (el correo solo desde el [dispositivo maestro](#master)
+cuando la instalación es compartida); un vencimiento pasado se muestra
+en rojo. **Hecho** cierra un vencimiento único; uno recurrente pasa a
+su fecha siguiente, contada desde la fecha anterior y no desde el día
+en que lo marcaste.
+
+Los vencimientos se copian en los demás PC de un perfil sincronizado y
+se incluyen en la exportación cifrada.
+
+### Exportar las fechas a un calendario
+
+**Terapia → Exportar al calendario…** guarda un archivo `.ics` con las
+próximas fechas: para cada medicamento activo el día en que solicitar
+la receta (la fecha de agotamiento menos el umbral de aviso) y la fecha
+de agotamiento, el último día para recoger cada receta y los
+vencimientos administrativos abiertos. Abre el archivo con Outlook,
+Google Calendar o el calendario del teléfono. Los eventos son
+recordatorios, no citas: no te marcan como ocupado. Al exportar de
+nuevo más adelante se actualizan los mismos eventos, sin copias.
+
+Los calendarios suelen guardarse en línea en otra empresa, así que los
+eventos solo dicen qué hacer ("MedReminder: se agota un
+medicamento"). Marca **Incluir los nombres de los medicamentos y las
+descripciones de los vencimientos** si quieres los nombres en el
+calendario; la opción se pregunta en cada exportación.
+
+Cada correo de stock bajo lleva también la fecha de agotamiento como
+archivo de calendario (`medreminder.ics`), con el mismo título
+genérico.
+
 ---
 
 <a id="notifications"></a>
@@ -439,7 +776,31 @@ MedReminder nunca envía una solicitud por sí solo.
 - Cada 30 minutos MedReminder revisa los medicamentos. Cuando un
   medicamento baja de su **umbral de aviso**, te avisa **una vez**, por
   los canales elegidos para ese medicamento: una notificación de
-  Windows y/o un correo. Tras una caja nueva, el ciclo vuelve a empezar.
+  Windows y/o un correo.
+  La revisión usa el stock registrado, no la estimación de la lista: el
+  día en que se cruza el umbral, la lista puede mostrar el estado de
+  aviso unas horas antes del aviso.
+- Si cuando los días restantes llegan a **la mitad del umbral** no se ha
+  añadido una caja nueva, sigue un **segundo aviso** por los mismos
+  canales (con un umbral de 10 días: primer aviso a los 10 días, segundo
+  a los 5). Un medicamento que ya está por debajo de la mitad en la
+  primera revisión recibe solo el segundo aviso. Tras una caja nueva, el
+  ciclo vuelve a empezar.
+- **Caducidad de las cajas**: una caja registrada con caducidad da un
+  aviso *caduca pronto* 30 días antes de la caducidad impresa (3 días
+  antes del fin del periodo tras la apertura) y un aviso *caducada* el
+  día siguiente, una vez cada uno, por los canales del medicamento,
+  aunque ya no esté en uso. Las cajas agotadas o cerradas no dan avisos.
+  Los plazos se cambian en **Herramientas → Configuración… →
+  Notificaciones → Caducidad de las cajas**; con 0 queda solo el aviso
+  de caja caducada.
+- **Desde la notificación de Windows**: un clic abre MedReminder en ese
+  medicamento (en las recetas, para un recordatorio de receta; en los vencimientos, para un recordatorio de vencimiento; en las cajas, para un aviso de caducidad). Un
+  aviso de stock tiene **Preparar la solicitud**, que abre la solicitud
+  al médico; un recordatorio de dosis tiene **Recuérdamelo en 15
+  minutos**, que lo repite más tarde, aunque MedReminder se haya cerrado
+  entretanto. Las tomas no se registran desde la notificación: usa
+  **Terapia → Registrar toma…**.
 - **Herramientas → Comprobar ahora** (**Ctrl+R**, o el menú del icono)
   ejecuta la comprobación enseguida.
 - MedReminder tiene que estar en marcha para enviar avisos. Activa el
@@ -452,7 +813,7 @@ MedReminder nunca envía una solicitud por sí solo.
 | Campo | Qué introducir |
 |---|---|
 | **Servidor** | El servidor de salida de tu proveedor, por ejemplo `smtp.gmail.com` |
-| **Puerto** | Normalmente `587` (con *Usar StartTLS*) o `465` |
+| **Puerto** | `587` con *Usar StartTLS* marcado, o `465` con *Usar StartTLS* sin marcar |
 | **Nombre de usuario** / **Nueva contraseña** | Tu cuenta de correo. La contraseña se guarda cifrada y nunca aparece en los registros |
 | **Remitente (from)** / **Nombre del remitente** | De quién llegan los correos |
 | **Timeout (s)** | Segundos antes de desistir |
@@ -460,13 +821,9 @@ MedReminder nunca envía una solicitud por sí solo.
 Haz clic en **Probar conexión** (inicia sesión sin enviar nada) y luego
 en **Guardar configuración SMTP**.
 
-*Ejemplo con Gmail:* activa la verificación en dos pasos en tu cuenta de
-Google, crea una contraseña de aplicación en
-`myaccount.google.com/apppasswords` y usa Servidor `smtp.gmail.com`,
-Puerto `587`, StartTLS activado, tu dirección de Gmail como nombre de
-usuario y la contraseña de aplicación como contraseña. Los proveedores
-cambian sus reglas: si la prueba falla, consulta las instrucciones de
-tu proveedor.
+Los valores para Gmail y los demás proveedores habituales, y cómo
+obtener una contraseña de aplicación, están en
+[Configuración de correo de los principales proveedores](#smtp-providers).
 
 ### Paso 2 — los destinatarios (cada perfil)
 
@@ -475,13 +832,96 @@ abierto:
 
 - **Destinatario (to)** — quién recibe los avisos de este perfil.
 - **E-mail del cuidador (opcional)** — un familiar o cuidador que recibe
-  una copia de cada aviso, en el mismo correo (ambas direcciones son
-  visibles para los dos). Debe ser distinta del destinatario.
+  una copia de los avisos, en el mismo correo (ambas direcciones son
+  visibles para los dos). Debe ser distinta del destinatario. En
+  **Copia al cuidador** eliges qué avisos recibe (todos mientras no lo
+  cambies): stock bajo, recordatorios de dosis, de recetas y de
+  vencimientos, avisos de desabastecimiento, avisos de caducidad de las
+  cajas. **Enviar al cuidador un resumen semanal del stock** añade, cada
+  7 días, un correo solo al cuidador con el stock, el estado y la fecha
+  de agotamiento de cada medicamento activo y las cajas caducadas o que
+  caducan pronto, y nada sobre las dosis tomadas. Lo envía el PC
+  que manda los correos, una vez por perfil aunque el perfil esté
+  sincronizado en varios PC.
 - **E-mail del médico (opcional)** — se usa solo para las solicitudes de
   receta que envías tú; los avisos automáticos nunca van ahí.
+- **Caducidad de las cajas** — cuántos días antes llega el aviso
+  *caduca pronto*: antes de la caducidad impresa (30 por defecto) y
+  antes del fin del periodo tras la apertura (3 por defecto).
 
 Haz clic en **Guardar destinatarios**. En la misma sección, **Mi PIN**
 permite establecer o cambiar el PIN de tu propio perfil.
+
+<a id="smtp-providers"></a>
+### Configuración de correo de los principales proveedores
+
+Muchos proveedores ya no aceptan, en los programas, la contraseña con la
+que entras en el webmail. Piden una **contraseña de aplicación**: una
+contraseña aparte, creada por el proveedor para un solo programa y
+revocable en cualquier momento. Introdúcela en **Nueva contraseña**. Si
+la revocas, MedReminder deja de enviar hasta que introduzcas una nueva.
+
+Para el puerto y el cifrado hay una sola regla:
+
+| Puerto | *Usar StartTLS* |
+|---|---|
+| `587` | marcado |
+| `465` | sin marcar (la conexión está cifrada desde el principio) |
+
+Con todos los proveedores de abajo, el **Nombre de usuario** es tu
+dirección de correo completa. Usa la misma dirección como **Remitente
+(from)**: muchos proveedores rechazan un remitente distinto de la
+cuenta.
+
+| Proveedor | Servidor | Puerto | Contraseña |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | Contraseña de aplicación (ver abajo) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | Contraseña de aplicación, desde la página *Seguridad* de la cuenta Yahoo |
+| iCloud Mail | `smtp.mail.me.com` | `587` | Contraseña específica para apps, desde `account.apple.com` → *Inicio de sesión y seguridad*; requiere la autenticación de doble factor |
+| Libero Mail | `smtp.libero.it` | `465` | Contraseña de la cuenta; con la verificación en dos pasos activa, una contraseña de aplicación desde *Gestione Account* |
+| Aruba (también buzones de dominio) | `smtps.aruba.it` | `465` | Contraseña del buzón |
+| GMX | `mail.gmx.net` | `587` | Contraseña de la cuenta; antes activa *POP3/IMAP* en la configuración de correo del webmail |
+| WEB.DE | `smtp.web.de` | `587` | Contraseña de la cuenta; antes activa *POP3/IMAP* en la configuración de correo del webmail |
+| Orange | `smtp.orange.fr` | `465` | Contraseña de la cuenta; si se rechaza, comprueba en tu área de cliente de Orange si hace falta una contraseña dedicada |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft solo acepta para estas
+cuentas el inicio de sesión moderno (OAuth2), que MedReminder no admite;
+tampoco funciona una contraseña de aplicación. Lo mismo suele valer para
+las cuentas profesionales o educativas de Microsoft 365. Usa otra cuenta
+para el envío, por ejemplo una dirección de Gmail dedicada a
+MedReminder.
+
+#### Gmail: crear la contraseña de aplicación
+
+1. Inicia sesión en `myaccount.google.com` con la cuenta de Gmail que
+   enviará los correos.
+2. Abre **Seguridad**. Si la **Verificación en dos pasos** no está
+   activada, actívala con el procedimiento guiado (teléfono o aplicación
+   de autenticación). Sin ella no existen las contraseñas de aplicación.
+3. Abre `myaccount.google.com/apppasswords`, o busca "Contraseñas de
+   aplicaciones" en el cuadro de búsqueda de la cuenta. Google puede
+   pedirte de nuevo la contraseña.
+4. Escribe un nombre que recuerde para qué sirve, por ejemplo
+   `MedReminder`, y haz clic en **Crear**.
+5. Google muestra una contraseña de 16 letras en cuatro grupos. Cópiala
+   y pégala en **Nueva contraseña**, sin espacios. Google no vuelve a
+   mostrarla: si la pierdes, elimínala en la misma página y crea otra.
+6. En MedReminder introduce Servidor `smtp.gmail.com`, Puerto `587`,
+   *Usar StartTLS* marcado, y tu dirección de Gmail como **Nombre de
+   usuario** y como **Remitente (from)**. Haz clic en **Probar
+   conexión** y luego en **Guardar configuración SMTP**.
+
+Si la página dice que la opción no está disponible, normalmente la
+verificación en dos pasos no está activada o solo usa llaves de
+seguridad, la cuenta está inscrita en la Protección Avanzada, o es una
+cuenta profesional o educativa cuyo administrador ha desactivado las
+contraseñas de aplicación. Si cambias la contraseña de tu cuenta de
+Google, Google revoca las contraseñas de aplicación: crea una nueva e
+introdúcela en MedReminder.
+
+Los proveedores cambian sus reglas y direcciones. Si **Probar conexión**
+falla con los valores de arriba, consulta la página de ayuda de tu
+proveedor (busca "configuración SMTP").
 
 ---
 
@@ -904,10 +1344,10 @@ redimensionar.
   Windows 11 con el modo oscuro activado; con un tema de contraste alto
   de Windows se usan sus colores. Se aplica tras reiniciar. En Oscuro,
   los campos de fecha siguen claros.
-- **General → Buscar actualizaciones automáticamente (GitHub)**: busca
-  una versión nueva al iniciar (nada se instala solo) y actualiza el
-  catálogo al iniciar y una vez al día. **? →
-  Buscar actualizaciones…** busca ahora.
+- **General → Buscar actualizaciones de la aplicación y los catálogos
+  (GitHub)**: busca una versión nueva al iniciar (nada se instala solo)
+  y actualiza el catálogo al iniciar y una vez al día. **? → Buscar
+  actualizaciones…** busca ahora.
 - **General → Registrar las consultas de la base de datos
   (diagnóstico)**: solo administradores. Escribe en el archivo de
   registro cada comando de la base de datos, sin los valores, para
@@ -1013,7 +1453,7 @@ tú.
     └── <perfil>\
         ├── medreminder.db     medicamentos y stock del perfil
         ├── notifications.settings.json   destinatarios
-        ├── ui.settings.json   tamaño del texto y apariencia
+        ├── ui.settings.json   tamaño del texto, apariencia, tamaño de la ventana
         └── sync.*             configuración de sincronización (solo si se usa)
 ```
 

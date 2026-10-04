@@ -51,6 +51,24 @@ scheduled dose time.
   remote feed published in this repository (data only, nothing is
   executed).
 - Printable therapy report for the doctor.
+- Italian medicines in shortage: the AIFA list is downloaded with the
+  catalogue and a listed package is marked in the list (start, expected
+  end, reason) and notified once; no substitute is suggested.
+- Prescriptions followed from the request to the pharmacy: requested,
+  issued (code, packages, valid until), collected; a reminder before an
+  issued prescription lapses uncollected.
+- Administrative deadlines: therapeutic plans, exemption renewals,
+  check-ups, optionally tied to a medicine and recurring every N months,
+  with a reminder from a notice period set by the user.
+- Calendar export (`.ics`): the day to request each prescription, the
+  run-out dates, the last day to collect a prescription and the
+  administrative deadlines, for Outlook, Google Calendar or a phone;
+  generic titles unless the user asks for the names. Low-stock emails
+  carry the run-out date as a calendar attachment.
+- Supply planner: for a period chosen by the user (a trip, the days
+  until the next pharmacy visit) the quantity each active medicine needs,
+  the stock left when it starts and the packages to get; print, PDF or
+  clipboard.
 
 **Notifications**
 
@@ -58,10 +76,16 @@ scheduled dose time.
   (Windows / Email / Both / None).
 - Optional dose-time reminder per medicine (toast and/or email at
   each timed slot, at most once per slot per day).
-- Optional caregiver email address per profile: receives a copy of
-  every email the profile receives.
+- Optional caregiver email address per profile: receives a copy of the
+  kinds of email the profile chooses (all by default) and, if asked, a
+  weekly stock summary without dose data.
+- Second warning at half of the warning threshold when the stock has
+  not been replenished since the first one.
 - Structural notification de-duplication via `StockEpoch`: after a
   refill the warning cycle restarts.
+- Actions in Windows notifications: open the app on the medicine,
+  prepare the prescription request from a low-stock warning, snooze a
+  dose reminder by 15 minutes (scheduled with Windows).
 - Internal scheduler with configurable periodic check (default 30
   minutes); "Check now" for an on-demand run.
 
@@ -234,9 +258,12 @@ dotnet publish src\MedReminder.UI -c Release ^
 
 ## Windows SmartScreen warning on first run
 
-The distributed binaries are **not code-signed**. The first time you
-launch `MedReminder.exe` — or open the MSI installer — Windows
-SmartScreen shows a blue dialog:
+MedReminder's own executables and libraries, and the MSI, are
+code-signed with a Certum Open
+Source Code Signing certificate (SHA-256, RFC 3161 timestamp;
+`docs/PACKAGING.md` §25). Until the certificate has built up
+reputation, Windows SmartScreen can still show a blue dialog the first
+time you launch `MedReminder.exe` or open the MSI installer:
 
 > Windows protected your PC
 > Microsoft Defender SmartScreen prevented an unrecognized app from
@@ -244,16 +271,13 @@ SmartScreen shows a blue dialog:
 
 Click **More info**, then **Run anyway**. Windows remembers your
 choice for that specific file — subsequent launches do not prompt
-again.
+again. The UAC dialog raised by the MSI shows the verified publisher.
 
-The UAC dialog raised by the MSI shows "Unknown Publisher" for the
-same reason. That is expected.
-
-MedReminder currently opts out of the recurring cost of a code-signing
-certificate. This does not affect the functionality or integrity of
-the binaries: they are built by the public GitHub Actions workflow
+The binaries are built by the public GitHub Actions workflow
 [`dotnet-desktop.yml`](.github/workflows/dotnet-desktop.yml) from the
-tagged source in this repository.
+tagged source in this repository, then rebuilt locally from the same
+tag and signed (`publish-signed-release.ps1`); the signed files replace
+the release assets.
 
 ## Where data is stored
 

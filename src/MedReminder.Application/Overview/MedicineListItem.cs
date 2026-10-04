@@ -1,3 +1,5 @@
+using MedReminder.Domain.Stock;
+
 namespace MedReminder.Application.Overview;
 
 // Row of the main grid (spec §13). Flat structure optimized for
@@ -7,8 +9,18 @@ public sealed class MedicineListItem
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    // Package code (AIC for Italy), when linked: drives the Codifa link
+    // and the equivalents of the grid's context menu.
+    public string? NationalCode { get; set; }
     public string Unit { get; set; } = string.Empty;
+    // Estimated stock now: the start-of-day ledger stock minus today's
+    // doses already due (ANALYSIS-INTRADAY-CONSUMPTION.md §4). Equal to
+    // LedgerStock when nothing is due yet.
     public decimal CurrentStock { get; set; }
+    // Stored stock: today's automatic consumption is booked after
+    // midnight, so during the day this is the start-of-day value.
+    public decimal LedgerStock { get; set; }
+    public decimal DueTodaySoFar { get; set; }
     public decimal DailyRate { get; set; }
     public int? DaysRemaining { get; set; }
     public DateOnly? EstimatedRunOutDate { get; set; }
@@ -29,6 +41,20 @@ public sealed class MedicineListItem
     // ILocalizationService — avoids injecting the service into a
     // data-binding DTO.
     public string StatusDisplay { get; set; } = string.Empty;
+
+    // Shortage of the medicine's package in the stored list
+    // (EVOLUTION-PROPOSALS-2 §3.3): empty when not listed. The detail is
+    // the grid cell's tooltip.
+    public string SupplyDisplay { get; set; } = string.Empty;
+    public string SupplyDetail { get; set; } = string.Empty;
+    public bool HasShortage => SupplyDisplay.Length > 0;
+
+    // Earliest effective expiry among the packages still in stock
+    // (ANALYSIS-PACKAGE-EXPIRY.md §5.4), its status and its text; null
+    // and empty when no package has an expiry.
+    public DateOnly? NextExpiry { get; set; }
+    public PackageExpiryStatus? NextExpiryStatus { get; set; }
+    public string ExpiryDisplay { get; set; } = string.Empty;
 }
 
 public enum MedicineRowStatus

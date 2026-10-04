@@ -44,6 +44,22 @@ internal sealed class MedicineDeletionRepository : IMedicineDeletionRepository
             await _db.SentEmailNotifications.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.DoseReminderEvents.RemoveRange(
             await _db.DoseReminderEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.Prescriptions.RemoveRange(
+            await _db.Prescriptions.Where(p => p.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.PrescriptionDispensations.RemoveRange(
+            await _db.PrescriptionDispensations.Where(d => d.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.PrescriptionReminderEvents.RemoveRange(
+            await _db.PrescriptionReminderEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.Deadlines.RemoveRange(
+            await _db.Deadlines.Where(d => d.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.DeadlineReminderEvents.RemoveRange(
+            await _db.DeadlineReminderEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.StockPackages.RemoveRange(
+            await _db.StockPackages.Where(p => p.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.PackageExpiryNoticeEvents.RemoveRange(
+            await _db.PackageExpiryNoticeEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
+        _db.ShortageNoticeEvents.RemoveRange(
+            await _db.ShortageNoticeEvents.Where(e => e.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.SyncFieldVersions.RemoveRange(
             await _db.SyncFieldVersions.Where(v => v.MedicineId == medicineId).ToListAsync(cancellationToken));
         _db.SyncConflicts.RemoveRange(

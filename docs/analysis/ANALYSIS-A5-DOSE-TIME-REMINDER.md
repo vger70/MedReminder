@@ -71,7 +71,11 @@ add:
   `Consumption` movement. Consumption stays owned by
   `ConsumptionMaterializer` / the catch-up service exactly as
   today (`ANALYSIS.md` §2.4). The reminder is a UX signal, not a
-  stock event.
+  stock event. Since v2.14.0 the main list subtracts today's doses
+  whose time has passed from the stock it shows
+  (`ANALYSIS-INTRADAY-CONSUMPTION.md`): a read-side estimate from the
+  schedule, independent of reminders, that stores nothing, so this
+  line still holds. As-needed slots get no reminder.
 
 The disclaimer copy in `CLAUDE.md` §1 remains sufficient **only as
 long as this line holds**. Any of the four items above turns A5

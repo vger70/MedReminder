@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
@@ -37,6 +38,16 @@ internal sealed record BarcodeScanContext(
     ICameraCaptureService Camera,
     BarcodeCaptureOptions Options,
     ILogger Logger);
+
+// Equivalent medicines of the package in the dialog
+// (docs/analysis/ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md §2.6, U1).
+// IsListedAsync tells whether the stored AIFA list has a group for an
+// AIC; it runs off the UI thread, since its first call parses the whole
+// list. Show opens the equivalents of a code, titled with the medicine
+// name, over the given owner.
+internal sealed record EquivalentsContext(
+    Func<string, Task<bool>> IsListedAsync,
+    Func<string, string, IWin32Window, Task> Show);
 
 // Dialog used both for "new medicine" (Mode=Create) and for "edit"
 // (Mode=Edit). At the end it exposes Result: null if the user
@@ -100,17 +111,27 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     private AtcCode? _linkedAtcCode;
     private Guid? _linkedReferenceMedicineId;
 
-    // AIFA leaflet / SPC links surfaced under the "Principio attivo"
-    // row. Non-null only for the Italian catalogue (country == "IT"):
-    // the other supported catalogues (EMA, ANSM, AEMPS) do not carry
-    // per-package leaflet / SPC URLs. The row starts hidden and is
-    // shown as soon as at least one URL is available (either from a
-    // fresh autocomplete pick or from the Edit-mode seed lookup).
+    // Information links surfaced under the "Principio attivo" row. The
+    // AIFA leaflet / SPC links are non-null only for the Italian
+    // catalogue (country == "IT"): the other supported catalogues (EMA,
+    // ANSM, AEMPS) do not carry per-package leaflet / SPC URLs. The
+    // Codifa page and the equivalents follow the AIC in the dialog,
+    // whatever the catalogue setting
+    // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §3.2). The row starts hidden
+    // and is shown as soon as at least one link is available.
     private readonly CountryCode? _documentsCountry;
     private readonly ReferenceMedicineLookupAsync? _documentsLookup;
-    private readonly FlowLayoutPanel? _documentsRow;
+    private readonly FlowLayoutPanel _documentsRow;
+    private readonly Label _documentsLabel;
     private readonly LinkLabel? _leafletLink;
     private readonly LinkLabel? _spcLink;
+    private readonly LinkLabel _codifaLink;
+    private readonly LinkLabel _equivalentsLink;
+    private readonly EquivalentsContext? _equivalents;
+    // AIC whose equivalents check is current; a check finishing for
+    // another code (the user picked a new row meanwhile) is ignored.
+    private string? _equivalentsCheckCode;
+    private bool _equivalentsListed;
     private string? _pendingSeedNationalCode;
 
     // Barcode scan (A2). Both non-null only when the catalogue is on
@@ -121,6 +142,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // user had picked it (restock by scan, "Add as a new medicine").
     private readonly ReferenceMedicine? _initialReference;
 
+    // Time-of-day presets offered by the slot dialog (null: built-ins).
+    private readonly DoseTimeSettings? _doseTimes;
+
     public MedicineEditDialog(
         EditMode mode,
         ILocalizationService localization,
@@ -128,8 +152,12 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         CatalogueAutocompleteContext? catalogueContext = null,
         decimal currentStock = 0m,
         BarcodeScanContext? barcodeContext = null,
-        ReferenceMedicine? initialReference = null)
+        ReferenceMedicine? initialReference = null,
+        DoseTimeSettings? doseTimes = null,
+        EquivalentsContext? equivalents = null)
     {
+        _doseTimes = doseTimes;
+        _equivalents = equivalents;
         _initialReference = mode == EditMode.Create ? initialReference : null;
         _loc = localization;
         _mode = mode;
@@ -155,6 +183,15 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _nameBox = new MedicineAutocompleteBox { Dock = DockStyle.Fill };
         _ingredientBox = new MedicineAutocompleteBox { Dock = DockStyle.Fill };
         _packageBox = new TextBox { Dock = DockStyle.Fill, MaxLength = 200 };
+
+        _documentsRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            WrapContents = false,
+            Margin = new Padding(0),
+            Visible = false,
+        };
 
         // Wire the autocomplete only when the catalogue is on and a
         // search delegate is available. Otherwise the boxes stay in
@@ -188,18 +225,16 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
                 _documentsLookup = catalogueContext.LookupByNationalCode;
                 _leafletLink = MakeDocumentLink(_loc.Get("Ui.MedicineEditDialog.Documents.Leaflet"));
                 _spcLink = MakeDocumentLink(_loc.Get("Ui.MedicineEditDialog.Documents.Spc"));
-                _documentsRow = new FlowLayoutPanel
-                {
-                    FlowDirection = FlowDirection.LeftToRight,
-                    AutoSize = true,
-                    WrapContents = false,
-                    Margin = new Padding(0),
-                    Visible = false,
-                };
                 _documentsRow.Controls.Add(_leafletLink);
                 _documentsRow.Controls.Add(_spcLink);
             }
         }
+        _codifaLink = MakeDocumentLink(_loc.Get("Ui.MedicineEditDialog.Documents.Codifa"));
+        _documentsRow.Controls.Add(_codifaLink);
+        _equivalentsLink = MakeDocumentLink(_loc.Get("Ui.MedicineEditDialog.Documents.Equivalents"));
+        _equivalentsLink.LinkClicked -= OnDocumentLinkClicked;
+        _equivalentsLink.LinkClicked += async (_, _) => await ShowEquivalentsAsync();
+        _documentsRow.Controls.Add(_equivalentsLink);
         _unitBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown };
         // Keep the DropDown style: the AIFA FORMA field carries many
         // pharmaceutical forms this list doesn't enumerate ("collirio",
@@ -279,10 +314,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Name"), BuildNameRow());
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.ActiveIngredient"), _ingredientBox);
-        if (_documentsRow is not null)
-        {
-            AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Documents"), _documentsRow);
-        }
+        _documentsLabel = AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Documents"), _documentsRow);
+        _documentsLabel.Visible = false;
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Package"), _packageBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.Unit"), _unitBox);
         AddRow(table, _loc.Get("Ui.MedicineEditDialog.Field.DosePerAdmin"), _doseBox);
@@ -383,6 +416,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _schedulePanel.ApplySchedule(_seedSchedule);
             SyncSimpleControlsEnabled();
         }
+        // The Codifa and equivalents links follow the seeded code at once,
+        // before and independently of the catalogue lookup below.
+        RefreshDocumentsRow();
         _ = HydrateSeededDocumentsAsync();
         if (_initialReference is not null) ApplyReference(_initialReference);
     }
@@ -457,12 +493,6 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         if (_channelWindows.Checked) channels |= NotificationChannels.Windows;
         if (_channelEmail.Checked) channels |= NotificationChannels.Email;
 
-        // A5 save-time clamp (ANALYSIS-A5 §5.3): RemindOnDose may be
-        // true only while the checkbox is actually enabled — i.e. a
-        // timed slot exists AND stock > 0. A disabled checkbox always
-        // persists false regardless of any stale seeded value.
-        var remindOnDose = _remindOnDose.Enabled && _remindOnDose.Checked;
-
         // A1: build the Schedule value object when Advanced is
         // selected. Simple mode keeps InitialSchedule = null so
         // AddMedicine constructs FixedDaily from Dose × Admin
@@ -482,6 +512,19 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             }
         }
 
+        // Slots are kept in both modes: in Advanced mode the schedule
+        // sets the day's quantity and the slots place it in the day
+        // (docs/analysis/ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md).
+        List<AdministrationSlotEntry> slots = [.. _slots];
+
+        // A5 save-time clamp (ANALYSIS-A5 §5.3): RemindOnDose may be
+        // true only while the checkbox is actually enabled — i.e. a
+        // timed slot exists AND stock > 0 — and the saved slots still
+        // hold a timed one. A disabled checkbox always persists false
+        // regardless of any stale seeded value.
+        var remindOnDose = _remindOnDose.Enabled && _remindOnDose.Checked
+            && slots.Any(s => s.Time.HasValue && !s.IsAsNeeded);
+
         Result = new MedicineEditResult(
             Name: _nameBox.InputText.Trim(),
             ActiveIngredient: NullIfBlank(_ingredientBox.InputText),
@@ -498,19 +541,17 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             NotificationChannels: channels,
             IsActive: _isActiveBox.Checked,
             RemindOnDose: remindOnDose,
-            // In Advanced mode slots × non-fixed combinations are out
-            // of scope (§3.1) — drop the slots so the schedule owns
-            // the daily rate uniquely.
-            Slots: initialSchedule is null ? [.. _slots] : new List<AdministrationSlotEntry>(),
+            Slots: slots,
             NationalCode: _linkedNationalCode,
             AtcCode: _linkedAtcCode,
             LinkedReferenceMedicineId: _linkedReferenceMedicineId,
             InitialSchedule: initialSchedule);
     }
 
-    // Disables the Simple-mode inputs (dose, admin/day, slot buttons)
-    // whenever the user flips into Advanced, so it is unambiguous
-    // which set of controls drives the projection. Called from the
+    // Disables the Simple-mode inputs (dose, admin/day) whenever the
+    // user flips into Advanced, so it is unambiguous which set of
+    // controls drives the projection. The slots stay editable: they
+    // place the schedule's quantity in the day. Called from the
     // SchedulePanel.ModeChanged event.
     private void SyncSimpleControlsEnabled()
     {
@@ -518,7 +559,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         var simple = !_schedulePanel.AdvancedSelected;
         _doseBox.Enabled = simple;
         _adminPerDayBox.Enabled = simple;
-        _slotsList.Enabled = simple;
+        UpdateSlotsSummary();
     }
 
     // Picking a catalogue row on either side populates the sibling
@@ -758,7 +799,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     // whenever the slots or the initial-stock field change.
     private void UpdateRemindOnDoseAvailability()
     {
-        var hasTimedSlot = _slots.Any(s => s.Time.HasValue);
+        // As-needed slots get no reminder (DoseReminderService).
+        var hasTimedSlot = _slots.Any(s => s.Time.HasValue && !s.IsAsNeeded);
         var hasStock = CurrentStockForGate() > 0m;
         var enabled = Medicine.CanRemindOnDose(hasTimedSlot, CurrentStockForGate());
 
@@ -822,7 +864,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private void AddSlot()
     {
-        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc);
+        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc, doseTimes: _doseTimes);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
         _slots.Add(dialog.Result);
         RefreshSlotsList();
@@ -832,7 +874,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         var index = SelectedSlotIndex();
         if (index < 0) return;
-        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc, _slots[index]);
+        using var dialog = new AdministrationSlotDialog(EffectiveUnit(), _doseBox.Value, _loc, _slots[index], _doseTimes);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
         _slots[index] = dialog.Result;
         RefreshSlotsList();
@@ -859,7 +901,9 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         {
             var row = new ListViewItem(slot.TimeDisplay);
             row.SubItems.Add(slot.Dose.ToString("0.##"));
-            row.SubItems.Add(slot.LabelDisplay);
+            row.SubItems.Add(slot.IsAsNeeded
+                ? _loc.Get("Ui.MedicineEditDialog.Slots.AsNeededLabel", slot.LabelDisplay)
+                : slot.LabelDisplay);
             _slotsList.Items.Add(row);
         }
         _slotsList.EndUpdate();
@@ -875,7 +919,20 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryNone");
             return;
         }
-        var total = _slots.Sum(s => s.Dose);
+        // As-needed doses are not part of the daily consumption.
+        if (_slots.All(s => s.IsAsNeeded))
+        {
+            _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryAsNeeded", _slots.Count);
+            return;
+        }
+        // Advanced mode: the schedule sets the quantity, the slot doses
+        // only split it.
+        if (_schedulePanel is { AdvancedSelected: true })
+        {
+            _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.SummaryShared", _slots.Count);
+            return;
+        }
+        var total = _slots.Where(s => !s.IsAsNeeded).Sum(s => s.Dose);
         _slotsSummary.Text = _loc.Get("Ui.MedicineEditDialog.Slots.Summary",
             _slots.Count, total.ToString("0.##"), EffectiveUnit());
     }
@@ -904,7 +961,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
             Width = 120,
         };
 
-    private static void AddRow(TableLayoutPanel table, string label, Control input)
+    private static Label AddRow(TableLayoutPanel table, string label, Control input)
     {
         // Top-aligned with the field's first line: some rows are taller
         // than their field (L6), and multi-line fields (notes, dose
@@ -914,6 +971,7 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         table.Controls.Add(lbl, 0, table.RowCount - 1);
         table.Controls.Add(input, 1, table.RowCount - 1);
+        return lbl;
     }
 
     private static string? NullIfBlank(string? s) =>
@@ -958,25 +1016,88 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
 
     private void UpdateDocumentLinks(string? leafletUrl, string? spcUrl)
     {
-        if (_documentsRow is null || _leafletLink is null || _spcLink is null) return;
+        if (_leafletLink is not null && _spcLink is not null)
+        {
+            var safeLeaflet = IsSafeAifaUrl(leafletUrl) ? leafletUrl : null;
+            var safeSpc = IsSafeAifaUrl(spcUrl) ? spcUrl : null;
 
-        var safeLeaflet = IsSafeAifaUrl(leafletUrl) ? leafletUrl : null;
-        var safeSpc = IsSafeAifaUrl(spcUrl) ? spcUrl : null;
+            _leafletLink.Tag = safeLeaflet;
+            _spcLink.Tag = safeSpc;
+            _leafletLink.LinkVisited = false;
+            _spcLink.LinkVisited = false;
+            _leafletLink.Visible = safeLeaflet is not null;
+            _spcLink.Visible = safeSpc is not null;
+        }
+        RefreshDocumentsRow();
+    }
 
-        _leafletLink.Tag = safeLeaflet;
-        _spcLink.Tag = safeSpc;
-        _leafletLink.LinkVisited = false;
-        _spcLink.LinkVisited = false;
-        _leafletLink.Visible = safeLeaflet is not null;
-        _spcLink.Visible = safeSpc is not null;
-        _documentsRow.Visible = safeLeaflet is not null || safeSpc is not null;
+    // The Codifa page and the equivalents follow the AIC currently in the
+    // dialog (_linkedNationalCode); the row shows when any link is there.
+    private void RefreshDocumentsRow()
+    {
+        var codifa = MedicineInfoLink.ForNationalCode(_linkedNationalCode);
+        if (!Equals(_codifaLink.Tag, codifa)) _codifaLink.LinkVisited = false;
+        _codifaLink.Tag = codifa;
+        _codifaLink.Visible = codifa is not null;
+
+        var aic = ItalianPharmacode.NormalizeAic(_linkedNationalCode);
+        if (aic != _equivalentsCheckCode)
+        {
+            _equivalentsCheckCode = aic;
+            _equivalentsListed = false;
+            if (aic is not null && _equivalents is not null) _ = CheckEquivalentsAsync(aic);
+        }
+        _equivalentsLink.Visible = _equivalentsListed;
+
+        // A local: Visible reads false while the dialog is not shown yet.
+        var any = _leafletLink?.Tag is not null || _spcLink?.Tag is not null || codifa is not null || _equivalentsListed;
+        _documentsRow.Visible = any;
+        _documentsLabel.Visible = any;
+    }
+
+    // Shows the equivalents link once the background check confirms the
+    // AIC is in the stored list, if the dialog still shows that AIC.
+    private async Task CheckEquivalentsAsync(string aic)
+    {
+        bool listed;
+        try
+        {
+            listed = await _equivalents!.IsListedAsync(aic);
+        }
+        catch
+        {
+            // Best-effort, as the catalogue lookup: an unreadable list only
+            // hides the link.
+            return;
+        }
+        if (IsDisposed || !listed || aic != _equivalentsCheckCode) return;
+        _equivalentsListed = true;
+        RefreshDocumentsRow();
+    }
+
+    private async Task ShowEquivalentsAsync()
+    {
+        if (_equivalents is null || MedicineInfoLink.ForNationalCode(_linkedNationalCode) is null) return;
+        try
+        {
+            await _equivalents.Show(_linkedNationalCode!.Trim(), _nameBox.InputText.Trim(), this);
+        }
+        catch (Exception ex)
+        {
+            UiMessageBox.Show(this, ex.Message, _loc.Get("Ui.EquivalentsDialog.Error.Load"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     private void OnDocumentLinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
     {
         if (sender is not LinkLabel link) return;
-        if (link.Tag is not string url) return;
-        if (!IsSafeAifaUrl(url)) return;
+        // The Codifa URL is built from a validated AIC, never read from
+        // data; the AIFA URLs come from the catalogue and are checked.
+        string url;
+        if (link.Tag is Uri codifa) url = codifa.AbsoluteUri;
+        else if (link.Tag is string aifa && IsSafeAifaUrl(aifa)) url = aifa;
+        else return;
 
         try
         {
@@ -1079,11 +1200,12 @@ internal sealed record MedicineEditResult(
         IsActive: IsActive,
         RemindOnDose: RemindOnDose,
         AdministrationSlots: MapSlots() ?? [],
-        Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId));
+        Catalogue: new CatalogueLink(NationalCode, AtcCode, LinkedReferenceMedicineId),
+        StartDate: StartDate);
 
     private IReadOnlyList<AdministrationSlotInput>? MapSlots()
     {
         if (Slots is null || Slots.Count == 0) return null;
-        return Slots.Select(s => new AdministrationSlotInput(s.Dose, s.Time, s.TimingLabel)).ToList();
+        return Slots.Select(s => new AdministrationSlotInput(s.Dose, s.Time, s.TimingLabel, s.IsAsNeeded, s.PresetId)).ToList();
     }
 }

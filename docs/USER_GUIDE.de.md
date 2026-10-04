@@ -30,11 +30,13 @@ in der App zu lesen. Die technische Architektur ist in
      [Bearbeiten, deaktivieren, löschen](#edit-medicine)
 3. [Ein Medikament finden: Katalog und Barcode](#catalogue)
 4. [Bestand](#stock)
-   - [Packung hinzufügen](#add-package) · [Einnahme erfassen](#intake) ·
+   - [Packung hinzufügen](#add-package) · [Packungen und Verfall](#packages) ·
+     [Einnahme erfassen](#intake) ·
      [Bestand korrigieren](#correct) · [Bestand zählen](#count) ·
      [Verlauf](#history)
 5. [Therapieverlauf, Therapieplan und Rezeptanforderung](#documents)
 6. [Benachrichtigungen und E-Mail](#notifications)
+   - [E-Mail-Einstellungen gängiger Anbieter](#smtp-providers)
 7. [Mehrere Personen: Profile und Rollen](#profiles)
 8. [Daten schützen: Sicherung und Export](#backup)
 9. [Mehrere Computer](#devices)
@@ -70,12 +72,13 @@ in der App zu lesen. Die technische Architektur ist in
    Windows-Infobereich (neben der Uhr) bleibt sichtbar, solange die App
    läuft.
 
-**Windows SmartScreen.** Das Programm ist nicht digital signiert. Beim
-allerersten Start kann Windows ein blaues Fenster „Der Computer wurde
-durch Windows geschützt“ zeigen: Klicke auf **Weitere Informationen**,
-dann auf **Trotzdem ausführen**. Windows merkt sich die Wahl. Bei der
-Installation über das MSI-Paket zeigt das Berechtigungsfenster aus
-demselben Grund „Unbekannter Herausgeber“.
+**Windows SmartScreen.** Das Programm ist mit einem Certum-Zertifikat
+digital signiert. Solange das Zertifikat noch keine Reputation
+aufgebaut hat, kann Windows beim allerersten Start trotzdem ein blaues
+Fenster „Der Computer wurde durch Windows geschützt“ zeigen: Klicke auf
+**Weitere Informationen**, dann auf **Trotzdem ausführen**. Windows
+merkt sich die Wahl. Bei der Installation über das MSI-Paket zeigt das
+Berechtigungsfenster den verifizierten Herausgeber.
 
 <a id="main-window"></a>
 ### Das Hauptfenster
@@ -86,7 +89,7 @@ demselben Grund „Unbekannter Herausgeber“.
   erfassen* und rechts ein Suchfeld (**Strg+F**), das die Liste nach
   Namen filtert.
 - **Navigation** links: *Medikamente* (diese Liste), dann
-  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Installation*
+  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Vorrat planen*, *Rezepte*, *Fristen*, *Installation*
   (Administratoren) und *Einstellungen*, die ein eigenes Fenster öffnen.
   In einem schmalen Fenster zeigt sie nur die Symbole.
 - **Übersicht** über der Liste: wie viele Medikamente *Leer*, *Bald
@@ -94,6 +97,8 @@ demselben Grund „Unbekannter Herausgeber“.
   Feld zeigt nur diese Medikamente; ein zweiter Klick zeigt wieder alle.
 - **Medikamentenliste** in der Mitte: eine Zeile pro Medikament, mit
   Bestand, verbleibenden Tagen und voraussichtlichem Ende des Bestands.
+  Im Laufe des Tages ziehen Bestand und verbleibende Tage die heutigen
+  Dosen, deren Uhrzeit vorbei ist, bereits ab ([Details](#stock-estimate)).
   Die Spalte **Status** zeigt den Zustand als farbige Markierung. Ein
   Rechtsklick auf eine Zeile bietet die Befehle für dieses Medikament
   (bearbeiten, Einnahme erfassen, Packung hinzufügen…); Doppelklick
@@ -115,9 +120,15 @@ Beenden klicke mit der rechten Maustaste auf das Symbol und wähle
 | Dosis oder Häufigkeit ändern | **Therapie → Dosis/Häufigkeit ändern…** |
 | Eine gekaufte Packung erfassen | **Bestand → Packung hinzufügen…** oder **Bestand → Per Barcode auffüllen…** |
 | Den Bestand an das anpassen, was ich wirklich habe | **Bestand → Bestand zählen…** |
+| Eine Bedarfsdosis erfassen | **Therapie → Einnahme erfassen…** (Option *Zusätzliche Dosis bei Bedarf*, wenn das Medikament auch geplante Dosen hat) |
+| Die Uhrzeit von „Morgens“, „Vor dem Mittagessen“… ändern | **Therapie → Einnahmezeiten…** |
 | Einen falschen Eintrag rückgängig machen | **Bestand → Verlauf…** |
 | Die Therapie für einen Arzt drucken | **Therapie → Therapieplan…** |
 | Ein Rezept anfordern | **Therapie → Rezept anfordern…** |
+| Ein Rezept bis zur Apotheke verfolgen | **Therapie → Rezepte…** |
+| An einen Therapieplan, eine Befreiung oder einen Kontrolltermin erinnert werden | **Therapie → Fristen…** |
+| Die nächsten Termine in Outlook, Google Kalender oder auf dem Telefon sehen | **Therapie → In Kalender exportieren…** |
+| Den Vorrat für eine Reise oder bis zum nächsten Apothekenbesuch prüfen | **Therapie → Vorrat planen…** |
 | E-Mail, Sprache, Sicherung einrichten | **Extras → Einstellungen…** |
 | Eine Person hinzufügen | **Extras → Profile verwalten…** (Administrator) |
 | MedReminder auf einem anderen PC nutzen | **Extras → Synchronisierung…** und **Extras → Installation…** (Administrator) |
@@ -168,6 +179,29 @@ wenn sie eine Uhrzeit haben, an die Einnahme erinnern.
 Ohne Einnahmezeiten verwendet das Medikament „Dosis × Einnahmen pro
 Tag“.
 
+Eine Dosis, die nur bei Bedarf genommen wird (zum Beispiel ein
+Schmerzmittel bei Kopfschmerzen), markierst du im Fenster der
+Einnahmezeit als **Bei Bedarf**: die Beschreibung *Bei Bedarf* setzt das
+Häkchen von selbst. Eine Bedarfsdosis wird nie automatisch abgezogen und
+zählt nicht zur Tagesmenge: der Bestand sinkt nur, wenn du die Einnahme
+erfasst. Sind alle Einnahmezeiten eines Medikaments bei Bedarf, verhält
+es sich wie ein Schema *Bei Bedarf (PRN)*.
+
+Ab der Version, die diese Option eingeführt hat, gelten Einnahmezeiten
+mit der Beschreibung „Bei Bedarf“ ab diesem Tag als Bedarfsdosen. Vorher
+wurden sie täglich abgezogen: Ist der angezeigte Bestand niedriger als
+der tatsächliche, mach eine [Zählung](#count), um ihn anzugleichen.
+
+**Therapie → Einnahmezeiten…** listet die Zeitpunkte des Tages mit
+ihrer Uhrzeit („Morgens“ = 08:00, „Vor dem Mittagessen“ = 13:00, …) und
+die Uhrzeiten für Medikamente ohne Einnahmezeiten (1 pro Tag = 08:00,
+2 pro Tag = 08:00 und 20:00, …). Du kannst die Uhrzeiten ändern, nicht
+genutzte Zeitpunkte ausblenden und eigene hinzufügen; im Fenster der
+Einnahmezeit zeigt die Wahl eines Zeitpunkts seine Uhrzeit. Diese
+Uhrzeiten legen die Dosen nur in den Tag und ändern nie den erfassten
+Bestand. Sie gelten für diesen Computer: sie werden nicht
+synchronisiert.
+
 <a id="regimens"></a>
 ### Komplexe Schemata
 
@@ -185,6 +219,13 @@ Medikamentenfenster **Schema** auf **Erweitert** und wähle einen
 
 Mit **Erweitert** werden die Dosisfelder oben im Fenster nicht
 verwendet. Wechsle zurück zu **Einfach** für eine feste Tagesdosis.
+
+**Einnahmezeiten gelten auch mit Erweitert.** Das Schema legt fest, wie
+viel du an jedem Tag nimmst; die [Einnahmezeiten](#slots) legen fest,
+wann. Die Tagesmenge wird im Verhältnis ihrer Dosen auf die Zeiten
+verteilt: Bei zwei Zeiten mit je 1 ergibt ein ausschleichender Tag mit 4
+die Aufteilung 2 + 2, ein Tag mit 1 ergibt 0,5 + 0,5. An einem
+Pausentag des Zyklus ist nichts fällig und es kommt keine Erinnerung.
 
 **Die Therapie ändert sich?** Nutze **Therapie → Dosis/Häufigkeit
 ändern…** und wähle das Datum **Gültig ab**. Das alte Schema bleibt für
@@ -260,7 +301,7 @@ ganze **Europäische Union** zugelassenen Arzneimittel (EMA).
   auch die EU-Arzneimittel; mit **EU** nur diese. Ein Arzneimittel kann
   zweimal erscheinen (national und EU): Wähle das, das zu deiner
   Packung passt.
-- **Automatische Aktualisierung.** Wenn **Automatisch nach Updates
+- **Automatische Aktualisierung.** Wenn **Nach App- und Katalog-Updates
   suchen (GitHub)** aktiviert ist (Einstellungen → Allgemein), lädt
   MedReminder beim Start und, solange es geöffnet bleibt, einmal täglich
   die neueste Monatsliste deines Landes und die EU-Liste herunter, falls
@@ -313,6 +354,65 @@ Bestandsfenster, bereits auf *Neue Packung* mit der üblichen Menge. Hat
 kein Medikament diesen Code, kannst du ein neues Medikament anlegen oder
 den Code einem vorhandenen zuordnen.
 
+### Medikamente mit Lieferengpass (Italien)
+
+Mit Italien als Referenzland lädt MedReminder die AIFA-Liste der
+Lieferengpässe zusammen mit dem Katalog herunter (beim Start und einmal
+am Tag, wenn **Nach App- und Katalog-Updates suchen** aktiv ist). Ein
+Medikament, dessen Packung (AIC-Code, aus dem Katalog oder dem Barcode
+ausgefüllt) auf der Liste steht, zeigt das in der Spalte
+**Verfügbarkeit** der Liste:
+
+- *Lieferengpass*: die AIFA führt die Packung als schwer erhältlich;
+- *Engpass ab …*: die AIFA kündigt einen Engpass ab diesem Datum an.
+
+Fahre mit der Maus über die Zelle, um Beginn, voraussichtliches Ende
+(oft nicht mitgeteilt, und es kann sich ändern), Grund, ob die AIFA
+gleichwertige Arzneimittel meldet und das Datum der Liste zu lesen. Du
+bekommst außerdem eine Benachrichtigung pro Engpass über die Kanäle des
+Medikaments.
+
+Die Engpassmeldung nennt keinen Ersatz: frage deinen Arzt oder
+Apotheker und fordere das Rezept rechtzeitig an. Steht die Packung auch
+in der AIFA-Transparenzliste, verweist die Zelle auf **Gleichwertige
+Arzneimittel (AIFA)** (siehe unten).
+
+### Informationslinks und gleichwertige Arzneimittel (Italien)
+
+Für ein Medikament mit italienischem Packungscode (AIC) bietet die
+Zeile **Informationen** im Medikamentenfenster bis zu vier Links:
+
+- **Packungsbeilage** und **Fachinformation**: die Dokumente der AIFA,
+  mit Italien als Referenzland, wenn der Katalog sie enthält;
+- **Codifa-Seite**: die öffentliche Seite der Packung auf codifa.it
+  (Zusammensetzung, Klasse, Abgabeform, Preis falls bekannt), im
+  Browser geöffnet. Sie funktioniert mit jedem Referenzland;
+- **Gleichwertige Arzneimittel**: erscheint, wenn die Packung in der
+  AIFA-Transparenzliste steht.
+
+Die beiden letzten Befehle stehen auch im Kontextmenü der Liste
+(Rechtsklick auf ein Medikament): **Gleichwertige Arzneimittel
+(AIFA)…** und **Codifa-Seite öffnen**. Ohne AIC sind sie ausgegraut.
+
+**Gleichwertige Arzneimittel (AIFA).** Mit Italien als Referenzland lädt
+MedReminder die AIFA-Transparenzliste zusammen mit dem Katalog herunter
+(monatliche Liste, einmal am Tag geprüft). Das Fenster zeigt die Gruppe
+der Packung (Wirkstoff, Einheiten, Stärke, Anwendungsart), den
+Referenzpreis des Gesundheitsdienstes und jede Packung der Gruppe, die
+günstigste zuerst, mit öffentlichem Preis, der Differenz, die du über
+den Referenzpreis hinaus zahlst, der Verfügbarkeit, ob du sie schon in
+einem anderen Medikament des Profils zu Hause hast, und dem
+unveränderten AIFA-Hinweis. Ein Hinweis kann den Austausch einschränken
+(zum Beispiel „nicht austauschbar mit …“): lies ihn. Dein Medikament
+ist fett gedruckt.
+
+Eine Packung, die nicht auf der Liste steht, ist nicht „ohne
+Gleichwertiges“: Sie kann patentgeschützt, in Klasse C oder einfach
+nicht gelistet sein. Über einen Austausch entscheiden dein Arzt und dein
+Apotheker; die Liste berücksichtigt weder Hilfsstoffe noch Allergien.
+Arzneimittel der Klasse C haben keinen öffentlichen Preis und zeigen
+keinen Preis.
+
 ---
 
 <a id="stock"></a>
@@ -320,6 +420,18 @@ den Code einem vorhandenen zuordnen.
 
 MedReminder senkt den Bestand jeden Tag selbst nach dem Schema. Du
 erfasst nur, was den Bestand auf andere Weise ändert.
+
+<a id="stock-estimate"></a>
+Im Laufe des Tages zeigt die Bestandsspalte eine Schätzung: den Bestand
+zu Tagesbeginn minus die heutigen Dosen, deren Uhrzeit vorbei ist.
+Einnahmezeiten ohne Uhrzeit verwenden die Uhrzeit ihres Zeitpunkts
+(**Therapie → Einnahmezeiten…**); eine frei beschriebene Einnahmezeit
+ohne Uhrzeit wird am Tagesende gezählt. Fährst du mit der Maus über den
+Bestand, siehst du den Wert zu Tagesbeginn. Der erfasste Bestand, der
+Verlauf und das Datum, an dem der Vorrat ausgeht, werden nach
+Mitternacht aktualisiert, die verbleibenden Tage folgen dem angezeigten
+Bestand; erfasst du eine Einnahme, zählt an diesem
+Tag die erfasste Menge.
 
 <a id="add-package"></a>
 ### Packung hinzufügen
@@ -335,6 +447,59 @@ erfasst nur, was den Bestand auf andere Weise ändert.
 Eine neue Packung startet den Warnzyklus neu: Fällt der Bestand wieder
 unter die Schwelle, bekommst du eine neue Warnung.
 
+Mit **Neue Packung** kannst du auch das Verfallsdatum erfassen; alle
+Felder sind optional:
+
+- **Packungen** — wie viele gleiche Packungen du gekauft hast; die Menge
+  wird auf sie verteilt.
+- **Verfall (Monat/Jahr)** — Kästchen ankreuzen und Monat und Jahr wie
+  aufgedruckt wählen. Ein Verfall `03/2027` gilt bis zum 31. März 2027.
+- **Verwenden innerhalb von … Tagen nach dem Öffnen** — für Augentropfen,
+  Säfte, Insulin in Gebrauch und Ähnliches, laut Beipackzettel; 0, wenn
+  es keine Frist gibt. Vorgeschlagen wird der Wert der letzten Packung
+  des Medikaments.
+- **Heute geöffnet** — wenn du die erste Packung gleich öffnest.
+- **Charge** — optional.
+
+Mit **Bestand → Per Barcode auffüllen…** füllt ein DataMatrix-Code
+Verfall und Charge selbst aus. Lässt du alle diese Felder leer, fügt die
+Packung nur Menge hinzu, wie bisher.
+
+<a id="packages"></a>
+### Packungen und Verfall
+
+**Bestand → Packungen und Verfall…** (auch im Rechtsklickmenü) listet
+die Packungen des ausgewählten Medikaments mit Status, aufgedrucktem
+Verfall, Öffnungsdatum, Verwendungsdatum und Menge im Bestand.
+
+- Eine Packung verfällt am Ende des aufgedruckten Monats oder früher,
+  wenn sie geöffnet ist und die Tage nach dem Öffnen abgelaufen sind
+  (geöffnet am 1. März, 28 Tage: verwenden bis 28. März).
+- Die App nimmt an, dass zuerst die geöffnete Packung verbraucht wird,
+  dann die, die zuerst verfallen. Packungen, die der Bestand nicht mehr
+  abdeckt, sind **Aufgebraucht** und lösen keine Warnung aus, auch wenn
+  du sie nie als beendet markierst. Verwendest du die Packungen in einer
+  anderen Reihenfolge, markiere die gerade benutzte mit **Heute
+  geöffnet** oder schließe die richtige.
+- **Neu…** erfasst eine Packung, die schon im Schrank liegt, ohne den
+  Bestand zu ändern.
+- **Heute geöffnet**, **Beendet**: aktualisieren die Packung; der
+  Bestand ändert sich nicht.
+- **Entsorgen…**: für eine weggeworfene, meist abgelaufene Packung. Die
+  restliche Menge (von der App vorgeschlagen) wird vom Bestand
+  abgezogen. Das ist endgültig: Bei einem Irrtum lösche die Packung und
+  füge die Einheiten mit einer positiven Korrektur wieder hinzu.
+- **Löschen**: nur für eine versehentlich erfasste Packung; der Bestand
+  ändert sich nicht.
+
+Die Spalte **Verfall** im Hauptfenster zeigt das erste Verfallsdatum der
+Packungen im Bestand, mit *(abgelaufen)* oder *(läuft bald ab)*.
+**Bestand → Ablaufende Packungen…** fasst die abgelaufenen und bald
+ablaufenden Packungen aller Medikamente zusammen, auch der nicht mehr
+verwendeten, die abgelaufenen zuerst; **Packungen öffnen…** öffnet die
+des gewählten Medikaments. Zu den Warnungen siehe
+[Benachrichtigungen und E-Mail](#notifications).
+
 <a id="intake"></a>
 ### Einnahme erfassen
 
@@ -344,6 +509,12 @@ Symbolleiste) erfasst eine Einnahme als **Eingenommen**,
 Tagen brauchst du das nicht. Nutze es, wenn ein Tag vom Schema abweicht:
 Sobald du für einen Tag eine Einnahme erfasst, ersetzt sie den
 automatischen Abzug dieses Tages.
+
+Für eine Dosis zusätzlich zum Schema, zum Beispiel eine Bedarfsdosis,
+setze **Zusätzliche Dosis bei Bedarf**: die Menge wird abgezogen und die
+geplanten Dosen des Tages bleiben. Die Option erscheint nur bei
+Medikamenten mit einem Schema und ist bereits gesetzt, wenn das
+Medikament eine Einnahmezeit bei Bedarf hat.
 
 <a id="correct"></a>
 ### Bestand korrigieren
@@ -364,8 +535,10 @@ die App korrigieren:
    Bestand, die Abweichung und wie sich das voraussichtliche Ende
    ändert.
 3. Trage unter **Heute bereits eingenommen** ein, was du heute beim
-   Zählen schon genommen hattest (die App schlägt die Dosen vor, deren
-   Uhrzeit vorbei ist).
+   Zählen schon genommen hattest. Die App schlägt die Dosen vor, deren
+   Uhrzeit vorbei ist, also die, die die Liste schon vom Bestand
+   abgezogen hat; Einnahmezeiten ohne Uhrzeit verwenden die Uhrzeit
+   ihres Zeitpunkts.
 4. Klicke auf **Zählung erfassen**.
 
 Die App erfasst eine Korrektur, damit der Bestand dem Gezählten
@@ -423,6 +596,31 @@ Apotheke: Wirkstoff, Dosierung, Therapiezeitraum, Arzt.
 
 MedReminder behält keine Kopie dessen, was du speicherst oder druckst.
 
+### Vorrat planen (Reise oder Apotheke)
+
+**Therapie → Vorrat planen…** beantwortet die Frage „reicht es bis …?“.
+Wähle den Zeitraum mit **Von** und **Bis**, zum Beispiel die Tage einer
+Reise oder die Tage bis zum nächsten Apothekenbesuch (Standard: die
+nächsten 14 Tage, heute eingeschlossen). Für jedes aktive Medikament
+zeigt das Fenster:
+
+- **Bedarf im Zeitraum**: die im Zeitraum verbrauchte Menge, nach
+  Schema, Unterbrechungen, Therapieende und Einnahmezeiten;
+- **Bestand zu Beginn**: der heutige Bestand minus der erwartete
+  Verbrauch bis zum Beginn des Zeitraums (*vorher aufgebraucht*, wenn
+  nichts übrig bleibt);
+- **Fehlt**: was über diesen Bestand hinaus gebraucht wird, oder
+  *gedeckt*;
+- **Zu besorgende Packungen**: wie viele Packungen das Fehlende decken,
+  so groß wie die zuletzt erfasste neue Packung (— wenn keine erfasst
+  wurde).
+
+Nicht gedeckte Medikamente stehen oben. Medikamente bei Bedarf werden
+aufgeführt, aber nicht berechnet, da ihr Verbrauch nicht geplant ist.
+**Drucken…**, **Als PDF speichern…** und **In Zwischenablage kopieren**
+funktionieren wie beim Therapieplan. Das Fenster ändert nichts: die
+Werte sind Schätzungen.
+
 ### Ein Rezept anfordern
 
 Wähle ein Medikament, dann **Therapie → Rezept anfordern…**. MedReminder
@@ -443,6 +641,152 @@ kannst vor dem Senden alles ändern.
 
 MedReminder sendet nie von selbst eine Anforderung.
 
+### Ein Rezept bis zur Apotheke verfolgen
+
+**Therapie → Rezepte…** listet die erfassten Rezepte, die noch
+einzulösenden zuerst. Für jedes kannst du notieren, sobald du es weißt:
+
+- **Angefordert am**: wann du den Arzt gefragt hast. **Als angefordert
+  markieren** im Anforderungsfenster erfasst es für dich mit dem
+  heutigen Datum;
+- **Ausgestellt am**, **Rezeptcode** und **Packungen**: vom Rezept, das
+  der Arzt ausgestellt hat;
+- **Gültig bis**: der letzte Tag, an dem die Apotheke es annimmt. Es
+  wird für 30 Tage ab dem Ausstellungsdatum ausgefüllt, die übliche
+  Gültigkeit des italienischen elektronischen Rezepts; prüfe es an
+  deinem Rezept und ändere es, wenn es abweicht;
+- **Eingelöst am**: wann du es in der Apotheke eingelöst hast. **Heute
+  eingelöst** erledigt das mit einem Klick. Wenn du eine neue Packung
+  eines Medikaments mit einem noch einzulösenden Rezept hinzufügst,
+  fragt MedReminder, ob die Packung daraus stammt.
+
+Ein ausgestelltes, nicht eingelöstes Rezept ist *Einzulösen*; nach
+seinem letzten gültigen Tag ist es *Abgelaufen*. Ab 3 Tagen vor diesem
+Tag bekommst du einmal eine Erinnerung über die
+Benachrichtigungskanäle des Medikaments (die E-Mail nur vom
+[Master-Gerät](#master), wenn die Installation geteilt ist). Die
+Erinnerung enthält den Code nicht.
+
+Rezepte werden auf die anderen PCs eines synchronisierten Profils
+kopiert und in den verschlüsselten Export aufgenommen.
+
+### Wiederholungsrezepte
+
+Manche Rezepte umfassen mehrere Abgaben in der Apotheke über eine lange
+Gültigkeit, zum Beispiel ein Jahr Therapie, das monatsweise eingelöst
+wird. Setze im Rezeptfenster das Häkchen **Wiederholungsrezept**, um es
+als ein einziges Rezept zu erfassen:
+
+- **Vorgesehene Abgaben**: wie oft die Apotheke es abgibt (2 bis 12);
+- **Gültig bis** wird für 12 Monate ab dem Ausstellungsdatum
+  ausgefüllt; prüfe es anhand deines Rezepts und ändere es, wenn es
+  abweicht;
+- **Eingelöste Abgaben** ersetzt *Eingelöst am*: füge jede Abgabe mit dem
+  Tag und, falls bekannt, der Anzahl der Packungen hinzu. **Heute
+  eingelöst** in der Liste erfasst eine mit einem Klick, und nach einer
+  neuen Packung bietet MedReminder an, sie mit dem heutigen Datum zu
+  erfassen.
+
+Die Liste zeigt die Abgaben als eingelöst / vorgesehen, zum Beispiel
+`3 / 12`. Ein Wiederholungsrezept bleibt *Einzulösen*, solange Abgaben
+übrig sind und die Gültigkeit läuft; es ist *Eingelöst*, wenn alle
+eingelöst sind, und *Abgelaufen*, wenn die Gültigkeit vorher endet. Wenn
+der Vorrat zur Neige geht, nennt die Warnung, wie viele Abgaben übrig
+sind und bis wann, statt ein neues Rezept vorzuschlagen, und ihre
+Schaltfläche öffnet das Rezept. Die Erinnerung vor *Gültig bis* kommt
+nur, solange Abgaben übrig sind, und nennt, wie viele verfallen würden.
+MedReminder prüft den Abstand zwischen den Abgaben nicht: folge den
+Hinweisen deines Apothekers.
+
+Auf synchronisierten PCs aktualisiere MedReminder auf allen PCs des
+Profils, bevor du ein Wiederholungsrezept erfasst: eine ältere Version
+hält die Synchronisierung an, bis sie aktualisiert wird.
+
+### Regionaler Rezeptdienst
+
+Mit Italien als Referenzland haben **Therapie → Rezepte…** und das
+Fenster der Rezeptanforderung die Schaltfläche **Regionaler
+Rezeptdienst**. Sie öffnet den Dienst deiner Region, in dem die für
+dich ausgestellten elektronischen Rezepte angezeigt werden, damit du
+die Rezeptnummer kopieren kannst, statt auf sie zu warten.
+
+- Beim ersten Mal wählst du deine Region oder autonome Provinz. Sie
+  wird mit dem Profil gespeichert; ändere sie über die Schaltfläche
+  (**Region ändern…**) oder unter Einstellungen → Benachrichtigungen.
+- **Im Browser öffnen** öffnet das regionale Portal in deinem
+  gewohnten Browser.
+- **Auf dem Telefon öffnen** zeigt einen QR-Code der regionalen App,
+  oder des Portals, wenn es keine App gibt: Scanne ihn mit der Kamera
+  des Telefons und melde dich auf dem Telefon an.
+
+Die Zeile unter der Schaltfläche nennt den Dienst und die Anmeldung
+(SPID, CIE oder TS-CNS). Du meldest dich beim regionalen Dienst an,
+nie in MedReminder: MedReminder sieht weder deine Zugangsdaten noch
+deine Gesundheitsakte und importiert nichts daraus. Eine betreuende
+Person meldet sich mit eigenen Zugangsdaten und einer im regionalen
+Dienst eingerichteten Vollmacht an. Ist für deine Region kein Dienst
+verzeichnet, öffne selbst das Portal der Gesundheitsakte (Fascicolo
+Sanitario Elettronico) deiner Region.
+
+**NRE einfügen** neben **Rezeptcode** im Rezeptfenster schreibt die
+elektronische Rezeptnummer (NRE, 15 Buchstaben oder Ziffern), die du
+im regionalen Dienst kopiert hast, ohne Leerzeichen, und füllt ein
+leeres **Ausgestellt am** mit dem heutigen Datum. MedReminder liest
+die Zwischenablage nur, wenn du klickst.
+
+### Fristen
+
+**Therapie → Fristen…** sammelt die Termine, die nicht den Vorrat
+betreffen: die Verlängerung eines Therapieplans oder einer Befreiung,
+einen regelmäßigen Kontrolltermin oder alles andere, was du
+beschreibst. Für jede Frist:
+
+- **Art** und **Beschreibung**: die Beschreibung ist optional, außer
+  bei der Art *Sonstiges*;
+- **Medikament**: das betroffene Medikament oder *(keines)* für eine
+  Frist des ganzen Profils;
+- **Datum** und **Tage vorher erinnern**: die Erinnerung beginnt so
+  viele Tage vor dem Datum (standardmäßig 14);
+- **Wiederholen alle … Monate**: für eine Frist, die wiederkehrt, etwa
+  eine jährliche Verlängerung;
+- **Benachrichtigen per**: Windows-Benachrichtigung und/oder E-Mail.
+
+MedReminder kennt für diese Termine keine eigenen Regeln: die
+Gültigkeit unterscheidet sich je nach Plan und Region, gib also das
+Datum aus deinen Unterlagen ein.
+
+Ab der Vorlaufzeit erhältst du eine Erinnerung pro Datum über die
+gewählten Kanäle (die E-Mail nur vom [Master-Gerät](#master), wenn die
+Installation geteilt ist); eine überfällige Frist wird rot angezeigt.
+**Erledigt** schließt eine einmalige Frist ab; eine wiederkehrende
+springt auf ihr nächstes Datum, gerechnet vom vorherigen Datum und
+nicht von dem Tag, an dem du sie markiert hast.
+
+Fristen werden auf die anderen PCs eines synchronisierten Profils
+kopiert und in den verschlüsselten Export aufgenommen.
+
+### Termine in einen Kalender exportieren
+
+**Therapie → In Kalender exportieren…** speichert eine `.ics`-Datei mit
+den kommenden Terminen: für jedes aktive Medikament den Tag, an dem du
+das Rezept anfordern solltest (das Datum, an dem der Vorrat aufgebraucht
+ist, minus die Warnschwelle), und dieses Datum selbst, den letzten Tag
+zum Einlösen jedes Rezepts und die offenen Fristen. Öffne die Datei mit
+Outlook, Google Kalender oder dem Kalender deines Telefons. Die Termine
+sind Erinnerungen, keine Verabredungen: sie markieren dich nicht als
+beschäftigt. Ein späterer Export aktualisiert dieselben Termine, statt
+Kopien anzulegen.
+
+Kalender werden oft online bei einem anderen Unternehmen gespeichert,
+deshalb sagen die Termine nur, was zu tun ist („MedReminder: ein
+Medikament geht zu Ende“). Setze das Häkchen bei **Medikamentennamen
+und Beschreibungen der Fristen einschließen**, wenn du die Namen im
+Kalender willst; die Wahl wird bei jedem Export abgefragt.
+
+Jede Bestandswarnung per E-Mail enthält außerdem das Datum, an dem der
+Vorrat aufgebraucht ist, als Kalenderdatei (`medreminder.ics`), mit
+demselben allgemeinen Titel.
+
 ---
 
 <a id="notifications"></a>
@@ -453,8 +797,32 @@ MedReminder sendet nie von selbst eine Anforderung.
 - Alle 30 Minuten prüft MedReminder die Medikamente. Fällt ein
   Medikament unter seine **Warnschwelle**, warnt es dich **einmal**,
   über die für dieses Medikament gewählten Kanäle: eine
-  Windows-Benachrichtigung und/oder eine E-Mail. Nach einer neuen
-  Packung beginnt der Zyklus von vorn.
+  Windows-Benachrichtigung und/oder eine E-Mail.
+  Die Prüfung verwendet den erfassten Bestand, nicht die Schätzung der
+  Liste: An dem Tag, an dem die Schwelle unterschritten wird, kann die
+  Liste den Warnstatus einige Stunden vor der Warnung zeigen.
+- Wurde keine neue Packung hinzugefügt, wenn die verbleibenden Tage
+  **die Hälfte der Schwelle** erreichen, folgt eine **zweite
+  Erinnerung** über dieselben Kanäle (bei einer Schwelle von 10 Tagen:
+  erste Warnung bei 10 Tagen, zweite bei 5). Ein Medikament, das bei der
+  ersten Prüfung schon unter der Hälfte liegt, bekommt nur die zweite
+  Erinnerung. Nach einer neuen Packung beginnt der Zyklus von vorn.
+- **Verfall der Packungen**: Eine Packung mit Verfallsdatum löst 30
+  Tage vor dem aufgedruckten Verfall (3 Tage vor dem Ende der Frist nach
+  dem Öffnen) einen Hinweis *läuft bald ab* aus und am Tag danach einen
+  Hinweis *abgelaufen*, jeweils einmal, über die Kanäle des Medikaments,
+  auch wenn es nicht mehr verwendet wird. Aufgebrauchte oder
+  geschlossene Packungen lösen keinen Hinweis aus. Die Vorlaufzeiten
+  änderst du unter **Extras → Einstellungen… → Benachrichtigungen →
+  Verfall der Packungen**; bei 0 bleibt nur der Hinweis auf eine
+  abgelaufene Packung.
+- **Aus der Windows-Benachrichtigung**: ein Klick öffnet MedReminder
+  bei diesem Medikament (bei den Rezepten, für eine Rezepterinnerung; bei den Fristen, für eine Fristerinnerung; bei den Packungen, für einen Verfallshinweis).
+  Eine Bestandswarnung hat **Anfrage vorbereiten**, das die Anfrage an
+  den Arzt öffnet; eine Dosiserinnerung hat **In 15 Minuten erinnern**,
+  das sie später erneut zeigt, auch wenn MedReminder inzwischen
+  geschlossen ist. Einnahmen werden nicht aus der Benachrichtigung
+  erfasst: nutze **Therapie → Einnahme erfassen…**.
 - **Extras → Jetzt prüfen** (**Strg+R** oder das Menü des Symbols)
   prüft sofort.
 - MedReminder muss laufen, um Warnungen zu senden. Aktiviere den
@@ -467,7 +835,7 @@ MedReminder sendet nie von selbst eine Anforderung.
 | Feld | Was eintragen |
 |---|---|
 | **Host** | Der Postausgangsserver deines Anbieters, z. B. `smtp.gmail.com` |
-| **Port** | Meist `587` (mit *StartTLS verwenden*) oder `465` |
+| **Port** | `587` mit aktiviertem *StartTLS verwenden* oder `465` mit deaktiviertem *StartTLS verwenden* |
 | **Benutzername** / **Neues Passwort** | Dein E-Mail-Konto. Das Passwort wird verschlüsselt gespeichert und nie protokolliert |
 | **Absender (from)** / **Absendername** | Von wem die E-Mails kommen |
 | **Zeitüberschreitung (s)** | Sekunden bis zum Abbruch |
@@ -475,12 +843,9 @@ MedReminder sendet nie von selbst eine Anforderung.
 Klicke auf **Verbindung testen** (meldet sich an, ohne etwas zu
 senden), dann auf **SMTP-Einstellungen speichern**.
 
-*Beispiel mit Gmail:* Aktiviere die Bestätigung in zwei Schritten im
-Google-Konto, erstelle ein App-Passwort unter
-`myaccount.google.com/apppasswords` und verwende Host `smtp.gmail.com`,
-Port `587`, StartTLS an, deine Gmail-Adresse als Benutzername und das
-App-Passwort als Passwort. Anbieter ändern ihre Regeln: Schlägt der Test
-fehl, sieh in der Anleitung deines Anbieters nach.
+Die Werte für Gmail und die anderen gängigen Anbieter und wie du ein
+App-Passwort erhältst, stehen unter
+[E-Mail-Einstellungen gängiger Anbieter](#smtp-providers).
 
 ### Schritt 2 — die Empfänger (jedes Profil)
 
@@ -489,14 +854,99 @@ Profil:
 
 - **Empfänger (to)** — wer die Warnungen dieses Profils erhält.
 - **E-Mail der Betreuungsperson (optional)** — ein Angehöriger oder eine
-  Pflegekraft, die eine Kopie jeder Warnung erhält, in derselben E-Mail
+  Pflegekraft, die eine Kopie der Warnungen erhält, in derselben E-Mail
   (beide Adressen sind für beide sichtbar). Sie muss sich vom Empfänger
-  unterscheiden.
+  unterscheiden. Unter **Kopie an die Betreuungsperson** wählst du, welche
+  Warnungen sie erhält (alle, solange du nichts änderst): Bestand,
+  Dosis-, Rezept- und Fristerinnerungen, Lieferengpass-Hinweise,
+  Hinweise zum Verfall von Packungen. **Der Betreuungsperson eine
+  wöchentliche Bestandsübersicht senden** schickt alle 7 Tage eine
+  E-Mail nur an die Betreuungsperson mit Bestand, Status und Datum, an
+  dem der Vorrat aufgebraucht ist, für jedes aktive Medikament und den
+  abgelaufenen oder bald ablaufenden Packungen, und nichts über
+  eingenommene Dosen. Sie kommt von dem PC,
+  der die E-Mails versendet, einmal pro Profil, auch wenn das Profil auf
+  mehreren PCs synchronisiert ist.
 - **E-Mail des Arztes (optional)** — nur für Rezeptanforderungen, die du
   selbst sendest; automatische Warnungen gehen nie dorthin.
+- **Verfall der Packungen** — wie viele Tage vorher der Hinweis *läuft
+  bald ab* kommt: vor dem aufgedruckten Verfall (Standard 30) und vor dem
+  Ende der Frist nach dem Öffnen (Standard 3).
 
 Klicke auf **Empfänger speichern**. Im selben Bereich kannst du unter
 **Meine PIN** die PIN deines eigenen Profils festlegen oder ändern.
+
+<a id="smtp-providers"></a>
+### E-Mail-Einstellungen gängiger Anbieter
+
+Viele Anbieter akzeptieren in Programmen nicht mehr das Passwort, mit
+dem du dich im Webmail anmeldest. Sie verlangen ein **App-Passwort**:
+ein eigenes Passwort, das der Anbieter für ein einzelnes Programm
+erzeugt und das jederzeit widerrufen werden kann. Trage es unter **Neues
+Passwort** ein. Widerrufst du es, sendet MedReminder nichts mehr, bis du
+ein neues einträgst.
+
+Für Port und Verschlüsselung gilt eine einzige Regel:
+
+| Port | *StartTLS verwenden* |
+|---|---|
+| `587` | aktiviert |
+| `465` | deaktiviert (die Verbindung ist von Anfang an verschlüsselt) |
+
+Bei allen Anbietern unten ist der **Benutzername** deine vollständige
+E-Mail-Adresse. Verwende dieselbe Adresse als **Absender (from)**:
+viele Anbieter lehnen einen Absender ab, der nicht zum Konto gehört.
+
+| Anbieter | Host | Port | Passwort |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | App-Passwort (siehe unten) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | App-Passwort, auf der Seite *Sicherheit* des Yahoo-Kontos |
+| iCloud Mail | `smtp.mail.me.com` | `587` | App-spezifisches Passwort, unter `account.apple.com` → *Anmeldung und Sicherheit*; erfordert die Zwei-Faktor-Authentifizierung |
+| Libero Mail | `smtp.libero.it` | `465` | Kontopasswort; bei aktiver Bestätigung in zwei Schritten ein App-Passwort aus *Gestione Account* |
+| Aruba (auch Domain-Postfächer) | `smtps.aruba.it` | `465` | Passwort des Postfachs |
+| GMX | `mail.gmx.net` | `587` | Kontopasswort; vorher *POP3/IMAP* in den E-Mail-Einstellungen des Webmails einschalten |
+| WEB.DE | `smtp.web.de` | `587` | Kontopasswort; vorher *POP3/IMAP* in den E-Mail-Einstellungen des Webmails einschalten |
+| Orange | `smtp.orange.fr` | `465` | Kontopasswort; wird es abgelehnt, im Orange-Kundenbereich prüfen, ob ein eigenes Passwort nötig ist |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft akzeptiert für diese
+Konten nur die moderne Anmeldung (OAuth2), die MedReminder nicht
+unterstützt; auch ein App-Passwort funktioniert nicht. Dasselbe gilt in
+der Regel für Geschäfts- oder Schulkonten von Microsoft 365. Verwende
+ein anderes Konto zum Senden, zum Beispiel eine eigene Gmail-Adresse für
+MedReminder.
+
+#### Gmail: App-Passwort erstellen
+
+1. Melde dich unter `myaccount.google.com` mit dem Gmail-Konto an, das
+   die E-Mails senden soll.
+2. Öffne **Sicherheit**. Ist die **Bestätigung in zwei Schritten** aus,
+   schalte sie mit dem geführten Ablauf ein (Telefon oder
+   Authenticator-App). Ohne sie gibt es keine App-Passwörter.
+3. Öffne `myaccount.google.com/apppasswords` oder suche im Suchfeld des
+   Kontos nach „App-Passwörter". Google fragt eventuell erneut nach dem
+   Passwort.
+4. Gib einen Namen ein, der an den Zweck erinnert, zum Beispiel
+   `MedReminder`, und klicke auf **Erstellen**.
+5. Google zeigt ein Passwort aus 16 Buchstaben in vier Gruppen. Kopiere
+   es und füge es ohne Leerzeichen unter **Neues Passwort** ein. Google
+   zeigt es nicht noch einmal: Geht es verloren, lösche es auf derselben
+   Seite und erstelle ein neues.
+6. Trage in MedReminder Host `smtp.gmail.com`, Port `587`, *StartTLS
+   verwenden* aktiviert und deine Gmail-Adresse als **Benutzername** und
+   als **Absender (from)** ein. Klicke auf **Verbindung testen**, dann
+   auf **SMTP-Einstellungen speichern**.
+
+Meldet die Seite, dass die Einstellung nicht verfügbar ist, ist meist
+die Bestätigung in zwei Schritten aus oder nutzt nur Sicherheitsschlüssel,
+das Konto ist im Erweiterten Sicherheitsprogramm, oder es ist ein
+Geschäfts- oder Schulkonto, dessen Administrator App-Passwörter
+abgeschaltet hat. Änderst du das Passwort deines Google-Kontos, widerruft
+Google die App-Passwörter: Erstelle ein neues und trage es in
+MedReminder ein.
+
+Anbieter ändern ihre Regeln und Adressen. Schlägt **Verbindung testen**
+mit den Werten oben fehl, sieh auf der Hilfeseite deines Anbieters nach
+(Suche nach „SMTP-Einstellungen").
 
 ---
 
@@ -928,9 +1378,10 @@ Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
   Windows 11 mit aktiviertem dunklem Modus dunkel; bei einem
   Windows-Kontrastdesign werden dessen Farben verwendet. Gilt nach einem
   Neustart. In Dunkel bleiben Datumsfelder hell.
-- **Allgemein → Automatisch nach Updates suchen (GitHub)**: sucht beim
-  Start nach einer neuen Version (nichts wird von selbst installiert)
-  und aktualisiert den Katalog beim Start und einmal täglich. **? → Nach Updates suchen…** sucht sofort.
+- **Allgemein → Nach App- und Katalog-Updates suchen (GitHub)**: sucht
+  beim Start nach einer neuen Version (nichts wird von selbst
+  installiert) und aktualisiert den Katalog beim Start und einmal
+  täglich. **? → Nach Updates suchen…** sucht sofort.
 - **Allgemein → Datenbankabfragen protokollieren (Diagnose)**: nur
   Administratoren. Schreibt jeden Datenbankbefehl ohne die Werte in die
   Protokolldatei, zur Fehlersuche. Gilt sofort; das Protokoll wächst
@@ -1037,7 +1488,7 @@ außer den Sicherungs- und Exportdateien, die du selbst ablegst.
     └── <Profil>\
         ├── medreminder.db     Medikamente und Bestand des Profils
         ├── notifications.settings.json   Empfänger
-        ├── ui.settings.json   Textgröße und Darstellung
+        ├── ui.settings.json   Textgröße, Darstellung, Fenstergröße
         └── sync.*             Synchronisierungseinstellungen (nur wenn genutzt)
 ```
 

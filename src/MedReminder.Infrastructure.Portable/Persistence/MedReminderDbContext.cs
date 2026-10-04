@@ -1,6 +1,8 @@
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 using MedReminder.Infrastructure.Persistence.Configurations;
@@ -37,6 +39,18 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<SyncFieldVersion> SyncFieldVersions => Set<SyncFieldVersion>();
     public DbSet<SyncConflict> SyncConflicts => Set<SyncConflict>();
     public DbSet<SyncPeer> SyncPeers => Set<SyncPeer>();
+    public DbSet<Prescription> Prescriptions => Set<Prescription>();
+    public DbSet<PrescriptionReminderEvent> PrescriptionReminderEvents => Set<PrescriptionReminderEvent>();
+    public DbSet<PrescriptionDispensation> PrescriptionDispensations => Set<PrescriptionDispensation>();
+    public DbSet<Deadline> Deadlines => Set<Deadline>();
+    public DbSet<DeadlineReminderEvent> DeadlineReminderEvents => Set<DeadlineReminderEvent>();
+    public DbSet<StockPackage> StockPackages => Set<StockPackage>();
+    public DbSet<PackageExpiryNoticeEvent> PackageExpiryNoticeEvents => Set<PackageExpiryNoticeEvent>();
+    public DbSet<DoseTimePreset> DoseTimePresets => Set<DoseTimePreset>();
+    public DbSet<DoseTimeDefault> DoseTimeDefaults => Set<DoseTimeDefault>();
+    internal DbSet<Repositories.PendingDataMigration> PendingDataMigrations => Set<Repositories.PendingDataMigration>();
+    public DbSet<MedReminder.Domain.Catalogue.ShortageNoticeEvent> ShortageNoticeEvents
+        => Set<MedReminder.Domain.Catalogue.ShortageNoticeEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +73,21 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new SyncFieldVersionConfiguration());
         modelBuilder.ApplyConfiguration(new SyncConflictConfiguration());
         modelBuilder.ApplyConfiguration(new SyncPeerConfiguration());
+        modelBuilder.ApplyConfiguration(new PrescriptionConfiguration());
+        modelBuilder.ApplyConfiguration(new PrescriptionReminderEventConfiguration());
+        modelBuilder.ApplyConfiguration(new PrescriptionDispensationConfiguration());
+        modelBuilder.ApplyConfiguration(new DeadlineConfiguration());
+        modelBuilder.ApplyConfiguration(new DeadlineReminderEventConfiguration());
+        modelBuilder.ApplyConfiguration(new StockPackageConfiguration());
+        modelBuilder.ApplyConfiguration(new PackageExpiryNoticeEventConfiguration());
+        modelBuilder.ApplyConfiguration(new ShortageNoticeEventConfiguration());
+        modelBuilder.ApplyConfiguration(new DoseTimePresetConfiguration());
+        modelBuilder.ApplyConfiguration(new DoseTimeDefaultConfiguration());
+        modelBuilder.Entity<Repositories.PendingDataMigration>(b =>
+        {
+            b.ToTable("PendingDataMigrations");
+            b.HasKey(m => m.Name);
+        });
 
         ApplyDateTimeOffsetConverter(modelBuilder);
     }

@@ -1,7 +1,9 @@
 using System.Data.Common;
 using System.Globalization;
+using MedReminder.Application.Migrations;
 using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Catalogue;
+using MedReminder.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -184,6 +186,93 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SentEmailNotifications_MedicineId_SentAt""
                 ON ""SentEmailNotifications"" (""MedicineId"", ""SentAt"");", cancellationToken);
+
+        // Second low-stock warning (docs/notes/EVOLUTION-PROPOSALS-2.md
+        // §3.1): the warning stage of every event and sent email. Rows
+        // written before it are first-stage warnings.
+        await AddColumnIfMissingAsync("NotificationEvents", "Stage", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await AddColumnIfMissingAsync("SentEmailNotifications", "Stage", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+
+        // Prescription lifecycle (docs/notes/EVOLUTION-PROPOSALS-2.md
+        // §3.2): the prescriptions (replicated) and the reminders to
+        // collect them this device showed (not replicated).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""Prescriptions"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_Prescriptions"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""RequestedOn"" TEXT NULL,
+                ""IssuedOn"" TEXT NULL,
+                ""Code"" TEXT NULL,
+                ""Packages"" INTEGER NULL,
+                ""ValidUntil"" TEXT NULL,
+                ""CollectedOn"" TEXT NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                ""UpdatedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_Prescriptions_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_Prescriptions_MedicineId""
+                ON ""Prescriptions"" (""MedicineId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""PrescriptionReminderEvents"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_PrescriptionReminderEvents"" PRIMARY KEY,
+                ""PrescriptionId"" TEXT NOT NULL,
+                ""MedicineId"" TEXT NOT NULL,
+                ""ValidUntil"" TEXT NOT NULL,
+                ""FiredAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PrescriptionReminderEvents_PrescriptionId_ValidUntil""
+                ON ""PrescriptionReminderEvents"" (""PrescriptionId"", ""ValidUntil"");", cancellationToken);
+
+        // Administrative deadlines (docs/notes/EVOLUTION-PROPOSALS-2.md
+        // §3.6): the deadlines (replicated) and the reminders this device
+        // showed (not replicated).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""Deadlines"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_Deadlines"" PRIMARY KEY,
+                ""MedicineId"" TEXT NULL,
+                ""Kind"" INTEGER NOT NULL,
+                ""Label"" TEXT NULL,
+                ""DueOn"" TEXT NOT NULL,
+                ""LeadDays"" INTEGER NOT NULL,
+                ""RepeatMonths"" INTEGER NULL,
+                ""Channels"" INTEGER NOT NULL,
+                ""DoneOn"" TEXT NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                ""UpdatedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_Deadlines_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_Deadlines_MedicineId""
+                ON ""Deadlines"" (""MedicineId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""DeadlineReminderEvents"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_DeadlineReminderEvents"" PRIMARY KEY,
+                ""DeadlineId"" TEXT NOT NULL,
+                ""MedicineId"" TEXT NULL,
+                ""DueOn"" TEXT NOT NULL,
+                ""FiredAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DeadlineReminderEvents_DeadlineId_DueOn""
+                ON ""DeadlineReminderEvents"" (""DeadlineId"", ""DueOn"");", cancellationToken);
+
+        // Shortage notices this device showed (docs/notes/
+        // EVOLUTION-PROPOSALS-2.md §3.3; not replicated).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""ShortageNoticeEvents"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_ShortageNoticeEvents"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""Code"" TEXT NOT NULL,
+                ""Start"" TEXT NOT NULL,
+                ""FiredAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_ShortageNoticeEvents_MedicineId_Code_Start""
+                ON ""ShortageNoticeEvents"" (""MedicineId"", ""Code"", ""Start"");", cancellationToken);
         await ExecuteRawSqlAsync(SyncOperationsTableSql, cancellationToken);
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SyncOperations_HlcPhysicalMs_HlcCounter""
@@ -247,6 +336,107 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_SyncConflicts_MedicineId""
                 ON ""SyncConflicts"" (""MedicineId"");", cancellationToken);
+
+        // As-needed slots and extra intakes (docs/analysis/
+        // ANALYSIS-INTRADAY-CONSUMPTION.md §5). Rows written before read
+        // false: no past day changes. The slots of the upgraded database
+        // are then corrected from today by AsNeededSlotBackfill.
+        await ExecuteRawSqlAsync(PendingDataMigrations.CreateTableSql, cancellationToken);
+        if (await AddColumnIfMissingAsync(
+                "MedicationAdministrationSlots", "IsAsNeeded", "INTEGER NOT NULL DEFAULT 0", cancellationToken))
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                PendingDataMigrations.MarkPendingSql, [AsNeededSlotBackfill.MigrationName], cancellationToken);
+        }
+        await AddColumnIfMissingAsync(
+            "MedicationIntakes", "IsExtra", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
+
+        // Time-of-day presets (ANALYSIS-INTRADAY-CONSUMPTION.md §6),
+        // device-local. Existing slots get their preset from their
+        // description once (SlotPresetBackfill).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""DoseTimePresets"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_DoseTimePresets"" PRIMARY KEY,
+                ""BuiltInKey"" TEXT NULL,
+                ""Label"" TEXT NULL,
+                ""Time"" TEXT NULL,
+                ""IsAsNeeded"" INTEGER NOT NULL,
+                ""Order"" INTEGER NOT NULL,
+                ""IsHidden"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""DoseTimeDefaults"" (
+                ""AdministrationsPerDay"" INTEGER NOT NULL CONSTRAINT ""PK_DoseTimeDefaults"" PRIMARY KEY,
+                ""Times"" TEXT NOT NULL
+            );", cancellationToken);
+        if (await AddColumnIfMissingAsync("MedicationAdministrationSlots", "PresetId", "TEXT NULL", cancellationToken))
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                PendingDataMigrations.MarkPendingSql, [SlotPresetBackfill.MigrationName], cancellationToken);
+        }
+
+        // Packages and their expiry (docs/analysis/
+        // ANALYSIS-PACKAGE-EXPIRY.md §6), replicated.
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""StockPackages"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_StockPackages"" PRIMARY KEY,
+                ""MedicineId"" TEXT NOT NULL,
+                ""MovementId"" TEXT NULL,
+                ""Quantity"" TEXT NOT NULL,
+                ""ExpiresOn"" TEXT NULL,
+                ""UseWithinDays"" INTEGER NULL,
+                ""OpenedOn"" TEXT NULL,
+                ""Batch"" TEXT NULL,
+                ""ClosedOn"" TEXT NULL,
+                ""Closure"" INTEGER NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                ""UpdatedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_StockPackages_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_StockPackages_MedicineId""
+                ON ""StockPackages"" (""MedicineId"");", cancellationToken);
+        // Package expiry notices this device showed (not replicated).
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""PackageExpiryNoticeEvents"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_PackageExpiryNoticeEvents"" PRIMARY KEY,
+                ""PackageId"" TEXT NOT NULL,
+                ""MedicineId"" TEXT NOT NULL,
+                ""EffectiveExpiry"" TEXT NOT NULL,
+                ""Stage"" INTEGER NOT NULL,
+                ""Channel"" INTEGER NOT NULL,
+                ""FiredAt"" INTEGER NOT NULL
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PackageExpiryNoticeEvents_PackageId_EffectiveExpiry_Stage_Channel""
+                ON ""PackageExpiryNoticeEvents"" (""PackageId"", ""EffectiveExpiry"", ""Stage"", ""Channel"");",
+            cancellationToken);
+
+        // Repeatable prescriptions (docs/prompt/
+        // PROMPT-REPEATABLE-PRESCRIPTION.md): the number of dispensations a
+        // prescription allows (null on the rows written before: single
+        // prescriptions) and the dispensations recorded (replicated). The
+        // foreign key is on the medicine only (PrescriptionDispensationConfiguration).
+        await AddColumnIfMissingAsync("Prescriptions", "Dispensations", "INTEGER NULL", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""PrescriptionDispensations"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_PrescriptionDispensations"" PRIMARY KEY,
+                ""PrescriptionId"" TEXT NOT NULL,
+                ""MedicineId"" TEXT NOT NULL,
+                ""CollectedOn"" TEXT NOT NULL,
+                ""Packages"" INTEGER NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                ""UpdatedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_PrescriptionDispensations_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_PrescriptionDispensations_PrescriptionId""
+                ON ""PrescriptionDispensations"" (""PrescriptionId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_PrescriptionDispensations_MedicineId""
+                ON ""PrescriptionDispensations"" (""MedicineId"");", cancellationToken);
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the

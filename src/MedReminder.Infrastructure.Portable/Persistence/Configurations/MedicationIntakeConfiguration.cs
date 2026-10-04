@@ -14,6 +14,7 @@ internal sealed class MedicationIntakeConfiguration : IEntityTypeConfiguration<M
         builder.Property(i => i.Quantity).HasConversion<string>();
         builder.Property(i => i.Status).HasConversion<int>();
         builder.Property(i => i.Notes).HasMaxLength(500);
+        builder.Property(i => i.IsExtra);
         // B.1 Phase 2c-2: same default as the boot patch column (0 ticks,
         // before any freeze).
         builder.Property(i => i.RecordedAt).HasDefaultValue(DateTimeOffset.MinValue);

@@ -69,6 +69,22 @@ public class TherapyTimelineBuilderTests
             window ?? Window);
 
     [Fact]
+    public void Of_two_rows_with_the_same_date_the_later_recorded_is_in_force()
+    {
+        // Same rule as DailyConsumption.RowInForce and the ledger
+        // (ANALYSIS-B1-MOBILE-SYNC.md §17).
+        var m = NewMedicine(new DateOnly(2026, 9, 1));
+        var row = Row(m, history:
+        [
+            Fixed(m, m.StartDate, admin: 2),
+            Fixed(m, m.StartDate, admin: 3),
+        ]);
+
+        row.ScheduleToday.Should().BeOfType<FixedDailySchedule>()
+            .Which.AdministrationsPerDay.Should().Be(3);
+    }
+
+    [Fact]
     public void Default_window_is_60_days_back_and_120_forward()
     {
         Window.Start.Should().Be(new DateOnly(2026, 7, 15));

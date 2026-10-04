@@ -25,4 +25,39 @@ public static class CatalogueFeedSelection
             .Where(feed => (feed.Country == reference || feed.Country.IsSupranational) && options.IsFeedEnabled(feed))
             .ToList();
     }
+
+    // Whether the shortage list is refreshed with the feeds: it lists
+    // Italian package codes, so only with Italy as reference country
+    // (an invalid value falls back to IT, as above).
+    public static bool IncludesShortages(string? referenceCountry, CatalogueFeedOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.ShortagesEnabled && IsItaly(referenceCountry);
+    }
+
+    // Whether the equivalents list is refreshed with the feeds: it lists
+    // Italian package codes, so under the same rule as the shortages.
+    public static bool IncludesEquivalents(string? referenceCountry, CatalogueFeedOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.EquivalentsEnabled && IsItaly(referenceCountry);
+    }
+
+    // Whether the regional services list is refreshed with the feeds: it
+    // names Italian regional services, so under the same rule.
+    public static bool IncludesRegionalServices(string? referenceCountry, CatalogueFeedOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.RegionalServicesEnabled && IsItaly(referenceCountry);
+    }
+
+    // Italy as reference country. An invalid value falls back to IT, as
+    // above.
+    public static bool IsItaly(string? referenceCountry)
+    {
+        var reference = CountryCode.TryParse(referenceCountry, out var parsed)
+            ? parsed
+            : CatalogueFeedDescriptor.Italy.Country;
+        return reference == CatalogueFeedDescriptor.Italy.Country;
+    }
 }

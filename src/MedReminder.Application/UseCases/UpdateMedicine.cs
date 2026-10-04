@@ -11,7 +11,11 @@ namespace MedReminder.Application.UseCases;
 // Updates non-schedule and non-stock fields. Dose / frequency changes
 // must go through ChangeMedicationSchedule to preserve the timeline;
 // here we only update the "administrative" fields plus, optionally,
-// the administration slots.
+// the administration slots and the therapy start date.
+//
+// StartDate: null leaves it alone. A new date records the facts that
+// make the schedule and the slots follow it (TherapyStartChange); the
+// ledger is derived again from the new date.
 //
 // AdministrationSlots semantics (Increment 10):
 //   null           → leave the existing slots alone (the caller is
@@ -55,7 +59,8 @@ public sealed record UpdateMedicineCommand(
     bool IsActive,
     bool RemindOnDose = false,
     IReadOnlyList<AdministrationSlotInput>? AdministrationSlots = null,
-    CatalogueLink? Catalogue = null)
+    CatalogueLink? Catalogue = null,
+    DateOnly? StartDate = null)
 {
     public UpdateMedicineCommand? Baseline { get; init; }
 }
@@ -68,6 +73,7 @@ public sealed record CatalogueLink(
 public sealed class UpdateMedicine
 {
     private readonly IMedicineRepository _medicines;
+    private readonly IMedicationScheduleHistoryRepository _schedules;
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IMedicineActivityRepository _activity;
     private readonly IOperationLog _operations;
@@ -76,6 +82,7 @@ public sealed class UpdateMedicine
 
     public UpdateMedicine(
         IMedicineRepository medicines,
+        IMedicationScheduleHistoryRepository schedules,
         IMedicationAdministrationSlotRepository slots,
         IMedicineActivityRepository activity,
         IOperationLog operations,
@@ -83,6 +90,7 @@ public sealed class UpdateMedicine
         TimeProvider clock)
     {
         _medicines = medicines;
+        _schedules = schedules;
         _slots = slots;
         _activity = activity;
         _operations = operations;
@@ -107,13 +115,17 @@ public sealed class UpdateMedicine
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
-        if (cmd.EndDate is { } end && end < medicine.StartDate)
-            throw new ArgumentException("Therapy end date cannot precede start date.", nameof(cmd));
-
-        var before = MedicineFieldCodec.Snapshot(medicine);
         var baseline = cmd.Baseline;
         bool Touched<T>(Func<UpdateMedicineCommand, T> value)
             => baseline is null || !EqualityComparer<T>.Default.Equals(value(cmd), value(baseline));
+
+        var previousStart = medicine.StartDate;
+        var startDate = cmd.StartDate is { } requested && Touched(c => c.StartDate) ? requested : previousStart;
+        var endDate = Touched(c => c.EndDate) ? cmd.EndDate : medicine.EndDate;
+        if (endDate is { } end && end < startDate)
+            throw new ArgumentException("Therapy end date cannot precede start date.", nameof(cmd));
+
+        var before = MedicineFieldCodec.Snapshot(medicine);
 
         if (Touched(c => Text(c.Name))) medicine.Name = cmd.Name.Trim();
         if (Touched(c => Text(c.ActiveIngredient))) medicine.ActiveIngredient = Text(cmd.ActiveIngredient);
@@ -122,6 +134,7 @@ public sealed class UpdateMedicine
         if (Touched(c => c.ThresholdDays)) medicine.ThresholdDays = cmd.ThresholdDays;
         if (Touched(c => c.NotificationChannels)) medicine.NotificationChannels = cmd.NotificationChannels;
         if (Touched(c => c.EndDate)) medicine.EndDate = cmd.EndDate;
+        medicine.StartDate = startDate;
         if (Touched(c => Text(c.DoctorName))) medicine.DoctorName = Text(cmd.DoctorName);
         if (Touched(c => Text(c.Notes))) medicine.Notes = Text(cmd.Notes);
 
@@ -147,6 +160,13 @@ public sealed class UpdateMedicine
 
         var operations = new List<SyncOperationBody>(Operations.FieldChanges(before, medicine));
         if (activityChange is not null) operations.Add(Operations.Activity(activityChange));
+        // Before a new slot set is added: the slot facts follow the sets
+        // recorded so far.
+        if (startDate != previousStart)
+        {
+            operations.AddRange(await TherapyStartChange.RecordAsync(
+                medicine, previousStart, now, _schedules, _slots, cancellationToken));
+        }
 
         if (cmd.AdministrationSlots is { } slotInputs
             && (baseline?.AdministrationSlots is not { } baseSlots || !slotInputs.SequenceEqual(baseSlots)))

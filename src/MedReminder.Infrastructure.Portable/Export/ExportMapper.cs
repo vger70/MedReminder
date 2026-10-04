@@ -1,7 +1,9 @@
 using MedReminder.Application.Export;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Infrastructure.Export;
@@ -125,6 +127,8 @@ internal static class ExportMapper
         Time = s.Time,
         TimingLabel = s.TimingLabel,
         Order = s.Order,
+        IsAsNeeded = s.IsAsNeeded,
+        PresetId = s.PresetId,
     };
 
     // SetId is resolved by ExportPayloadUpgrader before mapping; a
@@ -138,6 +142,8 @@ internal static class ExportMapper
         Time = d.Time,
         TimingLabel = d.TimingLabel,
         Order = d.Order,
+        IsAsNeeded = d.IsAsNeeded ?? false,
+        PresetId = d.PresetId,
     };
 
     public static ExportedAdministrationSlotSet ToDto(MedicationAdministrationSlotSet s) => new()
@@ -218,6 +224,7 @@ internal static class ExportMapper
         Quantity = i.Quantity,
         Status = i.Status.ToString(),
         Notes = i.Notes,
+        IsExtra = i.IsExtra,
     };
 
     public static MedicationIntake ToEntity(ExportedIntake d) => new()
@@ -230,6 +237,7 @@ internal static class ExportMapper
         Quantity = d.Quantity,
         Status = ParseEnum<IntakeStatus>(d.Status),
         Notes = d.Notes,
+        IsExtra = d.IsExtra,
     };
 
     public static ExportedNotificationEvent ToDto(NotificationEvent e) => new()
@@ -242,6 +250,7 @@ internal static class ExportMapper
         DaysRemainingAtSend = e.DaysRemainingAtSend,
         Success = e.Success,
         ErrorMessage = e.ErrorMessage,
+        Stage = e.Stage,
     };
 
     public static NotificationEvent ToEntity(ExportedNotificationEvent d) => new()
@@ -254,6 +263,7 @@ internal static class ExportMapper
         DaysRemainingAtSend = d.DaysRemainingAtSend,
         Success = d.Success,
         ErrorMessage = d.ErrorMessage,
+        Stage = d.Stage < 1 ? 1 : d.Stage,
     };
 
     public static ExportedDoseReminderEvent ToDto(DoseReminderEvent e) => new()
@@ -282,4 +292,166 @@ internal static class ExportMapper
     // payload rather than a benign casing difference.
     private static TEnum ParseEnum<TEnum>(string value) where TEnum : struct, Enum
         => Enum.Parse<TEnum>(value);
+
+    // `dispensations`: those of the prescription, written only for a
+    // repeatable one; a dispensation whose prescription is gone is not
+    // exported.
+    public static ExportedPrescription ToDto(Prescription p, IEnumerable<PrescriptionDispensation>? dispensations = null)
+        => new()
+    {
+        Id = p.Id,
+        MedicineId = p.MedicineId,
+        RequestedOn = p.RequestedOn,
+        IssuedOn = p.IssuedOn,
+        Code = p.Code,
+        Packages = p.Packages,
+        ValidUntil = p.ValidUntil,
+        CollectedOn = p.CollectedOn,
+        RecordedAt = p.RecordedAt,
+        UpdatedAt = p.UpdatedAt,
+        Dispensations = p.Dispensations,
+        DispensationRecords = p.IsRepeatable
+            ? (dispensations ?? []).OrderBy(x => x.CollectedOn).ThenBy(x => x.Id).Select(x => new ExportedPrescriptionDispensation
+            {
+                Id = x.Id,
+                CollectedOn = x.CollectedOn,
+                Packages = x.Packages,
+                RecordedAt = x.RecordedAt,
+                UpdatedAt = x.UpdatedAt,
+            }).ToList()
+            : null,
+    };
+
+    public static IEnumerable<PrescriptionDispensation> ToDispensationEntities(ExportedPrescription d)
+        => (d.DispensationRecords ?? []).Select(x => new PrescriptionDispensation
+        {
+            Id = x.Id,
+            PrescriptionId = d.Id,
+            MedicineId = d.MedicineId,
+            CollectedOn = x.CollectedOn,
+            Packages = x.Packages,
+            RecordedAt = x.RecordedAt,
+            UpdatedAt = x.UpdatedAt,
+        });
+
+    public static Prescription ToEntity(ExportedPrescription d) => new()
+    {
+        Id = d.Id,
+        MedicineId = d.MedicineId,
+        RequestedOn = d.RequestedOn,
+        IssuedOn = d.IssuedOn,
+        Code = d.Code,
+        Packages = d.Packages,
+        ValidUntil = d.ValidUntil,
+        CollectedOn = d.CollectedOn,
+        RecordedAt = d.RecordedAt,
+        UpdatedAt = d.UpdatedAt,
+        Dispensations = d.Dispensations,
+    };
+
+    public static ExportedDoseTimePreset ToDto(DoseTimePreset p) => new()
+    {
+        Id = p.Id,
+        BuiltInKey = p.BuiltInKey,
+        Label = p.Label,
+        Time = p.Time,
+        IsAsNeeded = p.IsAsNeeded,
+        Order = p.Order,
+        IsHidden = p.IsHidden,
+    };
+
+    public static DoseTimePreset ToEntity(ExportedDoseTimePreset d) => new()
+    {
+        Id = d.Id,
+        BuiltInKey = d.BuiltInKey,
+        Label = d.Label,
+        Time = d.Time,
+        IsAsNeeded = d.IsAsNeeded,
+        Order = d.Order,
+        IsHidden = d.IsHidden,
+    };
+
+    public static ExportedDoseTimeDefault ToDto(DoseTimeDefault d) => new()
+    {
+        AdministrationsPerDay = d.AdministrationsPerDay,
+        Times = d.Times,
+    };
+
+    public static DoseTimeDefault ToEntity(ExportedDoseTimeDefault d) => new()
+    {
+        AdministrationsPerDay = d.AdministrationsPerDay,
+        Times = d.Times,
+    };
+
+    public static ExportedStockPackage ToDto(StockPackage p) => new()
+    {
+        Id = p.Id,
+        MedicineId = p.MedicineId,
+        MovementId = p.MovementId,
+        Quantity = p.Quantity,
+        ExpiresOn = p.ExpiresOn,
+        UseWithinDays = p.UseWithinDays,
+        OpenedOn = p.OpenedOn,
+        Batch = p.Batch,
+        ClosedOn = p.ClosedOn,
+        Closure = p.Closure?.ToString(),
+        RecordedAt = p.RecordedAt,
+        UpdatedAt = p.UpdatedAt,
+    };
+
+    public static StockPackage ToEntity(ExportedStockPackage p) => new()
+    {
+        Id = p.Id,
+        MedicineId = p.MedicineId,
+        MovementId = p.MovementId,
+        Quantity = p.Quantity,
+        ExpiresOn = p.ExpiresOn,
+        UseWithinDays = p.UseWithinDays,
+        OpenedOn = p.OpenedOn,
+        Batch = p.Batch,
+        ClosedOn = p.ClosedOn,
+        Closure = p.Closure is null ? null : ClosureOf(p.Closure),
+        RecordedAt = p.RecordedAt,
+        UpdatedAt = p.UpdatedAt,
+    };
+
+    // A closure a newer app may add is read as Finished: the package left
+    // the cabinet, and Finished moves no stock. Refusing it would make the
+    // whole archive unreadable for one value.
+    private static PackageClosure ClosureOf(string value)
+        => Enum.TryParse<PackageClosure>(value, ignoreCase: false, out var closure)
+            && Enum.IsDefined(closure)
+            && !int.TryParse(value, out _)
+                ? closure
+                : PackageClosure.Finished;
+
+    public static ExportedDeadline ToDto(Deadline d) => new()
+    {
+        Id = d.Id,
+        MedicineId = d.MedicineId,
+        Kind = d.Kind.ToString(),
+        Label = d.Label,
+        DueOn = d.DueOn,
+        LeadDays = d.LeadDays,
+        RepeatMonths = d.RepeatMonths,
+        Channels = d.Channels.ToString(),
+        DoneOn = d.DoneOn,
+        RecordedAt = d.RecordedAt,
+        UpdatedAt = d.UpdatedAt,
+    };
+
+    public static Deadline ToEntity(ExportedDeadline d) => new()
+    {
+        Id = d.Id,
+        MedicineId = d.MedicineId,
+        Kind = ParseEnum<DeadlineKind>(d.Kind),
+        Label = d.Label,
+        DueOn = d.DueOn,
+        LeadDays = d.LeadDays,
+        RepeatMonths = d.RepeatMonths,
+        Channels = ParseEnum<NotificationChannels>(d.Channels),
+        DoneOn = d.DoneOn,
+        RecordedAt = d.RecordedAt,
+        UpdatedAt = d.UpdatedAt,
+    };
 }

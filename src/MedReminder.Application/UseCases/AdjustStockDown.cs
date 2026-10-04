@@ -45,7 +45,15 @@ public sealed class AdjustStockDown
 
     private async Task ExecuteCoreAsync(AdjustStockDownCommand cmd, CancellationToken cancellationToken)
     {
+        await RecordAsync(await PrepareAsync(cmd, cancellationToken), cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+    }
 
+    // Callers hold WriteGate; cmd.Quantity is positive. Checks the stock
+    // and builds the correction without recording anything, so a caller
+    // can refuse before it changes its own rows (DiscardStockPackage).
+    internal async Task<StockMovement> PrepareAsync(AdjustStockDownCommand cmd, CancellationToken cancellationToken)
+    {
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
@@ -67,9 +75,13 @@ public sealed class AdjustStockDown
             Origin = StockMovementOrigin.User,
             Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim(),
         };
+        return movement;
+    }
 
+    // Adds a prepared correction to the unit of work; the caller saves.
+    internal async Task RecordAsync(StockMovement movement, CancellationToken cancellationToken)
+    {
         await _stock.AddAsync(movement, cancellationToken);
         await _operations.AppendAsync([Operations.StockEntry(movement)], cancellationToken);
-        await _uow.SaveChangesAsync(cancellationToken);
     }
 }

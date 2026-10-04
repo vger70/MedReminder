@@ -1,9 +1,11 @@
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
 using MedReminder.Application.Notifications;
 using MedReminder.Infrastructure.Email;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MimeKit;
 using Xunit;
 
 namespace MedReminder.Infrastructure.Tests.Email;
@@ -200,6 +202,83 @@ public class MailKitEmailNotificationServiceTests
 
         var ok = await sut.TestConnectionAsync(CancellationToken.None);
         ok.Should().BeFalse();
+    }
+
+    // EVOLUTION-PROPOSALS-2 §3.7: a calendar event travels as an .ics
+    // attachment next to the text; a message without one stays plain.
+    [Fact]
+    public void BuildMimeMessage_attaches_the_calendar_event()
+    {
+        var notifications = new NotificationSettings { ToAddress = "user@example.org" };
+        var sut = BuildService(notifications);
+        var calendarEvent = new CalendarEvent("runout-1@medreminder", new DateOnly(2026, 10, 20), "MedReminder: a medicine runs out");
+
+        var mime = sut.BuildMimeMessage(ValidSmtp(), notifications,
+            new EmailMessage("s", "b", CalendarEvent: calendarEvent));
+
+        mime.TextBody.Should().Be("b");
+        var attachment = mime.Attachments.OfType<MimePart>().Should().ContainSingle().Subject;
+        attachment.FileName.Should().Be("medreminder.ics");
+        attachment.ContentType.MimeType.Should().Be("text/calendar");
+        attachment.ContentType.Parameters["method"].Should().Be("PUBLISH");
+        using var content = new MemoryStream();
+        attachment.Content!.DecodeTo(content);
+        var ics = System.Text.Encoding.UTF8.GetString(content.ToArray());
+        ics.Should().Contain("DTSTART;VALUE=DATE:20261020\r\n")
+            .And.Contain("UID:runout-1@medreminder");
+
+        sut.BuildMimeMessage(ValidSmtp(), notifications, new EmailMessage("s", "b"))
+            .Body.Should().BeOfType<TextPart>();
+    }
+
+    // EVOLUTION-PROPOSALS-2 §3.8: the caregiver gets only the kinds the
+    // profile chose; every kind while the setting is empty.
+    [Theory]
+    [InlineData("", EmailKind.DoseReminder, true)]
+    [InlineData("LowStock", EmailKind.LowStock, true)]
+    [InlineData("LowStock", EmailKind.DoseReminder, false)]
+    [InlineData("None", EmailKind.LowStock, false)]
+    public void BuildMimeMessage_copies_the_caregiver_only_for_the_chosen_kinds(
+        string chosen, EmailKind kind, bool copied)
+    {
+        var notifications = new NotificationSettings
+        {
+            ToAddress = "user@example.org",
+            CaregiverAddress = "caregiver@example.org",
+            CaregiverEmails = chosen,
+        };
+        var sut = BuildService(notifications);
+
+        var mime = sut.BuildMimeMessage(ValidSmtp(), notifications, new EmailMessage("s", "b", Kind: kind));
+
+        mime.To.Mailboxes.Select(m => m.Address).Should().Equal(
+            copied ? ["user@example.org", "caregiver@example.org"] : ["user@example.org"]);
+    }
+
+    [Fact]
+    public void BuildMimeMessage_sends_the_digest_to_the_caregiver_only()
+    {
+        var notifications = new NotificationSettings
+        {
+            ToAddress = "user@example.org",
+            CaregiverAddress = "caregiver@example.org",
+            CaregiverEmails = "None",
+        };
+        var sut = BuildService(notifications);
+
+        var mime = sut.BuildMimeMessage(ValidSmtp(), notifications, new EmailMessage("s", "b", Kind: EmailKind.Digest));
+
+        mime.To.Mailboxes.Select(m => m.Address).Should().Equal("caregiver@example.org");
+    }
+
+    [Fact]
+    public async Task SendAsync_refuses_a_digest_without_caregiver()
+    {
+        var sut = BuildService(new NotificationSettings { ToAddress = "user@example.org" });
+
+        var act = () => sut.SendAsync(new EmailMessage("s", "b", Kind: EmailKind.Digest), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     private sealed class StaticOptionsMonitor<T> : IOptionsMonitor<T>

@@ -54,6 +54,15 @@ internal sealed class InMemoryMedicationAdministrationSlotRepository
         return Task.CompletedTask;
     }
 
+    public Task SetPresetIdsAsync(IReadOnlyDictionary<Guid, Guid> presetBySlot, CancellationToken cancellationToken)
+    {
+        foreach (var slot in _items.Where(s => presetBySlot.ContainsKey(s.Id)))
+        {
+            slot.PresetId = presetBySlot[slot.Id];
+        }
+        return Task.CompletedTask;
+    }
+
     // Test double of IMedicineDeletionRepository (InMemoryMedicineDeletionRepository).
     public void RemoveForMedicine(Guid medicineId)
     {

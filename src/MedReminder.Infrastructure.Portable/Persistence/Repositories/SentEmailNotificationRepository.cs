@@ -18,6 +18,8 @@ internal sealed class SentEmailNotificationRepository : ISentEmailNotificationRe
             .AsNoTracking()
             .Where(e => e.MedicineId == medicineId)
             .OrderByDescending(e => e.SentAt)
+            // Same instant: the later stage is the latest email.
+            .ThenByDescending(e => e.Stage)
             .FirstOrDefaultAsync(cancellationToken);
 
     public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken)

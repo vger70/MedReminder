@@ -126,7 +126,7 @@ public static class TherapyCardBuilder
         {
             foreach (var slot in entry.Slots.OrderBy(SortKey))
             {
-                dosage.Add(FormatSlot(slot, m.Unit, c));
+                dosage.Add(FormatSlot(slot, m.Unit, c, loc));
             }
         }
         else
@@ -166,7 +166,8 @@ public static class TherapyCardBuilder
             Notes: options.IncludeNotes && !string.IsNullOrWhiteSpace(m.Notes) ? m.Notes : null);
     }
 
-    private static string FormatSlot(MedicationAdministrationSlot slot, string unit, CultureInfo c)
+    private static string FormatSlot(
+        MedicationAdministrationSlot slot, string unit, CultureInfo c, ILocalizationService? loc)
     {
         var text = slot.Dose.ToString("0.##", c) + " " + unit;
         if (!string.IsNullOrWhiteSpace(slot.TimingLabel))
@@ -177,7 +178,7 @@ public static class TherapyCardBuilder
         {
             text += " (" + t.ToString("HH:mm", c) + ")";
         }
-        return text;
+        return text + SlotTexts.AsNeededSuffix(slot, loc);
     }
 
     // Sorts slots with an explicit time first (chronological order),

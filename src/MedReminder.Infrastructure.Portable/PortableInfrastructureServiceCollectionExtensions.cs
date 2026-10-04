@@ -1,5 +1,7 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Catalogue;
 using MedReminder.Application.Export;
+using MedReminder.Infrastructure.Catalogue;
 using MedReminder.Infrastructure.Cloud.GoogleDrive;
 using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Export;
@@ -33,11 +35,34 @@ public static class PortableInfrastructureServiceCollectionExtensions
         });
 
         services.AddScoped<IMedicineRepository, MedicineRepository>();
+        services.AddScoped<IPendingDataMigrations, PendingDataMigrations>();
+        services.AddScoped<IDoseTimePresetRepository, DoseTimePresetRepository>();
         services.AddScoped<IMedicineDeletionRepository, MedicineDeletionRepository>();
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();
         services.AddScoped<IMedicationScheduleHistoryRepository, MedicationScheduleHistoryRepository>();
         services.AddScoped<IMedicationSuspensionRepository, MedicationSuspensionRepository>();
         services.AddScoped<INotificationEventRepository, NotificationEventRepository>();
+        services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
+        services.AddScoped<IPrescriptionDispensationRepository, PrescriptionDispensationRepository>();
+        services.AddScoped<IPrescriptionReminderEventRepository, PrescriptionReminderEventRepository>();
+        services.AddScoped<IDeadlineRepository, DeadlineRepository>();
+        services.AddScoped<IDeadlineReminderEventRepository, DeadlineReminderEventRepository>();
+        services.AddScoped<IStockPackageRepository, StockPackageRepository>();
+        services.AddScoped<IPackageExpiryNoticeEventRepository, PackageExpiryNoticeEventRepository>();
+        services.AddScoped<IShortageNoticeEventRepository, ShortageNoticeEventRepository>();
+        // Shortage list (EVOLUTION-PROPOSALS-2 §3.3): one file for every
+        // profile, so the store is a singleton like the client.
+        services.AddOptions();
+        services.TryAddSingleton<IShortageFeedClient, GitHubRawShortageFeedClient>();
+        services.TryAddSingleton<IShortageListStore, JsonFileShortageListStore>();
+        // Equivalents list (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.4):
+        // shared by every profile, as the shortage list.
+        services.TryAddSingleton<IEquivalenceFeedClient, GitHubRawEquivalenceFeedClient>();
+        services.TryAddSingleton<IEquivalenceListStore, JsonFileEquivalenceListStore>();
+        // Regional prescription services (PROMPT-REGIONAL-PRESCRIPTION-
+        // SERVICES §3.1): shared by every profile, with a shipped copy.
+        services.TryAddSingleton<IRegionalServicesFeedClient, GitHubRawRegionalServicesFeedClient>();
+        services.TryAddSingleton<IRegionalServicesListStore, JsonFileRegionalServicesListStore>();
         services.AddScoped<ISentEmailNotificationRepository, SentEmailNotificationRepository>();
         services.AddScoped<IMedicationIntakeRepository, MedicationIntakeRepository>();
         services.AddScoped<IMedicationAdministrationSlotRepository, MedicationAdministrationSlotRepository>();

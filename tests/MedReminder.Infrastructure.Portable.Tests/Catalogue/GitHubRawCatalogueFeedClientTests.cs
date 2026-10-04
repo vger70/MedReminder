@@ -49,8 +49,8 @@ public sealed class GitHubRawCatalogueFeedClientTests : IDisposable
         await client.DownloadAsync(feed, manifest!, Path.Combine(_directory, "archive.zip"), CancellationToken.None);
 
         handler.Urls.Should().Equal(
-            $"https://raw.githubusercontent.com/vger70/MedReminder/main/data/{folder}/latest.json",
-            $"https://raw.githubusercontent.com/vger70/MedReminder/main/data/{folder}/{prefix}-202610.zip");
+            $"https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/{folder}/latest.json",
+            $"https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/{folder}/{prefix}-202610.zip");
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class GitHubRawCatalogueFeedClientTests : IDisposable
         handler.Urls.Should().Equal(
             "https://mirror.example.org/aifa/latest.json",
             "https://mirror.example.org/aifa/202610.zip",
-            "https://raw.githubusercontent.com/vger70/MedReminder/main/data/fr/latest.json");
+            "https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/fr/latest.json");
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public sealed class GitHubRawCatalogueFeedClientTests : IDisposable
         var manifest = await client.GetLatestAsync(Italy, CancellationToken.None);
 
         manifest!.Version.Should().Be("202610");
-        handler.Urls.Should().Equal("https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/latest.json");
+        handler.Urls.Should().Equal("https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/latest.json");
         handler.UserAgents.Single().Should().StartWith("MedReminder/");
     }
 
@@ -224,7 +224,7 @@ public sealed class GitHubRawCatalogueFeedClientTests : IDisposable
         (await File.ReadAllBytesAsync(Destination)).Should().Equal(payload);
         File.Exists(Destination + ".part").Should().BeFalse();
         handler.Urls.Should().Equal(
-            "https://raw.githubusercontent.com/vger70/MedReminder/main/data/it/aifa-202610.zip");
+            "https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/it/aifa-202610.zip");
     }
 
     [Theory]

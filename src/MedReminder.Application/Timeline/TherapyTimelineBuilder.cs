@@ -63,7 +63,10 @@ public static class TherapyTimelineBuilder
             Segments: BuildSegments(medicine, input.Suspensions, today, window),
             Markers: BuildMarkers(history, window),
             ScheduleToday: ScheduleInForce(history, today),
-            HasAdministrationSlots: input.AdministrationSlots.Count > 0,
+            // The slots set the daily quantity only under a fixed daily
+            // schedule; under another one they only place it in the day.
+            HasAdministrationSlots: input.AdministrationSlots.Count > 0
+                && ScheduleInForce(history, today) is null or FixedDailySchedule,
             CurrentStock: input.CurrentStock,
             Forecast: forecast);
     }
@@ -211,17 +214,9 @@ public static class TherapyTimelineBuilder
         IReadOnlyList<MedicationScheduleHistory> orderedHistory,
         DateOnly day)
     {
-        // Same tie rule as DailyConsumption.RateOn: on equal dates the
-        // first entry wins.
-        MedicationScheduleHistory? latest = null;
-        foreach (var entry in orderedHistory)
-        {
-            if (entry.EffectiveFrom > day) break;
-            if (latest is null || entry.EffectiveFrom > latest.EffectiveFrom)
-            {
-                latest = entry;
-            }
-        }
+        // Same rule as DailyConsumption.RateOn: of two rows with the same
+        // date the later recorded wins (the sort by date is stable).
+        var latest = DailyConsumption.RowInForce(day, orderedHistory);
         return latest is null ? null : Deserialize(latest);
     }
 

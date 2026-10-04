@@ -1,9 +1,15 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Coverage;
+using MedReminder.Application.Deadlines;
 using MedReminder.Application.Donations;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Household;
 using MedReminder.Application.Ledger;
+using MedReminder.Application.Migrations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Packages;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
@@ -98,6 +104,7 @@ public static class ApplicationServiceCollectionExtensions
         // B.1, P8: replicated profile settings. The host registers
         // IProfileSettingsStore and ISyncProfileStatus.
         services.AddScoped<UpdateNotificationSettings>();
+        services.AddScoped<UpdateProfileRegion>();
         services.AddScoped<RenameProfile>();
 
         // B.1 ledger derivation (Phase 2c-2).
@@ -106,16 +113,55 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<FactHistoryQuery>();
         services.AddScoped<RetractFact>();
 
+        services.AddScoped<AsNeededSlotBackfill>();
+        services.AddScoped<SlotPresetBackfill>();
+        services.AddScoped<DoseTimeSettingsQuery>();
+        services.AddScoped<SaveDoseTimeSettings>();
+        services.AddScoped<DueToday>();
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();
         services.AddScoped<DoseReminderService>();
 
         // Therapy timeline view (EVOLUTION-PROPOSALS §4.3): read-only.
         services.AddScoped<TherapyTimelineQuery>();
+        // Coverage planner (EVOLUTION-PROPOSALS-2 §3.5): read-only.
+        services.AddScoped<CoveragePlanQuery>();
         services.AddScoped<RestockByScanQuery>();
         // Prescription request (EVOLUTION-PROPOSALS §3.4): interactive
         // send only, resolved per dialog action.
         services.AddScoped<SendPrescriptionRequest>();
+        // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2).
+        services.AddScoped<SavePrescription>();
+        services.AddScoped<CollectPrescription>();
+        services.AddScoped<RecordDispensation>();
+        services.AddScoped<DeletePrescription>();
+        services.AddScoped<PrescriptionListQuery>();
+        services.AddScoped<PrescriptionReminders>();
+        // Administrative deadlines (EVOLUTION-PROPOSALS-2 §3.6).
+        services.AddScoped<SaveDeadline>();
+        services.AddScoped<CompleteDeadline>();
+        services.AddScoped<DeleteDeadline>();
+        services.AddScoped<DeadlineListQuery>();
+        services.AddScoped<DeadlineReminders>();
+        // Package expiry (ANALYSIS-PACKAGE-EXPIRY.md).
+        services.AddScoped<SaveStockPackage>();
+        services.AddScoped<DiscardStockPackage>();
+        services.AddScoped<DeleteStockPackage>();
+        services.AddScoped<PackageListQuery>();
+        services.AddScoped<ExpiringPackagesQuery>();
+        services.AddScoped<PackageExpiryNotices>();
+        // Calendar export (EVOLUTION-PROPOSALS-2 §3.7).
+        services.AddScoped<CalendarExportQuery>();
+        // Shortage list (EVOLUTION-PROPOSALS-2 §3.3).
+        services.AddScoped<ShortageRefresher>();
+        services.AddScoped<ShortageNotices>();
+        // Equivalent medicines (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2).
+        services.AddScoped<EquivalenceRefresher>();
+        services.AddScoped<EquivalentsQuery>();
+        // Regional prescription services (PROMPT-REGIONAL-PRESCRIPTION-SERVICES).
+        services.AddScoped<RegionalServicesRefresher>();
+        services.AddScoped<RegionalServiceForProfileQuery>();
+        services.AddScoped<RegionalServiceLinkLauncher>();
 
         // Reference catalogue (M1). The country-profile provider owns
         // the "national ∪ EU" rule; use cases are cheap façades over

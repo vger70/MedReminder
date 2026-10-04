@@ -29,11 +29,13 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
 3. [Trovare una medicina: catalogo e codice a barre](#catalogue)
 4. [Scorte](#stock)
    - [Aggiungere una confezione](#add-package) ·
+     [Confezioni e scadenze](#packages) ·
      [Registrare un'assunzione](#intake) ·
      [Correggere le scorte](#correct) · [Contare le scorte](#count) ·
      [Storico](#history)
 5. [Linea del tempo, scheda terapia e richiesta ricetta](#documents)
 6. [Notifiche ed email](#notifications)
+   - [Parametri email dei principali provider](#smtp-providers)
 7. [Più persone: profili e ruoli](#profiles)
 8. [Proteggere i dati: backup ed esportazione](#backup)
 9. [Più computer](#devices)
@@ -68,12 +70,13 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
    notifica di Windows (vicino all'orologio) resta visibile finché l'app
    è in esecuzione.
 
-**Windows SmartScreen.** Il programma non è firmato digitalmente. Al
-primo avvio Windows può mostrare una finestra blu "Windows ha protetto
-il PC": fai clic su **Ulteriori informazioni**, poi su **Esegui
-comunque**. Windows ricorda la scelta. Se installi dal pacchetto MSI,
-la finestra dei permessi indica "Autore sconosciuto" per lo stesso
-motivo.
+**Windows SmartScreen.** Il programma è firmato digitalmente con un
+certificato Certum. Finché il certificato non ha accumulato
+reputazione, al primo avvio Windows può comunque mostrare una finestra
+blu "Windows ha protetto il PC": fai clic su **Ulteriori
+informazioni**, poi su **Esegui comunque**. Windows ricorda la scelta.
+Se installi dal pacchetto MSI, la finestra dei permessi mostra
+l'autore verificato.
 
 <a id="main-window"></a>
 ### La finestra principale
@@ -84,14 +87,16 @@ motivo.
   assunzione* e, a destra, una casella di ricerca (**Ctrl+F**) che
   filtra l'elenco per nome.
 - **Navigazione** a sinistra: *Medicine* (questo elenco), poi *Linea del
-  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Installazione*
+  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Pianifica scorte*, *Ricette*, *Scadenze amministrative*, *Installazione*
   (amministratori) e *Impostazioni*, che si aprono in una finestra
   propria. Se la finestra è stretta mostra solo le icone.
 - **Riepilogo** sopra l'elenco: quante medicine sono *Esaurite*, *In
   esaurimento*, *Sospese*, e il totale. Fai clic su un riquadro per
   vedere solo quelle medicine; un secondo clic le mostra tutte.
 - **Elenco delle medicine** al centro: una riga per medicina, con le
-  scorte, i giorni rimanenti e la data stimata di esaurimento. La
+  scorte, i giorni rimanenti e la data stimata di esaurimento. Durante
+  la giornata scorte e giorni rimanenti tolgono già le dosi di oggi il
+  cui orario è passato ([dettagli](#stock-estimate)). La
   colonna **Stato** mostra lo stato con un'etichetta colorata. Il clic
   destro su una riga offre i comandi per quella medicina (modifica,
   registra assunzione, aggiungi confezione…); doppio clic o **F2** la
@@ -112,9 +117,15 @@ uscire, fai clic destro sull'icona e scegli **Esci**.
 | Cambiare dose o frequenza | **Terapia → Cambia dose/frequenza…** |
 | Registrare una confezione comprata | **Scorte → Aggiungi confezione…** o **Scorte → Rifornisci da codice a barre…** |
 | Allineare le scorte a quello che ho davvero | **Scorte → Conta scorte…** |
+| Registrare una dose presa al bisogno | **Terapia → Registra assunzione…** (opzione *Dose extra al bisogno* se la medicina ha anche dosi programmate) |
+| Cambiare l'orario di "Al mattino", "Prima di pranzo"… | **Terapia → Orari delle dosi…** |
 | Annullare una registrazione sbagliata | **Scorte → Storico…** |
 | Stampare la terapia per un medico | **Terapia → Scheda terapia…** |
 | Chiedere una ricetta | **Terapia → Richiedi ricetta…** |
+| Seguire una ricetta fino alla farmacia | **Terapia → Ricette…** |
+| Ricordare un piano terapeutico, un'esenzione o un controllo | **Terapia → Scadenze amministrative…** |
+| Vedere le prossime date in Outlook, Google Calendar o sul telefono | **Terapia → Esporta nel calendario…** |
+| Controllare la scorta per un viaggio o fino al prossimo passaggio in farmacia | **Terapia → Pianifica scorte…** |
 | Configurare email, lingua, backup | **Strumenti → Impostazioni…** |
 | Aggiungere una persona | **Strumenti → Gestisci profili…** (amministratore) |
 | Usare MedReminder su un altro PC | **Strumenti → Sincronizzazione…** e **Strumenti → Installazione…** (amministratore) |
@@ -163,6 +174,28 @@ se hanno un'ora, possono ricordarti la dose.
 
 Senza orari, la medicina usa "dose × somministrazioni al giorno".
 
+Una dose presa solo quando serve (per esempio un antidolorifico per il
+mal di testa) va segnata **Al bisogno** nella finestra dell'orario: la
+descrizione *Al bisogno* la spunta da sola. Una dose al bisogno non viene
+mai scalata automaticamente e non fa parte del totale giornaliero: la
+scorta scende solo quando registri l'assunzione. Se tutti gli orari di
+una medicina sono al bisogno, la medicina si comporta come uno schema
+*Al bisogno (PRN)*.
+
+Dalla versione che ha introdotto questa opzione, gli orari descritti
+come "Al bisogno" vengono considerati al bisogno da quel giorno in poi.
+Prima venivano scalati ogni giorno: se la scorta mostrata è più bassa di
+quella reale, fai un [conteggio](#count) per riallinearla.
+
+**Terapia → Orari delle dosi…** elenca i momenti della giornata con il
+loro orario ("Al mattino" = 08:00, "Prima di pranzo" = 13:00, …) e gli
+orari usati per le medicine senza orari (1 al giorno = 08:00, 2 al
+giorno = 08:00 e 20:00, …). Puoi cambiare gli orari, nascondere i
+momenti che non usi e aggiungerne di tuoi; nella finestra dell'orario,
+scegliendo un momento vedi il suo orario. Questi orari servono solo a
+collocare le dosi nella giornata e non cambiano mai la scorta
+registrata. Valgono per questo computer: non vengono sincronizzati.
+
 <a id="regimens"></a>
 ### Regimi complessi
 
@@ -180,6 +213,13 @@ finestra della medicina imposta **Schema** su **Avanzato** e scegli un
 
 Con **Avanzato** i campi della dose in alto nella finestra non vengono
 usati. Torna a **Semplice** per una dose giornaliera fissa.
+
+**Gli orari di somministrazione valgono anche con Avanzato.** Lo schema
+decide quanto prendere ogni giorno; gli [orari di somministrazione](#slots)
+decidono quando. La quantità del giorno è ripartita tra gli orari in
+proporzione alle loro dosi: con due orari da 1, un giorno a scalare da 4
+dà 2 + 2, un giorno da 1 dà 0,5 + 0,5. In un giorno di pausa del ciclo
+non c'è nulla da prendere e non arriva alcun promemoria.
 
 **La terapia cambia?** Usa **Terapia → Cambia dose/frequenza…** e scegli
 la data **Effettiva dal**. Lo schema precedente resta valido per i
@@ -250,13 +290,12 @@ autorizzati per tutta l'**Unione Europea** (EMA).
   anche i medicinali UE; con **EU** contiene solo quelli. Un medicinale
   può comparire due volte (nazionale e UE): scegli quello che
   corrisponde alla tua scatola.
-- **Aggiornamento automatico.** Quando **Controlla aggiornamenti
-  automaticamente (GitHub)** è attivo (Impostazioni → Generale),
-  MedReminder scarica all'avvio, e una volta al giorno finché resta
-  aperto, l'ultimo elenco mensile del tuo Paese e quello UE, se più
-  recenti. Senza connessione non cambia nulla. Con più profili viene
-  aggiornato solo quello aperto; gli altri la prima volta che vengono
-  aperti.
+- **Aggiornamento automatico.** Quando **Controlla aggiornamenti di app
+  e cataloghi (GitHub)** è attivo (Impostazioni → Generale), MedReminder
+  scarica all'avvio, e una volta al giorno finché resta aperto, l'ultimo
+  elenco mensile del tuo Paese e quello UE, se più recenti. Senza
+  connessione non cambia nulla. Con più profili viene aggiornato solo
+  quello aperto; gli altri la prima volta che vengono aperti.
 
 **Fonti.** Open data AIFA (CC BY 4.0); dati EMA EPAR (avviso legale
 EMA, decisione della Commissione 2011/833/UE); AEMPS CIMA (legge
@@ -302,6 +341,63 @@ apre nella finestra delle scorte, già impostata su *Nuova confezione*
 con la quantità abituale. Se nessuna medicina ha quel codice, puoi
 aggiungere una nuova medicina o collegare il codice a una esistente.
 
+### Medicine carenti (Italia)
+
+Con l'Italia come paese di riferimento, MedReminder scarica l'elenco
+AIFA dei farmaci carenti insieme al catalogo (all'avvio e una volta al
+giorno, se **Controlla aggiornamenti di app e cataloghi** è attivo). Una
+medicina la cui confezione (codice AIC, compilato dal catalogo o dal
+codice a barre) è nell'elenco lo mostra nella colonna
+**Disponibilità** della lista:
+
+- *Carente*: AIFA indica la confezione come difficile da trovare;
+- *Carenza dal …*: AIFA annuncia una carenza da quella data.
+
+Passa il mouse sulla cella per leggere l'inizio, la fine prevista
+(spesso non comunicata, e può cambiare), il motivo, se AIFA segnala
+medicinali equivalenti e la data dell'elenco. Ricevi anche una notifica
+per ogni carenza, sui canali della medicina.
+
+Il messaggio di carenza non indica sostituti: chiedi al medico o al
+farmacista e richiedi la ricetta per tempo. Se la confezione è anche
+nella Lista di trasparenza AIFA, la cella rimanda a **Farmaci
+equivalenti (AIFA)** (vedi sotto).
+
+### Link informativi e farmaci equivalenti (Italia)
+
+Per una medicina con codice AIC, la riga **Informazioni** della
+finestra della medicina offre fino a quattro link:
+
+- **Foglietto illustrativo** e **Riassunto delle caratteristiche del
+  prodotto**: i documenti AIFA, con l'Italia come paese di riferimento,
+  quando il catalogo li riporta;
+- **Scheda Codifa**: la pagina pubblica della confezione su codifa.it
+  (composizione, classe, regime di fornitura, prezzo se noto), aperta
+  nel browser. Funziona con qualsiasi paese di riferimento;
+- **Farmaci equivalenti**: compare quando la confezione è nella Lista
+  di trasparenza AIFA.
+
+Gli ultimi due comandi sono anche nel menu contestuale della lista
+(clic destro su una medicina): **Farmaci equivalenti (AIFA)…** e **Apri
+scheda Codifa**. Sono disattivati per una medicina senza AIC.
+
+**Farmaci equivalenti (AIFA).** Con l'Italia come paese di riferimento,
+MedReminder scarica la Lista di trasparenza AIFA insieme al catalogo
+(lista mensile, controllata una volta al giorno). La finestra mostra il
+gruppo della confezione (principio attivo, unità, dosaggio, via di
+somministrazione), il prezzo di riferimento SSN e tutte le confezioni
+del gruppo, dalla meno cara, con prezzo al pubblico, differenza che
+paghi oltre il prezzo di riferimento, disponibilità, se l'hai già in
+casa in un'altra medicina del profilo e la nota AIFA così com'è. Una
+nota può limitare la sostituzione (per esempio "non sostituibile
+con …"): leggila. La tua medicina è in grassetto.
+
+Una confezione assente dalla lista non è "senza equivalenti": può
+essere coperta da brevetto, in classe C o semplicemente non elencata.
+La sostituzione la decidono il medico e il farmacista; la lista non
+considera eccipienti o allergie. I farmaci di classe C non hanno un
+listino pubblico e non mostrano prezzo.
+
 ---
 
 <a id="stock"></a>
@@ -309,6 +405,17 @@ aggiungere una nuova medicina o collegare il codice a una esistente.
 
 MedReminder abbassa da solo le scorte ogni giorno secondo lo schema.
 Registri solo ciò che cambia le scorte in altro modo.
+
+<a id="stock-estimate"></a>
+Durante la giornata la colonna della scorta mostra una stima: la scorta
+a inizio giornata meno le dosi di oggi il cui orario è già passato. Per
+gli orari senza ora vale l'orario del loro momento (**Terapia → Orari
+delle dosi…**); un orario descritto liberamente, senza ora, viene
+contato a fine giornata. Passando il mouse sulla scorta vedi il valore
+a inizio giornata. La scorta registrata, lo storico e la data di
+esaurimento si aggiornano dopo mezzanotte, mentre i giorni residui
+seguono la scorta mostrata; se registri un'assunzione,
+quel giorno conta la quantità registrata.
 
 <a id="add-package"></a>
 ### Aggiungere una confezione
@@ -324,6 +431,56 @@ Registri solo ciò che cambia le scorte in altro modo.
 Una nuova confezione fa ripartire il ciclo di avviso: quando le scorte
 scendono di nuovo sotto la soglia, ricevi un nuovo avviso.
 
+Con **Nuova confezione** puoi anche registrare la scadenza, tutti campi
+facoltativi:
+
+- **Confezioni** — quante scatole uguali hai comprato; la quantità viene
+  divisa tra loro.
+- **Scadenza (mese/anno)** — spunta la casella e scegli mese e anno come
+  sono stampati. Una scadenza `03/2027` vale fino al 31 marzo 2027.
+- **Da usare entro … giorni dall'apertura** — per colliri, sciroppi,
+  insuline in uso e simili, come indicato nel foglietto; 0 se non c'è.
+  Viene proposto il valore dell'ultima confezione della medicina.
+- **Aperta oggi** — se apri subito la prima scatola.
+- **Lotto** — facoltativo.
+
+Con **Scorte → Rifornisci da codice a barre** un codice DataMatrix
+compila da solo scadenza e lotto. Se lasci vuoti tutti questi campi, la
+confezione aggiunge solo quantità, come prima.
+
+<a id="packages"></a>
+### Confezioni e scadenze
+
+**Scorte → Confezioni e scadenze…** (anche dal menu del tasto destro)
+elenca le scatole della medicina selezionata con stato, scadenza
+stampata, data di apertura, data entro cui usarla e quantità in scorta.
+
+- Una confezione scade alla fine del mese stampato, o prima, se è aperta
+  e finiscono i giorni dall'apertura (aperta il 1° marzo, 28 giorni:
+  usare entro il 28 marzo).
+- L'app considera usate per prime la confezione aperta e poi quelle che
+  scadono prima. Quelle che la scorta non copre più sono **Esaurite** e
+  non danno avvisi, anche se non le segni finite. Se usi le scatole in
+  un altro ordine, segna quella in uso con **Aperta oggi** o chiudi
+  quella giusta.
+- **Nuova…** registra una scatola che hai già nell'armadietto, senza
+  cambiare la scorta.
+- **Aperta oggi**, **Finita**: aggiornano la confezione, la scorta non
+  cambia.
+- **Smaltisci…**: per una scatola buttata, tipicamente scaduta. La
+  quantità rimasta (proposta dall'app) viene tolta dalla scorta. Lo
+  smaltimento è definitivo: se ti sei sbagliato, elimina la confezione e
+  riaggiungi le unità con una correzione in eccesso.
+- **Elimina**: solo per una confezione inserita per errore; la scorta
+  non cambia.
+
+La colonna **Scadenza** della finestra principale mostra la prima
+scadenza tra le confezioni in scorta, con *(scaduta)* o *(in scadenza)*.
+**Scorte → Confezioni in scadenza…** riunisce in un solo elenco le
+confezioni scadute o in scadenza di tutte le medicine, anche di quelle
+non più in uso, prima le scadute; **Apri confezioni…** apre quelle della
+medicina scelta. Per gli avvisi vedi [Notifiche ed email](#notifications).
+
 <a id="intake"></a>
 ### Registrare un'assunzione
 
@@ -333,6 +490,12 @@ con il giorno e la quantità. Nei giorni normali non serve. Usala quando
 un giorno è diverso dallo schema: appena registri un'assunzione per un
 giorno, lo scalo automatico di quel giorno viene sostituito da quello
 che hai registrato.
+
+Per una dose in più rispetto allo schema, per esempio una dose al
+bisogno, spunta **Dose extra al bisogno**: la quantità viene scalata e le
+dosi programmate del giorno restano. L'opzione compare solo per le
+medicine con uno schema ed è già spuntata se la medicina ha un orario al
+bisogno.
 
 <a id="correct"></a>
 ### Correggere le scorte
@@ -352,8 +515,9 @@ lascia che l'app corregga:
 2. Scrivi la **Quantità contata**. La finestra mostra le scorte
    previste, la differenza e come cambia la data di esaurimento.
 3. In **Già assunto oggi** inserisci quanto avevi già preso oggi al
-   momento del conteggio (l'app propone le dosi il cui orario è
-   passato).
+   momento del conteggio. L'app propone le dosi il cui orario è
+   passato, le stesse che l'elenco ha già tolto dalla scorta; per gli
+   orari senza ora vale l'orario del loro momento.
 4. Fai clic su **Registra conteggio**.
 
 L'app registra una correzione perché le scorte coincidano con quanto
@@ -410,6 +574,30 @@ attivo, posologia, periodo di terapia, medico.
 
 MedReminder non conserva copie di quanto salvi o stampi.
 
+### Pianificare le scorte (viaggio o farmacia)
+
+**Terapia → Pianifica scorte…** risponde alla domanda "ne ho abbastanza
+fino a…?". Scegli il periodo con **Dal** e **Al**, per esempio i giorni
+di un viaggio o i giorni fino al prossimo passaggio in farmacia
+(predefinito: i prossimi 14 giorni, oggi compreso). Per ogni medicina
+attiva la finestra mostra:
+
+- **Serve nel periodo**: la quantità consumata nel periodo, secondo lo
+  schema, le sospensioni, la data di fine terapia e gli orari di
+  assunzione;
+- **Scorta all'inizio**: la scorta di oggi meno il consumo previsto fino
+  all'inizio del periodo (*finisce prima* se non ne resterà);
+- **Mancano**: quanto serve oltre quella scorta, oppure *coperto*;
+- **Confezioni da procurare**: quante confezioni coprono ciò che manca,
+  della stessa dimensione dell'ultima nuova confezione registrata (— se
+  non ne è stata registrata nessuna).
+
+Le medicine non coperte compaiono per prime. Le medicine al bisogno sono
+elencate ma non calcolate, perché il loro consumo non è pianificato.
+**Stampa…**, **Salva come PDF…** e **Copia negli appunti** funzionano
+come per la scheda terapia. La finestra non modifica nulla: i valori
+sono stime.
+
 ### Richiedere la ricetta
 
 Seleziona una medicina, poi **Terapia → Richiedi ricetta…**. MedReminder
@@ -430,6 +618,148 @@ prima di inviare.
 
 MedReminder non invia mai una richiesta da solo.
 
+### Seguire una ricetta fino alla farmacia
+
+**Terapia → Ricette…** elenca le ricette registrate, prima quelle da
+ritirare. Per ciascuna puoi annotare, quando le conosci:
+
+- **Richiesta il**: quando l'hai chiesta al medico. **Segna come
+  richiesta** nella finestra di richiesta la registra per te con la
+  data di oggi;
+- **Emessa il**, **Codice ricetta** e **Confezioni**: dalla ricetta
+  emessa dal medico;
+- **Valida fino al**: l'ultimo giorno in cui la farmacia la accetta.
+  Viene compilata per 30 giorni dalla data di emissione, la validità
+  abituale della ricetta elettronica italiana; controllala sulla tua
+  ricetta e correggila se è diversa;
+- **Ritirata il**: quando l'hai portata in farmacia. **Ritirata oggi**
+  lo fa con un clic. Quando aggiungi una nuova confezione di una
+  medicina con una ricetta ancora da ritirare, MedReminder chiede se la
+  confezione viene da lì.
+
+Una ricetta emessa e non ritirata è *Da ritirare*; dopo l'ultimo giorno
+di validità è *Scaduta*. Da 3 giorni prima di quel giorno ricevi un
+promemoria, una volta, sui canali di notifica della medicina (l'email
+solo dal [dispositivo master](#master) se l'installazione è
+condivisa). Il promemoria non contiene il codice.
+
+Le ricette vengono copiate sugli altri PC di un profilo sincronizzato e
+incluse nell'esportazione cifrata.
+
+### Ricette ripetibili
+
+Alcune ricette coprono più erogazioni in farmacia nell'arco di una
+validità lunga: per esempio la ricetta ripetibile per una terapia
+cronica, valida fino a 12 mesi e ritirata un mese alla volta. Spunta
+**Ricetta ripetibile** nella finestra della ricetta per registrarla come
+un'unica ricetta:
+
+- **Erogazioni previste**: quante volte la farmacia la eroga (da 2 a
+  12);
+- **Valida fino al** viene compilata per 12 mesi dalla data di
+  emissione; controllala sulla tua ricetta e correggila se è diversa;
+- **Erogazioni ritirate** sostituisce *Ritirata il*: aggiungi ogni
+  erogazione con il giorno e, se lo conosci, il numero di confezioni.
+  **Ritirata oggi** nell'elenco ne registra una con un clic, e dopo una
+  nuova confezione MedReminder propone di registrarla con la data di
+  oggi.
+
+L'elenco mostra le erogazioni come ritirate / previste, per esempio
+`3 / 12`. Una ricetta ripetibile resta *Da ritirare* finché restano
+erogazioni e dura la validità; è *Ritirata* quando sono state ritirate
+tutte ed è *Scaduta* se la validità finisce prima. Quando le scorte
+scendono, l'avviso dice quante erogazioni restano e fino a quando,
+invece di suggerire una nuova ricetta, e il suo pulsante apre la
+ricetta. Il promemoria prima di *Valida fino al* arriva solo se restano
+erogazioni e dice quante andrebbero perse. MedReminder non controlla
+l'intervallo tra le erogazioni: segui le indicazioni del farmacista.
+
+Sui PC sincronizzati, aggiorna MedReminder su tutti i PC del profilo
+prima di registrare una ricetta ripetibile: una versione precedente
+interrompe la sincronizzazione finché non viene aggiornata.
+
+### Servizio regionale delle ricette
+
+Con l'Italia come paese di riferimento, **Terapia → Ricette…** e la
+finestra di richiesta della ricetta hanno il pulsante **Servizio
+regionale delle ricette**. Apre il servizio della tua regione dove sono
+visibili le ricette elettroniche emesse per te, così puoi copiare il
+numero della ricetta invece di aspettarlo.
+
+- La prima volta scegli la tua regione o provincia autonoma. Viene
+  salvata con il profilo; la cambi dal pulsante (**Cambia regione…**)
+  o in Impostazioni → Notifiche.
+- **Apri nel browser** apre il portale regionale nel tuo browser
+  abituale.
+- **Apri sul telefono** mostra il codice QR dell'app regionale, o del
+  portale quando non c'è un'app: inquadralo con la fotocamera del
+  telefono e accedi dal telefono.
+
+La riga sotto il pulsante indica il servizio e come accedere (SPID, CIE
+o TS-CNS). Accedi sul servizio regionale, mai in MedReminder:
+MedReminder non vede le tue credenziali né il tuo fascicolo sanitario e
+non importa nulla. Chi assiste accede con le proprie credenziali e una
+delega attivata sul servizio regionale. Quando per la tua regione non è
+elencato un servizio, apri tu il portale del Fascicolo Sanitario
+Elettronico della tua regione.
+
+**Incolla NRE**, accanto a **Codice ricetta** nella finestra della
+ricetta, scrive il numero di ricetta elettronica (NRE, 15 lettere o
+cifre) copiato dal servizio regionale, senza spazi, e compila **Emessa
+il** con la data di oggi se è vuota. MedReminder legge gli appunti
+solo quando fai clic.
+
+### Scadenze amministrative
+
+**Terapia → Scadenze amministrative…** raccoglie le date che non
+riguardano le scorte: il rinnovo di un piano terapeutico o di
+un'esenzione, un controllo periodico o qualsiasi altra cosa tu
+descriva. Per ogni scadenza:
+
+- **Tipo** e **Descrizione**: la descrizione è facoltativa, tranne per
+  il tipo *Altro*;
+- **Medicina**: la medicina a cui si riferisce, oppure *(nessuna)* per
+  una scadenza di tutto il profilo;
+- **Data** e **Avvisa giorni prima**: il promemoria parte quel numero
+  di giorni prima della data (14 di base);
+- **Ripeti ogni … mesi**: per una scadenza che si ripete, come un
+  rinnovo annuale;
+- **Avvisa con**: notifica di Windows e/o email.
+
+MedReminder non applica regole proprie a queste date: le validità
+cambiano secondo il piano e la regione, quindi inserisci la data
+riportata sui tuoi documenti.
+
+Dal preavviso in poi ricevi un promemoria per ogni data, sui canali
+scelti (l'email solo dal [dispositivo master](#master) se
+l'installazione è condivisa); una scadenza superata è mostrata in
+rosso. **Fatta** chiude una scadenza singola; una ricorrente passa alla
+data successiva, contata dalla data precedente e non dal giorno in cui
+l'hai segnata.
+
+Le scadenze vengono copiate sugli altri PC di un profilo sincronizzato
+e incluse nell'esportazione cifrata.
+
+### Esportare le date in un calendario
+
+**Terapia → Esporta nel calendario…** salva un file `.ics` con le
+prossime date: per ogni medicina attiva il giorno in cui richiedere la
+ricetta (la data di esaurimento meno la soglia di avviso) e la data di
+esaurimento, l'ultimo giorno per ritirare ogni ricetta e le scadenze
+amministrative aperte. Apri il file con Outlook, Google Calendar o il
+calendario del telefono. Gli eventi sono promemoria, non appuntamenti:
+non ti segnano come occupato. Esportando di nuovo più avanti gli stessi
+eventi vengono aggiornati, senza copie.
+
+I calendari sono spesso conservati online da un'altra azienda, quindi
+gli eventi dicono solo cosa fare ("MedReminder: una medicina
+finisce"). Spunta **Includi i nomi delle medicine e le descrizioni
+delle scadenze** se vuoi i nomi nel calendario; la scelta viene chiesta
+a ogni esportazione.
+
+Ogni email di scorta bassa contiene anche la data di esaurimento come
+file di calendario (`medreminder.ics`), con lo stesso titolo generico.
+
 ---
 
 <a id="notifications"></a>
@@ -440,7 +770,31 @@ MedReminder non invia mai una richiesta da solo.
 - Ogni 30 minuti MedReminder controlla le medicine. Quando una medicina
   scende sotto la sua **soglia di avviso**, ti avvisa **una volta**, con
   i canali scelti per quella medicina: una notifica di Windows e/o
-  un'email. Dopo una nuova confezione il ciclo riparte.
+  un'email.
+  Il controllo usa la scorta registrata, non la stima dell'elenco: nel
+  giorno in cui la soglia viene superata, l'elenco può mostrare *In
+  esaurimento* qualche ora prima dell'avviso.
+- Se quando i giorni residui arrivano a **metà della soglia** non è stata
+  aggiunta una nuova confezione, segue un **secondo avviso** sugli
+  stessi canali (con una soglia di 10 giorni: primo avviso a 10 giorni,
+  secondo a 5). Una medicina che al primo controllo è già sotto la metà
+  riceve solo il secondo avviso. Dopo una nuova confezione il ciclo
+  riparte.
+- **Scadenza delle confezioni**: una confezione registrata con scadenza
+  dà un avviso *in scadenza* 30 giorni prima della scadenza stampata (3
+  giorni prima della fine del periodo dopo l'apertura) e un avviso
+  *scaduta* il giorno dopo, una volta ciascuno, sui canali della
+  medicina, anche se la medicina non è più in uso. Le confezioni esaurite
+  o chiuse non danno avvisi. Gli anticipi si cambiano in **Strumenti →
+  Impostazioni… → Notifiche → Scadenza delle confezioni**; con 0 resta
+  solo l'avviso di confezione scaduta.
+- **Dalla notifica di Windows**: un clic apre MedReminder su quella
+  medicina (sulle ricette, per un promemoria di ricetta; sulle scadenze, per un promemoria di scadenza; sulle confezioni, per un avviso di scadenza di una confezione). Un avviso di
+  scorta ha **Prepara la richiesta**, che apre la richiesta al medico;
+  un promemoria di dose ha **Ricordamelo tra 15 minuti**, che lo
+  ripropone più tardi, anche se nel frattempo MedReminder è chiuso. Le
+  assunzioni non si registrano dalla notifica: usa **Terapia → Registra
+  assunzione…**.
 - **Strumenti → Controlla ora** (**Ctrl+R**, o il menu dell'icona)
   esegue subito il controllo.
 - MedReminder deve essere in esecuzione per inviare gli avvisi. Attiva
@@ -453,7 +807,7 @@ MedReminder non invia mai una richiesta da solo.
 | Campo | Cosa inserire |
 |---|---|
 | **Host** | Il server di posta in uscita del tuo provider, per esempio `smtp.gmail.com` |
-| **Porta** | Di solito `587` (con *Usa StartTLS*) o `465` |
+| **Porta** | `587` con *Usa StartTLS* spuntato, oppure `465` con *Usa StartTLS* non spuntato |
 | **Username** / **Nuova password** | Il tuo account email. La password è salvata cifrata e non finisce mai nei log |
 | **Mittente (from)** / **Nome mittente** | Da chi arrivano le email |
 | **Timeout (s)** | Secondi prima di rinunciare |
@@ -461,12 +815,9 @@ MedReminder non invia mai una richiesta da solo.
 Fai clic su **Prova connessione** (accede senza inviare nulla), poi su
 **Salva impostazioni SMTP**.
 
-*Esempio con Gmail:* attiva la verifica in due passaggi nell'account
-Google, crea una password per le app su
-`myaccount.google.com/apppasswords`, poi usa Host `smtp.gmail.com`,
-Porta `587`, StartTLS attivo, il tuo indirizzo Gmail come Username e la
-password per le app come password. I provider cambiano le regole: se la
-prova fallisce, controlla le istruzioni del tuo provider.
+I valori per Gmail e per gli altri provider più diffusi, e come ottenere
+una password per le app, sono in
+[Parametri email dei principali provider](#smtp-providers).
 
 ### Passo 2 — i destinatari (per ogni profilo)
 
@@ -474,13 +825,93 @@ prova fallisce, controlla le istruzioni del tuo provider.
 
 - **Destinatario (to)** — chi riceve gli avvisi di questo profilo.
 - **E-mail assistente (facoltativa)** — un familiare o un assistente che
-  riceve una copia di ogni avviso, nella stessa email (i due indirizzi
-  sono visibili a entrambi). Deve essere diverso dal destinatario.
+  riceve una copia degli avvisi, nella stessa email (i due indirizzi
+  sono visibili a entrambi). Deve essere diverso dal destinatario. In
+  **Copia all'assistente** scegli quali avvisi riceve (tutti finché non
+  cambi): scorta bassa, promemoria delle dosi, delle ricette e delle
+  scadenze, avvisi di carenza, avvisi di scadenza delle confezioni.
+  **Invia all'assistente un riepilogo settimanale delle scorte**
+  aggiunge, ogni 7 giorni, un'email al solo assistente con scorta, stato
+  e data di esaurimento di ogni medicina attiva e le confezioni scadute o
+  in scadenza, e niente sulle dosi assunte. La invia il PC che manda le
+  email, una volta per profilo anche se il profilo è sincronizzato su
+  più PC.
 - **E-mail del medico (facoltativa)** — usata solo per le richieste di
   ricetta che invii tu; gli avvisi automatici non ci vanno mai.
+- **Scadenza delle confezioni** — quanti giorni prima arriva l'avviso
+  *in scadenza*: prima della scadenza stampata (predefinito 30) e prima
+  della fine del periodo dopo l'apertura (predefinito 3).
 
 Fai clic su **Salva destinatari**. Nella stessa sezione, **Il mio PIN**
 permette di impostare o cambiare il PIN del tuo profilo.
+
+<a id="smtp-providers"></a>
+### Parametri email dei principali provider
+
+Molti provider non accettano più, nei programmi, la password con cui
+accedi alla webmail. Chiedono una **password per le app**: una password
+separata, generata dal provider per un solo programma e revocabile in
+qualsiasi momento. Va inserita in **Nuova password**. Se la revochi,
+MedReminder smette di inviare finché non ne inserisci una nuova.
+
+Per porta e cifratura vale una sola regola:
+
+| Porta | *Usa StartTLS* |
+|---|---|
+| `587` | spuntato |
+| `465` | non spuntato (la connessione è cifrata fin dall'inizio) |
+
+Con tutti i provider qui sotto **Username** è l'indirizzo email completo.
+Usa lo stesso indirizzo come **Mittente (from)**: molti provider
+rifiutano un mittente diverso dall'account.
+
+| Provider | Host | Porta | Password |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `587` | Password per le app (vedi sotto) |
+| Yahoo Mail | `smtp.mail.yahoo.com` | `465` | Password per le app, dalla pagina *Sicurezza* dell'account Yahoo |
+| iCloud Mail | `smtp.mail.me.com` | `587` | Password specifica per l'app, da `account.apple.com` → *Accesso e sicurezza*; richiede l'autenticazione a due fattori |
+| Libero Mail | `smtp.libero.it` | `465` | Password dell'account; con la verifica in due passaggi attiva, una password per app da *Gestione Account* |
+| Aruba (anche caselle di dominio) | `smtps.aruba.it` | `465` | Password della casella |
+| GMX | `mail.gmx.net` | `587` | Password dell'account; prima attiva *POP3/IMAP* nelle impostazioni email della webmail |
+| WEB.DE | `smtp.web.de` | `587` | Password dell'account; prima attiva *POP3/IMAP* nelle impostazioni email della webmail |
+| Orange | `smtp.orange.fr` | `465` | Password dell'account; se viene rifiutata, controlla nello spazio cliente Orange se serve una password dedicata |
+
+**Outlook.com, Hotmail, Live, MSN.** Microsoft accetta per questi
+account solo l'accesso moderno (OAuth2), che MedReminder non supporta;
+nemmeno una password per le app funziona. Lo stesso vale, di norma, per
+gli account di lavoro o scuola Microsoft 365. Usa un altro account per
+l'invio, per esempio un indirizzo Gmail dedicato a MedReminder.
+
+#### Gmail: creare la password per le app
+
+1. Accedi a `myaccount.google.com` con l'account Gmail che invierà le
+   email.
+2. Apri **Sicurezza**. Se la **Verifica in due passaggi** non è attiva,
+   attivala seguendo la procedura guidata (telefono o app di
+   autenticazione). Senza di essa le password per le app non esistono.
+3. Apri `myaccount.google.com/apppasswords`, oppure cerca "Password per
+   le app" nella casella di ricerca dell'account. Google può chiederti
+   di nuovo la password.
+4. Scrivi un nome che ricordi a cosa serve, per esempio `MedReminder`, e
+   fai clic su **Crea**.
+5. Google mostra una password di 16 lettere, in quattro gruppi. Copiala e
+   incollala in **Nuova password**, senza spazi. Google non la mostra
+   più: se la perdi, eliminala dalla stessa pagina e creane un'altra.
+6. In MedReminder inserisci Host `smtp.gmail.com`, Porta `587`, *Usa
+   StartTLS* spuntato, il tuo indirizzo Gmail come **Username** e come
+   **Mittente (from)**. Fai clic su **Prova connessione**, poi su
+   **Salva impostazioni SMTP**.
+
+Se la pagina dice che l'opzione non è disponibile, di solito la verifica
+in due passaggi non è attiva, usa solo chiavi di sicurezza, l'account è
+iscritto alla Protezione avanzata, oppure è un account di lavoro o
+scuola il cui amministratore ha disattivato le password per le app. Se
+cambi la password dell'account Google, Google revoca le password per le
+app: creane una nuova e inseriscila in MedReminder.
+
+I provider cambiano regole e indirizzi. Se **Prova connessione**
+fallisce con i valori sopra, controlla la pagina di aiuto del tuo
+provider (cerca "impostazioni SMTP").
 
 ---
 
@@ -901,9 +1332,10 @@ ridimensionare.
   Windows 11 con la modalità scura attiva; con un tema a contrasto
   elevato di Windows si usano i suoi colori. Vale dopo il riavvio. In
   Scuro i campi data restano chiari.
-- **Generale → Controlla aggiornamenti automaticamente (GitHub)**: cerca
-  una nuova versione all'avvio (nulla viene installato da solo) e
-  aggiorna il catalogo all'avvio e una volta al giorno. **? → Controlla aggiornamenti…** controlla subito.
+- **Generale → Controlla aggiornamenti di app e cataloghi (GitHub)**:
+  cerca una nuova versione all'avvio (nulla viene installato da solo) e
+  aggiorna il catalogo all'avvio e una volta al giorno. **? → Controlla
+  aggiornamenti…** controlla subito.
 - **Generale → Registra le query del database (diagnostica)**: solo
   amministratori. Scrive nel file di log ogni comando del database, senza
   i valori, per la diagnosi dei problemi. Vale subito; il log cresce in
@@ -1007,7 +1439,7 @@ i file di backup ed esportazione che posizioni tu.
     └── <profilo>\
         ├── medreminder.db     medicine e scorte del profilo
         ├── notifications.settings.json   destinatari
-        ├── ui.settings.json   dimensione del testo e aspetto
+        ├── ui.settings.json   dimensione del testo, aspetto, dimensioni della finestra
         └── sync.*             impostazioni di sincronizzazione (solo se usata)
 ```
 

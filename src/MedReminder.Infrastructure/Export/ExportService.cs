@@ -39,6 +39,7 @@ internal sealed class ExportService : IExportService
     private readonly TimeProvider _clock;
     private readonly ILogger<ExportService> _log;
     private readonly string _sharedDirectory;
+    private readonly string _scratchRoot;
 
     public ExportService(
         ICurrentProfile currentProfile,
@@ -54,7 +55,9 @@ internal sealed class ExportService : IExportService
     }
 
     // Test overload: lets a test point the shared-settings reader at a
-    // temporary folder instead of %LOCALAPPDATA%.
+    // temporary folder instead of %LOCALAPPDATA%, and the scratch folder
+    // of the snapshot at a folder of its own instead of %TEMP%, which
+    // other tests share.
     internal ExportService(
         ICurrentProfile currentProfile,
         IBackupService backupService,
@@ -63,8 +66,10 @@ internal sealed class ExportService : IExportService
         TimeProvider clock,
         ILogger<ExportService> log,
         string sharedDirectory,
-        IProfileRegistry? profileRegistry = null)
+        IProfileRegistry? profileRegistry = null,
+        string? scratchRoot = null)
     {
+        _scratchRoot = scratchRoot ?? Path.GetTempPath();
         _currentProfile = currentProfile;
         _profileRegistry = profileRegistry;
         _backupService = backupService;
@@ -107,7 +112,7 @@ internal sealed class ExportService : IExportService
         progress?.Report(0);
 
         var scratchDirectory = Path.Combine(
-            Path.GetTempPath(), "MedReminder-export-" + Guid.NewGuid().ToString("N"));
+            _scratchRoot, "MedReminder-export-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratchDirectory);
 
         byte[]? key = null;
@@ -318,6 +323,24 @@ internal sealed class ExportService : IExportService
         payload.StockCounts = (await db.StockCounts.AsNoTracking()
             .OrderBy(c => c.Id).ToListAsync(cancellationToken))
             .Select(ExportMapper.ToDto).ToList();
+        var dispensations = (await db.PrescriptionDispensations.AsNoTracking().ToListAsync(cancellationToken))
+            .ToLookup(d => d.PrescriptionId);
+        payload.Prescriptions = (await db.Prescriptions.AsNoTracking()
+            .OrderBy(p => p.Id).ToListAsync(cancellationToken))
+            .Select(p => ExportMapper.ToDto(p, dispensations[p.Id])).ToList();
+        payload.SchemaVersion = ExportFormat.SchemaVersionOf(payload);
+        payload.Deadlines = (await db.Deadlines.AsNoTracking()
+            .OrderBy(d => d.Id).ToListAsync(cancellationToken))
+            .Select(ExportMapper.ToDto).ToList();
+        payload.StockPackages = (await db.StockPackages.AsNoTracking()
+            .OrderBy(p => p.Id).ToListAsync(cancellationToken))
+            .Select(ExportMapper.ToDto).ToList();
+        payload.DoseTimePresets = (await db.DoseTimePresets.AsNoTracking()
+            .OrderBy(p => p.Id).ToListAsync(cancellationToken))
+            .Select(ExportMapper.ToDto).ToList();
+        payload.DoseTimeDefaults = (await db.DoseTimeDefaults.AsNoTracking()
+            .OrderBy(d => d.AdministrationsPerDay).ToListAsync(cancellationToken))
+            .Select(ExportMapper.ToDto).ToList();
         var cutoff = await db.LedgerCutoffs.AsNoTracking()
             .SingleOrDefaultAsync(cancellationToken);
         payload.LedgerCutoff = cutoff is null ? null : ExportMapper.ToDto(cutoff);
@@ -441,20 +464,34 @@ internal sealed class ExportService : IExportService
         return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
     }
 
+    // Windows can keep a just-closed file locked for a short while (an
+    // antivirus or the search indexer scanning the new .db), so the
+    // deletion is retried a few times before giving up.
+    private const int DeleteAttempts = 5;
+
     private void TryDeleteDirectory(string directory)
     {
-        try
+        for (var attempt = 1; ; attempt++)
         {
-            if (Directory.Exists(directory))
+            try
             {
-                Directory.Delete(directory, recursive: true);
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, recursive: true);
+                }
+                return;
             }
-        }
-        catch (Exception ex)
-        {
-            // A leftover temp snapshot is harmless; do not fail the
-            // export over it. Log without any payload detail.
-            _log.LogWarning(ex, "Could not delete the temporary export snapshot directory.");
+            catch (Exception ex) when (attempt < DeleteAttempts && ex is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(100 * attempt);
+            }
+            catch (Exception ex)
+            {
+                // A leftover temp snapshot is harmless; do not fail the
+                // export over it. Log without any payload detail.
+                _log.LogWarning(ex, "Could not delete the temporary export snapshot directory.");
+                return;
+            }
         }
     }
 }

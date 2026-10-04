@@ -17,6 +17,10 @@ internal sealed class InMemoryStockCountRepository : IStockCountRepository
         return Task.FromResult(result);
     }
 
+    public Task<IReadOnlyList<Guid>> ListMedicinesWithMaterializedCountAsync(DateOnly day, CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyList<Guid>>(
+            [.. _items.Where(c => c.CountDay == day && c.MaterializesCountDay).Select(c => c.MedicineId).Distinct()]);
+
     public Task AddAsync(StockCount count, CancellationToken cancellationToken)
     {
         _items.Add(count);

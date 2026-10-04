@@ -1,19 +1,30 @@
 using System.ComponentModel;
 using System.Reflection;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.Coverage;
+using MedReminder.Application.Deadlines;
 using MedReminder.Application.Donations;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Notifications;
+using MedReminder.Application.Packages;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Prescriptions;
+using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
+using MedReminder.Infrastructure.Settings;
 using MedReminder.Application.Overview;
 using MedReminder.UI.Controls;
+using MedReminder.UI.Notifications;
 using MedReminder.UI.Tray;
 using MedReminder.UI.UiExtensions;
 using MedReminder.UI.Hosting;
@@ -66,6 +77,14 @@ internal sealed class MainForm : MedReminderFormBase
 
     private readonly bool _closeToTray = true;
     private bool _reallyExit;
+    // Normal or Maximized: the state to save and to restore from the tray
+    // while the window is minimized.
+    private FormWindowState _lastShownState = FormWindowState.Normal;
+    // Saved placement, applied in OnLoad. A separate flag because the
+    // layout scaling resizes the normal window first, which resets
+    // _lastShownState.
+    private Rectangle? _savedBounds;
+    private bool _startMaximized;
 
     // Sorting state for the "Days remaining" column. The DataGridView
     private SortOrder _sortOrderDaysRemaining = SortOrder.None;
@@ -100,11 +119,22 @@ internal sealed class MainForm : MedReminderFormBase
         Height = 560;
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(720, 420);
+        ApplySavedPlacement();
+        Resize += (_, _) =>
+        {
+            if (WindowState != FormWindowState.Minimized) _lastShownState = WindowState;
+        };
 
         BuildLayout();
         WireTrayHandlers();
 
-        Load += async (_, _) => await ReloadAsync();
+        Load += async (_, _) =>
+        {
+            await ReloadAsync();
+            // After the first load, so an action can select its medicine.
+            WireToastActions();
+        };
+        Load += (_, _) => WireEstimateRefresh();
         Load += (_, _) => WireSyncRefresh();
         Load += (_, _) => WireHandoverPrompt();
         Load += (_, _) => TryStartPassiveUpdateCheck();
@@ -198,7 +228,7 @@ internal sealed class MainForm : MedReminderFormBase
     // open the windows the menus already open.
     private NavigationPane BuildNavigationPane()
     {
-        var nav = new NavigationPane();
+        var nav = new NavigationPane { Resizable = true };
         var medicines = nav.AddItem(_loc.Get("Ui.MainForm.Nav.Medicines"), Mdl2Glyph.Glyphs.BulletedList,
             opensWindow: false, () => _grid.Focus());
         medicines.Selected = true;
@@ -208,6 +238,12 @@ internal sealed class MainForm : MedReminderFormBase
             opensWindow: true, async () => await ShowTherapyReportAsync());
         nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.RequestPrescription"), Mdl2Glyph.Glyphs.Mail,
             opensWindow: true, async () => await ShowPrescriptionRequestAsync());
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.PlanSupply"), Mdl2Glyph.Glyphs.Package,
+            opensWindow: true, ShowCoveragePlanner);
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Prescriptions"), Mdl2Glyph.Glyphs.Notebook,
+            opensWindow: true, async () => await ShowPrescriptionsAsync());
+        nav.AddItem(MenuCaption("Ui.MainForm.Menu.Therapy.Deadlines"), Mdl2Glyph.Glyphs.Ringer,
+            opensWindow: true, async () => await ShowDeadlinesAsync());
         nav.AddSeparator();
         if (_currentProfile.IsAdmin)
         {
@@ -216,6 +252,11 @@ internal sealed class MainForm : MedReminderFormBase
         }
         nav.AddItem(MenuCaption("Ui.MainForm.Menu.Tools.Settings"), Mdl2Glyph.Glyphs.Settings,
             opensWindow: true, ShowSettings);
+        // Set after the items, before the form scales the pane.
+        if (ProfileUiSettingsFile.ReadNavigationWidth(_currentProfile.DataDirectory) is { } width)
+        {
+            nav.ExpandedWidth = width;
+        }
         return nav;
     }
 
@@ -342,6 +383,9 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RegisterIntake"),
             Mdl2Glyph.Glyphs.CheckMark, Keys.Control | Keys.I,
             async () => await ShowRegisterIntakeAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.DoseTimes"),
+            Mdl2Glyph.Glyphs.History, Keys.None,
+            async () => await ShowDoseTimesAsync()));
         therapyMenu.DropDownItems.Add(new ToolStripSeparator());
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Report"),
             Mdl2Glyph.Glyphs.Document, Keys.Control | Keys.P,
@@ -352,6 +396,18 @@ internal sealed class MainForm : MedReminderFormBase
         therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.RequestPrescription"),
             Mdl2Glyph.Glyphs.Mail, Keys.None,
             async () => await ShowPrescriptionRequestAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.PlanSupply"),
+            Mdl2Glyph.Glyphs.Package, Keys.None,
+            () => { ShowCoveragePlanner(); return Task.CompletedTask; }));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Prescriptions"),
+            Mdl2Glyph.Glyphs.Notebook, Keys.None,
+            async () => await ShowPrescriptionsAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deadlines"),
+            Mdl2Glyph.Glyphs.Ringer, Keys.None,
+            async () => await ShowDeadlinesAsync()));
+        therapyMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.ExportCalendar"),
+            Mdl2Glyph.Glyphs.Calendar, Keys.None,
+            () => { ShowCalendarExport(); return Task.CompletedTask; }));
 
         // Scorte
         var stockMenu = new ToolStripMenuItem(_loc.Get("Ui.MainForm.Menu.Stock"));
@@ -362,6 +418,13 @@ internal sealed class MainForm : MedReminderFormBase
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.RestockFromBarcode"),
             Mdl2Glyph.Glyphs.Package, Keys.None,
             async () => await RestockFromBarcodeAsync()));
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Packages"),
+            Mdl2Glyph.Glyphs.Calendar, Keys.None,
+            async () => await ShowPackagesAsync()));
+        // Independent of the selected row: every medicine of the profile.
+        stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.ExpiringPackages"),
+            Mdl2Glyph.Glyphs.Warning, Keys.None,
+            async () => await ShowExpiringPackagesAsync()));
         stockMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Warning, Keys.None,
             async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
@@ -779,6 +842,34 @@ internal sealed class MainForm : MedReminderFormBase
         return await query.LoadAsync(window, CancellationToken.None);
     }
 
+    // Coverage planner (EVOLUTION-PROPOSALS-2 §3.5), read-only. Each
+    // computation runs in its own DI scope.
+    private void ShowCoveragePlanner()
+    {
+        try
+        {
+            DateOnly today;
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                today = scope.ServiceProvider.GetRequiredService<CoveragePlanQuery>().LocalToday();
+            }
+            using var dialog = new CoveragePlannerDialog(LoadCoveragePlanAsync, today,
+                _currentProfile.DisplayName, _loc);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenCoveragePlanner"), ex);
+        }
+    }
+
+    private async Task<CoveragePlan> LoadCoveragePlanAsync(DateOnly from, DateOnly to)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var query = scope.ServiceProvider.GetRequiredService<CoveragePlanQuery>();
+        return await query.LoadAsync(from, to, CancellationToken.None);
+    }
+
     private void SelectGridRow(Guid medicineId)
     {
         if (!_showInactive && _allRows.Any(r => r.Id == medicineId && !r.IsActive))
@@ -840,9 +931,252 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
+        var medicineId = row.Id;
         using var dialog = new PrescriptionRequestDialog(
-            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc, isMaster);
+            draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc, isMaster,
+            markRequested: () => MarkPrescriptionRequestedAsync(medicineId),
+            regional: BuildRegionalServiceActions());
         dialog.ShowDialog(this);
+    }
+
+    // The regional prescription service of the profile
+    // (PROMPT-REGIONAL-PRESCRIPTION-SERVICES §3.3), each action in its own
+    // DI scope. The reference country is an installation setting, read
+    // on every load so a change in Settings applies at once.
+    private RegionalServiceActions BuildRegionalServiceActions() => new(
+        Load: () =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var country = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<UserSettings>>()
+                .CurrentValue.ReferenceCountry;
+            return scope.ServiceProvider.GetRequiredService<RegionalServiceForProfileQuery>().Get(country);
+        },
+        SaveRegion: async region =>
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<UpdateProfileRegion>()
+                .ExecuteAsync(region, CancellationToken.None);
+        },
+        Open: (region, url) =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<RegionalServiceLinkLauncher>().Open(region, url);
+        });
+
+    private bool OffersNrePaste()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        return RegionalServiceForProfileQuery.IsOffered(scope.ServiceProvider
+            .GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue.ReferenceCountry);
+    }
+
+    // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2): a request sent
+    // or copied from the draft is recorded as requested today.
+    private async Task MarkPrescriptionRequestedAsync(Guid medicineId)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var today = scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>().LocalToday();
+        await scope.ServiceProvider.GetRequiredService<SavePrescription>().ExecuteAsync(
+            new SavePrescriptionCommand(null, medicineId, today, null, null, null, null, null), CancellationToken.None);
+    }
+
+    // Therapy → Prescriptions… Each action runs in its own DI scope.
+    private async Task ShowPrescriptionsAsync()
+    {
+        try
+        {
+            List<(Guid Id, string Name)> medicines;
+            DateOnly today;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                medicines = (await scope.ServiceProvider.GetRequiredService<IMedicineRepository>()
+                        .ListActiveAsync(CancellationToken.None))
+                    .OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(m => (m.Id, m.Name))
+                    .ToList();
+                today = scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>().LocalToday();
+            }
+            var selected = GetSelectedRow()?.Id;
+            var offerNrePaste = OffersNrePaste();
+
+            var actions = new PrescriptionsDialogActions(
+                Load: async () =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>()
+                        .LoadAsync(CancellationToken.None);
+                },
+                CreateEditor: item =>
+                {
+                    var existing = item?.Prescription;
+                    // An existing prescription of a deactivated medicine
+                    // keeps its medicine in the list.
+                    var options = existing is not null && medicines.All(m => m.Id != existing.MedicineId)
+                        ? [.. medicines, (existing.MedicineId, _allRows.FirstOrDefault(r => r.Id == existing.MedicineId)?.Name ?? string.Empty)]
+                        : medicines;
+                    return new PrescriptionEditDialog(options, selected, existing, item?.Dispensations ?? [], today, _loc,
+                        offerNrePaste);
+                },
+                Save: async command =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<SavePrescription>()
+                        .ExecuteAsync(command, CancellationToken.None);
+                },
+                Collect: async item =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    if (item.Prescription.IsRepeatable)
+                    {
+                        await scope.ServiceProvider.GetRequiredService<RecordDispensation>()
+                            .ExecuteAsync(item.Prescription.Id, today, null, CancellationToken.None);
+                    }
+                    else
+                    {
+                        await scope.ServiceProvider.GetRequiredService<CollectPrescription>()
+                            .ExecuteAsync(item.Prescription.Id, today, CancellationToken.None);
+                    }
+                },
+                Delete: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<DeletePrescription>()
+                        .ExecuteAsync(id, CancellationToken.None);
+                });
+
+            using var dialog = new PrescriptionsDialog(actions, _loc, BuildRegionalServiceActions());
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenPrescriptions"), ex);
+        }
+    }
+
+    // Therapy → Export to calendar… (EVOLUTION-PROPOSALS-2 §3.7). The
+    // events are read in their own DI scope when the user exports.
+    private void ShowCalendarExport()
+    {
+        using var dialog = new CalendarExportDialog(async includeNames =>
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<CalendarExportQuery>()
+                .WriteAsync(includeNames, CancellationToken.None);
+        }, _loc);
+        dialog.ShowDialog(this);
+    }
+
+    // Therapy → Deadlines… (EVOLUTION-PROPOSALS-2 §3.6). Each action runs
+    // in its own DI scope.
+    private async Task ShowDeadlinesAsync()
+    {
+        try
+        {
+            List<(Guid Id, string Name)> medicines;
+            DateOnly today;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                medicines = (await scope.ServiceProvider.GetRequiredService<IMedicineRepository>()
+                        .ListActiveAsync(CancellationToken.None))
+                    .OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(m => (m.Id, m.Name))
+                    .ToList();
+                today = scope.ServiceProvider.GetRequiredService<DeadlineListQuery>().LocalToday();
+            }
+
+            var actions = new DeadlinesDialogActions(
+                Load: async () =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<DeadlineListQuery>()
+                        .LoadAsync(CancellationToken.None);
+                },
+                CreateEditor: existing =>
+                {
+                    // A deadline of a deactivated medicine keeps its
+                    // medicine in the list.
+                    var options = existing?.MedicineId is { } linked && medicines.All(m => m.Id != linked)
+                        ? [.. medicines, (linked, _allRows.FirstOrDefault(r => r.Id == linked)?.Name ?? string.Empty)]
+                        : medicines;
+                    return new DeadlineEditDialog(options, null, existing, today, _loc);
+                },
+                Save: async command =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<SaveDeadline>()
+                        .ExecuteAsync(command, CancellationToken.None);
+                },
+                Complete: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<CompleteDeadline>()
+                        .ExecuteAsync(id, today, CancellationToken.None);
+                },
+                Delete: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<DeleteDeadline>()
+                        .ExecuteAsync(id, CancellationToken.None);
+                });
+
+            using var dialog = new DeadlinesDialog(actions, _loc);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenDeadlines"), ex);
+        }
+    }
+
+    // After a new package: an issued prescription of the medicine still
+    // to collect most likely became this package. Asks before recording:
+    // a single prescription is marked collected, a repeatable one gets a
+    // dispensation today with the number of packages just entered.
+    private async Task OfferPrescriptionCollectedAsync(Guid medicineId, string medicineName, int? packages)
+    {
+        try
+        {
+            OpenPrescription? candidate;
+            DateOnly today;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                var query = scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>();
+                candidate = (await query.OpenForMedicineAsync(medicineId, CancellationToken.None)).FirstOrDefault();
+                today = query.LocalToday();
+            }
+            if (candidate is null) return;
+            var open = candidate.Prescription;
+
+            if (open.IsRepeatable)
+            {
+                var issuedText = open.IssuedOn?.ToString("d", _loc.CurrentCulture) ?? string.Empty;
+                var record = ConfirmDialog.Show(_loc, this,
+                    _loc.Get("Ui.MainForm.RecordDispensation", medicineName, issuedText,
+                        candidate.Dispensations.Count, open.Dispensations!.Value),
+                    _loc.Get("Ui.MainForm.RecordDispensation.Title"),
+                    MessageBoxIcon.Question);
+                if (record != DialogResult.Yes) return;
+                await using var write = _scopeFactory.CreateAsyncScope();
+                await write.ServiceProvider.GetRequiredService<RecordDispensation>()
+                    .ExecuteAsync(open.Id, today, packages, CancellationToken.None);
+                return;
+            }
+            if (open.IssuedOn is not { } issued) return;
+
+            var answer = ConfirmDialog.Show(_loc, this,
+                _loc.Get("Ui.MainForm.CollectPrescription", medicineName, issued.ToString("d", _loc.CurrentCulture)),
+                _loc.Get("Ui.MainForm.CollectPrescription.Title"),
+                MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes) return;
+
+            await using var save = _scopeFactory.CreateAsyncScope();
+            await save.ServiceProvider.GetRequiredService<CollectPrescription>()
+                .ExecuteAsync(open.Id, today, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.PrescriptionsDialog.Error.Save"), ex);
+        }
     }
 
     private async Task SendPrescriptionRequestAsync(
@@ -1183,14 +1517,67 @@ internal sealed class MainForm : MedReminderFormBase
         };
         grid.Columns.Add(statusColumn);
         _statusColumnIndex = statusColumn.Index;
+        // Shortage of the package in the AIFA list (EVOLUTION-PROPOSALS-2
+        // §3.3); the detail is the cell's tooltip.
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            HeaderText = _loc.Get("Ui.MainForm.Column.Supply"),
+            DataPropertyName = nameof(MedicineListItem.SupplyDisplay),
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 120,
+            MinimumWidth = 88,
+        });
+        // Earliest expiry of the packages in stock (ANALYSIS-PACKAGE-EXPIRY
+        // §5.4); the status is in the text and in the colour.
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            HeaderText = _loc.Get("Ui.MainForm.Column.Expiry"),
+            DataPropertyName = nameof(MedicineListItem.ExpiryDisplay),
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            FillWeight = 120,
+            MinimumWidth = 88,
+        });
         grid.DataSource = _rows;
         grid.CellFormatting += (s, e) =>
         {
-            if (grid.Columns[e.ColumnIndex].DataPropertyName ==
-                nameof(MedicineListItem.DaysRemaining))
+            var property = grid.Columns[e.ColumnIndex].DataPropertyName;
+            if (property == nameof(MedicineListItem.DaysRemaining))
             {
                 e.Value ??= "—";
                 e.FormattingApplied = true;
+            }
+            else if (property == nameof(MedicineListItem.StockDisplay)
+                && e.RowIndex >= 0
+                && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem stockItem)
+            {
+                // The estimate is explained where it is shown
+                // (ANALYSIS-INTRADAY-CONSUMPTION.md §7).
+                grid.Rows[e.RowIndex].Cells[e.ColumnIndex].ToolTipText = stockItem.DueTodaySoFar > 0m
+                    ? _loc.Get("Ui.MainForm.Stock.EstimateTooltip",
+                        stockItem.LedgerStock.ToString("0.##"), stockItem.DueTodaySoFar.ToString("0.##"), stockItem.Unit)
+                    : string.Empty;
+            }
+            else if (property == nameof(MedicineListItem.SupplyDisplay)
+                && e.RowIndex >= 0
+                && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem { HasShortage: true } item)
+            {
+                grid.Rows[e.RowIndex].Cells[e.ColumnIndex].ToolTipText = item.SupplyDetail;
+                if (!UiColors.HighContrast && e.CellStyle is { } style)
+                {
+                    style.ForeColor = UiTheme.Palette.WarningText;
+                }
+            }
+            else if (property == nameof(MedicineListItem.ExpiryDisplay)
+                && e.RowIndex >= 0
+                && grid.Rows[e.RowIndex].DataBoundItem is MedicineListItem { NextExpiryStatus: { } expiryStatus }
+                && !UiColors.HighContrast && e.CellStyle is { } expiryStyle)
+            {
+                expiryStyle.ForeColor = expiryStatus switch
+                {
+                    PackageExpiryStatus.Expired => UiTheme.Palette.DangerText,
+                    PackageExpiryStatus.ExpiringSoon => UiTheme.Palette.WarningText,
+                    _ => expiryStyle.ForeColor,
+                };
             }
         };
         grid.ColumnHeaderMouseClick += (s, e) =>
@@ -1214,13 +1601,9 @@ internal sealed class MainForm : MedReminderFormBase
                     _sortOrderDaysRemaining = SortOrder.Ascending;
                 }
 
-                var items = ((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
-
-                items = _sortOrderDaysRemaining == SortOrder.Ascending
-                    ? [.. items.OrderBy(x => x.DaysRemaining ?? int.MaxValue)]
-                    : [.. items.OrderByDescending(x => x.DaysRemaining ?? int.MinValue)];
-
-                grid.DataSource = new BindingList<MedicineListItem>(items);
+                var items = Sorted((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
+                _rows = new BindingList<MedicineListItem>(items);
+                grid.DataSource = _rows;
 
                 column.HeaderCell.SortGlyphDirection = _sortOrderDaysRemaining;
 
@@ -1245,14 +1628,12 @@ internal sealed class MainForm : MedReminderFormBase
                     _sortOrderName = SortOrder.Ascending;
                 }
 
-                var items = ((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
-                items = _sortOrderName == SortOrder.Ascending
-                    ? [.. items.OrderBy(x => x.Name)]
-                    : [.. items.OrderByDescending(x => x.Name)];
+                var items = Sorted((IEnumerable<MedicineListItem>)grid.DataSource!).ToList();
 
                 column.HeaderCell.SortGlyphDirection = _sortOrderName;
 
-                grid.DataSource = new BindingList<MedicineListItem>(items);
+                _rows = new BindingList<MedicineListItem>(items);
+                grid.DataSource = _rows;
 
                 grid.Columns.Cast<DataGridViewColumn>()
                     .FirstOrDefault(c => c.DataPropertyName == nameof(MedicineListItem.DaysRemainingDisplay))
@@ -1377,16 +1758,34 @@ internal sealed class MainForm : MedReminderFormBase
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.AddPackage"),
             Mdl2Glyph.Glyphs.Package, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NewPackage)));
+        menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Packages"),
+            Mdl2Glyph.Glyphs.Calendar, Keys.None, async () => await ShowPackagesAsync()));
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.Adjust"),
             Mdl2Glyph.Glyphs.Edit, Keys.None, async () => await ShowStockDialogAsync(StockOperationKind.NegativeCorrection)));
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Stock.History"),
             Mdl2Glyph.Glyphs.History, Keys.None, async () => await ShowFactHistoryAsync()));
+        // Information on the package of an Italian medicine
+        // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.6 and §3.3): offered
+        // only when the row carries a valid AIC.
+        var equivalents = BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Equivalents"),
+            Mdl2Glyph.Glyphs.BulletedList, Keys.None, async () => await ShowSelectedEquivalentsAsync());
+        menu.Items.Add(equivalents);
+        var codifa = BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.OpenCodifa"),
+            Mdl2Glyph.Glyphs.OpenInNewWindow, Keys.None, () => { OpenSelectedCodifaPage(); return Task.CompletedTask; });
+        menu.Items.Add(codifa);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Therapy.Deactivate"),
             Mdl2Glyph.Glyphs.Cancel, Keys.None, async () => await DeactivateSelectedAsync()));
         menu.ImageScalingSize = new Size(ScaledIconSize(16), ScaledIconSize(16));
-        // Nothing to act on without a row (right-click below the last one).
-        menu.Opening += (_, e) => e.Cancel = GetSelectedRow() is null;
+        menu.Opening += (_, e) =>
+        {
+            // Nothing to act on without a row (right-click below the last one).
+            var row = GetSelectedRow();
+            e.Cancel = row is null;
+            var hasAic = ItalianPharmacode.NormalizeAic(row?.NationalCode) is not null;
+            equivalents.Enabled = hasAic;
+            codifa.Enabled = hasAic;
+        };
         return menu;
     }
 
@@ -1399,33 +1798,188 @@ internal sealed class MainForm : MedReminderFormBase
         _tray.ExitItem.Click += (_, _) => { _reallyExit = true; Close(); };
     }
 
+    // Clicks on toasts and their buttons (EVOLUTION-PROPOSALS-2 §3.4),
+    // including one that launched the app.
+    private void WireToastActions()
+    {
+        ToastActivationRouter.Attach(action =>
+        {
+            if (IsDisposed) return;
+            try
+            {
+                BeginInvoke(async () => await HandleNotificationActionAsync(action));
+            }
+            catch (InvalidOperationException)
+            {
+                // The window is closing.
+            }
+        });
+        FormClosed += (_, _) => ToastActivationRouter.Detach();
+    }
+
+    private async Task HandleNotificationActionAsync(NotificationAction? action)
+    {
+        if (action is { Kind: NotificationActionKind.Snooze })
+        {
+            await SnoozeDoseReminderAsync(action);
+            return;
+        }
+        RestoreFromTray();
+        // A toast of another profile (shown before a profile change)
+        // only brings the window forward.
+        if (action is null || action.ProfileId != _currentProfile.Id) return;
+        switch (action.Kind)
+        {
+            case NotificationActionKind.Open:
+                SelectGridRow(action.MedicineId);
+                break;
+            case NotificationActionKind.OpenPrescriptions:
+                SelectGridRow(action.MedicineId);
+                await ShowPrescriptionsAsync();
+                break;
+            case NotificationActionKind.OpenDeadlines:
+                await ShowDeadlinesAsync();
+                break;
+            case NotificationActionKind.OpenPackages:
+                // Notices include inactive medicines, which the list may
+                // hide: the packages open from the stored medicine then.
+                SelectGridRow(action.MedicineId);
+                if (GetSelectedRow() is { } row && row.Id == action.MedicineId)
+                {
+                    await ShowPackagesAsync(row.Id, row.Name, row.Unit);
+                }
+                else
+                {
+                    await ShowPackagesOfStoredMedicineAsync(action.MedicineId);
+                }
+                break;
+            case NotificationActionKind.RequestPrescription:
+                SelectGridRow(action.MedicineId);
+                if (GetSelectedRow()?.Id == action.MedicineId) await ShowPrescriptionRequestAsync();
+                break;
+        }
+    }
+
+    // "Remind me in 15 minutes": the same dose reminder, scheduled with
+    // Windows, so it arrives even if the app is closed meanwhile.
+    private async Task SnoozeDoseReminderAsync(NotificationAction action)
+    {
+        if (action.ProfileId != _currentProfile.Id || action.SlotTime is not { } slot) return;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var medicine = await scope.ServiceProvider.GetRequiredService<IMedicineRepository>()
+                .GetAsync(action.MedicineId, CancellationToken.None);
+            if (medicine is null || !medicine.IsActive) return;
+            var (title, body) = NotificationTexts.BuildDoseReminder(medicine, slot, _loc);
+            var target = NotificationTarget.DoseReminder(medicine.Id, slot);
+            var windows = scope.ServiceProvider.GetRequiredService<IWindowsNotificationService>();
+            if (windows is ToastWindowsNotificationService toast)
+            {
+                await toast.ScheduleAsync(title, body, target,
+                    DateTimeOffset.Now.AddMinutes(NotificationActionArguments.SnoozeMinutes), CancellationToken.None);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Snoozing a dose reminder failed.");
+        }
+    }
+
     private void RestoreFromTray()
     {
         Show();
-        WindowState = FormWindowState.Normal;
+        // A minimized window (start in tray) comes back in its last shown
+        // state, the saved one at start; a maximized one hidden to the
+        // tray comes back maximized.
+        if (WindowState == FormWindowState.Minimized) WindowState = _lastShownState;
         ShowInTaskbar = true;
         BringToFront();
         Activate();
     }
 
+    // Opens the window where this profile last left it. A placement whose
+    // title bar is on no current screen (monitor unplugged, resolution
+    // changed) is ignored and the window opens centred at its default size.
+    // Applied in OnLoad.
+    private void ApplySavedPlacement()
+    {
+        var saved = ProfileUiSettingsFile.ReadMainWindow(_currentProfile.DataDirectory);
+        if (saved is null) return;
+
+        var bounds = new Rectangle(saved.X, saved.Y, saved.Width, saved.Height);
+        var titleBar = new Rectangle(bounds.X, bounds.Y, bounds.Width, SystemInformation.CaptionHeight);
+        if (!Screen.AllScreens.Any(s => s.WorkingArea.IntersectsWith(titleBar))) return;
+
+        StartPosition = FormStartPosition.Manual;
+        _savedBounds = bounds;
+        _startMaximized = saved.Maximized;
+        if (saved.Maximized) _lastShownState = FormWindowState.Maximized;
+    }
+
+    // The base OnLoad scales the default size by the display DPI and the
+    // text size; the saved bounds are already final, so they are applied
+    // after it, or the window would grow at every start. They are set on
+    // the normal window and maximized after, so they stay its restore
+    // bounds. A window started in the tray stays minimized and comes back
+    // maximized from RestoreFromTray.
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        if (_savedBounds is not { } bounds) return;
+        Bounds = bounds;
+        if (_startMaximized && WindowState == FormWindowState.Normal)
+        {
+            WindowState = FormWindowState.Maximized;
+        }
+    }
+
+    // Saved on every close, the hide to the tray included, so the file
+    // is current whichever way the app later ends. A minimized window
+    // saves its normal bounds and its last shown state.
+    private void SavePlacement()
+    {
+        var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+        if (bounds.Width <= 0 || bounds.Height <= 0) return;
+        try
+        {
+            ProfileUiSettingsFile.WriteMainWindow(_currentProfile.DataDirectory, new MainWindowPlacement(
+                bounds.X, bounds.Y, bounds.Width, bounds.Height,
+                _lastShownState == FormWindowState.Maximized));
+            ProfileUiSettingsFile.WriteNavigationWidth(_currentProfile.DataDirectory, _nav.ExpandedWidth);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.LogWarning(ex, "Saving the main window placement failed.");
+        }
+    }
+
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {
+        SavePlacement();
         if (_reallyExit || e.CloseReason != CloseReason.UserClosing || !_closeToTray)
         {
             return;
         }
+        // A hidden window has no taskbar button. ShowInTaskbar is left
+        // alone: changing it recreates the handle, and WinForms re-applies
+        // a Maximized state with ShowWindow, which showed the window again.
         e.Cancel = true;
         Hide();
-        ShowInTaskbar = false;
     }
 
     // ------------------ Data loading ------------------
     private async Task ReloadAsync()
     {
         SetStatus(_loc.Get("Ui.MainForm.Status.Loading"));
+        // A refresh of the estimates started before this load is
+        // discarded when it completes (RefreshEstimatesAsync).
+        _loadVersion++;
+        _reloading = true;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
+            await CatchUpOnNewDayAsync(scope.ServiceProvider);
             var loader = scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>();
             var items = await loader.LoadAsync(CancellationToken.None);
 
@@ -1439,16 +1993,144 @@ internal sealed class MainForm : MedReminderFormBase
             SetStatus(_loc.Get("Ui.MainForm.Status.LoadError"));
             ShowErrorBanner(_loc.Get("Ui.MainForm.LoadBanner.Failure", ex.Message));
         }
+        finally
+        {
+            _reloading = false;
+        }
     }
 
-    // Rebuilds the shown rows from the last load, in load order: the
-    // inactive toggle, then the summary card and the search text
-    // (MedicineListFilter). The cards count the rows before the card and
-    // search filters, so each card shows what a click on it would list.
-    private void ApplyFilters()
+    // The ledger books a day after it ends, at the next catch-up of the
+    // monitor (every 30 minutes by default). The first load of a new day
+    // runs it at once, whichever path loads, so the estimate never starts
+    // from the day before yesterday. A failure is logged; the load goes
+    // on and the next one tries again.
+    private async Task CatchUpOnNewDayAsync(IServiceProvider services)
     {
-        var visible = MedicineListFilter.Visible(_allRows, _showInactive);
-        var summary = MedicineListFilter.Summarize(visible);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        if (today == _caughtUpDay) return;
+        try
+        {
+            await services.GetRequiredService<ConsumptionCatchUp>().RunAsync(CancellationToken.None);
+            _caughtUpDay = today;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "The consumption catch-up before loading the list failed.");
+        }
+    }
+
+    // The stock column subtracts today's doses as their time passes
+    // (ANALYSIS-INTRADAY-CONSUMPTION.md §4): every minute while the window
+    // is shown, and when it is activated (at most every 30 seconds), the
+    // estimates are recomputed. When nothing a filter or the sort reads
+    // changed, rows are updated in place; otherwise the filters and the
+    // sort are applied again (ApplyFilters keeps the selection). A
+    // refresh that a reload overtook is discarded.
+    private static readonly TimeSpan ActivationRefreshInterval = TimeSpan.FromSeconds(30);
+    private System.Windows.Forms.Timer? _estimateTimer;
+    private DateOnly _caughtUpDay;
+    private bool _refreshingEstimates;
+    private bool _reloading;
+    private int _loadVersion;
+    private DateTime _lastEstimateRefresh = DateTime.MinValue;
+
+    private void WireEstimateRefresh()
+    {
+        _estimateTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
+        _estimateTimer.Tick += async (_, _) => await RefreshEstimatesAsync();
+        _estimateTimer.Start();
+        Activated += async (_, _) =>
+        {
+            if (DateTime.UtcNow - _lastEstimateRefresh >= ActivationRefreshInterval) await RefreshEstimatesAsync();
+        };
+        FormClosed += (_, _) => _estimateTimer.Dispose();
+    }
+
+    private async Task RefreshEstimatesAsync()
+    {
+        if (_refreshingEstimates || _reloading || !Visible || WindowState == FormWindowState.Minimized) return;
+        // A dialog of this window may hold a row: refresh once it closes.
+        if (OwnedForms.Any(f => f.Visible && f.Modal)) return;
+        _refreshingEstimates = true;
+        _lastEstimateRefresh = DateTime.UtcNow;
+        var version = _loadVersion;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await CatchUpOnNewDayAsync(scope.ServiceProvider);
+            var items = await scope.ServiceProvider.GetRequiredService<MedicineOverviewLoader>()
+                .LoadAsync(CancellationToken.None);
+            // A reload started meanwhile has newer rows (an intake just
+            // recorded, a medicine just added): keep them.
+            if (version != _loadVersion || _reloading) return;
+
+            var byId = items.ToDictionary(i => i.Id);
+            if (byId.Count != _allRows.Count || _allRows.Any(r => !byId.ContainsKey(r.Id)))
+            {
+                _allRows = items.ToList();
+                ApplyFilters();
+                return;
+            }
+            var changed = false;
+            var refilter = false;
+            foreach (var row in _allRows)
+            {
+                var fresh = byId[row.Id];
+                if (row.CurrentStock == fresh.CurrentStock && row.Status == fresh.Status
+                    && row.DaysRemaining == fresh.DaysRemaining && row.EstimatedRunOutDate == fresh.EstimatedRunOutDate
+                    && row.DailyRate == fresh.DailyRate && row.IsSuspended == fresh.IsSuspended
+                    && row.IsActive == fresh.IsActive && row.SupplyDisplay == fresh.SupplyDisplay)
+                {
+                    continue;
+                }
+                refilter |= row.Status != fresh.Status || row.IsActive != fresh.IsActive
+                    || row.DaysRemaining != fresh.DaysRemaining || row.SupplyDisplay != fresh.SupplyDisplay;
+                CopyRefreshedValues(row, fresh);
+                changed = true;
+            }
+            if (!changed) return;
+            if (refilter)
+            {
+                ApplyFilters();
+                return;
+            }
+            UpdateCards();
+            _grid.Invalidate();
+        }
+        catch (Exception ex)
+        {
+            // The next tick tries again; the list keeps its last values.
+            _log.LogWarning(ex, "Refreshing the stock estimates failed.");
+        }
+        finally
+        {
+            _refreshingEstimates = false;
+        }
+    }
+
+    // Every value of a row the loader computes; the identity and the
+    // names stay.
+    private static void CopyRefreshedValues(MedicineListItem row, MedicineListItem fresh)
+    {
+        row.CurrentStock = fresh.CurrentStock;
+        row.LedgerStock = fresh.LedgerStock;
+        row.DueTodaySoFar = fresh.DueTodaySoFar;
+        row.DailyRate = fresh.DailyRate;
+        row.DailyRateDisplay = fresh.DailyRateDisplay;
+        row.DaysRemaining = fresh.DaysRemaining;
+        row.EstimatedRunOutDate = fresh.EstimatedRunOutDate;
+        row.ThresholdDays = fresh.ThresholdDays;
+        row.IsSuspended = fresh.IsSuspended;
+        row.IsActive = fresh.IsActive;
+        row.Status = fresh.Status;
+        row.StatusDisplay = fresh.StatusDisplay;
+        row.SupplyDisplay = fresh.SupplyDisplay;
+        row.SupplyDetail = fresh.SupplyDetail;
+    }
+
+    private void UpdateCards()
+    {
+        var summary = MedicineListFilter.Summarize(MedicineListFilter.Visible(_allRows, _showInactive));
         foreach (var card in _cards)
         {
             card.Count = card.Bucket switch
@@ -1459,10 +2141,25 @@ internal sealed class MainForm : MedReminderFormBase
                 _ => summary.All,
             };
         }
+    }
 
+    // Rebuilds the shown rows from the last load, in load order: the
+    // inactive toggle, then the summary card and the search text
+    // (MedicineListFilter). The cards count the rows before the card and
+    // search filters, so each card shows what a click on it would list.
+    // The column sort chosen by the user is applied again, and the
+    // selected medicine and the scroll position stay when still listed.
+    private void ApplyFilters()
+    {
+        var visible = MedicineListFilter.Visible(_allRows, _showInactive);
+        UpdateCards();
+
+        var selectedId = GetSelectedRow()?.Id;
+        var firstRow = _grid.Rows.Count > 0 ? _grid.FirstDisplayedScrollingRowIndex : -1;
         _rows = new BindingList<MedicineListItem>(
-            MedicineListFilter.Apply(visible, _bucket, _searchBox.Text));
+            [.. Sorted(MedicineListFilter.Apply(visible, _bucket, _searchBox.Text))]);
         _grid.DataSource = _rows;
+        RestoreView(selectedId, firstRow);
 
         var hidden = _allRows.Count - visible.Count;
         if (_rows.Count != visible.Count)
@@ -1474,6 +2171,44 @@ internal sealed class MainForm : MedReminderFormBase
             SetStatus(hidden > 0
                 ? _loc.Get("Ui.MainForm.Status.MedicinesLoadedHidden", _rows.Count, hidden)
                 : _loc.Get("Ui.MainForm.Status.MedicinesLoaded", _rows.Count));
+        }
+    }
+
+    // The rows in the order of the sorted column, if any (header click).
+    private IEnumerable<MedicineListItem> Sorted(IEnumerable<MedicineListItem> rows) => _sortColumn switch
+    {
+        nameof(MedicineListItem.DaysRemainingDisplay) => _sortOrderDaysRemaining == SortOrder.Descending
+            ? rows.OrderByDescending(x => x.DaysRemaining ?? int.MinValue)
+            : rows.OrderBy(x => x.DaysRemaining ?? int.MaxValue),
+        nameof(MedicineListItem.Name) => _sortOrderName == SortOrder.Descending
+            ? rows.OrderByDescending(x => x.Name)
+            : rows.OrderBy(x => x.Name),
+        _ => rows,
+    };
+
+    private void RestoreView(Guid? selectedId, int firstRow)
+    {
+        if (_grid.Rows.Count == 0) return;
+        if (firstRow >= 0)
+        {
+            try
+            {
+                _grid.FirstDisplayedScrollingRowIndex = Math.Min(firstRow, _grid.Rows.Count - 1);
+            }
+            catch (InvalidOperationException)
+            {
+                // The grid has no room to scroll (window being laid out).
+            }
+        }
+        if (selectedId is not { } id) return;
+        foreach (DataGridViewRow row in _grid.Rows)
+        {
+            if (row.DataBoundItem is not MedicineListItem item || item.Id != id) continue;
+            _grid.ClearSelection();
+            var cell = row.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible);
+            if (cell is not null) _grid.CurrentCell = cell;
+            row.Selected = true;
+            return;
         }
     }
 
@@ -1544,13 +2279,51 @@ internal sealed class MainForm : MedReminderFormBase
         return await query.GetByNationalCodeAsync(country, nationalCode, cancellationToken);
     }
 
+    // Time-of-day presets of the profile for the slot dialog; the
+    // built-ins when they cannot be read (display only).
+    private async Task<DoseTimeSettings> LoadDoseTimesAsync()
+    {
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<DoseTimeSettingsQuery>()
+                .LoadAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Dose time presets could not be read; using the built-in ones.");
+            return DoseTimeSettings.BuiltIn;
+        }
+    }
+
+    // Therapy → Dose times… (ANALYSIS-INTRADAY-CONSUMPTION.md §6).
+    private async Task ShowDoseTimesAsync()
+    {
+        using var dialog = new DoseTimesDialog(await LoadDoseTimesAsync(), _loc);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<SaveDoseTimeSettings>()
+                .ExecuteAsync(dialog.Result, CancellationToken.None);
+            _log.LogInformation("Dose time presets saved.");
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.DoseTimesDialog.Error.Save"), ex);
+        }
+    }
+
     private async Task ShowNewMedicineAsync(ReferenceMedicine? initialReference = null)
     {
         using var dialog = new MedicineEditDialog(
             MedicineEditDialog.EditMode.Create, _loc,
             catalogueContext: BuildCatalogueContext(),
             barcodeContext: BuildBarcodeScanContext(),
-            initialReference: initialReference);
+            initialReference: initialReference,
+            doseTimes: await LoadDoseTimesAsync(),
+            equivalents: BuildEquivalentsContext(null));
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -1582,7 +2355,8 @@ internal sealed class MainForm : MedReminderFormBase
             if (medicine is null) return;
 
             var slots = await slotRepo.ListForMedicineAsync(row.Id, CancellationToken.None);
-            IReadOnlyList<AdministrationSlotEntry> seedSlots = [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel))];
+            IReadOnlyList<AdministrationSlotEntry> seedSlots =
+                [.. slots.Select(s => new AdministrationSlotEntry(s.Time, s.Dose, s.TimingLabel, s.IsAsNeeded, s.PresetId))];
 
             // Reconstruct the therapy's current schedule from the most
             // recent history entry, so the edit dialog opens
@@ -1627,7 +2401,9 @@ internal sealed class MainForm : MedReminderFormBase
             MedicineEditDialog.EditMode.Edit, _loc, seed,
             catalogueContext: BuildCatalogueContext(),
             currentStock: row.CurrentStock,
-            barcodeContext: BuildBarcodeScanContext());
+            barcodeContext: BuildBarcodeScanContext(),
+            doseTimes: await LoadDoseTimesAsync(),
+            equivalents: BuildEquivalentsContext(row.Id));
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -1661,7 +2437,10 @@ internal sealed class MainForm : MedReminderFormBase
             {
                 var change = scope.ServiceProvider.GetRequiredService<ChangeMedicationSchedule>();
                 var today = DateOnly.FromDateTime(DateTime.Today);
-                var effectiveFrom = today < seed.StartDate ? seed.StartDate : today;
+                // The start date saved just above, which the dialog may
+                // have changed.
+                var start = dialog.Result.StartDate;
+                var effectiveFrom = today < start ? start : today;
                 var (displayDose, displayFreq) = ScheduleDisplayValues(chosen, seed);
                 await change.ExecuteAsync(
                     new ChangeMedicationScheduleCommand(row.Id, displayDose, displayFreq, effectiveFrom, chosen),
@@ -1847,15 +2626,27 @@ internal sealed class MainForm : MedReminderFormBase
         var row = GetSelectedRow();
         if (row is null) return;
 
-        // The dialog's default dose is the medicine's current one.
+        // The dialog's default dose is the medicine's current one, or the
+        // as-needed slot's dose when the medicine has one. A medicine
+        // with a plan offers "extra dose" (ANALYSIS-INTRADAY-CONSUMPTION
+        // §5.3), preselected when it has an as-needed slot.
         decimal suggestedQuantity;
+        bool offerExtra;
+        bool extraByDefault;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var repo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
             var medicine = await repo.GetAsync(row.Id, CancellationToken.None);
             if (medicine is null) return;
-            suggestedQuantity = medicine.DosePerAdministration;
+            var slots = await scope.ServiceProvider.GetRequiredService<IMedicationAdministrationSlotRepository>()
+                .ListForMedicineAsync(row.Id, CancellationToken.None);
+            var schedule = await scope.ServiceProvider.GetRequiredService<IMedicationScheduleHistoryRepository>()
+                .ListForMedicineAsync(row.Id, CancellationToken.None);
+            var asNeeded = slots.FirstOrDefault(s => s.IsAsNeeded);
+            suggestedQuantity = asNeeded?.Dose ?? medicine.DosePerAdministration;
+            offerExtra = DailyConsumption.RateOn(DateOnly.FromDateTime(DateTime.Today), schedule, slots) > 0m;
+            extraByDefault = offerExtra && asNeeded is not null;
         }
         catch (Exception ex)
         {
@@ -1863,7 +2654,7 @@ internal sealed class MainForm : MedReminderFormBase
             return;
         }
 
-        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity, _loc);
+        using var dialog = new IntakeDialog(row.Name, row.Unit, suggestedQuantity, _loc, offerExtra, extraByDefault);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
 
         try
@@ -1881,14 +2672,33 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    private async Task ShowStockDialogAsync(StockOperationKind defaultKind, decimal? initialQuantity = null)
+    // scanned: the barcode read by a restock scan, whose expiry and batch
+    // pre-fill the package fields (ANALYSIS-PACKAGE-EXPIRY.md §5.1).
+    private async Task ShowStockDialogAsync(StockOperationKind defaultKind, decimal? initialQuantity = null,
+        BarcodeContent? scanned = null)
     {
         var row = GetSelectedRow();
         if (row is null) return;
 
+        PackageDefaults packageDefaults;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var packages = scope.ServiceProvider.GetRequiredService<PackageListQuery>();
+            packageDefaults = new PackageDefaults(packages.LocalToday(),
+                (await packages.NewPackageDefaultsAsync(row.Id, CancellationToken.None)).UseWithinDays,
+                scanned?.Expiry, scanned?.Batch);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.ReadMedicine"), ex);
+            return;
+        }
+
         using var dialog = new StockAdjustmentDialog(
-            row.Name, row.CurrentStock, row.Unit, defaultKind, _loc, initialQuantity);
+            row.Name, row.CurrentStock, row.Unit, defaultKind, _loc, initialQuantity, packageDefaults);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+        var newPackage = false;
 
         try
         {
@@ -1897,8 +2707,10 @@ internal sealed class MainForm : MedReminderFormBase
             {
                 var addStock = scope.ServiceProvider.GetRequiredService<AddStock>();
                 await addStock.ExecuteAsync(
-                    new AddStockCommand(row.Id, dialog.Result.Quantity, dialog.Result.ToMovementKind(), dialog.Result.Notes),
+                    new AddStockCommand(row.Id, dialog.Result.Quantity, dialog.Result.ToMovementKind(), dialog.Result.Notes,
+                        dialog.Result.Packages),
                     CancellationToken.None);
+                newPackage = dialog.Result.ToMovementKind() == StockMovementKind.NewPackage;
             }
             else
             {
@@ -1912,6 +2724,115 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.StockMovement"), ex);
+            return;
+        }
+        if (newPackage) await OfferPrescriptionCollectedAsync(row.Id, row.Name, dialog.Result.Packages?.Count);
+    }
+
+    // Stock → Packages… (ANALYSIS-PACKAGE-EXPIRY.md §5.3): the packages of
+    // the selected medicine, each action in its own DI scope.
+    private async Task ShowPackagesAsync()
+    {
+        if (GetSelectedRow() is not { } selected) return;
+        await ShowPackagesAsync(selected.Id, selected.Name, selected.Unit);
+    }
+
+    private async Task ShowPackagesOfStoredMedicineAsync(Guid medicineId)
+    {
+        Medicine? medicine;
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            medicine = await scope.ServiceProvider.GetRequiredService<IMedicineRepository>()
+                .GetAsync(medicineId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenPackages"), ex);
+            return;
+        }
+        // Deleted since the toast was shown: nothing to open.
+        if (medicine is null) return;
+        await ShowPackagesAsync(medicine.Id, medicine.Name, medicine.Unit);
+    }
+
+    // Stock → Expiring packages… (ANALYSIS-PACKAGE-EXPIRY.md §5.4): the
+    // cabinet view across medicines; each medicine's packages open from
+    // it, owned by the view, and the main list reloads after a change.
+    private async Task ShowExpiringPackagesAsync()
+    {
+        using var dialog = new ExpiringPackagesDialog(
+            async () =>
+            {
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                return await scope.ServiceProvider.GetRequiredService<ExpiringPackagesQuery>()
+                    .LoadAsync(CancellationToken.None);
+            },
+            (entry, owner) => ShowPackagesAsync(entry.MedicineId, entry.MedicineName, entry.Unit, owner),
+            _loc);
+        dialog.ShowDialog(this);
+    }
+
+    // Also opened from a package expiry toast, for a medicine that may be
+    // inactive and hidden from the list, and from the expiring packages
+    // view (owner). Returns whether anything changed; the main list has
+    // then been reloaded.
+    private async Task<bool> ShowPackagesAsync(Guid medicineId, string medicineName, string unit,
+        IWin32Window? owner = null)
+    {
+        var row = (Id: medicineId, Name: medicineName, Unit: unit);
+        try
+        {
+            DateOnly today;
+            NewPackageDefaults defaults;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                var query = scope.ServiceProvider.GetRequiredService<PackageListQuery>();
+                today = query.LocalToday();
+                defaults = await query.NewPackageDefaultsAsync(row.Id, CancellationToken.None);
+            }
+
+            var actions = new PackagesDialogActions(
+                Load: async () =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<PackageListQuery>()
+                        .LoadAsync(row.Id, CancellationToken.None);
+                },
+                CreateEditor: existing => new PackageEditDialog(row.Id, row.Name, row.Unit, existing,
+                    defaults.UseWithinDays, defaults.Quantity, today, _loc),
+                Save: async command =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    return await scope.ServiceProvider.GetRequiredService<SaveStockPackage>()
+                        .ExecuteAsync(command, CancellationToken.None);
+                },
+                Discard: async (id, quantityLeft) =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<DiscardStockPackage>()
+                        .ExecuteAsync(new DiscardStockPackageCommand(id, today, quantityLeft), CancellationToken.None);
+                },
+                Delete: async id =>
+                {
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<DeleteStockPackage>()
+                        .ExecuteAsync(id, CancellationToken.None);
+                });
+
+            bool changed;
+            using (var dialog = new PackagesDialog(row.Name, row.Unit, today, actions, _loc))
+            {
+                dialog.ShowDialog(owner ?? this);
+                changed = dialog.Changed;
+            }
+            if (changed) await ReloadAsync();
+            return changed;
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.OpenPackages"), ex);
+            return false;
         }
     }
 
@@ -1965,7 +2886,7 @@ internal sealed class MainForm : MedReminderFormBase
 
             SelectGridRow(candidate.MedicineId);
             if (GetSelectedRow()?.Id != candidate.MedicineId) return;
-            await ShowStockDialogAsync(StockOperationKind.NewPackage, candidate.LastNewPackageQuantity);
+            await ShowStockDialogAsync(StockOperationKind.NewPackage, candidate.LastNewPackageQuantity, content);
         }
         catch (Exception ex)
         {
@@ -2083,6 +3004,57 @@ internal sealed class MainForm : MedReminderFormBase
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.StockCount"), ex);
+        }
+    }
+
+    // Equivalent medicines of the selected row's package
+    // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.6, U1 to U3).
+    private async Task ShowSelectedEquivalentsAsync()
+    {
+        var row = GetSelectedRow();
+        if (ItalianPharmacode.NormalizeAic(row?.NationalCode) is not { } code) return;
+        await ShowEquivalentsAsync(code, row!.Id, row.Name, this);
+    }
+
+    private Task ShowEquivalentsAsync(string nationalCode, Guid? medicineId, string medicineName, IWin32Window owner)
+    {
+        async Task<EquivalentsView> LoadAsync()
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<EquivalentsQuery>()
+                .LoadAsync(nationalCode, medicineId, CancellationToken.None);
+        }
+
+        using var dialog = new EquivalentsDialog(medicineName, LoadAsync, _loc);
+        dialog.ShowDialog(owner);
+        return Task.CompletedTask;
+    }
+
+    // Context for the edit dialog's "Equivalent medicines" link. The check
+    // runs on the thread pool: its first call parses the stored list.
+    private EquivalentsContext BuildEquivalentsContext(Guid? medicineId) => new(
+        IsListedAsync: code => Task.Run(() =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<EquivalentsQuery>().IsListed(code);
+        }),
+        Show: (code, name, owner) => ShowEquivalentsAsync(code, medicineId, name, owner));
+
+    // Codifa page of the selected row's package (§3.3). The URL is built
+    // from a validated AIC only.
+    private void OpenSelectedCodifaPage()
+    {
+        if (MedicineInfoLink.ForNationalCode(GetSelectedRow()?.NationalCode) is not { } url) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            UiMessageBox.Show(this,
+                _loc.Get("Ui.MedicineEditDialog.Documents.OpenError", ex.Message),
+                _loc.Get("Ui.MedicineEditDialog.Documents.Codifa"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 

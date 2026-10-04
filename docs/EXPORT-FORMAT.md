@@ -139,6 +139,9 @@ against `manifest.payload.sha256Base64` after decryption.
   "medicationAdministrationSlotSets": [ … ],
   "stockCounts": [ … ],
   "ledgerCutoff": { … },
+  "prescriptions": [ … ],
+  "deadlines": [ … ],
+  "stockPackages": [ … ],
   "notificationSettings": { … },
   "shared": { … }
 }
@@ -223,6 +226,8 @@ numbers.
 | `time` | TimeOnly? | |
 | `timingLabel` | string? | |
 | `order` | int | |
+| `isAsNeeded` | bool | as-needed dose, never consumed automatically. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false`, and their slots described "As needed" are flagged once from the day of the import, as on an upgraded database |
+| `presetId` | Guid? | time-of-day preset the description was picked from (§3.16). Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `null` |
 
 ### 3.5 `medicationSuspensions[]`
 
@@ -246,6 +251,7 @@ numbers.
 | `quantity` | decimal | |
 | `status` | string | `Taken` / `Skipped` / `Cancelled` / `ManualCorrection` |
 | `notes` | string? | |
+| `isExtra` | bool | extra dose on top of the plan (`Taken` only); it does not replace the day's automatic consumption. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false` |
 
 ### 3.7 `notificationEvents[]`
 
@@ -259,6 +265,7 @@ numbers.
 | `daysRemainingAtSend` | int | |
 | `success` | bool | |
 | `errorMessage` | string? | |
+| `stage` | int | warning stage: `1` at the threshold, `2` the second warning at half of it. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `1`. |
 
 ### 3.8 `doseReminderEvents[]`
 
@@ -278,6 +285,11 @@ numbers.
 | `toAddress` | string | primary recipient (may be empty) |
 | `caregiverAddress` | string | optional secondary recipient (may be empty) |
 | `doctorAddress` | string | optional recipient of user-initiated prescription requests (may be empty). Added after `schemaVersion` 1 shipped, as an additive field (§5): archives without it import with `""`. |
+| `caregiverEmails` | string | kinds of email copied to the caregiver (`""` every kind, `None`, or a comma list of `LowStock`, `DoseReminder`, `Prescription`, `Deadline`, `Shortage`, `PackageExpiry`). Additive (§5): archives without it import with `""`. |
+| `caregiverDigest` | string | `Weekly` sends the caregiver a weekly stock summary; `""` or `Off` does not. Additive (§5). The day of the last summary is not exported. |
+| `packageExpiryLeadDays` | string | days before a package's printed expiry when it is "expiring soon", an integer 0 to 180; `""` for the default 30. Additive (§5). |
+| `packageInUseLeadDays` | string | days before the end of a package's in-use period, an integer 0 to 30; `""` for the default 3. Additive (§5). |
+| `region` | string | Italian region of the profile, whose prescription service the prescription windows open: an ISTAT region code (`01` to `20` without `04`, `21` Bolzano, `22` Trento); `""` when not set. Additive (§5): archives without it import with `""`. |
 
 ### 3.10 `shared`
 
@@ -328,6 +340,117 @@ otherwise. Stock movements up to `cutoffDay` are frozen (`Legacy`).
 |---|---|---|
 | `cutoffDay` | DateOnly | last frozen day |
 | `frozenAt` | DateTimeOffset | instant of the freeze |
+
+### 3.14 `prescriptions[]`
+
+Added after `schemaVersion` 2 shipped, as an additive field (§5):
+archives without it import with no prescriptions. Reminders to collect
+a prescription are device-local and not exported.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `medicineId` | Guid | parent medicine |
+| `requestedOn` | DateOnly? | |
+| `issuedOn` | DateOnly? | |
+| `code` | string? | prescription code as printed, at most 64 characters |
+| `packages` | int? | 1 to 99 |
+| `validUntil` | DateOnly? | last day the pharmacy accepts it |
+| `collectedOn` | DateOnly? | `null` on a repeatable prescription |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
+| `dispensations` | int? | additive; number of dispensations allowed, 2 to 12 for a repeatable prescription; absent or `null` (or 1) = single prescription |
+| `dispensationRecords[]` | array? | additive; written only for a repeatable prescription, oldest first |
+
+`dispensationRecords[]` items:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `collectedOn` | DateOnly | day collected at the pharmacy |
+| `packages` | int? | 1 to 99 |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
+
+Archives without `dispensations` and `dispensationRecords` import as
+single prescriptions. An archive holding a repeatable prescription is
+written with `schemaVersion` 3, so an older app refuses it rather than
+importing it as a single prescription without its dispensations; any
+other archive keeps version 2 (§5.1). A
+dispensation whose prescription is no longer in the profile (left by a
+concurrent deletion on another device) is not exported.
+
+### 3.15 `deadlines[]`
+
+Added after `schemaVersion` 2 shipped, as an additive field (§5):
+archives without it import with no deadlines. Deadline reminders are
+device-local and not exported.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `medicineId` | Guid? | parent medicine; `null` for a deadline of the profile |
+| `kind` | string | `TherapeuticPlan`, `ExemptionRenewal`, `CheckUp`, `Other` |
+| `label` | string? | free text, at most 80 characters; required for `Other` |
+| `dueOn` | DateOnly | date of the deadline |
+| `leadDays` | int | 0 to 180: days before `dueOn` when the reminder starts |
+| `repeatMonths` | int? | 1 to 120; `null` for a one-off deadline |
+| `channels` | string | `NotificationChannels` name: `None`, `Email`, `Windows`, `Both` |
+| `doneOn` | DateOnly? | set on a one-off deadline once done |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
+
+### 3.16 `doseTimePresets[]` and `doseTimeDefaults[]`
+
+Time-of-day presets and the default times of medicines without slots
+(`docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md` §4.2, §6). Display
+only: they place doses in the day and never change stock. Added after
+`schemaVersion` 2 shipped, as additive fields (§5): archives without
+them import with the built-in presets and times, and their slots are
+linked once to the built-in preset their description names.
+
+`doseTimePresets[]`: only built-ins the user changed and presets the
+user added.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | name-based for a built-in |
+| `builtInKey` | string? | `Morning`, `BeforeLunch`, …; null for a preset the user added |
+| `label` | string? | text of a preset the user added |
+| `time` | TimeOnly? | null: no time of day |
+| `isAsNeeded` | bool | default of the slot flag when the preset is picked |
+| `order` | int | order among the presets the user added |
+| `isHidden` | bool | hidden from the slot dialog |
+
+`doseTimeDefaults[]`: only the counts the user changed.
+
+| Field | Type | Notes |
+|---|---|---|
+| `administrationsPerDay` | int | 1 to 4 |
+| `times` | string | `HH:mm` values separated by `;` |
+
+### 3.17 `stockPackages[]`
+
+The physical packages of a medicine and their expiry
+(`docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`). A parallel inventory: they
+never change the stock, which stays the sum of `stockMovements`. Added
+after `schemaVersion` 2 shipped, as an additive field (§5): archives
+without it import with no packages.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `medicineId` | Guid | parent medicine |
+| `movementId` | Guid? | the `NewPackage` or `InitialLoad` movement that brought it in; may refer to a retracted movement |
+| `quantity` | decimal | units in the package when full, greater than 0 |
+| `expiresOn` | DateOnly? | printed expiry; a printed `MM/YYYY` is the last day of that month |
+| `useWithinDays` | int? | 1 to 365: in-use period after opening, the opening day being day 1 |
+| `openedOn` | DateOnly? | first opening |
+| `batch` | string? | lot, at most 20 characters |
+| `closedOn` | DateOnly? | day the package left the cabinet; set together with `closure` |
+| `closure` | string? | `Finished` or `Discarded`; `null` while the package is open. A name this version does not know imports as `Finished` |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
 
 ---
 
@@ -404,6 +527,7 @@ another machine).
 |---|---|---|
 | 1 | Initial entity model | — |
 | 2 | `stockMovements[].origin`, `medicationAdministrationSlotSets`, `medicationAdministrationSlots[].setId`, `stockCounts`, `ledgerCutoff` | Each medicine's slots become one set with `id` = the medicine id, `effectiveFrom` = its `startDate`, `recordedAt` = the import instant; no stock counts |
+| 3 | `prescriptions[].dispensations` greater than 1 with `dispensationRecords[]` (repeatable prescriptions) | Nothing to map: a version 2 archive has only single prescriptions. Written only when the archive holds a repeatable prescription, so an older app refuses it instead of dropping the dispensations; any other archive is written with version 2 |
 
 Every import, whatever its version, freezes the imported profile as the
 application's boot patch does (B.1 Phase 2c-2): all stock movements

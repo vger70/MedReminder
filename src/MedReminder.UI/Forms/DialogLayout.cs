@@ -82,6 +82,22 @@ internal static class DialogLayout
         return bar;
     }
 
+    // A resizable dialog with many buttons: when the form loads (after
+    // MedReminderFormBase has scaled it), it becomes at least as wide as
+    // the button bar, so no button is cut at a larger text size or
+    // display scaling; the width is also its minimum width.
+    public static void KeepButtonsVisible(Form form, Control buttonBar)
+        => form.Load += (_, _) =>
+        {
+            var chrome = form.Width - form.ClientSize.Width;
+            var needed = buttonBar.GetPreferredSize(Size.Empty).Width + chrome;
+            var width = Math.Min(needed, Screen.FromControl(form).WorkingArea.Width);
+            if (form.MinimumSize.Width < width) form.MinimumSize = new Size(width, form.MinimumSize.Height);
+            if (form.Width >= width) return;
+            form.Width = width;
+            if (form.Owner is { } owner) form.Left = owner.Left + (owner.Width - form.Width) / 2;
+        };
+
     // The dialog grows to its content when the text size or the display
     // scaling makes it larger than the size it was written for; the size
     // set by the dialog stays the minimum. Measured once when the form
@@ -118,6 +134,26 @@ internal static class DialogLayout
                 owner.Left + (owner.Width - form.Width) / 2,
                 owner.Top + (owner.Height - form.Height) / 2);
         }
+    }
+
+    // A label docked across a resizable dialog whose height follows its
+    // wrapped text, so a longer translation or a larger text size is not
+    // cut. Recomputed when the width, the text or the font changes.
+    public static void GrowWithText(Label label)
+    {
+        ArgumentNullException.ThrowIfNull(label);
+        label.AutoSize = false;
+        void Fit()
+        {
+            var width = Math.Max(1, label.ClientSize.Width - label.Padding.Horizontal);
+            var text = TextRenderer.MeasureText(label.Text, label.Font, new Size(width, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
+            var height = text.Height + label.Padding.Vertical + UiTheme.Space.S;
+            if (label.Height != height) label.Height = height;
+        }
+        label.Resize += (_, _) => Fit();
+        label.TextChanged += (_, _) => Fit();
+        label.FontChanged += (_, _) => Fit();
     }
 
     // Content of a simple dialog stacked top to bottom, filling the form

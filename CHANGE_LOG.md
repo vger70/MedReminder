@@ -62,6 +62,1017 @@ Branch: `claude/store-msi-package` → `main`
 
 ---
 
+## PR #199 — Link the prescription windows to the regional prescription services
+
+Link: [vger70/MedReminder#199](https://github.com/vger70/MedReminder/pull/199)
+Branch: `claude/inspiring-pascal-povp02` → `claude/brave-turing-e4a7z7` (stacked on PR #197)
+
+### Added
+
+- "Regional prescription service" in Therapy → Prescriptions… and in the prescription request: opens the health record service of the profile's region in the default browser, or shows the regional app link (or the portal) as a QR code for the phone; names the service and the sign-in methods and states that MedReminder never sees the credentials or the health record. Asks for the region the first time; hidden when the reference country is not Italy; a region without a listed service gets a pointer to its health record portal, never a guessed link.
+- "Paste NRE" in the prescription editor: reads the clipboard only on click, accepts only a 15-character electronic prescription number (`NreCode`, spaces and dashes dropped, upper case, no invented check digit) and fills an empty issue date with today.
+- Regional services list: hand-maintained `scripts/feeds/regional_services_it.json` (19 regions and autonomous provinces found on official pages, all marked not yet verified for prescriptions; Campania and Sicily not yet), validated and published by `scripts/feeds/regional_services.py` to `data/it/regional-services/` on the `feeds` branch through `publish_regional_services.yaml`, which also checks every URL monthly or on demand and opens an issue for the failures. The version is the source's `listDate`, which every change must move, so the app always prefers the newer of the downloaded and shipped lists. The validator and the app's parser apply the same rules. The app refreshes it with the shortage list and ships a copy for the first start.
+- Profile setting `Region` (ISTAT code, 21 regions and autonomous provinces), replicated without an operation schema bump and editable in Settings → Notifications; written only by `UpdateProfileRegion` and only when it changes, so saving other settings on a device not yet synced never clears it; additive export field `notificationSettings.region`.
+
+### Security
+
+- Links are opened only through `RegionalServiceLinkLauncher`: exactly one of the links of the region's entry, unchanged, through the existing shell launcher. Log lines name neither the URL nor the region. No embedded browser, no sign-in, no reading of the regional pages; the NRE is never logged.
+
+### Docs
+
+- `CLAUDE.md` §5, `docs/CATALOGUE-DATA.md` §1.1 and §10, `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.9, the five user guides.
+## PR #194 — Fix the review findings of the dose-time stock and as-needed doses
+
+Link: [vger70/MedReminder#194](https://github.com/vger70/MedReminder/pull/194)
+Branch: `feature/intraday-review-fixes` → `main`
+
+### Fixed
+
+- Switching a medicine to PRN no longer drops its slots, nor does the
+  one-time as-needed backfill: under a PRN schedule slots consume
+  nothing (since #182), and clearing them lost as-needed slots the edit
+  dialog had just saved, or emptied today's slots for a PRN change
+  dated later. The supply planner shows a PRN medicine with slots as
+  as-needed.
+- An imported archive is marked for the one-time backfills only when it
+  was written before the as-needed flag or the presets, so re-importing
+  a current archive keeps the user's choices (`ProfileDatabaseBuilder`).
+- Main list: the first load of a new day runs the catch-up whichever
+  load comes first; a refresh overtaken by a reload is discarded;
+  activation refreshes at most every 30 seconds; a change of status or
+  days left applies the card filter and the column sort again, and
+  every reload keeps the selection and the scroll position
+  (`MainForm`).
+- The low-stock email marks as-needed slots in its own language.
+
+### Changed
+
+- `DueToday` reads today's booked medicines with one query for intakes
+  and one for counts instead of every intake and count of each
+  medicine; `PendingDataMigrations` is part of the EF model.
+- The backfills read the preset texts from the dictionaries instead of
+  copies in the code (`BuiltInPresetLabels`).
+- The schedule row in force comes from `DailyConsumption.RowInForce`
+  everywhere; the therapy timeline now applies the ledger's tie rule
+  (the later recorded row of a date wins).
+
+### Docs
+
+- `ANALYSIS.md`, `EXPORT-FORMAT.md`, `EVOLUTION-DONE.md` §12.5,
+  `STATUS.md` §2.11 and the status of
+  `analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`.
+## PR #192 — Fix the review findings on the daily catalogue check
+
+Link: [vger70/MedReminder#192](https://github.com/vger70/MedReminder/pull/192)
+Branch: `claude/catalogue-daily-refresh` → `main`
+
+### Fixed
+
+- `CsvReferenceCatalogueImporter` takes `WriteGate` itself for the
+  version read and the replace transaction, so the embedded boot import
+  is gated too; the snapshot is parsed outside the gate.
+- Archive import and backup restore set the sync reset marker under the
+  gate, right before the swap: a cancel while waiting no longer blocks
+  sync on an unchanged database.
+- `BackupService.ImportProfileAsync` swaps through `ProfileDatabaseSwap`
+  instead of a copy of it.
+- The daily catalogue check no longer drifts to every 25 hours.
+
+### Changed
+
+- Setting label "Check for app and catalogue updates (GitHub)" in the
+  five dictionaries and user guides.
+
+### Docs
+
+- `ANALYSIS-CATALOGUE-REMOTE-FEED.md` §4.5 and new §11.6.
+## PR #200 — Correct the guided setup prompt against the code
+
+Link: [vger70/MedReminder#200](https://github.com/vger70/MedReminder/pull/200)
+Branch: `claude/wizardly-goldberg-9atod5` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-GUIDED-SETUP.md`: names the real use cases (`UpdateNotificationSettings`, `RenameProfile`) and requires keeping the doctor address when saving; the wizard opens by itself for any profile with no medicines until a device-local `GuidedSetupShown` flag is set; maps the user's address to `CaregiverAddress` when they look after someone; warns when email is the only channel and cannot be sent; adds the Settings initial-section parameter and matching tests.
+
+---
+
+## PR #198 — Add implementation prompt for the guided setup
+
+**Status:** merged (2026-10-04)
+
+Link: [vger70/MedReminder#198](https://github.com/vger70/MedReminder/pull/198)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-GUIDED-SETUP.md`: brief for a skippable guided setup after a new installation, from an empty list or from Help (who the medicines are for, first medicines through the existing dialog, warning lead time and channel, user and caregiver email, summary); device-local settings only, no schema, sync or export change.
+
+---
+
+## PR #197 — Add repeatable prescriptions with several dispensations
+
+Link: [vger70/MedReminder#197](https://github.com/vger70/MedReminder/pull/197)
+Branch: `claude/brave-turing-e4a7z7` → `main`
+
+### Added
+
+- Repeatable prescription: `Prescription.Dispensations` (2 to 12; null or 1 keeps the single prescription unchanged) and the `PrescriptionDispensation` entity; status, dispensations left, reminder and validation rules in `PrescriptionRules` (defaults 12 dispensations and 12 months, parametric, no rule of a specific law).
+- Sync: `DispensationChanged` (one register per dispensation, so concurrent records on two devices are both kept) and `PrescriptionChanged.dispensations`; operation schema 12 only for repeatable prescriptions and dispensations, single prescriptions keep version 7; image schema 9. Every device of a sync group must run this version before anyone records a repeatable prescription.
+- Persistence: idempotent boot patch for `Prescriptions.Dispensations` and the `PrescriptionDispensations` table (foreign key on the medicine only); removed with the medicine. Deleting a prescription leaves its dispensations unused, so a concurrent edit on another device that restores the prescription restores them too.
+- UI: "Repeatable prescription" in the prescription editor with the dispensations allowed and the list of dispensations (Add, Edit, Remove); "Dispensations" column (collected / allowed); "Collected today" and the offer after a new package record a dispensation.
+- Export: additive `prescriptions[].dispensations` and `prescriptions[].dispensationRecords[]`; older archives import as single prescriptions.
+
+### Changed
+
+- Low-stock toast and email point to the dispensations left and the last valid day instead of a new prescription, and the toast button opens the prescriptions; the reminder before "valid until" of a repeatable prescription fires only with dispensations left and says how many would be lost.
+- Saving a prescription writes its sync register only when a field changed, and the editor sends only the dispensations added, changed or removed, so neither overrides what another device recorded meanwhile. Validation checks the dates of the dispensations edited (all of them when the dates of the prescription change), so a record made out of range elsewhere does not block a valid new one; dispensations a sync left on a single prescription are ignored.
+- The offer after a new package lists the prescriptions still valid before the expired ones.
+- Export `schemaVersion` 3, written only when the archive holds a repeatable prescription, so an older app refuses it instead of dropping the dispensations; other archives keep version 2.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.14, `docs/ANALYSIS.md` and the five user guides.
+
+---
+
+## PR #196 — Add implementation prompt for regional prescription services
+
+**Status:** merged (2026-10-04)
+
+Link: [vger70/MedReminder#196](https://github.com/vger70/MedReminder/pull/196)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md`: brief for a button that opens the profile's regional prescription service (browser, or QR code for the phone app) and a "Paste NRE" field; sign-in with SPID, CIE or TS-CNS stays on the regional service, no embedded browser; regional list as a hand-maintained dated feed with a monthly URL check, region as a replicated profile setting. It missed PR #195, which merged first.
+
+---
+
+## PR #195 — Add implementation prompt for repeatable prescriptions
+
+**Status:** merged (2026-10-04)
+
+Link: [vger70/MedReminder#195](https://github.com/vger70/MedReminder/pull/195)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-REPEATABLE-PRESCRIPTION.md`: brief for a prescription with several dispensations over a long validity (Italian Law 182/2025 art. 62, implementing decree not verified, so the model stays parametric); dispensations in their own sync register so concurrent records are not lost, single prescriptions unchanged at operation schema 7, boot patch, additive export fields, low-stock text when a dispensation is left, UI, tests.
+
+---
+
+## PR #193 — Harden the daily dated-list feeds and let feeds publish concurrently
+
+Link: [vger70/MedReminder#193](https://github.com/vger70/MedReminder/pull/193)
+Branch: `claude/shortage-feed-review-fixes` → `main`
+
+### Fixed
+
+- Shortage and equivalents feeds: an older list date than the
+  published one is refused, even when forced; the same date with other
+  content is republished; pruning never deletes the file `latest.json`
+  names (`scripts/feeds/common.py`).
+- A shared concurrency group let a queued run of one feed cancel
+  another's: each workflow has its own group, and
+  `feeds_branch.sh publish` replaces only the feed's own paths and
+  rebuilds a publish whose lease was lost.
+- The AIFA mirror to `main` no longer commits the shortage and
+  equivalents subfolders.
+
+### Changed
+
+- Dated-list runs send ETag / Last-Modified (stored as `source` in
+  `latest.json`, ignored by clients) and stop on 304 instead of
+  downloading the CSV every day.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §1.1, §8, §9; PR #174 entry and workflow
+  comments: a new list is on the feed within a day, on clients within
+  about two days; `docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3.
+
+---
+
+## PR #191 — Add an SMTP provider section to the user guides
+
+Link: [vger70/MedReminder#191](https://github.com/vger70/MedReminder/pull/191)
+
+Branch: `claude/user-guide-smtp-providers` → `main`
+
+### Docs
+
+- New subsection *Email settings for common providers* in section 6 of
+  `docs/USER_GUIDE.{en,it,fr,es,de}.md`: host, port and password type
+  for Gmail, Yahoo Mail, iCloud Mail, Libero Mail, Aruba, GMX, WEB.DE
+  and Orange, with step-by-step creation of a Gmail app password.
+- States that Outlook.com / Hotmail accounts cannot be used, since they
+  require OAuth2 for SMTP and MedReminder signs in with a password.
+- Clarifies the port rule applied by the email service: `587` with
+  *Use StartTLS* ticked, `465` with it unticked.
+
+---
+
+## PR #190 — Add the AIFA equivalent medicines list and a Codifa info link
+
+Link: [vger70/MedReminder#190](https://github.com/vger70/MedReminder/pull/190)
+
+**Status:** merged (2026-10-03)
+
+Branch: `claude/inspiring-bardeen-d79c0q` → `main`
+
+### Added
+
+- AIFA transparency list feed (`scripts/feeds/aifa_equivalents.py`, `download_aifa_equivalents.yaml`), published on the `feeds` branch under `data/it/equivalents/`, downloaded with Italy as reference country (`EquivalenceRefresher`) and stored once for every profile (`catalogue\equivalents\equivalents-it.json`).
+- Equivalent medicines window (`EquivalentsDialog`, `EquivalentsQuery`): the group of the package, its members cheapest first with public price, difference over the reference price, AIFA note verbatim, shortage state, and the packages already in stock in the profile. Join through a valid AIC only.
+- Codifa page link (`MedicineInfoLink`) built from a check-digit-validated AIC, in the edit dialog and the grid context menu, with "Equivalent medicines (AIFA)".
+- The shortage tooltip points to the equivalents window when the package is listed.
+- New UI strings in all five dictionaries.
+
+### Changed
+
+- The information row of the medicine edit dialog ("Information", formerly "AIFA documents") exists for every medicine; leaflet and SPC keep their Italian-catalogue condition.
+- Product names are now shown, in the equivalents window only: a decision recorded in `docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3. The shortage message still names no product.
+- The shortage and transparency lists share one transport, store and refresh (`DatedListFeed`, `GitHubRawDatedListFeedClient`, `JsonFileDatedListStore`) and one Python publisher (`common.publish_dated_list`), instead of two copies.
+
+### Fixed
+
+- A forced republish of a list date already stored on a client is downloaded again: the refresh compares the stored file's SHA-256 with the manifest, not only the list date. Applies to the shortage list too.
+- The stored list caches a failed parse per file version instead of re-reading a damaged file on every load.
+- The equivalents check of the edit dialog and of the main list runs off the UI thread.
+- One AIC rule (`ItalianPharmacode.NormalizeAic`) for the Codifa link, the menu, the edit dialog and the shortage tooltip, which no longer points to a disabled menu item for a code failing the check digit.
+- "Already at home" also lists another medicine record of the same package.
+- The Codifa menu item no longer shares its access key with "Correct stock" (en, it, fr, es).
+- The equivalents window no longer shows an error over itself when closed while loading.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §9, `docs/ANALYSIS.md`, `CLAUDE.md` §5, the analysis status, user guides in the five languages.
+
+---
+
+## PR #189 — Analyse AIFA equivalent-medicine lists and a Codifa info link
+
+Link: [vger70/MedReminder#189](https://github.com/vger70/MedReminder/pull/189)
+
+Branch: `claude/italian-medicine-catalog-integration-b1e933` → `main`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md`: integration of the AIFA transparency list (equivalent medicines with reference and public prices) on the shortage feed design, with its uses; a Codifa page link built from a valid AIC for the medicine edit dialog and the grid context menu. Non-medicinal products are out of scope for lack of an open Italian database.
+
+---
+
+## PR #188 — Give the export snapshot test a scratch folder of its own
+
+Link: [vger70/MedReminder#188](https://github.com/vger70/MedReminder/pull/188)
+
+Branch: `claude/fix-flaky-export-test` → `main`
+
+### Fixed
+
+- `ExportServiceTests.Export_deletes_its_temporary_snapshot` failed intermittently: it diffed `%TEMP%`, where the exports of `ExportImportRoundTripTests`, running in parallel, create their own snapshot folders. The test overload of `ExportService` takes an optional scratch root (the app keeps `%TEMP%`), and the test checks that its own root is empty after the export.
+
+---
+
+## PR #187 — Add the expiring packages view and document package expiry (package expiry, phase 4)
+
+Link: [vger70/MedReminder#187](https://github.com/vger70/MedReminder/pull/187)
+
+Branch: `feature/package-expiry-overview` → `main`
+
+### Added
+
+- Stock → Expiring packages: the expired and expiring packages of every medicine, inactive ones included, expired first; Open packages opens the package list of the medicine over the view (`ExpiringPackagesQuery`, `ExpiringPackagesDialog`).
+- New UI strings in all five dictionaries.
+
+### Changed
+
+- The expiry notices read the packages through `ExpiringPackagesQuery`, so the view and the notices cannot disagree.
+- The package list and the new view keep the theme colours under high contrast, and their hint grows with its text (`DialogLayout.GrowWithText`); the main list reloads once, only after a change.
+
+### Docs
+
+- User guides in the five languages: package fields when adding a package, "Packages and expiry" section, expiry notices, lead-day settings, caregiver copy and weekly summary.
+- `docs/ANALYSIS.md`: package tables, schema patches, expiry notices, link to the analysis; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: the cross-medicine view built in P4.
+
+## PR #186 — Warn about expiring and expired packages (package expiry, phase 3)
+
+Link: [vger70/MedReminder#186](https://github.com/vger70/MedReminder/pull/186)
+
+Branch: `feature/package-expiry-notices` → `main` (on top of #184 and #185)
+
+### Added
+
+- "Expires soon" and "expired" notices per package, once per stage and channel on each device, on the medicine's channels: one toast per medicine (opens its packages, also for an inactive medicine hidden from the list), one email per pass for all medicines from the device that sends email; inactive medicines included, used-up and closed packages left out; expired packages named first, those expiring soon on a later pass; a failed email retried without repeating the toast (`PackageExpiryNotices`, `PackageExpiryNoticeEvents`).
+- Email kind `PackageExpiry` for the caregiver copy; weekly digest line for a medicine with a package expiring or expired, inactive medicines included.
+- Configurable lead days in Settings → Notifications: before the printed expiry (default 30) and before the end of the in-use period (default 3); stored empty at the default, validated, replicated and exported; also used by the package list and the main list, which now allocates packages on the same ledger stock as the notices.
+
+### Fixed
+
+- A small new-package load split in several packages is no longer rounded to zero and refused.
+- New UI and notification strings in all five dictionaries.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md` and `docs/EXPORT-FORMAT.md`: new profile settings and email kind; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: phase 3 contents.
+
+## PR #185 — Enter packages and show their expiry (package expiry, phase 2)
+
+Link: [vger70/MedReminder#185](https://github.com/vger70/MedReminder/pull/185)
+
+Branch: `feature/package-expiry-ui` → `feature/package-expiry` (stacked on #184)
+
+### Added
+
+- New-package load with optional package fields: count, month/year expiry (last day of the month), use within N days of opening, opened today, batch; packages linked to the movement and saved with it (`AddStock`, `StockAdjustmentDialog`). A load with no package data stays a plain stock movement.
+- Restock by scan pre-fills expiry and batch from the DataMatrix; in-use period and size default to the latest package.
+- Stock → Packages and expiry: list of a medicine's packages with status, dates, quantity in stock and batch; New, Edit, Opened today, Finished, Discard (quantity left removed from the stock), Delete (`PackagesDialog`, `PackageEditDialog`, `PackageListQuery`).
+- Main list column Expiry: earliest expiry among the packages in stock, status in words and colour.
+- New UI strings in all five dictionaries.
+
+### Docs
+
+- `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: packages created only when the expiry section is filled; no package fields in the initial load; phase 2 contents.
+
+## PR #184 — Record packages and their expiry (package expiry, phase 1)
+
+Link: [vger70/MedReminder#184](https://github.com/vger70/MedReminder/pull/184)
+
+Branch: `feature/package-expiry` → `main`
+
+### Added
+
+- Packages of a medicine with printed expiry, in-use period after opening, opening date, batch and closure (`StockPackage`), beside the stock ledger: a package never moves the stock.
+- Expiry rules: the effective expiry is the earlier of the printed date and the end of the in-use period; status with configurable lead days (`PackageExpiryRules`). A derived allocation marks the packages the current stock no longer covers as used up, so finished boxes are never warned about (`PackageAllocation`).
+- Save, discard (closure and stock correction saved together) and delete use cases (`Application/Packages`).
+- Sync operation `PackageChanged` (schema version 11) and sync image version 8; `StockPackages` table through an idempotent boot patch; export field `stockPackages[]`; packages removed with the medicine.
+
+### Fixed
+
+- A discard is final: a save can neither set nor clear it, and a sync merge keeps it whatever concurrent edit wins the package register, since its stock correction is a separate fact.
+- A refused discard leaves the package unchanged; the stock is checked once (`AdjustStockDown.PrepareAsync`) and everything is saved together.
+- A closure name unknown to this version imports as Finished instead of making the archive unreadable.
+- A printed expiry more than 20 years from today is refused.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.17; `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: default in-use period from the latest package instead of a medicine field, phase contents, final discard.
+
+## PR #183 — Add analysis of package expiry tracking
+
+Link: [vger70/MedReminder#183](https://github.com/vger70/MedReminder/pull/183)
+
+Branch: `claude/package-expiry-analysis-1388ce` → `main`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: design of optional package expiry (printed `MM/YYYY`, valid to the last day of the month) and in-use period after opening, a `StockPackage` register beside the immutable stock ledger with a derived first-expiring-first-out allocation, expiring-soon and expired notices on the medicine's toast and email channels, sync, export, UI, tests, phased plan and decisions to confirm.
+
+## PR #182 — Slot description presets by time of day, resizable navigation pane
+
+Link: [vger70/MedReminder#182](https://github.com/vger70/MedReminder/pull/182)
+
+Branch: `claude/voci-ordinamento-menu-laterale-544d36` → `main`
+
+### Changed
+
+- The description dropdown of the administration slot dialog lists the time-of-day presets by time, as the dose times dialog already did: user presets no longer trail the built-ins, presets without a time come last (`DoseTimeSettings.ByTimeOfDay`).
+- The main window navigation pane can be widened by dragging its right edge, never narrower than its default width and at most half the window. The width is saved per profile in `ui.settings.json` (`NavigationWidth`, at 96 DPI) when the window closes.
+
+---
+
+## PR #181 — Give date pickers static Segoe UI so the first digit is not cut
+
+Link: [vger70/MedReminder#181](https://github.com/vger70/MedReminder/pull/181)
+Branch: `claude/zero-formatting-date-controls-a7f941` → `main`
+
+### Fixed
+
+- The first digit of the date is no longer cut in the date fields of
+  every window (medicine editor, prescriptions, deadlines, coverage
+  planner and others). The native date picker lays its fields out
+  wrongly with the variable Segoe UI fonts used on Windows 11; date
+  pickers now use static Segoe UI at the same size, so the text size
+  still applies (`UiThemeApplier`, `UiTheme.Fonts.DatePickerFamily`).
+
+### Removed
+
+- The format reset on show in `MedReminderFormBase`, which did not
+  address the cause.
+
+---
+
+## PR #TBD — Administration slots with advanced schedules
+
+Branch: `feature/slots-with-advanced-schedules` (stacked on #179)
+
+### Changed
+
+- Under a non-FixedDaily schedule the schedule sets the daily quantity and the slots split it in proportion to their doses; cyclic pause days are no longer consumed. Slots stay editable in Advanced mode (`docs/analysis/ANALYSIS-SLOTS-ADVANCED-SCHEDULES.md`).
+
+---
+
+## PR #179 — Fix the dose times order, slots lost in Advanced mode and the start date not saved
+
+Link: [vger70/MedReminder#179](https://github.com/vger70/MedReminder/pull/179)
+
+Branch: `claude/bug-orari-terapia-a59517` → `main`
+
+### Fixed
+
+- Therapy → Dose times lists the presets by time of day; presets
+  without a time come last (`DoseTimesDialog`).
+- Edit medicine: slots no longer disappear. A therapy that opens in
+  Advanced schedule mode keeps its slots on save (an unrelated edit
+  used to clear them), and in Advanced mode the whole slot panel is
+  disabled, so no slot can be added there and then dropped
+  (`MedicineEditDialog`). RemindOnDose is saved only when the saved
+  slots hold a timed one.
+- Edit medicine: a changed therapy start date is saved. It was shown
+  as editable but `UpdateMedicine` ignored it. The initial schedule
+  row is recorded again from the new date when the date moves earlier,
+  or later for a cyclic or tapering plan still in force; a schedule
+  change made after the start is never re-anchored. For an earlier
+  date the slot set in force is copied to cover only the days gained
+  (`UpdateMedicine`, `TherapyStartChange`).
+
+### Changed
+
+- Sync: new operation `MedicineStartChanged`, schema version 10 (an
+  older app stops at it, R7). `StartDate` is no longer immutable
+  (`docs/SYNC-FORMAT.md` §6).
+
+---
+
+## PR #178 — Count the days left from the stock shown in the list
+
+Link: [vger70/MedReminder#178](https://github.com/vger70/MedReminder/pull/178)
+Branch: `feature/days-left-from-shown-stock` → `main`
+
+### Fixed
+
+- The days left in the main list now follow the stock shown: once a
+  dose time has passed they count the days fully covered after it.
+  They used to come from the start-of-day stock, so after the morning
+  dose 100 tablets at one a day still read 101 days. The run-out date
+  and the status rules are unchanged; the status uses the days shown
+  (`MedicineOverviewLoader`).
+
+### Docs
+
+- User guides (five languages): the main list section says that stock
+  and days left already leave out today's doses due; the "where to
+  find" table lists recording an as-needed dose and the dose times; the
+  count steps say the suggestion matches the list; the alerts section
+  says notifications use the recorded stock.
+- `docs/ANALYSIS.md`: as-needed slots, extra intakes, the device-local
+  time-of-day presets, `IntradayConsumption`, the one-time data
+  migrations and the new schema patches.
+- `docs/EVOLUTION-DONE.md` §12.5, `ANALYSIS-A5` §1.3 and the status of
+  `ANALYSIS-INTRADAY-CONSUMPTION.md` updated for the shipped feature.
+- `docs/STATUS.md` reviewed at v2.14.0: releases v2.12.1–v2.14.0, the
+  dose-time stock (§2.11), codebase figures, open pull requests, code
+  signing and next steps.
+- `README.md` and the five user guides: the binaries and the MSI are
+  code-signed (Certum); SmartScreen can still warn on the first run
+  until the certificate has reputation, and the MSI shows the verified
+  publisher instead of "Unknown Publisher".
+
+---
+
+## PR #177 — Stock that follows the dose times; as-needed doses never consumed automatically
+
+**Status:** merged (2026-10-03)
+
+Link: [vger70/MedReminder#177](https://github.com/vger70/MedReminder/pull/177)
+Branch: `feature/intraday-consumption` → `main`
+
+### Docs
+
+- New `docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`. The stock shown
+  in the main window is the start-of-day value, so a dose already taken
+  still appears in it; the analysis chooses a read-side projection that
+  subtracts the doses already due today, resolved from slot times or
+  user-editable time-of-day presets, and leaves the ledger, sync, counts
+  and forecasts unchanged.
+- The same analysis covers as-needed doses: a slot described as "As
+  needed", or a PRN medicine that kept its slots, is consumed every day
+  today. It specifies a per-slot as-needed flag excluded from automatic
+  consumption, applied from today only so that past stock counts keep
+  their value, and an extra-intake flag so that recording an as-needed
+  tablet no longer cancels the day's scheduled consumption.
+
+### Added
+
+- Per-slot "As needed" flag (slot dialog checkbox, ticked by the "As
+  needed" description). An as-needed dose is never consumed
+  automatically, is left out of the daily total, forecast and coverage
+  plan, and gets no dose reminder; a medicine whose slots are all as
+  needed behaves as PRN (`DailyConsumption`, `CoveragePlanner`,
+  `DoseReminderService`).
+- "Extra dose as needed" in the intake dialog for medicines with a
+  plan: the dose is deducted and the day's scheduled consumption stays.
+  The ledger ignores extra intakes when deciding whether a day is
+  handled (automatic consumption, frozen-day reversal, count-day
+  materialization, count dialog).
+
+### Changed
+
+- Switching a medicine to PRN clears its slots from the same day; slots
+  used to take precedence and kept being consumed every day.
+- One-time correction of existing data, from today only: slots
+  described as "As needed" in any UI language are flagged, and PRN
+  medicines that kept slots lose them. Past days are not rewritten, so
+  recorded stock counts keep their value; the user guides suggest one
+  count to recover past over-consumption (`AsNeededSlotBackfill`).
+- Sync: an extra intake or a slot set with an as-needed slot is written
+  with operation schema version 9, and the database image goes to
+  schema version 7, so an older device stops instead of misreading
+  them. The archive carries both flags as additive fields.
+- Time-of-day presets: **Therapy → Dose times…** sets the time of each
+  moment ("In the morning" = 08:00, "Before lunch" = 13:00, …), hides
+  unused ones, adds the user's own, and sets the times of medicines
+  without slots (1 to 4 a day). A slot picked from a preset keeps a
+  reference to it (`PresetId`); existing slots are linked once from
+  their description in any UI language (`SlotPresetBackfill`). Display
+  only and device-local: the times never change stored stock and are
+  not synchronized; the archive carries them as additive fields.
+- The stock column of the main list is an estimate during the day: the
+  start-of-day stock minus today's doses whose time has passed (slot
+  time, else its preset time, else the default times of medicines
+  without slots). It used to show one dose more than the box held
+  until midnight. The run-out forecast, the coverage plan and the
+  recorded stock keep the start-of-day value, so nothing is counted
+  twice; a tooltip shows both values. The list refreshes the estimates
+  every minute in place, and the count dialog suggests the same
+  quantity as taken (`IntradayConsumption`, `DueToday`).
+
+---
+
+## PR #176 — Show all About data sources, stop text box border flicker, remember the main window placement
+
+Link: [vger70/MedReminder#176](https://github.com/vger70/MedReminder/pull/176)
+Branch: `claude/fonti-dati-textbox-issues-c699a3` → `main`
+
+### Added
+
+- The main window reopens at the size, position and maximized state
+  it had when last closed, per profile. The placement is saved in
+  `profiles\<id>\ui.settings.json` on every close, the hide to the tray
+  included; one whose title bar is on no current screen is ignored
+  (`src/MedReminder.UI/Forms/MainForm.cs`).
+- `ProfileUiSettingsFile` now changes only the properties it writes
+  and keeps the others, so the placement, the text size and the
+  appearance never overwrite one another.
+
+### Fixed
+
+- The About dialog's data-source attributions could not be read in
+  full: the dialog is taller and the last attribution keeps a bottom
+  gap, which a scrolling `FlowLayoutPanel` drops
+  (`src/MedReminder.UI/Forms/AboutDialog.cs`).
+- In dark mode the text box border flickered on mouse hover: Windows
+  repainted the frame in the hot state before the palette border was
+  drawn over it. Without visible scroll bars the frame is now drawn
+  once, by the palette painter
+  (`src/MedReminder.UI/UiExtensions/ThemedBorder.cs`).
+
+## PR #175 — Hide a maximized main window to the tray on the first close
+
+Link: [vger70/MedReminder#175](https://github.com/vger70/MedReminder/pull/175)
+Branch: `claude/fix-maximized-close-to-tray` → `main`
+
+### Fixed
+
+- Closing a maximized main window hid it and showed it again at once;
+  only a second close sent it to the tray. Setting `ShowInTaskbar` on
+  close recreated the window handle, which re-showed a maximized
+  window; the assignment is removed (`src/MedReminder.UI/Forms/MainForm.cs`).
+- Restoring from the tray keeps a maximized window maximized instead
+  of resetting it to Normal.
+
+## PR #174 — Run the AIFA shortage workflow daily
+
+Link: [vger70/MedReminder#174](https://github.com/vger70/MedReminder/pull/174)
+Branch: `claude/vigilant-hypatia-yby7iu` → `main`
+
+### Changed
+
+- `download_aifa_shortages.yaml` runs daily at 04:27 UTC instead of
+  on days 2, 9, 16 and 23: AIFA updates the list on no fixed day, so a
+  new list is now on the feed within a day, and on clients, which
+  check once a day, within about two days. Runs on a list already
+  published commit nothing.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §8.
+
+---
+
+## PR #173 — Publish the catalogue feeds on a single-commit feeds branch
+
+Link: [vger70/MedReminder#173](https://github.com/vger70/MedReminder/pull/173)
+Branch: `claude/feeds-branch` → `main`
+
+### Changed
+
+- Feed files are published on the `feeds` branch, which holds a single
+  parentless commit replaced at each publish, instead of accumulating
+  about 9.5 MB of archives a month in `main`'s history.
+  `scripts/feeds/feeds_branch.sh` (`load`, `publish`) is called by the
+  five `download_*.yaml` workflows; only runs on the default branch
+  publish.
+- The client reads
+  `https://raw.githubusercontent.com/vger70/MedReminder/feeds/data/`
+  (`CatalogueFeedOptions.DefaultBaseUrl`, `appsettings.json`).
+
+### Build
+
+- "Mirror to main" step keeps `main/data/` current for releases up to
+  v2.12.1 until the repository variable `FEEDS_MAIN_MIRROR` is `false`.
+- `scripts/feeds/tests/test_feeds_branch.py`.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §1.1, `docs/ANALYSIS.md`.
+
+---
+
+## PR #172 — Move feed workflow schedules off the top of the hour
+
+Link: [vger70/MedReminder#172](https://github.com/vger70/MedReminder/pull/172)
+Branch: `claude/vigilant-hypatia-yby7iu` → `main`
+
+### Fixed
+
+- No feed workflow started on 2 October 2026, the first scheduled day:
+  GitHub delays or drops `schedule` runs at minute 0 under load. Same
+  days and stagger, 7 minutes later: `download_aifa.yaml` 03:07,
+  `download_aemps.yaml` 03:27, `download_bdpm.yaml` 03:47,
+  `download_ema.yaml` 04:07, `download_aifa_shortages.yaml` 04:27 UTC.
+
+### Docs
+
+- `download_aifa_shortages.yaml` comment no longer says "twice a
+  week"; `docs/CATALOGUE-DATA.md` lists the new times.
+## PR #171 — Record the second round of proposals in the status snapshot
+
+Link: [vger70/MedReminder#171](https://github.com/vger70/MedReminder/pull/171)
+Branch: `claude/status-proposals-2` → `main`
+
+### Docs
+
+- `docs/STATUS.md` §2.9: the eight proposals of
+  `EVOLUTION-PROPOSALS-2.md` with their PRs and sync / format impact;
+  §3.3 and §4 updated (release and the update of every synced device).
+
+---
+
+## PR #170 — Let the caregiver receive chosen emails and a weekly summary
+
+**Status:** merged (2026-10-02)
+
+Link: [vger70/MedReminder#170](https://github.com/vger70/MedReminder/pull/170)
+Branch: `claude/caregiver-digest` → `main`
+
+### Added
+
+- Caregiver per-kind copies (`docs/notes/EVOLUTION-PROPOSALS-2.md`
+  §3.8; A3 §11 item 4): `EmailKind` on every automated email and the
+  `CaregiverEmails` setting; the MailKit adapter copies only the chosen
+  kinds. Default: every kind, as before.
+- Weekly stock summary to the caregiver only (`CaregiverDigest`): stock,
+  status and run-out date of each active medicine, no dose data; sent
+  from a device that sends email, in the periodic check.
+- Settings → Notifications: a box per kind and the weekly summary.
+- Strings `Ui.SettingsDialog.Notifications.Caregiver.*`,
+  `Notifications.Digest.*` in all five dictionaries; caregiver help text
+  updated; user guides in five languages.
+
+### Changed
+
+- New replicated profile settings `CaregiverEmails`, `CaregiverDigest`,
+  `CaregiverDigestSentOn` (no operation schema bump: an older app keeps
+  their versions without projecting them).
+- Export: additive `caregiverEmails`, `caregiverDigest` in
+  `notificationSettings`.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`
+  §9.2, A3 analysis §11, `README.md`, proposal status.
+
+---
+
+## PR #169 — Export coming dates to a calendar file
+
+**Status:** merged (2026-10-02)
+
+Link: [vger70/MedReminder#169](https://github.com/vger70/MedReminder/pull/169)
+Branch: `claude/calendar-export` → `main`
+
+### Added
+
+- Calendar export (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.7):
+  Therapy → Export to calendar… saves an `.ics` file with the day to
+  request each prescription, the run-out dates, the last day to collect
+  each prescription and the open administrative deadlines. Generic
+  titles by default; names only when ticked at export time. Stable
+  UIDs, so a new export updates the same events.
+- `IcsWriter` (RFC 5545), `CalendarEntries`, `CalendarExportQuery` in
+  `MedReminder.Application/Calendar`.
+- Low-stock emails carry the run-out date as `medreminder.ics`, with a
+  generic title (`EmailMessage.CalendarEvent`, multipart MIME in
+  `MailKitEmailNotificationService`).
+- Strings `Ui.CalendarExportDialog.*`, `Calendar.*`,
+  `Ui.MainForm.Menu.Therapy.ExportCalendar` in all five dictionaries;
+  section in the five user guides.
+
+### Docs
+
+- `docs/ANALYSIS.md` §9.2, `README.md`, proposal status.
+
+---
+
+## PR #168 — Add recurring administrative deadlines with reminders
+
+**Status:** merged (2026-10-02)
+
+Link: [vger70/MedReminder#168](https://github.com/vger70/MedReminder/pull/168)
+Branch: `claude/admin-deadlines` → `main`
+
+### Added
+
+- Administrative deadlines (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.6):
+  therapeutic plan, exemption renewal, check-up or other, optionally
+  tied to a medicine, with a notice period, an optional recurrence in
+  months and their own channels. No regulatory default: every date is
+  entered by the user.
+- Therapy → Administrative deadlines… (`DeadlinesDialog`,
+  `DeadlineEditDialog`); "Done" closes a one-off deadline and moves a
+  recurring one to its next date, counted from the previous date.
+- `DeadlineReminders` in the periodic check: one reminder per deadline
+  and date on this device (`DeadlineReminderEvents`, device-local),
+  email only where this device sends email; the toast opens the list.
+- Strings `Ui.DeadlinesDialog.*`, `Ui.DeadlineEditDialog.*`,
+  `Deadlines.*`, `Notifications.Deadline.*` in all five dictionaries;
+  section in the five user guides.
+
+### Changed
+
+- Sync: `DeadlineChanged`, one last-writer-wins register per deadline
+  (operation schema 8, image schema 6). Every device of a sync group
+  must run this version before deadlines are used.
+- Boot patch for `Deadlines` and `DeadlineReminderEvents`; deadlines of
+  a medicine are removed with it; reminders left out of sync images.
+- Export: additive `deadlines` field (schema version stays 2).
+
+### Fixed
+
+- The export retries the deletion of its temporary snapshot folder:
+  Windows can keep the just-closed snapshot locked for a moment, which
+  left the folder behind (`ExportServiceTests.Export_deletes_its_temporary_snapshot`).
+- Carries the `.gitattributes` of PR #167 (feed JSON files kept byte for
+  byte), so the shortage feed test passes on this branch too.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
+  `README.md`, proposal status in `EVOLUTION-PROPOSALS-2.md`.
+
+---
+
+## PR #167 — Keep feed JSON files byte for byte in every checkout
+
+**Status:** merged (2026-10-02)
+
+Link: [vger70/MedReminder#167](https://github.com/vger70/MedReminder/pull/167)
+Branch: `claude/shortage-feed-line-endings` → `main`
+
+### Fixed
+
+- `.gitattributes` marks `data/**/*.json` as `-text` and `data/**/*.zip`
+  as binary: with `core.autocrlf=true` Git added a CR to the published
+  shortage list, which then failed the size and SHA-256 check against
+  `latest.json` (`ShortageFeedTests.The_published_feed_parses`).
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §8 documents the line-ending rule.
+
+---
+
+## PR #166 — Mark Italian medicines in shortage from the AIFA list
+
+**Status:** merged (2026-10-01)
+
+Link: [vger70/MedReminder#166](https://github.com/vger70/MedReminder/pull/166)
+Branch: `claude/shortage-notice` → `main`
+
+### Added
+
+- Shortage feed (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.3):
+  `scripts/feeds/aifa_shortages.py` and `download_aifa_shortages.yaml`
+  publish `data/it/shortages/` (list date, start, expected end,
+  equivalent flag, reason category per AIC code); first list of
+  29/09/2026 published.
+- Client: `ShortageRefresher`, `GitHubRawShortageFeedClient`,
+  `JsonFileShortageListStore` (`catalogue\shortages\shortages-it.json`,
+  shared by every profile), run with the catalogue feeds when Italy is
+  the reference country.
+- Supply column in the medicine list with the detail as tooltip;
+  `ShortageNotices` notifies once per shortage start
+  (`ShortageNoticeEvents`, device-local).
+- Strings `Ui.MainForm.Column.Supply`, `Shortage.*`,
+  `Notifications.Shortage.*` in all five dictionaries.
+
+### Changed
+
+- Update-check tooltip mentions the shortage list.
+- Boot patch for `ShortageNoticeEvents`; left out of sync images and
+  removed with the medicine.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §8, `docs/ANALYSIS.md`, `docs/SYNC-FORMAT.md`,
+  `CLAUDE.md` §5, user guides (en, it, fr, es, de), `README.md`,
+  proposals note.
+
+---
+
+## PR #165 — Add actions to the Windows notifications
+
+**Status:** merged (2026-10-01)
+
+Link: [vger70/MedReminder#165](https://github.com/vger70/MedReminder/pull/165)
+Branch: `claude/toast-actions` → `main`
+
+### Added
+
+- Toast actions (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.4): body click
+  opens the app on the medicine (or the prescriptions); "Prepare
+  request" on low-stock warnings; "Remind me in 15 minutes" on dose
+  reminders, scheduled with Windows. No intake is recorded from a
+  toast: intakes are per day in the ledger.
+- Application `NotificationTarget`, `NotificationActionArguments`
+  (identifiers only); UI `ToastActivationRouter`.
+- Strings `Notifications.Action.Snooze`,
+  `Notifications.Action.RequestPrescription` in all five dictionaries.
+
+### Changed
+
+- `IWindowsNotificationService`: target-aware `ShowAsync` overload with
+  a default body; the low-stock, dose and prescription notifiers pass
+  their target.
+- Startup: the toast activation is subscribed first; a toast launch
+  opens the last used profile minimized and exits silently when another
+  instance runs.
+
+### Docs
+
+- User guides (en, it, fr, es, de), `README.md`, proposals note.
+
+---
+
+## PR #164 — Follow prescriptions from the request to the pharmacy
+
+**Status:** merged (2026-10-01)
+
+Link: [vger70/MedReminder#164](https://github.com/vger70/MedReminder/pull/164)
+Branch: `claude/prescription-lifecycle` → `main`
+
+### Added
+
+- Prescription lifecycle (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.2):
+  Therapy → Prescriptions… (and navigation pane) with requested, issued
+  (code, packages, valid until) and collected dates, all optional;
+  "Mark as requested" in the request window; after a new package, a
+  question whether an open prescription was collected.
+- Reminder to collect an issued prescription from 3 days before it
+  lapses, once per date and device, on the medicine's channels; the
+  code is never in the reminder or the logs.
+- Domain `Prescription`, `PrescriptionRules`,
+  `PrescriptionReminderEvent`; Application `SavePrescription`,
+  `CollectPrescription`, `DeletePrescription`, `PrescriptionListQuery`,
+  `PrescriptionReminders`; UI `PrescriptionsDialog`,
+  `PrescriptionEditDialog`.
+- Strings `Ui.PrescriptionsDialog.*`, `Ui.PrescriptionEditDialog.*`,
+  `Prescriptions.Status.*`, `Notifications.Prescription.*` and the
+  menu, request-window and main-window keys in all five dictionaries.
+
+### Changed
+
+- Sync: `PrescriptionChanged` (operation schema 7), one last-writer-wins
+  register per prescription; image schema 5. Devices on older versions
+  stop at the first such operation until updated.
+- Persistence: boot patch for `Prescriptions` and
+  `PrescriptionReminderEvents`; medicine deletion removes both.
+- Export: additive `prescriptions[]`.
+
+### Fixed
+
+- Prescription request window: wider (820 px), the hint wraps to the
+  field column, and the window is never narrower than its button bar
+  (`DialogLayout.KeepButtonsVisible`, also applied to the Prescriptions
+  and Plan supply windows); the buttons were cut on the left.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
+  user guides (en, it, fr, es, de), `README.md`, proposals note.
+
+---
+
+## PR #163 — Add a supply planner for a trip or the next pharmacy visit
+
+**Status:** merged (2026-10-01)
+
+Link: [vger70/MedReminder#163](https://github.com/vger70/MedReminder/pull/163)
+Branch: `claude/coverage-planner` → `main`
+
+### Added
+
+- Therapy → Plan supply… (and navigation pane): for a period chosen by
+  the user, each active medicine's need in the period, stock left at
+  its start, what is missing and the packages to get, sized like the
+  last new package (`docs/notes/EVOLUTION-PROPOSALS-2.md` §3.5).
+  Print, PDF and clipboard. Read-only.
+- `Application/Coverage`: `CoveragePlanner`, `CoveragePlanQuery`,
+  `CoveragePlanText`; `Application/Reporting`: `PrintableTable`,
+  `PrintableTableText`.
+- UI: `CoveragePlannerDialog`, `TablePrintDocument`, `PrintOutput`.
+- Strings `Ui.CoveragePlannerDialog.*`, `Reports.Coverage.*`,
+  `Ui.MainForm.Menu.Therapy.PlanSupply`,
+  `Ui.MainForm.Error.OpenCoveragePlanner` in all five dictionaries.
+
+### Docs
+
+- User guides (en, it, fr, es, de), `README.md`, status in
+  `docs/notes/EVOLUTION-PROPOSALS-2.md`.
+
+---
+
+## PR #162 — Send a second low-stock warning at half of the threshold
+
+**Status:** merged (2026-10-01)
+
+Link: [vger70/MedReminder#162](https://github.com/vger70/MedReminder/pull/162)
+Branch: `claude/escalation-warning` → `main`
+
+### Added
+
+- Second low-stock warning (`docs/notes/EVOLUTION-PROPOSALS-2.md`
+  §3.1): when the days left reach half of the medicine's warning
+  threshold and no new package has been added since the first warning,
+  a second toast and/or email follows ("Second reminder"). A medicine
+  already below half when first checked gets only the second one. No
+  new setting: the second threshold is derived from `ThresholdDays`.
+- Strings `Notifications.Email.SubjectSecond`, `.HeaderSecond`,
+  `Notifications.Toast.TitleSecond`, `.BodySecond` in all five
+  dictionaries.
+
+### Changed
+
+- `NotificationCycle`: `StageToNotify`, `StageFor`,
+  `SecondWarningDays`; `EmailAlreadySent` takes the stage.
+- `NotificationEvents.Stage` and `SentEmailNotifications.Stage`, boot
+  patch with default 1; the latest row of an instant is the later stage.
+- Sync: `EmailNotificationSent.stage`; a second-stage email is written
+  with operation schema 6 (first-stage emails keep 4); image schema 4.
+  Devices still on v2.12.x stop at the first second-stage email until
+  updated.
+- Export: additive `stage` on `notificationEvents[]`.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md`, `docs/ANALYSIS.md`,
+  `README.md`, user guides (en, it, fr, es, de).
+
+---
+
+## PR #160 — Add a second round of evolution proposals
+
+**Status:** merged (2026-10-01)
+
+Link: [vger70/MedReminder#160](https://github.com/vger70/MedReminder/pull/160)
+Branch: `claude/evolution-proposals-2` → `main`
+
+### Docs
+
+- `docs/notes/EVOLUTION-PROPOSALS-2.md`: eight new proposals ranked by
+  user benefit after a survey of similar medication apps (escalation
+  warning before run-out, prescription lifecycle, AIFA shortage notice,
+  toast actions, coverage planner, administrative deadlines, `.ics`
+  export, caregiver opt-in and digest), each with an implementation
+  plan; re-assessment of expiry tracking and pill-organizer preparation.
+- Shortage notice (§3.3) based on the reviewed AIFA shortage CSV of
+  29/09/2026: format, anomalies and matching on the 9-digit AIC.
+- `docs/notes/EVOLUTION-PROPOSALS.md`: pointer to the second round.
+
+---
+
 ## PR #159 — Check the remote catalogue feeds once a day during the session
 
 Link: [vger70/MedReminder#159](https://github.com/vger70/MedReminder/pull/159)

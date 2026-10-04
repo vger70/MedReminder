@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MedReminder.Application.Notifications;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Notifications;
@@ -53,6 +54,8 @@ public class DoseReminderServiceTests
 
         result.FiredCount.Should().Be(1);
         scope.Windows.Sent.Should().ContainSingle();
+        // The toast offers "Remind me later" for this slot (EVOLUTION-PROPOSALS-2 §3.4).
+        scope.Windows.Targets.Should().Equal(NotificationTarget.DoseReminder(id, SlotTime));
         scope.Email.Sent.Should().BeEmpty();
 
         var events = scope.DoseEvents.All;
@@ -60,6 +63,27 @@ public class DoseReminderServiceTests
         events[0].MedicineId.Should().Be(id);
         events[0].LocalDate.Should().Be(Today);
         events[0].Channel.Should().Be(NotificationChannels.Windows);
+    }
+
+    [Fact]
+    public async Task An_as_needed_slot_gets_no_reminder()
+    {
+        var scope = new ApplicationTestScope(JustAfterSlot);
+        await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            Name: "Enalapril", Unit: "compresse", DosePerAdministration: 1m, AdministrationsPerDay: 1,
+            StartDate: Today, ThresholdDays: 7, NotificationChannels: NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots:
+            [
+                new AdministrationSlotInput(1m, new TimeOnly(7, 0), null),
+                new AdministrationSlotInput(1m, SlotTime, "Al bisogno", IsAsNeeded: true),
+            ],
+            RemindOnDose: true), CancellationToken.None);
+
+        var result = await scope.BuildDoseReminder().RunAsync(CancellationToken.None);
+
+        result.FiredCount.Should().Be(0);
+        scope.Windows.Sent.Should().BeEmpty();
     }
 
     [Fact]

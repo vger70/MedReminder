@@ -182,6 +182,9 @@ internal sealed class SyncDevice : IDisposable
             [ProfileSetting.ToAddress] = string.Empty,
             [ProfileSetting.CaregiverAddress] = string.Empty,
             [ProfileSetting.DoctorAddress] = string.Empty,
+            [ProfileSetting.CaregiverEmails] = string.Empty,
+            [ProfileSetting.CaregiverDigest] = string.Empty,
+            [ProfileSetting.CaregiverDigestSentOn] = string.Empty,
         };
 
         public IReadOnlyDictionary<string, string?> Read() => new Dictionary<string, string?>(_values, StringComparer.Ordinal);

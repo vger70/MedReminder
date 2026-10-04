@@ -17,6 +17,11 @@ namespace MedReminder.UI.Forms;
 //   - Send: through the app's SMTP account (MailKit), enabled only when
 //     SMTP is configured and a doctor address is set, after an explicit
 //     confirmation.
+// "Mark as requested" records a prescription requested today
+// (docs/notes/EVOLUTION-PROPOSALS-2.md §3.2), whichever way the request
+// went out; it is offered when the caller passes markRequested.
+// "Regional prescription service" opens the service of the profile's
+// region (RegionalServicePanel) when the caller passes regional.
 //
 // The dialog does not log anything: the draft contains health data and
 // personal names (CLAUDE.md §7). The send delegate owns the outcome log.
@@ -38,6 +43,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
     private readonly Button _mailClientButton;
     private readonly Button _sendButton;
     private readonly Button _closeButton;
+    private readonly Button _markRequestedButton;
 
     private bool _sending;
 
@@ -47,7 +53,9 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         bool smtpConfigured,
         Func<string, string, string, CancellationToken, Task> sendAsync,
         ILocalizationService localization,
-        bool isMaster = true)
+        bool isMaster = true,
+        Func<Task>? markRequested = null,
+        RegionalServiceActions? regional = null)
     {
         ArgumentNullException.ThrowIfNull(draft);
         ArgumentNullException.ThrowIfNull(sendAsync);
@@ -58,9 +66,9 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         _sendAsync = sendAsync;
 
         Text = _loc.Get("Ui.PrescriptionRequestDialog.Title");
-        Width = 640;
-        Height = 560;
-        MinimumSize = new Size(520, 420);
+        Width = 820;
+        Height = 600;
+        MinimumSize = new Size(640, 460);
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
         MaximizeBox = true;
@@ -90,7 +98,6 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         var hint = new Label
         {
             AutoSize = true,
-            MaximumSize = new Size(580, 0),
             ForeColor = UiColors.Hint,
             Margin = new Padding(3, 6, 3, 3),
             Text = _loc.Get(_canSend
@@ -133,17 +140,50 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         _sendButton.Enabled = _canSend;
         _closeButton = DialogLayout.Button(_loc.Get("Common.Close"), DialogResult.Cancel);
 
+        _markRequestedButton = DialogLayout.Button(_loc.Get("Ui.PrescriptionRequestDialog.MarkRequested"));
+        _markRequestedButton.Visible = markRequested is not null;
+        _markRequestedButton.Click += async (_, _) =>
+        {
+            if (markRequested is null) return;
+            _markRequestedButton.Enabled = false;
+            try
+            {
+                await markRequested();
+                _markRequestedButton.Text = _loc.Get("Ui.PrescriptionRequestDialog.MarkedRequested");
+            }
+            catch (Exception ex)
+            {
+                _markRequestedButton.Enabled = true;
+                UiMessageBox.Show(this, ex.Message, _loc.Get("Ui.PrescriptionsDialog.Error.Save"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        };
+
         _copyButton.Click += (_, _) => CopyDraft(showConfirmation: true);
         _mailClientButton.Click += (_, _) => OpenInMailClient();
         _sendButton.Click += async (_, _) => await SendAsync();
 
         // Send is the primary action, last on the right (§5.3).
-        var buttonPanel = DialogLayout.ButtonBar(this, _sendButton, _closeButton, _mailClientButton, _copyButton);
+        var buttonPanel = DialogLayout.ButtonBar(this, _sendButton, _closeButton, _mailClientButton, _copyButton,
+            _markRequestedButton);
         // No default button: Enter in the subject must not send the email.
         AcceptButton = null;
 
         Controls.Add(table);
+        if (regional is not null) Controls.Add(new RegionalServicePanel(regional, _loc));
         Controls.Add(buttonPanel);
+
+        // The hint wraps to the width of the field column, whatever the
+        // window width.
+        table.SizeChanged += (_, _) =>
+        {
+            var widths = table.GetColumnWidths();
+            if (widths.Length < 2) return;
+            hint.MaximumSize = new Size(Math.Max(200, widths[1] - hint.Margin.Horizontal), 0);
+        };
+        // Every button stays visible at any text size and display
+        // scaling: the window is at least as wide as the button bar.
+        DialogLayout.KeepButtonsVisible(this, buttonPanel);
 
         // Closing while a send is in flight would dispose the controls
         // the continuation writes to; the user waits for the outcome.

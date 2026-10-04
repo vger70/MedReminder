@@ -17,6 +17,10 @@ namespace MedReminder.Application.Catalogue;
 //
 // `expectedCountry` gates parser strategy dispatch: the AIFA parser
 // only accepts "IT", the EMA Article 57 parser only "EU", etc.
+//
+// Implementations take WriteGate (IDatabaseExclusiveAccess) for every
+// database access, so callers must not hold it: the gate is not
+// reentrant.
 public interface IReferenceCatalogueImporter
 {
     // Same as the overload below with minimumRowCount = 1.

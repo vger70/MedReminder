@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MedReminder.Application;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Infrastructure.Catalogue;
 using MedReminder.Infrastructure.Catalogue.Parsers;
@@ -24,7 +25,7 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
         var importer = new CsvReferenceCatalogueImporter(
             _fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser() },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
         await using var snapshot = CatalogueFixtures.BuildAifaSnapshotStream();
         await importer.ImportAsync(snapshot, Italy, "202609", CancellationToken.None);
     }
@@ -147,7 +148,7 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
         var importer = new CsvReferenceCatalogueImporter(
             _fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
         await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
         {
             await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
@@ -175,7 +176,7 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
         var importer = new CsvReferenceCatalogueImporter(
             _fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
         await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
         {
             await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
@@ -201,7 +202,7 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
         var importer = new CsvReferenceCatalogueImporter(
             _fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
         await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
         {
             await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
@@ -230,7 +231,7 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
                 new AempsCimaParser(),
                 new AnsmBdpmParser(),
             },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
         await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
         {
             await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
@@ -283,7 +284,7 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
                 new AempsCimaParser(),
                 new AnsmBdpmParser(),
             },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
         await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
         {
             await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);
@@ -335,7 +336,7 @@ public sealed class SqliteReferenceCatalogueQueryServiceTests : IAsyncLifetime
                 new AempsCimaParser(),
                 new AnsmBdpmParser(),
             },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
         await using (var eu = CatalogueFixtures.BuildEmaEparSnapshotStream())
         {
             await importer.ImportAsync(eu, EU, "202609", CancellationToken.None);

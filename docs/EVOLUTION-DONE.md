@@ -445,6 +445,35 @@ limitations).
 scope. In dark mode the date and time pickers keep a white field; the
 Windows MessageBox remains on the start-up and crash paths.
 
+### 12.5 Stock that follows the dose times; as-needed doses
+
+**Status.** Shipped in v2.14.0 (PR #177); days-left follow-up in
+PR #178.
+
+**Authoritative analysis.**
+`docs/analysis/ANALYSIS-INTRADAY-CONSUMPTION.md` (§12 status and
+deviations).
+
+**As implemented.**
+
+- As-needed slots are never consumed automatically and get no
+  reminder; a medicine whose slots are all as needed behaves as PRN;
+  under a PRN schedule the slots consume nothing.
+- "Extra dose as needed" in the intake dialog: the dose is deducted and
+  the day's scheduled consumption stays.
+- Therapy → Dose times…: editable and user-defined time-of-day presets,
+  and the times of medicines without slots. Device-local.
+- The main list shows the stock and the days left after today's doses
+  whose time has passed; the run-out date, the forecast-based
+  notifications and the recorded stock keep the start-of-day value.
+- Existing data corrected once, from today: past days and recorded
+  counts unchanged.
+
+**Not done.** Retroactive restitution of past as-needed consumption
+(one stock count recovers it), minimum-quantity alerts for as-needed
+medicines, presets synchronized between devices, dose reminders at
+preset times.
+
 ---
 
 ## Change log for this document
@@ -458,3 +487,5 @@ Windows MessageBox remains on the start-up and crash paths.
   multi-user G, remote catalogue feeds (v2.11.0), household with a
   master device and UI modernisation (v2.12.0). §10 notes no longer
   give the app version as current.
+- 2026-10-03 — §12.5: stock that follows the dose times and as-needed
+  doses (v2.14.0).

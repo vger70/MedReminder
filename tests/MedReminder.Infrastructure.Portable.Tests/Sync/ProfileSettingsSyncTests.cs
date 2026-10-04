@@ -69,6 +69,32 @@ public sealed class ProfileSettingsSyncTests : IDisposable
         values[ProfileSetting.DoctorAddress].Should().Be("doctor@example.org");
     }
 
+    // EVOLUTION-PROPOSALS-2 §3.8: the caregiver options and the day of
+    // the last summary travel like the recipients.
+    [Fact]
+    public async Task Caregiver_options_and_the_last_summary_reach_the_other_device()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+
+        await a.RunAsync(sp => sp.GetRequiredService<UpdateNotificationSettings>().ExecuteAsync(
+            "patient@example.org", "carer@example.org", string.Empty, CancellationToken.None,
+            caregiverEmails: "LowStock,Prescription", caregiverDigest: "Weekly"));
+        await a.RunAsync(async sp =>
+        {
+            await sp.GetRequiredService<IOperationLog>().AppendAsync(
+                [new ProfileSettingChanged(ProfileSetting.CaregiverDigestSentOn, "2026-09-10")], CancellationToken.None);
+            await sp.GetRequiredService<MedReminderDbContext>().SaveChangesAsync();
+        });
+        await a.SyncAsync();
+        await b.SyncAsync();
+
+        var values = b.ProfileSettings.Read();
+        values[ProfileSetting.CaregiverEmails].Should().Be("LowStock,Prescription");
+        values[ProfileSetting.CaregiverDigest].Should().Be("Weekly");
+        values[ProfileSetting.CaregiverDigestSentOn].Should().Be("2026-09-10");
+    }
+
     [Fact]
     public async Task Saving_unchanged_recipients_records_nothing()
     {
@@ -192,6 +218,51 @@ public sealed class ProfileSettingsSyncTests : IDisposable
         await b.SyncAsync();
 
         b.ProfileSettings.Read()[ProfileSetting.ToAddress].Should().Be("patient@example.org");
+    }
+
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES §3.2: the region travels like
+    // the recipients, without an operation schema bump.
+    [Fact]
+    public async Task The_region_reaches_the_other_device()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+
+        await a.RunAsync(sp => sp.GetRequiredService<UpdateProfileRegion>().ExecuteAsync("12", CancellationToken.None));
+        (await a.SyncAsync()).OperationsPublished.Should().Be(1);
+        (await b.SyncAsync()).OperationsApplied.Should().Be(1);
+
+        b.ProfileSettings.Read()[ProfileSetting.Region].Should().Be("12");
+
+        await b.RunAsync(sp => sp.GetRequiredService<UpdateProfileRegion>().ExecuteAsync("", CancellationToken.None));
+        await b.SyncAsync();
+        await a.SyncAsync();
+        a.ProfileSettings.Read()[ProfileSetting.Region].Should().BeEmpty();
+    }
+
+    // What an older app does with Region: a setting name it does not know
+    // is applied and kept as a register, never projected, and the sync
+    // goes on.
+    [Fact]
+    public async Task A_setting_unknown_to_the_device_is_kept_and_not_projected()
+    {
+        var a = await CreateGroupAsync();
+        var b = await JoinAsync(a, "B");
+        const string future = "SettingOfALaterVersion";
+
+        await a.RunAsync(async sp =>
+        {
+            await sp.GetRequiredService<IOperationLog>().AppendAsync(
+                [new ProfileSettingChanged(future, "value")], CancellationToken.None);
+            await sp.GetRequiredService<MedReminderDbContext>().SaveChangesAsync();
+        });
+        await a.SyncAsync();
+        (await b.SyncAsync()).OperationsApplied.Should().Be(1);
+
+        b.ProfileSettings.Read().Should().NotContainKey(future);
+        var kept = await b.RunAsync(sp => sp.GetRequiredService<SyncRegisters>().WinnerAsync(
+            ProfileSettingsProjection.Entity, ProfileSettingsProjection.Register(future), CancellationToken.None));
+        kept!.Value.Should().Be("value");
     }
 
     private async Task<SyncDevice> CreateGroupAsync(Action<SyncDevice>? beforeSync = null)

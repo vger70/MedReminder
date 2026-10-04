@@ -2,12 +2,11 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using FluentAssertions;
+using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Tests.Support;
-using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
-using MedReminder.Domain.Notifications;
 using Xunit;
 
 namespace MedReminder.Application.Tests.Catalogue;
@@ -279,32 +278,22 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         importer.Imports.Should().BeEmpty();
     }
 
+    // The importer takes WriteGate itself (CsvReferenceCatalogueImporter,
+    // covered in Infrastructure.Tests). The gate is not reentrant, so the
+    // refresher must call the importer without holding it, or the
+    // importer would wait for itself.
     [Fact]
-    public async Task The_import_holds_WriteGate_so_use_cases_wait_for_it()
+    public async Task The_importer_is_called_without_WriteGate_held()
     {
         var feed = new FakeFeed(Manifest("202610"), BuildArchive());
-        var importer = new FakeImporter(new CatalogueImportState("202609", 1000)) { BlockImport = true };
-        var refresh = Build(feed, importer).RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None);
-        await importer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var importer = new FakeImporter(new CatalogueImportState("202609", 1000)) { TakeGate = true };
 
-        var scope = new ApplicationTestScope();
-        Task action;
-        Task early;
-        try
-        {
-            action = scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
-                "Enalapril", "compresse", 1m, 1, new DateOnly(2026, 9, 1), 7, NotificationChannels.Windows), default);
-            early = await Task.WhenAny(action, Task.Delay(200));
-        }
-        finally
-        {
-            // The gate is process-wide: always release it.
-            importer.Release.TrySetResult();
-        }
+        var outcome = await Build(feed, importer)
+            .RunAsync(CatalogueFeedDescriptor.Italy, CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(30));
 
-        early.Should().NotBeSameAs(action, "a use case must not commit while the catalogue import runs");
-        await action.WaitAsync(TimeSpan.FromSeconds(10));
-        (await refresh).Should().Be(RemoteCatalogueRefreshOutcome.Imported);
+        outcome.Should().Be(RemoteCatalogueRefreshOutcome.Imported);
+        importer.GateTaken.Should().Be(2, "the version read and the import each took the gate");
     }
 
     [Fact]
@@ -513,11 +502,24 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
 
         public Exception? ImportFailure { get; init; }
 
-        public bool BlockImport { get; init; }
+        // Takes the gate in every call, like the real importer. Times out
+        // instead of hanging when the caller already holds it.
+        public bool TakeGate { get; init; }
 
-        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int GateTaken { get; private set; }
 
-        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private async Task TakeGateAsync(CancellationToken cancellationToken)
+        {
+            if (!TakeGate)
+            {
+                return;
+            }
+
+            await new DatabaseExclusiveAccess()
+                .RunExclusiveAsync(_ => Task.CompletedTask, cancellationToken)
+                .WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            GateTaken++;
+        }
 
         public Task<ImportReport> ImportAsync(
             Stream snapshot, CountryCode expectedCountry, string snapshotVersion, CancellationToken cancellationToken) =>
@@ -532,11 +534,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
                 throw ImportFailure;
             }
 
-            if (BlockImport)
-            {
-                Entered.TrySetResult();
-                await Release.Task;
-            }
+            await TakeGateAsync(cancellationToken);
 
             using var copy = new MemoryStream();
             await snapshot.CopyToAsync(copy, cancellationToken);
@@ -546,10 +544,11 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
 
         public List<string> StateRequests { get; } = new();
 
-        public Task<CatalogueImportState> GetImportStateAsync(CountryCode country, CancellationToken cancellationToken)
+        public async Task<CatalogueImportState> GetImportStateAsync(CountryCode country, CancellationToken cancellationToken)
         {
             StateRequests.Add(country.Value);
-            return Task.FromResult(state);
+            await TakeGateAsync(cancellationToken);
+            return state;
         }
     }
 }

@@ -9,6 +9,10 @@ public interface IStockCountRepository
     Task<IReadOnlyList<StockCount>> ListForMedicineAsync(
         Guid medicineId, CancellationToken cancellationToken);
 
+    // Medicines with a count on `day` that materialized the day's
+    // consumption. One query for the whole list.
+    Task<IReadOnlyList<Guid>> ListMedicinesWithMaterializedCountAsync(DateOnly day, CancellationToken cancellationToken);
+
     Task AddAsync(StockCount count, CancellationToken cancellationToken);
 
     // Retraction of a mistaken count (RetractFact, B.1 Phase 2d).

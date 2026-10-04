@@ -16,6 +16,11 @@ namespace MedReminder.Application.UseCases;
 // NewDosePerAdministration and NewAdministrationsPerDay (existing
 // behavior). When set it is persisted verbatim; the legacy fields
 // become display-only summary values on the Medicine entity.
+//
+// The slots stay as they are. Under a schedule other than FixedDaily they
+// only place the schedule's quantity in the day (DailyConsumption), and
+// a PRN schedule has none: its slots are never consumed, reminded or
+// counted in the estimate, and the as-needed ones keep their meaning.
 public sealed record ChangeMedicationScheduleCommand(
     Guid MedicineId,
     decimal NewDosePerAdministration,

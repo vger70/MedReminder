@@ -36,6 +36,27 @@ public sealed class ExportPayload
     // Null when the profile has no cutoff (created after the patch).
     public ExportedLedgerCutoff? LedgerCutoff { get; set; }
 
+    // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2). Additive field
+    // of schema version 2: archives without it import with none.
+    public IList<ExportedPrescription> Prescriptions { get; set; } = new List<ExportedPrescription>();
+
+    // Administrative deadlines (EVOLUTION-PROPOSALS-2 §3.6). Additive
+    // field of schema version 2: archives without it import with none.
+    public IList<ExportedDeadline> Deadlines { get; set; } = new List<ExportedDeadline>();
+
+    // Packages and their expiry (ANALYSIS-PACKAGE-EXPIRY.md §7.2).
+    // Additive field of schema version 2: archives without it import with
+    // none.
+    public IList<ExportedStockPackage> StockPackages { get; set; } = new List<ExportedStockPackage>();
+
+    // Time-of-day presets and per-day default times
+    // (ANALYSIS-INTRADAY-CONSUMPTION.md §6). Additive fields of schema
+    // version 2: archives without them import with the built-ins.
+    // Null in an archive written before the presets: its slots are then
+    // linked to the presets on first use (SlotPresetBackfill).
+    public IList<ExportedDoseTimePreset>? DoseTimePresets { get; set; }
+    public IList<ExportedDoseTimeDefault> DoseTimeDefaults { get; set; } = new List<ExportedDoseTimeDefault>();
+
     // Per-profile notification settings (§3.2). Travels implicitly
     // with the profile.
     public ExportedNotificationSettings? NotificationSettings { get; set; }
@@ -130,6 +151,14 @@ public sealed class ExportedAdministrationSlot
     public TimeOnly? Time { get; set; }
     public string? TimingLabel { get; set; }
     public int Order { get; set; }
+
+    // Additive field (docs/EXPORT-FORMAT.md §5): null in an archive
+    // written before it, whose slots import as scheduled and are then
+    // corrected once (AsNeededSlotBackfill).
+    public bool? IsAsNeeded { get; set; }
+
+    // Additive field: archives without it import with null.
+    public Guid? PresetId { get; set; }
 }
 
 public sealed class ExportedAdministrationSlotSet
@@ -179,6 +208,10 @@ public sealed class ExportedIntake
     public string Status { get; set; } = string.Empty;
 
     public string? Notes { get; set; }
+
+    // Additive field (docs/EXPORT-FORMAT.md §5): archives without it
+    // import with false.
+    public bool IsExtra { get; set; }
 }
 
 public sealed class ExportedNotificationEvent
@@ -194,6 +227,10 @@ public sealed class ExportedNotificationEvent
     public int DaysRemainingAtSend { get; set; }
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
+
+    // Warning stage (1 or 2). Additive field: archives without it
+    // import as the first stage.
+    public int Stage { get; set; } = 1;
 }
 
 public sealed class ExportedDoseReminderEvent
@@ -216,6 +253,21 @@ public sealed class ExportedNotificationSettings
     // Added with the prescription request feature. Optional: archives
     // produced before it lack the field and import with "" (§5).
     public string DoctorAddress { get; set; } = string.Empty;
+
+    // Caregiver options (EVOLUTION-PROPOSALS-2 §3.8). Additive: archives
+    // without them import with "" (every kind copied, no digest). The day
+    // of the last digest is not exported.
+    public string CaregiverEmails { get; set; } = string.Empty;
+    public string CaregiverDigest { get; set; } = string.Empty;
+
+    // Lead days of the package expiry notices (ANALYSIS-PACKAGE-EXPIRY.md
+    // §4.6). Additive: archives without them import with "" (defaults).
+    public string PackageExpiryLeadDays { get; set; } = string.Empty;
+    public string PackageInUseLeadDays { get; set; } = string.Empty;
+
+    // Italian region of the profile (PROMPT-REGIONAL-PRESCRIPTION-SERVICES
+    // §3.2). Additive: archives without it import with "" (no region).
+    public string Region { get; set; } = string.Empty;
 }
 
 // Opt-in non-DB files (§3.4). A section is null unless the user opted
@@ -274,4 +326,84 @@ public sealed class ExportedProtectedSecret
     public string NonceBase64 { get; set; } = string.Empty;
     public string TagBase64 { get; set; } = string.Empty;
     public string CiphertextBase64 { get; set; } = string.Empty;
+}
+
+public sealed class ExportedPrescription
+{
+    public Guid Id { get; set; }
+    public Guid MedicineId { get; set; }
+    public DateOnly? RequestedOn { get; set; }
+    public DateOnly? IssuedOn { get; set; }
+    public string? Code { get; set; }
+    public int? Packages { get; set; }
+    public DateOnly? ValidUntil { get; set; }
+    public DateOnly? CollectedOn { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    // Repeatable prescriptions, additive (docs/EXPORT-FORMAT.md §3.14):
+    // absent in older archives, which import as single prescriptions.
+    public int? Dispensations { get; set; }
+    public IList<ExportedPrescriptionDispensation>? DispensationRecords { get; set; }
+}
+
+public sealed class ExportedPrescriptionDispensation
+{
+    public Guid Id { get; set; }
+    public DateOnly CollectedOn { get; set; }
+    public int? Packages { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public sealed class ExportedDoseTimePreset
+{
+    public Guid Id { get; set; }
+    public string? BuiltInKey { get; set; }
+    public string? Label { get; set; }
+    public TimeOnly? Time { get; set; }
+    public bool IsAsNeeded { get; set; }
+    public int Order { get; set; }
+    public bool IsHidden { get; set; }
+}
+
+public sealed class ExportedDoseTimeDefault
+{
+    public int AdministrationsPerDay { get; set; }
+    // "HH:mm" values separated by ';'.
+    public string Times { get; set; } = string.Empty;
+}
+
+public sealed class ExportedStockPackage
+{
+    public Guid Id { get; set; }
+    public Guid MedicineId { get; set; }
+    public Guid? MovementId { get; set; }
+    public decimal Quantity { get; set; }
+    public DateOnly? ExpiresOn { get; set; }
+    public int? UseWithinDays { get; set; }
+    public DateOnly? OpenedOn { get; set; }
+    public string? Batch { get; set; }
+    public DateOnly? ClosedOn { get; set; }
+    // PackageClosure member name; null for an open package.
+    public string? Closure { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public sealed class ExportedDeadline
+{
+    public Guid Id { get; set; }
+    public Guid? MedicineId { get; set; }
+    // DeadlineKind member name.
+    public string Kind { get; set; } = string.Empty;
+    public string? Label { get; set; }
+    public DateOnly DueOn { get; set; }
+    public int LeadDays { get; set; }
+    public int? RepeatMonths { get; set; }
+    // NotificationChannels member name.
+    public string Channels { get; set; } = string.Empty;
+    public DateOnly? DoneOn { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }

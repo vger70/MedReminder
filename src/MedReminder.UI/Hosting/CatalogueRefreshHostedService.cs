@@ -2,6 +2,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.UpdateChecking;
 using MedReminder.Domain.Catalogue;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Infrastructure.Catalogue;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,8 +33,9 @@ namespace MedReminder.UI.Hosting;
 // ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §5): the step waits for
 // MainForm's startup update check (at most RemoteFeedSignalTimeout),
 // then runs RemoteCatalogueRefresher once per feed when both
-// Catalogue:RemoteFeed:Enabled and the user's "check for updates
-// automatically" setting (UserSettings.CheckForUpdatesOnStartup) are on.
+// Catalogue:RemoteFeed:Enabled and the user's "check for app and
+// catalogue updates" setting (UserSettings.CheckForUpdatesOnStartup)
+// are on.
 //
 // The remote step then repeats during the session: a tick every
 // TickInterval runs it again once RemoteCheckInterval has passed since
@@ -54,6 +56,12 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
     private static readonly TimeSpan RemoteFeedSignalTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan TickInterval = TimeSpan.FromHours(1);
     internal static readonly TimeSpan RemoteCheckInterval = TimeSpan.FromHours(24);
+
+    // The ticks come from a monotonic timer, the times compared from the
+    // wall clock: a tick can read a few ms short of 24 h after the one
+    // that ran the step. Half a tick of slack keeps the check on the
+    // 24th tick instead of drifting to the 25th.
+    private static readonly TimeSpan DueSlack = TickInterval / 2;
 
     // Ordered so IT runs first (default reference country), then the
     // supranational EU catalogue, then the M4 national additions
@@ -134,11 +142,11 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
     }
 
     // Due when the remote step never ran in this session (a gate was
-    // off), when RemoteCheckInterval has passed, or when the clock went
-    // back before the last run (a manual clock change would otherwise
-    // hold the check back by the same amount).
+    // off), when RemoteCheckInterval has passed (less DueSlack), or when
+    // the clock went back before the last run (a manual clock change
+    // would otherwise hold the check back by the same amount).
     internal static bool IsRemoteCheckDue(DateTimeOffset? lastRun, DateTimeOffset now) =>
-        lastRun is not { } last || now < last || now - last >= RemoteCheckInterval;
+        lastRun is not { } last || now < last || now - last >= RemoteCheckInterval - DueSlack;
 
     // Returns false when the catalogue feature is off. The scope, and
     // with it the SQLite connection the importer opened, is disposed
@@ -176,6 +184,9 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
     {
         var skipLevel = atStartup ? LogLevel.Information : LogLevel.Debug;
         IReadOnlyList<CatalogueFeedDescriptor> feeds;
+        bool shortages;
+        bool equivalents;
+        bool regionalServices;
         try
         {
             // Gates first, so a disabled step neither waits for the
@@ -190,11 +201,14 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             var userSettings = _services.GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue;
             if (!userSettings.CheckForUpdatesOnStartup)
             {
-                _log.Log(skipLevel, "Remote catalogue feeds skipped: checking for updates automatically is off.");
+                _log.Log(skipLevel, "Remote catalogue feeds skipped: checking for app and catalogue updates is off.");
                 return false;
             }
 
             feeds = CatalogueFeedSelection.Select(userSettings.ReferenceCountry, feedOptions);
+            shortages = CatalogueFeedSelection.IncludesShortages(userSettings.ReferenceCountry, feedOptions);
+            equivalents = CatalogueFeedSelection.IncludesEquivalents(userSettings.ReferenceCountry, feedOptions);
+            regionalServices = CatalogueFeedSelection.IncludesRegionalServices(userSettings.ReferenceCountry, feedOptions);
             if (feeds.Count == 0)
             {
                 _log.Log(skipLevel, "No remote catalogue feed enabled for the reference country; skipping.");
@@ -222,7 +236,45 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
         }
 
         await RefreshFeedsAsync(feeds, RefreshFeedAsync, _log, cancellationToken);
+        if (shortages) await RefreshShortagesAsync(cancellationToken);
+        if (equivalents) await RefreshEquivalentsAsync(cancellationToken);
+        if (regionalServices) await RefreshRegionalServicesAsync(cancellationToken);
         return true;
+    }
+
+    // The Italian dated lists after the catalogues, in this order: the
+    // shortage list (EVOLUTION-PROPOSALS-2 §3.3), the equivalents list
+    // (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2.4) and the regional
+    // services list (PROMPT-REGIONAL-PRESCRIPTION-SERVICES §3.1).
+    private Task RefreshShortagesAsync(CancellationToken cancellationToken)
+        => RefreshDatedListAsync<ShortageRefresher, ShortageList>("Shortage", cancellationToken);
+
+    private Task RefreshEquivalentsAsync(CancellationToken cancellationToken)
+        => RefreshDatedListAsync<EquivalenceRefresher, EquivalenceList>("Equivalents", cancellationToken);
+
+    private Task RefreshRegionalServicesAsync(CancellationToken cancellationToken)
+        => RefreshDatedListAsync<RegionalServicesRefresher, RegionalServicesList>("Regional services",
+            cancellationToken);
+
+    // A file outside the profile database: no scope holds the database
+    // longer than the refresher needs. A failure leaves the list as it is.
+    private async Task RefreshDatedListAsync<TRefresher, TList>(string name, CancellationToken cancellationToken)
+        where TRefresher : DatedListRefresher<TList>
+        where TList : class
+    {
+        try
+        {
+            await using var scope = _services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<TRefresher>().RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "{List} list refresh failed; list unchanged.", name);
+        }
     }
 
     // Own scope per feed, opened only now and disposed as soon as that

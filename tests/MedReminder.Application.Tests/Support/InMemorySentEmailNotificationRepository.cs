@@ -10,7 +10,8 @@ internal sealed class InMemorySentEmailNotificationRepository : ISentEmailNotifi
     public IReadOnlyList<SentEmailNotification> All => _items;
 
     public Task<SentEmailNotification?> GetLatestForMedicineAsync(Guid medicineId, CancellationToken cancellationToken)
-        => Task.FromResult(_items.Where(e => e.MedicineId == medicineId).MaxBy(e => e.SentAt));
+        => Task.FromResult(_items.Where(e => e.MedicineId == medicineId)
+            .OrderByDescending(e => e.SentAt).ThenByDescending(e => e.Stage).FirstOrDefault());
 
     public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken)
         => Task.FromResult(_items.Any(e => e.Id == id));

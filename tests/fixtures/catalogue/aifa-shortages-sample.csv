@@ -1,0 +1,11 @@
+NB: I medicinali carenti, per i quali il Titolare AIC non abbia provveduto a comunicare la data effettiva di fine carenza, continueranno ad essere presenti nella Lista;;;;;;;;;;;;
+Elenco dei farmaci carenti aggiornato al 29/09/2026;;;;;;;;;;;;
+Nome medicinale;Codice AIC;Principio attivo;Forma farmaceutica e dosaggio;Titolare AIC;Data inizio;Fine presunta;Equivalente;Motivazioni;Suggerimenti/Indicazioni AIFA;Nota AIFA;Classe di rimborsabilità;Codice ATC
+ABACAVIR E LAMIVUDINA SUN;045348036;ABACAVIR + LAMIVUDINE;"""600 MG/300 MG COMPRESSE"" 30 COMPRESSE";SUN PHARMA FRANCE;28/07/2025;;Sì;Problemi produttivi;Si rilascia autorizzazione all’importazione;;A CARICO DEL SSN;J05AR02
+ACIDO VALPROICO RATIOPHARM;037839115;ACIDO VALPROICO;"500 MG" 30 COMPRESSE;RATIOPHARM GMBH;10/08/2026;31/10/2026;Sì;Elevata richiesta/problemi produttivi;Per trattamento alternativo;"carenza relativa sia al canale retail che al canale ospedaliero:
+- data inizio carenza canale retail: 21/08/2026";A TOTALE CARICO DEL SSN.;N03AG01
+ALBIOMIN;039073022;ALBUMINA UMANA;" 20% SOLUZIONE" 1 FLACONCINO;BIOTEST PHARMA GMBH;15/03/2022;31/12/2026;No;"Ridotta disponibilità per forniture discontinue: distribuzione contingentata";Si rilascia;;A TOTALE CARICO DEL SSN.;B05AA01
+CARREFLOR;043857022;L-CARNITINA;"2 G/10 ML" 10 CONTENITORI;SO.SE.PHARM S.R.L.;01/04/2026;;No;Problemi produttivi: forniture discontinue;Per trattamento alternativo;;A TOTALE CARICO DEL SSN.;A16AA01
+CARREFLOR;043857022;L-CARNITINA;"2 G/10 ML" 10 CONTENITORI;SO.SE.PHARM S.R.L.;01/04/2026;;No;Problemi produttivi: forniture discontinue;Per trattamento alternativo;;A TOTALE CARICO DEL SSN.;A16AA01
+FUTURO;012345678;PRINCIPIO;FORMA;TITOLARE;01/05/2028;;Sì;Cessata commercializzazione definitiva;Per trattamento alternativo;;C NON NEGOZIATA;A01AA01
+ALTRO;087654321;PRINCIPIO;FORMA;TITOLARE;01/01/2026;;No;Motivo nuovo;Per trattamento alternativo;;C NON NEGOZIATA;A01AA01

@@ -139,11 +139,11 @@ public class DailyConsumptionTests
     }
 
     [Fact]
-    public void RateOn_slots_still_win_over_non_fixed_schedule()
+    public void RateOn_a_non_fixed_schedule_sets_the_quantity_even_with_slots()
     {
-        // A1 §3.1: slots take precedence when present, whatever the
-        // schedule kind. Documented for A1; slot × schedule mixing is
-        // out of scope for the projection engine.
+        // ANALYSIS-SLOTS-ADVANCED-SCHEDULES: under a non-FixedDaily
+        // schedule the slots only place the day's quantity; a cyclic
+        // pause day consumes nothing.
         var schedule = new[]
         {
             DomainFactory.ScheduleFor(new DateOnly(2026, 3, 1),
@@ -158,7 +158,8 @@ public class DailyConsumptionTests
             },
         };
 
-        DailyConsumption.RateOn(new DateOnly(2026, 3, 4), schedule, slots).Should().Be(2m);
+        DailyConsumption.RateOn(new DateOnly(2026, 3, 1), schedule, slots).Should().Be(5m);
+        DailyConsumption.RateOn(new DateOnly(2026, 3, 4), schedule, slots).Should().Be(0m);
     }
 
     [Fact]

@@ -68,4 +68,18 @@ internal sealed class MedicationAdministrationSlotRepository
         await _db.MedicationAdministrationSlotSets.AddAsync(set, cancellationToken);
         await _db.MedicationAdministrationSlots.AddRangeAsync(slots, cancellationToken);
     }
+
+    public async Task SetPresetIdsAsync(
+        IReadOnlyDictionary<Guid, Guid> presetBySlot, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(presetBySlot);
+        var ids = presetBySlot.Keys.ToList();
+        var slots = await _db.MedicationAdministrationSlots
+            .Where(s => ids.Contains(s.Id))
+            .ToListAsync(cancellationToken);
+        foreach (var slot in slots)
+        {
+            slot.PresetId = presetBySlot[slot.Id];
+        }
+    }
 }

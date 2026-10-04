@@ -1,5 +1,10 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Calendar;
+using MedReminder.Application.Catalogue;
+using MedReminder.Application.Deadlines;
 using MedReminder.Application.Notifications;
+using MedReminder.Application.Packages;
+using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Medicines;
@@ -11,7 +16,9 @@ namespace MedReminder.Application.Monitoring;
 // Orchestrator of the periodic check (spec §18):
 //  1. run the daily-consumption catch-up;
 //  2. for each active medicine, compute stock, rate, forecast;
-//  3. evaluate NotificationCycle.ShouldNotify;
+//  3. evaluate NotificationCycle.StageToNotify (first warning at the
+//     threshold, second at half of it while the stock is not
+//     replenished);
 //  4. dispatch to the configured channels (Windows / Email) in
 //     isolation: an email failure does NOT prevent the toast and vice
 //     versa;
@@ -46,6 +53,13 @@ public sealed class MedicationMonitor
     private readonly ISentEmailNotificationRepository? _sentEmails;
     private readonly IOperationLog? _operationLog;
     private readonly IMasterRole? _master;
+    private readonly PrescriptionReminders? _prescriptionReminders;
+    private readonly ShortageNotices? _shortageNotices;
+    private readonly DeadlineReminders? _deadlineReminders;
+    private readonly CaregiverDigest? _caregiverDigest;
+    private readonly PackageExpiryNotices? _packageExpiryNotices;
+    private readonly IPrescriptionRepository? _prescriptions;
+    private readonly IPrescriptionDispensationRepository? _dispensations;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -62,8 +76,22 @@ public sealed class MedicationMonitor
         ILocalizationService? localization = null,
         ISentEmailNotificationRepository? sentEmails = null,
         IOperationLog? operationLog = null,
-        IMasterRole? master = null)
+        IMasterRole? master = null,
+        PrescriptionReminders? prescriptionReminders = null,
+        ShortageNotices? shortageNotices = null,
+        DeadlineReminders? deadlineReminders = null,
+        CaregiverDigest? caregiverDigest = null,
+        PackageExpiryNotices? packageExpiryNotices = null,
+        IPrescriptionRepository? prescriptions = null,
+        IPrescriptionDispensationRepository? dispensations = null)
     {
+        _prescriptions = prescriptions;
+        _dispensations = dispensations;
+        _caregiverDigest = caregiverDigest;
+        _packageExpiryNotices = packageExpiryNotices;
+        _deadlineReminders = deadlineReminders;
+        _shortageNotices = shortageNotices;
+        _prescriptionReminders = prescriptionReminders;
         _master = master;
         _sentEmails = sentEmails;
         _operationLog = operationLog;
@@ -111,7 +139,8 @@ public sealed class MedicationMonitor
             var forecast = RunOutForecast.Compute(today, currentStock, rate, isSuspended);
             var latest = await _notifications.GetLatestForMedicineAsync(medicine.Id, cancellationToken);
 
-            if (!NotificationCycle.ShouldNotify(medicine, forecast.DaysRemaining, forecast.EstimatedRunOutDate, latest))
+            if (NotificationCycle.StageToNotify(medicine, forecast.DaysRemaining, forecast.EstimatedRunOutDate, latest)
+                is not { } stage)
             {
                 continue;
             }
@@ -122,7 +151,7 @@ public sealed class MedicationMonitor
             var emailSentElsewhere = false;
             if ((channels & NotificationChannels.Email) != 0 && _sentEmails is not null
                 && NotificationCycle.EmailAlreadySent(medicine,
-                    await _sentEmails.GetLatestForMedicineAsync(medicine.Id, cancellationToken)))
+                    await _sentEmails.GetLatestForMedicineAsync(medicine.Id, cancellationToken), stage))
             {
                 channels &= ~NotificationChannels.Email;
                 emailSentElsewhere = true;
@@ -133,9 +162,10 @@ public sealed class MedicationMonitor
                 channels &= ~NotificationChannels.Email;
                 emailSentElsewhere = true;
             }
-            var dispatch = await DispatchAsync(medicine, channels, currentStock, daysRemaining, eta, slots,
-                cancellationToken);
-            if (dispatch.EmailSucceeded) await RecordEmailSentAsync(medicine, cancellationToken);
+            var repeatable = await RepeatableNoticeAsync(medicine.Id, today, cancellationToken);
+            var dispatch = await DispatchAsync(medicine, stage, channels, currentStock, daysRemaining, eta, slots,
+                repeatable, cancellationToken);
+            if (dispatch.EmailSucceeded) await RecordEmailSentAsync(medicine, stage, cancellationToken);
 
             var evt = new NotificationEvent
             {
@@ -150,17 +180,45 @@ public sealed class MedicationMonitor
                 // this device.
                 Success = dispatch.AnyChannelSucceeded || emailSentElsewhere,
                 ErrorMessage = dispatch.CombinedError,
+                Stage = stage,
             };
             await _notifications.AddAsync(evt, cancellationToken);
 
             if (dispatch.AnyChannelSucceeded) sent += 1;
         }
 
+        // Prescriptions to collect before they lapse (EVOLUTION-PROPOSALS-2
+        // §3.2); not counted in NotificationsSent, which is about stock.
+        if (_prescriptionReminders is not null)
+        {
+            await _prescriptionReminders.RunAsync(today, sendsEmail, cancellationToken);
+        }
+        // Medicines entering the shortage list (EVOLUTION-PROPOSALS-2 §3.3).
+        if (_shortageNotices is not null)
+        {
+            await _shortageNotices.RunAsync(today, sendsEmail, cancellationToken);
+        }
+        // Administrative deadlines (EVOLUTION-PROPOSALS-2 §3.6).
+        if (_deadlineReminders is not null)
+        {
+            await _deadlineReminders.RunAsync(today, sendsEmail, cancellationToken);
+        }
+        // Packages expiring or expired (ANALYSIS-PACKAGE-EXPIRY.md §4).
+        if (_packageExpiryNotices is not null)
+        {
+            await _packageExpiryNotices.RunAsync(today, sendsEmail, cancellationToken);
+        }
+        // Weekly summary for the caregiver (EVOLUTION-PROPOSALS-2 §3.8).
+        if (_caregiverDigest is not null)
+        {
+            await _caregiverDigest.RunAsync(today, sendsEmail, cancellationToken);
+        }
+
         await _uow.SaveChangesAsync(cancellationToken);
         return new RunResult(medicines.Count, sent);
     }
 
-    private async Task RecordEmailSentAsync(Medicine medicine, CancellationToken cancellationToken)
+    private async Task RecordEmailSentAsync(Medicine medicine, int stage, CancellationToken cancellationToken)
     {
         if (_sentEmails is null) return;
         var record = new SentEmailNotification
@@ -169,6 +227,7 @@ public sealed class MedicationMonitor
             StockEpoch = medicine.StockEpoch,
             EpochFactId = medicine.StockEpochFactId,
             SentAt = _clock.GetUtcNow(),
+            Stage = stage,
         };
         await _sentEmails.AddAsync(record, cancellationToken);
         // Recorded only while sync is enabled (OperationLog).
@@ -180,11 +239,13 @@ public sealed class MedicationMonitor
 
     private async Task<DispatchOutcome> DispatchAsync(
         Medicine medicine,
+        int stage,
         NotificationChannels channels,
         decimal currentStock,
         int daysRemaining,
         DateOnly? eta,
         IReadOnlyList<MedicationAdministrationSlot> slots,
+        RepeatablePrescriptionNotice? repeatable,
         CancellationToken cancellationToken)
     {
         var windowsSucceeded = false;
@@ -196,10 +257,11 @@ public sealed class MedicationMonitor
         {
             // Toast: USER language (chosen in the app), like the email.
             var (title, body) = NotificationTexts.BuildToast(
-                medicine, daysRemaining, localization: _localization);
+                medicine, daysRemaining, localization: _localization, stage: stage, repeatable: repeatable);
             try
             {
-                await _windows.ShowAsync(title, body, cancellationToken);
+                await _windows.ShowAsync(title, body, NotificationTarget.LowStock(medicine.Id, repeatable is not null),
+                    cancellationToken);
                 windowsSucceeded = true;
             }
             catch (Exception ex)
@@ -217,7 +279,16 @@ public sealed class MedicationMonitor
             var message = NotificationTexts.BuildEmail(
                 medicine, currentStock, daysRemaining, eta,
                 administrationSlots: slots,
-                localization: _localization);
+                localization: _localization,
+                stage: stage,
+                repeatable: repeatable);
+            // The run-out date as a calendar event (EVOLUTION-PROPOSALS-2
+            // §3.7), with a generic title: calendars live on third-party
+            // clouds.
+            if (eta is { } runOut)
+            {
+                message = message with { CalendarEvent = CalendarEntries.RunOut(medicine.Id, runOut, null, _localization) };
+            }
             try
             {
                 await _email.SendAsync(message, cancellationToken);
@@ -244,6 +315,27 @@ public sealed class MedicationMonitor
             AnyChannelSucceeded: windowsSucceeded || emailSucceeded,
             EmailSucceeded: emailSucceeded,
             CombinedError: combinedError);
+    }
+
+    // The repeatable prescription of the medicine to collect, with
+    // dispensations left: the one that lapses first (no end date last).
+    private async Task<RepeatablePrescriptionNotice?> RepeatableNoticeAsync(
+        Guid medicineId, DateOnly today, CancellationToken cancellationToken)
+    {
+        if (_prescriptions is null || _dispensations is null) return null;
+        var repeatable = (await _prescriptions.ListForMedicineAsync(medicineId, cancellationToken))
+            .Where(p => p.IsRepeatable).ToList();
+        if (repeatable.Count == 0) return null;
+        var collected = await _dispensations.CountByPrescriptionAsync(medicineId, cancellationToken);
+        var open = repeatable
+            .Select(p => (p, count: collected.GetValueOrDefault(p.Id)))
+            .Where(x => x.p.StatusOn(today, x.count) == Domain.Prescriptions.PrescriptionStatus.ToCollect)
+            .OrderBy(x => x.p.ValidUntil ?? DateOnly.MaxValue)
+            .FirstOrDefault();
+        return open.p is null
+            ? null
+            : new RepeatablePrescriptionNotice(
+                Domain.Prescriptions.PrescriptionRules.DispensationsLeft(open.p, open.count), open.p.ValidUntil);
     }
 
     private DateOnly LocalToday()

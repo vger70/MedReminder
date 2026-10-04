@@ -1,9 +1,12 @@
+using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Ledger;
 using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 
@@ -67,6 +70,10 @@ public sealed class ApplyRemoteOperations
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
     private readonly IProfileSettingsStore? _profileSettings;
+    private readonly IPrescriptionRepository? _prescriptions;
+    private readonly IDeadlineRepository? _deadlines;
+    private readonly IStockPackageRepository? _packages;
+    private readonly IPrescriptionDispensationRepository? _dispensations;
     private readonly ISentEmailNotificationRepository? _sentEmails;
 
     // Facts added or updated in this batch, by id: the context tracks
@@ -97,8 +104,16 @@ public sealed class ApplyRemoteOperations
         IUnitOfWork uow,
         TimeProvider clock,
         IProfileSettingsStore? profileSettings = null,
-        ISentEmailNotificationRepository? sentEmails = null)
+        ISentEmailNotificationRepository? sentEmails = null,
+        IPrescriptionRepository? prescriptions = null,
+        IDeadlineRepository? deadlines = null,
+        IStockPackageRepository? packages = null,
+        IPrescriptionDispensationRepository? dispensations = null)
     {
+        _dispensations = dispensations;
+        _prescriptions = prescriptions;
+        _deadlines = deadlines;
+        _packages = packages;
         _profileSettings = profileSettings;
         _sentEmails = sentEmails;
         _settings = settings;
@@ -253,8 +268,11 @@ public sealed class ApplyRemoteOperations
                 // The log row is the state (HouseholdLinks).
             }
             else if (body is MedicineDeleted) touched.Remove(body.MedicineId);
-            // A sent email changes no fact of the ledger.
-            else if (body is not EmailNotificationSent) touched.Add(body.MedicineId);
+            // A sent email, a prescription, a dispensation, a deadline or a
+            // package changes no fact of the ledger.
+            else if (body is not (EmailNotificationSent or PrescriptionChanged or DispensationChanged
+                     or DeadlineChanged or PackageChanged))
+                touched.Add(body.MedicineId);
             applied++;
         }
 
@@ -285,6 +303,12 @@ public sealed class ApplyRemoteOperations
                 var medicine = await GetMedicineAsync(changed.MedicineId, ct);
                 var winner = await _registers.WinnerAsync(changed.MedicineId, changed.Field, ct);
                 MedicineFieldCodec.Set(medicine, changed.Field, winner!.Value);
+                return;
+            case MedicineStartChanged start:
+                await RecordRegistersAsync(body, timestamp, ct);
+                (await GetMedicineAsync(start.MedicineId, ct)).StartDate = DateOnly.ParseExact(
+                    (await _registers.WinnerAsync(start.MedicineId, SyncRegisters.StartDate, ct))!.Value!,
+                    "yyyy-MM-dd", CultureInfo.InvariantCulture);
                 return;
             case MedicineActivityChanged activity:
                 if (await IsNewFactAsync(activity.MedicineId, activity.ChangeId, ct))
@@ -339,6 +363,18 @@ public sealed class ApplyRemoteOperations
                 return;
             case HouseholdLinked:
                 return;
+            case PrescriptionChanged prescription:
+                await ApplyPrescriptionAsync(prescription, timestamp, ct);
+                return;
+            case DeadlineChanged deadline:
+                await ApplyDeadlineAsync(deadline, timestamp, ct);
+                return;
+            case PackageChanged package:
+                await ApplyPackageAsync(package, timestamp, ct);
+                return;
+            case DispensationChanged dispensation:
+                await ApplyDispensationAsync(dispensation, timestamp, ct);
+                return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");
         }
@@ -360,7 +396,190 @@ public sealed class ApplyRemoteOperations
             StockEpoch = email.StockEpoch,
             EpochFactId = email.EpochFactId,
             SentAt = email.SentAt,
+            Stage = email.Stage,
         }, ct);
+    }
+
+    // A prescription is one register: the winning version holds its whole
+    // state, and this device's row is made to match it (deleted when the
+    // winner is a deletion).
+    private async Task ApplyPrescriptionAsync(PrescriptionChanged change, HybridTimestamp timestamp, CancellationToken ct)
+    {
+        await GetMedicineAsync(change.MedicineId, ct);
+        await RecordRegistersAsync(change, timestamp, ct);
+        if (_prescriptions is null) return;
+        var winner = await _registers.WinnerAsync(change.PrescriptionId, SyncRegisters.PrescriptionState, ct);
+        var state = winner?.Value is { } value ? SyncRegisters.ParsePrescription(value) : change;
+        var row = await _prescriptions.GetAsync(change.PrescriptionId, ct);
+        if (state.Deleted)
+        {
+            if (row is not null) await _prescriptions.RemoveAsync(row, ct);
+            return;
+        }
+        if (row is null)
+        {
+            row = new Prescription { Id = state.PrescriptionId, MedicineId = state.MedicineId, RecordedAt = state.RecordedAt };
+            CopyState(state, row);
+            await _prescriptions.AddAsync(row, ct);
+        }
+        else
+        {
+            CopyState(state, row);
+            await _prescriptions.UpdateAsync(row, ct);
+        }
+    }
+
+    private static void CopyState(PrescriptionChanged state, Prescription row)
+    {
+        row.RequestedOn = state.RequestedOn;
+        row.IssuedOn = state.IssuedOn;
+        row.Code = state.Code;
+        row.Packages = state.Packages;
+        row.ValidUntil = state.ValidUntil;
+        row.CollectedOn = state.CollectedOn;
+        row.Dispensations = state.Dispensations;
+        row.UpdatedAt = state.RecordedAt;
+    }
+
+    // A dispensation is one register, like a package. Its row follows its
+    // own register only, whatever happened to the prescription: a
+    // dispensation recorded on one device while another deleted the
+    // prescription stays on every device, unused, so all devices hold the
+    // same rows (no foreign key to Prescriptions for that reason).
+    private async Task ApplyDispensationAsync(DispensationChanged change, HybridTimestamp timestamp, CancellationToken ct)
+    {
+        await GetMedicineAsync(change.MedicineId, ct);
+        await RecordRegistersAsync(change, timestamp, ct);
+        if (_dispensations is null) return;
+        var winner = await _registers.WinnerAsync(change.DispensationId, SyncRegisters.DispensationState, ct);
+        var state = winner?.Value is { } value ? SyncRegisters.ParseDispensation(value) : change;
+        var row = await _dispensations.GetAsync(change.DispensationId, ct);
+        if (state.Deleted)
+        {
+            if (row is not null) await _dispensations.RemoveAsync(row, ct);
+            return;
+        }
+        if (row is null)
+        {
+            row = new PrescriptionDispensation
+            {
+                Id = state.DispensationId,
+                PrescriptionId = state.PrescriptionId,
+                MedicineId = state.MedicineId,
+                RecordedAt = state.RecordedAt,
+            };
+            CopyState(state, row);
+            await _dispensations.AddAsync(row, ct);
+        }
+        else
+        {
+            CopyState(state, row);
+            await _dispensations.UpdateAsync(row, ct);
+        }
+    }
+
+    private static void CopyState(DispensationChanged state, PrescriptionDispensation row)
+    {
+        row.CollectedOn = state.CollectedOn;
+        row.Packages = state.Packages;
+        row.UpdatedAt = state.RecordedAt;
+    }
+
+    // A deadline is one register, like a prescription. A deadline of a
+    // medicine needs the medicine (causal order); a deadline of the
+    // profile (Guid.Empty) needs none.
+    private async Task ApplyDeadlineAsync(DeadlineChanged change, HybridTimestamp timestamp, CancellationToken ct)
+    {
+        if (change.MedicineId != Guid.Empty) await GetMedicineAsync(change.MedicineId, ct);
+        await RecordRegistersAsync(change, timestamp, ct);
+        if (_deadlines is null) return;
+        var winner = await _registers.WinnerAsync(change.DeadlineId, SyncRegisters.DeadlineState, ct);
+        var state = winner?.Value is { } value ? SyncRegisters.ParseDeadline(value) : change;
+        var row = await _deadlines.GetAsync(change.DeadlineId, ct);
+        if (state.Deleted)
+        {
+            if (row is not null) await _deadlines.RemoveAsync(row, ct);
+            return;
+        }
+        if (row is null)
+        {
+            row = new Deadline { Id = state.DeadlineId, RecordedAt = state.RecordedAt };
+            CopyState(state, row);
+            await _deadlines.AddAsync(row, ct);
+        }
+        else
+        {
+            CopyState(state, row);
+            await _deadlines.UpdateAsync(row, ct);
+        }
+    }
+
+    private static void CopyState(DeadlineChanged state, Deadline row)
+    {
+        row.MedicineId = state.MedicineId == Guid.Empty ? null : state.MedicineId;
+        row.Kind = state.Kind;
+        row.Label = state.Label;
+        row.DueOn = state.DueOn;
+        row.LeadDays = state.LeadDays;
+        row.RepeatMonths = state.RepeatMonths;
+        row.Channels = state.Channels;
+        row.DoneOn = state.DoneOn;
+        row.UpdatedAt = state.RecordedAt;
+    }
+
+    // A package is one register, like a prescription, with one exception:
+    // a discard is final. It also wrote a stock correction, a separate
+    // fact, so a concurrent edit that wins the register must not reopen
+    // the package. The latest discard by HLC keeps its closure whatever
+    // version wins; the result depends only on the set of versions, so
+    // every device agrees. A deletion still removes the package.
+    private async Task ApplyPackageAsync(PackageChanged change, HybridTimestamp timestamp, CancellationToken ct)
+    {
+        await GetMedicineAsync(change.MedicineId, ct);
+        await RecordRegistersAsync(change, timestamp, ct);
+        if (_packages is null) return;
+        var versions = await _registers.ListAsync(change.PackageId, SyncRegisters.PackageState, ct);
+        var winner = versions.MaxBy(v => v.Version);
+        var state = winner?.Value is { } value ? SyncRegisters.ParsePackage(value) : change;
+        var row = await _packages.GetAsync(change.PackageId, ct);
+        if (state.Deleted)
+        {
+            if (row is not null) await _packages.RemoveAsync(row, ct);
+            return;
+        }
+        if (state.Closure != PackageClosure.Discarded
+            && versions
+                .Where(v => v.Value is not null)
+                .OrderByDescending(v => v.Version)
+                .Select(v => SyncRegisters.ParsePackage(v.Value!))
+                .FirstOrDefault(p => p.Closure == PackageClosure.Discarded) is { } discard)
+        {
+            state = state with { ClosedOn = discard.ClosedOn, Closure = PackageClosure.Discarded };
+        }
+        if (row is null)
+        {
+            row = new StockPackage { Id = state.PackageId, MedicineId = state.MedicineId, RecordedAt = state.RecordedAt };
+            CopyState(state, row);
+            await _packages.AddAsync(row, ct);
+        }
+        else
+        {
+            CopyState(state, row);
+            await _packages.UpdateAsync(row, ct);
+        }
+    }
+
+    private static void CopyState(PackageChanged state, StockPackage row)
+    {
+        row.MovementId = state.MovementId;
+        row.Quantity = state.Quantity;
+        row.ExpiresOn = state.ExpiresOn;
+        row.UseWithinDays = state.UseWithinDays;
+        row.OpenedOn = state.OpenedOn;
+        row.Batch = state.Batch;
+        row.ClosedOn = state.ClosedOn;
+        row.Closure = state.Closure;
+        row.UpdatedAt = state.RecordedAt;
     }
 
     private async Task CreateMedicineAsync(MedicineCreated created, CancellationToken ct)
@@ -435,6 +654,8 @@ public sealed class ApplyRemoteOperations
                 Time = s.Time,
                 TimingLabel = s.TimingLabel,
                 Order = s.Order,
+                IsAsNeeded = s.IsAsNeeded,
+                PresetId = s.PresetId,
             })], ct);
         }
         await _registers.RecordAsync(set.MedicineId, set, timestamp, ct);
@@ -479,14 +700,18 @@ public sealed class ApplyRemoteOperations
             ActualAt = intake.ActualAt,
             Notes = intake.Notes,
             RecordedAt = intake.RecordedAt,
+            IsExtra = intake.IsExtra,
         };
         await _intakes.AddAsync(added, ct);
         _trackedFacts[added.Id] = added;
 
         // §4.5 hint: intakes of one day from different devices that
         // together exceed the day's scheduled quantity.
-        var sameDay = existing.Where(i => i.Day == intake.Day && i.Status == IntakeStatus.Taken).ToList();
-        if (intake.Status != IntakeStatus.Taken || sameDay.Count == 0) return;
+        // Extra intakes are on top of the plan by definition.
+        var sameDay = existing
+            .Where(i => i.Day == intake.Day && i.Status == IntakeStatus.Taken && !i.IsExtra)
+            .ToList();
+        if (intake.Status != IntakeStatus.Taken || intake.IsExtra || sameDay.Count == 0) return;
         var planned = await PlannedQuantityAsync(medicine, intake.Day, ct);
         var total = sameDay.Sum(i => i.Quantity) + intake.Quantity;
         if (total <= planned) return;

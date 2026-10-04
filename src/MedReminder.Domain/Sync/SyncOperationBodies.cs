@@ -1,5 +1,7 @@
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Domain.Sync;
@@ -45,6 +47,14 @@ public sealed record MedicineFieldChanged(
     string? Value,
     HybridTimestamp? BaseVersion = null) : SyncOperationBody(MedicineId);
 
+// The therapy start date, last writer wins (UpdateMedicine). Not a
+// MedicineFieldChanged field: an older app fails on an unknown field,
+// while an unknown operation type stops it cleanly (R7). The schedule
+// rows and slot sets that follow the new date travel as their own facts.
+public sealed record MedicineStartChanged(
+    Guid MedicineId,
+    DateOnly StartDate) : SyncOperationBody(MedicineId);
+
 // A dated activation / deactivation (activity history, D15).
 public sealed record MedicineActivityChanged(
     Guid MedicineId,
@@ -73,7 +83,14 @@ public sealed record SlotSetRecorded(
     IReadOnlyList<SlotValue> Slots,
     HybridTimestamp? BaseVersion = null) : SyncOperationBody(MedicineId);
 
-public sealed record SlotValue(Guid SlotId, decimal Dose, TimeOnly? Time, string? TimingLabel, int Order);
+// IsAsNeeded (operation schema version 9, docs/analysis/
+// ANALYSIS-INTRADAY-CONSUMPTION.md §5.3): a set carrying an as-needed
+// slot is written with version 9, so an older device stops at it
+// instead of consuming that slot every day. PresetId is display only
+// (§6): an older device may ignore it, so it needs no version.
+public sealed record SlotValue(
+    Guid SlotId, decimal Dose, TimeOnly? Time, string? TimingLabel, int Order, bool IsAsNeeded = false,
+    Guid? PresetId = null);
 
 // A user stock entry: InitialLoad, NewPackage, ManualAdd,
 // PositiveCorrection (AddStock) or NegativeCorrection (AdjustStockDown).
@@ -94,7 +111,11 @@ public sealed record IntakeRecorded(
     DateTimeOffset? ScheduledAt,
     DateTimeOffset? ActualAt,
     string? Notes,
-    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+    DateTimeOffset RecordedAt,
+    // Operation schema version 9 (ANALYSIS-INTRADAY-CONSUMPTION.md
+    // §5.3): an extra intake is written with version 9, so an older
+    // device stops at it instead of reading it as a scheduled intake.
+    bool IsExtra = false) : SyncOperationBody(MedicineId);
 
 // The count inputs and the outcome evaluated on the recording device.
 // Phase 3b decides how the outcome is re-evaluated when facts from other
@@ -148,13 +169,15 @@ public sealed record MedicineDeleted(
 
 // A low-stock email sent for a stock epoch of the medicine (operation
 // schema version 4): the other devices of the group do not send it again
-// for that epoch. A fact, never retracted.
+// for that epoch. A fact, never retracted. Stage (schema version 6) is
+// the warning stage; a payload without it is the first stage.
 public sealed record EmailNotificationSent(
     Guid MedicineId,
     Guid NotificationId,
     int StockEpoch,
     Guid? EpochFactId,
-    DateTimeOffset SentAt) : SyncOperationBody(MedicineId);
+    DateTimeOffset SentAt,
+    int Stage = 1) : SyncOperationBody(MedicineId);
 
 // Household step H3c (operation schema version 5; docs/analysis/
 // ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §11): the household that adopted
@@ -165,6 +188,77 @@ public sealed record EmailNotificationSent(
 public sealed record HouseholdLinked(
     Guid HouseholdId,
     DateTimeOffset LinkedAt) : SyncOperationBody(Guid.Empty);
+
+// A prescription as a whole (operation schema version 7; docs/notes/
+// EVOLUTION-PROPOSALS-2.md §3.2): written when it is recorded, changed or
+// deleted. Last writer wins per prescription, without a conflict entry;
+// Deleted removes it, unless a later write brings it back.
+// Dispensations (operation schema version 12): a repeatable prescription
+// (more than one dispensation) is written with version 12, so an older
+// device stops at it instead of reading it as a single prescription; a
+// single one keeps version 7.
+public sealed record PrescriptionChanged(
+    Guid MedicineId,
+    Guid PrescriptionId,
+    DateOnly? RequestedOn,
+    DateOnly? IssuedOn,
+    string? Code,
+    int? Packages,
+    DateOnly? ValidUntil,
+    DateOnly? CollectedOn,
+    bool Deleted,
+    DateTimeOffset RecordedAt,
+    int? Dispensations = null) : SyncOperationBody(MedicineId);
+
+// One dispensation of a repeatable prescription as a whole (operation
+// schema version 12), with the rules of PackageChanged: last writer wins
+// per dispensation, Deleted removes it. Not part of PrescriptionChanged,
+// so two devices recording a dispensation at the same time both keep
+// theirs. The row follows its own register only: a dispensation whose
+// prescription is gone stays, unused, and returns with the prescription.
+public sealed record DispensationChanged(
+    Guid MedicineId,
+    Guid DispensationId,
+    Guid PrescriptionId,
+    DateOnly CollectedOn,
+    int? Packages,
+    bool Deleted,
+    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+
+// An administrative deadline as a whole (operation schema version 8;
+// docs/notes/EVOLUTION-PROPOSALS-2.md §3.6), with the same rules as
+// PrescriptionChanged: last writer wins per deadline, Deleted removes
+// it. MedicineId is Guid.Empty for a deadline of the profile.
+public sealed record DeadlineChanged(
+    Guid MedicineId,
+    Guid DeadlineId,
+    DeadlineKind Kind,
+    string? Label,
+    DateOnly DueOn,
+    int LeadDays,
+    int? RepeatMonths,
+    NotificationChannels Channels,
+    DateOnly? DoneOn,
+    bool Deleted,
+    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
+
+// A package of a medicine as a whole (operation schema version 11;
+// docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md §7.1), with the rules of
+// PrescriptionChanged: last writer wins per package, Deleted removes it.
+// A discarded package's stock correction is its own StockEntryRecorded.
+public sealed record PackageChanged(
+    Guid MedicineId,
+    Guid PackageId,
+    Guid? MovementId,
+    decimal Quantity,
+    DateOnly? ExpiresOn,
+    int? UseWithinDays,
+    DateOnly? OpenedOn,
+    string? Batch,
+    DateOnly? ClosedOn,
+    PackageClosure? Closure,
+    bool Deleted,
+    DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
 
 // A replicated setting of the profile (operation schema version 3,
 // closing P8 of docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §2, §4.2):
@@ -183,5 +277,34 @@ public static class ProfileSetting
     public const string CaregiverAddress = "CaregiverAddress";
     public const string DoctorAddress = "DoctorAddress";
 
-    public static readonly IReadOnlyList<string> All = [DisplayName, ToAddress, CaregiverAddress, DoctorAddress];
+    // Caregiver per-email-kind copies and weekly digest (docs/notes/
+    // EVOLUTION-PROPOSALS-2.md §3.8). An app that does not know a name
+    // keeps its version and does not project it, so no schema bump.
+    // CaregiverEmails: "" (every kind, the behaviour before the setting),
+    // "None", or EmailKind names separated by commas.
+    public const string CaregiverEmails = "CaregiverEmails";
+    // "" or "Off", or "Weekly".
+    public const string CaregiverDigest = "CaregiverDigest";
+    // Day of the last digest sent by any device (yyyy-MM-dd), so the
+    // devices of a group do not send it again.
+    public const string CaregiverDigestSentOn = "CaregiverDigestSentOn";
+
+    // Days before a package expires when it is "expiring soon"
+    // (docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md §4.6), as an invariant
+    // integer; "" for the default. One for a printed expiry, one for the
+    // end of an in-use period. Unknown to an older app: kept, not
+    // projected, as above.
+    public const string PackageExpiryLeadDays = "PackageExpiryLeadDays";
+    public const string PackageInUseLeadDays = "PackageInUseLeadDays";
+
+    // Italian region of the profile, whose prescription service the
+    // prescription windows open (docs/prompt/
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2): an ISTAT code of
+    // Prescriptions.ItalianRegions, "" when not set. Unknown to an older
+    // app: kept, not projected, as above.
+    public const string Region = "Region";
+
+    public static readonly IReadOnlyList<string> All =
+        [DisplayName, ToAddress, CaregiverAddress, DoctorAddress, CaregiverEmails, CaregiverDigest, CaregiverDigestSentOn,
+            PackageExpiryLeadDays, PackageInUseLeadDays, Region];
 }
