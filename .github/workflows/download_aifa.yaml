@@ -2,8 +2,8 @@ name: Download AIFA CSV
 
 on:
   schedule:
-    # On each saturday: a run that fails because AIFA is
-    # down is retried a week later. Once the month's version is
+    # On each day: a run that fails because AIFA is
+    # down is retried a day later. Once the month's version is
     # published, scripts/feeds/aifa.py exits without changes. Minute 7,
     # not 0: GitHub delays or drops scheduled runs at the top of the hour
     # under load (none of the 2 October 2026 runs started).
