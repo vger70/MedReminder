@@ -30,6 +30,7 @@ internal static class Operations
         PrescriptionChanged p => p.PrescriptionId,
         DeadlineChanged d => d.DeadlineId,
         PackageChanged p => p.PackageId,
+        DispensationChanged d => d.DispensationId,
         _ => body.MedicineId,
     };
 
@@ -83,7 +84,10 @@ internal static class Operations
 
     public static PrescriptionChanged Prescription(Prescription p, bool deleted)
         => new(p.MedicineId, p.Id, p.RequestedOn, p.IssuedOn, p.Code, p.Packages, p.ValidUntil, p.CollectedOn,
-            deleted, p.UpdatedAt);
+            deleted, p.UpdatedAt, p.Dispensations);
+
+    public static DispensationChanged Dispensation(PrescriptionDispensation d, bool deleted)
+        => new(d.MedicineId, d.Id, d.PrescriptionId, d.CollectedOn, d.Packages, deleted, d.UpdatedAt);
 
     public static DeadlineChanged Deadline(Deadline d, bool deleted)
         => new(d.MedicineId ?? Guid.Empty, d.Id, d.Kind, d.Label, d.DueOn, d.LeadDays, d.RepeatMonths, d.Channels,

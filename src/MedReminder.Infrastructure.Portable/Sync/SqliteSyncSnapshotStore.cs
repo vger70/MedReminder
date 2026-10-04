@@ -46,7 +46,11 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
     //      extra intakes as scheduled ones.
     //   8: StockPackages (package expiry), replicated: an older app would
     //      drop them.
-    public const int CurrentSchemaVersion = 8;
+    //   9: Prescriptions.Dispensations and PrescriptionDispensations
+    //      (repeatable prescriptions), replicated: an older app would read
+    //      a repeatable prescription as a single one and drop its
+    //      dispensations.
+    public const int CurrentSchemaVersion = 9;
 
     private static readonly string[] NotReplicated =
     [

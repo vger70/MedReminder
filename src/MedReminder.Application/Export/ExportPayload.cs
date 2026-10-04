@@ -333,6 +333,20 @@ public sealed class ExportedPrescription
     public DateOnly? CollectedOn { get; set; }
     public DateTimeOffset RecordedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    // Repeatable prescriptions, additive (docs/EXPORT-FORMAT.md §3.14):
+    // absent in older archives, which import as single prescriptions.
+    public int? Dispensations { get; set; }
+    public IList<ExportedPrescriptionDispensation>? DispensationRecords { get; set; }
+}
+
+public sealed class ExportedPrescriptionDispensation
+{
+    public Guid Id { get; set; }
+    public DateOnly CollectedOn { get; set; }
+    public int? Packages { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 
 public sealed class ExportedDoseTimePreset

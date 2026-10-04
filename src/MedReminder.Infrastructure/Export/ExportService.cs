@@ -323,9 +323,11 @@ internal sealed class ExportService : IExportService
         payload.StockCounts = (await db.StockCounts.AsNoTracking()
             .OrderBy(c => c.Id).ToListAsync(cancellationToken))
             .Select(ExportMapper.ToDto).ToList();
+        var dispensations = (await db.PrescriptionDispensations.AsNoTracking().ToListAsync(cancellationToken))
+            .ToLookup(d => d.PrescriptionId);
         payload.Prescriptions = (await db.Prescriptions.AsNoTracking()
             .OrderBy(p => p.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
+            .Select(p => ExportMapper.ToDto(p, dispensations[p.Id])).ToList();
         payload.Deadlines = (await db.Deadlines.AsNoTracking()
             .OrderBy(d => d.Id).ToListAsync(cancellationToken))
             .Select(ExportMapper.ToDto).ToList();

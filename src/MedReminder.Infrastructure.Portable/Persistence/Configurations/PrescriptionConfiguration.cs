@@ -25,6 +25,29 @@ internal sealed class PrescriptionConfiguration : IEntityTypeConfiguration<Presc
     }
 }
 
+// Dispensations of repeatable prescriptions (replicated). Mirrors the
+// CREATE TABLE of the boot patch. The foreign key is on the medicine
+// only: a dispensation follows its own sync register, so it may outlive
+// a prescription deleted concurrently on another device
+// (ApplyRemoteOperations). Removed with the medicine by
+// MedicineDeletionRepository, with the prescription by DeletePrescription.
+internal sealed class PrescriptionDispensationConfiguration : IEntityTypeConfiguration<PrescriptionDispensation>
+{
+    public void Configure(EntityTypeBuilder<PrescriptionDispensation> builder)
+    {
+        builder.ToTable("PrescriptionDispensations");
+        builder.HasKey(d => d.Id);
+
+        builder.HasIndex(d => d.PrescriptionId);
+        builder.HasIndex(d => d.MedicineId);
+
+        builder.HasOne<Medicine>()
+            .WithMany()
+            .HasForeignKey(d => d.MedicineId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 // Device-local: no foreign key, like DoseReminderEvents; removed with the
 // medicine by MedicineDeletionRepository.
 internal sealed class PrescriptionReminderEventConfiguration : IEntityTypeConfiguration<PrescriptionReminderEvent>

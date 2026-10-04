@@ -1778,6 +1778,7 @@ internal sealed class MainForm : MedReminderFormBase
                 SelectGridRow(action.MedicineId);
                 break;
             case NotificationActionKind.OpenPrescriptions:
+                SelectGridRow(action.MedicineId);
                 await ShowPrescriptionsAsync();
                 break;
             case NotificationActionKind.OpenDeadlines:

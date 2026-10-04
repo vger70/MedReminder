@@ -375,6 +375,31 @@ public sealed class DatabaseInitializer
                 PendingDataMigrations.MarkPendingSql, [SlotPresetBackfill.MigrationName], cancellationToken);
         }
 
+        // Repeatable prescriptions (docs/prompt/
+        // PROMPT-REPEATABLE-PRESCRIPTION.md): the number of dispensations a
+        // prescription allows (null on the rows written before: single
+        // prescriptions) and the dispensations recorded (replicated). The
+        // foreign key is on the medicine only (PrescriptionDispensationConfiguration).
+        await AddColumnIfMissingAsync("Prescriptions", "Dispensations", "INTEGER NULL", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE TABLE IF NOT EXISTS ""PrescriptionDispensations"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_PrescriptionDispensations"" PRIMARY KEY,
+                ""PrescriptionId"" TEXT NOT NULL,
+                ""MedicineId"" TEXT NOT NULL,
+                ""CollectedOn"" TEXT NOT NULL,
+                ""Packages"" INTEGER NULL,
+                ""RecordedAt"" INTEGER NOT NULL,
+                ""UpdatedAt"" INTEGER NOT NULL,
+                CONSTRAINT ""FK_PrescriptionDispensations_Medicines_MedicineId""
+                    FOREIGN KEY (""MedicineId"") REFERENCES ""Medicines"" (""Id"") ON DELETE RESTRICT
+            );", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_PrescriptionDispensations_PrescriptionId""
+                ON ""PrescriptionDispensations"" (""PrescriptionId"");", cancellationToken);
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_PrescriptionDispensations_MedicineId""
+                ON ""PrescriptionDispensations"" (""MedicineId"");", cancellationToken);
+
         // Packages and their expiry (docs/analysis/
         // ANALYSIS-PACKAGE-EXPIRY.md §6), replicated.
         await ExecuteRawSqlAsync(@"

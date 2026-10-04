@@ -111,6 +111,8 @@ internal sealed class ToastWindowsNotificationService : IWindowsNotificationServ
             ?? $"Remind me in {NotificationActionArguments.SnoozeMinutes} minutes",
         NotificationActionKind.RequestPrescription => _localization?.Get("Notifications.Action.RequestPrescription")
             ?? "Prepare request",
+        NotificationActionKind.OpenPrescriptions => _localization?.Get("Notifications.Action.OpenPrescription")
+            ?? "Open the prescription",
         _ => kind.ToString(),
     };
 }

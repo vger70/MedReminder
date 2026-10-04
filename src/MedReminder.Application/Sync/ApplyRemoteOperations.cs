@@ -73,6 +73,7 @@ public sealed class ApplyRemoteOperations
     private readonly IPrescriptionRepository? _prescriptions;
     private readonly IDeadlineRepository? _deadlines;
     private readonly IStockPackageRepository? _packages;
+    private readonly IPrescriptionDispensationRepository? _dispensations;
     private readonly ISentEmailNotificationRepository? _sentEmails;
 
     // Facts added or updated in this batch, by id: the context tracks
@@ -106,8 +107,10 @@ public sealed class ApplyRemoteOperations
         ISentEmailNotificationRepository? sentEmails = null,
         IPrescriptionRepository? prescriptions = null,
         IDeadlineRepository? deadlines = null,
-        IStockPackageRepository? packages = null)
+        IStockPackageRepository? packages = null,
+        IPrescriptionDispensationRepository? dispensations = null)
     {
+        _dispensations = dispensations;
         _prescriptions = prescriptions;
         _deadlines = deadlines;
         _packages = packages;
@@ -265,9 +268,10 @@ public sealed class ApplyRemoteOperations
                 // The log row is the state (HouseholdLinks).
             }
             else if (body is MedicineDeleted) touched.Remove(body.MedicineId);
-            // A sent email, a prescription, a deadline or a package changes
-            // no fact of the ledger.
-            else if (body is not (EmailNotificationSent or PrescriptionChanged or DeadlineChanged or PackageChanged))
+            // A sent email, a prescription, a dispensation, a deadline or a
+            // package changes no fact of the ledger.
+            else if (body is not (EmailNotificationSent or PrescriptionChanged or DispensationChanged
+                     or DeadlineChanged or PackageChanged))
                 touched.Add(body.MedicineId);
             applied++;
         }
@@ -368,6 +372,9 @@ public sealed class ApplyRemoteOperations
             case PackageChanged package:
                 await ApplyPackageAsync(package, timestamp, ct);
                 return;
+            case DispensationChanged dispensation:
+                await ApplyDispensationAsync(dispensation, timestamp, ct);
+                return;
             default:
                 throw new NotSupportedException($"No apply rule for {body.GetType().Name}.");
         }
@@ -430,6 +437,51 @@ public sealed class ApplyRemoteOperations
         row.Packages = state.Packages;
         row.ValidUntil = state.ValidUntil;
         row.CollectedOn = state.CollectedOn;
+        row.Dispensations = state.Dispensations;
+        row.UpdatedAt = state.RecordedAt;
+    }
+
+    // A dispensation is one register, like a package. Its row follows its
+    // own register only, whatever happened to the prescription: a
+    // dispensation recorded on one device while another deleted the
+    // prescription stays on every device, unused, so all devices hold the
+    // same rows (no foreign key to Prescriptions for that reason).
+    private async Task ApplyDispensationAsync(DispensationChanged change, HybridTimestamp timestamp, CancellationToken ct)
+    {
+        await GetMedicineAsync(change.MedicineId, ct);
+        await RecordRegistersAsync(change, timestamp, ct);
+        if (_dispensations is null) return;
+        var winner = await _registers.WinnerAsync(change.DispensationId, SyncRegisters.DispensationState, ct);
+        var state = winner?.Value is { } value ? SyncRegisters.ParseDispensation(value) : change;
+        var row = await _dispensations.GetAsync(change.DispensationId, ct);
+        if (state.Deleted)
+        {
+            if (row is not null) await _dispensations.RemoveAsync(row, ct);
+            return;
+        }
+        if (row is null)
+        {
+            row = new PrescriptionDispensation
+            {
+                Id = state.DispensationId,
+                PrescriptionId = state.PrescriptionId,
+                MedicineId = state.MedicineId,
+                RecordedAt = state.RecordedAt,
+            };
+            CopyState(state, row);
+            await _dispensations.AddAsync(row, ct);
+        }
+        else
+        {
+            CopyState(state, row);
+            await _dispensations.UpdateAsync(row, ct);
+        }
+    }
+
+    private static void CopyState(DispensationChanged state, PrescriptionDispensation row)
+    {
+        row.CollectedOn = state.CollectedOn;
+        row.Packages = state.Packages;
         row.UpdatedAt = state.RecordedAt;
     }
 

@@ -43,6 +43,7 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.AddScoped<IMedicationSuspensionRepository, MedicationSuspensionRepository>();
         services.AddScoped<INotificationEventRepository, NotificationEventRepository>();
         services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
+        services.AddScoped<IPrescriptionDispensationRepository, PrescriptionDispensationRepository>();
         services.AddScoped<IPrescriptionReminderEventRepository, PrescriptionReminderEventRepository>();
         services.AddScoped<IDeadlineRepository, DeadlineRepository>();
         services.AddScoped<IDeadlineReminderEventRepository, DeadlineReminderEventRepository>();

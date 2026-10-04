@@ -67,6 +67,8 @@ internal static class ProfileDatabaseBuilder
         db.DoseReminderEvents.AddRange(payload.DoseReminderEvents.Select(ExportMapper.ToEntity));
         db.StockCounts.AddRange(payload.StockCounts.Select(ExportMapper.ToEntity));
         db.Prescriptions.AddRange((payload.Prescriptions ?? []).Select(ExportMapper.ToEntity));
+        db.PrescriptionDispensations.AddRange(
+            (payload.Prescriptions ?? []).SelectMany(ExportMapper.ToDispensationEntities));
         db.Deadlines.AddRange((payload.Deadlines ?? []).Select(ExportMapper.ToEntity));
         db.StockPackages.AddRange((payload.StockPackages ?? []).Select(ExportMapper.ToEntity));
         db.DoseTimePresets.AddRange((payload.DoseTimePresets ?? []).Select(ExportMapper.ToEntity));

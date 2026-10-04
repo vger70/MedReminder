@@ -31,6 +31,7 @@ internal sealed class ApplicationTestScope
     public InMemoryDoseReminderEventRepository DoseEvents { get; } = new();
     public InMemoryPrescriptionRepository Prescriptions { get; } = new();
     public InMemoryPrescriptionReminderEventRepository PrescriptionReminderEvents { get; } = new();
+    public InMemoryPrescriptionDispensationRepository Dispensations { get; } = new();
     public InMemoryDeadlineRepository Deadlines { get; } = new();
     public InMemoryDeadlineReminderEventRepository DeadlineReminderEvents { get; } = new();
     public InMemoryStockPackageRepository Packages { get; } = new();
@@ -78,6 +79,7 @@ internal sealed class ApplicationTestScope
     public ApplyRemoteOperations ApplyRemote { get; }
     public SavePrescription SavePrescription { get; }
     public CollectPrescription CollectPrescription { get; }
+    public RecordDispensation RecordDispensation { get; }
     public DeletePrescription DeletePrescription { get; }
     public PrescriptionListQuery PrescriptionList { get; }
     public PrescriptionReminders PrescriptionReminders { get; }
@@ -133,7 +135,7 @@ internal sealed class ApplicationTestScope
         ApplyRemote = new ApplyRemoteOperations(
             SyncSettingsStore, SyncOperations, Registers, Medicines, Schedules, Slots, Stock, Intakes, Counts,
             Suspensions, Activity, Retractions, Deletion, Ledger, Uow, Clock, sentEmails: SentEmails,
-            prescriptions: Prescriptions, deadlines: Deadlines, packages: Packages);
+            prescriptions: Prescriptions, deadlines: Deadlines, packages: Packages, dispensations: Dispensations);
 
         SaveStockPackage = new SaveStockPackage(Medicines, Packages, Operations, Uow, Clock);
         DiscardStockPackage = new DiscardStockPackage(Packages, Operations, Uow, AdjustStockDown, Clock);
@@ -143,12 +145,13 @@ internal sealed class ApplicationTestScope
             new ExpiringPackagesQuery(Medicines, Packages, Stock, Clock, ProfileSettings), PackageNoticeEvents, Email,
             Windows, Clock, NullLogger<PackageExpiryNotices>.Instance);
 
-        SavePrescription = new SavePrescription(Medicines, Prescriptions, Operations, Uow, Clock);
+        SavePrescription = new SavePrescription(Medicines, Prescriptions, Dispensations, Operations, Uow, Clock);
         CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);
-        DeletePrescription = new DeletePrescription(Prescriptions, Operations, Uow, Clock);
-        PrescriptionList = new PrescriptionListQuery(Prescriptions, Medicines, Clock);
+        RecordDispensation = new RecordDispensation(Prescriptions, Dispensations, SavePrescription);
+        DeletePrescription = new DeletePrescription(Prescriptions, Dispensations, Operations, Uow, Clock);
+        PrescriptionList = new PrescriptionListQuery(Prescriptions, Dispensations, Medicines, Clock);
         PrescriptionReminders = new PrescriptionReminders(
-            Prescriptions, PrescriptionReminderEvents, Medicines, Email, Windows, Clock,
+            Prescriptions, Dispensations, PrescriptionReminderEvents, Medicines, Email, Windows, Clock,
             NullLogger<PrescriptionReminders>.Instance);
 
         SaveDeadline = new SaveDeadline(Medicines, Deadlines, Operations, Uow, Clock);
@@ -168,7 +171,8 @@ internal sealed class ApplicationTestScope
             NullLogger<MedicationMonitor>.Instance,
             sentEmails: SentEmails, operationLog: Operations, master: Master,
             prescriptionReminders: PrescriptionReminders, shortageNotices: ShortageNotices,
-            deadlineReminders: DeadlineReminders, packageExpiryNotices: PackageExpiryNotices);
+            deadlineReminders: DeadlineReminders, packageExpiryNotices: PackageExpiryNotices,
+            prescriptions: Prescriptions, dispensations: Dispensations);
     }
 
     // Turns operation capture on, as enabling sync will (Phase 3d).

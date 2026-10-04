@@ -26,3 +26,24 @@ public interface IPrescriptionReminderEventRepository
 
     Task AddAsync(PrescriptionReminderEvent reminder, CancellationToken cancellationToken);
 }
+
+// Dispensations of repeatable prescriptions (replicated). A dispensation
+// whose prescription is gone may exist after a sync (see
+// DispensationChanged); readers ignore it.
+public interface IPrescriptionDispensationRepository
+{
+    Task<PrescriptionDispensation?> GetAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<PrescriptionDispensation>> ListAllAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<PrescriptionDispensation>> ListForPrescriptionAsync(
+        Guid prescriptionId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<PrescriptionDispensation>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken);
+
+    Task AddAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken);
+
+    Task UpdateAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken);
+
+    Task RemoveAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken);
+}

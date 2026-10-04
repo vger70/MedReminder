@@ -100,7 +100,7 @@ public class PrescriptionUseCaseTests
             PrescriptionStatus.ToCollect, PrescriptionStatus.Requested, PrescriptionStatus.Expired,
             PrescriptionStatus.Collected);
         list[0].MedicineName.Should().Be("Bisoprolol");
-        (await scope.PrescriptionList.OpenForMedicineAsync(b, default)).Select(p => p.Id)
+        (await scope.PrescriptionList.OpenForMedicineAsync(b, default)).Select(o => o.Prescription.Id)
             .Should().HaveCount(2).And.EndWith(open);
         (await scope.PrescriptionList.OpenForMedicineAsync(a, default)).Should().BeEmpty();
     }

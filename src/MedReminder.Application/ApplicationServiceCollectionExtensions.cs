@@ -132,6 +132,7 @@ public static class ApplicationServiceCollectionExtensions
         // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2).
         services.AddScoped<SavePrescription>();
         services.AddScoped<CollectPrescription>();
+        services.AddScoped<RecordDispensation>();
         services.AddScoped<DeletePrescription>();
         services.AddScoped<PrescriptionListQuery>();
         services.AddScoped<PrescriptionReminders>();
