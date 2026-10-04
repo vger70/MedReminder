@@ -52,7 +52,8 @@ if ($TrimMode) { $arguments += "-p:SpikeTrimMode=$TrimMode" }
 $exitCode = $LASTEXITCODE
 
 $logText = Get-Content -Raw $log
-$stripLine = ($logText -split "`r?`n" | Where-Object { $_ -match 'StripReleaseDebugArtifacts: removed' }) -join "`n"
+# The referenced net10.0 projects log the same message; keep the spike's own line.
+$stripLine = ($logText -split "`r?`n" | Where-Object { $_ -match 'StripReleaseDebugArtifacts: removed .*net10\.0-android' } | Select-Object -Unique) -join "`n"
 $candidateFile = Get-ChildItem -Path (Join-Path $projectDir 'obj') -Recurse -Filter 's4-strip-candidates.txt' -ErrorAction SilentlyContinue | Select-Object -First 1
 $candidates = if ($candidateFile) { @(Get-Content $candidateFile.FullName | Where-Object { $_ }) } else { @() }
 

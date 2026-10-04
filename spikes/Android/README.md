@@ -107,7 +107,7 @@ What to look for in S3 and S4, given the pre-check below:
 ## Pre-check without a device
 
 Run on 2026-10-04 on Linux, on the merge of this branch with `main`
-(v2.16.0). Toolchain:
+(v2.16.0), and repeated from a clean output before the device runs. Toolchain:
 - .NET SDK 10.0.112 (Ubuntu package);
 - workloads `android` 36.1.69 and `maui-android` 10.0.110;
 - OpenJDK 21.
@@ -127,6 +127,8 @@ with the real Android SDK for the device runs.
 | Release publish, default settings | Succeeds, no warnings. Defaults: `PublishTrimmed=true`, `TrimMode=partial`, `RunAOTCompilation=true`, `AndroidEnableProfiledAot=true`, `JsonSerializerIsReflectionEnabledByDefault=true`. Signed APK 41.6 MB |
 | `StripReleaseDebugArtifacts` on that publish | Runs unchanged, deletes 2 candidates (`MedReminder.MobileSpikes.pdb`, `.xml`) from the output folder. No `*.pdb` / `*.xml` left in the output or publish folders. The APK is produced after the strip |
 | Release publish, `-p:SpikeTrimMode=full` | Succeeds with 54 IL2026 and 8 IL2104 trim warnings (EF Core, SQLitePCLRaw, reflection JSON). Signed APK 36.3 MB |
+| `run-s4.ps1` (PowerShell 7.6.6), default and `-TrimMode full` | Both runs exit 0 and write the report. Strip candidates 2, deleted 2, none left. The `-Install` path reports `adb not on PATH` when adb is missing |
+| S1b on CoreCLR, with an archive written in the export format (default KDF) by the production cipher | Manifest read and payload decrypted with the right passphrase. A wrong passphrase gives `ImportFailedException` ("The passphrase does not match this file"), with no secret in the report |
 | S1–S3 logic on CoreCLR (linux-x64), production cipher and persistence | Every check passes. AES-GCM and Argon2id known answers equal the references. Argon2id default about 0.4–0.5 s on the build machine. 32 tables created. `journal_mode` WAL, SQLite 3.53.3 |
 
 The earlier note that `StripReleaseDebugArtifacts` might run before the
