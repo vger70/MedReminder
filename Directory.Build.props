@@ -40,7 +40,7 @@
     Release-only cleanup: at the end of every Release build and publish,
     remove the debug symbols (*.pdb) and the XML documentation files
     (*.xml) from the output and publish folders. Keeps the shipped ZIP /
-    MSI / MSIX free of debug and documentation noise.
+    MSI free of debug and documentation noise.
 
     Scoped by Configuration == Release so Debug builds keep their .pdb
     and .xml files intact.

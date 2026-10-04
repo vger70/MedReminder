@@ -54,7 +54,8 @@
 #   - builds the application
 #   - stamps assemblies with version 2.3.2
 #   - generates ZIP packages
-#   - generates the MSI installer
+#   - generates the MSI installers (framework-dependent, and
+#     self-contained for the Microsoft Store)
 #   - publishes a GitHub Release
 #
 # NOTES ABOUT VERSIONING
@@ -257,6 +258,43 @@ jobs:
             "MedReminder-win-x64.msi"
 
       # ------------------------------------------------------------
+      # Build self-contained MSI installer (Microsoft Store)
+      #
+      # The Microsoft Store accepts MSI installers only if they are
+      # standalone: no separately installed .NET runtime. Same WiX
+      # project and UpgradeCode, harvested from the self-contained
+      # publish. --no-incremental: the previous step left an
+      # intermediate harvest of the framework-dependent folder in
+      # the same obj directory (docs/PACKAGING.md §13).
+      # ------------------------------------------------------------
+      - name: Build self-contained MSI
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+
+          $publishDir = (Resolve-Path publish-net10).Path
+
+          dotnet build packaging/wix/MedReminder.wixproj `
+            -c Release `
+            --no-incremental `
+            /p:PublishDir="$publishDir" `
+            /p:ProductVersion=$version
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Self-contained MSI build failed."
+          }
+
+          $msi = "packaging/wix/bin/Release/MedReminder-$version-x64.msi"
+
+          if (-not (Test-Path $msi)) {
+            throw "MSI not generated: $msi"
+          }
+
+          Copy-Item `
+            $msi `
+            "MedReminder-win-x64-net10.msi"
+
+      # ------------------------------------------------------------
       # Create GitHub Release
       #
       # The release is automatically associated with the tag
@@ -269,4 +307,5 @@ jobs:
             MedReminder-win-x64-net10.zip
             MedReminder-win-x64.zip
             MedReminder-win-x64.msi
+            MedReminder-win-x64-net10.msi
           generate_release_notes: true
