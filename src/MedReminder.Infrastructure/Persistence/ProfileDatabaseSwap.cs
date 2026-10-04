@@ -14,19 +14,26 @@ namespace MedReminder.Infrastructure.Storage;
 // the hosted services open the new file cleanly. One process owns each
 // profile database, so no other process holds it (CLAUDE.md §7).
 //
-// The swap runs under IDatabaseExclusiveAccess: the remote catalogue
-// import keeps the database open in a write transaction for several
-// seconds and may run at any time of the session, so the swap waits for
-// it instead of failing on the open handle.
+// Every path that replaces a profile database goes through here: archive
+// import, backup restore, sync join / rebuild / rekey.
+//
+// The swap runs under IDatabaseExclusiveAccess: the catalogue importer
+// keeps the database open in a write transaction for several seconds and
+// may run at any time of the session, so the swap waits for it instead
+// of failing on the open handle. `beforeSwap` runs under the gate too,
+// right before the file moves: a step that must happen only if the swap
+// happens (the sync reset marker) is never left behind by a cancelled
+// wait for the gate.
 internal static class ProfileDatabaseSwap
 {
     public static Task ReplaceAsync(
         IDatabaseExclusiveAccess access, MedReminderDbContext db, string target, string newFile,
-        TimeProvider clock, CancellationToken cancellationToken)
+        TimeProvider clock, CancellationToken cancellationToken, Action? beforeSwap = null)
     {
         ArgumentNullException.ThrowIfNull(access);
         return access.RunExclusiveAsync(_ =>
         {
+            beforeSwap?.Invoke();
             Replace(db, target, newFile, clock);
             return Task.CompletedTask;
         }, cancellationToken);

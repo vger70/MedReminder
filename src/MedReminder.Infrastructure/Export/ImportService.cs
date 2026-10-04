@@ -166,15 +166,15 @@ internal sealed class ImportService : IImportService
         {
             await ProfileDatabaseBuilder.BuildAsync(tempDbPath, payload, cancellationToken, _clock);
 
-            // B.1 Phase 3d (§5.7): on a synced profile the import starts a
-            // new sync generation. Marked before the swap, so no sync run
-            // applies the old generation to the imported data.
-            JsonSyncSettingsStore.MarkResetPending(Path.GetDirectoryName(target)!);
-
             // Step 8: pre-import safety copy of the current DB, then the
-            // swap (ProfileDatabaseSwap).
+            // swap (ProfileDatabaseSwap). B.1 Phase 3d (§5.7): on a synced
+            // profile the import starts a new sync generation. Marked
+            // under the gate right before the swap, so no sync run applies
+            // the old generation to the imported data, and a cancelled
+            // wait for the gate leaves no marker on the unchanged database.
             await ProfileDatabaseSwap.ReplaceAsync(
-                _exclusiveAccess, _db, target, tempDbPath, _clock, cancellationToken);
+                _exclusiveAccess, _db, target, tempDbPath, _clock, cancellationToken,
+                beforeSwap: () => JsonSyncSettingsStore.MarkResetPending(Path.GetDirectoryName(target)!));
         }
         finally
         {

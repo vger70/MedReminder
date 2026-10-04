@@ -301,7 +301,7 @@ ganze **Europäische Union** zugelassenen Arzneimittel (EMA).
   auch die EU-Arzneimittel; mit **EU** nur diese. Ein Arzneimittel kann
   zweimal erscheinen (national und EU): Wähle das, das zu deiner
   Packung passt.
-- **Automatische Aktualisierung.** Wenn **Automatisch nach Updates
+- **Automatische Aktualisierung.** Wenn **Nach App- und Katalog-Updates
   suchen (GitHub)** aktiviert ist (Einstellungen → Allgemein), lädt
   MedReminder beim Start und, solange es geöffnet bleibt, einmal täglich
   die neueste Monatsliste deines Landes und die EU-Liste herunter, falls
@@ -358,7 +358,7 @@ den Code einem vorhandenen zuordnen.
 
 Mit Italien als Referenzland lädt MedReminder die AIFA-Liste der
 Lieferengpässe zusammen mit dem Katalog herunter (beim Start und einmal
-am Tag, wenn **Automatisch nach Updates suchen** aktiv ist). Ein
+am Tag, wenn **Nach App- und Katalog-Updates suchen** aktiv ist). Ein
 Medikament, dessen Packung (AIC-Code, aus dem Katalog oder dem Barcode
 ausgefüllt) auf der Liste steht, zeigt das in der Spalte
 **Verfügbarkeit** der Liste:
@@ -1314,9 +1314,10 @@ Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
   Windows 11 mit aktiviertem dunklem Modus dunkel; bei einem
   Windows-Kontrastdesign werden dessen Farben verwendet. Gilt nach einem
   Neustart. In Dunkel bleiben Datumsfelder hell.
-- **Allgemein → Automatisch nach Updates suchen (GitHub)**: sucht beim
-  Start nach einer neuen Version (nichts wird von selbst installiert)
-  und aktualisiert den Katalog beim Start und einmal täglich. **? → Nach Updates suchen…** sucht sofort.
+- **Allgemein → Nach App- und Katalog-Updates suchen (GitHub)**: sucht
+  beim Start nach einer neuen Version (nichts wird von selbst
+  installiert) und aktualisiert den Katalog beim Start und einmal
+  täglich. **? → Nach Updates suchen…** sucht sofort.
 - **Allgemein → Datenbankabfragen protokollieren (Diagnose)**: nur
   Administratoren. Schreibt jeden Datenbankbefehl ohne die Werte in die
   Protokolldatei, zur Fehlersuche. Gilt sofort; das Protokoll wächst
