@@ -139,7 +139,10 @@ public sealed class ProfileDatabaseBuilderTests : IDisposable
                 },
             ],
         };
+        ExportFormat.SchemaVersionOf(payload).Should().Be(2, "no repeatable prescription yet");
         payload.Prescriptions = [repeatable];
+        ExportFormat.SchemaVersionOf(payload).Should().Be(3);
+        payload.SchemaVersion = ExportFormat.SchemaVersionOf(payload);
         var json = System.Text.Json.JsonSerializer.Serialize(payload, ExportJson.Options);
         json.Should().Contain("\"dispensations\": 12").And.Contain("\"dispensationRecords\"");
         var singleId = Guid.NewGuid();

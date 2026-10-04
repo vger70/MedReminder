@@ -25,12 +25,12 @@ public class PrescriptionRulesTests
     [Fact]
     public void The_status_follows_the_steps_recorded()
     {
-        P(requested: Today).StatusOn(Today).Should().Be(PrescriptionStatus.Requested);
-        P(issued: Today, until: Today.AddDays(29)).StatusOn(Today).Should().Be(PrescriptionStatus.ToCollect);
-        P(issued: Today).StatusOn(Today.AddDays(400)).Should().Be(PrescriptionStatus.ToCollect, "no end date known");
-        P(issued: Today, until: Today.AddDays(29)).StatusOn(Today.AddDays(29)).Should().Be(PrescriptionStatus.ToCollect);
-        P(issued: Today, until: Today.AddDays(29)).StatusOn(Today.AddDays(30)).Should().Be(PrescriptionStatus.Expired);
-        P(issued: Today, until: Today, collected: Today).StatusOn(Today.AddDays(30))
+        P(requested: Today).StatusOn(Today, 0).Should().Be(PrescriptionStatus.Requested);
+        P(issued: Today, until: Today.AddDays(29)).StatusOn(Today, 0).Should().Be(PrescriptionStatus.ToCollect);
+        P(issued: Today).StatusOn(Today.AddDays(400), 0).Should().Be(PrescriptionStatus.ToCollect, "no end date known");
+        P(issued: Today, until: Today.AddDays(29)).StatusOn(Today.AddDays(29), 0).Should().Be(PrescriptionStatus.ToCollect);
+        P(issued: Today, until: Today.AddDays(29)).StatusOn(Today.AddDays(30), 0).Should().Be(PrescriptionStatus.Expired);
+        P(issued: Today, until: Today, collected: Today).StatusOn(Today.AddDays(30), 0)
             .Should().Be(PrescriptionStatus.Collected);
     }
 
@@ -48,15 +48,15 @@ public class PrescriptionRulesTests
     public void The_reminder_is_due_in_the_last_days_of_validity(int dayOffset, bool due)
     {
         var until = Today.AddDays(10);
-        PrescriptionRules.ReminderDue(P(issued: Today, until: until), until.AddDays(dayOffset)).Should().Be(due);
+        PrescriptionRules.ReminderDue(P(issued: Today, until: until), until.AddDays(dayOffset), 0).Should().Be(due);
     }
 
     [Fact]
     public void No_reminder_without_an_issue_or_an_end_date_or_once_collected()
     {
-        PrescriptionRules.ReminderDue(P(requested: Today, until: Today), Today).Should().BeFalse();
-        PrescriptionRules.ReminderDue(P(issued: Today), Today).Should().BeFalse();
-        PrescriptionRules.ReminderDue(P(issued: Today, until: Today, collected: Today), Today).Should().BeFalse();
+        PrescriptionRules.ReminderDue(P(requested: Today, until: Today), Today, 0).Should().BeFalse();
+        PrescriptionRules.ReminderDue(P(issued: Today), Today, 0).Should().BeFalse();
+        PrescriptionRules.ReminderDue(P(issued: Today, until: Today, collected: Today), Today, 0).Should().BeFalse();
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class PrescriptionRulesTests
     [Fact]
     public void A_repeatable_prescription_not_issued_yet_is_requested()
     {
-        P(requested: Today, dispensations: 12).StatusOn(Today).Should().Be(PrescriptionStatus.Requested);
+        P(requested: Today, dispensations: 12).StatusOn(Today, 0).Should().Be(PrescriptionStatus.Requested);
     }
 
     [Theory]
@@ -111,7 +111,7 @@ public class PrescriptionRulesTests
         p.StatusOn(Today, dispensationsCollected: 5).Should().Be(PrescriptionStatus.ToCollect, "only CollectedOn counts");
         PrescriptionRules.DispensationsLeft(p, 0).Should().Be(1);
         p.CollectedOn = Today;
-        p.StatusOn(Today).Should().Be(PrescriptionStatus.Collected);
+        p.StatusOn(Today, 0).Should().Be(PrescriptionStatus.Collected);
         PrescriptionRules.DispensationsLeft(p, 0).Should().Be(0);
     }
 
@@ -162,6 +162,18 @@ public class PrescriptionRulesTests
 
         var single = P(issued: Today, dispensations: 1);
         PrescriptionRules.Validate(single, Collected(single, Today)).Should().Be(PrescriptionError.DispensationsOnSingle);
+    }
+
+    [Fact]
+    public void Dispensations_passed_as_a_count_are_counted_but_not_checked()
+    {
+        var p = P(issued: Today, until: Today.AddDays(30), dispensations: 2);
+        PrescriptionRules.Validate(p, Collected(p, Today), otherDispensations: 1).Should().BeNull();
+        PrescriptionRules.Validate(p, Collected(p, Today), otherDispensations: 2)
+            .Should().Be(PrescriptionError.TooManyDispensations);
+        PrescriptionRules.Validate(P(dispensations: 2), otherDispensations: 1).Should().BeNull();
+        PrescriptionRules.Validate(P(issued: Today), otherDispensations: 1)
+            .Should().Be(PrescriptionError.DispensationsOnSingle);
     }
 
     [Fact]

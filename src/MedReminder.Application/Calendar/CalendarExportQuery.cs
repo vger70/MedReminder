@@ -79,10 +79,9 @@ public sealed class CalendarExportQuery
         }
 
         // One "valid until" event per prescription, none per dispensation.
-        var collected = _dispensations is null
+        IReadOnlyDictionary<Guid, int> collected = _dispensations is null
             ? new Dictionary<Guid, int>()
-            : (await _dispensations.ListAllAsync(cancellationToken))
-                .GroupBy(d => d.PrescriptionId).ToDictionary(g => g.Key, g => g.Count());
+            : await _dispensations.CountByPrescriptionAsync(null, cancellationToken);
         foreach (var p in await _prescriptions.ListAllAsync(cancellationToken))
         {
             if (p.StatusOn(today, collected.GetValueOrDefault(p.Id)) != PrescriptionStatus.ToCollect || p.ValidUntil is not { } until) continue;

@@ -65,6 +65,14 @@ internal sealed class PrescriptionDispensationRepository : IPrescriptionDispensa
         => await _db.PrescriptionDispensations.AsNoTracking()
             .Where(d => d.MedicineId == medicineId).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountByPrescriptionAsync(
+        Guid? medicineId, CancellationToken cancellationToken)
+        => await _db.PrescriptionDispensations.AsNoTracking()
+            .Where(d => medicineId == null || d.MedicineId == medicineId)
+            .GroupBy(d => d.PrescriptionId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count, cancellationToken);
+
     public async Task AddAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken)
         => await _db.PrescriptionDispensations.AddAsync(dispensation, cancellationToken);
 

@@ -328,6 +328,7 @@ internal sealed class ExportService : IExportService
         payload.Prescriptions = (await db.Prescriptions.AsNoTracking()
             .OrderBy(p => p.Id).ToListAsync(cancellationToken))
             .Select(p => ExportMapper.ToDto(p, dispensations[p.Id])).ToList();
+        payload.SchemaVersion = ExportFormat.SchemaVersionOf(payload);
         payload.Deadlines = (await db.Deadlines.AsNoTracking()
             .OrderBy(d => d.Id).ToListAsync(cancellationToken))
             .Select(ExportMapper.ToDto).ToList();

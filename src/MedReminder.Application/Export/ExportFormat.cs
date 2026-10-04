@@ -23,7 +23,20 @@ public static class ExportFormat
     //   1 -> initial C.3 shape.
     //   2 -> B.1 Phase 2b: stock movement origin, slot sets, stock
     //        counts, ledger cutoff (docs/EXPORT-FORMAT.md §5).
-    public const int CurrentSchemaVersion = 2;
+    //   3 -> repeatable prescriptions (prescriptions[].dispensations,
+    //        dispensationRecords[]): written only when the archive holds
+    //        one, so an older app refuses it instead of importing it as a
+    //        single prescription without its dispensations; any other
+    //        archive keeps 2 (SchemaVersionOf).
+    public const int CurrentSchemaVersion = 3;
+
+    // The lowest payload.schemaVersion that carries the payload, like the
+    // sync operations (OperationCodec.SchemaVersionOf).
+    public static int SchemaVersionOf(ExportPayload payload)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        return payload.Prescriptions.Any(p => p.Dispensations > 1) ? 3 : 2;
+    }
 
     // Minimum passphrase length accepted at export time (§4.5, §12
     // item 7). No composition rules — the Argon2id cost dominates.

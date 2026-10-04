@@ -17,10 +17,7 @@ public sealed record PrescriptionListItem(
 }
 
 // A prescription of a medicine still to collect, with its dispensations.
-public sealed record OpenPrescription(Prescription Prescription, IReadOnlyList<PrescriptionDispensation> Dispensations)
-{
-    public int DispensationsLeft => PrescriptionRules.DispensationsLeft(Prescription, Dispensations);
-}
+public sealed record OpenPrescription(Prescription Prescription, IReadOnlyList<PrescriptionDispensation> Dispensations);
 
 // Read-only query behind Therapy → Prescriptions…: every prescription of
 // the profile, the ones to act on first (to collect, requested, expired,
@@ -68,24 +65,28 @@ public sealed class PrescriptionListQuery
     }
 
     // The prescriptions of a medicine still to collect (issued, not
-    // collected, expired included), oldest issue first: what a new
-    // package of that medicine most likely came from. A repeatable
-    // prescription only while it can take a dispensation (to collect):
-    // one recorded after "valid until" would be rejected.
+    // collected, expired included): what a new package of that medicine
+    // most likely came from. Those still valid first, then the expired
+    // ones, oldest issue first within each, so a stale prescription never
+    // hides a valid one. A repeatable prescription only while it can take
+    // a dispensation (to collect): one recorded after "valid until" would
+    // be rejected.
     public async Task<IReadOnlyList<OpenPrescription>> OpenForMedicineAsync(
         Guid medicineId, CancellationToken cancellationToken)
     {
         var today = LocalToday();
         var dispensations = Group(await _dispensations.ListForMedicineAsync(medicineId, cancellationToken));
         return (await _prescriptions.ListForMedicineAsync(medicineId, cancellationToken))
-            .Select(p => new OpenPrescription(p, Of(p, dispensations)))
-            .Where(o => o.Prescription.StatusOn(today, o.Dispensations.Count) switch
+            .Select(p => (Open: new OpenPrescription(p, Of(p, dispensations)), Status: p.StatusOn(today, Of(p, dispensations).Count)))
+            .Where(x => x.Status switch
             {
                 PrescriptionStatus.ToCollect => true,
-                PrescriptionStatus.Expired => !o.Prescription.IsRepeatable,
+                PrescriptionStatus.Expired => !x.Open.Prescription.IsRepeatable,
                 _ => false,
             })
-            .OrderBy(o => o.Prescription.IssuedOn)
+            .OrderBy(x => x.Status == PrescriptionStatus.ToCollect ? 0 : 1)
+            .ThenBy(x => x.Open.Prescription.IssuedOn)
+            .Select(x => x.Open)
             .ToList();
     }
 

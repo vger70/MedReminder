@@ -44,8 +44,7 @@ public class PrescriptionPersistenceTests
             stored.CollectedOn.Should().Be(Today);
             stored.Code.Should().Be("NRE-1");
             stored.ValidUntil.Should().Be(Today.AddDays(29));
-            await new DeletePrescription(new PrescriptionRepository(ctx), new PrescriptionDispensationRepository(ctx),
-                TestOperationLog.For(ctx),
+            await new DeletePrescription(new PrescriptionRepository(ctx), TestOperationLog.For(ctx),
                 new UnitOfWork(ctx), Clock).ExecuteAsync(id, CancellationToken.None);
         }
         await using (var ctx = fixture.CreateContext())
@@ -182,7 +181,7 @@ public class PrescriptionPersistenceTests
     }
 
     [Fact]
-    public async Task A_repeatable_prescription_keeps_its_dispensations_until_deleted()
+    public async Task A_deleted_repeatable_prescription_leaves_its_dispensations_unused()
     {
         using var fixture = new SqliteInMemoryFixture();
         var medicine = await SeedAsync(fixture);
@@ -191,25 +190,24 @@ public class PrescriptionPersistenceTests
         {
             id = await Save(ctx).ExecuteAsync(new SavePrescriptionCommand(
                 null, medicine, null, Today, "NRE-R", 1, PrescriptionRules.DefaultRepeatableValidUntil(Today), null,
-                Dispensations: 12, DispensationRecords: [new DispensationEntry(null, Today, 1)]), CancellationToken.None);
+                Dispensations: 12, DispensationEdits: [new DispensationEntry(null, Today, 1)]), CancellationToken.None);
         }
         await using (var ctx = fixture.CreateContext())
         {
-            await new RecordDispensation(new PrescriptionRepository(ctx), new PrescriptionDispensationRepository(ctx),
-                Save(ctx)).ExecuteAsync(id, Today.AddDays(30), 1, CancellationToken.None);
+            await new RecordDispensation(new PrescriptionRepository(ctx), Save(ctx)).ExecuteAsync(id, Today.AddDays(30), 1, CancellationToken.None);
         }
         await using (var ctx = fixture.CreateContext())
         {
             (await ctx.Prescriptions.SingleAsync()).Dispensations.Should().Be(12);
             (await ctx.PrescriptionDispensations.OrderBy(d => d.CollectedOn).Select(d => d.CollectedOn).ToListAsync())
                 .Should().Equal(Today, Today.AddDays(30));
-            await new DeletePrescription(new PrescriptionRepository(ctx), new PrescriptionDispensationRepository(ctx),
-                TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock).ExecuteAsync(id, CancellationToken.None);
+            await new DeletePrescription(new PrescriptionRepository(ctx), TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock).ExecuteAsync(id, CancellationToken.None);
         }
         await using (var ctx = fixture.CreateContext())
         {
             (await ctx.Prescriptions.AnyAsync()).Should().BeFalse();
-            (await ctx.PrescriptionDispensations.AnyAsync()).Should().BeFalse();
+            // Kept for a concurrent edit that brings the prescription back.
+            (await ctx.PrescriptionDispensations.CountAsync()).Should().Be(2);
         }
     }
 
@@ -237,10 +235,10 @@ public class PrescriptionPersistenceTests
         {
             var old = await ctx.Prescriptions.SingleAsync();
             old.Dispensations.Should().BeNull();
-            old.StatusOn(Today).Should().Be(PrescriptionStatus.ToCollect);
+            old.StatusOn(Today, 0).Should().Be(PrescriptionStatus.ToCollect);
             await Save(ctx).ExecuteAsync(new SavePrescriptionCommand(
                 old.Id, medicine, Today, Today, null, null, Today.AddDays(29), null,
-                Dispensations: 2, DispensationRecords: [new DispensationEntry(null, Today, null)]), CancellationToken.None);
+                Dispensations: 2, DispensationEdits: [new DispensationEntry(null, Today, null)]), CancellationToken.None);
         }
         await using (var ctx = fixture.CreateContext())
         {
@@ -258,7 +256,7 @@ public class PrescriptionPersistenceTests
         {
             await Save(ctx).ExecuteAsync(new SavePrescriptionCommand(
                 null, medicine, null, Today, null, null, null, null,
-                Dispensations: 3, DispensationRecords: [new DispensationEntry(null, Today, 1)]), CancellationToken.None);
+                Dispensations: 3, DispensationEdits: [new DispensationEntry(null, Today, 1)]), CancellationToken.None);
         }
         await using (var ctx = fixture.CreateContext())
         {

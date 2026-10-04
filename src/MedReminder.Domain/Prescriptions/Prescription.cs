@@ -44,8 +44,9 @@ public sealed class Prescription
     // `dispensationsCollected` is the number of dispensations recorded,
     // read only for a repeatable prescription: to collect while some are
     // left and the validity lasts, collected once all are, expired when
-    // the validity ended with some left.
-    public PrescriptionStatus StatusOn(DateOnly today, int dispensationsCollected = 0)
+    // the validity ended with some left. Required, so no caller can
+    // forget it for a repeatable prescription.
+    public PrescriptionStatus StatusOn(DateOnly today, int dispensationsCollected)
     {
         if (IsRepeatable)
         {

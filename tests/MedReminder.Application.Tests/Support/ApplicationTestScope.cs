@@ -147,8 +147,8 @@ internal sealed class ApplicationTestScope
 
         SavePrescription = new SavePrescription(Medicines, Prescriptions, Dispensations, Operations, Uow, Clock);
         CollectPrescription = new CollectPrescription(Prescriptions, SavePrescription);
-        RecordDispensation = new RecordDispensation(Prescriptions, Dispensations, SavePrescription);
-        DeletePrescription = new DeletePrescription(Prescriptions, Dispensations, Operations, Uow, Clock);
+        RecordDispensation = new RecordDispensation(Prescriptions, SavePrescription);
+        DeletePrescription = new DeletePrescription(Prescriptions, Operations, Uow, Clock);
         PrescriptionList = new PrescriptionListQuery(Prescriptions, Dispensations, Medicines, Clock);
         PrescriptionReminders = new PrescriptionReminders(
             Prescriptions, Dispensations, PrescriptionReminderEvents, Medicines, Email, Windows, Clock,

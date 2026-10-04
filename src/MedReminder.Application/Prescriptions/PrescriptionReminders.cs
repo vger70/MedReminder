@@ -57,9 +57,7 @@ public sealed class PrescriptionReminders
     public async Task<int> RunAsync(DateOnly today, bool sendsEmail, CancellationToken cancellationToken)
     {
         var sent = 0;
-        var collected = (await _dispensations.ListAllAsync(cancellationToken))
-            .GroupBy(d => d.PrescriptionId)
-            .ToDictionary(g => g.Key, g => g.Count());
+        var collected = await _dispensations.CountByPrescriptionAsync(null, cancellationToken);
         foreach (var prescription in await _prescriptions.ListAllAsync(cancellationToken))
         {
             var count = prescription.IsRepeatable ? collected.GetValueOrDefault(prescription.Id) : 0;

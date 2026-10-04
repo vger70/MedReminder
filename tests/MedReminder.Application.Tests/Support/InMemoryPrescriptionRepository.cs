@@ -61,6 +61,13 @@ internal sealed class InMemoryPrescriptionDispensationRepository : IPrescription
         Guid medicineId, CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyList<PrescriptionDispensation>>(_items.Where(d => d.MedicineId == medicineId).ToList());
 
+    public Task<IReadOnlyDictionary<Guid, int>> CountByPrescriptionAsync(
+        Guid? medicineId, CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyDictionary<Guid, int>>(_items
+            .Where(d => medicineId is null || d.MedicineId == medicineId)
+            .GroupBy(d => d.PrescriptionId)
+            .ToDictionary(g => g.Key, g => g.Count()));
+
     public Task AddAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken)
     {
         _items.Add(dispensation);

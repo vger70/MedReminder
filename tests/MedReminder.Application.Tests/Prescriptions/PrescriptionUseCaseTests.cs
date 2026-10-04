@@ -100,8 +100,9 @@ public class PrescriptionUseCaseTests
             PrescriptionStatus.ToCollect, PrescriptionStatus.Requested, PrescriptionStatus.Expired,
             PrescriptionStatus.Collected);
         list[0].MedicineName.Should().Be("Bisoprolol");
+        // The valid one first, the expired older one after it.
         (await scope.PrescriptionList.OpenForMedicineAsync(b, default)).Select(o => o.Prescription.Id)
-            .Should().HaveCount(2).And.EndWith(open);
+            .Should().HaveCount(2).And.StartWith(open);
         (await scope.PrescriptionList.OpenForMedicineAsync(a, default)).Should().BeEmpty();
     }
 

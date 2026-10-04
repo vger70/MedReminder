@@ -52,7 +52,7 @@ public static class PrescriptionRules
     // An issued prescription not collected yet (for a repeatable one:
     // with dispensations left) whose last valid day is near: from
     // ReminderLeadDays before it to the day itself.
-    public static bool ReminderDue(Prescription prescription, DateOnly today, int dispensationsCollected = 0)
+    public static bool ReminderDue(Prescription prescription, DateOnly today, int dispensationsCollected)
     {
         ArgumentNullException.ThrowIfNull(prescription);
         return prescription.StatusOn(today, dispensationsCollected) == PrescriptionStatus.ToCollect
@@ -61,14 +61,22 @@ public static class PrescriptionRules
     }
 
     // Null when the dates and numbers are consistent, else the reason.
-    // `dispensations` are those the prescription would hold once saved.
+    // `dispensations` are the dispensations whose dates are checked;
+    // `otherDispensations` the ones the prescription also holds once
+    // saved, counted but not checked. A caller recording one dispensation
+    // passes the others as a count, so a record made out of range by a
+    // later change of the dates elsewhere does not block a valid new one.
     public static PrescriptionError? Validate(
-        Prescription prescription, IReadOnlyCollection<PrescriptionDispensation>? dispensations = null)
+        Prescription prescription,
+        IReadOnlyCollection<PrescriptionDispensation>? dispensations = null,
+        int otherDispensations = 0)
     {
         ArgumentNullException.ThrowIfNull(prescription);
+        ArgumentOutOfRangeException.ThrowIfNegative(otherDispensations);
         var records = dispensations ?? [];
+        var total = records.Count + otherDispensations;
         if (prescription.RequestedOn is null && prescription.IssuedOn is null && prescription.CollectedOn is null
-            && records.Count == 0)
+            && total == 0)
             return PrescriptionError.NoDate;
         if (prescription.RequestedOn is { } requested && prescription.IssuedOn is { } issued && issued < requested)
             return PrescriptionError.IssuedBeforeRequested;
@@ -84,11 +92,11 @@ public static class PrescriptionRules
             return PrescriptionError.Dispensations;
         if (!prescription.IsRepeatable)
         {
-            return records.Count > 0 ? PrescriptionError.DispensationsOnSingle : null;
+            return total > 0 ? PrescriptionError.DispensationsOnSingle : null;
         }
         if (prescription.CollectedOn is not null)
             return PrescriptionError.CollectedOnRepeatable;
-        if (records.Count > prescription.Dispensations)
+        if (total > prescription.Dispensations)
             return PrescriptionError.TooManyDispensations;
         foreach (var record in records)
         {

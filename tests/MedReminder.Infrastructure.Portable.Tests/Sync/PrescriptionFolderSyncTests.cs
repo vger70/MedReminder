@@ -120,12 +120,13 @@ public sealed class PrescriptionFolderSyncTests : IDisposable
         (await DispensationsAsync(b)).Should().HaveCount(2);
         (await SyncStateDescriber.DescribeAsync(a)).Should().Be(await SyncStateDescriber.DescribeAsync(b));
 
-        // B removes A's dispensation through the editor's full list.
+        // B removes A's dispensation through the editor.
         var keep = (await DispensationsAsync(b)).Single(d => d.CollectedOn == Today.AddDays(1));
+        var drop = (await DispensationsAsync(b)).Single(d => d.Id != keep.Id);
         b.Clock.Advance(TimeSpan.FromMinutes(1));
         await b.RunAsync(sp => sp.GetRequiredService<SavePrescription>().ExecuteAsync(new SavePrescriptionCommand(
             id, _medicine, null, Today, "NRE-R", 1, PrescriptionRules.DefaultRepeatableValidUntil(Today), null,
-            Dispensations: 12, DispensationRecords: [new DispensationEntry(keep.Id, keep.CollectedOn, keep.Packages)]),
+            Dispensations: 12, RemovedDispensations: [drop.Id]),
             CancellationToken.None));
         await b.SyncAsync();
         await a.SyncAsync();

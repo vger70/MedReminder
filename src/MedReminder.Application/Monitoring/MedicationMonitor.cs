@@ -326,8 +326,7 @@ public sealed class MedicationMonitor
         var repeatable = (await _prescriptions.ListForMedicineAsync(medicineId, cancellationToken))
             .Where(p => p.IsRepeatable).ToList();
         if (repeatable.Count == 0) return null;
-        var collected = (await _dispensations.ListForMedicineAsync(medicineId, cancellationToken))
-            .GroupBy(d => d.PrescriptionId).ToDictionary(g => g.Key, g => g.Count());
+        var collected = await _dispensations.CountByPrescriptionAsync(medicineId, cancellationToken);
         var open = repeatable
             .Select(p => (p, count: collected.GetValueOrDefault(p.Id)))
             .Where(x => x.p.StatusOn(today, x.count) == Domain.Prescriptions.PrescriptionStatus.ToCollect)

@@ -31,8 +31,8 @@ public class RepeatablePrescriptionTests
             InitialQuantity: stock), default);
 
     private static SavePrescriptionCommand Repeatable(Guid medicine, int allowed = 12, DateOnly? until = null,
-        Guid? id = null, IReadOnlyList<DispensationEntry>? records = null)
-        => new(id, medicine, null, Today, "NRE-R", 1, until ?? Until, null, allowed, records);
+        Guid? id = null, IReadOnlyList<DispensationEntry>? records = null, IReadOnlyCollection<Guid>? removed = null)
+        => new(id, medicine, null, Today, "NRE-R", 1, until ?? Until, null, allowed, records, removed);
 
     [Fact]
     public async Task Saving_writes_one_register_per_changed_dispensation_only()
@@ -77,9 +77,10 @@ public class RepeatablePrescriptionTests
         var id = await scope.SavePrescription.ExecuteAsync(Repeatable(medicine,
             records: [new DispensationEntry(null, Today, 1), new DispensationEntry(null, Today.AddDays(30), 1)]), default);
         var first = scope.Dispensations.All.Single(d => d.CollectedOn == Today);
+        var second = scope.Dispensations.All.Single(d => d.Id != first.Id);
 
         await scope.SavePrescription.ExecuteAsync(Repeatable(medicine, id: id,
-            records: [new DispensationEntry(first.Id, Today.AddDays(1), 2)]), default);
+            records: [new DispensationEntry(first.Id, Today.AddDays(1), 2)], removed: [second.Id]), default);
 
         var left = scope.Dispensations.All.Should().ContainSingle().Subject;
         left.Id.Should().Be(first.Id);
@@ -109,7 +110,7 @@ public class RepeatablePrescriptionTests
     }
 
     [Fact]
-    public async Task Deleting_a_prescription_deletes_its_dispensations_with_their_tombstones()
+    public async Task Deleting_a_prescription_keeps_its_dispensations_unused()
     {
         var scope = new ApplicationTestScope(Now);
         scope.EnableSync();
@@ -119,10 +120,83 @@ public class RepeatablePrescriptionTests
 
         await scope.DeletePrescription.ExecuteAsync(id, default);
 
-        scope.Dispensations.All.Should().BeEmpty();
-        var tombstone = scope.SyncOperations.All.Last(o => o.Type == nameof(DispensationChanged));
-        ((DispensationChanged)OperationCodec.Deserialize(tombstone.Type, tombstone.SchemaVersion, tombstone.Payload))
-            .Deleted.Should().BeTrue();
+        scope.Dispensations.All.Should().ContainSingle();
+        scope.SyncOperations.All.Count(o => o.Type == nameof(DispensationChanged)).Should().Be(1, "no tombstone");
+        (await scope.PrescriptionList.LoadAsync(default)).Should().BeEmpty();
+    }
+
+    // Another device recorded a dispensation while the editor was open:
+    // saving the editor's edits keeps it, and a change to a dispensation
+    // removed meanwhile does not bring it back.
+    [Fact]
+    public async Task Saving_the_editor_keeps_dispensations_it_did_not_see()
+    {
+        var scope = new ApplicationTestScope(Now);
+        scope.EnableSync();
+        var medicine = await AddMedicineAsync(scope);
+        var id = await scope.SavePrescription.ExecuteAsync(Repeatable(medicine), default);
+        await scope.RecordDispensation.ExecuteAsync(id, Today, 1, default);
+        var seen = scope.Dispensations.All.Single();
+        // Arrives by sync after the editor opened.
+        await scope.RecordDispensation.ExecuteAsync(id, Today.AddDays(30), 1, default);
+        var gone = Guid.NewGuid();
+
+        await scope.SavePrescription.ExecuteAsync(Repeatable(medicine, id: id,
+            records: [new DispensationEntry(seen.Id, seen.CollectedOn, 2), new DispensationEntry(gone, Today, 1)])
+            with { Code = "NRE-2" }, default);
+
+        scope.Dispensations.All.Should().HaveCount(2);
+        scope.Dispensations.All.Should().NotContain(d => d.Id == gone);
+        scope.Dispensations.All.Single(d => d.Id == seen.Id).Packages.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task A_record_made_out_of_range_elsewhere_does_not_block_a_valid_new_one()
+    {
+        var scope = new ApplicationTestScope(Now);
+        var medicine = await AddMedicineAsync(scope);
+        var id = await scope.SavePrescription.ExecuteAsync(Repeatable(medicine,
+            records: [new DispensationEntry(null, Today, 1)]), default);
+        // As if another device moved the issue date after the dispensation.
+        scope.Prescriptions.All.Single().IssuedOn = Today.AddDays(5);
+
+        await scope.RecordDispensation.ExecuteAsync(id, Today.AddDays(30), 1, default);
+
+        scope.Dispensations.All.Should().HaveCount(2);
+        var act = () => scope.RecordDispensation.ExecuteAsync(id, Today.AddDays(1), 1, default);
+        (await act.Should().ThrowAsync<InvalidPrescriptionException>())
+            .Which.Error.Should().Be(PrescriptionError.DispensationBeforeIssued, "the new record is still checked");
+    }
+
+    // A dispensation recorded on another device while this one made the
+    // prescription single stays in the database, hidden: it must not
+    // block collecting the single prescription.
+    [Fact]
+    public async Task Dispensations_left_on_a_single_prescription_do_not_block_collecting_it()
+    {
+        var scope = new ApplicationTestScope(Now);
+        var medicine = await AddMedicineAsync(scope);
+        var id = await scope.SavePrescription.ExecuteAsync(Repeatable(medicine, allowed: 3), default);
+        await scope.RecordDispensation.ExecuteAsync(id, Today, 1, default);
+        scope.Prescriptions.All.Single().Dispensations = null;
+
+        await scope.CollectPrescription.ExecuteAsync(id, Today, default);
+
+        scope.Prescriptions.All.Single().CollectedOn.Should().Be(Today);
+        scope.Dispensations.All.Should().ContainSingle("left as it is");
+    }
+
+    [Fact]
+    public async Task A_valid_prescription_is_offered_before_an_expired_older_one()
+    {
+        var scope = new ApplicationTestScope(Now);
+        var medicine = await AddMedicineAsync(scope);
+        var stale = await scope.SavePrescription.ExecuteAsync(new SavePrescriptionCommand(
+            null, medicine, null, Today.AddDays(-90), null, 1, Today.AddDays(-61), null), default);
+        var repeatable = await scope.SavePrescription.ExecuteAsync(Repeatable(medicine), default);
+
+        (await scope.PrescriptionList.OpenForMedicineAsync(medicine, default)).Select(o => o.Prescription.Id)
+            .Should().Equal(repeatable, stale);
     }
 
     [Fact]
@@ -133,7 +207,7 @@ public class RepeatablePrescriptionTests
         var id = await scope.SavePrescription.ExecuteAsync(Repeatable(medicine, allowed: 2), default);
 
         (await scope.PrescriptionList.OpenForMedicineAsync(medicine, default)).Should().ContainSingle()
-            .Which.DispensationsLeft.Should().Be(2);
+            .Which.Dispensations.Should().BeEmpty();
         await scope.RecordDispensation.ExecuteAsync(id, Today, 1, default);
         await scope.RecordDispensation.ExecuteAsync(id, Today, 1, default);
         (await scope.PrescriptionList.OpenForMedicineAsync(medicine, default)).Should().BeEmpty();
@@ -278,13 +352,33 @@ public class DispensationSyncTests
 
         var mine = _b.Dispensations.All.Single(d => d.CollectedOn == Today.AddDays(1));
         _b.Clock.AdvanceBy(TimeSpan.FromMinutes(1));
-        await _b.SavePrescription.ExecuteAsync(Command(id) with
-        {
-            DispensationRecords = [new DispensationEntry(mine.Id, mine.CollectedOn, mine.Packages)],
-        }, default);
+        var theirs = _b.Dispensations.All.Single(d => d.Id != mine.Id);
+        await _b.SavePrescription.ExecuteAsync(Command(id) with { RemovedDispensations = [theirs.Id] }, default);
         await ExchangeAsync();
 
         _a.Dispensations.All.Should().ContainSingle().Which.Id.Should().Be(mine.Id);
+    }
+
+    // A deletes the prescription, B edits it later: B's edit wins and the
+    // prescription comes back on both devices with its dispensations.
+    [Fact]
+    public async Task A_prescription_restored_by_a_later_edit_keeps_its_dispensations()
+    {
+        var id = await _a.SavePrescription.ExecuteAsync(Command(), default);
+        await _a.RecordDispensation.ExecuteAsync(id, Today, 1, default);
+        await ExchangeAsync();
+
+        await _a.DeletePrescription.ExecuteAsync(id, default);
+        _b.Clock.AdvanceBy(TimeSpan.FromMinutes(1));
+        await _b.SavePrescription.ExecuteAsync(Command(id) with { Code = "NRE-2" }, default);
+        await ExchangeAsync();
+
+        foreach (var scope in new[] { _a, _b })
+        {
+            var item = (await scope.PrescriptionList.LoadAsync(default)).Should().ContainSingle().Subject;
+            item.Prescription.Code.Should().Be("NRE-2");
+            item.DispensationsLeft.Should().Be(11);
+        }
     }
 
     [Fact]

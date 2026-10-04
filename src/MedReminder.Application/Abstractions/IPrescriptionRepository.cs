@@ -41,6 +41,10 @@ public interface IPrescriptionDispensationRepository
 
     Task<IReadOnlyList<PrescriptionDispensation>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken);
 
+    // Dispensations recorded per prescription id (of one medicine when
+    // medicineId is set): the count Prescription.StatusOn needs.
+    Task<IReadOnlyDictionary<Guid, int>> CountByPrescriptionAsync(Guid? medicineId, CancellationToken cancellationToken);
+
     Task AddAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken);
 
     Task UpdateAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken);

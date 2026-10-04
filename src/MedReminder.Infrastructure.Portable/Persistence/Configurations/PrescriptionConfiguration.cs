@@ -30,7 +30,8 @@ internal sealed class PrescriptionConfiguration : IEntityTypeConfiguration<Presc
 // only: a dispensation follows its own sync register, so it may outlive
 // a prescription deleted concurrently on another device
 // (ApplyRemoteOperations). Removed with the medicine by
-// MedicineDeletionRepository, with the prescription by DeletePrescription.
+// MedicineDeletionRepository; DeletePrescription leaves them, unused, so
+// a concurrent edit that restores the prescription restores them too.
 internal sealed class PrescriptionDispensationConfiguration : IEntityTypeConfiguration<PrescriptionDispensation>
 {
     public void Configure(EntityTypeBuilder<PrescriptionDispensation> builder)

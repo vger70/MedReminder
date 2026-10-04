@@ -37,6 +37,10 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
     private readonly Guid? _id;
     private readonly DateOnly _today;
     private readonly List<DispensationEntry> _records;
+    // As loaded: the editor saves only what the user changed, so a
+    // dispensation another device records meanwhile is kept.
+    private readonly IReadOnlyList<DispensationEntry> _original;
+    private readonly Prescription? _existing;
     private bool _validUntilTouched;
 
     public PrescriptionEditDialog(
@@ -50,8 +54,10 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
         _loc = localization;
         _id = existing?.Id;
         _today = today;
-        _records = [.. dispensations.OrderBy(d => d.CollectedOn)
+        _existing = existing;
+        _original = [.. dispensations.OrderBy(d => d.CollectedOn)
             .Select(d => new DispensationEntry(d.Id, d.CollectedOn, d.Packages))];
+        _records = [.. _original];
 
         Text = _loc.Get(existing is null ? "Ui.PrescriptionEditDialog.Title.New" : "Ui.PrescriptionEditDialog.Title.Edit");
         Width = 520;
@@ -74,7 +80,13 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
         _issued = DatePicker(existing?.IssuedOn, today);
         _validUntil = DatePicker(existing?.ValidUntil, today);
         _collected = DatePicker(existing?.CollectedOn, today);
-        _validUntilTouched = existing?.ValidUntil is not null;
+        // A stored "valid until" equal to the default of its kind still
+        // follows the issue date and the kind, so ticking "repeatable" on
+        // a single prescription moves it to the repeatable default.
+        _validUntilTouched = existing is { ValidUntil: { } until }
+            && !(existing.IssuedOn is { } issuedOn && until == (existing.IsRepeatable
+                ? PrescriptionRules.DefaultRepeatableValidUntil(issuedOn)
+                : PrescriptionRules.DefaultValidUntil(issuedOn)));
         _issued.ValueChanged += (_, _) => PrefillValidUntil();
         _validUntil.ValueChanged += (_, _) => _validUntilTouched = _validUntilTouched || _validUntil.Focused;
 
@@ -103,7 +115,12 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
         {
             Minimum = 2,
             Maximum = PrescriptionRules.MaxDispensations,
-            Value = existing is { IsRepeatable: true } current ? current.Dispensations!.Value : PrescriptionRules.MaxDispensations,
+            // An imported or synced value may be outside the range the
+            // control accepts: clamped, so the editor opens and Validate
+            // reports the count on save if it no longer fits.
+            Value = existing is { IsRepeatable: true } current
+                ? Math.Clamp(current.Dispensations!.Value, 2, PrescriptionRules.MaxDispensations)
+                : PrescriptionRules.MaxDispensations,
             Width = 80,
             Dock = DockStyle.Left,
         };
@@ -289,23 +306,38 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
             CollectedOn = _repeatable.Checked ? null : DateOf(_collected),
             Dispensations = _repeatable.Checked ? (int)_dispensations.Value : null,
         };
-        // A single prescription keeps no dispensation: unticking
+        // Only the dispensations added or changed are sent, with the ids
+        // removed. A single prescription keeps no dispensation: unticking
         // "repeatable" with dispensations listed is reported, not discarded.
-        var records = _records.Select(r => new PrescriptionDispensation
+        var edits = _records
+            .Where(r => r.Id is null || _original.FirstOrDefault(o => o.Id == r.Id) is not { } o || o != r)
+            .ToList();
+        var removed = _original
+            .Where(o => _records.All(r => r.Id != o.Id))
+            .Select(o => o.Id!.Value)
+            .ToList();
+        // Same rule as SavePrescription: the dates of every dispensation
+        // are checked when the issue date, "valid until" or the number
+        // allowed changed, else only those edited, the others counted.
+        var datesChanged = _existing is null
+            || _existing.IssuedOn != candidate.IssuedOn
+            || _existing.ValidUntil != candidate.ValidUntil
+            || _existing.Dispensations != candidate.Dispensations;
+        var checkedRecords = (datesChanged ? _records : edits).Select(r => new PrescriptionDispensation
         {
             PrescriptionId = candidate.Id,
             MedicineId = candidate.MedicineId,
             CollectedOn = r.CollectedOn,
             Packages = r.Packages,
         }).ToList();
-        if (PrescriptionRules.Validate(candidate, records) is { } error)
+        if (PrescriptionRules.Validate(candidate, checkedRecords, _records.Count - checkedRecords.Count) is { } error)
         {
             DialogLayout.ShowError(_error, _loc.Get("Ui.PrescriptionEditDialog.Error." + error));
             return;
         }
         Result = new SavePrescriptionCommand(_id, candidate.MedicineId, candidate.RequestedOn, candidate.IssuedOn,
             candidate.Code, candidate.Packages, candidate.ValidUntil, candidate.CollectedOn,
-            candidate.Dispensations, [.. _records]);
+            candidate.Dispensations, edits, removed);
         DialogResult = DialogResult.OK;
         Close();
     }
