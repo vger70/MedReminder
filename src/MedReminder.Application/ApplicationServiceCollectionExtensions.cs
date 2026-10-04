@@ -104,6 +104,7 @@ public static class ApplicationServiceCollectionExtensions
         // B.1, P8: replicated profile settings. The host registers
         // IProfileSettingsStore and ISyncProfileStatus.
         services.AddScoped<UpdateNotificationSettings>();
+        services.AddScoped<UpdateProfileRegion>();
         services.AddScoped<RenameProfile>();
 
         // B.1 ledger derivation (Phase 2c-2).
@@ -132,6 +133,7 @@ public static class ApplicationServiceCollectionExtensions
         // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2).
         services.AddScoped<SavePrescription>();
         services.AddScoped<CollectPrescription>();
+        services.AddScoped<RecordDispensation>();
         services.AddScoped<DeletePrescription>();
         services.AddScoped<PrescriptionListQuery>();
         services.AddScoped<PrescriptionReminders>();
@@ -156,6 +158,10 @@ public static class ApplicationServiceCollectionExtensions
         // Equivalent medicines (ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK §2).
         services.AddScoped<EquivalenceRefresher>();
         services.AddScoped<EquivalentsQuery>();
+        // Regional prescription services (PROMPT-REGIONAL-PRESCRIPTION-SERVICES).
+        services.AddScoped<RegionalServicesRefresher>();
+        services.AddScoped<RegionalServiceForProfileQuery>();
+        services.AddScoped<RegionalServiceLinkLauncher>();
 
         // Reference catalogue (M1). The country-profile provider owns
         // the "national ∪ EU" rule; use cases are cheap façades over

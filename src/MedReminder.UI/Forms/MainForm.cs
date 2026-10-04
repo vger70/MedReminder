@@ -934,8 +934,40 @@ internal sealed class MainForm : MedReminderFormBase
         var medicineId = row.Id;
         using var dialog = new PrescriptionRequestDialog(
             draft, doctorAddress, smtpConfigured, SendPrescriptionRequestAsync, _loc, isMaster,
-            markRequested: () => MarkPrescriptionRequestedAsync(medicineId));
+            markRequested: () => MarkPrescriptionRequestedAsync(medicineId),
+            regional: BuildRegionalServiceActions());
         dialog.ShowDialog(this);
+    }
+
+    // The regional prescription service of the profile
+    // (PROMPT-REGIONAL-PRESCRIPTION-SERVICES §3.3), each action in its own
+    // DI scope. The reference country is an installation setting, read
+    // on every load so a change in Settings applies at once.
+    private RegionalServiceActions BuildRegionalServiceActions() => new(
+        Load: () =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var country = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<UserSettings>>()
+                .CurrentValue.ReferenceCountry;
+            return scope.ServiceProvider.GetRequiredService<RegionalServiceForProfileQuery>().Get(country);
+        },
+        SaveRegion: async region =>
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<UpdateProfileRegion>()
+                .ExecuteAsync(region, CancellationToken.None);
+        },
+        Open: (region, url) =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<RegionalServiceLinkLauncher>().Open(region, url);
+        });
+
+    private bool OffersNrePaste()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        return RegionalServiceForProfileQuery.IsOffered(scope.ServiceProvider
+            .GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue.ReferenceCountry);
     }
 
     // Prescription lifecycle (EVOLUTION-PROPOSALS-2 §3.2): a request sent
@@ -965,6 +997,7 @@ internal sealed class MainForm : MedReminderFormBase
                 today = scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>().LocalToday();
             }
             var selected = GetSelectedRow()?.Id;
+            var offerNrePaste = OffersNrePaste();
 
             var actions = new PrescriptionsDialogActions(
                 Load: async () =>
@@ -973,14 +1006,16 @@ internal sealed class MainForm : MedReminderFormBase
                     return await scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>()
                         .LoadAsync(CancellationToken.None);
                 },
-                CreateEditor: existing =>
+                CreateEditor: item =>
                 {
+                    var existing = item?.Prescription;
                     // An existing prescription of a deactivated medicine
                     // keeps its medicine in the list.
                     var options = existing is not null && medicines.All(m => m.Id != existing.MedicineId)
                         ? [.. medicines, (existing.MedicineId, _allRows.FirstOrDefault(r => r.Id == existing.MedicineId)?.Name ?? string.Empty)]
                         : medicines;
-                    return new PrescriptionEditDialog(options, selected, existing, today, _loc);
+                    return new PrescriptionEditDialog(options, selected, existing, item?.Dispensations ?? [], today, _loc,
+                        offerNrePaste);
                 },
                 Save: async command =>
                 {
@@ -988,11 +1023,19 @@ internal sealed class MainForm : MedReminderFormBase
                     return await scope.ServiceProvider.GetRequiredService<SavePrescription>()
                         .ExecuteAsync(command, CancellationToken.None);
                 },
-                Collect: async id =>
+                Collect: async item =>
                 {
                     await using var scope = _scopeFactory.CreateAsyncScope();
-                    await scope.ServiceProvider.GetRequiredService<CollectPrescription>()
-                        .ExecuteAsync(id, today, CancellationToken.None);
+                    if (item.Prescription.IsRepeatable)
+                    {
+                        await scope.ServiceProvider.GetRequiredService<RecordDispensation>()
+                            .ExecuteAsync(item.Prescription.Id, today, null, CancellationToken.None);
+                    }
+                    else
+                    {
+                        await scope.ServiceProvider.GetRequiredService<CollectPrescription>()
+                            .ExecuteAsync(item.Prescription.Id, today, CancellationToken.None);
+                    }
                 },
                 Delete: async id =>
                 {
@@ -1001,7 +1044,7 @@ internal sealed class MainForm : MedReminderFormBase
                         .ExecuteAsync(id, CancellationToken.None);
                 });
 
-            using var dialog = new PrescriptionsDialog(actions, _loc);
+            using var dialog = new PrescriptionsDialog(actions, _loc, BuildRegionalServiceActions());
             dialog.ShowDialog(this);
         }
         catch (Exception ex)
@@ -1086,20 +1129,39 @@ internal sealed class MainForm : MedReminderFormBase
     }
 
     // After a new package: an issued prescription of the medicine still
-    // to collect most likely became this package. Asks before recording.
-    private async Task OfferPrescriptionCollectedAsync(Guid medicineId, string medicineName)
+    // to collect most likely became this package. Asks before recording:
+    // a single prescription is marked collected, a repeatable one gets a
+    // dispensation today with the number of packages just entered.
+    private async Task OfferPrescriptionCollectedAsync(Guid medicineId, string medicineName, int? packages)
     {
         try
         {
-            Prescription? open;
+            OpenPrescription? candidate;
             DateOnly today;
             await using (var scope = _scopeFactory.CreateAsyncScope())
             {
                 var query = scope.ServiceProvider.GetRequiredService<PrescriptionListQuery>();
-                open = (await query.OpenForMedicineAsync(medicineId, CancellationToken.None)).FirstOrDefault();
+                candidate = (await query.OpenForMedicineAsync(medicineId, CancellationToken.None)).FirstOrDefault();
                 today = query.LocalToday();
             }
-            if (open?.IssuedOn is not { } issued) return;
+            if (candidate is null) return;
+            var open = candidate.Prescription;
+
+            if (open.IsRepeatable)
+            {
+                var issuedText = open.IssuedOn?.ToString("d", _loc.CurrentCulture) ?? string.Empty;
+                var record = ConfirmDialog.Show(_loc, this,
+                    _loc.Get("Ui.MainForm.RecordDispensation", medicineName, issuedText,
+                        candidate.Dispensations.Count, open.Dispensations!.Value),
+                    _loc.Get("Ui.MainForm.RecordDispensation.Title"),
+                    MessageBoxIcon.Question);
+                if (record != DialogResult.Yes) return;
+                await using var write = _scopeFactory.CreateAsyncScope();
+                await write.ServiceProvider.GetRequiredService<RecordDispensation>()
+                    .ExecuteAsync(open.Id, today, packages, CancellationToken.None);
+                return;
+            }
+            if (open.IssuedOn is not { } issued) return;
 
             var answer = ConfirmDialog.Show(_loc, this,
                 _loc.Get("Ui.MainForm.CollectPrescription", medicineName, issued.ToString("d", _loc.CurrentCulture)),
@@ -1772,6 +1834,7 @@ internal sealed class MainForm : MedReminderFormBase
                 SelectGridRow(action.MedicineId);
                 break;
             case NotificationActionKind.OpenPrescriptions:
+                SelectGridRow(action.MedicineId);
                 await ShowPrescriptionsAsync();
                 break;
             case NotificationActionKind.OpenDeadlines:
@@ -2663,7 +2726,7 @@ internal sealed class MainForm : MedReminderFormBase
             ShowError(_loc.Get("Ui.MainForm.Error.StockMovement"), ex);
             return;
         }
-        if (newPackage) await OfferPrescriptionCollectedAsync(row.Id, row.Name);
+        if (newPackage) await OfferPrescriptionCollectedAsync(row.Id, row.Name, dialog.Result.Packages?.Count);
     }
 
     // Stock → Packages… (ANALYSIS-PACKAGE-EXPIRY.md §5.3): the packages of

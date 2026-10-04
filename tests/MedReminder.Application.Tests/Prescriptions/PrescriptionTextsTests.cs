@@ -30,7 +30,7 @@ public class PrescriptionTextsTests
             InitialQuantity: 10m), default);
         await scope.SavePrescription.ExecuteAsync(
             new SavePrescriptionCommand(null, medicine, null, Today, "NRE", null, Today, null), default);
-        var reminders = new PrescriptionReminders(scope.Prescriptions, scope.PrescriptionReminderEvents,
+        var reminders = new PrescriptionReminders(scope.Prescriptions, scope.Dispensations, scope.PrescriptionReminderEvents,
             scope.Medicines, scope.Email, scope.Windows, scope.Clock, NullLogger<PrescriptionReminders>.Instance, loc);
 
         await reminders.RunAsync(Today, sendsEmail: true, default);

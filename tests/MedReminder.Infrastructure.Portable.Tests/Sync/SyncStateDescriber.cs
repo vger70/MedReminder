@@ -47,7 +47,9 @@ internal static class SyncStateDescriber
             foreach (var r in (await db.FactRetractions.AsNoTracking().ToListAsync()).OrderBy(r => r.Id))
                 sb.AppendLine($"R {r.Id} {r.FactId} {r.Kind}");
             foreach (var p in (await db.Prescriptions.AsNoTracking().ToListAsync()).OrderBy(p => p.Id))
-                sb.AppendLine($"P {p.Id} {p.MedicineId} {p.RequestedOn:O} {p.IssuedOn:O} {p.Code} {p.Packages} {p.ValidUntil:O} {p.CollectedOn:O}");
+                sb.AppendLine($"P {p.Id} {p.MedicineId} {p.RequestedOn:O} {p.IssuedOn:O} {p.Code} {p.Packages} {p.ValidUntil:O} {p.CollectedOn:O} {p.Dispensations}");
+            foreach (var d in (await db.PrescriptionDispensations.AsNoTracking().ToListAsync()).OrderBy(d => d.Id))
+                sb.AppendLine($"V {d.Id} {d.PrescriptionId} {d.MedicineId} {d.CollectedOn:O} {d.Packages}");
             foreach (var d in (await db.Deadlines.AsNoTracking().ToListAsync()).OrderBy(d => d.Id))
                 sb.AppendLine($"D {d.Id} {d.MedicineId} {d.Kind} {d.Label} {d.DueOn:O} {d.LeadDays} {d.RepeatMonths} {d.Channels} {d.DoneOn:O}");
             foreach (var p in (await db.StockPackages.AsNoTracking().ToListAsync()).OrderBy(p => p.Id))

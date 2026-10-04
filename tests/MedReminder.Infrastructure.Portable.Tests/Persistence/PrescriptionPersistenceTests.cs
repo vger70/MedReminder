@@ -180,9 +180,123 @@ public class PrescriptionPersistenceTests
         ExportMapper.ToEntity(ExportMapper.ToDto(p)).Should().BeEquivalentTo(p);
     }
 
+    [Fact]
+    public async Task A_deleted_repeatable_prescription_leaves_its_dispensations_unused()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var medicine = await SeedAsync(fixture);
+        Guid id;
+        await using (var ctx = fixture.CreateContext())
+        {
+            id = await Save(ctx).ExecuteAsync(new SavePrescriptionCommand(
+                null, medicine, null, Today, "NRE-R", 1, PrescriptionRules.DefaultRepeatableValidUntil(Today), null,
+                Dispensations: 12, DispensationEdits: [new DispensationEntry(null, Today, 1)]), CancellationToken.None);
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            await new RecordDispensation(new PrescriptionRepository(ctx), Save(ctx)).ExecuteAsync(id, Today.AddDays(30), 1, CancellationToken.None);
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await ctx.Prescriptions.SingleAsync()).Dispensations.Should().Be(12);
+            (await ctx.PrescriptionDispensations.OrderBy(d => d.CollectedOn).Select(d => d.CollectedOn).ToListAsync())
+                .Should().Equal(Today, Today.AddDays(30));
+            await new DeletePrescription(new PrescriptionRepository(ctx), TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock).ExecuteAsync(id, CancellationToken.None);
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await ctx.Prescriptions.AnyAsync()).Should().BeFalse();
+            // Kept for a concurrent edit that brings the prescription back.
+            (await ctx.PrescriptionDispensations.CountAsync()).Should().Be(2);
+        }
+    }
+
+    // A database of the previous release: no Dispensations column, no
+    // dispensation table, an existing single prescription.
+    [Fact]
+    public async Task The_repeatable_patch_runs_twice_on_a_previous_release_database()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var medicine = await SeedAsync(fixture);
+        await using (var ctx = fixture.CreateContext())
+        {
+            await Save(ctx).ExecuteAsync(new SavePrescriptionCommand(
+                null, medicine, Today, Today, null, null, Today.AddDays(29), null), CancellationToken.None);
+            await ctx.Database.ExecuteSqlRawAsync(@"DROP TABLE ""PrescriptionDispensations"";");
+            await ctx.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Prescriptions"" DROP COLUMN ""Dispensations"";");
+        }
+        for (var run = 0; run < 2; run++)
+        {
+            await using var ctx = fixture.CreateContext();
+            await new DatabaseInitializer(ctx, NullLogger<DatabaseInitializer>.Instance, Clock)
+                .InitializeAsync(CancellationToken.None);
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            var old = await ctx.Prescriptions.SingleAsync();
+            old.Dispensations.Should().BeNull();
+            old.StatusOn(Today, 0).Should().Be(PrescriptionStatus.ToCollect);
+            await Save(ctx).ExecuteAsync(new SavePrescriptionCommand(
+                old.Id, medicine, Today, Today, null, null, Today.AddDays(29), null,
+                Dispensations: 2, DispensationEdits: [new DispensationEntry(null, Today, null)]), CancellationToken.None);
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await ctx.PrescriptionDispensations.SingleAsync()).PrescriptionId.Should().Be(
+                (await ctx.Prescriptions.SingleAsync()).Id);
+        }
+    }
+
+    [Fact]
+    public async Task Deleting_the_medicine_removes_its_dispensations()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var medicine = await SeedAsync(fixture);
+        await using (var ctx = fixture.CreateContext())
+        {
+            await Save(ctx).ExecuteAsync(new SavePrescriptionCommand(
+                null, medicine, null, Today, null, null, null, null,
+                Dispensations: 3, DispensationEdits: [new DispensationEntry(null, Today, 1)]), CancellationToken.None);
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            await new MedicineDeletionRepository(ctx).RemoveAsync(medicine, CancellationToken.None);
+            await ctx.SaveChangesAsync();
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await ctx.PrescriptionDispensations.AnyAsync()).Should().BeFalse();
+        }
+    }
+
+    [Fact]
+    public void The_export_mapping_round_trips_a_repeatable_prescription()
+    {
+        var p = new Prescription
+        {
+            MedicineId = Guid.NewGuid(), IssuedOn = Today, ValidUntil = Today.AddMonths(12), Dispensations = 12,
+            RecordedAt = Clock.GetUtcNow(), UpdatedAt = Clock.GetUtcNow(),
+        };
+        var d = new PrescriptionDispensation
+        {
+            PrescriptionId = p.Id, MedicineId = p.MedicineId, CollectedOn = Today, Packages = 2,
+            RecordedAt = Clock.GetUtcNow(), UpdatedAt = Clock.GetUtcNow(),
+        };
+
+        var dto = ExportMapper.ToDto(p, [d]);
+
+        ExportMapper.ToEntity(dto).Should().BeEquivalentTo(p);
+        ExportMapper.ToDispensationEntities(dto).Should().ContainSingle().Which.Should().BeEquivalentTo(d);
+        // A single prescription writes neither field (older archives look the same).
+        var single = ExportMapper.ToDto(new Prescription { MedicineId = p.MedicineId, IssuedOn = Today }, [d]);
+        single.Dispensations.Should().BeNull();
+        single.DispensationRecords.Should().BeNull();
+        ExportMapper.ToDispensationEntities(single).Should().BeEmpty();
+    }
+
     private static SavePrescription Save(MedReminderDbContext ctx)
-        => new(new MedicineRepository(ctx), new PrescriptionRepository(ctx), TestOperationLog.For(ctx),
-            new UnitOfWork(ctx), Clock);
+        => new(new MedicineRepository(ctx), new PrescriptionRepository(ctx), new PrescriptionDispensationRepository(ctx),
+            TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock);
 
     private static async Task<Guid> SeedAsync(SqliteInMemoryFixture fixture)
     {

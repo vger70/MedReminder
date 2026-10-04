@@ -58,6 +58,8 @@ public sealed class MedicationMonitor
     private readonly DeadlineReminders? _deadlineReminders;
     private readonly CaregiverDigest? _caregiverDigest;
     private readonly PackageExpiryNotices? _packageExpiryNotices;
+    private readonly IPrescriptionRepository? _prescriptions;
+    private readonly IPrescriptionDispensationRepository? _dispensations;
 
     public MedicationMonitor(
         IMedicineRepository medicines,
@@ -79,8 +81,12 @@ public sealed class MedicationMonitor
         ShortageNotices? shortageNotices = null,
         DeadlineReminders? deadlineReminders = null,
         CaregiverDigest? caregiverDigest = null,
-        PackageExpiryNotices? packageExpiryNotices = null)
+        PackageExpiryNotices? packageExpiryNotices = null,
+        IPrescriptionRepository? prescriptions = null,
+        IPrescriptionDispensationRepository? dispensations = null)
     {
+        _prescriptions = prescriptions;
+        _dispensations = dispensations;
         _caregiverDigest = caregiverDigest;
         _packageExpiryNotices = packageExpiryNotices;
         _deadlineReminders = deadlineReminders;
@@ -156,8 +162,9 @@ public sealed class MedicationMonitor
                 channels &= ~NotificationChannels.Email;
                 emailSentElsewhere = true;
             }
+            var repeatable = await RepeatableNoticeAsync(medicine.Id, today, cancellationToken);
             var dispatch = await DispatchAsync(medicine, stage, channels, currentStock, daysRemaining, eta, slots,
-                cancellationToken);
+                repeatable, cancellationToken);
             if (dispatch.EmailSucceeded) await RecordEmailSentAsync(medicine, stage, cancellationToken);
 
             var evt = new NotificationEvent
@@ -238,6 +245,7 @@ public sealed class MedicationMonitor
         int daysRemaining,
         DateOnly? eta,
         IReadOnlyList<MedicationAdministrationSlot> slots,
+        RepeatablePrescriptionNotice? repeatable,
         CancellationToken cancellationToken)
     {
         var windowsSucceeded = false;
@@ -249,10 +257,11 @@ public sealed class MedicationMonitor
         {
             // Toast: USER language (chosen in the app), like the email.
             var (title, body) = NotificationTexts.BuildToast(
-                medicine, daysRemaining, localization: _localization, stage: stage);
+                medicine, daysRemaining, localization: _localization, stage: stage, repeatable: repeatable);
             try
             {
-                await _windows.ShowAsync(title, body, NotificationTarget.LowStock(medicine.Id), cancellationToken);
+                await _windows.ShowAsync(title, body, NotificationTarget.LowStock(medicine.Id, repeatable is not null),
+                    cancellationToken);
                 windowsSucceeded = true;
             }
             catch (Exception ex)
@@ -271,7 +280,8 @@ public sealed class MedicationMonitor
                 medicine, currentStock, daysRemaining, eta,
                 administrationSlots: slots,
                 localization: _localization,
-                stage: stage);
+                stage: stage,
+                repeatable: repeatable);
             // The run-out date as a calendar event (EVOLUTION-PROPOSALS-2
             // §3.7), with a generic title: calendars live on third-party
             // clouds.
@@ -305,6 +315,27 @@ public sealed class MedicationMonitor
             AnyChannelSucceeded: windowsSucceeded || emailSucceeded,
             EmailSucceeded: emailSucceeded,
             CombinedError: combinedError);
+    }
+
+    // The repeatable prescription of the medicine to collect, with
+    // dispensations left: the one that lapses first (no end date last).
+    private async Task<RepeatablePrescriptionNotice?> RepeatableNoticeAsync(
+        Guid medicineId, DateOnly today, CancellationToken cancellationToken)
+    {
+        if (_prescriptions is null || _dispensations is null) return null;
+        var repeatable = (await _prescriptions.ListForMedicineAsync(medicineId, cancellationToken))
+            .Where(p => p.IsRepeatable).ToList();
+        if (repeatable.Count == 0) return null;
+        var collected = await _dispensations.CountByPrescriptionAsync(medicineId, cancellationToken);
+        var open = repeatable
+            .Select(p => (p, count: collected.GetValueOrDefault(p.Id)))
+            .Where(x => x.p.StatusOn(today, x.count) == Domain.Prescriptions.PrescriptionStatus.ToCollect)
+            .OrderBy(x => x.p.ValidUntil ?? DateOnly.MaxValue)
+            .FirstOrDefault();
+        return open.p is null
+            ? null
+            : new RepeatablePrescriptionNotice(
+                Domain.Prescriptions.PrescriptionRules.DispensationsLeft(open.p, open.count), open.p.ValidUntil);
     }
 
     private DateOnly LocalToday()

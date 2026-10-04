@@ -6,12 +6,17 @@ namespace MedReminder.Application.Notifications;
 // on it (docs/notes/EVOLUTION-PROPOSALS-2.md §3.4). Carries identifiers
 // only: a toast's arguments are stored by Windows and must not hold a
 // medicine name or any other health data.
-public sealed record NotificationTarget(NotificationKind Kind, Guid MedicineId, TimeOnly? SlotTime = null)
+// HasRepeatablePrescription (low stock only): the medicine has a
+// repeatable prescription with dispensations left, so the toast offers to
+// open it rather than to prepare a request for a new one.
+public sealed record NotificationTarget(
+    NotificationKind Kind, Guid MedicineId, TimeOnly? SlotTime = null, bool HasRepeatablePrescription = false)
 {
     public static NotificationTarget DoseReminder(Guid medicineId, TimeOnly slotTime)
         => new(NotificationKind.DoseReminder, medicineId, slotTime);
 
-    public static NotificationTarget LowStock(Guid medicineId) => new(NotificationKind.LowStock, medicineId);
+    public static NotificationTarget LowStock(Guid medicineId, bool hasRepeatablePrescription = false)
+        => new(NotificationKind.LowStock, medicineId, HasRepeatablePrescription: hasRepeatablePrescription);
 
     public static NotificationTarget Prescription(Guid medicineId) => new(NotificationKind.Prescription, medicineId);
 
@@ -42,7 +47,9 @@ public enum NotificationActionKind
 {
     // Body click: the main window, on the medicine.
     Open,
-    // Body click on a prescription reminder: the prescriptions window.
+    // Body click on a prescription reminder, or low-stock button when a
+    // repeatable prescription has dispensations left: the prescriptions
+    // window.
     OpenPrescriptions,
     // Body click on a deadline reminder: the deadlines window.
     OpenDeadlines,
@@ -92,6 +99,8 @@ public static class NotificationActionArguments
         {
             { Kind: NotificationKind.DoseReminder, SlotTime: { } time } =>
                 [new NotificationAction(NotificationActionKind.Snooze, profileId, target.MedicineId, time)],
+            { Kind: NotificationKind.LowStock, HasRepeatablePrescription: true } =>
+                [new NotificationAction(NotificationActionKind.OpenPrescriptions, profileId, target.MedicineId)],
             { Kind: NotificationKind.LowStock } =>
                 [new NotificationAction(NotificationActionKind.RequestPrescription, profileId, target.MedicineId)],
             _ => [],

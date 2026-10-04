@@ -192,7 +192,8 @@ is used.
 | `NotificationEvent` (`NotificationEvents`) | Low-stock notification log | `StockEpoch`, `Channel`, `DaysRemainingAtSend`, `Success`, `Stage` |
 | `SentEmailNotification` (`SentEmailNotifications`) | Low-stock emails sent by any device of the sync group (replicated) | `StockEpoch`, `EpochFactId`, `SentAt`, `Stage` |
 | `DoseReminderEvent` (`DoseReminderEvents`) | Dose-time reminder dedup | unique `(MedicineId, SlotKey, LocalDate)` |
-| `Prescription` (`Prescriptions`) | A prescription from request to collection (replicated, one register per prescription) | `RequestedOn?`, `IssuedOn?`, `Code?`, `Packages?`, `ValidUntil?`, `CollectedOn?` |
+| `Prescription` (`Prescriptions`) | A prescription from request to collection (replicated, one register per prescription); `Dispensations` > 1 makes it repeatable, collected through its dispensations instead of `CollectedOn` | `RequestedOn?`, `IssuedOn?`, `Code?`, `Packages?`, `ValidUntil?`, `CollectedOn?`, `Dispensations?` (null or 1: single) |
+| `PrescriptionDispensation` (`PrescriptionDispensations`) | One collection at the pharmacy under a repeatable prescription (replicated, one register per dispensation, so concurrent records on two devices are both kept); foreign key on the medicine only, so a dispensation outlives a deleted prescription (it is ignored, and back in use if a concurrent edit restores the prescription); removed with the medicine | `PrescriptionId`, `MedicineId`, `CollectedOn`, `Packages?`; index on `PrescriptionId` and on `MedicineId` |
 | `PrescriptionReminderEvent` (`PrescriptionReminderEvents`) | Reminder to collect, device-local dedup | unique `(PrescriptionId, ValidUntil)` |
 | `Deadline` (`Deadlines`) | Administrative deadline: therapeutic plan, exemption renewal, check-up (replicated, one register per deadline) | `MedicineId?`, `Kind`, `Label?`, `DueOn`, `LeadDays`, `RepeatMonths?`, `Channels`, `DoneOn?` |
 | `DeadlineReminderEvent` (`DeadlineReminderEvents`) | Deadline reminder, device-local dedup | unique `(DeadlineId, DueOn)` |
@@ -719,7 +720,9 @@ start:
    `DoseTimeDefaults` and `MedicationAdministrationSlots.PresetId`
    (time-of-day presets; adding the column marks `SlotPresets`
    pending); then `StockPackages` and `PackageExpiryNoticeEvents`
-   (package expiry).
+   (package expiry); then `Prescriptions.Dispensations` (null on older
+   rows: single prescriptions) and `PrescriptionDispensations`
+   (repeatable prescriptions).
 3. The catalogue DDL runs unconditionally (idempotent).
 4. `PRAGMA journal_mode = WAL`, `foreign_keys = ON`,
    `synchronous = NORMAL`.

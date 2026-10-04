@@ -19,6 +19,7 @@ public sealed class CalendarExportQuery
     private readonly IMedicationSuspensionRepository _suspensions;
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly IPrescriptionRepository _prescriptions;
+    private readonly IPrescriptionDispensationRepository? _dispensations;
     private readonly IDeadlineRepository _deadlines;
     private readonly TimeProvider _clock;
     private readonly ILocalizationService? _localization;
@@ -32,8 +33,10 @@ public sealed class CalendarExportQuery
         IPrescriptionRepository prescriptions,
         IDeadlineRepository deadlines,
         TimeProvider clock,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        IPrescriptionDispensationRepository? dispensations = null)
     {
+        _dispensations = dispensations;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -75,9 +78,13 @@ public sealed class CalendarExportQuery
             events.Add(CalendarEntries.RunOut(m.Id, runOut, name, _localization));
         }
 
+        // One "valid until" event per prescription, none per dispensation.
+        IReadOnlyDictionary<Guid, int> collected = _dispensations is null
+            ? new Dictionary<Guid, int>()
+            : await _dispensations.CountByPrescriptionAsync(null, cancellationToken);
         foreach (var p in await _prescriptions.ListAllAsync(cancellationToken))
         {
-            if (p.StatusOn(today) != PrescriptionStatus.ToCollect || p.ValidUntil is not { } until) continue;
+            if (p.StatusOn(today, collected.GetValueOrDefault(p.Id)) != PrescriptionStatus.ToCollect || p.ValidUntil is not { } until) continue;
             if (!names.TryGetValue(p.MedicineId, out var medicineName)) continue;
             events.Add(CalendarEntries.Prescription(p.Id, until, includeNames ? medicineName : null, _localization));
         }

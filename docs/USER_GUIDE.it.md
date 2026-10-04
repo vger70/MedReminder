@@ -646,6 +646,69 @@ condivisa). Il promemoria non contiene il codice.
 Le ricette vengono copiate sugli altri PC di un profilo sincronizzato e
 incluse nell'esportazione cifrata.
 
+### Ricette ripetibili
+
+Alcune ricette coprono più erogazioni in farmacia nell'arco di una
+validità lunga: per esempio la ricetta ripetibile per una terapia
+cronica, valida fino a 12 mesi e ritirata un mese alla volta. Spunta
+**Ricetta ripetibile** nella finestra della ricetta per registrarla come
+un'unica ricetta:
+
+- **Erogazioni previste**: quante volte la farmacia la eroga (da 2 a
+  12);
+- **Valida fino al** viene compilata per 12 mesi dalla data di
+  emissione; controllala sulla tua ricetta e correggila se è diversa;
+- **Erogazioni ritirate** sostituisce *Ritirata il*: aggiungi ogni
+  erogazione con il giorno e, se lo conosci, il numero di confezioni.
+  **Ritirata oggi** nell'elenco ne registra una con un clic, e dopo una
+  nuova confezione MedReminder propone di registrarla con la data di
+  oggi.
+
+L'elenco mostra le erogazioni come ritirate / previste, per esempio
+`3 / 12`. Una ricetta ripetibile resta *Da ritirare* finché restano
+erogazioni e dura la validità; è *Ritirata* quando sono state ritirate
+tutte ed è *Scaduta* se la validità finisce prima. Quando le scorte
+scendono, l'avviso dice quante erogazioni restano e fino a quando,
+invece di suggerire una nuova ricetta, e il suo pulsante apre la
+ricetta. Il promemoria prima di *Valida fino al* arriva solo se restano
+erogazioni e dice quante andrebbero perse. MedReminder non controlla
+l'intervallo tra le erogazioni: segui le indicazioni del farmacista.
+
+Sui PC sincronizzati, aggiorna MedReminder su tutti i PC del profilo
+prima di registrare una ricetta ripetibile: una versione precedente
+interrompe la sincronizzazione finché non viene aggiornata.
+
+### Servizio regionale delle ricette
+
+Con l'Italia come paese di riferimento, **Terapia → Ricette…** e la
+finestra di richiesta della ricetta hanno il pulsante **Servizio
+regionale delle ricette**. Apre il servizio della tua regione dove sono
+visibili le ricette elettroniche emesse per te, così puoi copiare il
+numero della ricetta invece di aspettarlo.
+
+- La prima volta scegli la tua regione o provincia autonoma. Viene
+  salvata con il profilo; la cambi dal pulsante (**Cambia regione…**)
+  o in Impostazioni → Notifiche.
+- **Apri nel browser** apre il portale regionale nel tuo browser
+  abituale.
+- **Apri sul telefono** mostra il codice QR dell'app regionale, o del
+  portale quando non c'è un'app: inquadralo con la fotocamera del
+  telefono e accedi dal telefono.
+
+La riga sotto il pulsante indica il servizio e come accedere (SPID, CIE
+o TS-CNS). Accedi sul servizio regionale, mai in MedReminder:
+MedReminder non vede le tue credenziali né il tuo fascicolo sanitario e
+non importa nulla. Chi assiste accede con le proprie credenziali e una
+delega attivata sul servizio regionale. Quando per la tua regione non è
+elencato un servizio, apri tu il portale del Fascicolo Sanitario
+Elettronico della tua regione.
+
+**Incolla NRE**, accanto a **Codice ricetta** nella finestra della
+ricetta, scrive il numero di ricetta elettronica (NRE, 15 lettere o
+cifre) copiato dal servizio regionale, senza spazi, e compila **Emessa
+il** con la data di oggi se è vuota. MedReminder legge gli appunti
+solo quando fai clic.
+
 ### Scadenze amministrative
 
 **Terapia → Scadenze amministrative…** raccoglie le date che non

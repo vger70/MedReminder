@@ -4,7 +4,9 @@ using MedReminder.Application.Donations;
 namespace MedReminder.Infrastructure.Donations;
 
 // The only place Process.Start is called for a donation launch (A6,
-// docs/ANALYSIS-A6-DONATION-SUPPORT.md §3.2, §7). UseShellExecute hands
+// docs/ANALYSIS-A6-DONATION-SUPPORT.md §3.2, §7) and for a regional
+// prescription service link (RegionalServiceLinkLauncher, which checks
+// the URL first). UseShellExecute hands
 // the URL off to the default Windows browser. No legacy WebBrowser
 // control, no embedded payment page. Exceptions are caught and their
 // message returned via the out parameter — the DonationService logs it

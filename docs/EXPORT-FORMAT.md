@@ -289,6 +289,7 @@ numbers.
 | `caregiverDigest` | string | `Weekly` sends the caregiver a weekly stock summary; `""` or `Off` does not. Additive (§5). The day of the last summary is not exported. |
 | `packageExpiryLeadDays` | string | days before a package's printed expiry when it is "expiring soon", an integer 0 to 180; `""` for the default 30. Additive (§5). |
 | `packageInUseLeadDays` | string | days before the end of a package's in-use period, an integer 0 to 30; `""` for the default 3. Additive (§5). |
+| `region` | string | Italian region of the profile, whose prescription service the prescription windows open: an ISTAT region code (`01` to `20` without `04`, `21` Bolzano, `22` Trento); `""` when not set. Additive (§5): archives without it import with `""`. |
 
 ### 3.10 `shared`
 
@@ -355,9 +356,29 @@ a prescription are device-local and not exported.
 | `code` | string? | prescription code as printed, at most 64 characters |
 | `packages` | int? | 1 to 99 |
 | `validUntil` | DateOnly? | last day the pharmacy accepts it |
-| `collectedOn` | DateOnly? | |
+| `collectedOn` | DateOnly? | `null` on a repeatable prescription |
 | `recordedAt` | DateTimeOffset | |
 | `updatedAt` | DateTimeOffset | |
+| `dispensations` | int? | additive; number of dispensations allowed, 2 to 12 for a repeatable prescription; absent or `null` (or 1) = single prescription |
+| `dispensationRecords[]` | array? | additive; written only for a repeatable prescription, oldest first |
+
+`dispensationRecords[]` items:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | Guid | |
+| `collectedOn` | DateOnly | day collected at the pharmacy |
+| `packages` | int? | 1 to 99 |
+| `recordedAt` | DateTimeOffset | |
+| `updatedAt` | DateTimeOffset | |
+
+Archives without `dispensations` and `dispensationRecords` import as
+single prescriptions. An archive holding a repeatable prescription is
+written with `schemaVersion` 3, so an older app refuses it rather than
+importing it as a single prescription without its dispensations; any
+other archive keeps version 2 (§5.1). A
+dispensation whose prescription is no longer in the profile (left by a
+concurrent deletion on another device) is not exported.
 
 ### 3.15 `deadlines[]`
 
@@ -506,6 +527,7 @@ another machine).
 |---|---|---|
 | 1 | Initial entity model | — |
 | 2 | `stockMovements[].origin`, `medicationAdministrationSlotSets`, `medicationAdministrationSlots[].setId`, `stockCounts`, `ledgerCutoff` | Each medicine's slots become one set with `id` = the medicine id, `effectiveFrom` = its `startDate`, `recordedAt` = the import instant; no stock counts |
+| 3 | `prescriptions[].dispensations` greater than 1 with `dispensationRecords[]` (repeatable prescriptions) | Nothing to map: a version 2 archive has only single prescriptions. Written only when the archive holds a repeatable prescription, so an older app refuses it instead of dropping the dispensations; any other archive is written with version 2 |
 
 Every import, whatever its version, freezes the imported profile as the
 application's boot patch does (B.1 Phase 2c-2): all stock movements

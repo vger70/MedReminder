@@ -39,6 +39,56 @@ internal sealed class PrescriptionRepository : IPrescriptionRepository
     }
 }
 
+internal sealed class PrescriptionDispensationRepository : IPrescriptionDispensationRepository
+{
+    private readonly MedReminderDbContext _db;
+
+    public PrescriptionDispensationRepository(MedReminderDbContext db)
+    {
+        _db = db;
+    }
+
+    // Tracked, so a later update in the same unit of work changes it.
+    public async Task<PrescriptionDispensation?> GetAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.PrescriptionDispensations.FindAsync([id], cancellationToken);
+
+    public async Task<IReadOnlyList<PrescriptionDispensation>> ListAllAsync(CancellationToken cancellationToken)
+        => await _db.PrescriptionDispensations.AsNoTracking().ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<PrescriptionDispensation>> ListForPrescriptionAsync(
+        Guid prescriptionId, CancellationToken cancellationToken)
+        => await _db.PrescriptionDispensations.AsNoTracking()
+            .Where(d => d.PrescriptionId == prescriptionId).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<PrescriptionDispensation>> ListForMedicineAsync(
+        Guid medicineId, CancellationToken cancellationToken)
+        => await _db.PrescriptionDispensations.AsNoTracking()
+            .Where(d => d.MedicineId == medicineId).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyDictionary<Guid, int>> CountByPrescriptionAsync(
+        Guid? medicineId, CancellationToken cancellationToken)
+        => await _db.PrescriptionDispensations.AsNoTracking()
+            .Where(d => medicineId == null || d.MedicineId == medicineId)
+            .GroupBy(d => d.PrescriptionId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count, cancellationToken);
+
+    public async Task AddAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken)
+        => await _db.PrescriptionDispensations.AddAsync(dispensation, cancellationToken);
+
+    public Task UpdateAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken)
+    {
+        if (_db.Entry(dispensation).State == EntityState.Detached) _db.PrescriptionDispensations.Update(dispensation);
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(PrescriptionDispensation dispensation, CancellationToken cancellationToken)
+    {
+        _db.PrescriptionDispensations.Remove(dispensation);
+        return Task.CompletedTask;
+    }
+}
+
 internal sealed class PrescriptionReminderEventRepository : IPrescriptionReminderEventRepository
 {
     private readonly MedReminderDbContext _db;

@@ -8,7 +8,9 @@ namespace MedReminder.Application.Notifications;
 
 // Formats the texts (subject / body for email, title / body for
 // toast) from the medicine state. No clinical information (spec §22):
-// only medicine identification + invitation to request a prescription.
+// only medicine identification + invitation to request a prescription,
+// or, when the medicine has a repeatable prescription with dispensations
+// left (RepeatablePrescriptionNotice), to collect the next dispensation.
 //
 // Localization: every text (email, low-stock toast, dose reminder)
 // uses the language chosen by the user in the app
@@ -27,7 +29,8 @@ public static class NotificationTexts
         CultureInfo? culture = null,
         IReadOnlyList<MedicationAdministrationSlot>? administrationSlots = null,
         ILocalizationService? localization = null,
-        int stage = NotificationCycle.FirstStage)
+        int stage = NotificationCycle.FirstStage,
+        RepeatablePrescriptionNotice? repeatable = null)
     {
         ArgumentNullException.ThrowIfNull(medicine);
         var c = culture ?? localization?.CurrentCulture ?? CultureInfo.CurrentCulture;
@@ -69,7 +72,19 @@ public static class NotificationTexts
                 body.Append(localization.Get("Notifications.Email.Doctor", medicine.DoctorName)).Append('\n');
             }
             body.Append('\n');
-            body.Append(localization.Get("Notifications.Email.CallToAction")).Append('\n');
+            if (repeatable is not null)
+            {
+                body.Append(localization.Get("Notifications.Email.CallToActionRepeatable", repeatable.DispensationsLeft))
+                    .Append('\n');
+                if (repeatable.ValidUntil is { } until)
+                {
+                    body.Append(localization.Get("Notifications.Repeatable.ValidUntil", until.ToString("d", c))).Append('\n');
+                }
+            }
+            else
+            {
+                body.Append(localization.Get("Notifications.Email.CallToAction")).Append('\n');
+            }
             body.Append('\n');
             body.Append(localization.Get("Notifications.Email.Footer"));
         }
@@ -108,7 +123,19 @@ public static class NotificationTexts
                 body.Append($"Reference doctor: {medicine.DoctorName}").Append('\n');
             }
             body.Append('\n');
-            body.Append("It is advisable to request a new prescription from your doctor in advance.").Append('\n');
+            if (repeatable is not null)
+            {
+                body.Append($"Dispensations left on the repeatable prescription: {repeatable.DispensationsLeft}. "
+                    + "Collect the next one at the pharmacy.").Append('\n');
+                if (repeatable.ValidUntil is { } until)
+                {
+                    body.Append($"Valid until {until.ToString("d", c)}.").Append('\n');
+                }
+            }
+            else
+            {
+                body.Append("It is advisable to request a new prescription from your doctor in advance.").Append('\n');
+            }
             body.Append('\n');
             body.Append("— MedReminder (organizational reminder, not a medical device).");
         }
@@ -139,19 +166,41 @@ public static class NotificationTexts
         int daysRemaining,
         CultureInfo? culture = null,
         ILocalizationService? localization = null,
-        int stage = NotificationCycle.FirstStage)
+        int stage = NotificationCycle.FirstStage,
+        RepeatablePrescriptionNotice? repeatable = null)
     {
         ArgumentNullException.ThrowIfNull(medicine);
-        _ = culture;
+        var c = culture ?? localization?.CurrentCulture ?? CultureInfo.CurrentCulture;
         var second = stage >= NotificationCycle.SecondStage;
 
         if (localization is not null)
         {
             var title = localization.Get(second ? "Notifications.Toast.TitleSecond" : "Notifications.Toast.Title",
                 medicine.Name, daysRemaining);
+            if (repeatable is not null)
+            {
+                var text = localization.Get(
+                    second ? "Notifications.Toast.BodySecondRepeatable" : "Notifications.Toast.BodyRepeatable",
+                    daysRemaining, repeatable.DispensationsLeft);
+                if (repeatable.ValidUntil is { } until)
+                {
+                    text += " " + localization.Get("Notifications.Repeatable.ValidUntil", until.ToString("d", c));
+                }
+                return (title, text);
+            }
             var body = localization.Get(second ? "Notifications.Toast.BodySecond" : "Notifications.Toast.Body",
                 daysRemaining);
             return (title, body);
+        }
+
+        if (repeatable is not null)
+        {
+            var text = (second ? "Not replenished yet. " : string.Empty)
+                + $"Estimated quantity for {daysRemaining} days. "
+                + $"Dispensations left on the repeatable prescription: {repeatable.DispensationsLeft}.";
+            if (repeatable.ValidUntil is { } until) text += $" Valid until {until.ToString("d", c)}.";
+            return (second ? $"Second reminder — {medicine.Name}: {daysRemaining} days left"
+                : $"{medicine.Name}: {daysRemaining} days left", text);
         }
 
         // Backwards compatibility: hardcoded EN.
@@ -212,3 +261,8 @@ public static class NotificationTexts
         };
     }
 }
+
+// A repeatable prescription of the medicine to collect, with
+// dispensations left: the low-stock warning points to it instead of a
+// new prescription. ValidUntil null when the prescription has no end.
+public sealed record RepeatablePrescriptionNotice(int DispensationsLeft, DateOnly? ValidUntil);

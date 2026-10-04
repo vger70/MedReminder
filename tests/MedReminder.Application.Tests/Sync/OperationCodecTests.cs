@@ -44,6 +44,11 @@ public class OperationCodecTests
         new HouseholdLinked(Guid.Parse("0d0d0d0d-0000-0000-0000-000000000005"), At),
         new PrescriptionChanged(M, F, new DateOnly(2026, 9, 20), new DateOnly(2026, 9, 22), "1234ABCD5678",
             2, new DateOnly(2026, 10, 21), null, false, At),
+        new PrescriptionChanged(M, F, null, new DateOnly(2026, 9, 22), null, 1, new DateOnly(2027, 9, 21), null, false,
+            At, Dispensations: 12),
+        new PrescriptionChanged(M, F, null, new DateOnly(2026, 9, 22), null, 1, null, null, false, At, Dispensations: 1),
+        new DispensationChanged(M, F, Guid.Parse("0e0e0e0e-0000-0000-0000-000000000007"), new DateOnly(2026, 10, 1), 2,
+            false, At),
         new DeadlineChanged(M, F, DeadlineKind.TherapeuticPlan, "Plan AIFA", new DateOnly(2027, 3, 31), 30, 12,
             NotificationChannels.Both, null, false, At),
         new DeadlineChanged(Guid.Empty, F, DeadlineKind.Other, "Disability card", new DateOnly(2027, 1, 15), 0, null,
@@ -112,6 +117,44 @@ public class OperationCodecTests
             "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}");
     }
 
+    [Fact]
+    public void Dispensation_payload_format_is_stable()
+    {
+        var (_, payload) = OperationCodec.Serialize(new DispensationChanged(M, F,
+            Guid.Parse("0e0e0e0e-0000-0000-0000-000000000007"), new DateOnly(2026, 10, 1), null, false, At));
+
+        payload.Should().Be(
+            "{\"dispensationId\":\"0f0f0f0f-0000-0000-0000-000000000002\"," +
+            "\"prescriptionId\":\"0e0e0e0e-0000-0000-0000-000000000007\"," +
+            "\"collectedOn\":\"2026-10-01\",\"packages\":null,\"deleted\":false," +
+            "\"recordedAt\":\"2026-09-27T10:15:30+02:00\"," +
+            "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}");
+    }
+
+    // A single prescription stays readable by an app at schema 11; a
+    // repeatable one and its dispensations stop it (R7). A version-7
+    // payload written before the field existed reads as single.
+    [Fact]
+    public void Only_repeatable_prescriptions_need_schema_12()
+    {
+        const int previous = 11;
+        var single = new PrescriptionChanged(M, F, null, new DateOnly(2026, 9, 22), null, 1, null, null, false, At);
+        var repeatable = single with { Dispensations = 12 };
+
+        OperationCodec.SchemaVersionOf(single).Should().BeLessThanOrEqualTo(previous);
+        OperationCodec.SchemaVersionOf(single with { Dispensations = 1 }).Should().Be(7);
+        OperationCodec.SchemaVersionOf(repeatable).Should().BeGreaterThan(previous);
+        OperationCodec.SchemaVersionOf(new DispensationChanged(M, F, F, new DateOnly(2026, 10, 1), null, false, At))
+            .Should().BeGreaterThan(previous);
+
+        var legacy = "{\"prescriptionId\":\"0f0f0f0f-0000-0000-0000-000000000002\",\"requestedOn\":null," +
+            "\"issuedOn\":\"2026-09-22\",\"code\":null,\"packages\":1,\"validUntil\":null,\"collectedOn\":null," +
+            "\"deleted\":false,\"recordedAt\":\"2026-09-27T10:15:30+02:00\"," +
+            "\"medicineId\":\"0b0b0b0b-0000-0000-0000-000000000001\"}";
+        OperationCodec.Deserialize("PrescriptionChanged", 7, legacy).Should().BeOfType<PrescriptionChanged>()
+            .Which.Dispensations.Should().BeNull();
+    }
+
     // Only the type added in a version is written with it, so an older
     // app keeps reading every other operation.
     [Theory]
@@ -125,12 +168,14 @@ public class OperationCodecTests
             EmailNotificationSent { Stage: > 1 } => 6,
             EmailNotificationSent => 4,
             HouseholdLinked => 5,
+            PrescriptionChanged { Dispensations: > 1 } => 12,
             PrescriptionChanged => 7,
             DeadlineChanged => 8,
             IntakeRecorded { IsExtra: true } => 9,
             SlotSetRecorded set when set.Slots.Any(s => s.IsAsNeeded) => 9,
             MedicineStartChanged => 10,
             PackageChanged => 11,
+            DispensationChanged => 12,
             _ => 1,
         };
 

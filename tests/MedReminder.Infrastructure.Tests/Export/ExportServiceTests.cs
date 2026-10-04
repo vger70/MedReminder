@@ -134,7 +134,8 @@ public sealed class ExportServiceTests : IDisposable
 
             var payload = JsonSerializer.Deserialize<ExportPayload>(
                 payloadBytes, ExportJson.Options)!;
-            payload.SchemaVersion.Should().Be(ExportFormat.CurrentSchemaVersion);
+            // No repeatable prescription: the lowest version that carries it.
+            payload.SchemaVersion.Should().Be(2);
             payload.Medicines.Should().HaveCount(1);
             payload.Medicines[0].Name.Should().Be("Metformin");
             payload.StockMovements.Should().HaveCount(1);

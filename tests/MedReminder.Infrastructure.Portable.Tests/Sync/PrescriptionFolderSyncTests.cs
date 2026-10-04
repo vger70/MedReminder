@@ -83,6 +83,62 @@ public sealed class PrescriptionFolderSyncTests : IDisposable
         (await SyncStateDescriber.DescribeAsync(a)).Should().Be(await SyncStateDescriber.DescribeAsync(b));
     }
 
+    // Repeatable prescription: two devices record a dispensation before
+    // syncing and both survive; a dispensation removed on one device is
+    // removed on the other; the repeatable prescription travels with its
+    // number of dispensations.
+    [Fact]
+    public async Task Dispensations_recorded_on_two_devices_both_survive()
+    {
+        var a = Track(new SyncDevice("A", Path.Combine(_root, "A.db"), Now, settings: null));
+        await a.InitializeAsync();
+        _medicine = await a.RunAsync(sp => sp.GetRequiredService<AddMedicine>().ExecuteAsync(new AddMedicineCommand(
+            "Enalapril", "tablet", 1m, 2, new DateOnly(2026, 9, 1), 7, NotificationChannels.Windows,
+            InitialQuantity: 60m), CancellationToken.None));
+        await a.RunAsync(sp => sp.GetRequiredService<CreateSyncGroup>().ExecuteAsync(
+            new LocalFolderSyncTransport(Folder), Passphrase.ToCharArray(), SyncTarget.ForFolder(Folder),
+            CancellationToken.None, SyncFileFormatTests.FastKdf));
+        var b = await JoinAsync(a, "B");
+
+        var id = await a.RunAsync(sp => sp.GetRequiredService<SavePrescription>().ExecuteAsync(new SavePrescriptionCommand(
+            null, _medicine, null, Today, "NRE-R", 1, PrescriptionRules.DefaultRepeatableValidUntil(Today), null,
+            Dispensations: 12), CancellationToken.None));
+        await a.SyncAsync();
+        await b.SyncAsync();
+        (await ListAsync(b)).Should().ContainSingle(p => p.Id == id && p.Dispensations == 12);
+
+        await a.RunAsync(sp => sp.GetRequiredService<RecordDispensation>()
+            .ExecuteAsync(id, Today, 1, CancellationToken.None));
+        b.Clock.Advance(TimeSpan.FromMinutes(1));
+        await b.RunAsync(sp => sp.GetRequiredService<RecordDispensation>()
+            .ExecuteAsync(id, Today.AddDays(1), 1, CancellationToken.None));
+        await a.SyncAsync();
+        await b.SyncAsync();
+        await a.SyncAsync();
+
+        (await DispensationsAsync(a)).Should().HaveCount(2);
+        (await DispensationsAsync(b)).Should().HaveCount(2);
+        (await SyncStateDescriber.DescribeAsync(a)).Should().Be(await SyncStateDescriber.DescribeAsync(b));
+
+        // B removes A's dispensation through the editor.
+        var keep = (await DispensationsAsync(b)).Single(d => d.CollectedOn == Today.AddDays(1));
+        var drop = (await DispensationsAsync(b)).Single(d => d.Id != keep.Id);
+        b.Clock.Advance(TimeSpan.FromMinutes(1));
+        await b.RunAsync(sp => sp.GetRequiredService<SavePrescription>().ExecuteAsync(new SavePrescriptionCommand(
+            id, _medicine, null, Today, "NRE-R", 1, PrescriptionRules.DefaultRepeatableValidUntil(Today), null,
+            Dispensations: 12, RemovedDispensations: [drop.Id]),
+            CancellationToken.None));
+        await b.SyncAsync();
+        await a.SyncAsync();
+
+        (await DispensationsAsync(a)).Select(d => d.Id).Should().Equal(keep.Id);
+        (await SyncStateDescriber.DescribeAsync(a)).Should().Be(await SyncStateDescriber.DescribeAsync(b));
+    }
+
+    private static Task<List<PrescriptionDispensation>> DispensationsAsync(SyncDevice device)
+        => device.RunAsync(sp => sp.GetRequiredService<MedReminderDbContext>().PrescriptionDispensations
+            .AsNoTracking().ToListAsync());
+
     private Task<Guid> SaveAsync(SyncDevice device, Guid? id, int packages)
         => device.RunAsync(sp => sp.GetRequiredService<SavePrescription>().ExecuteAsync(new SavePrescriptionCommand(
             id, _medicine, Today, Today, "NRE-1", packages, Today.AddDays(29), null), CancellationToken.None));

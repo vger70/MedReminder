@@ -12,7 +12,7 @@ namespace MedReminder.Infrastructure.Profiles;
 // before: { "Notifications": { "ToAddress", "CaregiverAddress",
 // "DoctorAddress", "CaregiverEmails", "CaregiverDigest",
 // "CaregiverDigestSentOn", "PackageExpiryLeadDays",
-// "PackageInUseLeadDays" } }. Addresses are not logged.
+// "PackageInUseLeadDays", "Region" } }. Addresses are not logged.
 internal sealed class ProfileSettingsStore : IProfileSettingsStore
 {
     private const string Section = NotificationSettings.SectionName;
@@ -44,6 +44,7 @@ internal sealed class ProfileSettingsStore : IProfileSettingsStore
                 [ProfileSetting.CaregiverDigestSentOn] = notifications.CaregiverDigestSentOn,
                 [ProfileSetting.PackageExpiryLeadDays] = notifications.PackageExpiryLeadDays,
                 [ProfileSetting.PackageInUseLeadDays] = notifications.PackageInUseLeadDays,
+                [ProfileSetting.Region] = notifications.Region,
             };
         }
     }
@@ -74,6 +75,7 @@ internal sealed class ProfileSettingsStore : IProfileSettingsStore
                     case ProfileSetting.CaregiverDigestSentOn: notifications.CaregiverDigestSentOn = value; break;
                     case ProfileSetting.PackageExpiryLeadDays: notifications.PackageExpiryLeadDays = value; break;
                     case ProfileSetting.PackageInUseLeadDays: notifications.PackageInUseLeadDays = value; break;
+                    case ProfileSetting.Region: notifications.Region = value; break;
                     default: throw new ArgumentException($"Unknown profile setting '{key}'.", nameof(changes));
                 }
             }
@@ -99,6 +101,7 @@ internal sealed class ProfileSettingsStore : IProfileSettingsStore
         result.CaregiverDigestSentOn = StringOf(section, nameof(NotificationSettings.CaregiverDigestSentOn));
         result.PackageExpiryLeadDays = StringOf(section, nameof(NotificationSettings.PackageExpiryLeadDays));
         result.PackageInUseLeadDays = StringOf(section, nameof(NotificationSettings.PackageInUseLeadDays));
+        result.Region = StringOf(section, nameof(NotificationSettings.Region));
         return result;
     }
 

@@ -30,6 +30,25 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #199 — Link the prescription windows to the regional prescription services
+
+Link: [vger70/MedReminder#199](https://github.com/vger70/MedReminder/pull/199)
+Branch: `claude/inspiring-pascal-povp02` → `claude/brave-turing-e4a7z7` (stacked on PR #197)
+
+### Added
+
+- "Regional prescription service" in Therapy → Prescriptions… and in the prescription request: opens the health record service of the profile's region in the default browser, or shows the regional app link (or the portal) as a QR code for the phone; names the service and the sign-in methods and states that MedReminder never sees the credentials or the health record. Asks for the region the first time; hidden when the reference country is not Italy; a region without a listed service gets a pointer to its health record portal, never a guessed link.
+- "Paste NRE" in the prescription editor: reads the clipboard only on click, accepts only a 15-character electronic prescription number (`NreCode`, spaces and dashes dropped, upper case, no invented check digit) and fills an empty issue date with today.
+- Regional services list: hand-maintained `scripts/feeds/regional_services_it.json` (19 regions and autonomous provinces found on official pages, all marked not yet verified for prescriptions; Campania and Sicily not yet), validated and published by `scripts/feeds/regional_services.py` to `data/it/regional-services/` on the `feeds` branch through `publish_regional_services.yaml`, which also checks every URL monthly or on demand and opens an issue for the failures. The version is the source's `listDate`, which every change must move, so the app always prefers the newer of the downloaded and shipped lists. The validator and the app's parser apply the same rules. The app refreshes it with the shortage list and ships a copy for the first start.
+- Profile setting `Region` (ISTAT code, 21 regions and autonomous provinces), replicated without an operation schema bump and editable in Settings → Notifications; written only by `UpdateProfileRegion` and only when it changes, so saving other settings on a device not yet synced never clears it; additive export field `notificationSettings.region`.
+
+### Security
+
+- Links are opened only through `RegionalServiceLinkLauncher`: exactly one of the links of the region's entry, unchanged, through the existing shell launcher. Log lines name neither the URL nor the region. No embedded browser, no sign-in, no reading of the regional pages; the NRE is never logged.
+
+### Docs
+
+- `CLAUDE.md` §5, `docs/CATALOGUE-DATA.md` §1.1 and §10, `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.9, the five user guides.
 ## PR #194 — Fix the review findings of the dose-time stock and as-needed doses
 
 Link: [vger70/MedReminder#194](https://github.com/vger70/MedReminder/pull/194)
@@ -116,6 +135,32 @@ Branch: `claude/project-thread-i2a3y8` → `main`
 ### Docs
 
 - `docs/prompt/PROMPT-GUIDED-SETUP.md`: brief for a skippable guided setup after a new installation, from an empty list or from Help (who the medicines are for, first medicines through the existing dialog, warning lead time and channel, user and caregiver email, summary); device-local settings only, no schema, sync or export change.
+
+---
+
+## PR #197 — Add repeatable prescriptions with several dispensations
+
+Link: [vger70/MedReminder#197](https://github.com/vger70/MedReminder/pull/197)
+Branch: `claude/brave-turing-e4a7z7` → `main`
+
+### Added
+
+- Repeatable prescription: `Prescription.Dispensations` (2 to 12; null or 1 keeps the single prescription unchanged) and the `PrescriptionDispensation` entity; status, dispensations left, reminder and validation rules in `PrescriptionRules` (defaults 12 dispensations and 12 months, parametric, no rule of a specific law).
+- Sync: `DispensationChanged` (one register per dispensation, so concurrent records on two devices are both kept) and `PrescriptionChanged.dispensations`; operation schema 12 only for repeatable prescriptions and dispensations, single prescriptions keep version 7; image schema 9. Every device of a sync group must run this version before anyone records a repeatable prescription.
+- Persistence: idempotent boot patch for `Prescriptions.Dispensations` and the `PrescriptionDispensations` table (foreign key on the medicine only); removed with the medicine. Deleting a prescription leaves its dispensations unused, so a concurrent edit on another device that restores the prescription restores them too.
+- UI: "Repeatable prescription" in the prescription editor with the dispensations allowed and the list of dispensations (Add, Edit, Remove); "Dispensations" column (collected / allowed); "Collected today" and the offer after a new package record a dispensation.
+- Export: additive `prescriptions[].dispensations` and `prescriptions[].dispensationRecords[]`; older archives import as single prescriptions.
+
+### Changed
+
+- Low-stock toast and email point to the dispensations left and the last valid day instead of a new prescription, and the toast button opens the prescriptions; the reminder before "valid until" of a repeatable prescription fires only with dispensations left and says how many would be lost.
+- Saving a prescription writes its sync register only when a field changed, and the editor sends only the dispensations added, changed or removed, so neither overrides what another device recorded meanwhile. Validation checks the dates of the dispensations edited (all of them when the dates of the prescription change), so a record made out of range elsewhere does not block a valid new one; dispensations a sync left on a single prescription are ignored.
+- The offer after a new package lists the prescriptions still valid before the expired ones.
+- Export `schemaVersion` 3, written only when the archive holds a repeatable prescription, so an older app refuses it instead of dropping the dispensations; other archives keep version 2.
+
+### Docs
+
+- `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.14, `docs/ANALYSIS.md` and the five user guides.
 
 ---
 

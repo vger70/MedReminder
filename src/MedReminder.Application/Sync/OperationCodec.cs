@@ -21,13 +21,15 @@ namespace MedReminder.Application.Sync;
 // PrescriptionChanged; 8 adds DeadlineChanged; 9 adds
 // IntakeRecorded.IsExtra and SlotValue.IsAsNeeded, written only for an
 // extra intake or a set with an as-needed slot (the others keep 1); 10
-// adds MedicineStartChanged; 11 adds PackageChanged.
+// adds MedicineStartChanged; 11 adds PackageChanged; 12 adds
+// PrescriptionChanged.Dispensations, written only for a repeatable
+// prescription (a single one keeps 7), and DispensationChanged.
 // Each operation is written with the lowest version that can carry it,
 // so the operations an older app understands keep version 1 and only the
 // new type stops it (R7).
 public static class OperationCodec
 {
-    public const int CurrentSchemaVersion = 11;
+    public const int CurrentSchemaVersion = 12;
 
     private static readonly (string Name, Type Type)[] Catalogue =
     [
@@ -50,6 +52,7 @@ public static class OperationCodec
         ("DeadlineChanged", typeof(DeadlineChanged)),
         ("MedicineStartChanged", typeof(MedicineStartChanged)),
         ("PackageChanged", typeof(PackageChanged)),
+        ("DispensationChanged", typeof(DispensationChanged)),
     ];
 
     private static readonly Dictionary<Type, string> NameByType =
@@ -75,12 +78,14 @@ public static class OperationCodec
         EmailNotificationSent { Stage: > 1 } => 6,
         EmailNotificationSent => 4,
         HouseholdLinked => 5,
+        PrescriptionChanged { Dispensations: > 1 } => 12,
         PrescriptionChanged => 7,
         DeadlineChanged => 8,
         IntakeRecorded { IsExtra: true } => 9,
         SlotSetRecorded set when set.Slots.Any(s => s.IsAsNeeded) => 9,
         MedicineStartChanged => 10,
         PackageChanged => 11,
+        DispensationChanged => 12,
         _ => 1,
     };
 

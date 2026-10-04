@@ -620,6 +620,67 @@ installation is shared). The reminder does not include the code.
 Prescriptions are copied to the other PCs of a synced profile and
 included in the encrypted export.
 
+### Repeatable prescriptions
+
+Some prescriptions cover several dispensations at the pharmacy over a
+long validity, for example a year of therapy collected one month at a
+time. Tick **Repeatable prescription** in the prescription window to
+record one as a single prescription:
+
+- **Dispensations allowed**: how many times the pharmacy dispenses it
+  (2 to 12);
+- **Valid until** is filled in for 12 months from the issue date; check
+  it against your prescription and change it if it differs;
+- **Dispensations collected** replaces *Collected on*: add each
+  dispensation with the day and, if you know it, the number of packages.
+  **Collected today** in the list records one in one click, and after a
+  new package MedReminder offers to record it with today's date.
+
+The list shows the dispensations as collected / allowed, for example
+`3 / 12`. A repeatable prescription stays *To collect* while
+dispensations are left and its validity lasts; it is *Collected* once
+all are collected and *Expired* if the validity ends first. When the
+stock runs low, the warning says how many dispensations are left and
+until when, instead of suggesting a new prescription, and its button
+opens the prescription. The reminder before *Valid until* comes only
+while dispensations are left and says how many would be lost.
+MedReminder does not check the interval between dispensations: follow
+your pharmacist's indications.
+
+On synced PCs, update MedReminder on every PC of the profile before
+recording a repeatable prescription: an older version stops syncing
+until it is updated.
+
+### Regional prescription service
+
+With Italy as reference country, **Therapy → Prescriptions…** and the
+prescription request window have a **Regional prescription service**
+button. It opens the service of your region where the electronic
+prescriptions issued to you are shown, so you can copy the
+prescription number instead of waiting for it.
+
+- The first time, choose your region or autonomous province. It is
+  saved with the profile; change it from the button (**Change region…**)
+  or in Settings → Notifications.
+- **Open in browser** opens the regional portal in your usual browser.
+- **Open on phone** shows a QR code of the regional app, or of the
+  portal when there is no app: scan it with the phone camera and sign
+  in on the phone.
+
+The line under the button names the service and how to sign in (SPID,
+CIE or TS-CNS). You sign in on the regional service, never in
+MedReminder: MedReminder does not see your credentials or your health
+record and imports nothing from it. A caregiver signs in with their
+own credentials and a delegation set up on the regional service. When
+no service is listed for your region, open the health record portal
+(Fascicolo Sanitario Elettronico) of your region yourself.
+
+**Paste NRE**, next to **Prescription code** in the prescription
+window, writes the electronic prescription number (NRE, 15 letters or
+digits) you copied from the regional service, without spaces, and
+fills an empty **Issued on** with today. MedReminder reads the
+clipboard only when you click it.
+
 ### Administrative deadlines
 
 **Therapy → Administrative deadlines…** keeps the dates that are not

@@ -193,6 +193,10 @@ public sealed record HouseholdLinked(
 // EVOLUTION-PROPOSALS-2.md §3.2): written when it is recorded, changed or
 // deleted. Last writer wins per prescription, without a conflict entry;
 // Deleted removes it, unless a later write brings it back.
+// Dispensations (operation schema version 12): a repeatable prescription
+// (more than one dispensation) is written with version 12, so an older
+// device stops at it instead of reading it as a single prescription; a
+// single one keeps version 7.
 public sealed record PrescriptionChanged(
     Guid MedicineId,
     Guid PrescriptionId,
@@ -202,6 +206,22 @@ public sealed record PrescriptionChanged(
     int? Packages,
     DateOnly? ValidUntil,
     DateOnly? CollectedOn,
+    bool Deleted,
+    DateTimeOffset RecordedAt,
+    int? Dispensations = null) : SyncOperationBody(MedicineId);
+
+// One dispensation of a repeatable prescription as a whole (operation
+// schema version 12), with the rules of PackageChanged: last writer wins
+// per dispensation, Deleted removes it. Not part of PrescriptionChanged,
+// so two devices recording a dispensation at the same time both keep
+// theirs. The row follows its own register only: a dispensation whose
+// prescription is gone stays, unused, and returns with the prescription.
+public sealed record DispensationChanged(
+    Guid MedicineId,
+    Guid DispensationId,
+    Guid PrescriptionId,
+    DateOnly CollectedOn,
+    int? Packages,
     bool Deleted,
     DateTimeOffset RecordedAt) : SyncOperationBody(MedicineId);
 
@@ -277,7 +297,14 @@ public static class ProfileSetting
     public const string PackageExpiryLeadDays = "PackageExpiryLeadDays";
     public const string PackageInUseLeadDays = "PackageInUseLeadDays";
 
+    // Italian region of the profile, whose prescription service the
+    // prescription windows open (docs/prompt/
+    // PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2): an ISTAT code of
+    // Prescriptions.ItalianRegions, "" when not set. Unknown to an older
+    // app: kept, not projected, as above.
+    public const string Region = "Region";
+
     public static readonly IReadOnlyList<string> All =
         [DisplayName, ToAddress, CaregiverAddress, DoctorAddress, CaregiverEmails, CaregiverDigest, CaregiverDigestSentOn,
-            PackageExpiryLeadDays, PackageInUseLeadDays];
+            PackageExpiryLeadDays, PackageInUseLeadDays, Region];
 }

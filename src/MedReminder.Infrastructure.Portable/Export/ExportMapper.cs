@@ -293,7 +293,11 @@ internal static class ExportMapper
     private static TEnum ParseEnum<TEnum>(string value) where TEnum : struct, Enum
         => Enum.Parse<TEnum>(value);
 
-    public static ExportedPrescription ToDto(Prescription p) => new()
+    // `dispensations`: those of the prescription, written only for a
+    // repeatable one; a dispensation whose prescription is gone is not
+    // exported.
+    public static ExportedPrescription ToDto(Prescription p, IEnumerable<PrescriptionDispensation>? dispensations = null)
+        => new()
     {
         Id = p.Id,
         MedicineId = p.MedicineId,
@@ -305,7 +309,30 @@ internal static class ExportMapper
         CollectedOn = p.CollectedOn,
         RecordedAt = p.RecordedAt,
         UpdatedAt = p.UpdatedAt,
+        Dispensations = p.Dispensations,
+        DispensationRecords = p.IsRepeatable
+            ? (dispensations ?? []).OrderBy(x => x.CollectedOn).ThenBy(x => x.Id).Select(x => new ExportedPrescriptionDispensation
+            {
+                Id = x.Id,
+                CollectedOn = x.CollectedOn,
+                Packages = x.Packages,
+                RecordedAt = x.RecordedAt,
+                UpdatedAt = x.UpdatedAt,
+            }).ToList()
+            : null,
     };
+
+    public static IEnumerable<PrescriptionDispensation> ToDispensationEntities(ExportedPrescription d)
+        => (d.DispensationRecords ?? []).Select(x => new PrescriptionDispensation
+        {
+            Id = x.Id,
+            PrescriptionId = d.Id,
+            MedicineId = d.MedicineId,
+            CollectedOn = x.CollectedOn,
+            Packages = x.Packages,
+            RecordedAt = x.RecordedAt,
+            UpdatedAt = x.UpdatedAt,
+        });
 
     public static Prescription ToEntity(ExportedPrescription d) => new()
     {
@@ -319,6 +346,7 @@ internal static class ExportMapper
         CollectedOn = d.CollectedOn,
         RecordedAt = d.RecordedAt,
         UpdatedAt = d.UpdatedAt,
+        Dispensations = d.Dispensations,
     };
 
     public static ExportedDoseTimePreset ToDto(DoseTimePreset p) => new()

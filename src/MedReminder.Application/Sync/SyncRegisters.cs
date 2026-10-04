@@ -30,6 +30,9 @@ public sealed class SyncRegisters
     // The whole state of a package, as the payload of the PackageChanged
     // that wrote it (last writer wins).
     public const string PackageState = "Package";
+    // The whole state of a dispensation of a repeatable prescription, as
+    // the payload of the DispensationChanged that wrote it.
+    public const string DispensationState = "Dispensation";
 
     private readonly ISyncFieldVersionRepository _versions;
     private readonly ISyncConflictRepository _conflicts;
@@ -89,6 +92,8 @@ public sealed class SyncRegisters
             [new RegisterWrite(d.DeadlineId, DeadlineState, OperationCodec.Serialize(d).Payload, null)],
         PackageChanged p =>
             [new RegisterWrite(p.PackageId, PackageState, OperationCodec.Serialize(p).Payload, null)],
+        DispensationChanged d =>
+            [new RegisterWrite(d.DispensationId, DispensationState, OperationCodec.Serialize(d).Payload, null)],
         _ => [],
     };
 
@@ -122,6 +127,11 @@ public sealed class SyncRegisters
     public static PackageChanged ParsePackage(string value)
         => (PackageChanged)OperationCodec.Deserialize(
             nameof(PackageChanged), OperationCodec.CurrentSchemaVersion, value);
+
+    // The dispensation a DispensationState version holds.
+    public static DispensationChanged ParseDispensation(string value)
+        => (DispensationChanged)OperationCodec.Deserialize(
+            nameof(DispensationChanged), OperationCodec.CurrentSchemaVersion, value);
 
     public static HybridTimestamp? BaseOf(SyncOperationBody body) => body switch
     {

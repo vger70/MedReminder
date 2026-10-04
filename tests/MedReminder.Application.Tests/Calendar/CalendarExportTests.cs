@@ -19,7 +19,7 @@ public class CalendarExportTests
 
     private static CalendarExportQuery Query(ApplicationTestScope scope, JsonDictionaryLocalizationService? loc = null)
         => new(scope.Medicines, scope.Stock, scope.Schedules, scope.Suspensions, scope.Slots, scope.Prescriptions,
-            scope.Deadlines, scope.Clock, loc);
+            scope.Deadlines, scope.Clock, loc, scope.Dispensations);
 
     private static Task<Guid> AddMedicineAsync(ApplicationTestScope scope, string name, decimal stock,
         NotificationChannels channels = NotificationChannels.Windows)

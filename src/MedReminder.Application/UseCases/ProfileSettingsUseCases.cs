@@ -3,6 +3,7 @@ using MedReminder.Application.Household;
 using MedReminder.Application.Packages;
 using MedReminder.Application.Sync;
 using MedReminder.Domain.Household;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Sync;
 
 namespace MedReminder.Application.UseCases;
@@ -35,6 +36,7 @@ public sealed class UpdateNotificationSettings
     // caregiverEmails and caregiverDigest (docs/notes/
     // EVOLUTION-PROPOSALS-2.md §3.8), and the package expiry lead days
     // (ANALYSIS-PACKAGE-EXPIRY.md §4.6): null leaves the setting as it is.
+    // The region has its own use case, UpdateProfileRegion.
     public Task ExecuteAsync(string toAddress, string caregiverAddress, string doctorAddress,
         CancellationToken cancellationToken, string? caregiverEmails = null, string? caregiverDigest = null,
         string? packageExpiryLeadDays = null, string? packageInUseLeadDays = null)
@@ -91,6 +93,49 @@ public sealed class UpdateNotificationSettings
             if (changes.Count > 0) _store.Write(changes);
             return true;
         }, cancellationToken);
+}
+
+// The region of the profile (docs/prompt/
+// PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md §3.2, §3.3), the only write
+// path of the setting: chosen from the prescription windows the first
+// time the regional service is asked for, or changed in Settings. A
+// ProfileSettingChanged operation, as the addresses: the other devices
+// of the profile's sync group get it. Recorded only when the value
+// changes, never as a side effect of saving another setting, so a device
+// that has not synced yet cannot clear a region set elsewhere. "" clears
+// it.
+public sealed class UpdateProfileRegion
+{
+    private readonly IProfileSettingsStore _store;
+    private readonly IOperationLog _operations;
+    private readonly IUnitOfWork _uow;
+
+    public UpdateProfileRegion(IProfileSettingsStore store, IOperationLog operations, IUnitOfWork uow)
+    {
+        _store = store;
+        _operations = operations;
+        _uow = uow;
+    }
+
+    // A replicated value every device reads alike: a code outside the 21
+    // regions and provinces is refused, not stored.
+    public Task ExecuteAsync(string region, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(region);
+        var value = region.Trim();
+        if (value.Length > 0 && !ItalianRegions.IsValid(value))
+            throw new ArgumentException("The region is not an Italian region code.", nameof(region));
+        return WriteGate.RunExclusiveAsync(async ct =>
+        {
+            if (string.Equals(_store.Read().GetValueOrDefault(ProfileSetting.Region) ?? string.Empty, value,
+                    StringComparison.Ordinal))
+                return true;
+            await _operations.AppendAsync([new ProfileSettingChanged(ProfileSetting.Region, value)], ct);
+            await _uow.SaveChangesAsync(ct);
+            _store.Write(new Dictionary<string, string?>(StringComparer.Ordinal) { [ProfileSetting.Region] = value });
+            return true;
+        }, cancellationToken);
+    }
 }
 
 // A profile synced with other devices is renamed only while it is open:

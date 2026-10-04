@@ -41,6 +41,7 @@ public sealed class MedReminderDbContext : DbContext
     public DbSet<SyncPeer> SyncPeers => Set<SyncPeer>();
     public DbSet<Prescription> Prescriptions => Set<Prescription>();
     public DbSet<PrescriptionReminderEvent> PrescriptionReminderEvents => Set<PrescriptionReminderEvent>();
+    public DbSet<PrescriptionDispensation> PrescriptionDispensations => Set<PrescriptionDispensation>();
     public DbSet<Deadline> Deadlines => Set<Deadline>();
     public DbSet<DeadlineReminderEvent> DeadlineReminderEvents => Set<DeadlineReminderEvent>();
     public DbSet<StockPackage> StockPackages => Set<StockPackage>();
@@ -74,6 +75,7 @@ public sealed class MedReminderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new SyncPeerConfiguration());
         modelBuilder.ApplyConfiguration(new PrescriptionConfiguration());
         modelBuilder.ApplyConfiguration(new PrescriptionReminderEventConfiguration());
+        modelBuilder.ApplyConfiguration(new PrescriptionDispensationConfiguration());
         modelBuilder.ApplyConfiguration(new DeadlineConfiguration());
         modelBuilder.ApplyConfiguration(new DeadlineReminderEventConfiguration());
         modelBuilder.ApplyConfiguration(new StockPackageConfiguration());

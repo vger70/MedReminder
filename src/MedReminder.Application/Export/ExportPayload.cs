@@ -264,6 +264,10 @@ public sealed class ExportedNotificationSettings
     // §4.6). Additive: archives without them import with "" (defaults).
     public string PackageExpiryLeadDays { get; set; } = string.Empty;
     public string PackageInUseLeadDays { get; set; } = string.Empty;
+
+    // Italian region of the profile (PROMPT-REGIONAL-PRESCRIPTION-SERVICES
+    // §3.2). Additive: archives without it import with "" (no region).
+    public string Region { get; set; } = string.Empty;
 }
 
 // Opt-in non-DB files (§3.4). A section is null unless the user opted
@@ -334,6 +338,20 @@ public sealed class ExportedPrescription
     public int? Packages { get; set; }
     public DateOnly? ValidUntil { get; set; }
     public DateOnly? CollectedOn { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    // Repeatable prescriptions, additive (docs/EXPORT-FORMAT.md §3.14):
+    // absent in older archives, which import as single prescriptions.
+    public int? Dispensations { get; set; }
+    public IList<ExportedPrescriptionDispensation>? DispensationRecords { get; set; }
+}
+
+public sealed class ExportedPrescriptionDispensation
+{
+    public Guid Id { get; set; }
+    public DateOnly CollectedOn { get; set; }
+    public int? Packages { get; set; }
     public DateTimeOffset RecordedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
