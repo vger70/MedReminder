@@ -30,6 +30,17 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #195 — Add implementation prompt for repeatable prescriptions
+
+Link: [vger70/MedReminder#195](https://github.com/vger70/MedReminder/pull/195)
+Branch: `claude/project-thread-i2a3y8` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-REPEATABLE-PRESCRIPTION.md`: brief for a prescription with several dispensations over a long validity (Italian Law 182/2025 art. 62, implementing decree not verified, so the model stays parametric); dispensations in their own sync register so concurrent records are not lost, single prescriptions unchanged at operation schema 7, boot patch, additive export fields, low-stock text when a dispensation is left, UI, tests.
+
+---
+
 ## PR #193 — Harden the daily dated-list feeds and let feeds publish concurrently
 
 Link: [vger70/MedReminder#193](https://github.com/vger70/MedReminder/pull/193)
