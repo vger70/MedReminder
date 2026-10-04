@@ -4,6 +4,7 @@ using MedReminder.Application.Catalogue;
 using MedReminder.Application.Export;
 using MedReminder.Application.Notifications;
 using MedReminder.Application.Packages;
+using MedReminder.Application.Prescriptions;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Stock;
 using MedReminder.Infrastructure.Email;
@@ -28,6 +29,10 @@ internal sealed partial class SettingsDialog
     // Lead days of the package expiry notices (ANALYSIS-PACKAGE-EXPIRY.md §5.5).
     private NumericUpDown _expiryLeadDays = null!;
     private NumericUpDown _inUseLeadDays = null!;
+
+    // Region of the profile (PROMPT-REGIONAL-PRESCRIPTION-SERVICES §3.3):
+    // null when the reference country is not Italy and the row is hidden.
+    private ComboBox? _regionBox;
 
     // Notifications section (Increment 15d).
     // Per-profile "where do the emails go" tab (§7.4). Visible to
@@ -87,6 +92,11 @@ internal sealed partial class SettingsDialog
         AddRow(table, _loc.Get("Ui.SettingsDialog.Email.To"), _toBox);
         AddRow(table, _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Label"), _caregiverBox);
         AddRow(table, _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Label"), _doctorBox);
+        if (RegionalServiceForProfileQuery.IsOffered(_userMonitor.CurrentValue.ReferenceCountry))
+        {
+            _regionBox = BuildRegionBox(current.Region);
+            AddRow(table, _loc.Get("Ui.SettingsDialog.Notifications.Region.Label"), _regionBox);
+        }
 
         var buttons = new FlowLayoutPanel
         {
@@ -108,6 +118,16 @@ internal sealed partial class SettingsDialog
         container.Controls.Add(caregiverHelp);
         container.Controls.Add(caregiverOptions);
         container.Controls.Add(doctorHelp);
+        if (_regionBox is not null)
+        {
+            container.Controls.Add(new Label
+            {
+                AutoSize = true,
+                MaximumSize = new System.Drawing.Size(560, 0),
+                ForeColor = UiColors.Hint,
+                Text = _loc.Get("Ui.SettingsDialog.Notifications.Region.Help"),
+            });
+        }
         container.Controls.Add(BuildPackageExpiryOptions(current));
         container.Controls.Add(buttons);
         container.Controls.Add(explanation);
@@ -118,6 +138,21 @@ internal sealed partial class SettingsDialog
 
         page.Controls.Add(container);
         return page;
+    }
+
+    // "Not set" first, then the 21 regions and provinces by name.
+    private ComboBox BuildRegionBox(string current)
+    {
+        var box = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
+        box.Items.Add(new RegionChoice(string.Empty, _loc.Get("Ui.SettingsDialog.Notifications.Region.None")));
+        foreach (var (code, name) in RegionNames.All(_loc)) box.Items.Add(new RegionChoice(code, name));
+        box.SelectedItem = box.Items.Cast<RegionChoice>().FirstOrDefault(r => r.Code == current?.Trim()) ?? box.Items[0];
+        return box;
+    }
+
+    private sealed record RegionChoice(string Code, string Name)
+    {
+        public override string ToString() => Name;
     }
 
     private Control BuildCaregiverOptions(NotificationSettings current)
@@ -361,7 +396,8 @@ internal sealed partial class SettingsDialog
                         caregiverEmails: CaregiverEmails.Format(_caregiverKinds.Where(k => k.Value.Checked).Select(k => k.Key)),
                         caregiverDigest: _caregiverDigest.Checked ? CaregiverDigestFrequency.Weekly : CaregiverDigestFrequency.Off,
                         packageExpiryLeadDays: PackageSettings.FormatPrinted((int)_expiryLeadDays.Value),
-                        packageInUseLeadDays: PackageSettings.FormatInUse((int)_inUseLeadDays.Value));
+                        packageInUseLeadDays: PackageSettings.FormatInUse((int)_inUseLeadDays.Value),
+                        region: (_regionBox?.SelectedItem as RegionChoice)?.Code);
             }
             if (IsDisposed) return;
             UiMessageBox.Show(this,

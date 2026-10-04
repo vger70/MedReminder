@@ -1,7 +1,7 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
-using QRCoder;
+using MedReminder.UI.UiExtensions;
 
 namespace MedReminder.UI.Forms;
 
@@ -71,7 +71,7 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
 
         var qr = new PictureBox
         {
-            Image = RenderQr(codeText),
+            Image = QrImage.Render(codeText),
             SizeMode = PictureBoxSizeMode.Zoom,
             Width = 320,
             Height = 320,
@@ -160,16 +160,5 @@ internal sealed class SyncPairingDialog : MedReminderFormBase
         }
         _remaining.Text = _loc.Get("Ui.SyncDialog.Pair.Remaining",
             left.ToString(@"m\:ss", CultureInfo.CurrentCulture));
-    }
-
-    private static Bitmap RenderQr(string text)
-    {
-        using var generator = new QRCodeGenerator();
-        using var data = generator.CreateQrCode(text, QRCodeGenerator.ECCLevel.M);
-        using var png = new PngByteQRCode(data);
-        using var stream = new MemoryStream(png.GetGraphic(8));
-        // A copy: Image.FromStream needs its stream for the image's life.
-        using var image = Image.FromStream(stream);
-        return new Bitmap(image);
     }
 }

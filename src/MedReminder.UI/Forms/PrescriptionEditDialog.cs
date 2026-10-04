@@ -16,6 +16,11 @@ namespace MedReminder.UI.Forms;
 // single "collected on" date; ticking it pre-fills "valid until" with
 // the repeatable default unless the user set it. The fields stay in place
 // when disabled, so the dialog keeps its size.
+//
+// "Paste NRE" (docs/prompt/PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md
+// §3.3), offered with Italy as reference country: reads the clipboard
+// only when clicked, writes the normalised prescription number when the
+// text is one (NreCode), and fills an empty issue date with today.
 internal sealed class PrescriptionEditDialog : MedReminderFormBase
 {
     private readonly ILocalizationService _loc;
@@ -25,6 +30,7 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
     private readonly DateTimePicker _validUntil;
     private readonly DateTimePicker _collected;
     private readonly TextBox _code;
+    private readonly Label _codeError;
     private readonly NumericUpDown _packages;
     private readonly CheckBox _repeatable;
     private readonly NumericUpDown _dispensations;
@@ -49,7 +55,8 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
         Prescription? existing,
         IReadOnlyList<PrescriptionDispensation> dispensations,
         DateOnly today,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        bool offerNrePaste = false)
     {
         _loc = localization;
         _id = existing?.Id;
@@ -96,6 +103,29 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
             MaxLength = PrescriptionRules.MaxCodeLength,
             Text = existing?.Code ?? string.Empty,
         };
+        _codeError = DialogLayout.ErrorLabel();
+        Control codeField = _code;
+        if (offerNrePaste)
+        {
+            var paste = DialogLayout.Button(_loc.Get("Ui.PrescriptionEditDialog.PasteNre"));
+            paste.Click += (_, _) => PasteNre();
+            var row = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Margin = Padding.Empty,
+            };
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            _code.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            row.Controls.Add(_code, 0, 0);
+            row.Controls.Add(paste, 1, 0);
+            codeField = row;
+        }
+        _code.TextChanged += (_, _) => DialogLayout.ShowError(_codeError, null);
+
         _packages = new NumericUpDown
         {
             Minimum = 0,
@@ -165,7 +195,8 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
         DialogLayout.AddRow(table, _loc.Get("Ui.PrescriptionEditDialog.Medicine"), _medicine);
         DialogLayout.AddRow(table, _loc.Get("Ui.PrescriptionEditDialog.Requested"), _requested);
         DialogLayout.AddRow(table, _loc.Get("Ui.PrescriptionEditDialog.Issued"), _issued);
-        DialogLayout.AddRow(table, _loc.Get("Ui.PrescriptionEditDialog.Code"), _code);
+        DialogLayout.AddRow(table, _loc.Get("Ui.PrescriptionEditDialog.Code"), codeField);
+        DialogLayout.AddRow(table, string.Empty, _codeError);
         DialogLayout.AddRow(table, _loc.Get("Ui.PrescriptionEditDialog.Packages"), _packages);
         DialogLayout.AddRow(table, _loc.Get("Ui.PrescriptionEditDialog.ValidUntil"), _validUntil);
         DialogLayout.AddRow(table, _loc.Get("Ui.PrescriptionEditDialog.Collected"), _collected);
@@ -285,6 +316,35 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
         foreach (ListViewItem item in _dispensationList.Items)
         {
             item.Selected = ReferenceEquals(item.Tag, record);
+        }
+    }
+
+    // The clipboard is read here only, on the user's click. Nothing of it
+    // is logged.
+    private void PasteNre()
+    {
+        string text;
+        try
+        {
+            text = Clipboard.ContainsText() ? Clipboard.GetText() : string.Empty;
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            // Another program holds the clipboard.
+            text = string.Empty;
+        }
+        if (!NreCode.TryParse(text, out var code))
+        {
+            DialogLayout.ShowError(_codeError, _loc.Get("Ui.PrescriptionEditDialog.Error.NotNre"), _code);
+            return;
+        }
+        _code.Text = code.Value;
+        DialogLayout.ShowError(_codeError, null);
+        if (!_issued.Checked)
+        {
+            _issued.Value = _today.ToDateTime(TimeOnly.MinValue);
+            _issued.Checked = true;
+            PrefillValidUntil();
         }
     }
 

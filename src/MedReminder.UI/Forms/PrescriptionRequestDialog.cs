@@ -20,6 +20,8 @@ namespace MedReminder.UI.Forms;
 // "Mark as requested" records a prescription requested today
 // (docs/notes/EVOLUTION-PROPOSALS-2.md §3.2), whichever way the request
 // went out; it is offered when the caller passes markRequested.
+// "Regional prescription service" opens the service of the profile's
+// region (RegionalServicePanel) when the caller passes regional.
 //
 // The dialog does not log anything: the draft contains health data and
 // personal names (CLAUDE.md §7). The send delegate owns the outcome log.
@@ -52,7 +54,8 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         Func<string, string, string, CancellationToken, Task> sendAsync,
         ILocalizationService localization,
         bool isMaster = true,
-        Func<Task>? markRequested = null)
+        Func<Task>? markRequested = null,
+        RegionalServiceActions? regional = null)
     {
         ArgumentNullException.ThrowIfNull(draft);
         ArgumentNullException.ThrowIfNull(sendAsync);
@@ -167,6 +170,7 @@ internal sealed class PrescriptionRequestDialog : MedReminderFormBase
         AcceptButton = null;
 
         Controls.Add(table);
+        if (regional is not null) Controls.Add(new RegionalServicePanel(regional, _loc));
         Controls.Add(buttonPanel);
 
         // The hint wraps to the width of the field column, whatever the
