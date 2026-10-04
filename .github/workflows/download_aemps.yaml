@@ -5,7 +5,7 @@ on:
     # Same days as download_aifa.yaml, staggered by 20 minutes. Once the
     # month's version is published, scripts/feeds/aemps.py exits
     # without changes.
-    - cron: '27 3 2,9,16,23 * *'
+    - cron: '27 3 * * *'
   workflow_dispatch:
     inputs:
       force:
