@@ -5,16 +5,21 @@
 # (docs/CATALOGUE-DATA.md §1.1). Clients read
 # https://raw.githubusercontent.com/<owner>/<repo>/feeds/data/.
 #
-#   feeds_branch.sh load             replace data/ in the working tree
-#                                    with the branch content (no-op when
-#                                    the branch does not exist yet)
-#   feeds_branch.sh publish MESSAGE  publish data/ of the working tree as
-#                                    the branch's only commit
+#   feeds_branch.sh load
+#       Replace data/ in the working tree with the branch content (no-op
+#       when the branch does not exist yet).
+#   feeds_branch.sh publish MESSAGE PATHSPEC...
+#       Publish the paths the calling workflow owns (for example data/es,
+#       or data/it with its shortages and equivalents excluded) on top of
+#       the branch as it is at push time, as the branch's only commit.
 #
-# Run from the repository root of a checkout with push rights, inside
-# the catalogue-feeds-publish concurrency group. Only git plumbing on a
-# temporary index: the checkout's own index and HEAD are not touched, so
-# the step that mirrors data/ to main still sees main's state.
+# Each workflow has its own concurrency group, so two feeds can publish
+# at the same time: a publish starts from the current branch, replaces
+# only its own paths and pushes with --force-with-lease; when another
+# publish lands first, the lease fails and the publish is rebuilt on the
+# new branch. Only git plumbing on a temporary index: the checkout's own
+# index and HEAD are not touched, so the step that mirrors data/ to main
+# still sees main's state.
 set -euo pipefail
 
 BRANCH="${FEEDS_BRANCH:-feeds}"
@@ -44,16 +49,16 @@ load() {
     echo "Loaded data/ from ${BRANCH} ($(git rev-parse --short "$TRACKING"))."
 }
 
-publish() {
-    local message="$1"
+# One attempt, run in a subshell with errexit on: 0 published or
+# nothing to publish, 3 lease lost (the branch moved), anything else is
+# an error.
+publish_once() {
+    local index="$1" message="$2"
+    shift 2
     local old=""
     if fetch_branch; then
         old="$(git rev-parse "$TRACKING")"
     fi
-
-    local index
-    index="$(mktemp -u)"
-    trap 'rm -f "$index"' RETURN
 
     local readme
     readme="$(printf '%s\n' \
@@ -62,7 +67,16 @@ publish() {
         "publish replaces the single commit. See docs/CATALOGUE-DATA.md on main." \
         | git hash-object -w --stdin)"
 
-    GIT_INDEX_FILE="$index" git add --all --force -- data
+    if [ -n "$old" ]; then
+        # Start from the published branch and replace only the paths this
+        # workflow owns, so a feed published since this job's load is kept.
+        GIT_INDEX_FILE="$index" git read-tree "$old"
+        GIT_INDEX_FILE="$index" git rm -r -q --cached --ignore-unmatch -- "$@"
+        GIT_INDEX_FILE="$index" git add --all --force -- "$@"
+    else
+        # First publish: the branch starts from every feed of the checkout.
+        GIT_INDEX_FILE="$index" git add --all --force -- data
+    fi
     # The -text rules keep the JSON files byte for byte in any checkout
     # of the branch, as on main.
     if [ -f .gitattributes ]; then
@@ -80,18 +94,40 @@ publish() {
     local commit
     commit="$(git commit-tree "$tree" -m "$message")"
     # The lease refuses the push if the branch moved since the fetch (an
-    # empty lease requires it to be absent), so a concurrent publish is
-    # never overwritten silently.
-    git push --quiet --force-with-lease="refs/heads/${BRANCH}:${old}" \
-        "$REMOTE" "${commit}:refs/heads/${BRANCH}"
+    # empty lease requires it to be absent): the attempt is then rebuilt
+    # on the new branch instead of overwriting the other publish.
+    if ! git push --quiet --force-with-lease="refs/heads/${BRANCH}:${old}" \
+        "$REMOTE" "${commit}:refs/heads/${BRANCH}"; then
+        return 3
+    fi
     echo "Published ${BRANCH} at $(git rev-parse --short "$commit")."
+}
+
+publish() {
+    local attempt status index
+    for attempt in 1 2 3 4 5; do
+        index="$(mktemp -u)"
+        # A function called from `||` or `if` runs without errexit, even
+        # if it sets it again: the subshell keeps every failure fatal.
+        set +e
+        (set -e; publish_once "$index" "$@")
+        status=$?
+        set -e
+        rm -f "$index"
+        [ "$status" -eq 3 ] || return "$status"
+        echo "Branch ${BRANCH} moved during the publish; retrying (${attempt}/5)."
+        sleep $((attempt * 2))
+    done
+    echo "Branch ${BRANCH} kept moving; giving up." >&2
+    return 1
 }
 
 case "${1:-}" in
     load) load ;;
     publish)
-        [ -n "${2:-}" ] || { echo "usage: $0 publish MESSAGE" >&2; exit 64; }
-        publish "$2"
+        [ -n "${2:-}" ] && [ -n "${3:-}" ] || { echo "usage: $0 publish MESSAGE PATHSPEC..." >&2; exit 64; }
+        shift
+        publish "$@"
         ;;
-    *) echo "usage: $0 load | publish MESSAGE" >&2; exit 64 ;;
+    *) echo "usage: $0 load | publish MESSAGE PATHSPEC..." >&2; exit 64 ;;
 esac

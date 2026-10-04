@@ -327,6 +327,10 @@ writing `main/data/latest.json` until that release is out of use.
 - **Shared concurrency group** `catalogue-feeds-publish`
   (`cancel-in-progress: false`) so pushes are serialized; each job also
   does `git pull --rebase` before `git push`, with one retry.
+  *Superseded:* since the feeds moved to the `feeds` branch and run
+  daily, each workflow has its own group and publishes only its own
+  paths, rebuilding a publish whose lease was lost
+  (`docs/CATALOGUE-DATA.md` §1.1).
 - **Schedule:** the same days as AIFA (days 2, 9, 16 and 23 since
   2026-09-29; days 2–7 when this analysis was written), staggered (`0 3`, `20 3`, `40 3`,
   `0 4`) to spread load and simplify logs. Each script exits early when

@@ -437,12 +437,16 @@ Branch: `claude/vigilant-hypatia-yby7iu` → `main`
 
 - `download_aifa_shortages.yaml` runs daily at 04:27 UTC instead of
   on days 2, 9, 16 and 23: AIFA updates the list on no fixed day, so a
-  new list now reaches clients within a day. Runs on a list already
+  new list is now on the feed within a day, and on clients, which
+  check once a day, within about two days. Runs on a list already
   published commit nothing.
 
 ### Docs
 
 - `docs/CATALOGUE-DATA.md` §8.
+
+---
+
 ## PR #173 — Publish the catalogue feeds on a single-commit feeds branch
 
 Link: [vger70/MedReminder#173](https://github.com/vger70/MedReminder/pull/173)

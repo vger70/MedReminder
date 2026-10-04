@@ -112,3 +112,129 @@ def test_publish_keeps_the_three_newest_files(tmp_path):
     assert sorted(p.name for p in tmp_path.glob("shortages-*.json")) == [
         "shortages-20260915.json", "shortages-20260922.json", "shortages-20260929.json",
     ]
+
+
+def test_publish_never_deletes_the_file_the_manifest_names(tmp_path):
+    for day in ("20261001", "20261002", "20261003"):
+        (tmp_path / f"shortages-{day}.json").write_text("{}", encoding="utf-8")
+    list_date, entries = aifa_shortages.parse(sample_text())
+    generated = common.run_time()
+
+    manifest = aifa_shortages.publish(
+        tmp_path, list_date, aifa_shortages.build_document(list_date, entries, generated), generated)
+
+    assert (tmp_path / manifest["file"]).exists()
+    assert sorted(p.name for p in tmp_path.glob("shortages-*.json")) == [
+        "shortages-20260929.json", "shortages-20261002.json", "shortages-20261003.json",
+    ]
+
+
+class FakeResponse:
+    def __init__(self, status, content=b"", headers=None):
+        self.status_code = status
+        self.content = content
+        self.headers = headers or {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(self.status_code)
+
+
+class FakeSession:
+    def __init__(self, response):
+        self.response = response
+        self.headers = None
+
+    def get(self, url, headers=None, timeout=None):
+        self.headers = headers
+        return self.response
+
+
+def run_main(monkeypatch, tmp_path, response, force=False):
+    monkeypatch.setattr(aifa_shortages, "DATA_DIR", tmp_path)
+    # The sample holds 6 entries, below the production floor.
+    monkeypatch.setattr(aifa_shortages, "MIN_ENTRIES", 1)
+    session = FakeSession(response)
+    monkeypatch.setattr(common, "session", lambda: session)
+    monkeypatch.setenv("FORCE_REFRESH", "true" if force else "false")
+    assert aifa_shortages.main([]) == 0
+    return session
+
+
+def sample_response(etag='"v1"', text=None):
+    raw = SAMPLE.read_bytes() if text is None else text.encode("cp1252")
+    return FakeResponse(200, raw, {"ETag": etag, "Last-Modified": "Tue, 29 Sep 2026 10:00:00 GMT"})
+
+
+def manifest_of(tmp_path):
+    return json.loads((tmp_path / "latest.json").read_text(encoding="utf-8"))
+
+
+def test_main_publishes_and_records_the_source_validators(monkeypatch, tmp_path):
+    run_main(monkeypatch, tmp_path, sample_response())
+
+    manifest = manifest_of(tmp_path)
+    assert manifest["version"] == "20260929"
+    assert manifest["source"] == {"etag": '"v1"', "lastModified": "Tue, 29 Sep 2026 10:00:00 GMT"}
+
+
+def test_main_sends_the_validators_and_stops_on_304(monkeypatch, tmp_path, capsys):
+    run_main(monkeypatch, tmp_path, sample_response())
+    before = (tmp_path / "latest.json").read_bytes()
+
+    session = run_main(monkeypatch, tmp_path, FakeResponse(304))
+
+    assert session.headers["If-None-Match"] == '"v1"'
+    assert session.headers["If-Modified-Since"] == "Tue, 29 Sep 2026 10:00:00 GMT"
+    assert "unchanged" in capsys.readouterr().out
+    assert (tmp_path / "latest.json").read_bytes() == before
+
+
+def test_main_forced_ignores_the_validators(monkeypatch, tmp_path):
+    run_main(monkeypatch, tmp_path, sample_response())
+
+    session = run_main(monkeypatch, tmp_path, sample_response(), force=True)
+
+    assert "If-None-Match" not in session.headers
+
+
+def test_main_skips_the_same_list_and_records_new_validators(monkeypatch, tmp_path):
+    run_main(monkeypatch, tmp_path, sample_response())
+    published = manifest_of(tmp_path)
+
+    run_main(monkeypatch, tmp_path, sample_response(etag='"v2"'))
+
+    manifest = manifest_of(tmp_path)
+    assert manifest["sha256"] == published["sha256"]
+    assert manifest["generated"] == published["generated"]
+    assert manifest["source"]["etag"] == '"v2"'
+
+
+def test_main_republishes_a_correction_with_the_same_date(monkeypatch, tmp_path):
+    run_main(monkeypatch, tmp_path, sample_response())
+    published = manifest_of(tmp_path)
+
+    corrected = sample_text().replace("087654321", "087654329")
+    run_main(monkeypatch, tmp_path, sample_response(etag='"v2"', text=corrected))
+
+    manifest = manifest_of(tmp_path)
+    assert manifest["version"] == "20260929"
+    assert manifest["sha256"] != published["sha256"]
+    body = json.loads((tmp_path / manifest["file"]).read_text(encoding="utf-8"))
+    assert "087654329" in [e["aic"] for e in body["entries"]]
+
+
+@pytest.mark.parametrize("force", [False, True])
+def test_main_refuses_an_older_list_than_the_published_one(monkeypatch, tmp_path, capsys, force):
+    newer = sample_text().replace("aggiornato al 29/09/2026", "aggiornato al 03/10/2026")
+    assert newer != sample_text()
+    run_main(monkeypatch, tmp_path, sample_response(text=newer))
+    published = (tmp_path / "latest.json").read_bytes()
+
+    run_main(monkeypatch, tmp_path, sample_response(etag='"stale"'), force=force)
+
+    assert "refusing to roll back" in capsys.readouterr().out
+    assert manifest_of(tmp_path)["version"] == "20261003"
+    assert (tmp_path / "shortages-20261003.json").exists()
+    assert not (tmp_path / "shortages-20260929.json").exists()
+    assert manifest_of(tmp_path)["sha256"] == json.loads(published)["sha256"]

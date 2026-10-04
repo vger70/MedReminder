@@ -18,9 +18,12 @@ on:
 permissions:
   contents: write
 
-# Every feed workflow pushes to the feeds branch and main: one at a time.
+# One run of this feed at a time. Feeds run concurrently with each
+# other: each publishes only its own paths, and feeds_branch.sh rebuilds
+# a publish whose lease was lost. A shared group would let a queued run
+# of one feed cancel the queued run of another.
 concurrency:
-  group: catalogue-feeds-publish
+  group: feed-${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
@@ -58,7 +61,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          bash scripts/feeds/feeds_branch.sh publish "AIFA database update $(date -u +%Y%m)"
+          bash scripts/feeds/feeds_branch.sh publish "AIFA database update $(date -u +%Y%m)" \
+            "data/it" ":(exclude)data/it/shortages" ":(exclude)data/it/equivalents"
 
       - name: Mirror to main
         # Releases up to v2.12.1 read the feeds from main/data/. Set the
@@ -66,7 +70,8 @@ jobs:
         # out of use (docs/CATALOGUE-DATA.md §1.1).
         if: vars.FEEDS_MAIN_MIRROR != 'false'
         run: |
-          git add data/it/
+          # The shortage and equivalents feeds own their subfolders.
+          git add -- data/it/ ':(exclude)data/it/shortages' ':(exclude)data/it/equivalents'
           git diff --staged --quiet && exit 0
           git commit -m "AIFA database update $(date -u +%Y%m)"
 
