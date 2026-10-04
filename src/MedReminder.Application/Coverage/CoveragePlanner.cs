@@ -94,19 +94,13 @@ public static class CoveragePlanner
     }
 
     // An as-needed (PRN) medicine has no planned use: the plan cannot say
-    // how much the period needs. Slots take precedence over the schedule,
-    // as in DailyConsumption: a medicine whose slots are all as-needed is
-    // as-needed whatever its schedule.
+    // how much the period needs.
     private static bool IsAsNeeded(CoverageInput input, DateOnly to)
     {
-        if (input.AdministrationSlots.Count > 0) return input.AdministrationSlots.All(s => s.IsAsNeeded);
-        MedicationScheduleHistory? inForce = null;
-        foreach (var row in input.ScheduleHistory)
-        {
-            if (row.EffectiveFrom > to) continue;
-            if (inForce is null || row.EffectiveFrom >= inForce.EffectiveFrom) inForce = row;
-        }
-        return inForce?.ScheduleKind == ScheduleKind.Prn;
+        // Slots under a PRN schedule only place a quantity it does not
+        // have; all-as-needed slots make any schedule as-needed.
+        return DailyConsumption.RowInForce(to, input.ScheduleHistory)?.ScheduleKind == ScheduleKind.Prn
+            || (input.AdministrationSlots.Count > 0 && input.AdministrationSlots.All(s => s.IsAsNeeded));
     }
 }
 

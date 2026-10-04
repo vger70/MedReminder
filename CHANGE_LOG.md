@@ -30,6 +30,46 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #194 — Fix the review findings of the dose-time stock and as-needed doses
+
+Link: [vger70/MedReminder#194](https://github.com/vger70/MedReminder/pull/194)
+Branch: `feature/intraday-review-fixes` → `main`
+
+### Fixed
+
+- Switching a medicine to PRN no longer drops its slots, nor does the
+  one-time as-needed backfill: under a PRN schedule slots consume
+  nothing (since #182), and clearing them lost as-needed slots the edit
+  dialog had just saved, or emptied today's slots for a PRN change
+  dated later. The supply planner shows a PRN medicine with slots as
+  as-needed.
+- An imported archive is marked for the one-time backfills only when it
+  was written before the as-needed flag or the presets, so re-importing
+  a current archive keeps the user's choices (`ProfileDatabaseBuilder`).
+- Main list: the first load of a new day runs the catch-up whichever
+  load comes first; a refresh overtaken by a reload is discarded;
+  activation refreshes at most every 30 seconds; a change of status or
+  days left applies the card filter and the column sort again, and
+  every reload keeps the selection and the scroll position
+  (`MainForm`).
+- The low-stock email marks as-needed slots in its own language.
+
+### Changed
+
+- `DueToday` reads today's booked medicines with one query for intakes
+  and one for counts instead of every intake and count of each
+  medicine; `PendingDataMigrations` is part of the EF model.
+- The backfills read the preset texts from the dictionaries instead of
+  copies in the code (`BuiltInPresetLabels`).
+- The schedule row in force comes from `DailyConsumption.RowInForce`
+  everywhere; the therapy timeline now applies the ledger's tie rule
+  (the later recorded row of a date wins).
+
+### Docs
+
+- `ANALYSIS.md`, `EXPORT-FORMAT.md`, `EVOLUTION-DONE.md` §12.5,
+  `STATUS.md` §2.11 and the status of
+  `analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`.
 ## PR #192 — Fix the review findings on the daily catalogue check
 
 Link: [vger70/MedReminder#192](https://github.com/vger70/MedReminder/pull/192)

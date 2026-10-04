@@ -162,8 +162,8 @@ public class DoseTimeSettingsTests
         slots.Select(s => s.IsAsNeeded).Should().Equal(false, true);
     }
 
-    // The backfill recognizes every built-in in every UI language: its
-    // table must match the shipped dictionaries.
+    // The backfill recognizes every built-in in every UI language, read
+    // from the dictionaries whatever the current language.
     [Theory]
     [InlineData("en")]
     [InlineData("it")]
@@ -173,11 +173,12 @@ public class DoseTimeSettingsTests
     public void Backfill_labels_match_the_dictionaries(string language)
     {
         var loc = new JsonDictionaryLocalizationService(language);
+        var labels = new BuiltInPresetLabels(new JsonDictionaryLocalizationService("en"));
 
         foreach (var definition in BuiltInDoseTimePresets.All)
         {
             var label = loc.Get("Ui.AdministrationSlotDialog.Preset." + definition.Key);
-            SlotPresetBackfill.BuiltInPresetFor(label).Should().Be(definition.Id, $"{language}: {label}");
+            labels.PresetFor(label).Should().Be(definition.Id, $"{language}: {label}");
         }
     }
 }

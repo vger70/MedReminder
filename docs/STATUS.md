@@ -223,7 +223,7 @@ summary in `EVOLUTION-DONE.md` §12.5.
 
 | PR | Content | Sync / format impact |
 |---|---|---|
-| #177 | As-needed slots never consumed automatically, no reminder; switching to PRN clears the slots; "Extra dose as needed" in the intake dialog; existing "As needed" slots corrected once from today | `IntakeRecorded.IsExtra` and `SlotValue.IsAsNeeded`, operation schema 9; image schema 7; additive export fields `isAsNeeded`, `isExtra` |
+| #177 | As-needed slots never consumed automatically, no reminder; under PRN the slots consume nothing; "Extra dose as needed" in the intake dialog; existing "As needed" slots corrected once from today | `IntakeRecorded.IsExtra` and `SlotValue.IsAsNeeded`, operation schema 9; image schema 7; additive export fields `isAsNeeded`, `isExtra` |
 | #177 | Therapy → Dose times…: editable and user-defined time-of-day presets, times of medicines without slots; slots keep their preset (`PresetId`) | device-local, not replicated; `SlotValue.PresetId` display only (no version); additive export fields |
 | #177 | Main list: stock after today's doses whose time has passed, refreshed every minute; run-out date, coverage, recorded stock and low-stock monitor keep the start-of-day stock | none |
 | #178 (open) | Days left counted from the stock shown; user guides and architecture documents updated | none |

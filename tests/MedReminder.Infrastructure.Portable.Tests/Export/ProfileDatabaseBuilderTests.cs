@@ -40,9 +40,33 @@ public sealed class ProfileDatabaseBuilderTests : IDisposable
         medicines.Should().ContainSingle(m => m.Name == "Sample" && m.StockEpoch == 2);
         MedicineStock.Current(movements).Should().Be(28m);
         schedule.Should().ContainSingle();
-        // The archive may predate the as-needed flag.
-        (await new PendingDataMigrations(db).IsPendingAsync(AsNeededSlotBackfill.MigrationName, default))
-            .Should().BeTrue();
+    }
+
+    // ANALYSIS-INTRADAY-CONSUMPTION.md §5.2, §6: an archive written before
+    // the as-needed flag and the presets gets the one-time corrections of
+    // an upgraded database; one written since keeps the user's choices.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Only_an_archive_older_than_the_flags_is_corrected_on_first_use(bool older)
+    {
+        var payload = ExportPayloadUpgraderTests.VersionOnePayloadWithSlots(out _);
+        if (!older)
+        {
+            foreach (var slot in payload.MedicationAdministrationSlots) slot.IsAsNeeded = false;
+            payload.DoseTimePresets = [];
+        }
+        var path = Path.Combine(_directory, "medreminder.db");
+
+        await ProfileDatabaseBuilder.BuildAsync(path, payload, default);
+
+        var options = new DbContextOptionsBuilder<MedReminderDbContext>()
+            .UseSqlite(SqliteConnectionStrings.ForFile(path))
+            .Options;
+        await using var db = new MedReminderDbContext(options);
+        var pending = new PendingDataMigrations(db);
+        (await pending.IsPendingAsync(AsNeededSlotBackfill.MigrationName, default)).Should().Be(older);
+        (await pending.IsPendingAsync(SlotPresetBackfill.MigrationName, default)).Should().Be(older);
     }
 
     [Fact]

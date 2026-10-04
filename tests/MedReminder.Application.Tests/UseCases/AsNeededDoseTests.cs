@@ -85,35 +85,62 @@ public class AsNeededDoseTests
         (await StockAsync(scope, id)).Should().Be(30m);
     }
 
+    // Under PRN the slots only place a quantity PRN does not have
+    // (DailyConsumption): the schedule change leaves them as they are.
     [Fact]
-    public async Task Switching_to_prn_clears_the_slots_from_the_same_day()
+    public async Task Switching_to_prn_keeps_the_slots_and_stops_consumption_from_its_date()
     {
         var scope = new ApplicationTestScope();
-        var id = await SeedAsync(scope, new AdministrationSlotInput(1m, new TimeOnly(8, 0), null));
-        var from = new DateOnly(2026, 9, 10);
+        var id = await SeedAsync(scope,
+            new AdministrationSlotInput(1m, new TimeOnly(8, 0), null),
+            new AdministrationSlotInput(1m, null, "Al bisogno", IsAsNeeded: true));
+        var sets = (await scope.Slots.ListSetsForMedicineAsync(id, CancellationToken.None)).Count;
 
         await scope.ChangeMedicationSchedule.ExecuteAsync(
-            new ChangeMedicationScheduleCommand(id, 1m, 1, from, new PrnSchedule()), CancellationToken.None);
+            new ChangeMedicationScheduleCommand(id, 1m, 1, new DateOnly(2026, 9, 10), new PrnSchedule()),
+            CancellationToken.None);
 
-        (await scope.Slots.ListForMedicineAsync(id, CancellationToken.None)).Should().BeEmpty();
-        var sets = await scope.Slots.ListSetsForMedicineAsync(id, CancellationToken.None);
-        sets[^1].Set.EffectiveFrom.Should().Be(from);
-
+        (await scope.Slots.ListSetsForMedicineAsync(id, CancellationToken.None)).Should().HaveCount(sets);
+        (await scope.Slots.ListForMedicineAsync(id, CancellationToken.None)).Should().HaveCount(2);
         await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
         // Sep 1..9 consumed (9 days), nothing from Sep 10.
         (await StockAsync(scope, id)).Should().Be(21m);
     }
 
     [Fact]
-    public async Task Switching_to_prn_without_slots_records_no_slot_set()
+    public async Task Switching_to_prn_after_saving_as_needed_slots_keeps_them()
     {
+        // The edit dialog saves the slots first, then the schedule.
         var scope = new ApplicationTestScope();
-        var id = await SeedAsync(scope);
+        var id = await SeedAsync(scope, new AdministrationSlotInput(1m, new TimeOnly(8, 0), null));
+        scope.Clock.SetUtcNow(new DateTimeOffset(2026, 9, 13, 12, 5, 0, TimeSpan.Zero));
+        await scope.UpdateMedicine.ExecuteAsync(new UpdateMedicineCommand(
+            id, "Enalapril", null, null, "compresse", 7, NotificationChannels.Windows, null, null, null, true,
+            AdministrationSlots: [new AdministrationSlotInput(1m, null, "Al bisogno", IsAsNeeded: true)]),
+            CancellationToken.None);
 
         await scope.ChangeMedicationSchedule.ExecuteAsync(
             new ChangeMedicationScheduleCommand(id, 1m, 1, Today, new PrnSchedule()), CancellationToken.None);
 
-        (await scope.Slots.ListSetsForMedicineAsync(id, CancellationToken.None)).Should().BeEmpty();
+        (await scope.Slots.ListForMedicineAsync(id, CancellationToken.None)).Should().ContainSingle()
+            .Which.IsAsNeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task A_prn_change_dated_later_keeps_consuming_until_then()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedAsync(scope, new AdministrationSlotInput(1m, new TimeOnly(8, 0), null));
+
+        await scope.ChangeMedicationSchedule.ExecuteAsync(
+            new ChangeMedicationScheduleCommand(id, 1m, 1, new DateOnly(2026, 9, 20), new PrnSchedule()),
+            CancellationToken.None);
+
+        (await scope.Slots.ListForMedicineAsync(id, CancellationToken.None)).Should().ContainSingle();
+        scope.Clock.SetUtcNow(new DateTimeOffset(2026, 9, 23, 12, 0, 0, TimeSpan.Zero));
+        await scope.ConsumptionCatchUp.RunAsync(CancellationToken.None);
+        // Sep 1..19 consumed (19 days), nothing from Sep 20.
+        (await StockAsync(scope, id)).Should().Be(11m);
     }
 
     [Fact]
@@ -173,12 +200,12 @@ public class AsNeededDoseTests
     }
 
     [Fact]
-    public async Task Backfill_clears_the_slots_of_a_prn_medicine()
+    public async Task Backfill_leaves_the_slots_of_a_prn_medicine()
     {
         var scope = new ApplicationTestScope();
-        var id = await SeedAsync(scope, new AdministrationSlotInput(1m, new TimeOnly(8, 0), null));
-        // A PRN row recorded directly, as the change-schedule dialog did
-        // before it cleared the slots.
+        var id = await SeedAsync(scope,
+            new AdministrationSlotInput(1m, new TimeOnly(8, 0), null),
+            new AdministrationSlotInput(1m, null, "Dopo cena", IsAsNeeded: true));
         await scope.Schedules.AddAsync(new MedicationScheduleHistory
         {
             MedicineId = id, EffectiveFrom = new DateOnly(2026, 9, 5), DosePerAdministration = 1m,
@@ -186,11 +213,9 @@ public class AsNeededDoseTests
         }, CancellationToken.None);
 
         scope.PendingMigrations.Pending.Add(AsNeededSlotBackfill.MigrationName);
-        (await scope.AsNeededBackfill.RunAsync(CancellationToken.None)).Should().Be(1);
+        (await scope.AsNeededBackfill.RunAsync(CancellationToken.None)).Should().Be(0);
 
-        (await scope.Slots.ListForMedicineAsync(id, CancellationToken.None)).Should().BeEmpty();
-        (await scope.Slots.ListSetsForMedicineAsync(id, CancellationToken.None))[^1].Set.EffectiveFrom
-            .Should().Be(Today);
+        (await scope.Slots.ListSetsForMedicineAsync(id, CancellationToken.None)).Should().ContainSingle();
     }
 
     [Fact]
@@ -224,7 +249,7 @@ public class AsNeededDoseTests
     }
 
     // The backfill recognizes the "As needed" preset in every UI
-    // language: its list must match the shipped dictionaries.
+    // language, read from the dictionaries.
     [Theory]
     [InlineData("en")]
     [InlineData("it")]
@@ -235,7 +260,10 @@ public class AsNeededDoseTests
     {
         var label = new JsonDictionaryLocalizationService(language).Get("Ui.AdministrationSlotDialog.Preset.AsNeeded");
 
-        AsNeededSlotBackfill.AsNeededPresetLabels.Should().Contain(label);
-        AsNeededSlotBackfill.IsAsNeededLabel(label.ToUpperInvariant()).Should().BeTrue();
+        var labels = new BuiltInPresetLabels(new JsonDictionaryLocalizationService("en"));
+
+        labels.IsAsNeeded(label).Should().BeTrue();
+        labels.IsAsNeeded(" " + label.ToUpperInvariant() + " ").Should().BeTrue();
+        labels.IsAsNeeded("con il caffè").Should().BeFalse();
     }
 }

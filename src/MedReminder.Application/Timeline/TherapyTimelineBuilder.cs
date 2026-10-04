@@ -214,17 +214,9 @@ public static class TherapyTimelineBuilder
         IReadOnlyList<MedicationScheduleHistory> orderedHistory,
         DateOnly day)
     {
-        // Same tie rule as DailyConsumption.RateOn: on equal dates the
-        // first entry wins.
-        MedicationScheduleHistory? latest = null;
-        foreach (var entry in orderedHistory)
-        {
-            if (entry.EffectiveFrom > day) break;
-            if (latest is null || entry.EffectiveFrom > latest.EffectiveFrom)
-            {
-                latest = entry;
-            }
-        }
+        // Same rule as DailyConsumption.RateOn: of two rows with the same
+        // date the later recorded wins (the sort by date is stable).
+        var latest = DailyConsumption.RowInForce(day, orderedHistory);
         return latest is null ? null : Deserialize(latest);
     }
 

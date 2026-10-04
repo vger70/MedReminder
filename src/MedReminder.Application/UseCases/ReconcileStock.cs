@@ -243,9 +243,8 @@ public sealed class ReconcileStock
 
         var defaultTaken = _dueToday is null
             ? DefaultTakenToday(todayScheduled, schedule, slots)
-            : Math.Min(todayScheduled, await _dueToday.ComputeAsync(
-                medicine, schedule, suspensions, slots,
-                await _dueToday.LoadSettingsAsync(cancellationToken), cancellationToken));
+            : Math.Min(todayScheduled, DueToday.Compute(
+                await _dueToday.LoadAsync(cancellationToken), medicine, schedule, suspensions, slots));
 
         return new StockCountSnapshot(
             medicine.Id,
