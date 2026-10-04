@@ -33,8 +33,7 @@ Note: Infra tests need Windows (DPAPI/Registry). Release build deletes .pdb and 
 ---
 
 ## 4. Git, Branching & PR Workflow
- * Base Branch: main. Ask before creating feature branch.
- * Exception, household / master device feature (docs/analysis/ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md): every PR of that feature targets integration branch `feature/master-slave`, not main. Only final PR (after step H5) merges `feature/master-slave` into main. Step H0 is the one exception and targets main.
+ * Base Branch: main.
  * Branch Naming: name MUST reflect request. Prefixes allowed: claude/<name> or feature/<name>.
  * Early PR Requirement: Open PR after first commit of session. No ask to follow PR. No wait until end.
  * Commit Messages: Imperative, English, explain "why". Never push to main directly.
@@ -51,6 +50,7 @@ Note: Infra tests need Windows (DPAPI/Registry). Release build deletes .pdb and 
 
 ## 6. DOs (Always Follow)
  * Name branches correctly (claude/ or feature/) and open PR after 1st commit.
+ * Try to install .NET10 SDK to run dornet build/test
  * Ask user run dotnet build and dotnet test before committing source code.
  * Add new UI string keys to ALL assets/localization/strings.<lang>.json files.
  * Keep tone sober, factual, concise, no emojis in documentation.
