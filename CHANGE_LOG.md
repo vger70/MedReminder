@@ -32,6 +32,8 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ## PR #198 — Add implementation prompt for the guided setup
 
+**Status:** merged (2026-10-04)
+
 Link: [vger70/MedReminder#198](https://github.com/vger70/MedReminder/pull/198)
 Branch: `claude/project-thread-i2a3y8` → `main`
 
