@@ -30,6 +30,17 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #200 — Correct the guided setup prompt against the code
+
+Link: [vger70/MedReminder#200](https://github.com/vger70/MedReminder/pull/200)
+Branch: `claude/wizardly-goldberg-9atod5` → `main`
+
+### Docs
+
+- `docs/prompt/PROMPT-GUIDED-SETUP.md`: names the real use cases (`UpdateNotificationSettings`, `RenameProfile`) and requires keeping the doctor address when saving; the wizard opens by itself for any profile with no medicines until a device-local `GuidedSetupShown` flag is set; maps the user's address to `CaregiverAddress` when they look after someone; warns when email is the only channel and cannot be sent; adds the Settings initial-section parameter and matching tests.
+
+---
+
 ## PR #198 — Add implementation prompt for the guided setup
 
 **Status:** merged (2026-10-04)
