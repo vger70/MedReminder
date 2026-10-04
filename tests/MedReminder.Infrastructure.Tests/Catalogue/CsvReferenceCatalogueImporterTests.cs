@@ -1,9 +1,12 @@
 using FluentAssertions;
+using MedReminder.Application;
+using MedReminder.Application.Catalogue;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Infrastructure.Catalogue;
 using MedReminder.Infrastructure.Catalogue.Parsers;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Tests.Support;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -129,7 +132,7 @@ public sealed class CsvReferenceCatalogueImporterTests
         var importer = new CsvReferenceCatalogueImporter(
             fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser() },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
 
         await using var snapshot = CatalogueFixtures.BuildAifaSnapshotStream();
         var act = () => importer.ImportAsync(
@@ -380,7 +383,7 @@ public sealed class CsvReferenceCatalogueImporterTests
         return new CsvReferenceCatalogueImporter(
             fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser() },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
     }
 
     private static CsvReferenceCatalogueImporter BuildImporterWithBothParsers(
@@ -389,7 +392,7 @@ public sealed class CsvReferenceCatalogueImporterTests
         return new CsvReferenceCatalogueImporter(
             fixture.CreateContext(),
             new IReferenceSnapshotParser[] { new AifaSnapshotParser(), new EmaEparParser() },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
     }
 
     private static CsvReferenceCatalogueImporter BuildImporterWithAllParsers(
@@ -404,7 +407,7 @@ public sealed class CsvReferenceCatalogueImporterTests
                 new AempsCimaParser(),
                 new AnsmBdpmParser(),
             },
-            TimeProvider.System);
+            TimeProvider.System, new DatabaseExclusiveAccess());
     }
 
     // --- M4: IT + EU + ES + FR coexistence -------------------------
@@ -493,14 +496,16 @@ public sealed class CsvReferenceCatalogueImporterTests
             .Should().Be(93);
     }
 
-    // The remote refresh keeps its scope across a long download; a
-    // connection left open there would block a database swap.
+    // The remote refresh keeps its scope across a long download. A
+    // connection left open there would survive ClearAllPools and block a
+    // database swap; a closed one goes back to the pool, which the swap
+    // clears. Pooling stays on, as for the profile database.
     [Fact]
     public async Task A_connection_the_importer_opened_is_closed_when_the_call_ends()
     {
         var path = Path.Combine(Path.GetTempPath(), $"medreminder-importer-{Guid.NewGuid():N}.db");
         var options = new DbContextOptionsBuilder<MedReminderDbContext>()
-            .UseSqlite($"Data Source={path};Pooling=False")
+            .UseSqlite($"Data Source={path}")
             .Options;
         try
         {
@@ -511,7 +516,8 @@ public sealed class CsvReferenceCatalogueImporterTests
 
             await using var context = new MedReminderDbContext(options);
             var importer = new CsvReferenceCatalogueImporter(
-                context, new IReferenceSnapshotParser[] { new AifaSnapshotParser() }, TimeProvider.System);
+                context, new IReferenceSnapshotParser[] { new AifaSnapshotParser() }, TimeProvider.System,
+                new DatabaseExclusiveAccess());
             var connection = context.Database.GetDbConnection();
 
             await importer.GetImportStateAsync(Italy, CancellationToken.None);
@@ -528,9 +534,73 @@ public sealed class CsvReferenceCatalogueImporterTests
         }
         finally
         {
+            SqliteConnection.ClearAllPools();
             if (File.Exists(path))
             {
                 File.Delete(path);
+            }
+        }
+    }
+
+    // The parse runs outside WriteGate and the replace transaction under
+    // it: the parser below takes the gate and keeps it, which would time
+    // out if the importer held it while parsing, and the import must not
+    // complete until the gate is released.
+    [Fact]
+    public async Task The_snapshot_is_parsed_outside_the_gate_and_written_under_it()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var access = new DatabaseExclusiveAccess();
+        var parser = new GateHoldingParser(new AifaSnapshotParser(), access);
+        var importer = new CsvReferenceCatalogueImporter(
+            fixture.CreateContext(), new IReferenceSnapshotParser[] { parser }, TimeProvider.System, access);
+
+        await using var snapshot = CatalogueFixtures.BuildAifaSnapshotStream();
+        Task<ImportReport> import;
+        Task early;
+        try
+        {
+            import = importer.ImportAsync(snapshot, Italy, "202609", CancellationToken.None);
+            await parser.GateHeld.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            early = await Task.WhenAny(import, Task.Delay(200));
+        }
+        finally
+        {
+            // The gate is process-wide: always release it.
+            parser.Release.TrySetResult();
+        }
+
+        early.Should().NotBeSameAs(import, "the replace transaction waits for the gate");
+        (await import.WaitAsync(TimeSpan.FromSeconds(10))).Inserted.Should().Be(168);
+        await parser.Holder!.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    private sealed class GateHoldingParser(
+        IReferenceSnapshotParser inner, DatabaseExclusiveAccess access) : IReferenceSnapshotParser
+    {
+        public TaskCompletionSource GateHeld { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task? Holder { get; private set; }
+
+        public IReadOnlyCollection<CountryCode> SupportedCountries => inner.SupportedCountries;
+
+        public async IAsyncEnumerable<ReferenceMedicineRow> ParseAsync(
+            Stream snapshot,
+            ParseReport report,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            Holder = access.RunExclusiveAsync(async _ =>
+            {
+                GateHeld.TrySetResult();
+                await Release.Task;
+            }, CancellationToken.None);
+            await GateHeld.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+
+            await foreach (var row in inner.ParseAsync(snapshot, report, cancellationToken))
+            {
+                yield return row;
             }
         }
     }

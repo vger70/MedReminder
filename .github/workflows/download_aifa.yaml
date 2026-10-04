@@ -7,7 +7,7 @@ on:
     # published, scripts/feeds/aifa.py exits without changes. Minute 7,
     # not 0: GitHub delays or drops scheduled runs at the top of the hour
     # under load (none of the 2 October 2026 runs started).
-    - cron: '7 3 * * *'
+    - cron: '7 3 * * 0'
   workflow_dispatch:
     inputs:
       force:

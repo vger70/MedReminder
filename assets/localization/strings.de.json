@@ -673,7 +673,7 @@
   "Ui.SettingsDialog.General.RestartPrompt.Title": "Neustart erforderlich",
   "Ui.SettingsDialog.General.Note": "Windows-Toast-Benachrichtigungen verwenden immer die Systemsprache.\nE-Mail-Benachrichtigungen und das Benutzerhandbuch verwenden die hier gewählte Sprache.",
   "Ui.SettingsDialog.General.Saved": "Einstellungen gespeichert.",
-  "Ui.SettingsDialog.General.CheckUpdates": "Automatisch nach Updates suchen (GitHub)",
+  "Ui.SettingsDialog.General.CheckUpdates": "Nach App- und Katalog-Updates suchen (GitHub)",
   "Ui.SettingsDialog.General.LogQueries": "Datenbankabfragen protokollieren (Diagnose)",
   "Ui.SettingsDialog.General.LogQueries.Help": "Schreibt jeden SQL-Befehl der App ohne die Werte in die Protokolldatei. Nur zur Fehlersuche: Das Protokoll wächst schnell. Wird sofort angewendet.",
   "Ui.SettingsDialog.General.LogQueries.AdminOnly": "Die Protokollierung der Abfragen ist eine Diagnoseoption: Ein Administrator ändert sie.",

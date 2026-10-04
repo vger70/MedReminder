@@ -68,7 +68,10 @@ public sealed class CatalogueRefreshHostedServiceTests
     {
         var last = Now - CatalogueRefreshHostedService.RemoteCheckInterval;
 
-        CatalogueRefreshHostedService.IsRemoteCheckDue(last + TimeSpan.FromMinutes(1), Now).Should().BeFalse();
+        CatalogueRefreshHostedService.IsRemoteCheckDue(last + TimeSpan.FromHours(1), Now).Should().BeFalse(
+            "the 23rd hourly tick is too early");
+        CatalogueRefreshHostedService.IsRemoteCheckDue(last + TimeSpan.FromMilliseconds(5), Now).Should().BeTrue(
+            "the 24th tick runs even when it reads a few ms short of 24 h");
         CatalogueRefreshHostedService.IsRemoteCheckDue(last, Now).Should().BeTrue();
         CatalogueRefreshHostedService.IsRemoteCheckDue(last - TimeSpan.FromDays(3), Now).Should().BeTrue(
             "a resume after days of sleep catches up at the first tick");

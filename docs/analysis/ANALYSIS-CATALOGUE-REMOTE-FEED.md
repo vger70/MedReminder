@@ -224,16 +224,15 @@ required.
 ### 4.5 Concurrency with other writers
 
 The import transaction holds the SQLite write lock for the duration of
-the delete + insert. The remote import runs under `WriteGate`, so the
-use cases, the monitor and the catch-up wait for it instead of hitting
-the busy timeout (§11.1). The embedded import, which lives in the UI
-and Infrastructure layers, cannot take the `internal` gate and keeps
-its previous behaviour; it runs only when a release changes a
-snapshot. The import duration is logged; the first field run measured
-13.4 s for the Italian catalogue (§11.3), below the 30 s SQLite busy
-timeout that writers outside the gate would hit. The database swaps
-(backup restore, archive import, sync join / rebuild / rekey) take the
-same gate through `IDatabaseExclusiveAccess` (§11.5).
+the delete + insert. `CsvReferenceCatalogueImporter` takes `WriteGate`
+itself, through `IDatabaseExclusiveAccess`, for the version read and
+for the replace transaction, whoever calls it (embedded import at boot,
+remote refresh); the snapshot is parsed outside the gate (§11.6). The
+use cases, the monitor, the catch-up and the database swaps (backup
+restore, archive import, sync join / rebuild / rekey) wait for it
+instead of hitting the busy timeout or an open file. The import
+duration is logged; the first field run measured 13.4 s for the
+Italian catalogue (§11.3), parse included.
 
 ### 4.6 Relation to the embedded snapshot
 
@@ -602,7 +601,8 @@ successful run of days 2, 9, 16 or 23.
   Information at boot and Debug on later ticks. The daily step does not
   wait for `StartupUpdateCheckSignal`.
 - D1 stays: one switch. The setting is relabelled "Check for updates
-  automatically (GitHub)" in the five dictionaries and user guides;
+  automatically (GitHub)" (renamed again in §11.6) in the five
+  dictionaries and user guides;
   the property keeps its name `CheckForUpdatesOnStartup`, so settings
   files, archives and household projections are unchanged. The
   application update check itself still runs at startup only.
@@ -620,4 +620,46 @@ successful run of days 2, 9, 16 or 23.
   connection open from the version read through the download (up to
   two minutes), which would also have blocked a swap.
 - The embedded import keeps its boot-only, ungated behaviour (§4.5):
-  it runs before the user can reach any swap.
+  it runs before the user can reach any swap. Superseded by §11.6.
+
+### 11.6 Review remediation (2026-10-04)
+
+A review of PR #159 found the following; each was checked against
+`main` after the later PRs (shortage and equivalents lists, #174, #190)
+before the fix. Those lists are JSON files outside the profile
+database and do not change the analysis.
+
+- **Embedded import ungated.** The boot import of the embedded
+  snapshots called the importer without `WriteGate`, so a restore or
+  archive import started at first run could still meet an open write
+  transaction. The gate moved into `CsvReferenceCatalogueImporter`
+  (version read and replace transaction), which covers every caller;
+  `RemoteCatalogueRefresher` no longer wraps the importer, which would
+  now deadlock (the gate is not reentrant).
+- **Parse under the gate.** The snapshot was parsed while the gate was
+  held, so the use cases waited for the parse as well. The importer
+  now reads the version under the gate, parses outside it, then reads
+  the version again and runs the transaction under it.
+- **Sync reset marker before a cancellable wait.** Archive import and
+  backup restore set the sync reset marker, then waited for the gate
+  with the caller's token; a cancel left the marker on an unchanged
+  database and blocked sync until a new generation. The marker is now
+  set under the gate, right before the file moves
+  (`ProfileDatabaseSwap.ReplaceAsync`, `beforeSwap`).
+- **Duplicate swap.** `BackupService.ImportProfileAsync` repeated the
+  swap of `ProfileDatabaseSwap`. It now copies the backup next to the
+  profile database and swaps it in through `ProfileDatabaseSwap`; the
+  DbContext connection is closed whichever profile is restored.
+- **Daily check drift.** The hourly ticks come from a monotonic timer,
+  the comparison from the wall clock; a tick reading a few ms short of
+  24 h moved the check to the 25th hour. The check is due from 23.5 h.
+- **Connection close and pooling.** With pooling on, closing returns
+  the connection to the pool; the swaps release it with
+  `ClearAllPools`, which cannot release a connection still open. The
+  comment and the test (pooling on) now say so. CLAUDE.md §7 keeps
+  forced closes to the backup / restore paths; the importer only
+  closes the connection it opened itself, as EF Core does per query.
+- **Label.** "Check for updates automatically" suggested a periodic
+  application update check, which still runs at startup only. The
+  label is now "Check for app and catalogue updates (GitHub)"; the
+  tooltip states when each check runs.

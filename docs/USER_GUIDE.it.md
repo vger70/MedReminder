@@ -290,13 +290,12 @@ autorizzati per tutta l'**Unione Europea** (EMA).
   anche i medicinali UE; con **EU** contiene solo quelli. Un medicinale
   può comparire due volte (nazionale e UE): scegli quello che
   corrisponde alla tua scatola.
-- **Aggiornamento automatico.** Quando **Controlla aggiornamenti
-  automaticamente (GitHub)** è attivo (Impostazioni → Generale),
-  MedReminder scarica all'avvio, e una volta al giorno finché resta
-  aperto, l'ultimo elenco mensile del tuo Paese e quello UE, se più
-  recenti. Senza connessione non cambia nulla. Con più profili viene
-  aggiornato solo quello aperto; gli altri la prima volta che vengono
-  aperti.
+- **Aggiornamento automatico.** Quando **Controlla aggiornamenti di app
+  e cataloghi (GitHub)** è attivo (Impostazioni → Generale), MedReminder
+  scarica all'avvio, e una volta al giorno finché resta aperto, l'ultimo
+  elenco mensile del tuo Paese e quello UE, se più recenti. Senza
+  connessione non cambia nulla. Con più profili viene aggiornato solo
+  quello aperto; gli altri la prima volta che vengono aperti.
 
 **Fonti.** Open data AIFA (CC BY 4.0); dati EMA EPAR (avviso legale
 EMA, decisione della Commissione 2011/833/UE); AEMPS CIMA (legge
@@ -346,7 +345,7 @@ aggiungere una nuova medicina o collegare il codice a una esistente.
 
 Con l'Italia come paese di riferimento, MedReminder scarica l'elenco
 AIFA dei farmaci carenti insieme al catalogo (all'avvio e una volta al
-giorno, se **Controlla aggiornamenti automaticamente** è attivo). Una
+giorno, se **Controlla aggiornamenti di app e cataloghi** è attivo). Una
 medicina la cui confezione (codice AIC, compilato dal catalogo o dal
 codice a barre) è nell'elenco lo mostra nella colonna
 **Disponibilità** della lista:
@@ -1270,9 +1269,10 @@ ridimensionare.
   Windows 11 con la modalità scura attiva; con un tema a contrasto
   elevato di Windows si usano i suoi colori. Vale dopo il riavvio. In
   Scuro i campi data restano chiari.
-- **Generale → Controlla aggiornamenti automaticamente (GitHub)**: cerca
-  una nuova versione all'avvio (nulla viene installato da solo) e
-  aggiorna il catalogo all'avvio e una volta al giorno. **? → Controlla aggiornamenti…** controlla subito.
+- **Generale → Controlla aggiornamenti di app e cataloghi (GitHub)**:
+  cerca una nuova versione all'avvio (nulla viene installato da solo) e
+  aggiorna il catalogo all'avvio e una volta al giorno. **? → Controlla
+  aggiornamenti…** controlla subito.
 - **Generale → Registra le query del database (diagnostica)**: solo
   amministratori. Scrive nel file di log ogni comando del database, senza
   i valori, per la diagnosi dei problemi. Vale subito; il log cresce in
