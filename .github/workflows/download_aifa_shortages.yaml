@@ -7,7 +7,7 @@ on:
     # feed once a day, so they show it within about two days. The run
     # first asks AIFA whether the file changed (ETag / Last-Modified);
     # a list already published, or older than it, is not published.
-    - cron: '27 4 * * *'
+    - cron: '27 4 * * 0'
   workflow_dispatch:
     inputs:
       force:
