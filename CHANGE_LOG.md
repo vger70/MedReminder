@@ -45,7 +45,11 @@ Branch: `claude/store-msi-package` → `main`
   MSI from a copy of the self-contained output, where every PE file
   without a valid signature is signed, as the Store requires. The ZIPs
   keep vendor files untouched.
-- `publish-signed-release.ps1`: verifies and uploads the Store MSI.
+- `publish-signed-release.ps1`: verifies and uploads the Store MSI,
+  then publishes it on the `store` branch served by GitHub Pages
+  (`-SkipStorePages` to skip). GitHub release assets redirect to
+  expiring URLs, which Partner Center rejects. The branch holds a single
+  parentless commit with the last two versions, like `feeds`.
 
 ### Docs
 

@@ -17,6 +17,13 @@ param(
     # Maximum wait for the CI workflow run to appear after the tag push.
     [int]$WorkflowStartTimeoutSeconds = 300,
 
+    # Do not publish the Microsoft Store MSI on the GitHub Pages branch.
+    [switch]$SkipStorePages,
+
+    # Base URL GitHub Pages serves the store branch from
+    # (docs/PACKAGING.md §26).
+    [string]$StorePagesUrl = "https://vger70.github.io/MedReminder",
+
     [Alias("h")]
     [switch]$Help
 )
@@ -26,7 +33,7 @@ function Show-Usage {
     Write-Host "Signed Release Script" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "USAGE:"
-    Write-Host "  .\publish-signed-release.ps1 <version> [-CertificateThumbprint <sha1>] [-TimestampUrl <url>] [-SkipGitRelease]"
+    Write-Host "  .\publish-signed-release.ps1 <version> [-CertificateThumbprint <sha1>] [-TimestampUrl <url>] [-SkipGitRelease] [-SkipStorePages]"
     Write-Host "  .\publish-signed-release.ps1 -Help"
     Write-Host ""
     Write-Host "EXAMPLES:"
@@ -43,10 +50,13 @@ function Show-Usage {
     Write-Host "    3. .\release.ps1 <version> -LocalBuild (signed and timestamped),"
     Write-Host "       then signtool verify on both MSIs"
     Write-Host "    4. gh release upload --clobber: signed ZIPs, MSIs and SHA256SUMS.txt"
-    Write-Host "    5. git checkout main (always, also on failure)"
+    Write-Host "    5. publish the Store MSI on the 'store' branch served by GitHub Pages,"
+    Write-Host "       at <StorePagesUrl>/<version>/MedReminder-win-x64-net10.msi"
+    Write-Host "    6. git checkout main (always, also on failure)"
     Write-Host ""
     Write-Host "  -SkipGitRelease resumes from step 2 on an existing tag and release,"
-    Write-Host "  e.g. after a signing failure."
+    Write-Host "  e.g. after a signing failure. -SkipStorePages skips step 5, e.g. when"
+    Write-Host "  the version is already on the store branch."
     Write-Host ""
     Write-Host "REQUIREMENTS:"
     Write-Host "  - GitHub CLI (gh) logged in: gh auth login"
@@ -68,6 +78,11 @@ $TagName      = "v$Version"
 $WorkflowFile = "dotnet-desktop.yml"
 $ReleaseScript = Join-Path $PSScriptRoot "release.ps1"
 $DistDir      = Join-Path $PSScriptRoot "dist\$Version"
+$StoreMsiName = "MedReminder-win-x64-net10.msi"
+$StoreBranch  = "store"
+# Versions kept on the store branch: the new one and the previous one,
+# whose URL may still be in a submission under certification.
+$StoreKeep    = 2
 $Assets       = @(
     "MedReminder-win-x64-net10.zip",
     "MedReminder-win-x64.zip",
@@ -182,6 +197,101 @@ function Wait-ReleaseWorkflow {
     Write-Host "OK: release $TagName created by CI" -ForegroundColor Green
 }
 
+function Publish-StorePages {
+    # The Microsoft Store downloads the MSI from a URL that must answer
+    # without redirection and whose file never changes (docs/PACKAGING.md
+    # §26). GitHub release assets redirect to expiring URLs, so the MSI is
+    # served by GitHub Pages from the 'store' branch, which holds a single
+    # parentless commit replaced at each publish: the repository does not
+    # grow by one MSI per release. The work happens in a temporary
+    # repository; the checkout is not touched.
+    $msi = Join-Path $DistDir $StoreMsiName
+    if (-not (Test-Path $msi)) { throw "Missing asset: $msi" }
+
+    $remoteUrl = git remote get-url origin
+    if ($LASTEXITCODE -ne 0) { throw "git remote get-url origin failed." }
+
+    $work = Join-Path ([IO.Path]::GetTempPath()) "medreminder-store-$Version"
+    if (Test-Path $work) { Remove-Item $work -Recurse -Force }
+    New-Item -ItemType Directory -Path $work | Out-Null
+
+    try {
+        Invoke-Native { git -C $work init --quiet } "git init"
+
+        # ls-remote exits 2 when the branch does not exist yet.
+        $oldSha = ""
+        $heads = git ls-remote --exit-code --heads $remoteUrl $StoreBranch
+        if ($LASTEXITCODE -eq 0) {
+            $oldSha = ($heads -split '\s+')[0]
+            Invoke-Native { git -C $work fetch --quiet --depth 1 $remoteUrl $StoreBranch } "git fetch $StoreBranch"
+            Invoke-Native { git -C $work checkout --quiet --detach FETCH_HEAD } "git checkout $StoreBranch"
+        }
+        elseif ($LASTEXITCODE -ne 2) {
+            throw "git ls-remote failed (exit code $LASTEXITCODE)."
+        }
+
+        $target = Join-Path $work "$Version\$StoreMsiName"
+        if (Test-Path $target) {
+            if ((Get-FileHash $target).Hash -eq (Get-FileHash $msi).Hash) {
+                Write-Host "$Version is already on $StoreBranch with the same MSI." -ForegroundColor Yellow
+                return
+            }
+            throw "$Version is already on $StoreBranch with a different MSI. The Store requires the file behind a submitted URL not to change: release a new version, or pass -SkipStorePages."
+        }
+
+        $versions = @(Get-ChildItem -Path $work -Directory |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name })
+        $versions | Select-Object -SkipLast ($StoreKeep - 1) | ForEach-Object {
+            Write-Host "  removing $($_.Name)"
+            Remove-Item $_.FullName -Recurse -Force
+        }
+
+        New-Item -ItemType Directory -Path (Split-Path $target) | Out-Null
+        Copy-Item $msi $target
+        # No Jekyll build: the branch holds only binaries.
+        Set-Content -Path (Join-Path $work ".nojekyll") -Value "" -Encoding ascii
+
+        Invoke-Native { git -C $work checkout --quiet --orphan publish } "git checkout --orphan"
+        Invoke-Native { git -C $work add -A } "git add"
+        Invoke-Native { git -C $work commit --quiet -m "Publish the Microsoft Store MSI of v$Version" } "git commit"
+        # The lease refuses the push when the branch moved since the fetch
+        # (with an empty value: when it was created meanwhile).
+        Invoke-Native { git -C $work push --quiet "--force-with-lease=refs/heads/${StoreBranch}:$oldSha" $remoteUrl "HEAD:refs/heads/$StoreBranch" } "git push $StoreBranch"
+    }
+    finally {
+        Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    # GitHub Pages deploys the branch in a minute or two. The Store rejects
+    # a URL that redirects, so a 3xx is reported, not followed.
+    $url = "$StorePagesUrl/$Version/$StoreMsiName"
+    $deadline = (Get-Date).AddMinutes(5)
+    $status = $null
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $response = Invoke-WebRequest -Uri $url -Method Head -MaximumRedirection 0 -UseBasicParsing -ErrorAction Stop
+            $status = [int]$response.StatusCode
+        }
+        catch {
+            $status = $null
+            if ($_.Exception.Response) { $status = [int]$_.Exception.Response.StatusCode }
+        }
+        if ($status -eq 200 -or ($status -ge 300 -and $status -lt 400)) { break }
+        Start-Sleep -Seconds 15
+    }
+
+    if ($status -eq 200) {
+        Write-Host "OK: $url answers 200. Use it as the package URL in Partner Center." -ForegroundColor Green
+    }
+    elseif ($status -ge 300 -and $status -lt 400) {
+        Write-Host "WARNING: $url redirects ($status); the Store will reject it. Check -StorePagesUrl (custom domain?)." -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "WARNING: $url not reachable yet (last status: $status). Check Settings > Pages (source: branch $StoreBranch, root)." -ForegroundColor Yellow
+    }
+}
+
 $tagPushed  = $false
 $leftBranch = $false
 $exitCode   = 0
@@ -190,7 +300,7 @@ try {
     Assert-Prerequisites
 
     if (-not $SkipGitRelease) {
-        Write-Step "[1/4] Git release $TagName"
+        Write-Step "[1/5] Git release $TagName"
         $leftBranch = $true
         Invoke-Native { git checkout main } "git checkout main"
         Invoke-Native { git pull } "git pull"
@@ -198,11 +308,11 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "release.ps1 $Version failed (exit code $LASTEXITCODE)." }
         $tagPushed = $true
 
-        Write-Step "[2/4] Waiting for CI"
+        Write-Step "[2/5] Waiting for CI"
         Wait-ReleaseWorkflow
     }
     else {
-        Write-Step "[1-2/4] Git release and CI wait skipped (-SkipGitRelease)"
+        Write-Step "[1-2/5] Git release and CI wait skipped (-SkipGitRelease)"
         Invoke-Native { gh release view $TagName --json tagName *> $null } "gh release view $TagName"
     }
 
@@ -211,7 +321,7 @@ try {
     $leftBranch = $true
     Invoke-Native { git checkout --quiet $TagName } "git checkout $TagName"
 
-    Write-Step "[3/4] Signed local build"
+    Write-Step "[3/5] Signed local build"
     & $ReleaseScript $Version -LocalBuild `
         -CertificateThumbprint $script:CertificateThumbprint `
         -TimestampUrl $TimestampUrl
@@ -222,7 +332,7 @@ try {
         Invoke-Native { & $script:SignTool verify /pa /v $msi } "signtool verify $msi"
     }
 
-    Write-Step "[4/4] Uploading signed assets to $TagName"
+    Write-Step "[4/5] Uploading signed assets to $TagName"
     $files = $Assets | ForEach-Object {
         $path = Join-Path $DistDir $_
         if (-not (Test-Path $path)) { throw "Missing asset: $path" }
@@ -233,6 +343,11 @@ try {
     Write-Host ""
     Write-Host "Signed release $TagName published." -ForegroundColor Green
     gh release view $TagName --json url --jq .url
+
+    if (-not $SkipStorePages) {
+        Write-Step "[5/5] Publishing the Store MSI on $StoreBranch (GitHub Pages)"
+        Publish-StorePages
+    }
 }
 catch {
     Write-Host ""

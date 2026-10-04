@@ -771,7 +771,9 @@ locally signed ones from `dist\<version>\`.
    MSIs;
 5. `gh release upload --clobber` of the signed ZIPs, MSIs and
    `SHA256SUMS.txt`, keeping the release and its notes;
-6. returns to `main`, also on failure.
+6. publishes the signed Store MSI on the `store` branch served by GitHub
+   Pages (section 26), unless `-SkipStorePages`;
+7. returns to `main`, also on failure.
 
 If signing or upload fails after the tag is pushed, fix the cause and
 resume with `-SkipGitRelease`, which starts from the tag checkout. Run
@@ -781,7 +783,11 @@ resume with `-SkipGitRelease`, which starts from the tag checkout. Run
 
 MedReminder is listed in the Microsoft Store as an **MSI/EXE app**: the
 Store does not host the package, it downloads the MSI from a URL given
-in Partner Center. MSIX is not used (section 1): it would virtualize
+in Partner Center. That URL must answer without redirection, so it
+cannot be a GitHub release asset: `releases/download/...` answers 302
+to a signed URL that expires after a few minutes, and Partner Center
+rejects it ("The package URL redirects to another URL"). The Store MSI
+is served by GitHub Pages instead. MSIX is not used (section 1): it would virtualize
 writes to `%LOCALAPPDATA%\MedReminder\` and `HKCU\...\Run`, and the
 Store would replace the GitHub update check.
 
@@ -789,7 +795,7 @@ Store would replace the GitHub update check.
 
 | Requirement (Partner Center, MSI/EXE apps) | MedReminder |
 | --- | --- |
-| Versioned HTTPS URL, binary unchanged after submission | `https://github.com/vger70/MedReminder/releases/download/vX.Y.Z/MedReminder-win-x64-net10.msi` |
+| Versioned HTTPS URL without redirection, binary unchanged after submission | `https://vger70.github.io/MedReminder/X.Y.Z/MedReminder-win-x64-net10.msi` (GitHub Pages, below) |
 | Standalone, offline installer | Self-contained publish: no separate .NET runtime |
 | Silent install (a UAC prompt is allowed) | Windows Installer `/qn`; per-user install, no UAC |
 | `.msi` or `.exe` only | `.msi` |
@@ -801,11 +807,53 @@ vendor signature (for example the .NET runtime) keeps it; the others
 (native SQLite, NuGet libraries without Authenticode) are signed, since
 the Store rejects unsigned PE files.
 
-The CI assets are unsigned. Submit the URL only after
-`publish-signed-release.ps1` has replaced them with the signed ones,
-and never upload a different `MedReminder-win-x64-net10.msi` to a tag
-already submitted: the Store requires the binary behind the URL not to
-change.
+The CI asset `MedReminder-win-x64-net10.msi` on the GitHub release is
+unsigned until `publish-signed-release.ps1` replaces it; only the signed
+MSI goes to GitHub Pages.
+
+### GitHub Pages hosting
+
+`publish-signed-release.ps1` (step 6, section 25) publishes the signed
+Store MSI on the `store` branch:
+
+```text
+store
+├── .nojekyll
+├── 2.16.0/MedReminder-win-x64-net10.msi
+└── 2.17.0/MedReminder-win-x64-net10.msi
+```
+
+- The branch holds a single parentless commit, replaced with
+  `--force-with-lease` at each publish, like the `feeds` branch
+  (`docs/CATALOGUE-DATA.md` §1.1): the repository does not grow by one
+  MSI per release. It keeps the new version and the previous one,
+  whose URL may still be in a submission under certification.
+- A version already on the branch is never overwritten: the same MSI is
+  skipped, a different one stops the script, since the Store requires
+  the file behind a submitted URL not to change. Re-signing produces a
+  different file, so a failed certification that needs a new MSI needs
+  a new version (patch release).
+- After the push the script waits up to 5 minutes for the URL to
+  answer 200, and warns on a redirect.
+- Git refuses files over 100 MB; the self-contained MSI must stay
+  below that size.
+
+One-time setup, in GitHub → Settings → Pages:
+
+1. Source: **Deploy from a branch**, branch `store`, folder `/ (root)`.
+   The branch exists after the first `publish-signed-release.ps1` run
+   (`-SkipGitRelease` on an existing tag is enough).
+2. No custom domain on `vger70.github.io`: with one, GitHub answers 301
+   to the custom domain. In that case pass the custom domain's URL as
+   `-StorePagesUrl`.
+
+Check the URL before submitting it:
+
+```powershell
+curl.exe -sI https://vger70.github.io/MedReminder/X.Y.Z/MedReminder-win-x64-net10.msi
+```
+
+The first line must report status 200, not 301 or 302.
 
 ### Partner Center
 
@@ -827,7 +875,7 @@ Every release:
      privacy policy URL (MedReminder stores email settings and
      syncs to OneDrive / Google Drive).
    - **Age ratings**: the IARC questionnaire.
-   - **Packages**: the URL of the tag (table above), architecture x64,
+   - **Packages**: the GitHub Pages URL of the version, architecture x64,
      languages en, it, fr, es, de. For an MSI the Store installs with
      `/qn`; no other installer parameter is needed.
    - **Store listings**, one per language: description, at least one
@@ -844,7 +892,7 @@ Every release:
 ### Updates
 
 The Store does not update MSI/EXE apps by itself. Every release needs
-a new submission with the new tag's URL. The in-app update check
+a new submission with the new version's GitHub Pages URL. The in-app update check
 (GitHub Releases) keeps working for Store installations; it may report
 a version before the Store has certified it.
 
