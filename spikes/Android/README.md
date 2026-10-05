@@ -70,7 +70,10 @@ devices. See [Pre-check without a device](#pre-check-without-a-device).
 
 Run from `spikes/Android/`.
 
-1. **Debug baseline.** Build and start the app in Debug:
+1. **Debug baseline.** Connect the phone and authorize USB debugging;
+   `adb devices` must list it as `device` (not `unauthorized` or
+   `offline`), or the run stops with XA0010 after a successful build.
+   Build and start the app in Debug:
    `dotnet build MedReminder.MobileSpikes -t:Run -f net10.0-android`.
    Tap *Run S1, S2, S3*, then *S1b* with the test archive, then *Share
    report*. Save the JSON as
