@@ -1,0 +1,168 @@
+{
+  "report": "medreminder-b1-android-spikes",
+  "reportVersion": 1,
+  "createdAtUtc": "2026-10-05T19:59:34.8665588\u002B00:00",
+  "environment": {
+    "android.abis": "arm64-v8a",
+    "android.release": "16",
+    "android.sdkInt": "36",
+    "appContext.jsonReflectionEnabledByDefault": "unset",
+    "build.AndroidEnableProfiledAot": "true",
+    "build.Configuration": "Release",
+    "build.JsonSerializerIsReflectionEnabledByDefault": "true",
+    "build.PublishTrimmed": "true",
+    "build.RunAOTCompilation": "true",
+    "build.TrimMode": "partial",
+    "device.manufacturer": "motorola",
+    "device.model": "motorola edge 50 neo",
+    "dotnet.framework": ".NET 10.0.12",
+    "dotnet.processArchitecture": "Arm64",
+    "dotnet.rid": "android-arm64",
+    "gc.totalAvailableMiB": "404",
+    "ram.lowRamDevice": "False",
+    "ram.memoryClassMiB": "256",
+    "ram.totalMiB": "7430",
+    "runtime.isDynamicCodeCompiled": "True",
+    "runtime.isDynamicCodeSupported": "True"
+  },
+  "checks": [
+    {
+      "spike": "S5",
+      "check": "Schedule short battery, screen-off",
+      "outcome": "Measured",
+      "detail": "8 scheduled, 8 denied; exact alarms allowed: False"
+    },
+    {
+      "spike": "app",
+      "check": "Clear S5 and S8 data",
+      "outcome": "Measured",
+      "detail": "done"
+    },
+    {
+      "spike": "S5",
+      "check": "Schedule short battery, exact-denied",
+      "outcome": "Measured",
+      "detail": "8 scheduled, 8 denied; exact alarms allowed: False"
+    },
+    {
+      "spike": "S5",
+      "check": "Notifications enabled",
+      "outcome": "Pass",
+      "detail": "True"
+    },
+    {
+      "spike": "S5",
+      "check": "Exact alarms allowed (SCHEDULE_EXACT_ALARM)",
+      "outcome": "Measured",
+      "detail": "False"
+    },
+    {
+      "spike": "S5",
+      "check": "Battery optimization",
+      "outcome": "Measured",
+      "detail": "ignoring optimizations False; standby bucket active; power save False"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Exact \u002B2 min (#1, planned 10-05 21:34:04)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied AlarmClock \u002B2 min (#2, planned 10-05 21:34:04)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Inexact \u002B2 min (#3, planned 10-05 21:34:04)",
+      "outcome": "Measured",
+      "detail": "fired 92 s late; power save False, idle True"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Window \u002B2 min (#4, planned 10-05 21:34:04)",
+      "outcome": "Measured",
+      "detail": "fired 1522 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Exact \u002B5 min (#5, planned 10-05 21:37:04)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied AlarmClock \u002B5 min (#6, planned 10-05 21:37:04)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Inexact \u002B5 min (#7, planned 10-05 21:37:04)",
+      "outcome": "Measured",
+      "detail": "fired 227 s late; power save False, idle True"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Window \u002B5 min (#8, planned 10-05 21:37:04)",
+      "outcome": "Measured",
+      "detail": "fired 1342 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Exact \u002B10 min (#9, planned 10-05 21:42:04)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied AlarmClock \u002B10 min (#10, planned 10-05 21:42:04)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Inexact \u002B10 min (#11, planned 10-05 21:42:04)",
+      "outcome": "Measured",
+      "detail": "fired 381 s late; power save False, idle True"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Window \u002B10 min (#12, planned 10-05 21:42:04)",
+      "outcome": "Measured",
+      "detail": "fired 1042 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Exact \u002B20 min (#13, planned 10-05 21:52:04)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied AlarmClock \u002B20 min (#14, planned 10-05 21:52:04)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Inexact \u002B20 min (#15, planned 10-05 21:52:04)",
+      "outcome": "Measured",
+      "detail": "fired 442 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "exact-denied Window \u002B20 min (#16, planned 10-05 21:52:04)",
+      "outcome": "Measured",
+      "detail": "fired 442 s late; power save False, idle False"
+    },
+    {
+      "spike": "S8",
+      "check": "Periodic work ran",
+      "outcome": "Fail",
+      "detail": "no run recorded"
+    }
+  ]
+}
