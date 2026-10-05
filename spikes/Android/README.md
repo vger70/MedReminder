@@ -36,9 +36,28 @@ devices. See [Pre-check without a device](#pre-check-without-a-device).
 - The MAUI Android workload:
   `dotnet workload install maui-android`.
 - The Android SDK and a JDK. Visual Studio installs both. Without Visual
-  Studio, from `spikes/Android/MedReminder.MobileSpikes`:
-  `dotnet build -t:InstallAndroidDependencies -f net10.0-android -p:AcceptAndroidSDKLicenses=True`.
-- `adb` on `PATH` (Android SDK `platform-tools`).
+  Studio, install them with the `InstallAndroidDependencies` target. It
+  needs absolute target folders: without `AndroidSdkDirectory` it fails
+  with MSB4044 (`AndroidSdkPath`). It installs the JDK only when
+  `JavaSdkDirectory` is given. From `spikes/Android/MedReminder.MobileSpikes`:
+
+  ```powershell
+  dotnet build -t:InstallAndroidDependencies -f net10.0-android `
+    -p:AndroidSdkDirectory=C:\Android\sdk `
+    -p:JavaSdkDirectory=C:\Android\jdk `
+    -p:AcceptAndroidSDKLicenses=True
+  ```
+
+  Every later build must find the same folders. MSBuild reads
+  environment variables as properties, so set them once for the
+  session (or with `setx` for good), and put `adb` on `PATH`:
+
+  ```powershell
+  $env:AndroidSdkDirectory = 'C:\Android\sdk'
+  $env:JavaSdkDirectory = 'C:\Android\jdk'
+  $env:PATH += ';C:\Android\sdk\platform-tools'
+  ```
+
 - Devices with USB debugging on:
   - one on Android 14 or later;
   - one at the proposed floor of D13 (Android 8.0, API 26), if
