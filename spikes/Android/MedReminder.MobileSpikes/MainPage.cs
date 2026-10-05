@@ -17,6 +17,7 @@ public sealed class MainPage : ContentPage
     private readonly Label _log = new() { FontSize = 12, LineBreakMode = LineBreakMode.WordWrap };
     private readonly Entry _passphrase = new() { IsPassword = true, Placeholder = "Passphrase of the desktop archive" };
     private readonly List<Button> _buttons = [];
+    private readonly Picker _scenario = new() { Title = "S5 scenario", ItemsSource = S5Alarms.Scenarios, SelectedIndex = 0 };
 
     public MainPage()
     {
@@ -51,6 +52,24 @@ public sealed class MainPage : ContentPage
                     NewButton("S3 EF Core SQLite", () => RunAsync(() => S3EfCoreSqlite.RunAsync(_report, S3Directory, CancellationToken.None))),
                     _passphrase,
                     NewButton("S1b Decrypt a desktop archive…", DecryptDesktopArchiveAsync),
+                    new Label { Text = "S5 and S8 run over hours: see the README for the scenarios.", FontSize = 12 },
+                    _scenario,
+                    NewButton("S5 request notification permission", RequestNotificationPermissionAsync),
+                    NewButton("S5 open exact alarm settings", OpenExactAlarmSettingsAsync),
+                    NewButton("S5 schedule short battery (2-20 min)", () => ScheduleS5Async(longBattery: false)),
+                    NewButton("S5 schedule long battery (30 min-8 h)", () => ScheduleS5Async(longBattery: true)),
+                    NewButton("S8 start periodic work (15 min)", () => RunOnUiAsync("S8", "Start", S8Background.Start)),
+                    NewButton("S8 stop periodic work", () => RunOnUiAsync("S8", "Stop", () =>
+                    {
+                        S8Background.Stop();
+                        return "stopped";
+                    })),
+                    NewButton("Collect S5 and S8 results", () => RunAsync(() =>
+                    {
+                        S5Alarms.Collect(_report);
+                        S8Background.Collect(_report);
+                    })),
+                    NewButton("Clear S5 and S8 data", ClearS5S8Async),
                     NewButton("Share report", ShareReportAsync),
                     NewButton("Clear", () =>
                     {
@@ -136,6 +155,61 @@ public sealed class MainPage : ContentPage
         {
             Array.Clear(passphrase);
         }
+    }
+
+    private Task ScheduleS5Async(bool longBattery)
+    {
+        var scenario = _scenario.SelectedItem as string ?? S5Alarms.Scenarios[0];
+        return RunOnUiAsync("S5", $"Schedule {(longBattery ? "long" : "short")} battery, {scenario}",
+            () => S5Alarms.ScheduleBattery(scenario, longBattery));
+    }
+
+    // Alarm and WorkManager calls are quick; run them on the UI thread and
+    // record the outcome.
+    private Task RunOnUiAsync(string spike, string check, Func<string> action)
+    {
+        try
+        {
+            _report.Add(spike, check, Outcome.Measured, action());
+        }
+        catch (Exception ex)
+        {
+            _report.Add(spike, check, Outcome.Fail, SpikeRunner.Describe(ex));
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task RequestNotificationPermissionAsync()
+    {
+        var status = await Permissions.RequestAsync<Permissions.PostNotifications>();
+        _report.Add("S5", "POST_NOTIFICATIONS", status == PermissionStatus.Granted ? Outcome.Pass : Outcome.Fail, status.ToString());
+    }
+
+    private Task OpenExactAlarmSettingsAsync()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(31))
+        {
+            _report.Add("S5", "Exact alarm settings", Outcome.Skipped, "not needed before Android 12");
+            return Task.CompletedTask;
+        }
+        var context = global::Android.App.Application.Context;
+        var intent = new global::Android.Content.Intent(
+            global::Android.Provider.Settings.ActionRequestScheduleExactAlarm,
+            global::Android.Net.Uri.Parse("package:" + context.PackageName));
+        intent.AddFlags(global::Android.Content.ActivityFlags.NewTask);
+        context.StartActivity(intent);
+        return Task.CompletedTask;
+    }
+
+    private async Task ClearS5S8Async()
+    {
+        if (!await DisplayAlertAsync("Clear", "Cancel the pending S5 alarms and the S8 work, and delete their logs?", "Clear", "Keep"))
+        {
+            return;
+        }
+        S5Alarms.Clear();
+        S8Background.Clear();
+        _report.Add("app", "Clear S5 and S8 data", Outcome.Measured, "done");
     }
 
     private async Task ShareReportAsync()

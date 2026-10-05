@@ -1,4 +1,4 @@
-# B.1 Android spikes S1–S4
+# B.1 Android spikes S1–S5, S8
 
 Throw-away tool for the Android spikes of B.1 Phase 0
 (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` §13 Phase 0, §18). They are
@@ -12,10 +12,10 @@ Only the results go into §18 of the analysis.
 | S2 | What does Argon2id with `Argon2Params.Default` cost on a low-end phone? | App: *S2 Argon2id cost* |
 | S3 | Do EF Core SQLite and the production persistence work with Release trimming / AOT? (P13) | App: *S3 EF Core SQLite*, in the Release APK |
 | S4 | Does `StripReleaseDebugArtifacts` break or pass a Release Android build? (D11) | `run-s4.ps1` |
+| S5 | Do local notifications planned with `AlarmManager` fire on time in the background, swiped away, force-stopped, after a reboot, under Doze, and with exact alarms denied? (§8.1, §8.2) | App: *S5 …* buttons, [S5 and S8](#s5-and-s8) |
+| S8 | How often does WorkManager run 15-minute periodic work, with and without battery saver? (§7.4) | App: *S8 …* buttons, [S5 and S8](#s5-and-s8) |
 
 Out of scope here:
-- S5 (notifications) and S8 (background sync) need hours of
-  observation and reboots, so they get a later tool.
 - The Android halves of S6 and S7 need the Android OAuth clients (P14),
   and run with Phase 5.
 
@@ -179,6 +179,68 @@ The earlier note that `StripReleaseDebugArtifacts` might run before the
 publish folder is filled did not show up in this build: nothing was
 left to strip. It still has to be confirmed on Windows, where the
 target was designed.
+
+## S5 and S8
+
+Both run over hours and survive the app being closed: alarms, the
+boot receiver and the WorkManager job write to log files in the app's
+private folder, and **Collect S5 and S8 results** turns the logs into
+report lines, then **Share report** as usual. Use the Release APK
+(`run-s4.ps1 -Install`); Debug runs in the interpreter and starts more
+slowly from a cold process.
+
+### S5 — local notifications
+
+A *battery* schedules four alarms per time offset, one per kind:
+
+| Kind | API | Needs exact-alarm permission |
+|---|---|---|
+| Exact | `setExactAndAllowWhileIdle` | Yes |
+| AlarmClock | `setAlarmClock` | Yes |
+| Inexact | `setAndAllowWhileIdle` (the planned fallback, §8.2) | No |
+| Window | `setWindow`, 10-minute window | No |
+
+The short battery fires at +2, +5, +10 and +20 minutes; the long one at
++30 minutes and +1, +2, +4 and +8 hours. Each alarm posts a
+notification titled `S5 <kind> #<id>` with its delay. The scenario
+chosen in the *S5 scenario* list is written with the alarms, so pick it
+**before** scheduling.
+
+1. Tap **S5 request notification permission** (Android 13+) and allow.
+2. Run each scenario on a fresh battery, then collect:
+
+| Scenario | What to do after scheduling the short battery |
+|---|---|
+| `screen-off` | Lock the phone, leave it on battery for 25 minutes |
+| `swiped` | Swipe the app away from the recent apps, lock the phone, wait 25 minutes |
+| `force-stopped` | Settings → Apps → MedReminder Spikes → Force stop, wait 25 minutes. Android cancels the alarms of a force-stopped app: the expected result is "not fired", which documents the limit |
+| `reboot` | Restart the phone, unlock it, do **not** open the app, wait 25 minutes. The boot receiver re-plans the alarms still due |
+| `exact-denied` | With exact alarms not allowed (default for new installs on Android 14+; otherwise revoke it with **S5 open exact alarm settings**): Exact and AlarmClock are refused, Inexact and Window must still fire |
+| `doze-overnight` | Long battery in the evening, phone unplugged and still overnight |
+| `foreground` | Keep the app open (baseline) |
+
+3. Before a new scenario, open the app, tap **Collect S5 and S8
+   results** and **Share report**, then **Clear S5 and S8 data**.
+
+### S8 — background work cadence
+
+1. Tap **S8 start periodic work (15 min)**, then leave the phone in
+   normal use for at least 8 hours, including a night unplugged.
+2. Turn battery saver on for at least 3 hours of that time.
+3. Open the app, **Collect S5 and S8 results**, **Share report**.
+   Leave the work running if you want a longer record; **S8 stop
+   periodic work** ends it.
+
+The worker records only its own run (no network call): time, battery
+saver, Doze, standby bucket, charging, and whether it started the
+process.
+
+### Acceptance (S5, S8)
+
+| Spike | Pass when |
+|---|---|
+| S5 | Exact and AlarmClock fire within 60 s in `screen-off`, `swiped`, `doze-overnight` and, after the boot re-plan, `reboot`. With exact alarms denied, the app sees it (*Exact alarms allowed* False), the exact kinds are refused, and Inexact and Window fire, with their delay recorded. `force-stopped` is recorded, not judged |
+| S8 | The periodic work runs, unattended, at least every hour on average with battery saver off. The gaps with battery saver on are recorded; they set what the Phase 5 sync status can promise, not a pass or fail |
 
 ## Privacy
 

@@ -46,6 +46,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <!-- S8: periodic background work, as the Phase 5 sync would use. -->
+    <PackageReference Include="Xamarin.AndroidX.Work.Runtime" Version="2.10.3" />
   </ItemGroup>
 
   <ItemGroup>
