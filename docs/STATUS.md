@@ -1,7 +1,7 @@
-# Development status — 2026-10-03
+# Development status — 2026-10-05
 
 Snapshot of what has shipped and what remains open, taken at
-`main` = v2.14.0 (commit `0999afa`), with PR #178 open. Sources: `CHANGE_LOG.md`,
+`main` = v2.16.0 plus PR #161 (commit `c6f1f58`), with only draft PR #106 open. Sources: `CHANGE_LOG.md`,
 `docs/EVOLUTION.md`, `docs/EVOLUTION-DONE.md`,
 `docs/notes/EVOLUTION-PROPOSALS.md`,
 `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`, the GitHub tracker.
@@ -31,6 +31,12 @@ Reviewed again on 2026-10-03 at v2.14.0, after #158, #159 and
 branch, stock that follows the dose times) and with #178 open: all
 sections.
 
+Updated on 2026-10-05 at `c6f1f58` (v2.16.0 plus #161), after #178–#200
+(releases v2.14.1 to v2.16.0, package expiry, AIFA equivalents list,
+repeatable prescriptions, regional prescription services, Store MSI):
+header, §1, §2.11, §2.12, §3.3, §3.4, §3.5, §4. The counts in §1 were
+taken at `c6f1f58`.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -40,11 +46,11 @@ verified against the tree or the tracker.
 
 | Item | Value |
 |---|---|
-| Latest release | v2.14.0 (2026-10-03); v2.13.0 and v2.13.1 on 2026-10-02; v2.12.1 on 2026-10-01 |
+| Latest release | v2.16.0 (2026-10-04); v2.14.1, v2.14.2 and v2.15.0 on 2026-10-03; v2.14.0 on 2026-10-03 |
 | Projects | Domain, Application, Infrastructure.Portable (`net10.0`); Infrastructure (`net10.0-windows`); UI (WinForms, `net10.0-windows10.0.19041.0`); DataImporter |
-| Source files | 510 `.cs` under `src/` |
-| Test projects | 6 (one per project, plus UI and DataImporter); 230 `.cs` files, 1341 `[Fact]`/`[Theory]` attributes |
-| Open pull requests | #178 — days left from the stock shown, documentation of the dose-time stock (follow-up to #177); #161 — self-contained MSI for the Microsoft Store; #106 — Android spikes S1–S4 (draft, not to be merged) |
+| Source files | 542 `.cs` under `src/` |
+| Test projects | 6 (one per project, plus UI and DataImporter); 252 `.cs` files, 1537 `[Fact]`/`[Theory]` attributes |
+| Open pull requests | #106 — Android spikes S1–S4 (draft, not to be merged) |
 | Open issues | #11 — Simplified Chinese localization (catalogue search disabled) |
 | UI languages | en, it, fr, es, de |
 
@@ -226,15 +232,37 @@ summary in `EVOLUTION-DONE.md` §12.5.
 | #177 | As-needed slots never consumed automatically, no reminder; under PRN the slots consume nothing; "Extra dose as needed" in the intake dialog; existing "As needed" slots corrected once from today | `IntakeRecorded.IsExtra` and `SlotValue.IsAsNeeded`, operation schema 9; image schema 7; additive export fields `isAsNeeded`, `isExtra` |
 | #177 | Therapy → Dose times…: editable and user-defined time-of-day presets, times of medicines without slots; slots keep their preset (`PresetId`) | device-local, not replicated; `SlotValue.PresetId` display only (no version); additive export fields |
 | #177 | Main list: stock after today's doses whose time has passed, refreshed every minute; run-out date, coverage, recorded stock and low-stock monitor keep the start-of-day stock | none |
-| #178 (open) | Days left counted from the stock shown; user guides and architecture documents updated | none |
+| #178 | Days left counted from the stock shown; user guides and architecture documents updated (v2.14.1) | none |
+| #194 | Review findings: PRN switch and backfill keep slots, imported archives keep the user's choices, main list reload and catch-up fixes (v2.16.0) | none |
 
 Every device of a sync group must run v2.14.0 before anyone records an
 extra intake or flags an as-needed slot; an older app stops at the
 first operation of schema 9 (R7). Past as-needed consumption is not
 given back: one stock count per affected medicine recovers it. The
 maintainer ran the Windows-only test projects on #177 before v2.14.0;
-for #178 the Domain and Application tests ran on Linux and the run on
-Windows is pending.
+whether they ran on #178 before v2.14.1 cannot be verified from this
+repository `[UNCERTAIN]`.
+
+### 2.12 Changes v2.14.1 – v2.16.0 and after
+
+Sources: the `CHANGE_LOG.md` entries of each PR.
+
+| PR | Content | Release |
+|---|---|---|
+| #178 | Days left counted from the stock shown (§2.11) | v2.14.1 |
+| #179, #180 | Dose times order, slots lost in Advanced mode, start date not saved; slots place the quantity of advanced schedules (#180, stacked on #179) | v2.14.2 |
+| #181, #182 | Date pickers with static Segoe UI; slot presets ordered by time of day, resizable navigation pane | v2.14.2 |
+| #183–#187 | Package expiry (proposal 1 of `EVOLUTION-PROPOSALS.md`): analysis, packages with expiry and in-use period, package list, expiry notices with lead days, Stock → Expiring packages | v2.15.0 |
+| #188 | Export snapshot test isolated in its own scratch folder | v2.15.0 |
+| #189, #190 | AIFA equivalent medicines list (transparency list feed, Equivalent medicines window) and Codifa info link, Italy only | v2.16.0 |
+| #191 | SMTP provider section in the user guides | v2.16.0 |
+| #192, #193 | Review fixes of the daily catalogue check; dated-list feeds hardened, feed workflows publish concurrently | v2.16.0 |
+| #195, #196, #198, #200 | Implementation prompts: repeatable prescriptions, regional prescription services, guided setup (corrected by #200) | v2.16.0 |
+| #197, #199 | Repeatable prescriptions with several dispensations (`DispensationChanged`, operation schema 12 for repeatable prescriptions only, image schema 9, export `schemaVersion` 3 when present); regional prescription service link and "Paste NRE" (#199, stacked on #197) | v2.16.0 |
+| #161 | Self-contained MSI for the Microsoft Store (`dotnet-desktop.yml`, `release.ps1`, `publish-signed-release.ps1`, `store` branch on GitHub Pages); MSIX scaffolding removed | not released |
+
+Every device of a sync group must run v2.16.0 before anyone records a
+repeatable prescription (operation schema 12).
 
 ---
 
@@ -283,17 +311,24 @@ developer-days `[INFERRED — from the §13.1 estimates]`.
 
 ### 3.3 Proposals with an implementation prompt ready
 
-None for the application. Every proposal of
-`EVOLUTION-PROPOSALS-2.md` §3 has shipped (§2.9); its §4 and §5
-(re-assessed backlog items, proposals not recommended) remain notes. `docs/prompt/` holds only the two website
-prompts (§3.5). The others are in `docs/prompt/Completed/`, including
+- Guided setup after the first start (item M2 of the evolution plan of
+  2026-10-04, kept outside this repository):
+  `docs/prompt/PROMPT-GUIDED-SETUP.md` (#198, corrected by #200). Not
+  implemented.
+
+Every proposal of `EVOLUTION-PROPOSALS-2.md` §3 has shipped (§2.9); its
+§4 and §5 (re-assessed backlog items, proposals not recommended) remain
+notes. `PROMPT-REPEATABLE-PRESCRIPTION.md` and
+`PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md` are implemented (#197, #199)
+but still in `docs/prompt/`, not yet moved to `Completed/`. The two
+website prompts are covered in §3.5. The others are in `docs/prompt/Completed/`, including
 the multi-user roles prompt (item G shipped with household step H2a;
 item I was not built) and the two remote-feed prompts.
 
 ### 3.4 Proposals without design
 
-From `EVOLUTION-PROPOSALS.md`, not started: 1 package expiry tracking
-(domain change: stock is one quantity per medicine), 5 weekly
+From `EVOLUTION-PROPOSALS.md`, not started (proposal 1, package
+expiry tracking, shipped in v2.15.0, §2.12): 5 weekly
 pill-organizer preparation (interaction with A5 needs a decision),
 10–16 and 18–19 (storage location, shared household stock, database
 encryption at rest, text-to-speech, cost tracking, Windows 11 widget,
@@ -317,7 +352,9 @@ tracking.
   publishes unsigned packages that the script replaces with the signed
   ones (`docs/PACKAGING.md` §25); signing in CI is open. `README.md` and
   the user guides now describe signed binaries (#178).
-- **Microsoft Store**: PR #161 (self-contained MSI) is open.
+- **Microsoft Store**: the self-contained MSI (#161) is on `main`, not yet
+  released; the Partner Center submission is a product-owner action
+  (`docs/PACKAGING.md` §26).
 - **UI, known limitations** (`ANALYSIS-UI-MODERNIZATION.md` §6b): in
   dark mode the date and time pickers keep a white field (a dark picker
   needs a replacement control); the Windows MessageBox remains on the
@@ -347,11 +384,10 @@ tracking.
 
 ## 4. Suggested next steps `[INFERRED]`
 
-0. Run the Windows-only tests on PR #178, then merge it and release it
-   as a patch version. The release notes of
-   v2.14.x must say that every device of a sync group has to be updated
-   before extra intakes or as-needed slots are used, and that one stock
-   count recovers past as-needed consumption.
+0. Release #161 (Store MSI) and submit the MSI in Partner Center
+   (`docs/PACKAGING.md` §26). Move the two implemented prompts to
+   `docs/prompt/Completed/`. Implement the guided setup
+   (`PROMPT-GUIDED-SETUP.md`).
 
 The household feature shipped after its manual tests (§2.7). Every
 device of a sync group or installation must run v2.12.0 or later
@@ -359,11 +395,10 @@ before anyone uses the household features (older apps cannot read
 profile operation schemas 4 and 5).
 
 1. Desktop: confirm webcam decoding on a real pack with a webcam of
-   sufficient resolution (A2 checklist item 7). Decide on PR #161
-   (Microsoft Store MSI).
+   sufficient resolution (A2 checklist item 7).
 2. UI: replace the date and time pickers if a fully dark mode is
    wanted (§3.5).
-3. Website content refresh for v2.7–v2.14; the screenshots in
+3. Website content refresh for v2.7–v2.16; the screenshots in
    particular predate the new main window and dark mode.
 4. Mobile: build and run the S1–S4 spike app of draft PR #106 on
    Android before committing to Phase 5; S1 and S3 are the go / no-go

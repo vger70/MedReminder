@@ -32,6 +32,8 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ## PR #161 — Build a self-contained MSI for the Microsoft Store
 
+**Status:** merged (2026-10-04)
+
 Link: [vger70/MedReminder#161](https://github.com/vger70/MedReminder/pull/161)
 Branch: `claude/store-msi-package` → `main`
 
@@ -68,6 +70,8 @@ Branch: `claude/store-msi-package` → `main`
 
 ## PR #199 — Link the prescription windows to the regional prescription services
 
+**Status:** merged into `claude/brave-turing-e4a7z7` (2026-10-04), on `main` with PR #197 (2026-10-04)
+
 Link: [vger70/MedReminder#199](https://github.com/vger70/MedReminder/pull/199)
 Branch: `claude/inspiring-pascal-povp02` → `claude/brave-turing-e4a7z7` (stacked on PR #197)
 
@@ -86,6 +90,8 @@ Branch: `claude/inspiring-pascal-povp02` → `claude/brave-turing-e4a7z7` (stack
 
 - `CLAUDE.md` §5, `docs/CATALOGUE-DATA.md` §1.1 and §10, `docs/SYNC-FORMAT.md`, `docs/EXPORT-FORMAT.md` §3.9, the five user guides.
 ## PR #194 — Fix the review findings of the dose-time stock and as-needed doses
+
+**Status:** merged (2026-10-04)
 
 Link: [vger70/MedReminder#194](https://github.com/vger70/MedReminder/pull/194)
 Branch: `feature/intraday-review-fixes` → `main`
@@ -127,6 +133,8 @@ Branch: `feature/intraday-review-fixes` → `main`
   `analysis/ANALYSIS-INTRADAY-CONSUMPTION.md`.
 ## PR #192 — Fix the review findings on the daily catalogue check
 
+**Status:** merged (2026-10-04)
+
 Link: [vger70/MedReminder#192](https://github.com/vger70/MedReminder/pull/192)
 Branch: `claude/catalogue-daily-refresh` → `main`
 
@@ -152,6 +160,8 @@ Branch: `claude/catalogue-daily-refresh` → `main`
 - `ANALYSIS-CATALOGUE-REMOTE-FEED.md` §4.5 and new §11.6.
 ## PR #200 — Correct the guided setup prompt against the code
 
+**Status:** merged (2026-10-04)
+
 Link: [vger70/MedReminder#200](https://github.com/vger70/MedReminder/pull/200)
 Branch: `claude/wizardly-goldberg-9atod5` → `main`
 
@@ -175,6 +185,8 @@ Branch: `claude/project-thread-i2a3y8` → `main`
 ---
 
 ## PR #197 — Add repeatable prescriptions with several dispensations
+
+**Status:** merged (2026-10-04)
 
 Link: [vger70/MedReminder#197](https://github.com/vger70/MedReminder/pull/197)
 Branch: `claude/brave-turing-e4a7z7` → `main`
@@ -228,6 +240,8 @@ Branch: `claude/project-thread-i2a3y8` → `main`
 
 ## PR #193 — Harden the daily dated-list feeds and let feeds publish concurrently
 
+**Status:** merged (2026-10-04)
+
 Link: [vger70/MedReminder#193](https://github.com/vger70/MedReminder/pull/193)
 Branch: `claude/shortage-feed-review-fixes` → `main`
 
@@ -259,6 +273,8 @@ Branch: `claude/shortage-feed-review-fixes` → `main`
 ---
 
 ## PR #191 — Add an SMTP provider section to the user guides
+
+**Status:** merged (2026-10-03)
 
 Link: [vger70/MedReminder#191](https://github.com/vger70/MedReminder/pull/191)
 
@@ -317,6 +333,8 @@ Branch: `claude/inspiring-bardeen-d79c0q` → `main`
 
 ## PR #189 — Analyse AIFA equivalent-medicine lists and a Codifa info link
 
+**Status:** merged (2026-10-03)
+
 Link: [vger70/MedReminder#189](https://github.com/vger70/MedReminder/pull/189)
 
 Branch: `claude/italian-medicine-catalog-integration-b1e933` → `main`
@@ -329,6 +347,8 @@ Branch: `claude/italian-medicine-catalog-integration-b1e933` → `main`
 
 ## PR #188 — Give the export snapshot test a scratch folder of its own
 
+**Status:** merged (2026-10-03)
+
 Link: [vger70/MedReminder#188](https://github.com/vger70/MedReminder/pull/188)
 
 Branch: `claude/fix-flaky-export-test` → `main`
@@ -340,6 +360,8 @@ Branch: `claude/fix-flaky-export-test` → `main`
 ---
 
 ## PR #187 — Add the expiring packages view and document package expiry (package expiry, phase 4)
+
+**Status:** merged (2026-10-03)
 
 Link: [vger70/MedReminder#187](https://github.com/vger70/MedReminder/pull/187)
 
@@ -362,6 +384,8 @@ Branch: `feature/package-expiry-overview` → `main`
 
 ## PR #186 — Warn about expiring and expired packages (package expiry, phase 3)
 
+**Status:** merged (2026-10-03)
+
 Link: [vger70/MedReminder#186](https://github.com/vger70/MedReminder/pull/186)
 
 Branch: `feature/package-expiry-notices` → `main` (on top of #184 and #185)
@@ -383,6 +407,8 @@ Branch: `feature/package-expiry-notices` → `main` (on top of #184 and #185)
 
 ## PR #185 — Enter packages and show their expiry (package expiry, phase 2)
 
+**Status:** merged into `feature/package-expiry` (2026-10-03), on `main` with PR #184 (2026-10-03)
+
 Link: [vger70/MedReminder#185](https://github.com/vger70/MedReminder/pull/185)
 
 Branch: `feature/package-expiry-ui` → `feature/package-expiry` (stacked on #184)
@@ -400,6 +426,8 @@ Branch: `feature/package-expiry-ui` → `feature/package-expiry` (stacked on #18
 - `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: packages created only when the expiry section is filled; no package fields in the initial load; phase 2 contents.
 
 ## PR #184 — Record packages and their expiry (package expiry, phase 1)
+
+**Status:** merged (2026-10-03)
 
 Link: [vger70/MedReminder#184](https://github.com/vger70/MedReminder/pull/184)
 
@@ -425,6 +453,8 @@ Branch: `feature/package-expiry` → `main`
 
 ## PR #183 — Add analysis of package expiry tracking
 
+**Status:** merged (2026-10-03)
+
 Link: [vger70/MedReminder#183](https://github.com/vger70/MedReminder/pull/183)
 
 Branch: `claude/package-expiry-analysis-1388ce` → `main`
@@ -434,6 +464,8 @@ Branch: `claude/package-expiry-analysis-1388ce` → `main`
 - `docs/analysis/ANALYSIS-PACKAGE-EXPIRY.md`: design of optional package expiry (printed `MM/YYYY`, valid to the last day of the month) and in-use period after opening, a `StockPackage` register beside the immutable stock ledger with a derived first-expiring-first-out allocation, expiring-soon and expired notices on the medicine's toast and email channels, sync, export, UI, tests, phased plan and decisions to confirm.
 
 ## PR #182 — Slot description presets by time of day, resizable navigation pane
+
+**Status:** merged (2026-10-03)
 
 Link: [vger70/MedReminder#182](https://github.com/vger70/MedReminder/pull/182)
 
@@ -447,6 +479,8 @@ Branch: `claude/voci-ordinamento-menu-laterale-544d36` → `main`
 ---
 
 ## PR #181 — Give date pickers static Segoe UI so the first digit is not cut
+
+**Status:** merged (2026-10-03)
 
 Link: [vger70/MedReminder#181](https://github.com/vger70/MedReminder/pull/181)
 Branch: `claude/zero-formatting-date-controls-a7f941` → `main`
@@ -467,9 +501,13 @@ Branch: `claude/zero-formatting-date-controls-a7f941` → `main`
 
 ---
 
-## PR #TBD — Administration slots with advanced schedules
+## PR #180 — Let slots place the quantity of advanced schedules
 
-Branch: `feature/slots-with-advanced-schedules` (stacked on #179)
+**Status:** merged into `claude/bug-orari-terapia-a59517` (2026-10-03), on `main` with PR #179 (2026-10-03)
+
+Link: [vger70/MedReminder#180](https://github.com/vger70/MedReminder/pull/180)
+
+Branch: `feature/slots-with-advanced-schedules` → `claude/bug-orari-terapia-a59517` (stacked on PR #179)
 
 ### Changed
 
@@ -478,6 +516,8 @@ Branch: `feature/slots-with-advanced-schedules` (stacked on #179)
 ---
 
 ## PR #179 — Fix the dose times order, slots lost in Advanced mode and the start date not saved
+
+**Status:** merged (2026-10-03)
 
 Link: [vger70/MedReminder#179](https://github.com/vger70/MedReminder/pull/179)
 
@@ -510,6 +550,8 @@ Branch: `claude/bug-orari-terapia-a59517` → `main`
 ---
 
 ## PR #178 — Count the days left from the stock shown in the list
+
+**Status:** merged (2026-10-03)
 
 Link: [vger70/MedReminder#178](https://github.com/vger70/MedReminder/pull/178)
 Branch: `feature/days-left-from-shown-stock` → `main`
@@ -616,6 +658,8 @@ Branch: `feature/intraday-consumption` → `main`
 
 ## PR #176 — Show all About data sources, stop text box border flicker, remember the main window placement
 
+**Status:** merged (2026-10-02)
+
 Link: [vger70/MedReminder#176](https://github.com/vger70/MedReminder/pull/176)
 Branch: `claude/fonti-dati-textbox-issues-c699a3` → `main`
 
@@ -644,6 +688,8 @@ Branch: `claude/fonti-dati-textbox-issues-c699a3` → `main`
 
 ## PR #175 — Hide a maximized main window to the tray on the first close
 
+**Status:** merged (2026-10-02)
+
 Link: [vger70/MedReminder#175](https://github.com/vger70/MedReminder/pull/175)
 Branch: `claude/fix-maximized-close-to-tray` → `main`
 
@@ -657,6 +703,8 @@ Branch: `claude/fix-maximized-close-to-tray` → `main`
   of resetting it to Normal.
 
 ## PR #174 — Run the AIFA shortage workflow daily
+
+**Status:** merged (2026-10-02)
 
 Link: [vger70/MedReminder#174](https://github.com/vger70/MedReminder/pull/174)
 Branch: `claude/vigilant-hypatia-yby7iu` → `main`
@@ -676,6 +724,8 @@ Branch: `claude/vigilant-hypatia-yby7iu` → `main`
 ---
 
 ## PR #173 — Publish the catalogue feeds on a single-commit feeds branch
+
+**Status:** merged (2026-10-02)
 
 Link: [vger70/MedReminder#173](https://github.com/vger70/MedReminder/pull/173)
 Branch: `claude/feeds-branch` → `main`
@@ -706,6 +756,8 @@ Branch: `claude/feeds-branch` → `main`
 
 ## PR #172 — Move feed workflow schedules off the top of the hour
 
+**Status:** merged (2026-10-02)
+
 Link: [vger70/MedReminder#172](https://github.com/vger70/MedReminder/pull/172)
 Branch: `claude/vigilant-hypatia-yby7iu` → `main`
 
@@ -722,6 +774,8 @@ Branch: `claude/vigilant-hypatia-yby7iu` → `main`
 - `download_aifa_shortages.yaml` comment no longer says "twice a
   week"; `docs/CATALOGUE-DATA.md` lists the new times.
 ## PR #171 — Record the second round of proposals in the status snapshot
+
+**Status:** merged (2026-10-02)
 
 Link: [vger70/MedReminder#171](https://github.com/vger70/MedReminder/pull/171)
 Branch: `claude/status-proposals-2` → `main`
@@ -1079,6 +1133,8 @@ Branch: `claude/evolution-proposals-2` → `main`
 
 ## PR #159 — Check the remote catalogue feeds once a day during the session
 
+**Status:** merged (2026-10-01)
+
 Link: [vger70/MedReminder#159](https://github.com/vger70/MedReminder/pull/159)
 Branch: `claude/catalogue-daily-refresh` → `main`
 
@@ -1108,6 +1164,8 @@ Branch: `claude/catalogue-daily-refresh` → `main`
 
 ## PR #158 — Add publish-signed-release.ps1 to automate signed releases
 
+**Status:** merged (2026-10-01)
+
 Link: [vger70/MedReminder#158](https://github.com/vger70/MedReminder/pull/158)
 Branch: `claude/signed-release-script`
 
@@ -1126,6 +1184,8 @@ Branch: `claude/signed-release-script`
 ---
 
 ## PR #137 — Add local Certum-signed release build to release.ps1
+
+**Status:** merged (2026-10-01)
 
 Link: [vger70/MedReminder#137](https://github.com/vger70/MedReminder/pull/137)
 Branch: `claude/certum-code-signing`
@@ -1148,6 +1208,8 @@ Branch: `claude/certum-code-signing`
 
 - `docs/PACKAGING.md` §25 documents the signed local build.
 ## PR #157 — Align STATUS, EVOLUTION and the proposals note with v2.12.0
+
+**Status:** merged (2026-10-01)
 
 Link: [vger70/MedReminder#157](https://github.com/vger70/MedReminder/pull/157)
 Branch: `claude/docs-status-evolution-v2-12` → `main`
@@ -1204,6 +1266,8 @@ Branch: `claude/docs-refresh-v2-12` → `main`
 
 ## PR #154 — Close the remaining dark-mode gaps
 
+**Status:** merged (2026-10-01)
+
 Link: [vger70/MedReminder#154](https://github.com/vger70/MedReminder/pull/154)
 Branch: `claude/ui-dark-mode-gaps` → `main`
 
@@ -1221,6 +1285,8 @@ Branch: `claude/ui-dark-mode-gaps` → `main`
   Large text; they wrap.
 
 ## PR #153 — Add an admin-only option to log database queries
+
+**Status:** merged (2026-10-01)
 
 Link: [vger70/MedReminder#153](https://github.com/vger70/MedReminder/pull/153)
 Branch: `claude/db-query-logging` → `main`
@@ -1252,6 +1318,8 @@ Branch: `claude/db-query-logging` → `main`
 - The five user guides describe the option.
 ## PR #152 — Draw text and number box borders in the dark palette
 
+**Status:** merged (2026-10-01)
+
 Link: [vger70/MedReminder#152](https://github.com/vger70/MedReminder/pull/152)
 Branch: `claude/ui-dark-textbox-border` → `main`
 
@@ -1262,6 +1330,8 @@ Branch: `claude/ui-dark-textbox-border` → `main`
   the focus.
 
 ## PR #151 — Document the appearance setting and the UI building blocks
+
+**Status:** merged (2026-09-30)
 
 Link: [vger70/MedReminder#151](https://github.com/vger70/MedReminder/pull/151)
 Branch: `claude/ui-phase6-docs` → `main`
@@ -1276,6 +1346,8 @@ Branch: `claude/ui-phase6-docs` → `main`
 
 ## PR #150 — Ask confirmations in the app language and give the wizards the template buttons
 
+**Status:** merged (2026-09-30)
+
 Link: [vger70/MedReminder#150](https://github.com/vger70/MedReminder/pull/150)
 Branch: `claude/ui-phase5c-wizards-confirmations` → `main`
 
@@ -1288,6 +1360,8 @@ Branch: `claude/ui-phase5c-wizards-confirmations` → `main`
   10 pt base font and shows its errors under the fields.
 
 ## PR #149 — Apply the dialog template to the large dialogs
+
+**Status:** merged (2026-09-30)
 
 Link: [vger70/MedReminder#149](https://github.com/vger70/MedReminder/pull/149)
 Branch: `claude/ui-phase5b-large-dialogs` → `main`
@@ -1307,6 +1381,8 @@ Branch: `claude/ui-phase5b-large-dialogs` → `main`
   10 pt base font.
 
 ## PR #148 — Add the dialog template and apply it to the small dialogs
+
+**Status:** merged (2026-09-30)
 
 Link: [vger70/MedReminder#148](https://github.com/vger70/MedReminder/pull/148)
 Branch: `claude/ui-phase5-dialogs` → `main`
@@ -1341,6 +1417,8 @@ Branch: `claude/ui-phase5-dialogs` → `main`
 
 ## PR #147 — Replace the Settings tabs with a section list
 
+**Status:** merged (2026-09-30)
+
 Link: [vger70/MedReminder#147](https://github.com/vger70/MedReminder/pull/147)
 Branch: `claude/ui-phase4-settings` → `main`
 
@@ -1366,6 +1444,8 @@ Branch: `claude/ui-phase4-settings` → `main`
   wider.
 
 ## PR #146 — Redesign the main window around a summary and a navigation pane
+
+**Status:** merged (2026-09-30)
 
 Link: [vger70/MedReminder#146](https://github.com/vger70/MedReminder/pull/146)
 Branch: `claude/ui-phase3-main-window` → `main`
@@ -1397,6 +1477,8 @@ Branch: `claude/ui-phase3-main-window` → `main`
 - Profile picker buttons grow with their captions instead of being cut.
 
 ## PR #145 — Fix the dark-mode and layout defects found in the UI baseline
+
+**Status:** merged (2026-09-30)
 
 Link: [vger70/MedReminder#145](https://github.com/vger70/MedReminder/pull/145)
 Branch: `claude/ui-phase2-controls` → `main`
@@ -1551,6 +1633,8 @@ Branch: `claude/pairing-code-show-on-request` → `feature/master-slave`
 
 ## PR #135 — Refresh the EU, ES and FR catalogues from remote feeds
 
+**Status:** merged (2026-09-29)
+
 Link: [vger70/MedReminder#135](https://github.com/vger70/MedReminder/pull/135)
 Branch: `claude/catalogue-feeds-eu-es-fr`
 
@@ -1604,6 +1688,8 @@ Branch: `claude/catalogue-feeds-eu-es-fr`
 ---
 
 ## PR #134 — Add the implementation prompt for the EU, ES and FR catalogue feeds
+
+**Status:** merged (2026-09-29)
 
 Link: [vger70/MedReminder#134](https://github.com/vger70/MedReminder/pull/134)
 Branch: `claude/aifa-catalog-auto-update-jrkles`
@@ -2076,6 +2162,8 @@ Branch: `claude/household-h1-email-dedup` → `feature/master-slave`
 
 ## PR #115 — Close the join-during-listing-lag limit and ask which group a passphrase opens
 
+**Status:** merged (2026-09-29)
+
 Link: [vger70/MedReminder#115](https://github.com/vger70/MedReminder/pull/115)
 Branch: `claude/household-h0-join-fixes`
 
@@ -2106,6 +2194,8 @@ Step H0 of the household / master device feature; targets `main`
   limit is closed.
 
 ## PR #113 — Align STATUS, EVOLUTION and ANALYSIS with v2.10.0
+
+**Status:** merged (2026-09-28)
 
 Link: [vger70/MedReminder#113](https://github.com/vger70/MedReminder/pull/113)
 Branch: `claude/docs-status-v2.10`
