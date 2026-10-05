@@ -1450,9 +1450,8 @@ two behavior findings belong to Phase 2.
 
 ## 18. Spike results
 
-One subsection per spike: date, environment, result, decision. S1, S3
-and S4 done on Android; S2 done on a mid-range phone, the low-end phone
-pending; S5 and S8 pending; S6 and S7 done for Windows (their Android
+One subsection per spike: date, environment, result, decision. S1–S4
+done on Android; S5 and S8 pending; S6 and S7 done for Windows (their Android
 halves run with Phase 5).
 
 ### 18.0 Android spike tool and device (S1–S4)
@@ -1464,8 +1463,15 @@ the production `MedReminder.Domain`, `MedReminder.Application` and
 `AddMedReminderPortableInfrastructure`, and `run-s4.ps1` for S4. The
 reports are in that folder's `results/`.
 
-**Environment**: motorola edge 50 neo, Android 16 (API 36), arm64-v8a,
-7.4 GB RAM; .NET SDK 10.0.401 on Windows, runtime .NET 10.0.12, workloads
+**Environment**: three phones, arm64:
+
+| Phone | Android | RAM | Builds run |
+|---|---|---|---|
+| motorola edge 50 neo | 16 (API 36) | 7.4 GB | Debug, Release default, Release full trimming |
+| Samsung Galaxy A52 5G (SM-A526B) | 14 (API 34) | 5.4 GB | Release default |
+| Samsung Galaxy A32 4G (SM-A325F, MediaTek Helio G80), the low-end phone | 13 (API 33) | 3.6 GB | Release default |
+
+.NET SDK 10.0.401 on Windows, runtime .NET 10.0.12, workloads
 `android` 36.1.69 and `maui-android` 10.0.110; minimum API 26 (D13
 proposal), target API 36. Three builds of the same code:
 
@@ -1491,26 +1497,31 @@ only.
 | Argon2id known answer (argon2-cffi reference) through `IArchiveCipher` | Pass | Pass | Pass |
 | S1b: desktop archive, manifest and payload through `IArchiveReader` | Pass (7.5 s) | Pass (1.2 s) | **Fail**: `JsonSerializerIsReflectionDisabled` |
 
+The Release default build also passes every S1 check on the A52 (S1b
+1.4 s; a wrong passphrase gives "The passphrase does not match this
+file") and on the A32 (S1b 2.5 s).
+
 **Decision**: P12 met on Android. The phone computes the same bytes as
 the desktop and reads a desktop archive with the Release defaults. The
 full-trimming failure is the JSON setting, not the cipher (§18.3).
 
-### 18.2 S2 — Argon2id cost (2026-10-05, mid-range phone)
+### 18.2 S2 — Argon2id cost (2026-10-05)
 
 **Results**: `Argon2Params.Default` (t=3, m=64 MiB, p=1) through
 `IArchiveCipher`, three runs, key equal to the reference, no
 out-of-memory.
 
-| Build | Per derivation | Peak working set |
+| Phone, build | Per derivation | Peak working set |
 |---|---|---|
-| Debug (interpreter) | 7.05–7.09 s | 367 MiB |
-| Release, default | 0.88–0.90 s | 334 MiB |
-| Release, full trimming | 0.89–0.91 s | 322 MiB |
+| motorola edge 50 neo, Debug (interpreter) | 7.05–7.09 s | 367 MiB |
+| motorola edge 50 neo, Release default | 0.88–0.90 s | 334 MiB |
+| motorola edge 50 neo, Release full trimming | 0.89–0.91 s | 322 MiB |
+| Galaxy A52 5G, Release default | 1.07–1.08 s | 254 MiB |
+| Galaxy A32 4G (low-end, 3.6 GB), Release default | 1.90–2.04 s | 308 MiB |
 
-**Decision**: the 5 s target holds in Release on this phone, with a
-large margin. The Debug figure is the interpreter and is not used.
-The low-end phone named by §13 is still to run; until then S2 is
-partial.
+**Decision**: the 5 s target holds in Release on every phone, the
+low-end A32 included, with `Argon2Params.Default` unchanged. The Debug
+figure is the interpreter and is not used.
 
 ### 18.3 S3 — EF Core SQLite with trimming / AOT (2026-10-05)
 
@@ -1532,6 +1543,9 @@ The JSON failure is `JsonSerializerIsReflectionDisabled`. The
 full-trimming publish reports 54 IL2026 and 8 IL2104 warnings (EF Core,
 EF Core Relational, EF Core Sqlite, SQLitePCLRaw, the entity
 configurations, reflection JSON); the default publish reports none.
+
+The Release default build passes every S3 check on the A52 and the A32
+too (`DatabaseInitializer` on a new database 2.0 s and 3.7 s).
 
 **Decision**: P13 met on Android with the .NET for Android Release
 defaults. The Phase 5 client keeps `TrimMode=partial`. Full trimming
@@ -1925,10 +1939,11 @@ Phase 2 implements the derivation from the prototype and its tests.
   either has synced still both send; the master device of the
   household feature (step H4) takes the place of the designated mail
   device (§8.4) and removes that case.
-- 2026-10-05 — Android spikes S1–S4 run on a motorola edge 50 neo
-  (Android 16) with the tool of draft PR #106 (§18.0–§18.4). S1, S3 and
-  S4 pass with the .NET for Android Release defaults; S2 takes 0.9 s in
-  Release on that mid-range phone, the low-end phone is pending; full
+- 2026-10-05 — Android spikes S1–S4 run with the tool of draft PR #106
+  on a motorola edge 50 neo (Android 16), a Galaxy A52 5G (Android 14)
+  and a low-end Galaxy A32 4G (Android 13, 3.6 GB) (§18.0–§18.4). S1,
+  S3 and S4 pass with the .NET for Android Release defaults; S2 takes
+  0.9–2.0 s in Release, under the 5 s target on the low-end phone; full
   trimming breaks reflection-based JSON and EF Core. P12 and P13 met
   for Android; Phase 0 exit met for Android; D11 recommendation:
   reject, no exclusion needed.

@@ -275,7 +275,7 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | spike S2 on a low-end phone, S5, S8 (S1, S3, S4 passed); D4, D11, D13; Play Console account |
+| 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | spikes S5, S8 (S1–S4 passed); D4, D11, D13; Play Console account |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | Feature parity on mobile (timeline, prescription request, catalogue and camera scan, mail device, `.mrz` export, PDF share, state-hash check) | 20–30 d | Phase 5 / 6; D14 |
 
@@ -285,9 +285,9 @@ master, QR decode on the PC webcam) belongs to Phases 5 and 7, plus
 
 Open prerequisites and debts inside B.1:
 
-- **Spikes**: S1, S3 and S4 pass on Android 16 with the Release
-  defaults; S2 takes 0.9 s on a mid-range phone, the low-end phone is
-  still to run; full trimming breaks reflection-based JSON and EF Core,
+- **Spikes**: S1–S4 pass on Android 13, 14 and 16 with the Release
+  defaults; S2 takes at most 2.0 s on the low-end phone (Galaxy A32 4G,
+  3.6 GB); full trimming breaks reflection-based JSON and EF Core,
   so the client keeps `TrimMode=partial` (B.1 analysis §18.0–§18.4; tool
   in draft PR #106, not to be merged). Not run: S5 local notifications,
   S8 background sync; S6 and S7 lack their Android half.
@@ -403,6 +403,6 @@ profile operation schemas 4 and 5).
    wanted (§3.5).
 3. Website content refresh for v2.7–v2.16; the screenshots in
    particular predate the new main window and dark mode.
-4. Mobile: S1 and S3, the go / no-go risks for MAUI, pass on Android;
-   run S2 on a low-end phone and close D11 before Phase 5. Independent
+4. Mobile: S1–S4 pass on Android, S1 and S3 being the go / no-go
+   risks for MAUI; close D11 and D13 before Phase 5. Independent
    of items 1–3.
