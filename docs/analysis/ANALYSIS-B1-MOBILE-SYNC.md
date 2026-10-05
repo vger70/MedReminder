@@ -99,8 +99,8 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 | P9 | Stock ledger is a deterministic function of user facts | **Met by Phase 2c-2** (after the cutoff; counts carry their stored outcome until Phase 3) | `LedgerSynchronizer` derives consumption, reversals, count corrections and `StockEpoch` from the facts; the stored ledger equals a fresh derivation after every action of the random scenarios (`LedgerParityTests`) `[VERIFIED]` |
 | P10 | Stable GUID identity on every replicated entity | **Met** | All entities use `Guid Id` generated at creation `[VERIFIED — Domain entities]` |
 | P11 | Medicines are never hard-deleted | **Met, with one exception (2026-09-28)** | Deactivation via `IsActive` `[VERIFIED]`; slots are no longer deleted: since Phase 2b `UpdateMedicine` appends a slot set `[VERIFIED]`. A medicine without recorded facts can be deleted: `MedicineDeleted` operation, §4.2 |
-| P12 | AES-GCM on mobile | iOS 13+ on .NET 9+ **met**; Android `[UNCERTAIN]` | dotnet/runtime #91523 `[VERIFIED]`; spike S1 |
-| P13 | EF Core SQLite on Android / iOS AOT | `[UNCERTAIN]` | Spike S3 |
+| P12 | AES-GCM on mobile | iOS 13+ on .NET 9+ **met**; Android **met** (S1, §18.1) | dotnet/runtime #91523 `[VERIFIED]`; spike S1 on Android 16 |
+| P13 | EF Core SQLite on Android / iOS AOT | Android **met** with the Release defaults, not with full trimming (S3, §18.3); iOS `[UNCERTAIN]` | Spike S3 |
 | P14 | OAuth app registrations (Microsoft Entra public client, Google Cloud OAuth client) | **Not met** | Guide exists: `docs/notes/AZURE-ENTRA-PUBLIC-CLIENT-APPLICATION-GUIDE.md` `[VERIFIED]`. Phase 0 |
 | P15 | Build hosts and store accounts (macOS for iOS, Apple Developer Program, Google Play) | **Not met** | Product-owner action; Phase 0 / 6 |
 | P16 | Product-owner decisions D1–D15 | **Open** | §16 |
@@ -1136,7 +1136,8 @@ place relative to A2 (`EVOLUTION.md` §2.0).
    host if iOS is in scope.
 
 **Exit**: S9 passes; S1, S3 pass or have accepted mitigations; S6
-passes for Windows; D9 decided. The Android halves of S6 and S7 need
+passes for Windows; D9 decided. Met on 2026-10-05 for Android: S1 and
+S3 pass with the Release defaults (§18.1, §18.3). The Android halves of S6 and S7 need
 the Android OAuth clients (P14) and run with Phase 5 (§18).
 
 **Effort**: 8–12 days, plus 8–12 days for S9 `[INFERRED]`.
@@ -1404,7 +1405,7 @@ Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15; on
 | D8 | Retraction (delete a mistaken fact) | Add now; later | **Decided 2026-09-26**: add in Phase 2 | Phase 2 |
 | D9 | Portable project name, namespaces | `MedReminder.Infrastructure.Portable`, keep namespaces | **Decided 2026-09-26**: as proposed | Phase 1 |
 | D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | **Decided 2026-09-26**: separate | Phase 3 |
-| D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | Decide on S4 evidence | Phase 5 |
+| D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | S4 passed (§18.4): no exclusion needed; reject | Phase 5 |
 | D12 | iCloud transport | Plan; exclude | Exclude | Phase 0 |
 | D13 | Minimum OS versions | — | Android 8.0 (API 26), iOS 15 `[INFERRED — not measured]` | Phase 5 |
 | D14 | Donation links on iOS | Include; exclude | Exclude unless verified compliant | Phase 7 |
@@ -1449,9 +1450,106 @@ two behavior findings belong to Phase 2.
 
 ## 18. Spike results
 
-One subsection per spike: date, environment, result, decision. S1–S5,
-S8 pending; S6 and S7 done for Windows (their Android halves run with
-Phase 5).
+One subsection per spike: date, environment, result, decision. S1, S3
+and S4 done on Android; S2 done on a mid-range phone, the low-end phone
+pending; S5 and S8 pending; S6 and S7 done for Windows (their Android
+halves run with Phase 5).
+
+### 18.0 Android spike tool and device (S1–S4)
+
+Tool in `spikes/Android/` on branch `claude/nifty-galileo-vfepsw`
+(draft PR #106, not merged): a MAUI Android app that runs S1–S3 against
+the production `MedReminder.Domain`, `MedReminder.Application` and
+`MedReminder.Infrastructure.Portable` through
+`AddMedReminderPortableInfrastructure`, and `run-s4.ps1` for S4. The
+reports are in that folder's `results/`.
+
+**Environment**: motorola edge 50 neo, Android 16 (API 36), arm64-v8a,
+7.4 GB RAM; .NET SDK 10.0.401 on Windows, runtime .NET 10.0.12, workloads
+`android` 36.1.69 and `maui-android` 10.0.110; minimum API 26 (D13
+proposal), target API 36. Three builds of the same code:
+
+| Build | Settings |
+|---|---|
+| Debug | Interpreter (`RunAOTCompilation=false`, `IsDynamicCodeCompiled=false`) |
+| Release, default | `PublishTrimmed=true`, `TrimMode=partial`, `RunAOTCompilation=true`, profiled AOT, `JsonSerializerIsReflectionEnabledByDefault=true` |
+| Release, full trimming | As the default with `TrimMode=full`, which sets `JsonSerializerIsReflectionEnabledByDefault=false` |
+
+The desktop archive for S1b was exported by MedReminder 2.16.0 (payload
+schema 2, 18 medicines, 195 stock movements); the reports hold counts
+only.
+
+### 18.1 S1 — AES-GCM on Android (2026-10-05)
+
+**Results**
+
+| Check | Debug | Release, default | Release, full trimming |
+|---|---|---|---|
+| `AesGcm.IsSupported` | Pass | Pass | Pass |
+| AES-256-GCM known answer (pyca/cryptography reference), in-box and through `IArchiveCipher` | Pass | Pass | Pass |
+| Tampered tag rejected (`AuthenticationTagMismatchException`) | Pass | Pass | Pass |
+| Argon2id known answer (argon2-cffi reference) through `IArchiveCipher` | Pass | Pass | Pass |
+| S1b: desktop archive, manifest and payload through `IArchiveReader` | Pass (7.5 s) | Pass (1.2 s) | **Fail**: `JsonSerializerIsReflectionDisabled` |
+
+**Decision**: P12 met on Android. The phone computes the same bytes as
+the desktop and reads a desktop archive with the Release defaults. The
+full-trimming failure is the JSON setting, not the cipher (§18.3).
+
+### 18.2 S2 — Argon2id cost (2026-10-05, mid-range phone)
+
+**Results**: `Argon2Params.Default` (t=3, m=64 MiB, p=1) through
+`IArchiveCipher`, three runs, key equal to the reference, no
+out-of-memory.
+
+| Build | Per derivation | Peak working set |
+|---|---|---|
+| Debug (interpreter) | 7.05–7.09 s | 367 MiB |
+| Release, default | 0.88–0.90 s | 334 MiB |
+| Release, full trimming | 0.89–0.91 s | 322 MiB |
+
+**Decision**: the 5 s target holds in Release on this phone, with a
+large margin. The Debug figure is the interpreter and is not used.
+The low-end phone named by §13 is still to run; until then S2 is
+partial.
+
+### 18.3 S3 — EF Core SQLite with trimming / AOT (2026-10-05)
+
+**Results**
+
+| Check | Debug | Release, default | Release, full trimming |
+|---|---|---|---|
+| `DatabaseInitializer` on a new database (32 tables) | Pass | Pass | **Fail** |
+| Write through `IMedicineRepository` and `IUnitOfWork` | Pass | Pass | **Fail** |
+| Read through the repositories (decimal, `DateOnly`) | Pass | Pass | **Fail** |
+| `MedicineOverviewLoader.LoadAsync` | Pass | Pass | **Fail** |
+| `DatabaseInitializer` on the existing database (boot patches, WAL) | Pass | Pass | **Fail** |
+| Reflection-based `System.Text.Json` (`ArchiveReader`, sync codec) | Pass | Pass | **Fail** |
+
+Every full-trimming EF Core failure is the same
+`MissingMethodException`: the constructor of
+`EntryCurrentValueComparer<Guid>`, created by reflection, is trimmed.
+The JSON failure is `JsonSerializerIsReflectionDisabled`. The
+full-trimming publish reports 54 IL2026 and 8 IL2104 warnings (EF Core,
+EF Core Relational, EF Core Sqlite, SQLitePCLRaw, the entity
+configurations, reflection JSON); the default publish reports none.
+
+**Decision**: P13 met on Android with the .NET for Android Release
+defaults. The Phase 5 client keeps `TrimMode=partial`. Full trimming
+would need source-generated JSON contexts in the portable code and EF
+Core trimming support; it is not planned. iOS is not covered by this
+spike (Phase 6).
+
+### 18.4 S4 — `StripReleaseDebugArtifacts` on an Android Release build (2026-10-05)
+
+**Results**: `dotnet publish -c Release -f net10.0-android` with
+`Directory.Build.props` unchanged, default and full trimming: exit 0;
+the target deletes the spike's `.pdb` and `.xml` from the output folder
+and leaves no `*.pdb` / `*.xml` in the output or publish folders; the
+signed APK (39.7 MiB default, 34.6 MiB full trimming) installs with adb
+and starts; the default APK passes S1 and S3.
+
+**Decision**: no exclusion of the mobile project from
+`StripReleaseDebugArtifacts` is needed; D11 can be closed as "reject".
 
 ### 18.6 S6 — OneDrive app folder (2026-09-27)
 
@@ -1827,3 +1925,10 @@ Phase 2 implements the derivation from the prototype and its tests.
   either has synced still both send; the master device of the
   household feature (step H4) takes the place of the designated mail
   device (§8.4) and removes that case.
+- 2026-10-05 — Android spikes S1–S4 run on a motorola edge 50 neo
+  (Android 16) with the tool of draft PR #106 (§18.0–§18.4). S1, S3 and
+  S4 pass with the .NET for Android Release defaults; S2 takes 0.9 s in
+  Release on that mid-range phone, the low-end phone is pending; full
+  trimming breaks reflection-based JSON and EF Core. P12 and P13 met
+  for Android; Phase 0 exit met for Android; D11 recommendation:
+  reject, no exclusion needed.

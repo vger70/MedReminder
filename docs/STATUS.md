@@ -37,6 +37,9 @@ repeatable prescriptions, regional prescription services, Store MSI):
 header, §1, §2.11, §2.12, §3.3, §3.4, §3.5, §4. The counts in §1 were
 taken at `c6f1f58`.
 
+Updated on 2026-10-05 after the Android spike runs (S1–S4, draft
+#106): §3.1, §4.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -272,7 +275,7 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | spikes S1, S3 (and S2, S4, S5, S8); D4, D11, D13; Play Console account |
+| 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | spike S2 on a low-end phone, S5, S8 (S1, S3, S4 passed); D4, D11, D13; Play Console account |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | Feature parity on mobile (timeline, prescription request, catalogue and camera scan, mail device, `.mrz` export, PDF share, state-hash check) | 20–30 d | Phase 5 / 6; D14 |
 
@@ -282,15 +285,15 @@ master, QR decode on the PC webcam) belongs to Phases 5 and 7, plus
 
 Open prerequisites and debts inside B.1:
 
-- **Spikes not run**: S1 AES-GCM on Android, S2 Argon2id cost on a
-  low-end phone, S3 EF Core SQLite with trimming / AOT, S4
-  `StripReleaseDebugArtifacts` on an Android build, S5 local
-  notifications, S8 background sync. S6 and S7 lack their Android half.
-  The spike app for S1–S4 is in draft PR #106 (not built yet, not to be
-  merged; only its results go into §18 of the B.1 analysis).
+- **Spikes**: S1, S3 and S4 pass on Android 16 with the Release
+  defaults; S2 takes 0.9 s on a mid-range phone, the low-end phone is
+  still to run; full trimming breaks reflection-based JSON and EF Core,
+  so the client keeps `TrimMode=partial` (B.1 analysis §18.0–§18.4; tool
+  in draft PR #106, not to be merged). Not run: S5 local notifications,
+  S8 background sync; S6 and S7 lack their Android half.
 - **Decisions open**: D4 (notification defaults per device), D11
-  (strip-target exclusion for mobile, depends on S4), D13 (minimum OS
-  versions), D14 (donation links on iOS).
+  (strip-target exclusion for mobile; S4 passed, recommendation:
+  reject), D13 (minimum OS versions), D14 (donation links on iOS).
 - **Known sync limit closed** (shared by OneDrive and Google Drive): a
   device that joined while the listing lagged, while another device
   compacted, ended in `RebuildRequired`. The join now waits until the
@@ -400,6 +403,6 @@ profile operation schemas 4 and 5).
    wanted (§3.5).
 3. Website content refresh for v2.7–v2.16; the screenshots in
    particular predate the new main window and dark mode.
-4. Mobile: build and run the S1–S4 spike app of draft PR #106 on
-   Android before committing to Phase 5; S1 and S3 are the go / no-go
-   risks for MAUI. Independent of items 1–3.
+4. Mobile: S1 and S3, the go / no-go risks for MAUI, pass on Android;
+   run S2 on a low-end phone and close D11 before Phase 5. Independent
+   of items 1–3.
