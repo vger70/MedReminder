@@ -19,7 +19,7 @@ Tags:
   pipeline (`FDA/openfda`, `openfda/ndc/pipeline.py`,
   `schemas/ndc_mapping.json`) and the dm+d importer `wardle/dmd`
   (`src/com/eldrix/dmd/import.clj`, `download.clj`, README) with its
-  TRUD client `wardle/trud`. Read on 2026-10-05 (§10).
+  TRUD client `wardle/trud`. Read on 2026-10-05 (§11).
 - `[SEARCH]` found through a web search on 2026-10-05, page not
   fetched: this session's egress proxy blocks `www.fda.gov`,
   `open.fda.gov`, `www.accessdata.fda.gov`, `www.gov.uk`,
@@ -123,7 +123,7 @@ FDA text files [VERIFIED: `pipeline.py` downloads
 | Distribution | Format | Licence |
 |--------------|--------|---------|
 | `ndctext.zip` (finished drugs) | `product.txt` + `package.txt`, tab-delimited, UTF-8 (openFDA patches some invalid UTF-8 in `product.txt`) [VERIFIED] | US Government work [OWNER] |
-| openFDA bulk, endpoint `drug/ndc`, listed in `https://api.fda.gov/download.json` | zipped JSON, about 27 MB [SEARCH]; one object per product, nested `packaging[]`, an `openfda` annotation block; finished and unfinished merged, flagged by `finished` [VERIFIED] | CC0 1.0 "unless otherwise noted" [SEARCH]; the `FDA/open.fda.gov` repository is CC0 [VERIFIED: `COPYING.txt`] |
+| openFDA bulk, endpoint `drug/ndc`, listed in `https://api.fda.gov/download.json` | zipped JSON, about 27 MB [SEARCH]; one object per product, nested `packaging[]`, an `openfda` annotation block; finished and unfinished merged, flagged by `finished` [VERIFIED] | CC0 1.0 "unless otherwise noted", no exemption listed [VERIFIED: licence page supplied by the owner, §9.1] |
 
 - **Update frequency**: daily [SEARCH]. The feed stays weekly like the
   others.
@@ -350,6 +350,10 @@ releases of items 24 and 25 → iterparse → TSV → validation →
   `["fda-ndc.tsv"]`) and `UnitedKingdom` (`nhs-dmd`, `["dmd.tsv"]`),
   uncompressed cap 256 MiB each; `All` gains both, after FR.
 - `appsettings.json`: `Catalogue:RemoteFeed:Feeds:US` and `:GB`.
+- `Ui.SettingsDialog.Tooltip.CheckUpdates` says the app downloads
+  "the medicine catalogue of the reference country and the EU one";
+  with US/GB that is no longer always true. Reword in all five
+  `strings.<lang>.json` [VERIFIED: current English text].
 
 ### 5.2 Reference-country dropdown
 
@@ -409,7 +413,7 @@ check digit (`CatalogueFeedSelection.IsItaly`).
 | D4 | Refresh on country change: next start or immediately | Immediately, through the existing refresher, off the UI thread |
 | D5 | US therapeutic equivalence from the Orange Book | Not now |
 | D6 | dm+d key: AMPP id or GTIN | After the NHS England answer (§4.4 point 1) |
-| D7 | Proceed with GB | Only after the TRUD licence pages of items 24 and 25 and the TRUD terms are read and recorded in `CATALOGUE-DATA.md` §7 |
+| D7 | Proceed with GB | Only after the TRUD licence pages of items 24 and 25 and the TRUD terms are read and recorded in `CATALOGUE-DATA.md` §7. The OGL v3.0 text itself is reviewed (§9.2) and does not block |
 | D8 | GB unlicensed products (`LIC_AUTHCD` 0) | Keep, with a status the UI can show |
 
 ---
@@ -434,9 +438,10 @@ check digit (`CatalogueFeedSelection.IsItaly`).
 0. **Runner verification** (hosts unreachable from this session):
    fetch `download.json`, the NDC bulk file and `ndctext.zip`; record
    `product_type` and `marketing_category` values, row counts, sizes,
-   duplicate canonical keys. Read and save the openFDA licence page,
-   the TRUD licence pages of items 24 and 25 and the TRUD terms, and
-   one GOV.UK category list (columns). Clear the remaining
+   duplicate canonical keys. Read and save the openFDA terms of
+   service, the TRUD licence pages of items 24 and 25 and the TRUD
+   terms, and one GOV.UK category list (columns). The openFDA licence
+   page and the OGL v3.0 text are done (§9). Clear the remaining
    `[UNCERTAIN]` marks.
 1. **US catalogue**: `fda_ndc.py` + workflow, `OpenFdaNdcParser`,
    descriptor, §5.1, §5.2, status vocabulary (§5.4), notices, user
@@ -453,7 +458,105 @@ One PR per phase; phases 1 and 3 are independent.
 
 ---
 
-## 9. Corrections to the first draft of this document
+## 9. Licence texts supplied by the owner (2026-10-05)
+
+The owner supplied two browser printouts, both dated 05/10/26 10:03–10:04
+and image-only (no text layer): `licenza-openFDA.pdf` (3 pages) and
+`NHS-TRUD-Licence.pdf` (4 pages). Read page by page.
+
+### 9.1 openFDA — "Data Licensing" (`https://open.fda.gov/license/`)
+
+Page last modified 27 May 2014. Relevant text:
+
+- "Use of the data made available via openFDA is generally
+  unrestricted"; the *service* is subject to the openFDA terms of
+  service and to "any relevant sections of the FDA Website Policies".
+- "Unless otherwise noted, the content, data, documentation, code,
+  and related materials on openFDA is public domain and made available
+  with a Creative Commons CC0 1.0 Universal dedication … waiving all
+  rights to the work worldwide under copyright law, including all
+  related and neighboring rights … You can copy, modify, distribute
+  and perform the work, even for commercial purposes, all without
+  asking permission."
+- CC0 considerations: patent and trademark rights are not affected;
+  no warranty, liability disclaimed; "When using or citing the work,
+  you should not imply endorsement by the author or the affirmer."
+- A GMDN paragraph: GMDN content (medical-device nomenclature) may not
+  be used for commercial services, alternative categorisation, mapping
+  or AI training without a licence from The GMDN Agency.
+- "Exemptions": data not covered by these terms will be listed on the
+  page; none is listed.
+
+Assessment:
+
+1. **The NDC dataset is covered by CC0.** It is "data on openFDA" and
+   is not listed under the exemptions. Redistribution in the `feeds`
+   branch and in the app is allowed without attribution; attribution
+   stays as good practice (§3.6).
+2. **The GMDN restriction does not apply.** GMDN terms belong to the
+   device datasets (GUDID); the NDC mapping has no GMDN field
+   [VERIFIED: `ndc_mapping.json`]. The feed script must not read any
+   other openFDA endpoint without re-checking this point.
+3. **The CC0 covers the openFDA copy, not `ndctext.zip`** on
+   `accessdata.fda.gov`, which is outside openFDA. That file relies on
+   the US public-domain status of federal works only. A further reason
+   for D1 (openFDA bulk).
+4. **Trademarks.** Brand names in the NDC data stay trademarks of
+   their owners; CC0 does not license them. Showing them to identify
+   the product the user owns is the same use the app already makes of
+   AIFA, EMA, AEMPS and BDPM names [INFERRED; not legal advice].
+5. **Endorsement.** No wording, logo or icon may suggest FDA endorses
+   MedReminder (CC0 consideration and §3.6).
+6. **Gaps.** The printout's page 2 starts under the site's fixed
+   header, so a few lines before the GMDN paragraph (probably its
+   heading) are hidden. The openFDA *Terms of Service* and the FDA
+   Website Policies were not supplied; they govern the download
+   service (for example rate limits), not the data. The bulk download
+   is a handful of files a week, well within any plausible limit
+   [UNCERTAIN until the terms are read].
+
+### 9.2 "NHS-TRUD-Licence.pdf" — Open Government Licence v3.0
+
+The file is the generic OGL v3.0 page of The National Archives
+(`https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/`),
+**not** the TRUD licence page of the dm+d items nor the TRUD terms of
+use. It establishes what OGL v3.0 allows; it does not establish that
+dm+d is under OGL v3.0 (still [SEARCH] plus the `wardle/dmd` README),
+nor which attribution statement NHSBSA requires.
+
+What OGL v3.0 grants and requires, applied to dm+d:
+
+| OGL v3.0 clause | Effect on MedReminder |
+|-----------------|-----------------------|
+| Worldwide, royalty-free, perpetual, non-exclusive licence | Covers users outside the UK |
+| Free to copy, publish, distribute, adapt, and exploit commercially, "by including it in your own product or application" | Publishing the derived TSV on the `feeds` branch and importing it in the app are allowed |
+| Must acknowledge the source with the attribution statement specified by the Information Provider, else "Contains public sector information licensed under the Open Government Licence v3.0.", and link to the licence where possible | `THIRD-PARTY-NOTICES.md`, About dialog, `feeds` README; the exact NHSBSA statement to be copied from the TRUD item page |
+| Several providers: a URI to a page listing the attributions is enough | `THIRD-PARTY-NOTICES.md` can be that page |
+| Rights "end automatically" if the conditions are not met | Attribution must ship in the same release that ships the GB feed |
+| Exemption: personal data | dm+d lists products and suppliers (organisations); nothing to exclude [INFERRED] |
+| Exemption: "third party rights the Information Provider is not authorised to license" | **SNOMED CT.** dm+d codes are SNOMED CT identifiers owned by SNOMED International; OGL cannot license them if NHSBSA is not authorised to. Confirms §4.4 point 1 and D6 as a real gate |
+| Exemption: "other intellectual property rights, including patents, trade marks" | Brand names: same position as §9.1 point 4. "SNOMED CT" itself is a registered trade mark [UNCERTAIN on registration details] |
+| Exemption: public-sector logos and crests | No NHS logo in the app or the guides |
+| Non-endorsement: no use suggesting official status or endorsement | No "NHS-approved" wording |
+| No warranty; "does not guarantee the continued supply of the Information" | Clients keep the last import when the feed stops (current behaviour) |
+| Governed by the law of the Information Provider's jurisdiction | England and Wales for NHSBSA [INFERRED] |
+| Compatible with CC BY 4.0 and ODC-BY | No conflict with the Apache-2.0 code licence: the data keeps its own licence, stated per dataset in `THIRD-PARTY-NOTICES.md`, as for AIFA (CC BY 4.0) |
+
+Outcome:
+
+- **OGL v3.0 does not block GB.** It is at least as permissive as the
+  licences already accepted for IT (CC BY 4.0) and FR (Etalab 2.0).
+- **Still missing for D7:** the licence page of TRUD items 24 and 25
+  (to confirm OGL v3.0 and read the NHSBSA attribution statement and
+  any SNOMED note), and the TRUD terms of use (account, API key,
+  redistribution of downloaded files). Both are visible only after
+  login on TRUD.
+- **D6 is now the main gate**, by the OGL's own third-party-rights
+  exemption.
+
+---
+
+## 10. Corrections to the first draft of this document
 
 | Claim in the first draft | Now |
 |--------------------------|-----|
@@ -466,7 +569,7 @@ One PR per phase; phases 1 and 3 are independent.
 
 ---
 
-## 10. Sources
+## 11. Sources
 
 Verified (read on 2026-10-05):
 
