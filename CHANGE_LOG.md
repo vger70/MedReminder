@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #204 — Add a privacy policy
+
+Link: [vger70/MedReminder#204](https://github.com/vger70/MedReminder/pull/204)
+Branch: `claude/privacy-policy` → `main`
+
+### Docs
+
+- `PRIVACY.md`: data stored on the PC, the optional features that send
+  data and where, OneDrive / Google Drive scopes, webcam, browser links,
+  user rights, contact. Needed as the privacy policy URL of the
+  Microsoft Store listing.
+- `PRIVACY.{it,fr,es,de}.md`: translations in the application's other
+  languages; the English version prevails.
+- `README.md`: new "Privacy" section.
+- `CLAUDE.md` §2: the privacy policy translations join the exceptions
+  to the English-only rule.
 ## PR #203 — Fix the US feed floor test after raising MIN_ROWS
 
 Link: [vger70/MedReminder#203](https://github.com/vger70/MedReminder/pull/203)
