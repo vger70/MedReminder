@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #201 — Record last week's merges in CHANGE_LOG and STATUS
+
+Link: [vger70/MedReminder#201](https://github.com/vger70/MedReminder/pull/201)
+Branch: `claude/project-thread-enzy0k` → `main`
+
+### Docs
+
+- `CHANGE_LOG.md`: status line for every PR merged into `main` from 2026-09-28 to 2026-10-04; stacked #180, #185 and #199 name the PR that brought them to `main`; the `PR #TBD` entry becomes #180.
+- `docs/STATUS.md`: snapshot at `c6f1f58` (v2.16.0 plus #161): open pull requests, new §2.12 for v2.14.1 to v2.16.0, guided setup prompt ready, package expiry shipped, Store MSI on `main`, next steps.
+
+---
+
 ## PR #161 — Build a self-contained MSI for the Microsoft Store
 
 **Status:** merged (2026-10-04)
