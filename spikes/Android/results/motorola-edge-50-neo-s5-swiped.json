@@ -1,0 +1,150 @@
+{
+  "report": "medreminder-b1-android-spikes",
+  "reportVersion": 1,
+  "createdAtUtc": "2026-10-05T19:02:13.4330968\u002B00:00",
+  "environment": {
+    "android.abis": "arm64-v8a",
+    "android.release": "16",
+    "android.sdkInt": "36",
+    "appContext.jsonReflectionEnabledByDefault": "unset",
+    "build.AndroidEnableProfiledAot": "true",
+    "build.Configuration": "Release",
+    "build.JsonSerializerIsReflectionEnabledByDefault": "true",
+    "build.PublishTrimmed": "true",
+    "build.RunAOTCompilation": "true",
+    "build.TrimMode": "partial",
+    "device.manufacturer": "motorola",
+    "device.model": "motorola edge 50 neo",
+    "dotnet.framework": ".NET 10.0.12",
+    "dotnet.processArchitecture": "Arm64",
+    "dotnet.rid": "android-arm64",
+    "gc.totalAvailableMiB": "521",
+    "ram.lowRamDevice": "False",
+    "ram.memoryClassMiB": "256",
+    "ram.totalMiB": "7430",
+    "runtime.isDynamicCodeCompiled": "True",
+    "runtime.isDynamicCodeSupported": "True"
+  },
+  "checks": [
+    {
+      "spike": "S5",
+      "check": "Notifications enabled",
+      "outcome": "Pass",
+      "detail": "True"
+    },
+    {
+      "spike": "S5",
+      "check": "Exact alarms allowed (SCHEDULE_EXACT_ALARM)",
+      "outcome": "Measured",
+      "detail": "True"
+    },
+    {
+      "spike": "S5",
+      "check": "Battery optimization",
+      "outcome": "Measured",
+      "detail": "ignoring optimizations False; standby bucket active; power save False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Exact \u002B2 min (#1, planned 10-05 20:38:38)",
+      "outcome": "Pass",
+      "detail": "fired 1 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped AlarmClock \u002B2 min (#2, planned 10-05 20:38:38)",
+      "outcome": "Pass",
+      "detail": "fired 1 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Inexact \u002B2 min (#3, planned 10-05 20:38:38)",
+      "outcome": "Measured",
+      "detail": "fired 91 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Window \u002B2 min (#4, planned 10-05 20:38:38)",
+      "outcome": "Measured",
+      "detail": "fired 91 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Exact \u002B5 min (#5, planned 10-05 20:41:38)",
+      "outcome": "Pass",
+      "detail": "fired 1 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped AlarmClock \u002B5 min (#6, planned 10-05 20:41:38)",
+      "outcome": "Pass",
+      "detail": "fired 1 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Inexact \u002B5 min (#7, planned 10-05 20:41:38)",
+      "outcome": "Measured",
+      "detail": "fired 17 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Window \u002B5 min (#8, planned 10-05 20:41:38)",
+      "outcome": "Measured",
+      "detail": "fired 17 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Exact \u002B10 min (#9, planned 10-05 20:46:38)",
+      "outcome": "Pass",
+      "detail": "fired 1 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped AlarmClock \u002B10 min (#10, planned 10-05 20:46:38)",
+      "outcome": "Pass",
+      "detail": "fired 1 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Inexact \u002B10 min (#11, planned 10-05 20:46:38)",
+      "outcome": "Measured",
+      "detail": "fired 240 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Window \u002B10 min (#12, planned 10-05 20:46:38)",
+      "outcome": "Measured",
+      "detail": "fired 240 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Exact \u002B20 min (#13, planned 10-05 20:56:38)",
+      "outcome": "Pass",
+      "detail": "fired 1 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped AlarmClock \u002B20 min (#14, planned 10-05 20:56:38)",
+      "outcome": "Pass",
+      "detail": "fired 1 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Inexact \u002B20 min (#15, planned 10-05 20:56:38)",
+      "outcome": "Measured",
+      "detail": "fired 63 s late; power save False, idle False"
+    },
+    {
+      "spike": "S5",
+      "check": "swiped Window \u002B20 min (#16, planned 10-05 20:56:38)",
+      "outcome": "Measured",
+      "detail": "fired 63 s late; power save False, idle False"
+    },
+    {
+      "spike": "S8",
+      "check": "Periodic work ran",
+      "outcome": "Fail",
+      "detail": "no run recorded"
+    }
+  ]
+}
