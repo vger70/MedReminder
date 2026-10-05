@@ -107,24 +107,36 @@ have accepted mitigations.
 | S3 | Every S3 check passes in the Release build with the default settings. The full-trimming run is recorded; a failure there is a finding, not a blocker, as long as the default passes |
 | S4 | The publish succeeds with `Directory.Build.props` unchanged. A signed APK is produced, installs, starts, and passes S1 and S3. Otherwise the exclusion goes to the product owner (D11) |
 
-What to look for in S3 and S4, given the pre-check below:
+## Device results (2026-10-05)
 
-- **Reflection JSON.** `ArchiveReader` (manifest, payload) and the sync
-  codec use reflection-based `System.Text.Json`. The .NET for Android
-  Release default sets `JsonSerializerIsReflectionEnabledByDefault=true`
-  (pre-check), so with the default settings the check *Reflection-based
-  System.Text.Json* is expected to pass. Under full trimming the
-  serializer is kept, but the members of the serialized types may be
-  trimmed (IL2026 warnings on `ArchiveReader`, `JsonSyncSettingsStore`
-  and `ScheduleCodec`). S1b and the JSON check in the
-  `-TrimMode full` APK show whether that happens. The mitigation would
-  be source-generated `JsonSerializerContext`s in the portable code.
-- **EF Core under trimming.** EF Core builds its model with reflection.
-  A failure in *DatabaseInitializer on a new database* in Release,
-  but not in Debug, is the P13 risk itself. Under full trimming EF Core,
-  EF Core Relational, EF Core Sqlite and SQLitePCLRaw report trim
-  warnings (IL2104), and so do the entity configurations and the
-  `MedReminderDbContext` constructor (IL2026).
+motorola edge 50 neo, Android 16 (API 36), arm64-v8a, 7.4 GB RAM;
+.NET SDK 10.0.401 on Windows, runtime .NET 10.0.12. Reports in
+`results/`. The desktop archive for S1b was exported by MedReminder
+2.16.0 (payload schema 2); the reports hold counts only.
+
+| Spike | Debug | Release, default (`TrimMode=partial`, profiled AOT) | Release, `TrimMode=full` |
+|---|---|---|---|
+| S1 | Pass; S1b decrypts the desktop archive | Pass; S1b decrypts it in 1.2 s | Primitives pass; **S1b fails**: `JsonSerializerIsReflectionDisabled` |
+| S2 | 7.05–7.09 s, Fail; runs in the interpreter (`isDynamicCodeCompiled=False`), not representative | **0.88–0.90 s, Pass**; key equals the reference, peak working set 334 MiB | 0.89–0.91 s, Pass |
+| S3 | Pass | **Pass**: every check | **Fail**: every EF Core check throws `MissingMethodException` (`EntryCurrentValueComparer<Guid>` constructor trimmed); the JSON check fails as S1b |
+| S4 | — | **Pass**: publish exit 0 with `Directory.Build.props` unchanged, 2 files stripped and none left, APK installs, starts and passes S1 and S3 | Builds and starts; S1b and S3 fail as above |
+
+Reading:
+
+- With the .NET for Android Release defaults, S1, S3 and S4 pass on
+  this phone: no exclusion from `StripReleaseDebugArtifacts` is needed
+  (D11), and EF Core SQLite works with the default trimming and AOT
+  (P13).
+- Full trimming is not usable as is. It disables reflection-based JSON
+  (`JsonSerializerIsReflectionEnabledByDefault=false`, unlike the
+  default) and removes EF Core members created by reflection. Using it
+  would need source-generated JSON contexts in the portable code and
+  EF Core trimming support; the default settings do not need either.
+  The earlier note that full trimming keeps the serializer was wrong.
+- S2 passes on a mid-range phone. The low-end phone is still to run.
+
+Still open: S2 on a low-end phone; a device at the D13 floor (API 26),
+if available.
 
 ## Pre-check without a device
 
