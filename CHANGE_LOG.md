@@ -46,10 +46,27 @@ Branch: `claude/privacy-policy` → `main`
 - `README.md`: new "Privacy" section.
 - `CLAUDE.md` §2: the privacy policy translations join the exceptions
   to the English-only rule.
+## PR #203 — Fix the US feed floor test after raising MIN_ROWS
+
+Link: [vger70/MedReminder#203](https://github.com/vger70/MedReminder/pull/203)
+Branch: `claude/drug-data-sources-integration-eidpbg` → `main`
+
+### Fixed
+
+- `scripts/feeds/tests/test_fda_ndc.py`: the floor test reads
+  `fda_ndc.MIN_ROWS` instead of the old 20,000, which failed the script
+  tests once the floor was raised to 169,500.
+
+### Docs
+
+- `docs/CATALOGUE-DATA.md` §11.2 and the US/GB analysis record the
+  first published US run (211,876 rows) behind the floor.
 
 ---
 
 ## PR #202 — US reference catalogue (FDA NDC) and US/UK sources analysis
+
+**Status:** merged (2026-10-05)
 
 Link: [vger70/MedReminder#202](https://github.com/vger70/MedReminder/pull/202)
 Branch: `claude/drug-data-sources-integration-eidpbg` → `main`

@@ -865,9 +865,11 @@ of the month publishes. The run fails, leaving `data/` untouched, when
 the export is HTML or not a ZIP, holds no `results` list, when two
 codes map to the same 12-digit NDC, when a TSV line has another
 column count or an invalid key, or when the rows fall below
-`MIN_ROWS` (20 000) or below 90% of the previous run. `MIN_ROWS` was
-set before the first published run: after it, raise it to about 80%
-of the count recorded under `rows` in `data/us/latest.json`. The feed
+`MIN_ROWS` (169 500, about 80% of the 211 876 rows of the first
+published run, 2026-10-05) or below 90% of the previous run. If the
+directory genuinely shrinks below either floor, lower `MIN_ROWS` in the
+script or the previous count in `data/us/latest.json` on the `feeds`
+branch, then re-run. The feed
 is not mirrored to `main/data/`: only releases that read the `feeds`
 branch know it. Run the workflow by hand once after the merge, before
 releasing a client that knows the US feed: until `data/us/latest.json`

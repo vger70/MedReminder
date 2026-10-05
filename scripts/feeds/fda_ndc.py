@@ -68,9 +68,8 @@ KEPT_PRODUCT_TYPES = {
     "VACCINE": "Rx",
 }
 
-# Absolute floor for the package rows, far above a truncated download.
-# Set before the first published run; raise it to about 80% of the
-# first measured count (latest.json "rows") once it is known.
+# Absolute floor for the package rows, far above a truncated download:
+# about 80% of the first published run (211,876 rows, 2026-10-05).
 MIN_ROWS = 169_500
 
 # Download caps: the manifest is a few kB, the NDC export about 27 MB

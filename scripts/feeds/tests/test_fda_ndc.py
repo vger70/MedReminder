@@ -124,7 +124,7 @@ def test_validate_counts_the_rows(low_floor):
 
 
 def test_validate_applies_the_absolute_floor():
-    with pytest.raises(common.FeedError, match="at least 20000"):
+    with pytest.raises(common.FeedError, match=f"at least {fda_ndc.MIN_ROWS}"):
         fda_ndc.validate(SAMPLE_TSV, {})
 
 
