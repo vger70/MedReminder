@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #206 — Record the Android spike results S1-S4 in the B.1 analysis
+
+Link: [vger70/MedReminder#206](https://github.com/vger70/MedReminder/pull/206)
+Branch: `claude/b1-android-spike-results`
+
+### Docs
+
+- `ANALYSIS-B1-MOBILE-SYNC.md` §18.0–§18.4: results of the Android
+  spikes S1–S4 run with the tool of draft PR #106 on Android 16. S1, S3
+  and S4 pass with the Release defaults, S2 takes 0.9 s on a mid-range
+  phone, full trimming breaks reflection-based JSON and EF Core. P12 and
+  P13 met for Android, Phase 0 exit met for Android, D11 recommendation:
+  reject.
+- `STATUS.md` §3.1, §4: spikes and Phase 5 inputs updated.
+
 ## PR #201 — Record last week's merges in CHANGE_LOG and STATUS
 
 Link: [vger70/MedReminder#201](https://github.com/vger70/MedReminder/pull/201)
