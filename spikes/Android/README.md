@@ -207,7 +207,11 @@ chosen in the *S5 scenario* list is written with the alarms, so pick it
 **before** scheduling.
 
 1. Tap **S5 request notification permission** (Android 13+) and allow.
-2. Run each scenario on a fresh battery, then collect:
+2. Tap **S5 open exact alarm settings** and turn exact alarms **on**:
+   on Android 14+ they are off by default for a new install, and every
+   scenario except `exact-denied` needs them. The *Schedule …* report
+   line must then say `0 denied; exact alarms allowed: True`.
+3. Run each scenario on a fresh battery, then collect:
 
 | Scenario | What to do after scheduling the short battery |
 |---|---|
@@ -215,12 +219,13 @@ chosen in the *S5 scenario* list is written with the alarms, so pick it
 | `swiped` | Swipe the app away from the recent apps, lock the phone, wait 25 minutes |
 | `force-stopped` | Settings → Apps → MedReminder Spikes → Force stop, wait 25 minutes. Android cancels the alarms of a force-stopped app: the expected result is "not fired", which documents the limit |
 | `reboot` | Restart the phone, unlock it, do **not** open the app, wait 25 minutes. The boot receiver re-plans the alarms still due |
-| `exact-denied` | With exact alarms not allowed (default for new installs on Android 14+; otherwise revoke it with **S5 open exact alarm settings**): Exact and AlarmClock are refused, Inexact and Window must still fire |
+| `exact-denied` | Turn exact alarms **off** with **S5 open exact alarm settings** before scheduling, and on again afterwards: Exact and AlarmClock are refused, Inexact and Window must still fire |
 | `doze-overnight` | Long battery in the evening, phone unplugged and still overnight |
 | `foreground` | Keep the app open (baseline) |
 
-3. Before a new scenario, open the app, tap **Collect S5 and S8
-   results** and **Share report**, then **Clear S5 and S8 data**.
+4. Collect at least 25 minutes after scheduling (the last alarm is at
+   +20 minutes), then **Share report** and **Clear S5 and S8 data**
+   before the next scenario.
 
 ### S8 — background work cadence
 
