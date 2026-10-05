@@ -48,6 +48,8 @@ public sealed class MedicineAutocompleteBox : UserControl
         "sospesa",
         "ritirat",
         "revocata",
+        // US packages whose marketing ended (OpenFdaNdcParser).
+        "discontinued",
     };
 
     // Delegate the actual query so the caller can create a fresh DI

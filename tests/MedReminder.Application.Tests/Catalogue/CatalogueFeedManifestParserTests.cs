@@ -99,6 +99,7 @@ public class CatalogueFeedManifestParserTests
     [InlineData("EU", "ema-epar-202609.zip")]
     [InlineData("ES", "aemps-202609.zip")]
     [InlineData("FR", "bdpm-202609.zip")]
+    [InlineData("US", "fda-ndc-202609.zip")]
     public void Accepts_the_archive_name_and_country_of_each_feed(string country, string file)
     {
         var feed = Descriptor(country);
@@ -115,6 +116,7 @@ public class CatalogueFeedManifestParserTests
     [InlineData("ES", """{"version":"202609","file":"aifa-202609.zip"}""")]
     [InlineData("FR", """{"version":"202609","file":"bdpm-202608.zip"}""")]
     [InlineData("EU", """{"version":"202609","file":"ema-202609.zip"}""")]
+    [InlineData("US", """{"version":"202609","file":"fda-202609.zip"}""")]
     public void Rejects_an_archive_name_of_another_feed(string country, string json)
     {
         CatalogueFeedManifestParser.TryParse(json, Descriptor(country), out var manifest, out var error).Should().BeFalse();

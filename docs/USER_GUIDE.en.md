@@ -264,7 +264,8 @@ change the stock.
 
 MedReminder includes the official medicine lists of **Italy** (AIFA),
 **Spain** (AEMPS), **France** (ANSM) and the medicines authorised for
-the whole **European Union** (EMA).
+the whole **European Union** (EMA). The list of the **United States**
+(FDA) is downloaded when you choose it as reference country.
 
 - In the medicine window, type part of the **name** or of the **active
   ingredient**: up to 20 matches appear. Picking one fills in the other
@@ -279,6 +280,14 @@ the whole **European Union** (EMA).
   device. With IT, ES or FR the list also contains the EU medicines;
   with **EU** it contains only those. A medicine may appear twice
   (national and EU): pick the one that matches your box.
+- **United States.** With **US** as reference country the list comes
+  from the FDA National Drug Code Directory: one row per package, by
+  brand name (or generic name when there is none), without EU
+  medicines. It is not included in MedReminder: it is downloaded right
+  after you choose US (with **Check for app and catalogue updates** on
+  and an internet connection), and stays empty until then. A package
+  whose marketing has ended shows the red circle. The **Package
+  leaflet** link opens the label on DailyMed.
 - **Automatic updates.** When **Check for app and catalogue updates
   (GitHub)** is on (Settings → General), MedReminder downloads at start,
   and once a day while it stays open, the latest monthly list of your
@@ -289,7 +298,8 @@ the whole **European Union** (EMA).
 **Sources.** AIFA open data (CC BY 4.0); EMA EPAR data (EMA legal
 notice, Commission decision 2011/833/EU); AEMPS CIMA (Spanish Law
 37/2007 on reuse of public-sector information); ANSM BDPM (Licence
-Ouverte Etalab 2.0). Full attributions are in **? → About MedReminder…**
+Ouverte Etalab 2.0); FDA NDC Directory via openFDA (CC0 1.0, not
+endorsed by the FDA). Full attributions are in **? → About MedReminder…**
 and in `THIRD-PARTY-NOTICES.md`.
 
 ### Scan the barcode

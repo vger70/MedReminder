@@ -49,6 +49,11 @@ snapshots stay the offline baseline:
 | `es` | `download_aemps.yaml`, 03:27 | `scripts/feeds/aemps.py` | `data/es/aemps-<yyyymm>.zip` |
 | `fr` | `download_bdpm.yaml`, 03:47 | `scripts/feeds/bdpm.py` | `data/fr/bdpm-<yyyymm>.zip` |
 | `eu` | `download_ema.yaml`, 04:07 | `scripts/feeds/ema.py` | `data/eu/ema-epar-<yyyymm>.zip` |
+| `us` | `download_fda_ndc.yaml`, 04:27 | `scripts/feeds/fda_ndc.py` | `data/us/fda-ndc-<yyyymm>.zip` |
+
+The United States catalogue (§11) has a remote feed only: no snapshot
+is embedded, so a client has no US rows until its first download after
+the user selects `US` as reference country.
 
 Each folder also holds `latest.json` (§2.1) and keeps the 3 newest
 archives. The scripts share `scripts/feeds/common.py` (retries, run
@@ -180,9 +185,12 @@ Client behaviour, the same for every feed (`RemoteCatalogueRefresher`,
   `Catalogue:RemoteFeed:Enabled` and the user's *Check for updates on
   startup* setting are both on.
 - Refreshes the feeds the autocomplete reads: the reference country's
-  (when it is IT, ES or FR) and EU, in the order IT, EU, ES, FR. A
-  reference country without a feed refreshes EU only. Other countries
-  keep their current catalogue until the user switches to them.
+  (when it is IT, ES, FR or US) and EU, in the order IT, EU, ES, FR, US.
+  EU is refreshed only for countries where EMA authorisations are valid
+  (`StaticCountryProfileProvider`): US and GB never fetch it. A
+  reference country without a feed refreshes EU only (GB: nothing).
+  Other countries keep their current catalogue until the user switches
+  to them; a change of reference country runs the refresh at once.
   `Catalogue:RemoteFeed:Feeds:<country>:Enabled` turns one feed off;
   `MaxDownloadBytes` caps its archive. A failure in one feed does not
   stop the next.
@@ -822,7 +830,68 @@ Sicily have no entry yet: no official service URL was confirmed.
 
 ---
 
+## 11. Refresh procedure (United States — FDA NDC Directory)
+
+Design: `docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md` §3.
+
+### 11.1 Source and wire format
+
+- **Source.** The openFDA bulk export of the FDA National Drug Code
+  Directory, endpoint `drug/ndc`. `scripts/feeds/fda_ndc.py` reads the
+  partition URLs from `https://api.fda.gov/download.json`
+  (`results.drug.ndc.partitions[].file`, host `download.open.fda.gov`
+  only) and falls back to
+  `https://download.open.fda.gov/drug/ndc/drug-ndc-0001-of-0001.json.zip`.
+- **Licence.** CC0 1.0 for data on openFDA, no exemption listed for the
+  NDC data (`https://open.fda.gov/license/`, read 2026-10-05). No FDA
+  logo; no wording that implies FDA endorsement.
+- **Archive.** `data/us/fda-ndc-<yyyymm>.zip` with one entry,
+  `fda-ndc.tsv`: header row, TAB delimiter, UTF-8, no quoting, one row
+  per package. Columns: `ndc` (12-digit 6-4-2 form, the key),
+  `ndc_published`, `name`, `generic_name`, `form`, `dosage`, `labeler`,
+  `status`, `regime`, `ingredients` (`|`-separated), `spl_set_id`.
+  `OpenFdaNdcParser` matches the columns by name.
+- **Filters.** Finished products of type `HUMAN PRESCRIPTION DRUG`,
+  `HUMAN OTC DRUG` or `VACCINE`; sample packages dropped; packages
+  without a valid NDC or name skipped. A package or product whose
+  marketing end date is on or before the run date gets the status
+  `Discontinued (<category>, marketing ended <date>)`, which the
+  autocomplete marks as withdrawn.
+
+### 11.2 Remote feed
+
+`download_fda_ndc.yaml`, daily at 04:27 UTC; the first successful run
+of the month publishes. The run fails, leaving `data/` untouched, when
+the export is HTML or not a ZIP, holds no `results` list, when two
+codes map to the same 12-digit NDC, when a TSV line has another
+column count or an invalid key, or when the rows fall below
+`MIN_ROWS` (20 000) or below 90% of the previous run. `MIN_ROWS` was
+set before the first published run: after it, raise it to about 80%
+of the count recorded under `rows` in `data/us/latest.json`. The feed
+is not mirrored to `main/data/`: only releases that read the `feeds`
+branch know it. Run the workflow by hand once after the merge, before
+releasing a client that knows the US feed: until `data/us/latest.json`
+exists, a client with US as reference country logs the manifest as
+unavailable and has no US rows.
+
+### 11.3 Fixture
+
+`tests/fixtures/catalogue/openfda-ndc-sample.json` holds synthetic
+products in the openFDA layout (invented names and labelers);
+`fda-ndc-sample.tsv` is the script's output for it on 2026-10-05.
+pytest checks the script still produces that file byte for byte, and
+`OpenFdaNdcParserTests` parse it. After a change of the TSV layout,
+regenerate it with `rows_from_products` and `write_tsv` and update
+both tests.
+
+---
+
 ## 7. Suspended countries (M4b: UK / MHRA and DE / BfArM)
+
+> The UK assessment of this section is being revised: the NHSBSA dm+d
+> release is published under the Open Government Licence v3.0. Open
+> points (TRUD account clause, SNOMED CT identifiers) are in
+> `docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md` §4.4 and §9.
 
 Not shipping. Both remaining target countries on the M4 shortlist
 — MHRA (`gb`) and BfArM (`de`) — are **suspended**, tracked in

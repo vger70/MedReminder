@@ -30,6 +30,48 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #202 — US reference catalogue (FDA NDC) and US/UK sources analysis
+
+Link: [vger70/MedReminder#202](https://github.com/vger70/MedReminder/pull/202)
+Branch: `claude/drug-data-sources-integration-eidpbg` → `main`
+
+### Added
+
+- United States reference catalogue from the FDA National Drug Code
+  Directory (openFDA bulk export, CC0 1.0), one row per package, keyed
+  on the 12-digit 6-4-2 NDC. Remote feed only, no embedded snapshot:
+  `scripts/feeds/fda_ndc.py`, `.github/workflows/download_fda_ndc.yaml`
+  (publishes `data/us/` on the `feeds` branch),
+  `OpenFdaNdcParser`, `CatalogueFeedDescriptor.UnitedStates`.
+- `US` in the reference-country dropdown even before its first
+  download; a change of reference country refreshes the remote feeds
+  at once instead of at the next start or daily check.
+- About dialog and `THIRD-PARTY-NOTICES.md`: FDA attribution and
+  non-endorsement statement (`about.dataSources.fda`, five languages).
+
+### Changed
+
+- `US` joins GB/UK as a country outside EMA coverage: its search shows
+  no EU rows, and `CatalogueFeedSelection` fetches EU only for
+  countries covered by EMA (GB no longer downloads the unused EU feed).
+- Document links accept DailyMed (`dailymed.nlm.nih.gov`) besides AIFA;
+  the autocomplete marks "Discontinued" US packages as withdrawn.
+- Settings tooltip for the update check reworded in five languages: EU
+  catalogue only for EU countries, immediate download on a country
+  change.
+
+### Docs
+
+- `docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md`: evaluates the
+  FDA Orange Book, the FDA NDC Directory, the MHRA Windsor Framework
+  category lists and NHSBSA dm+d as reference-catalogue sources.
+  Recommends NDC (openFDA, CC0) for the US and dm+d for the UK,
+  revisits the earlier dm+d licence conclusion, lists the client gaps
+  to close and the owner decisions D1–D8; reviews the openFDA, OGL v3.0
+  and TRUD licence texts.
+- `docs/CATALOGUE-DATA.md` §11 (US feed procedure), user guides (five
+  languages), `THIRD-PARTY-NOTICES.md`.
+
 ## PR #161 — Build a self-contained MSI for the Microsoft Store
 
 Link: [vger70/MedReminder#161](https://github.com/vger70/MedReminder/pull/161)

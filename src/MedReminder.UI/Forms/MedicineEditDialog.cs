@@ -1018,8 +1018,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         if (_leafletLink is not null && _spcLink is not null)
         {
-            var safeLeaflet = IsSafeAifaUrl(leafletUrl) ? leafletUrl : null;
-            var safeSpc = IsSafeAifaUrl(spcUrl) ? spcUrl : null;
+            var safeLeaflet = IsSafeDocumentUrl(leafletUrl) ? leafletUrl : null;
+            var safeSpc = IsSafeDocumentUrl(spcUrl) ? spcUrl : null;
 
             _leafletLink.Tag = safeLeaflet;
             _spcLink.Tag = safeSpc;
@@ -1093,10 +1093,11 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
     {
         if (sender is not LinkLabel link) return;
         // The Codifa URL is built from a validated AIC, never read from
-        // data; the AIFA URLs come from the catalogue and are checked.
+        // data; the AIFA and DailyMed URLs come from the catalogue and
+        // are checked.
         string url;
         if (link.Tag is Uri codifa) url = codifa.AbsoluteUri;
-        else if (link.Tag is string aifa && IsSafeAifaUrl(aifa)) url = aifa;
+        else if (link.Tag is string document && IsSafeDocumentUrl(document)) url = document;
         else return;
 
         try
@@ -1113,12 +1114,15 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         }
     }
 
-    // Restrict browser-launched URLs to the AIFA-owned domains that
-    // ship these links in the open-data feed. A corrupted or spoofed
-    // catalogue row could otherwise become a redirect vector when the
-    // user clicks the label. The scheme must be HTTPS, and the host
-    // must be one of AIFA's own domains (bare or subdomain).
-    private static bool IsSafeAifaUrl(string? url)
+    // Restrict browser-launched URLs to the domains the catalogue links
+    // to: AIFA's own domains (bare or subdomain), which ship the Italian
+    // leaflet and SPC links in the open-data feed, and DailyMed, whose
+    // US label pages OpenFdaNdcParser builds from the SPL set id
+    // (docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md §3.5). A
+    // corrupted or spoofed catalogue row could otherwise become a
+    // redirect vector when the user clicks the label. The scheme must
+    // be HTTPS.
+    private static bool IsSafeDocumentUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)) return false;
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
@@ -1127,7 +1131,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         return host == "aifa.gov.it"
             || host.EndsWith(".aifa.gov.it", StringComparison.Ordinal)
             || host == "agenziafarmaco.gov.it"
-            || host.EndsWith(".agenziafarmaco.gov.it", StringComparison.Ordinal);
+            || host.EndsWith(".agenziafarmaco.gov.it", StringComparison.Ordinal)
+            || host == "dailymed.nlm.nih.gov";
     }
 }
 

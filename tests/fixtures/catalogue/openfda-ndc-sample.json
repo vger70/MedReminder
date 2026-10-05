@@ -1,0 +1,153 @@
+{
+  "meta": {
+    "disclaimer": "Synthetic sample in the layout of the openFDA drug/ndc bulk export. Values are invented for tests.",
+    "last_updated": "2026-10-01"
+  },
+  "results": [
+    {
+      "product_id": "0002-1001_aaaaaaaa-0001-4000-8000-000000000001",
+      "product_ndc": "0002-1001",
+      "spl_id": "aaaaaaaa-0001-4000-8000-000000000001",
+      "product_type": "HUMAN PRESCRIPTION DRUG",
+      "finished": true,
+      "brand_name": "Examplor",
+      "brand_name_base": "Examplor",
+      "generic_name": "atorvastatin calcium",
+      "dosage_form": "TABLET, FILM COATED",
+      "route": ["ORAL"],
+      "marketing_start_date": "20100115",
+      "marketing_category": "NDA",
+      "application_number": "NDA020702",
+      "labeler_name": "Example Labs Inc.",
+      "active_ingredients": [{"name": "ATORVASTATIN CALCIUM TRIHYDRATE", "strength": "10 mg/1"}],
+      "listing_expiration_date": "20271231",
+      "packaging": [
+        {"package_ndc": "0002-1001-30", "description": "30 TABLET, FILM COATED in 1 BOTTLE (0002-1001-30)", "marketing_start_date": "20100115", "sample": false},
+        {"package_ndc": "0002-1001-90", "description": "90 TABLET, FILM COATED in 1 BOTTLE (0002-1001-90)", "marketing_start_date": "20100115", "sample": false},
+        {"package_ndc": "0002-1001-01", "description": "1 TABLET, FILM COATED in 1 BLISTER PACK (0002-1001-01)", "marketing_start_date": "20100115", "sample": true}
+      ],
+      "openfda": {"spl_set_id": ["c0ffee00-1111-4222-8333-444455556666"], "manufacturer_name": ["Example Labs Inc."]}
+    },
+    {
+      "product_id": "51234-200_aaaaaaaa-0002-4000-8000-000000000002",
+      "product_ndc": "51234-200",
+      "spl_id": "aaaaaaaa-0002-4000-8000-000000000002",
+      "product_type": "HUMAN OTC DRUG",
+      "finished": true,
+      "generic_name": "Acetaminophen",
+      "dosage_form": "TABLET",
+      "route": ["ORAL"],
+      "marketing_start_date": "20150301",
+      "marketing_category": "OTC MONOGRAPH DRUG",
+      "labeler_name": "Sample Pharmacy Brands",
+      "active_ingredients": [{"name": "ACETAMINOPHEN", "strength": "500 mg/1"}],
+      "packaging": [
+        {"package_ndc": "51234-200-10", "description": "100 TABLET in 1 BOTTLE (51234-200-10)", "marketing_start_date": "20150301", "sample": false},
+        {"package_ndc": "51234-200-24", "description": "24 TABLET in 1 BOTTLE (51234-200-24)", "marketing_start_date": "20150301", "marketing_end_date": "20240630", "sample": false}
+      ]
+    },
+    {
+      "product_id": "60001-1234_aaaaaaaa-0003-4000-8000-000000000003",
+      "product_ndc": "60001-1234",
+      "product_type": "HUMAN PRESCRIPTION DRUG",
+      "finished": true,
+      "brand_name": "Combipril HCT",
+      "brand_name_base": "Combipril",
+      "brand_name_suffix": "HCT",
+      "generic_name": "lisinopril and hydrochlorothiazide",
+      "dosage_form": "TABLET",
+      "marketing_start_date": "20050101",
+      "marketing_end_date": "20251231",
+      "marketing_category": "ANDA",
+      "application_number": "ANDA076000",
+      "labeler_name": "Generic Example Co",
+      "active_ingredients": [
+        {"name": "HYDROCHLOROTHIAZIDE", "strength": "12.5 mg/1"},
+        {"name": "LISINOPRIL", "strength": "20 mg/1"}
+      ],
+      "packaging": [
+        {"package_ndc": "60001-1234-1", "description": "30 TABLET in 1 BOTTLE (60001-1234-1)", "marketing_start_date": "20050101", "sample": false}
+      ],
+      "openfda": {"spl_set_id": ["not-a-uuid"]}
+    },
+    {
+      "product_id": "0409-4888_aaaaaaaa-0004-4000-8000-000000000004",
+      "product_ndc": "0409-4888",
+      "product_type": "HUMAN PRESCRIPTION DRUG",
+      "finished": true,
+      "brand_name": "Oxyexample",
+      "generic_name": "oxycodone hydrochloride",
+      "dosage_form": "TABLET",
+      "marketing_start_date": "20120101",
+      "marketing_category": "NDA",
+      "labeler_name": "Example Labs Inc.",
+      "active_ingredients": [{"name": "OXYCODONE HYDROCHLORIDE", "strength": "5 mg/1"}],
+      "dea_schedule": "CII",
+      "packaging": [
+        {"package_ndc": "0409-4888-02", "description": "100 TABLET in 1 BOTTLE (0409-4888-02)", "marketing_start_date": "20120101", "marketing_end_date": "20991231", "sample": false}
+      ]
+    },
+    {
+      "product_id": "49281-400_aaaaaaaa-0005-4000-8000-000000000005",
+      "product_ndc": "49281-400",
+      "product_type": "VACCINE",
+      "finished": true,
+      "brand_name": "Fluexample",
+      "generic_name": "Influenza Vaccine",
+      "dosage_form": "INJECTION, SUSPENSION",
+      "marketing_start_date": "20250701",
+      "marketing_category": "BLA",
+      "labeler_name": "Vaccine Example LLC",
+      "active_ingredients": [
+        {"name": "INFLUENZA A VIRUS A/EXAMPLE/1/2025 (H1N1) ANTIGEN", "strength": "15 ug/.5mL"},
+        {"name": "INFLUENZA B VIRUS B/EXAMPLE/2/2025 ANTIGEN", "strength": "15 ug/.5mL"}
+      ],
+      "packaging": [
+        {"package_ndc": "49281-400-10", "description": "10 SYRINGE in 1 PACKAGE (49281-400-10) > .5 mL in 1 SYRINGE", "marketing_start_date": "20250701", "sample": false}
+      ]
+    },
+    {
+      "product_id": "12345-678_aaaaaaaa-0006-4000-8000-000000000006",
+      "product_ndc": "12345-678",
+      "product_type": "BULK INGREDIENT",
+      "finished": false,
+      "generic_name": "Metformin hydrochloride",
+      "dosage_form": "POWDER",
+      "marketing_category": "BULK INGREDIENT",
+      "labeler_name": "Bulk Example",
+      "active_ingredients": [{"name": "METFORMIN HYDROCHLORIDE", "strength": "1 kg/kg"}],
+      "packaging": [
+        {"package_ndc": "12345-678-01", "description": "25 kg in 1 DRUM (12345-678-01)", "sample": false}
+      ]
+    },
+    {
+      "product_id": "70000-0001_aaaaaaaa-0007-4000-8000-000000000007",
+      "product_ndc": "70000-0001",
+      "product_type": "STANDARDIZED ALLERGENIC",
+      "finished": true,
+      "brand_name": "Pollen Example",
+      "dosage_form": "INJECTION, SOLUTION",
+      "marketing_category": "BLA",
+      "labeler_name": "Allergen Example",
+      "packaging": [
+        {"package_ndc": "70000-0001-1", "description": "5 mL in 1 VIAL (70000-0001-1)", "sample": false}
+      ]
+    },
+    {
+      "product_id": "80000-111_aaaaaaaa-0008-4000-8000-000000000008",
+      "product_ndc": "80000-111",
+      "product_type": "HUMAN OTC DRUG",
+      "finished": true,
+      "brand_name": "Broken Example",
+      "dosage_form": "CREAM",
+      "marketing_category": "OTC MONOGRAPH DRUG",
+      "labeler_name": "Broken Example",
+      "active_ingredients": [{"name": "HYDROCORTISONE", "strength": "1 g/100g"}],
+      "packaging": [
+        {"package_ndc": "80000111-01", "description": "1 TUBE in 1 CARTON", "sample": false},
+        {"package_ndc": "80000-111-01", "description": "28 g in 1 TUBE (80000-111-01)", "sample": false},
+        {"package_ndc": "80000-111-01", "description": "28 g in 1 TUBE (80000-111-01)", "sample": false}
+      ]
+    }
+  ]
+}

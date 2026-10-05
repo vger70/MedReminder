@@ -44,9 +44,11 @@ namespace MedReminder.UI.Hosting;
 // its start. The hourly tick, compared with the wall clock, catches up
 // right after a resume from sleep. The last run is kept in memory only:
 // every start checks anyway. The gates are read again on every tick, so
-// turning the setting on, or changing the reference country, takes
-// effect without a restart. Running every step on the same task keeps
-// every catalogue write sequential.
+// turning the setting on takes effect without a restart. A change of
+// the reference country runs the remote step at once, without waiting
+// for the tick: a feed-only country (US) has no rows until then
+// (ANALYSIS-CATALOGUE-US-GB-SOURCES.md §5.2, D4). Running every step on
+// the same task keeps every catalogue write sequential.
 //
 // Nothing blocks the UI: the whole run lives on a background thread
 // pool task started from ExecuteAsync. When the flag is off the
@@ -78,6 +80,14 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
     private readonly IServiceProvider _services;
     private readonly TimeProvider _clock;
     private readonly ILogger<CatalogueRefreshHostedService> _log;
+
+    // Released when the reference country differs from the one the
+    // remote step last read; at most one pending release.
+    private readonly SemaphoreSlim _referenceCountryChanged = new(0, 1);
+
+    // Reference country the remote step last read; written by the
+    // background task, read by the settings change callback.
+    private volatile string? _refreshedCountry;
 
     public CatalogueRefreshHostedService(
         IServiceProvider services,
@@ -121,23 +131,84 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             return;
         }
 
+        var userSettings = _services.GetRequiredService<IOptionsMonitor<UserSettings>>();
+        _refreshedCountry = userSettings.CurrentValue.ReferenceCountry;
+        using var subscription = userSettings.OnChange(settings =>
+        {
+            if (ReferenceCountryChanged(_refreshedCountry, settings.ReferenceCountry))
+            {
+                SignalReferenceCountryChanged();
+            }
+        });
+
         var startedAt = _clock.GetUtcNow();
         DateTimeOffset? lastRemoteRun =
             await RefreshFromRemoteFeedAsync(atStartup: true, cancellationToken) ? startedAt : null;
 
         using var timer = new PeriodicTimer(TickInterval, _clock);
-        while (await timer.WaitForNextTickAsync(cancellationToken))
+        Task<bool>? tick = null;
+        Task? countryChange = null;
+        while (true)
         {
+            // A PeriodicTimer allows one pending wait: the task that did
+            // not complete is kept for the next round.
+            tick ??= timer.WaitForNextTickAsync(cancellationToken).AsTask();
+            countryChange ??= _referenceCountryChanged.WaitAsync(cancellationToken);
+            var completed = await Task.WhenAny(tick, countryChange);
             var now = _clock.GetUtcNow();
-            if (!IsRemoteCheckDue(lastRemoteRun, now))
+
+            if (completed == tick)
             {
-                continue;
+                var ticked = await tick;
+                tick = null;
+                if (!ticked)
+                {
+                    return;
+                }
+                if (!IsRemoteCheckDue(lastRemoteRun, now))
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                countryChange = null;
+                await completed;
+                if (!ReferenceCountryChanged(_refreshedCountry, userSettings.CurrentValue.ReferenceCountry))
+                {
+                    continue;
+                }
+                _log.LogInformation("Reference country changed; refreshing the remote catalogue feeds.");
             }
 
             if (await RefreshFromRemoteFeedAsync(atStartup: false, cancellationToken))
             {
                 lastRemoteRun = now;
             }
+        }
+    }
+
+    // Whether `current` names another catalogue country than `refreshed`.
+    // Invalid values count as IT, as CatalogueFeedSelection reads them.
+    internal static bool ReferenceCountryChanged(string? refreshed, string? current) =>
+        Normalize(refreshed) != Normalize(current);
+
+    private static CountryCode Normalize(string? country) =>
+        CountryCode.TryParse(country, out var code) ? code : CatalogueFeedDescriptor.Italy.Country;
+
+    private void SignalReferenceCountryChanged()
+    {
+        if (_referenceCountryChanged.CurrentCount > 0)
+        {
+            return;
+        }
+        try
+        {
+            _referenceCountryChanged.Release();
+        }
+        catch (SemaphoreFullException)
+        {
+            // Another change released it first: one refresh covers both.
         }
     }
 
@@ -199,6 +270,7 @@ internal sealed class CatalogueRefreshHostedService : BackgroundService
             }
 
             var userSettings = _services.GetRequiredService<IOptionsMonitor<UserSettings>>().CurrentValue;
+            _refreshedCountry = userSettings.ReferenceCountry;
             if (!userSettings.CheckForUpdatesOnStartup)
             {
                 _log.Log(skipLevel, "Remote catalogue feeds skipped: checking for app and catalogue updates is off.");

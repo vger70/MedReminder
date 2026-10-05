@@ -4,15 +4,20 @@ namespace MedReminder.Application.Catalogue;
 
 // Which remote feeds a client refreshes at startup (decision D4 of
 // docs/analysis/ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md §5.3): the
-// catalogue autocomplete reads the reference country plus EU, so only
-// those two are fetched. Other countries stay at their embedded version
-// until the user switches to them.
+// catalogue autocomplete reads the reference country's search scope
+// (the country, plus EU when EMA authorisations are valid there), so
+// only those feeds are fetched. Other countries stay at their embedded
+// version until the user switches to them.
 public static class CatalogueFeedSelection
 {
+    private static readonly StaticCountryProfileProvider Profiles = new();
+
     // Enabled feeds for `referenceCountry`, in CatalogueFeedDescriptor.All
     // order. An invalid value falls back to IT, as the autocomplete does
-    // (MainForm.BuildCatalogueContext); a country without a feed (for
-    // example DE) or EU itself selects EU only.
+    // (MainForm.BuildCatalogueContext). A country without a feed (for
+    // example DE) or EU itself selects EU only; a country outside EMA
+    // coverage (US) never selects EU
+    // (docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md §5.1).
     public static IReadOnlyList<CatalogueFeedDescriptor> Select(string? referenceCountry, CatalogueFeedOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -20,9 +25,10 @@ public static class CatalogueFeedSelection
         var reference = CountryCode.TryParse(referenceCountry, out var parsed)
             ? parsed
             : CatalogueFeedDescriptor.Italy.Country;
+        var scope = Profiles.GetSearchScope(reference);
 
         return CatalogueFeedDescriptor.All
-            .Where(feed => (feed.Country == reference || feed.Country.IsSupranational) && options.IsFeedEnabled(feed))
+            .Where(feed => scope.Contains(feed.Country) && options.IsFeedEnabled(feed))
             .ToList();
     }
 

@@ -246,10 +246,17 @@ internal sealed partial class SettingsDialog
     // present in the local catalogue plus the synthetic "EU" entry
     // (supranational). "IT" is always offered even on an empty DB so
     // the user has something meaningful to pick before the first
-    // snapshot import completes.
+    // snapshot import completes. Every country with a remote feed is
+    // offered too: a feed-only country (US) has no rows until its first
+    // download, which runs once it is selected
+    // (docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md §5.2).
     private void PopulateReferenceCountryCombo()
     {
         var options = new SortedSet<string>(StringComparer.Ordinal) { "IT", "EU" };
+        foreach (var feed in CatalogueFeedDescriptor.All)
+        {
+            options.Add(feed.Country.Value);
+        }
         try
         {
             var present = _catalogueQuery

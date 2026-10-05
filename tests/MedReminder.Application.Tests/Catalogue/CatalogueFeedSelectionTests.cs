@@ -5,7 +5,9 @@ using Xunit;
 namespace MedReminder.Application.Tests.Catalogue;
 
 // Decision D4 of ANALYSIS-CATALOGUE-REMOTE-FEEDS-EU-ES-FR.md: the
-// reference country's feed plus EU, in IT, EU, ES, FR order.
+// reference country's feed plus EU, in IT, EU, ES, FR, US order; EU
+// only for countries covered by EMA authorisations
+// (ANALYSIS-CATALOGUE-US-GB-SOURCES.md §5.1).
 public class CatalogueFeedSelectionTests
 {
     [Theory]
@@ -16,7 +18,10 @@ public class CatalogueFeedSelectionTests
     [InlineData("EU", "EU")]
     [InlineData("European Union", "EU")]
     [InlineData("DE", "EU")]
-    [InlineData("GB", "EU")]
+    [InlineData("US", "US")]
+    [InlineData("us", "US")]
+    [InlineData("GB", "")]
+    [InlineData("UK", "")]
     [InlineData("", "IT,EU")]
     [InlineData(null, "IT,EU")]
     [InlineData("Italia", "IT,EU")]
@@ -31,6 +36,7 @@ public class CatalogueFeedSelectionTests
     [InlineData("IT", "IT,EU")]
     [InlineData("ES", "EU,ES")]
     [InlineData("FR", "EU,FR")]
+    [InlineData("US", "US")]
     [InlineData("EU", "EU")]
     public void The_defaults_enable_every_published_feed(string reference, string expected)
     {
@@ -55,6 +61,15 @@ public class CatalogueFeedSelectionTests
         options.Feeds.Remove("FR");
 
         Codes(CatalogueFeedSelection.Select("FR", options)).Should().Be("EU");
+    }
+
+    [Fact]
+    public void A_disabled_US_feed_selects_nothing()
+    {
+        var options = AllEnabled();
+        options.Feeds["US"].Enabled = false;
+
+        CatalogueFeedSelection.Select("US", options).Should().BeEmpty();
     }
 
     [Fact]
