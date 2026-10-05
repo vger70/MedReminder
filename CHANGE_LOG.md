@@ -30,6 +30,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #202 — Analysis: US (FDA) and UK (dm+d) reference catalogues
+
+Link: [vger70/MedReminder#202](https://github.com/vger70/MedReminder/pull/202)
+Branch: `claude/drug-data-sources-integration-eidpbg` → `main`
+
+### Docs
+
+- `docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md`: evaluates the
+  FDA Orange Book, the FDA NDC Directory, the MHRA Windsor Framework
+  category lists and NHSBSA dm+d as reference-catalogue sources.
+  Recommends NDC (openFDA, CC0) for the US and dm+d for the UK,
+  revisits the earlier dm+d licence conclusion, lists the client gaps
+  to close and the owner decisions D1–D7.
+
 ## PR #161 — Build a self-contained MSI for the Microsoft Store
 
 Link: [vger70/MedReminder#161](https://github.com/vger70/MedReminder/pull/161)
