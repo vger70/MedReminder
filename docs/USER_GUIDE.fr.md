@@ -286,6 +286,8 @@ stock.
 MedReminder contient les listes officielles des médicaments de
 l'**Italie** (AIFA), de l'**Espagne** (AEMPS), de la **France** (ANSM)
 et les médicaments autorisés pour toute l'**Union européenne** (EMA).
+La liste des **États-Unis** (FDA) est téléchargée quand tu la choisis
+comme pays de référence.
 
 - Dans la fenêtre du médicament, saisis une partie du **nom** ou de la
   **substance active** : jusqu'à 20 résultats s'affichent. En choisir
@@ -301,6 +303,14 @@ et les médicaments autorisés pour toute l'**Union européenne** (EMA).
   aussi les médicaments UE ; avec **EU**, seulement ceux-ci. Un
   médicament peut apparaître deux fois (national et UE) : choisis celui
   qui correspond à ta boîte.
+- **États-Unis.** Avec **US** comme pays de référence, la liste vient
+  du FDA National Drug Code Directory : une ligne par conditionnement,
+  par nom de marque (ou nom générique à défaut), sans les médicaments
+  de l'UE. Elle n'est pas incluse dans MedReminder : elle est
+  téléchargée juste après le choix de US (avec **Vérifier les mises à
+  jour** activé et une connexion internet) et reste vide jusque-là. Un
+  conditionnement qui n'est plus commercialisé affiche le cercle rouge.
+  Le lien **Notice patient** ouvre l'étiquetage sur DailyMed.
 - **Mises à jour automatiques.** Quand **Vérifier les mises à jour de
   l'application et des catalogues (GitHub)** est activé (Paramètres →
   Général), MedReminder télécharge au démarrage, puis une fois par jour
@@ -312,7 +322,8 @@ et les médicaments autorisés pour toute l'**Union européenne** (EMA).
 **Sources.** Données ouvertes AIFA (CC BY 4.0) ; données EMA EPAR
 (avis juridique de l'EMA, décision de la Commission 2011/833/UE) ;
 AEMPS CIMA (loi espagnole 37/2007 sur la réutilisation des informations
-du secteur public) ; ANSM BDPM (Licence Ouverte Etalab 2.0). Les
+du secteur public) ; ANSM BDPM (Licence Ouverte Etalab 2.0) ; FDA NDC Directory via
+openFDA (CC0 1.0, sans approbation de la FDA). Les
 attributions complètes sont dans **? → À propos de MedReminder…** et
 dans `THIRD-PARTY-NOTICES.md`.
 

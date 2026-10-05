@@ -36,6 +36,7 @@ public sealed class GitHubRawCatalogueFeedClientTests : IDisposable
     [InlineData("EU", "eu", "ema-epar")]
     [InlineData("ES", "es", "aemps")]
     [InlineData("FR", "fr", "bdpm")]
+    [InlineData("US", "us", "fda-ndc")]
     public async Task Builds_the_manifest_and_archive_urls_of_each_feed(string country, string folder, string prefix)
     {
         var feed = CatalogueFeedDescriptor.All.Single(f => f.Country.Value == country);

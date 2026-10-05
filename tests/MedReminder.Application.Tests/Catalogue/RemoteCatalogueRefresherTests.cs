@@ -332,6 +332,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
         { "EU", ["ema-epar.csv"] },
         { "ES", ["aemps.xlsx"] },
         { "FR", ["CIS_bdpm.txt", "CIS_COMPO_bdpm.txt", "CIS_CIP_bdpm.txt"] },
+        { "US", ["fda-ndc.tsv"] },
     };
 
     [Theory]
@@ -358,6 +359,7 @@ public sealed class RemoteCatalogueRefresherTests : IDisposable
     [InlineData("ES", "ema-epar.csv")]
     [InlineData("FR", "CIS_bdpm.txt")]
     [InlineData("IT", "confezioni_fornitura.csv")]
+    [InlineData("US", "CIS_bdpm.txt")]
     public async Task Rejects_an_archive_missing_an_entry_the_feed_requires(string country, string onlyEntry)
     {
         var feed = Descriptor(country);

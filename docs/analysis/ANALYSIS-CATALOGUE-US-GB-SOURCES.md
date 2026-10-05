@@ -1,5 +1,13 @@
 # ANALYSIS — US (FDA) and UK (MHRA, NHS dm+d) reference catalogues
 
+Status (2026-10-05): phase 1 (US catalogue, §8) implemented in PR #202
+with decisions D1 (openFDA bulk), D2 (finished prescription, OTC and
+vaccine products, samples excluded), D3 (no embedded snapshot) and D4
+(refresh at once on a change of reference country). The `MIN_ROWS`
+floor of the feed is provisional until the first published run
+(`docs/CATALOGUE-DATA.md` §11.2). Phases 2 to 5 are not started; GB
+waits on D6 and D7.
+
 Design document, written before implementation. It evaluates four
 sources proposed by the product owner on 2026-10-05 and maps them onto
 the existing catalogue pipeline (embedded snapshot, remote feed on the

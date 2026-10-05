@@ -12,13 +12,16 @@ namespace MedReminder.Application.Catalogue;
 //   - Any country not explicitly listed → IncludesEuCentralised = true.
 //   - "EU" → IncludesEuCentralised = false (querying "EU" already
 //     means "supranational rows only").
-//   - Explicit opt-outs (§12 point 7): "GB", "UK".
+//   - Explicit opt-outs (§12 point 7): "GB", "UK", and "US"
+//     (docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md §5.1): EMA
+//     centralised authorisations are not valid on those markets.
 public sealed class StaticCountryProfileProvider : ICountryProfileProvider
 {
     private static readonly HashSet<string> NonEuCovered = new(StringComparer.Ordinal)
     {
         "GB",
         "UK",
+        "US",
     };
 
     public CountryProfile GetProfile(CountryCode country)

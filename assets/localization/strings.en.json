@@ -784,7 +784,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Days of automatic backup retention. Older files are deleted after a successful backup.\n\n0 = no automatic deletion (discouraged: the folder grows indefinitely).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Open File Explorer to choose the backup folder.",
   "Ui.SettingsDialog.Tooltip.Language": "Interface language for menus, dialogs and email notifications.\nWindows toast notifications always follow the system language.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "When enabled, MedReminder contacts the public GitHub Releases API at startup and shows a message when a newer stable release is available; the new version is never downloaded or installed automatically. At startup, and once a day while the app stays open, it also downloads the medicine catalogue of the reference country and the EU one when a newer edition is published (data only). With Italy as reference country it also downloads the AIFA list of medicines in shortage.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "When enabled, MedReminder contacts the public GitHub Releases API at startup and shows a message when a newer stable release is available; the new version is never downloaded or installed automatically. At startup, and once a day while the app stays open, it also downloads the medicine catalogue of the reference country, plus the EU one for EU countries, when a newer edition is published (data only); after a change of reference country it downloads the new catalogue at once. With Italy as reference country it also downloads the AIFA list of medicines in shortage.",
 
   "Ui.HelpViewer.Title": "User guide — MedReminder",
   "Ui.HelpViewer.Back": "Back",
@@ -936,6 +936,7 @@
   "about.dataSources.emaArticle57": "European centrally authorised medicines: EMA EPAR dataset (European public assessment reports), reused under EMA's public-content terms.",
   "about.dataSources.aemps": "Spanish medicine catalogue: AEMPS CIMA \"Medicamentos\" register, reused under Spain's public-sector information reuse regime (Law 37/2007). Source: Agencia Española de Medicamentos y Productos Sanitarios (AEMPS).",
   "about.dataSources.bdpm": "French medicine catalogue: ANSM BDPM (Base de données publique des médicaments), reused under Licence Ouverte Etalab 2.0.",
+  "about.dataSources.fda": "US medicine catalogue: FDA National Drug Code Directory, from openFDA (CC0 1.0 public domain dedication). Not endorsed by the FDA.",
   "Common.Exit": "Exit",
   "Ui.App.MigrationFailed.Title": "Migration failed",
   "Ui.App.MigrationFailed.Body": "The V1 → V2 migration failed and was rolled back. The pre-migration backup is preserved. Details: {0}",

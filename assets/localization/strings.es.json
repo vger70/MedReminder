@@ -783,7 +783,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Número de días de conservación de las copias automáticas. Los archivos más antiguos se eliminan tras una copia correcta.\n\n0 = sin eliminación automática (desaconsejado: la carpeta crece indefinidamente).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Abrir el Explorador de archivos para elegir la carpeta de copia.",
   "Ui.SettingsDialog.Tooltip.Language": "Idioma de la interfaz para menús, diálogos y notificaciones e-mail.\nLas notificaciones toast Windows siguen siempre el idioma del sistema.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si está habilitado, MedReminder consulta la API pública de GitHub Releases al iniciar y muestra un mensaje si hay una nueva versión estable disponible; la nueva versión nunca se descarga ni se instala automáticamente. Al iniciar, y una vez al día mientras la aplicación siga abierta, también descarga el catálogo de medicamentos del país de referencia y el de la UE cuando se publica una edición más reciente (solo datos). Con Italia como país de referencia, también descarga la lista AIFA de medicamentos en desabastecimiento.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si está habilitado, MedReminder consulta la API pública de GitHub Releases al iniciar y muestra un mensaje si hay una nueva versión estable disponible; la nueva versión nunca se descarga ni se instala automáticamente. Al iniciar, y una vez al día mientras la aplicación siga abierta, también descarga el catálogo de medicamentos del país de referencia, más el de la UE para los países de la UE, cuando se publica una edición más reciente (solo datos); tras un cambio de país de referencia, descarga de inmediato el nuevo catálogo. Con Italia como país de referencia, también descarga la lista AIFA de medicamentos en desabastecimiento.",
 
   "Ui.HelpViewer.Title": "Guía de usuario — MedReminder",
   "Ui.HelpViewer.Back": "Atrás",
@@ -935,6 +935,7 @@
   "about.dataSources.emaArticle57": "Medicamentos europeos con autorización centralizada: conjunto de datos EMA EPAR (European public assessment reports), reutilizado según los términos de uso de los contenidos públicos de la EMA.",
   "about.dataSources.aemps": "Catálogo español de medicamentos: registro AEMPS CIMA «Medicamentos», reutilizado según el régimen español de reutilización de la información del sector público (Ley 37/2007). Fuente: Agencia Española de Medicamentos y Productos Sanitarios (AEMPS).",
   "about.dataSources.bdpm": "Catálogo francés de medicamentos: ANSM BDPM (Base de données publique des médicaments), reutilizado bajo la Licence Ouverte Etalab 2.0.",
+  "about.dataSources.fda": "Catálogo estadounidense de medicamentos: FDA National Drug Code Directory, a través de openFDA (dedicación al dominio público CC0 1.0). Sin respaldo de la FDA.",
   "Common.Exit": "Salir",
   "Ui.App.MigrationFailed.Title": "Error en la migración",
   "Ui.App.MigrationFailed.Body": "La migración V1 → V2 falló y se revirtió. La copia previa a la migración se conserva. Detalles: {0}",

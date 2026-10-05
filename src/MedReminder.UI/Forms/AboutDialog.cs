@@ -178,11 +178,17 @@ internal sealed class AboutDialog : MedReminderFormBase
         {
             AutoSize = true,
             MaximumSize = sourceLabelMaxSize,
+            Text = _loc.Get("about.dataSources.bdpm"),
+        };
+        var fda = new Label
+        {
+            AutoSize = true,
+            MaximumSize = sourceLabelMaxSize,
             // A scrolling FlowLayoutPanel ignores its bottom padding, so
             // the last label carries the gap itself: otherwise, scrolled
             // to the end, its last line sits clipped against the edge.
             Margin = new Padding(3, 3, 3, 8),
-            Text = _loc.Get("about.dataSources.bdpm"),
+            Text = _loc.Get("about.dataSources.fda"),
         };
 
         _updateStatusLabel = new Label
@@ -252,6 +258,7 @@ internal sealed class AboutDialog : MedReminderFormBase
         body.Controls.Add(ema);
         body.Controls.Add(aemps);
         body.Controls.Add(bdpm);
+        body.Controls.Add(fda);
 
         var updatePanel = new FlowLayoutPanel
         {

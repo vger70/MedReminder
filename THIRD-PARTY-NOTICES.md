@@ -12,8 +12,9 @@ separately) and is surfaced in the app's About dialog through the
 Each dataset below is redistributed twice, with the same attribution
 and the same content: embedded in the build (the snapshot shipped with
 it), and as a monthly archive the repository publishes under
-`data/<country>/` on `main`, which the app downloads at startup
-(`docs/CATALOGUE-DATA.md` §1, §2.1).
+`data/<country>/` on the `feeds` branch, which the app downloads at
+startup (`docs/CATALOGUE-DATA.md` §1, §2.1). The US catalogue is
+published as an archive only, with no embedded snapshot.
 
 ### AIFA — Agenzia Italiana del Farmaco (Italy)
 
@@ -136,6 +137,34 @@ it), and as a monthly archive the repository publishes under
   a distinction preserved in the localisation key name
   `about.dataSources.emaArticle57` (kept for compatibility with the
   M2 dictionaries) and the surrounding docs.
+
+### FDA — U.S. Food and Drug Administration (United States)
+
+- **Dataset:** National Drug Code (NDC) Directory, finished drug
+  products and their packages, as exported by openFDA (endpoint
+  `drug/ndc`).
+- **Source:** <https://open.fda.gov/data/ndc/>; bulk files listed in
+  <https://api.fda.gov/download.json>.
+- **Licence:** "Unless otherwise noted, the content, data,
+  documentation, code, and related materials on openFDA is public
+  domain and made available with a Creative Commons CC0 1.0 Universal
+  dedication" (<https://open.fda.gov/license/>, read 2026-10-05). The
+  NDC data is not listed under the page's exemptions. CC0 does not
+  affect trademark rights: brand names remain their owners' marks and
+  are shown only to identify the product.
+- **Attribution (not required by CC0, given as good practice):** "US
+  medicine catalogue: FDA National Drug Code Directory, from openFDA
+  (CC0 1.0 public domain dedication). Not endorsed by the FDA." No FDA
+  logo is used, and nothing implies endorsement by the FDA.
+- **Redistributed from:** `data/us/fda-ndc-<yyyymm>.zip`, built monthly
+  by `.github/workflows/download_fda_ndc.yaml`. No snapshot is
+  embedded in the build.
+- **Modifications:** the export is converted to one TSV row per
+  package (`docs/CATALOGUE-DATA.md` §11): only finished prescription,
+  OTC and vaccine products are kept, sample packages are dropped, the
+  package NDC is rewritten in the 12-digit 6-4-2 form, and packages
+  whose marketing ended are marked "Discontinued". The DailyMed link
+  of each package is built by the app from the SPL set id.
 
 ---
 

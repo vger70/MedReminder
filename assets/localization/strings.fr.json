@@ -783,7 +783,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Nombre de jours de conservation des sauvegardes automatiques. Les fichiers plus anciens sont supprimés après une sauvegarde réussie.\n\n0 = aucune suppression automatique (déconseillé : le dossier grandit indéfiniment).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Ouvrir l'Explorateur de fichiers pour choisir le dossier de sauvegarde.",
   "Ui.SettingsDialog.Tooltip.Language": "Langue de l'interface pour menus, dialogues et notifications e-mail.\nLes notifications toast Windows suivent toujours la langue du système.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si activé, MedReminder interroge l'API publique GitHub Releases au démarrage et affiche un message si une nouvelle version stable est disponible ; la nouvelle version n'est jamais téléchargée ni installée automatiquement. Au démarrage, puis une fois par jour tant que l'application reste ouverte, il télécharge aussi le catalogue des médicaments du pays de référence et celui de l'UE lorsqu'une édition plus récente est publiée (données uniquement). Avec l'Italie comme pays de référence, il télécharge aussi la liste AIFA des médicaments en pénurie.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Si activé, MedReminder interroge l'API publique GitHub Releases au démarrage et affiche un message si une nouvelle version stable est disponible ; la nouvelle version n'est jamais téléchargée ni installée automatiquement. Au démarrage, puis une fois par jour tant que l'application reste ouverte, il télécharge aussi le catalogue des médicaments du pays de référence, plus celui de l'UE pour les pays de l'UE, lorsqu'une édition plus récente est publiée (données uniquement) ; après un changement de pays de référence, il télécharge aussitôt le nouveau catalogue. Avec l'Italie comme pays de référence, il télécharge aussi la liste AIFA des médicaments en pénurie.",
 
   "Ui.HelpViewer.Title": "Guide utilisateur — MedReminder",
   "Ui.HelpViewer.Back": "Précédent",
@@ -935,6 +935,7 @@
   "about.dataSources.emaArticle57": "Médicaments européens en autorisation centralisée : jeu de données EMA EPAR (European public assessment reports), réutilisé selon les conditions d'utilisation des contenus publics de l'EMA.",
   "about.dataSources.aemps": "Catalogue espagnol des médicaments : registre AEMPS CIMA « Medicamentos », réutilisé selon le régime espagnol de réutilisation des informations du secteur public (Loi 37/2007). Source : Agencia Española de Medicamentos y Productos Sanitarios (AEMPS).",
   "about.dataSources.bdpm": "Catalogue français des médicaments : ANSM BDPM (Base de données publique des médicaments), réutilisé sous Licence Ouverte Etalab 2.0.",
+  "about.dataSources.fda": "Catalogue américain des médicaments : FDA National Drug Code Directory, via openFDA (dédicace au domaine public CC0 1.0). Sans approbation de la FDA.",
   "Common.Exit": "Quitter",
   "Ui.App.MigrationFailed.Title": "Échec de la migration",
   "Ui.App.MigrationFailed.Body": "La migration V1 → V2 a échoué et a été annulée. La sauvegarde de pré-migration est préservée. Détails : {0}",
