@@ -2,6 +2,10 @@
 
 Last updated: 5 October 2026
 
+Translations: [Italiano](PRIVACY.it.md) · [Français](PRIVACY.fr.md) ·
+[Español](PRIVACY.es.md) · [Deutsch](PRIVACY.de.md). The English
+version prevails.
+
 This policy describes how the MedReminder desktop application for
 Windows handles personal data. It applies to every distribution of the
 application: the ZIP packages, the MSI installers and the Microsoft
