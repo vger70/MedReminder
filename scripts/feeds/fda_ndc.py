@@ -71,7 +71,7 @@ KEPT_PRODUCT_TYPES = {
 # Absolute floor for the package rows, far above a truncated download.
 # Set before the first published run; raise it to about 80% of the
 # first measured count (latest.json "rows") once it is known.
-MIN_ROWS = 20_000
+MIN_ROWS = 169_500
 
 # Download caps: the manifest is a few kB, the NDC export about 27 MB
 # zipped (openFDA, 2026-10).
