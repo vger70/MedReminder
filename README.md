@@ -432,6 +432,11 @@ dose/quantity values are never written to the logs.**
   (OneDrive, Google Drive or a shared folder); MedReminder runs no
   server.
 
+## Privacy
+
+MedReminder keeps your data on your PC and sends nothing to the
+developer. See [PRIVACY.md](PRIVACY.md).
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
