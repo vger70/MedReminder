@@ -133,10 +133,20 @@ Reading:
   would need source-generated JSON contexts in the portable code and
   EF Core trimming support; the default settings do not need either.
   The earlier note that full trimming keeps the serializer was wrong.
-- S2 passes on a mid-range phone. The low-end phone is still to run.
+- S2 passes on a mid-range phone; see below for the low-end phone.
 
-Still open: S2 on a low-end phone; a device at the D13 floor (API 26),
-if available.
+### Two more phones, Release default
+
+| Phone | Android | RAM | S1 / S1b | S2 per derivation | S3 |
+|---|---|---|---|---|---|
+| Samsung Galaxy A32 4G (SM-A325F, Helio G80) | 13 (API 33) | 3.6 GB | Pass; S1b 2.5 s | 1.90–2.04 s, Pass | Pass |
+| Samsung Galaxy A52 5G (SM-A526B) | 14 (API 34) | 5.4 GB | Pass; S1b 1.4 s (a first attempt with a wrong passphrase was rejected as expected) | 1.07–1.08 s, Pass | Pass |
+
+The A32 meets the low-end criterion of this README (4 GB RAM or less),
+so S2 is closed: the worst derivation stays under 2.1 s, no
+out-of-memory, key equal to the reference.
+
+Still open: a device at the D13 floor (API 26), if available.
 
 ## Pre-check without a device
 

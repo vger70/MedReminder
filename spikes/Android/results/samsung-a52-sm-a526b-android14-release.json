@@ -1,0 +1,168 @@
+{
+  "report": "medreminder-b1-android-spikes",
+  "reportVersion": 1,
+  "createdAtUtc": "2026-10-05T14:24:34.6736104\u002B00:00",
+  "environment": {
+    "android.abis": "arm64-v8a,armeabi-v7a,armeabi",
+    "android.release": "14",
+    "android.sdkInt": "34",
+    "appContext.jsonReflectionEnabledByDefault": "True",
+    "build.AndroidEnableProfiledAot": "true",
+    "build.Configuration": "Release",
+    "build.JsonSerializerIsReflectionEnabledByDefault": "true",
+    "build.PublishTrimmed": "true",
+    "build.RunAOTCompilation": "true",
+    "build.TrimMode": "partial",
+    "device.manufacturer": "samsung",
+    "device.model": "SM-A526B",
+    "dotnet.framework": ".NET 10.0.12",
+    "dotnet.processArchitecture": "Arm64",
+    "dotnet.rid": "android-arm64",
+    "gc.totalAvailableMiB": "278",
+    "ram.lowRamDevice": "False",
+    "ram.memoryClassMiB": "256",
+    "ram.totalMiB": "5425",
+    "runtime.isDynamicCodeCompiled": "True",
+    "runtime.isDynamicCodeSupported": "True"
+  },
+  "checks": [
+    {
+      "spike": "S1",
+      "check": "AesGcm.IsSupported",
+      "outcome": "Pass",
+      "detail": "True"
+    },
+    {
+      "spike": "S1",
+      "check": "AES-256-GCM known answer, in-box AesGcm",
+      "outcome": "Pass",
+      "detail": "ciphertext and tag equal the reference",
+      "elapsedMs": 28.8
+    },
+    {
+      "spike": "S1",
+      "check": "AES-256-GCM known answer, IArchiveCipher.Decrypt",
+      "outcome": "Pass",
+      "detail": "plaintext equals the reference",
+      "elapsedMs": 2.1
+    },
+    {
+      "spike": "S1",
+      "check": "Tampered tag rejected",
+      "outcome": "Pass",
+      "detail": "AuthenticationTagMismatchException as on the desktop",
+      "elapsedMs": 3.8
+    },
+    {
+      "spike": "S1",
+      "check": "IArchiveCipher round trip, 1 MiB, random nonce",
+      "outcome": "Pass",
+      "detail": "decrypted data equals the input",
+      "elapsedMs": 18.4
+    },
+    {
+      "spike": "S1",
+      "check": "Argon2id known answer (t=2, m=1024 KiB, p=2), IArchiveCipher.DeriveKey",
+      "outcome": "Pass",
+      "detail": "key equals the reference",
+      "elapsedMs": 61.6
+    },
+    {
+      "spike": "S2",
+      "check": "Derivation 1/3",
+      "outcome": "Measured",
+      "detail": "t=3 m=65536 KiB p=1; managed allocation 72.0 MiB; key equals the reference",
+      "elapsedMs": 1079
+    },
+    {
+      "spike": "S2",
+      "check": "Derivation 2/3",
+      "outcome": "Measured",
+      "detail": "t=3 m=65536 KiB p=1; managed allocation 64.3 MiB",
+      "elapsedMs": 1069.5
+    },
+    {
+      "spike": "S2",
+      "check": "Derivation 3/3",
+      "outcome": "Measured",
+      "detail": "t=3 m=65536 KiB p=1; managed allocation 64.3 MiB",
+      "elapsedMs": 1070.6
+    },
+    {
+      "spike": "S2",
+      "check": "Worst derivation under 5 s",
+      "outcome": "Pass",
+      "detail": "min 1069 ms, max 1079 ms, target \u003C 5000 ms; peak working set 254 MiB"
+    },
+    {
+      "spike": "S3",
+      "check": "DatabaseInitializer on a new database",
+      "outcome": "Pass",
+      "detail": "32 tables; Medicines table present: True",
+      "elapsedMs": 1966.8
+    },
+    {
+      "spike": "S3",
+      "check": "Write through IMedicineRepository and IUnitOfWork",
+      "outcome": "Pass",
+      "detail": "1 row(s) written",
+      "elapsedMs": 469.2
+    },
+    {
+      "spike": "S3",
+      "check": "Read through the repositories (ListActiveAsync)",
+      "outcome": "Pass",
+      "detail": "decimal and DateOnly columns read back",
+      "elapsedMs": 658.2
+    },
+    {
+      "spike": "S3",
+      "check": "MedicineOverviewLoader.LoadAsync",
+      "outcome": "Pass",
+      "detail": "1 item(s)",
+      "elapsedMs": 258.5
+    },
+    {
+      "spike": "S3",
+      "check": "DatabaseInitializer on the existing database (boot patches)",
+      "outcome": "Pass",
+      "detail": "journal_mode wal; SQLite 3.53.3",
+      "elapsedMs": 51.9
+    },
+    {
+      "spike": "S3",
+      "check": "Reflection-based System.Text.Json (ArchiveReader, sync codec path)",
+      "outcome": "Pass",
+      "detail": "round trip ok: {\u0022iterations\u0022:3,\u0022memoryKiB\u0022:65536,\u0022parallelism\u0022:1}",
+      "elapsedMs": 55.5
+    },
+    {
+      "spike": "S1",
+      "check": "Desktop archive: manifest",
+      "outcome": "Pass",
+      "detail": "format medreminder-export v1, app 2.16.0, scope profile, kdf Argon2id t=3 m=65536 KiB p=1, cipher AES-GCM-256, payload 116260 bytes",
+      "elapsedMs": 370.2
+    },
+    {
+      "spike": "S1",
+      "check": "Desktop archive: decrypt and parse payload",
+      "outcome": "Fail",
+      "detail": "MedReminder.Application.Export.ImportFailedException: The passphrase does not match this file. ---\u003E System.Security.Cryptography.AuthenticationTagMismatchException: Cryptography_AuthTagMismatch",
+      "elapsedMs": 1122.9
+    },
+    {
+      "spike": "S1",
+      "check": "Desktop archive: manifest",
+      "outcome": "Pass",
+      "detail": "format medreminder-export v1, app 2.16.0, scope profile, kdf Argon2id t=3 m=65536 KiB p=1, cipher AES-GCM-256, payload 116260 bytes",
+      "elapsedMs": 2.1
+    },
+    {
+      "spike": "S1",
+      "check": "Desktop archive: decrypt and parse payload",
+      "outcome": "Pass",
+      "detail": "schema 2; medicines 18, stock movements 195, schedule rows 29, slot sets 24, slots 28, suspensions 0, intakes 4, stock counts 2, prescriptions 5, deadlines 1, packages 6",
+      "elapsedMs": 1419.4
+    }
+  ]
+}
