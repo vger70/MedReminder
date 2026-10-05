@@ -1266,6 +1266,8 @@ Also sign the lost device out in your Microsoft or Google account.
 
 All in **Tools → Settings…**. The sections are listed on the left;
 **Ctrl+Tab** moves to the next one. The window can be resized.
+Each section is saved with its own **Save** button; closing the window
+with changes not saved asks whether to save them first.
 
 - **General → Interface language**: English, Italian, French, Spanish
   or German. Emails and the therapy report use it too. MedReminder

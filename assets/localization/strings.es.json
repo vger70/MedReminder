@@ -682,6 +682,8 @@
   "Ui.SettingsDialog.Tab.Email": "E-mail SMTP",
   "Ui.SettingsDialog.Tab.Startup": "Inicio",
   "Ui.SettingsDialog.Tab.Backup": "Copia de seguridad / Restaurar",
+  "Ui.SettingsDialog.Unsaved.Title": "Cambios sin guardar",
+  "Ui.SettingsDialog.Unsaved.Prompt": "Algunos cambios no se han guardado: {0}.\n\n¿Guardarlos antes de cerrar?",
 
   "Ui.SettingsDialog.General.Language": "Idioma de la interfaz",
   "Ui.SettingsDialog.General.Save": "Guardar",

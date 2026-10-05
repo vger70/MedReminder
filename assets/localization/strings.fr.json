@@ -682,6 +682,8 @@
   "Ui.SettingsDialog.Tab.Email": "E-mail SMTP",
   "Ui.SettingsDialog.Tab.Startup": "Démarrage",
   "Ui.SettingsDialog.Tab.Backup": "Sauvegarde / Restauration",
+  "Ui.SettingsDialog.Unsaved.Title": "Modifications non enregistrées",
+  "Ui.SettingsDialog.Unsaved.Prompt": "Certaines modifications n'ont pas été enregistrées : {0}.\n\nLes enregistrer avant de fermer ?",
 
   "Ui.SettingsDialog.General.Language": "Langue de l'interface",
   "Ui.SettingsDialog.General.Save": "Enregistrer",

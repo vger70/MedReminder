@@ -1377,6 +1377,9 @@ Google-Konto ab.
 
 Alles unter **Extras → Einstellungen…**. Die Bereiche stehen links;
 **Strg+Tab** wechselt zum nächsten. Die Fenstergröße lässt sich ändern.
+Jeder Bereich wird mit seiner eigenen Schaltfläche gespeichert; wer das
+Fenster mit nicht gespeicherten Änderungen schließt, wird gefragt, ob
+sie zuerst gespeichert werden sollen.
 
 - **Allgemein → Oberflächensprache**: Englisch, Italienisch,
   Französisch, Spanisch oder Deutsch. Auch E-Mails und der Therapieplan

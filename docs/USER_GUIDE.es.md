@@ -1342,7 +1342,8 @@ cuenta de Microsoft o Google.
 
 Todo en **Herramientas → Configuración…**. Las secciones aparecen a la
 izquierda; **Ctrl+Tab** pasa a la siguiente. La ventana se puede
-redimensionar.
+redimensionar. Cada sección se guarda con su propio botón; al cerrar la
+ventana con cambios sin guardar se pregunta si guardarlos antes.
 
 - **General → Idioma de la interfaz**: inglés, italiano, francés,
   español o alemán. Los correos y la ficha de terapia también lo usan.

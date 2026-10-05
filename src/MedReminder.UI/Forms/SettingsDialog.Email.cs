@@ -86,8 +86,9 @@ internal sealed partial class SettingsDialog
 
     // Household step H2b: through UpdateSmtpSettings, which writes the
     // transport and the password and records them in the household.
-    // Returns false when the save failed (the error was shown).
-    private async Task<bool> SaveSmtpSettingsAsync()
+    // Returns false when the save failed (the error was shown). quiet
+    // skips the "saved" confirmation when the dialog saves on closing.
+    private async Task<bool> SaveSmtpSettingsAsync(bool quiet = false)
     {
         try
         {
@@ -112,11 +113,15 @@ internal sealed partial class SettingsDialog
                 : "Ui.SettingsDialog.Email.PasswordEmpty");
             _passwordBox.Text = string.Empty;
             _clearPasswordBox.Checked = false;
+            MarkSaved(EmailSection);
 
-            UiMessageBox.Show(this,
-                _loc.Get("Ui.SettingsDialog.Email.Saved"),
-                _loc.Get("Common.Ok"),
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (!quiet)
+            {
+                UiMessageBox.Show(this,
+                    _loc.Get("Ui.SettingsDialog.Email.Saved"),
+                    _loc.Get("Common.Ok"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
             return true;
         }
         catch (Exception ex)
