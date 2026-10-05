@@ -274,7 +274,8 @@ Il promemoria non registra se hai preso la dose e non cambia le scorte.
 
 MedReminder contiene gli elenchi ufficiali dei medicinali di **Italia**
 (AIFA), **Spagna** (AEMPS), **Francia** (ANSM) e i medicinali
-autorizzati per tutta l'**Unione Europea** (EMA).
+autorizzati per tutta l'**Unione Europea** (EMA). L'elenco degli **Stati
+Uniti** (FDA) viene scaricato quando lo scegli come Paese di riferimento.
 
 - Nella finestra della medicina scrivi parte del **nome** o del
   **principio attivo**: compaiono fino a 20 risultati. Sceglierne uno
@@ -290,6 +291,14 @@ autorizzati per tutta l'**Unione Europea** (EMA).
   anche i medicinali UE; con **EU** contiene solo quelli. Un medicinale
   può comparire due volte (nazionale e UE): scegli quello che
   corrisponde alla tua scatola.
+- **Stati Uniti.** Con **US** come Paese di riferimento l'elenco viene
+  dalla FDA National Drug Code Directory: una riga per confezione, per
+  nome commerciale (o nome generico se manca), senza i medicinali UE.
+  Non è incluso in MedReminder: viene scaricato subito dopo aver scelto
+  US (con **Controlla aggiornamenti di app e cataloghi** attivo e una
+  connessione a internet) e fino ad allora resta vuoto. Una confezione
+  non più commercializzata mostra il cerchio rosso. Il collegamento
+  **Foglietto illustrativo** apre l'etichetta su DailyMed.
 - **Aggiornamento automatico.** Quando **Controlla aggiornamenti di app
   e cataloghi (GitHub)** è attivo (Impostazioni → Generale), MedReminder
   scarica all'avvio, e una volta al giorno finché resta aperto, l'ultimo
@@ -300,7 +309,8 @@ autorizzati per tutta l'**Unione Europea** (EMA).
 **Fonti.** Open data AIFA (CC BY 4.0); dati EMA EPAR (avviso legale
 EMA, decisione della Commissione 2011/833/UE); AEMPS CIMA (legge
 spagnola 37/2007 sul riutilizzo dell'informazione del settore
-pubblico); ANSM BDPM (Licence Ouverte Etalab 2.0). Le attribuzioni
+pubblico); ANSM BDPM (Licence Ouverte Etalab 2.0); FDA NDC Directory tramite
+openFDA (CC0 1.0, non approvato dalla FDA). Le attribuzioni
 complete sono in **? → Info su MedReminder…** e in
 `THIRD-PARTY-NOTICES.md`.
 

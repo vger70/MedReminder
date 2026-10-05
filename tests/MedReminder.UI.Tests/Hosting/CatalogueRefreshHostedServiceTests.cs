@@ -104,6 +104,23 @@ public sealed class CatalogueRefreshHostedServiceTests
         options.MaxDownloadBytesFor(CatalogueFeedDescriptor.Italy).Should().Be(64L * 1024 * 1024);
         options.MaxDownloadBytesFor(CatalogueFeedDescriptor.Spain).Should().Be(16L * 1024 * 1024);
         options.MaxDownloadBytesFor(CatalogueFeedDescriptor.France).Should().Be(1024);
-        options.Feeds.Should().HaveCount(4);
+        options.IsFeedEnabled(CatalogueFeedDescriptor.UnitedStates).Should().BeTrue();
+        options.MaxDownloadBytesFor(CatalogueFeedDescriptor.UnitedStates).Should().Be(64L * 1024 * 1024);
+        options.Feeds.Should().HaveCount(5);
+    }
+
+    [Theory]
+    [InlineData("IT", "US", true)]
+    [InlineData("US", "IT", true)]
+    [InlineData("IT", "EU", true)]
+    [InlineData("US", "US", false)]
+    [InlineData("us", "US", false)]
+    [InlineData(null, "IT", false)]
+    [InlineData("", "IT", false)]
+    [InlineData("Italia", "IT", false)]
+    [InlineData(null, "US", true)]
+    public void Reference_country_change_compares_catalogue_countries(string? refreshed, string? current, bool changed)
+    {
+        CatalogueRefreshHostedService.ReferenceCountryChanged(refreshed, current).Should().Be(changed);
     }
 }

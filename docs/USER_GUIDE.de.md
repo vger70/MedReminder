@@ -285,7 +285,9 @@ Die Erinnerung erfasst nicht, ob du die Dosis genommen hast, und
 
 MedReminder enthält die amtlichen Arzneimittellisten von **Italien**
 (AIFA), **Spanien** (AEMPS), **Frankreich** (ANSM) sowie die für die
-ganze **Europäische Union** zugelassenen Arzneimittel (EMA).
+ganze **Europäische Union** zugelassenen Arzneimittel (EMA). Die Liste
+der **Vereinigten Staaten** (FDA) wird heruntergeladen, wenn du sie als
+Referenzland wählst.
 
 - Tippe im Medikamentenfenster einen Teil des **Namens** oder des
   **Wirkstoffs**: Bis zu 20 Treffer erscheinen. Die Auswahl eines
@@ -301,6 +303,14 @@ ganze **Europäische Union** zugelassenen Arzneimittel (EMA).
   auch die EU-Arzneimittel; mit **EU** nur diese. Ein Arzneimittel kann
   zweimal erscheinen (national und EU): Wähle das, das zu deiner
   Packung passt.
+- **Vereinigte Staaten.** Mit **US** als Referenzland stammt die Liste
+  aus dem FDA National Drug Code Directory: eine Zeile pro Packung, nach
+  Markenname (oder generischem Namen, falls keiner existiert), ohne
+  EU-Arzneimittel. Sie ist nicht in MedReminder enthalten: Sie wird
+  direkt nach der Wahl von US heruntergeladen (mit aktivierter Suche
+  nach Updates und Internetverbindung) und ist bis dahin leer. Eine
+  Packung, die nicht mehr vermarktet wird, zeigt den roten Kreis. Der
+  Link **Packungsbeilage** öffnet die Kennzeichnung auf DailyMed.
 - **Automatische Aktualisierung.** Wenn **Nach App- und Katalog-Updates
   suchen (GitHub)** aktiviert ist (Einstellungen → Allgemein), lädt
   MedReminder beim Start und, solange es geöffnet bleibt, einmal täglich
@@ -312,7 +322,8 @@ ganze **Europäische Union** zugelassenen Arzneimittel (EMA).
 **Quellen.** AIFA Open Data (CC BY 4.0); EMA-EPAR-Daten (rechtlicher
 Hinweis der EMA, Beschluss der Kommission 2011/833/EU); AEMPS CIMA
 (spanisches Gesetz 37/2007 über die Weiterverwendung von Informationen
-des öffentlichen Sektors); ANSM BDPM (Licence Ouverte Etalab 2.0). Die
+des öffentlichen Sektors); ANSM BDPM (Licence Ouverte Etalab 2.0); FDA NDC Directory über
+openFDA (CC0 1.0, nicht von der FDA gebilligt). Die
 vollständigen Quellenangaben stehen unter **? → Über MedReminder…** und
 in `THIRD-PARTY-NOTICES.md`.
 

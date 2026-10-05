@@ -784,7 +784,7 @@
   "Ui.SettingsDialog.Tooltip.BackupRetention": "Numero di giorni di conservazione dei backup automatici. File più vecchi vengono cancellati automaticamente dopo un backup riuscito.\n\n0 = nessuna cancellazione automatica (sconsigliato: la cartella cresce all'infinito).",
   "Ui.SettingsDialog.Tooltip.BackupBrowse": "Apri Esplora file per scegliere la cartella dei backup.",
   "Ui.SettingsDialog.Tooltip.Language": "Lingua dell'interfaccia utente e delle notifiche email.\nLe notifiche toast di Windows seguono sempre la lingua di sistema.",
-  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Se abilitato, all'avvio MedReminder interroga le GitHub Releases API pubbliche e mostra un messaggio se è disponibile una nuova versione stabile; la nuova versione non viene mai scaricata né installata automaticamente. All'avvio, e una volta al giorno finché l'app resta aperta, scarica inoltre il catalogo dei medicinali del Paese di riferimento e quello UE quando ne è pubblicata un'edizione più recente (solo dati). Con l'Italia come Paese di riferimento scarica anche l'elenco AIFA dei farmaci carenti.",
+  "Ui.SettingsDialog.Tooltip.CheckUpdates": "Se abilitato, all'avvio MedReminder interroga le GitHub Releases API pubbliche e mostra un messaggio se è disponibile una nuova versione stabile; la nuova versione non viene mai scaricata né installata automaticamente. All'avvio, e una volta al giorno finché l'app resta aperta, scarica inoltre il catalogo dei medicinali del Paese di riferimento, più quello UE per i Paesi dell'UE, quando ne è pubblicata un'edizione più recente (solo dati); dopo un cambio del Paese di riferimento scarica subito il nuovo catalogo. Con l'Italia come Paese di riferimento scarica anche l'elenco AIFA dei farmaci carenti.",
 
   "Ui.HelpViewer.Title": "Guida utente — MedReminder",
   "Ui.HelpViewer.Back": "Indietro",
@@ -936,6 +936,7 @@
   "about.dataSources.emaArticle57": "Medicinali europei ad autorizzazione centralizzata: dataset EMA EPAR (European public assessment reports), riutilizzato secondo i termini d'uso dei contenuti pubblici EMA.",
   "about.dataSources.aemps": "Catalogo farmaci spagnolo: registro AEMPS CIMA \"Medicamentos\", riutilizzato secondo il regime spagnolo di riuso dell'informazione del settore pubblico (Legge 37/2007). Fonte: Agencia Española de Medicamentos y Productos Sanitarios (AEMPS).",
   "about.dataSources.bdpm": "Catalogo farmaci francese: ANSM BDPM (Base de données publique des médicaments), riutilizzato secondo la Licence Ouverte Etalab 2.0.",
+  "about.dataSources.fda": "Catalogo farmaci statunitense: FDA National Drug Code Directory, da openFDA (dedica al pubblico dominio CC0 1.0). Non approvato dalla FDA.",
   "Common.Exit": "Esci",
   "Ui.App.MigrationFailed.Title": "Migrazione fallita",
   "Ui.App.MigrationFailed.Body": "La migrazione V1 → V2 non è riuscita ed è stato eseguito il rollback. Il backup pre-migrazione è preservato. Dettagli: {0}",

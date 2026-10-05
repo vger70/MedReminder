@@ -274,7 +274,9 @@ El aviso no registra si tomaste la dosis ni cambia el stock.
 
 MedReminder incluye los listados oficiales de medicamentos de
 **Italia** (AIFA), **España** (AEMPS), **Francia** (ANSM) y los
-medicamentos autorizados para toda la **Unión Europea** (EMA).
+medicamentos autorizados para toda la **Unión Europea** (EMA). La lista
+de **Estados Unidos** (FDA) se descarga cuando lo eliges como país de
+referencia.
 
 - En la ventana del medicamento, escribe parte del **nombre** o del
   **principio activo**: aparecen hasta 20 resultados. Elegir uno
@@ -290,6 +292,14 @@ medicamentos autorizados para toda la **Unión Europea** (EMA).
   contiene también los medicamentos de la UE; con **EU**, solo esos. Un
   medicamento puede aparecer dos veces (nacional y UE): elige el que
   coincide con tu caja.
+- **Estados Unidos.** Con **US** como país de referencia, la lista
+  procede del FDA National Drug Code Directory: una fila por envase, por
+  nombre comercial (o nombre genérico si no lo hay), sin los
+  medicamentos de la UE. No viene incluida en MedReminder: se descarga
+  justo después de elegir US (con **Buscar actualizaciones** activado y
+  conexión a internet) y hasta entonces está vacía. Un envase que ya no
+  se comercializa muestra el círculo rojo. El enlace **Prospecto** abre
+  el etiquetado en DailyMed.
 - **Actualización automática.** Cuando **Buscar actualizaciones de la
   aplicación y los catálogos (GitHub)** está activado (Configuración →
   General), MedReminder descarga al iniciar, y una vez al día mientras
@@ -300,7 +310,8 @@ medicamentos autorizados para toda la **Unión Europea** (EMA).
 **Fuentes.** Datos abiertos de AIFA (CC BY 4.0); datos EMA EPAR (aviso
 jurídico de la EMA, Decisión de la Comisión 2011/833/UE); AEMPS CIMA
 (Ley 37/2007 sobre reutilización de la información del sector
-público); ANSM BDPM (Licence Ouverte Etalab 2.0). Las atribuciones
+público); ANSM BDPM (Licence Ouverte Etalab 2.0); FDA NDC Directory a través
+de openFDA (CC0 1.0, sin respaldo de la FDA). Las atribuciones
 completas están en **? → Acerca de MedReminder…** y en
 `THIRD-PARTY-NOTICES.md`.
 

@@ -29,6 +29,7 @@ public sealed class CatalogueFeedOptions
         ["EU"] = new() { Enabled = true, MaxDownloadBytes = 16 * MiB },
         ["ES"] = new() { Enabled = true, MaxDownloadBytes = 16 * MiB },
         ["FR"] = new() { Enabled = true, MaxDownloadBytes = 16 * MiB },
+        ["US"] = new() { Enabled = true, MaxDownloadBytes = 64 * MiB },
     };
 
     // Italy-only overrides kept from the single-feed configuration of

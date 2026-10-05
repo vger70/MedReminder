@@ -23,8 +23,13 @@ public sealed class CatalogueFeedDescriptor
     public static CatalogueFeedDescriptor France { get; } = new(
         CountryCode.Parse("FR"), "bdpm", ["CIS_bdpm.txt", "CIS_COMPO_bdpm.txt"], 64 * MiB);
 
+    // Remote feed only, no embedded snapshot
+    // (docs/analysis/ANALYSIS-CATALOGUE-US-GB-SOURCES.md §3.3, D3).
+    public static CatalogueFeedDescriptor UnitedStates { get; } = new(
+        CountryCode.Parse("US"), "fda-ndc", ["fda-ndc.tsv"], 256 * MiB);
+
     // Every known feed, in refresh order.
-    public static IReadOnlyList<CatalogueFeedDescriptor> All { get; } = [Italy, EuropeanUnion, Spain, France];
+    public static IReadOnlyList<CatalogueFeedDescriptor> All { get; } = [Italy, EuropeanUnion, Spain, France, UnitedStates];
 
     private CatalogueFeedDescriptor(
         CountryCode country, string prefix, IReadOnlyList<string> requiredEntries, long maxUncompressedBytes)

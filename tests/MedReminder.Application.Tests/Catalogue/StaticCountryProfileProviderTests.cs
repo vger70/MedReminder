@@ -24,6 +24,7 @@ public sealed class StaticCountryProfileProviderTests
     [Theory]
     [InlineData("GB")]
     [InlineData("UK")]
+    [InlineData("US")]
     public void UK_variants_are_flagged_as_non_EU_covered(string country)
     {
         var profile = _sut.GetProfile(CountryCode.Parse(country));
@@ -67,6 +68,14 @@ public sealed class StaticCountryProfileProviderTests
         var scope = _sut.GetSearchScope(CountryCode.Parse("FR"));
 
         scope.Should().Equal(CountryCode.Parse("FR"), CountryCode.Parse("EU"));
+    }
+
+    [Fact]
+    public void GetSearchScope_for_US_returns_only_US()
+    {
+        var scope = _sut.GetSearchScope(CountryCode.Parse("US"));
+
+        scope.Should().Equal(CountryCode.Parse("US"));
     }
 
     [Fact]

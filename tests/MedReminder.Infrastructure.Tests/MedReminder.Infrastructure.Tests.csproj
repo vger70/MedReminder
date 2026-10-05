@@ -66,6 +66,10 @@
       <Link>fixtures\catalogue\bdpm-cip-sample.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\fixtures\catalogue\fda-ndc-sample.tsv">
+      <Link>fixtures\catalogue\fda-ndc-sample.tsv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

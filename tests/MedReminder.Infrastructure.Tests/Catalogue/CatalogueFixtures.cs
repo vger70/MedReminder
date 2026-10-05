@@ -24,6 +24,11 @@ internal static class CatalogueFixtures
     public const string BdpmCompoTxt = "bdpm-compo-sample.txt";
     public const string BdpmCipTxt = "bdpm-cip-sample.txt";
 
+    // scripts/feeds/fda_ndc.py's conversion of openfda-ndc-sample.json
+    // (synthetic products in the openFDA layout); pytest checks that the
+    // script still produces exactly this file.
+    public const string FdaNdcTsv = "fda-ndc-sample.tsv";
+
     public static Stream BuildAifaSnapshotStream()
     {
         var buffer = new MemoryStream();
@@ -74,6 +79,19 @@ internal static class CatalogueFixtures
             AddEntry(archive, "CIS_bdpm.txt", BdpmCisTxt);
             AddEntry(archive, "CIS_COMPO_bdpm.txt", BdpmCompoTxt);
             AddEntry(archive, "CIS_CIP_bdpm.txt", BdpmCipTxt);
+        }
+        buffer.Position = 0;
+        return buffer;
+    }
+
+    // US snapshot shape: outer ZIP with the single `fda-ndc.tsv` entry
+    // that scripts/feeds/fda_ndc.py publishes.
+    public static Stream BuildFdaNdcSnapshotStream()
+    {
+        var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            AddEntry(archive, "fda-ndc.tsv", FdaNdcTsv);
         }
         buffer.Position = 0;
         return buffer;
