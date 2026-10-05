@@ -12,51 +12,68 @@ the existing catalogue pipeline (embedded snapshot, remote feed on the
 | S3 | MHRA "Category lists of products" (Windsor Framework) | UK |
 | S4 | NHSBSA dm+d (Dictionary of Medicines and Devices), via TRUD | UK |
 
-Tags follow the sibling documents: `[VERIFIED]` (checked against the
-tree at `c6f1f58`), `[SEARCH]` (found through a web search on
-2026-10-05, page not fetched: this session's egress proxy blocks
-`www.fda.gov`, `open.fda.gov`, `www.accessdata.fda.gov`, `www.gov.uk`,
-`isd.digital.nhs.uk` and `www.nhsbsa.nhs.uk`), `[OWNER]` (supplied by
-the product owner), `[INFERRED]`, `[UNCERTAIN]`. Field lists marked
-`[UNCERTAIN]` come from prior knowledge of the formats and must be
-confirmed on a GitHub runner before any parser is written (§8, step 0).
+Tags:
+
+- `[VERIFIED]` checked against the tree at `c6f1f58`, or against
+  public source code that consumes the data: FDA's own openFDA
+  pipeline (`FDA/openfda`, `openfda/ndc/pipeline.py`,
+  `schemas/ndc_mapping.json`) and the dm+d importer `wardle/dmd`
+  (`src/com/eldrix/dmd/import.clj`, `download.clj`, README) with its
+  TRUD client `wardle/trud`. Read on 2026-10-05 (§10).
+- `[SEARCH]` found through a web search on 2026-10-05, page not
+  fetched: this session's egress proxy blocks `www.fda.gov`,
+  `open.fda.gov`, `www.accessdata.fda.gov`, `www.gov.uk`,
+  `isd.digital.nhs.uk`, `www.nhsbsa.nhs.uk` and `dailymed.nlm.nih.gov`.
+- `[OWNER]` supplied by the product owner; `[INFERRED]`;
+  `[UNCERTAIN]`.
 
 ---
 
 ## 1. Summary
 
 - **US: use the NDC Directory (S2) as the catalogue, not the Orange
-  Book (S1).** The Orange Book covers only drugs approved under an NDA
+  Book (S1).** The Orange Book lists only drugs approved under an NDA
   or ANDA, keyed on application and product number, with no package
-  code. The NDC Directory lists every marketed listing, prescription
-  and OTC, down to the package NDC printed (as a GTIN) on the box. The
-  Orange Book is useful only for its therapeutic-equivalence (TE)
-  codes, the US counterpart of the Italian equivalents list
-  (`ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md`); patents and
-  exclusivity have no use in a reminder app.
+  code. It leaves out OTC monograph drugs and, since March 2020,
+  biologics such as insulins, which moved to the Purple Book [INFERRED
+  from the scope of the publication and the 2020 BLA transition; not
+  re-checked this session]. The NDC Directory lists every marketed
+  listing, prescription and OTC, including biologics, down to the
+  package NDC printed in the barcode. The Orange Book is useful only
+  for its therapeutic-equivalence (TE) codes, the US counterpart of
+  the Italian equivalents list; patents and exclusivity have no use in
+  a reminder app.
 - **UK: use dm+d (S4), not the MHRA category lists (S3).** The
-  category lists exist to assign each product a Windsor Framework
-  category (1 or 2); they are a regulatory classification, not a
-  product dictionary [SEARCH; content to verify]. dm+d is the NHS
-  reference for every prescribable medicine and pack, released weekly,
-  with GTIN mapping.
-- **dm+d licence: the project's earlier conclusion needs revision.**
+  category lists assign each licensed product to Windsor Framework
+  Category 1 or 2. Together they may cover every licensed product
+  [INFERRED], but they are a regulatory classification (PL number,
+  name, category) without form, strength, pack or GTIN [SEARCH,
+  columns not verified]. dm+d has all of them, weekly.
+- **dm+d licence: the project's earlier conclusion is wrong.**
   `ANALYSIS-DRUG-CATALOGUE.md` §3.5 and `CATALOGUE-DATA.md` §7 state
   that dm+d "does not allow silent redistribution inside a third-party
-  product binary". Search results on 2026-10-05 indicate that the
-  NHSBSA dm+d release (TRUD item 24) is published under the Open
-  Government Licence v3.0 [SEARCH]. If confirmed on the TRUD licence
-  page, the UK gate of `CATALOGUE-DATA.md` §7 point 2 is met for dm+d,
-  subject to two open points: the TRUD account terms (download is
-  behind a personal account and API key) and SNOMED CT (§4.4).
-- **Blocking gaps in the current client** (§5): US is not flagged as
-  outside EMA coverage; the reference-country dropdown offers only
-  countries already in the local catalogue; the barcode lookup matches
-  national codes only, so a US or UK GTIN scan finds nothing.
-- **No ATC for either country.** Neither the NDC Directory nor the
-  OGL part of dm+d carries ATC codes; the ATC mapping in the UK Drug
-  bonus files is under the SNOMED CT affiliate licence [SEARCH].
-  Features keyed on ATC stay Italy/EU/ES/FR only.
+  product binary". The NHSBSA dm+d release (TRUD item 24) is published
+  under the Open Government Licence v3.0 ([SEARCH], and stated in the
+  `wardle/dmd` README [VERIFIED]); so is the supplementary item 25
+  that carries the ATC mapping [SEARCH]. Open points: the TRUD account
+  terms and the SNOMED CT nature of dm+d identifiers (§4.4).
+- **ATC: available for GB, not for US.** An earlier draft of this
+  document said dm+d has no ATC under an open licence. Wrong: the
+  supplementary item 25 maps VMPs to ATC and BNF codes under OGL
+  [SEARCH]; NHSBSA notes it "is not an officially endorsed dm+d
+  product" and covers products prescribed in primary care [SEARCH].
+  The NDC Directory has no ATC; it carries FDA pharmacologic classes
+  (`pharm_class`) instead [VERIFIED].
+- **The NDC changes format on 2033-03-07**: every NDC becomes 12
+  digits, 6-4-2, existing 10-digit NDCs converted by left-padding
+  with zeros; 10-digit labelling tolerated until March 2036 (final
+  rule published 2026-03-05) [SEARCH]. The US key and barcode rule
+  must be designed for both formats now (§3.2, §5.3).
+- **Client gaps to close first** (§5): `US` not flagged as outside
+  EMA coverage; EU always fetched with the reference country; the
+  reference-country dropdown offers only countries already in the
+  local catalogue; no GTIN → catalogue lookup; the withdrawn badge
+  recognises Italian wording only.
 
 ---
 
@@ -64,14 +81,15 @@ confirmed on a GitHub runner before any parser is written (§8, step 0).
 
 | Area | What exists | Impact on US/UK |
 |------|-------------|-----------------|
-| Parsers | `IReferenceSnapshotParser` per country (`AifaSnapshotParser`, `EmaEparParser`, `AempsCimaParser`, `AnsmBdpmParser`), yielding `ReferenceMedicineRow` (country, national code, name, form, dosage, MAH, status, dispensing regime, leaflet/SPC links, ingredients with optional ATC) | Two new parsers; the row shape fits both sources (§3.3, §4.3) |
+| Parsers | `IReferenceSnapshotParser` per country, yielding `ReferenceMedicineRow` (country, national code, name, form, dosage, MAH, status, dispensing regime, leaflet/SPC links, ingredients with optional ATC) | Two new parsers; the row shape fits both sources (§3.3, §4.3) |
 | Schema | `reference_medicines` unique on `(country, national_code)`; no GTIN column (`CatalogueSchema.cs`) | Barcode support needs a GTIN rule (US) or a GTIN table (UK), §5.3 |
-| Feeds | `CatalogueFeedDescriptor.All = [IT, EU, ES, FR]`; `CatalogueFeedSelection.Select` always adds EU to the reference country | Two descriptors; EU must not be fetched for US/GB (§5.1) |
+| Feeds | `CatalogueFeedDescriptor.All = [IT, EU, ES, FR]`; `CatalogueFeedSelection.Select` keeps every supranational feed, so EU is always fetched | Two descriptors; EU must not be fetched for US/GB (§5.1) |
 | Country profile | `StaticCountryProfileProvider.NonEuCovered = { "GB", "UK" }` | `US` missing: a US user would see EMA rows (§5.1) |
 | Embedded import | `CatalogueRefreshHostedService.ImportOrder = { IT, EU, ES, FR }` | Decide whether US/GB ship embedded (§6, D3) |
-| Settings | `PopulateReferenceCountryCombo` offers `IT`, `EU` plus countries present in the local catalogue | Without an embedded snapshot, US/GB can never be selected (§5.2) |
-| Barcodes | `BarcodeParser`: GS1 DataMatrix → GTIN, Code 32 → AIC, EAN-13 → GTIN; `RestockByScanQuery.FindByNationalCodeAsync` matches `Medicine.NationalCode` | UPC-A (12 digits, US) not recognised as such; no GTIN → catalogue lookup (§5.3) |
-| Info links | `MedicineInfoLink` builds Codifa URLs from a valid AIC | US: DailyMed by SPL set id is possible (§3.5); UK: none planned |
+| Settings | `PopulateReferenceCountryCombo` offers `IT`, `EU` plus `ListAvailableCountriesAsync` (distinct `country` in `reference_medicines`) | Without an embedded snapshot, US/GB can never be selected (§5.2) |
+| Withdrawn badge | `MedicineAutocompleteBox.WithdrawnMarkers = { "sospesa", "ritirat", "revocata" }` | US/GB statuses (English) never badged (§5.4) |
+| Barcodes | `BarcodeParser`: GS1 DataMatrix (AI 01) → GTIN, Code 32 / 9 digits → AIC, EAN-13 → GTIN; a 12-digit UPC-A payload is `Unrecognized` | US UPC-A not read; no GTIN → catalogue lookup (§5.3) |
+| Document links | `MedicineEditDialog.IsSafeAifaUrl` allows HTTPS on `aifa.gov.it` / `agenziafarmaco.gov.it` only | A DailyMed leaflet link needs the host added (§3.5) |
 | Dated lists | Shortages, equivalents, regional services are Italy-only (`CatalogueFeedSelection.IsItaly`) | Orange Book TE codes would be a new dated list (§3.4) |
 
 ---
@@ -80,118 +98,125 @@ confirmed on a GitHub runner before any parser is written (§8, step 0).
 
 ### 3.1 S1 — Orange Book
 
-- **Content** [SEARCH]: one ZIP, three ASCII files, `~` delimited:
-  `products.txt` (ingredient, dosage form and route, trade name,
-  applicant, strength, application type N/A, application number,
-  product number, TE code, approval date, RLD/RS flags, marketing
-  type Rx/OTC/DISCN, applicant full name [UNCERTAIN on exact column
-  set]), `patent.txt`, `exclusivity.txt`. Updated monthly.
-- **Coverage**: NDA and ANDA products only. OTC monograph drugs (most
-  analgesics, antacids, many OTC packs bought in a US pharmacy) and
-  unapproved marketed drugs are not in it [INFERRED from the scope of
-  the publication, "Approved Drug Products with Therapeutic
-  Equivalence Evaluations"].
-- **Identifier**: application number + product number. No NDC, no
-  package level. It cannot be matched to a scanned box.
+- **Content** [SEARCH]: one ZIP, three ASCII files, `~` delimited,
+  updated monthly. `products.txt` header starts
+  `Ingredient~DF;Route~Trade_Name~Applicant~Strength~Appl_Type~Appl_No~Product_No~TE_Code~…`
+  (the rest — approval date, RLD, RS, type Rx/OTC/DISCN, applicant
+  full name — to confirm on a runner [UNCERTAIN]). Multiple
+  ingredients are `;`-separated in one field.
+- **Coverage**: NDA and ANDA products (§1). No package level.
+- **Identifier**: application number + product number. It cannot be
+  matched to a scanned box.
 - **Licence** [OWNER]: US Government work, no copyright in the US.
-  Outside the US the status of US federal works is not uniform across
-  jurisdictions [UNCERTAIN]; no restriction is known to be enforced.
-  Attribution and the FDA logo rule (§3.6) apply as good practice.
-- **Verdict**: not a catalogue source. Candidate for a later, optional
+  Outside the US the status of US federal works is not uniform
+  [UNCERTAIN]. Not an issue if only the TE codes are ever used (§3.4).
+- **Verdict**: not a catalogue source. Candidate for an optional
   "US equivalents" list (§3.4).
 
 ### 3.2 S2 — NDC Directory
 
-Two distributions of the same data:
+Two distributions of the same data. openFDA builds its JSON from the
+FDA text files [VERIFIED: `pipeline.py` downloads
+`https://www.accessdata.fda.gov/cder/ndctext.zip` and
+`.../ndc_unfinished.zip`]:
 
-| Distribution | URL | Format | Licence |
-|--------------|-----|--------|---------|
-| FDA text files | `https://www.accessdata.fda.gov/cder/ndctext.zip` [SEARCH] | `product.txt`, `package.txt`, tab-delimited [UNCERTAIN on delimiter] | US Government work [OWNER] |
-| openFDA bulk | listed in `https://api.fda.gov/download.json`, endpoint `drug/ndc`, zipped JSON, about 27 MB [SEARCH] | JSON, one object per product with nested `packaging[]` and an `openfda` block | CC0 1.0 "unless otherwise noted" (`open.fda.gov/license`) [SEARCH] |
+| Distribution | Format | Licence |
+|--------------|--------|---------|
+| `ndctext.zip` (finished drugs) | `product.txt` + `package.txt`, tab-delimited, UTF-8 (openFDA patches some invalid UTF-8 in `product.txt`) [VERIFIED] | US Government work [OWNER] |
+| openFDA bulk, endpoint `drug/ndc`, listed in `https://api.fda.gov/download.json` | zipped JSON, about 27 MB [SEARCH]; one object per product, nested `packaging[]`, an `openfda` annotation block; finished and unfinished merged, flagged by `finished` [VERIFIED] | CC0 1.0 "unless otherwise noted" [SEARCH]; the `FDA/open.fda.gov` repository is CC0 [VERIFIED: `COPYING.txt`] |
 
 - **Update frequency**: daily [SEARCH]. The feed stays weekly like the
-  others (days 2, 9, 16, 23); a daily cadence brings nothing to a
-  reminder app.
-- **Recommendation: openFDA bulk JSON.** Explicit CC0 worldwide
-  waiver, which removes the "US work abroad" doubt of §3.1; nested
-  packages avoid a join; `openfda.spl_set_id` gives the DailyMed link
-  (§3.5). Fallback: `ndctext.zip`, same fields, join on `PRODUCTID`.
-  Decision D1.
-- **Fields used** [UNCERTAIN on exact names; openFDA names given]:
+  others.
+- **Recommendation: openFDA bulk JSON** (D1). Explicit worldwide CC0
+  waiver, packages already nested, `openfda.spl_set_id` for the
+  DailyMed link. Fallback: `ndctext.zip`, join on `PRODUCTID`.
+- **Fields** [VERIFIED: `NDCProduct2JSONMapper`,
+  `NDCPackage2JSONMapper`, `ndc_mapping.json`]:
 
-  | `ReferenceMedicineRow` | openFDA NDC field |
-  |------------------------|-------------------|
-  | `NationalCode` | `packaging[].package_ndc` (package level, see below) |
-  | `CommercialName` | `brand_name` (+ `brand_name_suffix`); fallback `generic_name` |
-  | `PharmaceuticalForm` | `dosage_form` |
-  | `Dosage` | `active_ingredients[].strength`, joined |
-  | `MarketingAuthorisationHolder` | `labeler_name` |
-  | `MarketingStatus` | `marketing_category` + `packaging[].marketing_end_date` (ended → withdrawn badge) |
-  | `DispensingRegime` | `product_type` (`HUMAN PRESCRIPTION DRUG` / `HUMAN OTC DRUG`) + `dea_schedule` |
+  | `ReferenceMedicineRow` | openFDA field (FDA text column) |
+  |------------------------|---------------------------------|
+  | `NationalCode` | `packaging[].package_ndc` (`NDCPACKAGECODE`), normalised (below) |
+  | `CommercialName` | `brand_name` (`PROPRIETARYNAME` + `PROPRIETARYNAMESUFFIX`, already joined by openFDA); fallback `generic_name` (`NONPROPRIETARYNAME`) |
+  | `PharmaceuticalForm` | `dosage_form` (`DOSAGEFORMNAME`) |
+  | `Dosage` | `active_ingredients[].strength` (numerator strength + unit, joined by openFDA) |
+  | `MarketingAuthorisationHolder` | `labeler_name` (`LABELERNAME`) |
+  | `MarketingStatus` | `marketing_category` (`MARKETINGCATEGORYNAME`); `marketing_end_date` on product or package → ended |
+  | `DispensingRegime` | `product_type` (`PRODUCTTYPENAME`: prescription / OTC) + `dea_schedule` (`DEASCHEDULE`) |
   | `LinkLeaflet` | DailyMed URL from `openfda.spl_set_id` (§3.5) |
-  | ingredients | `active_ingredients[].name`, ATC `null` |
+  | ingredients | `active_ingredients[].name` (`SUBSTANCENAME`), ATC `null` |
 
+  Also available: `packaging[].description` (pack text, for example
+  quantity and container), `packaging[].sample` (boolean),
+  `application_number` (`APPLICATIONNUMBER`, the join key to the
+  Orange Book), `pharm_class`, and `openfda.upc` [VERIFIED in the
+  mapping; content and coverage not checked].
+- **The `openfda` block is an annotation**: present only when openFDA
+  matched the product to its SPL/RxNorm harmonisation
+  (`annotate.py`) [VERIFIED]. A missing `spl_set_id` only means no
+  leaflet link.
+- **Filters**: `finished = true`; `product_type` prescription or OTC
+  human drug (exact strings to record on the runner [UNCERTAIN]);
+  drop `packaging[].sample = true`; vaccines kept (D2). An earlier
+  draft mentioned an `NDC_EXCLUDE_FLAG`: openFDA does not map any such
+  column [VERIFIED], so it is not used.
 - **Granularity: one row per package NDC**, as Italy (one row per AIC
-  package). It is what a box carries and what the barcode resolves to
-  (§5.3). The autocomplete shows more near-duplicates than with a
-  product-level key; the same is true today for Italy.
-- **NDC normalisation.** NDCs are 10 digits in three segments
-  (4-4-2, 5-3-2, 5-4-1). Store the hyphenated form as published (for
-  display) and match barcodes on the 10 digits without hyphens. The
-  script must fail if two package NDCs collapse to the same 10 digits
-  [UNCERTAIN whether FDA's labeler-code allocation already excludes
-  it; checking is cheap].
-- **Filters**: keep `HUMAN PRESCRIPTION DRUG` and `HUMAN OTC DRUG`;
-  drop bulk ingredients, vaccines only if the owner wants (D2),
-  unfinished drugs, and packages flagged excluded
-  (`ndc_exclude_flag` in the text files) [UNCERTAIN].
-- **Size** [UNCERTAIN]: on the order of 100 000 package rows. The
-  script emits a compact TSV; the archive should be comparable to the
-  Italian one (about 5 MB).
+  package). It is what the box carries and what a barcode resolves to
+  (§5.3).
+- **NDC key.** Today NDCs are 10 digits in three segments (4-4-2,
+  5-3-2, 5-4-1); from 2033-03-07 they are 12 digits (6-4-2), old ones
+  converted by left-padding with zeros [SEARCH]. Store
+  `NationalCode` in the canonical 12-digit 6-4-2 form (each segment
+  left-padded), which is unique, stable across the 2033 change, and
+  displayable; keep the published hyphenated form in the pack text.
+  The script fails if two packages map to the same canonical key.
+  The 10-digit unsegmented form needed by the barcode rule is derived
+  at import (§5.3).
+- **Size** [UNCERTAIN]: on the order of 100 000 package rows; the
+  script emits a compact TSV, expected around the Italian archive's
+  5 MB.
 
 ### 3.3 Parser and feed
 
 - `OpenFdaNdcParser` (`SupportedCountries = { US }`) reads one TSV
-  produced by the feed script, not the raw JSON: the transformation and
-  the shape checks happen on the runner (as `ema.py` turns XLSX into
-  CSV), the client stays small. Archive `fda-ndc-<yyyymm>.zip`, entry
-  `fda-ndc.tsv`.
-- `scripts/feeds/fda_ndc.py`, workflow `download_fda_ndc.yaml`, on the
-  shared `common.py`: download, JSON → TSV, validation (required
-  columns, rows ≥ an absolute floor set from the first runner
-  measurement, ≥ 90% of the previous run), publish `data/us/`.
+  produced by the feed script, not the raw JSON: the transformation
+  and shape checks run on the runner (as `ema.py` turns XLSX into
+  CSV). Archive `fda-ndc-<yyyymm>.zip`, entry `fda-ndc.tsv`.
+- `scripts/feeds/fda_ndc.py`, workflow `download_fda_ndc.yaml`, on
+  `common.py`: download, JSON → TSV, validation (required fields, row
+  floor from the first runner measurement, ≥ 90% of the previous run),
+  publish `data/us/`.
 
 ### 3.4 Optional: therapeutic equivalence from the Orange Book
 
-The Orange Book `products.txt` gives, per approved product, a TE code
-(for example `AB`, meaning therapeutically equivalent to the reference
-listed drug). A list "products with the same ingredient, form, route,
+`products.txt` gives, per approved product, a TE code (for example
+`AB`). A list "products with the same ingredient, form, route,
 strength and an `A*` TE code" is the US analogue of the AIFA
-transparency list. Mapping it to NDC rows needs the application number,
-which the NDC Directory carries (`application_number`, for example
-`NDA012345` / `ANDA071234`) [UNCERTAIN on format], so the join is
-feasible on the runner.
+transparency list. The join to NDC rows goes through the application
+number, present on both sides (`Appl_Type` + `Appl_No` vs
+`application_number`, for example `ANDA071234`) [VERIFIED on the NDC
+side; Orange Book side per §3.1].
 
-Not proposed for the first phase: it reverses the "no product is
-suggested" stance for a second country, and the Italian feature was
-accepted only after an explicit owner decision
-(`ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md` §2.6). Decision D5.
+Not proposed for the first phase: it extends the product suggestion
+stance to a second country, accepted for Italy only after an explicit
+owner decision (`ANALYSIS-IT-EQUIVALENTS-AND-INFO-LINK.md` §2.6).
+Decision D5.
 
 ### 3.5 Information link
 
-DailyMed serves the US label by SPL set id
-(`https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=<uuid>`)
-[UNCERTAIN on the exact path; to verify]. The parser fills
-`LinkLeaflet` with it only when the set id parses as a GUID, so nothing
-read from data reaches the shell (same rule as `MedicineInfoLink`),
-and `MedicineEditDialog`'s host allow-list gains `dailymed.nlm.nih.gov`.
+DailyMed serves the label at
+`https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=<SPL set id>`,
+the set id being a UUID [SEARCH]. The parser fills `LinkLeaflet` only
+when the set id parses as a GUID, so nothing read from data reaches the
+shell (rule of `MedicineInfoLink`), and `IsSafeAifaUrl` (renamed, for
+example `IsSafeDocumentUrl`) gains `dailymed.nlm.nih.gov`.
 
 ### 3.6 Attribution
 
 `THIRD-PARTY-NOTICES.md` and the About dialog: "Contains data from the
 U.S. Food and Drug Administration (openFDA), CC0 1.0. Not endorsed by
-FDA." No FDA logo anywhere; the user guides must not suggest that FDA
-approves or reviews MedReminder [OWNER: FDA terms].
+FDA." No FDA logo: FDA marks must not be used with third-party
+products or in a way that implies endorsement [SEARCH]. User guides
+must not suggest that FDA approves or reviews MedReminder.
 
 ---
 
@@ -199,99 +224,115 @@ approves or reviews MedReminder [OWNER: FDA terms].
 
 ### 4.1 S3 — MHRA category lists
 
-- **What they are** [SEARCH]: lists published by MHRA from 20
-  December 2024 assigning each product to Category 1 (formerly EU
-  centralised products and their generics, hybrids, biosimilars) or
-  Category 2 (all others), under the Windsor Framework. From 1 January
-  2025 both categories are licensed UK-wide by MHRA.
-- **Premise correction.** The owner's note describes them as "all
-  medicines authorised in the UK, updated". Their purpose is the
-  category assignment; whether they cover every licensed product, how
-  often they are updated and which columns they carry (product name,
-  PL number, holder, active substance) could not be checked from this
-  session [UNCERTAIN]. Even if complete, they would lack form,
-  strength, pack and GTIN, which dm+d has.
-- **Licence**: OGL v3.0 for GOV.UK content [OWNER], attribution
-  required.
-- **Verdict**: not a catalogue source. Possible secondary use: a PL
-  number → category lookup, which has no user-facing value in a
-  reminder app [INFERRED]. Not proposed.
+- **What they are** [SEARCH]: two lists ("Category 1 list of
+  products", "Category 2 list of products") published from 20
+  December 2024, last updated 2 March 2026, each update replacing the
+  previous lists. Category 1: products formerly authorised through the
+  EU centralised procedure and their generics, hybrids and
+  biosimilars; Category 2: all others. From 1 January 2025 both are
+  licensed UK-wide by MHRA.
+- **Premise check.** The owner's note describes them as "all
+  medicines authorised in the UK". Since every licensed product falls
+  in one category, the union may indeed be complete [INFERRED]. The
+  columns reported are PL number, product name and category [SEARCH,
+  weak: from a search summary, not from the files]. The format (CSV or
+  spreadsheet) could not be checked [UNCERTAIN].
+- **Licence**: OGL v3.0 for GOV.UK content [OWNER].
+- **Verdict**: not a catalogue source: no form, strength, pack,
+  ingredients or GTIN, irregular updates, and no shared key with dm+d
+  (dm+d carries no PL number [INFERRED from the AMP fields in §4.3]).
+  Not proposed.
 
 ### 4.2 S4 — NHSBSA dm+d
 
-- **Content** [SEARCH]: weekly XML release (every Monday) of five
-  linked classes — VTM (therapeutic moiety), VMP (generic product),
-  AMP (branded product), VMPP (generic pack), AMPP (branded pack, with
-  price) — plus a GTIN file mapping GTINs to AMPPs, and lookup tables.
-  Devices and appliances are in the same dictionary.
-- **Distribution**: TRUD, item "NHSBSA dm+d". Download needs a free
-  TRUD account, subscription to the item, and the account's API key
-  for automation [SEARCH].
-- **Licence**: Open Government Licence v3.0 [SEARCH], which permits
-  commercial reuse and redistribution with attribution ("Contains
-  public sector information licensed under the Open Government Licence
-  v3.0"). To confirm by reading the licence attached to item 24 on
-  TRUD, not the test-files item. Separate items (UK Drug bonus files,
-  SNOMED CT UK Drug Extension) are under the SNOMED CT UK Affiliate
+- **Content** [VERIFIED: `import.clj`]: weekly XML release, files
+  `f_<class><n>_<n><ddMMyy>.xml` for LOOKUP, INGREDIENT, VTM, VMP,
+  AMP, VMPP, AMPP, GTIN; the GTIN file sits in a nested ZIP of the
+  main release. Five classes: VTM (therapeutic moiety), VMP (generic
+  product), AMP (branded product), VMPP (generic pack), AMPP (branded
+  pack). GTIN → AMPP is one-to-one in practice (data-quality report in
+  the `wardle/dmd` README) [VERIFIED]. Devices and appliances are in
+  the same dictionary.
+- **Supplementary release** (TRUD item 25) [VERIFIED: `download.clj`
+  fetches items 24 and 25]: BNF and ATC mapping at VMP level (file
+  type `BNF`), history, VTM ingredients. Licence OGL [SEARCH].
+- **Distribution**: TRUD. Free account, subscription to the items,
+  account API key. API:
+  `https://isd.digital.nhs.uk/trud/api/v1/keys/<api key>/items/<item>/releases?latest`
+  [VERIFIED: `wardle/trud`]. The key travels in the URL path, so the
+  script must never print request URLs or exception messages that
+  contain them.
+- **Licence**: OGL v3.0 for items 24 and 25 [SEARCH; `wardle/dmd`
+  README: "published by the NHS Business Services Authority under an
+  Open Government Licence" VERIFIED]. To confirm by reading the
+  licence page of each item on TRUD. The UK Drug bonus files and the
+  SNOMED CT UK Drug Extension are under the SNOMED CT UK Affiliate
   Licence [SEARCH] and are **not** used.
 
 ### 4.3 Mapping
 
-One row per AMPP (branded pack), the level that carries the GTIN and
-the legal category:
+One row per AMPP (branded pack), the level that carries the GTIN, the
+legal category and the discontinued flag. Element names
+[VERIFIED: `import.clj`]; code values [UNCERTAIN unless stated]:
 
-| `ReferenceMedicineRow` | dm+d [UNCERTAIN on exact element names] |
-|------------------------|------------------------------------------|
-| `NationalCode` | AMPP id (`APPID`) — see §4.4 |
-| `CommercialName` | AMPP description (`NM`), or AMP name + pack size |
-| `PharmaceuticalForm` | VMP form (`DFORMCD` → lookup) |
-| `Dosage` | VMP ingredient strengths (`VPI`) |
-| `MarketingAuthorisationHolder` | AMP supplier (`SUPPCD` → lookup) |
-| `MarketingStatus` | AMPP discontinued flag / AMP availability restriction; invalid records dropped |
-| `DispensingRegime` | AMPP legal category (POM, P, GSL; controlled drug from VMP) |
-| ingredients | VMP ingredients (`VPI` → `ING`), ATC `null` |
+| `ReferenceMedicineRow` | dm+d |
+|------------------------|------|
+| `NationalCode` | AMPP `APPID` — see §4.4 |
+| `CommercialName` | AMPP `NM` |
+| `PharmaceuticalForm` | VMP drug form `FORMCD` → LOOKUP |
+| `Dosage` | VMP ingredients `STRNT_NMRTR_VAL`/`STRNT_NMRTR_UOMCD` over `STRNT_DNMTR_VAL`/`STRNT_DNMTR_UOMCD` |
+| `MarketingAuthorisationHolder` | AMP `SUPPCD` → LOOKUP |
+| `MarketingStatus` | AMPP `DISCCD` (discontinued), AMP `AVAIL_RESTRICTCD`; records with `INVALID` dropped |
+| `DispensingRegime` | AMPP `LEGAL_CATCD` → LOOKUP (POM, P, GSL…); VMP controlled-drug `CATCD` |
+| ingredients | VMP ingredients `ISID` → INGREDIENT `NM`; ATC from item 25 (VMP level), else `null` |
 
-Filters: drop records flagged invalid; drop devices and appliances
-(no VMP ingredients / device flag) [UNCERTAIN on the flag];
-`CountryCode` `GB` (already in `NonEuCovered`). Northern Ireland: from
-2025 licences are UK-wide, so one `GB` catalogue serves the whole UK
-[INFERRED from §4.1].
+Filters:
+
+- `INVALID` records out.
+- Devices and appliances out. `LIC_AUTHCD` cannot tell medicines
+  from appliances (dm+d Implementation Guide) [SEARCH]; use instead
+  "VMP has at least one ingredient and the AMPP has no
+  `APPLIANCE_PACK_INFO`" [INFERRED; measure on a release].
+- Unlicensed products (`LIC_AUTHCD` 0; 1–2 licensed, 3 unknown, 4
+  traditional herbal [SEARCH]): kept, as specials are real prescribed
+  items; decision D8.
+- `CountryCode` `GB` (already in `NonEuCovered`). Northern Ireland:
+  UK-wide licensing since 2025, so one `GB` catalogue serves the UK
+  [INFERRED from §4.1].
 
 ### 4.4 Open points before any code
 
-1. **SNOMED CT identifiers.** dm+d ids (VTM/VMP/AMP/VMPP/AMPP) are
-   SNOMED CT UK Drug Extension concept ids [UNCERTAIN; widely stated,
-   not verified this session]. MedReminder is distributed worldwide
-   (Microsoft Store, GitHub). Whether shipping those ids to users
-   outside the UK, as opaque keys, falls under the SNOMED International
-   affiliate rules is a legal question, not an engineering one. Two
-   ways to stay clear of it, to choose in D6:
-   - fetch the GB feed only when the reference country is GB (already
-     the rule of `CatalogueFeedSelection`) and never embed it, so only
+1. **SNOMED CT identifiers.** dm+d codes are SNOMED CT identifiers
+   [VERIFIED: `wardle/dmd` README, "dm+d codes are actually SNOMED
+   identifiers"]. MedReminder is distributed worldwide. Whether
+   shipping those ids to users outside the UK, as opaque keys, falls
+   under SNOMED International's affiliate rules is a legal question.
+   Options (D6):
+   - fetch the GB feed only when the reference country is GB (the rule
+     of `CatalogueFeedSelection`) and never embed it, so only
      UK-configured installs download it;
-   - use the first GTIN of the AMPP as `NationalCode` and drop the
-     dm+d ids from the published archive (AMPPs without GTIN would then
-     need a synthetic key, or be dropped) [INFERRED].
-   The owner should ask NHS England (`information.standards@nhs.net`,
-   the contact listed for dm+d [SEARCH]) before the first release.
-2. **TRUD account terms.** The OGL governs the data; the TRUD service
-   terms govern the account. Publishing a derived archive on the public
+   - use the AMPP's GTIN as `NationalCode` and drop dm+d ids from the
+     published archive; AMPPs without a GTIN then need another key or
+     are dropped [INFERRED].
+   Ask NHS England (`information.standards@nhs.net`, the dm+d contact
+   [SEARCH]) before the first release.
+2. **TRUD account terms.** The OGL governs the data, the TRUD service
+   terms the account. Publishing a derived archive on the public
    `feeds` branch is redistribution: allowed by the OGL, to check
    against the TRUD terms [UNCERTAIN].
 3. **Secret handling.** `TRUD_API_KEY` as a repository secret, used
-   only by `download_dmd.yaml`; never logged, never written under
-   `data/`. A forked PR cannot read it, so the workflow must not run on
+   only by `download_dmd.yaml`; masked by Actions in logs, but the
+   script must still avoid echoing URLs (§4.2). Never on
    `pull_request` from forks.
-4. **Size** [UNCERTAIN]: the full XML release is large (tens of MB
-   compressed). The script must stream-parse (`xml.etree.iterparse`)
-   and publish only the TSV.
+4. **Size** [UNCERTAIN]: tens of MB compressed. Stream-parse
+   (`xml.etree.ElementTree.iterparse`), publish only the TSV.
 
 ### 4.5 Parser and feed
 
 `DmdParser` (`SupportedCountries = { GB }`) reads `dmd.tsv` (and
 `dmd-gtin.tsv`, §5.3) from `nhs-dmd-<yyyymm>.zip`.
 `scripts/feeds/dmd.py`, workflow `download_dmd.yaml`: TRUD API → latest
-release ZIP → iterparse VMP/AMP/AMPP/lookups/GTIN → TSV → validation →
+releases of items 24 and 25 → iterparse → TSV → validation →
 `data/gb/`.
 
 ---
@@ -301,52 +342,60 @@ release ZIP → iterparse VMP/AMP/AMPP/lookups/GTIN → TSV → validation →
 ### 5.1 Country profile and feed selection
 
 - Add `US` to `StaticCountryProfileProvider.NonEuCovered`; the set
-  becomes "not covered by EMA centralised authorisations"
-  (`US`, `GB`, `UK`). Without it a US user would see EMA rows.
-- `CatalogueFeedSelection.Select`: add EU only when
-  `ICountryProfileProvider.GetProfile(reference).IncludesEuCentralised`
-  (today EU is always added). Saves one download per start for US/GB
-  users.
+  means "not covered by EMA centralised authorisations".
+- `CatalogueFeedSelection.Select`: keep EU only when
+  `GetProfile(reference).IncludesEuCentralised`. Saves one download
+  per start for US/GB users.
 - `CatalogueFeedDescriptor`: `UnitedStates` (`fda-ndc`,
-  `["fda-ndc.tsv"]`, 256 MiB) and `UnitedKingdom` (`nhs-dmd`,
-  `["dmd.tsv"]`, 256 MiB); `All` gains both, after FR.
-- `appsettings.json`: `Catalogue:RemoteFeed:Feeds:US` and `:GB` with
-  `Enabled` and `MaxDownloadBytes`.
+  `["fda-ndc.tsv"]`) and `UnitedKingdom` (`nhs-dmd`, `["dmd.tsv"]`),
+  uncompressed cap 256 MiB each; `All` gains both, after FR.
+- `appsettings.json`: `Catalogue:RemoteFeed:Feeds:US` and `:GB`.
 
 ### 5.2 Reference-country dropdown
 
-`PopulateReferenceCountryCombo` offers `IT`, `EU` and the countries
-already in the local catalogue. A country served only by a remote feed
-never appears, so it can never be selected and its feed never
-downloads. Fix: seed the list from `CatalogueFeedDescriptor.All` as
-well. On selection of a country with an empty catalogue, the next
-start (or an immediate refresh, D4) downloads it; the autocomplete
-shows nothing until then, which the Settings page should state (new
-UI string, in all five `strings.<lang>.json`).
+Seed `PopulateReferenceCountryCombo` with `CatalogueFeedDescriptor.All`
+as well, so a feed-only country can be chosen. Until its first
+download the autocomplete is empty; Settings states it (new UI string
+in all five `strings.<lang>.json`). Refresh on change: D4.
 
 ### 5.3 Barcodes
 
-- **US.** A US drug package carries a UPC-A or a GS1 GTIN that embeds
-  the 10-digit NDC (GS1 US prefix 03: GTIN-12 = `3` + NDC10 + check
-  digit; GTIN-14 = `003` + NDC10 + check digit) [INFERRED from the GS1
-  US / FDA NDC convention; to verify against FDA guidance]. Unlike the
-  AIC (`ANALYSIS-A2-BARCODE-SCAN.md` §2.3), the NDC can therefore be
-  derived from the GTIN. `BarcodeParser` gains a UPC-A path (12 digits)
-  and a rule: GTIN with prefix `003` (or UPC-A starting with `3`) →
-  candidate NDC10, looked up only when the reference country is US.
-  Many scanners send UPC-A as EAN-13 with a leading `0`, which the
-  same rule covers.
-- **UK.** GTINs are arbitrary; the mapping is dm+d's GTIN file. New
+- **US, current 10-digit NDC** [SEARCH]: the retail barcode is UPC-A
+  `3` + NDC10 + check digit, or EAN-13 `03` + NDC10 + check digit; the
+  GS1 company prefix is `03` + labeler code. GTIN-14 in a DSCSA
+  DataMatrix: `003` + NDC10 + check digit [INFERRED: same GTIN
+  left-padded]. The NDC10 can therefore be read from the GTIN, unlike
+  the AIC (`ANALYSIS-A2-BARCODE-SCAN.md` §2.3), but without hyphens:
+  the segmentation is unknown, so the lookup needs a column (or an
+  index) holding the unsegmented 10 digits, filled at import.
+  `BarcodeParser` gains a UPC-A path (12 digits), and the scan lookup,
+  for reference country US, maps a GTIN starting `003` to NDC10.
+- **US, 12-digit NDC (2033)**: the DataMatrix encodes the 12-digit
+  NDC [SEARCH]; how it sits in a GTIN-14 is not settled in what was
+  found [UNCERTAIN]. The canonical 6-4-2 key (§3.2) keeps the
+  catalogue side ready; the barcode rule is revisited before 2033.
+- **UK**: GTINs are arbitrary, the mapping is dm+d's GTIN file. New
   table `reference_gtins (country, gtin, medicine_id)`, created by an
-  idempotent boot patch in `CatalogueSchema` (CLAUDE.md §7), filled by
-  the importer from `dmd-gtin.tsv`. The scan dialog looks up a GTIN
-  there when national-code lookup fails. Phase 3, after the GB
-  catalogue itself.
+  idempotent boot patch in `CatalogueSchema` (CLAUDE.md §7), filled
+  from `dmd-gtin.tsv`. The scan dialog looks there when the
+  national-code lookup fails. Same table can hold the US unsegmented
+  NDC10 instead of a dedicated column.
 
-### 5.4 What stays Italy-only
+### 5.4 Withdrawn badge
 
-Shortages, equivalents, regional services, the Codifa link and the
-AIC check digit. `CatalogueFeedSelection.IsItaly` already gates them.
+`WithdrawnMarkers` holds Italian words only. Parsers for US/GB should
+map their status to a small fixed vocabulary, and the badge should test
+that vocabulary instead of free text. The same gap exists today for
+EU, ES and FR [VERIFIED]: `EmaEparParser`, `AempsCimaParser` and
+`AnsmBdpmParser` store the source status verbatim (EMA "Medicine
+status", AEMPS "Estado", BDPM "Statut administratif"), none of which
+contains an Italian marker. Fixing it for those countries is a
+separate change.
+
+### 5.5 What stays Italy-only
+
+Shortages, equivalents, regional services, the Codifa link and the AIC
+check digit (`CatalogueFeedSelection.IsItaly`).
 
 ---
 
@@ -355,12 +404,13 @@ AIC check digit. `CatalogueFeedSelection.IsItaly` already gates them.
 | # | Decision | Recommendation |
 |---|----------|----------------|
 | D1 | US distribution: openFDA bulk JSON or `ndctext.zip` | openFDA (explicit CC0, nested packages, SPL set id) |
-| D2 | US scope: Rx + OTC; vaccines, kits, bulk ingredients | Rx + OTC finished products; vaccines kept; bulk and unfinished dropped |
-| D3 | Embedded snapshots for US/GB | No: remote feed only, keeps the installer size and the SNOMED exposure down; fix §5.2 instead |
-| D4 | Refresh on country change: at next start or immediately | Immediately, through the existing refresher, off the UI thread |
-| D5 | US therapeutic equivalence from the Orange Book | Not now; revisit after US usage is known |
-| D6 | dm+d key: AMPP id or GTIN | Decide after the NHS England answer (§4.4 point 1) |
-| D7 | Proceed with GB at all | Only after the TRUD licence page for item 24 and the TRUD terms are read and recorded in `CATALOGUE-DATA.md` §7 |
+| D2 | US scope | Finished human prescription + OTC drugs, vaccines included, samples excluded |
+| D3 | Embedded snapshots for US/GB | No: remote feed only; installer size, SNOMED exposure; fix §5.2 instead |
+| D4 | Refresh on country change: next start or immediately | Immediately, through the existing refresher, off the UI thread |
+| D5 | US therapeutic equivalence from the Orange Book | Not now |
+| D6 | dm+d key: AMPP id or GTIN | After the NHS England answer (§4.4 point 1) |
+| D7 | Proceed with GB | Only after the TRUD licence pages of items 24 and 25 and the TRUD terms are read and recorded in `CATALOGUE-DATA.md` §7 |
+| D8 | GB unlicensed products (`LIC_AUTHCD` 0) | Keep, with a status the UI can show |
 
 ---
 
@@ -368,48 +418,82 @@ AIC check digit. `CatalogueFeedSelection.IsItaly` already gates them.
 
 | Risk | Mitigation |
 |------|------------|
-| openFDA or TRUD changes format | Script validates required fields and row floors; nothing is published on failure (existing `common.py` behaviour) |
-| TRUD key revoked or account expired | GB feed workflow fails; clients keep the last import; failure visible in Actions |
-| Users read US/GB data as clinical advice | Same wording as today: reference data for naming and stock, no clinical role; FDA non-endorsement sentence (§3.6) |
-| Name collisions in the autocomplete (US package-level rows) | Same as Italy today; group by product in the UI later if needed |
-| SNOMED CT licensing outside the UK | D3 + D6 + written answer from NHS England before release |
-| US labels in English only | Expected; UI strings are already localised |
+| openFDA or TRUD changes format | Script validates fields and row floors; nothing published on failure (`common.py`) |
+| TRUD key revoked or account lapsed | GB workflow fails; clients keep the last import |
+| TRUD key leaked through a logged URL | No URL logging in `dmd.py`; Actions masking as second line |
+| Users read US/GB data as clinical advice | Same wording as today; FDA non-endorsement sentence (§3.6) |
+| Package-level near-duplicates in the autocomplete (US) | As Italy today; product grouping later if needed |
+| SNOMED CT licensing outside the UK | D3 + D6 + written answer from NHS England |
+| 2033 NDC format change | Canonical 6-4-2 key now; barcode rule revisited before 2033 |
+| ATC for GB covers primary-care products only, "not officially endorsed" | ATC optional per row, as already in the schema |
 
 ---
 
 ## 8. Phasing
 
-0. **Verification on a GitHub runner** (this session cannot reach the
-   hosts): fetch the openFDA `download.json`, one NDC bulk file and
-   `ndctext.zip`; record field names, row counts, sizes. Read and save
-   the licence text of openFDA and of TRUD item 24, and the GOV.UK
-   category list page (columns, date). Update the `[UNCERTAIN]` marks
-   of this document.
+0. **Runner verification** (hosts unreachable from this session):
+   fetch `download.json`, the NDC bulk file and `ndctext.zip`; record
+   `product_type` and `marketing_category` values, row counts, sizes,
+   duplicate canonical keys. Read and save the openFDA licence page,
+   the TRUD licence pages of items 24 and 25 and the TRUD terms, and
+   one GOV.UK category list (columns). Clear the remaining
+   `[UNCERTAIN]` marks.
 1. **US catalogue**: `fda_ndc.py` + workflow, `OpenFdaNdcParser`,
-   descriptor, `NonEuCovered` + `Select` change (§5.1), dropdown fix
-   (§5.2), notices, user guides (five languages), fixture of about 200
-   rows, tests.
-2. **US barcodes**: UPC-A and NDC-from-GTIN rule (§5.3).
+   descriptor, §5.1, §5.2, status vocabulary (§5.4), notices, user
+   guides (five languages), fixture of about 200 rows, tests.
+2. **US barcodes**: UPC-A path and NDC10 lookup (§5.3).
 3. **GB catalogue**, gated by D6/D7: `dmd.py` + workflow with
-   `TRUD_API_KEY`, `DmdParser`, descriptor, notices, guides,
-   `CATALOGUE-DATA.md` §7 rewritten as a refresh procedure.
-4. **GB barcodes**: `reference_gtins` table and lookup.
-5. Optional (D5): Orange Book TE list for the US.
+   `TRUD_API_KEY`, `DmdParser` with ATC from item 25, descriptor,
+   notices, guides, `CATALOGUE-DATA.md` §7 rewritten as a refresh
+   procedure and `ANALYSIS-DRUG-CATALOGUE.md` §3.5 corrected.
+4. **GB barcodes**: `reference_gtins` and lookup.
+5. Optional (D5): Orange Book TE list.
 
-Each phase is one PR; phases 1 and 3 are independent.
+One PR per phase; phases 1 and 3 are independent.
 
 ---
 
-## 9. Sources
+## 9. Corrections to the first draft of this document
 
-- FDA, Orange Book Data Files: <https://www.fda.gov/drugs/drug-approvals-and-databases/orange-book-data-files>;
-  download instructions: <https://www.accessdata.fda.gov/drugsatfda_docs/ob/OrangeBookDataFileDownloadInstructions.pdf>
-- FDA, National Drug Code Directory: <https://www.fda.gov/drugs/drug-approvals-and-databases/national-drug-code-directory>
-- openFDA, NDC data and downloads: <https://open.fda.gov/data/ndc/>, <https://open.fda.gov/data/downloads/>
-- openFDA, licence and terms: <https://open.fda.gov/license>, <https://open.fda.gov/terms>
-- GOV.UK, Category lists following implementation of the Windsor Framework: <https://www.gov.uk/government/publications/category-lists-following-implementation-of-the-windsor-framework>
-- MHRA, Windsor Framework explainer (PDF): <https://assets.publishing.service.gov.uk/media/673cc5cf7e8a3c98a090fe94/MHRA_Windsor_Framework_Explainer.pdf>
-- NHSBSA, Release of dm+d files: <https://www.nhsbsa.nhs.uk/pharmacies-gp-practices-and-appliance-contractors/nhs-dictionary-medicines-and-devices-dmd/release-dmd-files>
-- TRUD, NHSBSA dm+d releases: <https://isd.digital.nhs.uk/trud/user/guest/group/0/pack/6/subpack/24/releases>
-- TRUD, UK Drug bonus files licence: <https://isd.digital.nhs.uk/trud/users/guest/filters/0/categories/8/items/639/licences>
-- dm+d structure and TRUD API usage (open-source implementation): <https://github.com/wardle/dmd>
+| Claim in the first draft | Now |
+|--------------------------|-----|
+| No open ATC for GB (only in SNOMED-licensed bonus files) | Wrong: dm+d supplementary (item 25) maps ATC under OGL |
+| US packages filtered on `ndc_exclude_flag` | Not mapped by openFDA; dropped. Filters are `finished`, `product_type`, `sample` |
+| NDC key: hyphenated 10-digit form | Canonical 12-digit 6-4-2, because of the 2033 rule |
+| MHRA lists likely partial | May be complete (two categories partition all licensed products); rejected for missing fields instead |
+| Device filter via a dm+d flag | `LIC_AUTHCD` does not separate devices; rule based on ingredients / appliance pack info |
+| Withdrawn badge not considered | Italian-only markers; gap added (§5.4), also present for EU/ES/FR |
+
+---
+
+## 10. Sources
+
+Verified (read on 2026-10-05):
+
+- openFDA NDC pipeline: <https://raw.githubusercontent.com/FDA/openfda/master/openfda/ndc/pipeline.py>,
+  mapping <https://raw.githubusercontent.com/FDA/openfda/master/schemas/ndc_mapping.json>,
+  annotation <https://raw.githubusercontent.com/FDA/openfda/master/openfda/ndc/annotate.py>
+- open.fda.gov repository licence: <https://raw.githubusercontent.com/FDA/open.fda.gov/master/COPYING.txt>
+- dm+d importer: <https://github.com/wardle/dmd> (README, `src/com/eldrix/dmd/import.clj`, `download.clj`);
+  TRUD client: <https://github.com/wardle/trud> (`src/com/eldrix/trud/impl/release.clj`)
+
+Search results only (pages not fetched):
+
+- FDA Orange Book data files: <https://www.fda.gov/drugs/drug-approvals-and-databases/orange-book-data-files>,
+  <https://www.accessdata.fda.gov/drugsatfda_docs/ob/OrangeBookDataFileDownloadInstructions.pdf>
+- FDA NDC Directory: <https://www.fda.gov/drugs/drug-approvals-and-databases/national-drug-code-directory>;
+  openFDA: <https://open.fda.gov/data/ndc/>, <https://open.fda.gov/data/downloads/>,
+  <https://open.fda.gov/license>, <https://open.fda.gov/terms>
+- 12-digit NDC final rule: <https://www.thefdalawblog.com/2026/03/6-4-2-blastoff-fdas-new-ndc-format-coming-in-2033/>,
+  <https://www.faegredrinker.com/en/insights/publications/2026/3/fda-finalizes-rule-requiring-12-digit-national-drug-code-ndc>,
+  <https://www.raps.org/resource/fda-issues-long-awaited-final-ndc-rule.html>
+- NDC in barcodes: <https://www.rxtrace.com/2012/01/depicting-an-ndc-within-a-gtin.html/>,
+  <https://en.wikipedia.org/wiki/National_drug_code>
+- DailyMed web services: <https://www.dailymed.nlm.nih.gov/dailymed/webservices-help/v2/spls_setid_api.cfm>
+- MHRA category lists: <https://www.gov.uk/government/publications/category-lists-following-implementation-of-the-windsor-framework>;
+  explainer <https://assets.publishing.service.gov.uk/media/673cc5cf7e8a3c98a090fe94/MHRA_Windsor_Framework_Explainer.pdf>
+- NHSBSA dm+d: <https://www.nhsbsa.nhs.uk/pharmacies-gp-practices-and-appliance-contractors/nhs-dictionary-medicines-and-devices-dmd/release-dmd-files>;
+  TRUD item 24 <https://isd.digital.nhs.uk/trud/user/guest/group/0/pack/6/subpack/24/releases>;
+  item 25 licence <https://isd.digital.nhs.uk/trud/users/guest/filters/0/categories/6/items/25/licences>;
+  UK Drug bonus files licence <https://isd.digital.nhs.uk/trud/users/guest/filters/0/categories/8/items/639/licences>
+- dm+d Implementation Guide (Primary Care) v2.0: <https://www.nhsbsa.nhs.uk/sites/default/files/2020-11/dm+d%20Implementation%20Guide%20(Primary%20Care)%20v2.0.pdf>
