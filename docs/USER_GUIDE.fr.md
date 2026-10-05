@@ -1382,7 +1382,9 @@ Google.
 
 Tout se trouve dans **Outils → Paramètres…**. Les sections sont
 listées à gauche ; **Ctrl+Tab** passe à la suivante. La fenêtre est
-redimensionnable.
+redimensionnable. Chaque section s'enregistre avec son propre bouton ;
+fermer la fenêtre avec des modifications non enregistrées demande s'il
+faut d'abord les enregistrer.
 
 - **Général → Langue de l'interface** : anglais, italien, français,
   espagnol ou allemand. Les e-mails et la fiche de traitement

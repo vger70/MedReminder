@@ -682,6 +682,8 @@
   "Ui.SettingsDialog.Tab.Email": "E-Mail-SMTP",
   "Ui.SettingsDialog.Tab.Startup": "Autostart",
   "Ui.SettingsDialog.Tab.Backup": "Sicherung / Wiederherstellung",
+  "Ui.SettingsDialog.Unsaved.Title": "Nicht gespeicherte Änderungen",
+  "Ui.SettingsDialog.Unsaved.Prompt": "Einige Änderungen wurden nicht gespeichert: {0}.\n\nVor dem Schließen speichern?",
 
   "Ui.SettingsDialog.General.Language": "Oberflächensprache",
   "Ui.SettingsDialog.General.Save": "Speichern",

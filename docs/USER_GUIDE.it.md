@@ -1328,7 +1328,9 @@ Microsoft o Google.
 
 Tutto in **Strumenti → Impostazioni…**. Le sezioni sono elencate a
 sinistra; **Ctrl+Tab** passa alla successiva. La finestra si può
-ridimensionare.
+ridimensionare. Ogni sezione si salva con il suo pulsante **Salva**;
+chiudendo la finestra con modifiche non salvate viene chiesto se
+salvarle prima.
 
 - **Generale → Lingua interfaccia**: Inglese, Italiano, Francese,
   Spagnolo o Tedesco. Anche le email e la scheda terapia la usano.

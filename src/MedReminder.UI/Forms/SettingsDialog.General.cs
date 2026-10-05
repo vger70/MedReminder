@@ -290,9 +290,11 @@ internal sealed partial class SettingsDialog
 
     // Household step H2b: through UpdateGeneralSettings, which records the
     // reference country in the household.
-    private async Task SaveGeneralAsync()
+    // Returns false when the save failed (the error was shown). quiet
+    // skips the "saved" confirmation when the dialog saves on closing.
+    private async Task<bool> SaveGeneralAsync(bool quiet = false)
     {
-        if (_languageCombo.SelectedItem is not LanguageChoice choice) return;
+        if (_languageCombo.SelectedItem is not LanguageChoice choice) return true;
 
         var referenceCountry = _referenceCountryCombo.SelectedItem as string ?? "IT";
         var settings = new UserSettings
@@ -316,8 +318,9 @@ internal sealed partial class SettingsDialog
             UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Common.Error"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
+            return false;
         }
+        MarkSaved(GeneralSection);
 
         // If neither the language, the text size nor the appearance
         // changed, no restart needed. The query log follows the file
@@ -333,11 +336,14 @@ internal sealed partial class SettingsDialog
         var profileChanged = textSizeChanged || appearanceChanged;
         if (!languageChanged && !profileChanged)
         {
-            UiMessageBox.Show(this,
-                _loc.Get("Ui.SettingsDialog.General.Saved"),
-                _loc.Get("Common.Ok"),
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
+            if (!quiet)
+            {
+                UiMessageBox.Show(this,
+                    _loc.Get("Ui.SettingsDialog.General.Saved"),
+                    _loc.Get("Common.Ok"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            return true;
         }
 
         var confirm = ConfirmDialog.Show(_loc, this,
@@ -346,7 +352,7 @@ internal sealed partial class SettingsDialog
                 : "Ui.SettingsDialog.General.RestartPrompt"),
             _loc.Get("Ui.SettingsDialog.General.RestartPrompt.Title"),
             MessageBoxIcon.Question);
-        if (confirm != DialogResult.Yes) return;
+        if (confirm != DialogResult.Yes) return true;
 
         if (profileChanged)
         {
@@ -358,6 +364,7 @@ internal sealed partial class SettingsDialog
         {
             _restarter.RestartAndExit();
         }
+        return true;
     }
 
     // Runs a use case of the installation settings in its own scope.

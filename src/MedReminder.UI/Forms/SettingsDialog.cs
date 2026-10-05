@@ -219,16 +219,19 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         _sectionHost = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
         _sectionList = new NavigationPane(expandedWidth: 280);
 
-        AddSection("Ui.SettingsDialog.Tab.General", Mdl2Glyph.Glyphs.Settings, BuildGeneralTab());
+        AddSection(GeneralSection, Mdl2Glyph.Glyphs.Settings, BuildGeneralTab());
+        TrackSection(GeneralSection, GeneralState, SaveGeneralAsync);
         // Increment 15d (docs/ANALYSIS-MULTI-USER.md §7.4): SMTP and
         // Backup sections are admin-only. Every profile still needs to
         // choose its own recipient — that lives in the Notifications
         // section, visible to admins and users alike.
         if (_currentProfile.IsAdmin)
         {
-            AddSection("Ui.SettingsDialog.Tab.Email", Mdl2Glyph.Glyphs.Mail, BuildEmailTab());
+            AddSection(EmailSection, Mdl2Glyph.Glyphs.Mail, BuildEmailTab());
+            TrackSection(EmailSection, EmailState, SaveSmtpSettingsAsync);
         }
-        AddSection("Ui.SettingsDialog.Tab.Notifications", Mdl2Glyph.Glyphs.Ringer, BuildNotificationsTab());
+        AddSection(NotificationsSection, Mdl2Glyph.Glyphs.Ringer, BuildNotificationsTab());
+        TrackSection(NotificationsSection, NotificationsState, quiet => SaveNotificationSettingsAsync(null, quiet));
         // The Windows Run entry is a per-Windows-account setting, so
         // it must not be toggled by a non-admin profile: doing so
         // would change the auto-start behaviour for every profile of
@@ -241,7 +244,13 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         // Backup section: all profiles. Automatic-backup settings and
         // the Save/Run-now buttons are hidden for non-admin profiles;
         // the manual export/import buttons are always visible.
-        AddSection("Ui.SettingsDialog.Tab.Backup", Mdl2Glyph.Glyphs.Save, BuildBackupTab());
+        AddSection(BackupSection, Mdl2Glyph.Glyphs.Save, BuildBackupTab());
+        // The automatic-backup fields are hidden for a non-admin profile,
+        // which has nothing to save there.
+        if (_currentProfile.IsAdmin)
+        {
+            TrackSection(BackupSection, BackupState, SaveBackupSettingsAsync);
+        }
         SelectSection(0);
 
         var page = new TableLayoutPanel

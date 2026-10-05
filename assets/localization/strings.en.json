@@ -683,6 +683,8 @@
   "Ui.SettingsDialog.Tab.Email": "Email SMTP",
   "Ui.SettingsDialog.Tab.Startup": "Startup",
   "Ui.SettingsDialog.Tab.Backup": "Backup / Restore",
+  "Ui.SettingsDialog.Unsaved.Title": "Unsaved changes",
+  "Ui.SettingsDialog.Unsaved.Prompt": "Some changes were not saved: {0}.\n\nSave them before closing?",
 
   "Ui.SettingsDialog.General.Language": "Interface language",
   "Ui.SettingsDialog.General.Save": "Save",

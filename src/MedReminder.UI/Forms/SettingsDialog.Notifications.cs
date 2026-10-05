@@ -346,10 +346,12 @@ internal sealed partial class SettingsDialog
 
     // B.1, P8: through UpdateNotificationSettings, which records the
     // change for the other devices of a synced profile and writes
-    // notifications.settings.json.
-    private async Task SaveNotificationSettingsAsync(Button saveButton)
+    // notifications.settings.json. Returns false when the save failed or
+    // a field is invalid (the reason was shown). quiet skips the "saved"
+    // confirmation when the dialog saves on closing.
+    private async Task<bool> SaveNotificationSettingsAsync(Button? saveButton, bool quiet = false)
     {
-        saveButton.Enabled = false;
+        if (saveButton is not null) saveButton.Enabled = false;
         try
         {
             var toAddress = _toBox.Text.Trim();
@@ -370,7 +372,7 @@ internal sealed partial class SettingsDialog
                         _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.Invalid"),
                         _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
+                    return false;
                 }
 
                 if (string.Equals(caregiverAddress, toAddress, StringComparison.OrdinalIgnoreCase))
@@ -379,7 +381,7 @@ internal sealed partial class SettingsDialog
                         _loc.Get("Ui.SettingsDialog.Notifications.CaregiverAddress.SameAsPrimary"),
                         _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
+                    return false;
                 }
             }
 
@@ -392,7 +394,7 @@ internal sealed partial class SettingsDialog
                     _loc.Get("Ui.SettingsDialog.Notifications.DoctorAddress.Invalid"),
                     _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                return false;
             }
 
             if (_scopes is null) throw new InvalidOperationException("The settings dialog has no service scope.");
@@ -411,11 +413,16 @@ internal sealed partial class SettingsDialog
                     _regionLoaded = region;
                 }
             }
-            if (IsDisposed) return;
-            UiMessageBox.Show(this,
-                _loc.Get("Ui.SettingsDialog.Notifications.Saved"),
-                _loc.Get("Common.Ok"),
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (IsDisposed) return true;
+            MarkSaved(NotificationsSection);
+            if (!quiet)
+            {
+                UiMessageBox.Show(this,
+                    _loc.Get("Ui.SettingsDialog.Notifications.Saved"),
+                    _loc.Get("Common.Ok"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            return true;
         }
         catch (Exception ex)
         {
@@ -425,10 +432,11 @@ internal sealed partial class SettingsDialog
                     _loc.Get("Ui.SettingsDialog.Notifications.SaveError"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            return false;
         }
         finally
         {
-            if (!IsDisposed) saveButton.Enabled = true;
+            if (!IsDisposed && saveButton is not null) saveButton.Enabled = true;
         }
     }
 }
