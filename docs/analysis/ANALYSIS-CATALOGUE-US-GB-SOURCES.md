@@ -317,7 +317,8 @@ Filters:
    Ask NHS England (`information.standards@nhs.net`, the dm+d contact
    [SEARCH]) before the first release.
 2. **TRUD account terms.** The OGL governs the data, the TRUD service
-   terms the account. Publishing a derived archive on the public
+   terms the account. The TRUD licence page requires "an open account
+   on TRUD to use the content"; its scope is analysed in §9.3 point 3. Publishing a derived archive on the public
    `feeds` branch is redistribution: allowed by the OGL, to check
    against the TRUD terms [UNCERTAIN].
 3. **Secret handling.** `TRUD_API_KEY` as a repository secret, used
@@ -413,7 +414,7 @@ check digit (`CatalogueFeedSelection.IsItaly`).
 | D4 | Refresh on country change: next start or immediately | Immediately, through the existing refresher, off the UI thread |
 | D5 | US therapeutic equivalence from the Orange Book | Not now |
 | D6 | dm+d key: AMPP id or GTIN | After the NHS England answer (§4.4 point 1) |
-| D7 | Proceed with GB | Only after the TRUD licence pages of items 24 and 25 and the TRUD terms are read and recorded in `CATALOGUE-DATA.md` §7. The OGL v3.0 text itself is reviewed (§9.2) and does not block |
+| D7 | Proceed with GB | Data licence settled (OGL v3.0, §9.3). Proceed only after NHS England confirms in writing that end users of a derived file need no TRUD account (§9.3 point 3); record the answer in `CATALOGUE-DATA.md` §7 |
 | D8 | GB unlicensed products (`LIC_AUTHCD` 0) | Keep, with a status the UI can show |
 
 ---
@@ -553,6 +554,71 @@ Outcome:
   login on TRUD.
 - **D6 is now the main gate**, by the OGL's own third-party-rights
   exemption.
+
+### 9.3 "Open Government Licence for TRUD" (supplied by the owner)
+
+Text of the TRUD licence attached to the item, as supplied:
+
+> The content within releases of items having this licence may be used
+> under the terms and conditions of the Open Government Licence.
+> Consider the following when using content having this licence:
+> - You must have an open account on TRUD to use the content.
+> - If you find errors in the content, email the content provider for
+>   the item. If there is no content provider email address, email
+>   information.standards@nhs.net.
+> - We recommend that you record how and where you use the content to
+>   better prepare for when updated content is released.
+
+Which items carry it: supplied for dm+d; that both item 24 and item 25
+carry it is consistent with the search results for item 25 (§4.2), to
+record by item number in `CATALOGUE-DATA.md` [UNCERTAIN until each
+item page is saved].
+
+Assessment:
+
+1. **Licence confirmed: OGL.** The link points to the unversioned OGL
+   URL, which resolves to v3.0 (§9.2) [INFERRED]. The OGL analysis of
+   §9.2 applies in full.
+2. **No specific attribution statement.** The page names none, so the
+   OGL default applies: "Contains public sector information licensed
+   under the Open Government Licence v3.0.", with the source named
+   ("NHS Dictionary of Medicines and Devices (dm+d), NHS Business
+   Services Authority, via NHS England TRUD") and a link to the
+   licence.
+3. **"You must have an open account on TRUD to use the content."**
+   This is the one clause that matters. Two readings:
+   - *Narrow*: whoever obtains the content from TRUD needs an account.
+     The maintainer who runs the feed has one; MedReminder users
+     receive a derived file from the `feeds` branch, not from TRUD.
+     This reading matches the OGL itself, whose "You" is anyone
+     "acquiring rights in the Information (whether the Information is
+     obtained directly from the Licensor or otherwise)" (§9.2,
+     definitions), and whose grant includes distributing the
+     Information and "including it in your own product or
+     application".
+   - *Broad*: every user of the content needs a TRUD account. Under
+     this reading, an app distributing dm+d data to the public would
+     not comply, and the GB feed could not be published.
+   The text is framed as "consider the following", but uses "must".
+   The narrow reading is the more consistent one [INFERRED]; it is not
+   certain enough to ship on. Ask NHS England in writing, together
+   with the SNOMED question (§4.4 point 1), before phase 3.
+4. **Error reporting.** Not a condition on redistribution. The GB
+   refresh procedure in `CATALOGUE-DATA.md` names the dm+d content
+   provider (NHSBSA) as the contact for data errors, so reports from
+   users are not sent to NHS England by default.
+5. **Record of use.** A recommendation. `CATALOGUE-DATA.md` §1 and
+   `THIRD-PARTY-NOTICES.md` already record where each dataset is used;
+   the GB entry follows that pattern.
+6. **SNOMED CT.** The page says nothing about it. The OGL exemption
+   for third-party rights (§9.2) still applies, so D6 stays open.
+
+Status of D7 after this text: the data licence is settled (OGL v3.0,
+default attribution). Two written answers from NHS England remain:
+the scope of the TRUD account requirement (point 3) and the SNOMED CT
+identifiers (§4.4 point 1). The TRUD service terms of use (account
+creation, API key) were not supplied and are still to read
+[UNCERTAIN whether they add anything beyond this page].
 
 ---
 
