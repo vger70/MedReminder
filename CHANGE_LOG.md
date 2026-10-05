@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #204 — Add a privacy policy
+
+Link: [vger70/MedReminder#204](https://github.com/vger70/MedReminder/pull/204)
+Branch: `claude/privacy-policy` → `main`
+
+### Docs
+
+- `PRIVACY.md`: data stored on the PC, the optional features that send
+  data and where, OneDrive / Google Drive scopes, webcam, browser links,
+  user rights, contact. Needed as the privacy policy URL of the
+  Microsoft Store listing.
+- `README.md`: new "Privacy" section.
+
+---
+
 ## PR #202 — US reference catalogue (FDA NDC) and US/UK sources analysis
 
 Link: [vger70/MedReminder#202](https://github.com/vger70/MedReminder/pull/202)
