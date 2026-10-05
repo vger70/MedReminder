@@ -30,6 +30,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #205 — Ask to save unsaved settings when closing the Settings dialog
+
+Link: [vger70/MedReminder#205](https://github.com/vger70/MedReminder/pull/205)
+Branch: `claude/loving-keller-n3maee` → `main`
+
+### Changed
+
+- Settings: closing the dialog with changes not saved in General, Email, Notifications or Backup asks whether to save them (Yes saves and closes, or stays on the section whose save fails; No discards; Cancel stays). Before, an edit left without pressing the section's Save button was lost silently (`src/MedReminder.UI/Forms/SettingsDialog.UnsavedChanges.cs`).
+- New UI strings `Ui.SettingsDialog.Unsaved.Title` and `Ui.SettingsDialog.Unsaved.Prompt` in all dictionaries.
+
+### Docs
+
+- `docs/USER_GUIDE.{en,it,fr,es,de}.md` §10: the prompt on closing Settings.
+
 ## PR #201 — Record last week's merges in CHANGE_LOG and STATUS
 
 Link: [vger70/MedReminder#201](https://github.com/vger70/MedReminder/pull/201)
