@@ -30,9 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — Stop logging the notification recipient address
+## PR #208 — Stop logging the notification recipient address
 
-Link: TBD
+Link: [vger70/MedReminder#208](https://github.com/vger70/MedReminder/pull/208)
 Branch: `claude/upbeat-gates-jfe9sb` → `main`
 
 ### Security
