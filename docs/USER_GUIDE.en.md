@@ -18,7 +18,8 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
 ## Contents
 
 1. [Getting started](#start)
-   - [First start](#first-start) · [The main window](#main-window) ·
+   - [First start](#first-start) · [Guided setup](#guided-setup) ·
+     [The main window](#main-window) ·
      [Where to find what](#where)
 2. [Medicines](#medicines)
    - [Add a medicine](#add-medicine) ·
@@ -67,6 +68,10 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
      take part (see [Share the installation](#installation)).
 3. The main window opens. The MedReminder icon in the Windows
    notification area (near the clock) stays visible while the app runs.
+4. While the profile has no medicine, the **Guided setup** opens by
+   itself to help you add the first medicines and choose the warnings
+   (see [Guided setup](#guided-setup)). You can close it with
+   **Not now** and use it later.
 
 **Windows SmartScreen.** The program is code-signed with a Certum
 certificate. Until the certificate has built up reputation, on the very
@@ -74,6 +79,50 @@ first launch Windows may still show a blue "Windows protected your PC"
 window: click **More info**, then **Run anyway**. Windows remembers the
 choice. If you install from the MSI package, the permission window
 shows the verified publisher.
+
+<a id="guided-setup"></a>
+### Guided setup
+
+A short window that takes you from an empty list to medicines that warn
+you. It opens by itself the first time a profile with no medicine is
+opened on this computer. Afterwards it is in **? → Guided setup…** and,
+while the list is empty, under **Start guided setup** in the main
+window. Every step can be skipped. **Not now**, Esc or closing the
+window ends it, and it does not open by itself again for that profile
+on this computer.
+
+1. **Who the medicines are for** — for you or for someone you look
+   after. The answer changes the wording of the next steps and where
+   your e-mail address goes in step 4. An administrator can also change
+   the profile name here.
+2. **First medicines** — **Add a medicine…** opens the usual medicine
+   window (see [Add a medicine](#add-medicine)). The step lists the
+   medicines added, with the days left.
+3. **When to warn** — how many days before a medicine runs out (7, 10,
+   14 or another value) and how (on Windows, by e-mail or both). The
+   choice is applied to the medicines added in step 2 and becomes the
+   starting value of the new medicines added on this computer. Medicines
+   already in the list are not changed.
+4. **E-mail** — shown when step 3 includes e-mail or the medicines are
+   for someone you look after.
+   - For you: your address receives the warnings; the person who
+     assists you, if you enter one, receives a copy of the e-mails you
+     tick.
+   - For someone you look after: if that person has an address, the
+     warnings go to them and you receive the copies; if not, the
+     warnings come to you.
+
+   If no e-mail account is set up, an administrator can open
+   **Set up the e-mail account…**; other profiles are told that an
+   administrator has to do it (see [Notifications and email](#notifications)).
+5. **Summary** — what MedReminder will do from now on, with links to
+   set the times of the doses, back up the data and, for
+   administrators, use MedReminder on another computer. If e-mail is the
+   only channel and no e-mail can be sent yet, the summary says so and
+   offers **Also warn on Windows**.
+
+The guided setup only records what you type: it suggests no medicine
+and no dose.
 
 <a id="main-window"></a>
 ### The main window
@@ -1266,6 +1315,8 @@ Also sign the lost device out in your Microsoft or Google account.
 
 All in **Tools → Settings…**. The sections are listed on the left;
 **Ctrl+Tab** moves to the next one. The window can be resized.
+Each section is saved with its own **Save** button; closing the window
+with changes not saved asks whether to save them first.
 
 - **General → Interface language**: English, Italian, French, Spanish
   or German. Emails and the therapy report use it too. MedReminder

@@ -524,7 +524,10 @@ internal sealed partial class SettingsDialog
 
     // Household step H2b: through UpdateBackupSettings, which records the
     // scheduled cloud backup policy in the household.
-    private async Task SaveBackupSettingsAsync()
+    // Returns false when the save failed or a field is invalid (the
+    // reason was shown). quiet skips the "saved" confirmation when the
+    // dialog saves on closing.
+    private async Task<bool> SaveBackupSettingsAsync(bool quiet = false)
     {
         try
         {
@@ -537,7 +540,7 @@ internal sealed partial class SettingsDialog
                     _loc.Get("Ui.SettingsDialog.Backup.NoDirectorySelected"),
                     _loc.Get("Ui.SettingsDialog.Backup.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                return false;
             }
 
             if (!string.IsNullOrWhiteSpace(directory))
@@ -550,7 +553,7 @@ internal sealed partial class SettingsDialog
                         _loc.Get("Ui.SettingsDialog.Backup.DirectoryCreateError", ex.Message),
                         _loc.Get("Ui.SettingsDialog.Backup.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
+                    return false;
                 }
             }
 
@@ -571,7 +574,7 @@ internal sealed partial class SettingsDialog
                         : "Ui.SettingsDialog.CloudBackup.SignInFirst"),
                     _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                return false;
             }
             if (cloudEnabled && !cloudIsProvider && string.IsNullOrWhiteSpace(cloudDirectory))
             {
@@ -579,7 +582,7 @@ internal sealed partial class SettingsDialog
                     _loc.Get("Ui.CloudBackup.Error.FolderMissing"),
                     _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                return false;
             }
             if (cloudEnabled && !_cloudPassStore.HasPassphrase)
             {
@@ -587,7 +590,7 @@ internal sealed partial class SettingsDialog
                     _loc.Get("Ui.CloudBackup.Error.PassphraseMissing"),
                     _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                return false;
             }
             if (cloudEnabled && !cloudIsProvider)
             {
@@ -598,7 +601,7 @@ internal sealed partial class SettingsDialog
                         _loc.Get("Ui.SettingsDialog.Backup.DirectoryCreateError", ex.Message),
                         _loc.Get("Ui.SettingsDialog.CloudBackup.Section.Title"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
+                    return false;
                 }
             }
 
@@ -618,17 +621,23 @@ internal sealed partial class SettingsDialog
             };
 
             await RunUseCaseAsync<UpdateBackupSettings>(u => u.ExecuteAsync(settings, CancellationToken.None));
-            if (IsDisposed) return;
-            UiMessageBox.Show(this,
-                _loc.Get("Ui.SettingsDialog.Backup.Saved"),
-                _loc.Get("Common.Ok"),
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (IsDisposed) return true;
+            MarkSaved(BackupSection);
+            if (!quiet)
+            {
+                UiMessageBox.Show(this,
+                    _loc.Get("Ui.SettingsDialog.Backup.Saved"),
+                    _loc.Get("Common.Ok"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            return true;
         }
         catch (Exception ex)
         {
             UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.SettingsDialog.Backup.SaveError"),
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
         }
     }
 

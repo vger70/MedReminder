@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Catalogue;
+using MedReminder.Application.GuidedSetup;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Catalogue;
 using MedReminder.Domain.Medicines;
@@ -154,7 +155,8 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         BarcodeScanContext? barcodeContext = null,
         ReferenceMedicine? initialReference = null,
         DoseTimeSettings? doseTimes = null,
-        EquivalentsContext? equivalents = null)
+        EquivalentsContext? equivalents = null,
+        NewMedicineDefaults? newMedicineDefaults = null)
     {
         _doseTimes = doseTimes;
         _equivalents = equivalents;
@@ -272,6 +274,14 @@ internal sealed class MedicineEditDialog : MedReminderFormBase
         _remindOnDoseHelp = new Label { AutoSize = true, ForeColor = UiColors.Hint, Text = string.Empty, Margin = new Padding(20, 0, 4, 4) };
         _remindOnDoseTip = new ToolTip();
         _isActiveBox = new CheckBox { Text = _loc.Get("Ui.MedicineEditDialog.Field.IsActive"), AutoSize = true, Checked = true };
+        // Create mode: the lead time and channels chosen in the guided
+        // setup (ui.settings.json), when the profile has them.
+        if (mode == EditMode.Create && newMedicineDefaults is not null)
+        {
+            _thresholdBox.Value = newMedicineDefaults.ThresholdDays;
+            _channelWindows.Checked = (newMedicineDefaults.Channels & NotificationChannels.Windows) != 0;
+            _channelEmail.Checked = (newMedicineDefaults.Channels & NotificationChannels.Email) != 0;
+        }
 
         _slotsList = new ListView
         {

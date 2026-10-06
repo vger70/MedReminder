@@ -19,7 +19,8 @@ de la aplicación. La arquitectura técnica se describe en
 ## Índice
 
 1. [Primeros pasos](#start)
-   - [Primer inicio](#first-start) · [La ventana principal](#main-window) ·
+   - [Primer inicio](#first-start) · [Configuración guiada](#guided-setup) ·
+     [La ventana principal](#main-window) ·
      [Dónde encontrar cada cosa](#where)
 2. [Medicamentos](#medicines)
    - [Añadir un medicamento](#add-medicine) ·
@@ -69,6 +70,10 @@ de la aplicación. La arquitectura técnica se describe en
 3. Se abre la ventana principal. El icono de MedReminder en el área de
    notificación de Windows (junto al reloj) sigue visible mientras la
    aplicación está en marcha.
+4. Mientras el perfil no tiene medicamentos, la **Configuración guiada**
+   se abre sola para ayudarte a añadir los primeros medicamentos y a
+   elegir los avisos (ver [Configuración guiada](#guided-setup)). Puedes
+   cerrarla con **Ahora no** y usarla más tarde.
 
 **Windows SmartScreen.** El programa está firmado digitalmente con un
 certificado Certum. Mientras el certificado no haya ganado reputación,
@@ -76,6 +81,52 @@ en el primer inicio Windows aún puede mostrar una ventana azul "Windows
 protegió su PC": haz clic en **Más información** y luego en **Ejecutar
 de todas formas**. Windows recuerda la elección. Si instalas desde el
 paquete MSI, la ventana de permisos muestra el editor verificado.
+
+<a id="guided-setup"></a>
+### Configuración guiada
+
+Una ventana breve que te lleva de una lista vacía a medicamentos que te
+avisan. Se abre sola la primera vez que en este ordenador se abre un
+perfil sin medicamentos. Después está en **? → Configuración guiada…**
+y, mientras la lista está vacía, en **Iniciar la configuración guiada**
+en la ventana principal. Cada paso se puede omitir. **Ahora no**, Esc o
+cerrar la ventana la terminan, y para ese perfil ya no se abre sola en
+este ordenador.
+
+1. **Para quién son los medicamentos** — para ti o para una persona a la
+   que cuidas. La respuesta cambia el texto de los pasos siguientes y el
+   campo donde va tu dirección de e-mail en el paso 4. Un administrador
+   también puede cambiar aquí el nombre del perfil.
+2. **Primeros medicamentos** — **Añadir un medicamento…** abre la
+   ventana habitual del medicamento (ver
+   [Añadir un medicamento](#add-medicine)). El paso muestra los
+   medicamentos añadidos, con los días restantes.
+3. **Cuándo avisar** — cuántos días antes de que se acabe un medicamento
+   (7, 10, 14 u otro valor) y cómo (en Windows, por e-mail o ambos). La
+   elección se aplica a los medicamentos añadidos en el paso 2 y pasa a
+   ser el valor inicial de los nuevos medicamentos añadidos en este
+   ordenador. Los medicamentos que ya están en la lista no cambian.
+4. **E-mail** — aparece cuando el paso 3 incluye el e-mail o los
+   medicamentos son para una persona a la que cuidas.
+   - Para ti: tu dirección recibe los avisos; la persona que te ayuda, si
+     la introduces, recibe una copia de los e-mails que marques.
+   - Para una persona a la que cuidas: si esa persona tiene dirección,
+     los avisos le llegan a ella y tú recibes las copias; si no, los
+     avisos te llegan a ti.
+
+   Si no hay ninguna cuenta de e-mail configurada, un administrador
+   puede abrir **Configurar la cuenta de e-mail…**; los demás perfiles
+   ven que debe hacerlo un administrador (ver
+   [Notificaciones y correo](#notifications)).
+5. **Resumen** — lo que MedReminder hará a partir de ahora, con enlaces
+   para fijar los horarios de las dosis, hacer una copia de seguridad de
+   los datos y, para los administradores, usar MedReminder en otro
+   ordenador. Si el e-mail es el único canal y todavía no se puede
+   enviar ningún e-mail, el resumen lo indica y ofrece
+   **Avisar también en Windows**.
+
+La configuración guiada solo registra lo que escribes: no sugiere
+medicamentos ni dosis.
 
 <a id="main-window"></a>
 ### La ventana principal
@@ -1342,7 +1393,8 @@ cuenta de Microsoft o Google.
 
 Todo en **Herramientas → Configuración…**. Las secciones aparecen a la
 izquierda; **Ctrl+Tab** pasa a la siguiente. La ventana se puede
-redimensionar.
+redimensionar. Cada sección se guarda con su propio botón; al cerrar la
+ventana con cambios sin guardar se pregunta si guardarlos antes.
 
 - **General → Idioma de la interfaz**: inglés, italiano, francés,
   español o alemán. Los correos y la ficha de terapia también lo usan.

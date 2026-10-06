@@ -20,7 +20,8 @@ dans l'application. L'architecture technique est décrite dans
 ## Sommaire
 
 1. [Pour commencer](#start)
-   - [Premier démarrage](#first-start) · [La fenêtre principale](#main-window) ·
+   - [Premier démarrage](#first-start) · [Configuration guidée](#guided-setup) ·
+     [La fenêtre principale](#main-window) ·
      [Où trouver quoi](#where)
 2. [Médicaments](#medicines)
    - [Ajouter un médicament](#add-medicine) ·
@@ -71,6 +72,11 @@ dans l'application. L'architecture technique est décrite dans
 3. La fenêtre principale s'ouvre. L'icône de MedReminder dans la zone de
    notification de Windows (près de l'horloge) reste visible tant que
    l'application tourne.
+4. Tant que le profil n'a aucun médicament, la **Configuration guidée**
+   s'ouvre d'elle-même pour t'aider à ajouter les premiers médicaments
+   et à choisir les avertissements (voir
+   [Configuration guidée](#guided-setup)). Tu peux la fermer avec
+   **Pas maintenant** et l'utiliser plus tard.
 
 **Windows SmartScreen.** Le programme est signé numériquement avec un
 certificat Certum. Tant que le certificat n'a pas acquis de
@@ -79,6 +85,55 @@ fenêtre bleue « PC protégé par Windows » : clique sur **Informations
 complémentaires**, puis sur **Exécuter quand même**. Windows retient ce
 choix. Si tu installes depuis le paquet MSI, la fenêtre d'autorisation
 affiche l'éditeur vérifié.
+
+<a id="guided-setup"></a>
+### Configuration guidée
+
+Une courte fenêtre qui te mène d'une liste vide à des médicaments qui
+t'avertissent. Elle s'ouvre d'elle-même la première fois qu'un profil
+sans médicament est ouvert sur cet ordinateur. Ensuite, elle se trouve
+dans **? → Configuration guidée…** et, tant que la liste est vide, sous
+**Lancer la configuration guidée** dans la fenêtre principale. Chaque
+étape peut être ignorée. **Pas maintenant**, Échap ou la fermeture de la
+fenêtre la terminent, et elle ne s'ouvre plus d'elle-même pour ce
+profil sur cet ordinateur.
+
+1. **Pour qui sont les médicaments** — pour toi ou pour une personne
+   dont tu t'occupes. La réponse change le texte des étapes suivantes et
+   le champ où va ton adresse e-mail à l'étape 4. Un administrateur peut
+   aussi changer ici le nom du profil.
+2. **Premiers médicaments** — **Ajouter un médicament…** ouvre la
+   fenêtre habituelle du médicament (voir
+   [Ajouter un médicament](#add-medicine)). L'étape liste les
+   médicaments ajoutés, avec les jours restants.
+3. **Quand avertir** — combien de jours avant qu'un médicament soit
+   épuisé (7, 10, 14 ou une autre valeur) et comment (sur Windows, par
+   e-mail ou les deux). Le choix s'applique aux médicaments ajoutés à
+   l'étape 2 et devient la valeur de départ des nouveaux médicaments
+   ajoutés sur cet ordinateur. Les médicaments déjà dans la liste ne
+   changent pas.
+4. **E-mail** — affichée quand l'étape 3 comprend l'e-mail ou que les
+   médicaments sont pour une personne dont tu t'occupes.
+   - Pour toi : ton adresse reçoit les avertissements ; la personne qui
+     t'aide, si tu la saisis, reçoit une copie des e-mails que tu
+     coches.
+   - Pour une personne dont tu t'occupes : si elle a une adresse, les
+     avertissements lui sont envoyés et tu reçois les copies ; sinon,
+     les avertissements t'arrivent à toi.
+
+   Si aucun compte e-mail n'est configuré, un administrateur peut ouvrir
+   **Configurer le compte e-mail…** ; les autres profils lisent qu'un
+   administrateur doit le faire (voir
+   [Notifications et e-mail](#notifications)).
+5. **Récapitulatif** — ce que MedReminder fera désormais, avec des liens
+   pour définir les heures des prises, sauvegarder les données et, pour
+   les administrateurs, utiliser MedReminder sur un autre ordinateur. Si
+   l'e-mail est le seul canal et qu'aucun e-mail ne peut encore être
+   envoyé, le récapitulatif le dit et propose
+   **Avertir aussi sur Windows**.
+
+La configuration guidée enregistre seulement ce que tu saisis : elle ne
+propose aucun médicament et aucune dose.
 
 <a id="main-window"></a>
 ### La fenêtre principale
@@ -1382,7 +1437,9 @@ Google.
 
 Tout se trouve dans **Outils → Paramètres…**. Les sections sont
 listées à gauche ; **Ctrl+Tab** passe à la suivante. La fenêtre est
-redimensionnable.
+redimensionnable. Chaque section s'enregistre avec son propre bouton ;
+fermer la fenêtre avec des modifications non enregistrées demande s'il
+faut d'abord les enregistrer.
 
 - **Général → Langue de l'interface** : anglais, italien, français,
   espagnol ou allemand. Les e-mails et la fiche de traitement

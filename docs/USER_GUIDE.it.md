@@ -18,7 +18,8 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
 ## Indice
 
 1. [Per iniziare](#start)
-   - [Primo avvio](#first-start) · [La finestra principale](#main-window) ·
+   - [Primo avvio](#first-start) · [Configurazione guidata](#guided-setup) ·
+     [La finestra principale](#main-window) ·
      [Dove trovo cosa](#where)
 2. [Medicine](#medicines)
    - [Aggiungere una medicina](#add-medicine) ·
@@ -69,6 +70,10 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
 3. Si apre la finestra principale. L'icona di MedReminder nell'area di
    notifica di Windows (vicino all'orologio) resta visibile finché l'app
    è in esecuzione.
+4. Finché il profilo non ha medicine, si apre da sola la
+   **Configurazione guidata**, che aiuta ad aggiungere le prime medicine
+   e a scegliere gli avvisi (vedi [Configurazione guidata](#guided-setup)).
+   Puoi chiuderla con **Non ora** e usarla più tardi.
 
 **Windows SmartScreen.** Il programma è firmato digitalmente con un
 certificato Certum. Finché il certificato non ha accumulato
@@ -77,6 +82,50 @@ blu "Windows ha protetto il PC": fai clic su **Ulteriori
 informazioni**, poi su **Esegui comunque**. Windows ricorda la scelta.
 Se installi dal pacchetto MSI, la finestra dei permessi mostra
 l'autore verificato.
+
+<a id="guided-setup"></a>
+### Configurazione guidata
+
+Una breve finestra che ti porta da una lista vuota a medicine che ti
+avvisano. Si apre da sola la prima volta che su questo computer si apre
+un profilo senza medicine. In seguito si trova in
+**? → Configurazione guidata…** e, finché la lista è vuota, sotto
+**Avvia la configurazione guidata** nella finestra principale. Ogni
+passo si può saltare. **Non ora**, Esc o la chiusura della finestra la
+terminano, e per quel profilo non si apre più da sola su questo
+computer.
+
+1. **Per chi sono le medicine** — per te o per una persona che assisti.
+   La risposta cambia il testo dei passi successivi e il campo in cui va
+   il tuo indirizzo e-mail al passo 4. Un amministratore può anche
+   cambiare qui il nome del profilo.
+2. **Prime medicine** — **Aggiungi una medicina…** apre la solita
+   finestra della medicina (vedi [Aggiungere una medicina](#add-medicine)).
+   Il passo elenca le medicine aggiunte, con i giorni rimasti.
+3. **Quando avvisare** — quanti giorni prima che una medicina finisca
+   (7, 10, 14 o un altro valore) e come (su Windows, per e-mail o
+   entrambi). La scelta si applica alle medicine aggiunte al passo 2 e
+   diventa il valore di partenza delle nuove medicine aggiunte su questo
+   computer. Le medicine già nella lista non cambiano.
+4. **E-mail** — compare quando il passo 3 comprende l'e-mail o le
+   medicine sono per una persona che assisti.
+   - Per te: il tuo indirizzo riceve gli avvisi; la persona che ti
+     assiste, se la inserisci, riceve una copia delle e-mail che spunti.
+   - Per una persona che assisti: se quella persona ha un indirizzo, gli
+     avvisi vanno a lei e tu ricevi le copie; altrimenti gli avvisi
+     arrivano a te.
+
+   Se nessun account e-mail è configurato, un amministratore può aprire
+   **Configura l'account e-mail…**; gli altri profili leggono che deve
+   farlo un amministratore (vedi [Notifiche ed email](#notifications)).
+5. **Riepilogo** — che cosa farà MedReminder da ora in poi, con i link
+   per impostare gli orari delle dosi, eseguire il backup dei dati e,
+   per gli amministratori, usare MedReminder su un altro computer. Se
+   l'e-mail è l'unico canale e nessuna e-mail può ancora essere inviata,
+   il riepilogo lo dice e offre **Avvisa anche su Windows**.
+
+La configurazione guidata registra solo ciò che scrivi: non suggerisce
+medicine né dosi.
 
 <a id="main-window"></a>
 ### La finestra principale
@@ -1328,7 +1377,9 @@ Microsoft o Google.
 
 Tutto in **Strumenti → Impostazioni…**. Le sezioni sono elencate a
 sinistra; **Ctrl+Tab** passa alla successiva. La finestra si può
-ridimensionare.
+ridimensionare. Ogni sezione si salva con il suo pulsante **Salva**;
+chiudendo la finestra con modifiche non salvate viene chiesto se
+salvarle prima.
 
 - **Generale → Lingua interfaccia**: Inglese, Italiano, Francese,
   Spagnolo o Tedesco. Anche le email e la scheda terapia la usano.

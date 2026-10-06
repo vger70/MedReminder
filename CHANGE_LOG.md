@@ -48,6 +48,48 @@ Branch: `claude/b1-android-spike-results`
   P13 met for Android, Phase 0 exit met for Android, D11 recommendation:
   reject.
 - `STATUS.md` §3.1, §4: spikes and Phase 5 inputs updated.
+## PR #208 — Stop logging the notification recipient address
+
+Link: [vger70/MedReminder#208](https://github.com/vger70/MedReminder/pull/208)
+Branch: `claude/upbeat-gates-jfe9sb` → `main`
+
+### Security
+
+- Email: a successful notification send no longer logs the primary recipient address (`ToAddress`); the line now records only the email kind and the SMTP host and port. Recipient addresses are PII and logs are plain files under `%LOCALAPPDATA%\MedReminder\logs\` (CLAUDE.md §5, §7). The explicit-recipient path already omitted the address (`src/MedReminder.Infrastructure/Email/MailKitEmailNotificationService.cs`).
+## PR #207 — Add the guided setup
+
+Link: [vger70/MedReminder#207](https://github.com/vger70/MedReminder/pull/207)
+Branch: `claude/wizardly-goldberg-9atod5` → `main`
+
+### Added
+
+- Guided setup (`docs/prompt/PROMPT-GUIDED-SETUP.md`): one skippable window that takes a profile from an empty list to medicines that warn — who the medicines are for, first medicines through the existing medicine dialog, warning lead time and channel, user and caregiver e-mail, summary with next steps. It opens by itself once per profile and device while the profile has no medicine, and from **? → Guided setup…** and the new empty state of the main list (`src/MedReminder.UI/Forms/GuidedSetupForm.cs`, `src/MedReminder.Application/GuidedSetup/`).
+- Device-local `GuidedSetupShown`, `NewMedicineThresholdDays` and `NewMedicineChannels` in `profiles\<id>\ui.settings.json`; the medicine dialog in Create mode starts from the stored lead time and channels.
+- Settings opens on a chosen section (Email, Backup) when the guided setup asks for it.
+
+### Docs
+
+- User guides (5 languages): "Guided setup" section and an updated first-start section.
+
+No schema change, no new replicated value, no export change: the warning and the addresses are written through `UpdateMedicine` and `UpdateNotificationSettings`, the profile name through `RenameProfile`.
+
+---
+
+## PR #205 — Ask to save unsaved settings when closing the Settings dialog
+
+**Status:** merged (2026-10-05)
+
+Link: [vger70/MedReminder#205](https://github.com/vger70/MedReminder/pull/205)
+Branch: `claude/loving-keller-n3maee` → `main`
+
+### Changed
+
+- Settings: closing the dialog with changes not saved in General, Email, Notifications or Backup asks whether to save them (Yes saves and closes, or stays on the section whose save fails; No discards; Cancel stays). Before, an edit left without pressing the section's Save button was lost silently (`src/MedReminder.UI/Forms/SettingsDialog.UnsavedChanges.cs`).
+- New UI strings `Ui.SettingsDialog.Unsaved.Title` and `Ui.SettingsDialog.Unsaved.Prompt` in all dictionaries.
+
+### Docs
+
+- `docs/USER_GUIDE.{en,it,fr,es,de}.md` §10: the prompt on closing Settings.
 
 ## PR #201 — Record last week's merges in CHANGE_LOG and STATUS
 

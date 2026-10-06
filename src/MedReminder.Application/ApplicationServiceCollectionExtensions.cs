@@ -106,6 +106,10 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<UpdateNotificationSettings>();
         services.AddScoped<UpdateProfileRegion>();
         services.AddScoped<RenameProfile>();
+        // Guided setup (docs/prompt/PROMPT-GUIDED-SETUP.md): writes only
+        // through UpdateMedicine and UpdateNotificationSettings.
+        services.AddScoped<GuidedSetup.ApplyGuidedSetupWarning>();
+        services.AddScoped<GuidedSetup.GuidedSetupEmail>();
 
         // B.1 ledger derivation (Phase 2c-2).
         services.AddScoped<LedgerFactsLoader>();

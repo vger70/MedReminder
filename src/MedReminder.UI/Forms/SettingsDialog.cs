@@ -23,6 +23,16 @@ namespace MedReminder.UI.Forms;
 // %LOCALAPPDATA%\MedReminder\smtp.settings.json (added to the
 // IConfiguration chain in Program.cs with reloadOnChange=true, so
 // IOptionsMonitor<SmtpSettings> refreshes without a restart).
+// The section the dialog opens on (General unless a caller asks for
+// another, as the guided setup does for Email and Backup).
+internal enum SettingsSection
+{
+    General,
+    Email,
+    Notifications,
+    Backup,
+}
+
 internal sealed partial class SettingsDialog : MedReminderFormBase
 {
     private readonly IOptionsMonitor<SmtpSettings> _smtpMonitor;
@@ -172,7 +182,8 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         MedReminder.UI.Hosting.SyncHostedService? sync = null,
         ICloudAccountService? cloudAccounts = null,
         IArchiveStorage? archiveStorage = null,
-        IServiceScopeFactory? scopes = null)
+        IServiceScopeFactory? scopes = null,
+        SettingsSection initialSection = SettingsSection.General)
     {
         _scopes = scopes;
         _sync = sync;
@@ -219,16 +230,19 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         _sectionHost = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
         _sectionList = new NavigationPane(expandedWidth: 280);
 
-        AddSection("Ui.SettingsDialog.Tab.General", Mdl2Glyph.Glyphs.Settings, BuildGeneralTab());
+        AddSection(GeneralSection, Mdl2Glyph.Glyphs.Settings, BuildGeneralTab());
+        TrackSection(GeneralSection, GeneralState, SaveGeneralAsync);
         // Increment 15d (docs/ANALYSIS-MULTI-USER.md §7.4): SMTP and
         // Backup sections are admin-only. Every profile still needs to
         // choose its own recipient — that lives in the Notifications
         // section, visible to admins and users alike.
         if (_currentProfile.IsAdmin)
         {
-            AddSection("Ui.SettingsDialog.Tab.Email", Mdl2Glyph.Glyphs.Mail, BuildEmailTab());
+            AddSection(EmailSection, Mdl2Glyph.Glyphs.Mail, BuildEmailTab());
+            TrackSection(EmailSection, EmailState, SaveSmtpSettingsAsync);
         }
-        AddSection("Ui.SettingsDialog.Tab.Notifications", Mdl2Glyph.Glyphs.Ringer, BuildNotificationsTab());
+        AddSection(NotificationsSection, Mdl2Glyph.Glyphs.Ringer, BuildNotificationsTab());
+        TrackSection(NotificationsSection, NotificationsState, quiet => SaveNotificationSettingsAsync(null, quiet));
         // The Windows Run entry is a per-Windows-account setting, so
         // it must not be toggled by a non-admin profile: doing so
         // would change the auto-start behaviour for every profile of
@@ -241,8 +255,16 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         // Backup section: all profiles. Automatic-backup settings and
         // the Save/Run-now buttons are hidden for non-admin profiles;
         // the manual export/import buttons are always visible.
-        AddSection("Ui.SettingsDialog.Tab.Backup", Mdl2Glyph.Glyphs.Save, BuildBackupTab());
-        SelectSection(0);
+        AddSection(BackupSection, Mdl2Glyph.Glyphs.Save, BuildBackupTab());
+        // The automatic-backup fields are hidden for a non-admin profile,
+        // which has nothing to save there.
+        if (_currentProfile.IsAdmin)
+        {
+            TrackSection(BackupSection, BackupState, SaveBackupSettingsAsync);
+        }
+        // The guided setup opens Settings on Email; a section the profile
+        // does not see (Email for a standard user) opens the first one.
+        SelectSection(Math.Max(0, _sectionKeys.IndexOf(SectionKey(initialSection))));
 
         var page = new TableLayoutPanel
         {
@@ -307,6 +329,8 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
     // were, so the text size and theme reach all of them on load; only
     // the selected one is visible.
     private readonly List<(NavigationItem Item, string Title, Control Body)> _sections = [];
+    // The title key of each section, in the order of _sections.
+    private readonly List<string> _sectionKeys = [];
     private readonly NavigationPane _sectionList;
     private readonly Panel _sectionHost;
     private readonly Label _sectionHeading;
@@ -335,7 +359,16 @@ internal sealed partial class SettingsDialog : MedReminderFormBase
         if (body is ScrollableControl scrollable) scrollable.AutoScroll = true;
         _sectionHost.Controls.Add(body);
         _sections.Add((item, title, body));
+        _sectionKeys.Add(titleKey);
     }
+
+    private static string SectionKey(SettingsSection section) => section switch
+    {
+        SettingsSection.Email => EmailSection,
+        SettingsSection.Notifications => NotificationsSection,
+        SettingsSection.Backup => BackupSection,
+        _ => GeneralSection,
+    };
 
     private void SelectSection(int index)
     {

@@ -100,9 +100,8 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
             await client.DisconnectAsync(quit: true, cancellationToken);
         }
 
-        // An explicit-recipient send (prescription request) carries
-        // health data addressed to a named person: the address is not
-        // logged (CLAUDE.md §7).
+        // Recipient addresses are PII and logs are plain files: no
+        // address is logged on either path (CLAUDE.md §5, §7).
         if (isExplicit)
         {
             _log.LogInformation(
@@ -112,8 +111,8 @@ internal sealed class MailKitEmailNotificationService : IEmailNotificationServic
         else
         {
             _log.LogInformation(
-                "Email notification sent to {ToAddress} via {Host}:{Port}",
-                notifications.ToAddress, settings.Host, settings.Port);
+                "Email notification ({Kind}) sent via {Host}:{Port}",
+                message.Kind, settings.Host, settings.Port);
         }
     }
 
