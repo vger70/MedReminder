@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #206 — Record the Android spike results S1-S4 in the B.1 analysis
+## PR #206 — Record the Android spike results S1-S5 and S8 in the B.1 analysis
 
 Link: [vger70/MedReminder#206](https://github.com/vger70/MedReminder/pull/206)
 Branch: `claude/b1-android-spike-results`
@@ -43,7 +43,8 @@ Branch: `claude/b1-android-spike-results`
   2.0 s on the low-end phone (Galaxy A32 4G), full trimming breaks
   reflection-based JSON and EF Core. §18.5: S5 on Android 16, exact
   alarms within 4 s except after a force stop, boot re-plan verified,
-  exact-alarm permission not granted after install. P12 and
+  exact-alarm permission not granted after install. §18.8: S8, the
+  15-minute WorkManager job runs every 1 to 4 hours. P12 and
   P13 met for Android, Phase 0 exit met for Android, D11 recommendation:
   reject.
 - `STATUS.md` §3.1, §4: spikes and Phase 5 inputs updated.

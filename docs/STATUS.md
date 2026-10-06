@@ -275,7 +275,7 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | spike S8 (S1–S5 passed); D4, D11, D13; Play Console account |
+| 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | D4, D11, D13; Play Console account (spikes S1–S5 and S8 done) |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | Feature parity on mobile (timeline, prescription request, catalogue and camera scan, mail device, `.mrz` export, PDF share, state-hash check) | 20–30 d | Phase 5 / 6; D14 |
 
@@ -291,8 +291,9 @@ Open prerequisites and debts inside B.1:
   so the client keeps `TrimMode=partial` (B.1 analysis §18.0–§18.4; tool
   in draft PR #106, not to be merged). S5 passes on Android 16: exact
   alarms fire within 4 s, also after a reboot, and need
-  `SCHEDULE_EXACT_ALARM` granted by the user (§18.5). Not run: S8
-  background sync; S6 and S7 lack their Android half.
+  `SCHEDULE_EXACT_ALARM` granted by the user (§18.5). S8: the
+  15-minute WorkManager job runs every 1 to 4 hours, so background sync
+  is best effort (§18.8). S6 and S7 lack their Android half.
 - **Decisions open**: D4 (notification defaults per device), D11
   (strip-target exclusion for mobile; S4 passed, recommendation:
   reject), D13 (minimum OS versions), D14 (donation links on iOS).
@@ -405,6 +406,6 @@ profile operation schemas 4 and 5).
    wanted (§3.5).
 3. Website content refresh for v2.7–v2.16; the screenshots in
    particular predate the new main window and dark mode.
-4. Mobile: S1–S5 pass on Android, S1 and S3 being the go / no-go
-   risks for MAUI; run S8 and close D11 and D13 before Phase 5. Independent
+4. Mobile: the Android spikes are done (S1–S5, S8), S1 and S3 being
+   the go / no-go risks for MAUI; close D4, D11 and D13 before Phase 5. Independent
    of items 1–3.
