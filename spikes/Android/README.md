@@ -1,4 +1,4 @@
-# B.1 Android spikes S1–S5, S8
+# B.1 Android spikes S1–S5, S8, S10
 
 Throw-away tool for the Android spikes of B.1 Phase 0
 (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` §13 Phase 0, §18). They are
@@ -14,6 +14,7 @@ Only the results go into §18 of the analysis.
 | S4 | Does `StripReleaseDebugArtifacts` break or pass a Release Android build? (D11) | `run-s4.ps1` |
 | S5 | Do local notifications planned with `AlarmManager` fire on time in the background, swiped away, force-stopped, after a reboot, under Doze, and with exact alarms denied? (§8.1, §8.2) | App: *S5 …* buttons, [S5 and S8](#s5-and-s8) |
 | S8 | How often does WorkManager run 15-minute periodic work, with and without battery saver? (§7.4) | App: *S8 …* buttons, [S5 and S8](#s5-and-s8) |
+| S10 | Does the production MailKit email adapter send from Android, TLS included? (`ANALYSIS-B1-ANDROID-PLAN.md` §4.5) | App: *S10 …* buttons, [S10](#s10--mailkit) |
 
 Out of scope here:
 - The Android halves of S6 and S7 need the Android OAuth clients (P14),
@@ -246,6 +247,33 @@ process.
 |---|---|
 | S5 | Exact and AlarmClock fire within 60 s in `screen-off`, `swiped`, `doze-overnight` and, after the boot re-plan, `reboot`. With exact alarms denied, the app sees it (*Exact alarms allowed* False), the exact kinds are refused, and Inexact and Window fire, with their delay recorded. `force-stopped` is recorded, not judged |
 | S8 | The periodic work runs, unattended, at least every hour on average with battery saver off. The gaps with battery saver on are recorded; they set what the Phase 5 sync status can promise, not a pass or fail |
+
+## S10 — MailKit
+
+The app compiles the desktop's `MailKitEmailNotificationService` and
+`SmtpSettings` from `src/MedReminder.Infrastructure/Email/` unchanged,
+with the desktop's MailKit version, and runs them on the phone. Use the
+Release APK and a test mailbox.
+
+1. Fill in the SMTP fields: host, port (587 with STARTTLS on, or 465
+   with it off), user name, password, recipient. Many providers need an
+   app password (see "Email settings for common providers" in the user
+   guide). Nothing typed there is saved, logged or put in the report.
+2. Tap **S10 build message (offline)**: it must pass without network.
+3. Tap **S10 test connection**: connect, TLS, authenticate.
+4. Tap **S10 send test email**, then check that the message
+   "MedReminder S10 test" arrives with a `medreminder.ics` attachment.
+5. **Share report**.
+
+Pass when the three checks pass in the Release APK and the message
+arrives with its attachment. Checked off-device on 2026-10-06: the
+same code builds the message and sends it to a local SMTP server
+(no TLS) on Linux; the Release publish has no warning.
+
+Finding for the client: MAUI's implicit `using` of
+`Microsoft.Maui.ApplicationModel.Communication` brings its own
+`EmailMessage`, which makes the production `EmailMessage` ambiguous;
+the spike removes that implicit using.
 
 ## Privacy
 

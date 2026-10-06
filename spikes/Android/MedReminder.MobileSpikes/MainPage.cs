@@ -17,6 +17,12 @@ public sealed class MainPage : ContentPage
     private readonly Label _log = new() { FontSize = 12, LineBreakMode = LineBreakMode.WordWrap };
     private readonly Entry _passphrase = new() { IsPassword = true, Placeholder = "Passphrase of the desktop archive" };
     private readonly List<Button> _buttons = [];
+    private readonly Entry _smtpHost = new() { Placeholder = "SMTP host, e.g. smtp.gmail.com" };
+    private readonly Entry _smtpPort = new() { Placeholder = "Port", Text = "587", Keyboard = Keyboard.Numeric };
+    private readonly Switch _smtpStartTls = new() { IsToggled = true };
+    private readonly Entry _smtpUser = new() { Placeholder = "SMTP user name (usually the address)", Keyboard = Keyboard.Email };
+    private readonly Entry _smtpPassword = new() { Placeholder = "SMTP password or app password", IsPassword = true };
+    private readonly Entry _smtpRecipient = new() { Placeholder = "Recipient of the test message", Keyboard = Keyboard.Email };
     private readonly Picker _scenario = new() { Title = "S5 scenario", ItemsSource = S5Alarms.Scenarios, SelectedIndex = 0 };
 
     public MainPage()
@@ -70,6 +76,16 @@ public sealed class MainPage : ContentPage
                         S8Background.Collect(_report);
                     })),
                     NewButton("Clear S5 and S8 data", ClearS5S8Async),
+                    new Label { Text = "S10 MailKit: use a test mailbox; nothing typed here is saved or reported.", FontSize = 12 },
+                    _smtpHost,
+                    _smtpPort,
+                    new HorizontalStackLayout { Spacing = 8, Children = { new Label { Text = "STARTTLS", VerticalOptions = LayoutOptions.Center }, _smtpStartTls } },
+                    _smtpUser,
+                    _smtpPassword,
+                    _smtpRecipient,
+                    NewButton("S10 build message (offline)", () => RunAsync(() => S10MailKit.BuildMessage(_report))),
+                    NewButton("S10 test connection", () => RunS10Async(send: false)),
+                    NewButton("S10 send test email", () => RunS10Async(send: true)),
                     NewButton("Share report", ShareReportAsync),
                     NewButton("Clear", () =>
                     {
@@ -155,6 +171,20 @@ public sealed class MainPage : ContentPage
         {
             Array.Clear(passphrase);
         }
+    }
+
+    private async Task RunS10Async(bool send)
+    {
+        if (string.IsNullOrWhiteSpace(_smtpHost.Text)
+            || !int.TryParse(_smtpPort.Text, out var port)
+            || (send && string.IsNullOrWhiteSpace(_smtpRecipient.Text)))
+        {
+            await DisplayAlertAsync("S10", "Enter host, port and, to send, the recipient.", "OK");
+            return;
+        }
+        var input = new SmtpInput(_smtpHost.Text, port, _smtpStartTls.IsToggled,
+            _smtpUser.Text ?? string.Empty, _smtpPassword.Text ?? string.Empty, _smtpRecipient.Text ?? string.Empty);
+        await RunAsync(() => S10MailKit.RunAsync(_report, input, send, CancellationToken.None));
     }
 
     private Task ScheduleS5Async(bool longBattery)
