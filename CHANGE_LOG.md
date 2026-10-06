@@ -42,8 +42,10 @@ Branch: `claude/b1-android-standalone-plan` (stacked on #206)
   without a PC and without an account, and covers every desktop feature
   of v2.16.0 that applies to a phone; feature inventory, standalone
   design points (first start, notification planner, backup, catalogue,
-  email, PDF, security), milestones M0–M5 (110–155 days), decisions
-  DA1–DA5, risks.
+  email, PDF, security), milestones M0–M5 (110–160 days), decisions
+  DA1–DA5, risks. Revision 2 after a check against the tree and the
+  household design: profiles, roles and PIN in M2, corrected
+  references, M1 completed (accessibility, packaging, user guides).
 - `ANALYSIS-B1-MOBILE-SYNC.md` §9.1, §10, §13 and `STATUS.md` §3.1, §4
   point to the new plan for Android.
 

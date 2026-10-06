@@ -278,9 +278,9 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, proposed) | Standalone Android app with every applicable desktop feature: M0 portability refactor 2 and notification planner; M1 standalone core (first release); M2 cloud backup, sync, household; M3 prescriptions, planning, views; M4 catalogue, scan, Italian services; M5 email, people, support | 110–155 d | D4, D11, D13, DA1–DA5; Play Console account (spikes S1–S5 and S8 done) |
+| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, proposed) | Standalone Android app with every applicable desktop feature: M0 portability refactor 2 and notification planner; M1 standalone core (first release); M2 cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 catalogue, scan, Italian services; M5 email and support | 110–160 d | D4, D11, D13, DA1–DA5; Play Console account (spikes S1–S5 and S8 done) |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
-| 7 | iOS feature parity and the state-hash check; for Android absorbed by M3–M5 | not re-estimated | Phase 6; D14 |
+| 7 | iOS feature parity (for Android absorbed by M2–M5); the state-hash check is not implemented on any device and stays a B.1 item | not re-estimated | Phase 6; D14 |
 
 Household step H6 (household creation and join on the phone, phone as
 master, QR decode on the PC webcam) belongs to Phases 5 and 7, plus

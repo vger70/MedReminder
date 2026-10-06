@@ -15,7 +15,7 @@ this document wins once approved. The sync model, the formats and the
 merge rules of B.1 are unchanged. iOS (B.1 Phase 6) is out of scope
 here.
 
-Status on 2026-10-06: revision 1. Reading conventions: `[VERIFIED]`
+Status on 2026-10-06: revision 2. Reading conventions: `[VERIFIED]`
 (checked against the tree at `main` v2.16.0 and the spike results of
 B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]`
 (not verified). Untagged statements are design proposals.
@@ -42,9 +42,9 @@ What changes against B.1:
 - B.1 §10 excludes cloud backup on the phone because "sync plus desktop
   backups cover it". Without a PC that no longer holds: the phone needs
   its own backup (§4.3).
-- Email from the phone moves from Phase 7 to an earlier step, since a
-  phone without a PC is the master and the only device that can send
-  it (§4.5).
+- Email from the phone becomes necessary, since a phone without a PC
+  is the master and the only device that can send it (§4.5). It stays
+  a late milestone (M5), which DA4 can move earlier.
 
 ---
 
@@ -57,7 +57,7 @@ From the spikes (B.1 §18) `[VERIFIED]`:
 | Crypto (S1, S2) | AES-GCM and Argon2id produce the desktop's bytes; Argon2id default parameters 0.9–2.0 s | Archives, sync keys and household passphrases work on the phone unchanged |
 | Persistence (S3) | Production EF Core SQLite, `DatabaseInitializer` and repositories run with the Release defaults (`TrimMode=partial`, profiled AOT); full trimming breaks EF Core and reflection JSON | Keep `TrimMode=partial`; no source-generator migration needed for the first releases |
 | Build (S4) | `StripReleaseDebugArtifacts` unchanged works on Android | D11: reject the exclusion |
-| Notifications (S5) | Exact alarms fire within 4 s, also after reboot; `SCHEDULE_EXACT_ALARM` is not granted after install on Android 16; inexact fallback up to 25 min late; force stop cancels until the next launch | Notifications are planned ahead and set as exact alarms; the app asks for the permission |
+| Notifications (S5) | Exact alarms fire within 4 s, also after reboot; `SCHEDULE_EXACT_ALARM` is not granted after install on Android 16; inexact fallback up to 25 min late; force stop cancels until the next launch, which on Android 15+ delivers `BOOT_COMPLETED` | Notifications are planned ahead and set as exact alarms; the app asks for the permission; one receiver re-plans after reboot and force stop |
 | Background (S8) | 15-minute WorkManager work runs every 1–4 h | Anything periodic (sync, cloud backup, email, feed refresh) is best effort on the phone |
 
 From the code at v2.16.0 `[VERIFIED]`:
@@ -68,11 +68,13 @@ From the code at v2.16.0 `[VERIFIED]`:
   calendar, household and sync logic), and Infrastructure.Portable
   (persistence, archive cipher and reader, OneDrive and Google Drive
   REST clients, sync transports, household stores, localization,
-  remote feed clients for shortages, equivalents and regional
-  services).
-- **Windows project, but without Windows APIs** `[INFERRED — no
-  Windows, DPAPI or registry reference in these files]`: MailKit email
-  service, reference catalogue query service, catalogue parsers and
+  remote feed clients for the catalogue, shortages, equivalents and
+  regional services; `RemoteCatalogueRefresher` is in Application).
+- **Windows project, but without Windows APIs** `[VERIFIED — their
+  using directives reference only System, Microsoft.Extensions, EF Core,
+  SQLite, MailKit/MimeKit and MedReminder namespaces; no DPAPI,
+  registry or Windows reference]`: MailKit email service, reference
+  catalogue query service, catalogue importer and parsers, embedded
   snapshot provider, backup service, cloud archive storage, sync setup
   service.
 - **Windows-specific, need an Android adapter**: DPAPI credential
@@ -126,7 +128,7 @@ its place in the plan. "M" refers to the milestones of §5.
 | Italy | Shortage list, notice once per shortage | Yes | M4 |
 | Italy | Information links and equivalent medicines | Yes | M4 |
 | Email | SMTP account, recipients, low-stock email, caregiver copies per kind, weekly digest, run-out date | Yes, MailKit; timing best effort (S8) | M5 |
-| People | Several profiles, roles (administrator, user), PIN, switch profile | Yes; app lock with device biometrics as well | M5 |
+| People | Several profiles, roles (administrator, user), PIN, switch profile | Yes; app lock with device biometrics as well | M2 (one administrator profile in M1) |
 | Support | Donation links (A6) | Yes, browser | M5 |
 | Appearance | Text size, dark mode, high contrast | System font scaling and dark theme; no own setting | M1 |
 | Language | Five UI languages | Yes, same dictionaries | M1 |
@@ -135,6 +137,9 @@ its place in the plan. "M" refers to the milestones of §5.
 | Desktop only | Raw database backup to a folder | Replaced by cloud backup and `.mrz` export | — |
 
 No desktop feature is dropped except the desktop-only rows. The
+device-side state-hash check of B.1 §12 and Phase 7 is not implemented
+on the desktop either; it stays a B.1 item for every device, outside
+M0–M5. The
 feature parity table of B.1 §10 is replaced by this one for Android.
 
 ---
@@ -145,17 +150,20 @@ feature parity table of B.1 §10 is replaced by this one for Android.
 
 The first-start wizard offers three paths:
 
-1. **Start here**: create the installation (household of one, master
-   is this phone) and the first profile. No account needed. This is
-   the standalone path (A1, A2).
-2. **Join an installation**: pairing code (QR from the PC or another
-   phone, or text) or household passphrase plus cloud account, as on
-   the desktop (household §8, B.1 §6.1).
+1. **Start here**: create the installation and the first profile. No
+   account needed: a device with no storage configured is a household
+   of one (household §4.1) `[VERIFIED]`, master of itself. This is the
+   standalone path (A1, A2).
+2. **Join an installation** (from M2): pairing code (QR from the PC or
+   another phone, or text) or household passphrase plus cloud account,
+   as on the desktop (household §6, B.1 §6.1).
 3. **Restore**: from a `.mrz` file or from a cloud backup.
 
-A standalone phone can later publish its household to a cloud account
-and let a PC join; the household design already describes that
-reverse pairing (household §10) `[VERIFIED]`.
+A standalone phone can later publish its household to a cloud account,
+which needs an account because a phone has no folder transport, and
+let a PC join (household §10) `[VERIFIED]`. The PC joins with the text
+pairing code: its webcam decoder does not read QR codes (household §10)
+`[VERIFIED]`.
 
 ### 4.2 Notification planner
 
@@ -198,8 +206,9 @@ Google outside the app's encryption. The phone offers instead:
 
 The desktop embeds a snapshot per country (0.5–4.6 MB each, B.1 §10)
 and refreshes it from monthly feeds `[VERIFIED]`. The phone downloads
-the snapshot of the reference country chosen in the wizard from the
-same feeds, and refreshes it when the app opens and as periodic work.
+the reference country's catalogue and the EU catalogue from the same
+feeds (`GitHubRawCatalogueFeedClient`, `RemoteCatalogueRefresher`,
+both portable `[VERIFIED]`), and refreshes it when the app opens and as periodic work.
 No country is embedded in the APK, which keeps it near the 40 MB of the
 spike `[INFERRED]`. Without network the catalogue is simply not
 available; manual entry always works.
@@ -225,8 +234,8 @@ share sheet. The calendar export, the prescription request and the
 - Secrets (SMTP password, sync and household keys, cloud tokens,
   backup passphrase) in an Android Keystore-backed store, behind the
   existing ports (`ICredentialProtector` and the stores built on it).
-- App lock: device biometrics or the profile PIN (M5); before M5,
-  device biometrics only.
+- App lock: device biometrics in M1; the profile PIN as well from M2,
+  when several profiles and roles arrive.
 - Database and logs in the app sandbox; same log rules as the desktop
   (`CLAUDE.md` §7).
 
@@ -268,12 +277,17 @@ Entry: M0 merged; D4, D11, D13, DA1–DA4 decided; Play Console account.
 - Notification planner with exact alarms: low stock (two stages), dose
   reminders with actions, package expiry.
 - Encrypted export and import, backup reminder (§4.3).
-- App lock with device biometrics; system font scaling and dark theme;
-  five languages; sandbox and log rules.
-- CI Android job, signing outside the repository, closed testing track.
-- Exit: manual checklist on Android 14+ and on the D13 floor; one month
-  of use on a phone without a PC or account loses no data across app
-  updates, reboots and an export/import cycle; no health data in logs.
+- One profile, administrator role; app lock with device biometrics;
+  system font scaling and dark theme; accessibility of B.1 §9.1
+  (screen-reader labels, no meaning by color alone); five languages;
+  sandbox and log rules.
+- CI Android job, signing outside the repository, closed testing track;
+  `docs/PACKAGING.md` mobile section; user guide sections in the five
+  languages.
+- Exit: manual checklist on Android 14+ and on the D13 floor; the
+  14-day closed test runs on phones without a PC or account and loses
+  no data across app updates, reboots and an export/import cycle; no
+  health data in logs.
 - Effort: 35–50 days `[INFERRED — strongly dependent on MAUI
   experience]`.
 
@@ -288,11 +302,15 @@ P14).
   to review, sync status with the time of the last sync (S8).
 - Household: create on the phone, join, master role on the phone or
   hand it to a PC, device removal; "Join an installation" path of
-  §4.1.
+  §4.1. A phone that is master holds every profile (household C4, C7).
+- Several profiles, switch profile, roles and PIN, with the permission
+  matrix of household §4.3 and §8 (household step H6). Needed here
+  because a joined phone can hold several profiles and must not let a
+  user change administrator settings.
 - Exit: phone and desktop converge in the offline and conflict
   scenarios of the B.1 checklist; a phone-first installation is joined
   by a PC and the PC becomes master.
-- Effort: 20–30 days `[INFERRED]`.
+- Effort: 25–38 days, H6 included `[INFERRED]`.
 
 ### M3 — Prescriptions, planning, views
 
@@ -311,15 +329,14 @@ P14).
 - Shortage list and notices; information links and equivalents.
 - Effort: 15–20 days `[INFERRED]`.
 
-### M5 — Email, people, support
+### M5 — Email and support
 
 - SMTP settings and MailKit on the phone; low-stock email, caregiver
   copies per kind, weekly digest (§4.5).
-- Several profiles, roles, PIN, switch profile; PIN as app lock.
 - Donation links.
 - Exit: feature inventory of §3 fully satisfied or each gap accepted
   by the product owner.
-- Effort: 15–20 days `[INFERRED]`.
+- Effort: 10–15 days `[INFERRED]`.
 
 ### 5.1 Summary
 
@@ -327,13 +344,13 @@ P14).
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
 | M1 | Standalone core, first release | M0; D4, D11, D13, DA1–DA4; Play account | 35–50 d |
-| M2 | Cloud backup, sync, household | M1; S6/S7 Android halves | 20–30 d |
+| M2 | Cloud backup, sync, household, profiles, roles and PIN | M1; S6/S7 Android halves | 25–38 d |
 | M3 | Prescriptions, planning, views | M1 | 15–20 d |
 | M4 | Catalogue, scan, Italian services | M1 | 15–20 d |
-| M5 | Email, people, support | M1 (M2 for email to a PC household) | 15–20 d |
+| M5 | Email, support | M1 | 10–15 d |
 
-Total about 110–155 developer-days, against 60–90 for B.1 Phases 5 and
-7 on Android. The difference is the standalone requirement (M0, backup,
+Total about 110–160 developer-days, against 60–90 for B.1 Phases 5
+and 7. The difference is the standalone requirement (M0, backup,
 phone-first household) and the features added to the desktop since
 2026-09-26. M3, M4 and M5 are independent of each other after M1 and
 can be reordered.
@@ -347,7 +364,7 @@ can be reordered.
   connects the phone to a PC when there is one.
 - Sync compatibility does not depend on the order. The phone uses the
   same persistence and apply code as the desktop, so from M2 on it
-  stores and forwards every operation type, including those whose
+  stores and applies every operation type, including those whose
   screens come in M3–M5 `[INFERRED — shared Application and
   Infrastructure.Portable code, B.1 §7.5]`.
 
@@ -377,7 +394,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | Data loss on a standalone phone (lost, reset, uninstalled) | Medium | High | Backup reminder in M1, cloud backup in M2 (§4.3) |
 | Exact-alarm permission refused | Medium | Medium | Explanation at first start; inexact fallback stated in the UI (S5) |
 | Background work late (emails, backups, feeds) | High | Low–medium | Run on app open; status shows the last run; PC as master when present |
-| Scope growth beyond 155 days | Medium | Schedule | Milestones releasable on their own; M3–M5 reorderable |
+| Scope growth beyond 160 days | Medium | Schedule | Milestones releasable on their own; M3–M5 reorderable |
 | Desktop and phone notify on different days | Low | Medium | One rule set, planner parity tests (§4.2) |
 
 ---
@@ -386,8 +403,9 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 - `ANALYSIS-B1-MOBILE-SYNC.md` §1.2, §9.1, §10, §13 Phases 5 and 7:
   for Android, superseded by this document.
-- `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` §10: the phone sends email
-  from M5, not from B.1 Phase 7.
+- `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` §10 and §13 (H6): the phone
+  sends email from M5, not from B.1 Phase 7; household creation, join,
+  roles and PIN on the phone are part of M2.
 - `docs/STATUS.md` §3.1: Phases 5 and 7 replaced by M0–M5.
 
 ---
@@ -396,3 +414,12 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 - 2026-10-06 — revision 1: standalone requirement, feature inventory of
   v2.16.0, milestones M0–M5, decisions DA1–DA5.
+- 2026-10-06 — revision 2, after a check against the tree and the
+  household design: profiles, roles and PIN move from M5 to M2 (a
+  joined phone holds several profiles and needs the permission
+  matrix); household references corrected (§4.1 and §6, not §8);
+  household without storage cited; PC joins a phone with the text
+  code; catalogue feed client and refresher already portable, EU feed
+  added; M1 gains accessibility, packaging and user guides, exit aligned
+  with the 14-day closed test; state-hash check stated as outside the
+  plan; "forwards" corrected to "applies"; totals 110–160 days.
