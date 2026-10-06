@@ -99,8 +99,8 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 | P9 | Stock ledger is a deterministic function of user facts | **Met by Phase 2c-2** (after the cutoff; counts carry their stored outcome until Phase 3) | `LedgerSynchronizer` derives consumption, reversals, count corrections and `StockEpoch` from the facts; the stored ledger equals a fresh derivation after every action of the random scenarios (`LedgerParityTests`) `[VERIFIED]` |
 | P10 | Stable GUID identity on every replicated entity | **Met** | All entities use `Guid Id` generated at creation `[VERIFIED — Domain entities]` |
 | P11 | Medicines are never hard-deleted | **Met, with one exception (2026-09-28)** | Deactivation via `IsActive` `[VERIFIED]`; slots are no longer deleted: since Phase 2b `UpdateMedicine` appends a slot set `[VERIFIED]`. A medicine without recorded facts can be deleted: `MedicineDeleted` operation, §4.2 |
-| P12 | AES-GCM on mobile | iOS 13+ on .NET 9+ **met**; Android `[UNCERTAIN]` | dotnet/runtime #91523 `[VERIFIED]`; spike S1 |
-| P13 | EF Core SQLite on Android / iOS AOT | `[UNCERTAIN]` | Spike S3 |
+| P12 | AES-GCM on mobile | iOS 13+ on .NET 9+ **met**; Android **met** (S1, §18.1) | dotnet/runtime #91523 `[VERIFIED]`; spike S1 on Android 16 |
+| P13 | EF Core SQLite on Android / iOS AOT | Android **met** with the Release defaults, not with full trimming (S3, §18.3); iOS `[UNCERTAIN]` | Spike S3 |
 | P14 | OAuth app registrations (Microsoft Entra public client, Google Cloud OAuth client) | **Not met** | Guide exists: `docs/notes/AZURE-ENTRA-PUBLIC-CLIENT-APPLICATION-GUIDE.md` `[VERIFIED]`. Phase 0 |
 | P15 | Build hosts and store accounts (macOS for iOS, Apple Developer Program, Google Play) | **Not met** | Product-owner action; Phase 0 / 6 |
 | P16 | Product-owner decisions D1–D15 | **Open** | §16 |
@@ -889,7 +889,9 @@ user-chosen, as the C.3+ cloud folder already is.
   background with Android WorkManager periodic work (minimum interval
   15 minutes `[VERIFIED — Android WorkManager documentation, training
   knowledge]`) and iOS background app refresh, whose timing the OS
-  decides `[INFERRED]`.
+  decides `[INFERRED]`. Measured on one Android 16 phone, the 15-minute
+  work ran every 1 to 4 hours (S8, §18.8): background sync is best
+  effort, and the sync status shows the time of the last sync.
 - Status surface on every device: last successful sync, pending
   operations, peer devices and their last seen time, errors, clock
   warnings, conflicts to review.
@@ -951,11 +953,13 @@ change.
   changes]`. Plan: request `SCHEDULE_EXACT_ALARM` with an explanation;
   inexact fallback stated in the UI.
 - Android alarms are cleared on reboot; re-plan on `BOOT_COMPLETED`
-  `[INFERRED]`.
+  `[VERIFIED — S5, §18.5]`.
 - iOS: explicit authorization.
 - MAUI has no built-in local-notification API `[INFERRED]`; thin native
   adapters (`AlarmManager` + `NotificationCompat`, `UNUserNotificationCenter`)
-  behind `ILocalNotificationScheduler` (spike S5).
+  behind `ILocalNotificationScheduler`. On Android the exact kinds
+  (`setExactAndAllowWhileIdle`, `setAlarmClock`) fire within seconds;
+  the inexact fallback fires up to 25 minutes late (S5, §18.5).
 
 ### 8.3 Duplication policy
 
@@ -1136,7 +1140,8 @@ place relative to A2 (`EVOLUTION.md` §2.0).
    host if iOS is in scope.
 
 **Exit**: S9 passes; S1, S3 pass or have accepted mitigations; S6
-passes for Windows; D9 decided. The Android halves of S6 and S7 need
+passes for Windows; D9 decided. Met on 2026-10-05 for Android: S1 and
+S3 pass with the Release defaults (§18.1, §18.3). The Android halves of S6 and S7 need
 the Android OAuth clients (P14) and run with Phase 5 (§18).
 
 **Effort**: 8–12 days, plus 8–12 days for S9 `[INFERRED]`.
@@ -1404,7 +1409,7 @@ Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15; on
 | D8 | Retraction (delete a mistaken fact) | Add now; later | **Decided 2026-09-26**: add in Phase 2 | Phase 2 |
 | D9 | Portable project name, namespaces | `MedReminder.Infrastructure.Portable`, keep namespaces | **Decided 2026-09-26**: as proposed | Phase 1 |
 | D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | **Decided 2026-09-26**: separate | Phase 3 |
-| D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | Decide on S4 evidence | Phase 5 |
+| D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | S4 passed (§18.4): no exclusion needed; reject | Phase 5 |
 | D12 | iCloud transport | Plan; exclude | Exclude | Phase 0 |
 | D13 | Minimum OS versions | — | Android 8.0 (API 26), iOS 15 `[INFERRED — not measured]` | Phase 5 |
 | D14 | Donation links on iOS | Include; exclude | Exclude unless verified compliant | Phase 7 |
@@ -1449,9 +1454,166 @@ two behavior findings belong to Phase 2.
 
 ## 18. Spike results
 
-One subsection per spike: date, environment, result, decision. S1–S5,
-S8 pending; S6 and S7 done for Windows (their Android halves run with
-Phase 5).
+One subsection per spike: date, environment, result, decision. S1–S5
+and S8 done on Android; S6 and S7 done for Windows (their Android
+halves run with Phase 5).
+
+### 18.0 Android spike tool and device (S1–S4)
+
+Tool in `spikes/Android/` on branch `claude/nifty-galileo-vfepsw`
+(draft PR #106, not merged): a MAUI Android app that runs S1–S3 against
+the production `MedReminder.Domain`, `MedReminder.Application` and
+`MedReminder.Infrastructure.Portable` through
+`AddMedReminderPortableInfrastructure`, and `run-s4.ps1` for S4. The
+reports are in that folder's `results/`.
+
+**Environment**: three phones, arm64:
+
+| Phone | Android | RAM | Builds run |
+|---|---|---|---|
+| motorola edge 50 neo | 16 (API 36) | 7.4 GB | Debug, Release default, Release full trimming |
+| Samsung Galaxy A52 5G (SM-A526B) | 14 (API 34) | 5.4 GB | Release default |
+| Samsung Galaxy A32 4G (SM-A325F, MediaTek Helio G80), the low-end phone | 13 (API 33) | 3.6 GB | Release default |
+
+.NET SDK 10.0.401 on Windows, runtime .NET 10.0.12, workloads
+`android` 36.1.69 and `maui-android` 10.0.110; minimum API 26 (D13
+proposal), target API 36. Three builds of the same code:
+
+| Build | Settings |
+|---|---|
+| Debug | Interpreter (`RunAOTCompilation=false`, `IsDynamicCodeCompiled=false`) |
+| Release, default | `PublishTrimmed=true`, `TrimMode=partial`, `RunAOTCompilation=true`, profiled AOT, `JsonSerializerIsReflectionEnabledByDefault=true` |
+| Release, full trimming | As the default with `TrimMode=full`, which sets `JsonSerializerIsReflectionEnabledByDefault=false` |
+
+The desktop archive for S1b was exported by MedReminder 2.16.0 (payload
+schema 2, 18 medicines, 195 stock movements); the reports hold counts
+only.
+
+### 18.1 S1 — AES-GCM on Android (2026-10-05)
+
+**Results**
+
+| Check | Debug | Release, default | Release, full trimming |
+|---|---|---|---|
+| `AesGcm.IsSupported` | Pass | Pass | Pass |
+| AES-256-GCM known answer (pyca/cryptography reference), in-box and through `IArchiveCipher` | Pass | Pass | Pass |
+| Tampered tag rejected (`AuthenticationTagMismatchException`) | Pass | Pass | Pass |
+| Argon2id known answer (argon2-cffi reference) through `IArchiveCipher` | Pass | Pass | Pass |
+| S1b: desktop archive, manifest and payload through `IArchiveReader` | Pass (7.5 s) | Pass (1.2 s) | **Fail**: `JsonSerializerIsReflectionDisabled` |
+
+The Release default build also passes every S1 check on the A52 (S1b
+1.4 s; a wrong passphrase gives "The passphrase does not match this
+file") and on the A32 (S1b 2.5 s).
+
+**Decision**: P12 met on Android. The phone computes the same bytes as
+the desktop and reads a desktop archive with the Release defaults. The
+full-trimming failure is the JSON setting, not the cipher (§18.3).
+
+### 18.2 S2 — Argon2id cost (2026-10-05)
+
+**Results**: `Argon2Params.Default` (t=3, m=64 MiB, p=1) through
+`IArchiveCipher`, three runs, key equal to the reference, no
+out-of-memory.
+
+| Phone, build | Per derivation | Peak working set |
+|---|---|---|
+| motorola edge 50 neo, Debug (interpreter) | 7.05–7.09 s | 367 MiB |
+| motorola edge 50 neo, Release default | 0.88–0.90 s | 334 MiB |
+| motorola edge 50 neo, Release full trimming | 0.89–0.91 s | 322 MiB |
+| Galaxy A52 5G, Release default | 1.07–1.08 s | 254 MiB |
+| Galaxy A32 4G (low-end, 3.6 GB), Release default | 1.90–2.04 s | 308 MiB |
+
+**Decision**: the 5 s target holds in Release on every phone, the
+low-end A32 included, with `Argon2Params.Default` unchanged. The Debug
+figure is the interpreter and is not used.
+
+### 18.3 S3 — EF Core SQLite with trimming / AOT (2026-10-05)
+
+**Results**
+
+| Check | Debug | Release, default | Release, full trimming |
+|---|---|---|---|
+| `DatabaseInitializer` on a new database (32 tables) | Pass | Pass | **Fail** |
+| Write through `IMedicineRepository` and `IUnitOfWork` | Pass | Pass | **Fail** |
+| Read through the repositories (decimal, `DateOnly`) | Pass | Pass | **Fail** |
+| `MedicineOverviewLoader.LoadAsync` | Pass | Pass | **Fail** |
+| `DatabaseInitializer` on the existing database (boot patches, WAL) | Pass | Pass | **Fail** |
+| Reflection-based `System.Text.Json` (`ArchiveReader`, sync codec) | Pass | Pass | **Fail** |
+
+Every full-trimming EF Core failure is the same
+`MissingMethodException`: the constructor of
+`EntryCurrentValueComparer<Guid>`, created by reflection, is trimmed.
+The JSON failure is `JsonSerializerIsReflectionDisabled`. The
+full-trimming publish reports 54 IL2026 and 8 IL2104 warnings (EF Core,
+EF Core Relational, EF Core Sqlite, SQLitePCLRaw, the entity
+configurations, reflection JSON); the default publish reports none.
+
+The Release default build passes every S3 check on the A52 and the A32
+too (`DatabaseInitializer` on a new database 2.0 s and 3.7 s).
+
+**Decision**: P13 met on Android with the .NET for Android Release
+defaults. The Phase 5 client keeps `TrimMode=partial`. Full trimming
+would need source-generated JSON contexts in the portable code and EF
+Core trimming support; it is not planned. iOS is not covered by this
+spike (Phase 6).
+
+### 18.4 S4 — `StripReleaseDebugArtifacts` on an Android Release build (2026-10-05)
+
+**Results**: `dotnet publish -c Release -f net10.0-android` with
+`Directory.Build.props` unchanged, default and full trimming: exit 0;
+the target deletes the spike's `.pdb` and `.xml` from the output folder
+and leaves no `*.pdb` / `*.xml` in the output or publish folders; the
+signed APK (39.7 MiB default, 34.6 MiB full trimming) installs with adb
+and starts; the default APK passes S1 and S3.
+
+**Decision**: no exclusion of the mobile project from
+`StripReleaseDebugArtifacts` is needed; D11 can be closed as "reject".
+
+### 18.5 S5 — Local notifications on Android (2026-10-05/06)
+
+**Environment**: motorola edge 50 neo, Android 16, the Release default
+APK of §18.0 extended with S5 (draft PR #106). A *battery* schedules,
+per time offset, one alarm of each kind: Exact
+(`setExactAndAllowWhileIdle`), AlarmClock (`setAlarmClock`), Inexact
+(`setAndAllowWhileIdle`) and Window (`setWindow`, 10 minutes). The
+receiver logs the real firing time and posts a notification; a
+`BOOT_COMPLETED` receiver re-plans the alarms still due, as the Phase 5
+planner would. `POST_NOTIFICATIONS` granted. `SCHEDULE_EXACT_ALARM` was
+**not granted after install** on Android 16; it was granted in the
+settings for every run except the two with exact alarms denied.
+
+**Results** (delay after the planned time; short battery: +2 to +20
+minutes; long battery: +30 minutes to +8 hours)
+
+| Scenario | Exact, AlarmClock | Inexact, Window | Notes |
+|---|---|---|---|
+| Screen off | 0–2 s, 8/8 | 17–239 s | |
+| Swiped from recents | 1 s, 8/8 | 17–240 s | The process stayed cached: no alarm had to start it |
+| Reboot | 2–4 s, 8/8 | 4–221 s | The boot receiver re-planned 16/16 without the app being opened; the first alarms started the process |
+| Reboot, exact alarms denied | Refused | 11–777 s | 8/8 re-planned at boot |
+| Exact alarms denied | Refused (`SecurityException`); `canScheduleExactAlarms` false | Inexact 92–442 s, Window 442–1522 s | |
+| Force-stopped | 0/8 | 0/8 | No alarm fired. Opening the app again delivered `BOOT_COMPLETED` without a reboot, so the boot receiver ran; every alarm was already past due |
+| Overnight, long battery (22:30–06:00) | 1 s, 10/10 | 171–243 s | Doze not observed at firing time (`isDeviceIdleMode` false) `[UNCERTAIN — whether the phone entered Doze]` |
+| Foreground | 0 s, 8/8 | 90–347 s | |
+
+**Decision**:
+
+- Dose reminders use the exact kinds; they fire within 4 s in every
+  scenario except force stop. §8.2 holds: request
+  `SCHEDULE_EXACT_ALARM` with an explanation, since it is not granted
+  after install; without it the inexact fallback is up to 25 minutes
+  late, which the UI states.
+- Re-plan on `BOOT_COMPLETED` works without the app being opened.
+- Force stop cancels the alarms until the user opens the app again.
+  On Android 15+ the app then receives `BOOT_COMPLETED` when it leaves
+  the stopped state `[VERIFIED — S5 on Android 16; the Android 15
+  change is reported by M. Murphy, "Random Musings on the Android 15
+  Developer Preview 2"]`, so the same receiver re-plans; the planner
+  also re-plans on start (§8.1). Reminders due while the app was
+  stopped are lost; whether the planner shows them as missed on the
+  next start is a Phase 5 design point.
+- iOS (pending limit, authorization) is not covered; it belongs to
+  Phase 6.
 
 ### 18.6 S6 — OneDrive app folder (2026-09-27)
 
@@ -1532,6 +1694,44 @@ rounds, reports in that folder's `results/`.
 - Own writes are remembered until the listing shows them (lag).
 - Before release the Cloud project must be published: in Testing the
   refresh token lasts 7 days.
+
+### 18.8 S8 — Background sync cadence on Android (2026-10-06)
+
+**Environment**: motorola edge 50 neo, Android 16, the Release default
+APK of §18.0 extended with S8 (draft PR #106). A unique periodic
+WorkManager job (`Xamarin.AndroidX.Work.Runtime` 2.10.3), period 15
+minutes, constraint "network connected"; the worker records its run
+only, with no network call. The app was not exempt from battery
+optimization. Recorded 08:31–20:57 on a day of normal use, on battery,
+with battery saver on for part of it.
+
+**Results**
+
+| Measure | Value |
+|---|---|
+| Runs | 6 in 12.4 hours, the first at enqueue time |
+| Gaps, all | 5: min 61 min, median 144 min, max 241 min |
+| Gaps with battery saver off | 4: 61–241 min |
+| Gap with battery saver on | 1: 179 min |
+| Standby bucket at the runs | active ×5, working set ×1 |
+| Runs that started the process | 0 (the process was cached each time) |
+
+**Decision**: the requested 15 minutes is a floor, not a cadence: the
+work ran every 1 to 4 hours, with battery saver on or off, and below
+the 1-hour target the spike README had set. Background sync on Android
+is best effort. Consequences for Phase 5:
+
+- Sync on start, resume and after local writes (§7.4) carries the
+  freshness the user sees; the periodic work only catches up.
+- Dose reminders do not depend on sync: they are planned locally with
+  exact alarms (§18.5).
+- An intake recorded on another device can reach the phone hours
+  later, so a duplicate dose reminder is likelier than §8.3 assumed;
+  §8.3 already accepts it.
+- Not tried: an exemption from battery optimization (Play policy
+  restricts the request) or a push channel, which needs a backend
+  (§5.9, C.1). One phone and one day; figures on other phones may
+  differ `[UNCERTAIN]`.
 
 ### 18.9 S9 — Convergence prototype (2026-09-26)
 
@@ -1827,3 +2027,17 @@ Phase 2 implements the derivation from the prototype and its tests.
   either has synced still both send; the master device of the
   household feature (step H4) takes the place of the designated mail
   device (§8.4) and removes that case.
+- 2026-10-05 — Android spikes S1–S4 run with the tool of draft PR #106
+  on a motorola edge 50 neo (Android 16), a Galaxy A52 5G (Android 14)
+  and a low-end Galaxy A32 4G (Android 13, 3.6 GB) (§18.0–§18.4). S1,
+  S3 and S4 pass with the .NET for Android Release defaults; S2 takes
+  0.9–2.0 s in Release, under the 5 s target on the low-end phone; full
+  trimming breaks reflection-based JSON and EF Core. S5 run on the
+  motorola (§18.5): exact alarms fire within 4 s in every scenario
+  except force stop, also after a reboot through the boot re-plan;
+  `SCHEDULE_EXACT_ALARM` is not granted after install on Android 16;
+  the inexact fallback is up to 25 minutes late. §8.2 updated. S8 run
+  on the motorola (§18.8): the 15-minute WorkManager job ran every 1 to
+  4 hours; background sync is best effort. §7.4 updated. P12 and P13 met
+  for Android; Phase 0 exit met for Android; D11 recommendation:
+  reject, no exclusion needed.
