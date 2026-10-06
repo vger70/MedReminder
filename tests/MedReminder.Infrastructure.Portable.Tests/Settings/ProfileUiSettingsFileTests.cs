@@ -1,5 +1,7 @@
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.GuidedSetup;
+using MedReminder.Domain.Notifications;
 using MedReminder.Infrastructure.Settings;
 using Xunit;
 
@@ -197,5 +199,85 @@ public sealed class ProfileUiSettingsFileTests : IDisposable
         TextSizes.ScaleOf(TextSize.Normal).Should().Be(1f);
         TextSizes.ScaleOf(TextSize.Large).Should().BeGreaterThan(1f);
         TextSizes.ScaleOf(TextSize.ExtraLarge).Should().BeGreaterThan(TextSizes.ScaleOf(TextSize.Large));
+    }
+
+    // Guided setup (docs/prompt/PROMPT-GUIDED-SETUP.md): device-local values.
+    [Fact]
+    public void Guided_setup_is_not_shown_until_written()
+    {
+        ProfileUiSettingsFile.ReadGuidedSetupShown(_dir).Should().BeFalse();
+
+        ProfileUiSettingsFile.WriteGuidedSetupShown(_dir);
+
+        ProfileUiSettingsFile.ReadGuidedSetupShown(_dir).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("{ \"GuidedSetupShown\": \"yes\" }")]
+    [InlineData("{ \"GuidedSetupShown\": 1 }")]
+    [InlineData("{ \"GuidedSetupShown\": false }")]
+    [InlineData("not json")]
+    public void Damaged_guided_setup_flag_reads_as_not_shown(string content)
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, content);
+
+        ProfileUiSettingsFile.ReadGuidedSetupShown(_dir).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(7, NotificationChannels.Windows)]
+    [InlineData(14, NotificationChannels.Email)]
+    [InlineData(0, NotificationChannels.Both)]
+    [InlineData(365, NotificationChannels.Both)]
+    public void New_medicine_defaults_round_trip(int days, NotificationChannels channels)
+    {
+        ProfileUiSettingsFile.WriteNewMedicineDefaults(_dir, new NewMedicineDefaults(days, channels));
+
+        ProfileUiSettingsFile.ReadNewMedicineDefaults(_dir).Should().Be(new NewMedicineDefaults(days, channels));
+        File.ReadAllText(FilePath).Should().Contain($"\"NewMedicineChannels\": \"{channels}\"");
+    }
+
+    [Fact]
+    public void Guided_setup_values_keep_the_other_preferences()
+    {
+        ProfileUiSettingsFile.Write(_dir, TextSize.Large, AppearanceMode.Dark);
+
+        ProfileUiSettingsFile.WriteNewMedicineDefaults(_dir, new NewMedicineDefaults(10, NotificationChannels.Both));
+        ProfileUiSettingsFile.WriteGuidedSetupShown(_dir);
+
+        ProfileUiSettingsFile.ReadTextSize(_dir).Should().Be(TextSize.Large);
+        ProfileUiSettingsFile.ReadAppearance(_dir).Should().Be(AppearanceMode.Dark);
+        ProfileUiSettingsFile.ReadNewMedicineDefaults(_dir).Should().Be(new NewMedicineDefaults(10, NotificationChannels.Both));
+    }
+
+    [Theory]
+    [InlineData("{ }")]
+    [InlineData("{ \"NewMedicineThresholdDays\": 10 }")]
+    [InlineData("{ \"NewMedicineChannels\": \"Windows\" }")]
+    [InlineData("{ \"NewMedicineThresholdDays\": 400, \"NewMedicineChannels\": \"Windows\" }")]
+    [InlineData("{ \"NewMedicineThresholdDays\": -1, \"NewMedicineChannels\": \"Windows\" }")]
+    [InlineData("{ \"NewMedicineThresholdDays\": \"10\", \"NewMedicineChannels\": \"Windows\" }")]
+    [InlineData("{ \"NewMedicineThresholdDays\": 10, \"NewMedicineChannels\": \"None\" }")]
+    [InlineData("{ \"NewMedicineThresholdDays\": 10, \"NewMedicineChannels\": \"Pager\" }")]
+    [InlineData("{ \"NewMedicineThresholdDays\": 10, \"NewMedicineChannels\": \"2\" }")]
+    [InlineData("{ \"NewMedicineThresholdDays\": 10, \"NewMedicineChannels\": 2 }")]
+    [InlineData("not json")]
+    public void Missing_or_damaged_new_medicine_defaults_read_as_null(string content)
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, content);
+
+        ProfileUiSettingsFile.ReadNewMedicineDefaults(_dir).Should().BeNull();
+    }
+
+    [Fact]
+    public void Invalid_new_medicine_defaults_are_not_written()
+    {
+        var act = () => ProfileUiSettingsFile.WriteNewMedicineDefaults(_dir,
+            new NewMedicineDefaults(7, NotificationChannels.None));
+
+        act.Should().Throw<ArgumentException>();
+        File.Exists(FilePath).Should().BeFalse();
     }
 }
