@@ -133,8 +133,11 @@ public class GuidedSetupUseCasesTests
         read.HasRecipient.Should().BeTrue();
     }
 
-    [Fact]
-    public void No_address_means_no_recipient()
-        => new GuidedSetupEmailSettings(new GuidedSetupAddresses("", ""), new HashSet<EmailKind>(), false)
-            .HasRecipient.Should().BeFalse();
+    [Theory]
+    [InlineData("", "", false)]
+    [InlineData("", "carer@example.org", false)]
+    [InlineData("me@example.org", "", true)]
+    public void Only_a_to_address_is_a_recipient(string to, string caregiver, bool expected)
+        => new GuidedSetupEmailSettings(new GuidedSetupAddresses(to, caregiver), new HashSet<EmailKind>(), false)
+            .HasRecipient.Should().Be(expected);
 }

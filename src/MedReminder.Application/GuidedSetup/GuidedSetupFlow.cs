@@ -225,27 +225,31 @@ public sealed class GuidedSetupFlow
     // "For me": the user's address receives the warnings, the second
     // address is the person who assists them. "For someone I look
     // after": the user is the caregiver, the second address is the person
-    // looked after.
+    // looked after, who receives the warnings. Every email but the weekly
+    // summary needs a ToAddress (MailKitEmailNotificationService), so a
+    // caregiver alone, with no address for the person looked after, is
+    // the recipient: as CaregiverAddress they would get nothing.
     public GuidedSetupAddresses MapAddresses(string? userAddress, string? otherAddress)
     {
         var user = userAddress?.Trim() ?? string.Empty;
         var other = otherAddress?.Trim() ?? string.Empty;
-        return Audience == GuidedSetupAudience.Myself
+        return Audience == GuidedSetupAudience.Myself || other.Length == 0
             ? new GuidedSetupAddresses(ToAddress: user, CaregiverAddress: other)
             : new GuidedSetupAddresses(ToAddress: other, CaregiverAddress: user);
     }
 
-    // The two fields of the email step, filled from the saved settings.
+    // The two fields of the email step, filled from the saved settings:
+    // the inverse of MapAddresses.
     public (string User, string Other) AddressFields(GuidedSetupAddresses saved)
     {
         ArgumentNullException.ThrowIfNull(saved);
-        return Audience == GuidedSetupAudience.Myself
+        return Audience == GuidedSetupAudience.Myself || saved.CaregiverAddress.Length == 0
             ? (saved.ToAddress, saved.CaregiverAddress)
             : (saved.CaregiverAddress, saved.ToAddress);
     }
 
     // Email is the only channel and nothing can deliver it: no SMTP
-    // account, or no address to send to. The summary then says these
+    // account, or no ToAddress to send to (hasRecipient). The summary then says these
     // medicines will warn no one and offers to add Windows.
     public bool WarnsNoOne(bool hasRecipient)
         => (_channels & NotificationChannels.Windows) == 0 && (!SmtpConfigured || !hasRecipient);

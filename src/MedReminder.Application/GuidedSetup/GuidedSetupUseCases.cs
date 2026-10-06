@@ -69,8 +69,8 @@ public sealed record GuidedSetupEmailSettings(
     IReadOnlySet<EmailKind> CaregiverEmails,
     bool WeeklyDigest)
 {
-    public bool HasRecipient
-        => Addresses.ToAddress.Length > 0 || Addresses.CaregiverAddress.Length > 0;
+    // The warnings go to ToAddress; the caregiver only gets copies.
+    public bool HasRecipient => Addresses.ToAddress.Length > 0;
 }
 
 // Email step of the guided setup: reads the profile's recipients and

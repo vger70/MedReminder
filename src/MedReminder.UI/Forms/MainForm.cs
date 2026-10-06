@@ -7,6 +7,7 @@ using MedReminder.Application.Coverage;
 using MedReminder.Application.Deadlines;
 using MedReminder.Application.Donations;
 using MedReminder.Application.DoseTimes;
+using MedReminder.Application.GuidedSetup;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Notifications;
@@ -66,6 +67,8 @@ internal sealed class MainForm : MedReminderFormBase
     private ToolStripStatusLabel _lastCheckLabel = null!;
     private Panel _errorBanner = null!;
     private Label _errorBannerLabel = null!;
+    // Shown in place of the grid while the profile has no medicine at all.
+    private Panel _emptyState = null!;
 
     // Index of the "Status" column so we can apply the badge
     // colors in RowPrePaint without looking the column up by name
@@ -133,6 +136,7 @@ internal sealed class MainForm : MedReminderFormBase
             await ReloadAsync();
             // After the first load, so an action can select its medicine.
             WireToastActions();
+            OfferGuidedSetup();
         };
         Load += (_, _) => WireEstimateRefresh();
         Load += (_, _) => WireSyncRefresh();
@@ -166,7 +170,11 @@ internal sealed class MainForm : MedReminderFormBase
         page.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         page.Controls.Add(BuildSummaryCards(), 0, 0);
-        page.Controls.Add(_grid, 0, 1);
+        _emptyState = BuildEmptyState();
+        var listHost = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
+        listHost.Controls.Add(_grid);
+        listHost.Controls.Add(_emptyState);
+        page.Controls.Add(listHost, 0, 1);
 
         var body = new TableLayoutPanel
         {
@@ -485,6 +493,9 @@ internal sealed class MainForm : MedReminderFormBase
             Mdl2Glyph.Glyphs.Info, Keys.None,
             () => { ShowAboutDialog(); return Task.CompletedTask; });
         helpMenu.DropDownItems.Add(helpGuide);
+        helpMenu.DropDownItems.Add(BuildMenuItem(_loc.Get("Ui.MainForm.Menu.Help.GuidedSetup"),
+            Mdl2Glyph.Glyphs.CheckMark, Keys.None,
+            async () => await ShowGuidedSetupAsync()));
         helpMenu.DropDownItems.Add(new ToolStripSeparator());
         helpMenu.DropDownItems.Add(helpCheckUpdates);
         helpMenu.DropDownItems.Add(helpAbout);
@@ -1388,7 +1399,9 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    private void ShowHousehold()
+    private void ShowHousehold() => ShowHousehold(this);
+
+    private void ShowHousehold(IWin32Window owner)
     {
         if (!_currentProfile.IsAdmin) return;
         try
@@ -1402,7 +1415,7 @@ internal sealed class MainForm : MedReminderFormBase
                 _currentProfile,
                 _loc,
                 _restarter);
-            dialog.ShowDialog(this);
+            dialog.ShowDialog(owner);
         }
         catch (Exception ex)
         {
@@ -1984,11 +1997,14 @@ internal sealed class MainForm : MedReminderFormBase
             var items = await loader.LoadAsync(CancellationToken.None);
 
             _allRows = items.ToList();
+            _listLoaded = true;
             ApplyFilters();
             HideErrorBanner();
         }
         catch (Exception ex)
         {
+            _listLoaded = false;
+            UpdateEmptyState();
             _log.LogError(ex, "Errore caricamento medicine");
             SetStatus(_loc.Get("Ui.MainForm.Status.LoadError"));
             ShowErrorBanner(_loc.Get("Ui.MainForm.LoadBanner.Failure", ex.Message));
@@ -2031,6 +2047,8 @@ internal sealed class MainForm : MedReminderFormBase
     private DateOnly _caughtUpDay;
     private bool _refreshingEstimates;
     private bool _reloading;
+    // The last load succeeded: an empty _allRows then means no medicine.
+    private bool _listLoaded;
     private int _loadVersion;
     private DateTime _lastEstimateRefresh = DateTime.MinValue;
 
@@ -2153,6 +2171,7 @@ internal sealed class MainForm : MedReminderFormBase
     {
         var visible = MedicineListFilter.Visible(_allRows, _showInactive);
         UpdateCards();
+        UpdateEmptyState();
 
         var selectedId = GetSelectedRow()?.Id;
         var firstRow = _grid.Rows.Count > 0 ? _grid.FirstDisplayedScrollingRowIndex : -1;
@@ -2297,10 +2316,12 @@ internal sealed class MainForm : MedReminderFormBase
     }
 
     // Therapy → Dose times… (ANALYSIS-INTRADAY-CONSUMPTION.md §6).
-    private async Task ShowDoseTimesAsync()
+    private Task ShowDoseTimesAsync() => ShowDoseTimesAsync(this);
+
+    private async Task ShowDoseTimesAsync(IWin32Window owner)
     {
         using var dialog = new DoseTimesDialog(await LoadDoseTimesAsync(), _loc);
-        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+        if (dialog.ShowDialog(owner) != DialogResult.OK || dialog.Result is null) return;
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -2315,7 +2336,14 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    private async Task ShowNewMedicineAsync(ReferenceMedicine? initialReference = null)
+    private Task ShowNewMedicineAsync(ReferenceMedicine? initialReference = null)
+        => AddMedicineAsync(this, initialReference);
+
+    // The medicine dialog in Create mode, from the main window or from
+    // the guided setup (owner). The lead time and channels start from the
+    // values the guided setup stored for this profile on this device.
+    // Returns the new medicine, or null when cancelled or failed.
+    private async Task<Guid?> AddMedicineAsync(IWin32Window owner, ReferenceMedicine? initialReference = null)
     {
         using var dialog = new MedicineEditDialog(
             MedicineEditDialog.EditMode.Create, _loc,
@@ -2323,8 +2351,9 @@ internal sealed class MainForm : MedReminderFormBase
             barcodeContext: BuildBarcodeScanContext(),
             initialReference: initialReference,
             doseTimes: await LoadDoseTimesAsync(),
-            equivalents: BuildEquivalentsContext(null));
-        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is null) return;
+            equivalents: BuildEquivalentsContext(null),
+            newMedicineDefaults: ProfileUiSettingsFile.ReadNewMedicineDefaults(_currentProfile.DataDirectory));
+        if (dialog.ShowDialog(owner) != DialogResult.OK || dialog.Result is null) return null;
 
         try
         {
@@ -2333,10 +2362,12 @@ internal sealed class MainForm : MedReminderFormBase
             var id = await usecase.ExecuteAsync(dialog.Result.ToAddCommand(), CancellationToken.None);
             _log.LogInformation("Medicina creata: {MedicineId}", id);
             await ReloadAsync();
+            return id;
         }
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.CreateMedicine"), ex);
+            return null;
         }
     }
 
@@ -3111,7 +3142,9 @@ internal sealed class MainForm : MedReminderFormBase
         }
     }
 
-    private void ShowSettings()
+    private void ShowSettings() => ShowSettings(this, SettingsSection.General);
+
+    private void ShowSettings(IWin32Window owner, SettingsSection section)
     {
         try
         {
@@ -3138,13 +3171,168 @@ internal sealed class MainForm : MedReminderFormBase
                 scope.ServiceProvider.GetRequiredService<SyncHostedService>(),
                 scope.ServiceProvider.GetRequiredService<ICloudAccountService>(),
                 scope.ServiceProvider.GetRequiredService<IArchiveStorage>(),
-                _scopeFactory);
-            dialog.ShowDialog(this);
+                _scopeFactory,
+                section);
+            dialog.ShowDialog(owner);
         }
         catch (Exception ex)
         {
             ShowError(_loc.Get("Ui.MainForm.Error.OpenSettings"), ex);
         }
+    }
+
+    // ------------------ Guided setup ------------------
+    // Empty state of the list (docs/prompt/PROMPT-GUIDED-SETUP.md §3.1):
+    // one line and two links, in place of the grid while the profile has
+    // no medicine, inactive ones included.
+    private Panel BuildEmptyState()
+    {
+        var text = new Label
+        {
+            AutoSize = true,
+            Font = UiTheme.Fonts.Heading(),
+            Text = _loc.Get("Ui.MainForm.Empty.Text"),
+            Margin = new Padding(0, 0, 0, UiTheme.Space.M),
+        };
+        var add = new LinkLabel
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.MainForm.Empty.Add"),
+            Margin = new Padding(0, 0, 0, UiTheme.Space.S),
+        };
+        add.LinkClicked += async (_, _) => await ShowNewMedicineAsync();
+        var guided = new LinkLabel
+        {
+            AutoSize = true,
+            Text = _loc.Get("Ui.MainForm.Empty.GuidedSetup"),
+        };
+        guided.LinkClicked += async (_, _) => await ShowGuidedSetupAsync();
+        var stack = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            Dock = DockStyle.Top,
+            Padding = new Padding(UiTheme.Space.L),
+        };
+        stack.Controls.Add(text);
+        stack.Controls.Add(add);
+        stack.Controls.Add(guided);
+        var panel = new Panel { Dock = DockStyle.Fill, Visible = false, AutoScroll = true };
+        panel.Controls.Add(stack);
+        return panel;
+    }
+
+    private void UpdateEmptyState()
+    {
+        var empty = _listLoaded && _allRows.Count == 0;
+        if (_emptyState.Visible == empty) return;
+        _emptyState.Visible = empty;
+        _grid.Visible = !empty;
+    }
+
+    // After the first load: the guided setup opens by itself for a
+    // profile with no medicine that this device has not shown it to
+    // (GuidedSetupFlow.OpensByItself). A window started in the tray
+    // offers it the first time it is shown.
+    private void OfferGuidedSetup()
+    {
+        if (!_listLoaded) return;
+        bool shown;
+        try
+        {
+            shown = ProfileUiSettingsFile.ReadGuidedSetupShown(_currentProfile.DataDirectory);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return;
+        }
+        if (!GuidedSetupFlow.OpensByItself(_allRows.Count > 0, shown)) return;
+
+        if (Visible && WindowState != FormWindowState.Minimized)
+        {
+            BeginInvoke(async () => await ShowGuidedSetupAsync());
+            return;
+        }
+        // Not shown yet: checked again the first time it is.
+        void OnShownLater(object? sender, EventArgs e)
+        {
+            Activated -= OnShownLater;
+            VisibleChanged -= OnShownLater;
+            BeginInvoke(OfferGuidedSetup);
+        }
+        Activated += OnShownLater;
+        VisibleChanged += OnShownLater;
+    }
+
+    private bool _guidedSetupOpen;
+
+    // From the empty list, the ? menu, or by itself (OfferGuidedSetup).
+    private async Task ShowGuidedSetupAsync()
+    {
+        if (_guidedSetupOpen) return;
+        _guidedSetupOpen = true;
+        try
+        {
+            GuidedSetupEmailSettings email;
+            bool sendsEmail;
+            await using (var scope = _scopeFactory.CreateAsyncScope())
+            {
+                email = scope.ServiceProvider.GetRequiredService<GuidedSetupEmail>().Read();
+                sendsEmail = await scope.ServiceProvider.GetRequiredService<IMasterRole>()
+                    .SendsEmailAsync(CancellationToken.None);
+            }
+            var flow = new GuidedSetupFlow(
+                new GuidedSetupEnvironment(_currentProfile.IsAdmin, ReadSmtpConfigured(), sendsEmail),
+                ProfileUiSettingsFile.ReadNewMedicineDefaults(_currentProfile.DataDirectory));
+            var name = _profileRegistry.GetById(_currentProfile.Id)?.DisplayName ?? _currentProfile.DisplayName;
+            var host = new GuidedSetupHost(
+                AddMedicine: owner => AddMedicineAsync(owner),
+                Medicines: () => _allRows,
+                OpenSettings: ShowSettings,
+                OpenDoseTimes: ShowDoseTimesAsync,
+                OpenInstallation: _currentProfile.IsAdmin ? ShowHousehold : null,
+                SmtpConfigured: ReadSmtpConfigured);
+
+            using (var form = new GuidedSetupForm(flow, email, name, _loc, _scopeFactory, _currentProfile, host, _log))
+            {
+                form.ShowDialog(this);
+                if (form.RenamedTo is { } renamed)
+                {
+                    Text = _loc.Get("Ui.MainForm.Title.WithProfile", _loc.Get("Ui.MainForm.Title"), renamed);
+                }
+            }
+
+            // No address, medicine name or answer is logged (CLAUDE.md §7).
+            _log.LogInformation("Guided setup {Outcome} at step {Step}.",
+                flow.Outcome == GuidedSetupOutcome.Completed ? "completed" : "dismissed", flow.Current);
+            if (flow.MarksShown)
+            {
+                try
+                {
+                    ProfileUiSettingsFile.WriteGuidedSetupShown(_currentProfile.DataDirectory);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _log.LogWarning(ex, "Saving that the guided setup was shown failed.");
+                }
+            }
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(_loc.Get("Ui.MainForm.Error.GuidedSetup"), ex);
+        }
+        finally
+        {
+            _guidedSetupOpen = false;
+        }
+    }
+
+    private bool ReadSmtpConfigured()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<IOptionsMonitor<SmtpSettings>>().CurrentValue.IsConfigured;
     }
 
     private void ShowError(string title, Exception ex)

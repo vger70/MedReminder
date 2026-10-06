@@ -193,10 +193,24 @@ public class GuidedSetupFlowTests
         var flow = Flow();
         flow.Audience = GuidedSetupAudience.SomeoneElse;
 
-        flow.MapAddresses("carer@example.org", "")
-            .Should().Be(new GuidedSetupAddresses(string.Empty, "carer@example.org"));
+        flow.MapAddresses("carer@example.org", "patient@example.org")
+            .Should().Be(new GuidedSetupAddresses("patient@example.org", "carer@example.org"));
         flow.AddressFields(new GuidedSetupAddresses("patient@example.org", "carer@example.org"))
             .Should().Be(("carer@example.org", "patient@example.org"));
+    }
+
+    // Without a ToAddress no warning is ever emailed: a caregiver alone
+    // is the recipient.
+    [Fact]
+    public void A_caregiver_alone_receives_the_warnings()
+    {
+        var flow = Flow();
+        flow.Audience = GuidedSetupAudience.SomeoneElse;
+
+        flow.MapAddresses("carer@example.org", " ")
+            .Should().Be(new GuidedSetupAddresses("carer@example.org", string.Empty));
+        flow.AddressFields(new GuidedSetupAddresses("carer@example.org", string.Empty))
+            .Should().Be(("carer@example.org", string.Empty));
     }
 
     [Theory]
