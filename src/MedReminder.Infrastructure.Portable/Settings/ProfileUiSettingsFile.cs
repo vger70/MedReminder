@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.GuidedSetup;
+using MedReminder.Domain.Notifications;
 
 namespace MedReminder.Infrastructure.Settings;
 
@@ -10,12 +12,17 @@ namespace MedReminder.Infrastructure.Settings;
 // §4.4). Shape:
 //   { "TextSize": "Large", "Appearance": "Dark",
 //     "MainWindow": { "X": 100, "Y": 80, "Width": 1200, "Height": 700, "Maximized": true },
-//     "NavigationWidth": 300 }
+//     "NavigationWidth": 300, "GuidedSetupShown": true,
+//     "NewMedicineThresholdDays": 10, "NewMedicineChannels": "Both" }
 // Text size and appearance are read once at boot, before the main
 // window is created, so they are not part of the reloadable
 // configuration; the main window placement and the width of its
-// navigation pane (at 96 DPI) are written each time the window closes. A missing, unreadable or unknown value reads as the
-// default: a UI preference must never block the app from opening.
+// navigation pane (at 96 DPI) are written each time the window closes.
+// The guided setup (docs/prompt/PROMPT-GUIDED-SETUP.md) writes whether
+// it was shown on this device and the lead time and channels a new
+// medicine starts with; none of them is replicated or exported. A
+// missing, unreadable or unknown value reads as the default: a UI
+// preference must never block the app from opening.
 public static class ProfileUiSettingsFile
 {
     public const string FileName = "ui.settings.json";
@@ -24,6 +31,9 @@ public static class ProfileUiSettingsFile
     private const string AppearanceProperty = "Appearance";
     private const string MainWindowProperty = "MainWindow";
     private const string NavigationWidthProperty = "NavigationWidth";
+    private const string GuidedSetupShownProperty = "GuidedSetupShown";
+    private const string NewMedicineThresholdDaysProperty = "NewMedicineThresholdDays";
+    private const string NewMedicineChannelsProperty = "NewMedicineChannels";
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
     private static readonly JsonNodeOptions NodeOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -71,6 +81,44 @@ public static class ProfileUiSettingsFile
 
     public static void WriteNavigationWidth(string profileDirectory, int width)
         => Update(profileDirectory, root => root[NavigationWidthProperty] = width);
+
+    // False when the guided setup never closed on this device for this
+    // profile, or the value is not a boolean.
+    public static bool ReadGuidedSetupShown(string profileDirectory)
+        => ReadRoot(profileDirectory)?[GuidedSetupShownProperty] is JsonValue value
+           && value.TryGetValue<bool>(out var shown)
+           && shown;
+
+    public static void WriteGuidedSetupShown(string profileDirectory)
+        => Update(profileDirectory, root => root[GuidedSetupShownProperty] = true);
+
+    // Null when the guided setup did not store them, or one of the two is
+    // missing or out of range: the medicine dialog then keeps its own
+    // defaults (NewMedicineDefaults.BuiltIn).
+    public static NewMedicineDefaults? ReadNewMedicineDefaults(string profileDirectory)
+    {
+        var root = ReadRoot(profileDirectory);
+        if (root?[NewMedicineThresholdDaysProperty] is not JsonValue days
+            || !days.TryGetValue<int>(out var thresholdDays)) return null;
+        if (root[NewMedicineChannelsProperty] is not JsonValue channelsValue
+            || !channelsValue.TryGetValue<string>(out var channelsText)
+            || int.TryParse(channelsText, out _)
+            || !Enum.TryParse<NotificationChannels>(channelsText, ignoreCase: true, out var channels)) return null;
+        return NewMedicineDefaults.TryCreate(thresholdDays, channels);
+    }
+
+    public static void WriteNewMedicineDefaults(string profileDirectory, NewMedicineDefaults defaults)
+    {
+        ArgumentNullException.ThrowIfNull(defaults);
+        if (NewMedicineDefaults.TryCreate(defaults.ThresholdDays, defaults.Channels) is null)
+            throw new ArgumentException("The lead time or the channels are out of range.", nameof(defaults));
+        Update(profileDirectory, root =>
+        {
+            root[NewMedicineThresholdDaysProperty] = defaults.ThresholdDays;
+            // The member name, not the number, as for the text size.
+            root[NewMedicineChannelsProperty] = defaults.Channels.ToString();
+        });
+    }
 
     public static void WriteTextSize(string profileDirectory, TextSize size)
         => Update(profileDirectory, root => root[TextSizeProperty] = size.ToString());
