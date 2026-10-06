@@ -30,6 +30,14 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #208 — Stop logging the notification recipient address
+
+Link: [vger70/MedReminder#208](https://github.com/vger70/MedReminder/pull/208)
+Branch: `claude/upbeat-gates-jfe9sb` → `main`
+
+### Security
+
+- Email: a successful notification send no longer logs the primary recipient address (`ToAddress`); the line now records only the email kind and the SMTP host and port. Recipient addresses are PII and logs are plain files under `%LOCALAPPDATA%\MedReminder\logs\` (CLAUDE.md §5, §7). The explicit-recipient path already omitted the address (`src/MedReminder.Infrastructure/Email/MailKitEmailNotificationService.cs`).
 ## PR #207 — Add the guided setup
 
 Link: [vger70/MedReminder#207](https://github.com/vger70/MedReminder/pull/207)
