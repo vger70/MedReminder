@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #<pending> — Revise the B.1 Android plan for a standalone app with every current feature
+
+Branch: `claude/b1-android-standalone-plan` (stacked on #206)
+
+### Docs
+
+- `docs/analysis/ANALYSIS-B1-ANDROID-PLAN.md`: the Android app works
+  without a PC and without an account, and covers every desktop feature
+  of v2.16.0 that applies to a phone; feature inventory, standalone
+  design points (first start, notification planner, backup, catalogue,
+  email, PDF, security), milestones M0–M5 (110–155 days), decisions
+  DA1–DA5, risks.
+- `ANALYSIS-B1-MOBILE-SYNC.md` §9.1, §10, §13 and `STATUS.md` §3.1, §4
+  point to the new plan for Android.
+
 ## PR #206 — Record the Android spike results S1-S5 and S8 in the B.1 analysis
 
 Link: [vger70/MedReminder#206](https://github.com/vger70/MedReminder/pull/206)

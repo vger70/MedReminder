@@ -40,6 +40,9 @@ taken at `c6f1f58`.
 Updated on 2026-10-05 after the Android spike runs (S1–S4, draft
 #106): §3.1, §4.
 
+Updated on 2026-10-06: Android plan revised for a standalone app with
+every current feature (`ANALYSIS-B1-ANDROID-PLAN.md`): §3.1, §4.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -275,9 +278,9 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 | Android full client (MAUI): screens, pairing scanner, provider sign-in, notification planner, WorkManager sync, secure storage, app lock, CI job, Play internal track | 40–60 d | D4, D11, D13; Play Console account (spikes S1–S5 and S8 done) |
+| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, proposed) | Standalone Android app with every applicable desktop feature: M0 portability refactor 2 and notification planner; M1 standalone core (first release); M2 cloud backup, sync, household; M3 prescriptions, planning, views; M4 catalogue, scan, Italian services; M5 email, people, support | 110–155 d | D4, D11, D13, DA1–DA5; Play Console account (spikes S1–S5 and S8 done) |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
-| 7 | Feature parity on mobile (timeline, prescription request, catalogue and camera scan, mail device, `.mrz` export, PDF share, state-hash check) | 20–30 d | Phase 5 / 6; D14 |
+| 7 | iOS feature parity and the state-hash check; for Android absorbed by M3–M5 | not re-estimated | Phase 6; D14 |
 
 Household step H6 (household creation and join on the phone, phone as
 master, QR decode on the PC webcam) belongs to Phases 5 and 7, plus
@@ -406,6 +409,7 @@ profile operation schemas 4 and 5).
    wanted (§3.5).
 3. Website content refresh for v2.7–v2.16; the screenshots in
    particular predate the new main window and dark mode.
-4. Mobile: the Android spikes are done (S1–S5, S8), S1 and S3 being
-   the go / no-go risks for MAUI; close D4, D11 and D13 before Phase 5. Independent
+4. Mobile: the Android spikes are done (S1–S5, S8). Approve the
+   standalone Android plan (`ANALYSIS-B1-ANDROID-PLAN.md`), then decide
+   D4, D11, D13 and DA1–DA5 before M1. Independent
    of items 1–3.
