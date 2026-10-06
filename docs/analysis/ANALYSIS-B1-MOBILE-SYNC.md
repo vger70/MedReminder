@@ -1590,7 +1590,7 @@ minutes; long battery: +30 minutes to +8 hours)
 | Reboot | 2–4 s, 8/8 | 4–221 s | The boot receiver re-planned 16/16 without the app being opened; the first alarms started the process |
 | Reboot, exact alarms denied | Refused | 11–777 s | 8/8 re-planned at boot |
 | Exact alarms denied | Refused (`SecurityException`); `canScheduleExactAlarms` false | Inexact 92–442 s, Window 442–1522 s | |
-| Force-stopped | 0/8 | 0/8 | No alarm fired; documented platform behaviour |
+| Force-stopped | 0/8 | 0/8 | No alarm fired. Opening the app again delivered `BOOT_COMPLETED` without a reboot, so the boot receiver ran; every alarm was already past due |
 | Overnight, long battery (22:30–06:00) | 1 s, 10/10 | 171–243 s | Doze not observed at firing time (`isDeviceIdleMode` false) `[UNCERTAIN — whether the phone entered Doze]` |
 | Foreground | 0 s, 8/8 | 90–347 s | |
 
@@ -1602,8 +1602,14 @@ minutes; long battery: +30 minutes to +8 hours)
   after install; without it the inexact fallback is up to 25 minutes
   late, which the UI states.
 - Re-plan on `BOOT_COMPLETED` works without the app being opened.
-- Force stop cancels the alarms until the user opens the app again;
-  the planner re-plans on start (§8.1). No mitigation beyond that.
+- Force stop cancels the alarms until the user opens the app again.
+  On Android 15+ the app then receives `BOOT_COMPLETED` when it leaves
+  the stopped state `[VERIFIED — S5 on Android 16; the Android 15
+  change is reported by M. Murphy, "Random Musings on the Android 15
+  Developer Preview 2"]`, so the same receiver re-plans; the planner
+  also re-plans on start (§8.1). Reminders due while the app was
+  stopped are lost; whether the planner shows them as missed on the
+  next start is a Phase 5 design point.
 - iOS (pending limit, authorization) is not covered; it belongs to
   Phase 6.
 
