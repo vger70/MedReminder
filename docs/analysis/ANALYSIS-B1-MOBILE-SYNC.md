@@ -52,6 +52,9 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 
 ### 1.2 End-state goal
 
+For Android, revised by `ANALYSIS-B1-ANDROID-PLAN.md` once approved:
+the app also works on its own, without a PC or an account.
+
 1. A mobile app (Android, then iOS) that is a **full client** of a
    profile: it reads and writes the same data the desktop manages
    (§10 lists feature parity and the justified exclusions).
@@ -1303,8 +1306,8 @@ libraries.
 
 For Android, Phases 5 and 7 are replaced by milestones M0–M5 of
 `ANALYSIS-B1-ANDROID-PLAN.md` §5, once approved: the app works without
-a PC (product owner, 2026-10-06) and covers every desktop feature of
-v2.16.0 that applies to a phone.
+a PC (product owner, 2026-10-06) and covers every current desktop feature
+that applies to a phone.
 
 **Entry**: Phase 4 exit for at least OneDrive; D1, D3, D4, D13
 decided; Play Console account.

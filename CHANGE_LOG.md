@@ -39,13 +39,16 @@ Branch: `claude/b1-android-standalone-plan` (stacked on #206)
 ### Docs
 
 - `docs/analysis/ANALYSIS-B1-ANDROID-PLAN.md`: the Android app works
-  without a PC and without an account, and covers every desktop feature
-  of v2.16.0 that applies to a phone; feature inventory, standalone
+  without a PC and without an account, and covers every current desktop
+  feature that applies to a phone; feature inventory, standalone
   design points (first start, notification planner, backup, catalogue,
   email, PDF, security), milestones M0–M5 (110–160 days), decisions
   DA1–DA5, risks. Revision 2 after a check against the tree and the
   household design: profiles, roles and PIN in M2, corrected
   references, M1 completed (accessibility, packaging, user guides).
+  Revision 3 after a second check: inventory at `main` `64ccba9` with
+  the guided setup and as-needed slots, embedded snapshots kept on the
+  desktop, 500-alarm limit and time-zone re-plan, DA5 before M1.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §9.1, §10, §13 and `STATUS.md` §3.1, §4
   point to the new plan for Android.
 

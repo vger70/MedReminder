@@ -278,7 +278,7 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, proposed) | Standalone Android app with every applicable desktop feature: M0 portability refactor 2 and notification planner; M1 standalone core (first release); M2 cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 catalogue, scan, Italian services; M5 email and support | 110–160 d | D4, D11, D13, DA1–DA5; Play Console account (spikes S1–S5 and S8 done) |
+| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, proposed) | Standalone Android app with every applicable desktop feature, guided setup included: M0 portability refactor 2 and notification planner; M1 standalone core (first release); M2 cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 catalogue, scan, Italian services; M5 email and support | 110–160 d | D4, D11, D13, DA1–DA5; Play Console account (spikes S1–S5 and S8 done) |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | iOS feature parity (for Android absorbed by M2–M5); the state-hash check is not implemented on any device and stays a B.1 item | not re-estimated | Phase 6; D14 |
 
@@ -411,5 +411,5 @@ profile operation schemas 4 and 5).
    particular predate the new main window and dark mode.
 4. Mobile: the Android spikes are done (S1–S5, S8). Approve the
    standalone Android plan (`ANALYSIS-B1-ANDROID-PLAN.md`), then decide
-   D4, D11, D13 and DA1–DA5 before M1. Independent
+   D4, D11, D13 and DA1–DA5 (DA5 fixes the application id) before M1. Independent
    of items 1–3.

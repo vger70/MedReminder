@@ -15,9 +15,9 @@ this document wins once approved. The sync model, the formats and the
 merge rules of B.1 are unchanged. iOS (B.1 Phase 6) is out of scope
 here.
 
-Status on 2026-10-06: revision 2. Reading conventions: `[VERIFIED]`
-(checked against the tree at `main` v2.16.0 and the spike results of
-B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]`
+Status on 2026-10-06: revision 3. Reading conventions: `[VERIFIED]`
+(checked against the tree at `main` commit `64ccba9`, v2.16.0 plus
+#205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]`
 (not verified). Untagged statements are design proposals.
 
 ---
@@ -28,7 +28,7 @@ B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]`
 |---|---|---|
 | A1 | The app is complete on its own: first start, profiles, all daily use, notifications, backup and restore, without a PC | Product owner, 2026-10-06 |
 | A2 | The app also works without a cloud account; sync and cloud backup are optional | Derived from A1 `[INFERRED]` |
-| A3 | Every desktop feature of v2.16.0 that applies to a phone is in the plan; the rest is listed with the reason | Product owner, 2026-10-06 |
+| A3 | Every desktop feature on `main` (§3) that applies to a phone is in the plan; the rest is listed with the reason | Product owner, 2026-10-06 |
 | A4 | A first release with a consistent core, then the remaining features in releasable steps | Product owner, 2026-10-06 |
 | A5 | When the user also has a PC, phone and PC stay one installation (household) and one data set per profile, as B.1 and the household design define | B.1 §1.2; `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` R8 |
 
@@ -60,23 +60,27 @@ From the spikes (B.1 §18) `[VERIFIED]`:
 | Notifications (S5) | Exact alarms fire within 4 s, also after reboot; `SCHEDULE_EXACT_ALARM` is not granted after install on Android 16; inexact fallback up to 25 min late; force stop cancels until the next launch, which on Android 15+ delivers `BOOT_COMPLETED` | Notifications are planned ahead and set as exact alarms; the app asks for the permission; one receiver re-plans after reboot and force stop |
 | Background (S8) | 15-minute WorkManager work runs every 1–4 h | Anything periodic (sync, cloud backup, email, feed refresh) is best effort on the phone |
 
-From the code at v2.16.0 `[VERIFIED]`:
+From the code at `main` `64ccba9` `[VERIFIED]`:
 
 - **Portable already**: Domain, Application (use cases, `MedicationMonitor`
   with low-stock stages, prescription, deadline, package-expiry and
   shortage notices, `CaregiverDigest`, `DueToday`, timeline, coverage,
   calendar, household and sync logic), and Infrastructure.Portable
   (persistence, archive cipher and reader, OneDrive and Google Drive
-  REST clients, sync transports, household stores, localization,
-  remote feed clients for the catalogue, shortages, equivalents and
-  regional services; `RemoteCatalogueRefresher` is in Application).
+  REST clients and their archive storages, sync transports, household
+  stores, localization, remote feed clients for the catalogue,
+  shortages, equivalents and regional services). The catalogue
+  refresher (`RemoteCatalogueRefresher`) and the barcode parser
+  (`BarcodeParser`, `ItalianPharmacode`) are in Application.
 - **Windows project, but without Windows APIs** `[VERIFIED — their
   using directives reference only System, Microsoft.Extensions, EF Core,
   SQLite, MailKit/MimeKit and MedReminder namespaces; no DPAPI,
   registry or Windows reference]`: MailKit email service, reference
-  catalogue query service, catalogue importer and parsers, embedded
-  snapshot provider, backup service, cloud archive storage, sync setup
-  service.
+  catalogue query service, catalogue importer and parsers, backup
+  service, cloud archive storage (the provider router), sync setup
+  service. The embedded snapshot provider is portable code too, but it
+  reads the 9.2 MB of snapshots embedded in the Windows assembly; it
+  stays on the desktop (§4.4).
 - **Windows-specific, need an Android adapter**: DPAPI credential
   stores (`ICredentialProtector` and the stores built on it), profile
   registry and settings stores (paths), export and import shells,
@@ -89,17 +93,20 @@ From the code at v2.16.0 `[VERIFIED]`:
 
 ---
 
-## 3. Feature inventory (desktop v2.16.0)
+## 3. Feature inventory (desktop, `main` `64ccba9`)
 
-Every feature in `docs/USER_GUIDE.en.md` and `docs/STATUS.md` §2, with
-its place in the plan. "M" refers to the milestones of §5.
+Every feature in `docs/USER_GUIDE.en.md` and `docs/STATUS.md` §2 at
+v2.16.0, plus the guided setup merged after it (#207), with its place
+in the plan. "M" refers to the milestones of §5.
 
 | Area | Desktop feature | Android | Milestone |
 |---|---|---|---|
-| Start | First start, guided setup, disclaimer | Yes, touch wizard | M1 |
+| Start | First start, disclaimer | Yes, touch wizard (§4.1) | M1 |
+| Start | Guided setup (#207): who the medicines are for, first medicines, when and how to warn | Yes; the e-mail choice of the "how" step from M5 | M1 |
 | Medicines | Add, edit, deactivate, delete; administration times | Yes | M1 |
 | Medicines | Complex regimens, stepped taper (A1) | Yes | M1 |
-| Medicines | Dose-time presets and defaults | Yes | M1 |
+| Medicines | As-needed slots and extra dose as needed (#177) | Yes | M1 |
+| Medicines | Dose-time presets and defaults | Yes; device-local as on the desktop, not replicated (#177) | M1 |
 | Medicines | Main list, forecast, warnings, search, inactive filter | Yes | M1 |
 | Stock | Add a package, correct stock, count stock (guided) | Yes | M1 |
 | Stock | Packages and expiry, expiry notices | Yes | M1 |
@@ -139,8 +146,8 @@ its place in the plan. "M" refers to the milestones of §5.
 No desktop feature is dropped except the desktop-only rows. The
 device-side state-hash check of B.1 §12 and Phase 7 is not implemented
 on the desktop either; it stays a B.1 item for every device, outside
-M0–M5. The
-feature parity table of B.1 §10 is replaced by this one for Android.
+M0–M5. The feature parity table of B.1 §10 is replaced by this one for
+Android.
 
 ---
 
@@ -150,10 +157,10 @@ feature parity table of B.1 §10 is replaced by this one for Android.
 
 The first-start wizard offers three paths:
 
-1. **Start here**: create the installation and the first profile. No
-   account needed: a device with no storage configured is a household
-   of one (household §4.1) `[VERIFIED]`, master of itself. This is the
-   standalone path (A1, A2).
+1. **Start here**: create the installation and the first profile, then
+   the guided setup (#207). No account needed: a device with no storage
+   configured is a household of one (household §4.1) `[VERIFIED]`,
+   master of itself. This is the standalone path (A1, A2).
 2. **Join an installation** (from M2): pairing code (QR from the PC or
    another phone, or text) or household passphrase plus cloud account,
    as on the desktop (household §6, B.1 §6.1).
@@ -181,8 +188,13 @@ from the same rules, the dated notifications of the next days:
 | Shortage | When a feed refresh finds a new shortage for a listed medicine | `ShortageNotices`; event, not dated |
 
 The Android adapter replaces the scheduled set with exact alarms after
-every local write, every sync that changed data, every start and resume,
-and at `BOOT_COMPLETED` (S5). The planner and the monitor share the
+every local write, every sync that changed data, every start and
+resume, at `BOOT_COMPLETED` (S5), and on a time-zone or clock change
+(B.1 §8.1). Android 12+ refuses more than 500 concurrent alarms per
+app `[VERIFIED — "Maximum limit of concurrent alarms 500 reached",
+AOSP AlarmManagerService and developer reports]`, so the planner
+schedules a bounded window (for example the next 48 hours of dose
+reminders) and re-plans when an alarm fires. The planner and the monitor share the
 rules, so desktop and phone notify on the same days; a test runs both
 over the same scenarios. The desktop keeps its polling; moving it to
 the planner is not needed.
@@ -194,7 +206,8 @@ Google outside the app's encryption. The phone offers instead:
 
 - **Encrypted export** (`.mrz`, same format as the desktop) to a file
   the user picks or shares; import replaces the profile, as on the
-  desktop.
+  desktop. With sync on (M2), an import starts a new generation of the
+  group (B.1 §5.7).
 - **Encrypted cloud backup** (C.3+ on the phone) to OneDrive or Google
   Drive with the existing `IArchiveStorage` providers, same passphrase
   rules, run when the app opens if the last backup is older than a day,
@@ -210,7 +223,8 @@ the reference country's catalogue and the EU catalogue from the same
 feeds (`GitHubRawCatalogueFeedClient`, `RemoteCatalogueRefresher`,
 both portable `[VERIFIED]`), and refreshes it when the app opens and as periodic work.
 No country is embedded in the APK, which keeps it near the 40 MB of the
-spike `[INFERRED]`. Without network the catalogue is simply not
+spike instead of adding the 9.2 MB of the four embedded snapshots
+`[INFERRED]`. Without network the catalogue is simply not
 available; manual entry always works.
 
 ### 4.5 Email from the phone
@@ -251,9 +265,10 @@ on alone.
 
 - Move to `MedReminder.Infrastructure.Portable` the services of §2
   that have no Windows dependency: MailKit email, catalogue query,
-  parsers and snapshot import, backup service, cloud archive storage,
-  sync setup service, export core (payload build without the Windows
-  settings files).
+  importer and parsers, backup service, cloud archive storage, sync
+  setup service, export core (payload build without the Windows
+  settings files). The embedded snapshots and their provider stay in
+  the Windows project.
 - Split the profile registry and settings stores into a portable core
   and a Windows path/DPAPI shell, as Phase 1 did for the archive
   reader.
@@ -264,15 +279,17 @@ on alone.
 
 ### M1 — Standalone core (first release)
 
-Entry: M0 merged; D4, D11, D13, DA1–DA4 decided; Play Console account.
+Entry: M0 merged; D4, D11, D13, DA1–DA5 decided (DA5 fixes the
+application id before the first upload); Play Console account.
 
 - MAUI app (`TrimMode=partial`), composition root, Android adapters
   (paths, Keystore credential protector, notifications, exact alarms,
   boot receiver, share sheet, file picker).
 - First start: "Start here" and "Restore from file" paths of §4.1,
-  disclaimer, language, notification and exact-alarm permissions.
-- Medicines, regimens, dose times and presets; main list with forecast,
-  warnings and search; stock, packages and expiry, intakes, count,
+  disclaimer, language, notification and exact-alarm permissions;
+  guided setup without its e-mail choice.
+- Medicines, regimens, as-needed slots, dose times and presets; main
+  list with forecast, warnings and search; stock, packages and expiry, intakes, count,
   history and retraction.
 - Notification planner with exact alarms: low stock (two stages), dose
   reminders with actions, package expiry.
@@ -343,7 +360,7 @@ P14).
 | Milestone | Content | Entry | Effort `[INFERRED]` |
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
-| M1 | Standalone core, first release | M0; D4, D11, D13, DA1–DA4; Play account | 35–50 d |
+| M1 | Standalone core, first release | M0; D4, D11, D13, DA1–DA5; Play account | 35–50 d |
 | M2 | Cloud backup, sync, household, profiles, roles and PIN | M1; S6/S7 Android halves | 25–38 d |
 | M3 | Prescriptions, planning, views | M1 | 15–20 d |
 | M4 | Catalogue, scan, Italian services | M1 | 15–20 d |
@@ -358,8 +375,9 @@ can be reordered.
 ### 5.2 Why this order
 
 - M1 is the smallest set that a person without a PC can use every day
-  without losing data: medicines, stock, intakes, the two notification
-  kinds that matter daily, and a way to save and restore the data.
+  without losing data: medicines, stock, intakes, the notifications
+  that matter daily (low stock, doses, expiry), and a way to save and
+  restore the data.
 - M2 comes next because it removes the single-device risk (backup) and
   connects the phone to a PC when there is one.
 - Sync compatibility does not depend on the order. The phone uses the
@@ -414,6 +432,13 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 - 2026-10-06 — revision 1: standalone requirement, feature inventory of
   v2.16.0, milestones M0–M5, decisions DA1–DA5.
+- 2026-10-06 — revision 3, second check: inventory taken at `main`
+  `64ccba9` and extended with the guided setup (#207) and as-needed
+  slots (#177); the embedded catalogue snapshots stay on the desktop
+  (moving their provider would put 9.2 MB in the APK); planner re-plans
+  on time-zone and clock change and stays under the 500-alarm limit;
+  import with sync on starts a new generation; DA5 is needed before M1
+  (application id); B.1 §1.2 pointer added.
 - 2026-10-06 — revision 2, after a check against the tree and the
   household design: profiles, roles and PIN move from M5 to M2 (a
   joined phone holds several profiles and needs the permission
