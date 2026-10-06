@@ -411,5 +411,6 @@ profile operation schemas 4 and 5).
    particular predate the new main window and dark mode.
 4. Mobile: the Android spikes are done (S1–S5, S8). Approve the
    standalone Android plan (`ANALYSIS-B1-ANDROID-PLAN.md`), then decide
-   D4, D11, D13 and DA1–DA5 (DA5 fixes the application id) before M1. Independent
+   D11, D13 and DA1–DA5 (DA5 fixes the application id) before M1, D4
+   before M2. Independent
    of items 1–3.

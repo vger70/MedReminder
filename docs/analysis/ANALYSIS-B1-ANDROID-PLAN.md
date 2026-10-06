@@ -15,7 +15,7 @@ this document wins once approved. The sync model, the formats and the
 merge rules of B.1 are unchanged. iOS (B.1 Phase 6) is out of scope
 here.
 
-Status on 2026-10-06: revision 4. Reading conventions: `[VERIFIED]`
+Status on 2026-10-06: revision 5. Reading conventions: `[VERIFIED]`
 (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus
 #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]`
 (not verified). Untagged statements are design proposals.
@@ -35,9 +35,10 @@ Status on 2026-10-06: revision 4. Reading conventions: `[VERIFIED]`
 What changes against B.1:
 
 - B.1 already lets the phone create a profile (§9.1 item 1), but it
-  was approved "with mandatory sync" and leaves backup, email,
-  catalogue and printing to the desktop (§10). With A1 the phone runs
-  with no sync, no account and no PC. The household design already
+  was approved "with mandatory sync", excludes cloud backup on the
+  phone, and puts email, catalogue and PDF on the phone only in its
+  last phase (§10, Phase 7). With A1 the phone runs with no sync, no
+  account and no PC from its first release. The household design already
   allows a phone as first installation and as master (R8, C8, D-7)
   `[VERIFIED]`.
 - B.1 §10 excludes cloud backup on the phone because "sync plus desktop
@@ -190,9 +191,10 @@ from the same rules, the dated notifications of the next days:
 The Android adapter replaces the scheduled set with exact alarms after
 every local write, every sync that changed data, every start and
 resume, at `BOOT_COMPLETED` (S5), and on a time-zone or clock change
-(B.1 §8.1). Android 12+ refuses more than 500 concurrent alarms per
-app `[VERIFIED — "Maximum limit of concurrent alarms 500 reached",
-AOSP AlarmManagerService and developer reports]`, so the planner
+(B.1 §8.1). Android refuses more than 500 concurrent alarms per app
+`[UNCERTAIN — reported by developers as "Maximum limit of concurrent
+alarms 500 reached" on API 31+; not checked in the platform source]`,
+so the planner
 schedules a bounded window (for example the next 48 hours of dose
 reminders) and re-plans when an alarm fires. The planner and the monitor share the
 rules, so desktop and phone notify on the same days; a test runs both
@@ -282,8 +284,10 @@ on alone.
 
 ### M1 — Standalone core (first release)
 
-Entry: M0 merged; D4, D11, D13, DA1–DA5 decided (DA5 fixes the
-application id before the first upload); Play Console account.
+Entry: M0 merged; D11, D13, DA1–DA5 decided (DA5 fixes the
+application id before the first upload); Play Console account. D4
+(which device notifies what) concerns several devices and waits for
+M2.
 
 - MAUI app (`TrimMode=partial`), composition root, Android adapters
   (paths, Keystore credential protector, notifications, exact alarms,
@@ -313,14 +317,15 @@ application id before the first upload); Play Console account.
 
 ### M2 — Cloud: backup, sync, household
 
-Entry: M1 released; Android halves of S6 and S7 (Android OAuth clients,
-P14).
+Entry: M1 released; D4 decided; Android halves of S6 and S7 (Android
+OAuth clients, P14).
 
 - OneDrive and Google Drive sign-in on Android.
 - Encrypted cloud backup and restore (§4.3); the scheduled backup on
   the master only (household C3).
-- Sync: create or join a group, QR pairing with the camera, conflicts
-  to review, sync status with the time of the last sync (S8).
+- Sync: create or join a group, QR pairing with the camera (the camera
+  decoder chosen here is reused for barcodes in M4), conflicts to
+  review, sync status with the time of the last sync (S8).
 - Household: create on the phone, join, master role on the phone or
   hand it to a PC, device removal; "Join an installation" path of
   §4.1. A phone that is master holds every profile (household C4, C7).
@@ -364,8 +369,8 @@ P14).
 | Milestone | Content | Entry | Effort `[INFERRED]` |
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
-| M1 | Standalone core, first release | M0; D4, D11, D13, DA1–DA5; Play account | 35–50 d |
-| M2 | Cloud backup, sync, household, profiles, roles and PIN | M1; S6/S7 Android halves | 25–38 d |
+| M1 | Standalone core, first release | M0; D11, D13, DA1–DA5; Play account | 35–50 d |
+| M2 | Cloud backup, sync, household, profiles, roles and PIN | M1; D4; S6/S7 Android halves | 25–38 d |
 | M3 | Prescriptions, planning, views | M1 | 15–20 d |
 | M4 | Catalogue, scan, Italian services | M1 | 15–20 d |
 | M5 | Email, support | M1 | 10–15 d |
@@ -394,8 +399,9 @@ can be reordered.
 
 ## 6. Decisions
 
-Still open from B.1: D4 (notification defaults per device), D11
-(recommendation: reject), D13 (minimum Android version).
+Still open from B.1: D4 (notification defaults per device, before M2),
+D11 (recommendation: reject, before M1), D13 (minimum Android version,
+before M1).
 
 New (prefix DA, to keep them apart from the B.1 and household numbering):
 
@@ -428,6 +434,8 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 - `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` §10 and §13 (H6): the phone
   sends email from M5, not from B.1 Phase 7; household creation, join,
   roles and PIN on the phone are part of M2.
+- `ANALYSIS-B1-MOBILE-SYNC.md` §16: D11 and D13 are needed before M1,
+  D4 before M2, instead of "Phase 5".
 - `docs/STATUS.md` §3.1: Phases 5 and 7 replaced by M0–M5.
 
 ---
@@ -436,6 +444,12 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 - 2026-10-06 — revision 1: standalone requirement, feature inventory of
   v2.16.0, milestones M0–M5, decisions DA1–DA5.
+- 2026-10-06 — revision 5, fourth check: the B.1 baseline restated
+  (email, catalogue and PDF were planned for Phase 7, not left to the
+  desktop); D4 moves from the M1 entry to the M2 entry (one device has
+  no per-device policy); the camera decoder is chosen in M2; the
+  500-alarm limit tagged as reported, not verified in the source; B.1
+  §16 phase column added to the corrections.
 - 2026-10-06 — revision 4, third check: B.1 already allowed a profile
   created on the phone, the change is "no sync, no account, no PC";
   the scheduled cloud backup runs on the master only (household C3);

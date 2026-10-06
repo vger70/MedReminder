@@ -51,6 +51,8 @@ Branch: `claude/b1-android-standalone-plan` (stacked on #206)
   desktop, 500-alarm limit and time-zone re-plan, DA5 before M1.
   Revision 4 after a third check: cloud backup on the master only,
   as-needed slots excluded from dose reminders, B.1 baseline restated.
+  Revision 5 after a fourth check: D4 before M2 instead of M1, camera
+  decoder chosen in M2, 500-alarm limit tagged as reported.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §9.1, §10, §13 and `STATUS.md` §3.1, §4
   point to the new plan for Android.
 
