@@ -20,7 +20,8 @@ in der App zu lesen. Die technische Architektur ist in
 ## Inhalt
 
 1. [Erste Schritte](#start)
-   - [Erster Start](#first-start) · [Das Hauptfenster](#main-window) ·
+   - [Erster Start](#first-start) · [Geführte Einrichtung](#guided-setup) ·
+     [Das Hauptfenster](#main-window) ·
      [Was finde ich wo](#where)
 2. [Medikamente](#medicines)
    - [Ein Medikament hinzufügen](#add-medicine) ·
@@ -71,6 +72,11 @@ in der App zu lesen. Die technische Architektur ist in
 3. Das Hauptfenster öffnet sich. Das MedReminder-Symbol im
    Windows-Infobereich (neben der Uhr) bleibt sichtbar, solange die App
    läuft.
+4. Solange das Profil kein Medikament hat, öffnet sich die
+   **Geführte Einrichtung** von selbst und hilft dir, die ersten
+   Medikamente hinzuzufügen und die Warnungen festzulegen (siehe
+   [Geführte Einrichtung](#guided-setup)). Du kannst sie mit
+   **Nicht jetzt** schließen und später verwenden.
 
 **Windows SmartScreen.** Das Programm ist mit einem Certum-Zertifikat
 digital signiert. Solange das Zertifikat noch keine Reputation
@@ -79,6 +85,55 @@ Fenster „Der Computer wurde durch Windows geschützt“ zeigen: Klicke auf
 **Weitere Informationen**, dann auf **Trotzdem ausführen**. Windows
 merkt sich die Wahl. Bei der Installation über das MSI-Paket zeigt das
 Berechtigungsfenster den verifizierten Herausgeber.
+
+<a id="guided-setup"></a>
+### Geführte Einrichtung
+
+Ein kurzes Fenster, das dich von einer leeren Liste zu Medikamenten
+führt, die dich warnen. Es öffnet sich von selbst, wenn auf diesem
+Computer zum ersten Mal ein Profil ohne Medikament geöffnet wird.
+Danach findest du es unter **? → Geführte Einrichtung…** und, solange
+die Liste leer ist, unter **Geführte Einrichtung starten** im
+Hauptfenster. Jeder Schritt kann übersprungen werden. **Nicht jetzt**,
+Esc oder das Schließen des Fensters beenden es, und für dieses Profil
+öffnet es sich auf diesem Computer nicht mehr von selbst.
+
+1. **Für wen die Medikamente sind** — für dich oder für eine Person, die
+   du betreust. Die Antwort ändert den Text der nächsten Schritte und
+   das Feld, in das deine E-Mail-Adresse in Schritt 4 kommt. Ein
+   Administrator kann hier auch den Profilnamen ändern.
+2. **Erste Medikamente** — **Medikament hinzufügen…** öffnet das
+   gewohnte Medikamentenfenster (siehe
+   [Ein Medikament hinzufügen](#add-medicine)). Der Schritt listet die
+   hinzugefügten Medikamente mit den verbleibenden Tagen.
+3. **Wann warnen** — wie viele Tage bevor ein Medikament aufgebraucht
+   ist (7, 10, 14 oder ein anderer Wert) und wie (in Windows, per
+   E-Mail oder beides). Die Wahl gilt für die in Schritt 2
+   hinzugefügten Medikamente und wird zum Startwert neuer Medikamente,
+   die auf diesem Computer hinzugefügt werden. Medikamente, die schon in
+   der Liste stehen, ändern sich nicht.
+4. **E-Mail** — erscheint, wenn Schritt 3 E-Mail enthält oder die
+   Medikamente für eine betreute Person sind.
+   - Für dich: Deine Adresse erhält die Warnungen; die Person, die dich
+     unterstützt, erhält, wenn du sie angibst, eine Kopie der
+     angekreuzten E-Mails.
+   - Für eine betreute Person: Hat sie eine Adresse, gehen die
+     Warnungen an sie und du erhältst die Kopien; sonst kommen die
+     Warnungen zu dir.
+
+   Ist kein E-Mail-Konto eingerichtet, kann ein Administrator
+   **E-Mail-Konto einrichten…** öffnen; andere Profile sehen den
+   Hinweis, dass ein Administrator das übernehmen muss (siehe
+   [Benachrichtigungen und E-Mail](#notifications)).
+5. **Zusammenfassung** — was MedReminder ab jetzt tut, mit Links zum
+   Festlegen der Einnahmezeiten, zum Sichern der Daten und, für
+   Administratoren, zur Nutzung von MedReminder auf einem anderen
+   Computer. Ist E-Mail der einzige Kanal und kann noch keine E-Mail
+   gesendet werden, sagt die Zusammenfassung das und bietet
+   **Auch in Windows warnen** an.
+
+Die geführte Einrichtung speichert nur, was du eingibst: Sie schlägt
+weder Medikamente noch Dosen vor.
 
 <a id="main-window"></a>
 ### Das Hauptfenster
