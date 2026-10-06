@@ -30,7 +30,9 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #<pending> — Revise the B.1 Android plan for a standalone app with every current feature
+## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature
+
+Link: [vger70/MedReminder#209](https://github.com/vger70/MedReminder/pull/209)
 
 Branch: `claude/b1-android-standalone-plan` (stacked on #206)
 
