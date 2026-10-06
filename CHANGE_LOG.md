@@ -30,6 +30,32 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature
+
+Link: [vger70/MedReminder#209](https://github.com/vger70/MedReminder/pull/209)
+
+Branch: `claude/b1-android-standalone-plan` (stacked on #206)
+
+### Docs
+
+- `docs/analysis/ANALYSIS-B1-ANDROID-PLAN.md`: the Android app works
+  without a PC and without an account, and covers every current desktop
+  feature that applies to a phone; feature inventory, standalone
+  design points (first start, notification planner, backup, catalogue,
+  email, PDF, security), milestones M0–M5 (110–160 days), decisions
+  DA1–DA5, risks. Revision 2 after a check against the tree and the
+  household design: profiles, roles and PIN in M2, corrected
+  references, M1 completed (accessibility, packaging, user guides).
+  Revision 3 after a second check: inventory at `main` `64ccba9` with
+  the guided setup and as-needed slots, embedded snapshots kept on the
+  desktop, 500-alarm limit and time-zone re-plan, DA5 before M1.
+  Revision 4 after a third check: cloud backup on the master only,
+  as-needed slots excluded from dose reminders, B.1 baseline restated.
+  Revision 5 after a fourth check: D4 before M2 instead of M1, camera
+  decoder chosen in M2, 500-alarm limit tagged as reported.
+- `ANALYSIS-B1-MOBILE-SYNC.md` §9.1, §10, §13 and `STATUS.md` §3.1, §4
+  point to the new plan for Android.
+
 ## PR #206 — Record the Android spike results S1-S5 and S8 in the B.1 analysis
 
 Link: [vger70/MedReminder#206](https://github.com/vger70/MedReminder/pull/206)

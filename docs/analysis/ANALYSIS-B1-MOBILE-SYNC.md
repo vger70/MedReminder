@@ -52,6 +52,9 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 
 ### 1.2 End-state goal
 
+For Android, revised by `ANALYSIS-B1-ANDROID-PLAN.md` once approved:
+the app also works on its own, without a PC or an account.
+
 1. A mobile app (Android, then iOS) that is a **full client** of a
    profile: it reads and writes the same data the desktop manages
    (§10 lists feature parity and the justified exclusions).
@@ -989,6 +992,9 @@ or SMTP if configured there.
 
 ### 9.1 Screens (end state)
 
+For Android, superseded by `ANALYSIS-B1-ANDROID-PLAN.md` (standalone
+app, feature inventory of v2.16.0, milestones M0–M5), once approved.
+
 1. Onboarding: disclaimer, create or join a profile (QR or provider
    sign-in + passphrase), notification permissions.
 2. Medicine list: stock, days remaining, run-out date, warning badges,
@@ -1027,6 +1033,9 @@ sections added to the five user guides.
 ---
 
 ## 10. Feature parity (end state)
+
+For Android, superseded by `ANALYSIS-B1-ANDROID-PLAN.md` §3, once
+approved.
 
 | Desktop feature | Mobile | Phase |
 |---|---|---|
@@ -1294,6 +1303,11 @@ libraries.
 **Effort**: 15–25 days `[INFERRED]`.
 
 ### Phase 5 — Android full client
+
+For Android, Phases 5 and 7 are replaced by milestones M0–M5 of
+`ANALYSIS-B1-ANDROID-PLAN.md` §5, once approved: the app works without
+a PC (product owner, 2026-10-06) and covers every current desktop feature
+that applies to a phone.
 
 **Entry**: Phase 4 exit for at least OneDrive; D1, D3, D4, D13
 decided; Play Console account.
@@ -2041,3 +2055,7 @@ Phase 2 implements the derivation from the prototype and its tests.
   4 hours; background sync is best effort. §7.4 updated. P12 and P13 met
   for Android; Phase 0 exit met for Android; D11 recommendation:
   reject, no exclusion needed.
+- 2026-10-06 — Android plan revised in `ANALYSIS-B1-ANDROID-PLAN.md`
+  after two product-owner requests: a standalone Android app, and every
+  current desktop feature that applies to a phone. §9.1, §10 and §13
+  Phases 5 and 7 point to it for Android.
