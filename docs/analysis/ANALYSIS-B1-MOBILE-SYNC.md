@@ -951,11 +951,13 @@ change.
   changes]`. Plan: request `SCHEDULE_EXACT_ALARM` with an explanation;
   inexact fallback stated in the UI.
 - Android alarms are cleared on reboot; re-plan on `BOOT_COMPLETED`
-  `[INFERRED]`.
+  `[VERIFIED — S5, §18.5]`.
 - iOS: explicit authorization.
 - MAUI has no built-in local-notification API `[INFERRED]`; thin native
   adapters (`AlarmManager` + `NotificationCompat`, `UNUserNotificationCenter`)
-  behind `ILocalNotificationScheduler` (spike S5).
+  behind `ILocalNotificationScheduler`. On Android the exact kinds
+  (`setExactAndAllowWhileIdle`, `setAlarmClock`) fire within seconds;
+  the inexact fallback fires up to 25 minutes late (S5, §18.5).
 
 ### 8.3 Duplication policy
 
@@ -1450,8 +1452,8 @@ two behavior findings belong to Phase 2.
 
 ## 18. Spike results
 
-One subsection per spike: date, environment, result, decision. S1–S4
-done on Android; S5 and S8 pending; S6 and S7 done for Windows (their Android
+One subsection per spike: date, environment, result, decision. S1–S5
+done on Android; S8 pending; S6 and S7 done for Windows (their Android
 halves run with Phase 5).
 
 ### 18.0 Android spike tool and device (S1–S4)
@@ -1564,6 +1566,46 @@ and starts; the default APK passes S1 and S3.
 
 **Decision**: no exclusion of the mobile project from
 `StripReleaseDebugArtifacts` is needed; D11 can be closed as "reject".
+
+### 18.5 S5 — Local notifications on Android (2026-10-05/06)
+
+**Environment**: motorola edge 50 neo, Android 16, the Release default
+APK of §18.0 extended with S5 (draft PR #106). A *battery* schedules,
+per time offset, one alarm of each kind: Exact
+(`setExactAndAllowWhileIdle`), AlarmClock (`setAlarmClock`), Inexact
+(`setAndAllowWhileIdle`) and Window (`setWindow`, 10 minutes). The
+receiver logs the real firing time and posts a notification; a
+`BOOT_COMPLETED` receiver re-plans the alarms still due, as the Phase 5
+planner would. `POST_NOTIFICATIONS` granted. `SCHEDULE_EXACT_ALARM` was
+**not granted after install** on Android 16; it was granted in the
+settings for every run except the two with exact alarms denied.
+
+**Results** (delay after the planned time; short battery: +2 to +20
+minutes; long battery: +30 minutes to +8 hours)
+
+| Scenario | Exact, AlarmClock | Inexact, Window | Notes |
+|---|---|---|---|
+| Screen off | 0–2 s, 8/8 | 17–239 s | |
+| Swiped from recents | 1 s, 8/8 | 17–240 s | The process stayed cached: no alarm had to start it |
+| Reboot | 2–4 s, 8/8 | 4–221 s | The boot receiver re-planned 16/16 without the app being opened; the first alarms started the process |
+| Reboot, exact alarms denied | Refused | 11–777 s | 8/8 re-planned at boot |
+| Exact alarms denied | Refused (`SecurityException`); `canScheduleExactAlarms` false | Inexact 92–442 s, Window 442–1522 s | |
+| Force-stopped | 0/8 | 0/8 | No alarm fired; documented platform behaviour |
+| Overnight, long battery (22:30–06:00) | 1 s, 10/10 | 171–243 s | Doze not observed at firing time (`isDeviceIdleMode` false) `[UNCERTAIN — whether the phone entered Doze]` |
+| Foreground | 0 s, 8/8 | 90–347 s | |
+
+**Decision**:
+
+- Dose reminders use the exact kinds; they fire within 4 s in every
+  scenario except force stop. §8.2 holds: request
+  `SCHEDULE_EXACT_ALARM` with an explanation, since it is not granted
+  after install; without it the inexact fallback is up to 25 minutes
+  late, which the UI states.
+- Re-plan on `BOOT_COMPLETED` works without the app being opened.
+- Force stop cancels the alarms until the user opens the app again;
+  the planner re-plans on start (§8.1). No mitigation beyond that.
+- iOS (pending limit, authorization) is not covered; it belongs to
+  Phase 6.
 
 ### 18.6 S6 — OneDrive app folder (2026-09-27)
 
@@ -1944,6 +1986,10 @@ Phase 2 implements the derivation from the prototype and its tests.
   and a low-end Galaxy A32 4G (Android 13, 3.6 GB) (§18.0–§18.4). S1,
   S3 and S4 pass with the .NET for Android Release defaults; S2 takes
   0.9–2.0 s in Release, under the 5 s target on the low-end phone; full
-  trimming breaks reflection-based JSON and EF Core. P12 and P13 met
+  trimming breaks reflection-based JSON and EF Core. S5 run on the
+  motorola (§18.5): exact alarms fire within 4 s in every scenario
+  except force stop, also after a reboot through the boot re-plan;
+  `SCHEDULE_EXACT_ALARM` is not granted after install on Android 16;
+  the inexact fallback is up to 25 minutes late. §8.2 updated. P12 and P13 met
   for Android; Phase 0 exit met for Android; D11 recommendation:
   reject, no exclusion needed.
