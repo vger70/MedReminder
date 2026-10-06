@@ -137,9 +137,9 @@ internal static class S5Alarms
         }
     }
 
-    // BOOT_COMPLETED: alarms are cleared on reboot (§8.2). Re-plan the
-    // future ones and record the ones whose time passed while the phone
-    // was off.
+    // BOOT_COMPLETED: alarms are cleared on reboot (§8.2). Android 15+
+    // also sends it when a force-stopped app is opened again. Re-plan
+    // the future alarms and record the ones already past due.
     public static void OnBoot()
     {
         var now = SpikeFiles.NowMs();
@@ -208,7 +208,7 @@ internal static class S5Alarms
             var planned = long.Parse(p[5], CultureInfo.InvariantCulture);
             var check = $"{p[2]} {kind} +{p[3]} min (#{id}, planned {SpikeFiles.Local(planned)})";
             var notes = (rescheduledIds.Contains(id) ? "; re-planned at boot" : string.Empty)
-                + (missedIds.Contains(id) ? "; time passed while the phone was off" : string.Empty);
+                + (missedIds.Contains(id) ? "; past due at the boot broadcast (reboot, or app leaving the stopped state on Android 15+)" : string.Empty);
 
             if (p[6] != "scheduled")
             {
@@ -236,7 +236,7 @@ internal static class S5Alarms
         foreach (var b in events.Where(e => e[0] == "boot"))
         {
             report.Add(Spike, "Boot", Outcome.Measured,
-                $"at {SpikeFiles.Local(long.Parse(b[4], CultureInfo.InvariantCulture))}: {b[5]} alarm(s) re-planned, {b[6]} passed while off; exact alarms allowed {b[7]}");
+                $"at {SpikeFiles.Local(long.Parse(b[4], CultureInfo.InvariantCulture))}: {b[5]} alarm(s) re-planned, {b[6]} already past due; exact alarms allowed {b[7]}");
         }
     }
 
