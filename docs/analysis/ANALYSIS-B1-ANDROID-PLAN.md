@@ -15,7 +15,7 @@ this document wins once approved. The sync model, the formats and the
 merge rules of B.1 are unchanged. iOS (B.1 Phase 6) is out of scope
 here.
 
-Status on 2026-10-06: revision 3. Reading conventions: `[VERIFIED]`
+Status on 2026-10-06: revision 4. Reading conventions: `[VERIFIED]`
 (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus
 #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]`
 (not verified). Untagged statements are design proposals.
@@ -30,15 +30,16 @@ Status on 2026-10-06: revision 3. Reading conventions: `[VERIFIED]`
 | A2 | The app also works without a cloud account; sync and cloud backup are optional | Derived from A1 `[INFERRED]` |
 | A3 | Every desktop feature on `main` (§3) that applies to a phone is in the plan; the rest is listed with the reason | Product owner, 2026-10-06 |
 | A4 | A first release with a consistent core, then the remaining features in releasable steps | Product owner, 2026-10-06 |
-| A5 | When the user also has a PC, phone and PC stay one installation (household) and one data set per profile, as B.1 and the household design define | B.1 §1.2; `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` R8 |
+| A5 | When the user also has a PC, phone and PC stay one installation (household) and one data set per profile, as B.1 and the household design define | B.1 §1.2; `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` R2, R8 |
 
 What changes against B.1:
 
-- B.1 §1.2 calls the app a "full client of a profile" whose data is
-  created on the desktop and reaches the phone by sync. With A1 the
-  phone can create the installation, the profiles and all the data.
-  The household design already allows a phone as first installation
-  and as master (R8, C8, D-7) `[VERIFIED]`.
+- B.1 already lets the phone create a profile (§9.1 item 1), but it
+  was approved "with mandatory sync" and leaves backup, email,
+  catalogue and printing to the desktop (§10). With A1 the phone runs
+  with no sync, no account and no PC. The household design already
+  allows a phone as first installation and as master (R8, C8, D-7)
+  `[VERIFIED]`.
 - B.1 §10 excludes cloud backup on the phone because "sync plus desktop
   backups cover it". Without a PC that no longer holds: the phone needs
   its own backup (§4.3).
@@ -116,7 +117,7 @@ in the plan. "M" refers to the milestones of §5.
 | Notifications | Dose-time reminder (A5) | Yes, exact alarm | M1 |
 | Notifications | Notification actions: open the medicine or the list, prepare the prescription request, snooze a dose reminder 15 min | Yes, Android notification actions (prescription action from M3) | M1 |
 | Data | Encrypted `.mrz` export and import | Yes, through the system file picker and share sheet | M1 |
-| Data | Automatic daily backup to a folder | Replaced by encrypted cloud backup (§4.3) | M2 |
+| Data | Automatic daily backup: unencrypted `.db` copies to a folder, restore from a `.db` | Not applicable: replaced by `.mrz` export (M1) and encrypted cloud backup (M2), §4.3 | — |
 | Data | Cloud backup (OneDrive, Google Drive) and restore | Yes | M2 |
 | Sync | Profile sync between devices, conflicts, pairing codes and QR, key rotation, device removal | Yes; QR with the camera | M2 |
 | Sync | Household: create or join, master device, handover, lost device | Yes; the phone can be master | M2 |
@@ -141,7 +142,6 @@ in the plan. "M" refers to the milestones of §5.
 | Language | Five UI languages | Yes, same dictionaries | M1 |
 | Desktop only | Auto-start, tray, window placement, single-instance mutex | Not applicable: Android manages the app lifecycle | — |
 | Desktop only | Update check | Not applicable: Play Store updates | — |
-| Desktop only | Raw database backup to a folder | Replaced by cloud backup and `.mrz` export | — |
 
 No desktop feature is dropped except the desktop-only rows. The
 device-side state-hash check of B.1 §12 and Phase 7 is not implemented
@@ -181,7 +181,7 @@ from the same rules, the dated notifications of the next days:
 | Notification | Date | Source rule |
 |---|---|---|
 | Low stock, stage 1 and 2 | Day the forecast crosses the threshold and half of it | `NotificationCycle` |
-| Dose reminder | Each timed slot not yet taken, within a rolling window | `DoseReminderService`, `DueToday` |
+| Dose reminder | Each timed slot not yet taken, within a rolling window; as-needed slots excluded (#177) | `DoseReminderService`, `DueToday` |
 | Prescription to collect | Before "valid until" | `PrescriptionReminders` |
 | Administrative deadline | Before the due date, with recurrence | `DeadlineReminders` |
 | Package expiry | Before the expiry date | `PackageExpiryNotices` |
@@ -211,7 +211,10 @@ Google outside the app's encryption. The phone offers instead:
 - **Encrypted cloud backup** (C.3+ on the phone) to OneDrive or Google
   Drive with the existing `IArchiveStorage` providers, same passphrase
   rules, run when the app opens if the last backup is older than a day,
-  and as best-effort periodic work (S8).
+  and as best-effort periodic work (S8). As on the desktop, the
+  scheduled backup runs on the master only (household C3): a
+  standalone phone is master and backs up; a phone in a household
+  whose master is a PC leaves it to the PC.
 - A **reminder** when no backup or export has been made for 30 days
   and sync is off: without a PC, a lost phone is lost data.
 
@@ -314,7 +317,8 @@ Entry: M1 released; Android halves of S6 and S7 (Android OAuth clients,
 P14).
 
 - OneDrive and Google Drive sign-in on Android.
-- Encrypted cloud backup and restore (§4.3).
+- Encrypted cloud backup and restore (§4.3); the scheduled backup on
+  the master only (household C3).
 - Sync: create or join a group, QR pairing with the camera, conflicts
   to review, sync status with the time of the last sync (S8).
 - Household: create on the phone, join, master role on the phone or
@@ -432,6 +436,11 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 - 2026-10-06 — revision 1: standalone requirement, feature inventory of
   v2.16.0, milestones M0–M5, decisions DA1–DA5.
+- 2026-10-06 — revision 4, third check: B.1 already allowed a profile
+  created on the phone, the change is "no sync, no account, no PC";
+  the scheduled cloud backup runs on the master only (household C3);
+  dose reminders skip as-needed slots; the daily `.db` backup rows
+  merged; A5 cites household R2.
 - 2026-10-06 — revision 3, second check: inventory taken at `main`
   `64ccba9` and extended with the guided setup (#207) and as-needed
   slots (#177); the embedded catalogue snapshots stay on the desktop

@@ -49,6 +49,8 @@ Branch: `claude/b1-android-standalone-plan` (stacked on #206)
   Revision 3 after a second check: inventory at `main` `64ccba9` with
   the guided setup and as-needed slots, embedded snapshots kept on the
   desktop, 500-alarm limit and time-zone re-plan, DA5 before M1.
+  Revision 4 after a third check: cloud backup on the master only,
+  as-needed slots excluded from dose reminders, B.1 baseline restated.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §9.1, §10, §13 and `STATUS.md` §3.1, §4
   point to the new plan for Android.
 
