@@ -51,6 +51,9 @@ Branch: `claude/b1-android-premium-model`
 - Revision 8 after a check: DA9 decided (no donation links on mobile);
   which reminders are free stated; cloud restore free; DA11 opened
   (shortage notices need the catalogue link, recommended free).
+- Revision 9 after another check: licence notices due only for
+  contributed code, packages and catalogue data; DA11 needed before M4,
+  not M2; premium reminder kinds planned only with premium.
 - `STATUS.md` §3.1: Phase 5 row updated.
 
 ## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature

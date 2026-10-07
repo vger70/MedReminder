@@ -20,7 +20,7 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-07: revision 8. Reading conventions: `[VERIFIED]`
+Status on 2026-10-07: revision 9. Reading conventions: `[VERIFIED]`
 (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus
 #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]`
 (deduction from verified facts), `[UNCERTAIN]` (not verified).
@@ -32,7 +32,7 @@ Untagged statements are design proposals.
 
 | # | Requirement | Source |
 |---|---|---|
-| A1 | The app is complete on its own: first start, profiles, all daily use, notifications, backup and restore, without a PC | Product owner, 2026-10-06 |
+| A1 | The app is complete on its own: first start, all daily use, notifications, backup and restore, without a PC (several profiles with premium, §4.8) | Product owner, 2026-10-06 |
 | A2 | The app also works without a cloud account; sync and cloud backup are optional | Derived from A1 `[INFERRED]` |
 | A3 | Every desktop feature on `main` (§3) that applies to a phone is in the plan; the rest is listed with the reason | Product owner, 2026-10-06 |
 | A4 | A first release with a consistent core, then the remaining features in releasable steps | Product owner, 2026-10-06 |
@@ -198,6 +198,9 @@ from the same rules, the dated notifications of the next days:
 | Administrative deadline | Before the due date, with recurrence | `DeadlineReminders` |
 | Package expiry | Before the expiry date | `PackageExpiryNotices` |
 | Shortage | When a feed refresh finds a new shortage for a listed medicine | `ShortageNotices`; event, not dated |
+
+The prescription and deadline kinds are planned only with premium
+(§4.8); the others for every user.
 
 The Android adapter replaces the scheduled set with exact alarms after
 every local write, every sync that changed data, every start and
@@ -382,8 +385,10 @@ long-term cost risk.
 **Code and licence** (decided on 2026-10-07, A7, DA8). This
 repository stays public and Apache-2.0 `[VERIFIED — LICENSE]`. The
 mobile apps live in a **private repository** under a proprietary
-licence, which is possible because the project owns the copyright of
-the code `[INFERRED — commit authors are the owner and tooling]`.
+licence. This is possible because the project owner holds the
+copyright of the code and is not bound by the owner's own Apache licence
+`[INFERRED — commit authors are the owner and tooling; the copyright
+status of AI-assisted code is not assessed here]`.
 
 | Public repository (this one, Apache-2.0) | Private repository (proprietary) |
 |---|---|
@@ -397,14 +402,18 @@ the code `[INFERRED — commit authors are the owner and tooling]`.
   published from here; the submodule is the simpler start
   (proposal). A change to the shared core is made here first, in a
   public PR, and then picked up by the app.
-- The apps must carry the Apache-2.0 licence and any notices of the
-  shared libraries (Apache-2.0 §4) on their licences screen.
-- External contributions to this repository arrive under Apache-2.0
-  and can be used by the apps.
-- The name "MedReminder" is not licensed by Apache-2.0 (§6 of the
-  licence) `[VERIFIED — LICENSE]`, so a rebuilt desktop or shared core
-  cannot be published under that name; registering the trademark is a
-  separate decision.
+- The owner's own shared code needs no Apache notice in the apps.
+  Notices are due for code that others contribute to this repository
+  (it arrives under Apache-2.0, §4), for the NuGet packages the apps
+  ship, and for the catalogue data, whose attributions the desktop
+  lists in `THIRD-PARTY-NOTICES.md` `[VERIFIED — that file covers the
+  data sources; package licences are recorded by the .NET tooling; no
+  NOTICE file in this repository]`. The apps show them on a licences
+  screen.
+- Apache-2.0 grants no right to use the name "MedReminder" (§6 of the
+  licence) `[VERIFIED — LICENSE]`; how far the name is protected
+  without a registered trademark is a legal question, and registering
+  it is a separate decision.
 - GitHub private repositories are free; GitHub Actions minutes for
   private repositories are limited per month, and macOS runners (iOS
   builds) count more than Linux ones `[UNCERTAIN — training knowledge,
@@ -496,7 +505,7 @@ M2.
 
 ### M2 — Cloud: backup, sync, household
 
-Entry: M1 released; D4, DA10, DA11 decided; Android halves of S6 and S7
+Entry: M1 released; D4, DA10 decided; Android halves of S6 and S7
 (Android OAuth clients, P14); spike S11 (billing); trader status and
 payments profile in Play Console.
 
@@ -526,7 +535,8 @@ payments profile in Play Console.
 ### M3 — Prescriptions, planning, views
 
 Tiers as in §4.8 for M3–M5: the timeline, shortage notices and
-equivalents are free, the rest premium.
+equivalents are free, catalogue search as DA11 decides, the rest
+premium.
 
 - Prescription request draft, lifecycle, repeatable prescriptions,
   reminders; regional service links.
@@ -535,6 +545,8 @@ equivalents are free, the rest premium.
 - Effort: 15–20 days `[INFERRED]`.
 
 ### M4 — Catalogue, scan, Italian services
+
+Entry: M1 released; DA11 decided (tier of catalogue search).
 
 - Catalogue download and refresh per country (§4.4), search, link to a
   medicine.
@@ -558,9 +570,9 @@ equivalents are free, the rest premium.
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
 | M1 | Standalone core, first release | M0; D11, D13, DA1–DA5; Play account; private repository | 35–50 d |
-| M2 | Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN | M1; D4, DA10, DA11; S6/S7 Android halves; S11; trader status | 30–45 d |
+| M2 | Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN | M1; D4, DA10; S6/S7 Android halves; S11; trader status | 30–45 d |
 | M3 | Prescriptions, planning, views | M1 | 15–20 d |
-| M4 | Catalogue, scan, Italian services | M1 | 15–20 d |
+| M4 | Catalogue, scan, Italian services | M1; DA11 | 15–20 d |
 | M5 | Email | M1 (M2 for the premium gate) | 10–15 d |
 
 Total about 115–165 developer-days, against 60–90 for B.1 Phases 5
@@ -644,6 +656,13 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 ## 9. Change log for this document
 
+- 2026-10-07 — revision 9, check of revision 8: the owner is not bound
+  by the owner's Apache licence, so the apps owe notices only for
+  contributed code, third-party packages and catalogue data; the name protection is
+  not asserted; DA11 moves from the M2 entry to the M4 entry, where the
+  catalogue is built; the planner plans prescription and deadline
+  reminders only with premium; A1 says that several profiles need
+  premium; copyright of AI-assisted code flagged as not assessed.
 - 2026-10-07 — revision 8, check after the decisions: DA9 decided (no
   donation links on mobile, D14 settled); the free core states which
   reminders are free (medicine notifications) and which come with the
