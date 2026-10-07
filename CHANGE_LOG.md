@@ -61,7 +61,8 @@ Branch: `claude/b1-android-premium-model`
 - Revision 11: DA10 reopened; family tier designed (one purchase, the
   other phones of the household get premium through a grant in the
   household log, up to six phones, PCs free); M2 35–50 days, total
-  120–170.
+  120–170. `STATUS.md` total effort aligned with the Android plan
+  (it still showed 75–115 days for B.1 Phases 5–7).
 - `STATUS.md` §3.1: Phase 5 row updated.
 
 ## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature

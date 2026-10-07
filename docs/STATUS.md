@@ -312,8 +312,10 @@ Open prerequisites and debts inside B.1:
 - **P15**: store accounts and macOS build host are product-owner
   actions.
 
-Total remaining B.1 effort, phases 5–7 only: about 75–115
-developer-days `[INFERRED — from the §13.1 estimates]`.
+Total remaining B.1 effort: about 120–170 developer-days for Android
+(M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, which replace Phases 5 and 7
+for Android) plus 15–25 for iOS (Phase 6), whose estimate predates the
+standalone and premium requirements `[INFERRED]`.
 
 ### 3.2 Other decided items
 
