@@ -6,8 +6,8 @@ proceeds on a branch named `feature/vital-tracking` (per `CLAUDE.md`
 
 > **This is not a speculative analysis.** Every decision is
 > technically motivated and delimits what will be written in code.
-> The "Decisions still to confirm" section at the end is the only
-> zone of ambiguity that needs product-owner input.
+> All decisions in §9 were confirmed by the product owner on
+> 2026-10-07. The document is ready for implementation planning.
 
 Epistemic classification (aligned with sibling documents):
 `[VERIFIED]` (checked against the current tree), `[INFERRED]`
@@ -111,15 +111,19 @@ One measurement, entered by the user.
 | `Unit` | `string` | Copied from `VitalType.PrimaryUnit` at record time; preserved even if the type's unit is later edited |
 | `RecordedAt` | `DateTimeOffset` | User-chosen date and time; stored as UTC ticks in SQLite |
 | `Note` | `string?` | Free-text, max 500 characters; never logged |
-| `CreatedAt` | `DateTimeOffset` | Server-side insertion time (UTC); used for sync conflict resolution |
+| `CreatedAt` | `DateTimeOffset` | Device-local insertion time (UTC); immutable after creation |
+| `UpdatedAt` | `DateTimeOffset` | Device-local time of the last edit (UTC); equals `CreatedAt` on new readings; used as the LWW register for sync conflict resolution on updates |
 
 `VitalType` deletion is blocked when readings exist (`Restrict`). The
 user deactivates a type instead (`IsHidden = true`).
 
 ### 2.2 Invariants (enforced in the domain)
 
-- `Value` must be a positive finite decimal.
-- `SecondaryValue` must be a positive finite decimal when
+- `Value` must be a finite decimal ≥ 0. Zero is allowed to support
+  user-defined scales where 0 is meaningful (e.g. pain 0–10, mood
+  0–5). The UI may warn when a built-in type receives 0, but the
+  domain does not reject it.
+- `SecondaryValue` must be a finite decimal ≥ 0 when
   `HasSecondaryValue`, null otherwise.
 - `RecordedAt` must not be in the future by more than 5 minutes
   (tolerates clock skew; prevents accidental future entries).
@@ -166,10 +170,12 @@ approval.
 IVitalReadingRepository
     Task<VitalReading?> GetByIdAsync(Guid id);
     Task<IReadOnlyList<VitalReading>> GetHistoryAsync(Guid typeId, DateOnly from, DateOnly to);
+    Task<IReadOnlyList<VitalReading>> GetAllAsync();   // for export: no cap, full history
     Task AddAsync(VitalReading reading);
     Task UpdateAsync(VitalReading reading);
     Task DeleteAsync(Guid id);
-    Task DeleteAllAsync();                         // for right-to-erasure
+    Task DeleteByTypeAsync(Guid typeId);               // for type management (§8.4)
+    Task DeleteAllAsync();                             // for right-to-erasure
 
 IVitalTypeRepository
     Task<IReadOnlyList<VitalType>> GetAllAsync();
@@ -215,12 +221,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS IX_VitalTypes_BuiltInKey
 CREATE TABLE IF NOT EXISTS VitalReadings (
     Id              TEXT    NOT NULL PRIMARY KEY,
     VitalTypeId     TEXT    NOT NULL REFERENCES VitalTypes (Id) ON DELETE RESTRICT,
-    Value           TEXT    NOT NULL,        -- decimal stored as TEXT
+    Value           TEXT    NOT NULL,        -- decimal stored as TEXT; EF Core ValueConverter<decimal,string> required
     SecondaryValue  TEXT    NULL,
     Unit            TEXT    NOT NULL,
     RecordedAt      INTEGER NOT NULL,        -- UTC ticks
     Note            TEXT    NULL,
-    CreatedAt       INTEGER NOT NULL
+    CreatedAt       INTEGER NOT NULL,        -- UTC ticks; immutable after insertion
+    UpdatedAt       INTEGER NOT NULL         -- UTC ticks; equals CreatedAt on insert; bumped on each edit; LWW register for sync
 );
 CREATE INDEX IF NOT EXISTS IX_VitalReadings_VitalTypeId_RecordedAt
     ON VitalReadings (VitalTypeId, RecordedAt DESC);
@@ -238,8 +245,12 @@ Core queries, no raw SQL, one `DbContext` per scope `[VERIFIED]`.
 
 ### 4.3 Export and deletion
 
-`GetVitalHistory` with the full date range feeds the existing export
-path. The `.mrz` archive format gains a new section
+`IVitalReadingRepository.GetAllAsync()` (no date filter, no visibility
+cap) feeds the existing export path. The export path **must not** use
+`GetHistoryAsync`, which is subject to the DA1 free-tier limit on
+Android; `GetAllAsync` is explicitly cap-free and ensures full
+data portability (GDPR Art. 20) regardless of the user's tier. The
+`.mrz` archive format gains a new section
 `vitals/<profile-id>/vital_types.json` and
 `vitals/<profile-id>/vital_readings.json` (same JSON convention as
 `medicines.json`). The export schema version in the archive header is
@@ -351,7 +362,7 @@ same household. The sync model (CRDTs / HLC / LWW registers, B.1
 
 | Type | Payload | Meaning |
 |---|---|---|
-| `VitalReadingUpsert` | `VitalReadingPayload` (full reading) | Create or update a reading (last-writer-wins on `CreatedAt`) |
+| `VitalReadingUpsert` | `VitalReadingPayload` (full reading incl. `UpdatedAt`) | Create or update a reading; last-writer-wins on `UpdatedAt` |
 | `VitalReadingDelete` | `{ "id": "<guid>" }` | Tombstone: the reading is deleted on all peers |
 
 `VitalTypeUpsert` and `VitalTypeDelete` are added for custom types.
@@ -359,9 +370,21 @@ Built-in types are never synced (they are seeded locally).
 
 ### 6.2 Conflict rule
 
-`VitalReading` is treated as an immutable fact once recorded: its only
-conflict scenario is a concurrent delete on one peer and edit on another.
-The delete wins (same rule as `FactRetraction` `[VERIFIED]`).
+`VitalReading` supports both creation, edit (`UpdateVitalReading`) and
+deletion. Conflict resolution:
+
+- **Concurrent edits**: last-writer-wins on `UpdatedAt`. `UpdatedAt` is
+  bumped by every `UpdateVitalReading` call on the originating device,
+  so two concurrent edits are resolved deterministically. The `UpdatedAt`
+  value in the sync payload is the device-local wall-clock time at the
+  moment of the edit; HLC is **not** used here because `VitalReading` is
+  not part of the causal chain of medicine or stock facts `[INFERRED —
+  to confirm at implementation]`.
+- **Concurrent delete + edit**: delete wins. The tombstone
+  (`VitalReadingDelete`) is applied even if the peer's `UpdatedAt` is
+  more recent. This matches the `FactRetraction` rule `[VERIFIED]` and
+  prevents ghost readings from reappearing after a user explicitly
+  removes one.
 
 ### 6.3 Schema version bump
 
@@ -490,10 +513,12 @@ condition.
    >   stored only when you open the Vitals section and give explicit
    >   consent. You may delete it at any time from Settings → Privacy.
 
-2. **§3 — existing disclosure on encryption**: no change needed; the
-   existing "databases are not encrypted" statement already covers the
-   new table. Update this statement only when the follow-on SQLCipher
-   item is implemented.
+2. **§3 — encryption disclosure**: replace the existing sentence
+   *"The databases are not encrypted"* with *"The databases are
+   encrypted with AES-256 (SQLCipher)."* This change is **required in
+   the same D.1 PR** because DA7 makes SQLCipher a D.1 prerequisite
+   (§8.7). Leaving the old sentence would make the Privacy Policy
+   factually wrong the moment D.1 ships.
 
 3. **§4 — Data that leaves your PC**: add a row to the existing table:
 
@@ -533,10 +558,14 @@ All eight decisions were confirmed by the product owner on 2026-10-07.
 
 The limit enforcement follows these rules:
 
-- **Threshold**: determined at implementation (e.g., 300 readings or
-  the oldest reading older than 90 days — whichever boundary is
-  reached first). The exact number is a product decision; the
-  architectural boundary is established here.
+- **Threshold**: determined at implementation. The suggested rule is:
+  a free user can log readings **until either** (a) the total count of
+  stored readings for the profile reaches 300, **or** (b) the oldest
+  stored reading is more than 90 days old — whichever limit is hit
+  first (i.e. the stricter of the two). The "Log reading" button is
+  disabled as soon as either condition is true. The exact numbers are
+  a product decision; the architectural boundary (enforce the stricter
+  of a count cap and a recency cap) is established here.
 - **No deletion**: readings beyond the threshold are not deleted; they
   remain in the database, appear in exports (`.mrz`, CSV) and are
   restored to full visibility if the user upgrades to premium.
@@ -579,14 +608,13 @@ databases (`medreminder.db`). The implementation must:
 | `src/MedReminder.Application/Vitals/*.cs` | New use cases and DTOs |
 | `src/MedReminder.Application/Abstractions/Vitals/IVitalReadingRepository.cs` | New port |
 | `src/MedReminder.Application/Abstractions/Vitals/IVitalTypeRepository.cs` | New port |
-| `src/MedReminder.Infrastructure.Portable/Persistence/MedReminderDbContext.cs` | Two new `DbSet<>` |
+| `src/MedReminder.Infrastructure.Portable/Persistence/MedReminderDbContext.cs` | Two new `DbSet<>` + SQLCipher connection string (DA7) |
 | `src/MedReminder.Infrastructure.Portable/Persistence/Configurations/VitalTypeConfiguration.cs` | New |
-| `src/MedReminder.Infrastructure.Portable/Persistence/Configurations/VitalReadingConfiguration.cs` | New |
+| `src/MedReminder.Infrastructure.Portable/Persistence/Configurations/VitalReadingConfiguration.cs` | New (note: `Value`/`SecondaryValue` mapped via `ValueConverter<decimal,string>` to preserve precision) |
 | `src/MedReminder.Infrastructure.Portable/Persistence/DatabaseInitializer.cs` | Schema patch + built-in seed |
 | `src/MedReminder.Infrastructure.Portable/Repositories/VitalReadingRepository.cs` | New |
 | `src/MedReminder.Infrastructure.Portable/Repositories/VitalTypeRepository.cs` | New |
-| `src/MedReminder.Infrastructure.Portable/Persistence/MedReminderDbContext.cs` | SQLCipher connection string (DA7) |
-| `src/MedReminder.Infrastructure/Security/DatabaseEncryptionMigrator.cs` | One-time re-encrypt of existing databases (DA7) |
+| `src/MedReminder.Infrastructure/Security/DatabaseEncryptionMigrator.cs` | One-time re-encrypt of existing Desktop databases (DA7; Desktop-only — Android uses SQLCipher from its first release and has no unencrypted database to migrate) |
 | `src/MedReminder.Infrastructure.Portable/Export/` | Extend `.mrz` writer/reader for vitals section |
 | `src/MedReminder.UI/Forms/VitalsForm.cs` (and partials) | New main form section |
 | `src/MedReminder.UI/Forms/LogVitalReadingDialog.cs` | New dialog |
