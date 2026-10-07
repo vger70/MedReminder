@@ -48,6 +48,10 @@ Branch: `claude/legal-compliance-health-app-319bf5`
   2026-10-07 (including: free core with reading-count limit for non-premium
   Android users DA1; SQLCipher as D.1 prerequisite DA7; iOS deferred to
   D.1c DA8).
+- **Changed** `docs/analysis/ANALYSIS-B1-ANDROID-PLAN.md` (revision 14):
+  schedule D.1b after the M1 baseline is stable, clarify its separate
+  estimate, and correct portability, notification-permission, alarm-limit
+  and background-work wording.
 - **Added** `docs/DPIA-VITAL-TRACKING.md`: Data Protection Impact Assessment
   (GDPR Art. 35). Confirms DPIA obligation (Art. 9 health data), maps all
   data flows (local-first; no developer server), assesses 7 risks. Updated
