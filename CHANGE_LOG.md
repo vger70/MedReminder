@@ -48,6 +48,9 @@ Branch: `claude/b1-android-premium-model`
   with a 14-day trial, Android and iOS apps in a private repository
   with the desktop and the shared core open); closed-test rule
   corrected to 12 testers.
+- Revision 8 after a check: DA9 decided (no donation links on mobile);
+  which reminders are free stated; cloud restore free; DA11 opened
+  (shortage notices need the catalogue link, recommended free).
 - `STATUS.md` §3.1: Phase 5 row updated.
 
 ## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature
