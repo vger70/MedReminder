@@ -1,336 +1,390 @@
-# Data Protection Impact Assessment (DPIA)
-## MedReminder — Vital-parameter tracking feature (D.1)
+# Data Protection Impact Assessment / Privacy Risk Assessment
+## MedReminder — Vital-parameter recording feature (D.1)
 
-**Reference regulation**: EU General Data Protection Regulation
-2016/679 (GDPR), Article 35 — Data Protection Impact Assessment.
+**Reference regulation:** Regulation (EU) 2016/679 (GDPR), especially
+Articles 2, 4, 5, 9 and 35.
 
-**Prepared by**: vger70 (controller / developer).
-**Date**: 7 October 2026.
-**Version**: 1.0 — initial draft, pending DPO/legal review before feature release.
-**Related documents**:
-- `docs/analysis/ANALYSIS-D1-VITAL-TRACKING.md` (technical design)
-- `PRIVACY.md` (current privacy policy)
-- Legal-compliance guide — Guida alla Conformità Legale e Privacy (Scenario A: Non-MDR)
+**Prepared by:** MedReminder developer, for product accountability and
+privacy-by-design review. This document does **not** by itself determine the
+legal controller role for every MedReminder processing activity.
 
----
+**Date:** 7 October 2026  
+**Version:** 2.0 — revised after the D.1 architecture decision  
+**Related documents:**
+- `docs/analysis/ANALYSIS-D1-VITAL-TRACKING.md`
+- `docs/analysis/ANALYSIS-B1-ANDROID-PLAN.md`
+- `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
+- `PRIVACY.md`
 
-## Part 1 — Is a DPIA required?
-
-GDPR Art. 35(1) requires a DPIA when processing "is likely to result in
-a high risk to the rights and freedoms of natural persons". Art. 35(3)b
-specifies that large-scale processing of **special-category data (Art. 9)**
-always triggers the obligation.
-
-**Assessment**: vital-parameter readings (blood pressure, heart rate,
-blood glucose, body weight, SpO₂, body temperature) are **health data**
-under Art. 4(15) and therefore special-category data under Art. 9(1).
-The DPIA is **mandatory** regardless of scale, because the data category
-alone satisfies Art. 35(3)b.
+> **Important:** this document is a product privacy/risk assessment, not legal
+> advice. The architecture deliberately prevents the developer from receiving
+> D.1 vital data. A material change to that boundary requires this assessment
+> to be reopened.
 
 ---
 
-## Part 2 — Description of the processing
+## Part 1 — Does GDPR require a DPIA for this exact processing?
 
-### 2.1 Controller
+GDPR Article 35(1) requires a DPIA where processing is likely to result in a
+high risk to the rights and freedoms of natural persons. Article 35(3)(b)
+expressly refers to **large-scale** processing of special-category data; it
+does not say that any processing of health data, regardless of scale,
+automatically requires a DPIA. citeturn0search10
 
-| Field | Value |
+D.1 is designed as a local-only diary. The developer does not receive the
+vital readings, does not operate a vital-data server, and does not perform
+remote analytics or profiling. Accordingly, this document does **not** claim
+that Article 35(3)(b) automatically makes a DPIA mandatory merely because
+vital readings are health data.
+
+Nevertheless, the project maintains this assessment voluntarily as a
+privacy-by-design and accountability measure because health data is sensitive,
+D.1 creates a new data store, and exported CSV/PDF files can create additional
+user-controlled copies. If a concrete deployment model introduces a GDPR
+controller processing activity at scale or another high-risk processing
+condition, the legal requirement must be reassessed before that processing
+starts.
+
+---
+
+## Part 2 — Processing description and responsibility boundary
+
+### 2.1 Responsibility matrix
+
+| Activity | Where data exists | Developer receives it? | D.1 developer role |
+|---|---|---:|---|
+| Manual entry into `vitals.db` | User's Desktop/Android device | No | No controller role established for this local activity |
+| Local chart/list display | User's device | No | No |
+| CSV export | User-selected local file | No, unless user separately sends it | No |
+| CSV import | User-selected local file → `vitals.db` | No | No |
+| PDF export | User-selected local file | No | No |
+| B.1 sync | **Not applicable to vitals** | No | Prohibited by D.1 architecture |
+| Cloud backup | **Not applicable to vitals** | No | Prohibited by D.1 architecture |
+| Developer account/billing/support processing | Separate MedReminder systems | Potentially | Separate GDPR analysis; outside this D.1 boundary |
+
+The developer may have controller responsibilities for other MedReminder
+processing, such as account, subscription, support or non-vital cloud
+services. Those responsibilities must not be inferred to include local vital
+data merely because the developer publishes the application.
+
+### 2.2 Purpose
+
+The purpose of D.1 is limited to enabling the user to record, store, review,
+export and manually re-import their vital-parameter history for personal
+reference.
+
+There is no D.1 purpose for:
+
+- analytics;
+- advertising;
+- profiling;
+- research;
+- clinical decision support;
+- diagnosis or prognosis;
+- treatment or dose recommendations;
+- remote physiological monitoring.
+
+### 2.3 Data categories
+
+| Category | Description |
 |---|---|
-| Name / handle | vger70 |
-| Contact | info@medreminder26.org |
-| Role | Controller (the developer processes no data; all processing is by the user on their own device — see §2.5) |
+| Vital readings | Vital type, numeric value(s), unit, user-selected date/time |
+| Optional note | Free text up to 500 characters |
+| Technical timestamps | `CreatedAt`, `UpdatedAt` |
+| Profile context | Profile-local UUID/context required to isolate the selected profile |
 
-### 2.2 Purpose and legal basis
+Vital readings can constitute health data under GDPR Article 4(15) and special-
+category data under Article 9 when GDPR applies.
 
-| Purpose | Legal basis |
-|---|---|
-| Storing a user's self-entered vital-parameter readings on their own device for personal reference and historical review | Art. 9.2.a GDPR — **explicit consent** of the data subject, collected via the in-app consent screen (double opt-in, non-pre-selected checkboxes) at first use of the Vitals section |
+D.1 intentionally does not require name, national identifier, address,
+location, diagnosis or sensor identifier.
 
-There is **no secondary purpose**. The data is not used for analytics,
-advertising, research, or any purpose other than displaying the user's
-own history back to them.
+### 2.4 Data subjects
 
-### 2.3 Categories of data and data subjects
+The primary intended data subject is the person whose personal diary is being
+recorded. The application must not assume that the person holding the device
+and the person described by the readings are always the same individual; if a
+caregiver records another person's health data, the applicable GDPR analysis
+can differ. This is another reason the product must not present the household
+exemption as an automatic legal conclusion.
 
-| Category | Description | GDPR classification |
-|---|---|---|
-| Vital-parameter readings | Type (e.g. blood pressure), numeric value(s), user-chosen timestamp, optional free-text note | **Special-category health data — Art. 9(1)** |
-| Profile context | Internal profile ID (a UUID, not a real-world identifier) | Personal data — Art. 4(1) |
+### 2.5 Data flows
 
-Data subjects: the individual users of MedReminder, who are the same
-persons who enter their own data. No data concerning third parties is
-collected by this feature.
+```text
+                         ┌──────────────────────────────┐
+                         │        User / device         │
+                         └──────────────┬───────────────┘
+                                        │ manual entry
+                                        ▼
+                              ┌───────────────────┐
+                              │   Vitals UI       │
+                              └─────────┬─────────┘
+                                        ▼
+                              ┌───────────────────┐
+                              │ Vitals application│
+                              │      layer        │
+                              └─────────┬─────────┘
+                                        ▼
+                              ┌───────────────────┐
+                              │    vitals.db      │
+                              │ encrypted SQLite  │
+                              └─────────┬─────────┘
+                                        │
+                    ┌───────────────────┼───────────────────┐
+                    │                   │                   │
+                    ▼                   ▼                   ▼
+               CSV export          PDF export         local display
+                    │                   │
+                    ▼                   ▼
+             user-selected       user-selected
+             local destination   local destination
 
-### 2.4 Data flows
-
+         X NO B.1 SYNC
+         X NO .mrz inclusion
+         X NO CLOUD BACKUP
+         X NO DEVELOPER SERVER
 ```
-User (manual entry)
-        │
-        ▼
-In-app input form
-        │
-        ▼
-Use case: LogVitalReading
-        │
-        ▼
-VitalReadingRepository
-        │
-        ▼
-MedReminderDbContext ──► medreminder.db (SQLite)
-                          %LOCALAPPDATA%\MedReminder\profiles\<id>\
-                          (Desktop)
-                          /data/data/…/MedReminder/databases/
-                          (Android — app-private sandbox)
-        │
-        ├──[if sync enabled]──► Sync engine (B.1)
-        │                         end-to-end encrypted payload
-        │                         ──► user's OneDrive or Google Drive
-        │                         ──► peer device (Desktop or Android)
-        │
-        └──[if cloud backup]──► .mrz archive (AES-GCM encrypted)
-                                 ──► user's OneDrive or Google Drive
-```
 
-**No data is sent to the developer's infrastructure at any point.**
-The developer operates no server, no telemetry endpoint, no analytics
-pipeline. The "controller" role is nominal: the actual processing takes
-place on the user's device, on the user's behalf, making this closer to
-the Art. 2.2.c household-activity exemption — but Art. 9 compliance is
-maintained regardless.
+The separation from `medreminder.db` is deliberate. No cross-database foreign
+key exists. Vital data is not passed to the B.1 operation log or archive
+writer.
 
-### 2.5 Recipients
+### 2.6 Recipients
 
-| Recipient | What they receive | Basis |
-|---|---|---|
-| The user themselves | All data they entered, in plaintext, in the app | Implicit — the user is the data subject |
-| Peer device (sync, optional) | Vital readings, end-to-end encrypted with a key the user holds; the cloud provider (OneDrive/Google Drive) sees only ciphertext | User's decision to enable sync; GDPR Art. 6.1.a and 9.2.a consent |
-| Cloud provider (OneDrive or Google Drive, optional) | Encrypted `.mrz` archive; no plaintext health data | User's decision to enable cloud backup; data processed under the provider's own DPA |
+For D.1 there are no remote recipients. The only destination is the user's
+local device or a local file destination explicitly selected by the user.
 
-No data processor agreement is required with Microsoft or Google for
-the cloud storage: MedReminder stores only encrypted blobs whose key
-never leaves the user's device; the providers are storage utilities
-without access to the content.
+If the user manually sends a CSV/PDF to another person or service, that is a
+separate user-initiated disclosure outside the D.1 application's automatic
+data flow.
 
-### 2.6 Retention
+### 2.7 Retention
 
-The data is retained on the user's device until:
+There is no developer-controlled server retention period for D.1 because the
+developer does not receive the data. The application retains local readings
+until the user deletes them or removes the local application/profile data.
 
-- The user deletes individual readings.
-- The user deletes all vitals data (Settings → Privacy).
-- The user deletes their profile.
-- The user uninstalls MedReminder and manually removes
-  `%LOCALAPPDATA%\MedReminder\` (Desktop) or clears app data (Android).
+Exported CSV/PDF files are independent copies and are not automatically
+removed when the user deletes the in-app readings.
 
-There is no automated expiry. For a personal diary application with no
-server component, manual retention under the user's full control satisfies
-the **storage-limitation principle** (Art. 5.1.e): the user is both
-controller-in-practice and data subject, and decides what is retained.
+### 2.8 Automated decision-making
 
-### 2.7 Automated decision-making
-
-**None.** The application does not perform automated decision-making or
-profiling in the sense of Art. 22. The chart is a visual representation
-of data the user entered; no algorithm interprets values, flags
-anomalies or influences medical treatment.
+None. D.1 performs no profiling and makes no decisions with legal or similarly
+significant effects. Charts are descriptive and do not classify readings as
+normal/abnormal or recommend action.
 
 ---
 
-## Part 3 — Necessity and proportionality
+## Part 3 — Necessity, proportionality and safeguards
 
-### 3.1 Is the processing necessary for the stated purpose?
+### 3.1 Necessity
 
-Yes. To show the user a chronological history of their vital parameters,
-the application must store those readings. There is no less-intrusive
-alternative that would satisfy the purpose.
+The minimum functionality required for the stated purpose is manual entry,
+local persistence, list/chart display, deletion and user-controlled export.
+Remote storage is not necessary, so it is deliberately excluded.
 
-### 3.2 Data minimization (Art. 5.1.c)
+### 3.2 Data minimization
 
-| Data element | Justification |
-|---|---|
-| Type key + unit | Required to label the chart axes and group readings |
-| Primary value (and secondary for BP) | The reading itself; without it the feature does not exist |
-| Timestamp (`RecordedAt`) | Required to place the reading on the time axis |
-| Note (optional, max 500 chars) | User-initiated; the field is optional and the app stores it only when the user provides it |
-| `CreatedAt` (internal) | Required for CRDT sync conflict resolution; not exposed in the UI |
+The feature stores only measurement values, units, dates/times and optional
+notes required for the diary. No clinical interpretation or unrelated
+identifier is collected.
 
-No data element beyond this list is collected. No real-world identifier
-(name, national ID, date of birth, address) is collected by the Vitals
-feature. The profile UUID used as context is already present in the
-existing database for medicine tracking.
+A separate database reduces accidental disclosure through the normal
+MedReminder sync/archive paths and provides a stronger technical boundary than
+merely documenting an exclusion.
 
 ### 3.3 User control
 
-The user has full control over their data:
+The user can:
 
-- **Access**: all readings are visible in the Vitals section.
-- **Correction**: readings can be edited after the fact.
-- **Deletion**: per-reading, per-type, or bulk (all vitals).
-- **Portability (Art. 20)**: export as CSV (plain text, structured)
-  and as part of the `.mrz` archive (machine-readable JSON).
-- **Consent withdrawal**: the user may revoke consent from
-  Settings → Privacy; the Vitals section is locked but data is
-  retained until the user explicitly deletes it (consent withdrawal
-  does not automatically erase data, consistent with Art. 7.3 read in
-  light of Art. 17.1.b — the user must separately exercise the right
-  to erasure).
+- view readings;
+- edit readings;
+- delete individual readings;
+- delete all local vital data;
+- export complete history to CSV;
+- export selected history to PDF;
+- manually import CSV using merge + deduplication.
+
+No subscription state may silently delete vital data.
+
+### 3.4 Data portability
+
+CSV is the canonical machine-readable D.1 transfer format. It is independent
+of `.mrz` and independent of cloud backup. This supports user control and,
+where Article 20 applies to the relevant processing, facilitates structured
+data portability. The product must not claim that Article 20 automatically
+applies to every local-only household activity.
+
+### 3.5 Security by separation
+
+`medreminder.db` and `vitals.db` use separate encryption keys. D.1 does not
+reuse the B.1 sync key as a database key and does not place the vital database
+inside the `.mrz` archive.
 
 ---
 
 ## Part 4 — Risk assessment
 
-### 4.1 Risk identification
+### 4.1 Risk matrix
 
-| # | Risk | Likelihood | Severity | Overall |
-|---|---|---|---|---|
-| R1 | Unauthorised access by another person who obtains physical access to an unlocked device | Medium | High | **High** |
-| R2 | Data loss due to device failure without backup | Medium | Medium | **Medium** |
-| R3 | Unauthorised access via sync channel (MITM, compromised cloud account) | Low | High | **Medium** |
-| R4 | Unintended disclosure via app log files | Low | High | **Medium** |
-| R5 | Data retained beyond the user's expectation (no automated expiry) | Low | Medium | **Low** |
-| R6 | Re-identification via combination of readings and other profile data | Low | Low | **Low** |
-| R7 | Developer/third-party access to health data | Very low | High | **Low** |
+| # | Risk | Likelihood | Severity | Initial | Residual |
+|---|---|---|---|---|---|
+| R1 | Physical/local unauthorized access to an unlocked or compromised device | Medium | High | High | Low |
+| R2 | Accidental inclusion of vital data in `.mrz` or cloud backup | Medium | High | High | Low |
+| R3 | Accidental inclusion in B.1 sync operations | Low | High | Medium | Low |
+| R4 | Disclosure through CSV/PDF exported by the user | Medium | High | High | Medium |
+| R5 | Health data written to logs/diagnostics | Low | High | Medium | Low |
+| R6 | Malicious or malformed CSV import | Low | Medium | Medium | Low |
+| R7 | Wrong-profile import or accidental mixing of records | Low | High | Medium | Low |
+| R8 | Excessive retention of local records | Low | Medium | Low | Low |
+| R9 | Future feature drift into clinical/MDR processing | Medium | High | High | Low* |
+| R10 | Developer/third-party access to vital data | Very low | High | Medium | Low |
 
-### 4.2 Risk analysis
+`*` Low only while the current architecture and release gates remain in force.
 
-**R1 — Physical access to unlocked device (Desktop)**
+### 4.2 R1 — local unauthorized access
 
-The Desktop SQLite database was unencrypted at rest `[VERIFIED —
-PRIVACY.md §3]`. Anyone with access to the Windows user account could
-read `medreminder.db`, including the new `VitalReadings` table.
+The principal control is encrypted SQLite at rest plus OS/app access controls.
+Desktop uses a DPAPI-protected key; Android uses Android Keystore-backed key
+protection. The databases are separate, so compromise of the medicine DB key
+does not automatically expose `vitals.db`.
 
-**Decision DA7 (product owner, 2026-10-07)**: SQLCipher database
-encryption is a **D.1 prerequisite**. The database will be encrypted
-with AES-256 before D.1 ships to users. A one-time migration path
-re-encrypts existing databases on first open after the update. The
-encryption key is stored via DPAPI (`ICredentialProtector`), which
-ties it to the Windows user account.
+Residual risk: **Low**, subject to implementation and platform security.
 
-*Residual risk after DA7*: **Low** — the database is encrypted at
-rest; physical access to the machine does not yield plaintext health
-data without the Windows account credentials.
+### 4.3 R2 — accidental archive/cloud inclusion
 
-**R1 — Physical access to unlocked device (Android)**
+The strongest mitigation is architectural: the archive/backup layer does not
+have access to `vitals.db` as an input. Automated tests must assert that an
+`.mrz` archive contains no vital entities or database bytes.
 
-The Android database is protected by SQLCipher with a key in the
-Android Keystore, within the app-private internal storage sandbox
-`[INFERRED from ANALYSIS-B1-ANDROID-PLAN.md §4.7]`. Additionally,
-app lock via `BiometricPrompt` is implemented at M1 `[VERIFIED in B.1
-plan]`. The residual risk is low.
+Residual risk: **Low** after the boundary tests pass.
 
-**R2 — Data loss**
+### 4.4 R3 — accidental synchronization
 
-MedReminder already offers encrypted `.mrz` export and, optionally,
-encrypted cloud backup `[VERIFIED]`. Vital readings are included in
-both (§4.3 of ANALYSIS-D1-VITAL-TRACKING.md). The backup reminder (no
-backup in 30 days, sync off) also covers vital data.
+No `SyncOperation` type exists for vitals. `VitalReading` and `VitalType` are
+not in the B.1 sync model, and no sync repository is injected into the Vitals
+application layer.
 
-*Residual risk*: **low**.
+Residual risk: **Low** after compile-time/integration tests and code review.
 
-**R3 — Sync-channel interception**
+### 4.5 R4 — exported-file disclosure
 
-The sync protocol uses end-to-end AES-GCM encryption with an
-Argon2id-derived key `[VERIFIED — B.1 §18, spike S1]`. The cloud
-provider sees only ciphertext. A MITM attack would require compromising
-both the TLS layer and the AES-GCM envelope.
+CSV and PDF are deliberately user-accessible and may be plaintext files. The
+application should show a concise warning that exported files are outside
+MedReminder's database protection once saved elsewhere.
 
-*Residual risk*: **low**.
+Residual risk: **Medium** because the user can intentionally copy the file to
+an unprotected location. This is accepted because export is a core user-
+controlled function and there is no automatic remote transfer.
 
-**R4 — Log disclosure**
+### 4.6 R5 — logs and diagnostics
 
-MedReminder already prohibits logging medical notes and passwords
-`[VERIFIED — CLAUDE.md §7]`. The same prohibition is extended
-explicitly to `VitalReading.Value`, `SecondaryValue` and `Note` fields.
-A build-time lint rule enforces this.
+No value, note, CSV row or PDF content may be logged. Import diagnostics must
+use row numbers/error categories rather than echoing health data.
 
-*Residual risk*: **low** after the lint rule is in place.
+Residual risk: **Low** after automated log tests.
 
-**R5 — Retention**
+### 4.7 R6 — malicious/malformed import
 
-No automated expiry exists. The user decides when to delete data. For a
-local diary with no server side, this is compliant with
-storage-limitation (Art. 5.1.e). The consent screen informs the user
-that data is retained until explicitly deleted.
+CSV import is parsed and validated before commit, runs in a transaction, and
+uses stable IDs for deduplication. Invalid rows are rejected without inserting
+partial invalid data.
 
-*Residual risk*: **low**.
+Residual risk: **Low**.
 
-**R6 — Re-identification**
+### 4.8 R7 — wrong-profile import
 
-The database contains no real-world identifier. The profile UUID is
-device-local. Combining readings with medicine data could in theory
-narrow the user's identity, but since both are on the same device and
-under the same user's control, this is not a risk in the threat model
-of a local-only app.
+The import flow displays the destination profile and requires explicit user
+confirmation before committing. A CSV never silently switches the active
+profile.
 
-*Residual risk*: **negligible**.
+Residual risk: **Low**.
 
-**R7 — Developer access**
+### 4.9 R8 — retention
 
-The developer operates no server. No telemetry, analytics or crash-
-reporting SDK is integrated `[VERIFIED — PRIVACY.md §1]`. The
-developer has no access to user data under any circumstances.
+There is no automatic deletion, but deletion is user-controlled and there is
+no server-side copy. This is proportionate to a personal diary; the UI must
+make bulk deletion discoverable without making accidental deletion easy.
 
-*Residual risk*: **negligible**.
+Residual risk: **Low**.
+
+### 4.10 R9 — regulatory/intended-purpose drift
+
+The product can become materially different if future releases add clinical
+thresholds, alerts, sensor ingestion, diagnostic analysis, therapy advice,
+remote monitoring, AI interpretation or medical claims. MDCG Rule 11 is based
+on intended purpose and the significance of information used for healthcare
+decisions; software intended to monitor physiological processes or support
+diagnostic/therapeutic decisions can fall within MDSW classification. citeturn0search34
+
+Residual risk: **Low only with mandatory change control**. A future feature
+cannot be treated as a routine extension of D.1 without reassessment.
+
+### 4.11 R10 — developer/third-party access
+
+The D.1 architecture provides no automated path for vital data to reach the
+developer or a cloud provider. Any manual disclosure by the user is outside
+the automatic D.1 flow.
+
+Residual risk: **Low**, provided the architecture remains unchanged.
 
 ---
 
-## Part 5 — Measures adopted
+## Part 5 — Technical and organisational measures
 
 ### 5.1 Technical measures
 
-| Measure | Status | Notes |
-|---|---|---|
-| Local-only storage by default | Implemented | No server component |
-| End-to-end encrypted sync (AES-GCM + Argon2id) | Implemented (B.1) | Vital readings included in sync payload |
-| Encrypted cloud backup (AES-GCM) | Implemented (C.3+) | Vital readings included in `.mrz` archive |
-| No third-party analytics or tracking SDK | Implemented | PRIVACY.md §1 `[VERIFIED]` |
-| Log policy: no health data in logs | Implemented + extended for vitals | Build-time lint rule added |
-| Android: app-sandbox + SQLCipher + BiometricPrompt | Planned (B.1 M1) | Covers Android database and app lock |
-| Desktop: SQLCipher database encryption | **Required in D.1** (DA7, 2026-10-07) | AES-256 at rest; key via DPAPI; one-time migration of existing databases; closes R1 Desktop |
-| Data portability: CSV and `.mrz` export | Extended for vitals in D.1 | Satisfies GDPR Art. 20 |
-| Explicit double opt-in consent screen | New in D.1 | Non-pre-selected checkboxes; medical disclaimer |
-| Consent revocation UI | New in D.1 | Settings → Privacy |
-| Per-reading and bulk deletion | New in D.1 | Satisfies GDPR Art. 17 |
+| Measure | Status / release gate |
+|---|---|
+| Separate `vitals.db` | Mandatory |
+| Separate encryption key | Mandatory |
+| SQLCipher/equivalent at rest | Mandatory |
+| Android Keystore-backed key protection | Mandatory on Android |
+| No vital `SyncOperation` | Mandatory |
+| No vital `.mrz` content | Mandatory |
+| No vital cloud backup | Mandatory |
+| CSV merge + deduplication by stable ID | Mandatory |
+| PDF export-only | Mandatory |
+| Log/diagnostic prohibition | Mandatory |
+| Transactional CSV import | Mandatory |
+| Explicit profile confirmation before import | Mandatory |
+| User deletion controls | Mandatory |
 
 ### 5.2 Organisational measures
 
-| Measure | Status |
-|---|---|
-| Medical disclaimer (4 paragraphs) displayed at first use and in Settings / Info | New in D.1 |
-| Privacy Policy updated to include vitals data category, flows and retention | Required before release; not yet done |
-| DPIA recorded and kept as documentation (this document) | This document |
-| Consent timestamp stored per profile | New in D.1 |
+- Privacy Policy updated before release.
+- Product/store/website copy reviewed for medical claims.
+- D.1 design and this assessment reviewed when intended purpose changes.
+- Legal/privacy review performed before adding any remote vital-data flow.
+- Release checklist includes tests proving `.mrz`, sync and cloud exclusion.
 
-### 5.3 Follow-on measures
+### 5.3 No processor dependency for D.1 vital data
 
-**Decision DA7 (product owner, 2026-10-07)**: Desktop SQLCipher
-encryption is no longer a follow-on recommendation — it is a D.1
-prerequisite (§5.1 table above). No residual follow-on measures remain
-from the original risk R1 assessment. The only outstanding
-organisational measure before release is the Privacy Policy update
-(§5.2), which is tracked as a release condition in §7.1.
+Because D.1 sends no vital data to a cloud provider, there is no D.1 processor
+relationship created by OneDrive/Google Drive for vital data. Those providers
+may have separate roles for other MedReminder data and must be assessed under
+the general privacy architecture; that analysis is outside this document.
 
 ---
 
-## Part 6 — Consultation
+## Part 6 — Consultation and review
 
 ### 6.1 Data subject consultation
 
-MedReminder is a B2C consumer application. Individual consultation with
-data subjects before the DPIA is completed is not practicable. However:
+Individual consultation is not required as a prerequisite to this internal
+privacy-risk assessment. The feature is user initiated and local-only.
+User-facing privacy information and the medical disclaimer must be available
+before first use.
 
-- The feature is opt-in: users who do not open the Vitals section are
-  not affected.
-- The consent screen provides full transparency before any data is
-  collected.
-- User feedback can be submitted via the project issue tracker
-  (https://github.com/vger70/MedReminder/issues).
+### 6.2 Legal/DPO review
 
-### 6.2 DPO / legal review
+A formal DPO is not automatically required merely because the product has a
+local diary feature. Whether a DPO is required depends on the organisation's
+full processing activities and the criteria in GDPR Article 37.
 
-The developer (vger70) acts as sole controller. A formal DPO has not
-been designated (not required under Art. 37 for this scale of
-processing). However, **a review of this DPIA by a legal professional
-or privacy consultant is strongly recommended before the feature is
-released**, given the Art. 9 special-category data involved.
+Given the sensitivity of health data and the regulatory boundary, a legal or
+privacy review is recommended before release and is mandatory before any
+material expansion of D.1 into remote, analytical or clinical processing.
 
 ---
 
@@ -338,48 +392,49 @@ released**, given the Art. 9 special-category data involved.
 
 ### 7.1 Residual risk summary
 
-Reflects decisions DA1–DA8 confirmed by the product owner on 2026-10-07.
+The current architecture materially reduces privacy risk by keeping vital
+data local and physically separate from the replicated MedReminder data.
+The highest residual risk is user-controlled export to an unprotected local
+file; this is transparent and user initiated.
 
-| Risk | Residual level | Note |
-|---|---|---|
-| R1 (physical access — Desktop) | **Low** | SQLCipher required in D.1 (DA7); closes R1 before vital data reaches production |
-| R1 (physical access — Android) | Low | App-sandbox + SQLCipher + BiometricPrompt (B.1 M1) |
-| R2 (data loss) | Low | `.mrz` export and optional cloud backup cover vitals |
-| R3 (sync interception) | Low | AES-GCM end-to-end encryption (B.1) |
-| R4 (log disclosure) | Low | Build-time lint rule prohibits logging `VitalReading` fields |
-| R5 (retention) | Low | Manual retention under full user control; disclosed in consent screen |
-| R6 (re-identification) | Negligible | No real-world identifier in the database |
-| R7 (developer access) | Negligible | Developer operates no server; no telemetry |
+Overall residual risk for the **developer's D.1 automated processing** is
+low because there is no developer-side vital-data processing path. The local
+device risk remains dependent on OS/device security and implementation quality.
 
-The overall residual risk is **low and acceptable**.
+### 7.2 Release conditions
 
-### 7.2 Decision
+D.1 must not ship until:
 
-Processing may proceed conditionally on **two items** being completed
-before D.1 ships to users:
+1. `vitals.db` is separate on Desktop and Android.
+2. Separate database keys are implemented and tested.
+3. `.mrz` contains no vital data.
+4. Cloud backup contains no vital data.
+5. Sync contains no vital operations.
+6. CSV import is transactional and merge+deduplication by ID is tested.
+7. PDF is export-only.
+8. Logs and diagnostics cannot contain vital values or notes.
+9. Privacy Policy accurately describes the local-only architecture.
+10. Product/store/website claims are consistent with the intended-purpose
+    boundary and have passed the required regulatory/privacy review.
+11. This assessment is reviewed again before any material architecture or
+    feature change.
 
-1. Medical disclaimer displayed at first use of the Vitals section
-   (D.1 design §5.3) — implemented in D.1.
-2. Privacy Policy (`PRIVACY.md` and four translations) updated to
-   include the vitals data category, flows and retention — implemented
-   in the same D.1 PR (§8.8 of the design document).
+### 7.3 Review triggers
 
-Desktop database encryption (SQLCipher) was elevated to a D.1
-prerequisite by decision DA7 (2026-10-07); it is no longer a
-conditional item — it must be implemented before D.1 compiles for
-release.
+Reopen this document before implementing any of the following:
 
-| Field | Value |
-|---|---|
-| DPIA initial draft | 7 October 2026 |
-| Decisions DA1–DA8 recorded | 7 October 2026 |
-| Decision | Proceed — all conditions addressed in D.1 |
-| Review date | Before D.1 release, or within 12 months if release is delayed |
-| Author | vger70 |
+- synchronization of vital data;
+- cloud backup of vital data;
+- remote sharing or caregiver access to vital data;
+- analytics, profiling or AI on vital data;
+- reference ranges or abnormality detection;
+- alerts based on vital values;
+- sensor/BLE acquisition;
+- diagnosis, prognosis or treatment recommendations;
+- any medical or clinical claim about D.1.
 
 ---
 
-*This DPIA must be updated whenever the processing described in
-`ANALYSIS-D1-VITAL-TRACKING.md` changes materially — in particular if
-sensor integration, clinical thresholds, alerting or a server component
-is added.*
+*Assessment status: revised 7 October 2026. The assessment is based on the
+local-only D.1 architecture confirmed by the product owner: separate database,
+no sync/cloud for vitals, manual CSV merge+deduplication, and PDF export-only.*
