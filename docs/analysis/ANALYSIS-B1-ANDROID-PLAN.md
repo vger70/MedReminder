@@ -20,7 +20,7 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-07: revision 9. Reading conventions: `[VERIFIED]`
+Status on 2026-10-07: revision 10. Reading conventions: `[VERIFIED]`
 (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus
 #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]`
 (deduction from verified facts), `[UNCERTAIN]` (not verified).
@@ -292,7 +292,8 @@ share sheet. The calendar export, the prescription request and the
    Art. 20) `[INFERRED — legal reading not verified]`.
 4. **No data hostage.** When premium ends, nothing is deleted: data
    created with premium stays visible and exportable; premium actions
-   (sync, scheduled backup, emails, new extra profiles, scans) stop.
+   (sync, scheduled backup, emails, prescription and deadline
+   reminders, new extra profiles, scans) stop.
    Sync stops cleanly, and a later renewal resumes it from the group
    (B.1 §5.3 apply loop) `[INFERRED]`. A phone that is master of a
    household with a PC proposes to hand the master role to the PC,
@@ -302,7 +303,8 @@ share sheet. The calendar export, the prescription request and the
    checked on the phone only; a phone without premium cannot join or
    publish a sync group or household.
 
-**Split** (decided by the product owner, 2026-10-07, DA6):
+**Split** (decided by the product owner, 2026-10-07, DA6; catalogue
+row amended by DA11):
 
 | Feature (§3) | Tier | Why |
 |---|---|---|
@@ -318,17 +320,17 @@ share sheet. The calendar export, the prescription request and the
 | Email: low-stock, caregiver copies, weekly digest | Premium | Automation for someone else |
 | Prescriptions: request draft, lifecycle, repeatable, reminders, regional services | Premium | Convenience |
 | Administrative deadlines, supply planner, calendar export, PDF report | Premium | Convenience |
-| Catalogue search, barcode scan, restock by scan | Premium | Convenience; manual entry stays free |
+| Catalogue download, search and link to a medicine | Free | Sets the national code that shortage notices and equivalents need (DA11) |
+| Barcode scan, restock by scan | Premium | Convenience; search and manual entry stay free |
 | Shortage notices, information links, equivalents (Italy) | Free | Safety information, from public lists at no cost to the project |
 
-Open point on the split (DA11): shortage notices and equivalents match
-a medicine by its national code (AIC), which the desktop sets only by
-linking the medicine to the catalogue or by a scan `[VERIFIED —
-MedicineEditDialog sets the code from a catalogue reference; no
-free-text field]`. With catalogue search premium, a free user gets
-these notices only for medicines imported with a code (`.mrz` from the
-desktop). Recommendation: catalogue search and linking free, barcode
-scan and restock by scan premium.
+Catalogue tier (decided on 2026-10-07, DA11): shortage notices and
+equivalents match a medicine by its national code (AIC), which the
+desktop sets only by linking the medicine to the catalogue or by a scan
+`[VERIFIED — MedicineEditDialog sets the code from a catalogue
+reference; no free-text field]`. With catalogue search premium, a free
+user without a PC would never get these free notices, so catalogue
+search and linking are free and only the scan is premium.
 
 **Prices** (decided on 2026-10-07, DA7):
 
@@ -439,8 +441,11 @@ status of AI-assisted code is not assessed here]`.
   verification a modified APK can unlock premium; accepted. With the
   app code private, this needs a patched binary, not a rebuild.
 - One purchase covers one store account on all its phones (restore
-  purchases). Family sharing of subscriptions is a store option to
-  evaluate (DA10).
+  purchases). Store family sharing stays off (decided on 2026-10-07,
+  DA10): every store account whose phone syncs or joins a household
+  needs its own premium, as principle 5 states. A household with two
+  phones on two accounts, for example a caregiver and the person cared
+  for, buys premium twice; the PC stays free.
 
 ---
 
@@ -468,14 +473,13 @@ on alone.
 
 ### M1 — Standalone core (first release)
 
-Entry: M0 merged; D11, D13, DA1–DA5 decided (DA5 fixes the
+Entry: M0 merged; D11, D13, DA2, DA5 decided (DA5 fixes the
 application id before the first upload); Play Console account; private
-repository created (A7). D4
-(which device notifies what) concerns several devices and waits for
-M2.
+repository created (A7). D4 (which device notifies what) concerns
+several devices and waits for M2; DA3 waits for M4 and DA4 for M3.
 
-- Free core of §4.8 only; no billing yet, so the first release needs
-  no payments profile.
+- Free features only (§4.8); no billing yet, so the first release
+  needs no payments profile.
 - MAUI app (`TrimMode=partial`), composition root, Android adapters
   (paths, Keystore credential protector, notifications, exact alarms,
   boot receiver, share sheet, file picker).
@@ -505,14 +509,14 @@ M2.
 
 ### M2 — Cloud: backup, sync, household
 
-Entry: M1 released; D4, DA10 decided; Android halves of S6 and S7
+Entry: M1 released; D4 decided; Android halves of S6 and S7
 (Android OAuth clients, P14); spike S11 (billing); trader status and
 payments profile in Play Console.
 
 - Premium infrastructure (§4.8): entitlement service, Play Billing
   adapter, subscription and lifetime products, purchase and restore
   screens, gates, license testers on the testing tracks. Every M2
-  feature below is premium.
+  feature below is premium except restoring a cloud backup.
 - OneDrive and Google Drive sign-in on Android.
 - Encrypted cloud backup and restore (§4.3); the scheduled backup on
   the master only (household C3), premium; restore free.
@@ -534,8 +538,10 @@ payments profile in Play Console.
 
 ### M3 — Prescriptions, planning, views
 
-Tiers as in §4.8 for M3–M5: the timeline, shortage notices and
-equivalents are free, catalogue search as DA11 decides, the rest
+Entry for M3, M4 and M5: M2 released, since each carries premium
+features and needs its entitlement gates; DA4 decided before the first
+of them. Tiers as in §4.8: the timeline (M3), catalogue search and
+linking, shortage notices and equivalents (M4) are free, the rest
 premium.
 
 - Prescription request draft, lifecycle, repeatable prescriptions,
@@ -546,7 +552,7 @@ premium.
 
 ### M4 — Catalogue, scan, Italian services
 
-Entry: M1 released; DA11 decided (tier of catalogue search).
+Entry: DA3 decided.
 
 - Catalogue download and refresh per country (§4.4), search, link to a
   medicine.
@@ -569,17 +575,17 @@ Entry: M1 released; DA11 decided (tier of catalogue search).
 | Milestone | Content | Entry | Effort `[INFERRED]` |
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
-| M1 | Standalone core, first release | M0; D11, D13, DA1–DA5; Play account; private repository | 35–50 d |
-| M2 | Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN | M1; D4, DA10; S6/S7 Android halves; S11; trader status | 30–45 d |
-| M3 | Prescriptions, planning, views | M1 | 15–20 d |
-| M4 | Catalogue, scan, Italian services | M1; DA11 | 15–20 d |
-| M5 | Email | M1 (M2 for the premium gate) | 10–15 d |
+| M1 | Standalone core, first release | M0; D11, D13, DA2, DA5; Play account; private repository | 35–50 d |
+| M2 | Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN | M1; D4; S6/S7 Android halves; S11; trader status | 30–45 d |
+| M3 | Prescriptions, planning, views | M2; DA4 | 15–20 d |
+| M4 | Catalogue, scan, Italian services | M2; DA3, DA4 | 15–20 d |
+| M5 | Email | M2; DA4 | 10–15 d |
 
 Total about 115–165 developer-days, against 60–90 for B.1 Phases 5
 and 7. The difference is the standalone requirement (M0, backup,
 phone-first household) and the features added to the desktop since
-2026-09-26. M3, M4 and M5 are independent of each other after M1 and
-can be reordered.
+2026-09-26. M3, M4 and M5 are independent of each other after M2 and
+can be reordered (DA4).
 
 ### 5.2 Why this order
 
@@ -587,9 +593,11 @@ can be reordered.
   without a PC can use every day without losing data: medicines, stock, intakes, the notifications
   that matter daily (low stock, doses, expiry), and a way to save and
   restore the data.
-- M2 comes next because it removes the single-device risk (backup),
-  connects the phone to a PC when there is one, and starts the premium
-  tier with its strongest feature, sync.
+- M2 comes next because it builds the premium infrastructure that
+  M3–M5 need, starts the premium tier with its strongest feature,
+  sync, connects the phone to a PC when there is one, and removes the
+  single-device risk for premium users (scheduled cloud backup). Free
+  users keep the export and the backup reminder of M1.
 - Sync compatibility does not depend on the order. The phone uses the
   same persistence and apply code as the desktop, so from M2 on it
   stores and applies every operation type, including those whose
@@ -617,8 +625,8 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | DA7 | Prices | € 1.99 / 20.99 / 59.99; € 1.99 / 17.99 / 49.99 with a 14-day trial | **Decided 2026-10-07**: € 1.99 / 17.99 / 49.99 with a 14-day trial |
 | DA8 | Licence of the mobile app code | Apache-2.0 in this repository; private repository, proprietary | **Decided 2026-10-07**: private repository for the Android and iOS apps; desktop and shared core stay Apache-2.0 here (A7) |
 | DA9 | Donation links on mobile | Keep; drop | **Decided 2026-10-07**: drop |
-| DA10 | Premium across a family | Per store account; store family sharing | Per store account in M2; family sharing evaluated later |
-| DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | Free: shortage notices and equivalents, which are free, need the code that linking sets (§4.8) |
+| DA10 | Premium across a family | Per store account; store family sharing | **Decided 2026-10-07**: per store account, store family sharing off (§4.8) |
+| DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | **Decided 2026-10-07**: free, scan stays premium (§4.8) |
 
 ---
 
@@ -626,7 +634,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Data loss on a standalone phone (lost, reset, uninstalled) | Medium | High | Backup reminder in M1, cloud backup in M2 (§4.3) |
+| Data loss on a standalone phone (lost, reset, uninstalled) | Medium | High | Export and backup reminder in M1 for everyone; scheduled cloud backup in M2 with premium (§4.3) |
 | Exact-alarm permission refused | Medium | Medium | Explanation at first start; inexact fallback stated in the UI (S5) |
 | Background work late (emails, backups, feeds) | High | Low–medium | Run on app open; status shows the last run; PC as master when present |
 | Scope growth beyond 165 days | Medium | Schedule | Milestones releasable on their own; M3–M5 reorderable |
@@ -634,6 +642,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | Premium unlocked by a modified app | Low (app code private, DA8) | Low–medium | Accepted without a backend |
 | Shared core and private app drift apart | Medium | Medium | App pins a tag of this repository; shared changes land here first |
 | Users reject paying for sync that is free on the desktop | Medium | Medium | Generous free core; clear premium value; trial |
+| A household with several phones finds one premium per account too dear (DA10) | Medium | Low–medium | Lifetime offer; PC stays free; review family sharing after release data |
 | MAUI billing binding immature | Medium | Schedule | Spike S11 before M2 |
 | Store review of a health app with subscriptions | Low–medium | Schedule | Clear non-medical positioning, no safety feature paid (§4.8) |
 
@@ -656,6 +665,15 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 ## 9. Change log for this document
 
+- 2026-10-07 — revision 10: DA10 decided (premium per store account,
+  store family sharing off) and DA11 decided (catalogue search and
+  linking free, scan premium), split table amended; M3–M5 enter after
+  M2, since their premium features need its gates (M3 and M4 entered
+  after M1 before); M1 needs DA2 and DA5 only, DA3 before M4 and DA4
+  before M3–M5; M2 states that cloud restore is free; prescription and
+  deadline reminders stop when premium ends; the data-loss risk and
+  §5.2 say that scheduled cloud backup is premium; risk on the cost
+  for households with several phones.
 - 2026-10-07 — revision 9, check of revision 8: the owner is not bound
   by the owner's Apache licence, so the apps owe notices only for
   contributed code, third-party packages and catalogue data; the name protection is

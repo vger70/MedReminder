@@ -54,6 +54,10 @@ Branch: `claude/b1-android-premium-model`
 - Revision 9 after another check: licence notices due only for
   contributed code, packages and catalogue data; DA11 needed before M4,
   not M2; premium reminder kinds planned only with premium.
+- Revision 10: DA10 decided (premium per store account, no store family
+  sharing) and DA11 decided (catalogue search and linking free, scan
+  premium); M3–M5 enter after M2, whose entitlement gates they need;
+  decision gates per milestone narrowed.
 - `STATUS.md` §3.1: Phase 5 row updated.
 
 ## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature
