@@ -30,6 +30,31 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #213 — Add D.1 vital-tracking design and DPIA
+
+Link: [vger70/MedReminder#213](https://github.com/vger70/MedReminder/pull/213)
+Branch: `claude/legal-compliance-health-app-319bf5`
+
+### Docs
+
+- **Added** `docs/analysis/ANALYSIS-D1-VITAL-TRACKING.md`: design
+  document for the vital-parameter tracking feature (Desktop + Android).
+  Covers domain model (`VitalType`, `VitalReading`), Application use cases
+  and ports, Infrastructure.Portable schema patch and repository
+  implementations, WinForms UI with double-opt-in consent screen (GDPR
+  Art. 9.2.a), charting with `System.Windows.Forms.DataVisualization`,
+  sync integration (B.1), Android milestone mapping (D.1b), and 8 open
+  decisions (DA1–DA8) pending product-owner sign-off.
+- **Added** `docs/DPIA-VITAL-TRACKING.md`: Data Protection Impact
+  Assessment (GDPR Art. 35) for the same feature. Confirms the DPIA
+  obligation (Art. 9 special-category health data), maps all data flows
+  (local-first, no developer server), assesses 7 risks, documents adopted
+  technical and organisational measures, and records one follow-on
+  recommendation (Desktop SQLCipher encryption) that does not block the D.1
+  release.
+
+---
+
 ## PR #211 — Add a free core and a premium tier to the Android plan
 
 Link: [vger70/MedReminder#211](https://github.com/vger70/MedReminder/pull/211)
