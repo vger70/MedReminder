@@ -451,35 +451,122 @@ output**, consistent with the existing prohibition on logging medical
 notes `[VERIFIED — CLAUDE.md §7]`. A lint rule (Roslyn analyzer or
 naming-convention test) is added to enforce this at build time.
 
-### 8.7 Desktop database encryption (status quo and plan)
+### 8.7 Desktop database encryption
 
-The current Desktop SQLite database is **not encrypted at rest**
-`[VERIFIED — PRIVACY.md §3]`. The Privacy Policy already discloses
-this. The Vitals feature increases the sensitivity of the data in the
-same database; this does not by itself justify introducing SQLCipher on
-the desktop in D.1, but the DPIA records it as a residual risk and
-recommends evaluating database encryption as a follow-on item.
+**Decision DA7 (2026-10-07): SQLCipher is a D.1 prerequisite**, not a
+follow-on item. The current Desktop SQLite database is unencrypted
+`[VERIFIED — PRIVACY.md §3]`; adding vital-parameter readings (Art. 9
+health data) to the same unencrypted store before encrypting it would
+create a window of elevated risk that the product owner chose not to
+accept.
 
-On Android the database is protected by the existing `EncryptedSharedPreferences`-backed SQLCipher key in the app sandbox `[INFERRED
-from §4.7 of ANALYSIS-B1-ANDROID-PLAN.md]`.
+SQLCipher must be implemented and the one-time migration path
+completed (§9 DA7 notes) before D.1 is released to users. The DPIA
+risk R1 (Desktop physical access) is closed as mitigated by this
+decision. See §9 DA7 for the implementation notes.
+
+On Android the database is protected by the existing
+`EncryptedSharedPreferences`-backed SQLCipher key in the app sandbox
+`[INFERRED from §4.7 of ANALYSIS-B1-ANDROID-PLAN.md]`.
+
+### 8.8 PRIVACY.md update — mandatory before D.1 ships
+
+The Privacy Policy (`PRIVACY.md`) and its four translations
+(`PRIVACY.it.md`, `PRIVACY.fr.md`, `PRIVACY.es.md`, `PRIVACY.de.md`)
+**must be updated in the same PR that ships D.1** — not deferred to a
+later release. Processing special-category data without an up-to-date
+policy that discloses it would violate Art. 13 GDPR (information to be
+provided at collection time). The DPIA §7.1 records this as a release
+condition.
+
+**Changes required in `PRIVACY.md`:**
+
+1. **§3 — Data stored on your PC**: add a new bullet after the existing
+   medicine-data bullet:
+
+   > - vital-parameter readings: type (e.g. blood pressure), numeric
+   >   value(s), date and time chosen by you, and an optional note; this
+   >   data is **health data** in the meaning of GDPR Art. 9. It is
+   >   stored only when you open the Vitals section and give explicit
+   >   consent. You may delete it at any time from Settings → Privacy.
+
+2. **§3 — existing disclosure on encryption**: no change needed; the
+   existing "databases are not encrypted" statement already covers the
+   new table. Update this statement only when the follow-on SQLCipher
+   item is implemented.
+
+3. **§4 — Data that leaves your PC**: add a row to the existing table:
+
+   | Vital readings (when sync or cloud backup is enabled) | Encrypted, same flow as medicines and stock | Your own OneDrive or Google Drive, end-to-end encrypted |
+
+4. **§8 — Your rights**: add to the existing paragraph:
+
+   > Vital-parameter readings can also be deleted individually from the
+   > Vitals section, or in bulk via Settings → Privacy → Delete all
+   > vitals data.
+
+5. **"Last updated" date**: update to the release date of D.1.
+
+The English version is the reference (`PRIVACY.md`). The four
+translations must be updated consistently. Machine-translation drafts
+are acceptable; a native-speaker review is recommended before release,
+especially for the health-data disclosure which carries legal weight.
 
 ---
 
-## 9. Decisions still to confirm
+## 9. Decisions
 
-Before implementation begins, the product owner must confirm or reject
-each of the following open points.
+All eight decisions were confirmed by the product owner on 2026-10-07.
 
-| # | Question | Default assumed in this document |
+| # | Decision | Resolution |
 |---|---|---|
-| DA1 | Is vital tracking free or premium on Android? | **Free core** (non-paying users also benefit from the personal diary) |
-| DA2 | Are vitals synced between devices from day one of D.1b, or added later? | **Synced from D.1b** (M2 Android milestone) |
-| DA3 | Should the user be able to rename built-in types and change their units? | **No in D.1** (adds conversion-error risk; deferred) |
-| DA4 | Export format for vitals in plain text: CSV only, or also JSON? | **CSV only** in D.1; JSON already available via `.mrz` |
-| DA5 | Desired date-range options for the chart? | 7 d / 30 d / 90 d / 1 y / all |
-| DA6 | Is the "Delete all vitals data" button under Settings → Privacy or in the Vitals section itself? | **Settings → Privacy** (consistent with "Delete profile") |
-| DA7 | Does Desktop need database encryption (SQLCipher) as part of D.1 or as a separate item? | **Separate item**; DPIA records it as residual risk |
-| DA8 | Is iOS in scope for D.1 or a later item? | **Later item** (D.1c, after B.1 Phase 6) |
+| DA1 | Vital tracking tier on Android | **Free core with a reading-count limit for non-premium users.** Built-in types and logging are available to all users. Free users are capped at a maximum number of stored readings (exact limit TBD, suggested: 300 readings or 90 days of history, whichever is more recent). Readings beyond the limit are **retained and exportable** but hidden in the UI — consistent with the "no data hostage" principle (§4.8 of the Android plan). The limit is enforced only on Android; Desktop has no limit. |
+| DA2 | Vitals sync timing | **Synced from D.1b (M2 Android milestone).** `VitalReading` and `VitalType` sync operations are included from the first Android sync release. |
+| DA3 | Rename / unit change for built-in types | **No in D.1.** Built-in types have fixed names and units. Users may add custom types with free names and units. |
+| DA4 | Plain-text export format | **CSV only.** JSON is already available via the `.mrz` archive. |
+| DA5 | Chart date-range presets | **7 d / 30 d / 90 d / 1 y / All.** Five presets in the chart toolbar; no free date-picker in D.1. |
+| DA6 | "Delete all vitals data" placement | **Settings → Privacy.** Consistent with "Delete profile"; minimises accidental deletion. |
+| DA7 | Desktop database encryption | **Required as part of D.1** — SQLCipher (or equivalent) must be implemented before D.1 ships to users. This eliminates DPIA risk R1 on Desktop before vital data is exposed in production. The DPIA is updated accordingly. |
+| DA8 | iOS scope | **Later item D.1c**, after B.1 Phase 6 stabilises. |
+
+### DA1 — Reading-count limit: design notes
+
+The limit enforcement follows these rules:
+
+- **Threshold**: determined at implementation (e.g., 300 readings or
+  the oldest reading older than 90 days — whichever boundary is
+  reached first). The exact number is a product decision; the
+  architectural boundary is established here.
+- **No deletion**: readings beyond the threshold are not deleted; they
+  remain in the database, appear in exports (`.mrz`, CSV) and are
+  restored to full visibility if the user upgrades to premium.
+- **UI behaviour**: the "Log reading" button is disabled when the limit
+  is reached; a non-intrusive banner explains why and links to premium.
+- **Desktop**: no limit. The reading cap is an Android-only premium
+  incentive; Desktop users are not affected.
+- **Sync**: if a Desktop user (no limit) has synced readings, those
+  readings appear on the Android device even if they exceed the free
+  limit — they are read-only but visible (same as post-downgrade
+  visibility). This preserves data integrity and avoids the "data
+  hostage" anti-pattern.
+
+### DA7 — SQLCipher on Desktop: design notes
+
+SQLCipher replaces the unencrypted SQLite database for all profile
+databases (`medreminder.db`). The implementation must:
+
+1. Add the `SQLitePCLRaw.bundle_sqlcipher` package (or equivalent) to
+   `MedReminder.Infrastructure.Portable`.
+2. Generate and store the database key via DPAPI (Windows, existing
+   `ICredentialProtector`) on first open; Android uses the Keystore
+   (already planned in §7).
+3. Provide a **one-time migration path**: on first open after the
+   update, detect an unencrypted database, re-encrypt it in place with
+   the generated key, and write a migration marker to prevent re-running.
+4. Update `PRIVACY.md` §3 to remove the "databases are not encrypted"
+   disclosure and replace it with "databases are encrypted with
+   AES-256".
+5. Update the DPIA to close risk R1 (Desktop) as mitigated.
 
 ---
 
@@ -498,14 +585,17 @@ each of the following open points.
 | `src/MedReminder.Infrastructure.Portable/Persistence/DatabaseInitializer.cs` | Schema patch + built-in seed |
 | `src/MedReminder.Infrastructure.Portable/Repositories/VitalReadingRepository.cs` | New |
 | `src/MedReminder.Infrastructure.Portable/Repositories/VitalTypeRepository.cs` | New |
+| `src/MedReminder.Infrastructure.Portable/Persistence/MedReminderDbContext.cs` | SQLCipher connection string (DA7) |
+| `src/MedReminder.Infrastructure/Security/DatabaseEncryptionMigrator.cs` | One-time re-encrypt of existing databases (DA7) |
 | `src/MedReminder.Infrastructure.Portable/Export/` | Extend `.mrz` writer/reader for vitals section |
 | `src/MedReminder.UI/Forms/VitalsForm.cs` (and partials) | New main form section |
 | `src/MedReminder.UI/Forms/LogVitalReadingDialog.cs` | New dialog |
 | `src/MedReminder.UI/Controls/VitalsChartControl.cs` | New chart wrapper |
 | `assets/localization/strings.en.json` … `strings.de.json` | New keys (§5.4) |
-| `PRIVACY.md` and translations | New §3 paragraph for vital readings |
-| `docs/DPIA-VITAL-TRACKING.md` | Companion DPIA (companion document) |
+| `PRIVACY.md` | §3 new health-data bullet; §4 new sync/backup row; §8 rights addendum; date update — **mandatory before D.1 ships** (§8.8) |
+| `PRIVACY.it.md`, `PRIVACY.fr.md`, `PRIVACY.es.md`, `PRIVACY.de.md` | Same changes as `PRIVACY.md`; same PR; see §8.8 |
+| `docs/DPIA-VITAL-TRACKING.md` | Companion DPIA |
 
 ---
 
-*Document status: draft, pending product-owner sign-off on §9.*
+*Document status: decisions DA1–DA8 confirmed by product owner on 2026-10-07. Ready for implementation planning.*

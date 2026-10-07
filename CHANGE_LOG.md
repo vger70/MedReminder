@@ -41,17 +41,18 @@ Branch: `claude/legal-compliance-health-app-319bf5`
   document for the vital-parameter tracking feature (Desktop + Android).
   Covers domain model (`VitalType`, `VitalReading`), Application use cases
   and ports, Infrastructure.Portable schema patch and repository
-  implementations, WinForms UI with double-opt-in consent screen (GDPR
-  Art. 9.2.a), charting with `System.Windows.Forms.DataVisualization`,
-  sync integration (B.1), Android milestone mapping (D.1b), and 8 open
-  decisions (DA1–DA8) pending product-owner sign-off.
-- **Added** `docs/DPIA-VITAL-TRACKING.md`: Data Protection Impact
-  Assessment (GDPR Art. 35) for the same feature. Confirms the DPIA
-  obligation (Art. 9 special-category health data), maps all data flows
-  (local-first, no developer server), assesses 7 risks, documents adopted
-  technical and organisational measures, and records one follow-on
-  recommendation (Desktop SQLCipher encryption) that does not block the D.1
-  release.
+  implementations, WinForms UI with GDPR Art. 9.2.a double opt-in consent
+  screen, charting with `System.Windows.Forms.DataVisualization`, B.1 sync
+  integration, Android milestone mapping (D.1b), mandatory PRIVACY.md update
+  specification (§8.8), and decisions DA1–DA8 confirmed by product owner on
+  2026-10-07 (including: free core with reading-count limit for non-premium
+  Android users DA1; SQLCipher as D.1 prerequisite DA7; iOS deferred to
+  D.1c DA8).
+- **Added** `docs/DPIA-VITAL-TRACKING.md`: Data Protection Impact Assessment
+  (GDPR Art. 35). Confirms DPIA obligation (Art. 9 health data), maps all
+  data flows (local-first; no developer server), assesses 7 risks. Updated
+  with DA1–DA8: Desktop SQLCipher elevated to D.1 prerequisite (DA7), all
+  residual risks at Low or Negligible; overall decision: Proceed.
 
 ---
 

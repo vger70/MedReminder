@@ -193,27 +193,20 @@ The user has full control over their data:
 
 **R1 — Physical access to unlocked device (Desktop)**
 
-On the Desktop, the SQLite database is not encrypted at rest
-`[VERIFIED — PRIVACY.md §3]`. Anyone with access to the Windows user
-account can read `medreminder.db`, including the new `VitalReadings`
-table. The existing profile PIN is a UI gate, not a cryptographic
-control.
+The Desktop SQLite database was unencrypted at rest `[VERIFIED —
+PRIVACY.md §3]`. Anyone with access to the Windows user account could
+read `medreminder.db`, including the new `VitalReadings` table.
 
-*Likelihood*: medium — shared household PCs are common among the
-target demographic (elderly users or patients managing multiple
-conditions).
+**Decision DA7 (product owner, 2026-10-07)**: SQLCipher database
+encryption is a **D.1 prerequisite**. The database will be encrypted
+with AES-256 before D.1 ships to users. A one-time migration path
+re-encrypts existing databases on first open after the update. The
+encryption key is stored via DPAPI (`ICredentialProtector`), which
+ties it to the Windows user account.
 
-*Severity*: high — health data, potentially stigmatising (e.g.
-glucose readings suggesting diabetes).
-
-*Mitigation in D.1*: the medical disclaimer's informed-consent screen
-explicitly warns the user that the data is not encrypted on disk. The
-PRIVACY.md disclosure (§3) already states this. The consent screen for
-Vitals repeats this warning.
-
-*Residual risk*: **medium-high**. Full mitigation requires database
-encryption (SQLCipher or equivalent), which is outside D.1 scope.
-See §5.3.
+*Residual risk after DA7*: **Low** — the database is encrypted at
+rest; physical access to the machine does not yield plaintext health
+data without the Windows account credentials.
 
 **R1 — Physical access to unlocked device (Android)**
 
@@ -291,6 +284,7 @@ developer has no access to user data under any circumstances.
 | No third-party analytics or tracking SDK | Implemented | PRIVACY.md §1 `[VERIFIED]` |
 | Log policy: no health data in logs | Implemented + extended for vitals | Build-time lint rule added |
 | Android: app-sandbox + SQLCipher + BiometricPrompt | Planned (B.1 M1) | Covers Android database and app lock |
+| Desktop: SQLCipher database encryption | **Required in D.1** (DA7, 2026-10-07) | AES-256 at rest; key via DPAPI; one-time migration of existing databases; closes R1 Desktop |
 | Data portability: CSV and `.mrz` export | Extended for vitals in D.1 | Satisfies GDPR Art. 20 |
 | Explicit double opt-in consent screen | New in D.1 | Non-pre-selected checkboxes; medical disclaimer |
 | Consent revocation UI | New in D.1 | Settings → Privacy |
@@ -305,19 +299,14 @@ developer has no access to user data under any circumstances.
 | DPIA recorded and kept as documentation (this document) | This document |
 | Consent timestamp stored per profile | New in D.1 |
 
-### 5.3 Recommended follow-on measure (outside D.1 scope)
+### 5.3 Follow-on measures
 
-**Desktop database encryption (SQLCipher)**: the single most impactful
-risk-reduction measure not included in D.1. Adding AES-256-GCM
-encryption to the SQLite database on Desktop would reduce R1 from
-medium-high to low. This is recommended as a dedicated follow-on item,
-to be evaluated by the product owner. It would require:
-
-- Adding the `SQLitePCLRaw` + `SQLCipher` package chain.
-- A one-time migration path (re-encrypt existing databases on first
-  open after the update).
-- An update to PRIVACY.md removing the "databases are not encrypted"
-  disclosure.
+**Decision DA7 (product owner, 2026-10-07)**: Desktop SQLCipher
+encryption is no longer a follow-on recommendation — it is a D.1
+prerequisite (§5.1 table above). No residual follow-on measures remain
+from the original risk R1 assessment. The only outstanding
+organisational measure before release is the Privacy Policy update
+(§5.2), which is tracked as a release condition in §7.1.
 
 ---
 
@@ -349,35 +338,42 @@ released**, given the Art. 9 special-category data involved.
 
 ### 7.1 Residual risk summary
 
-| Risk | Residual level |
-|---|---|
-| R1 (physical access — Desktop) | **Medium** (database not encrypted; disclosed to user) |
-| R1 (physical access — Android) | Low |
-| R2 (data loss) | Low |
-| R3 (sync interception) | Low |
-| R4 (log disclosure) | Low (after lint rule) |
-| R5 (retention) | Low |
-| R6 (re-identification) | Negligible |
-| R7 (developer access) | Negligible |
+Reflects decisions DA1–DA8 confirmed by the product owner on 2026-10-07.
 
-The overall residual risk is **acceptable** for a local-first personal
-diary application, provided that:
+| Risk | Residual level | Note |
+|---|---|---|
+| R1 (physical access — Desktop) | **Low** | SQLCipher required in D.1 (DA7); closes R1 before vital data reaches production |
+| R1 (physical access — Android) | Low | App-sandbox + SQLCipher + BiometricPrompt (B.1 M1) |
+| R2 (data loss) | Low | `.mrz` export and optional cloud backup cover vitals |
+| R3 (sync interception) | Low | AES-GCM end-to-end encryption (B.1) |
+| R4 (log disclosure) | Low | Build-time lint rule prohibits logging `VitalReading` fields |
+| R5 (retention) | Low | Manual retention under full user control; disclosed in consent screen |
+| R6 (re-identification) | Negligible | No real-world identifier in the database |
+| R7 (developer access) | Negligible | Developer operates no server; no telemetry |
 
-1. The medical disclaimer is displayed at first use (D.1 design §5.3).
-2. The Privacy Policy is updated before release to include vitals data.
-3. The Desktop database encryption item is opened and prioritised.
+The overall residual risk is **low and acceptable**.
 
 ### 7.2 Decision
 
-Processing may proceed **conditionally** on items 1 and 2 above being
-completed before the feature ships to users. Item 3 (database
-encryption) is recorded as an open risk and a recommended follow-on;
-it does not block the D.1 release.
+Processing may proceed conditionally on **two items** being completed
+before D.1 ships to users:
+
+1. Medical disclaimer displayed at first use of the Vitals section
+   (D.1 design §5.3) — implemented in D.1.
+2. Privacy Policy (`PRIVACY.md` and four translations) updated to
+   include the vitals data category, flows and retention — implemented
+   in the same D.1 PR (§8.8 of the design document).
+
+Desktop database encryption (SQLCipher) was elevated to a D.1
+prerequisite by decision DA7 (2026-10-07); it is no longer a
+conditional item — it must be implemented before D.1 compiles for
+release.
 
 | Field | Value |
 |---|---|
-| DPIA completed | 7 October 2026 |
-| Decision | Proceed with conditions |
+| DPIA initial draft | 7 October 2026 |
+| Decisions DA1–DA8 recorded | 7 October 2026 |
+| Decision | Proceed — all conditions addressed in D.1 |
 | Review date | Before D.1 release, or within 12 months if release is delayed |
 | Author | vger70 |
 
