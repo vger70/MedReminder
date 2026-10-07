@@ -30,6 +30,41 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #211 — Add a free core and a premium tier to the Android plan
+
+Link: [vger70/MedReminder#211](https://github.com/vger70/MedReminder/pull/211)
+Branch: `claude/b1-android-premium-model`
+
+### Docs
+
+- `ANALYSIS-B1-ANDROID-PLAN.md` revision 6: requirement A6 and §4.8
+  (free core for one person on one phone with every reminder and
+  export; premium for sync, household, cloud backup, profiles, email
+  and convenience tools; prices with net estimates; store billing,
+  license testers, trader status, licence options, entitlement
+  design); premium infrastructure in M2 after spike S11; no donation
+  links on mobile; decisions DA6–DA10; risks.
+- Revision 7: decisions DA6–DA8 taken (split, € 1.99 / 17.99 / 49.99
+  with a 14-day trial, Android and iOS apps in a private repository
+  with the desktop and the shared core open); closed-test rule
+  corrected to 12 testers.
+- Revision 8 after a check: DA9 decided (no donation links on mobile);
+  which reminders are free stated; cloud restore free; DA11 opened
+  (shortage notices need the catalogue link, recommended free).
+- Revision 9 after another check: licence notices due only for
+  contributed code, packages and catalogue data; DA11 needed before M4,
+  not M2; premium reminder kinds planned only with premium.
+- Revision 10: DA10 decided (premium per store account, no store family
+  sharing) and DA11 decided (catalogue search and linking free, scan
+  premium); M3–M5 enter after M2, whose entitlement gates they need;
+  decision gates per milestone narrowed.
+- Revision 11: DA10 reopened; family tier designed (one purchase, the
+  other phones of the household get premium through a grant in the
+  household log, up to six phones, PCs free); M2 35–50 days, total
+  120–170. `STATUS.md` total effort aligned with the Android plan
+  (it still showed 75–115 days for B.1 Phases 5–7).
+- `STATUS.md` §3.1: Phase 5 row updated.
+
 ## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature
 
 Link: [vger70/MedReminder#209](https://github.com/vger70/MedReminder/pull/209)
