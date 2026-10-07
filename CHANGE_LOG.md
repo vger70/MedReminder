@@ -44,6 +44,10 @@ Branch: `claude/b1-android-premium-model`
   license testers, trader status, licence options, entitlement
   design); premium infrastructure in M2 after spike S11; no donation
   links on mobile; decisions DA6–DA10; risks.
+- Revision 7: decisions DA6–DA8 taken (split, € 1.99 / 17.99 / 49.99
+  with a 14-day trial, Android and iOS apps in a private repository
+  with the desktop and the shared core open); closed-test rule
+  corrected to 12 testers.
 - `STATUS.md` §3.1: Phase 5 row updated.
 
 ## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature

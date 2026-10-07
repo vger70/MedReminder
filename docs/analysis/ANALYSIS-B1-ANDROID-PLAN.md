@@ -15,7 +15,7 @@ this document wins once approved. The sync model, the formats and the
 merge rules of B.1 are unchanged. iOS (B.1 Phase 6) is out of scope
 here.
 
-Status on 2026-10-07: revision 6. Reading conventions: `[VERIFIED]`
+Status on 2026-10-07: revision 7. Reading conventions: `[VERIFIED]`
 (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus
 #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]`
 (not verified). Untagged statements are design proposals.
@@ -32,6 +32,7 @@ Status on 2026-10-07: revision 6. Reading conventions: `[VERIFIED]`
 | A4 | A first release with a consistent core, then the remaining features in releasable steps | Product owner, 2026-10-06 |
 | A5 | When the user also has a PC, phone and PC stay one installation (household) and one data set per profile, as B.1 and the household design define | B.1 §1.2; `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` R2, R8 |
 | A6 | The mobile apps (Android, later iOS) have a free core and a paid premium tier (subscription or lifetime purchase); the desktop stays free | Product owner, 2026-10-07 |
+| A7 | The code of the Android and iOS apps lives in a private repository; the desktop app stays open source in this repository | Product owner, 2026-10-07 |
 
 What changes against B.1:
 
@@ -284,7 +285,7 @@ share sheet. The calendar export, the prescription request and the
    checked on the phone only; a phone without premium cannot join or
    publish a sync group or household.
 
-**Proposed split** (the product owner decides, DA6):
+**Split** (decided by the product owner, 2026-10-07, DA6):
 
 | Feature (§3) | Tier | Why |
 |---|---|---|
@@ -303,7 +304,8 @@ share sheet. The calendar export, the prescription request and the
 | Catalogue search, barcode scan, restock by scan | Premium | Convenience; manual entry stays free |
 | Shortage notices, information links, equivalents (Italy) | Free | Safety information, from public lists at no cost to the project |
 
-**Prices.** The proposal of the product owner and an alternative:
+**Prices.** Decided on 2026-10-07 (DA7): the alternative column below,
+with a 14-day free trial on the subscriptions.
 
 | Offer | Proposal | Alternative | Net per sale in Italy, proposal `[INFERRED]` |
 |---|---|---|---|
@@ -317,8 +319,8 @@ The net assumes 22% Italian VAT inside the price and a 15% store fee
 a 10% service fee plus 5% billing fee; Apple Small Business Program:
 15%) `[UNCERTAIN — fees from secondary sources dated 2026; one-time
 purchases may carry a higher fee on Google Play from 2026]`. The
-proposal is acceptable. The alternative is a recommendation, not a
-correction: € 20.99 a year saves only 12% against twelve months, while
+alternative was chosen because € 20.99 a year saves only 12% against
+twelve months, while
 a yearly price that saves 25–35% usually moves users to the yearly
 plan `[INFERRED — common practice, no market data verified]`; a
 lifetime price near three years of the yearly plan keeps the yearly
@@ -339,33 +341,57 @@ long-term cost risk.
   in Play Console buy with test payment methods and are not charged;
   test subscriptions renew daily. The closed-test testers are added as
   license testers. On iOS, TestFlight purchases are free sandbox
-  purchases. The app contains **no tester back door**: in an open
-  repository it would be a free premium switch for everyone.
+  purchases. The app contains **no tester back door**: it would ship in
+  the store build and could be found and abused.
+- Closed test before production: a **personal** Play account created
+  after 2023-11-13 needs at least **12** testers opted in for 14
+  consecutive days; the figure was 20 until 2024-12-11. Organization
+  accounts (D-U-N-S) are exempt `[VERIFIED — secondary sources dated
+  2026; check Play Console at registration]`. Recruiting more than 12,
+  for example 20, leaves a margin for testers who drop out.
 - Selling makes the developer a **trader** under the EU Digital
   Services Act: Google Play and the App Store publish the trader's
   name, address, e-mail and phone on the product page. Income from
   sales has tax consequences in Italy that this document does not
   cover; a tax adviser is needed before the first paid release.
 
-**Code and licence.** The repository is Apache-2.0 and public
-`[VERIFIED — LICENSE]`. Anyone may build the app from it and remove the
-premium check, which the licence allows. Two options (DA8):
+**Code and licence** (decided on 2026-10-07, A7, DA8). This
+repository stays public and Apache-2.0 `[VERIFIED — LICENSE]`. The
+mobile apps live in a **private repository** under a proprietary
+licence, which is possible because the project owns the copyright of
+the code `[INFERRED — commit authors are the owner and tooling]`.
 
-| Option | Effect |
+| Public repository (this one, Apache-2.0) | Private repository (proprietary) |
 |---|---|
-| Mobile app in this repository, Apache-2.0 | Premium pays for the store build and updates; a self-built copy is free. Simplest |
-| Mobile app shell (MAUI project, billing, premium gates) in a private repository, proprietary; shared libraries stay Apache-2.0 here | The paid app cannot be rebuilt from public code; the desktop and the shared core stay open. Possible because the project owns the copyright of the code `[INFERRED — commit authors are the owner and tooling]` |
+| Desktop app (UI, Infrastructure), its tests and documentation | MAUI app(s) for Android and iOS, platform adapters |
+| Shared libraries: Domain, Application, Infrastructure.Portable, with the M0 refactor and the notification planner | Entitlement service, store billing, premium gates |
+| Formats (`EXPORT-FORMAT.md`, `SYNC-FORMAT.md`) and the shared design (B.1, household, this plan at the level of the shared core) | Mobile design details, packaging, signing configuration, store assets, mobile user guides, mobile CI |
+| Throw-away spikes already published (`spikes/Android`, draft PR #106) | New mobile spikes, from S11 on |
 
-The name "MedReminder" is not licensed by Apache-2.0 (§6 of the
-licence) `[VERIFIED — LICENSE]`, so a rebuilt copy cannot be published
-under that name; registering the trademark is a separate decision.
+- The private repository consumes the shared libraries from this
+  repository pinned to a tag, as a git submodule or as packages
+  published from here; the submodule is the simpler start
+  (proposal). A change to the shared core is made here first, in a
+  public PR, and then picked up by the app.
+- The apps must carry the Apache-2.0 licence and any notices of the
+  shared libraries (Apache-2.0 §4) on their licences screen.
+- External contributions to this repository arrive under Apache-2.0
+  and can be used by the apps.
+- The name "MedReminder" is not licensed by Apache-2.0 (§6 of the
+  licence) `[VERIFIED — LICENSE]`, so a rebuilt desktop or shared core
+  cannot be published under that name; registering the trademark is a
+  separate decision.
+- GitHub private repositories are free; GitHub Actions minutes for
+  private repositories are limited per month, and macOS runners (iOS
+  builds) count more than Linux ones `[UNCERTAIN — training knowledge,
+  check the plan's quota]`.
 
 **Technical design.**
 
-- `IEntitlementService` (Application): current tier, expiry, purchase
-  and restore. Gates live in the mobile app's screens and in the
-  mobile host's sync, backup and email scheduling; use cases stay
-  ungated so the desktop is unaffected.
+- `IEntitlementService` in the private app, not in Application: current
+  tier, expiry, purchase and restore. Gates live in the app's screens
+  and in its sync, backup and email scheduling; the shared use cases
+  stay ungated and the public code has no notion of premium.
 - Android adapter on Google Play Billing (Play requires Billing
   Library 7 or later for new apps and updates `[VERIFIED — secondary
   sources, deadline 2025-08-31]`). The MAUI options are the
@@ -377,7 +403,8 @@ under that name; registering the trademark is a separate decision.
 - No backend (B.1 §1.3): purchases are verified and acknowledged on
   the device, and the entitlement is cached so that premium works
   offline, with a grace period before it lapses. Without server-side
-  verification a modified APK can unlock premium; accepted.
+  verification a modified APK can unlock premium; accepted. With the
+app code private, this needs a patched binary, not a rebuild.
 - One purchase covers one store account on all its phones (restore
   purchases). Family sharing of subscriptions is a store option to
   evaluate (DA10).
@@ -431,9 +458,10 @@ M2.
   system font scaling and dark theme; accessibility of B.1 §9.1
   (screen-reader labels, no meaning by color alone); five languages;
   sandbox and log rules.
-- CI Android job, signing outside the repository, closed testing track;
-  `docs/PACKAGING.md` mobile section; user guide sections in the five
-  languages.
+- In the private repository (A7): CI Android job, signing outside the
+  repository, closed testing track, mobile packaging notes and mobile
+  user guides in the five languages. In this repository: the M0
+  refactor and any shared-core change the app needs.
 - Exit: manual checklist on Android 14+ and on the D13 floor; the
   14-day closed test runs on phones without a PC or account and loses
   no data across app updates, reboots and an export/import cycle; no
@@ -545,9 +573,9 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | DA3 | Catalogue on the phone | Embed one country; download per country | Download per country (§4.4) |
 | DA4 | Order of M3–M5 | As proposed; email (M5) before M3/M4 | As proposed, unless a caregiver relies on email without a PC |
 | DA5 | Play account type and application id | Personal; organization (D-U-N-S); id such as `com.vger70.medreminder` | Product owner; the id cannot change after the first upload |
-| DA6 | Free and premium split | §4.8 table; other | §4.8 table: free core for one person on one phone with every reminder and export; premium for devices, people, automation, convenience |
-| DA7 | Prices | € 1.99 / 20.99 / 59.99 (product owner); € 1.99 / 17.99 / 49.99 with a 14-day trial | Either is acceptable; the alternative favours the yearly plan |
-| DA8 | Licence of the mobile app code | Apache-2.0 in this repository; proprietary app shell in a private repository | Proprietary shell, shared core stays Apache-2.0 here |
+| DA6 | Free and premium split | §4.8 table; other | **Decided 2026-10-07**: §4.8 table |
+| DA7 | Prices | € 1.99 / 20.99 / 59.99; € 1.99 / 17.99 / 49.99 with a 14-day trial | **Decided 2026-10-07**: € 1.99 / 17.99 / 49.99 with a 14-day trial |
+| DA8 | Licence of the mobile app code | Apache-2.0 in this repository; private repository, proprietary | **Decided 2026-10-07**: private repository for the Android and iOS apps; desktop and shared core stay Apache-2.0 here (A7) |
 | DA9 | Donation links on mobile | Keep; drop | Drop: the premium tier replaces them |
 | DA10 | Premium across a family | Per store account; store family sharing | Per store account in M2; family sharing evaluated later |
 
@@ -562,7 +590,8 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | Background work late (emails, backups, feeds) | High | Low–medium | Run on app open; status shows the last run; PC as master when present |
 | Scope growth beyond 160 days | Medium | Schedule | Milestones releasable on their own; M3–M5 reorderable |
 | Desktop and phone notify on different days | Low | Medium | One rule set, planner parity tests (§4.2) |
-| Premium unlocked by a rebuilt or modified app | High (open code) | Low–medium | DA8; accepted without a backend |
+| Premium unlocked by a modified app | Low (app code private, DA8) | Low–medium | Accepted without a backend |
+| Shared core and private app drift apart | Medium | Medium | App pins a tag of this repository; shared changes land here first |
 | Users reject paying for sync that is free on the desktop | Medium | Medium | Generous free core; clear premium value; trial |
 | MAUI billing binding immature | Medium | Schedule | Spike S11 before M2 |
 | Store review of a health app with subscriptions | Low–medium | Schedule | Clear non-medical positioning, no safety feature paid (§4.8) |
@@ -588,6 +617,12 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 - 2026-10-06 — revision 1: standalone requirement, feature inventory of
   v2.16.0, milestones M0–M5, decisions DA1–DA5.
+- 2026-10-07 — revision 7: product-owner decisions DA6 (split), DA7
+  (€ 1.99 / 17.99 / 49.99, 14-day trial) and DA8 with requirement A7
+  (Android and iOS apps in a private repository, desktop and shared
+  core open); repository split, Apache-2.0 notice duty, entitlement in
+  the private app; closed-test rule corrected to 12 testers (20 until
+  2024-12-11, organizations exempt).
 - 2026-10-07 — revision 6: free core and premium tier for the mobile
   apps (A6, §4.8): principles, feature split, prices with net
   estimates, store rules, testers through license testing, trader
