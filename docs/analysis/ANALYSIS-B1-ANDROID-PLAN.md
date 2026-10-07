@@ -20,7 +20,7 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-07: revision 13 (includes Android Expert Review, GDPR & Legal Compliance Assessment).
+Status on 2026-10-07: revision 14 (review corrections to the Android Expert Review and GDPR & Legal Compliance Assessment).
 Reading conventions: `[VERIFIED]` (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]` (not verified), **`[ANDROID EXPERT NOTE]`** (Technical integration/correction from senior Android platform review).
 Untagged statements are design proposals.
 
@@ -37,7 +37,7 @@ Untagged statements are design proposals.
 | A5 | When the user also has a PC, phone and PC stay one installation (household) and one data set per profile, as B.1 and the household design define | B.1 §1.2; `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` R2, R8 |
 | A6 | The mobile apps (Android, later iOS) have a free core and a paid premium tier (subscription or lifetime purchase); the desktop stays free | Product owner, 2026-10-07 |
 | A7 | The code of the Android and iOS apps lives in a private repository; the desktop app stays open source in this repository | Product owner, 2026-10-07 |
-| A8 | Privacy & GDPR Compliance by Design: local-first storage, transparent onboarding consent/acknowledgment, data portability (Art. 20 GDPR) | Legal Assessment, 2026-10-07 |
+| A8 | Privacy by design: local-first storage, transparent onboarding privacy acknowledgment, and user-controlled data export/import | Legal Assessment, 2026-10-07 |
 
 What changes against B.1:
 
@@ -136,8 +136,8 @@ in the plan. "M" refers to the milestones of §5.
 | Planning | Export dates to a calendar (`.ics`) | Yes, share the file | M3 |
 | Views | Therapy timeline | Yes | M3 |
 | Views | Therapy report / card, print and PDF | PDF generated on the phone and shared (§4.6) | M3 |
-| Vitals | Manual vital-parameter diary, history and charts | Yes, local-only; separate `vitals.db`; no sync/cloud backup | D.1b |
-| Vitals | CSV export/import and PDF printout | Yes; CSV merge+dedup by `VitalReading.Id`; PDF output-only | D.1b |
+| Vitals | Manual vital-parameter diary, history and charts | Yes, local-only; separate `vitals.db`; no sync/cloud backup | M1b (D.1b; after M1 baseline is stable) |
+| Vitals | CSV export/import and PDF printout | Yes; CSV merge+dedup by `VitalReading.Id`; PDF output-only | M1b (D.1b; after M1 baseline is stable) |
 | Catalogue | Reference catalogue search per country, remote monthly feeds | Yes, data downloaded per country (§4.4) | M4 |
 | Catalogue | Barcode scan (webcam) and restock by scan | Yes, phone camera | M4 |
 | Catalogue | Barcode scan with a USB HID scanner | No: desktop accessory `[INFERRED]` | — |
@@ -203,7 +203,7 @@ every local write, every sync that changed data, every start and
 resume, at `BOOT_COMPLETED` (S5), and on a time-zone or clock change
 (B.1 §8.1). 
 
-**`[ANDROID EXPERT NOTE]`**: Android strictly enforces a maximum limit of concurrent alarms (500 per app) via `AlarmManager` on API 31+ `[VERIFIED]`. Therefore, the planner schedules a bounded window (e.g., the next 48 hours of dose reminders) and re-plans when an alarm fires. Furthermore, because of Play Store Policy, we will use `SCHEDULE_EXACT_ALARM` (user permission required) rather than `USE_EXACT_ALARM` (restricted policy, high risk of app rejection). The UI must guide the user to grant this permission gracefully.
+**`[ANDROID EXPERT NOTE]`**: A bounded scheduling window (for example, the next 48 hours of dose reminders) limits pending work and allows the planner to re-plan when an alarm fires. A reported limit of 500 concurrent alarms per app on API 31+ has not been independently verified and must be checked in the Android spike before it is treated as a platform constraint. Because Play restricts `USE_EXACT_ALARM` to narrow core use cases, the current proposal is `SCHEDULE_EXACT_ALARM`, subject to user approval; gracefully degrade if the permission is denied. The UI must explain the request.
 
 ### 4.3 Backup without a PC
 
@@ -224,10 +224,9 @@ through the Android file picker. CSV import is a manual **merge + deduplication*
 operation keyed by `VitalReading.Id`; it never uploads the data to a
 cloud service. PDF is output-only and is not an import format.
 - A **reminder** when no backup or export has been made for 30 days
-and sync is off: without a PC, a lost phone is lost data. The reminder
-for vital data is local-only and does not imply cloud backup.
-- A **reminder** when no backup or export has been made for 30 days
-and sync is off: without a PC, a lost phone is lost data.
+  and sync is off: without a PC, a lost phone is lost data. This tracks
+  non-vital profile data; any vital-data reminder is separate and
+  local-only because vital data is excluded from every backup path.
 
 ### 4.3a Vital data boundary (D.1)
 
@@ -298,10 +297,10 @@ those tools.
 2. Premium sells **more devices, more people and more automation**:
 sync and household, automatic cloud backup, several profiles,
 email, and the convenience tools.
-3. **GDPR Art. 20 (Data Portability):** Nothing that keeps a user safe or keeps their data reachable is
+3. **User-controlled data portability:** Nothing that keeps a user safe or keeps their data reachable is
 paid: dose reminders, low-stock and expiry warnings, `.mrz` export
 and import, and restoring a cloud backup stay free; only the
-scheduled backup is premium. Export also covers the right to data portability (GDPR Art. 20) `[VERIFIED — legal requirement]`.
+scheduled backup is premium. Export/import and vital CSV transfer provide user-controlled portability; they do not by themselves establish GDPR Article 20 compliance, which depends on the regulation's stated conditions, including legal basis and the scope of data provided by the data subject.
 4. **No data hostage.** When premium ends, nothing is deleted: data
 created with premium stays visible and exportable; premium actions
 (sync, scheduled backup, emails, prescription and deadline
@@ -564,14 +563,16 @@ needs no payments profile.
 (paths, Keystore credential protector, notifications, exact alarms,
 boot receiver, share sheet, file picker).
 - First start: "Start here" and "Restore from file" paths of §4.1,
-disclaimer & Privacy Policy acknowledgment (§4.1), language, notification and exact-alarm permissions;
-guided setup without its e-mail choice.
+  disclaimer & Privacy Policy acknowledgment (§4.1), language,
+  Android 13+ `POST_NOTIFICATIONS` runtime permission and exact-alarm
+  permission; denied permissions have an explained degraded mode;
+  guided setup without its e-mail choice.
 - Medicines, regimens, as-needed slots, dose times and presets; main
 list with forecast, warnings and search; stock, packages and expiry, intakes, count,
 history and retraction.
 - Notification planner with exact alarms: low stock (two stages), dose
 reminders with actions, package expiry.
-- Encrypted export and import (GDPR Art. 20 compliant), backup reminder (§4.3).
+- Encrypted export and import; backup reminder (§4.3). These support user-controlled portability without asserting blanket GDPR Art. 20 compliance.
 - One profile, administrator role; app lock with device biometrics;
 system font scaling and dark theme; accessibility of B.1 §9.1
 (screen-reader labels, no meaning by color alone); five languages;
@@ -586,6 +587,21 @@ no data across app updates, reboots and an export/import cycle; no
 health data in logs.
 - Effort: 35–50 days `[INFERRED — strongly dependent on MAUI
 experience]`.
+
+### M1b — Vital tracking (D.1b)
+
+Entry: M1 released and its baseline stable, as required by
+`ANALYSIS-D1-VITAL-TRACKING.md` §6.1.
+
+- Implement the local-only vital diary, history and charts with a
+  separate encrypted `vitals.db` and an Android Keystore-protected key.
+- Add user-initiated CSV export/import (merge and deduplicate by
+  `VitalReading.Id`) and PDF export through the Storage Access
+  Framework. Vital data is not included in `.mrz`, cloud backup or sync.
+- Exit: D.1 Android acceptance criteria and privacy/local-storage
+  checks pass; export/import and database encryption are verified.
+- Effort: not estimated in this plan; estimate under D.1 before
+  scheduling. The M0–M5 total below excludes M1b.
 
 ### M2 — Cloud: backup, sync, household
 
@@ -657,12 +673,13 @@ by the product owner.
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
 | M1 | Standalone core, first release | M0; D11, D13, DA2, DA5; Play account; private repository | 35–50 d |
+| M1b | Vital tracking (D.1b), after M1 baseline is stable | M1; D.1 Android acceptance criteria | To estimate under D.1; excluded from total |
 | M2 | Premium infrastructure, family grant; cloud backup, sync, household, profiles, roles and PIN | M1; D4, DA10; S6/S7 Android halves; S11; trader status | 35–50 d |
 | M3 | Prescriptions, planning, views | M2; DA4 | 15–20 d |
 | M4 | Catalogue, scan, Italian services | M2; DA3, DA4 | 15–20 d |
 | M5 | Email | M2; DA4 | 10–15 d |
 
-Total about 120–170 developer-days, against 60–90 for B.1 Phases 5
+Total for M0–M5 about 120–170 developer-days, against 60–90 for B.1 Phases 5
 and 7. The difference is the standalone requirement (M0, backup,
 phone-first household) and the features added to the desktop since
 2026-09-26. M3, M4 and M5 are independent of each other after M2 and
@@ -709,7 +726,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | DA10 | Premium across a family | Per store account; family tier granted through the household; any premium phone covers its household | Family tier (§4.8), with its prices; reopened 2026-10-07 after a first decision for per store account |
 | DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | **Decided 2026-10-07**: free, scan stays premium (§4.8) |
 | DA12 | GDPR / Store Onboarding | Explicit privacy acknowledgment banner; hidden in settings | **Recommended: explicit acknowledgment, without claiming it is always GDPR consent (§4.1)** |
-| **DA13** | **Battery Optimization Handling** | Ignore OEM restrictions; Prompt user to exclude app from battery optimization | **`[ANDROID EXPERT]` Recommended: In-app prompt (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) for reliable sync & alarms** |
+| **DA13** | **Battery Optimization Handling** | No prompt; contextual optional guidance to battery settings | **Recommend contextual guidance only; exclusion may help on some devices but cannot ensure reliable background work** |
 
 ---
 
@@ -719,7 +736,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 |---|---|---|---|
 | Data loss on a standalone phone (lost, reset, uninstalled) | Medium | High | Export and backup reminder in M1 for everyone; scheduled cloud backup in M2 with premium (§4.3) |
 | Exact-alarm permission refused | Medium | Medium | Explanation at first start; inexact fallback stated in the UI (S5) |
-| **App process killed by aggressive OEM Battery Managers (Xiaomi/Samsung)** | **High** | **High** | **`[ANDROID EXPERT NOTE]` Add explicit UI dialog guiding users to whitelist MedReminder in OS battery settings (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`).** |
+| **App process killed by aggressive OEM Battery Managers (Xiaomi/Samsung)** | **High** | **High** | Offer a contextual, optional link to device battery settings where appropriate. This can help on some devices but cannot guarantee timely background work. |
 | Background work late (emails, backups, feeds) | High | Low–medium | Run on app open; status shows the last run; PC as master when present |
 | Scope growth beyond 170 days | Medium | Schedule | Milestones releasable on their own; M3–M5 reorderable |
 | Desktop and phone notify on different days | Low | Medium | One rule set, planner parity tests (§4.2) |
@@ -753,6 +770,11 @@ donation links on Android or iOS (DA9); D14 is settled by it.
 ---
 
 ## 9. Change log for this document
+- **2026-10-07 — revision 14:** Review corrections: D.1b is an explicit
+  post-M1 milestone with separate estimation; removed the duplicate
+  backup reminder; limited GDPR portability wording; marked the
+  500-alarm figure as unverified; clarified notification permissions,
+  battery-optimization guidance and onboarding acknowledgment.
 - **2026-10-07 — revision 13:** Integrated Android Expert Review. Added specific platform implementations (SAF for Storage, Jetpack Security for Keystore, `BiometricPrompt` for App Lock). Clarified `SCHEDULE_EXACT_ALARM` vs Play Policy restrictions. Added DA13 and battery management risk mitigation. Confirmed 500 alarm limit and Family Sharing store policy.
 - 2026-10-07 — revision 12: Integrated Legal & GDPR Privacy Assessment. Added Requirement A8, local-only vital-data boundary, separate vital database, manual CSV/PDF transfer, and revised privacy onboarding language. Removed unsupported claims that local processing automatically requires or avoids GDPR consent and that every export automatically satisfies Article 20.
 - 2026-10-07 — revision 11: DA10 reopened at the product owner's
