@@ -43,6 +43,9 @@ Updated on 2026-10-05 after the Android spike runs (S1–S4, draft
 Updated on 2026-10-06: Android plan revised for a standalone app with
 every current feature (`ANALYSIS-B1-ANDROID-PLAN.md`): §3.1, §4.
 
+Updated on 2026-10-07: free core and premium tier for the mobile
+apps (`ANALYSIS-B1-ANDROID-PLAN.md` §4.8): §3.1.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -278,7 +281,7 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, proposed) | Standalone Android app with every applicable desktop feature, guided setup included: M0 portability refactor 2 and notification planner; M1 standalone core (first release); M2 cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 catalogue, scan, Italian services; M5 email and support | 110–160 d | D4, D11, D13, DA1–DA5; Play Console account (spikes S1–S5 and S8 done) |
+| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, proposed) | Standalone Android app with every applicable desktop feature, guided setup included: M0 portability refactor 2 and notification planner; M1 standalone core (first release); M2 premium infrastructure, cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 catalogue, scan, Italian services; M5 email; free core and premium tier (§4.8) | 115–165 d | D4, D11, D13, DA1–DA10; trader status and tax advice; Play Console account (spikes S1–S5 and S8 done) |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | iOS feature parity (for Android absorbed by M2–M5); the state-hash check is not implemented on any device and stays a B.1 item | not re-estimated | Phase 6; D14 |
 
