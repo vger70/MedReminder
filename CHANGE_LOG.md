@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #211 — Add a free core and a premium tier to the Android plan
+
+Link: [vger70/MedReminder#211](https://github.com/vger70/MedReminder/pull/211)
+Branch: `claude/b1-android-premium-model`
+
+### Docs
+
+- `ANALYSIS-B1-ANDROID-PLAN.md` revision 6: requirement A6 and §4.8
+  (free core for one person on one phone with every reminder and
+  export; premium for sync, household, cloud backup, profiles, email
+  and convenience tools; prices with net estimates; store billing,
+  license testers, trader status, licence options, entitlement
+  design); premium infrastructure in M2 after spike S11; no donation
+  links on mobile; decisions DA6–DA10; risks.
+- `STATUS.md` §3.1: Phase 5 row updated.
+
 ## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature
 
 Link: [vger70/MedReminder#209](https://github.com/vger70/MedReminder/pull/209)
