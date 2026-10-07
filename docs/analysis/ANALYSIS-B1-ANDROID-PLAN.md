@@ -20,7 +20,7 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-07: revision 10. Reading conventions: `[VERIFIED]`
+Status on 2026-10-07: revision 11. Reading conventions: `[VERIFIED]`
 (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus
 #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]`
 (deduction from verified facts), `[UNCERTAIN]` (not verified).
@@ -300,8 +300,9 @@ share sheet. The calendar export, the prescription request and the
    which keeps email and the scheduled backup running (household C3,
    C8).
 5. The **desktop stays free and keeps its own sync**. Premium is
-   checked on the phone only; a phone without premium cannot join or
-   publish a sync group or household.
+   checked on the phone only; a phone without premium, its own or a
+   family plan's (DA10), cannot join or publish a sync group or
+   household.
 
 **Split** (decided by the product owner, 2026-10-07, DA6; catalogue
 row amended by DA11):
@@ -340,6 +341,13 @@ search and linking are free and only the scan is premium.
 | Yearly subscription | € 17.99 | ≈ € 12.53 |
 | Lifetime (one-time purchase) | € 49.99 | ≈ € 34.83 |
 | Free trial | 14 days on the subscriptions | — |
+| Family monthly (proposal, DA10) | € 2.99 | ≈ € 2.08 |
+| Family yearly (proposal, DA10) | € 26.99 | ≈ € 18.80 |
+| Family lifetime (proposal, DA10) | € 74.99 | ≈ € 52.25 |
+
+The family prices are 1.5 times the individual ones `[INFERRED —
+family plans of other services cost 1.5–2 times the individual plan;
+no market data verified]`; they are a proposal until DA10 is decided.
 
 The net assumes 22% Italian VAT inside the price and a 15% store fee
 (Google Play: 15% on auto-renewing subscriptions; from 2026 in the EEA
@@ -441,11 +449,67 @@ status of AI-assisted code is not assessed here]`.
   verification a modified APK can unlock premium; accepted. With the
   app code private, this needs a patched binary, not a rebuild.
 - One purchase covers one store account on all its phones (restore
-  purchases). Store family sharing stays off (decided on 2026-10-07,
-  DA10): every store account whose phone syncs or joins a household
-  needs its own premium, as principle 5 states. A household with two
-  phones on two accounts, for example a caregiver and the person cared
-  for, buys premium twice; the PC stays free.
+  purchases).
+
+**Family premium (DA10, reopened on 2026-10-07).** Premium per store
+account makes a household with two phones on two accounts, for example
+a caregiver and the person cared for, buy premium twice. The product
+owner asked for a family tier instead: one member buys, the other
+phones of the household get premium at no cost while the plan runs.
+
+- **The stores do not do it on Android.** Google Play Family Library
+  shares paid apps but not in-app products or subscriptions `[VERIFIED
+  — secondary sources; no change found since its launch]`. Apple
+  Family Sharing does share subscriptions and non-consumables with up
+  to five family members, is turned on per product and cannot be
+  turned off `[VERIFIED — App Store Connect Help]`. One mechanism on
+  both platforms means doing it in the app.
+- **Products.** Three more products, family monthly, yearly and
+  lifetime (prices above). An individual subscription moves to the
+  family one through the store's upgrade with proration; an individual
+  lifetime owner gets a one-time "family upgrade" product priced at
+  the difference `[INFERRED — Play Billing replacement modes cover
+  subscriptions; a separate one-time product for the lifetime case]`.
+- **Grant through the household.** The buyer's phone verifies its
+  purchase on the device, as for individual premium, and writes a
+  family grant into the household log: product, valid-until date
+  (renewal date plus a grace period for subscriptions, none for
+  lifetime), buyer device and the time of the last check. The grant is
+  sealed with the household key like every household operation (§5 of
+  the household design). The other phones read it and are premium
+  while it is valid; the buyer's phone refreshes it at each check.
+  Household settings are administrator state (household §4.3), so the
+  buyer acts with an administrator profile, or an administrator
+  accepts the grant on first purchase `[INFERRED — permission check on
+  apply to be designed in M2]`.
+- **Shared format, no premium logic in public code.** The grant travels
+  as a `HouseholdSettingChanged` entry under an app-reserved setting
+  name, which the desktop stores and ignores, so the household format
+  and the desktop need no premium concept `[INFERRED — settings are a
+  name and value map; that the desktop keeps unknown names without
+  error is to be verified in M2]`. A new operation type would instead
+  stop older desktops (household design §12).
+- **Limits.** At most six phones in the household, as the store family
+  groups `[VERIFIED — Google Play and Apple family groups have six
+  members]`; PCs do not count and stay free. Joining as a family
+  member needs a free place; when the plan ends, members fall back to
+  their own entitlement, or to the free core with no data lost
+  (principle 4). A member's own individual subscription is not
+  cancelled by the app; the app tells the member it can be cancelled.
+- **What a family member can do.** Everything premium, including a
+  second household of their own only with their own premium: the grant
+  covers the household that holds it.
+- **Abuse.** Without a server the grant cannot be checked against the
+  store from another phone; a member with a modified app could forge
+  one, the same accepted risk as a modified APK. The six-phone limit
+  caps sharing with strangers.
+- **Store policy.** Selling through store billing an access that the
+  app extends to other users is common (family plans of password
+  managers and media services) `[UNCERTAIN — no Google Play or App
+  Store rule on it verified for third-party apps; to check before
+  M2]`. On iOS, Apple Family Sharing stays off so that a purchase is
+  shared through one mechanism only `[INFERRED]`.
+- Cost: 5–8 more days in M2 `[INFERRED]`.
 
 ---
 
@@ -509,13 +573,14 @@ several devices and waits for M2; DA3 waits for M4 and DA4 for M3.
 
 ### M2 — Cloud: backup, sync, household
 
-Entry: M1 released; D4 decided; Android halves of S6 and S7
+Entry: M1 released; D4, DA10 decided; Android halves of S6 and S7
 (Android OAuth clients, P14); spike S11 (billing); trader status and
 payments profile in Play Console.
 
 - Premium infrastructure (§4.8): entitlement service, Play Billing
   adapter, subscription and lifetime products, purchase and restore
-  screens, gates, license testers on the testing tracks. Every M2
+  screens, gates, license testers on the testing tracks, and the
+  family grant if DA10 adopts it. Every M2
   feature below is premium except restoring a cloud backup.
 - OneDrive and Google Drive sign-in on Android.
 - Encrypted cloud backup and restore (§4.3); the scheduled backup on
@@ -533,8 +598,8 @@ payments profile in Play Console.
 - Exit: phone and desktop converge in the offline and conflict
   scenarios of the B.1 checklist; a phone-first installation is joined
   by a PC and the PC becomes master.
-- Effort: 30–45 days, H6 and the premium infrastructure included
-  `[INFERRED]`.
+- Effort: 35–50 days, H6, the premium infrastructure and the family
+  grant included `[INFERRED]`.
 
 ### M3 — Prescriptions, planning, views
 
@@ -576,12 +641,12 @@ Entry: DA3 decided.
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
 | M1 | Standalone core, first release | M0; D11, D13, DA2, DA5; Play account; private repository | 35–50 d |
-| M2 | Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN | M1; D4; S6/S7 Android halves; S11; trader status | 30–45 d |
+| M2 | Premium infrastructure, family grant; cloud backup, sync, household, profiles, roles and PIN | M1; D4, DA10; S6/S7 Android halves; S11; trader status | 35–50 d |
 | M3 | Prescriptions, planning, views | M2; DA4 | 15–20 d |
 | M4 | Catalogue, scan, Italian services | M2; DA3, DA4 | 15–20 d |
 | M5 | Email | M2; DA4 | 10–15 d |
 
-Total about 115–165 developer-days, against 60–90 for B.1 Phases 5
+Total about 120–170 developer-days, against 60–90 for B.1 Phases 5
 and 7. The difference is the standalone requirement (M0, backup,
 phone-first household) and the features added to the desktop since
 2026-09-26. M3, M4 and M5 are independent of each other after M2 and
@@ -625,7 +690,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | DA7 | Prices | € 1.99 / 20.99 / 59.99; € 1.99 / 17.99 / 49.99 with a 14-day trial | **Decided 2026-10-07**: € 1.99 / 17.99 / 49.99 with a 14-day trial |
 | DA8 | Licence of the mobile app code | Apache-2.0 in this repository; private repository, proprietary | **Decided 2026-10-07**: private repository for the Android and iOS apps; desktop and shared core stay Apache-2.0 here (A7) |
 | DA9 | Donation links on mobile | Keep; drop | **Decided 2026-10-07**: drop |
-| DA10 | Premium across a family | Per store account; store family sharing | **Decided 2026-10-07**: per store account, store family sharing off (§4.8) |
+| DA10 | Premium across a family | Per store account; family tier granted through the household; any premium phone covers its household | Family tier (§4.8), with its prices; reopened 2026-10-07 after a first decision for per store account |
 | DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | **Decided 2026-10-07**: free, scan stays premium (§4.8) |
 
 ---
@@ -637,12 +702,14 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | Data loss on a standalone phone (lost, reset, uninstalled) | Medium | High | Export and backup reminder in M1 for everyone; scheduled cloud backup in M2 with premium (§4.3) |
 | Exact-alarm permission refused | Medium | Medium | Explanation at first start; inexact fallback stated in the UI (S5) |
 | Background work late (emails, backups, feeds) | High | Low–medium | Run on app open; status shows the last run; PC as master when present |
-| Scope growth beyond 165 days | Medium | Schedule | Milestones releasable on their own; M3–M5 reorderable |
+| Scope growth beyond 170 days | Medium | Schedule | Milestones releasable on their own; M3–M5 reorderable |
 | Desktop and phone notify on different days | Low | Medium | One rule set, planner parity tests (§4.2) |
 | Premium unlocked by a modified app | Low (app code private, DA8) | Low–medium | Accepted without a backend |
 | Shared core and private app drift apart | Medium | Medium | App pins a tag of this repository; shared changes land here first |
 | Users reject paying for sync that is free on the desktop | Medium | Medium | Generous free core; clear premium value; trial |
-| A household with several phones finds one premium per account too dear (DA10) | Medium | Low–medium | Lifetime offer; PC stays free; review family sharing after release data |
+| A household with several phones finds one premium per account too dear (DA10) | Medium | Low–medium | Family tier; PC stays free |
+| Family grant shared outside the family or forged | Low–medium | Low | Six-phone limit; accepted without a backend |
+| Store review objects to access extended by the app | Low `[UNCERTAIN]` | Schedule | Policy check before M2; S11 tests the family products |
 | MAUI billing binding immature | Medium | Schedule | Spike S11 before M2 |
 | Store review of a health app with subscriptions | Low–medium | Schedule | Clear non-medical positioning, no safety feature paid (§4.8) |
 
@@ -665,6 +732,12 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 
 ## 9. Change log for this document
 
+- 2026-10-07 — revision 11: DA10 reopened at the product owner's
+  request; family tier designed (three products, grant through the
+  household log under an app-reserved setting, six phones, PCs free,
+  Apple Family Sharing off); family price proposal; Google Play
+  Family Library does not share subscriptions; M2 35–50 days, total
+  120–170; risks on grant abuse and store review.
 - 2026-10-07 — revision 10: DA10 decided (premium per store account,
   store family sharing off) and DA11 decided (catalogue search and
   linking free, scan premium), split table amended; M3–M5 enter after
