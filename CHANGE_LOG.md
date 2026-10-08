@@ -58,6 +58,9 @@ Branch: `ui-requirements`
   slices, dependencies, UX acceptance links, milestone gates, and a
   recommended country/catalogue decision for M4. Keep the API 26 spike
   deferred as requested.
+- Add `ANALYSIS-B1-ANDROID-TEAM-PLAN.md`: role ownership, readiness gates,
+  milestone sequencing, parallel work, integration/review workflow, and
+  immediate planning actions before implementation.
 - Align `docs/STATUS.md` with the current Android decisions and the
   separate, unestimated M1b vital-tracking milestone.
 - Record DA3 desktop parity for supported catalogues, locales and

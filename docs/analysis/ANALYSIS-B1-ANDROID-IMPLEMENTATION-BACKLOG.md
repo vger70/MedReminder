@@ -5,6 +5,9 @@ reviewable implementation slices. It is a planning artifact for the
 private Android repository and this repository's shared-core changes; it
 does not start implementation or technical spikes.
 
+Team ownership, readiness actions, sequencing, integration and milestone
+workflow are detailed in `ANALYSIS-B1-ANDROID-TEAM-PLAN.md`.
+
 ## 1. Source of truth and delivery rules
 
 - Product scope and milestone dependencies: `ANALYSIS-B1-ANDROID-PLAN.md`.
