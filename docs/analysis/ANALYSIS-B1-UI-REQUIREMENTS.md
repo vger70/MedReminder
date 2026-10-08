@@ -3,7 +3,8 @@
 Status: product-owner selected the **Daily overview** direction on
 2026-10-08. This document defines the UX requirements for the Android
 client planned in `ANALYSIS-B1-ANDROID-PLAN.md`. It does not authorize
-changes to the desktop UI or shared data model.
+changes to the desktop UI or shared data model. M1–M5 builds are for
+internal testing; public Play Store launch is after M5.
 
 The companion presentation is
 [`../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first-fixed.pptx`](../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first-fixed.pptx).
@@ -334,14 +335,19 @@ adherence scoring.
 
 ### UI-15 — Catalogue and scan (M4)
 
-The catalogue area shall allow a user to select the reference country,
-search downloaded entries, and link an entry to a medicine for free.
-Show catalogue availability and last refresh; explain when the
-catalogue needs a connection. Manual medicine entry remains available
-offline. The area shall include the shortage list and notices,
-equivalent-medicine information, and public information links; these
-remain free. Barcode scan and restock-by-scan are Premium and shall
-offer a clear manual alternative.
+The Android app shall match the desktop's five supported UI languages
+(Italian, English, French, Spanish and German), reference-country
+behavior (Italy is the current default), and catalogue sources (currently
+Italy, EU, Spain and France). The app remains usable worldwide; this
+catalogue coverage does not restrict installation or core use. Where a
+public dataset is available and redistributable, the catalogue is an
+optional aid for searching and linking medicines. Manual medicine entry
+remains available everywhere, including offline. Android shall use the
+country-feed delivery behavior in the Android plan, show catalogue
+availability and last refresh, and explain the source. Country-specific
+shortage lists, equivalents and public information are shown only where
+desktop data supports them; they remain free. Barcode scan and
+restock-by-scan are Premium and shall offer a clear manual alternative.
 
 **Acceptance:** search/linking and scan are visibly different access
 levels; no private profile data is sent by catalogue downloads; scan
@@ -572,15 +578,16 @@ feature inventory to the requirement that owns its UI behavior.
 | M2 — Cloud and Premium | A user can buy/restore individual Premium, create/join an installation, use Google Drive before OneDrive, review sync/conflict/device state, use multiple profiles/roles, delete a selected local copy with accurate cloud-copy warnings, and back up/restore without losing local data when billing or network is unavailable. |
 | M3 — Prescriptions and planning | Premium prescription and planning flows work with correct reminder states; free read-only timeline remains available; PDF/share and calendar actions explain the handoff. |
 | M4 — Catalogue and scan | Catalogue search/link and safety information remain free; scan is Premium with manual alternatives; offline catalogue limitations are clear. |
-| M5 — Email | SMTP and recipient setup is understandable, delivery timing is described as best effort, and Premium expiry does not affect ordinary medicine reminders. |
+| M5 — Email | SMTP and recipient setup is understandable, delivery timing is described as best effort, and Premium expiry does not affect ordinary medicine reminders. M1–M5 builds remain internal-test builds; public Play Store launch is gated on M5 exit and final release checks. |
 
 Decisions recorded on 2026-10-08: D4 notification distribution defaults
 and lock-screen privacy; Android API 26 as the provisional D13 minimum,
 subject to the M1 technical spike; DA13 contextual, non-blocking battery
-guidance; and deferral of DA10's family tier until after M2. The local
-data deletion behavior is specified in UI-17 and affects only the
-selected device's local copy. Country/catalogue and milestone-order
-decisions remain governed by DA3 and DA4 in the Android plan. Before
+guidance; deferral of DA10's family tier until after M2; DA3 parity with
+desktop countries, catalogues and languages while keeping app use
+worldwide; and DA4 order M3 → M4 → M5 with internal-only milestone builds
+and public launch after M5. The local data deletion behavior is specified
+in UI-17 and affects only the selected device's local copy. Before public
 release, complete the privacy/legal review and verify API 26 support.
 Exact prices and Play-provided renewal/cancellation terms must come from
 current store product data at runtime, not static UI copy.

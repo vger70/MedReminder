@@ -28,8 +28,8 @@ does not start implementation or technical spikes.
 
 | Key | Backlog decision | Current recommendation/status | Blocks |
 |---|---|---|---|
-| DA3 | Android reference-country and catalogue delivery policy | Decide before M4. Recommend no country dataset embedded in the APK; default the reference country to Italy, allow an explicit choice among supported countries, and fetch/cache the chosen national feed plus the EU feed. Keep manual entry available without network. | M4 country picker, downloads, catalogue search/link, shortage and equivalents scope |
-| DA4 | Order of M3–M5 | Decide before committing milestone sequence. Plan recommendation: M3, then M4, then M5 unless caregiver reliance makes email urgent. | M3/M4/M5 release order only; independent technical slices may be prepared after M2 |
+| DA3 | Catalogue, language and country parity with desktop | **Decided 2026-10-08**: follow the desktop's five languages and country/catalogue options (currently IT, EU, ES and FR); the app is usable worldwide; catalogues are optional entry aids only where public and redistributable sources exist. Keep Android's §4.4 delivery approach. | M4 implements the supported catalogue set; no country catalogue is required to use the app |
+| DA4 | Order of M3–M5 and public launch | **Decided 2026-10-08**: M3 → M4 → M5; intermediate builds are for internal testing; public Play Store launch is only after M5. | M3/M4/M5 exit gates and the single public launch gate |
 | D13 | Android minimum OS | API 26 selected provisionally; verify MAUI, alarms, billing/store compatibility in the M1 spike before claiming support. Spike is deferred until separately authorized/scheduled. | M1 release claim and M2 entry |
 | DA5 | Play account and application ID | Decide before first Play upload; application ID is immutable after first upload. | M1 release |
 | S11 | Google Play Billing integration | Plan requires the native billing spike before M2. | M2 entitlement/purchase implementation |
@@ -37,36 +37,18 @@ does not start implementation or technical spikes.
 
 ### DA3: what “country/catalogue” means
 
-The Android client needs one **reference country** to choose the national
-medicine dataset and the country-specific identifiers and public sources
-used by catalogue search/linking. The plan also proposes the EU-wide EMA
-catalogue alongside the selected national catalogue. Country selection
-therefore affects which medicines can be found and linked, which source
-and licence are displayed, and which shortage/equivalent or regional
-information applies. It does not change manual medicine entry or the
-therapy data already stored in a profile.
-
-There are two main packaging strategies: embed one national dataset in the
-APK (simple first use but a country-specific, larger release), or download
-the selected supported dataset (smaller APK and broader reach, but first
-catalogue use needs a connection and a feed). The existing Android plan
-recommends the second. The desktop catalogue design defaults to Italy; the
-current feed design provides the selected national feed plus EU and has
-Italy, Spain, and France sources. The decision still needs to confirm the
-Android first-run default, the countries exposed at launch, whether the
-national dataset is cached for offline use after download, and the exact
-relationship between country changes and the Italy-only shortage,
-equivalents, and regional-service features.
-
-**Recommended decision to carry into M4:** keep the APK country-neutral;
-preselect Italy as the editable default for consistency with the existing
-product; list only countries with a verified, licensed feed; fetch the
-selected national catalogue plus EU; retain the last successful catalogue
-locally for offline search; show source and last-update status; never infer
-country solely from UI language; keep manual entry available when the
-country is unsupported or the feed is unavailable. Confirm this product
-choice before M4 implementation. Do not interpret the current
-recommendation as a closed decision.
+DA3 is closed. Android follows the desktop's five supported UI languages
+(Italian, English, French, Spanish and German), reference-country
+behavior (Italy is the current default), and supported catalogue sources
+(currently IT, EU, ES and FR). The user can use the app anywhere; neither
+installation nor core features are limited to those countries. A catalogue
+is an optional medicine-entry aid only where a public dataset can legally
+be redistributed. If no catalogue is available, manual entry still works.
+Android keeps the delivery approach in plan §4.4: use the selected
+reference-country feed plus the EU feed without embedding one national
+catalogue in the APK. Country or language selection must not disable core
+app use. Future country/source additions follow the desktop's source and
+redistribution review.
 
 ## 3. Backlog by milestone
 
@@ -120,7 +102,7 @@ sync, cloud backup, or `.mrz`.
 
 ### B2 — Individual Premium, cloud and household (M2)
 
-**Entry:** M1 released, API 26 support validated, D4 recorded, S6/S7 Android
+**Entry:** M1 internal-test exit passed, API 26 support validated, D4 recorded, S6/S7 Android
 OAuth clients ready, S11 billing spike complete, Play merchant/trader setup
 ready. Google Drive integration precedes OneDrive. **Exit:** offline,
 conflict, purchase, restore, entitlement lapse and device-removal flows
@@ -142,7 +124,8 @@ preserve user data and accurately report state.
 
 ### B3 — Prescriptions, planning and reports (M3)
 
-**Entry:** M2 released; DA4 confirms scheduling. **Exit:** each feature has
+**Entry:** M2 internal-test exit passed; implement first in the approved
+M3 → M4 → M5 order. **Exit:** each feature has
 correct reminder states, accessible Premium gate, and safe external handoff.
 
 | ID | Slice | Acceptance / done when | Depends on / UX |
@@ -155,24 +138,25 @@ correct reminder states, accessible Premium gate, and safe external handoff.
 
 ### B4 — Reference catalogue, scan and safety information (M4)
 
-**Entry:** DA3 defines first-run country, supported sources, offline cache,
-and source/legal presentation; DA4 confirms order. **Exit:** manual entry
-works regardless of catalogue state; search/link, safety information and
-scan obey the Free/Premium split.
+**Entry:** M3 internal-test exit passed. Use the desktop's supported
+country/catalogue and language options; verify public redistribution and
+source attribution for each dataset. **Exit:** manual entry works
+regardless of catalogue state; search/link, safety information and scan
+obey the Free/Premium split.
 
 | ID | Slice | Acceptance / done when | Depends on / UX |
 |---|---|---|---|
-| B4-01 | Reference-country setup and setting | Show editable reference country and supported feeds; do not infer country from language; explain what data/country changes affect. | DA3; UI-15, UI-18 |
-| B4-02 | National + EU catalogue refresh and offline cache | Fetch only selected national feed plus EU; show availability/source/version/last refresh; preserve last successful data for offline search; isolate failed feeds and never send profile data. | DA3; feed contracts; UI-15 |
+| B4-01 | Reference-country setup and setting | Match the desktop country options/default behavior and supported locales; explain that the app works without a catalogue and worldwide. | DA3; UI-15, UI-18 |
+| B4-02 | National + EU catalogue refresh and offline cache | Follow §4.4 for catalogue delivery; show available public/redistributable sources, version and last refresh; preserve downloaded data for offline search; isolate failed feeds and never send profile data. | Desktop feed contracts; UI-15 |
 | B4-03 | Search and link catalogue entries | Search by supported fields, preview selected medicine and identifiers, link/unlink with confirmation; manual entry remains free if no match. | B4-02; DA11; UI-03, UI-15 |
 | B4-04 | Barcode scan and scan-to-restock | Request camera only in context; decode supported formats; confirm resolved medicine/package and quantity before writing stock; provide manual fallback. | B4-03; UI-15 |
-| B4-05 | Shortages, equivalents and information links | Show source/update date and distinguish public information from medical advice; national availability/links are shown only where supported. | DA3; UI-15 |
+| B4-05 | Shortages, equivalents and information links | Show source/update date and distinguish public information from medical advice; provide country-specific items only where the desktop has supported public data. | UI-15 |
 
 ### B5 — Email automation (M5)
 
-**Entry:** M2 released; DA4 confirms scheduling; master/mail-device behavior
+**Entry:** M4 internal-test exit passed; master/mail-device behavior
 agreed. **Exit:** configuration and failures are transparent; no UI calls
-queued work “sent”.
+queued work “sent”; no public store release occurs before M5 exits.
 
 | ID | Slice | Acceptance / done when | Depends on / UX |
 |---|---|---|---|
@@ -180,6 +164,7 @@ queued work “sent”.
 | B5-02 | Recipients and message categories | Configure caregiver copies, low-stock emails and weekly digest separately; review recipients/content before save. | UI-16 |
 | B5-03 | Designated mail device and master transfer | Identify sender device and last-seen state; explain handoff to PC and effect if sender is unavailable. | Household design; UI-16 |
 | B5-04 | Best-effort delivery and Premium expiry | State sends may be delayed; show queued/attempted/failed/confirmed states; ordinary medicine reminders continue when Premium expires. | B2-01, planner; UI-13, UI-16 |
+| B5-05 | Public Play Store launch | Publish only after M5 exit and final store/privacy/legal/release checks; M1–M5 artifacts before then are internal-test builds only. | M5 exit; D13 validation; privacy/legal and Play release gates |
 
 ## 4. Cross-cutting definition of done
 
@@ -210,7 +195,10 @@ Every user-facing item is complete only when:
 3. Once the M1 baseline is stable, schedule B1b (D.1) separately.
 4. Complete M2 provider, household, billing and recovery work; keep Google
    Drive ahead of OneDrive and family Premium out of scope.
-5. Confirm DA4, then sequence M3–M5; confirm DA3 before any M4 build work.
+5. Deliver M3, then M4, then M5 in internal-test builds; publish to Play
+   only after M5 exits. Use the desktop's catalogue/country/language
+   behavior in M4; public-data source additions require the same
+   redistribution review as desktop.
 
 This ordering refines the product plan into work slices; it does not
 change the approved M0–M5 scope or authorize the deferred API 26 spike.
