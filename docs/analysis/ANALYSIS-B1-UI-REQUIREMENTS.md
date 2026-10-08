@@ -8,6 +8,8 @@ changes to the desktop UI or shared data model.
 The companion presentation is
 [`../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first-fixed.pptx`](../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first-fixed.pptx).
 The source mockups are in [`../mockups/android-ui-proposals.svg`](../mockups/android-ui-proposals.svg).
+Implementation slices and dependencies are tracked in
+[`ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md`](ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md).
 
 ## 1. Product boundary
 

@@ -54,6 +54,12 @@ Branch: `ui-requirements`
   M1 validation (D13), contextual non-blocking battery guidance (DA13),
   and deferral of family Premium beyond M2 (DA10). Specify local-only
   data deletion and its distinction from cloud/household removal.
+- Add `ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md`: implementation
+  slices, dependencies, UX acceptance links, milestone gates, and a
+  recommended country/catalogue decision for M4. Keep the API 26 spike
+  deferred as requested.
+- Align `docs/STATUS.md` with the current Android decisions and the
+  separate, unestimated M1b vital-tracking milestone.
 
 ## PR #213 — Add D.1 vital-tracking design and DPIA
 
