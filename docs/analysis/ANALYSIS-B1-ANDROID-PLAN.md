@@ -20,7 +20,7 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-08: revision 18 (records desktop parity for DA3, M3→M4→M5 sequencing, internal-only milestone builds and public launch after M5).
+Status on 2026-10-08: revision 19 (records DA3 catalogue/language defaults and EMA fallback, M3→M4→M5 sequencing, internal-only milestone builds and public launch after M5).
 The product owner approved the plan's M3 → M4 → M5 sequence on
 2026-10-08; M1–M5 builds are for internal testing and public Play Store
 launch follows M5.
@@ -742,7 +742,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 |---|---|---|---|
 | DA1 | The Android app works without a PC and without an account | Yes; no | **Requested by the product owner, 2026-10-06** |
 | DA2 | Backup on a standalone phone | Export only; export and cloud backup; Android Auto Backup | Export in M1, cloud backup in M2; Auto Backup stays off |
-| DA3 | Catalogue, language and country parity with desktop | Country/catalogue/language support differs from desktop; same support as desktop | **Decided 2026-10-08**: match desktop sources (currently IT, EU, ES, FR), reference-country behavior (Italy default), and languages (it, en, fr, es, de); Android remains usable worldwide; public redistributable catalogues are optional medicine-entry aids. Android uses §4.4 delivery behavior. |
+| DA3 | Catalogue, language and country parity with desktop | Country/catalogue/language support differs from desktop; same support as desktop | **Decided 2026-10-08; clarified 2026-10-08**: match desktop sources (IT, EU, ES, FR, US) and languages (it, en, fr, es, de). Country selects its matching national catalogue and default language when available (Italy → IT/Italian, France → FR/French, USA → US/English); otherwise select EMA and English. Users may change the UI language. Android remains usable worldwide; public redistributable catalogues are optional medicine-entry aids. Android uses §4.4 delivery behavior. |
 | DA4 | Order of M3–M5 and public launch | M3 → M4 → M5; M5 before M3/M4 | **Decided 2026-10-08**: M3 → M4 → M5; all intermediate builds are for internal testing; public Play Store launch only after M5. |
 | DA5 | Play account type and application id | Personal; organization (D-U-N-S); id such as `com.vger70.medreminder` | Product owner; the id cannot change after the first upload |
 | DA6 | Free and premium split | §4.8 table; other | **Decided 2026-10-07**: §4.8 table |
@@ -805,6 +805,7 @@ donation links on Android or iOS (DA9); D14 is settled by it.
 ---
 
 ## 9. Change log for this document
+- **2026-10-08 — revision 19:** Clarified DA3: added the available US catalogue and defined country-based catalogue/language defaults, with EMA and English fallback where a national catalogue is unavailable; retained worldwide use and user language choice.
 - **2026-10-08 — revision 18:** Recorded DA3 desktop parity for supported countries/catalogues/languages without restricting worldwide app use; confirmed M3 → M4 → M5, internal-only intermediate builds, and public Play Store launch after M5.
 - **2026-10-08 — revision 16:** Recorded D4 notification distribution and lock-screen defaults; selected Android API 26 provisionally pending M1 validation; selected contextual non-blocking battery guidance (DA13); deferred family products and grants until after M2 (DA10); specified local-only data deletion.
 - **2026-10-08 — revision 15:** Expanded the linked UX requirements across M1–M5, including the Free/Premium lifecycle, settings/privacy, and full feature-flow coverage; corrected first-start privacy copy to account for optional encrypted cloud transfer and require privacy/legal review.

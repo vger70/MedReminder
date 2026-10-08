@@ -336,22 +336,29 @@ adherence scoring.
 ### UI-15 — Catalogue and scan (M4)
 
 The Android app shall match the desktop's five supported UI languages
-(Italian, English, French, Spanish and German), reference-country
-behavior (Italy is the current default), and catalogue sources (currently
-Italy, EU, Spain and France). The app remains usable worldwide; this
-catalogue coverage does not restrict installation or core use. Where a
-public dataset is available and redistributable, the catalogue is an
-optional aid for searching and linking medicines. Manual medicine entry
-remains available everywhere, including offline. Android shall use the
-country-feed delivery behavior in the Android plan, show catalogue
-availability and last refresh, and explain the source. Country-specific
-shortage lists, equivalents and public information are shown only where
-desktop data supports them; they remain free. Barcode scan and
-restock-by-scan are Premium and shall offer a clear manual alternative.
+(Italian, English, French, Spanish and German) and catalogue sources
+(Italy, EU, Spain, France and US). Country selects the corresponding
+national catalogue and default UI language when available (e.g. Italy →
+IT/Italian, France → FR/French, USA → US/English). If no national
+catalogue is available for the selected country, default to the EMA (EU)
+catalogue and English. The user may subsequently override the UI language
+in Settings.
+The app remains usable worldwide; catalogue coverage does not restrict
+installation or core use. Where a public dataset is available and
+redistributable, the catalogue is an optional aid for searching and
+linking medicines. Manual medicine entry remains available everywhere,
+including offline. Android shall use the country-feed delivery behavior
+in the Android plan, show catalogue availability and last refresh, and
+explain the source. Country-specific shortage lists, equivalents and
+public information are shown only where desktop data supports them; they
+remain free. Barcode scan and restock-by-scan are Premium and shall offer
+a clear manual alternative.
 
 **Acceptance:** search/linking and scan are visibly different access
-levels; no private profile data is sent by catalogue downloads; scan
-permission denial does not block manual entry or stock correction.
+levels; changing country applies the available national catalogue and
+default language, or EMA/English as fallback; the UI language remains
+user-changeable. No private profile data is sent by catalogue downloads;
+scan permission denial does not block manual entry or stock correction.
 
 ### UI-16 — Email automation (M5)
 

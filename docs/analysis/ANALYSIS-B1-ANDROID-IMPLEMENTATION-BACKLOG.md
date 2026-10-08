@@ -28,7 +28,7 @@ does not start implementation or technical spikes.
 
 | Key | Backlog decision | Current recommendation/status | Blocks |
 |---|---|---|---|
-| DA3 | Catalogue, language and country parity with desktop | **Decided 2026-10-08**: follow the desktop's five languages and country/catalogue options (currently IT, EU, ES and FR); the app is usable worldwide; catalogues are optional entry aids only where public and redistributable sources exist. Keep Android's §4.4 delivery approach. | M4 implements the supported catalogue set; no country catalogue is required to use the app |
+| DA3 | Catalogue, language and country parity with desktop | **Decided 2026-10-08**: follow the desktop's five languages and supported catalogues (IT, EU, ES, FR and US); country selects the matching national catalogue and default language where available; otherwise default to EMA and English. App use remains worldwide; catalogues are optional entry aids and public/redistributable only. Keep Android's §4.4 delivery approach. | M4 implements the supported catalogue set; no country catalogue is required to use the app |
 | DA4 | Order of M3–M5 and public launch | **Decided 2026-10-08**: M3 → M4 → M5; intermediate builds are for internal testing; public Play Store launch is only after M5. | M3/M4/M5 exit gates and the single public launch gate |
 | D13 | Android minimum OS | API 26 selected provisionally; verify MAUI, alarms, billing/store compatibility in the M1 spike before claiming support. Spike is deferred until separately authorized/scheduled. | M1 release claim and M2 entry |
 | DA5 | Play account and application ID | Decide before first Play upload; application ID is immutable after first upload. | M1 release |
@@ -38,16 +38,20 @@ does not start implementation or technical spikes.
 ### DA3: what “country/catalogue” means
 
 DA3 is closed. Android follows the desktop's five supported UI languages
-(Italian, English, French, Spanish and German), reference-country
-behavior (Italy is the current default), and supported catalogue sources
-(currently IT, EU, ES and FR). The user can use the app anywhere; neither
-installation nor core features are limited to those countries. A catalogue
-is an optional medicine-entry aid only where a public dataset can legally
-be redistributed. If no catalogue is available, manual entry still works.
-Android keeps the delivery approach in plan §4.4: use the selected
-reference-country feed plus the EU feed without embedding one national
-catalogue in the APK. Country or language selection must not disable core
-app use. Future country/source additions follow the desktop's source and
+(Italian, English, French, Spanish and German) and supported catalogue
+sources (IT, EU, ES, FR and US; US support is recorded in
+`ANALYSIS-CATALOGUE-US-GB-SOURCES.md`). Country selects the corresponding
+national catalogue and its default language where available (for example,
+Italy → IT/Italian, France → FR/French, USA → US/English). If the country
+has no available national catalogue, the initial selection is the EMA
+(EU) catalogue with English. The user can explicitly change the UI
+language afterwards.
+Country matching is a default, not a restriction: the app remains usable
+worldwide and core features do not depend on a catalogue. Catalogues are
+optional medicine-entry aids only where public datasets can legally be
+redistributed; manual entry always works. Android keeps plan §4.4's feed
+delivery approach without embedding a national catalogue in the APK.
+Future country/source additions follow the desktop's source and
 redistribution review.
 
 ## 3. Backlog by milestone
@@ -146,8 +150,8 @@ obey the Free/Premium split.
 
 | ID | Slice | Acceptance / done when | Depends on / UX |
 |---|---|---|---|
-| B4-01 | Reference-country setup and setting | Match the desktop country options/default behavior and supported locales; explain that the app works without a catalogue and worldwide. | DA3; UI-15, UI-18 |
-| B4-02 | National + EU catalogue refresh and offline cache | Follow §4.4 for catalogue delivery; show available public/redistributable sources, version and last refresh; preserve downloaded data for offline search; isolate failed feeds and never send profile data. | Desktop feed contracts; UI-15 |
+| B4-01 | Reference-country setup and setting | Match desktop country options; default to the matching national catalogue and language, or EMA and English when no national catalogue exists; allow language override and explain worldwide use without a catalogue. | DA3; UI-15, UI-18 |
+| B4-02 | National + EMA catalogue refresh and offline cache | Follow §4.4 for delivery; refresh the selected national catalogue when available, otherwise EMA; show public/redistributable sources, version and last refresh; preserve downloaded data for offline search; isolate failed feeds and never send profile data. | Desktop feed contracts; UI-15 |
 | B4-03 | Search and link catalogue entries | Search by supported fields, preview selected medicine and identifiers, link/unlink with confirmation; manual entry remains free if no match. | B4-02; DA11; UI-03, UI-15 |
 | B4-04 | Barcode scan and scan-to-restock | Request camera only in context; decode supported formats; confirm resolved medicine/package and quantity before writing stock; provide manual fallback. | B4-03; UI-15 |
 | B4-05 | Shortages, equivalents and information links | Show source/update date and distinguish public information from medical advice; provide country-specific items only where the desktop has supported public data. | UI-15 |

@@ -61,9 +61,11 @@ Branch: `ui-requirements`
 - Align `docs/STATUS.md` with the current Android decisions and the
   separate, unestimated M1b vital-tracking milestone.
 - Record DA3 desktop parity for supported catalogues, locales and
-  countries without restricting worldwide app use; record DA4 as M3 →
-  M4 → M5, with internal-only milestone builds and public Play Store
-  launch after M5.
+  countries without restricting worldwide app use. Clarify that country
+  selects the matching national catalogue and default language (including
+  US/English), with EMA/English fallback where no national catalogue is
+  available; record DA4 as M3 → M4 → M5, with internal-only milestone
+  builds and public Play Store launch after M5.
 
 ## PR #213 — Add D.1 vital-tracking design and DPIA
 
