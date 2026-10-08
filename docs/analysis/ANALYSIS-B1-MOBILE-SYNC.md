@@ -1085,7 +1085,7 @@ simulation harness covers the same properties empirically]`.
 |---|---|---|---|
 | Divergence bug in merge or derivation | Medium | High | Pure Domain rules; convergence simulation in CI; state-hash exchange between devices (each device publishes, per applied vector, a hash of its replicated state **and** of the resolved current values, derived rows excluded; mismatch raises an error and offers re-bootstrap). A hash of the version sets alone does not detect a wrong winner selection `[VERIFIED — S9 negative control]` |
 | Ledger refactor changes existing numbers | Medium | High | Cutoff (§3.5); parity tests; refactor shipped (Phase 2) before sync |
-| Provider API limits, scope policies, OAuth verification | Medium `[UNCERTAIN]` | Blocking per provider | Spikes S6, S7; OneDrive first; `LocalFolder` fallback on desktop |
+| Provider API limits, scope policies, OAuth verification | Medium `[UNCERTAIN]` | Blocking per provider | Spikes S6, S7; Google Drive first for Android, then OneDrive; `LocalFolder` fallback on desktop |
 | Background sync on mobile too infrequent | High | Stale data, duplicate reminders | Foreground sync on open; status always visible; accepted duplication (§8.3) |
 | Exact alarms denied | High on Android 14+ | Late reminders | Explained permission request; inexact fallback |
 | Passphrase loss | Medium | Remote data unreadable | QR pairing; recovery sheet; local databases on each device remain usable |
@@ -1309,8 +1309,9 @@ For Android, Phases 5 and 7 are replaced by milestones M0–M5 of
 a PC (product owner, 2026-10-06) and covers every current desktop feature
 that applies to a phone.
 
-**Entry**: Phase 4 exit for at least OneDrive; D1, D3, D4, D13
-decided; Play Console account.
+**Entry**: Phase 4 exit with Google Drive available; D1, D3, D4, D13
+decided; Play Console account. Android provider priority is Google
+Drive, then OneDrive.
 
 **Actions**: MAUI project; composition root; screens §9.1 items 1–5, 8–10;
 QR pairing scanner; provider sign-in, after the Android halves of S6
@@ -1415,7 +1416,7 @@ Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15; on
 |---|---|---|---|---|
 | D1 | Platforms and order | Android then iOS; both; Android only | **Decided 2026-09-26**: Android, then iOS | Phase 0 |
 | D2 | UI framework | MAUI; Avalonia | **Decided 2026-09-26**: MAUI | Phase 0 |
-| D3 | Providers and order | OneDrive, Google Drive, Dropbox | **Decided 2026-09-26**: OneDrive, then Google Drive; Dropbox later | Phase 0 |
+| D3 | Providers and order | OneDrive, Google Drive, Dropbox | Decided 2026-09-26: OneDrive, then Google Drive; **updated 2026-10-08**: Google Drive first for Android, then OneDrive; Dropbox later | Phase 0 |
 | D4 | Notification defaults per device | Proposal in §8.3 | Dose on phone, low-stock everywhere | Phase 5 |
 | D5 | Relative order with A2 | A2 first; B.1 first | **Decided 2026-09-26**: A2 phase 1 has shipped (PR #72); A2 phase 2 (webcam) is independent and may run after B.1 or in parallel | Phase 0 |
 | D6 | Retroactive changes after cutoff (schedule rows, suspensions, therapy end date) re-derive past days; frozen days never change | Yes; no (freeze on first derivation) | **Decided 2026-09-26**: yes | Phase 2 |

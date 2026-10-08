@@ -20,7 +20,7 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-07: revision 13 (includes Android Expert Review, GDPR & Legal Compliance Assessment).
+Status on 2026-10-08: revision 14 (adds the selected Android UI direction, implementation requirements, and the updated Google Drive-first provider priority).
 Reading conventions: `[VERIFIED]` (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]` (not verified), **`[ANDROID EXPERT NOTE]`** (Technical integration/correction from senior Android platform review).
 Untagged statements are design proposals.
 
@@ -497,6 +497,20 @@ M2]`. On iOS, Apple Family Sharing stays off so that a purchase is
 shared through one mechanism only `[INFERRED]`.
 - Cost: 5–8 more days in M2 `[INFERRED]`.
 
+### 4.9 Android UI requirements
+
+The product owner selected the Daily overview direction on 2026-10-08.
+The screen architecture, M1/M2 functional requirements, accessibility
+conditions, offline and sync states, and acceptance criteria are in
+[`ANALYSIS-B1-ANDROID-UI-REQUIREMENTS.md`](ANALYSIS-B1-ANDROID-UI-REQUIREMENTS.md).
+The production UI belongs to the private Android repository (A7); this
+repository holds the public requirements and shared-core work.
+
+The product owner also changed the provider priority: integrate Google
+Drive before OneDrive in the Android client. Both remain supported. The
+desktop transports shipped in their existing order; that history and
+the sync format do not change.
+
 ---
 
 ## 5. Revised plan
@@ -561,14 +575,16 @@ experience]`.
 
 Entry: M1 released; D4, DA10 decided; Android halves of S6 and S7
 (Android OAuth clients, P14); spike S11 (billing); trader status and
-payments profile in Play Console.
+payments profile in Play Console. Google Drive is the first Android
+provider, followed by OneDrive.
 
 - Premium infrastructure (§4.8): entitlement service, Play Billing
 adapter, subscription and lifetime products, purchase and restore
 screens, gates, license testers on the testing tracks, and the
 family grant if DA10 adopts it. Every M2
 feature below is premium except restoring a cloud backup.
-- OneDrive and Google Drive sign-in on Android.
+- Google Drive sign-in on Android, then OneDrive sign-in; both use the
+  existing provider transports and the shared sync model.
 - Encrypted cloud backup and restore (§4.3); the scheduled backup on
 the master only (household C3), premium; restore free.
 - Sync: create or join a group, QR pairing with the camera (the camera
@@ -719,10 +735,17 @@ D4 before M2, instead of "Phase 5".
 - `docs/STATUS.md` §3.1: Phases 5 and 7 replaced by M0–M5.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §10 (donation links) and §16 (D14): no
 donation links on Android or iOS (DA9); D14 is settled by it.
+- `ANALYSIS-B1-ANDROID-UI-REQUIREMENTS.md`: selected Daily overview,
+  M1/M2 screen behavior, accessibility, offline/sync states, and
+  acceptance criteria for the private Android UI.
+- `ANALYSIS-B1-MOBILE-SYNC.md` §16 and `EVOLUTION.md` §6: provider
+  priority updated to Google Drive first, then OneDrive for Android;
+  the desktop implementation history remains OneDrive first.
 
 ---
 
 ## 9. Change log for this document
+- **2026-10-08 — revision 14:** Selected the Daily overview UI; added linked implementation requirements and acceptance criteria; set Google Drive first and OneDrive second for Android without changing the historical desktop provider rollout.
 - **2026-10-07 — revision 13:** Integrated Android Expert Review. Added specific platform implementations (SAF for Storage, Jetpack Security for Keystore, `BiometricPrompt` for App Lock). Clarified `SCHEDULE_EXACT_ALARM` vs Play Policy restrictions. Added DA13 and battery management risk mitigation. Confirmed 500 alarm limit and Family Sharing store policy.
 - 2026-10-07 — revision 12: Integrated Legal & GDPR Privacy Assessment. Added Requirement A8, section §4.1 Legal Onboarding notice for Store Compliance, Art. 20 GDPR Data Portability alignment in §4.3 & §4.8, Decision DA12, and DSA/Tax risk factors in §7.
 - 2026-10-07 — revision 11: DA10 reopened at the product owner's

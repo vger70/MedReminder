@@ -1063,9 +1063,14 @@ work already scoped there. `[INFERRED]`
 | Preserve `.mrz` as the long-term interoperability contract | ✅ |
 | Ship `LocalFolderArchiveStorage` as the only implementation in Phase 1 | ✅ |
 | Defer native cloud APIs (OneDrive, Google Drive, Dropbox) until B.1 | ✅ |
-| Prioritise OneDrive, then Google Drive, when native APIs become necessary | ✅ |
+| Prioritise Google Drive, then OneDrive, for the Android client | ✅ |
 | Keep iCloud in the file-system model on Windows permanently | ✅ |
 | Use Scenario A (file picker) for B.1's first cut on mobile | ✅ |
+
+The earlier OneDrive-first recommendation was superseded by the
+product owner's 2026-10-08 decision: Google Drive is the first Android
+provider, followed by OneDrive. The desktop rollout order already
+shipped and recorded in B.1 is unchanged.
 
 The architecture that results is: **one archive format, one
 pluggable storage port, one implementation that ships now, and
