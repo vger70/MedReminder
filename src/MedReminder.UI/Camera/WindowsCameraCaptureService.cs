@@ -237,6 +237,7 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
         private long _lastPreviewMs = long.MinValue / 2;
         private int _framesDecoded;
         private int _previewPending;
+        private CameraFrameDiagnostics? _lastDiagnostics;
         private volatile bool _completed;
 
         public Session(
@@ -342,6 +343,7 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
         {
             _framesDecoded++;
             var raw = _decoder.Decode(_work, width, height);
+            _lastDiagnostics = _decoder.LastDiagnostics;
             if (raw is null || _completed) return;
             if (_accept(raw.Value))
             {
@@ -355,7 +357,10 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
         {
             if (_preview.Length != length) _preview = new byte[length];
             Buffer.BlockCopy(_work, 0, _preview, 0, length);
-            var status = new CameraFrameStatus(_framesDecoded, new CameraPreviewFrame(width, height, _preview));
+            var status = new CameraFrameStatus(
+                _framesDecoded,
+                new CameraPreviewFrame(width, height, _preview),
+                _lastDiagnostics);
 
             Volatile.Write(ref _previewPending, 1);
             void Deliver(object? _)

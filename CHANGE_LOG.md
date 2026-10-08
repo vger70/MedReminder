@@ -39,6 +39,7 @@ Branch: `claude/webcam-barcode-scan`
 
 - **Improved** webcam barcode decoding for inverted or mirrored frames and increased the maximum selected camera width to 1920 pixels when supported.
 - **Enabled** continuous autofocus on cameras that support it, and logged when focus control or continuous autofocus is unavailable or activation fails.
+- **Added** a central-region retry and percentile contrast enhancement fallback; scan timeouts report frame size, center-region contrast and sharpness, and the strongest scan-line transition span without recording image data.
 - **Added** decoder coverage for mirrored and inverted Code 32 (Code 39) frames.
 - **Reduced** cloud sync failure logs to the exception message instead of the full stack trace.
 
