@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Windows.Graphics.Imaging;
 using Windows.Media.Capture;
 using Windows.Media.Capture.Frames;
+using Windows.Media.Devices;
 using Windows.Media.MediaProperties;
 
 namespace MedReminder.UI.Camera;
@@ -119,6 +120,7 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
                 _log.LogError("Camera scan: frame reader did not start ({Status}).", status);
                 return new CameraScanResult(CameraAvailability.InitializationFailed, null);
             }
+            await EnableContinuousFocusIfAvailableAsync(capture);
             _log.LogInformation(
                 "Camera scan started: {Width}x{Height}.",
                 format?.VideoFormat.Width ?? 0, format?.VideoFormat.Height ?? 0);
@@ -178,6 +180,42 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
             .ThenByDescending(f => f.FrameRate.Denominator == 0 ? 0 : (double)f.FrameRate.Numerator / f.FrameRate.Denominator)
             .FirstOrDefault();
 
+    // Some desktop webcams do not enable continuous focus for video by
+    // default. Enable it only when supported; a focus-control failure
+    // must not prevent the user from scanning with the current image.
+    private async Task EnableContinuousFocusIfAvailableAsync(MediaCapture capture)
+    {
+        try
+        {
+            var focus = capture.VideoDeviceController.FocusControl;
+            if (!focus.Supported)
+            {
+                _log.LogInformation("Camera scan: autofocus control is not supported by this camera.");
+                return;
+            }
+            if (!focus.SupportedFocusModes.Contains(FocusMode.Continuous))
+            {
+                _log.LogInformation("Camera scan: continuous autofocus is not supported by this camera.");
+                return;
+            }
+
+            await focus.UnlockAsync();
+            focus.Configure(new FocusSettings
+            {
+                Mode = FocusMode.Continuous,
+                AutoFocusRange = AutoFocusRange.FullRange,
+            });
+            await focus.FocusAsync();
+            _log.LogInformation("Camera scan: continuous autofocus enabled.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(
+                "Camera scan: continuous autofocus could not be enabled ({ErrorMessage}); continuing with the current focus.",
+                ex.Message);
+        }
+    }
+
     // State of one scan. Frame events arrive on worker threads and may
     // still fire after the session completed; every path checks
     // _completed first, so late frames are dropped.
@@ -199,6 +237,7 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
         private long _lastPreviewMs = long.MinValue / 2;
         private int _framesDecoded;
         private int _previewPending;
+        private CameraFrameDiagnostics? _lastDiagnostics;
         private volatile bool _completed;
 
         public Session(
@@ -304,6 +343,7 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
         {
             _framesDecoded++;
             var raw = _decoder.Decode(_work, width, height);
+            _lastDiagnostics = _decoder.LastDiagnostics;
             if (raw is null || _completed) return;
             if (_accept(raw.Value))
             {
@@ -317,7 +357,10 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
         {
             if (_preview.Length != length) _preview = new byte[length];
             Buffer.BlockCopy(_work, 0, _preview, 0, length);
-            var status = new CameraFrameStatus(_framesDecoded, new CameraPreviewFrame(width, height, _preview));
+            var status = new CameraFrameStatus(
+                _framesDecoded,
+                new CameraPreviewFrame(width, height, _preview),
+                _lastDiagnostics);
 
             Volatile.Write(ref _previewPending, 1);
             void Deliver(object? _)

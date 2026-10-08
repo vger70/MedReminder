@@ -42,7 +42,22 @@ public sealed record CameraScanResult(CameraAvailability Availability, RawBarcod
 
 // Reported for frames shown in the preview. FramesDecoded counts the
 // frames handed to the decoder so far in this session.
-public sealed record CameraFrameStatus(int FramesDecoded, CameraPreviewFrame Preview);
+public sealed record CameraFrameStatus(
+    int FramesDecoded,
+    CameraPreviewFrame Preview,
+    CameraFrameDiagnostics? Diagnostics = null);
+
+// Image-only diagnostics from the decoder's scan region. They contain
+// no image data or barcode payload.
+public sealed record CameraFrameDiagnostics(
+    int FrameWidth,
+    int FrameHeight,
+    int RegionWidth,
+    int RegionHeight,
+    int ContrastRange,
+    double Sharpness,
+    int StrongestLineTransitions,
+    int StrongestLineSpanPixels);
 
 // 32-bit BGRA pixels, top-down, Width * 4 bytes per row.
 public sealed record CameraPreviewFrame(int Width, int Height, byte[] Bgra32);

@@ -51,6 +51,7 @@ internal sealed class BarcodeScanDialog : MedReminderFormBase
     private CancellationTokenSource? _scanCts;
     private Bitmap? _previewBitmap;
     private (BarcodeContent Content, RawBarcode Raw)? _webcamRead;
+    private CameraFrameDiagnostics? _lastFrameDiagnostics;
     private CameraAvailability _failure;
 
     public BarcodeScanDialog(
@@ -268,6 +269,7 @@ internal sealed class BarcodeScanDialog : MedReminderFormBase
         _scanCts = scanCts;
         scanCts.CancelAfter(TimeSpan.FromSeconds(Math.Max(5, _options.ScanTimeoutSeconds)));
         _webcamRead = null;
+        _lastFrameDiagnostics = null;
         var started = Stopwatch.StartNew();
 
         CameraScanResult result;
@@ -307,7 +309,18 @@ internal sealed class BarcodeScanDialog : MedReminderFormBase
         _tryAgainButton.Visible = true;
         if (timedOut)
         {
-            _log.LogWarning("Webcam scan: no barcode detected within {Seconds} s.", _options.ScanTimeoutSeconds);
+            if (_lastFrameDiagnostics is { } diagnostics)
+            {
+                _log.LogWarning(
+                    "Webcam scan: no barcode detected within {Seconds} s; frame {FrameWidth}x{FrameHeight}, center region {RegionWidth}x{RegionHeight}, contrast range {ContrastRange}, sharpness {Sharpness:0.0}, strongest line {LineTransitions} transitions across {LineSpanPixels} px.",
+                    _options.ScanTimeoutSeconds, diagnostics.FrameWidth, diagnostics.FrameHeight,
+                    diagnostics.RegionWidth, diagnostics.RegionHeight, diagnostics.ContrastRange,
+                    diagnostics.Sharpness, diagnostics.StrongestLineTransitions, diagnostics.StrongestLineSpanPixels);
+            }
+            else
+            {
+                _log.LogWarning("Webcam scan: no barcode detected within {Seconds} s; no frame diagnostics were received.", _options.ScanTimeoutSeconds);
+            }
             _status.Text = _loc.Get("Ui.BarcodeScanDialog.NoBarcodeDetected");
             return;
         }
@@ -370,6 +383,7 @@ internal sealed class BarcodeScanDialog : MedReminderFormBase
     private void OnFrame(CameraFrameStatus status)
     {
         if (IsDisposed || !_webcamPanel.Visible) return;
+        if (status.Diagnostics is { } diagnostics) _lastFrameDiagnostics = diagnostics;
         var frame = status.Preview;
         if (_previewBitmap is null || _previewBitmap.Width != frame.Width || _previewBitmap.Height != frame.Height)
         {
