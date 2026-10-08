@@ -52,7 +52,8 @@ one overwrites the target profile (`IImportService`, overwrite-only)
 
 ### 1.2 End-state goal
 
-For Android, revised by `ANALYSIS-B1-ANDROID-PLAN.md` once approved:
+For Android, revised by `ANALYSIS-B1-ANDROID-PLAN.md` (approved
+2026-10-08), which takes precedence:
 the app also works on its own, without a PC or an account.
 
 1. A mobile app (Android, then iOS) that is a **full client** of a
@@ -628,7 +629,7 @@ offers one. New Application port `ISyncTransport`, implemented by:
 | `LocalFolderSyncTransport` (a folder synced by a third-party client, or a NAS share) | Yes | No | 3 |
 | `OneDriveSyncTransport` (Microsoft Graph, MSAL public client) | Yes | Yes | 4a |
 | `GoogleDriveSyncTransport` (Drive REST API) | Yes | Yes | 4b |
-| iCloud | Only through `LocalFolder` on Windows | Native container | Not planned, D12 |
+| iCloud | Only through `LocalFolder` on Windows | Native container | Excluded, D12 |
 
 Why desktop also uses the provider API rather than only the synced
 folder: with Google Drive the narrow `drive.file` scope lets an app see
@@ -907,7 +908,7 @@ user-chosen, as the C.3+ cloud folder already is.
 | `ILocalizationService` | Portable loader + `%LOCALAPPDATA%` override | Portable loader, embedded dictionaries |
 | `ICurrentProfile` | `CurrentProfile` | `MobileCurrentProfile` |
 | Low-stock and dose notifications | Toast / balloon + polling services | `ILocalNotificationScheduler` + `NotificationPlanner` (§8) |
-| `IEmailNotificationService` | MailKit | MailKit, only when the device is the designated mail device (§8.4) |
+| `IEmailNotificationService` | MailKit | MailKit, only when the device is the household master (§8.4) |
 | Secret stores | DPAPI | `SecureStorage` |
 | `ISyncTransport` | LocalFolder, OneDrive, Google Drive | OneDrive, Google Drive |
 | Camera barcode capture | A2 webcam variant | Platform camera (§10) |
@@ -979,16 +980,27 @@ reminder is possible and accepted.
 
 ### 8.4 Email
 
-Exactly one **designated mail device** per profile sends low-stock and
-caregiver email (default: the desktop that enabled sync). The
-designation is a replicated LWW field. Mobile uses MailKit (runs on
-Android and iOS `[INFERRED — managed library]`) only if designated;
-SMTP settings are then configured on that device (not synced, §4.6).
-The desktop sends only if designated. If the designated device is off,
-no email is sent; the device list shows its last-seen time, and any
-device can take over the designation. Prescription requests (user
-initiated) are sent from the device where the user acts, via `mailto:`
-or SMTP if configured there.
+Superseded on 2026-10-08. The "designated mail device" first designed
+here (one per profile, a replicated LWW field) was never implemented
+and is replaced by the **household master**
+(`ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` R5, C4, C5, §7.6), as backlog
+item B5-03 of `ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md` specifies:
+
+- Only the master sends email (low-stock, caregiver copies, weekly
+  digest), for every profile of the installation, and only when SMTP
+  is configured on it. A non-master device never sends email through
+  SMTP.
+- The device list shows which device is master and its last-seen time.
+  If the master is off, no email is sent; the role moves only through
+  the household handover or takeover, never silently.
+- A phone may be master, with the timing limits of §8.2 and the
+  household recommendation of a PC as master (C8); when a PC joins a
+  phone-first installation, the phone proposes to hand the master role
+  to the PC.
+- Mobile uses MailKit on the master (Android from M5 of
+  `ANALYSIS-B1-ANDROID-PLAN.md`).
+- Prescription requests (user initiated) are sent from the device where
+  the user acts, via `mailto:` on any device or SMTP on the master.
 
 ---
 
@@ -997,7 +1009,8 @@ or SMTP if configured there.
 ### 9.1 Screens (end state)
 
 For Android, superseded by `ANALYSIS-B1-ANDROID-PLAN.md` (standalone
-app, feature inventory of v2.16.0, milestones M0–M5), once approved.
+app, feature inventory of v2.16.0, milestones M0–M5), approved
+2026-10-08, and by `ANALYSIS-B1-UI-REQUIREMENTS.md` for the screens.
 
 1. Onboarding: disclaimer, create or join a profile (QR or provider
    sign-in + passphrase), notification permissions.
@@ -1011,7 +1024,7 @@ app, feature inventory of v2.16.0, milestones M0–M5), once approved.
 7. Prescription request draft (as desktop PR #74).
 8. Conflicts to review.
 9. Profiles on this device; devices of the sync group; revoke.
-10. Settings: language, notifications per kind, designated mail device,
+10. Settings: language, notifications per kind, email (master only),
     app lock, sync interval and status, about, licenses.
 
 Accessibility: system font scaling, screen-reader labels, no meaning by
@@ -1038,8 +1051,8 @@ sections added to the five user guides.
 
 ## 10. Feature parity (end state)
 
-For Android, superseded by `ANALYSIS-B1-ANDROID-PLAN.md` §3, once
-approved.
+For Android, superseded by `ANALYSIS-B1-ANDROID-PLAN.md` §3 (approved
+2026-10-08).
 
 | Desktop feature | Mobile | Phase |
 |---|---|---|
@@ -1053,7 +1066,7 @@ approved.
 | Prescription request (PR #74) | Yes (`mailto:` / share) | 7 |
 | Reference catalogue search | Yes, snapshot for the selected reference country (0.5–4.6 MB of embedded snapshot files per country directory `[VERIFIED — Assets/Catalogue]`) | 7 |
 | Barcode scan (A2) | Yes, phone camera | 7 |
-| Email notifications | Only on the designated mail device | 7 |
+| Email notifications | Only on the household master (§8.4) | 7 |
 | Caregiver recipient (A3) | Via synced notification settings | 5 |
 | Multiple profiles | Yes, one sync group each | 5 |
 | Encrypted `.mrz` export / import | Export yes; import = group reset (§5.7) | 7 |
@@ -1115,7 +1128,7 @@ place relative to A2 (`EVOLUTION.md` §2.0).
 **Actions**
 
 1. Decide the remaining open items needed before Phase 1 (D9) and before
-   Phase 5 (D11). D4 was decided 2026-10-08; validate the provisional
+   Phase 5 (D11, decided 2026-10-08). D4 was decided 2026-10-08; validate the provisional
    Android API 26 floor in the M1 technical spike (D13). D1–D3, D5,
    D6, D8, D10, D15 were decided on 2026-09-26.
 2. Spikes (throw-away branches; results appended to §18):
@@ -1311,9 +1324,12 @@ libraries.
 ### Phase 5 — Android full client
 
 For Android, Phases 5 and 7 are replaced by milestones M0–M5 of
-`ANALYSIS-B1-ANDROID-PLAN.md` §5, once approved: the app works without
+`ANALYSIS-B1-ANDROID-PLAN.md` §5 (approved 2026-10-08): the app works without
 a PC (product owner, 2026-10-06) and covers every current desktop feature
 that applies to a phone.
+
+For Android, the entry, actions, exit and effort below are historical;
+the plan's milestones apply.
 
 **Entry**: Phase 4 exit with Google Drive available; D1, D3, D4, D13
 decided; Play Console account. Android provider priority is Google
@@ -1353,7 +1369,7 @@ macOS CI job; TestFlight; privacy labels; App Store submission.
 
 **Actions**: timeline and prescription request on mobile; catalogue
 snapshot on mobile and barcode scan with the phone camera (A2 mobile
-path); designated mail device and MailKit on mobile; `.mrz` export on
+path); MailKit on a mobile master (§8.4); `.mrz` export on
 mobile; donation links per D14; PDF share; device-side state-hash
 verification UI; documentation completion.
 
@@ -1417,9 +1433,10 @@ iCloud transport; tablet-specific layouts; web client.
 
 Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15; on
 2026-09-27: D7. On 2026-10-08, D4 was decided and Android API 26 was
-selected provisionally in D13, pending M1 technical validation. Still
-open: D11,
-D12, D14. The iOS 15 D13 proposal remains inferred and unmeasured.
+selected provisionally in D13, pending M1 technical validation; D11
+was decided and D14 settled by DA9 of `ANALYSIS-B1-ANDROID-PLAN.md`.
+D12 was decided on 2026-10-08 (no iCloud transport). No B.1 decision
+is open. The iOS 15 D13 proposal remains inferred and unmeasured.
 
 | # | Decision | Options | Proposal | Needed by |
 |---|---|---|---|---|
@@ -1433,10 +1450,10 @@ D12, D14. The iOS 15 D13 proposal remains inferred and unmeasured.
 | D8 | Retraction (delete a mistaken fact) | Add now; later | **Decided 2026-09-26**: add in Phase 2 | Phase 2 |
 | D9 | Portable project name, namespaces | `MedReminder.Infrastructure.Portable`, keep namespaces | **Decided 2026-09-26**: as proposed | Phase 1 |
 | D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | **Decided 2026-09-26**: separate | Phase 3 |
-| D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | S4 passed (§18.4): no exclusion needed; reject | Phase 5 |
-| D12 | iCloud transport | Plan; exclude | Exclude | Phase 0 |
+| D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | **Decided 2026-10-08**: reject. S4 passed (§18.4), no exclusion; the private app repository adopts an equivalent target so that no `*.pdb` / `*.xml` ships in the app's Release output (this repository's target covers only projects under its own tree, such as the shared libraries built from the submodule `[INFERRED — MSBuild imports Directory.Build.props from the project's directory upwards]`) | M1 |
+| D12 | iCloud transport | Plan; exclude | **Decided 2026-10-08**: exclude. A native iCloud container serves Apple devices only and cannot reach Android or Windows through the provider-API transports `[INFERRED]`; a Windows PC with iCloud for Windows can still use its folder through `LocalFolder` | Phase 0 |
 | D13 | Minimum OS versions | — | **Android decided 2026-10-08**: 8.0 (API 26), provisional pending M1 MAUI/alarm/Play validation; iOS 15 remains `[INFERRED — not measured]` | M1 validation (Android); Phase 7 (iOS) |
-| D14 | Donation links on iOS | Include; exclude | Exclude unless verified compliant | Phase 7 |
+| D14 | Donation links on iOS | Include; exclude | **Settled 2026-10-07** by DA9 of `ANALYSIS-B1-ANDROID-PLAN.md`: no donation links on Android or iOS | Phase 7 |
 | D15 | Automatic consumption for inactive periods | None on inactive days (activity history); today's catch-up on reactivation | **Decided 2026-09-26**: no automatic consumption on inactive days | Phase 2 |
 
 ---
@@ -2069,3 +2086,7 @@ Phase 2 implements the derivation from the prototype and its tests.
   after two product-owner requests: a standalone Android app, and every
   current desktop feature that applies to a phone. §9.1, §10 and §13
   Phases 5 and 7 point to it for Android.
+- 2026-10-08 — Consistency review with the Android plan revision 20:
+  §8.4 superseded by the household master (backlog B5-03); §7.5, §9.1
+  and §10 email rows aligned; "once approved" pointers replaced, since
+  the Android plan was approved on 2026-10-08.

@@ -3,6 +3,16 @@
 Design document, **prior to implementation**. Once approved, work proceeds
 on a branch named `feature/vital-tracking` (per `CLAUDE.md` §5).
 
+> **Placement (product owner, 2026-10-08):** D.1 is **evolution V**. It is
+> evaluated, for the desktop, Android and iOS together, only after the
+> store release of the Android and iOS apps. It is not part of Android
+> release 1 (milestones M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`), which
+> ships without any vital data, nor of the desktop roadmap before that
+> release. This document is the design baseline for evolution V; when
+> it is scheduled, re-check it against the shipped apps (entry list in
+> `ANALYSIS-B1-ANDROID-PLAN.md` §4.3a) and add the iOS design, which
+> this document does not cover.
+
 > **Design objective:** add a personal vital-parameter diary without turning
 > MedReminder into a system that remotely processes, synchronizes, interprets,
 > or clinically monitors physiological data.
@@ -397,8 +407,10 @@ The disclaimer and privacy notice must also be localized before release.
 
 ### 6.1 D.1b placement
 
-Android implements the same local-only feature after the B.1 M1 baseline is
-stable. No Android-specific sync work is required for D.1.
+Android vital tracking belongs to evolution V (see the placement note
+at the top), not to Android release 1 (M0–M5); the Android app ships
+first without it. The rest of this section is the design baseline for
+evolution V. No Android-specific sync work is required for D.1.
 
 ### 6.2 Platform implementation
 
@@ -406,7 +418,7 @@ stable. No Android-specific sync work is required for D.1.
 |---|---|
 | Database | Separate encrypted `vitals.db` in app-private storage |
 | Key protection | Android Keystore-backed secure storage |
-| UI | Native Android/Compose layer consistent with B.1; exact chart library decided at implementation |
+| UI | Defined in `ANALYSIS-B1-UI-REQUIREMENTS.md`, which is authoritative for the Android UI (MAUI app of the B.1 plan); exact chart library decided at implementation |
 | File export/import | Storage Access Framework (`ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`) |
 | CSV import | Explicit local merge + deduplication by `VitalReading.Id` |
 | PDF | Local generation and share/save; never an import source |
@@ -531,18 +543,21 @@ of local diary data merely because it publishes the application.
 
 ## 9. Decisions
 
+The prefix DV (renumbered from DA on 2026-10-08) keeps these decisions
+apart from the DA decisions of `ANALYSIS-B1-ANDROID-PLAN.md`.
+
 | # | Decision | Resolution |
 |---|---|---|
-| DA1 | Android vital-data entitlement | Free core may impose a product-level history/UI limit, but **export always includes the complete local history**. No premium feature may make existing vital data inaccessible. |
-| DA2 | Vital-data synchronization | **No sync.** `VitalType` and `VitalReading` are outside B.1. |
-| DA3 | Vital database | **Separate `vitals.db`**, separate EF Core context, separate encryption key, no FK to `medreminder.db`. |
-| DA4 | `.mrz` treatment | **Vitals excluded completely** from `.mrz` export/import and cloud backup. |
-| DA5 | CSV import | **Manual merge + deduplication by `VitalReading.Id`**. Existing IDs are not duplicated. |
-| DA6 | PDF import | **Not supported.** PDF is export/print only. |
-| DA7 | Desktop encryption | **Required before D.1 release**: SQLCipher/equivalent for `vitals.db`, with key protected through DPAPI. |
-| DA8 | Android encryption | **Required**: encrypted `vitals.db`, key protected by Android Keystore-backed secure storage. |
-| DA9 | MDR boundary | Manual diary, local storage, descriptive charts, CSV/PDF only; no clinical interpretation, alerts, diagnosis, therapy or remote monitoring. Material changes require formal assessment. |
-| DA10 | First-use acknowledgement | Required as a privacy/safety acknowledgement; it is not presented as a universal GDPR legal basis. |
+| DV1 | Android vital-data entitlement | Free core may impose a product-level history/UI limit, but **export always includes the complete local history**. No premium feature may make existing vital data inaccessible. |
+| DV2 | Vital-data synchronization | **No sync.** `VitalType` and `VitalReading` are outside B.1. |
+| DV3 | Vital database | **Separate `vitals.db`**, separate EF Core context, separate encryption key, no FK to `medreminder.db`. |
+| DV4 | `.mrz` treatment | **Vitals excluded completely** from `.mrz` export/import and cloud backup. |
+| DV5 | CSV import | **Manual merge + deduplication by `VitalReading.Id`**. Existing IDs are not duplicated. |
+| DV6 | PDF import | **Not supported.** PDF is export/print only. |
+| DV7 | Desktop encryption | **Required before D.1 release**: SQLCipher/equivalent for `vitals.db`, with key protected through DPAPI. |
+| DV8 | Android encryption | **Required**: encrypted `vitals.db`, key protected by Android Keystore-backed secure storage. |
+| DV9 | MDR boundary | Manual diary, local storage, descriptive charts, CSV/PDF only; no clinical interpretation, alerts, diagnosis, therapy or remote monitoring. Material changes require formal assessment. |
+| DV10 | First-use acknowledgement | Required as a privacy/safety acknowledgement; it is not presented as a universal GDPR legal basis. |
 
 ---
 
@@ -590,4 +605,4 @@ D.1 cannot ship until all of the following are true:
 
 ---
 
-*Document status: revised 7 October 2026 after product-owner confirmation of local-only vital storage, manual CSV merge/deduplication, and PDF export-only semantics.*
+*Document status: revised 7 October 2026 after product-owner confirmation of local-only vital storage, manual CSV merge/deduplication, and PDF export-only semantics. Revised 8 October 2026: D.1 placed as evolution V, after the store release of the Android and iOS apps; decisions renumbered DV1–DV10; Android UI defined by `ANALYSIS-B1-UI-REQUIREMENTS.md`.*

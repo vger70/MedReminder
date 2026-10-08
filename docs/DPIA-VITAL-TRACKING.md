@@ -16,6 +16,13 @@ legal controller role for every MedReminder processing activity.
 - `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`
 - `PRIVACY.md`
 
+> **Placement (2026-10-08):** D.1 is evolution V, evaluated only after the
+> store release of the Android and iOS apps
+> (`docs/analysis/ANALYSIS-B1-ANDROID-PLAN.md` §4.3a). Android release 1
+> (milestones M0–M5) processes no vital data and is not covered by this
+> assessment. Review and update this assessment when evolution V is
+> scheduled, including iOS, which it does not yet cover.
+
 > **Important:** this document is a product privacy/risk assessment, not legal
 > advice. The architecture deliberately prevents the developer from receiving
 > D.1 vital data. A material change to that boundary requires this assessment
@@ -437,4 +444,6 @@ Reopen this document before implementing any of the following:
 
 *Assessment status: revised 7 October 2026. The assessment is based on the
 local-only D.1 architecture confirmed by the product owner: separate database,
-no sync/cloud for vitals, manual CSV merge+deduplication, and PDF export-only.*
+no sync/cloud for vitals, manual CSV merge+deduplication, and PDF export-only.
+Placement note added 8 October 2026: D.1 is evolution V, after the store
+release of the Android and iOS apps.*
