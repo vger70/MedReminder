@@ -26,10 +26,15 @@ medicines.
 The Android app must work on its own, offline, and without a cloud
 account. When sync is configured, its profile data converges with the
 other devices through the existing encrypted sync model. The app does
-not run a project-operated backend. Vital-parameter tracking (D.1,
-[`ANALYSIS-D1-VITAL-TRACKING.md`](ANALYSIS-D1-VITAL-TRACKING.md)) is not
-part of M1–M5; it is evaluated after the store release, and its Android
-UX will be specified in this document when it is scheduled.
+not run a project-operated backend.
+
+This document specifies **Android release 1** (M1–M5), which has no
+vital-parameter tracking: no vital screens, menu entries, placeholders
+or premium offers. Vital tracking (D.1,
+[`ANALYSIS-D1-VITAL-TRACKING.md`](ANALYSIS-D1-VITAL-TRACKING.md)) is
+**evolution V**, evaluated after the store release of the Android and
+iOS apps (`ANALYSIS-B1-ANDROID-PLAN.md` §4.3a); its Android UX will be
+added to this document, as a separate section, when it is scheduled.
 
 ## 2. Selected direction
 
@@ -614,7 +619,9 @@ guidance; deferral of DA10's family tier until after M2; DA3 (UI language
 from the system, English otherwise; catalogue from the reference country:
 national, else EMA in the EU/EEA, else none; app use worldwide); DA4 order
 M3 → M4 → M5 with pre-release milestone builds and public launch after
-M5; and vital tracking (D.1) moved after the store release. The local data deletion behavior is specified
+M5; vital tracking (D.1) moved to evolution V, after the store release;
+D11, DA2, DA5 (personal account, `com.vger70.medreminder`) and DA12
+(onboarding acknowledgment) decided. The local data deletion behavior is specified
 in UI-17 and affects only the selected device's local copy. Before public
 release, complete the privacy/legal review and verify API 26 support.
 Exact prices and Play-provided renewal/cancellation terms must come from

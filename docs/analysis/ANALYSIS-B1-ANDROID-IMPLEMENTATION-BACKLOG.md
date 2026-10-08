@@ -16,8 +16,10 @@ workflow are detailed in `ANALYSIS-B1-ANDROID-TEAM-PLAN.md`.
   the household design it references.
 - The `ANALYSIS-B1-*` documents take precedence over `docs/STATUS.md` and
   `docs/EVOLUTION.md`, which are not kept up to date.
-- Vital tracking (D.1) is not in this backlog: it is evaluated after the
-  store release (plan §4.3a).
+- This backlog covers **Android release 1** only. Vital tracking (D.1) is
+  evolution V, evaluated after the store release of the Android and iOS
+  apps (plan §4.3a); its backlog is written when it is scheduled. No
+  release 1 item adds vital data, screens or placeholders.
 - "Pre-release build" means a build on the Play internal or closed
   testing track (plan §5.0); production only after M5.
 - Implement each item as a separately reviewable vertical slice where
@@ -36,13 +38,13 @@ workflow are detailed in `ANALYSIS-B1-ANDROID-TEAM-PLAN.md`.
 
 | Key | Backlog decision | Current recommendation/status | Blocks |
 |---|---|---|---|
-| D11 | `StripReleaseDebugArtifacts` exclusion for mobile | Open; recommendation: reject (S4 passed). | M1 entry |
-| DA2 | Backup on a standalone phone | Adopted as the planning baseline: export in M1, cloud backup in M2, Android Auto Backup off; product-owner confirmation required. | M1 entry |
+| D11 | `StripReleaseDebugArtifacts` exclusion for mobile | **Decided 2026-10-08**: reject; the private app repository adopts an equivalent target for the app's Release output. | B1-09 |
+| DA2 | Backup on a standalone phone | **Decided 2026-10-08**: export in M1, cloud backup in M2, Android Auto Backup off. | B1-06, B2-03 |
 | DA3 | Catalogue, language and country defaults | **Decided 2026-10-08, revised 2026-10-08**: UI language from the system if supported, English otherwise, user-changeable and independent of the country. Catalogue from the reference country: national (IT, ES, FR, US) if one exists; otherwise EMA for an EU/EEA country; otherwise none, with manual entry. App use remains worldwide; catalogues are optional, public and redistributable. Plan §4.4. | B1-01 (language), M4 (country and catalogue); desktop integration in `ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md` |
 | DA4 | Order of M3–M5 and public launch | **Decided 2026-10-08**: M3 → M4 → M5; M1–M5 are pre-release builds; public Play Store launch is only after M5. | M3/M4/M5 exit gates and the single public launch gate |
-| DA12 | Onboarding privacy acknowledgment | Adopted as the planning baseline (UI-00, UI-17); product-owner confirmation required. | M1 entry |
+| DA12 | Onboarding privacy acknowledgment | **Decided 2026-10-08**: explicit acknowledgment at first start, not presented as GDPR consent (UI-00, UI-17). | B1-02 |
 | D13 | Android minimum OS | API 26 selected provisionally; verify MAUI, alarms, billing/store compatibility in the M1 spike before claiming support. Spike is deferred until separately authorized/scheduled. | M1 release claim and M2 entry |
-| DA5 | Play account and application ID | Decide before first Play upload; application ID is immutable after first upload. | M1 release |
+| DA5 | Play account and application ID | **Decided 2026-10-08**: personal account, application ID `com.vger70.medreminder` (immutable after first upload); production access needs the closed test of plan §5.0. | B1-09, B5-05 |
 | S11 | Google Play Billing integration | Plan requires the native billing spike before M2, on Billing Library 8 or later (required by Play since 2026-08-31). | M2 entitlement/purchase implementation |
 | M2 accounts | Google Drive and OneDrive Android OAuth clients; Play trader/payment profile | Provision and verify before their respective M2 integration/release gates. | M2 provider sign-in and paid release |
 
@@ -80,8 +82,8 @@ and behave unchanged on desktop; Android can consume the portable APIs.
 
 ### B1 — Standalone Android core (M1)
 
-**Entry:** M0 merged; D11, DA2, DA5 and DA12 resolved as the Android plan
-requires; D13 selected provisionally (API 26); Play account and private
+**Entry:** M0 merged (D11, DA2, DA5 and DA12 decided on 2026-10-08);
+D13 selected provisionally (API 26); Play account and private
 repository ready. M1 implementation may proceed, but claiming API 26
 support is gated on the deferred D13 technical spike and compatibility
 check, which are not started in this task.
@@ -99,7 +101,7 @@ export/import.
 | B1-06 | Free export/import and backup reminder | Export/import encrypted `.mrz` using Android document flows; preview selected profile and replacement effect; failure/cancel preserves data; offer free export after 30 days without backup when sync is off. | UI-11, UI-17 |
 | B1-07 | Security, profile and app lock | One local profile with administrator role; biometric app lock; app data in private storage and secrets protected by the Android Keystore adapter. | UI-10, UI-17; plan §4.7 |
 | B1-08 | Reminder settings and recovery states | Expose permission status and routes to Android settings; when battery restrictions may delay reminders, offer contextual optional guidance and explain the limitation. | DA13; UI-09, UI-18 |
-| B1-09 | Pre-release readiness | Private-repository CI, signing outside source control, internal and closed testing tracks (plan §5.0), five-language user guides, upgrade/reboot/export-import checklist, and no health data in logs. | B1-01–08; D13 validation |
+| B1-09 | Pre-release readiness | Private-repository CI with a Release strip target equivalent to `StripReleaseDebugArtifacts` (D11), application ID `com.vger70.medreminder` (DA5), signing outside source control, internal and closed testing tracks (plan §5.0), five-language user guides, upgrade/reboot/export-import checklist, and no health data in logs. | B1-01–08; D13 validation |
 
 ### B2 — Individual Premium, cloud and household (M2)
 
@@ -189,7 +191,8 @@ Every user-facing item is complete only when:
 
 ## 5. Recommended execution order
 
-1. Resolve administrative M1 prerequisites (D11, DA2, DA5, DA12) and schedule the
+1. Create the personal Play account with application ID
+   `com.vger70.medreminder` (DA5) and schedule the
    API 26 technical spike as a separate later task; do not claim API 26
    support before its result.
 2. Deliver B0, then B1 and its closed-test exit criteria.

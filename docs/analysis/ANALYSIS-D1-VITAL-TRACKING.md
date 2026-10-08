@@ -3,6 +3,16 @@
 Design document, **prior to implementation**. Once approved, work proceeds
 on a branch named `feature/vital-tracking` (per `CLAUDE.md` §5).
 
+> **Placement (product owner, 2026-10-08):** D.1 is **evolution V**. It is
+> evaluated, for the desktop, Android and iOS together, only after the
+> store release of the Android and iOS apps. It is not part of Android
+> release 1 (milestones M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`), which
+> ships without any vital data, nor of the desktop roadmap before that
+> release. This document is the design baseline for evolution V; when
+> it is scheduled, re-check it against the shipped apps (entry list in
+> `ANALYSIS-B1-ANDROID-PLAN.md` §4.3a) and add the iOS design, which
+> this document does not cover.
+
 > **Design objective:** add a personal vital-parameter diary without turning
 > MedReminder into a system that remotely processes, synchronizes, interprets,
 > or clinically monitors physiological data.
@@ -397,11 +407,10 @@ The disclaimer and privacy notice must also be localized before release.
 
 ### 6.1 D.1b placement
 
-Android vital tracking is not part of the Android plan's milestones
-M0–M5: it is a later evolution, evaluated after the store release on
-Android and iOS (product owner, 2026-10-08; `ANALYSIS-B1-ANDROID-PLAN.md`
-§4.3a). The rest of this section is the design baseline for that
-evaluation. No Android-specific sync work is required for D.1.
+Android vital tracking belongs to evolution V (see the placement note
+at the top), not to Android release 1 (M0–M5); the Android app ships
+first without it. The rest of this section is the design baseline for
+evolution V. No Android-specific sync work is required for D.1.
 
 ### 6.2 Platform implementation
 
@@ -596,4 +605,4 @@ D.1 cannot ship until all of the following are true:
 
 ---
 
-*Document status: revised 7 October 2026 after product-owner confirmation of local-only vital storage, manual CSV merge/deduplication, and PDF export-only semantics.*
+*Document status: revised 7 October 2026 after product-owner confirmation of local-only vital storage, manual CSV merge/deduplication, and PDF export-only semantics. Revised 8 October 2026: D.1 placed as evolution V, after the store release of the Android and iOS apps; decisions renumbered DV1–DV10; Android UI defined by `ANALYSIS-B1-UI-REQUIREMENTS.md`.*

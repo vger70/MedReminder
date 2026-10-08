@@ -17,8 +17,9 @@ it does not authorize implementation or the deferred technical spikes.
 - Milestones M1–M5 are pre-release builds on the Play internal and
   closed testing tracks (plan §5.0). The public Play Store release is
   after M5 (DA4). M3 precedes M4, which precedes M5.
-- Vital tracking (D.1) is not part of M0–M5; it is evaluated after the
-  store release (plan §4.3a).
+- The team plans **Android release 1** (M0–M5). Vital tracking (D.1) is
+  evolution V, evaluated after the store release of the Android and iOS
+  apps (plan §4.3a); it needs its own staffing and estimate.
 - The `ANALYSIS-B1-*` documents take precedence over `docs/STATUS.md` and
   `docs/EVOLUTION.md`.
 - Google Drive precedes OneDrive in M2. Family Premium remains deferred.
@@ -31,7 +32,7 @@ directly responsible owner and a reviewer.
 
 | Role | Owns |
 |---|---|
-| Product owner | Scope and acceptance decisions; D11, DA2, DA5 and DA12 closure; milestone exits; public release approval |
+| Product owner | Scope and acceptance decisions (D11, DA2, DA5 and DA12 decided on 2026-10-08); milestone exits; public release approval |
 | Android lead | Private app architecture, Android composition root, navigation, platform APIs, integration and technical decisions |
 | Shared-core lead | Portable domain/application/storage changes in this repository; desktop compatibility and shared API versioning |
 | Feature developers | Vertical slices across shared core and Android UI/adapters, coordinated with the relevant lead |
@@ -47,7 +48,7 @@ must still be explicit for each milestone.
 | Stage | Work | Gate to proceed |
 |---|---|---|
 | P0 — Team readiness | Confirm private Android repository access, named role owners, available capacity, device/test access, and shared-core contribution/release workflow. Review the backlog against the approved UX requirements. | Team and repository ownership are clear; no code work is started from an unassigned or ambiguous slice. |
-| P1 — Resolve M1 entry inputs | Product owner closes D11 and DA5 (Play account/application ID decision) and confirms DA2 (export in M1, cloud backup in M2) and DA12 (onboarding acknowledgment), both adopted as the planning baseline. Separately schedule the deferred API 26 spike and state its result is required before claiming API 26 support. | D11, DA2, DA5 and DA12 are recorded as settled for the relevant M1 gate; spike has an owner and a future slot, but is not run by this plan. |
+| P1 — Prepare M1 entry inputs | D11, DA2, DA5 and DA12 are decided (2026-10-08). Create the personal Play account and reserve the application ID `com.vger70.medreminder`; add the strip target to the private repository (D11). Separately schedule the deferred API 26 spike and state its result is required before claiming API 26 support. | Play account and private-repository build rules ready; spike has an owner and a future slot, but is not run by this plan. |
 | M0 — Shared foundations | Deliver B0-01–04 in dependency order: profile/settings extraction, notification planner, Android consumption proof, then shared-core CI/release discipline. | Existing desktop behavior remains unchanged; Android builds against a pinned shared-core revision; portable CI is green. |
 | M1 — Standalone core | Deliver B1-01–09. Establish the shell and local data path first; develop medicine/regimen and package/intake flows alongside permission/reminder work after shared APIs are stable; complete export/import, security and recovery; then run the closed test on the closed testing track. | 14-day closed test passes on a phone without PC/account; no data loss across update, reboot, export/import; API 26 claim only after compatibility validation. |
 | M2 — Premium, cloud and household | Before entry, finish S11 billing spike, Android OAuth client work for S6/S7, Play merchant/trader setup and API 26 validation. Deliver individual Premium and entitlement states, then Google Drive backup/restore, OneDrive, pairing/sync, household and local deletion in that order as dependencies permit. | Offline, conflict, purchase/restore, entitlement lapse, provider recovery and device-removal scenarios preserve data and report accurate state. |
@@ -59,7 +60,7 @@ The existing plan estimates M0–M5 at 120–170 developer-days in total:
 M0 10–15, M1 35–50, M2 35–50, M3 15–20, M4 15–20, M5 10–15.
 These are effort ranges, not calendar dates. Convert them to a dated
 schedule only after the team, capacity, repository access and spike slots
-are known. Vital tracking (D.1) is excluded.
+are known. Evolution V (vital tracking) is excluded.
 
 ## 4. Parallel work and integration
 
@@ -116,8 +117,9 @@ Before implementation starts, the team should:
 
 1. Name the owners in §2 and confirm repository access for the private
    Android app and shared-core contribution path.
-2. Record the product decisions still needed for M1 entry (D11, DA5) and
-   the confirmation of DA2 and DA12 in the decision log.
+2. Create the personal Play account with the application ID
+   `com.vger70.medreminder` (DA5) and recruit at least 20 closed-test
+   testers, so that 12 remain opted in for 14 consecutive days.
 3. Assign an owner and proposed date to the deferred API 26 spike without
    starting it; schedule S11, S6/S7 Android OAuth work and Play merchant
    setup before M2.

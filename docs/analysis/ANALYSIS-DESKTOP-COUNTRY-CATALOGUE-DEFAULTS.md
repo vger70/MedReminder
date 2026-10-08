@@ -103,12 +103,12 @@ describe the country step and the "no catalogue" option.
 
 ## 4. Decisions
 
-| # | Decision | Options | Recommendation |
+| # | Decision | Options | Resolution |
 |---|---|---|---|
-| DD1 | Storage of the catalogue choice | New `ReferenceCatalogue` setting; sentinel value in `ReferenceCountry` | New setting (§3.2) |
-| DD2 | Countries offered | Every ISO country; catalogue countries plus EU/EEA | Every ISO country, so that R3 can return "none" |
-| DD3 | Area that selects EMA | EU/EEA (EMA centralised authorisations); euro area | EU/EEA: EMA authorisations follow the EU/EEA, not the currency |
-| DD4 | Country step at first run | Mandatory; optional with skip | Optional with skip |
+| DD1 | Storage of the catalogue choice | New `ReferenceCatalogue` setting; sentinel value in `ReferenceCountry` | **Decided 2026-10-08**: new setting (§3.2) |
+| DD2 | Countries offered | Every ISO country; catalogue countries plus EU/EEA | **Decided 2026-10-08**: every ISO country, so that R3 can return "none" |
+| DD3 | Area that selects EMA | EU/EEA (EMA centralised authorisations); euro area | **Decided 2026-10-08**: EU/EEA (27 EU members plus Iceland, Liechtenstein, Norway), not the euro area |
+| DD4 | Country step at first run | Mandatory; optional with skip | **Decided 2026-10-08**: optional; skipping means no catalogue |
 
 ---
 
@@ -127,3 +127,4 @@ describe the country step and the "no catalogue" option.
 ## 6. Change log for this document
 
 - 2026-10-08 — First version, from the DA3 revision of the Android plan.
+- 2026-10-08 — DD1–DD4 decided by the product owner.

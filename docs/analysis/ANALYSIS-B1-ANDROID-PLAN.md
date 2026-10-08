@@ -22,12 +22,25 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-08: revision 20, approved by the product owner on
+Status on 2026-10-08: revision 21, approved by the product owner on
 2026-10-08 (M3 → M4 → M5 sequence included). M1–M5 builds are
 pre-release builds on the Play testing tracks (§5.0); the public Play
 Store launch follows M5.
 Reading conventions: `[VERIFIED]` (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]` (not verified), **`[ANDROID EXPERT NOTE]`** (Technical integration/correction from senior Android platform review).
 Untagged statements are design proposals.
+
+### Scope boundary: Android release 1 and evolution V
+
+| | Android release 1 (this plan) | Evolution V (vital tracking) |
+|---|---|---|
+| Content | Milestones M0–M5: every applicable desktop feature on `main`, without vital-parameter tracking | D.1 (`ANALYSIS-D1-VITAL-TRACKING.md`): vital diary on the desktop, Android and iOS |
+| When | Now; public Play Store launch after M5 | Evaluated only after the store release of the Android and iOS apps (product owner, 2026-10-08) |
+| Vital data | None: no `vitals.db`, no vital screens, no vital transfer, no vital entries in the Privacy Policy or the Play data-safety form | Separate local `vitals.db`, outside `.mrz`, cloud backup and sync |
+| Effort | 120–170 developer-days (§5.1) | Not estimated; estimated when evolution V is scheduled |
+
+Every requirement, milestone, backlog item, UX requirement and estimate in
+the `ANALYSIS-B1-*` documents belongs to release 1 unless it names
+evolution V. §4.3a lists what release 1 must leave in place for it.
 
 ---
 
@@ -43,6 +56,7 @@ Untagged statements are design proposals.
 | A6 | The mobile apps (Android, later iOS) have a free core and a paid premium tier (subscription or lifetime purchase); the desktop stays free | Product owner, 2026-10-07 |
 | A7 | The code of the Android and iOS apps lives in a private repository; the desktop app stays open source in this repository | Product owner, 2026-10-07 |
 | A8 | Privacy by design: local-first storage, transparent onboarding privacy acknowledgment, and user-controlled data export/import | Legal Assessment, 2026-10-07 |
+| A9 | Release 1 contains no vital-parameter tracking; it is evolution V, evaluated after the store release on Android and iOS | Product owner, 2026-10-08 |
 
 What changes against B.1:
 
@@ -141,7 +155,7 @@ in the plan. "M" refers to the milestones of §5.
 | Planning | Export dates to a calendar (`.ics`) | Yes, share the file | M3 |
 | Views | Therapy timeline | Yes | M3 |
 | Views | Therapy report / card, print and PDF | PDF generated on the phone and shared (§4.6) | M3 |
-| Vitals | Not a desktop feature on `main`: D.1 (`ANALYSIS-D1-VITAL-TRACKING.md`) is designed, not implemented | Not in M0–M5; a later evolution evaluated after the store release on Android and iOS (§4.3a) | — |
+| Vitals | Not a desktop feature on `main`: D.1 (`ANALYSIS-D1-VITAL-TRACKING.md`) is designed, not implemented | Not in release 1; evolution V, on the desktop and the phones, after the store release on Android and iOS (§4.3a) | — |
 | Catalogue | Reference catalogue search per country, remote monthly feeds | Yes, data downloaded per country (§4.4) | M4 |
 | Catalogue | Barcode scan (webcam) and restock by scan | Yes, phone camera | M4 |
 | Catalogue | Barcode scan with a USB HID scanner | No: desktop accessory `[INFERRED]` | — |
@@ -225,16 +239,31 @@ Drive with the existing `IArchiveStorage` providers.
 - A **reminder** when no backup or export has been made for 30 days
   and sync is off: without a PC, a lost phone is lost data.
 
-### 4.3a Vital tracking (D.1) is outside M0–M5
+### 4.3a Vital tracking (D.1) is evolution V, outside release 1
 
 Vital-parameter tracking (`ANALYSIS-D1-VITAL-TRACKING.md`) is not part
-of the Android plan M0–M5. It is a later evolution, evaluated after the
-store release on Android and iOS (product owner, 2026-10-08). Until
-then the Android app has no `vitals.db`, no vital screens and no vital
-CSV/PDF transfer. The boundary D.1 defines (separate local database,
-outside `.mrz`, cloud backup and sync) remains the design baseline for
-that later evaluation. For the Android UI, `ANALYSIS-B1-UI-REQUIREMENTS.md`
-is authoritative.
+of release 1 (M0–M5). It is evolution V, for the desktop, Android and
+iOS together, evaluated only after the store release of the Android and
+iOS apps (product owner, 2026-10-08). Release 1 has no `vitals.db`, no
+vital screens, no vital CSV/PDF transfer and no reference to vital data
+in its store listing, data-safety form or Privacy Policy.
+
+Release 1 keeps evolution V possible without designing for it now:
+
+- `.mrz`, cloud backup and the sync model stay as they are; evolution V
+  adds a separate database and does not change these formats.
+- The onboarding acknowledgment records the policy version (UI-17), so
+  evolution V can ask for a new acknowledgment when the Privacy Policy
+  changes.
+- No vital placeholder, menu entry or premium offer appears in the
+  release 1 UI.
+
+When evolution V is scheduled, its entry includes: both apps on the
+store; the D.1 design re-checked against the shipped apps (MAUI UI per
+`ANALYSIS-B1-UI-REQUIREMENTS.md`, encrypted SQLite on Android and iOS,
+which no spike has validated yet); updated Privacy Policy, DPIA
+(`docs/DPIA-VITAL-TRACKING.md`) and store data-safety declarations; its
+own estimate and decisions (DV1–DV10 of D.1).
 
 ### 4.4 Catalogue on the phone
 
@@ -601,8 +630,8 @@ reader.
 
 ### M1 — Standalone core (first pre-release milestone)
 
-Entry: M0 merged; D11, DA2, DA5, DA12 decided (DA5 fixes the
-application id before the first upload); D13 selected provisionally
+Entry: M0 merged (D11, DA2, DA5 and DA12 were decided on 2026-10-08;
+DA5 fixes the application id `com.vger70.medreminder`); D13 selected provisionally
 (API 26), with its validation due before support is claimed and before
 M2; Play Console account; private repository created (A7). M1 and
 later milestones are pre-release builds (§5.0). D4 multi-device
@@ -719,7 +748,7 @@ by the product owner.
 | Milestone | Content | Entry | Effort `[INFERRED]` |
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
-| M1 | Standalone core, first pre-release milestone | M0; D11, DA2, DA5, DA12; D13/API 26 selected provisionally; Play account; private repository | 35–50 d |
+| M1 | Standalone core, first pre-release milestone | M0; D13/API 26 selected provisionally (D11, DA2, DA5, DA12 decided); Play account; private repository | 35–50 d |
 | M2 | Individual Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN, local data deletion | M1; D4; API 26 validated; S6/S7 Android halves; S11; trader status | 35–50 d |
 | M3 | Prescriptions, planning, views | M2 exit | 15–20 d |
 | M4 | Catalogue (DA3 defaults), scan, Italian services | M3 exit | 15–20 d |
@@ -728,7 +757,7 @@ by the product owner.
 Total for M0–M5 about 120–170 developer-days, against 60–90 for B.1 Phases 5
 and 7. The difference is the standalone requirement (M0, backup,
 phone-first household) and the features added to the desktop since
-2026-09-26. Vital tracking (D.1) is outside the total (§4.3a). The
+2026-09-26. Evolution V (vital tracking) is outside the total (§4.3a). The
 confirmed delivery order is M3 → M4 → M5 and the public Play Store
 launch follows M5 (DA4, 2026-10-08).
 
@@ -753,7 +782,8 @@ Infrastructure.Portable code, B.1 §7.5]`.
 
 ## 6. Decisions
 
-Still open from B.1: D11 (recommendation: reject, before M1). D4 was
+From B.1: D11 was decided on 2026-10-08 (reject; the private app
+repository adopts an equivalent strip target, see B.1 §16). D4 was
 decided on 2026-10-08. D13 selects Android API 26 provisionally; validate
 MAUI, alarm and Play compatibility in the M1 technical spike. iOS 15
 remains an inferred proposal and is outside this Android decision.
@@ -764,17 +794,17 @@ numbering; the D.1 vital-tracking decisions use the prefix DV):
 | # | Decision | Options | Recommendation |
 |---|---|---|---|
 | DA1 | The Android app works without a PC and without an account | Yes; no | **Requested by the product owner, 2026-10-06** |
-| DA2 | Backup on a standalone phone | Export only; export and cloud backup; Android Auto Backup | Export in M1, cloud backup in M2; Auto Backup stays off. **Adopted as the planning baseline** (§4.3, M1, M2); product-owner confirmation required at the M1 entry |
+| DA2 | Backup on a standalone phone | Export only; export and cloud backup; Android Auto Backup | **Decided 2026-10-08**: export in M1, cloud backup in M2; Auto Backup stays off |
 | DA3 | Catalogue, language and country parity with desktop | Country/catalogue/language support differs from desktop; same support as desktop | **Decided 2026-10-08; revised 2026-10-08**: same sources (IT, EU, ES, FR, US) and languages (it, en, fr, es, de) as the desktop. UI language: system language if supported, English otherwise; user-changeable; independent of the country. Catalogue from the reference country: national catalogue if one exists; otherwise EMA for an EU/EEA country; otherwise no catalogue and manual entry. Android remains usable worldwide; catalogues are optional, public and redistributable. Details in §4.4; desktop integration in `ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md`. |
 | DA4 | Order of M3–M5 and public launch | M3 → M4 → M5; M5 before M3/M4 | **Decided 2026-10-08**: M3 → M4 → M5; M1–M5 are pre-release builds on the testing tracks (§5.0); public Play Store launch only after M5. |
-| DA5 | Play account type and application id | Personal; organization (D-U-N-S); id such as `com.vger70.medreminder` | Product owner; the id cannot change after the first upload |
+| DA5 | Play account type and application id | Personal; organization (D-U-N-S); id such as `com.vger70.medreminder` | **Decided 2026-10-08**: personal account; application id `com.vger70.medreminder` (cannot change after the first upload). A personal account needs the closed test of §5.0 (at least 12 testers for 14 consecutive days) before production access |
 | DA6 | Free and premium split | §4.8 table; other | **Decided 2026-10-07**: §4.8 table |
 | DA7 | Prices | € 1.99 / 20.99 / 59.99; € 1.99 / 17.99 / 49.99 with a 14-day trial | **Decided 2026-10-07**: € 1.99 / 17.99 / 49.99 with a 14-day trial |
 | DA8 | Licence of the mobile app code | Apache-2.0 in this repository; private repository, proprietary | **Decided 2026-10-07**: private repository for the Android and iOS apps; desktop and shared core stay Apache-2.0 here (A7) |
 | DA9 | Donation links on mobile | Keep; drop | **Decided 2026-10-07**: drop |
 | DA10 | Premium across a family | Per store account; family tier granted through the household; any premium phone covers its household | **Decided 2026-10-08**: defer family products and grants until after M2; M2 offers individual products, restorable on phones using the same Play account |
 | DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | **Decided 2026-10-07**: free, scan stays premium (§4.8) |
-| DA12 | GDPR / Store Onboarding | Explicit privacy acknowledgment banner; hidden in settings | Explicit acknowledgment, without claiming it is always GDPR consent (§4.1). **Adopted as the planning baseline** (UI-00, UI-17); product-owner confirmation required at the M1 entry |
+| DA12 | GDPR / Store Onboarding | Explicit privacy acknowledgment banner; hidden in settings | **Decided 2026-10-08**: explicit acknowledgment at first start, without claiming it is always GDPR consent (§4.1, UI-00, UI-17) |
 | **DA13** | **Battery Optimization Handling** | No prompt; contextual optional guidance to battery settings | **Decided 2026-10-08**: show a contextual, non-blocking invitation to Android battery settings when OS restrictions threaten reminders or sync; declining keeps the app usable and explains possible delays. This guidance cannot guarantee timely background work. |
 
 ---
@@ -813,8 +843,8 @@ for Android, superseded by this document.
 - `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` §10 and §13 (H6): the phone
 sends email from M5, not from B.1 Phase 7; household creation, join,
 roles and PIN on the phone are part of M2.
-- `ANALYSIS-B1-MOBILE-SYNC.md` §16: D11 is needed before M1. D4 is
-  decided; validate the provisional API 26 floor during the M1 spike.
+- `ANALYSIS-B1-MOBILE-SYNC.md` §16: D11 and D4 decided; validate the
+  provisional API 26 floor during the M1 spike.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §10 (donation links) and §16 (D14): no
 donation links on Android or iOS (DA9); D14 is settled by it.
 - `ANALYSIS-B1-UI-REQUIREMENTS.md`: selected Daily overview,
@@ -823,8 +853,9 @@ donation links on Android or iOS (DA9); D14 is settled by it.
   private Android UI.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §8.4: the designated mail device is
   superseded by the household master (household R5, C4); backlog B5-03.
-- `ANALYSIS-D1-VITAL-TRACKING.md` §6: Android vital tracking is
-  evaluated after the store release; decisions renumbered DV1–DV10.
+- `ANALYSIS-D1-VITAL-TRACKING.md` and `docs/DPIA-VITAL-TRACKING.md`:
+  D.1 as a whole (desktop and mobile) is evolution V, after the store
+  release; decisions renumbered DV1–DV10.
 - `ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md`: desktop integration
   of the DA3 country and catalogue defaults.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §16: provider
@@ -838,6 +869,13 @@ donation links on Android or iOS (DA9); D14 is settled by it.
 Numbering note: two entries carry revision 14 and none carries
 revision 17; the numbers are kept as recorded.
 
+- **2026-10-08 — revision 21:** Decisions D11 (reject; equivalent strip
+  target in the private repository), DA2, DA5 (personal account,
+  `com.vger70.medreminder`) and DA12 recorded. Scope boundary between
+  release 1 (M0–M5, no vital data) and evolution V (D.1 on desktop,
+  Android and iOS, after the store release) added; requirement A9;
+  §4.3a rewritten with the release 1 constraints and the evolution V
+  entry.
 - **2026-10-08 — revision 20:** Consistency review. DA3 revised: UI
   language from the system (English fallback), catalogue from the
   reference country (national, else EMA in the EU/EEA, else none), desktop
