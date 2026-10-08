@@ -184,7 +184,9 @@ to Android and iOS.
 - **Phase 4 — re-evaluate on data.** iCloud on Windows stays on the
   synced-folder model unless Apple publishes a supported Windows SDK.
 
-Priority among providers: OneDrive, then Google Drive, then Dropbox.
+Current Android priority among providers: Google Drive, then OneDrive;
+Dropbox remains a later option. The desktop transports were implemented
+in their prior OneDrive-first order.
 The `.mrz` archive format stays the interoperability contract.
 
 **Mobile strategy.** The first B.1 release should use the platform
@@ -197,7 +199,8 @@ requirement for it.
 
 **Update 2026-09-26.** B.1 with mandatory synchronization creates that
 requirement: Phase 2 (OneDrive, then Google Drive) is absorbed by B.1
-Phase 4 (`ANALYSIS-B1-MOBILE-SYNC.md` §5.8, §13).
+Phase 4 (`ANALYSIS-B1-MOBILE-SYNC.md` §5.8, §13). This is the desktop
+implementation order recorded below.
 
 **Update 2026-09-28.** Shipped: OneDrive (B.1 Phase 4a) and Google
 Drive (Phase 4b), for both cloud backups and sync, in v2.8.0. Only
@@ -206,6 +209,9 @@ the optional Phase 3 providers remain.
 **Update 2026-10-01.** Phase 2 is recorded as shipped in
 `EVOLUTION-DONE.md` §6. With a shared installation only the master
 device writes the cloud backup (household step H4a).
+
+**Update 2026-10-08.** The product owner set Google Drive as the first
+provider for Android, followed by OneDrive; Dropbox remains later.
 
 ---
 
