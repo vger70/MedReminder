@@ -282,7 +282,7 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, proposed) | Standalone Android app with every applicable desktop feature, guided setup included: M0 portability refactor 2 and notification planner; M1 standalone core (first release); M2 premium infrastructure and family tier, cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 catalogue, scan, Italian services; M5 email; free core and premium tier (§4.8) | 120–170 d | D11, D13, DA2, DA5 (before M1), D4, DA10 (before M2), DA3, DA4 (before M3–M5) (DA1, DA6–DA9, DA11 decided); trader status and tax advice; private repository for the app; Play Console account (spikes S1–S5 and S8 done) |
+| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, approved sequence) | Standalone Android app with every applicable desktop feature: M0 portability refactor 2 and notification planner; M1 standalone core; M1b local vital tracking (D.1, separately estimated); M2 individual Premium only, cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 desktop-parity catalogues and scan; M5 email; all M1–M5 builds for internal testing; public Play Store launch after M5 | 120–170 d for M0–M5; M1b not estimated | D11, DA2, DA5 (before M1); validate provisional D13/API 26 before claiming support; S11, S6/S7 Android OAuth, trader/payment setup (before M2); final privacy/legal and Play release checks after M5; private app repository (spikes S1–S5 and S8 done) |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | iOS feature parity (for Android absorbed by M2–M5); the state-hash check is not implemented on any device and stays a B.1 item | not re-estimated | Phase 6; D14 |
 
@@ -301,9 +301,13 @@ Open prerequisites and debts inside B.1:
   `SCHEDULE_EXACT_ALARM` granted by the user (§18.5). S8: the
   15-minute WorkManager job runs every 1 to 4 hours, so background sync
   is best effort (§18.8). S6 and S7 lack their Android half.
-- **Decisions open**: D4 (notification defaults per device), D11
-  (strip-target exclusion for mobile; S4 passed, recommendation:
-  reject), D13 (minimum OS versions), D14 (donation links on iOS).
+- **Decisions open**: D11 (strip-target exclusion for mobile; S4 passed,
+  recommendation: reject) and D14 (donation links on iOS). DA3 (desktop
+  parity including ES and US catalogues; country-based catalogue/language
+  defaults with EMA/English fallback) and DA4 (M3 → M4 → M5;
+  public launch after M5) were decided on 2026-10-08. D4 and DA13 are
+  decided; Android API 26 is the provisional D13 floor, pending the
+  technical spike before support is claimed.
 - **Known sync limit closed** (shared by OneDrive and Google Drive): a
   device that joined while the listing lagged, while another device
   compacted, ended in `RebuildRequired`. The join now waits until the
@@ -314,8 +318,9 @@ Open prerequisites and debts inside B.1:
 
 Total remaining B.1 effort: about 120–170 developer-days for Android
 (M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, which replace Phases 5 and 7
-for Android) plus 15–25 for iOS (Phase 6), whose estimate predates the
-standalone and premium requirements `[INFERRED]`.
+for Android; M1b is separate and not estimated) plus 15–25 for iOS
+(Phase 6), whose estimate predates the standalone and premium
+requirements `[INFERRED]`.
 
 ### 3.2 Other decided items
 
@@ -415,8 +420,8 @@ profile operation schemas 4 and 5).
    wanted (§3.5).
 3. Website content refresh for v2.7–v2.16; the screenshots in
    particular predate the new main window and dark mode.
-4. Mobile: the Android spikes are done (S1–S5, S8). Approve the
-   standalone Android plan (`ANALYSIS-B1-ANDROID-PLAN.md`), then decide
-   D11, D13 and DA1–DA5 (DA5 fixes the application id) before M1, D4
-   before M2. Independent
-   of items 1–3.
+4. Mobile: the Android spikes S1–S5 and S8 are done. The Android plan
+   and DA3/DA4 decisions were approved on 2026-10-08. Resolve D11, DA2
+   and DA5 before M1; validate the provisional API 26 floor in the
+   deferred technical spike; build M1–M5 for internal testing and
+   publish to Play only after M5. Independent of items 1–3.

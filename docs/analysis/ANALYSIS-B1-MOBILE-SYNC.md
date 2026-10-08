@@ -966,10 +966,14 @@ change.
 
 ### 8.3 Duplication policy
 
-Per device and per kind, the user chooses whether that device notifies
-(D4 proposes: dose reminders on the phone, low-stock on every device).
-An intake recorded on one device suppresses the pending dose reminder
-on the others after the next sync. Sync latency is minutes on
+By default, dose reminders are delivered by the phone on which they
+are scheduled; low-stock alerts are delivered on every paired device.
+The user can override notification delivery per device and kind.
+Medicine details on the lock screen are hidden by default and may be
+shown using a per-device control. Android's own visibility settings may
+also affect displayed details. These D4 defaults were selected on
+2026-10-08. An intake recorded on one device suppresses the pending dose
+reminder on the others after the next sync. Sync latency is minutes on
 foreground devices and OS-dependent in background, so a duplicate
 reminder is possible and accepted.
 
@@ -1085,7 +1089,7 @@ simulation harness covers the same properties empirically]`.
 |---|---|---|---|
 | Divergence bug in merge or derivation | Medium | High | Pure Domain rules; convergence simulation in CI; state-hash exchange between devices (each device publishes, per applied vector, a hash of its replicated state **and** of the resolved current values, derived rows excluded; mismatch raises an error and offers re-bootstrap). A hash of the version sets alone does not detect a wrong winner selection `[VERIFIED — S9 negative control]` |
 | Ledger refactor changes existing numbers | Medium | High | Cutoff (§3.5); parity tests; refactor shipped (Phase 2) before sync |
-| Provider API limits, scope policies, OAuth verification | Medium `[UNCERTAIN]` | Blocking per provider | Spikes S6, S7; OneDrive first; `LocalFolder` fallback on desktop |
+| Provider API limits, scope policies, OAuth verification | Medium `[UNCERTAIN]` | Blocking per provider | Spikes S6, S7; Google Drive first for Android, then OneDrive; `LocalFolder` fallback on desktop |
 | Background sync on mobile too infrequent | High | Stale data, duplicate reminders | Foreground sync on open; status always visible; accepted duplication (§8.3) |
 | Exact alarms denied | High on Android 14+ | Late reminders | Explained permission request; inexact fallback |
 | Passphrase loss | Medium | Remote data unreadable | QR pairing; recovery sheet; local databases on each device remain usable |
@@ -1110,8 +1114,10 @@ place relative to A2 (`EVOLUTION.md` §2.0).
 
 **Actions**
 
-1. Decide the open items needed before Phase 1 (D9) and before Phase 5
-   (D4, D11, D13); D1–D3, D5, D6, D8, D10, D15 decided on 2026-09-26.
+1. Decide the remaining open items needed before Phase 1 (D9) and before
+   Phase 5 (D11). D4 was decided 2026-10-08; validate the provisional
+   Android API 26 floor in the M1 technical spike (D13). D1–D3, D5,
+   D6, D8, D10, D15 were decided on 2026-09-26.
 2. Spikes (throw-away branches; results appended to §18):
    - S1 AES-GCM on Android (`AesGcm.IsSupported`, decrypt a desktop
      archive).
@@ -1309,8 +1315,9 @@ For Android, Phases 5 and 7 are replaced by milestones M0–M5 of
 a PC (product owner, 2026-10-06) and covers every current desktop feature
 that applies to a phone.
 
-**Entry**: Phase 4 exit for at least OneDrive; D1, D3, D4, D13
-decided; Play Console account.
+**Entry**: Phase 4 exit with Google Drive available; D1, D3, D4, D13
+decided; Play Console account. Android provider priority is Google
+Drive, then OneDrive.
 
 **Actions**: MAUI project; composition root; screens §9.1 items 1–5, 8–10;
 QR pairing scanner; provider sign-in, after the Android halves of S6
@@ -1409,14 +1416,17 @@ iCloud transport; tablet-specific layouts; web client.
 ## 16. Decisions still to confirm
 
 Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15; on
-2026-09-27: D7. Still open: D4, D11, D12, D13, D14.
+2026-09-27: D7. On 2026-10-08, D4 was decided and Android API 26 was
+selected provisionally in D13, pending M1 technical validation. Still
+open: D11,
+D12, D14. The iOS 15 D13 proposal remains inferred and unmeasured.
 
 | # | Decision | Options | Proposal | Needed by |
 |---|---|---|---|---|
 | D1 | Platforms and order | Android then iOS; both; Android only | **Decided 2026-09-26**: Android, then iOS | Phase 0 |
 | D2 | UI framework | MAUI; Avalonia | **Decided 2026-09-26**: MAUI | Phase 0 |
-| D3 | Providers and order | OneDrive, Google Drive, Dropbox | **Decided 2026-09-26**: OneDrive, then Google Drive; Dropbox later | Phase 0 |
-| D4 | Notification defaults per device | Proposal in §8.3 | Dose on phone, low-stock everywhere | Phase 5 |
+| D3 | Providers and order | OneDrive, Google Drive, Dropbox | Decided 2026-09-26: OneDrive, then Google Drive; **updated 2026-10-08**: Google Drive first for Android, then OneDrive; Dropbox later | Phase 0 |
+| D4 | Notification defaults per device | Dose on phone; low-stock everywhere; lock-screen details hidden by default | **Decided 2026-10-08**: per-device and per-kind overrides; lock-screen detail can be enabled per device | Phase 5 |
 | D5 | Relative order with A2 | A2 first; B.1 first | **Decided 2026-09-26**: A2 phase 1 has shipped (PR #72); A2 phase 2 (webcam) is independent and may run after B.1 or in parallel | Phase 0 |
 | D6 | Retroactive changes after cutoff (schedule rows, suspensions, therapy end date) re-derive past days; frozen days never change | Yes; no (freeze on first derivation) | **Decided 2026-09-26**: yes | Phase 2 |
 | D7 | Conflict review scope | Show all LWW losses; show only listed cases (§4.5) | **Decided 2026-09-27**: §4.5 list | Phase 3 |
@@ -1425,7 +1435,7 @@ Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15; on
 | D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | **Decided 2026-09-26**: separate | Phase 3 |
 | D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | S4 passed (§18.4): no exclusion needed; reject | Phase 5 |
 | D12 | iCloud transport | Plan; exclude | Exclude | Phase 0 |
-| D13 | Minimum OS versions | — | Android 8.0 (API 26), iOS 15 `[INFERRED — not measured]` | Phase 5 |
+| D13 | Minimum OS versions | — | **Android decided 2026-10-08**: 8.0 (API 26), provisional pending M1 MAUI/alarm/Play validation; iOS 15 remains `[INFERRED — not measured]` | M1 validation (Android); Phase 7 (iOS) |
 | D14 | Donation links on iOS | Include; exclude | Exclude unless verified compliant | Phase 7 |
 | D15 | Automatic consumption for inactive periods | None on inactive days (activity history); today's catch-up on reactivation | **Decided 2026-09-26**: no automatic consumption on inactive days | Phase 2 |
 

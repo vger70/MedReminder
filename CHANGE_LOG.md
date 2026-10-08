@@ -30,6 +30,47 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #214 — Fix the Android UI proposal and refine its requirements
+
+Link: [vger70/MedReminder#214](https://github.com/vger70/MedReminder/pull/214)
+Branch: `ui-requirements`
+
+### Fixed
+
+- The slide 5 PNG fallback in the Android UI proposal was empty in
+  viewers that do not render the embedded SVG; replace it so the three
+  screen mockups remain visible.
+
+### Docs
+
+- Review and expand `ANALYSIS-B1-UI-REQUIREMENTS.md` across M1–M5:
+  settings and privacy, backup and sync flows, Free/Premium gates,
+  entitlements, billing states, and acceptance criteria for each planned
+  feature area; final review closes coverage gaps for backup reminders,
+  M3 prescription links/actions, M4 shortage lists, Premium lapse and
+  master transfer, and privacy/deletion scope.
+- Record product-owner decisions for notification distribution and
+  lock-screen privacy (D4), provisional Android API 26 minimum pending
+  M1 validation (D13), contextual non-blocking battery guidance (DA13),
+  and deferral of family Premium beyond M2 (DA10). Specify local-only
+  data deletion and its distinction from cloud/household removal.
+- Add `ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md`: implementation
+  slices, dependencies, UX acceptance links, milestone gates, and a
+  recommended country/catalogue decision for M4. Keep the API 26 spike
+  deferred as requested.
+- Add `ANALYSIS-B1-ANDROID-TEAM-PLAN.md`: role ownership, readiness gates,
+  milestone sequencing, parallel work, integration/review workflow, and
+  immediate planning actions before implementation.
+- Align `docs/STATUS.md` with the current Android decisions and the
+  separate, unestimated M1b vital-tracking milestone.
+- Record DA3 desktop parity for supported catalogues, locales and
+  countries without restricting worldwide app use. Clarify that country
+  selects the matching national catalogue and default language (including
+  Spain → ES/Spanish and USA → US/English), with EMA/English fallback
+  where no national catalogue is available; record DA4 as M3 → M4 → M5,
+  with internal-only milestone
+  builds and public Play Store launch after M5.
+
 ## PR #213 — Add D.1 vital-tracking design and DPIA
 
 Link: [vger70/MedReminder#213](https://github.com/vger70/MedReminder/pull/213)
