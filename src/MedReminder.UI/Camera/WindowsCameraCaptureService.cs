@@ -185,11 +185,20 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
     // must not prevent the user from scanning with the current image.
     private async Task EnableContinuousFocusIfAvailableAsync(MediaCapture capture)
     {
-        var focus = capture.VideoDeviceController.FocusControl;
-        if (!focus.Supported || !focus.SupportedFocusModes.Contains(FocusMode.Continuous)) return;
-
         try
         {
+            var focus = capture.VideoDeviceController.FocusControl;
+            if (!focus.Supported)
+            {
+                _log.LogInformation("Camera scan: autofocus control is not supported by this camera.");
+                return;
+            }
+            if (!focus.SupportedFocusModes.Contains(FocusMode.Continuous))
+            {
+                _log.LogInformation("Camera scan: continuous autofocus is not supported by this camera.");
+                return;
+            }
+
             await focus.UnlockAsync();
             focus.Configure(new FocusSettings
             {
@@ -201,7 +210,9 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "Camera scan: continuous autofocus could not be enabled; continuing with the current focus.");
+            _log.LogWarning(
+                "Camera scan: continuous autofocus could not be enabled ({ErrorMessage}); continuing with the current focus.",
+                ex.Message);
         }
     }
 

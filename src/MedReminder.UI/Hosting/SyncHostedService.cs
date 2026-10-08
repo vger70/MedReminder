@@ -184,7 +184,7 @@ internal sealed class SyncHostedService : BackgroundService
         {
             // The folder or the provider may be offline; the next run retries.
             _status.ReportError(_clock.GetUtcNow(), ex.Message);
-            _log.LogWarning(ex, "Sync run failed.");
+            _log.LogWarning("Sync run failed: {ErrorMessage}", ex.Message);
             return null;
         }
         finally
