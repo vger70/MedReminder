@@ -30,6 +30,36 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #218 — Move the profile registry and settings stores to Infrastructure.Portable
+
+Link: [vger70/MedReminder#218](https://github.com/vger70/MedReminder/pull/218)
+Branch: `claude/b0-01-portable-profile-stores`
+
+### Changed
+
+- **Moved** `ProfileRegistry`, `ProfileSettingsStore`, `InstallationSettingsStore` and `SmtpSettings` to `MedReminder.Infrastructure.Portable`, so the Android app can reuse them (Android plan M0, backlog B0-01). No behavior change on the desktop.
+- `CurrentProfile` and `SyncProfileStatus` take the profiles root from the host; the desktop passes `AppDataPaths.GetProfilesRootDirectory()`. The sync status check no longer creates an empty profile folder.
+- The registry and installation settings tests run in the portable test project, on any OS; new tests cover `CurrentProfile`, `ProfileSettingsStore` and `SyncProfileStatus`.
+
+### Docs
+
+- `ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md`: B0-01 marked implemented. `ANALYSIS-B1-MOBILE-SYNC.md`: project table and port mapping updated.
+
+---
+
+## PR #216 — Record the open B.1 decisions
+
+Link: [vger70/MedReminder#216](https://github.com/vger70/MedReminder/pull/216)
+Branch: `claude/b1-docs-review`
+**Status:** merged (2026-10-08)
+
+### Docs
+
+- Recorded decisions D11, D12, DA2, DA5, DA12 and DA14 in the B.1 Android documents; separated release 1 (M0–M5) from evolution V (vital-parameter tracking).
+- Aligned the B.1 Android documents after a consistency review and removed the compatibility check for older desktops from the country and catalogue defaults analysis.
+
+---
+
 ## PR #215 — Improve webcam barcode scanning
 
 Link: [vger70/MedReminder#215](https://github.com/vger70/MedReminder/pull/215)
