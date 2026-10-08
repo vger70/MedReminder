@@ -182,6 +182,13 @@ medicine/list or snooze for 15 minutes; from M3, the prescription action
 may prepare a request. These actions shall not silently register an
 intake or submit a prescription request.
 
+By default, dose reminders are delivered by the phone on which they
+are scheduled; low-stock alerts are delivered on every paired device.
+Users may override these defaults per device and notification kind.
+Medicine details on the lock screen are hidden by default; users may
+change this per device. Settings shall explain that Android may apply
+its own lock-screen visibility rules.
+
 **Acceptance:** denying a permission does not block access to app data;
 the current reminder capability and route to Android settings remain
 clear.
@@ -286,13 +293,11 @@ offer the planned master-transfer path before sync-dependent automation
 stops. Do not delete extra-profile data or create a data hostage. Test
 accounts shall use Play license testing, not an in-app tester bypass.
 
-One individual purchase shall be restorable on phones using the same
-Google Play account, as specified in the Android plan. Family grants
-are separate from store-account restore and remain conditional on DA10.
-
-The family grant flow and family offer prices are conditional on DA10
-being closed in the Android plan. Until then, do not present proposed
-family prices as final or imply a family entitlement is available.
+M2 shall offer individual Play products only. One individual purchase
+shall be restorable on phones using the same Google Play account, as
+specified in the Android plan. A family tier, household grants, and
+family prices are deferred until after M2 and shall not be shown as
+available offers or implemented as M2 entitlements.
 
 **Acceptance:** every gate has an accessible explanation and a safe
 back/cancel path; entitlement refresh, purchase, restore, offline,
@@ -368,13 +373,24 @@ provide:
   and profile sync, including the provider currently configured and the
   fact that Android system backup is disabled for the profile database.
 - Direct routes to encrypted export/import, provider/sync settings,
-  app lock, notification permissions, and Android's lock-screen
-  notification visibility settings.
-- Notification privacy guidance: do not promise that medicine details
-  are hidden when Android allows notification content on the lock
-  screen; explain how to review OS visibility. Any in-app control or
-  default for redacting medicine names remains subject to the open
-  notification-default decision D4.
+  app lock, notification preferences, permissions, and Android's
+  lock-screen notification visibility settings.
+- Notification privacy guidance: medicine details are hidden by
+  default on the lock screen, with a per-device in-app control to show
+  them. Explain that Android's own visibility settings may also affect
+  what appears.
+- An in-app local-data deletion flow. Let the user select the active
+  profile's local data or all MedReminder profile data stored locally
+  on this device, show the exact scope and affected profile/device,
+  suggest exporting an encrypted `.mrz` file first, and require an
+  explicit confirmation. Explain that this removes the selected local
+  copy only; it does not delete provider/cloud copies or data on other
+  devices. For a synced profile, explain that its cloud copy remains and
+  could be downloaded again if the device reconnects or rejoins. Prevent
+  background sync from immediately recreating the deleted local copy.
+  This is distinct from removing a device or profile from a household.
+  Do not claim secure erasure or remote deletion unless the underlying
+  operation guarantees it.
 - An explanation before handing data to another app through the share
   sheet. The operating system's destination app controls the shared
   copy after handoff.
@@ -391,11 +407,11 @@ the provider operation confirms it.
 data is stored, whether sync is enabled, what is sent to a provider,
 and how to export data without buying Premium.
 
-The Android plan does not yet define an in-app delete-all/local-profile
-data flow. This is an open product decision, distinct from removing a
-device from a household; do not imply that disconnecting sync deletes
-local or provider data. Resolve the behavior and confirmation copy
-before implementing a destructive data-removal action.
+Deletion shall respect the active profile and household role
+permissions. If the user cannot delete the selected scope, explain who
+can do so. The confirmation and completion states shall distinguish
+local removal from remote/provider deletion; disconnecting sync alone
+shall not be described as deleting either copy.
 
 ### UI-18 — Settings map and support
 
@@ -404,13 +420,19 @@ Use stable, named groups under **More → Settings**:
 | Group | Entries and milestone |
 |---|---|
 | Profile and security | Active profile and switch (M2); roles/PIN (M2); biometric app lock (M1) |
-| Reminders | Notification preferences (D4); notification and exact-alarm permission status; route to Android settings; battery-optimization guidance only if DA13 is approved |
+| Reminders | Per-device, per-kind notification preferences (dose on phone; low-stock on every device by default); lock-screen detail visibility (hidden by default); notification and exact-alarm permission status; Android settings route; contextual battery-restriction guidance |
 | Appearance and language | Follow system light/dark appearance and text scaling; language selector (M1, five supported languages) |
 | Backup and sync | `.mrz` export/import (M1); provider, sync, conflicts and devices (M2); cloud backup and restore (M2) |
 | Privacy and data | UI-17 privacy summary and data routes |
 | Premium | Entitlement, offer, purchase/restore and Play management (M2 onward) |
 | Email | SMTP and recipient settings (M5) |
 | Help and about | Help, version, privacy policy, open-source/third-party licences |
+
+When Android battery restrictions may delay reminders or sync, the app
+shall show a contextual, non-blocking invitation to review the relevant
+system setting. The user may decline and continue using the app; explain
+the possible delay and provide a route back to the setting without
+repeatedly interrupting unrelated tasks.
 
 Do not put Premium controls in place of general settings or make privacy
 information conditional on purchase. Settings reachable on a shared
@@ -539,21 +561,21 @@ feature inventory to the requirement that owns its UI behavior.
 | Milestone | UX exit condition |
 |---|---|
 | M1 — Standalone core | A user can set up or restore from `.mrz`, manage therapies and stock, record/retract intakes, receive local medicine reminders, change core settings, export data, and continue offline without a cloud account or purchase. After 30 days without export/backup while sync is off, the reminder offers export without blocking use. |
-| M2 — Cloud and Premium | A user can buy/restore Premium, create/join an installation, use Google Drive before OneDrive, review sync/conflict/device state, use multiple profiles/roles, and back up/restore without losing local data when billing or network is unavailable. |
+| M2 — Cloud and Premium | A user can buy/restore individual Premium, create/join an installation, use Google Drive before OneDrive, review sync/conflict/device state, use multiple profiles/roles, delete a selected local copy with accurate cloud-copy warnings, and back up/restore without losing local data when billing or network is unavailable. |
 | M3 — Prescriptions and planning | Premium prescription and planning flows work with correct reminder states; free read-only timeline remains available; PDF/share and calendar actions explain the handoff. |
 | M4 — Catalogue and scan | Catalogue search/link and safety information remain free; scan is Premium with manual alternatives; offline catalogue limitations are clear. |
 | M5 — Email | SMTP and recipient setup is understandable, delivery timing is described as best effort, and Premium expiry does not affect ordinary medicine reminders. |
 
-The following decisions still constrain final copy or behavior and must
-not be presented as settled product behavior: D4 notification defaults,
-D13 minimum Android version, DA10 family grant/product and proposed
-family prices, and DA13 battery-optimization guidance. Country/catalogue
-and milestone-order decisions remain governed by DA3 and DA4 in the
-Android plan. The plan also needs to decide whether the app exposes an
-in-app delete-all/local-profile action and what happens to related
-provider data. Exact prices and Play-provided renewal/cancellation terms
-must come from the current store product data at runtime, not static UI
-copy.
+Decisions recorded on 2026-10-08: D4 notification distribution defaults
+and lock-screen privacy; Android API 26 as the provisional D13 minimum,
+subject to the M1 technical spike; DA13 contextual, non-blocking battery
+guidance; and deferral of DA10's family tier until after M2. The local
+data deletion behavior is specified in UI-17 and affects only the
+selected device's local copy. Country/catalogue and milestone-order
+decisions remain governed by DA3 and DA4 in the Android plan. Before
+release, complete the privacy/legal review and verify API 26 support.
+Exact prices and Play-provided renewal/cancellation terms must come from
+current store product data at runtime, not static UI copy.
 
 The product owner changed provider priority on 2026-10-08: Google Drive
 first, OneDrive second. Dropbox remains outside the current scope.

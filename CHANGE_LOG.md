@@ -49,6 +49,11 @@ Branch: `ui-requirements`
   feature area; final review closes coverage gaps for backup reminders,
   M3 prescription links/actions, M4 shortage lists, Premium lapse and
   master transfer, and privacy/deletion scope.
+- Record product-owner decisions for notification distribution and
+  lock-screen privacy (D4), provisional Android API 26 minimum pending
+  M1 validation (D13), contextual non-blocking battery guidance (DA13),
+  and deferral of family Premium beyond M2 (DA10). Specify local-only
+  data deletion and its distinction from cloud/household removal.
 
 ---
 
