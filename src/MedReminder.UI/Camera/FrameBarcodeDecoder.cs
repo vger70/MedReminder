@@ -10,13 +10,15 @@ namespace MedReminder.UI.Camera;
 // See docs/analysis/ANALYSIS-A2-BARCODE-SCAN.md §6.
 internal sealed class FrameBarcodeDecoder
 {
+    private byte[] _mirrored = [];
     private readonly BarcodeReaderGeneric _reader = new()
     {
         AutoRotate = true,
         Options = new DecodingOptions
         {
             TryHarder = true,
-            TryInverted = false,
+            // Packaging can be glossy or use light bars on a dark field.
+            TryInverted = true,
             // Restricting the formats cuts decode time and ignores
             // marketing QR codes on the packaging. CODE_39 carries
             // Code 32; the parser converts it (§2.2).
@@ -30,6 +32,21 @@ internal sealed class FrameBarcodeDecoder
     {
         var source = new RGBLuminanceSource(bgra32, width, height, RGBLuminanceSource.BitmapFormat.BGRA32);
         var result = _reader.Decode(source);
+        // Some camera drivers expose a horizontally mirrored preview
+        // stream. Decode the original first (the common case), then try
+        // a mirrored copy before giving up.
+        if (result is null)
+        {
+            if (_mirrored.Length != bgra32.Length) _mirrored = new byte[bgra32.Length];
+            var rowLength = width * 4;
+            for (var y = 0; y < height; y++)
+            {
+                var row = y * rowLength;
+                for (var x = 0; x < width; x++)
+                    Buffer.BlockCopy(bgra32, row + x * 4, _mirrored, row + (width - 1 - x) * 4, 4);
+            }
+            result = _reader.Decode(new RGBLuminanceSource(_mirrored, width, height, RGBLuminanceSource.BitmapFormat.BGRA32));
+        }
         if (result is null || string.IsNullOrEmpty(result.Text)) return null;
 
         var symbology = Map(result.BarcodeFormat);

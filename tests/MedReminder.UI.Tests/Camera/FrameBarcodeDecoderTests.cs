@@ -66,6 +66,39 @@ public sealed class FrameBarcodeDecoderTests
     }
 
     [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void Mirrored_or_inverted_camera_frame_is_decoded(bool mirror, bool invert)
+    {
+        var writer = new BarcodeWriterPixelData
+        {
+            Format = BarcodeFormat.CODE_39,
+            Options = new EncodingOptions { Width = 480, Height = 160, Margin = 10 },
+        };
+        var image = writer.Write("0D4YD5");
+        var pixels = (byte[])image.Pixels.Clone();
+        if (mirror)
+        {
+            var rowBytes = image.Width * 4;
+            var copy = (byte[])pixels.Clone();
+            for (var y = 0; y < image.Height; y++)
+                for (var x = 0; x < image.Width; x++)
+                    Buffer.BlockCopy(copy, y * rowBytes + x * 4, pixels, y * rowBytes + (image.Width - 1 - x) * 4, 4);
+        }
+        if (invert)
+            for (var i = 0; i < pixels.Length; i += 4)
+            {
+                pixels[i] = (byte)~pixels[i];
+                pixels[i + 1] = (byte)~pixels[i + 1];
+                pixels[i + 2] = (byte)~pixels[i + 2];
+            }
+
+        var raw = new FrameBarcodeDecoder().Decode(pixels, image.Width, image.Height);
+        raw.Should().NotBeNull();
+        Parse(raw!.Value).NationalCode.Should().Be("012745093");
+    }
+
+    [Theory]
     [InlineData(BarcodeFormat.DATA_MATRIX, BarcodeSymbology.DataMatrix)]
     [InlineData(BarcodeFormat.CODE_39, BarcodeSymbology.Code39)]
     [InlineData(BarcodeFormat.EAN_13, BarcodeSymbology.Ean13)]

@@ -32,5 +32,5 @@ public sealed class BarcodeCaptureOptions
 
     // Widest camera format chosen. Higher resolution helps the thin
     // bars of a Code 32; the bound keeps decode time per frame low.
-    public int CameraMaxWidthPixels { get; set; } = 1280;
+    public int CameraMaxWidthPixels { get; set; } = 1920;
 }
