@@ -303,8 +303,8 @@ Open prerequisites and debts inside B.1:
   is best effort (§18.8). S6 and S7 lack their Android half.
 - **Decisions open**: D11 (strip-target exclusion for mobile; S4 passed,
   recommendation: reject) and D14 (donation links on iOS). DA3 (desktop
-  parity including US catalogue; country-based catalogue/language defaults
-  with EMA/English fallback) and DA4 (M3 → M4 → M5;
+  parity including ES and US catalogues; country-based catalogue/language
+  defaults with EMA/English fallback) and DA4 (M3 → M4 → M5;
   public launch after M5) were decided on 2026-10-08. D4 and DA13 are
   decided; Android API 26 is the provisional D13 floor, pending the
   technical spike before support is claimed.

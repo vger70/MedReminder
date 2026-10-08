@@ -42,10 +42,10 @@ DA3 is closed. Android follows the desktop's five supported UI languages
 sources (IT, EU, ES, FR and US; US support is recorded in
 `ANALYSIS-CATALOGUE-US-GB-SOURCES.md`). Country selects the corresponding
 national catalogue and its default language where available (for example,
-Italy → IT/Italian, France → FR/French, USA → US/English). If the country
-has no available national catalogue, the initial selection is the EMA
-(EU) catalogue with English. The user can explicitly change the UI
-language afterwards.
+Italy → IT/Italian, France → FR/French, Spain → ES/Spanish, USA →
+US/English). If the country has no available national catalogue, the
+initial selection is the EMA (EU) catalogue with English. The user can
+explicitly change the UI language afterwards.
 Country matching is a default, not a restriction: the app remains usable
 worldwide and core features do not depend on a catalogue. Catalogues are
 optional medicine-entry aids only where public datasets can legally be

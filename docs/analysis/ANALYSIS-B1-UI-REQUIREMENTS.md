@@ -339,10 +339,10 @@ The Android app shall match the desktop's five supported UI languages
 (Italian, English, French, Spanish and German) and catalogue sources
 (Italy, EU, Spain, France and US). Country selects the corresponding
 national catalogue and default UI language when available (e.g. Italy →
-IT/Italian, France → FR/French, USA → US/English). If no national
-catalogue is available for the selected country, default to the EMA (EU)
-catalogue and English. The user may subsequently override the UI language
-in Settings.
+IT/Italian, France → FR/French, Spain → ES/Spanish, USA → US/English).
+If no national catalogue is available for the selected country, default
+to the EMA (EU) catalogue and English. The user may subsequently override
+the UI language in Settings.
 The app remains usable worldwide; catalogue coverage does not restrict
 installation or core use. Where a public dataset is available and
 redistributable, the catalogue is an optional aid for searching and
