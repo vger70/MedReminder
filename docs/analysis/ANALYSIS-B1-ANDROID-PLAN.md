@@ -11,7 +11,9 @@ to a phone, not only the Phase 5 scope written on 2026-09-26.
 
 Where this document and `ANALYSIS-B1-MOBILE-SYNC.md` disagree on the
 Android client (§9.1 screens, §10 feature parity, §13 Phases 5 and 7),
-this document wins once approved. The sync model, the formats and the
+this document wins. The `ANALYSIS-B1-*` documents also take precedence
+over `docs/STATUS.md` and `docs/EVOLUTION.md`, which are snapshots and
+are not kept up to date with the Android plan. The sync model, the formats and the
 merge rules of B.1 are unchanged. The iOS implementation (B.1 Phase 6)
 is out of scope here; the premium model and the repository rules of
 §4.8 apply to iOS as well.
@@ -20,10 +22,10 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-08: revision 19 (records DA3 catalogue/language defaults and EMA fallback, M3→M4→M5 sequencing, internal-only milestone builds and public launch after M5).
-The product owner approved the plan's M3 → M4 → M5 sequence on
-2026-10-08; M1–M5 builds are for internal testing and public Play Store
-launch follows M5.
+Status on 2026-10-08: revision 20, approved by the product owner on
+2026-10-08 (M3 → M4 → M5 sequence included). M1–M5 builds are
+pre-release builds on the Play testing tracks (§5.0); the public Play
+Store launch follows M5.
 Reading conventions: `[VERIFIED]` (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]` (not verified), **`[ANDROID EXPERT NOTE]`** (Technical integration/correction from senior Android platform review).
 Untagged statements are design proposals.
 
@@ -36,7 +38,7 @@ Untagged statements are design proposals.
 | A1 | The app is complete on its own: first start, all daily use, notifications, backup and restore, without a PC (several profiles with premium, §4.8) | Product owner, 2026-10-06 |
 | A2 | The app also works without a cloud account; sync and cloud backup are optional | Derived from A1 `[INFERRED]` |
 | A3 | Every desktop feature on `main` (§3) that applies to a phone is in the plan; the rest is listed with the reason | Product owner, 2026-10-06 |
-| A4 | Deliver a consistent Android core and remaining features in M0–M5 internal-test milestones; publish to the Play Store only after M5 | Product owner, 2026-10-06; launch timing confirmed 2026-10-08 |
+| A4 | Deliver a consistent Android core and remaining features in milestones M0–M5 (M1–M5 as pre-release builds on the Play testing tracks, §5.0); publish to the Play Store production track only after M5 | Product owner, 2026-10-06; launch timing confirmed 2026-10-08 |
 | A5 | When the user also has a PC, phone and PC stay one installation (household) and one data set per profile, as B.1 and the household design define | B.1 §1.2; `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` R2, R8 |
 | A6 | The mobile apps (Android, later iOS) have a free core and a paid premium tier (subscription or lifetime purchase); the desktop stays free | Product owner, 2026-10-07 |
 | A7 | The code of the Android and iOS apps lives in a private repository; the desktop app stays open source in this repository | Product owner, 2026-10-07 |
@@ -48,7 +50,7 @@ What changes against B.1:
 was approved "with mandatory sync", excludes cloud backup on the
 phone, and puts email, catalogue and PDF on the phone only in its
 last phase (§10, Phase 7). With A1 the phone runs with no sync, no
-account and no PC from its first internal-test milestone. The household design already
+account and no PC from its first pre-release milestone (M1). The household design already
 allows a phone as first installation and as master (R8, C8, D-7)
 `[VERIFIED]`.
 - B.1 §10 excludes cloud backup on the phone because "sync plus desktop
@@ -139,15 +141,15 @@ in the plan. "M" refers to the milestones of §5.
 | Planning | Export dates to a calendar (`.ics`) | Yes, share the file | M3 |
 | Views | Therapy timeline | Yes | M3 |
 | Views | Therapy report / card, print and PDF | PDF generated on the phone and shared (§4.6) | M3 |
-| Vitals | Manual vital-parameter diary, history and charts | Yes, local-only; separate `vitals.db`; no sync/cloud backup | M1b (D.1b; after M1 baseline is stable) |
-| Vitals | CSV export/import and PDF printout | Yes; CSV merge+dedup by `VitalReading.Id`; PDF output-only | M1b (D.1b; after M1 baseline is stable) |
+| Vitals | Not a desktop feature on `main`: D.1 (`ANALYSIS-D1-VITAL-TRACKING.md`) is designed, not implemented | Not in M0–M5; a later evolution evaluated after the store release on Android and iOS (§4.3a) | — |
 | Catalogue | Reference catalogue search per country, remote monthly feeds | Yes, data downloaded per country (§4.4) | M4 |
 | Catalogue | Barcode scan (webcam) and restock by scan | Yes, phone camera | M4 |
 | Catalogue | Barcode scan with a USB HID scanner | No: desktop accessory `[INFERRED]` | — |
 | Italy | Shortage list, notice once per shortage | Yes | M4 |
 | Italy | Information links and equivalent medicines | Yes | M4 |
 | Email | SMTP account, recipients, low-stock email, caregiver copies per kind, weekly digest, run-out date | Yes, MailKit; timing best effort (S8) | M5 |
-| People | Several profiles, roles, PIN, switch profile | Yes; app lock with device biometrics as well. **`[ANDROID EXPERT NOTE]`**: Implemented via AndroidX BiometricPrompt API. | M2 |
+| People | Several profiles, roles, PIN, switch profile | Yes | M2 |
+| People | App lock | Device biometrics instead of the desktop PIN for the single M1 profile. **`[ANDROID EXPERT NOTE]`**: Implemented via AndroidX BiometricPrompt API. | M1 |
 | Support | Donation links (A6) | No on mobile: the premium tier replaces them (§4.8, DA9) | — |
 | Appearance | Text size, dark mode, high contrast | System font scaling and dark theme; no own setting | M1 |
 | Language | Five UI languages | Yes, same dictionaries | M1 |
@@ -179,7 +181,7 @@ pairing code: its webcam decoder does not read QR codes (household §10)
 `[VERIFIED]`.
 
 **Privacy / Store onboarding note:**
-Before entering the setup path, the onboarding UI presents a concise privacy acknowledgment explaining that MedReminder is local-first and that vital-parameter data, when the Vitals feature is used, remains in a separate local database and is not included in sync or cloud backup. The user is directed to the current Privacy Policy.
+Before entering the setup path, the onboarding UI presents a concise privacy acknowledgment explaining that MedReminder is local-first, that data leaves the device only through actions the user configures (export, share, encrypted cloud backup or sync with the user's own provider), and where the current Privacy Policy is (UI-00, UI-17 of `ANALYSIS-B1-UI-REQUIREMENTS.md`).
 
 This screen is a product/privacy safeguard, not a claim that a GDPR consent is always the developer's legal basis. Whether the household exemption in GDPR Article 2(2)(c) applies depends on the concrete activity and context; the app must not present the exemption as an automatic legal conclusion.
 
@@ -206,7 +208,7 @@ every local write, every sync that changed data, every start and
 resume, at `BOOT_COMPLETED` (S5), and on a time-zone or clock change
 (B.1 §8.1). 
 
-**`[ANDROID EXPERT NOTE]`**: A bounded scheduling window (for example, the next 48 hours of dose reminders) limits pending work and allows the planner to re-plan when an alarm fires. A reported limit of 500 concurrent alarms per app on API 31+ has not been independently verified and must be checked in the Android spike before it is treated as a platform constraint. Because Play restricts `USE_EXACT_ALARM` to narrow core use cases, the current proposal is `SCHEDULE_EXACT_ALARM`, subject to user approval; gracefully degrade if the permission is denied. The UI must explain the request.
+**`[ANDROID EXPERT NOTE]`**: A bounded scheduling window (for example, the next 48 hours of dose reminders) limits pending work and allows the planner to re-plan when an alarm fires. Android caps the alarms one app can register: at 500 alarms `AlarmManager` throws `SecurityException` ("Too many alarms (500) registered") `[VERIFIED — AOSP and public crash reports from Android 8/9 onward; not specific to API 31]`. The planner stays well below that limit and the adapter catches the exception. Because Play restricts `USE_EXACT_ALARM` to narrow core use cases, the current proposal is `SCHEDULE_EXACT_ALARM`, subject to user approval; gracefully degrade if the permission is denied. The UI must explain the request.
 
 ### 4.3 Backup without a PC
 
@@ -214,52 +216,68 @@ Android Auto Backup stays off (B.1 §9.2): it would copy health data to
 Google outside the app's encryption. The phone offers instead:
 
 - **Encrypted export** (`.mrz`, same format as the desktop) to a file
-the user picks or shares; import replaces the non-vital profile data, as on the
+the user picks or shares; import replaces the profile data, as on the
 desktop. With sync on (M2), an import starts a new generation of the
-group (B.1 §5.7). **Vital data is deliberately excluded from `.mrz`**.
+group (B.1 §5.7).
 **`[ANDROID EXPERT NOTE]`**: This will be implemented using the Android Storage Access Framework (SAF) (`ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`) to ensure full compatibility with Scoped Storage restrictions introduced in Android 11+.
 - **Encrypted cloud backup** (C.3+ on the phone) to OneDrive or Google
-Drive with the existing `IArchiveStorage` providers. The backup contains
-only the synchronizable/non-vital MedReminder profile data; **`vitals.db`
-is never included**.
-- Vital readings have their own **CSV export/import** and **PDF export**
-through the Android file picker. CSV import is a manual **merge + deduplication**
-operation keyed by `VitalReading.Id`; it never uploads the data to a
-cloud service. PDF is output-only and is not an import format.
+Drive with the existing `IArchiveStorage` providers.
 - A **reminder** when no backup or export has been made for 30 days
-  and sync is off: without a PC, a lost phone is lost data. This tracks
-  non-vital profile data; any vital-data reminder is separate and
-  local-only because vital data is excluded from every backup path.
+  and sync is off: without a PC, a lost phone is lost data.
 
-### 4.3a Vital data boundary (D.1)
+### 4.3a Vital tracking (D.1) is outside M0–M5
 
-Vital-parameter data is intentionally outside the B.1 replication domain:
-
-- `vitals.db` is a separate local database, isolated from `medreminder.db`.
-- `VitalType` and `VitalReading` are not `SyncOperation` types.
-- `vitals.db` is not included in `.mrz` exports, cloud backups, sync
-  generations or household replication.
-- CSV export/import is a user-initiated local file operation. Import is
-  merge + deduplication by `VitalReading.Id`; an existing ID is not inserted
-  twice.
-- PDF is a presentation/export format only and cannot be imported.
-- No vital data is sent to developer infrastructure, catalogue services,
-  SMTP services, analytics or telemetry.
-
-This boundary is deliberate: the Android app can provide the D.1 feature
-without turning vital data into replicated or remotely stored health data.
+Vital-parameter tracking (`ANALYSIS-D1-VITAL-TRACKING.md`) is not part
+of the Android plan M0–M5. It is a later evolution, evaluated after the
+store release on Android and iOS (product owner, 2026-10-08). Until
+then the Android app has no `vitals.db`, no vital screens and no vital
+CSV/PDF transfer. The boundary D.1 defines (separate local database,
+outside `.mrz`, cloud backup and sync) remains the design baseline for
+that later evaluation. For the Android UI, `ANALYSIS-B1-UI-REQUIREMENTS.md`
+is authoritative.
 
 ### 4.4 Catalogue on the phone
 
-The desktop embeds a snapshot per country (0.5–4.6 MB each, B.1 §10)
-and refreshes it from monthly feeds `[VERIFIED]`. The phone downloads
-the reference country's catalogue and the EU catalogue from the same
-feeds (`GitHubRawCatalogueFeedClient`, `RemoteCatalogueRefresher`,
-both portable `[VERIFIED]`), and refreshes it when the app opens and as periodic work.
-No country is embedded in the APK, which keeps it near the 40 MB of the
-spike instead of adding the 9.2 MB of the four embedded snapshots
-`[INFERRED]`. Without network the catalogue is simply not
-available; manual entry always works. No personal data is transmitted during catalogue downloads.
+The desktop embeds a snapshot for IT, EU, ES and FR (0.5–4.6 MB each,
+B.1 §10), refreshes them from monthly feeds and reads US from its feed
+only `[VERIFIED — CatalogueFeedDescriptor]`. The phone downloads the
+selected catalogue from the same feeds (`GitHubRawCatalogueFeedClient`,
+`RemoteCatalogueRefresher`, both portable `[VERIFIED]`), and refreshes
+it when the app opens and as periodic work. No catalogue is embedded in
+the APK, which keeps it near the 40 MB of the spike instead of adding
+the 9.2 MB of the four embedded snapshots `[INFERRED]`. Without network
+the catalogue is simply not available; manual entry always works. No
+personal data is transmitted during catalogue downloads.
+
+**Country, catalogue and language defaults (DA3).**
+
+- **UI language**: the system language when it is one of the five
+  supported languages (it, en, fr, es, de), English otherwise. The user
+  can change it at any time. The language does not depend on the
+  country. This matches the desktop first run
+  (`Program.ApplySystemLanguageOnFirstRun`) `[VERIFIED]`.
+- **Reference country**: preselected from the device region setting
+  (no location permission) and confirmed or changed by the user. When
+  the region cannot be determined, nothing is preselected.
+- **Reference catalogue**, from the reference country:
+  1. a national catalogue exists (IT, ES, FR, US): preselect it. The
+     search scope follows the desktop: the national catalogue plus EU
+     where EMA centralised authorisations are valid (IT, ES, FR), the
+     national catalogue only for US (`StaticCountryProfileProvider`)
+     `[VERIFIED]`;
+  2. otherwise, the country is in the EU/EEA, where EMA centralised
+     authorisations are valid: preselect the EMA (EU) catalogue;
+  3. otherwise, or when no country is set: no reference catalogue. The
+     user enters medicines manually and may still pick a catalogue
+     explicitly in the settings.
+- The app is usable worldwide; a catalogue is an optional data-entry
+  aid. Shortage notices, equivalents and regional services stay tied
+  to Italy as reference country, as on the desktop.
+
+The desktop differs on the country and catalogue part (default `IT`,
+no "no catalogue" state, any unlisted country treated as EMA-covered).
+`ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md` specifies the desktop
+integration.
 
 ### 4.5 Email from the phone
 
@@ -268,18 +286,21 @@ it sends the low-stock emails, the caregiver copies and the weekly
 digest. MailKit runs on Android `[INFERRED — managed library, no native
 dependency]`. The send happens when the app is opened and as periodic
 work, so it can be hours late (S8); the settings say so. When a PC joins,
-the app proposes to make the PC master (household C8). Initiated directly by user configuration/action.
+the app proposes to make the PC master (household C8). Email is sent
+only after the user has configured SMTP and recipients on the master.
+The B.1 "designated mail device" (B.1 §8.4) is superseded by the
+household master.
 
 ### 4.6 PDF and sharing
 
 The therapy report becomes a PDF built on the phone (Android
 `PdfDocument` or a managed library, decision in M3) and shared with the
-share sheet. **`[ANDROID EXPERT NOTE]`**: Android's native `PdfDocument` requires manual canvas drawing coordinates. SkiaSharp (MIT, already a MAUI dependency) is the recommended managed library for complex layouts; it avoids the AGPL-3.0 / commercial licence cost of iText7, which must not be used without a paid licence in a proprietary app.
+share sheet. **`[ANDROID EXPERT NOTE]`**: Android's native `PdfDocument` requires manual canvas drawing coordinates. SkiaSharp (MIT; an opt-in package for MAUI, not a default dependency; PDF output through `SKDocument.CreatePdf`) is the recommended managed library for complex layouts; it avoids the AGPL-3.0 / commercial licence cost of iText7, which must not be used without a paid licence in a proprietary app.
 
 ### 4.7 Security on the phone
 
 - Secrets (SMTP password, sync and household keys, cloud tokens,
-backup passphrase and the key protecting `vitals.db`) use an
+backup passphrase) use an
 Android Keystore-backed secure-storage abstraction behind the existing
 ports. The architecture must not depend on a deprecated storage helper;
 the concrete Android implementation is selected during the spike and
@@ -303,7 +324,7 @@ email, and the convenience tools.
 3. **User-controlled data portability:** Nothing that keeps a user safe or keeps their data reachable is
 paid: dose reminders, low-stock and expiry warnings, `.mrz` export
 and import, and restoring a cloud backup stay free; only the
-scheduled backup is premium. Export/import and vital CSV transfer provide user-controlled portability; they do not by themselves establish GDPR Article 20 compliance, which depends on the regulation's stated conditions, including legal basis and the scope of data provided by the data subject.
+scheduled backup is premium. Export and import provide user-controlled portability; they do not by themselves establish GDPR Article 20 compliance, which depends on the regulation's stated conditions, including legal basis and the scope of data provided by the data subject.
 4. **No data hostage.** When premium ends, nothing is deleted: data
 created with premium stays visible and exportable; premium actions
 (sync, scheduled backup, emails, prescription and deadline
@@ -327,9 +348,7 @@ row amended by DA11):
 | Stock, packages and expiry, intakes, count, history | Free | Core use |
 | Low-stock (two stages), dose, expiry notifications and their actions | Free | Safety: never paid |
 | Guided setup, five languages, accessibility, app lock with biometrics | Free | Core use |
-| `.mrz` export and import | Free | Non-vital data remains reachable without paying |
-| Vital CSV export/import | Free | Local vital data remains reachable without paying; no cloud transfer |
-| Vital PDF export | Free | User-controlled printable copy; output only |
+| `.mrz` export and import | Free | Data remains reachable without paying |
 | Main list, forecast, timeline | Free | Core use; the timeline is read-only and cheap to give |
 | Sync with other devices, household, master role, pairing | Premium | The clearest added value; the request names it |
 | Automatic encrypted cloud backup | Premium | Automation; manual export and restoring a cloud backup stay free |
@@ -384,8 +403,6 @@ long-term cost risk.
 - Digital features sold in the app go through Google Play Billing and
 Apple In-App Purchase. The lifetime offer is a one-time product, the
 others auto-renewing subscriptions.
-- Under EU DSA (Digital Services Act), developer contact details (Name, Address, Email, Phone) are published on store product pages.
-- Income generated requires appropriate tax handling (VAT / Imposte) under Italian law.
 - No donation links in the mobile apps (decided on 2026-10-07, DA9):
 the premium tier replaces them, and next to a paid tier they could
 conflict with the store payment rules `[UNCERTAIN — exact Google Play
@@ -402,7 +419,8 @@ after 2023-11-13 needs at least **12** testers opted in for 14
 consecutive days; the figure was 20 until 2024-12-11. Organization
 accounts (D-U-N-S) are exempt `[VERIFIED — secondary sources dated
 2026; check Play Console at registration]`. Recruiting more than 12,
-for example 20, leaves a margin for testers who drop out.
+for example 20, leaves a margin for testers who drop out. How the
+plan uses the tracks is in §5.0.
 - Selling makes the developer a **trader** under the EU Digital
 Services Act: Google Play and the App Store publish the trader's
 name, address, e-mail and phone on the product page. Income from
@@ -453,13 +471,15 @@ tier, expiry, purchase and restore. Gates live in the app's screens
 and in its sync, backup and email scheduling; the shared use cases
 stay ungated and the public code has no notion of premium.
 - Android adapter on Google Play Billing (Play requires Billing
-Library 7 or later for new apps and updates `[VERIFIED — secondary
-sources, deadline 2025-08-31]`). The MAUI options are the
+Library 8 or later for new apps and updates since 2026-08-31, with an
+extension available on request until 2026-11-01; version 8 removed
+APIs of version 7 `[VERIFIED — secondary sources dated 2026; check the
+Play Console policy status at S11]`). The MAUI options are the
 `Xamarin.Android.Google.BillingClient` binding (reported
 compatibility problems with MAUI) and Microsoft's MAUI
 `BillingService` sample; `Plugin.InAppBilling` is archived
 `[UNCERTAIN — secondary sources]`. Spike S11 settles the choice
-before M2. **`[ANDROID EXPERT NOTE]`**: Because third-party plugins like `Plugin.InAppBilling` are deprecated/unmaintained, Spike S11 will implement a direct C# wrapper over Android's native `com.android.billingclient:billing:7.x.x` library. Device-side receipt validation and `PurchasesUpdatedListener` handling pending purchases will be implemented in M2.
+before M2. **`[ANDROID EXPERT NOTE]`**: Because third-party plugins like `Plugin.InAppBilling` are deprecated/unmaintained, Spike S11 will implement a direct C# wrapper over Android's native `com.android.billingclient:billing` library, version 8 or later (the version Play requires at the time of S11). Device-side receipt validation and `PurchasesUpdatedListener` handling pending purchases will be implemented in M2.
 - No backend (B.1 §1.3): purchases are verified and acknowledged on
 the device, and the entitlement is cached so that premium works
 offline, with a grace period before it lapses. Without server-side
@@ -546,9 +566,22 @@ the sync format do not change.
 
 ## 5. Revised plan
 
-Replaces B.1 §13 Phases 5 and 7 for Android. Every milestone ends with
-a release on a Play testing track; M1 is the first one users can rely
-on alone.
+Replaces B.1 §13 Phases 5 and 7 for Android. Every milestone from M1
+ends with a pre-release build on the Play testing tracks (§5.0); M1 is
+the first build testers can use on its own, without a PC or account.
+
+### 5.0 Play tracks
+
+| Track | Use in this plan |
+|---|---|
+| Internal testing | Development builds for the team, at any time; no milestone exit runs here |
+| Closed testing | The milestone builds M1–M5 for the recruited testers, who are also license testers (§4.8). Each milestone exit runs on this track. The M1 exit is a 14-day closed test; before applying for production access after M5, the closed test must again meet the Play rule for personal accounts (at least 12 testers opted in for 14 consecutive days) |
+| Open testing | Not used |
+| Production | Public launch, only after the M5 exit (DA4) |
+
+"Pre-release build" in the B.1 Android documents means a build on the
+internal or closed testing track; no milestone build goes to
+production before M5.
 
 ### M0 — Portability refactor 2 (desktop only, no behavior change)
 
@@ -566,21 +599,23 @@ reader.
 - Exit: desktop tests green, no behavior change, release.
 - Effort: 10–15 days `[INFERRED]`.
 
-### M1 — Standalone core (first internal-test milestone)
+### M1 — Standalone core (first pre-release milestone)
 
-Entry: M0 merged; D11, D13, DA2, DA5 decided (DA5 fixes the
-application id before the first upload); Play Console account; private
-repository created (A7). M1 and later milestones are internal-test
-builds; public Play Store launch is after M5. D4 multi-device delivery
-preferences are implemented in M2.
+Entry: M0 merged; D11, DA2, DA5, DA12 decided (DA5 fixes the
+application id before the first upload); D13 selected provisionally
+(API 26), with its validation due before support is claimed and before
+M2; Play Console account; private repository created (A7). M1 and
+later milestones are pre-release builds (§5.0). D4 multi-device
+delivery preferences are implemented in M2.
 
-- Free features only (§4.8); no billing in M1, so its internal-test
+- Free features only (§4.8); no billing in M1, so its pre-release
   build needs no payments profile.
 - MAUI app (`TrimMode=partial`), composition root, Android adapters
 (paths, Keystore credential protector, notifications, exact alarms,
 boot receiver, share sheet, file picker).
 - First start: "Start here" and "Restore from file" paths of §4.1,
-  disclaimer & Privacy Policy acknowledgment (§4.1), language,
+  disclaimer & Privacy Policy acknowledgment (§4.1), language (system
+  language if supported, English otherwise; DA3),
   Android 13+ `POST_NOTIFICATIONS` runtime permission and exact-alarm
   permission; denied permissions have an explained degraded mode;
   guided setup without its e-mail choice.
@@ -595,7 +630,7 @@ system font scaling and dark theme; accessibility of B.1 §9.1
 (screen-reader labels, no meaning by color alone); five languages;
 sandbox and log rules.
 - In the private repository (A7): CI Android job, signing outside the
-repository, closed testing track, mobile packaging notes and mobile
+repository, internal and closed testing tracks (§5.0), mobile packaging notes and mobile
 user guides in the five languages. In this repository: the M0
 refactor and any shared-core change the app needs.
 - Exit: manual checklist on Android 14+ and on the D13 floor; the
@@ -605,24 +640,9 @@ health data in logs.
 - Effort: 35–50 days `[INFERRED — strongly dependent on MAUI
 experience]`.
 
-### M1b — Vital tracking (D.1b)
-
-Entry: M1 internal-test exit passed and its baseline stable, as required by
-`ANALYSIS-D1-VITAL-TRACKING.md` §6.1.
-
-- Implement the local-only vital diary, history and charts with a
-  separate encrypted `vitals.db` and an Android Keystore-protected key.
-- Add user-initiated CSV export/import (merge and deduplicate by
-  `VitalReading.Id`) and PDF export through the Storage Access
-  Framework. Vital data is not included in `.mrz`, cloud backup or sync.
-- Exit: D.1 Android acceptance criteria and privacy/local-storage
-  checks pass; export/import and database encryption are verified.
-- Effort: not estimated in this plan; estimate under D.1 before
-  scheduling. The M0–M5 total below excludes M1b.
-
 ### M2 — Cloud: backup, sync, household
 
-Entry: M1 internal-test exit passed; D4 decided; Android API 26 validated by the M1
+Entry: M1 exit passed; D4 decided; Android API 26 validated by the M1
 technical spike; DA10 family tier deferred beyond M2; Android halves of
 S6 and S7 (Android OAuth clients, P14); spike S11 (billing); trader
 status and payments profile in Play Console. Google Drive is the first
@@ -648,6 +668,9 @@ hand it to a PC, device removal; "Join an installation" path of
 matrix of household §4.3 and §8 (household step H6). Needed here
 because a joined phone can hold several profiles and must not let a
 user change administrator settings.
+- Local data deletion (UI-17): remove the active profile's local copy
+or all local profile data on this device, without deleting provider
+copies or other devices' data. Free, like export.
 - Exit: phone and desktop converge in the offline and conflict
 scenarios of the B.1 checklist; a phone-first installation is joined
 by a PC and the PC becomes master.
@@ -656,7 +679,7 @@ by a PC and the PC becomes master.
 
 ### M3 — Prescriptions, planning, views
 
-Entry for M3, M4 and M5: M2 internal-test exit passed, since each carries premium
+Entry for M3, M4 and M5: M2 exit passed, since each carries premium
 features and needs its entitlement gates. The confirmed order is M3,
 then M4, then M5; public Play Store launch follows M5. Tiers as in §4.8:
 the timeline (M3), catalogue search and
@@ -671,12 +694,12 @@ reminders; regional service links.
 
 ### M4 — Catalogue, scan, Italian services
 
-Entry: use the same reference-country behavior, supported public
-redistributable catalogues and languages as the desktop app; the Android
-app remains usable worldwide even where no catalogue is available.
+Entry: M3 exit passed.
 
-- Catalogue download and refresh per country (§4.4), search, link to a
-medicine.
+- Reference country, catalogue defaults and catalogue download and
+refresh as in §4.4 (DA3), search, link to a medicine. Only public,
+redistributable catalogues; the app remains usable worldwide without
+one.
 - Barcode scan with the camera, reusing the Code 32 / DataMatrix
 parser; restock by scan.
 - Shortage list and notices; information links and equivalents.
@@ -696,19 +719,18 @@ by the product owner.
 | Milestone | Content | Entry | Effort `[INFERRED]` |
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
-| M1 | Standalone core, internal-test milestone | M0; D11, provisional D13/API 26 validation, DA2, DA5; Play account; private repository | 35–50 d |
-| M1b | Vital tracking (D.1b), after M1 baseline is stable | M1; D.1 Android acceptance criteria | To estimate under D.1; excluded from total |
-| M2 | Individual Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN | M1; D4; API 26 validation; S6/S7 Android halves; S11; trader status | 35–50 d |
-| M3 | Prescriptions, planning, views | M2 internal-test exit | 15–20 d |
-| M4 | Catalogue, scan, Italian services | M3 internal-test exit; desktop catalogue parity | 15–20 d |
-| M5 | Email; final pre-store milestone | M4 internal-test exit | 10–15 d |
+| M1 | Standalone core, first pre-release milestone | M0; D11, DA2, DA5, DA12; D13/API 26 selected provisionally; Play account; private repository | 35–50 d |
+| M2 | Individual Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN, local data deletion | M1; D4; API 26 validated; S6/S7 Android halves; S11; trader status | 35–50 d |
+| M3 | Prescriptions, planning, views | M2 exit | 15–20 d |
+| M4 | Catalogue (DA3 defaults), scan, Italian services | M3 exit | 15–20 d |
+| M5 | Email; last pre-release milestone | M4 exit | 10–15 d |
 
 Total for M0–M5 about 120–170 developer-days, against 60–90 for B.1 Phases 5
 and 7. The difference is the standalone requirement (M0, backup,
 phone-first household) and the features added to the desktop since
-2026-09-26. M3–M5 can be developed as internal builds, but the confirmed
-delivery order is M3 → M4 → M5 and the public Play Store launch follows
-M5 (DA4, 2026-10-08).
+2026-09-26. Vital tracking (D.1) is outside the total (§4.3a). The
+confirmed delivery order is M3 → M4 → M5 and the public Play Store
+launch follows M5 (DA4, 2026-10-08).
 
 ### 5.2 Why this order
 
@@ -736,14 +758,15 @@ decided on 2026-10-08. D13 selects Android API 26 provisionally; validate
 MAUI, alarm and Play compatibility in the M1 technical spike. iOS 15
 remains an inferred proposal and is outside this Android decision.
 
-New (prefix DA, to keep them apart from the B.1 and household numbering):
+New (prefix DA, to keep them apart from the B.1 and household
+numbering; the D.1 vital-tracking decisions use the prefix DV):
 
 | # | Decision | Options | Recommendation |
 |---|---|---|---|
 | DA1 | The Android app works without a PC and without an account | Yes; no | **Requested by the product owner, 2026-10-06** |
-| DA2 | Backup on a standalone phone | Export only; export and cloud backup; Android Auto Backup | Export in M1, cloud backup in M2; Auto Backup stays off |
-| DA3 | Catalogue, language and country parity with desktop | Country/catalogue/language support differs from desktop; same support as desktop | **Decided 2026-10-08; clarified 2026-10-08**: match desktop sources (IT, EU, ES, FR, US) and languages (it, en, fr, es, de). Country selects its matching national catalogue and default language when available (Italy → IT/Italian, France → FR/French, Spain → ES/Spanish, USA → US/English); otherwise select EMA and English. Users may change the UI language. Android remains usable worldwide; public redistributable catalogues are optional medicine-entry aids. Android uses §4.4 delivery behavior. |
-| DA4 | Order of M3–M5 and public launch | M3 → M4 → M5; M5 before M3/M4 | **Decided 2026-10-08**: M3 → M4 → M5; all intermediate builds are for internal testing; public Play Store launch only after M5. |
+| DA2 | Backup on a standalone phone | Export only; export and cloud backup; Android Auto Backup | Export in M1, cloud backup in M2; Auto Backup stays off. **Adopted as the planning baseline** (§4.3, M1, M2); product-owner confirmation required at the M1 entry |
+| DA3 | Catalogue, language and country parity with desktop | Country/catalogue/language support differs from desktop; same support as desktop | **Decided 2026-10-08; revised 2026-10-08**: same sources (IT, EU, ES, FR, US) and languages (it, en, fr, es, de) as the desktop. UI language: system language if supported, English otherwise; user-changeable; independent of the country. Catalogue from the reference country: national catalogue if one exists; otherwise EMA for an EU/EEA country; otherwise no catalogue and manual entry. Android remains usable worldwide; catalogues are optional, public and redistributable. Details in §4.4; desktop integration in `ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md`. |
+| DA4 | Order of M3–M5 and public launch | M3 → M4 → M5; M5 before M3/M4 | **Decided 2026-10-08**: M3 → M4 → M5; M1–M5 are pre-release builds on the testing tracks (§5.0); public Play Store launch only after M5. |
 | DA5 | Play account type and application id | Personal; organization (D-U-N-S); id such as `com.vger70.medreminder` | Product owner; the id cannot change after the first upload |
 | DA6 | Free and premium split | §4.8 table; other | **Decided 2026-10-07**: §4.8 table |
 | DA7 | Prices | € 1.99 / 20.99 / 59.99; € 1.99 / 17.99 / 49.99 with a 14-day trial | **Decided 2026-10-07**: € 1.99 / 17.99 / 49.99 with a 14-day trial |
@@ -751,7 +774,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | DA9 | Donation links on mobile | Keep; drop | **Decided 2026-10-07**: drop |
 | DA10 | Premium across a family | Per store account; family tier granted through the household; any premium phone covers its household | **Decided 2026-10-08**: defer family products and grants until after M2; M2 offers individual products, restorable on phones using the same Play account |
 | DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | **Decided 2026-10-07**: free, scan stays premium (§4.8) |
-| DA12 | GDPR / Store Onboarding | Explicit privacy acknowledgment banner; hidden in settings | **Recommended: explicit acknowledgment, without claiming it is always GDPR consent (§4.1)** |
+| DA12 | GDPR / Store Onboarding | Explicit privacy acknowledgment banner; hidden in settings | Explicit acknowledgment, without claiming it is always GDPR consent (§4.1). **Adopted as the planning baseline** (UI-00, UI-17); product-owner confirmation required at the M1 entry |
 | **DA13** | **Battery Optimization Handling** | No prompt; contextual optional guidance to battery settings | **Decided 2026-10-08**: show a contextual, non-blocking invitation to Android battery settings when OS restrictions threaten reminders or sync; declining keeps the app usable and explains possible delays. This guidance cannot guarantee timely background work. |
 
 ---
@@ -764,7 +787,7 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | Exact-alarm permission refused | Medium | Medium | Explanation at first start; inexact fallback stated in the UI (S5) |
 | **App process killed by aggressive OEM Battery Managers (Xiaomi/Samsung)** | **High** | **High** | Show a contextual, non-blocking explanation and route to Android battery settings when restrictions may delay reminders or sync; declining remains possible and the app explains that this guidance cannot guarantee timely background work. |
 | Background work late (emails, backups, feeds) | High | Low–medium | Run on app open; status shows the last run; PC as master when present |
-| Scope growth beyond 170 days | Medium | Schedule | M0–M5 are internal-test milestones with separate exits; public launch follows M5, and the M3 → M4 → M5 order is fixed by DA4 |
+| Scope growth beyond 170 days | Medium | Schedule | M0–M5 are milestones with separate exits; public launch follows M5, and the M3 → M4 → M5 order is fixed by DA4 |
 | Desktop and phone notify on different days | Low | Medium | One rule set, planner parity tests (§4.2) |
 | Premium unlocked by a modified app | Low (app code private, DA8) | Low–medium | Accepted without a backend |
 | Shared core and private app drift apart | Medium | Medium | App pins a tag of this repository; shared changes land here first |
@@ -772,17 +795,18 @@ New (prefix DA, to keep them apart from the B.1 and household numbering):
 | A household with several phones finds one premium per account too dear (DA10) | Medium | Low–medium | Family tier is deferred beyond M2; revisit after observing individual-tier use |
 | Family grant shared outside the family or forged | Low–medium | Low | Deferred with DA10; no family grant in M2 |
 | Store review objects to access extended by the app | Low `[UNCERTAIN]` | Schedule | Reassess store policy only if a family tier is reconsidered after M2 |
-| Store review of health-data handling | Medium | High | Clear local-only vital-data boundary, accurate Privacy Policy, no unsupported GDPR claims |
-| Data lock-in / portability concern | Low | High | Keep non-vital `.mrz` and vital CSV export available without premium cloud dependency |
-| Store rejection over Health Data policy | Medium | High | Add explicit privacy acknowledgment at first start (§4.1) and accurately describe vital-data handling |
-| Non-compliance with GDPR Art. 20 (Data lock-in) | Low | High | Ensure `.mrz` export/import remains 100% free forever; vital CSV export remains available without premium cloud dependency |
+| Store review or rejection over health-data handling | Medium | High | Explicit privacy acknowledgment at first start (§4.1), accurate Privacy Policy and Play data-safety form, no unsupported GDPR claims |
+| Data lock-in / portability concern (including GDPR Art. 20 questions) | Low | High | `.mrz` export and import stay free (§4.8 principle 3); the plan does not claim that export alone establishes Art. 20 compliance |
 | DSA / Tax compliance oversight | Low | Medium | Consult tax adviser prior to publishing paid Tier |
 | MAUI billing binding immature | Medium | Schedule | Spike S11 before M2 |
 | Store review of a health app with subscriptions | Low–medium | Schedule | Clear non-medical positioning, no safety feature paid (§4.8) |
 
 ---
 
-## 8. Corrections to other documents (when approved)
+## 8. Corrections to other documents
+
+`docs/STATUS.md` and `docs/EVOLUTION.md` are not updated for these
+corrections; the `ANALYSIS-B1-*` documents take precedence over them.
 
 - `ANALYSIS-B1-MOBILE-SYNC.md` §1.2, §9.1, §10, §13 Phases 5 and 7:
 for Android, superseded by this document.
@@ -791,20 +815,42 @@ sends email from M5, not from B.1 Phase 7; household creation, join,
 roles and PIN on the phone are part of M2.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §16: D11 is needed before M1. D4 is
   decided; validate the provisional API 26 floor during the M1 spike.
-- `docs/STATUS.md` §3.1: Phases 5 and 7 replaced by M0–M5.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §10 (donation links) and §16 (D14): no
 donation links on Android or iOS (DA9); D14 is settled by it.
 - `ANALYSIS-B1-UI-REQUIREMENTS.md`: selected Daily overview,
   M1–M5 screen behavior, settings/privacy, Free/Premium flows,
   accessibility, offline/sync states, and acceptance criteria for the
   private Android UI.
-- `ANALYSIS-B1-MOBILE-SYNC.md` §16 and `EVOLUTION.md` §6: provider
+- `ANALYSIS-B1-MOBILE-SYNC.md` §8.4: the designated mail device is
+  superseded by the household master (household R5, C4); backlog B5-03.
+- `ANALYSIS-D1-VITAL-TRACKING.md` §6: Android vital tracking is
+  evaluated after the store release; decisions renumbered DV1–DV10.
+- `ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md`: desktop integration
+  of the DA3 country and catalogue defaults.
+- `ANALYSIS-B1-MOBILE-SYNC.md` §16: provider
   priority updated to Google Drive first, then OneDrive for Android;
   the desktop implementation history remains OneDrive first.
 
 ---
 
 ## 9. Change log for this document
+
+Numbering note: two entries carry revision 14 and none carries
+revision 17; the numbers are kept as recorded.
+
+- **2026-10-08 — revision 20:** Consistency review. DA3 revised: UI
+  language from the system (English fallback), catalogue from the
+  reference country (national, else EMA in the EU/EEA, else none), desktop
+  integration in a new analysis. Vital tracking (M1b) removed from
+  M0–M5 and deferred to after the store release. Play track usage
+  defined (§5.0) and "internal-test" replaced by "pre-release". Billing
+  Library 8 required since 2026-08-31. Email through the household
+  master (B.1 §8.4 superseded). App lock in M1 in §3; local data
+  deletion in M2; DA2 and DA12 adopted as baseline pending confirmation;
+  M1 entry states D13 as provisional; M4 entry corrected; duplicate
+  store rules and risks merged; SkiaSharp and 500-alarm statements
+  corrected; plan marked approved; STATUS and EVOLUTION declared
+  superseded by the B.1 documents.
 - **2026-10-08 — revision 19:** Clarified DA3: included the available US catalogue and defined country-based catalogue/language defaults (including Spain → ES/Spanish), with EMA and English fallback where a national catalogue is unavailable; retained worldwide use and user language choice.
 - **2026-10-08 — revision 18:** Recorded DA3 desktop parity for supported countries/catalogues/languages without restricting worldwide app use; confirmed M3 → M4 → M5, internal-only intermediate builds, and public Play Store launch after M5.
 - **2026-10-08 — revision 16:** Recorded D4 notification distribution and lock-screen defaults; selected Android API 26 provisionally pending M1 validation; selected contextual non-blocking battery guidance (DA13); deferred family products and grants until after M2 (DA10); specified local-only data deletion.

@@ -3,8 +3,11 @@
 Status: product-owner selected the **Daily overview** direction on
 2026-10-08. This document defines the UX requirements for the Android
 client planned in `ANALYSIS-B1-ANDROID-PLAN.md`. It does not authorize
-changes to the desktop UI or shared data model. M1–M5 builds are for
-internal testing; public Play Store launch is after M5.
+changes to the desktop UI or shared data model. M1–M5 builds are
+pre-release builds on the Play internal and closed testing tracks
+(`ANALYSIS-B1-ANDROID-PLAN.md` §5.0); public Play Store launch is after
+M5. For the Android UI, this document is authoritative over the UI notes
+of other analyses.
 
 The companion presentation is
 [`../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first-fixed.pptx`](../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first-fixed.pptx).
@@ -23,10 +26,10 @@ medicines.
 The Android app must work on its own, offline, and without a cloud
 account. When sync is configured, its profile data converges with the
 other devices through the existing encrypted sync model. The app does
-not run a project-operated backend. The D.1 vital-tracking feature is a
-separate local-only area with its own UX requirements in
-[`ANALYSIS-D1-VITAL-TRACKING.md`](ANALYSIS-D1-VITAL-TRACKING.md); its
-database is outside B.1 profile sync and cloud backup.
+not run a project-operated backend. Vital-parameter tracking (D.1,
+[`ANALYSIS-D1-VITAL-TRACKING.md`](ANALYSIS-D1-VITAL-TRACKING.md)) is not
+part of M1–M5; it is evaluated after the store release, and its Android
+UX will be specified in this document when it is scheduled.
 
 ## 2. Selected direction
 
@@ -55,10 +58,13 @@ Use four persistent primary destinations:
 
 | Destination | Responsibility |
 |---|---|
-| **Oggi** | Daily summary, next reminder, attention items, quick actions |
-| **Terapie** | Searchable active/inactive medicine list and medicine details |
+| **Today** | Daily summary, next reminder, attention items, quick actions |
+| **Medicines** | Searchable active/inactive medicine list and medicine details |
 | **Agenda** | Scheduled reminders grouped by local day and time |
-| **Altro** | Profiles, sync, conflicts, backup, Premium, settings, privacy and data, help, and app information |
+| **More** | Profiles, sync, conflicts, backup, Premium, settings (including privacy and data), help, and app information |
+
+The labels are the English reference names; the displayed labels come
+from the localization dictionaries of the five languages.
 
 The full therapy timeline remains in milestone M3 as set out in the
 Android plan. “Agenda” in M1 is limited to scheduled reminders and does
@@ -163,7 +169,7 @@ shall not change the shared sync model or expose plaintext profile
 data to cloud storage.
 
 **Acceptance:** offline, pending, synchronized, authentication-needed,
-and conflict states are distinct and available from Oggi and Altro →
+and conflict states are distinct and available from Today and More →
 Sync.
 
 ### UI-08 — Conflicts
@@ -188,11 +194,11 @@ medicine/list or snooze for 15 minutes; from M3, the prescription action
 may prepare a request. These actions shall not silently register an
 intake or submit a prescription request.
 
-By default, dose reminders are delivered by the phone on which they
-are scheduled; low-stock alerts are delivered on every paired device.
-Users may override these defaults per device and notification kind.
-Medicine details on the lock screen are hidden by default; users may
-change this per device. Settings shall explain that Android may apply
+From M2 (several devices), dose reminders are delivered by default by
+the phone on which they are scheduled and low-stock alerts on every
+paired device; users may override these defaults per device and
+notification kind. Medicine details on the lock screen are hidden by
+default from M1; users may change this per device. Settings shall explain that Android may apply
 its own lock-screen visibility rules.
 
 **Acceptance:** denying a permission does not block access to app data;
@@ -296,7 +302,9 @@ exportable; stop only gated actions/reminders/automation, identify what
 stopped, and explain how to renew or continue with the free features. If
 the phone is household master and a PC is present when Premium expires,
 offer the planned master-transfer path before sync-dependent automation
-stops. Do not delete extra-profile data or create a data hostage. Test
+stops. Handing the master role to the PC stays possible after Premium
+has ended, since it is what keeps email and scheduled backup running on
+the free desktop (plan §4.8 principle 4). Do not delete extra-profile data or create a data hostage. Test
 accounts shall use Play license testing, not an in-app tester bypass.
 
 M2 shall offer individual Play products only. One individual purchase
@@ -335,30 +343,38 @@ adherence scoring.
 
 ### UI-15 — Catalogue and scan (M4)
 
-The Android app shall match the desktop's five supported UI languages
-(Italian, English, French, Spanish and German) and catalogue sources
-(Italy, EU, Spain, France and US). Country selects the corresponding
-national catalogue and default UI language when available (e.g. Italy →
-IT/Italian, France → FR/French, Spain → ES/Spanish, USA → US/English).
-If no national catalogue is available for the selected country, default
-to the EMA (EU) catalogue and English. The user may subsequently override
-the UI language in Settings.
+Defaults follow DA3 (`ANALYSIS-B1-ANDROID-PLAN.md` §4.4):
+
+- The UI language is the system language when it is one of the five
+  supported languages (Italian, English, French, Spanish, German),
+  English otherwise. The user can change it in Settings at any time. It
+  is set from M1 and never changed by a country or catalogue choice.
+- The reference country is preselected from the device region setting,
+  without location permission, and the user confirms or changes it.
+  When the region is unknown, nothing is preselected.
+- The catalogue is preselected from the reference country: the national
+  catalogue when one exists (Italy, Spain, France, US); otherwise the
+  EMA (EU) catalogue for an EU/EEA country; otherwise no catalogue. The
+  user may pick a catalogue explicitly or none.
+
 The app remains usable worldwide; catalogue coverage does not restrict
 installation or core use. Where a public dataset is available and
 redistributable, the catalogue is an optional aid for searching and
-linking medicines. Manual medicine entry remains available everywhere,
-including offline. Android shall use the country-feed delivery behavior
-in the Android plan, show catalogue availability and last refresh, and
-explain the source. Country-specific shortage lists, equivalents and
-public information are shown only where desktop data supports them; they
-remain free. Barcode scan and restock-by-scan are Premium and shall offer
-a clear manual alternative.
+linking medicines. With no catalogue selected, medicine entry is manual
+and no catalogue is downloaded. Manual medicine entry remains available
+everywhere, including offline. Android shall use the feed delivery
+behavior in the Android plan, show catalogue availability and last
+refresh, and explain the source. Country-specific shortage lists,
+equivalents and public information are shown only where desktop data
+supports them (Italy); they remain free. Barcode scan and
+restock-by-scan are Premium and shall offer a clear manual alternative.
 
 **Acceptance:** search/linking and scan are visibly different access
-levels; changing country applies the available national catalogue and
-default language, or EMA/English as fallback; the UI language remains
-user-changeable. No private profile data is sent by catalogue downloads;
-scan permission denial does not block manual entry or stock correction.
+levels; changing country applies the catalogue default (national, EMA
+for EU/EEA, or none) and never changes the UI language; with no
+catalogue the medicine form works in manual mode without error. No
+private profile data is sent by catalogue downloads; scan permission
+denial does not block manual entry or stock correction.
 
 ### UI-16 — Email automation (M5)
 
@@ -369,19 +385,23 @@ runs when the app opens and as best-effort background work. Do not label
 queued email as sent. Store credentials securely and never display
 saved secrets.
 
-When the phone is household master, explain its responsibility for
-email. If a PC joins, the planned master-transfer proposal shall explain
+Only the household master sends email, for every profile of the
+installation (household R5, C4); the B.1 designated mail device is
+superseded. When the phone is master, explain its responsibility for
+email; on a non-master, show which device sends and keep user-initiated
+`mailto:` available. If a PC joins, the planned master-transfer proposal shall explain
 the effect on email before the user decides. Email and its reminders
 are Premium; ordinary medicine reminders remain free.
 
 **Acceptance:** recipient and message categories are reviewable before
 save; invalid configuration and send failures have recovery guidance;
-no success state claims delivery without a confirmed send result.
+no success state claims delivery; at most it reports that the SMTP
+server accepted the message.
 
 ### UI-17 — Privacy and data controls
 
-`More → Privacy & data` shall remain available after onboarding and
-provide:
+`More → Settings → Privacy and data` (its canonical location, UI-18)
+shall remain available after onboarding and provide:
 
 - A link to the current Privacy Policy and a concise summary of what is
   stored locally, what is encrypted before cloud-provider transfer, and
@@ -397,7 +417,7 @@ provide:
   default on the lock screen, with a per-device in-app control to show
   them. Explain that Android's own visibility settings may also affect
   what appears.
-- An in-app local-data deletion flow. Let the user select the active
+- An in-app local-data deletion flow (M2; free). Let the user select the active
   profile's local data or all MedReminder profile data stored locally
   on this device, show the exact scope and affected profile/device,
   suggest exporting an encrypted `.mrz` file first, and require an
@@ -439,13 +459,14 @@ Use stable, named groups under **More → Settings**:
 | Group | Entries and milestone |
 |---|---|
 | Profile and security | Active profile and switch (M2); roles/PIN (M2); biometric app lock (M1) |
-| Reminders | Per-device, per-kind notification preferences (dose on phone; low-stock on every device by default); lock-screen detail visibility (hidden by default); notification and exact-alarm permission status; Android settings route; contextual battery-restriction guidance |
-| Appearance and language | Follow system light/dark appearance and text scaling; language selector (M1, five supported languages) |
+| Reminders | Per-device, per-kind notification preferences (M2; dose on phone, low-stock on every device by default); lock-screen detail visibility (hidden by default); notification and exact-alarm permission status; Android settings route; contextual battery-restriction guidance |
+| Appearance and language | Follow system light/dark appearance and text scaling; language selector (M1, five supported languages; default system language, English otherwise) |
 | Backup and sync | `.mrz` export/import (M1); provider, sync, conflicts and devices (M2); cloud backup and restore (M2) |
-| Privacy and data | UI-17 privacy summary and data routes |
+| Privacy and data | UI-17 privacy summary, data routes and local data deletion (M2) |
 | Premium | Entitlement, offer, purchase/restore and Play management (M2 onward) |
 | Email | SMTP and recipient settings (M5) |
-| Help and about | Help, version, privacy policy, open-source/third-party licences |
+| Reference country and catalogue | Country, catalogue or none (M4, UI-15) |
+| Help and about | Help, version, privacy policy (link to the same policy as UI-17), open-source/third-party licences |
 
 When Android battery restrictions may delay reminders or sync, the app
 shall show a contextual, non-blocking invitation to review the relevant
@@ -493,7 +514,7 @@ shown as active controls.
 without accidental data loss; the visible state distinguishes local
 save, pending work, and confirmed completion.
 
-## 6. Accessibility and presentation
+## 5. Accessibility and presentation
 
 | Requirement | Acceptance condition |
 |---|---|
@@ -505,7 +526,7 @@ save, pending work, and confirmed completion.
 | Motion | No state or task depends on animation; respect Android reduced-motion settings where applicable. |
 | Theme | Follow system light/dark appearance; keep readable contrast in both. |
 
-## 7. Error, empty, and recovery states
+## 6. Error, empty, and recovery states
 
 - Empty profile: explain that no therapy is recorded and provide the
   add-medicine action.
@@ -527,15 +548,15 @@ save, pending work, and confirmed completion.
   export or the configured backup action without claiming a backup ran.
 - Catalogue unavailable: explain that online search is unavailable and
   provide manual entry.
-- Email delayed or failed: distinguish queued, attempted, and confirmed
-  send states; explain that background delivery may be late.
+- Email delayed or failed: distinguish queued, attempted, failed and
+  accepted-by-server states; explain that background delivery may be late.
 
 Errors shall be stated in plain language with a recovery action where
 one exists. Notification contents shall follow the product's
 notification privacy behavior. Logs shall not contain identifying
 health data.
 
-## 8. Implementation and verification constraints
+## 7. Implementation and verification constraints
 
 - Implement the production UI in the private Android repository under
   the MAUI decision in `ANALYSIS-B1-ANDROID-PLAN.md`; this repository
@@ -552,7 +573,7 @@ health data.
   verify sync/provider and conflict behavior in M2 on devices with
   intermittent connectivity.
 
-## 9. Scope, milestone acceptance, and decisions
+## 8. Scope, milestone acceptance, and decisions
 
 This document specifies the UX for M1–M5 without changing the Android
 plan's milestone order or making a future-milestone feature available
@@ -575,25 +596,25 @@ feature inventory to the requirement that owns its UI behavior.
 | Prescriptions, administrative deadlines, supply planning, calendar/PDF, timeline | M3 | UI-02, UI-09, UI-13, UI-14 |
 | Catalogue, barcode scan/restock, shortages, equivalents, information links | M4 | UI-13, UI-15 |
 | SMTP, recipients, caregiver copies, low-stock email, weekly digest | M5 | UI-13, UI-16, UI-18 |
-| App lock, permissions, appearance, localization, accessibility, licences/help | M1–M5 | UI-09, UI-10, UI-17, UI-18, §6 |
-| Local vital diary, chart, CSV/PDF transfer | M1b (D.1) | `ANALYSIS-D1-VITAL-TRACKING.md` §6 |
+| App lock, permissions, appearance, localization, accessibility, licences/help | M1–M5 | UI-09, UI-10, UI-17, UI-18, §5 |
+| Local data deletion | M2 | UI-17 |
 
 | Milestone | UX exit condition |
 |---|---|
 | M1 — Standalone core | A user can set up or restore from `.mrz`, manage therapies and stock, record/retract intakes, receive local medicine reminders, change core settings, export data, and continue offline without a cloud account or purchase. After 30 days without export/backup while sync is off, the reminder offers export without blocking use. |
-| M1b — Vital tracking (D.1) | Vital readings use the separate encrypted local database; charting and CSV/PDF transfer follow the feature's dedicated UX and acceptance requirements. Vital data stays outside B.1 sync, cloud backup, and `.mrz`; export always preserves the complete local history. |
 | M2 — Cloud and Premium | A user can buy/restore individual Premium, create/join an installation, use Google Drive before OneDrive, review sync/conflict/device state, use multiple profiles/roles, delete a selected local copy with accurate cloud-copy warnings, and back up/restore without losing local data when billing or network is unavailable. |
 | M3 — Prescriptions and planning | Premium prescription and planning flows work with correct reminder states; free read-only timeline remains available; PDF/share and calendar actions explain the handoff. |
-| M4 — Catalogue and scan | Catalogue search/link and safety information remain free; scan is Premium with manual alternatives; offline catalogue limitations are clear. |
-| M5 — Email | SMTP and recipient setup is understandable, delivery timing is described as best effort, and Premium expiry does not affect ordinary medicine reminders. M1–M5 builds remain internal-test builds; public Play Store launch is gated on M5 exit and final release checks. |
+| M4 — Catalogue and scan | DA3 country and catalogue defaults apply, including the no-catalogue case; catalogue search/link and safety information remain free; scan is Premium with manual alternatives; offline catalogue limitations are clear. |
+| M5 — Email | SMTP and recipient setup is understandable, delivery timing is described as best effort, and Premium expiry does not affect ordinary medicine reminders. M1–M5 builds remain pre-release builds; public Play Store launch is gated on M5 exit, the closed test required for production access, and final release checks. |
 
 Decisions recorded on 2026-10-08: D4 notification distribution defaults
 and lock-screen privacy; Android API 26 as the provisional D13 minimum,
 subject to the M1 technical spike; DA13 contextual, non-blocking battery
-guidance; deferral of DA10's family tier until after M2; DA3 parity with
-desktop countries, catalogues and languages while keeping app use
-worldwide; and DA4 order M3 → M4 → M5 with internal-only milestone builds
-and public launch after M5. The local data deletion behavior is specified
+guidance; deferral of DA10's family tier until after M2; DA3 (UI language
+from the system, English otherwise; catalogue from the reference country:
+national, else EMA in the EU/EEA, else none; app use worldwide); DA4 order
+M3 → M4 → M5 with pre-release milestone builds and public launch after
+M5; and vital tracking (D.1) moved after the store release. The local data deletion behavior is specified
 in UI-17 and affects only the selected device's local copy. Before public
 release, complete the privacy/legal review and verify API 26 support.
 Exact prices and Play-provided renewal/cancellation terms must come from

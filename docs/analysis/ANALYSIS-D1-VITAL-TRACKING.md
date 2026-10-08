@@ -397,8 +397,11 @@ The disclaimer and privacy notice must also be localized before release.
 
 ### 6.1 D.1b placement
 
-Android implements the same local-only feature after the B.1 M1 baseline is
-stable. No Android-specific sync work is required for D.1.
+Android vital tracking is not part of the Android plan's milestones
+M0–M5: it is a later evolution, evaluated after the store release on
+Android and iOS (product owner, 2026-10-08; `ANALYSIS-B1-ANDROID-PLAN.md`
+§4.3a). The rest of this section is the design baseline for that
+evaluation. No Android-specific sync work is required for D.1.
 
 ### 6.2 Platform implementation
 
@@ -406,7 +409,7 @@ stable. No Android-specific sync work is required for D.1.
 |---|---|
 | Database | Separate encrypted `vitals.db` in app-private storage |
 | Key protection | Android Keystore-backed secure storage |
-| UI | Native Android/Compose layer consistent with B.1; exact chart library decided at implementation |
+| UI | Defined in `ANALYSIS-B1-UI-REQUIREMENTS.md`, which is authoritative for the Android UI (MAUI app of the B.1 plan); exact chart library decided at implementation |
 | File export/import | Storage Access Framework (`ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`) |
 | CSV import | Explicit local merge + deduplication by `VitalReading.Id` |
 | PDF | Local generation and share/save; never an import source |
@@ -531,18 +534,21 @@ of local diary data merely because it publishes the application.
 
 ## 9. Decisions
 
+The prefix DV (renumbered from DA on 2026-10-08) keeps these decisions
+apart from the DA decisions of `ANALYSIS-B1-ANDROID-PLAN.md`.
+
 | # | Decision | Resolution |
 |---|---|---|
-| DA1 | Android vital-data entitlement | Free core may impose a product-level history/UI limit, but **export always includes the complete local history**. No premium feature may make existing vital data inaccessible. |
-| DA2 | Vital-data synchronization | **No sync.** `VitalType` and `VitalReading` are outside B.1. |
-| DA3 | Vital database | **Separate `vitals.db`**, separate EF Core context, separate encryption key, no FK to `medreminder.db`. |
-| DA4 | `.mrz` treatment | **Vitals excluded completely** from `.mrz` export/import and cloud backup. |
-| DA5 | CSV import | **Manual merge + deduplication by `VitalReading.Id`**. Existing IDs are not duplicated. |
-| DA6 | PDF import | **Not supported.** PDF is export/print only. |
-| DA7 | Desktop encryption | **Required before D.1 release**: SQLCipher/equivalent for `vitals.db`, with key protected through DPAPI. |
-| DA8 | Android encryption | **Required**: encrypted `vitals.db`, key protected by Android Keystore-backed secure storage. |
-| DA9 | MDR boundary | Manual diary, local storage, descriptive charts, CSV/PDF only; no clinical interpretation, alerts, diagnosis, therapy or remote monitoring. Material changes require formal assessment. |
-| DA10 | First-use acknowledgement | Required as a privacy/safety acknowledgement; it is not presented as a universal GDPR legal basis. |
+| DV1 | Android vital-data entitlement | Free core may impose a product-level history/UI limit, but **export always includes the complete local history**. No premium feature may make existing vital data inaccessible. |
+| DV2 | Vital-data synchronization | **No sync.** `VitalType` and `VitalReading` are outside B.1. |
+| DV3 | Vital database | **Separate `vitals.db`**, separate EF Core context, separate encryption key, no FK to `medreminder.db`. |
+| DV4 | `.mrz` treatment | **Vitals excluded completely** from `.mrz` export/import and cloud backup. |
+| DV5 | CSV import | **Manual merge + deduplication by `VitalReading.Id`**. Existing IDs are not duplicated. |
+| DV6 | PDF import | **Not supported.** PDF is export/print only. |
+| DV7 | Desktop encryption | **Required before D.1 release**: SQLCipher/equivalent for `vitals.db`, with key protected through DPAPI. |
+| DV8 | Android encryption | **Required**: encrypted `vitals.db`, key protected by Android Keystore-backed secure storage. |
+| DV9 | MDR boundary | Manual diary, local storage, descriptive charts, CSV/PDF only; no clinical interpretation, alerts, diagnosis, therapy or remote monitoring. Material changes require formal assessment. |
+| DV10 | First-use acknowledgement | Required as a privacy/safety acknowledgement; it is not presented as a universal GDPR legal basis. |
 
 ---
 

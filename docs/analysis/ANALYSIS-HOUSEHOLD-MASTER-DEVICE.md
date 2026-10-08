@@ -546,8 +546,9 @@ restart when the key arrives while the profile is open.
 - Creating a household on a phone needs a cloud storage account: the
   phone has no folder transport (B.1 §5.8) `[VERIFIED]`.
 - The phone is master (R1). SMTP on a phone arrives with MailKit on
-  mobile (B.1 Phase 7). Until then the phone is a master "without
-  email": when a PC joins, the app proposes to make the PC master (C8).
+  Android in milestone M5 of `ANALYSIS-B1-ANDROID-PLAN.md` (B.1 Phase 7
+  for iOS). Until then the phone is a master "without email": when a PC
+  joins, the app proposes to make the PC master (C8).
 - Argon2id for the household passphrase runs on the phone (spike S2
   not run) `[VERIFIED — STATUS.md §3.1]`.
 - Reverse pairing (phone shows the code, PC joins): the PC accepts the
@@ -620,7 +621,7 @@ Branching (product owner, 2026-09-28):
 | H3 | Household group on storage: create, pairing `mrpair2`, setup wizard (§6), profile subsets with per-device key grants and recovery escrow (§4.4), adoption of existing groups (§11), engine port (§5.5) | H1, H2 | 25–38 d |
 | H4 | Master: election, handover wizard, takeover, lease, email and cloud backup gated on master, all-profile monitoring, `mailto:` on non-master. Three PRs: H4a (master state, election, activation rule, lease, gating of email and cloud backup, Make master in the installation window, activation without wizard); H4b (handover wizard before activation, takeover wording, cloud-backup passphrase, grants of missing profiles); H4c (all-profile monitoring, `mailto:` and SMTP test on non-master) | H3 | 15–25 d |
 | H5 | Device removal at household level (§9). Two PRs: H5a (household key, passphrase, recovery key and generation; option A for the remaining devices; master takeover); H5b (rotation of the profile groups the removed device held, new keys granted and escrowed, adopted by the remaining devices from their grants) | H3 | 8–12 d |
-| H6 | Mobile: household creation and join on the phone, roles and PIN (B.1 Phase 5); phone as master with email (B.1 Phase 7); QR decode on the PC webcam | H3, H4, B.1 Phase 5 | inside B.1 Phases 5 and 7, plus 5–8 d |
+| H6 | Mobile: household creation and join on the phone, roles and PIN (Android M2 of `ANALYSIS-B1-ANDROID-PLAN.md`); phone as master with email (Android M5); QR decode on the PC webcam | H3, H4, Android M2 | inside Android M2 and M5 (iOS: B.1 Phases 6 and 7), plus 5–8 d |
 
 Step H3 is split into four PRs, each merged into
 `feature/master-slave` (plan of 2026-09-29):
