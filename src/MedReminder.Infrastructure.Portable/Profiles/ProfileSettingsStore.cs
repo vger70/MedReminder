@@ -1,11 +1,12 @@
 using System.Text.Json;
 using MedReminder.Application.Abstractions;
 using MedReminder.Domain.Sync;
-using MedReminder.Infrastructure.Storage;
+using MedReminder.Infrastructure.Sync;
 
 namespace MedReminder.Infrastructure.Profiles;
 
-// IProfileSettingsStore of the desktop (B.1, P8): the display name in
+// IProfileSettingsStore (B.1, P8; portable since Android plan M0,
+// backlog B0-01): the display name in
 // profiles.json (IProfileRegistry) and the notification recipients in
 // the profile's notifications.settings.json, the file the configuration
 // reloads (IOptionsMonitor<NotificationSettings>). Same file shape as
@@ -127,13 +128,23 @@ internal sealed class ProfileSettingsStore : IProfileSettingsStore
             : string.Empty;
 }
 
-// ISyncProfileStatus of the desktop: a profile takes part in sync when
-// its sync.settings.json exists (JsonSyncSettingsStore.FileName in
-// Infrastructure.Portable).
+// ISyncProfileStatus: a profile takes part in sync when its
+// sync.settings.json exists. The host passes the root that holds one
+// folder per profile (AppDataPaths.GetProfilesRootDirectory() on
+// Windows).
 internal sealed class SyncProfileStatus : ISyncProfileStatus
 {
-    private const string SyncSettingsFileName = "sync.settings.json";
+    private readonly string _profilesRootDirectory;
+
+    public SyncProfileStatus(string profilesRootDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profilesRootDirectory);
+        _profilesRootDirectory = profilesRootDirectory;
+    }
 
     public bool IsSyncEnabled(string profileId)
-        => File.Exists(Path.Combine(AppDataPaths.GetProfileDataDirectory(profileId), SyncSettingsFileName));
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
+        return File.Exists(Path.Combine(_profilesRootDirectory, profileId, JsonSyncSettingsStore.FileName));
+    }
 }
