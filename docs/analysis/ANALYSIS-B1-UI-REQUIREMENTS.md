@@ -20,7 +20,10 @@ medicines.
 The Android app must work on its own, offline, and without a cloud
 account. When sync is configured, its profile data converges with the
 other devices through the existing encrypted sync model. The app does
-not run a project-operated backend.
+not run a project-operated backend. The D.1 vital-tracking feature is a
+separate local-only area with its own UX requirements in
+[`ANALYSIS-D1-VITAL-TRACKING.md`](ANALYSIS-D1-VITAL-TRACKING.md); its
+database is outside B.1 profile sync and cloud backup.
 
 ## 2. Selected direction
 
@@ -386,8 +389,9 @@ provide:
   explicit confirmation. Explain that this removes the selected local
   copy only; it does not delete provider/cloud copies or data on other
   devices. For a synced profile, explain that its cloud copy remains and
-  could be downloaded again if the device reconnects or rejoins. Prevent
-  background sync from immediately recreating the deleted local copy.
+  could be downloaded again if the device reconnects or rejoins. Pause
+  sync for that profile on this device after deletion; require an
+  explicit restore/reconnect action before downloading it again.
   This is distinct from removing a device or profile from a household.
   Do not claim secure erasure or remote deletion unless the underlying
   operation guarantees it.
@@ -557,10 +561,12 @@ feature inventory to the requirement that owns its UI behavior.
 | Catalogue, barcode scan/restock, shortages, equivalents, information links | M4 | UI-13, UI-15 |
 | SMTP, recipients, caregiver copies, low-stock email, weekly digest | M5 | UI-13, UI-16, UI-18 |
 | App lock, permissions, appearance, localization, accessibility, licences/help | M1–M5 | UI-09, UI-10, UI-17, UI-18, §6 |
+| Local vital diary, chart, CSV/PDF transfer | M1b (D.1) | `ANALYSIS-D1-VITAL-TRACKING.md` §6 |
 
 | Milestone | UX exit condition |
 |---|---|
 | M1 — Standalone core | A user can set up or restore from `.mrz`, manage therapies and stock, record/retract intakes, receive local medicine reminders, change core settings, export data, and continue offline without a cloud account or purchase. After 30 days without export/backup while sync is off, the reminder offers export without blocking use. |
+| M1b — Vital tracking (D.1) | Vital readings use the separate encrypted local database; charting and CSV/PDF transfer follow the feature's dedicated UX and acceptance requirements. Vital data stays outside B.1 sync, cloud backup, and `.mrz`; export always preserves the complete local history. |
 | M2 — Cloud and Premium | A user can buy/restore individual Premium, create/join an installation, use Google Drive before OneDrive, review sync/conflict/device state, use multiple profiles/roles, delete a selected local copy with accurate cloud-copy warnings, and back up/restore without losing local data when billing or network is unavailable. |
 | M3 — Prescriptions and planning | Premium prescription and planning flows work with correct reminder states; free read-only timeline remains available; PDF/share and calendar actions explain the handoff. |
 | M4 — Catalogue and scan | Catalogue search/link and safety information remain free; scan is Premium with manual alternatives; offline catalogue limitations are clear. |
