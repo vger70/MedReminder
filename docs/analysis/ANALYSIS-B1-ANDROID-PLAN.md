@@ -502,7 +502,7 @@ shared through one mechanism only `[INFERRED]`.
 The product owner selected the Daily overview direction on 2026-10-08.
 The screen architecture, M1/M2 functional requirements, accessibility
 conditions, offline and sync states, and acceptance criteria are in
-[`ANALYSIS-B1-ANDROID-UI-REQUIREMENTS.md`](ANALYSIS-B1-ANDROID-UI-REQUIREMENTS.md).
+[`ANALYSIS-B1-UI-REQUIREMENTS.md`](ANALYSIS-B1-UI-REQUIREMENTS.md).
 The production UI belongs to the private Android repository (A7); this
 repository holds the public requirements and shared-core work.
 
@@ -735,7 +735,7 @@ D4 before M2, instead of "Phase 5".
 - `docs/STATUS.md` §3.1: Phases 5 and 7 replaced by M0–M5.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §10 (donation links) and §16 (D14): no
 donation links on Android or iOS (DA9); D14 is settled by it.
-- `ANALYSIS-B1-ANDROID-UI-REQUIREMENTS.md`: selected Daily overview,
+- `ANALYSIS-B1-UI-REQUIREMENTS.md`: selected Daily overview,
   M1/M2 screen behavior, accessibility, offline/sync states, and
   acceptance criteria for the private Android UI.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §16 and `EVOLUTION.md` §6: provider

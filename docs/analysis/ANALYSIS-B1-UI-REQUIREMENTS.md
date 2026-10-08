@@ -6,7 +6,7 @@ client planned in `ANALYSIS-B1-ANDROID-PLAN.md`. It does not authorize
 changes to the desktop UI or shared data model.
 
 The companion presentation is
-[`../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first.pptx`](../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first.pptx).
+[`../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first-fixed.pptx`](../../deliverables/MedReminder-Android-UI-e-requisiti-google-drive-first-fixed.pptx).
 The source mockups are in [`../mockups/android-ui-proposals.svg`](../mockups/android-ui-proposals.svg).
 
 ## 1. Product boundary
@@ -60,6 +60,18 @@ does not imply that the complete therapy timeline has moved earlier.
 
 ## 4. Functional requirements
 
+### UI-00 — First start and setup
+
+The M1 first-start flow shall offer standalone setup and restore from an
+encrypted `.mrz` file. It shall present the required disclaimer and
+Privacy Policy acknowledgment before setup, then provide the guided
+setup for the first profile and medicines. Joining an installation and
+restoring from a cloud backup are M2 paths.
+
+**Acceptance:** a new user can complete the standalone path without a
+cloud account; restore and join options identify the source and
+milestone available to the user.
+
 ### UI-01 — Daily overview
 
 On opening the selected profile, the app shall show the active profile,
@@ -101,8 +113,10 @@ shows the result and the updated stock forecast.
 ### UI-05 — Intake actions
 
 The user shall be able to record or update an intake from the medicine
-detail, today's scheduled reminder, and the Android notification
-actions supported by the plan.
+detail and today's scheduled reminder. Notification actions shall
+provide only the actions defined by the Android plan, such as opening
+the medicine or list and snoozing a dose reminder; they do not record
+an intake directly.
 
 **Acceptance:** the selected medicine, slot, time, and status are
 reviewable before save; the UI describes intake records as
@@ -155,9 +169,10 @@ clear.
 
 ### UI-10 — Profiles and settings
 
-The app shall expose profile switching, app lock, language, notification
-preferences, sync status, and app information in the locations defined
-by the Android plan's M1/M2 scope.
+The app shall expose app lock, language, notification preferences, sync
+status, and app information in the locations defined by the Android
+plan. Biometric app lock is M1; multiple profiles, roles, PIN, and
+profile switching are M2.
 
 **Acceptance:** a profile switch makes the active profile visible and
 does not leave the previous profile's medicine data on screen.
@@ -169,7 +184,7 @@ does not leave the previous profile's medicine data on screen.
 | System text/display scaling | Essential text and actions remain visible and operable at supported Android font and display scales; content can scroll rather than clip. |
 | Screen readers | Interactive controls expose a meaningful label, role, state, and logical reading order. Decorative icons are not announced. |
 | Non-color state encoding | Every warning and sync state has text; color and iconography are supplementary. |
-| Touch and focus | Controls have touch targets suitable for one-handed use; keyboard/accessibility focus follows the visual order. |
+| Touch and focus | Interactive touch targets are at least 48 × 48 dp; keyboard/accessibility focus follows the visual order. |
 | Localization | UI strings ship in Italian, English, French, Spanish, and German; layouts tolerate expansion and longer translations. |
 | Motion | No state or task depends on animation; respect Android reduced-motion settings where applicable. |
 | Theme | Follow system light/dark appearance; keep readable contrast in both. |
@@ -191,8 +206,9 @@ does not leave the previous profile's medicine data on screen.
   permission later.
 
 Errors shall be stated in plain language with a recovery action where
-one exists. Do not place identifying health data in notifications or
-logs unless the existing product settings explicitly require it.
+one exists. Notification contents shall follow the product's
+notification privacy behavior. Logs shall not contain identifying
+health data.
 
 ## 7. Implementation and verification constraints
 
@@ -227,4 +243,6 @@ first, OneDrive second. Dropbox remains outside the current scope.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §§1, 3–5, 8–11, 13, 16.
 - `ANALYSIS-UI-MODERNIZATION.md` §1 (accessibility and attention-first
   desktop goals; phone implementation remains native/touch-first).
+- Android accessibility guidance for a minimum 48 dp touch target:
+  <https://developer.android.com/guide/topics/ui/accessibility/apps>.
 - User-selected direction and requirements review, 2026-10-08.
