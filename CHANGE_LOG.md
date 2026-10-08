@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #215 — Improve webcam barcode scanning
+
+Link: [vger70/MedReminder#215](https://github.com/vger70/MedReminder/pull/215)
+Branch: `claude/webcam-barcode-scan`
+
+### Fixed
+
+- **Improved** webcam barcode decoding for inverted or mirrored frames and increased the maximum selected camera width to 1920 pixels when supported.
+- **Enabled** continuous autofocus on cameras that support it, so close-up package barcodes are more likely to be in focus.
+- **Added** decoder coverage for mirrored and inverted Code 32 (Code 39) frames.
+
+---
+
 ## PR #213 — Add D.1 vital-tracking design and DPIA
 
 Link: [vger70/MedReminder#213](https://github.com/vger70/MedReminder/pull/213)
