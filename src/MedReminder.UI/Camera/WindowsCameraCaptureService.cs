@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Windows.Graphics.Imaging;
 using Windows.Media.Capture;
 using Windows.Media.Capture.Frames;
+using Windows.Media.Devices;
 using Windows.Media.MediaProperties;
 
 namespace MedReminder.UI.Camera;
@@ -119,6 +120,7 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
                 _log.LogError("Camera scan: frame reader did not start ({Status}).", status);
                 return new CameraScanResult(CameraAvailability.InitializationFailed, null);
             }
+            await EnableContinuousFocusIfAvailableAsync(capture);
             _log.LogInformation(
                 "Camera scan started: {Width}x{Height}.",
                 format?.VideoFormat.Width ?? 0, format?.VideoFormat.Height ?? 0);
@@ -177,6 +179,31 @@ internal sealed class WindowsCameraCaptureService : ICameraCaptureService
             .OrderByDescending(f => f.VideoFormat.Width)
             .ThenByDescending(f => f.FrameRate.Denominator == 0 ? 0 : (double)f.FrameRate.Numerator / f.FrameRate.Denominator)
             .FirstOrDefault();
+
+    // Some desktop webcams do not enable continuous focus for video by
+    // default. Enable it only when supported; a focus-control failure
+    // must not prevent the user from scanning with the current image.
+    private async Task EnableContinuousFocusIfAvailableAsync(MediaCapture capture)
+    {
+        var focus = capture.VideoDeviceController.FocusControl;
+        if (!focus.Supported || !focus.SupportedFocusModes.Contains(FocusMode.Continuous)) return;
+
+        try
+        {
+            await focus.UnlockAsync();
+            focus.Configure(new FocusSettings
+            {
+                Mode = FocusMode.Continuous,
+                AutoFocusRange = AutoFocusRange.FullRange,
+            });
+            await focus.FocusAsync();
+            _log.LogInformation("Camera scan: continuous autofocus enabled.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Camera scan: continuous autofocus could not be enabled; continuing with the current focus.");
+        }
+    }
 
     // State of one scan. Frame events arrive on worker threads and may
     // still fire after the session completed; every path checks
