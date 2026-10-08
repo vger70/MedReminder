@@ -30,6 +30,36 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #213 — Add D.1 vital-tracking design and DPIA
+
+Link: [vger70/MedReminder#213](https://github.com/vger70/MedReminder/pull/213)
+Branch: `claude/legal-compliance-health-app-319bf5`
+
+### Docs
+
+- **Added** `docs/analysis/ANALYSIS-D1-VITAL-TRACKING.md`: design
+  document for the vital-parameter tracking feature (Desktop + Android).
+  Covers domain model (`VitalType`, `VitalReading`), Application use cases
+  and ports, Infrastructure.Portable schema patch and repository
+  implementations, WinForms UI with GDPR Art. 9.2.a double opt-in consent
+  screen, charting with `System.Windows.Forms.DataVisualization`, B.1 sync
+  integration, Android milestone mapping (D.1b), mandatory PRIVACY.md update
+  specification (§8.8), and decisions DA1–DA8 confirmed by product owner on
+  2026-10-07 (including: free core with reading-count limit for non-premium
+  Android users DA1; SQLCipher as D.1 prerequisite DA7; iOS deferred to
+  D.1c DA8).
+- **Changed** `docs/analysis/ANALYSIS-B1-ANDROID-PLAN.md` (revision 14):
+  schedule D.1b after the M1 baseline is stable, clarify its separate
+  estimate, and correct portability, notification-permission, alarm-limit
+  and background-work wording.
+- **Added** `docs/DPIA-VITAL-TRACKING.md`: Data Protection Impact Assessment
+  (GDPR Art. 35). Confirms DPIA obligation (Art. 9 health data), maps all
+  data flows (local-first; no developer server), assesses 7 risks. Updated
+  with DA1–DA8: Desktop SQLCipher elevated to D.1 prerequisite (DA7), all
+  residual risks at Low or Negligible; overall decision: Proceed.
+
+---
+
 ## PR #211 — Add a free core and a premium tier to the Android plan
 
 Link: [vger70/MedReminder#211](https://github.com/vger70/MedReminder/pull/211)
