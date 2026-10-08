@@ -43,9 +43,10 @@ Branch: `ui-requirements`
 
 ### Docs
 
-- Review and align `ANALYSIS-B1-UI-REQUIREMENTS.md` with the Android
-  plan: first-run and restore paths, notification actions, M1/M2 scope,
-  privacy behavior, and measurable touch-target accessibility criteria.
+- Review and expand `ANALYSIS-B1-UI-REQUIREMENTS.md` across M1–M5:
+  settings and privacy, backup and sync flows, Free/Premium gates,
+  entitlements, billing states, and acceptance criteria for each planned
+  feature area.
 
 ---
 

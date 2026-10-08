@@ -500,7 +500,7 @@ shared through one mechanism only `[INFERRED]`.
 ### 4.9 Android UI requirements
 
 The product owner selected the Daily overview direction on 2026-10-08.
-The screen architecture, M1/M2 functional requirements, accessibility
+The screen architecture, M1–M5 functional requirements, accessibility
 conditions, offline and sync states, and acceptance criteria are in
 [`ANALYSIS-B1-UI-REQUIREMENTS.md`](ANALYSIS-B1-UI-REQUIREMENTS.md).
 The production UI belongs to the private Android repository (A7); this
