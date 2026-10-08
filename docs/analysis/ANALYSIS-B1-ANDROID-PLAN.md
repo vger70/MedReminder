@@ -20,7 +20,7 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-08: revision 14 (adds the selected Android UI direction, implementation requirements, and the updated Google Drive-first provider priority).
+Status on 2026-10-08: revision 15 (expands Android UI requirements across M1–M5 and makes first-start privacy copy consistent with optional encrypted cloud sync/backup).
 Reading conventions: `[VERIFIED]` (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]` (not verified), **`[ANDROID EXPERT NOTE]`** (Technical integration/correction from senior Android platform review).
 Untagged statements are design proposals.
 
@@ -173,10 +173,15 @@ let a PC join (household §10) `[VERIFIED]`. The PC joins with the text
 pairing code: its webcam decoder does not read QR codes (household §10)
 `[VERIFIED]`.
 
-**GDPR / Store Compliance Note for First Start:**
-Before entering the setup path, the onboarding UI presents an explicit acknowledgment screen:
-> *"MedReminder processes health data exclusively on your device. No personal or medical data is sent to central developer servers. By continuing, you acknowledge that you have read and accepted our [Privacy Policy](link)."*
-> Action required: `[ I Understand and Agree ]`. This fulfills Google Play Health Data Policy and App Store Privacy Guidelines without requiring an explicit GDPR consent form (since processing is purely local and falls under Art. 2.2.c GDPR household exemption).
+**Privacy acknowledgment for first start:**
+Before entering the setup path, the onboarding UI presents the Privacy
+Policy and an explicit acknowledgment. Copy shall distinguish local-only
+use from optional sync/backup and shall explain that, when enabled,
+encrypted profile data is transferred to the cloud provider selected by
+the user. Do not say that profile data stays exclusively on the device
+once cloud sync or backup is enabled. The final copy and acknowledgment
+mechanism require privacy/legal review before release; this UX
+requirement is not a legal conclusion.
 
 ### 4.2 Notification planner
 
@@ -736,8 +741,9 @@ D4 before M2, instead of "Phase 5".
 - `ANALYSIS-B1-MOBILE-SYNC.md` §10 (donation links) and §16 (D14): no
 donation links on Android or iOS (DA9); D14 is settled by it.
 - `ANALYSIS-B1-UI-REQUIREMENTS.md`: selected Daily overview,
-  M1/M2 screen behavior, accessibility, offline/sync states, and
-  acceptance criteria for the private Android UI.
+  M1–M5 screen behavior, settings/privacy, Free/Premium flows,
+  accessibility, offline/sync states, and acceptance criteria for the
+  private Android UI.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §16 and `EVOLUTION.md` §6: provider
   priority updated to Google Drive first, then OneDrive for Android;
   the desktop implementation history remains OneDrive first.
@@ -745,6 +751,7 @@ donation links on Android or iOS (DA9); D14 is settled by it.
 ---
 
 ## 9. Change log for this document
+- **2026-10-08 — revision 15:** Expanded the linked UX requirements across M1–M5, including the Free/Premium lifecycle, settings/privacy, and full feature-flow coverage; corrected first-start privacy copy to account for optional encrypted cloud transfer and require privacy/legal review.
 - **2026-10-08 — revision 14:** Selected the Daily overview UI; added linked implementation requirements and acceptance criteria; set Google Drive first and OneDrive second for Android without changing the historical desktop provider rollout.
 - **2026-10-07 — revision 13:** Integrated Android Expert Review. Added specific platform implementations (SAF for Storage, Jetpack Security for Keystore, `BiometricPrompt` for App Lock). Clarified `SCHEDULE_EXACT_ALARM` vs Play Policy restrictions. Added DA13 and battery management risk mitigation. Confirmed 500 alarm limit and Family Sharing store policy.
 - 2026-10-07 — revision 12: Integrated Legal & GDPR Privacy Assessment. Added Requirement A8, section §4.1 Legal Onboarding notice for Store Compliance, Art. 20 GDPR Data Portability alignment in §4.3 & §4.8, Decision DA12, and DSA/Tax risk factors in §7.

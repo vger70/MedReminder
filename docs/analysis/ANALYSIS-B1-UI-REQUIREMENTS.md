@@ -175,10 +175,12 @@ The app shall explain the purpose and effect of notification and exact
 alarm permissions before requesting them. If exact alarms are denied,
 the app shall explain that reminder timing may be approximate and
 continue with the documented fallback. Dose reminders, two-stage
-low-stock warnings, and package-expiry notifications shall be distinct
-from premium prescription and administrative-deadline reminders. Dose
-reminder actions shall match the plan: open the medicine/list or snooze
-for 15 minutes; they shall not silently register an intake.
+low-stock warnings, package-expiry notifications, and shortage notices
+shall be distinct from premium prescription and administrative-deadline
+reminders. Dose reminder actions shall match the plan: open the
+medicine/list or snooze for 15 minutes; from M3, the prescription action
+may prepare a request. These actions shall not silently register an
+intake or submit a prescription request.
 
 **Acceptance:** denying a permission does not block access to app data;
 the current reminder capability and route to Android settings remain
@@ -210,7 +212,8 @@ Cloud backup setup shall be separate from profile sync. It shall show
 the selected provider, last backup time, scheduled-backup state, and
 restore action. Restoring a cloud backup and manual `.mrz` export/import
 remain free; scheduled automatic cloud backup is Premium. The M1 backup
-reminder shall say that data is local and offer the free export action.
+reminder shall appear after 30 days without an export/backup while sync
+is off, say that data is local, and offer the free export action.
 
 **Acceptance:** the user can distinguish export, cloud backup, restore,
 and sync; each operation identifies its source/destination and whether
@@ -277,9 +280,15 @@ the state and keep non-premium tasks usable. A cached valid entitlement
 shall continue to work offline according to the plan's grace policy. If
 Premium expires, retain all existing data and keep it visible and
 exportable; stop only gated actions/reminders/automation, identify what
-stopped, and explain how to renew or continue with the free features.
-Do not delete extra-profile data or create a data hostage. Test accounts
-shall use Play license testing, not an in-app tester bypass.
+stopped, and explain how to renew or continue with the free features. If
+the phone is household master and a PC is present when Premium expires,
+offer the planned master-transfer path before sync-dependent automation
+stops. Do not delete extra-profile data or create a data hostage. Test
+accounts shall use Play license testing, not an in-app tester bypass.
+
+One individual purchase shall be restorable on phones using the same
+Google Play account, as specified in the Android plan. Family grants
+are separate from store-account restore and remain conditional on DA10.
 
 The family grant flow and family offer prices are conditional on DA10
 being closed in the Android plan. Until then, do not present proposed
@@ -293,10 +302,12 @@ left column becomes unavailable when billing fails or Premium ends.
 ### UI-14 — Prescriptions, planning, and reports (M3)
 
 M3 shall add the premium prescription draft/share flow, prescription
-lifecycle (requested, issued, collected), repeat entries, and
-"valid-until" reminder; recurring administrative deadlines and their
-reminders; supply planning; calendar `.ics` export; and report/PDF
-generation and sharing. These flows shall be reachable from the
+lifecycle (requested, issued, collected), repeat entries, regional
+prescription-service links, and "valid-until" reminder; recurring
+administrative deadlines and their reminders; supply planning; calendar
+`.ics` export; and report/PDF generation and sharing. A prescription
+notification action shall open the preparation flow, not submit or mark
+a request as sent. These flows shall be reachable from the
 medicine detail, Agenda, and the relevant planning section without
 moving the M1 medicine agenda out of its existing role.
 
@@ -317,9 +328,10 @@ The catalogue area shall allow a user to select the reference country,
 search downloaded entries, and link an entry to a medicine for free.
 Show catalogue availability and last refresh; explain when the
 catalogue needs a connection. Manual medicine entry remains available
-offline. Shortage notices, equivalent-medicine information and public
-information links remain free. Barcode scan and restock-by-scan are
-Premium and shall offer a clear manual alternative.
+offline. The area shall include the shortage list and notices,
+equivalent-medicine information, and public information links; these
+remain free. Barcode scan and restock-by-scan are Premium and shall
+offer a clear manual alternative.
 
 **Acceptance:** search/linking and scan are visibly different access
 levels; no private profile data is sent by catalogue downloads; scan
@@ -378,6 +390,12 @@ the provider operation confirms it.
 **Acceptance:** users can reopen the policy and understand where their
 data is stored, whether sync is enabled, what is sent to a provider,
 and how to export data without buying Premium.
+
+The Android plan does not yet define an in-app delete-all/local-profile
+data flow. This is an open product decision, distinct from removing a
+device from a household; do not imply that disconnecting sync deletes
+local or provider data. Resolve the behavior and confirmation copy
+before implementing a destructive data-removal action.
 
 ### UI-18 — Settings map and support
 
@@ -499,9 +517,28 @@ This document specifies the UX for M1–M5 without changing the Android
 plan's milestone order or making a future-milestone feature available
 early.
 
+### Feature-to-requirement coverage
+
+This mapping traces every user-facing area in the Android plan's §3
+feature inventory to the requirement that owns its UI behavior.
+
+| Android plan area | Milestone | UX requirements |
+|---|---|---|
+| First start, guided setup, join, restore | M1–M2 | UI-00, UI-11, UI-12 |
+| Medicines, complex regimens, taper, as-needed slots, dose presets, search/filter | M1 | UI-03 |
+| Packages, stock correction/count, intakes, history/retraction, expiry | M1 | UI-04, UI-05 |
+| Dose, low-stock, expiry, shortage, prescription, and deadline notices/actions | M1–M5 | UI-09, UI-14, UI-15, UI-16 |
+| Encrypted file export/import, backup, restore | M1–M2 | UI-11, UI-17 |
+| Provider sign-in, sync, pairing, household, master role, devices, conflicts | M2 | UI-07, UI-08, UI-12 |
+| Billing, entitlement, profile count/roles/PIN | M2 | UI-10, UI-12, UI-13, UI-18 |
+| Prescriptions, administrative deadlines, supply planning, calendar/PDF, timeline | M3 | UI-02, UI-09, UI-13, UI-14 |
+| Catalogue, barcode scan/restock, shortages, equivalents, information links | M4 | UI-13, UI-15 |
+| SMTP, recipients, caregiver copies, low-stock email, weekly digest | M5 | UI-13, UI-16, UI-18 |
+| App lock, permissions, appearance, localization, accessibility, licences/help | M1–M5 | UI-09, UI-10, UI-17, UI-18, §6 |
+
 | Milestone | UX exit condition |
 |---|---|
-| M1 — Standalone core | A user can set up or restore from `.mrz`, manage therapies and stock, record/retract intakes, receive local medicine reminders, change core settings, export data, and continue offline without a cloud account or purchase. |
+| M1 — Standalone core | A user can set up or restore from `.mrz`, manage therapies and stock, record/retract intakes, receive local medicine reminders, change core settings, export data, and continue offline without a cloud account or purchase. After 30 days without export/backup while sync is off, the reminder offers export without blocking use. |
 | M2 — Cloud and Premium | A user can buy/restore Premium, create/join an installation, use Google Drive before OneDrive, review sync/conflict/device state, use multiple profiles/roles, and back up/restore without losing local data when billing or network is unavailable. |
 | M3 — Prescriptions and planning | Premium prescription and planning flows work with correct reminder states; free read-only timeline remains available; PDF/share and calendar actions explain the handoff. |
 | M4 — Catalogue and scan | Catalogue search/link and safety information remain free; scan is Premium with manual alternatives; offline catalogue limitations are clear. |
@@ -512,7 +549,9 @@ not be presented as settled product behavior: D4 notification defaults,
 D13 minimum Android version, DA10 family grant/product and proposed
 family prices, and DA13 battery-optimization guidance. Country/catalogue
 and milestone-order decisions remain governed by DA3 and DA4 in the
-Android plan. Exact prices and Play-provided renewal/cancellation terms
+Android plan. The plan also needs to decide whether the app exposes an
+in-app delete-all/local-profile action and what happens to related
+provider data. Exact prices and Play-provided renewal/cancellation terms
 must come from the current store product data at runtime, not static UI
 copy.
 

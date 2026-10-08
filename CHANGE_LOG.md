@@ -46,7 +46,9 @@ Branch: `ui-requirements`
 - Review and expand `ANALYSIS-B1-UI-REQUIREMENTS.md` across M1–M5:
   settings and privacy, backup and sync flows, Free/Premium gates,
   entitlements, billing states, and acceptance criteria for each planned
-  feature area.
+  feature area; final review closes coverage gaps for backup reminders,
+  M3 prescription links/actions, M4 shortage lists, Premium lapse and
+  master transfer, and privacy/deletion scope.
 
 ---
 
