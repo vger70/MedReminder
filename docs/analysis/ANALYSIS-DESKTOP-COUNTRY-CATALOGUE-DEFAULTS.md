@@ -64,13 +64,11 @@ while it also drives the Italy-only lists. Proposal: a new installation
 setting `ReferenceCatalogue` (`IT`, `ES`, `FR`, `US`, `EU`, `none`),
 replicated as a household setting and written to the `.mrz` payload.
 
-Compatibility `[INFERRED]`: a device that does not know
-`ReferenceCatalogue` keeps today's behavior from `ReferenceCountry`
-(EU for an unlisted country). The household design records that
-desktops keeping an unknown setting name without error is still to be
-verified (`ANALYSIS-B1-ANDROID-PLAN.md` §4.8, family grant); this must
-be verified before the setting ships, and `docs/SYNC-FORMAT.md` and
-`docs/EXPORT-FORMAT.md` updated.
+Older desktops that do not know `ReferenceCatalogue` are not a
+constraint: household installations are not yet widespread (product
+owner, 2026-10-08), so no compatibility check is planned.
+`docs/SYNC-FORMAT.md` and `docs/EXPORT-FORMAT.md` are updated with the
+new setting.
 
 ### 3.3 First run and settings
 
@@ -114,8 +112,7 @@ describe the country step and the "no catalogue" option.
 
 ## 5. Plan
 
-- Effort: 3–5 developer-days `[INFERRED]`, including the compatibility
-  check of §3.2.
+- Effort: 3–5 developer-days `[INFERRED]`.
 - Order: §3.1 before Android M4 (the Android app consumes the same
   rule); the desktop UI (§3.3) can ship with or after it.
 - Tests: `CatalogueDefaults` unit tests; household projection test for
@@ -128,3 +125,5 @@ describe the country step and the "no catalogue" option.
 
 - 2026-10-08 — First version, from the DA3 revision of the Android plan.
 - 2026-10-08 — DD1–DD4 decided by the product owner.
+- 2026-10-08 — Compatibility check with older desktops dropped: household
+  installations are not yet widespread.

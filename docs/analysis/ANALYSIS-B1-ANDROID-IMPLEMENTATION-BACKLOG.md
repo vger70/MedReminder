@@ -137,7 +137,7 @@ correct reminder states, accessible Premium gate, and safe external handoff.
 | B3-02 | Regional prescription links and validity | Show supported public service link and valid-until reminders without implying submission or clinical approval. | Regional service data; UI-14 |
 | B3-03 | Administrative deadlines and reminders | Create recurring deadlines, edit/pause them, and resolve notifications; keep distinct from free medicine-dose reminders. | Planner parity; UI-14 |
 | B3-04 | Supply planning and calendar export | Show estimates and inputs; export `.ics` via Android document/share flow with cancellation recovery. | UI-14 |
-| B3-05 | Therapy timeline and PDF report | Timeline remains read-only/free; report uses approved library/licence, previews scope and explains share-sheet handoff. | PDF implementation decision; UI-14 |
+| B3-05 | Therapy timeline and PDF report | Timeline remains read-only/free; report built with SkiaSharp (DA14; no iText), previews scope and explains share-sheet handoff; SkiaSharp MIT notice on the licences screen. | DA14; UI-14 |
 
 ### B4 — Reference catalogue, scan and safety information (M4)
 

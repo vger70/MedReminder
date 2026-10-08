@@ -22,7 +22,7 @@ This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-08: revision 21, approved by the product owner on
+Status on 2026-10-08: revision 22, approved by the product owner on
 2026-10-08 (M3 → M4 → M5 sequence included). M1–M5 builds are
 pre-release builds on the Play testing tracks (§5.0); the public Play
 Store launch follows M5.
@@ -322,9 +322,9 @@ household master.
 
 ### 4.6 PDF and sharing
 
-The therapy report becomes a PDF built on the phone (Android
-`PdfDocument` or a managed library, decision in M3) and shared with the
-share sheet. **`[ANDROID EXPERT NOTE]`**: Android's native `PdfDocument` requires manual canvas drawing coordinates. SkiaSharp (MIT; an opt-in package for MAUI, not a default dependency; PDF output through `SKDocument.CreatePdf`) is the recommended managed library for complex layouts; it avoids the AGPL-3.0 / commercial licence cost of iText7, which must not be used without a paid licence in a proprietary app.
+The therapy report becomes a PDF built on the phone with SkiaSharp
+(DA14, decided 2026-10-08) and shared with the
+share sheet. **`[ANDROID EXPERT NOTE]`**: Android's native `PdfDocument` requires manual canvas drawing coordinates. SkiaSharp (MIT; an opt-in package for MAUI, not a default dependency; PDF output through `SKDocument.CreatePdf`) is the selected managed library for complex layouts; it avoids the AGPL-3.0 / commercial licence cost of iText7, which must not be used without a paid licence in a proprietary app. SkiaSharp ships a native library in the APK, whose size impact is measured in M3 `[UNCERTAIN — not measured]`; its MIT notice goes on the licences screen.
 
 ### 4.7 Security on the phone
 
@@ -806,6 +806,7 @@ numbering; the D.1 vital-tracking decisions use the prefix DV):
 | DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | **Decided 2026-10-07**: free, scan stays premium (§4.8) |
 | DA12 | GDPR / Store Onboarding | Explicit privacy acknowledgment banner; hidden in settings | **Decided 2026-10-08**: explicit acknowledgment at first start, without claiming it is always GDPR consent (§4.1, UI-00, UI-17) |
 | **DA13** | **Battery Optimization Handling** | No prompt; contextual optional guidance to battery settings | **Decided 2026-10-08**: show a contextual, non-blocking invitation to Android battery settings when OS restrictions threaten reminders or sync; declining keeps the app usable and explains possible delays. This guidance cannot guarantee timely background work. |
+| DA14 | PDF library for the mobile report | Android `PdfDocument`; SkiaSharp; iText7 | **Decided 2026-10-08**: SkiaSharp (MIT); iText7 excluded (AGPL-3.0 or paid licence) (§4.6) |
 
 ---
 
@@ -869,6 +870,8 @@ donation links on Android or iOS (DA9); D14 is settled by it.
 Numbering note: two entries carry revision 14 and none carries
 revision 17; the numbers are kept as recorded.
 
+- **2026-10-08 — revision 22:** DA14 decided: SkiaSharp for the mobile
+  PDF report, iText7 excluded. B.1 D12 (iCloud transport) decided: no.
 - **2026-10-08 — revision 21:** Decisions D11 (reject; equivalent strip
   target in the private repository), DA2, DA5 (personal account,
   `com.vger70.medreminder`) and DA12 recorded. Scope boundary between
