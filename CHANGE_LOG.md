@@ -30,6 +30,25 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #214 — Fix the Android UI proposal and refine its requirements
+
+Link: [vger70/MedReminder#214](https://github.com/vger70/MedReminder/pull/214)
+Branch: `ui-requirements`
+
+### Fixed
+
+- The slide 5 PNG fallback in the Android UI proposal was empty in
+  viewers that do not render the embedded SVG; replace it so the three
+  screen mockups remain visible.
+
+### Docs
+
+- Review and align `ANALYSIS-B1-UI-REQUIREMENTS.md` with the Android
+  plan: first-run and restore paths, notification actions, M1/M2 scope,
+  privacy behavior, and measurable touch-target accessibility criteria.
+
+---
+
 ## PR #211 — Add a free core and a premium tier to the Android plan
 
 Link: [vger70/MedReminder#211](https://github.com/vger70/MedReminder/pull/211)
