@@ -1436,8 +1436,9 @@ Decided on 2026-09-26: D1, D2, D3, D5, D6, D8, D9, D10, D15; on
 selected provisionally in D13, pending M1 technical validation; D11
 was decided and D14 settled by DA9 of `ANALYSIS-B1-ANDROID-PLAN.md`.
 D12 was decided on 2026-10-08 (no iCloud transport). On 2026-10-09
-DA9 was reopened, because the mobile apps became entirely free, so
-D14 is open again until DA9 is decided. The iOS 15 D13 proposal remains inferred and unmeasured.
+DA9 was reopened, when the mobile apps became entirely free, and
+decided again (no donation links, store payment rules); D14 stays
+settled. No B.1 decision is open. The iOS 15 D13 proposal remains inferred and unmeasured.
 
 | # | Decision | Options | Proposal | Needed by |
 |---|---|---|---|---|
@@ -1454,7 +1455,7 @@ D14 is open again until DA9 is decided. The iOS 15 D13 proposal remains inferred
 | D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | **Decided 2026-10-08**: reject. S4 passed (§18.4), no exclusion; the private app repository adopts an equivalent target so that no `*.pdb` / `*.xml` ships in the app's Release output (this repository's target covers only projects under its own tree, such as the shared libraries built from the submodule `[INFERRED — MSBuild imports Directory.Build.props from the project's directory upwards]`) | M1 |
 | D12 | iCloud transport | Plan; exclude | **Decided 2026-10-08**: exclude. A native iCloud container serves Apple devices only and cannot reach Android or Windows through the provider-API transports `[INFERRED]`; a Windows PC with iCloud for Windows can still use its folder through `LocalFolder` | Phase 0 |
 | D13 | Minimum OS versions | — | **Android decided 2026-10-08**: 8.0 (API 26), provisional pending M1 MAUI/alarm/Play validation; iOS 15 remains `[INFERRED — not measured]` | M1 validation (Android); Phase 7 (iOS) |
-| D14 | Donation links on iOS | Include; exclude | Settled 2026-10-07 by DA9 of `ANALYSIS-B1-ANDROID-PLAN.md` (no donation links on Android or iOS). **Reopened 2026-10-09** with DA9 | Phase 7 |
+| D14 | Donation links on iOS | Include; exclude | Settled 2026-10-07 by DA9 of `ANALYSIS-B1-ANDROID-PLAN.md` (no donation links on Android or iOS); confirmed 2026-10-09 when DA9 was decided again (store payment rules) | Phase 7 |
 | D15 | Automatic consumption for inactive periods | None on inactive days (activity history); today's catch-up on reactivation | **Decided 2026-09-26**: no automatic consumption on inactive days | Phase 2 |
 
 ---

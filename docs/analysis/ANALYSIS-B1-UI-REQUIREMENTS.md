@@ -278,9 +278,9 @@ Premium status, and no feature shall depend on a purchase. A feature is
 unavailable only before the milestone that delivers it; a
 later-milestone control shall not appear active early.
 
-Donation links on mobile depend on DA9 (reopened on 2026-10-09). If DA9
-keeps them, they appear only under Help and about, never inside a
-medicine task, a notification or onboarding, and they unlock nothing.
+The app shows no donation link or payment request (DA9, decided on
+2026-10-09: store payment rules). The project website link of UI-10 is
+the only route to project information outside the app.
 
 **Acceptance:** no screen offers a purchase or mentions Premium; every
 feature a milestone delivers works without an account, except the
@@ -430,7 +430,7 @@ Use stable, named groups under **More → Settings**:
 | Privacy and data | UI-17 privacy summary, data routes and local data deletion (M2) |
 | Email | SMTP and recipient settings (M5) |
 | Reference country and catalogue | Country, catalogue or none (M4, UI-15) |
-| Help and about | Help, version, privacy policy (link to the same policy as UI-17), open-source/third-party licences |
+| Help and about | Help, version, project website (`https://www.medreminder26.org`), privacy policy (link to the same policy as UI-17), open-source/third-party licences |
 
 When Android battery restrictions may delay reminders or sync, the app
 shall show a contextual, non-blocking invitation to review the relevant
@@ -444,7 +444,8 @@ device shall respect the active profile and household role permissions.
 **Acceptance:** every setting has one canonical location; direct links
 from a blocked feature, permission explanation, or error state return
 to the relevant setting; unavailable future-milestone entries are not
-shown as active controls.
+shown as active controls; the project website link says it opens the
+browser and sends no profile data.
 
 ### UI-19 — Shared workflow behavior
 
@@ -581,8 +582,9 @@ in UI-17 and affects only the selected device's local copy. Before public
 release, complete the privacy/legal review and verify API 26 support.
 On 2026-10-09 the product owner made the apps entirely free (A6): the
 Free/Premium lifecycle, purchase and entitlement requirements were
-removed from UI-13 and the milestone exits, and DA9 (donation links)
-was reopened.
+removed from UI-13 and the milestone exits; DA9 was decided again (no
+donation links, store payment rules), and Help and about links to the
+project website.
 
 The product owner changed provider priority on 2026-10-08: Google Drive
 first, OneDrive second. Dropbox remains outside the current scope.

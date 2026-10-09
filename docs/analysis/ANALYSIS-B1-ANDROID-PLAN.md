@@ -75,8 +75,8 @@ its own backup (§4.3).
 - Email from the phone becomes necessary, since a phone without a PC
 is the master and the only device that can send it (§4.5). It stays
 a late milestone (M5), which DA4 can move earlier.
-- The mobile apps are free, as B.1 assumed (A6, §4.8); donation links
-on mobile are an open decision (DA9).
+- The mobile apps are free, as B.1 assumed (A6, §4.8), but without the
+donation links B.1 assumed (DA9).
 
 ---
 
@@ -166,7 +166,7 @@ in the plan. "M" refers to the milestones of §5.
 | Email | SMTP account, recipients, low-stock email, caregiver copies per kind, weekly digest, run-out date | Yes, MailKit; timing best effort (S8) | M5 |
 | People | Several profiles, roles, PIN, switch profile | Yes | M2 |
 | People | App lock | Device biometrics instead of the desktop PIN for the single M1 profile. **`[ANDROID EXPERT NOTE]`**: Implemented via AndroidX BiometricPrompt API. | M1 |
-| Support | Donation links (A6) | Open: DA9, reopened on 2026-10-09 (§4.8) | — |
+| Support | Donation links (A6) | No on mobile: store payment rules (§4.8, DA9); Help and about links to the project website (UI-10) | — |
 | Appearance | Text size, dark mode, high contrast | System font scaling and dark theme; no own setting | M1 |
 | Language | Five UI languages | Yes, same dictionaries | M1 |
 | Desktop only | Auto-start, tray, window placement, single-instance mutex | Not applicable: Android manages the app lifecycle | — |
@@ -374,9 +374,20 @@ the history of this document.
 Billing nor Apple In-App Purchase, and Play Console needs no payments
 profile `[INFERRED — a payments profile is needed to sell apps or
 in-app products]`.
-- Donation links on mobile: DA9 was decided on 2026-10-07 (drop) because
-the premium tier replaced them; that reason no longer holds, and DA9 is
-reopened (§6). The desktop keeps its donation links.
+- No donation links in the mobile apps (DA9, confirmed on 2026-10-09).
+Google Play requires Play billing for payments and exempts only
+donations to tax-exempt organisations; apps have been rejected both for
+an in-app donation dialog and for a link to a project page that showed
+donation information (StreetComplete, 2022; AnkiDroid, 2026). The App
+Store accepts developer tips only through in-app purchase, and outside
+the United States storefront forbids links to other payment methods
+(guidelines 3.1.1, 3.1.1(a)). Tips through store billing would bring
+back the payments profile and the trader and tax questions that the
+all-free model removes. The apps link to the project website under
+Help and about (UI-10); the page they open must show no donation or
+payment link `[INFERRED — from the StreetComplete rejection; the
+Payments policy page was not read directly]`. The desktop keeps its
+donation links.
 - Closed test before production: a **personal** Play account created
 after 2023-11-13 needs at least **12** testers opted in for 14
 consecutive days; the figure was 20 until 2024-12-11. Organization
@@ -390,7 +401,7 @@ e-mail and phone on the product page. Without sales, whether the
 developer is a trader depends on the criteria the store applies; a
 free app with no income is the case most likely to be non-trader
 `[UNCERTAIN — check the Play Console declaration criteria before the
-first upload, and again if DA9 adds donations]`.
+first upload]`.
 
 **Code and licence** (decided on 2026-10-07, A7, DA8). This
 repository stays public and Apache-2.0 `[VERIFIED — LICENSE]`. The
@@ -585,7 +596,7 @@ parser; restock by scan.
 
 - SMTP settings and MailKit on the phone; low-stock email, caregiver
 copies per kind, weekly digest (§4.5).
-- Donation links on mobile as DA9 decides (reopened on 2026-10-09).
+- No donation links on mobile (§4.8, DA9).
 - Exit: feature inventory of §3 fully satisfied or each gap accepted
 by the product owner.
 - Effort: 10–15 days `[INFERRED]`.
@@ -648,7 +659,7 @@ numbering; the D.1 vital-tracking decisions use the prefix DV):
 | DA6 | Free and premium split | Split table; other | Decided 2026-10-07 (split table). **Superseded 2026-10-09**: every feature free (A6, §4.8) |
 | DA7 | Prices | € 1.99 / 20.99 / 59.99; € 1.99 / 17.99 / 49.99 with a 14-day trial | Decided 2026-10-07 (€ 1.99 / 17.99 / 49.99, 14-day trial). **Superseded 2026-10-09**: nothing is sold (A6) |
 | DA8 | Licence of the mobile app code | Apache-2.0 in this repository; private repository, proprietary | **Decided 2026-10-07**: private repository for the Android and iOS apps; desktop and shared core stay Apache-2.0 here (A7) |
-| DA9 | Donation links on mobile | Keep; drop | Decided 2026-10-07 (drop, because the premium tier replaced them). **Reopened 2026-10-09**: that reason no longer holds; decide after reviewing the Google Play and App Store rules on donations |
+| DA9 | Donation links on mobile | Keep; drop | Decided 2026-10-07 (drop, because the premium tier replaced them). Reopened and **decided again 2026-10-09: drop**, because of the Google Play and App Store payment rules (§4.8); Help and about links to the project website instead |
 | DA10 | Premium across a family | Per store account; family tier granted through the household; any premium phone covers its household | Decided 2026-10-08 (family tier deferred beyond M2). **Superseded 2026-10-09**: no premium tier (A6) |
 | DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | Decided 2026-10-07 (free, scan premium). **Superseded 2026-10-09**: catalogue, search, linking and scan all free (A6) |
 | DA12 | GDPR / Store Onboarding | Explicit privacy acknowledgment banner; hidden in settings | **Decided 2026-10-08**: explicit acknowledgment at first start, without claiming it is always GDPR consent (§4.1, UI-00, UI-17) |
@@ -670,8 +681,8 @@ numbering; the D.1 vital-tracking decisions use the prefix DV):
 | Shared core and private app drift apart | Medium | Medium | App pins a tag of this repository; shared changes land here first |
 | Store review or rejection over health-data handling | Medium | High | Explicit privacy acknowledgment at first start (§4.1), accurate Privacy Policy and Play data-safety form, no unsupported GDPR claims |
 | Data lock-in / portability concern (including GDPR Art. 20 questions) | Low | High | `.mrz` export and import stay available (§4.8 principle 2); the plan does not claim that export alone establishes Art. 20 compliance |
-| DSA trader status declared wrongly | Low | Medium | Check the Play Console criteria before the first upload (§4.8); reassess if DA9 adds donations |
-| No income for the fixed costs (store accounts, private-repository CI minutes) | Medium | Low–medium | No backend and no per-user cost; DA9 reopened |
+| DSA trader status declared wrongly | Low | Medium | Check the Play Console criteria before the first upload (§4.8) |
+| No income for the fixed costs (store accounts, private-repository CI minutes) | Medium | Low–medium | No backend and no per-user cost; donations stay on the desktop (DA9) |
 
 ---
 
@@ -688,8 +699,8 @@ roles and PIN on the phone are part of M2.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §16: D11 and D4 decided; validate the
   provisional API 26 floor during the M1 spike.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §10 (donation links) and §16 (D14):
-donation links on Android and iOS follow DA9, reopened on 2026-10-09;
-D14 is settled when DA9 is.
+no donation links on Android or iOS (DA9, decided again on
+2026-10-09); D14 is settled by it.
 - `ANALYSIS-B1-UI-REQUIREMENTS.md`: selected Daily overview,
   M1–M5 screen behavior, settings/privacy,
   accessibility, offline/sync states, and acceptance criteria for the
@@ -716,7 +727,8 @@ revision 17; the numbers are kept as recorded.
   apps are entirely free (A6). §4.8 rewritten (principles, store rules,
   trader status); split table, prices, license testing, entitlement and
   billing design, and the family tier removed. DA6, DA7, DA10 and DA11
-  superseded; DA9 reopened. M2 loses the premium infrastructure, S11 and
+  superseded; DA9 reopened and decided again (drop, store payment
+  rules), with a link to the project website under Help and about. M2 loses the premium infrastructure, S11 and
   the trader/payments entry (30–45 days, total 115–165); M3–M5 follow M2
   by DA4 only. Premium risks removed; trader-status and no-income risks
   added.
