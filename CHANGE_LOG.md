@@ -30,6 +30,17 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #223 — Docs: the maintainer pushes core-v tags
+
+Link: [vger70/MedReminder#223](https://github.com/vger70/MedReminder/pull/223)
+Branch: `claude/shared-core-tag-note`
+
+### Docs
+
+- `docs/SHARED-CORE.md`: `core-v*` tags are created and pushed by the maintainer from a local clone; cloud sessions cannot push tags.
+
+---
+
 ## PR #222 — Android M0 (B0-04): shared-core CI and core-v tag discipline
 
 Link: [vger70/MedReminder#222](https://github.com/vger70/MedReminder/pull/222)
