@@ -6,15 +6,18 @@ namespace MedReminder.Application.Tests.Support;
 internal sealed class FakeTimeProvider : TimeProvider
 {
     private DateTimeOffset _utcNow;
+    private readonly TimeZoneInfo _zone;
 
-    public FakeTimeProvider(DateTimeOffset initial)
+    // zone: a test that exercises local days and DST passes its own.
+    public FakeTimeProvider(DateTimeOffset initial, TimeZoneInfo? zone = null)
     {
         _utcNow = initial.ToUniversalTime();
+        _zone = zone ?? TimeZoneInfo.Utc;
     }
 
     public override DateTimeOffset GetUtcNow() => _utcNow;
 
-    public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+    public override TimeZoneInfo LocalTimeZone => _zone;
 
     public void SetUtcNow(DateTimeOffset newNow) => _utcNow = newNow.ToUniversalTime();
 

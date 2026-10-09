@@ -217,6 +217,12 @@ from the same rules, the dated notifications of the next days:
 The prescription and deadline kinds are planned only with premium
 (§4.8); the others for every user.
 
+Implemented in M0 (backlog B0-02) for low stock, dose reminders and
+package expiry: `NotificationPlanner` and `NotificationPlanLoader` in
+`MedReminder.Application/Notifications`, checked against the desktop
+passes by `NotificationPlannerParityTests`. The prescription and
+deadline kinds are added with premium in M2.
+
 The Android adapter replaces the scheduled set with exact alarms after
 every local write, every sync that changed data, every start and
 resume, at `BOOT_COMPLETED` (S5), and on a time-zone or clock change

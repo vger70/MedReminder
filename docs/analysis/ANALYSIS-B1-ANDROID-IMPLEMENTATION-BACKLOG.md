@@ -75,8 +75,8 @@ and behave unchanged on desktop; Android can consume the portable APIs.
 
 | ID | Slice | Acceptance / done when | Depends on |
 |---|---|---|---|
-| B0-01 | Extract portable profile registry and settings stores | Existing desktop profile/settings behavior is unchanged; Windows path and DPAPI concerns remain in the Windows shell. | Plan M0 |
-| B0-02 | Add the shared notification planner | Planner results match existing desktop medication monitor/reminder behavior for dose, stock, expiry, time-zone and schedule edge cases. | B0-01; plan §4.2 |
+| B0-01 | Extract portable profile registry and settings stores | Existing desktop profile/settings behavior is unchanged; Windows path and DPAPI concerns remain in the Windows shell. **Implemented 2026-10-08**: `ProfileRegistry`, `CurrentProfile`, `ProfileSettingsStore`, `SyncProfileStatus`, `InstallationSettingsStore` and `SmtpSettings` in `Infrastructure.Portable`; the desktop passes the `AppDataPaths` locations. | Plan M0 |
+| B0-02 | Add the shared notification planner | Planner results match existing desktop medication monitor/reminder behavior for dose, stock, expiry, time-zone and schedule edge cases. **Implemented 2026-10-09**: `NotificationPlanner` (pure) and `NotificationPlanLoader` in `Application/Notifications`, for low stock, dose reminders and package expiry on the device channel; `NotificationPlannerParityTests` replay the desktop passes every 15 minutes (two-stage low stock, suspension, schedule change, therapy end, packages of an inactive medicine, as-needed slot, already reminded slot, booked day, both DST changes). Prescriptions and deadlines (premium, M2) and shortages (feed event) are not planned; skipping slots with a recorded intake (B.1 §8.1) is left to B1-05. | B0-01; plan §4.2 |
 | B0-03 | Prove the Android app can consume shared core | Private app builds against a pinned shared-core revision; no Windows-only dependency crosses into the Android composition root. | B0-01; private repository A7 |
 | B0-04 | Establish shared-core CI and release discipline | CI builds and runs relevant portable tests; shared changes are tagged/referenced by the mobile app. | B0-03 |
 

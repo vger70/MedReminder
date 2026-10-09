@@ -3,6 +3,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Sync;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Profiles;
+using MedReminder.Infrastructure.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MedReminder.UI.Hosting;
@@ -42,7 +43,7 @@ internal sealed class ProfileGroupRotation : IProfileGroupRotation
 
         var profile = _registry.GetById(profileId)
             ?? throw new InvalidOperationException("The profile is not on this device.");
-        await using var provider = ProfileServices.Build(_services, new CurrentProfile(profile));
+        await using var provider = ProfileServices.Build(_services, new CurrentProfile(profile, AppDataPaths.GetProfilesRootDirectory()));
         await using (var scope = provider.CreateAsyncScope())
         {
             await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().InitializeAsync(cancellationToken);
