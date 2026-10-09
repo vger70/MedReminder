@@ -3,6 +3,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Deadlines;
 using MedReminder.Application.Migrations;
+using MedReminder.Application.Notifications;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Packages;
 using MedReminder.Application.Prescriptions;
@@ -96,9 +97,9 @@ internal sealed class ApplicationTestScope
     public PackageExpiryNotices PackageExpiryNotices { get; }
     public SyncGenesis Genesis { get; }
 
-    public ApplicationTestScope(DateTimeOffset? now = null)
+    public ApplicationTestScope(DateTimeOffset? now = null, TimeZoneInfo? zone = null)
     {
-        Clock = new FakeTimeProvider(now ?? new DateTimeOffset(2026, 9, 13, 12, 0, 0, TimeSpan.Zero));
+        Clock = new FakeTimeProvider(now ?? new DateTimeOffset(2026, 9, 13, 12, 0, 0, TimeSpan.Zero), zone);
 
         Registers = new SyncRegisters(SyncVersions, SyncConflicts, Clock);
         Operations = new OperationLog(SyncSettingsStore, SyncOperations, Registers, Clock);
@@ -225,6 +226,12 @@ internal sealed class ApplicationTestScope
 
         Cutoff.Cutoff = new LedgerCutoff { CutoffDay = cutoffDay, FrozenAt = now };
     }
+
+    // Builds the NotificationPlanner loader (backlog B0-02) over the same
+    // in-memory dependencies.
+    public NotificationPlanLoader BuildPlanLoader()
+        => new(Medicines, Stock, Schedules, Suspensions, Slots, Notifications, DoseEvents, Intakes, Counts,
+            Packages, PackageNoticeEvents, Clock, ProfileSettings);
 
     // Builds a DoseReminderService (A5) wired to the same in-memory
     // dependencies. graceWindow is optional so tests can exercise the

@@ -28,10 +28,13 @@ namespace MedReminder.Infrastructure.Profiles;
 // accidentally promote a profile to admin because of a typo or a
 // future schema drift.
 //
-// Concurrency: single-instance mutex Local\... already prevents two
-// processes from mutating the file from the same Windows session
-// (§10.1). The internal lock guards concurrent calls from within
-// the same process (the UI thread and background services).
+// Concurrency: the host keeps one process per installation (on
+// Windows the single-instance mutex Local\..., §10.1). The internal
+// lock guards concurrent calls from within the same process (the UI
+// thread and background services).
+//
+// Portable (Android plan M0, backlog B0-01): no Windows dependency;
+// the host passes the paths.
 public sealed class ProfileRegistry : IProfileRegistry
 {
     private const int CurrentSchemaVersion = 1;
@@ -56,9 +59,9 @@ public sealed class ProfileRegistry : IProfileRegistry
     private readonly TimeProvider _clock;
     private readonly object _sync = new();
 
-    // The two paths are passed in explicitly (instead of read from
-    // AppDataPaths) so unit tests can exercise the registry against
-    // a temporary directory. Production wiring builds them from
+    // The two paths are passed in explicitly so unit tests can
+    // exercise the registry against a temporary directory and each
+    // host supplies its own layout. The desktop builds them from
     // AppDataPaths.GetProfilesRegistryPath() /
     // AppDataPaths.GetProfilesRootDirectory().
     public ProfileRegistry(

@@ -8,8 +8,8 @@ namespace MedReminder.Infrastructure.Tests.Profiles;
 
 // Unit tests for ProfileRegistry (docs/ANALYSIS-MULTI-USER.md §15a).
 // The registry writes plain JSON with PBKDF2 hashes — nothing
-// Windows-specific — so these tests run on any platform even though
-// the containing project is TFM'd to net10.0-windows.
+// Windows-specific — so it lives in Infrastructure.Portable (Android
+// plan M0, backlog B0-01) and these tests run on any platform.
 public sealed class ProfileRegistryTests : IDisposable
 {
     private readonly string _tempDirectory;
