@@ -43,9 +43,11 @@ Updated on 2026-10-05 after the Android spike runs (S1–S4, draft
 Updated on 2026-10-06: Android plan revised for a standalone app with
 every current feature (`ANALYSIS-B1-ANDROID-PLAN.md`): §3.1, §4.
 
-Updated on 2026-10-07: free core and premium tier for the mobile
-apps (`ANALYSIS-B1-ANDROID-PLAN.md` §4.8); Android and iOS apps in a
-private repository, desktop and shared core open: §3.1.
+Updated on 2026-10-07: Android and iOS apps in a private repository,
+desktop and shared core open: §3.1. Updated on 2026-10-09: the mobile
+apps are entirely free, like the desktop; the free core and premium
+tier of 2026-10-07 are dropped (`ANALYSIS-B1-ANDROID-PLAN.md` A6,
+§4.8).
 
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
@@ -282,7 +284,7 @@ repeatable prescription (operation schema 12).
 
 | Phase | Content | Effort `[INFERRED]` | Blocking inputs |
 |---|---|---|---|
-| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, approved sequence) | Standalone Android app with every applicable desktop feature: M0 portability refactor 2 and notification planner; M1 standalone core; M1b local vital tracking (D.1, separately estimated); M2 individual Premium only, cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 desktop-parity catalogues and scan; M5 email; all M1–M5 builds for internal testing; public Play Store launch after M5 | 120–170 d for M0–M5; M1b not estimated | D11, DA2, DA5 (before M1); validate provisional D13/API 26 before claiming support; S11, S6/S7 Android OAuth, trader/payment setup (before M2); final privacy/legal and Play release checks after M5; private app repository (spikes S1–S5 and S8 done) |
+| 5 (Android: M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, approved sequence) | Standalone Android app with every applicable desktop feature: M0 portability refactor 2 and notification planner; M1 standalone core; M1b local vital tracking (D.1, separately estimated); M2 cloud backup, sync, household, profiles, roles and PIN; M3 prescriptions, planning, views; M4 desktop-parity catalogues and scan; M5 email; all M1–M5 builds for internal testing; public Play Store launch after M5 | 115–165 d for M0–M5; M1b not estimated | D11, DA2, DA5 (before M1); validate provisional D13/API 26 before claiming support; S6/S7 Android OAuth (before M2); DA9 donation links (reopened); final privacy/legal and Play release checks after M5; private app repository (spikes S1–S5 and S8 done) |
 | 6 | iOS | 15–25 d | Phase 5; macOS host; Apple Developer Program; S1, S3, S5 on iOS |
 | 7 | iOS feature parity (for Android absorbed by M2–M5); the state-hash check is not implemented on any device and stays a B.1 item | not re-estimated | Phase 6; D14 |
 
@@ -317,11 +319,10 @@ Open prerequisites and debts inside B.1:
 - **P15**: store accounts and macOS build host are product-owner
   actions.
 
-Total remaining B.1 effort: about 120–170 developer-days for Android
+Total remaining B.1 effort: about 115–165 developer-days for Android
 (M0–M5 of `ANALYSIS-B1-ANDROID-PLAN.md`, which replace Phases 5 and 7
 for Android; M1b is separate and not estimated) plus 15–25 for iOS
-(Phase 6), whose estimate predates the standalone and premium
-requirements `[INFERRED]`.
+(Phase 6), whose estimate predates the standalone requirement `[INFERRED]`.
 
 ### 3.2 Other decided items
 

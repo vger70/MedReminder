@@ -30,9 +30,12 @@ workflow are detailed in `ANALYSIS-B1-ANDROID-TEAM-PLAN.md`.
   screen-reader semantics, scalable text/layout, loading/empty/error/offline
   states, and accessibility verification where applicable. Do not make a
   later-milestone control appear active early.
-- Spike S11 for billing and the API 26 compatibility spike remain explicit
-  prerequisites at their plan gates. They are listed here as deferred work;
-  this backlog does not launch them.
+- The API 26 compatibility spike remains an explicit prerequisite at its
+  plan gate. It is listed here as deferred work; this backlog does not
+  launch it. Spike S11 (billing) was dropped on 2026-10-09 with the
+  premium tier.
+- The apps are entirely free (plan A6, decided 2026-10-09): no slice adds
+  a purchase, a premium gate or an entitlement.
 
 ## 2. Decisions and gates
 
@@ -42,11 +45,12 @@ workflow are detailed in `ANALYSIS-B1-ANDROID-TEAM-PLAN.md`.
 | DA2 | Backup on a standalone phone | **Decided 2026-10-08**: export in M1, cloud backup in M2, Android Auto Backup off. | B1-06, B2-03 |
 | DA3 | Catalogue, language and country defaults | **Decided 2026-10-08, revised 2026-10-08**: UI language from the system if supported, English otherwise, user-changeable and independent of the country. Catalogue from the reference country: national (IT, ES, FR, US) if one exists; otherwise EMA for an EU/EEA country; otherwise none, with manual entry. App use remains worldwide; catalogues are optional, public and redistributable. Plan §4.4. | B1-01 (language), M4 (country and catalogue); desktop integration in `ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md` |
 | DA4 | Order of M3–M5 and public launch | **Decided 2026-10-08**: M3 → M4 → M5; M1–M5 are pre-release builds; public Play Store launch is only after M5. | M3/M4/M5 exit gates and the single public launch gate |
+| A6 | Free or paid mobile apps | **Decided 2026-10-09**: entirely free, like the desktop; no premium tier or in-app purchase (plan §4.8). | — |
+| DA9 | Donation links on mobile | **Reopened 2026-10-09**: the 2026-10-07 drop relied on the premium tier, which no longer exists. | Store listing and settings screens (B1-09, B5-05) |
 | DA12 | Onboarding privacy acknowledgment | **Decided 2026-10-08**: explicit acknowledgment at first start, not presented as GDPR consent (UI-00, UI-17). | B1-02 |
-| D13 | Android minimum OS | API 26 selected provisionally; verify MAUI, alarms, billing/store compatibility in the M1 spike before claiming support. Spike is deferred until separately authorized/scheduled. | M1 release claim and M2 entry |
+| D13 | Android minimum OS | API 26 selected provisionally; verify MAUI, alarms and store compatibility in the M1 spike before claiming support. Spike is deferred until separately authorized/scheduled. | M1 release claim and M2 entry |
 | DA5 | Play account and application ID | **Decided 2026-10-08**: personal account, application ID `com.vger70.medreminder` (immutable after first upload); production access needs the closed test of plan §5.0. | B1-09, B5-05 |
-| S11 | Google Play Billing integration | Plan requires the native billing spike before M2, on Billing Library 8 or later (required by Play since 2026-08-31). | M2 entitlement/purchase implementation |
-| M2 accounts | Google Drive and OneDrive Android OAuth clients; Play trader/payment profile | Provision and verify before their respective M2 integration/release gates. | M2 provider sign-in and paid release |
+| M2 accounts | Google Drive and OneDrive Android OAuth clients | Provision and verify before their respective M2 integration gates. | M2 provider sign-in |
 
 ### DA3: country, catalogue and language
 
@@ -103,18 +107,17 @@ export/import.
 | B1-08 | Reminder settings and recovery states | Expose permission status and routes to Android settings; when battery restrictions may delay reminders, offer contextual optional guidance and explain the limitation. | DA13; UI-09, UI-18 |
 | B1-09 | Pre-release readiness | Private-repository CI with a Release strip target equivalent to `StripReleaseDebugArtifacts` (D11), application ID `com.vger70.medreminder` (DA5), signing outside source control, internal and closed testing tracks (plan §5.0), five-language user guides, upgrade/reboot/export-import checklist, and no health data in logs. | B1-01–08; D13 validation |
 
-### B2 — Individual Premium, cloud and household (M2)
+### B2 — Cloud and household (M2)
 
 **Entry:** M1 exit passed, API 26 support validated, D4 recorded, S6/S7 Android
-OAuth clients ready, S11 billing spike complete, Play merchant/trader setup
-ready. Google Drive integration precedes OneDrive. **Exit:** offline,
-conflict, purchase, restore, entitlement lapse and device-removal flows
-preserve user data and accurately report state.
+OAuth clients ready. Google Drive integration precedes OneDrive.
+**Exit:** offline, conflict, restore and device-removal flows preserve
+user data and accurately report state. B2-01 (Play products and
+entitlement) and B2-02 (Premium gates) were removed on 2026-10-09 with
+the premium tier; the other IDs are unchanged.
 
 | ID | Slice | Acceptance / done when | Depends on / UX |
 |---|---|---|---|
-| B2-01 | Individual Play products and entitlement state | Buy/restore individual monthly, yearly and lifetime products; show pending/unavailable/offline/grace/expired states; cached valid entitlement works under the documented grace policy. No family product/grant in M2. | S11, DA7, DA10; UI-13 |
-| B2-02 | Contextual Premium gates | Explain gated feature, value and runtime Play terms; preserve free path and unrelated medicine work; no safety reminders, export or restore are gated. | B2-01; UI-13 |
 | B2-03 | Google Drive sign-in and encrypted backup | Explicit provider opt-in; configure, schedule and restore backup; show provider and last-success status; restore remains free and does not silently replace a profile. | S6/S7, P14; UI-07, UI-11, UI-12 |
 | B2-04 | OneDrive provider | Add after Google Drive; same encrypted archive, provider-state and recovery semantics. | B2-03; UI-07, UI-12 |
 | B2-05 | Installation create/join and pairing | QR/code/passphrase paths explain provider authentication, key handling and profile replacement; cancellation and failure preserve current local data. | Sync protocol, B2-03; UI-12 |
@@ -123,19 +126,19 @@ preserve user data and accurately report state.
 | B2-08 | Local data deletion | Export suggestion, exact local scope and confirmation; delete current profile or all local profile data on this device; preserve remote copies, pause that profile's sync on this device, and require explicit restore/reconnect before redownload. Free, like export. | B2-06/07; UI-17 |
 | B2-09 | Lock-screen privacy and notification distribution | Hide medicine details by default; allow per-device opt-in; expose per-kind/per-device delivery preferences; explain Android visibility controls. | D4; UI-09, UI-17, UI-18 |
 | B2-10 | Battery restriction guidance for sync | Contextual optional route to battery settings when OS restriction threatens sync; declining remains safe and shows expected limitation. | DA13; UI-18 |
-| B2-11 | Billing and sync recovery verification | Exercise license-test purchase, restore on same Play account, offline grace, expiry, provider failures, interrupted restore, conflict and removal. | B2-01–10; M2 exit |
+| B2-11 | Sync and recovery verification | Exercise provider failures, interrupted restore, offline, conflict and device removal. | B2-03–10; M2 exit |
 
 ### B3 — Prescriptions, planning and reports (M3)
 
 **Entry:** M2 exit passed; implement first in the approved
 M3 → M4 → M5 order. **Exit:** each feature has
-correct reminder states, accessible Premium gate, and safe external handoff.
+correct reminder states and safe external handoff.
 
 | ID | Slice | Acceptance / done when | Depends on / UX |
 |---|---|---|---|
 | B3-01 | Prescription drafts and lifecycle | Prepare/share a request, record requested/issued/collected and repeats; notifications open preparation only and never claim submission. | M2; UI-09, UI-14 |
 | B3-02 | Regional prescription links and validity | Show supported public service link and valid-until reminders without implying submission or clinical approval. | Regional service data; UI-14 |
-| B3-03 | Administrative deadlines and reminders | Create recurring deadlines, edit/pause them, and resolve notifications; keep distinct from free medicine-dose reminders. | Planner parity; UI-14 |
+| B3-03 | Administrative deadlines and reminders | Create recurring deadlines, edit/pause them, and resolve notifications; keep distinct from medicine-dose reminders. | Planner parity; UI-14 |
 | B3-04 | Supply planning and calendar export | Show estimates and inputs; export `.ics` via Android document/share flow with cancellation recovery. | UI-14 |
 | B3-05 | Therapy timeline and PDF report | Timeline remains read-only/free; report built with SkiaSharp (DA14; no iText), previews scope and explains share-sheet handoff; SkiaSharp MIT notice on the licences screen. | DA14; UI-14 |
 
@@ -144,7 +147,7 @@ correct reminder states, accessible Premium gate, and safe external handoff.
 **Entry:** M3 exit passed. Verify public redistribution and source
 attribution for each dataset. **Exit:** manual entry works
 regardless of catalogue state; search/link, safety information and scan
-obey the Free/Premium split.
+work for every user as plan §4.4 and UI-15 specify.
 
 | ID | Slice | Acceptance / done when | Depends on / UX |
 |---|---|---|---|
@@ -166,7 +169,7 @@ queued work “sent”; no public store release occurs before M5 exits.
 | B5-01 | SMTP credentials and connection setup | Validate configuration, protect secrets, support test/recovery states and never display saved credentials. | UI-16, UI-18 |
 | B5-02 | Recipients and message categories | Configure caregiver copies, low-stock emails and weekly digest separately; review recipients/content before save. | UI-16 |
 | B5-03 | Master as the sending device and master transfer | Email is sent only by the household master, for every profile of the installation; show which device is master and its last-seen state; on a non-master, explain that the master sends and offer user-initiated `mailto:`; explain the handoff to a PC and the effect when the master is unavailable. | Household R5, C4, C5, C8; UI-16 |
-| B5-04 | Best-effort delivery and Premium expiry | State sends may be delayed; show queued/attempted/failed/accepted-by-server states; ordinary medicine reminders continue when Premium expires. | B2-01, planner; UI-13, UI-16 |
+| B5-04 | Best-effort delivery | State sends may be delayed; show queued/attempted/failed/accepted-by-server states. | Planner; UI-16 |
 | B5-05 | Public Play Store launch | Publish to production only after M5 exit, a closed test that meets the Play production-access rule (plan §5.0), and final store/privacy/legal/release checks; M1–M5 artifacts before then are pre-release builds only. | M5 exit; D13 validation; privacy/legal and Play release gates |
 
 ## 4. Cross-cutting definition of done
@@ -179,7 +182,7 @@ Every user-facing item is complete only when:
    system text scaling, dark/light appearance and all five localizations
    are checked.
 3. Safety-related medicine reminders, manual data entry and data export
-   stay available on the free path; no screen suggests diagnosis or
+   stay available to every user; no screen suggests diagnosis or
    treatment changes.
 4. Destructive/replacement operations preview scope, identify local versus
    provider/remote copies and require confirmation.
@@ -196,8 +199,8 @@ Every user-facing item is complete only when:
    API 26 technical spike as a separate later task; do not claim API 26
    support before its result.
 2. Deliver B0, then B1 and its closed-test exit criteria.
-3. Complete M2 provider, household, billing and recovery work; keep Google
-   Drive ahead of OneDrive and family Premium out of scope.
+3. Complete M2 provider, household and recovery work; keep Google
+   Drive ahead of OneDrive.
 4. Deliver M3, then M4, then M5 as pre-release builds; publish to Play
    production only after M5 exits. Apply the DA3 defaults in M4;
    public-data source additions require the same redistribution review

@@ -26,11 +26,12 @@ medicines.
 The Android app must work on its own, offline, and without a cloud
 account. When sync is configured, its profile data converges with the
 other devices through the existing encrypted sync model. The app does
-not run a project-operated backend.
+not run a project-operated backend. Every feature is free: the app has
+no premium tier and no in-app purchase (plan A6, decided 2026-10-09).
 
 This document specifies **Android release 1** (M1–M5), which has no
-vital-parameter tracking: no vital screens, menu entries, placeholders
-or premium offers. Vital tracking (D.1,
+vital-parameter tracking: no vital screens, menu entries or
+placeholders. Vital tracking (D.1,
 [`ANALYSIS-D1-VITAL-TRACKING.md`](ANALYSIS-D1-VITAL-TRACKING.md)) is
 **evolution V**, evaluated after the store release of the Android and
 iOS apps (`ANALYSIS-B1-ANDROID-PLAN.md` §4.3a); its Android UX will be
@@ -66,7 +67,7 @@ Use four persistent primary destinations:
 | **Today** | Daily summary, next reminder, attention items, quick actions |
 | **Medicines** | Searchable active/inactive medicine list and medicine details |
 | **Agenda** | Scheduled reminders grouped by local day and time |
-| **More** | Profiles, sync, conflicts, backup, Premium, settings (including privacy and data), help, and app information |
+| **More** | Profiles, sync, conflicts, backup, settings (including privacy and data), help, and app information |
 
 The labels are the English reference names; the displayed labels come
 from the localization dictionaries of the five languages.
@@ -193,7 +194,7 @@ alarm permissions before requesting them. If exact alarms are denied,
 the app shall explain that reminder timing may be approximate and
 continue with the documented fallback. Dose reminders, two-stage
 low-stock warnings, package-expiry notifications, and shortage notices
-shall be distinct from premium prescription and administrative-deadline
+shall be distinct from prescription and administrative-deadline
 reminders. Dose reminder actions shall match the plan: open the
 medicine/list or snooze for 15 minutes; from M3, the prescription action
 may prepare a request. These actions shall not silently register an
@@ -213,12 +214,12 @@ clear.
 ### UI-10 — Profiles and settings
 
 The app shall expose app lock, language, notification preferences, sync
-status, backup status, privacy and data controls, Premium status, help,
+status, backup status, privacy and data controls, help,
 licences, and app information in a clearly grouped settings area.
 Biometric app lock is M1; multiple profiles, roles, PIN, and profile
 switching are M2. The app shall not imply that users need a MedReminder
-account; provider sign-in and Google Play purchases are separate
-concepts.
+account; provider sign-in is the only account the app uses, and only
+for cloud features.
 
 **Acceptance:** a profile switch makes the active profile visible and
 does not leave the previous profile's medicine data on screen.
@@ -234,10 +235,10 @@ starts a new sync generation and requires explicit confirmation.
 
 Cloud backup setup shall be separate from profile sync. It shall show
 the selected provider, last backup time, scheduled-backup state, and
-restore action. Restoring a cloud backup and manual `.mrz` export/import
-remain free; scheduled automatic cloud backup is Premium. The M1 backup
+restore action. Manual `.mrz` export/import, scheduled cloud backup and
+restore are available to every user. The M1 backup
 reminder shall appear after 30 days without an export/backup while sync
-is off, say that data is local, and offer the free export action.
+is off, say that data is local, and offer the export action.
 
 **Acceptance:** the user can distinguish export, cloud backup, restore,
 and sync; each operation identifies its source/destination and whether
@@ -268,64 +269,26 @@ every displayed sync state corresponds to the sync service result;
 device removal, conflict resolution, or pairing failure does not
 silently discard unrelated pending changes.
 
-### UI-13 — Free and Premium access
+### UI-13 — Free access
 
-The UI shall follow the tier split in `ANALYSIS-B1-ANDROID-PLAN.md`
-§4.8. M1 is free and has no billing flow. In M2, premium offers and
-entitlements shall use Google Play Billing and the in-app entitlement
-service; product and entitlement status shall remain understandable
-offline from the cached entitlement state.
+Every feature is free (`ANALYSIS-B1-ANDROID-PLAN.md` §4.8, A6 decided on
+2026-10-09; it replaces the free and Premium split of 2026-10-07). The
+UI shall show no purchase, price, trial, subscription, entitlement or
+Premium status, and no feature shall depend on a purchase. A feature is
+unavailable only before the milestone that delivers it; a
+later-milestone control shall not appear active early.
 
-| Free, always available | Premium-gated |
-|---|---|
-| One person on one phone; medicines, regimens, stock, intakes, history, and medicine reminders | Sync, household, pairing, and additional devices |
-| Accessibility, five languages, biometric app lock, medicine list, forecasts, and read-only therapy timeline | Scheduled automatic cloud backup; extra profiles, roles, and PIN |
-| Encrypted `.mrz` export/import; restore from cloud backup | Email automation; prescriptions and their reminders; administrative deadlines and supply planning |
-| Catalogue search/link, shortage notices, equivalents and information links | Calendar export and PDF report; barcode scan/restock by scan |
+Donation links on mobile depend on DA9 (reopened on 2026-10-09). If DA9
+keeps them, they appear only under Help and about, never inside a
+medicine task, a notification or onboarding, and they unlock nothing.
 
-The UI shall not gate medicine reminders or other safety-related
-medicine notifications, accessibility, data export/import, cloud backup
-restore, catalogue search/link, or public medicine information behind
-payment. Manual entry shall remain available when catalogue access is
-unavailable. Timeline is read-only and free; reports and the other M3
-planning tools follow the plan's Premium split.
-
-Premium explanations shall be contextual: show them when a user chooses
-a gated feature, preserve the free path, and avoid interrupting an
-unrelated medicine task. Before purchase, show the included features,
-price, billing period, trial length where offered, renewal/cancellation
-terms supplied by Play, and the action to start or restore a purchase.
-Do not invent or hard-code store terms. Provide a visible Premium status
-page with product, trial/renewal or lifetime state, and the store
-management/restore routes.
-
-If a purchase is pending, unavailable, or cannot be refreshed, explain
-the state and keep non-premium tasks usable. A cached valid entitlement
-shall continue to work offline according to the plan's grace policy. If
-Premium expires, retain all existing data and keep it visible and
-exportable; stop only gated actions/reminders/automation, identify what
-stopped, and explain how to renew or continue with the free features. If
-the phone is household master and a PC is present when Premium expires,
-offer the planned master-transfer path before sync-dependent automation
-stops. Handing the master role to the PC stays possible after Premium
-has ended, since it is what keeps email and scheduled backup running on
-the free desktop (plan §4.8 principle 4). Do not delete extra-profile data or create a data hostage. Test
-accounts shall use Play license testing, not an in-app tester bypass.
-
-M2 shall offer individual Play products only. One individual purchase
-shall be restorable on phones using the same Google Play account, as
-specified in the Android plan. A family tier, household grants, and
-family prices are deferred until after M2 and shall not be shown as
-available offers or implemented as M2 entitlements.
-
-**Acceptance:** every gate has an accessible explanation and a safe
-back/cancel path; entitlement refresh, purchase, restore, offline,
-grace, and expiry states are distinguishable; no free feature in the
-left column becomes unavailable when billing fails or Premium ends.
+**Acceptance:** no screen offers a purchase or mentions Premium; every
+feature a milestone delivers works without an account, except the
+provider account that cloud backup and sync need.
 
 ### UI-14 — Prescriptions, planning, and reports (M3)
 
-M3 shall add the premium prescription draft/share flow, prescription
+M3 shall add the prescription draft/share flow, prescription
 lifecycle (requested, issued, collected), repeat entries, regional
 prescription-service links, and "valid-until" reminder; recurring
 administrative deadlines and their reminders; supply planning; calendar
@@ -335,9 +298,7 @@ a request as sent. These flows shall be reachable from the
 medicine detail, Agenda, and the relevant planning section without
 moving the M1 medicine agenda out of its existing role.
 
-The full therapy timeline is read-only and free. The report/PDF and
-other premium planning actions shall have contextual gates under UI-13.
-Before external sharing, identify the file/content being handed to the
+The full therapy timeline is read-only. Before external sharing, identify the file/content being handed to the
 Android share sheet; do not imply that a shared file remains private to
 MedReminder.
 
@@ -371,11 +332,10 @@ everywhere, including offline. Android shall use the feed delivery
 behavior in the Android plan, show catalogue availability and last
 refresh, and explain the source. Country-specific shortage lists,
 equivalents and public information are shown only where desktop data
-supports them (Italy); they remain free. Barcode scan and
-restock-by-scan are Premium and shall offer a clear manual alternative.
+supports them (Italy). Barcode scan and restock-by-scan shall offer a
+clear manual alternative.
 
-**Acceptance:** search/linking and scan are visibly different access
-levels; changing country applies the catalogue default (national, EMA
+**Acceptance:** changing country applies the catalogue default (national, EMA
 for EU/EEA, or none) and never changes the UI language; with no
 catalogue the medicine form works in manual mode without error. No
 private profile data is sent by catalogue downloads; scan permission
@@ -395,8 +355,8 @@ installation (household R5, C4); the B.1 designated mail device is
 superseded. When the phone is master, explain its responsibility for
 email; on a non-master, show which device sends and keep user-initiated
 `mailto:` available. If a PC joins, the planned master-transfer proposal shall explain
-the effect on email before the user decides. Email and its reminders
-are Premium; ordinary medicine reminders remain free.
+the effect on email before the user decides. Ordinary medicine
+reminders do not depend on email.
 
 **Acceptance:** recipient and message categories are reviewable before
 save; invalid configuration and send failures have recovery guidance;
@@ -449,7 +409,7 @@ the provider operation confirms it.
 
 **Acceptance:** users can reopen the policy and understand where their
 data is stored, whether sync is enabled, what is sent to a provider,
-and how to export data without buying Premium.
+and how to export data.
 
 Deletion shall respect the active profile and household role
 permissions. If the user cannot delete the selected scope, explain who
@@ -468,7 +428,6 @@ Use stable, named groups under **More → Settings**:
 | Appearance and language | Follow system light/dark appearance and text scaling; language selector (M1, five supported languages; default system language, English otherwise) |
 | Backup and sync | `.mrz` export/import (M1); provider, sync, conflicts and devices (M2); cloud backup and restore (M2) |
 | Privacy and data | UI-17 privacy summary, data routes and local data deletion (M2) |
-| Premium | Entitlement, offer, purchase/restore and Play management (M2 onward) |
 | Email | SMTP and recipient settings (M5) |
 | Reference country and catalogue | Country, catalogue or none (M4, UI-15) |
 | Help and about | Help, version, privacy policy (link to the same policy as UI-17), open-source/third-party licences |
@@ -479,8 +438,7 @@ system setting. The user may decline and continue using the app; explain
 the possible delay and provide a route back to the setting without
 repeatedly interrupting unrelated tasks.
 
-Do not put Premium controls in place of general settings or make privacy
-information conditional on purchase. Settings reachable on a shared
+Settings reachable on a shared
 device shall respect the active profile and household role permissions.
 
 **Acceptance:** every setting has one canonical location; direct links
@@ -546,10 +504,7 @@ save, pending work, and confirmed completion.
   fabricated run-out date.
 - Permission denied: explain the feature affected and how to change the
   permission later.
-- Purchase pending or billing unavailable: explain that Premium has not
-  yet been confirmed (or show the cached entitlement state); preserve
-  free access and offer retry/restore.
-- Backup stale: show the date and local/device status, and offer free
+- Backup stale: show the date and local/device status, and offer
   export or the configured backup action without claiming a backup ran.
 - Catalogue unavailable: explain that online search is unavailable and
   provide manual entry.
@@ -597,25 +552,25 @@ feature inventory to the requirement that owns its UI behavior.
 | Dose, low-stock, expiry, shortage, prescription, and deadline notices/actions | M1–M5 | UI-09, UI-14, UI-15, UI-16 |
 | Encrypted file export/import, backup, restore | M1–M2 | UI-11, UI-17 |
 | Provider sign-in, sync, pairing, household, master role, devices, conflicts | M2 | UI-07, UI-08, UI-12 |
-| Billing, entitlement, profile count/roles/PIN | M2 | UI-10, UI-12, UI-13, UI-18 |
-| Prescriptions, administrative deadlines, supply planning, calendar/PDF, timeline | M3 | UI-02, UI-09, UI-13, UI-14 |
-| Catalogue, barcode scan/restock, shortages, equivalents, information links | M4 | UI-13, UI-15 |
-| SMTP, recipients, caregiver copies, low-stock email, weekly digest | M5 | UI-13, UI-16, UI-18 |
+| Profile count/roles/PIN | M2 | UI-10, UI-12, UI-18 |
+| Prescriptions, administrative deadlines, supply planning, calendar/PDF, timeline | M3 | UI-02, UI-09, UI-14 |
+| Catalogue, barcode scan/restock, shortages, equivalents, information links | M4 | UI-15 |
+| SMTP, recipients, caregiver copies, low-stock email, weekly digest | M5 | UI-16, UI-18 |
 | App lock, permissions, appearance, localization, accessibility, licences/help | M1–M5 | UI-09, UI-10, UI-17, UI-18, §5 |
 | Local data deletion | M2 | UI-17 |
 
 | Milestone | UX exit condition |
 |---|---|
-| M1 — Standalone core | A user can set up or restore from `.mrz`, manage therapies and stock, record/retract intakes, receive local medicine reminders, change core settings, export data, and continue offline without a cloud account or purchase. After 30 days without export/backup while sync is off, the reminder offers export without blocking use. |
-| M2 — Cloud and Premium | A user can buy/restore individual Premium, create/join an installation, use Google Drive before OneDrive, review sync/conflict/device state, use multiple profiles/roles, delete a selected local copy with accurate cloud-copy warnings, and back up/restore without losing local data when billing or network is unavailable. |
-| M3 — Prescriptions and planning | Premium prescription and planning flows work with correct reminder states; free read-only timeline remains available; PDF/share and calendar actions explain the handoff. |
-| M4 — Catalogue and scan | DA3 country and catalogue defaults apply, including the no-catalogue case; catalogue search/link and safety information remain free; scan is Premium with manual alternatives; offline catalogue limitations are clear. |
-| M5 — Email | SMTP and recipient setup is understandable, delivery timing is described as best effort, and Premium expiry does not affect ordinary medicine reminders. M1–M5 builds remain pre-release builds; public Play Store launch is gated on M5 exit, the closed test required for production access, and final release checks. |
+| M1 — Standalone core | A user can set up or restore from `.mrz`, manage therapies and stock, record/retract intakes, receive local medicine reminders, change core settings, export data, and continue offline without a cloud account. After 30 days without export/backup while sync is off, the reminder offers export without blocking use. |
+| M2 — Cloud and household | A user can create/join an installation, use Google Drive before OneDrive, review sync/conflict/device state, use multiple profiles/roles, delete a selected local copy with accurate cloud-copy warnings, and back up/restore without losing local data when the network is unavailable. |
+| M3 — Prescriptions and planning | Prescription and planning flows work with correct reminder states; the read-only timeline remains available; PDF/share and calendar actions explain the handoff. |
+| M4 — Catalogue and scan | DA3 country and catalogue defaults apply, including the no-catalogue case; catalogue search/link and safety information work; scan has manual alternatives; offline catalogue limitations are clear. |
+| M5 — Email | SMTP and recipient setup is understandable, delivery timing is described as best effort, and email failures do not affect ordinary medicine reminders. M1–M5 builds remain pre-release builds; public Play Store launch is gated on M5 exit, the closed test required for production access, and final release checks. |
 
 Decisions recorded on 2026-10-08: D4 notification distribution defaults
 and lock-screen privacy; Android API 26 as the provisional D13 minimum,
 subject to the M1 technical spike; DA13 contextual, non-blocking battery
-guidance; deferral of DA10's family tier until after M2; DA3 (UI language
+guidance; DA3 (UI language
 from the system, English otherwise; catalogue from the reference country:
 national, else EMA in the EU/EEA, else none; app use worldwide); DA4 order
 M3 → M4 → M5 with pre-release milestone builds and public launch after
@@ -624,8 +579,10 @@ D11, DA2, DA5 (personal account, `com.vger70.medreminder`) and DA12
 (onboarding acknowledgment) decided. The local data deletion behavior is specified
 in UI-17 and affects only the selected device's local copy. Before public
 release, complete the privacy/legal review and verify API 26 support.
-Exact prices and Play-provided renewal/cancellation terms must come from
-current store product data at runtime, not static UI copy.
+On 2026-10-09 the product owner made the apps entirely free (A6): the
+Free/Premium lifecycle, purchase and entitlement requirements were
+removed from UI-13 and the milestone exits, and DA9 (donation links)
+was reopened.
 
 The product owner changed provider priority on 2026-10-08: Google Drive
 first, OneDrive second. Dropbox remains outside the current scope.

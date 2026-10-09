@@ -15,15 +15,17 @@ this document wins. The `ANALYSIS-B1-*` documents also take precedence
 over `docs/STATUS.md` and `docs/EVOLUTION.md`, which are snapshots and
 are not kept up to date with the Android plan. The sync model, the formats and the
 merge rules of B.1 are unchanged. The iOS implementation (B.1 Phase 6)
-is out of scope here; the premium model and the repository rules of
+is out of scope here; the all-free model and the repository rules of
 §4.8 apply to iOS as well.
 
 This document is public and predates the repository split of §4.8: it
 stays the public summary of the mobile plan, and further mobile design
 detail goes to the private repository.
 
-Status on 2026-10-08: revision 22, approved by the product owner on
-2026-10-08 (M3 → M4 → M5 sequence included). M1–M5 builds are
+Status on 2026-10-09: revision 23. Revision 22 was approved by the
+product owner on 2026-10-08 (M3 → M4 → M5 sequence included); revision
+23 applies the product owner's decision of 2026-10-09 to release the
+mobile apps entirely free (A6, §4.8). M1–M5 builds are
 pre-release builds on the Play testing tracks (§5.0); the public Play
 Store launch follows M5.
 Reading conventions: `[VERIFIED]` (checked against the tree at `main` commit `64ccba9`, v2.16.0 plus #205, #207 and #208, and the spike results of B.1 §18), `[INFERRED]` (deduction from verified facts), `[UNCERTAIN]` (not verified), **`[ANDROID EXPERT NOTE]`** (Technical integration/correction from senior Android platform review).
@@ -36,7 +38,7 @@ Untagged statements are design proposals.
 | Content | Milestones M0–M5: every applicable desktop feature on `main`, without vital-parameter tracking | D.1 (`ANALYSIS-D1-VITAL-TRACKING.md`): vital diary on the desktop, Android and iOS |
 | When | Now; public Play Store launch after M5 | Evaluated only after the store release of the Android and iOS apps (product owner, 2026-10-08) |
 | Vital data | None: no `vitals.db`, no vital screens, no vital transfer, no vital entries in the Privacy Policy or the Play data-safety form | Separate local `vitals.db`, outside `.mrz`, cloud backup and sync |
-| Effort | 120–170 developer-days (§5.1) | Not estimated; estimated when evolution V is scheduled |
+| Effort | 115–165 developer-days (§5.1) | Not estimated; estimated when evolution V is scheduled |
 
 Every requirement, milestone, backlog item, UX requirement and estimate in
 the `ANALYSIS-B1-*` documents belongs to release 1 unless it names
@@ -48,12 +50,12 @@ evolution V. §4.3a lists what release 1 must leave in place for it.
 
 | # | Requirement | Source |
 |---|---|---|
-| A1 | The app is complete on its own: first start, all daily use, notifications, backup and restore, without a PC (several profiles with premium, §4.8) | Product owner, 2026-10-06 |
+| A1 | The app is complete on its own: first start, all daily use, notifications, backup and restore, without a PC; several profiles from M2 | Product owner, 2026-10-06 |
 | A2 | The app also works without a cloud account; sync and cloud backup are optional | Derived from A1 `[INFERRED]` |
 | A3 | Every desktop feature on `main` (§3) that applies to a phone is in the plan; the rest is listed with the reason | Product owner, 2026-10-06 |
 | A4 | Deliver a consistent Android core and remaining features in milestones M0–M5 (M1–M5 as pre-release builds on the Play testing tracks, §5.0); publish to the Play Store production track only after M5 | Product owner, 2026-10-06; launch timing confirmed 2026-10-08 |
 | A5 | When the user also has a PC, phone and PC stay one installation (household) and one data set per profile, as B.1 and the household design define | B.1 §1.2; `ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md` R2, R8 |
-| A6 | The mobile apps (Android, later iOS) have a free core and a paid premium tier (subscription or lifetime purchase); the desktop stays free | Product owner, 2026-10-07 |
+| A6 | The mobile apps (Android, later iOS) are entirely free, like the desktop: no premium tier, no in-app purchase, no subscription | Product owner, 2026-10-09; replaces the free core and paid premium tier of 2026-10-07 |
 | A7 | The code of the Android and iOS apps lives in a private repository; the desktop app stays open source in this repository | Product owner, 2026-10-07 |
 | A8 | Privacy by design: local-first storage, transparent onboarding privacy acknowledgment, and user-controlled data export/import | Legal Assessment, 2026-10-07 |
 | A9 | Release 1 contains no vital-parameter tracking; it is evolution V, evaluated after the store release on Android and iOS | Product owner, 2026-10-08 |
@@ -73,8 +75,8 @@ its own backup (§4.3).
 - Email from the phone becomes necessary, since a phone without a PC
 is the master and the only device that can send it (§4.5). It stays
 a late milestone (M5), which DA4 can move earlier.
-- The mobile apps get a free core and a paid premium tier (A6, §4.8);
-B.1 assumed free apps with donation links.
+- The mobile apps are free, as B.1 assumed (A6, §4.8); donation links
+on mobile are an open decision (DA9).
 
 ---
 
@@ -164,7 +166,7 @@ in the plan. "M" refers to the milestones of §5.
 | Email | SMTP account, recipients, low-stock email, caregiver copies per kind, weekly digest, run-out date | Yes, MailKit; timing best effort (S8) | M5 |
 | People | Several profiles, roles, PIN, switch profile | Yes | M2 |
 | People | App lock | Device biometrics instead of the desktop PIN for the single M1 profile. **`[ANDROID EXPERT NOTE]`**: Implemented via AndroidX BiometricPrompt API. | M1 |
-| Support | Donation links (A6) | No on mobile: the premium tier replaces them (§4.8, DA9) | — |
+| Support | Donation links (A6) | Open: DA9, reopened on 2026-10-09 (§4.8) | — |
 | Appearance | Text size, dark mode, high contrast | System font scaling and dark theme; no own setting | M1 |
 | Language | Five UI languages | Yes, same dictionaries | M1 |
 | Desktop only | Auto-start, tray, window placement, single-instance mutex | Not applicable: Android manages the app lifecycle | — |
@@ -182,11 +184,11 @@ The first-start wizard offers three paths:
 the guided setup (#207). No account needed: a device with no storage
 configured is a household of one (household §4.1) `[VERIFIED]`,
 master of itself. This is the standalone path (A1, A2).
-2. **Join an installation** (from M2, premium): pairing code (QR from
+2. **Join an installation** (from M2): pairing code (QR from
 the PC or another phone, or text) or household passphrase plus cloud
 account, as on the desktop (household §6, B.1 §6.1).
 3. **Restore**: from a `.mrz` file (M1) or from a cloud backup (M2),
-both free (§4.8).
+both available to every user (§4.8).
 
 A standalone phone can later publish its household to a cloud account,
 which needs an account because a phone has no folder transport, and
@@ -214,14 +216,15 @@ from the same rules, the dated notifications of the next days:
 | Package expiry | Before the expiry date | `PackageExpiryNotices` |
 | Shortage | When a feed refresh finds a new shortage for a listed medicine | `ShortageNotices`; event, not dated |
 
-The prescription and deadline kinds are planned only with premium
-(§4.8); the others for every user.
+The prescription and deadline kinds are planned from M3, with their
+tools; the others from M1.
 
 Implemented in M0 (backlog B0-02) for low stock, dose reminders and
 package expiry: `NotificationPlanner` and `NotificationPlanLoader` in
 `MedReminder.Application/Notifications`, checked against the desktop
 passes by `NotificationPlannerParityTests`. The prescription and
-deadline kinds are added with premium in M2.
+deadline kinds are added in M3, with the prescription and deadline
+tools.
 
 The Android adapter replaces the scheduled set with exact alarms after
 every local write, every sync that changed data, every start and
@@ -261,7 +264,7 @@ Release 1 keeps evolution V possible without designing for it now:
 - The onboarding acknowledgment records the policy version (UI-17), so
   evolution V can ask for a new acknowledgment when the Privacy Policy
   changes.
-- No vital placeholder, menu entry or premium offer appears in the
+- No vital placeholder or menu entry appears in the
   release 1 UI.
 
 When evolution V is scheduled, its entry includes: both apps on the
@@ -343,112 +346,37 @@ keeps the key material outside the database itself.
 - App lock: device biometrics in M1 (via `BiometricPrompt`).
 - Database and logs in the app sandbox (internal storage). 
 
-### 4.8 Free core and premium (A6) & Legal Compliance
+### 4.8 All free (A6) & Legal Compliance
 
-**Principles.**
+**Principles** (product owner, 2026-10-09; they replace the free core
+and premium tier decided on 2026-10-07).
 
-1. The free core is a complete app for **one person on one phone**,
-including everything that protects that person: every notification
-about the medicines themselves (doses, low stock, expiry, shortages)
-and a way to save, move and recover their data. Reminders of the
-premium tools (prescriptions, administrative deadlines) come with
-those tools.
-2. Premium sells **more devices, more people and more automation**:
-sync and household, automatic cloud backup, several profiles,
-email, and the convenience tools.
-3. **User-controlled data portability:** Nothing that keeps a user safe or keeps their data reachable is
-paid: dose reminders, low-stock and expiry warnings, `.mrz` export
-and import, and restoring a cloud backup stay free; only the
-scheduled backup is premium. Export and import provide user-controlled portability; they do not by themselves establish GDPR Article 20 compliance, which depends on the regulation's stated conditions, including legal basis and the scope of data provided by the data subject.
-4. **No data hostage.** When premium ends, nothing is deleted: data
-created with premium stays visible and exportable; premium actions
-(sync, scheduled backup, emails, prescription and deadline
-reminders, new extra profiles, scans) stop.
-Sync stops cleanly, and a later renewal resumes it from the group
-(B.1 §5.3 apply loop) `[INFERRED]`. A phone that is master of a
-household with a PC proposes to hand the master role to the PC,
-which keeps email and the scheduled backup running (household C3,
-C8).
-5. The **desktop stays free and keeps its own sync**. Premium is
-checked on the phone only; a phone without its own individual premium
-cannot join or publish a sync group or household. A family tier is
-deferred until after M2 (DA10).
+1. **Every feature is free**, on the phone as on the desktop: no
+premium tier, no in-app purchase, no subscription. Feature
+availability depends only on the milestone that delivers it (§5).
+2. **Safety and data stay reachable.** Dose reminders, low-stock and
+expiry warnings, `.mrz` export and import, cloud backup and its
+restore work for every user. Export and import provide user-controlled portability; they do not by themselves establish GDPR Article 20 compliance, which depends on the regulation's stated conditions, including legal basis and the scope of data provided by the data subject.
+3. **Same sync on every device.** The desktop and the phones keep one
+feature set and one sync model; any phone can create, publish or join
+a household, without a per-phone purchase.
 
-**Split** (decided by the product owner, 2026-10-07, DA6; catalogue
-row amended by DA11):
-
-| Feature (§3) | Tier | Why |
-|---|---|---|
-| Medicines, regimens, as-needed slots, dose times | Free | Core use |
-| Stock, packages and expiry, intakes, count, history | Free | Core use |
-| Low-stock (two stages), dose, expiry notifications and their actions | Free | Safety: never paid |
-| Guided setup, five languages, accessibility, app lock with biometrics | Free | Core use |
-| `.mrz` export and import | Free | Data remains reachable without paying |
-| Main list, forecast, timeline | Free | Core use; the timeline is read-only and cheap to give |
-| Sync with other devices, household, master role, pairing | Premium | The clearest added value; the request names it |
-| Automatic encrypted cloud backup | Premium | Automation; manual export and restoring a cloud backup stay free |
-| Several profiles, roles, PIN | Premium | Family use |
-| Email: low-stock, caregiver copies, weekly digest | Premium | Automation for someone else |
-| Prescriptions: request draft, lifecycle, repeatable, reminders, regional services | Premium | Convenience |
-| Administrative deadlines, supply planner, calendar export, PDF report | Premium | Convenience |
-| Catalogue download, search and link to a medicine | Free | Sets the national code that shortage notices and equivalents need (DA11) |
-| Barcode scan, restock by scan | Premium | Convenience; search and manual entry stay free |
-| Shortage notices, information links, equivalents (Italy) | Free | Safety information, from public lists at no cost to the project |
-
-Catalogue tier (decided on 2026-10-07, DA11): shortage notices and
-equivalents match a medicine by its national code (AIC), which the
-desktop sets only by linking the medicine to the catalogue or by a scan
-`[VERIFIED — MedicineEditDialog sets the code from a catalogue
-reference; no free-text field]`. With catalogue search premium, a free
-user without a PC would never get these free notices, so catalogue
-search and linking are free and only the scan is premium.
-
-**Prices** (decided on 2026-10-07, DA7):
-
-| Offer | Price | Net per sale in Italy `[INFERRED]` |
-|---|---|---|
-| Monthly subscription | € 1.99 | ≈ € 1.39 |
-| Yearly subscription | € 17.99 | ≈ € 12.53 |
-| Lifetime (one-time purchase) | € 49.99 | ≈ € 34.83 |
-| Free trial | 14 days on the subscriptions | — |
-
-DA10 was decided on 2026-10-08: defer the family tier until after M2.
-Family products, grant mechanics, and the following historical price
-proposal are out of M2 scope and are not offers: monthly € 2.99, yearly
-€ 26.99, lifetime € 74.99. The prior 1.5× estimate was inferred and
-has not been validated against market data.
-
-The net assumes 22% Italian VAT inside the price and a 15% store fee
-(Google Play: 15% on auto-renewing subscriptions; from 2026 in the EEA
-a 10% service fee plus 5% billing fee; Apple Small Business Program:
-15%) `[UNCERTAIN — fees from secondary sources dated 2026; one-time
-purchases may carry a higher fee on Google Play from 2026, which would
-lower the lifetime net]`. The first proposal (€ 20.99 a year, € 59.99
-lifetime) was replaced because € 20.99 saves only 12% against twelve
-months, while
-a yearly price that saves 25–35% usually moves users to the yearly
-plan `[INFERRED — common practice, no market data verified]`; a
-lifetime price near three years of the yearly plan keeps the yearly
-plan attractive. The project has no per-user running cost (no
-backend, the user's own cloud), so a lifetime offer carries no
-long-term cost risk.
+**What the change removes.** The free and premium split (DA6), the
+prices (DA7), the family tier (DA10), the catalogue tier (DA11), the
+entitlement service, the Play Billing adapter, spike S11, license
+testers and the Play payments profile. They are recorded in the
+decisions (§6) and in the change log (§9); the earlier design remains in
+the history of this document.
 
 **Store rules and testers.**
 
-- Digital features sold in the app go through Google Play Billing and
-Apple In-App Purchase. The lifetime offer is a one-time product, the
-others auto-renewing subscriptions.
-- No donation links in the mobile apps (decided on 2026-10-07, DA9):
-the premium tier replaces them, and next to a paid tier they could
-conflict with the store payment rules `[UNCERTAIN — exact Google Play
-policy on tips not verified]`. The desktop keeps them (A6 on the
-desktop).
-- Testers get premium through **Play license testing**: accounts listed
-in Play Console buy with test payment methods and are not charged;
-test subscriptions renew daily. The closed-test testers are added as
-license testers. On iOS, TestFlight purchases are free sandbox
-purchases. The app contains **no tester back door**: it would ship in
-the store build and could be found and abused.
+- The apps sell no digital goods, so they use neither Google Play
+Billing nor Apple In-App Purchase, and Play Console needs no payments
+profile `[INFERRED — a payments profile is needed to sell apps or
+in-app products]`.
+- Donation links on mobile: DA9 was decided on 2026-10-07 (drop) because
+the premium tier replaced them; that reason no longer holds, and DA9 is
+reopened (§6). The desktop keeps its donation links.
 - Closed test before production: a **personal** Play account created
 after 2023-11-13 needs at least **12** testers opted in for 14
 consecutive days; the figure was 20 until 2024-12-11. Organization
@@ -456,11 +384,13 @@ accounts (D-U-N-S) are exempt `[VERIFIED — secondary sources dated
 2026; check Play Console at registration]`. Recruiting more than 12,
 for example 20, leaves a margin for testers who drop out. How the
 plan uses the tracks is in §5.0.
-- Selling makes the developer a **trader** under the EU Digital
-Services Act: Google Play and the App Store publish the trader's
-name, address, e-mail and phone on the product page. Income from
-sales has tax consequences in Italy that this document does not
-cover; a tax adviser is needed before the first paid release.
+- Trader status under the EU Digital Services Act: the stores ask every
+developer to declare it, and publish the trader's name, address,
+e-mail and phone on the product page. Without sales, whether the
+developer is a trader depends on the criteria the store applies; a
+free app with no income is the case most likely to be non-trader
+`[UNCERTAIN — check the Play Console declaration criteria before the
+first upload, and again if DA9 adds donations]`.
 
 **Code and licence** (decided on 2026-10-07, A7, DA8). This
 repository stays public and Apache-2.0 `[VERIFIED — LICENSE]`. The
@@ -473,9 +403,9 @@ status of AI-assisted code is not assessed here]`.
 | Public repository (this one, Apache-2.0) | Private repository (proprietary) |
 |---|---|
 | Desktop app (UI, Infrastructure), its tests and documentation | MAUI app(s) for Android and iOS, platform adapters |
-| Shared libraries: Domain, Application, Infrastructure.Portable, with the M0 refactor and the notification planner | Entitlement service, store billing, premium gates |
+| Shared libraries: Domain, Application, Infrastructure.Portable, with the M0 refactor and the notification planner | — |
 | Formats (`EXPORT-FORMAT.md`, `SYNC-FORMAT.md`) and the shared design (B.1, household, this plan at the level of the shared core) | Mobile design details, packaging, signing configuration, store assets, mobile user guides, mobile CI |
-| Throw-away spikes already published, S1–S10 (`spikes/Android`, draft PR #106) | New mobile spikes, from S11 on |
+| Throw-away spikes already published, S1–S10 (`spikes/Android`, draft PR #106) | New mobile spikes |
 
 - The private repository consumes the shared libraries from this
 repository pinned to a tag, as a git submodule or as packages
@@ -498,90 +428,10 @@ it is a separate decision.
 private repositories are limited per month, and macOS runners (iOS
 builds) count more than Linux ones `[UNCERTAIN — training knowledge,
 check the plan's quota]`.
-
-**Technical design.**
-
-- `IEntitlementService` in the private app, not in Application: current
-tier, expiry, purchase and restore. Gates live in the app's screens
-and in its sync, backup and email scheduling; the shared use cases
-stay ungated and the public code has no notion of premium.
-- Android adapter on Google Play Billing (Play requires Billing
-Library 8 or later for new apps and updates since 2026-08-31, with an
-extension available on request until 2026-11-01; version 8 removed
-APIs of version 7 `[VERIFIED — secondary sources dated 2026; check the
-Play Console policy status at S11]`). The MAUI options are the
-`Xamarin.Android.Google.BillingClient` binding (reported
-compatibility problems with MAUI) and Microsoft's MAUI
-`BillingService` sample; `Plugin.InAppBilling` is archived
-`[UNCERTAIN — secondary sources]`. Spike S11 settles the choice
-before M2. **`[ANDROID EXPERT NOTE]`**: Because third-party plugins like `Plugin.InAppBilling` are deprecated/unmaintained, Spike S11 will implement a direct C# wrapper over Android's native `com.android.billingclient:billing` library, version 8 or later (the version Play requires at the time of S11). Device-side receipt validation and `PurchasesUpdatedListener` handling pending purchases will be implemented in M2.
-- No backend (B.1 §1.3): purchases are verified and acknowledged on
-the device, and the entitlement is cached so that premium works
-offline, with a grace period before it lapses. Without server-side
-verification a modified APK can unlock premium; accepted. With the
-app code private, this needs a patched binary, not a rebuild.
-- One purchase covers one store account on all its phones (restore
-purchases).
-
-**Family premium (deferred beyond M2 by DA10 on 2026-10-08).** M2
-implements only individual Play products. The following is retained as
-historical design exploration, not an accepted requirement or committed
-implementation. Revisit family products, entitlement sharing, prices,
-and store-policy implications after M2 using product evidence.
-
-- **The stores do not do it on Android.** Google Play Family Library
-shares paid apps but not in-app products or subscriptions `[VERIFIED
-— secondary sources; no change found since its launch]`. Apple
-Family Sharing does share subscriptions and non-consumables with up
-to five family members, is turned on per product and cannot be
-turned off `[VERIFIED — App Store Connect Help]`. One mechanism on
-both platforms means doing it in the app.
-- **Products.** Three more products, family monthly, yearly and
-lifetime (prices above). An individual subscription moves to the
-family one through the store's upgrade with proration; an individual
-lifetime owner gets a one-time "family upgrade" product priced at
-the difference `[INFERRED — Play Billing replacement modes cover
-subscriptions; a separate one-time product for the lifetime case]`.
-- **Grant through the household.** The buyer's phone verifies its
-purchase on the device, as for individual premium, and writes a
-family grant into the household log: product, valid-until date
-(renewal date plus a grace period for subscriptions, none for
-lifetime), buyer device and the time of the last check. The grant is
-sealed with the household key like every household operation (§5 of
-the household design). The other phones read it and are premium
-while it is valid; the buyer's phone refreshes it at each check.
-Household settings are administrator state (household §4.3), so the
-buyer acts with an administrator profile, or an administrator
-accepts the grant on first purchase `[INFERRED — permission check on
-apply to be designed in M2]`.
-- **Shared format, no premium logic in public code.** The grant travels
-as a `HouseholdSettingChanged` entry under an app-reserved setting
-name, which the desktop stores and ignores, so the household format
-and the desktop need no premium concept `[INFERRED — settings are a
-name and value map; that the desktop keeps unknown names without
-error is to be verified in M2]`. A new operation type would instead
-stop older desktops (household design §12).
-- **Limits.** At most six phones in the household, as the store family
-groups `[VERIFIED — Google Play and Apple family groups have six
-members]`; PCs do not count and stay free. Joining as a family
-member needs a free place; when the plan ends, members fall back to
-their own entitlement, or to the free core with no data lost
-(principle 4). A member's own individual subscription is not
-cancelled by the app; the app tells the member it can be cancelled.
-- **What a family member can do.** Everything premium, including a
-second household of their own only with their own premium: the grant
-covers the household that holds it.
-- **Abuse.** Without a server the grant cannot be checked against the
-store from another phone; a member with a modified app could forge
-one, the same accepted risk as a modified APK. The six-phone limit
-caps sharing with strangers.
-- **Store policy.** Selling through store billing an access that the
-app extends to other users is common (family plans of password
-managers and media services) `[UNCERTAIN — no Google Play or App
-Store rule on it verified for third-party apps; to check before
-M2]`. On iOS, Apple Family Sharing stays off so that a purchase is
-shared through one mechanism only `[INFERRED]`.
-- Cost: 5–8 more days in M2 `[INFERRED]`.
+- A7 stays after the 2026-10-09 change to an all-free app. One of its
+benefits, that unlocking a premium tier would need a patched binary
+rather than a rebuild, no longer applies; the choice of a private
+repository is the product owner's.
 
 ### 4.9 Android UI requirements
 
@@ -610,7 +460,7 @@ the first build testers can use on its own, without a PC or account.
 | Track | Use in this plan |
 |---|---|
 | Internal testing | Development builds for the team, at any time; no milestone exit runs here |
-| Closed testing | The milestone builds M1–M5 for the recruited testers, who are also license testers (§4.8). Each milestone exit runs on this track. The M1 exit is a 14-day closed test; before applying for production access after M5, the closed test must again meet the Play rule for personal accounts (at least 12 testers opted in for 14 consecutive days) |
+| Closed testing | The milestone builds M1–M5 for the recruited testers. Each milestone exit runs on this track. The M1 exit is a 14-day closed test; before applying for production access after M5, the closed test must again meet the Play rule for personal accounts (at least 12 testers opted in for 14 consecutive days) |
 | Open testing | Not used |
 | Production | Public launch, only after the M5 exit (DA4) |
 
@@ -643,8 +493,8 @@ M2; Play Console account; private repository created (A7). M1 and
 later milestones are pre-release builds (§5.0). D4 multi-device
 delivery preferences are implemented in M2.
 
-- Free features only (§4.8); no billing in M1, so its pre-release
-  build needs no payments profile.
+- No in-app purchase in M1 or later (§4.8), so no build needs a
+  payments profile.
 - MAUI app (`TrimMode=partial`), composition root, Android adapters
 (paths, Keystore credential protector, notifications, exact alarms,
 boot receiver, share sheet, file picker).
@@ -678,21 +528,13 @@ experience]`.
 ### M2 — Cloud: backup, sync, household
 
 Entry: M1 exit passed; D4 decided; Android API 26 validated by the M1
-technical spike; DA10 family tier deferred beyond M2; Android halves of
-S6 and S7 (Android OAuth clients, P14); spike S11 (billing); trader
-status and payments profile in Play Console. Google Drive is the first
-Android provider, followed by OneDrive.
+technical spike; Android halves of S6 and S7 (Android OAuth clients,
+P14). Google Drive is the first Android provider, followed by OneDrive.
 
-- Premium infrastructure (§4.8): entitlement service, Play Billing
-adapter, subscription and lifetime products, purchase and restore
-screens, gates, license testers on the testing tracks. M2 offers
-individual products only; purchases restore on phones using the same
-Google Play account. Every M2 feature below is premium except restoring
-a cloud backup.
 - Google Drive sign-in on Android, then OneDrive sign-in; both use the
   existing provider transports and the shared sync model.
 - Encrypted cloud backup and restore (§4.3); the scheduled backup on
-the master only (household C3), premium; restore free.
+the master only (household C3).
 - Sync: create or join a group, QR pairing with the camera (the camera
 decoder chosen here is reused for barcodes in M4), conflicts to
 review, sync status with the time of the last sync (S8).
@@ -705,21 +547,20 @@ because a joined phone can hold several profiles and must not let a
 user change administrator settings.
 - Local data deletion (UI-17): remove the active profile's local copy
 or all local profile data on this device, without deleting provider
-copies or other devices' data. Free, like export.
+copies or other devices' data.
 - Exit: phone and desktop converge in the offline and conflict
 scenarios of the B.1 checklist; a phone-first installation is joined
 by a PC and the PC becomes master.
-- Effort: 35–50 days, H6 and individual premium infrastructure
-  included `[INFERRED]`; no family grant is included.
+- Effort: 30–45 days, H6 included `[INFERRED — 35–50 days with the
+  premium infrastructure removed on 2026-10-09]`.
 
 ### M3 — Prescriptions, planning, views
 
-Entry for M3, M4 and M5: M2 exit passed, since each carries premium
-features and needs its entitlement gates. The confirmed order is M3,
-then M4, then M5; public Play Store launch follows M5. Tiers as in §4.8:
-the timeline (M3), catalogue search and
-linking, shortage notices and equivalents (M4) are free, the rest
-premium.
+Entry for M3, M4 and M5: M2 exit passed, in the order of DA4: M3,
+then M4, then M5; public Play Store launch follows M5. Since 2026-10-09
+no premium gate ties them to M2; the remaining technical dependency is
+the camera decoder chosen in M2 and reused for barcodes in M4, and
+moving M3 or M4 before M2 would need DA4 revisited.
 
 - Prescription request draft, lifecycle, repeatable prescriptions,
 reminders; regional service links.
@@ -744,7 +585,7 @@ parser; restock by scan.
 
 - SMTP settings and MailKit on the phone; low-stock email, caregiver
 copies per kind, weekly digest (§4.5).
-- No donation links on mobile (§4.8, DA9).
+- Donation links on mobile as DA9 decides (reopened on 2026-10-09).
 - Exit: feature inventory of §3 fully satisfied or each gap accepted
 by the product owner.
 - Effort: 10–15 days `[INFERRED]`.
@@ -755,12 +596,12 @@ by the product owner.
 |---|---|---|---|
 | M0 | Portability refactor 2, notification planner | Approval of this plan | 10–15 d |
 | M1 | Standalone core, first pre-release milestone | M0; D13/API 26 selected provisionally (D11, DA2, DA5, DA12 decided); Play account; private repository | 35–50 d |
-| M2 | Individual Premium infrastructure; cloud backup, sync, household, profiles, roles and PIN, local data deletion | M1; D4; API 26 validated; S6/S7 Android halves; S11; trader status | 35–50 d |
+| M2 | Cloud backup, sync, household, profiles, roles and PIN, local data deletion | M1; D4; API 26 validated; S6/S7 Android halves | 30–45 d |
 | M3 | Prescriptions, planning, views | M2 exit | 15–20 d |
 | M4 | Catalogue (DA3 defaults), scan, Italian services | M3 exit | 15–20 d |
 | M5 | Email; last pre-release milestone | M4 exit | 10–15 d |
 
-Total for M0–M5 about 120–170 developer-days, against 60–90 for B.1 Phases 5
+Total for M0–M5 about 115–165 developer-days, against 60–90 for B.1 Phases 5
 and 7. The difference is the standalone requirement (M0, backup,
 phone-first household) and the features added to the desktop since
 2026-09-26. Evolution V (vital tracking) is outside the total (§4.3a). The
@@ -769,15 +610,15 @@ launch follows M5 (DA4, 2026-10-08).
 
 ### 5.2 Why this order
 
-- M1 is the free core (§4.8) and the smallest set that a person
+- M1 is the standalone core and the smallest set that a person
 without a PC can use every day without losing data: medicines, stock, intakes, the notifications
 that matter daily (low stock, doses, expiry), and a way to save and
 restore the data.
-- M2 comes next because it builds the premium infrastructure that
-M3–M5 need, starts the premium tier with its strongest feature,
-sync, connects the phone to a PC when there is one, and removes the
-single-device risk for premium users (scheduled cloud backup). Free
-users keep the export and the backup reminder of M1.
+- M2 comes next because it adds sync, the strongest feature, connects
+the phone to a PC when there is one, and removes the single-device
+risk (scheduled cloud backup). Until M2, users keep the export and the
+backup reminder of M1. Since 2026-10-09 M2 builds no premium
+infrastructure, so M3–M5 follow it by DA4, not by a gate.
 - Sync compatibility does not depend on the order. The phone uses the
 same persistence and apply code as the desktop, so from M2 on it
 stores and applies every operation type, including those whose
@@ -804,12 +645,12 @@ numbering; the D.1 vital-tracking decisions use the prefix DV):
 | DA3 | Catalogue, language and country parity with desktop | Country/catalogue/language support differs from desktop; same support as desktop | **Decided 2026-10-08; revised 2026-10-08**: same sources (IT, EU, ES, FR, US) and languages (it, en, fr, es, de) as the desktop. UI language: system language if supported, English otherwise; user-changeable; independent of the country. Catalogue from the reference country: national catalogue if one exists; otherwise EMA for an EU/EEA country; otherwise no catalogue and manual entry. Android remains usable worldwide; catalogues are optional, public and redistributable. Details in §4.4; desktop integration in `ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md`. |
 | DA4 | Order of M3–M5 and public launch | M3 → M4 → M5; M5 before M3/M4 | **Decided 2026-10-08**: M3 → M4 → M5; M1–M5 are pre-release builds on the testing tracks (§5.0); public Play Store launch only after M5. |
 | DA5 | Play account type and application id | Personal; organization (D-U-N-S); id such as `com.vger70.medreminder` | **Decided 2026-10-08**: personal account; application id `com.vger70.medreminder` (cannot change after the first upload). A personal account needs the closed test of §5.0 (at least 12 testers for 14 consecutive days) before production access |
-| DA6 | Free and premium split | §4.8 table; other | **Decided 2026-10-07**: §4.8 table |
-| DA7 | Prices | € 1.99 / 20.99 / 59.99; € 1.99 / 17.99 / 49.99 with a 14-day trial | **Decided 2026-10-07**: € 1.99 / 17.99 / 49.99 with a 14-day trial |
+| DA6 | Free and premium split | Split table; other | Decided 2026-10-07 (split table). **Superseded 2026-10-09**: every feature free (A6, §4.8) |
+| DA7 | Prices | € 1.99 / 20.99 / 59.99; € 1.99 / 17.99 / 49.99 with a 14-day trial | Decided 2026-10-07 (€ 1.99 / 17.99 / 49.99, 14-day trial). **Superseded 2026-10-09**: nothing is sold (A6) |
 | DA8 | Licence of the mobile app code | Apache-2.0 in this repository; private repository, proprietary | **Decided 2026-10-07**: private repository for the Android and iOS apps; desktop and shared core stay Apache-2.0 here (A7) |
-| DA9 | Donation links on mobile | Keep; drop | **Decided 2026-10-07**: drop |
-| DA10 | Premium across a family | Per store account; family tier granted through the household; any premium phone covers its household | **Decided 2026-10-08**: defer family products and grants until after M2; M2 offers individual products, restorable on phones using the same Play account |
-| DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | **Decided 2026-10-07**: free, scan stays premium (§4.8) |
+| DA9 | Donation links on mobile | Keep; drop | Decided 2026-10-07 (drop, because the premium tier replaced them). **Reopened 2026-10-09**: that reason no longer holds; decide after reviewing the Google Play and App Store rules on donations |
+| DA10 | Premium across a family | Per store account; family tier granted through the household; any premium phone covers its household | Decided 2026-10-08 (family tier deferred beyond M2). **Superseded 2026-10-09**: no premium tier (A6) |
+| DA11 | Catalogue search and linking in the split | Premium (as decided in DA6); free, scan stays premium | Decided 2026-10-07 (free, scan premium). **Superseded 2026-10-09**: catalogue, search, linking and scan all free (A6) |
 | DA12 | GDPR / Store Onboarding | Explicit privacy acknowledgment banner; hidden in settings | **Decided 2026-10-08**: explicit acknowledgment at first start, without claiming it is always GDPR consent (§4.1, UI-00, UI-17) |
 | **DA13** | **Battery Optimization Handling** | No prompt; contextual optional guidance to battery settings | **Decided 2026-10-08**: show a contextual, non-blocking invitation to Android battery settings when OS restrictions threaten reminders or sync; declining keeps the app usable and explains possible delays. This guidance cannot guarantee timely background work. |
 | DA14 | PDF library for the mobile report | Android `PdfDocument`; SkiaSharp; iText7 | **Decided 2026-10-08**: SkiaSharp (MIT); iText7 excluded (AGPL-3.0 or paid licence) (§4.6) |
@@ -820,23 +661,17 @@ numbering; the D.1 vital-tracking decisions use the prefix DV):
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Data loss on a standalone phone (lost, reset, uninstalled) | Medium | High | Export and backup reminder in M1 for everyone; scheduled cloud backup in M2 with premium (§4.3) |
+| Data loss on a standalone phone (lost, reset, uninstalled) | Medium | High | Export and backup reminder in M1; scheduled cloud backup in M2 (§4.3) |
 | Exact-alarm permission refused | Medium | Medium | Explanation at first start; inexact fallback stated in the UI (S5) |
 | **App process killed by aggressive OEM Battery Managers (Xiaomi/Samsung)** | **High** | **High** | Show a contextual, non-blocking explanation and route to Android battery settings when restrictions may delay reminders or sync; declining remains possible and the app explains that this guidance cannot guarantee timely background work. |
 | Background work late (emails, backups, feeds) | High | Low–medium | Run on app open; status shows the last run; PC as master when present |
-| Scope growth beyond 170 days | Medium | Schedule | M0–M5 are milestones with separate exits; public launch follows M5, and the M3 → M4 → M5 order is fixed by DA4 |
+| Scope growth beyond 165 days | Medium | Schedule | M0–M5 are milestones with separate exits; public launch follows M5, and the M3 → M4 → M5 order is fixed by DA4 |
 | Desktop and phone notify on different days | Low | Medium | One rule set, planner parity tests (§4.2) |
-| Premium unlocked by a modified app | Low (app code private, DA8) | Low–medium | Accepted without a backend |
 | Shared core and private app drift apart | Medium | Medium | App pins a tag of this repository; shared changes land here first |
-| Users reject paying for sync that is free on the desktop | Medium | Medium | Generous free core; clear premium value; trial |
-| A household with several phones finds one premium per account too dear (DA10) | Medium | Low–medium | Family tier is deferred beyond M2; revisit after observing individual-tier use |
-| Family grant shared outside the family or forged | Low–medium | Low | Deferred with DA10; no family grant in M2 |
-| Store review objects to access extended by the app | Low `[UNCERTAIN]` | Schedule | Reassess store policy only if a family tier is reconsidered after M2 |
 | Store review or rejection over health-data handling | Medium | High | Explicit privacy acknowledgment at first start (§4.1), accurate Privacy Policy and Play data-safety form, no unsupported GDPR claims |
-| Data lock-in / portability concern (including GDPR Art. 20 questions) | Low | High | `.mrz` export and import stay free (§4.8 principle 3); the plan does not claim that export alone establishes Art. 20 compliance |
-| DSA / Tax compliance oversight | Low | Medium | Consult tax adviser prior to publishing paid Tier |
-| MAUI billing binding immature | Medium | Schedule | Spike S11 before M2 |
-| Store review of a health app with subscriptions | Low–medium | Schedule | Clear non-medical positioning, no safety feature paid (§4.8) |
+| Data lock-in / portability concern (including GDPR Art. 20 questions) | Low | High | `.mrz` export and import stay available (§4.8 principle 2); the plan does not claim that export alone establishes Art. 20 compliance |
+| DSA trader status declared wrongly | Low | Medium | Check the Play Console criteria before the first upload (§4.8); reassess if DA9 adds donations |
+| No income for the fixed costs (store accounts, private-repository CI minutes) | Medium | Low–medium | No backend and no per-user cost; DA9 reopened |
 
 ---
 
@@ -852,10 +687,11 @@ sends email from M5, not from B.1 Phase 7; household creation, join,
 roles and PIN on the phone are part of M2.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §16: D11 and D4 decided; validate the
   provisional API 26 floor during the M1 spike.
-- `ANALYSIS-B1-MOBILE-SYNC.md` §10 (donation links) and §16 (D14): no
-donation links on Android or iOS (DA9); D14 is settled by it.
+- `ANALYSIS-B1-MOBILE-SYNC.md` §10 (donation links) and §16 (D14):
+donation links on Android and iOS follow DA9, reopened on 2026-10-09;
+D14 is settled when DA9 is.
 - `ANALYSIS-B1-UI-REQUIREMENTS.md`: selected Daily overview,
-  M1–M5 screen behavior, settings/privacy, Free/Premium flows,
+  M1–M5 screen behavior, settings/privacy,
   accessibility, offline/sync states, and acceptance criteria for the
   private Android UI.
 - `ANALYSIS-B1-MOBILE-SYNC.md` §8.4: the designated mail device is
@@ -876,6 +712,14 @@ donation links on Android or iOS (DA9); D14 is settled by it.
 Numbering note: two entries carry revision 14 and none carries
 revision 17; the numbers are kept as recorded.
 
+- **2026-10-09 — revision 23:** Product-owner decision: the mobile
+  apps are entirely free (A6). §4.8 rewritten (principles, store rules,
+  trader status); split table, prices, license testing, entitlement and
+  billing design, and the family tier removed. DA6, DA7, DA10 and DA11
+  superseded; DA9 reopened. M2 loses the premium infrastructure, S11 and
+  the trader/payments entry (30–45 days, total 115–165); M3–M5 follow M2
+  by DA4 only. Premium risks removed; trader-status and no-income risks
+  added.
 - **2026-10-08 — revision 22:** DA14 decided: SkiaSharp for the mobile
   PDF report, iText7 excluded. B.1 D12 (iCloud transport) decided: no.
 - **2026-10-08 — revision 21:** Decisions D11 (reject; equivalent strip
