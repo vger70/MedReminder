@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #225 — Docs: mobile apps entirely free (A6), premium tier dropped
+
+Link: [vger70/MedReminder#225](https://github.com/vger70/MedReminder/pull/225)
+Branch: `claude/mobile-all-free`
+
+### Docs
+
+- Android plan revision 23: the mobile apps are entirely free, like the desktop (A6, §4.8); premium split, prices, family tier, entitlement and billing design removed; DA6, DA7, DA10, DA11 superseded; DA9 (donation links) and B.1 D14 reopened; M2 30–45 days, total 115–165.
+- Backlog, team plan, UI requirements (UI-13 "Free access"), D.1 (DV1) and `STATUS.md` aligned.
+
+---
+
 ## PR #224 — Record the overnight S8 run in the B.1 spike results
 
 Link: [vger70/MedReminder#224](https://github.com/vger70/MedReminder/pull/224)
