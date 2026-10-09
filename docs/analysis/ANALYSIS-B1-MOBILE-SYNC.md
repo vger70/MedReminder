@@ -1736,30 +1736,35 @@ rounds, reports in that folder's `results/`.
 - Before release the Cloud project must be published: in Testing the
   refresh token lasts 7 days.
 
-### 18.8 S8 — Background sync cadence on Android (2026-10-06)
+### 18.8 S8 — Background sync cadence on Android (2026-10-06, 2026-10-09)
 
 **Environment**: motorola edge 50 neo, Android 16, the Release default
 APK of §18.0 extended with S8 (draft PR #106). A unique periodic
 WorkManager job (`Xamarin.AndroidX.Work.Runtime` 2.10.3), period 15
 minutes, constraint "network connected"; the worker records its run
 only, with no network call. The app was not exempt from battery
-optimization. Recorded 08:31–20:57 on a day of normal use, on battery,
-with battery saver on for part of it.
+optimization. Two runs, on battery, with battery saver on for part of
+each:
+
+- day: 2026-10-06, 08:31–20:57, normal use;
+- night: 2026-10-08 21:23 to 2026-10-09 10:56, unplugged overnight, as
+  the spike procedure asks; the day run had not covered a night.
 
 **Results**
 
-| Measure | Value |
-|---|---|
-| Runs | 6 in 12.4 hours, the first at enqueue time |
-| Gaps, all | 5: min 61 min, median 144 min, max 241 min |
-| Gaps with battery saver off | 4: 61–241 min |
-| Gap with battery saver on | 1: 179 min |
-| Standby bucket at the runs | active ×5, working set ×1 |
-| Runs that started the process | 0 (the process was cached each time) |
+| Measure | Day | Night |
+|---|---|---|
+| Runs | 6 in 12.4 hours, the first at enqueue time | 6 in 13.5 hours, the first at enqueue time |
+| Gaps, all | 5: min 61, median 144, max 241 min | 5: min 61, median 175, max 241 min |
+| Gaps with battery saver off | 4: 61–241 min | 4: 61–241 min, median 215 |
+| Gap with battery saver on | 1: 179 min | 1: 175 min |
+| Standby bucket at the runs | active ×5, working set ×1 | active ×4, frequent ×1, rare ×1 |
+| Runs that started the process | 0 (the process was cached each time) | 0 |
 
 **Decision**: the requested 15 minutes is a floor, not a cadence: the
-work ran every 1 to 4 hours, with battery saver on or off, and below
-the 1-hour target the spike README had set. Background sync on Android
+work ran every 1 to 4 hours, by day and overnight, with battery saver
+on or off, also in the "rare" standby bucket, and below the 1-hour
+target the spike README had set. Background sync on Android
 is best effort. Consequences for Phase 5:
 
 - Sync on start, resume and after local writes (§7.4) carries the
@@ -1771,8 +1776,9 @@ is best effort. Consequences for Phase 5:
   §8.3 already accepts it.
 - Not tried: an exemption from battery optimization (Play policy
   restricts the request) or a push channel, which needs a backend
-  (§5.9, C.1). One phone and one day; figures on other phones may
-  differ `[UNCERTAIN]`.
+  (§5.9, C.1). A run that has to start a killed process is not
+  measured. One phone; figures on other phones, especially with
+  aggressive vendor battery managers, may differ `[UNCERTAIN]`.
 
 ### 18.9 S9 — Convergence prototype (2026-09-26)
 
@@ -2090,3 +2096,7 @@ Phase 2 implements the derivation from the prototype and its tests.
   §8.4 superseded by the household master (backlog B5-03); §7.5, §9.1
   and §10 email rows aligned; "once approved" pointers replaced, since
   the Android plan was approved on 2026-10-08.
+- 2026-10-09 — S8 run again overnight on the motorola (§18.8): 6 runs
+  in 13.5 hours, gaps 61 to 241 minutes, median 175; the "rare" standby
+  bucket did not stop the work. The decision stands; the cold-process
+  case is stated as not measured.
