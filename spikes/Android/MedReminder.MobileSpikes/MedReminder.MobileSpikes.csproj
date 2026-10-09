@@ -1,0 +1,116 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Throw-away spike app for B.1 Phase 0 on Android
+    (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §13 Phase 0, §18):
+    S1 AES-GCM, S2 Argon2id cost, S3 EF Core SQLite with Release
+    trimming / AOT, S4 StripReleaseDebugArtifacts on an Android Release
+    build. Not part of MedReminder.sln and never shipped.
+
+    It references the production Domain, Application and
+    Infrastructure.Portable projects on purpose: the spikes measure the
+    code a Phase 5 client would run, not a copy of it. It inherits the
+    repository Directory.Build.props, StripReleaseDebugArtifacts
+    included, unchanged (CLAUDE.md §7); that inheritance is what S4
+    measures.
+
+    The root namespace avoids "Android": a namespace ending in .Android
+    would hide the global Android.* bindings inside the project.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <RootNamespace>MedReminder.MobileSpikes</RootNamespace>
+    <AssemblyName>MedReminder.MobileSpikes</AssemblyName>
+    <IsPackable>false</IsPackable>
+
+    <ApplicationTitle>MedReminder Spikes</ApplicationTitle>
+    <ApplicationId>com.vger70.medreminder.spikes</ApplicationId>
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- Proposed floor of D13 (Android 8.0, API 26), still open. -->
+    <SupportedOSPlatformVersion>26.0</SupportedOSPlatformVersion>
+
+    <!-- An APK installs with adb; the Release default is an AAB. -->
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+  </PropertyGroup>
+
+  <!-- Optional S3 variant: dotnet publish ... -p:SpikeTrimMode=full.
+       Empty keeps the .NET for Android Release default. -->
+  <PropertyGroup Condition="'$(SpikeTrimMode)' != ''">
+    <TrimMode>$(SpikeTrimMode)</TrimMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <!-- S8: periodic background work, as the Phase 5 sync would use. -->
+    <PackageReference Include="Xamarin.AndroidX.Work.Runtime" Version="2.10.3" />
+    <!-- S10: the desktop's MailKit version. -->
+    <PackageReference Include="MailKit" Version="4.18.1" />
+  </ItemGroup>
+
+  <!-- S10: the production email adapter, compiled from the desktop
+       source unchanged (it uses no Windows API), so the spike runs the
+       code the Android client would move to the portable project in
+       M0. Its SmtpSettings already lives in Infrastructure.Portable. -->
+  <ItemGroup>
+    <Compile Include="..\..\..\src\MedReminder.Infrastructure\Email\MailKitEmailNotificationService.cs" Link="Linked\MailKitEmailNotificationService.cs" />
+    <!-- MAUI's implicit using brings its own EmailMessage, which makes
+         the production file's EmailMessage ambiguous. Unused here. -->
+    <Using Remove="Microsoft.Maui.ApplicationModel.Communication" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\MedReminder.Domain\MedReminder.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\MedReminder.Application\MedReminder.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\MedReminder.Infrastructure.Portable\MedReminder.Infrastructure.Portable.csproj" />
+  </ItemGroup>
+
+  <!-- The report states how the running APK was built. Added inside a
+       target so the properties set by the Android SDK targets are
+       already evaluated. -->
+  <Target Name="SpikeBuildMetadata" BeforeTargets="GetAssemblyAttributes">
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>Spike.Configuration</_Parameter1>
+        <_Parameter2>$(Configuration)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>Spike.PublishTrimmed</_Parameter1>
+        <_Parameter2>$(PublishTrimmed)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>Spike.TrimMode</_Parameter1>
+        <_Parameter2>$(TrimMode)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>Spike.RunAOTCompilation</_Parameter1>
+        <_Parameter2>$(RunAOTCompilation)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>Spike.AndroidEnableProfiledAot</_Parameter1>
+        <_Parameter2>$(AndroidEnableProfiledAot)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>Spike.JsonSerializerIsReflectionEnabledByDefault</_Parameter1>
+        <_Parameter2>$(JsonSerializerIsReflectionEnabledByDefault)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
+  <!-- S4: record what StripReleaseDebugArtifacts is about to delete, so
+       run-s4.ps1 can report it. Observes only; the strip target itself
+       is untouched. -->
+  <Target Name="SpikeS4ListStripCandidates" BeforeTargets="StripReleaseDebugArtifacts" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <_SpikeS4Candidate Include="$(OutputPath)**\*.pdb;$(OutputPath)**\*.xml" />
+      <_SpikeS4Candidate Include="$(PublishDir)**\*.pdb;$(PublishDir)**\*.xml" Condition="'$(PublishDir)' != ''" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)s4-strip-candidates.txt" Lines="@(_SpikeS4Candidate->'%(FullPath)')" Overwrite="true" />
+    <Message Importance="high" Text="SpikeS4: @(_SpikeS4Candidate->Count()) strip candidate(s) listed in $(IntermediateOutputPath)s4-strip-candidates.txt" />
+  </Target>
+
+</Project>

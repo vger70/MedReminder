@@ -1,0 +1,156 @@
+{
+  "report": "medreminder-b1-android-spikes",
+  "reportVersion": 1,
+  "createdAtUtc": "2026-10-05T17:41:03.2508445\u002B00:00",
+  "environment": {
+    "android.abis": "arm64-v8a",
+    "android.release": "16",
+    "android.sdkInt": "36",
+    "appContext.jsonReflectionEnabledByDefault": "unset",
+    "build.AndroidEnableProfiledAot": "true",
+    "build.Configuration": "Release",
+    "build.JsonSerializerIsReflectionEnabledByDefault": "true",
+    "build.PublishTrimmed": "true",
+    "build.RunAOTCompilation": "true",
+    "build.TrimMode": "partial",
+    "device.manufacturer": "motorola",
+    "device.model": "motorola edge 50 neo",
+    "dotnet.framework": ".NET 10.0.12",
+    "dotnet.processArchitecture": "Arm64",
+    "dotnet.rid": "android-arm64",
+    "gc.totalAvailableMiB": "290",
+    "ram.lowRamDevice": "False",
+    "ram.memoryClassMiB": "256",
+    "ram.totalMiB": "7430",
+    "runtime.isDynamicCodeCompiled": "True",
+    "runtime.isDynamicCodeSupported": "True"
+  },
+  "checks": [
+    {
+      "spike": "S5",
+      "check": "Notifications enabled",
+      "outcome": "Pass",
+      "detail": "True"
+    },
+    {
+      "spike": "S5",
+      "check": "Exact alarms allowed (SCHEDULE_EXACT_ALARM)",
+      "outcome": "Measured",
+      "detail": "False"
+    },
+    {
+      "spike": "S5",
+      "check": "Battery optimization",
+      "outcome": "Measured",
+      "detail": "ignoring optimizations False; standby bucket active; power save False"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Exact \u002B2 min (#1, planned 10-05 19:24:51)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot AlarmClock \u002B2 min (#2, planned 10-05 19:24:51)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Inexact \u002B2 min (#3, planned 10-05 19:24:51)",
+      "outcome": "Measured",
+      "detail": "fired 11 s late; power save False, idle False; started the process; re-planned at boot"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Window \u002B2 min (#4, planned 10-05 19:24:51)",
+      "outcome": "Measured",
+      "detail": "fired 11 s late; power save False, idle False; started the process; re-planned at boot"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Exact \u002B5 min (#5, planned 10-05 19:27:51)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot AlarmClock \u002B5 min (#6, planned 10-05 19:27:51)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Inexact \u002B5 min (#7, planned 10-05 19:27:51)",
+      "outcome": "Measured",
+      "detail": "fired 132 s late; power save False, idle True; re-planned at boot"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Window \u002B5 min (#8, planned 10-05 19:27:51)",
+      "outcome": "Measured",
+      "detail": "fired 777 s late; power save False, idle False; re-planned at boot"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Exact \u002B10 min (#9, planned 10-05 19:32:51)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot AlarmClock \u002B10 min (#10, planned 10-05 19:32:51)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Inexact \u002B10 min (#11, planned 10-05 19:32:51)",
+      "outcome": "Measured",
+      "detail": "fired 370 s late; power save False, idle True; re-planned at boot"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Window \u002B10 min (#12, planned 10-05 19:32:51)",
+      "outcome": "Measured",
+      "detail": "fired 477 s late; power save False, idle False; re-planned at boot"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Exact \u002B20 min (#13, planned 10-05 19:42:51)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot AlarmClock \u002B20 min (#14, planned 10-05 19:42:51)",
+      "outcome": "Measured",
+      "detail": "denied:SecurityException"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Inexact \u002B20 min (#15, planned 10-05 19:42:51)",
+      "outcome": "Skipped",
+      "detail": "pending; re-planned at boot"
+    },
+    {
+      "spike": "S5",
+      "check": "reboot Window \u002B20 min (#16, planned 10-05 19:42:51)",
+      "outcome": "Skipped",
+      "detail": "pending; re-planned at boot"
+    },
+    {
+      "spike": "S5",
+      "check": "Boot",
+      "outcome": "Measured",
+      "detail": "at 10-05 19:24:37: 8 alarm(s) re-planned, 0 passed while off; exact alarms allowed False"
+    },
+    {
+      "spike": "S8",
+      "check": "Periodic work ran",
+      "outcome": "Fail",
+      "detail": "no run recorded"
+    }
+  ]
+}

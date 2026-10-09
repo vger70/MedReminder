@@ -1,0 +1,2 @@
+# Build logs contain local paths; commit only the JSON and s4-*.md reports.
+results/*-build.log
