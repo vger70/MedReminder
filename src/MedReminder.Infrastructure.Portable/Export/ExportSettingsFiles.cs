@@ -37,8 +37,12 @@ internal sealed class ExportSettingsFiles
     public ExportedUserSettings? ReadUserSettings()
         => ReadSection<ExportedUserSettings>(UserSettingsPath, "UI");
 
-    public ExportedNotificationSettings? ReadNotificationSettings(string notificationSettingsPath)
+    // Per-profile file: static, its path comes from the profile.
+    public static ExportedNotificationSettings? ReadNotificationSettings(string notificationSettingsPath)
         => ReadSection<ExportedNotificationSettings>(notificationSettingsPath, "Notifications");
+
+    public static void WriteNotificationSettings(string notificationSettingsPath, ExportedNotificationSettings settings)
+        => WriteSection(notificationSettingsPath, "Notifications", settings);
 
     public void WriteSmtpSettings(ExportedSmtpSettings settings)
         => WriteSection(SmtpSettingsPath, "Smtp", settings);

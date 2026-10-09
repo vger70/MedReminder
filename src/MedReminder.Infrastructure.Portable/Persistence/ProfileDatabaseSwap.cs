@@ -27,7 +27,7 @@ namespace MedReminder.Infrastructure.Storage;
 internal static class ProfileDatabaseSwap
 {
     public static Task ReplaceAsync(
-        IDatabaseExclusiveAccess access, MedReminderDbContext db, string target, string newFile,
+        IDatabaseExclusiveAccess access, MedReminderDbContext? db, string target, string newFile,
         TimeProvider clock, CancellationToken cancellationToken, Action? beforeSwap = null)
     {
         ArgumentNullException.ThrowIfNull(access);
@@ -39,11 +39,13 @@ internal static class ProfileDatabaseSwap
         }, cancellationToken);
     }
 
-    private static void Replace(MedReminderDbContext db, string target, string newFile, TimeProvider clock)
+    // db: the caller's open context, closed before the move; null when
+    // the host holds no context of its own (the mobile import).
+    private static void Replace(MedReminderDbContext? db, string target, string newFile, TimeProvider clock)
     {
         SqliteConnection.ClearAllPools();
-        var connection = db.Database.GetDbConnection();
-        if (connection.State != ConnectionState.Closed)
+        var connection = db?.Database.GetDbConnection();
+        if (connection is not null && connection.State != ConnectionState.Closed)
         {
             connection.Close();
         }

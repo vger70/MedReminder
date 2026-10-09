@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Persistence;
@@ -91,12 +90,7 @@ internal sealed class ExportService : IExportService
 
         // Step 1: validate the passphrase before touching the disk, so
         // a rejected export never leaves a partial file (§4.5).
-        if (passphrase.Length < ExportFormat.MinPassphraseLength)
-        {
-            throw new ExportValidationException(
-                ExportValidationReason.PassphraseTooShort,
-                $"The passphrase must be at least {ExportFormat.MinPassphraseLength} characters.");
-        }
+        ArchiveWriter.ValidatePassphrase(passphrase);
 
         // The admin-only all-profiles scope is deferred to a follow-up
         // (§3.5, §12 item 3); the first cut ships profile scope only.
@@ -115,7 +109,7 @@ internal sealed class ExportService : IExportService
             _scratchRoot, "MedReminder-export-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratchDirectory);
 
-        byte[]? key = null;
+        byte[]? smtpPassword = null;
         try
         {
             // Step 2: torn-write-free snapshot via the online-backup API.
@@ -128,88 +122,46 @@ internal sealed class ExportService : IExportService
             // Step 4: collect the opt-in shared files.
             var settingsFiles = new ExportSettingsFiles(_sharedDirectory);
             payload.NotificationSettings =
-                settingsFiles.ReadNotificationSettings(target.NotificationSettingsPath);
+                ExportSettingsFiles.ReadNotificationSettings(target.NotificationSettingsPath);
 
             var includes = new ManifestIncludes();
             CollectSharedFiles(options, settingsFiles, payload, includes);
 
             progress?.Report(50);
 
-            // Step 5: serialize payload.json (UTF-8, no BOM, camelCase).
-            var payloadBytes = JsonSerializer.SerializeToUtf8Bytes(
-                payload, ExportJson.Options);
-
-            // Step 6: derive the archive key from a fresh random salt.
-            var salt = RandomNumberGenerator.GetBytes(ExportFormat.SaltSizeBytes);
-            var kdfParams = Argon2Params.Default;
-            key = _cipher.DeriveKey(passphrase, salt, kdfParams);
-
-            // Re-encrypt the SMTP password (if opted in) with the same
-            // archive key, now that it is available (§3.4).
+            // The SMTP password (if opted in) is re-encrypted with the
+            // archive key by the writer (§3.4).
             if (options is { IncludeSmtpSettings: true, IncludeSmtpPassword: true })
             {
-                var secret = EncryptSmtpPassword(key);
-                if (secret is not null)
-                {
-                    payload.Shared.SmtpPasswordEncrypted = secret;
-                    includes.SmtpCredential = true;
-                    // The password lives in payload.json, so re-serialize
-                    // after adding it.
-                    payloadBytes = JsonSerializer.SerializeToUtf8Bytes(
-                        payload, ExportJson.Options);
-                }
+                smtpPassword = ReadSmtpPassword();
             }
-
-            // Step 7: AES-GCM-encrypt the payload.
-            var (nonce, tag, ciphertext) = _cipher.Encrypt(key, payloadBytes);
-
-            // Step 8: SHA-256 over the plaintext for the manifest hash.
-            var payloadHash = SHA256.HashData(payloadBytes);
-
-            // Step 9: build the manifest.
-            var manifest = new ExportManifest
-            {
-                AppVersion = ResolveAppVersion(),
-                CreatedAtUtc = _clock.GetUtcNow(),
-                Scope = "profile",
-                ProfileId = target.Id,
-                Kdf = new ManifestKdf
-                {
-                    Iterations = kdfParams.Iterations,
-                    MemoryKiB = kdfParams.MemoryKiB,
-                    Parallelism = kdfParams.Parallelism,
-                    SaltBase64 = Convert.ToBase64String(salt),
-                },
-                Cipher = new ManifestCipher
-                {
-                    NonceBase64 = Convert.ToBase64String(nonce),
-                    TagBase64 = Convert.ToBase64String(tag),
-                },
-                Payload = new ManifestPayload
-                {
-                    Sha256Base64 = Convert.ToBase64String(payloadHash),
-                    SizeBytes = payloadBytes.Length,
-                },
-                Includes = includes,
-            };
 
             // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §3.6):
             // automatic-scheduled cloud snapshots carry an origin marker
             // and a HASHED host name. User-triggered C.3 exports leave
             // both fields null so the archive stays byte-compatible with
             // pre-C.3+ readers.
-            if (options.AutomaticSource)
+            var content = new ArchiveContent
             {
-                manifest.Source = "automatic";
-                manifest.Device = new ManifestDevice
-                {
-                    HostNameSha256 = HashHostName(Environment.MachineName),
-                    ProfileId = target.Id,
-                };
-            }
+                Payload = payload,
+                ProfileId = target.Id,
+                AppVersion = ResolveAppVersion(),
+                CreatedAtUtc = _clock.GetUtcNow(),
+                Includes = includes,
+                SmtpPassword = smtpPassword,
+                Source = options.AutomaticSource ? "automatic" : null,
+                Device = options.AutomaticSource
+                    ? new ManifestDevice
+                    {
+                        HostNameSha256 = HashHostName(Environment.MachineName),
+                        ProfileId = target.Id,
+                    }
+                    : null,
+            };
 
-            // Step 10: write the ZIP (manifest.json cleartext + payload.enc).
-            WriteArchive(options.DestinationPath, manifest, ciphertext);
+            // Steps 5-10: serialize, derive the key, encrypt, hash, build
+            // the manifest and write the ZIP (ArchiveWriter).
+            WriteArchive(options.DestinationPath, content, passphrase);
 
             progress?.Report(100);
             _log.LogInformation(
@@ -218,9 +170,9 @@ internal sealed class ExportService : IExportService
         }
         finally
         {
-            if (key is not null)
+            if (smtpPassword is not null)
             {
-                CryptographicOperations.ZeroMemory(key);
+                CryptographicOperations.ZeroMemory(smtpPassword);
             }
 
             // Step 11: delete the temp DB snapshot and scratch folder.
@@ -280,72 +232,14 @@ internal sealed class ExportService : IExportService
 
         await using var db = new MedReminderDbContext(options);
 
-        var payload = new ExportPayload
+        var profile = new ExportedProfileInfo
         {
-            Profile = new ExportedProfileInfo
-            {
-                Id = target.Id,
-                DisplayName = target.DisplayName,
-                Role = target.Role.ToString(),
-                CreatedAt = _clock.GetUtcNow(),
-            },
+            Id = target.Id,
+            DisplayName = target.DisplayName,
+            Role = target.Role.ToString(),
+            CreatedAt = _clock.GetUtcNow(),
         };
-
-        // Ordered by Id so the produced payload is stable and diffable;
-        // AsNoTracking because this context is read-only.
-        payload.Medicines = (await db.Medicines.AsNoTracking()
-            .OrderBy(m => m.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.StockMovements = (await db.StockMovements.AsNoTracking()
-            .OrderBy(m => m.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.MedicationScheduleHistory = (await db.MedicationScheduleHistories.AsNoTracking()
-            .OrderBy(s => s.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.MedicationAdministrationSlots = (await db.MedicationAdministrationSlots.AsNoTracking()
-            .OrderBy(s => s.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.MedicationSuspensions = (await db.MedicationSuspensions.AsNoTracking()
-            .OrderBy(s => s.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.MedicationIntakes = (await db.MedicationIntakes.AsNoTracking()
-            .OrderBy(i => i.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.NotificationEvents = (await db.NotificationEvents.AsNoTracking()
-            .OrderBy(e => e.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.DoseReminderEvents = (await db.DoseReminderEvents.AsNoTracking()
-            .OrderBy(e => e.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.MedicationAdministrationSlotSets = (await db.MedicationAdministrationSlotSets.AsNoTracking()
-            .OrderBy(s => s.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.StockCounts = (await db.StockCounts.AsNoTracking()
-            .OrderBy(c => c.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        var dispensations = (await db.PrescriptionDispensations.AsNoTracking().ToListAsync(cancellationToken))
-            .ToLookup(d => d.PrescriptionId);
-        payload.Prescriptions = (await db.Prescriptions.AsNoTracking()
-            .OrderBy(p => p.Id).ToListAsync(cancellationToken))
-            .Select(p => ExportMapper.ToDto(p, dispensations[p.Id])).ToList();
-        payload.SchemaVersion = ExportFormat.SchemaVersionOf(payload);
-        payload.Deadlines = (await db.Deadlines.AsNoTracking()
-            .OrderBy(d => d.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.StockPackages = (await db.StockPackages.AsNoTracking()
-            .OrderBy(p => p.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.DoseTimePresets = (await db.DoseTimePresets.AsNoTracking()
-            .OrderBy(p => p.Id).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        payload.DoseTimeDefaults = (await db.DoseTimeDefaults.AsNoTracking()
-            .OrderBy(d => d.AdministrationsPerDay).ToListAsync(cancellationToken))
-            .Select(ExportMapper.ToDto).ToList();
-        var cutoff = await db.LedgerCutoffs.AsNoTracking()
-            .SingleOrDefaultAsync(cancellationToken);
-        payload.LedgerCutoff = cutoff is null ? null : ExportMapper.ToDto(cutoff);
-
-        return payload;
+        return await ProfilePayloadReader.ReadAsync(db, profile, cancellationToken);
     }
 
     private static void CollectSharedFiles(
@@ -385,36 +279,18 @@ internal sealed class ExportService : IExportService
         }
     }
 
-    // DPAPI-decrypt the SMTP password into a transient buffer, then
-    // AES-GCM-encrypt it with the archive key (§3.4). The plaintext
-    // byte buffer is zeroed before returning. Returns null when no
-    // password is stored.
-    private ExportedProtectedSecret? EncryptSmtpPassword(byte[] key)
+    // DPAPI-decrypt the SMTP password into a transient UTF-8 buffer,
+    // which the caller zeroes after the archive is written (§3.4).
+    // Returns null when no password is stored.
+    private byte[]? ReadSmtpPassword()
     {
         if (!_credentialStore.HasPassword) return null;
 
         var plaintext = _credentialStore.GetPassword();
-        if (string.IsNullOrEmpty(plaintext)) return null;
-
-        var passwordBytes = Encoding.UTF8.GetBytes(plaintext);
-        try
-        {
-            var (nonce, tag, ciphertext) = _cipher.Encrypt(key, passwordBytes);
-            return new ExportedProtectedSecret
-            {
-                NonceBase64 = Convert.ToBase64String(nonce),
-                TagBase64 = Convert.ToBase64String(tag),
-                CiphertextBase64 = Convert.ToBase64String(ciphertext),
-            };
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(passwordBytes);
-        }
+        return string.IsNullOrEmpty(plaintext) ? null : Encoding.UTF8.GetBytes(plaintext);
     }
 
-    private static void WriteArchive(
-        string destinationPath, ExportManifest manifest, byte[] ciphertext)
+    private void WriteArchive(string destinationPath, ArchiveContent content, char[] passphrase)
     {
         var directory = Path.GetDirectoryName(destinationPath);
         if (!string.IsNullOrEmpty(directory))
@@ -424,24 +300,7 @@ internal sealed class ExportService : IExportService
 
         using var stream = new FileStream(
             destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
-        using var archive = new System.IO.Compression.ZipArchive(
-            stream, System.IO.Compression.ZipArchiveMode.Create);
-
-        var manifestEntry = archive.CreateEntry(
-            ExportFormat.ManifestEntryName,
-            System.IO.Compression.CompressionLevel.Optimal);
-        using (var manifestStream = manifestEntry.Open())
-        {
-            var manifestBytes = JsonSerializer.SerializeToUtf8Bytes(
-                manifest, ExportJson.Options);
-            manifestStream.Write(manifestBytes);
-        }
-
-        var payloadEntry = archive.CreateEntry(
-            ExportFormat.PayloadEntryName,
-            System.IO.Compression.CompressionLevel.Optimal);
-        using var payloadStream = payloadEntry.Open();
-        payloadStream.Write(ciphertext);
+        ArchiveWriter.Write(stream, content, passphrase, _cipher);
     }
 
     private static string HashHostName(string hostName)
