@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #217 — Desktop country and catalogue defaults (DA3)
+
+Link: [vger70/MedReminder#217](https://github.com/vger70/MedReminder/pull/217)
+Branch: `claude/desktop-country-catalogue-defaults`
+
+### Added
+
+- `CatalogueDefaults` (`src/MedReminder.Application/Catalogue`): the
+  portable DA3 rule shared with the Android app. The national catalogue
+  when the country has one (IT, ES, FR, US); EMA (EU) for an EU/EEA
+  country; otherwise no catalogue. Today every country outside GB, UK
+  and US falls back to EU, which is wrong for countries such as JP or CH
+  (`docs/analysis/ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md` §3.1).
+
+---
 ## PR #218 — Android M0: portable profile stores and notification planner
 
 Link: [vger70/MedReminder#218](https://github.com/vger70/MedReminder/pull/218)
