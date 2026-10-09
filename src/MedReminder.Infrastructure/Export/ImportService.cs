@@ -2,7 +2,6 @@ using System.Data;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Persistence;
@@ -239,17 +238,5 @@ internal sealed class ImportService : IImportService
     }
 
     private void WriteNotificationSettings(ExportedNotificationSettings settings)
-    {
-        var payload = new Dictionary<string, ExportedNotificationSettings>
-        {
-            ["Notifications"] = settings,
-        };
-        var path = _currentProfile.NotificationSettingsPath;
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-        });
-        File.WriteAllText(path, json);
-    }
+        => ExportSettingsFiles.WriteNotificationSettings(_currentProfile.NotificationSettingsPath, settings);
 }
