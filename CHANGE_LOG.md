@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #222 — Android M0 (B0-04): shared-core CI and core-v tag discipline
+
+Link: [vger70/MedReminder#222](https://github.com/vger70/MedReminder/pull/222)
+Branch: `claude/b0-04-shared-core-ci`
+
+### Build
+
+- `MedReminder.SharedCore.slnf` and `.github/workflows/shared_core.yaml`: Linux CI for Domain, Application and Infrastructure.Portable on pull requests, `main` and `core-v*` tags, so the shared core the mobile app pins is tested on its own and stays free of Windows dependencies.
+
+### Docs
+
+- `docs/SHARED-CORE.md`: `core-vX.Y.Z` tags on `main`, without a GitHub Release and outside the desktop's `v*` trigger; version rules and release procedure. Backlog B0-03 closed, B0-04 recorded.
+
+---
+
 ## PR #220 — Android M0 (B0-03): portable composition of profile stores and planner
 
 Link: [vger70/MedReminder#220](https://github.com/vger70/MedReminder/pull/220)
