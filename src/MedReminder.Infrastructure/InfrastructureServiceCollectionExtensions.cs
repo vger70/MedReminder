@@ -93,15 +93,13 @@ public static class InfrastructureServiceCollectionExtensions
         services.Configure<NotificationSettings>(
             configuration.GetSection(NotificationSettings.SectionName));
         // B.1, P8: the replicated profile settings (display name,
-        // notification recipients) and the sync state of other profiles.
-        services.TryAddSingleton<IProfileSettingsStore, ProfileSettingsStore>();
-        services.TryAddSingleton<ISyncProfileStatus>(_ => new SyncProfileStatus(AppDataPaths.GetProfilesRootDirectory()));
+        // notification recipients) and the sync state of other profiles;
+        // household step H2b: the shared settings files behind the
+        // installation-settings use cases. Portable since B0-01.
+        services.AddMedReminderPortableProfileSettings(AppDataPaths.GetProfilesRootDirectory());
 
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();
-        // Household step H2b: the shared settings files behind the
-        // installation-settings use cases.
-        services.TryAddSingleton<IInstallationSettingsStore, InstallationSettingsStore>();
 
         // B.1 Phase 3c: the sync group key, DPAPI-protected next to the
         // profile database.

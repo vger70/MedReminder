@@ -9,6 +9,8 @@ using MedReminder.Infrastructure.Household;
 using MedReminder.Infrastructure.Localization;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
+using MedReminder.Infrastructure.Profiles;
+using MedReminder.Infrastructure.Settings;
 using MedReminder.Infrastructure.Sync;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -119,6 +121,24 @@ public static class PortableInfrastructureServiceCollectionExtensions
             sp.GetRequiredService<ICredentialProtector>(),
             Path.Combine(sp.GetRequiredService<IAppDataLocation>().DataDirectory, "household")));
 
+        return services;
+    }
+
+    // Android plan M0 (B0-03): the profile and installation settings
+    // stores (B0-01), which stay internal. profilesRootDirectory holds
+    // one folder per profile (AppDataPaths.GetProfilesRootDirectory() on
+    // Windows). The host registers IProfileRegistry, ICurrentProfile,
+    // IAppDataLocation and the SmtpSettings, BackupSettings and
+    // UserSettings options.
+    public static IServiceCollection AddMedReminderPortableProfileSettings(
+        this IServiceCollection services,
+        string profilesRootDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profilesRootDirectory);
+
+        services.TryAddSingleton<IProfileSettingsStore, ProfileSettingsStore>();
+        services.TryAddSingleton<ISyncProfileStatus>(_ => new SyncProfileStatus(profilesRootDirectory));
+        services.TryAddSingleton<IInstallationSettingsStore, InstallationSettingsStore>();
         return services;
     }
 }
