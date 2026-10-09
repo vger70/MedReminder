@@ -9,6 +9,7 @@ using MedReminder.Application.Household;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Migrations;
 using MedReminder.Application.Monitoring;
+using MedReminder.Application.Notifications;
 using MedReminder.Application.Packages;
 using MedReminder.Application.Timeline;
 using MedReminder.Application.Prescriptions;
@@ -125,6 +126,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ConsumptionCatchUp>();
         services.AddScoped<MedicationMonitor>();
         services.AddScoped<DoseReminderService>();
+        // Android plan M0 (B0-02): the device-side plan of the same
+        // notifications, for hosts that schedule them ahead (B0-03).
+        services.AddScoped<NotificationPlanLoader>();
 
         // Therapy timeline view (EVOLUTION-PROPOSALS §4.3): read-only.
         services.AddScoped<TherapyTimelineQuery>();
