@@ -43,6 +43,14 @@ Branch: `claude/mobile-all-free`
 
 ---
 
+## PR #223 — Docs: the maintainer pushes core-v tags
+
+Link: [vger70/MedReminder#223](https://github.com/vger70/MedReminder/pull/223)
+Branch: `claude/shared-core-tag-note`
+
+### Docs
+
+- `docs/SHARED-CORE.md`: `core-v*` tags are created and pushed by the maintainer from a local clone; cloud sessions cannot push tags.
 ## PR #224 — Record the overnight S8 run in the B.1 spike results
 
 Link: [vger70/MedReminder#224](https://github.com/vger70/MedReminder/pull/224)

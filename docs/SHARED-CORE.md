@@ -65,6 +65,12 @@ on Windows (CLAUDE.md §3).
    git push origin core-v0.2.0
    ```
 
+   The maintainer creates and pushes the tag from a local clone.
+   Claude Code cloud sessions cannot: their git proxy accepts branch
+   pushes only and rejects tag pushes (HTTP 403), and the GitHub
+   integration has no tool to create a tag. A session prepares the
+   tag command with the merge commit and the message.
+
 3. Wait for the Shared core workflow on the tag to pass.
 4. In the private repository, move the submodule to the tag and open a
    pull request there:
