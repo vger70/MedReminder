@@ -52,13 +52,12 @@
     <PackageReference Include="MailKit" Version="4.18.1" />
   </ItemGroup>
 
-  <!-- S10: the production email adapter and its settings, compiled from
-       the desktop sources unchanged (they use no Windows API), so the
-       spike runs the code the Android client would move to the
-       portable project in M0. -->
+  <!-- S10: the production email adapter, compiled from the desktop
+       source unchanged (it uses no Windows API), so the spike runs the
+       code the Android client would move to the portable project in
+       M0. Its SmtpSettings already lives in Infrastructure.Portable. -->
   <ItemGroup>
     <Compile Include="..\..\..\src\MedReminder.Infrastructure\Email\MailKitEmailNotificationService.cs" Link="Linked\MailKitEmailNotificationService.cs" />
-    <Compile Include="..\..\..\src\MedReminder.Infrastructure\Email\SmtpSettings.cs" Link="Linked\SmtpSettings.cs" />
     <!-- MAUI's implicit using brings its own EmailMessage, which makes
          the production file's EmailMessage ambiguous. Unused here. -->
     <Using Remove="Microsoft.Maui.ApplicationModel.Communication" />

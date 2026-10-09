@@ -250,9 +250,10 @@ process.
 
 ## S10 — MailKit
 
-The app compiles the desktop's `MailKitEmailNotificationService` and
-`SmtpSettings` from `src/MedReminder.Infrastructure/Email/` unchanged,
-with the desktop's MailKit version, and runs them on the phone. Use the
+The app compiles the desktop's `MailKitEmailNotificationService` from
+`src/MedReminder.Infrastructure/Email/` unchanged, with its
+`SmtpSettings` from Infrastructure.Portable and the desktop's MailKit
+version, and runs them on the phone. Use the
 Release APK and a test mailbox.
 
 1. Fill in the SMTP fields: host, port (587 with STARTTLS on, or 465
