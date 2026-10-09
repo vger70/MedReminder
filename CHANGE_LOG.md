@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #218 — Move the profile registry and settings stores to Infrastructure.Portable
+## PR #218 — Android M0: portable profile stores and notification planner
 
 Link: [vger70/MedReminder#218](https://github.com/vger70/MedReminder/pull/218)
 Branch: `claude/b0-01-portable-profile-stores`
@@ -41,9 +41,14 @@ Branch: `claude/b0-01-portable-profile-stores`
 - `CurrentProfile` and `SyncProfileStatus` take the profiles root from the host; the desktop passes `AppDataPaths.GetProfilesRootDirectory()`. The sync status check no longer creates an empty profile folder.
 - The registry and installation settings tests run in the portable test project, on any OS; new tests cover `CurrentProfile`, `ProfileSettingsStore` and `SyncProfileStatus`.
 
+### Added
+
+- **Added** `NotificationPlanner` and `NotificationPlanLoader` in `MedReminder.Application/Notifications` (backlog B0-02): from the same rules as `MedicationMonitor`, `DoseReminderService` and `PackageExpiryNotices`, the low-stock, dose and package expiry notifications of the coming days, for the Android local notifications. No desktop behavior change.
+- `NotificationPlannerParityTests` replay the desktop passes every 15 minutes and compare them with the plan, across suspensions, schedule changes, packages and both DST changes.
+
 ### Docs
 
-- `ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md`: B0-01 marked implemented. `ANALYSIS-B1-MOBILE-SYNC.md`: project table and port mapping updated.
+- `ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md`: B0-01 and B0-02 marked implemented; `ANALYSIS-B1-ANDROID-PLAN.md` §4.2 records the planner. `ANALYSIS-B1-MOBILE-SYNC.md`: project table and port mapping updated.
 
 ---
 
