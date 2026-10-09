@@ -37,7 +37,57 @@ Branch: `claude/dose-reminder-therapy-window`
 
 ### Fixed
 
-- Dose reminders were shown before the therapy start date and after its end date while the medicine stayed active; they now follow the therapy window, end date included (`DoseReminderService`).
+- Dose reminders were shown before the therapy start date and after its end date while the medicine stayed active; they now follow the therapy window, end date included (`DoseReminderService`). `NotificationPlanner` applies the same window, so the Android plan stays in parity.
+
+---
+
+## PR #217 — Desktop country and catalogue defaults (DA3)
+
+Link: [vger70/MedReminder#217](https://github.com/vger70/MedReminder/pull/217)
+Branch: `claude/desktop-country-catalogue-defaults`
+
+### Added
+
+- `CatalogueDefaults` (`src/MedReminder.Application/Catalogue`): the
+  portable DA3 rule shared with the Android app. The national catalogue
+  when the country has one (IT, ES, FR, US); EMA (EU) for an EU/EEA
+  country; otherwise no catalogue. Today every country outside GB, UK
+  and US falls back to EU, which is wrong for countries such as JP or CH
+  (`docs/analysis/ANALYSIS-DESKTOP-COUNTRY-CATALOGUE-DEFAULTS.md` §3.1).
+
+---
+## PR #218 — Android M0: portable profile stores and notification planner
+
+Link: [vger70/MedReminder#218](https://github.com/vger70/MedReminder/pull/218)
+Branch: `claude/b0-01-portable-profile-stores`
+
+### Changed
+
+- **Moved** `ProfileRegistry`, `ProfileSettingsStore`, `InstallationSettingsStore` and `SmtpSettings` to `MedReminder.Infrastructure.Portable`, so the Android app can reuse them (Android plan M0, backlog B0-01). No behavior change on the desktop.
+- `CurrentProfile` and `SyncProfileStatus` take the profiles root from the host; the desktop passes `AppDataPaths.GetProfilesRootDirectory()`. The sync status check no longer creates an empty profile folder.
+- The registry and installation settings tests run in the portable test project, on any OS; new tests cover `CurrentProfile`, `ProfileSettingsStore` and `SyncProfileStatus`.
+
+### Added
+
+- **Added** `NotificationPlanner` and `NotificationPlanLoader` in `MedReminder.Application/Notifications` (backlog B0-02): from the same rules as `MedicationMonitor`, `DoseReminderService` and `PackageExpiryNotices`, the low-stock, dose and package expiry notifications of the coming days, for the Android local notifications. No desktop behavior change.
+- `NotificationPlannerParityTests` replay the desktop passes every 15 minutes and compare them with the plan, across suspensions, schedule changes, packages and both DST changes.
+
+### Docs
+
+- `ANALYSIS-B1-ANDROID-IMPLEMENTATION-BACKLOG.md`: B0-01 and B0-02 marked implemented; `ANALYSIS-B1-ANDROID-PLAN.md` §4.2 records the planner. `ANALYSIS-B1-MOBILE-SYNC.md`: project table and port mapping updated.
+
+---
+
+## PR #216 — Record the open B.1 decisions
+
+Link: [vger70/MedReminder#216](https://github.com/vger70/MedReminder/pull/216)
+Branch: `claude/b1-docs-review`
+**Status:** merged (2026-10-08)
+
+### Docs
+
+- Recorded decisions D11, D12, DA2, DA5, DA12 and DA14 in the B.1 Android documents; separated release 1 (M0–M5) from evolution V (vital-parameter tracking).
+- Aligned the B.1 Android documents after a consistency review and removed the compatibility check for older desktops from the country and catalogue defaults analysis.
 
 ---
 

@@ -95,7 +95,7 @@ public static class InfrastructureServiceCollectionExtensions
         // B.1, P8: the replicated profile settings (display name,
         // notification recipients) and the sync state of other profiles.
         services.TryAddSingleton<IProfileSettingsStore, ProfileSettingsStore>();
-        services.TryAddSingleton<ISyncProfileStatus, SyncProfileStatus>();
+        services.TryAddSingleton<ISyncProfileStatus>(_ => new SyncProfileStatus(AppDataPaths.GetProfilesRootDirectory()));
 
         services.TryAddSingleton<ICredentialProtector, DpapiCredentialProtector>();
         services.TryAddSingleton<ISmtpCredentialStore, SmtpCredentialStore>();

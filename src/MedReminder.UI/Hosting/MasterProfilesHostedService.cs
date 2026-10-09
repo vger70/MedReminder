@@ -8,6 +8,7 @@ using MedReminder.Infrastructure.Cloud.GoogleDrive;
 using MedReminder.Infrastructure.Cloud.OneDrive;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Profiles;
+using MedReminder.Infrastructure.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -106,7 +107,7 @@ internal sealed class MasterProfilesHostedService : BackgroundService
 
     private async Task RunProfileAsync(Profile profile, CancellationToken ct)
     {
-        var current = new CurrentProfile(profile);
+        var current = new CurrentProfile(profile, AppDataPaths.GetProfilesRootDirectory());
         if (!File.Exists(current.DatabasePath)) return;
 
         await using var provider = ProfileServices.Build(_services, current);

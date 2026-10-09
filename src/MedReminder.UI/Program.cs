@@ -187,7 +187,7 @@ internal static class Program
     }
 
     private static void ApplyProfileAppearance(Profile profile)
-        => ApplyAppearance(ProfileUiSettingsFile.ReadAppearance(new CurrentProfile(profile).DataDirectory));
+        => ApplyAppearance(ProfileUiSettingsFile.ReadAppearance(AppDataPaths.GetProfileDataDirectory(profile.Id)));
 
     // Sets the WinForms colour mode and the strip renderer built from
     // the resulting palette. Applied before the windows it affects are
@@ -260,7 +260,7 @@ internal static class Program
                 {
                     return null;
                 }
-                return new CurrentProfile(wizard.CreatedProfile);
+                return new CurrentProfile(wizard.CreatedProfile, AppDataPaths.GetProfilesRootDirectory());
             }
             profiles = registry.ListProfiles();
         }
@@ -328,7 +328,7 @@ internal static class Program
     {
         if (!profile.HasPin)
         {
-            return new CurrentProfile(profile);
+            return new CurrentProfile(profile, AppDataPaths.GetProfilesRootDirectory());
         }
         // The PIN prompt belongs to the profile being opened.
         ApplyProfileAppearance(profile);
@@ -340,7 +340,7 @@ internal static class Program
             // must not open the profile without a valid PIN.
             return null;
         }
-        return new CurrentProfile(profile);
+        return new CurrentProfile(profile, AppDataPaths.GetProfilesRootDirectory());
     }
 
     private static string? TryReadProfileArg(string[] args)

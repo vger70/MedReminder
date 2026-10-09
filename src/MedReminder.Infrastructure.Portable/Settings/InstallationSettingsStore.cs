@@ -10,8 +10,9 @@ namespace MedReminder.Infrastructure.Settings;
 // already binds (the files over appsettings.json); writes the file of a
 // section in the shape the Settings dialog wrote before, { "<Section>":
 // { ... } }, through a temporary file, so the configuration reload sees a
-// complete file. The directory is %LOCALAPPDATA%\MedReminder\
-// (IAppDataLocation); nothing is written elsewhere (CLAUDE.md §5).
+// complete file. The directory is IAppDataLocation.DataDirectory
+// (%LOCALAPPDATA%\MedReminder\ on Windows); nothing is written
+// elsewhere (CLAUDE.md §5). Portable since Android plan M0 (B0-01).
 internal sealed class InstallationSettingsStore : IInstallationSettingsStore
 {
     public const string SmtpFileName = "smtp.settings.json";
