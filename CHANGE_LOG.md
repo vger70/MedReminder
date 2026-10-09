@@ -30,6 +30,72 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #106 — Spikes S1-S5, S8, S10: B.1 Android spike app (do not merge)
+
+Link: [vger70/MedReminder#106](https://github.com/vger70/MedReminder/pull/106)
+Branch: `claude/nifty-galileo-vfepsw`
+**Status:** draft, not to be merged (spike tool; results go to
+`ANALYSIS-B1-MOBILE-SYNC.md` §18)
+
+### Added
+
+- `spikes/Android/`: MAUI Android app for S1 (AES-GCM, known answers,
+  desktop archive decryption), S2 (Argon2id cost with the default
+  parameters) and S3 (EF Core SQLite and reflection JSON in a Release
+  build), on the production portable projects; `run-s4.ps1` for S4
+  (`StripReleaseDebugArtifacts` on an Android Release publish).
+- Aligned with `main` at v2.16.0: `MedicineOverviewLoader` built
+  without the shortage and equivalents lists; S1b also counts
+  prescriptions, deadlines and packages. Debug and Release builds and
+  the S1–S3 logic checked off-device (README, pre-check); device runs
+  pending.
+- `run-s4.ps1` reports the strip message of the spike project only, not
+  the repeated lines of the referenced projects; the script itself and
+  S1b were checked off-device.
+- README: the `InstallAndroidDependencies` command now passes
+  `AndroidSdkDirectory` and `JavaSdkDirectory` (without them it fails
+  with MSB4044), and the later builds take them from the environment.
+- README: check `adb devices` before the Debug run (XA0010 otherwise).
+- First device results in `spikes/Android/results/`: Debug report on a
+  motorola edge 50 neo (Android 16) and the S4 reports for the default
+  and full-trimming Release publishes.
+- Release reports (default and full trimming) and a README "Device
+  results" section: S1, S3 and S4 pass with the Release defaults, S2
+  takes 0.9 s on that phone; full trimming breaks reflection JSON and
+  EF Core.
+- Release reports from a Samsung Galaxy A32 4G (low-end, 3.6 GB) and
+  A52 5G: S1, S2 and S3 pass; Argon2id at most 2.04 s on the A32.
+- S5 and S8 added to the app: alarm batteries of four kinds with a
+  boot receiver that re-plans them, and a 15-minute WorkManager job
+  (`Xamarin.AndroidX.Work.Runtime` 2.10.3, aligned with the AndroidX
+  versions of MAUI); results collected from log files; README procedure
+  and acceptance.
+- README S5: turn exact alarms on before every scenario except
+  `exact-denied` (off by default on Android 14+), and collect at least
+  25 minutes after scheduling.
+- First S5 results on the motorola (Android 16): `screen-off`,
+  `swiped`, `reboot`, `reboot` with exact alarms denied, and
+  `exact-denied`, `force-stopped`, `foreground` and `doze-overnight`
+  (S8 not started in that run).
+- S5 report wording: an alarm past due at `BOOT_COMPLETED` is no longer
+  described as "while the phone was off", since Android 15+ also sends
+  that broadcast when a force-stopped app is opened again.
+- S8 result on the motorola: 6 runs in 12.4 hours of the 15-minute
+  periodic work, gaps 61 to 241 minutes.
+- S10 added: the production MailKit email adapter, compiled from the
+  desktop sources, builds a message with a calendar attachment, tests
+  the connection and sends through the user's SMTP server; checked
+  off-device against a local SMTP server.
+- Rebased on `main` at `ded58de` (`core-v0.1.0`). `SmtpSettings` moved
+  to Infrastructure.Portable on `main`, so S10 links only
+  `MailKitEmailNotificationService` and takes `SmtpSettings` from the
+  referenced portable project.
+- S8 overnight run on the motorola (21:23 to 10:56, unplugged
+  overnight): 6 runs in 13.5 hours, gaps 61 to 241 minutes, median 175;
+  the standby bucket reached "rare" once and the work still ran.
+
+---
+
 ## PR #222 — Android M0 (B0-04): shared-core CI and core-v tag discipline
 
 Link: [vger70/MedReminder#222](https://github.com/vger70/MedReminder/pull/222)
