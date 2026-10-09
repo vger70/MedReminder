@@ -1,0 +1,13 @@
+{
+  "solution": {
+    "path": "MedReminder.sln",
+    "projects": [
+      "src\\MedReminder.Domain\\MedReminder.Domain.csproj",
+      "src\\MedReminder.Application\\MedReminder.Application.csproj",
+      "src\\MedReminder.Infrastructure.Portable\\MedReminder.Infrastructure.Portable.csproj",
+      "tests\\MedReminder.Domain.Tests\\MedReminder.Domain.Tests.csproj",
+      "tests\\MedReminder.Application.Tests\\MedReminder.Application.Tests.csproj",
+      "tests\\MedReminder.Infrastructure.Portable.Tests\\MedReminder.Infrastructure.Portable.Tests.csproj"
+    ]
+  }
+}

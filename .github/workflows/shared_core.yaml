@@ -1,0 +1,81 @@
+# Shared core CI (Android plan M0, backlog B0-04; docs/SHARED-CORE.md).
+#
+# Builds and tests the projects the mobile app consumes (Domain,
+# Application, Infrastructure.Portable) on Linux, through
+# MedReminder.SharedCore.slnf. Linux also proves that no Windows-only
+# project or API reaches them: the Windows projects are not in the
+# filter and EnableWindowsTargeting is not set.
+#
+# A core-v* tag runs the same job and also checks the tag format and
+# that the tagged commit is on main. Core tags never create a GitHub
+# Release: the desktop update check reads releases/latest, and the
+# desktop release workflow triggers on v* tags only.
+
+name: Shared core
+
+on:
+  push:
+    branches: [main]
+    tags: ['core-v*']
+    paths:
+      - 'src/MedReminder.Domain/**'
+      - 'src/MedReminder.Application/**'
+      - 'src/MedReminder.Infrastructure.Portable/**'
+      - 'tests/MedReminder.Domain.Tests/**'
+      - 'tests/MedReminder.Application.Tests/**'
+      - 'tests/MedReminder.Infrastructure.Portable.Tests/**'
+      - 'tests/fixtures/**'
+      - 'scripts/feeds/regional_services_it.json'
+      - 'assets/localization/**'
+      - 'Directory.Build.props'
+      - 'MedReminder.SharedCore.slnf'
+      - '.github/workflows/shared_core.yaml'
+  pull_request:
+    paths:
+      - 'src/MedReminder.Domain/**'
+      - 'src/MedReminder.Application/**'
+      - 'src/MedReminder.Infrastructure.Portable/**'
+      - 'tests/MedReminder.Domain.Tests/**'
+      - 'tests/MedReminder.Application.Tests/**'
+      - 'tests/MedReminder.Infrastructure.Portable.Tests/**'
+      - 'tests/fixtures/**'
+      - 'scripts/feeds/regional_services_it.json'
+      - 'assets/localization/**'
+      - 'Directory.Build.props'
+      - 'MedReminder.SharedCore.slnf'
+      - '.github/workflows/shared_core.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check core tag
+        if: startsWith(github.ref, 'refs/tags/core-v')
+        run: |
+          if ! [[ "${GITHUB_REF_NAME}" =~ ^core-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Core tag must be core-vX.Y.Z, got ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::${GITHUB_REF_NAME} does not point at a commit on main"
+            exit 1
+          fi
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+          DOTNET_NOLOGO: '1'
+        run: dotnet test MedReminder.SharedCore.slnf -c Release
