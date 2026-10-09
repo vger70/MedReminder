@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #220 — Android M0 (B0-03): portable composition of profile stores and planner
+
+Link: [vger70/MedReminder#220](https://github.com/vger70/MedReminder/pull/220)
+Branch: `claude/b0-03-portable-composition`
+
+### Added
+
+- `AddMedReminderPortableProfileSettings` (`src/MedReminder.Infrastructure.Portable`): registers the profile settings, sync status and installation settings stores for any host; the desktop now uses it with the same `AppDataPaths` location. `AddMedReminderApplication` registers `NotificationPlanLoader`. Lets the Android app compose them from the shared core alone (backlog B0-03).
+- `PortableCompositionTests`: the container built from the portable projects plans notifications for a new profile.
+
+### Docs
+
+- Backlog B0-03: shared-core side done; private repository and APK build open.
+
+---
+
 ## PR #219 — Stop dose reminders outside the therapy window
 
 Link: [vger70/MedReminder#219](https://github.com/vger70/MedReminder/pull/219)
