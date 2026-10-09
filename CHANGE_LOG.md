@@ -43,6 +43,14 @@ Branch: `claude/b0-03-portable-composition`
 ### Docs
 
 - Backlog B0-03: shared-core side done; private repository and APK build open.
+## PR #221 — Decode inverted camera frames explicitly
+
+Link: [vger70/MedReminder#221](https://github.com/vger70/MedReminder/pull/221)
+Branch: `claude/barcode-decoder-inverted-frame-5a858d`
+
+### Fixed
+
+- Barcodes printed with light bars on a dark field were never decoded: ZXing.Net's `TryInverted` alone does not read an inverted Code 39 frame. `FrameBarcodeDecoder` now tries the inverted full frame as a last resort (`src/MedReminder.UI/Camera`).
 
 ---
 
