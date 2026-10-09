@@ -18,22 +18,7 @@
 
 ---
 
-## 3. Build, Test & Publish
-```powershell
-# Build & Test
-dotnet restore MedReminder.sln
-dotnet build MedReminder.sln -c Release
-dotnet test MedReminder.sln -c Release
-
-# Publish
-dotnet publish src/MedReminder.UI -c Release /p:PublishProfile=win-x64-framework-dependent
-dotnet publish src/MedReminder.UI -c Release /p:PublishProfile=win-x64-self-contained
-```
-Note: Infra tests need Windows (DPAPI/Registry). Release build deletes .pdb and .xml via MSBuild target StripReleaseDebugArtifacts (see §7).
-
----
-
-## 4. Git, Branching & PR Workflow
+## 3. Git, Branching & PR Workflow
  * Base Branch: main.
  * Branch Naming: name MUST reflect request. Prefixes allowed: claude/<name> or feature/<name>.
  * Early PR Requirement: Open PR after first commit of session. No ask to follow PR. No wait until end.
@@ -42,26 +27,26 @@ Note: Infra tests need Windows (DPAPI/Registry). Release build deletes .pdb and 
 
 ---
 
-## 5. Runtime Data (%LOCALAPPDATA%\MedReminder\)
+## 4. Runtime Data (%LOCALAPPDATA%\MedReminder\)
  * Shared: profiles.json, smtp.settings.json, smtp.protected (DPAPI), backup.*.json, user.settings.json, logs/*.log, catalogue\staging\ (transient remote AIFA archive, deleted after each run), catalogue\shortages\ (AIFA shortage list), catalogue\equivalents\ (AIFA transparency list), catalogue\regional-services\ (regional prescription services list), household/ (household.db, household.settings.json, household.protected and device.protected (DPAPI)), setup/ (transient, first-run join only).
  * Per-Profile (profiles\<id>\): medreminder.db (SQLite), notifications.settings.json, ui.settings.json.
  * Constraint: Never write outside %LOCALAPPDATA%\MedReminder\. Never log secrets/PII.
 
 ---
 
-## 6. DOs (Always Follow)
+## 5. DOs (Always Follow)
  * Name branches correctly (claude/ or feature/) and open PR after 1st commit.
- * Try to install .NET10 SDK to run dornet build/test
- * Ask user run dotnet build and dotnet test before committing source code.
+ * Install the SDK to run dornet build/test only if necessary and if the environment allows it.
  * Add new UI string keys to ALL assets/localization/strings.<lang>.json files.
  * Keep tone sober, factual, concise, no emojis in documentation.
 
 ---
 
-## 7. Constraints
+## 6. Constraints
  * Non-English text goes only where §2 allows (user guides, UI dictionaries).
- * Send email through MailKit, not System.Net.Mail.SmtpClient: Microsoft no recommend SmtpClient for new development, email service built on MailKit.
- * No log plaintext passwords, email bodies, medical notes; logs plain files under %LOCALAPPDATA%\MedReminder\logs\.
+ * Send email through MailKit, not System.Net.Mail.
+ * Never log secrets or PII. Keep runtime writes under
+  `%LOCALAPPDATA%\MedReminder\`.
  * Schema changes idempotent boot patches in DatabaseInitializer. EnsureCreated() only creates schema of new empty database, cannot upgrade existing one (docs/ANALYSIS.md §8.1).
  * Keep single-instance mutex, close SQLite connections only in backup/restore paths: in-process database gate relies on one process owning each profile database (docs/ANALYSIS.md §7).
- * Keep StripReleaseDebugArtifacts in Directory.Build.props intact; removes *.pdb and *.xml from Release build and publish output (docs/ANALYSIS.md).
+ * Keep StripReleaseDebugArtifacts in Directory.Build.props intact.
