@@ -240,4 +240,30 @@ public class DoseReminderServiceTests
         scope.Windows.Sent.Should().ContainSingle();
         scope.DoseEvents.All.Should().ContainSingle();
     }
+
+    // A therapy window that does not contain today: no reminder before
+    // the start date or after the end date, as no consumption is booked
+    // there (ConsumptionMaterializer). The end date itself is reminded.
+    [Theory]
+    [InlineData(1, null)]
+    [InlineData(-5, -1)]
+    [InlineData(-5, 0)]
+    public async Task Fires_only_inside_the_therapy_window(int startOffset, int? endOffset)
+    {
+        var scope = new ApplicationTestScope(JustAfterSlot);
+        await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            Name: "Enalapril", Unit: "compresse", DosePerAdministration: 1m, AdministrationsPerDay: 1,
+            StartDate: Today.AddDays(startOffset), ThresholdDays: 7,
+            NotificationChannels: NotificationChannels.Windows,
+            EndDate: endOffset is { } end ? Today.AddDays(end) : null,
+            InitialQuantity: 30m,
+            AdministrationSlots: [new AdministrationSlotInput(1m, SlotTime, null)],
+            RemindOnDose: true), CancellationToken.None);
+
+        var result = await scope.BuildDoseReminder().RunAsync(CancellationToken.None);
+
+        var insideWindow = startOffset <= 0 && (endOffset is null || endOffset >= 0);
+        result.FiredCount.Should().Be(insideWindow ? 1 : 0);
+        scope.Windows.Sent.Should().HaveCount(insideWindow ? 1 : 0);
+    }
 }

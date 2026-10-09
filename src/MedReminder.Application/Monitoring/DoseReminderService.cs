@@ -95,11 +95,16 @@ public sealed class DoseReminderService
             // (ANALYSIS-A5 §4.4).
             if (currentStock <= 0) continue;
 
+            // Gate: today outside the therapy window. DailyConsumption
+            // ignores StartDate/EndDate; ConsumptionMaterializer books
+            // nothing outside them, so no dose is due.
+            if (today < medicine.StartDate || (medicine.EndDate is { } endDate && today > endDate)) continue;
+
             var schedule = await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
 
-            // Gate: therapy not active today (StartDate/EndDate,
-            // schedule inactive, suspension).
+            // Gate: no dose scheduled today (schedule without a rate;
+            // suspension below).
             var rate = DailyConsumption.RateOn(today, schedule, slots);
             if (rate == 0m) continue;
 
