@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #226 — Share the .mrz export and import with the mobile host (core-v0.2.0)
+
+Link: [vger70/MedReminder#226](https://github.com/vger70/MedReminder/pull/226)
+Branch: `claude/portable-profile-archive`
+
+### Added
+
+- Public `ProfileArchive` in `Infrastructure.Portable`: stream-based export, manifest read, decrypt for preview and database replace of one profile, for the Android app (backlog B1-06).
+
+### Changed
+
+- `ExportSettingsFiles` and `ProfileDatabaseSwap` moved to `Infrastructure.Portable`; `ArchiveWriter` and `ProfilePayloadReader` extracted from `ExportService`, which now uses them. Archive format unchanged.
+
+---
+
 ## PR #225 — Docs: mobile apps entirely free (A6), premium tier dropped
 
 Link: [vger70/MedReminder#225](https://github.com/vger70/MedReminder/pull/225)
