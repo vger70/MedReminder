@@ -38,6 +38,15 @@ Branch: `claude/shared-core-tag-note`
 ### Docs
 
 - `docs/SHARED-CORE.md`: `core-v*` tags are created and pushed by the maintainer from a local clone; cloud sessions cannot push tags.
+## PR #224 — Record the overnight S8 run in the B.1 spike results
+
+Link: [vger70/MedReminder#224](https://github.com/vger70/MedReminder/pull/224)
+Branch: `claude/b1-s8-overnight-result`
+
+### Docs
+
+- `ANALYSIS-B1-MOBILE-SYNC.md` §18.8: S8 run again overnight on the motorola (6 runs in 13.5 hours, gaps 61 to 241 minutes, median 175, also in the "rare" standby bucket), next to the day run; the best-effort decision stands; the cold-process case stated as not measured.
+- `docs/STATUS.md`: S8 summary updated.
 
 ---
 

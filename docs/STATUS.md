@@ -299,8 +299,9 @@ Open prerequisites and debts inside B.1:
   in draft PR #106, not to be merged). S5 passes on Android 16: exact
   alarms fire within 4 s, also after a reboot, and need
   `SCHEDULE_EXACT_ALARM` granted by the user (§18.5). S8: the
-  15-minute WorkManager job runs every 1 to 4 hours, so background sync
-  is best effort (§18.8). S6 and S7 lack their Android half.
+  15-minute WorkManager job runs every 1 to 4 hours, by day and
+  overnight (rerun 2026-10-09), so background sync is best effort
+  (§18.8). S6 and S7 lack their Android half.
 - **Decisions open**: D11 (strip-target exclusion for mobile; S4 passed,
   recommendation: reject) and D14 (donation links on iOS). DA3 (desktop
   parity including ES and US catalogues; country-based catalogue/language
