@@ -78,6 +78,10 @@ internal sealed class FrameBarcodeDecoder
             Mirror(_enhancedRoi, roiWidth, roiHeight, _mirroredRoi);
             result = _reader.Decode(new RGBLuminanceSource(_mirroredRoi, roiWidth, roiHeight, RGBLuminanceSource.BitmapFormat.BGRA32));
         }
+        // Light bars on a dark field. TryInverted alone does not decode an
+        // inverted Code 39 frame (ZXing.Net 0.16.11), so invert explicitly.
+        if (result is null)
+            result = _reader.Decode(source.invert());
         if (result is null || string.IsNullOrEmpty(result.Text)) return null;
 
         var symbology = Map(result.BarcodeFormat);
