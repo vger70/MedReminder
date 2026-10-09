@@ -194,8 +194,9 @@ public static class NotificationPlanner
         }
     }
 
-    // DoseReminderService gates, per day: stock above zero, a positive
-    // rate, not suspended; then each timed slot that is not as-needed.
+    // DoseReminderService gates, per day: stock above zero, inside the
+    // therapy window, a positive rate, not suspended; then each timed slot
+    // that is not as-needed.
     private static void PlanDoses(MedicinePlanState state, decimal[] stock, DateOnly today,
         DateTimeOffset localNow, TimeZoneInfo zone, NotificationPlanOptions options, List<PlannedNotification> result)
     {
@@ -208,6 +209,8 @@ public static class NotificationPlanner
             var day = today.AddDays(i);
             if (i >= stock.Length || AtLocal(day, TimeOnly.MinValue, zone) > end) break;
             if (stock[i] <= 0m) continue;
+            if (day < state.Medicine.StartDate
+                || (state.Medicine.EndDate is { } endDate && day > endDate)) continue;
             if (DailyConsumption.RateOn(day, state.Schedule, state.Slots) == 0m) continue;
             if (SuspensionState.IsSuspendedOn(day, state.Suspensions)) continue;
 

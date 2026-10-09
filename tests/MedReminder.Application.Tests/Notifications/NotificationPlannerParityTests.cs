@@ -59,6 +59,22 @@ public sealed class NotificationPlannerParityTests
     }
 
     [Fact]
+    public async Task Dose_reminders_only_inside_the_therapy_window()
+    {
+        // Starts tomorrow, ends three days later: no reminder today or
+        // after the end date, one on each day in between.
+        var scope = new ApplicationTestScope(StartInstant);
+        await AddAsync(scope, quantity: 30m, start: Start.AddDays(1), endDate: Start.AddDays(3),
+            slots: [new(1m, new TimeOnly(9, 0), null)]);
+
+        var (planned, shown) = await RunAsync(scope, days: 6);
+
+        AssertParity(planned, shown);
+        planned.Where(p => p.Kind == PlannedNotificationKind.DoseReminder).Select(p => p.Day)
+            .Should().Equal(Start.AddDays(1), Start.AddDays(2), Start.AddDays(3));
+    }
+
+    [Fact]
     public async Task No_low_stock_notice_when_the_therapy_ends_before_the_run_out()
     {
         var scope = new ApplicationTestScope(StartInstant);
