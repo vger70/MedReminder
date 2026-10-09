@@ -302,8 +302,8 @@ The canonical CSV is UTF-8 with header:
 id,type_key,type_name,value,secondary_value,unit,recorded_at_utc,note,created_at_utc,updated_at_utc
 ```
 
-Export always writes the **complete local history**, regardless of Android
-free/premium presentation limits. This prevents a UI limit from becoming a
+Export always writes the **complete local history**, regardless of any
+presentation limit. This prevents a UI limit from becoming a
 data-portability limit.
 
 Import is always explicit and local:
@@ -459,7 +459,7 @@ receives no vital readings, vital CSVs, PDFs, database files or telemetry
 containing them.
 
 Separate MedReminder services may have their own GDPR roles for account,
-billing, support or non-vital cloud operations. Those activities are outside
+support or non-vital cloud operations. Those activities are outside
 the D.1 local-vitals boundary and must not be conflated with it.
 
 ### 7.3 Data minimization
@@ -473,7 +473,7 @@ remote device identifier is required by D.1.
 There is no server-side retention period because the developer does not
 receive the data. Local retention is controlled by the user until deletion.
 The app must make deletion straightforward and must not silently delete
-history merely because a subscription changes.
+history merely because an app setting or a provider account changes.
 
 Exported CSV and PDF files are separate user-controlled copies. Deleting the
 records from the app does not delete copies the user saved elsewhere.
@@ -481,7 +481,7 @@ records from the app does not delete copies the user saved elsewhere.
 ### 7.5 Portability and export
 
 CSV is the canonical machine-readable vital-data transfer format. It is
-available independently of `.mrz` and premium cloud services. This supports
+available independently of `.mrz` and cloud services. This supports
 user control and, where applicable, GDPR data portability. The application
 must not make an unsupported blanket claim that Article 20 applies to every
 local-only use case.
@@ -548,7 +548,7 @@ apart from the DA decisions of `ANALYSIS-B1-ANDROID-PLAN.md`.
 
 | # | Decision | Resolution |
 |---|---|---|
-| DV1 | Android vital-data entitlement | Free core may impose a product-level history/UI limit, but **export always includes the complete local history**. No premium feature may make existing vital data inaccessible. |
+| DV1 | Android vital-data entitlement | Superseded on 2026-10-09: the mobile apps are entirely free (`ANALYSIS-B1-ANDROID-PLAN.md` A6), so no tier limits vital history. **Export always includes the complete local history.** |
 | DV2 | Vital-data synchronization | **No sync.** `VitalType` and `VitalReading` are outside B.1. |
 | DV3 | Vital database | **Separate `vitals.db`**, separate EF Core context, separate encryption key, no FK to `medreminder.db`. |
 | DV4 | `.mrz` treatment | **Vitals excluded completely** from `.mrz` export/import and cloud backup. |

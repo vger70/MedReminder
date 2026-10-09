@@ -22,7 +22,8 @@ it does not authorize implementation or the deferred technical spikes.
   apps (plan §4.3a); it needs its own staffing and estimate.
 - The `ANALYSIS-B1-*` documents take precedence over `docs/STATUS.md` and
   `docs/EVOLUTION.md`.
-- Google Drive precedes OneDrive in M2. Family Premium remains deferred.
+- Google Drive precedes OneDrive in M2. The apps are entirely free (plan A6,
+  2026-10-09): no billing, entitlement or premium work in any milestone.
 
 ## 2. Team roles and ownership
 
@@ -51,9 +52,9 @@ must still be explicit for each milestone.
 | P1 — Prepare M1 entry inputs | D11, DA2, DA5 and DA12 are decided (2026-10-08). Create the personal Play account and reserve the application ID `com.vger70.medreminder`; add the strip target to the private repository (D11). Separately schedule the deferred API 26 spike and state its result is required before claiming API 26 support. | Play account and private-repository build rules ready; spike has an owner and a future slot, but is not run by this plan. |
 | M0 — Shared foundations | Deliver B0-01–04 in dependency order: profile/settings extraction, notification planner, Android consumption proof, then shared-core CI/release discipline. | Existing desktop behavior remains unchanged; Android builds against a pinned shared-core revision; portable CI is green. |
 | M1 — Standalone core | Deliver B1-01–09. Establish the shell and local data path first; develop medicine/regimen and package/intake flows alongside permission/reminder work after shared APIs are stable; complete export/import, security and recovery; then run the closed test on the closed testing track. | 14-day closed test passes on a phone without PC/account; no data loss across update, reboot, export/import; API 26 claim only after compatibility validation. |
-| M2 — Premium, cloud and household | Before entry, finish S11 billing spike, Android OAuth client work for S6/S7, Play merchant/trader setup and API 26 validation. Deliver individual Premium and entitlement states, then Google Drive backup/restore, OneDrive, pairing/sync, household and local deletion in that order as dependencies permit. | Offline, conflict, purchase/restore, entitlement lapse, provider recovery and device-removal scenarios preserve data and report accurate state. |
-| M3 — Prescriptions and planning | Deliver B3-01–05 after M2 exit; build the PDF report with SkiaSharp (DA14; no iText) and verify public regional-service links as data inputs. | Milestone acceptance of prescription lifecycle, reminders, planning, calendar/report handoff and Premium gates. |
-| M4 — Catalogue and scan | Deliver B4-01–05 after M3 exit. Verify data attribution/redistribution for each feed; implement the DA3 defaults: reference country from the device region, national catalogue if one exists (IT, ES, FR, US), otherwise EMA for an EU/EEA country, otherwise no catalogue; the UI language stays independent of the country. | Catalogue/manual-entry behavior, offline states, safety information, scan and free/Premium split pass milestone acceptance. |
+| M2 — Cloud and household | Before entry, finish Android OAuth client work for S6/S7 and API 26 validation. Deliver Google Drive backup/restore, OneDrive, pairing/sync, household and local deletion in that order as dependencies permit. | Offline, conflict, restore, provider recovery and device-removal scenarios preserve data and report accurate state. |
+| M3 — Prescriptions and planning | Deliver B3-01–05 after M2 exit; build the PDF report with SkiaSharp (DA14; no iText) and verify public regional-service links as data inputs. | Milestone acceptance of prescription lifecycle, reminders, planning, calendar/report handoff. |
+| M4 — Catalogue and scan | Deliver B4-01–05 after M3 exit. Verify data attribution/redistribution for each feed; implement the DA3 defaults: reference country from the device region, national catalogue if one exists (IT, ES, FR, US), otherwise EMA for an EU/EEA country, otherwise no catalogue; the UI language stays independent of the country. | Catalogue/manual-entry behavior, offline states, safety information and scan pass milestone acceptance. |
 | M5 — Email and release preparation | Deliver B5-01–04 after M4 exit; complete B5-05 store, privacy/legal, security and operational checks, and a closed test that meets the Play production-access rule. | M5 exit and final release checks pass; product owner authorizes public Play release. |
 
 The existing plan estimates M0–M5 at 120–170 developer-days in total:
@@ -70,9 +71,8 @@ are known. Evolution V (vital tracking) is excluded.
 - In M1, Android shell/localization and shared-core domain work can proceed
   in parallel once B0-03 defines the app/core boundary. Integrate in small
   slices against pinned core revisions.
-- In M2, billing and provider adapters can be developed in parallel after
-  their prerequisites, but entitlement gates must be integrated with each
-  feature before M2 acceptance. Implement and validate Google Drive before
+- In M2, provider adapters and household work can be developed in parallel
+  after their prerequisites. Implement and validate Google Drive before
   starting OneDrive.
 - M3 feature slices can proceed in parallel when they do not compete for
   the notification planner or shared persistence contracts. Keep M4 and M5
@@ -96,7 +96,7 @@ are known. Evolution V (vital tracking) is excluded.
    boundaries, licensing, secret handling and desktop regression risk.
 4. Run automated domain/protocol checks and relevant CI for each change;
    perform focused device checks for native permissions, alarms, storage,
-   camera, billing and provider flows.
+   camera and provider flows.
 5. The QA/accessibility owner maintains a matrix from backlog IDs to
    automated checks, manual scenarios, supported devices/OS versions,
    localization and TalkBack evidence.
@@ -121,8 +121,7 @@ Before implementation starts, the team should:
    `com.vger70.medreminder` (DA5) and recruit at least 20 closed-test
    testers, so that 12 remain opted in for 14 consecutive days.
 3. Assign an owner and proposed date to the deferred API 26 spike without
-   starting it; schedule S11, S6/S7 Android OAuth work and Play merchant
-   setup before M2.
+   starting it; schedule S6/S7 Android OAuth work before M2.
 4. Confirm available devices and OS versions for closed testing, including
    low-end hardware and permission/reboot scenarios from the existing B.1
    spike findings.
