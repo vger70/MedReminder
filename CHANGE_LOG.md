@@ -30,6 +30,17 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #219 — Stop dose reminders outside the therapy window
+
+Link: [vger70/MedReminder#219](https://github.com/vger70/MedReminder/pull/219)
+Branch: `claude/dose-reminder-therapy-window`
+
+### Fixed
+
+- Dose reminders were shown before the therapy start date and after its end date while the medicine stayed active; they now follow the therapy window, end date included (`DoseReminderService`). `NotificationPlanner` applies the same window, so the Android plan stays in parity.
+
+---
+
 ## PR #217 — Desktop country and catalogue defaults (DA3)
 
 Link: [vger70/MedReminder#217](https://github.com/vger70/MedReminder/pull/217)
