@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -29,6 +30,18 @@ internal sealed class ArchiveReader : IArchiveReader
     internal const int MaxManifestBytes = 64 * 1024;
     internal const int MaxPayloadBytes = 64 * 1024 * 1024;
     internal const int MaxArchiveBytes = MaxPayloadBytes + 1024 * 1024;
+
+    // An export has two entries. ZipArchive indexes every entry on the
+    // first lookup, at a few hundred bytes of memory each, so within the
+    // size limit a crafted archive of tiny entries could cost hundreds of
+    // MiB before the two expected ones are even looked for. The declared
+    // count is checked first; ZipArchive reads no more entries than that
+    // and fails as soon as it finds others. The margin tolerates files
+    // added by other tools.
+    internal const int MaxEntries = 16;
+
+    private const int EndOfCentralDirectorySize = 22;
+    private const uint EndOfCentralDirectorySignature = 0x06054b50;
 
     private readonly IArchiveCipher _cipher;
 
@@ -151,6 +164,8 @@ internal sealed class ArchiveReader : IArchiveReader
                 var bytes = ReadBounded(archiveStream, MaxArchiveBytes, sizeHint: 0, out var length);
                 archiveStream = new MemoryStream(bytes, 0, length, writable: false);
             }
+            if (DeclaredEntries(archiveStream) > MaxEntries)
+                throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage);
             archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or ArgumentException)
@@ -160,8 +175,18 @@ internal sealed class ArchiveReader : IArchiveReader
 
         using (archive)
         {
-            var manifestEntry = archive.GetEntry(ExportFormat.ManifestEntryName);
-            var payloadEntry = archive.GetEntry(ExportFormat.PayloadEntryName);
+            ZipArchiveEntry? manifestEntry, payloadEntry;
+            try
+            {
+                // The first lookup reads the central directory: a damaged
+                // or inconsistent one fails here, not in the constructor.
+                manifestEntry = archive.GetEntry(ExportFormat.ManifestEntryName);
+                payloadEntry = archive.GetEntry(ExportFormat.PayloadEntryName);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or IOException)
+            {
+                throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage, ex);
+            }
             if (manifestEntry is null || payloadEntry is null)
                 throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage);
 
@@ -204,6 +229,30 @@ internal sealed class ArchiveReader : IArchiveReader
 
             return (manifest, ciphertext);
         }
+    }
+
+    // The entry count the end-of-central-directory record declares, the
+    // larger of its two count fields; 0 when the record is missing (then
+    // ZipArchive reports the archive as damaged). The record is the last
+    // one found scanning back from the end, as ZipArchive finds it. A count
+    // of 0xFFFF defers to a Zip64 record, which a two-entry export never
+    // needs: it is above the limit as it stands.
+    private static int DeclaredEntries(Stream archive)
+    {
+        var tailLength = (int)Math.Min(archive.Length, EndOfCentralDirectorySize + ushort.MaxValue);
+        var tail = new byte[tailLength];
+        var start = archive.Position;
+        archive.Seek(-tailLength, SeekOrigin.End);
+        archive.ReadExactly(tail);
+        archive.Position = start;
+        for (var at = tailLength - EndOfCentralDirectorySize; at >= 0; at--)
+        {
+            if (BinaryPrimitives.ReadUInt32LittleEndian(tail.AsSpan(at)) != EndOfCentralDirectorySignature) continue;
+            var onThisDisk = BinaryPrimitives.ReadUInt16LittleEndian(tail.AsSpan(at + 8));
+            var total = BinaryPrimitives.ReadUInt16LittleEndian(tail.AsSpan(at + 10));
+            return Math.Max(onThisDisk, total);
+        }
+        return 0;
     }
 
     // Reads at most `limit` bytes into one buffer; the first `length`

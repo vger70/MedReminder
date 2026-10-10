@@ -30,6 +30,21 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #229 — Refuse archives that declare more ZIP entries than an export has
+
+Link: [vger70/MedReminder#229](https://github.com/vger70/MedReminder/pull/229)
+Branch: `claude/zip-entry-limit`
+
+### Security
+
+- `.mrz` import refuses an archive that declares more than 16 ZIP entries, or a Zip64 entry count, before the entries are indexed: within the size limit, hundreds of thousands of tiny entries cost hundreds of MiB of memory (`docs/EXPORT-FORMAT.md` §4.1).
+
+### Fixed
+
+- A damaged or inconsistent ZIP central directory is reported as a damaged export instead of an unexpected `InvalidDataException`.
+
+---
+
 ## PR #228 — Harden archive import, database swap and medicine edit
 
 Link: [vger70/MedReminder#228](https://github.com/vger70/MedReminder/pull/228)

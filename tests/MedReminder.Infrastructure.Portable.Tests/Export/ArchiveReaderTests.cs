@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -270,6 +271,70 @@ public sealed class ArchiveReaderTests
             new Argon2Params { Iterations = 1, MemoryKiB = Argon2Params.MaxMemoryKiB * 2, Parallelism = 1 });
 
         act.Should().Throw<InvalidDataException>();
+    }
+
+    [Fact]
+    public void Up_to_the_entry_limit_the_extra_entries_are_ignored()
+    {
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase,
+            extraEntries: Extras(ArchiveReader.MaxEntries - 2));
+
+        using var archive = Reader().Decrypt(new MemoryStream(bytes), Passphrase.ToCharArray());
+
+        archive.Payload.Medicines.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void More_entries_than_the_limit_are_corrupt()
+    {
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase,
+            extraEntries: Extras(ArchiveReader.MaxEntries - 1));
+
+        FailureOf(() => Reader().ReadManifest(new MemoryStream(bytes))).Should().Be(ImportFailureReason.Corrupt);
+        FailureOf(() => Reader().ReadManifest(new ForwardOnlyStream(bytes))).Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Many_tiny_entries_are_refused_without_indexing_them(bool declareTwo)
+    {
+        // Within the size limit, 100 000 empty entries would cost tens of
+        // MiB of index. Declaring only two does not help: ZipArchive stops
+        // as soon as it finds more entries than declared.
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase,
+            extraEntries: Extras(100_000));
+        if (declareTwo) DeclareEntries(bytes, 2);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        FailureOf(() => Reader().ReadManifest(new MemoryStream(bytes))).Should().Be(ImportFailureReason.Corrupt);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        allocated.Should().BeLessThan(2 * 1024 * 1024);
+    }
+
+    [Fact]
+    public void A_zip64_entry_count_is_corrupt()
+    {
+        // 0xFFFF defers the count to a Zip64 record, which an export of two
+        // entries never needs.
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase);
+        DeclareEntries(bytes, ushort.MaxValue);
+
+        FailureOf(() => Reader().ReadManifest(new MemoryStream(bytes))).Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    private static Dictionary<string, string> Extras(int count)
+        => Enumerable.Range(0, count).ToDictionary(i => $"extra-{i}", _ => string.Empty);
+
+    // Rewrites both entry counts of the end-of-central-directory record
+    // (no archive comment: it is the last 22 bytes).
+    private static void DeclareEntries(byte[] archive, ushort count)
+    {
+        var record = archive.AsSpan(archive.Length - 22);
+        BinaryPrimitives.ReadUInt32LittleEndian(record).Should().Be(0x06054b50u);
+        BinaryPrimitives.WriteUInt16LittleEndian(record[8..], count);
+        BinaryPrimitives.WriteUInt16LittleEndian(record[10..], count);
     }
 
     [Fact]
