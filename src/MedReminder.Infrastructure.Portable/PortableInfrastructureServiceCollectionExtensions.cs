@@ -92,6 +92,7 @@ public static class PortableInfrastructureServiceCollectionExtensions
             SyncTarget.Of(sp.GetRequiredService<ISyncSettingsStore>().Load()
                 ?? throw new InvalidOperationException("Sync is not enabled for this profile."))));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ITransactionalScope, TransactionalScope>();
         services.AddScoped<DatabaseInitializer>();
 
         // Per-profile sync state, next to the database (B.1 Phase 3a).

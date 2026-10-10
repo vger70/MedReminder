@@ -101,6 +101,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<SuspendMedication>();
         services.AddScoped<ResumeMedication>();
         services.AddScoped<ChangeMedicationSchedule>();
+        services.AddScoped<EditMedicine>();
         services.AddScoped<RegisterIntake>();
         // B.1, P8: replicated profile settings. The host registers
         // IProfileSettingsStore and ISyncProfileStatus.

@@ -2440,18 +2440,17 @@ internal sealed class MainForm : MedReminderFormBase
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
-            var usecase = scope.ServiceProvider.GetRequiredService<UpdateMedicine>();
             // Only the fields the user changed are written (B.1 Phase
             // 3a, stale forms): the seed is the baseline.
-            await usecase.ExecuteAsync(
-                dialog.Result.ToUpdateCommand(row.Id) with { Baseline = seed.ToUpdateCommand(row.Id) },
-                CancellationToken.None);
+            var update = dialog.Result.ToUpdateCommand(row.Id) with { Baseline = seed.ToUpdateCommand(row.Id) };
 
             // If the user changed the schedule shape in the edit dialog,
             // record it as a new versioned schedule entry effective
             // today, preserving the timeline before that date.
             // UpdateMedicine deliberately does not touch the schedule,
-            // so this is the path that persists it.
+            // so this is the path that persists it. EditMedicine saves
+            // both in one transaction: a failed schedule change does not
+            // leave the other fields saved without it.
             //
             // Advanced mode → InitialSchedule is the chosen value object.
             // Simple mode → InitialSchedule is null; if the seed was an
@@ -2464,19 +2463,20 @@ internal sealed class MainForm : MedReminderFormBase
                     dialog.Result.AdministrationsPerDay);
             var seedSchedule = seed.InitialSchedule
                 ?? new FixedDailySchedule(seed.DosePerAdministration, seed.AdministrationsPerDay);
+            ChangeMedicationScheduleCommand? scheduleChange = null;
             if (!chosen.Equals(seedSchedule))
             {
-                var change = scope.ServiceProvider.GetRequiredService<ChangeMedicationSchedule>();
                 var today = DateOnly.FromDateTime(DateTime.Today);
-                // The start date saved just above, which the dialog may
-                // have changed.
+                // The start date the same edit saves, which the dialog
+                // may have changed.
                 var start = dialog.Result.StartDate;
                 var effectiveFrom = today < start ? start : today;
                 var (displayDose, displayFreq) = ScheduleDisplayValues(chosen, seed);
-                await change.ExecuteAsync(
-                    new ChangeMedicationScheduleCommand(row.Id, displayDose, displayFreq, effectiveFrom, chosen),
-                    CancellationToken.None);
+                scheduleChange = new ChangeMedicationScheduleCommand(row.Id, displayDose, displayFreq, effectiveFrom, chosen);
             }
+
+            await scope.ServiceProvider.GetRequiredService<EditMedicine>().ExecuteAsync(
+                new EditMedicineCommand(update, scheduleChange), CancellationToken.None);
 
             await ReloadAsync();
         }
