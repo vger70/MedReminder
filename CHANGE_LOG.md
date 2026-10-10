@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #230 — Record the D13 API 26 check on the emulator
+
+Link: [vger70/MedReminder#230](https://github.com/vger70/MedReminder/pull/230)
+Branch: `claude/d13-api26-spike`
+
+### Docs
+
+- D13 check of the provisional Android API 26 floor on an emulator (`docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md` §18.10): app, alarms, Doze, reboot, upgrade, app lock and `.mrz` flows pass; the Keystore key and the Play side remain open, so API 26 support is not claimed yet.
+- D13 status updated in the decisions table and in the Android backlog; two findings for the private app repository recorded (snooze lost on reboot, passphrase in the accessibility text).
+
+---
+
 ## PR #229 — Refuse archives that declare more ZIP entries than an export has
 
 Link: [vger70/MedReminder#229](https://github.com/vger70/MedReminder/pull/229)

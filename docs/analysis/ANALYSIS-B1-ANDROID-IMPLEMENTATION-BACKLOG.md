@@ -48,7 +48,7 @@ workflow are detailed in `ANALYSIS-B1-ANDROID-TEAM-PLAN.md`.
 | A6 | Free or paid mobile apps | **Decided 2026-10-09**: entirely free, like the desktop; no premium tier or in-app purchase (plan §4.8). | — |
 | DA9 | Donation links on mobile | **Decided again 2026-10-09**: drop, because of the Google Play and App Store payment rules (plan §4.8); Help and about links to the project website (UI-10). | Store listing and settings screens (B1-09, B5-05) |
 | DA12 | Onboarding privacy acknowledgment | **Decided 2026-10-08**: explicit acknowledgment at first start, not presented as GDPR consent (UI-00, UI-17). | B1-02 |
-| D13 | Android minimum OS | API 26 selected provisionally; verify MAUI, alarms and store compatibility in the M1 spike before claiming support. Spike is deferred until separately authorized/scheduled. | M1 release claim and M2 entry |
+| D13 | Android minimum OS | API 26 selected provisionally; verify MAUI, alarms and store compatibility in the M1 spike before claiming support. **Emulator check run 2026-10-10** (`ANALYSIS-B1-MOBILE-SYNC.md` §18.10): app, alarms, Doze, reboot, upgrade, app lock and `.mrz` pass; the Keystore key (first secret, M2) and the Play side (internal track) remain open. | M1 release claim and M2 entry |
 | DA5 | Play account and application ID | **Decided 2026-10-08**: personal account, application ID `com.vger70.medreminder` (immutable after first upload); production access needs the closed test of plan §5.0. | B1-09, B5-05 |
 | M2 accounts | Google Drive and OneDrive Android OAuth clients | Provision and verify before their respective M2 integration gates. | M2 provider sign-in |
 
