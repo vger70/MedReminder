@@ -65,13 +65,17 @@ internal sealed class JsonSyncSettingsStore : ISyncSettingsStore
     // profile in `profileDirectory` (§5.7): when that profile is synced,
     // its next sync run starts a new generation from the new database
     // instead of applying the current generation to it.
-    public static void MarkResetPending(string profileDirectory)
+    // Returns how to undo the mark when the swap it announces does not
+    // happen; null when there was nothing to mark.
+    public static Action? MarkResetPending(string profileDirectory)
     {
         var store = new JsonSyncSettingsStore(Path.Combine(profileDirectory, FileName));
         if (store.Load() is { ResetPending: false } settings)
         {
             store.Save(settings with { ResetPending = true });
+            return () => store.Save(settings);
         }
+        return null;
     }
 
     private SyncSettings? Read()

@@ -45,6 +45,33 @@ public sealed class ProfileDatabaseSwapTests : IDisposable
         File.Exists(target + ".bak-20261010090000").Should().BeFalse();
     }
 
+    [Fact]
+    public async Task A_failed_move_undoes_the_step_taken_before_it()
+    {
+        var target = Write("medreminder.db", "current");
+        var missing = Path.Combine(_directory, "missing.db");
+        var undone = false;
+
+        var act = () => ProfileDatabaseSwap.ReplaceAsync(new DatabaseExclusiveAccess(), db: null, target, missing, _clock,
+            CancellationToken.None, beforeSwap: () => () => undone = true);
+
+        await act.Should().ThrowAsync<FileNotFoundException>();
+        undone.Should().BeTrue("the swap did not happen, so its marker must not stay");
+    }
+
+    [Fact]
+    public async Task A_successful_swap_keeps_the_step_taken_before_it()
+    {
+        var target = Write("medreminder.db", "current");
+        var incoming = Write("incoming.db", "new");
+        var undone = false;
+
+        await ProfileDatabaseSwap.ReplaceAsync(new DatabaseExclusiveAccess(), db: null, target, incoming, _clock,
+            CancellationToken.None, beforeSwap: () => () => undone = true);
+
+        undone.Should().BeFalse();
+    }
+
     private string Write(string name, string content)
     {
         var path = Path.Combine(_directory, name);

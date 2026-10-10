@@ -103,6 +103,19 @@ public sealed class JsonSyncSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Undoing_a_reset_mark_restores_the_previous_settings()
+    {
+        var store = new JsonSyncSettingsStore(PathName);
+        store.Save(new SyncSettings(Guid.NewGuid(), Guid.NewGuid(), 1));
+
+        var undo = JsonSyncSettingsStore.MarkResetPending(_dir);
+        new JsonSyncSettingsStore(PathName).Load()!.ResetPending.Should().BeTrue();
+        undo!();
+
+        new JsonSyncSettingsStore(PathName).Load()!.ResetPending.Should().BeFalse();
+    }
+
+    [Fact]
     public void Marking_a_profile_without_sync_writes_nothing()
     {
         JsonSyncSettingsStore.MarkResetPending(_dir);

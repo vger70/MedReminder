@@ -23,7 +23,9 @@ public interface IArchiveCipher
     // given Argon2id parameters. Deterministic: the same
     // (passphrase, salt, parameters) always yields the same key.
     // Returns a fresh KeySizeBytes-long buffer the caller owns and is
-    // responsible for zeroing after use.
+    // responsible for zeroing after use. Throws InvalidDataException,
+    // before any derivation, when the parameters are outside
+    // Argon2Params' limits (they often come from a file).
     byte[] DeriveKey(char[] passphrase, byte[] salt, Argon2Params parameters);
 
     // AES-GCM encrypts the plaintext with the given key, generating a

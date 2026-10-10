@@ -1,3 +1,6 @@
+using System.IO.Compression;
+using System.Text;
+using System.Text.Json.Nodes;
 using FluentAssertions;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Export;
@@ -163,8 +166,74 @@ public sealed class ArchiveReaderTests
             tamperCiphertext: _ => new byte[ArchiveReader.MaxPayloadBytes + 1]);
         bytes.Length.Should().BeLessThan(ArchiveReader.MaxPayloadBytes / 100);
 
-        FailureOf(() => Reader().ReadManifest(new MemoryStream(bytes)))
+        var ex = Assert.Throws<ImportFailedException>(
+            () => Reader().Decrypt(new MemoryStream(bytes), Passphrase.ToCharArray()));
+
+        ex.Reason.Should().Be(ImportFailureReason.Corrupt);
+        ex.Message.Should().Contain("larger than any MedReminder export");
+    }
+
+    [Fact]
+    public void Reading_the_manifest_leaves_the_payload_compressed()
+    {
+        // The preview does not inflate the payload: an oversized one does
+        // not surface until the import decrypts it.
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase,
+            tamperCiphertext: _ => new byte[ArchiveReader.MaxPayloadBytes + 1]);
+
+        Reader().ReadManifest(new MemoryStream(bytes)).AppVersion.Should().Be("test");
+    }
+
+    [Theory]
+    [InlineData("kdf")]
+    [InlineData("cipher")]
+    [InlineData("payload")]
+    [InlineData("kdf.saltBase64")]
+    [InlineData("cipher.nonceBase64")]
+    [InlineData("cipher.tagBase64")]
+    public void Null_manifest_fields_are_corrupt(string field)
+    {
+        var bytes = WithManifest(TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase), manifest =>
+        {
+            var parts = field.Split('.');
+            var owner = parts.Length == 1 ? manifest : manifest[parts[0]]!.AsObject();
+            owner[parts[^1]] = null;
+        });
+
+        FailureOf(() => Reader().Decrypt(new MemoryStream(bytes), Passphrase.ToCharArray()))
             .Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    [Theory]
+    [InlineData("kdf", "saltBase64")]
+    [InlineData("cipher", "nonceBase64")]
+    [InlineData("cipher", "tagBase64")]
+    public void Fields_of_the_wrong_size_are_corrupt(string section, string field)
+    {
+        var bytes = WithManifest(TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase),
+            manifest => manifest[section]![field] = Convert.ToBase64String(new byte[5]));
+
+        FailureOf(() => Reader().Decrypt(new MemoryStream(bytes), Passphrase.ToCharArray()))
+            .Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    // Rewrites manifest.json as raw JSON, so a test can put what the
+    // writer never does (a JSON null) in it.
+    private static byte[] WithManifest(byte[] archive, Action<JsonObject> edit)
+    {
+        using var buffer = new MemoryStream();
+        buffer.Write(archive);
+        using (var zip = new ZipArchive(buffer, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var entry = zip.GetEntry(ExportFormat.ManifestEntryName)!;
+            JsonObject manifest;
+            using (var read = entry.Open()) manifest = JsonNode.Parse(read)!.AsObject();
+            edit(manifest);
+            entry.Delete();
+            using var write = zip.CreateEntry(ExportFormat.ManifestEntryName).Open();
+            write.Write(Encoding.UTF8.GetBytes(manifest.ToJsonString()));
+        }
+        return buffer.ToArray();
     }
 
     [Fact]
@@ -200,7 +269,7 @@ public sealed class ArchiveReaderTests
         var act = () => new ArchiveCipher().DeriveKey("x".ToCharArray(), new byte[16],
             new Argon2Params { Iterations = 1, MemoryKiB = Argon2Params.MaxMemoryKiB * 2, Parallelism = 1 });
 
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        act.Should().Throw<InvalidDataException>();
     }
 
     [Fact]

@@ -1,4 +1,6 @@
 using FluentAssertions;
+using MedReminder.Application;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Notifications;
 using MedReminder.Infrastructure.Persistence;
@@ -43,13 +45,14 @@ public sealed class EditMedicineTransactionTests
 
         await using (var ctx = fixture.CreateContext())
         {
-            // A zero dose fails inside ChangeMedicationSchedule, after
-            // UpdateMedicine has already saved its changes.
+            // The edit moves the start date past the schedule change: the
+            // change fails inside the transaction, after UpdateMedicine has
+            // saved the new name and start date.
             var act = () => Edit(ctx).ExecuteAsync(new EditMedicineCommand(
-                Update(id, "Enalapril 20"),
-                new ChangeMedicationScheduleCommand(id, 0m, 1, new DateOnly(2026, 9, 13))), CancellationToken.None);
+                Update(id, "Enalapril 20") with { StartDate = new DateOnly(2026, 9, 20) },
+                new ChangeMedicationScheduleCommand(id, 2m, 1, new DateOnly(2026, 9, 13))), CancellationToken.None);
 
-            await act.Should().ThrowAsync<ArgumentException>();
+            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*therapy start date*");
         }
 
         await using (var ctx = fixture.CreateContext())
@@ -60,7 +63,69 @@ public sealed class EditMedicineTransactionTests
         }
     }
 
-    private static EditMedicine Edit(MedReminderDbContext ctx)
+    [Fact]
+    public async Task A_schedule_change_for_another_medicine_is_refused_before_any_write()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var id = await AddAsync(fixture);
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            var act = () => Edit(ctx).ExecuteAsync(new EditMedicineCommand(
+                Update(id, "Enalapril 20"),
+                new ChangeMedicationScheduleCommand(Guid.NewGuid(), 2m, 1, new DateOnly(2026, 9, 13))), CancellationToken.None);
+
+            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*another medicine*");
+        }
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await new MedicineRepository(ctx).GetAsync(id, CancellationToken.None))!.Name.Should().Be("Enalapril");
+        }
+    }
+
+    [Fact]
+    public async Task The_transaction_runs_inside_the_write_gate()
+    {
+        // The gate must be held for the whole transaction: otherwise a
+        // catch-up, the monitor or a database swap could take it between
+        // the two steps, or the SQLite write lock would precede the gate.
+        using var fixture = new SqliteInMemoryFixture();
+        var id = await AddAsync(fixture);
+        bool? gateWasFree = null;
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            var probe = new GateProbe(new TransactionalScope(ctx), async () =>
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+                try
+                {
+                    await new DatabaseExclusiveAccess().RunExclusiveAsync(_ => Task.CompletedTask, timeout.Token);
+                    gateWasFree = true;
+                }
+                catch (OperationCanceledException)
+                {
+                    gateWasFree = false;
+                }
+            });
+            await Edit(ctx, probe).ExecuteAsync(new EditMedicineCommand(Update(id, "Enalapril 20")), CancellationToken.None);
+        }
+
+        gateWasFree.Should().BeFalse();
+    }
+
+    private sealed class GateProbe(ITransactionalScope inner, Func<Task> probe) : ITransactionalScope
+    {
+        public Task RunAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+            => inner.RunAsync(async ct =>
+            {
+                await probe();
+                await work(ct);
+            }, cancellationToken);
+    }
+
+    private static EditMedicine Edit(MedReminderDbContext ctx, ITransactionalScope? transaction = null)
         => new(
             new UpdateMedicine(
                 new MedicineRepository(ctx),
@@ -72,7 +137,7 @@ public sealed class EditMedicineTransactionTests
                 new MedicineRepository(ctx),
                 new MedicationScheduleHistoryRepository(ctx),
                 TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock),
-            new TransactionalScope(ctx));
+            transaction ?? new TransactionalScope(ctx));
 
     private static UpdateMedicineCommand Update(Guid id, string name)
         => new(id, name, ActiveIngredient: null, Package: null, Unit: "compresse", ThresholdDays: 7,

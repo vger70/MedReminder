@@ -26,11 +26,23 @@ public sealed class EditMedicine
     public Task ExecuteAsync(EditMedicineCommand cmd, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cmd);
-        return _transaction.RunAsync(async ct =>
+        UpdateMedicine.Validate(cmd.Update);
+        if (cmd.ScheduleChange is { } change)
         {
-            await _update.ExecuteAsync(cmd.Update, ct);
-            if (cmd.ScheduleChange is { } change)
-                await _changeSchedule.ExecuteAsync(change, ct);
-        }, cancellationToken);
+            if (change.MedicineId != cmd.Update.MedicineId)
+                throw new ArgumentException("The schedule change belongs to another medicine.", nameof(cmd));
+            ChangeMedicationSchedule.Validate(change);
+        }
+
+        // One gate for the whole edit, taken before the transaction: no
+        // other gated writer (catch-up, monitor, sync apply, database swap)
+        // runs between the two steps, and the SQLite write lock is always
+        // taken after the gate, never before it.
+        return WriteGate.RunExclusiveAsync(gated => _transaction.RunAsync(async ct =>
+        {
+            await _update.ExecuteCoreAsync(cmd.Update, ct);
+            if (cmd.ScheduleChange is { } scheduleChange)
+                await _changeSchedule.ExecuteCoreAsync(scheduleChange, ct);
+        }, gated), cancellationToken);
     }
 }

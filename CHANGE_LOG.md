@@ -37,8 +37,10 @@ Branch: `claude/harden-archive-import`
 
 ### Fixed
 
-- `ProfileDatabaseSwap` puts the current database back when moving the new file in fails, so import, restore and sync never leave a profile without a database.
-- A medicine edit saves the general fields and the schedule change in one transaction (`EditMedicine`, `ITransactionalScope`); the desktop edit uses it.
+- `ProfileDatabaseSwap` puts the current database back when moving the new file in fails (removing a partial copy first), so import, restore and sync never leave a profile without a database; the sync reset marker is undone when the swap does not happen.
+- A medicine edit saves the general fields and the schedule change in one transaction under one `WriteGate` acquisition (`EditMedicine`, `ITransactionalScope`); the desktop edit uses it.
+- A `.mrz` manifest with a null section or a salt, nonce or tag of the wrong size is reported as damaged instead of failing with an unexpected exception.
+- Reading a `.mrz` manifest for a preview no longer decompresses the payload; the payload is read into one buffer sized from the entry.
 
 ### Security
 

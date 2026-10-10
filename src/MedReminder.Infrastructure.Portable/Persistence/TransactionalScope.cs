@@ -33,8 +33,20 @@ internal sealed class TransactionalScope : ITransactionalScope
         }
         catch
         {
-            await transaction.RollbackAsync(CancellationToken.None);
-            _dbContext.ChangeTracker.Clear();
+            try
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                // A broken connection cannot roll back explicitly; SQLite
+                // drops the uncommitted transaction with it. The first
+                // error is the one to report.
+            }
+            finally
+            {
+                _dbContext.ChangeTracker.Clear();
+            }
             throw;
         }
     }

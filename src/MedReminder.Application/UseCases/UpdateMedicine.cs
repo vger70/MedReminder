@@ -100,6 +100,12 @@ public sealed class UpdateMedicine
 
     public async Task ExecuteAsync(UpdateMedicineCommand cmd, CancellationToken cancellationToken)
     {
+        Validate(cmd);
+        await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
+
+    internal static void Validate(UpdateMedicineCommand cmd)
+    {
         ArgumentNullException.ThrowIfNull(cmd);
         if (string.IsNullOrWhiteSpace(cmd.Name))
             throw new ArgumentException("Medicine name is required.", nameof(cmd));
@@ -107,10 +113,11 @@ public sealed class UpdateMedicine
             throw new ArgumentException("Unit of measure is required.", nameof(cmd));
         if (cmd.ThresholdDays < 0)
             throw new ArgumentException("Threshold in days cannot be negative.", nameof(cmd));
-        await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
     }
 
-    private async Task ExecuteCoreAsync(UpdateMedicineCommand cmd, CancellationToken cancellationToken)
+    // The update without the gate, for a composition that already holds
+    // it (EditMedicine). The command must have passed Validate.
+    internal async Task ExecuteCoreAsync(UpdateMedicineCommand cmd, CancellationToken cancellationToken)
     {
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
