@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #227 — Skip damaged settings files instead of failing
+
+Link: [vger70/MedReminder#227](https://github.com/vger70/MedReminder/pull/227)
+Branch: `claude/tolerate-damaged-settings-files`
+
+### Fixed
+
+- `ProfileSettingsStore` reads a malformed, locked or unreadable `notifications.settings.json` as empty settings instead of throwing; the next save rewrites it. Shared with the Android app.
+- The desktop no longer stops at start when `smtp.settings.json`, `backup.settings.json`, `user.settings.json` or a profile's `notifications.settings.json` is malformed, has a root that is not an object, or cannot be opened: the file is skipped with a warning (file name only) and its section keeps its defaults (`src/MedReminder.UI/Hosting/SettingsFileConfiguration.cs`).
+
+---
+
 ## PR #226 — Share the .mrz export and import with the mobile host (core-v0.2.0)
 
 Link: [vger70/MedReminder#226](https://github.com/vger70/MedReminder/pull/226)

@@ -416,10 +416,10 @@ internal static class Program
         configuration
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-            .AddJsonFile(Path.Combine(appDataDir, "smtp.settings.json"), optional: true, reloadOnChange: reloadOnChange)
-            .AddJsonFile(Path.Combine(appDataDir, "backup.settings.json"), optional: true, reloadOnChange: reloadOnChange)
-            .AddJsonFile(Path.Combine(appDataDir, "user.settings.json"), optional: true, reloadOnChange: reloadOnChange)
-            .AddJsonFile(profile.NotificationSettingsPath, optional: true, reloadOnChange: reloadOnChange);
+            .AddSettingsFile(Path.Combine(appDataDir, "smtp.settings.json"), reloadOnChange)
+            .AddSettingsFile(Path.Combine(appDataDir, "backup.settings.json"), reloadOnChange)
+            .AddSettingsFile(Path.Combine(appDataDir, "user.settings.json"), reloadOnChange)
+            .AddSettingsFile(profile.NotificationSettingsPath, reloadOnChange);
     }
 
     private static IHost BuildHost(string[] args, ICurrentProfile currentProfile)

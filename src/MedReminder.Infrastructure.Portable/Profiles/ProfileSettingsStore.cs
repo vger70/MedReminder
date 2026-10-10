@@ -92,7 +92,18 @@ internal sealed class ProfileSettingsStore : IProfileSettingsStore
         var path = _profile.NotificationSettingsPath;
         var result = new NotificationSettings();
         if (!File.Exists(path)) return result;
-        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        JsonDocument document;
+        try
+        {
+            document = JsonDocument.Parse(File.ReadAllText(path));
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            // A damaged or unreadable file reads as empty settings, like the
+            // configuration that skips it; the next save rewrites it.
+            return result;
+        }
+        using var _ = document;
         if (!TryGetProperty(document.RootElement, Section, out var section)) return result;
         result.ToAddress = StringOf(section, nameof(NotificationSettings.ToAddress));
         result.CaregiverAddress = StringOf(section, nameof(NotificationSettings.CaregiverAddress));
