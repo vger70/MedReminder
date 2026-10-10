@@ -472,6 +472,16 @@ Current defaults: `iterations = 3`, `memoryKiB = 65536` (64 MiB),
 `parallelism = 1`, salt = 16 random bytes. The derived key is 32 bytes
 (AES-256).
 
+Accepted range on import: `iterations` 1-10, `parallelism` 1-8,
+`memoryKiB` from `8 x parallelism` to 262144 (256 MiB). An archive that
+declares values outside this range is reported as damaged before any
+key derivation, so a crafted manifest cannot force unbounded memory or
+time.
+
+Size limits on import, counted on the decompressed bytes:
+`manifest.json` at most 64 KiB, `payload.enc` at most 64 MiB, the whole
+`.mrz` at most 65 MiB. A larger file is refused as damaged.
+
 ### 4.2 Payload cipher (AES-256-GCM)
 
 ```
