@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #228 — Harden archive import, database swap and medicine edit
+
+Link: [vger70/MedReminder#228](https://github.com/vger70/MedReminder/pull/228)
+Branch: `claude/harden-archive-import`
+
+### Fixed
+
+- `ProfileDatabaseSwap` puts the current database back when moving the new file in fails, so import, restore and sync never leave a profile without a database.
+- A medicine edit saves the general fields and the schedule change in one transaction (`EditMedicine`, `ITransactionalScope`); the desktop edit uses it.
+
+### Security
+
+- Argon2id parameters read from a `.mrz` manifest or a sync key wrap are bounded (iterations 1-10, parallelism 1-8, memory up to 256 MiB) before any key derivation.
+- `.mrz` import reads the archive, manifest and payload within fixed limits (65 MiB, 64 KiB, 64 MiB) counted on the decompressed bytes (`docs/EXPORT-FORMAT.md` §4.1).
+
+---
+
 ## PR #227 — Skip damaged settings files instead of failing
 
 Link: [vger70/MedReminder#227](https://github.com/vger70/MedReminder/pull/227)
