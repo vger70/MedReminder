@@ -1454,7 +1454,7 @@ settled. No B.1 decision is open. The iOS 15 D13 proposal remains inferred and u
 | D10 | Sync passphrase vs cloud-backup passphrase | Same; separate | **Decided 2026-09-26**: separate | Phase 3 |
 | D11 | `StripReleaseDebugArtifacts` exclusion for mobile if S4 fails | Approve; reject | **Decided 2026-10-08**: reject. S4 passed (§18.4), no exclusion; the private app repository adopts an equivalent target so that no `*.pdb` / `*.xml` ships in the app's Release output (this repository's target covers only projects under its own tree, such as the shared libraries built from the submodule `[INFERRED — MSBuild imports Directory.Build.props from the project's directory upwards]`) | M1 |
 | D12 | iCloud transport | Plan; exclude | **Decided 2026-10-08**: exclude. A native iCloud container serves Apple devices only and cannot reach Android or Windows through the provider-API transports `[INFERRED]`; a Windows PC with iCloud for Windows can still use its folder through `LocalFolder` | Phase 0 |
-| D13 | Minimum OS versions | — | **Android decided 2026-10-08**: 8.0 (API 26), provisional pending M1 MAUI/alarm/Play validation; iOS 15 remains `[INFERRED — not measured]` | M1 validation (Android); Phase 7 (iOS) |
+| D13 | Minimum OS versions | — | **Android decided 2026-10-08**: 8.0 (API 26), provisional pending M1 MAUI/alarm/Play validation; emulator check passed 2026-10-10 (§18.10), Keystore key and Play side open; iOS 15 remains `[INFERRED — not measured]` | M1 validation (Android); Phase 7 (iOS) |
 | D14 | Donation links on iOS | Include; exclude | Settled 2026-10-07 by DA9 of `ANALYSIS-B1-ANDROID-PLAN.md` (no donation links on Android or iOS); confirmed 2026-10-09 when DA9 was decided again (store payment rules) | Phase 7 |
 | D15 | Automatic consumption for inactive periods | None on inactive days (activity history); today's catch-up on reactivation | **Decided 2026-09-26**: no automatic consumption on inactive days | Phase 2 |
 
@@ -1499,7 +1499,8 @@ two behavior findings belong to Phase 2.
 
 One subsection per spike: date, environment, result, decision. S1–S5
 and S8 done on Android; S6 and S7 done for Windows (their Android
-halves run with Phase 5).
+halves run with Phase 5); the D13 API 26 check on the emulator in
+§18.10.
 
 ### 18.0 Android spike tool and device (S1–S4)
 
@@ -1845,6 +1846,61 @@ Phase 2 implements the derivation from the prototype and its tests.
 
 ---
 
+### 18.10 D13 — Android API 26 floor on the emulator (2026-10-10)
+
+**Environment**: Windows 11, Android Emulator 37.2.12 with WHPX, AVD
+`pixel_5` on `system-images;android-26;google_apis;x86_64` revision 16
+(Android 8.0, security patch 2018-04-05), no Play Store. .NET SDK
+10.0.401, workload `maui-android` 10.0.110. App: `medreminder-mobile`
+`main` at `4e20cad` with the shared core at `core-v0.2.2`, Release
+default (`TrimMode=partial`, AOT), `android-x64`, signed with the debug
+key; version code 1, then 2 for the upgrade. The checks follow the
+private repository's `docs/RELEASE-CHECKLIST.md`, driven through `adb`
+and `uiautomator`.
+
+**Results**
+
+| Area | Check on API 26 | Result |
+|---|---|---|
+| Install and start | Install, first start, notice, "Start here", Today | Pass; cold start 7.1 s on the emulator (not representative of a phone) |
+| Notifications | No runtime permission before API 33: the app reports them allowed | Pass |
+| Channels | Dose reminders, low stock, expiry channels; routes to the app and per-channel Android settings | Pass |
+| Lock-screen privacy | Dose and stock notifications carry a redacted `publicVersion` (visibility private) | Pass |
+| Exact alarm | Dose at 11:51 posted at 11:51 with the app in the background; exact-alarm row hidden below API 31 | Pass |
+| Doze | Forced deep idle with the screen off: the dose reminder arrived (`setExactAndAllowWhileIdle`) | Pass |
+| Snooze | "Remind me in 15 minutes" removed the notification and set an alarm 15 minutes later; no intake recorded | Pass |
+| Reboot | After a reboot the process starts from the boot receiver and plans the next dose without opening the app | Pass, except the snooze (finding 1) |
+| Upgrade | Version code 1 → 2 over the existing install: alarm planned again without opening the app; data, app lock and version shown | Pass |
+| Battery | "Optimized" shown; the button opens Android's battery-optimization list | Pass |
+| App lock | No biometric enrolled: AndroidX falls back to the device PIN (`ConfirmLockPassword`); asked at cold start; screen lock removed → lock turned off with the message | Pass |
+| Export and import | `.mrz` export (AES-GCM, Argon2id) through the system picker to Downloads; import of the same file with preview, confirmation, replacement and reminders planned again | Pass |
+| Localization and text | System language Italian → Italian UI; font scale 1.3 without clipping on Today; light appearance (no system dark mode before API 29) | Pass |
+| Logs | `logcat` holds no medicine name or passphrase; the profile name appears only in the export file name logged by Android's media scanner | Pass, see note |
+
+**Not covered**: the Android Keystore key of `AndroidKeystoreProtector`
+is not created by any M1 flow, so AES-GCM in the Keystore was not run
+on API 26 (Android documents it from API 23); it runs with the first
+stored secret in M2. TalkBack was not used. No physical API 26 phone,
+and no Play installation: Play's device catalogue and track
+installation are checked on the internal track.
+
+**Findings** (not specific to API 26; to fix in the private repository):
+
+1. A snoozed dose reminder is lost after a reboot: the snooze is only an
+   AlarmManager alarm, and after the boot the planner treats the slot as
+   already reminded.
+2. In the export and import forms, the accessibility text of the
+   passphrase fields reported by `uiautomator` contains the typed
+   passphrase although the field is a password field. To be checked with
+   TalkBack: a screen reader could read the passphrase aloud
+   `[UNCERTAIN — not verified with TalkBack]`.
+
+**Decision**: the MAUI app, alarms, notifications, document flows, app
+lock and archive cryptography work on API 26, so the floor is kept. The
+remaining parts of the D13 gate are the Keystore key (first secret in
+M2) and the Play side (internal track); this run does not by itself
+declare API 26 support.
+
 ## 19. Sources
 
 - .NET MAUI support policy — dotnet.microsoft.com/platform/support/policy/maui
@@ -2102,3 +2158,8 @@ Phase 2 implements the derivation from the prototype and its tests.
   in 13.5 hours, gaps 61 to 241 minutes, median 175; the "rare" standby
   bucket did not stop the work. The decision stands; the cold-process
   case is stated as not measured.
+- 2026-10-10 — D13 API 26 check on the emulator (§18.10): app,
+  alarms, Doze, reboot, upgrade, app lock, export and import pass;
+  Keystore key and Play side open; two findings for the private
+  repository (snooze lost on reboot, passphrase in the accessibility
+  text).
