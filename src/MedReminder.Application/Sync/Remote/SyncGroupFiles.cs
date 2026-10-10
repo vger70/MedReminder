@@ -70,8 +70,11 @@ public sealed record SyncKeyWrap(
     public byte[] Unwrap(IArchiveCipher cipher, char[] passphrase, string purpose = "Key")
     {
         ArgumentNullException.ThrowIfNull(cipher);
-        var wrappingKey = cipher.DeriveKey(passphrase, Salt,
-            new Argon2Params { Iterations = Iterations, MemoryKiB = MemoryKiB, Parallelism = Parallelism });
+        var parameters = new Argon2Params { Iterations = Iterations, MemoryKiB = MemoryKiB, Parallelism = Parallelism };
+        // The wrap comes from the shared storage: bound its cost before
+        // deriving, like the archive import.
+        if (!parameters.IsWithinLimits()) throw new InvalidDataException("The key wrap declares Argon2id parameters outside the accepted limits.");
+        var wrappingKey = cipher.DeriveKey(passphrase, Salt, parameters);
         try
         {
             return cipher.Decrypt(wrappingKey, Nonce, Tag, Ciphertext, Aad(GroupId, KeyVersion, purpose));

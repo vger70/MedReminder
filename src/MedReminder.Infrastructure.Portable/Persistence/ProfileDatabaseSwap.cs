@@ -50,11 +50,28 @@ internal static class ProfileDatabaseSwap
             connection.Close();
         }
 
+        string? backup = null;
         if (File.Exists(target))
         {
-            File.Move(target, $"{target}.bak-{clock.GetUtcNow():yyyyMMddHHmmss}", overwrite: false);
+            backup = $"{target}.bak-{clock.GetUtcNow():yyyyMMddHHmmss}";
+            File.Move(target, backup, overwrite: false);
         }
-        File.Move(newFile, target, overwrite: false);
+        try
+        {
+            File.Move(newFile, target, overwrite: false);
+        }
+        catch
+        {
+            // The current file is already aside: put it back, so a failed
+            // move leaves the profile with its database, not without one.
+            // If that fails too, the original error still surfaces and the
+            // database stays in the .bak file.
+            if (backup is not null && !File.Exists(target))
+            {
+                try { File.Move(backup, target, overwrite: false); } catch { /* keep the first error */ }
+            }
+            throw;
+        }
 
         foreach (var suffix in new[] { "-wal", "-shm" })
         {

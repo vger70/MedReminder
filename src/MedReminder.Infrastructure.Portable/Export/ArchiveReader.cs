@@ -18,8 +18,17 @@ namespace MedReminder.Infrastructure.Export;
 internal sealed class ArchiveReader : IArchiveReader
 {
     private const string CorruptMessage = "The export file is damaged and cannot be imported.";
+    private const string TooLargeMessage = "The export file is larger than any MedReminder export and cannot be imported.";
     private const string NewerVersionMessage =
         "This export was produced by a newer version of MedReminder. Update the app and try again.";
+
+    // Size limits against a crafted archive (a ZIP bomb, an oversized
+    // file): an export holds text records only, a few MB even after years
+    // of use, so these leave ample room. The ciphertext is about the size
+    // of the payload JSON; the archive adds the manifest and ZIP headers.
+    internal const int MaxManifestBytes = 64 * 1024;
+    internal const int MaxPayloadBytes = 64 * 1024 * 1024;
+    internal const int MaxArchiveBytes = MaxPayloadBytes + 1024 * 1024;
 
     private readonly IArchiveCipher _cipher;
 
@@ -52,6 +61,8 @@ internal sealed class ArchiveReader : IArchiveReader
                 MemoryKiB = manifest.Kdf.MemoryKiB,
                 Parallelism = manifest.Kdf.Parallelism,
             };
+            if (!kdfParams.IsWithinLimits())
+                throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage);
             var salt = DecodeBase64(manifest.Kdf.SaltBase64);
             key = _cipher.DeriveKey(passphrase, salt, kdfParams);
 
@@ -119,6 +130,17 @@ internal sealed class ArchiveReader : IArchiveReader
         ZipArchive archive;
         try
         {
+            // ZipArchive buffers a non-seekable stream (the mobile picker)
+            // whole: read it here, within the limit, instead.
+            if (archiveStream.CanSeek)
+            {
+                if (archiveStream.Length - archiveStream.Position > MaxArchiveBytes)
+                    throw new ImportFailedException(ImportFailureReason.Corrupt, TooLargeMessage);
+            }
+            else
+            {
+                archiveStream = new MemoryStream(ReadBounded(archiveStream, MaxArchiveBytes), writable: false);
+            }
             archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or ArgumentException)
@@ -137,9 +159,10 @@ internal sealed class ArchiveReader : IArchiveReader
             try
             {
                 using var manifestStream = manifestEntry.Open();
-                manifest = JsonSerializer.Deserialize<ExportManifest>(manifestStream, ExportJson.Options);
+                manifest = JsonSerializer.Deserialize<ExportManifest>(
+                    ReadBounded(manifestStream, MaxManifestBytes), ExportJson.Options);
             }
-            catch (Exception ex) when (ex is JsonException or InvalidDataException)
+            catch (Exception ex) when (ex is JsonException or InvalidDataException or IOException)
             {
                 throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage, ex);
             }
@@ -155,17 +178,31 @@ internal sealed class ArchiveReader : IArchiveReader
             try
             {
                 using var payloadStream = payloadEntry.Open();
-                using var buffer = new MemoryStream();
-                payloadStream.CopyTo(buffer);
-                ciphertext = buffer.ToArray();
+                ciphertext = ReadBounded(payloadStream, MaxPayloadBytes);
             }
-            catch (InvalidDataException ex)
+            catch (Exception ex) when (ex is InvalidDataException or IOException)
             {
                 throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage, ex);
             }
 
             return (manifest, ciphertext);
         }
+    }
+
+    // Copies at most `limit` bytes; the declared entry sizes of a ZIP are
+    // not trusted, the decompressed bytes are counted.
+    private static byte[] ReadBounded(Stream source, int limit)
+    {
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81920];
+        int read;
+        while ((read = source.Read(chunk, 0, chunk.Length)) > 0)
+        {
+            if (buffer.Length + read > limit)
+                throw new ImportFailedException(ImportFailureReason.Corrupt, TooLargeMessage);
+            buffer.Write(chunk, 0, read);
+        }
+        return buffer.ToArray();
     }
 
     private static byte[] DecodeBase64(string value)

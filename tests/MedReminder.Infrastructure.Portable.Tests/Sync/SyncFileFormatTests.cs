@@ -72,6 +72,16 @@ public class SyncFileFormatTests
         FluentActions.Invoking(() => (parsed with { KeyVersion = 2 }).Unwrap(_cipher, "correct horse".ToCharArray()))
             .Should().Throw<CryptographicException>("the group id and key version are associated data");
     }
+
+    [Fact]
+    public void Key_wrap_with_a_crafted_kdf_cost_is_refused_before_deriving()
+    {
+        var wrap = SyncKeyWrap.Wrap(_cipher, Guid.NewGuid(), 1, _key, "correct horse".ToCharArray(), FastKdf)
+            with { MemoryKiB = Argon2Params.MaxMemoryKiB * 4 };
+
+        FluentActions.Invoking(() => wrap.Unwrap(_cipher, "correct horse".ToCharArray()))
+            .Should().Throw<InvalidDataException>();
+    }
 }
 
 internal static class CipherExtensions
