@@ -21,40 +21,65 @@ namespace MedReminder.Infrastructure.Storage;
 // keeps the database open in a write transaction for several seconds and
 // may run at any time of the session, so the swap waits for it instead
 // of failing on the open handle. `beforeSwap` runs under the gate too,
-// right before the file moves: a step that must happen only if the swap
-// happens (the sync reset marker) is never left behind by a cancelled
-// wait for the gate.
+// right before the file moves, and returns how to undo itself: a step
+// that must exist only if the swap happens (the sync reset marker) is
+// never left behind by a cancelled wait for the gate, nor by a move that
+// failed and was rolled back.
 internal static class ProfileDatabaseSwap
 {
     public static Task ReplaceAsync(
         IDatabaseExclusiveAccess access, MedReminderDbContext? db, string target, string newFile,
-        TimeProvider clock, CancellationToken cancellationToken, Action? beforeSwap = null)
+        TimeProvider clock, CancellationToken cancellationToken, Func<Action?>? beforeSwap = null)
     {
         ArgumentNullException.ThrowIfNull(access);
         return access.RunExclusiveAsync(_ =>
         {
-            beforeSwap?.Invoke();
-            Replace(db, target, newFile, clock);
+            var undo = beforeSwap?.Invoke();
+            Replace(db, target, newFile, clock, undo);
             return Task.CompletedTask;
         }, cancellationToken);
     }
 
     // db: the caller's open context, closed before the move; null when
     // the host holds no context of its own (the mobile import).
-    private static void Replace(MedReminderDbContext? db, string target, string newFile, TimeProvider clock)
+    // undoBeforeSwap: run when the swap did not happen and the current
+    // database is in place again.
+    private static void Replace(MedReminderDbContext? db, string target, string newFile, TimeProvider clock,
+        Action? undoBeforeSwap)
     {
-        SqliteConnection.ClearAllPools();
-        var connection = db?.Database.GetDbConnection();
-        if (connection is not null && connection.State != ConnectionState.Closed)
+        string? backup = null;
+        try
         {
-            connection.Close();
+            SqliteConnection.ClearAllPools();
+            var connection = db?.Database.GetDbConnection();
+            if (connection is not null && connection.State != ConnectionState.Closed)
+            {
+                connection.Close();
+            }
+
+            if (File.Exists(target))
+            {
+                var aside = $"{target}.bak-{clock.GetUtcNow():yyyyMMddHHmmss}";
+                File.Move(target, aside, overwrite: false);
+                backup = aside;
+            }
+        }
+        catch
+        {
+            // Nothing moved: the current database is still in place.
+            Undo(undoBeforeSwap);
+            throw;
         }
 
-        if (File.Exists(target))
+        try
         {
-            File.Move(target, $"{target}.bak-{clock.GetUtcNow():yyyyMMddHHmmss}", overwrite: false);
+            File.Move(newFile, target, overwrite: false);
         }
-        File.Move(newFile, target, overwrite: false);
+        catch
+        {
+            if (RollBack(target, backup)) Undo(undoBeforeSwap);
+            throw;
+        }
 
         foreach (var suffix in new[] { "-wal", "-shm" })
         {
@@ -64,5 +89,29 @@ internal static class ProfileDatabaseSwap
                 try { File.Delete(side); } catch { /* best effort */ }
             }
         }
+    }
+
+    // After a failed move of the new file: whatever stands at the target
+    // came from that move (a partial copy across volumes), since the
+    // current file was moved aside first or did not exist; remove it and
+    // put the current file back. False when that fails too: the database
+    // then stays in the .bak file and the original error still surfaces.
+    private static bool RollBack(string target, string? backup)
+    {
+        try
+        {
+            if (File.Exists(target)) File.Delete(target);
+            if (backup is not null) File.Move(backup, target, overwrite: false);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void Undo(Action? undo)
+    {
+        try { undo?.Invoke(); } catch { /* keep the first error */ }
     }
 }

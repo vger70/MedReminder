@@ -21,6 +21,11 @@ internal sealed class ArchiveCipher : IArchiveCipher
         ArgumentNullException.ThrowIfNull(passphrase);
         ArgumentNullException.ThrowIfNull(salt);
         ArgumentNullException.ThrowIfNull(parameters);
+        // The one check of the bounds: the parameters often come from a
+        // file (an archive manifest, a sync key wrap), and a crafted cost
+        // must not run. Callers map InvalidDataException to a damaged file.
+        if (!parameters.IsWithinLimits())
+            throw new InvalidDataException("The Argon2id parameters are outside the accepted limits.");
 
         // Encode the passphrase as UTF-8 bytes for the KDF. Zero the
         // intermediate byte buffer after derivation so the secret does

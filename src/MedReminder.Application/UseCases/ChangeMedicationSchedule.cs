@@ -52,6 +52,12 @@ public sealed class ChangeMedicationSchedule
 
     public async Task ExecuteAsync(ChangeMedicationScheduleCommand cmd, CancellationToken cancellationToken)
     {
+        Validate(cmd);
+        await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
+    }
+
+    internal static void Validate(ChangeMedicationScheduleCommand cmd)
+    {
         ArgumentNullException.ThrowIfNull(cmd);
 
         if (cmd.NewSchedule is null)
@@ -68,11 +74,11 @@ public sealed class ChangeMedicationSchedule
             if (cmd.NewAdministrationsPerDay < 0)
                 throw new ArgumentException("Display administrations per day cannot be negative.", nameof(cmd));
         }
-
-        await WriteGate.RunExclusiveAsync(ct => ExecuteCoreAsync(cmd, ct), cancellationToken);
     }
 
-    private async Task ExecuteCoreAsync(ChangeMedicationScheduleCommand cmd, CancellationToken cancellationToken)
+    // The change without the gate, for a composition that already holds
+    // it (EditMedicine). The command must have passed Validate.
+    internal async Task ExecuteCoreAsync(ChangeMedicationScheduleCommand cmd, CancellationToken cancellationToken)
     {
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");

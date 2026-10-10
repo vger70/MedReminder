@@ -25,4 +25,18 @@ public sealed record Argon2Params
         MemoryKiB = 65536,
         Parallelism = 1,
     };
+
+    // Bounds for parameters read from a file (an archive manifest, a sync
+    // key wrap): a crafted file must not make the key derivation take
+    // unbounded memory or time. They leave room above Default for a
+    // stronger future default. Argon2 needs 8 KiB of memory per lane.
+    // IArchiveCipher.DeriveKey enforces them.
+    public const int MaxIterations = 10;
+    public const int MaxMemoryKiB = 256 * 1024;
+    public const int MaxParallelism = 8;
+
+    public bool IsWithinLimits()
+        => Iterations is >= 1 and <= MaxIterations
+            && Parallelism is >= 1 and <= MaxParallelism
+            && MemoryKiB >= 8 * Parallelism && MemoryKiB <= MaxMemoryKiB;
 }

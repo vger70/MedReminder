@@ -1,3 +1,6 @@
+using System.IO.Compression;
+using System.Text;
+using System.Text.Json.Nodes;
 using FluentAssertions;
 using MedReminder.Application.Export;
 using MedReminder.Infrastructure.Export;
@@ -132,6 +135,143 @@ public sealed class ArchiveReaderTests
             .Should().Be(ImportFailureReason.Corrupt);
     }
 
+    [Theory]
+    [InlineData(0, 1024, 1)]
+    [InlineData(Argon2Params.MaxIterations + 1, 1024, 1)]
+    [InlineData(1, Argon2Params.MaxMemoryKiB + 1, 1)]
+    [InlineData(1, int.MaxValue, 1)]
+    [InlineData(1, 4, 1)]
+    [InlineData(1, 1024, 0)]
+    [InlineData(1, 1024, Argon2Params.MaxParallelism + 1)]
+    public void Kdf_parameters_outside_the_limits_are_corrupt(int iterations, int memoryKiB, int parallelism)
+    {
+        // A crafted manifest must not make the import derive a key with
+        // unbounded memory or time: the reader refuses before deriving.
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase, tamperManifest: m =>
+        {
+            m.Kdf.Iterations = iterations;
+            m.Kdf.MemoryKiB = memoryKiB;
+            m.Kdf.Parallelism = parallelism;
+        });
+
+        FailureOf(() => Reader().Decrypt(new MemoryStream(bytes), Passphrase.ToCharArray()))
+            .Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    [Fact]
+    public void Oversized_payload_is_refused_while_decompressing()
+    {
+        // Zeros compress to a small entry that expands past the limit.
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase,
+            tamperCiphertext: _ => new byte[ArchiveReader.MaxPayloadBytes + 1]);
+        bytes.Length.Should().BeLessThan(ArchiveReader.MaxPayloadBytes / 100);
+
+        var ex = Assert.Throws<ImportFailedException>(
+            () => Reader().Decrypt(new MemoryStream(bytes), Passphrase.ToCharArray()));
+
+        ex.Reason.Should().Be(ImportFailureReason.Corrupt);
+        ex.Message.Should().Contain("larger than any MedReminder export");
+    }
+
+    [Fact]
+    public void Reading_the_manifest_leaves_the_payload_compressed()
+    {
+        // The preview does not inflate the payload: an oversized one does
+        // not surface until the import decrypts it.
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase,
+            tamperCiphertext: _ => new byte[ArchiveReader.MaxPayloadBytes + 1]);
+
+        Reader().ReadManifest(new MemoryStream(bytes)).AppVersion.Should().Be("test");
+    }
+
+    [Theory]
+    [InlineData("kdf")]
+    [InlineData("cipher")]
+    [InlineData("payload")]
+    [InlineData("kdf.saltBase64")]
+    [InlineData("cipher.nonceBase64")]
+    [InlineData("cipher.tagBase64")]
+    public void Null_manifest_fields_are_corrupt(string field)
+    {
+        var bytes = WithManifest(TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase), manifest =>
+        {
+            var parts = field.Split('.');
+            var owner = parts.Length == 1 ? manifest : manifest[parts[0]]!.AsObject();
+            owner[parts[^1]] = null;
+        });
+
+        FailureOf(() => Reader().Decrypt(new MemoryStream(bytes), Passphrase.ToCharArray()))
+            .Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    [Theory]
+    [InlineData("kdf", "saltBase64")]
+    [InlineData("cipher", "nonceBase64")]
+    [InlineData("cipher", "tagBase64")]
+    public void Fields_of_the_wrong_size_are_corrupt(string section, string field)
+    {
+        var bytes = WithManifest(TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase),
+            manifest => manifest[section]![field] = Convert.ToBase64String(new byte[5]));
+
+        FailureOf(() => Reader().Decrypt(new MemoryStream(bytes), Passphrase.ToCharArray()))
+            .Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    // Rewrites manifest.json as raw JSON, so a test can put what the
+    // writer never does (a JSON null) in it.
+    private static byte[] WithManifest(byte[] archive, Action<JsonObject> edit)
+    {
+        using var buffer = new MemoryStream();
+        buffer.Write(archive);
+        using (var zip = new ZipArchive(buffer, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var entry = zip.GetEntry(ExportFormat.ManifestEntryName)!;
+            JsonObject manifest;
+            using (var read = entry.Open()) manifest = JsonNode.Parse(read)!.AsObject();
+            edit(manifest);
+            entry.Delete();
+            using var write = zip.CreateEntry(ExportFormat.ManifestEntryName).Open();
+            write.Write(Encoding.UTF8.GetBytes(manifest.ToJsonString()));
+        }
+        return buffer.ToArray();
+    }
+
+    [Fact]
+    public void Oversized_manifest_is_corrupt()
+    {
+        var bytes = TestArchiveWriter.Write(TestArchiveWriter.SamplePayload(), Passphrase,
+            tamperManifest: m => m.AppVersion = new string('x', ArchiveReader.MaxManifestBytes));
+
+        FailureOf(() => Reader().ReadManifest(new MemoryStream(bytes)))
+            .Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    [Fact]
+    public void Oversized_archive_is_refused_before_reading()
+    {
+        FailureOf(() => Reader().ReadManifest(new LongStream(ArchiveReader.MaxArchiveBytes + 1L)))
+            .Should().Be(ImportFailureReason.Corrupt);
+    }
+
+    [Fact]
+    public void Oversized_non_seekable_archive_is_refused_while_reading()
+    {
+        var ex = Assert.Throws<ImportFailedException>(
+            () => Reader().ReadManifest(new ForwardOnlyStream(new byte[ArchiveReader.MaxArchiveBytes + 1])));
+
+        ex.Reason.Should().Be(ImportFailureReason.Corrupt);
+        ex.Message.Should().Contain("larger than any MedReminder export");
+    }
+
+    [Fact]
+    public void Cipher_refuses_kdf_parameters_outside_the_limits()
+    {
+        var act = () => new ArchiveCipher().DeriveKey("x".ToCharArray(), new byte[16],
+            new Argon2Params { Iterations = 1, MemoryKiB = Argon2Params.MaxMemoryKiB * 2, Parallelism = 1 });
+
+        act.Should().Throw<InvalidDataException>();
+    }
+
     [Fact]
     public void Extra_entries_are_ignored()
     {
@@ -180,6 +320,21 @@ public sealed class ArchiveReaderTests
     }
 
     // A stream that can only be read forward, like a content URI stream.
+    // Seekable, reports a length, never read: the size check comes first.
+    private sealed class LongStream(long length) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => false;
+        public override long Length => length;
+        public override long Position { get; set; }
+        public override int Read(byte[] buffer, int offset, int count) => throw new InvalidOperationException("Read before the size check.");
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void Flush() { }
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
     private sealed class ForwardOnlyStream(byte[] data) : Stream
     {
         private readonly MemoryStream _inner = new(data);

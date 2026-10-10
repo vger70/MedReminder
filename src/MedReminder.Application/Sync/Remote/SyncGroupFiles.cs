@@ -70,6 +70,9 @@ public sealed record SyncKeyWrap(
     public byte[] Unwrap(IArchiveCipher cipher, char[] passphrase, string purpose = "Key")
     {
         ArgumentNullException.ThrowIfNull(cipher);
+        // The wrap comes from the shared storage: the cipher refuses a cost
+        // outside Argon2Params' limits with InvalidDataException, like any
+        // damaged sync file.
         var wrappingKey = cipher.DeriveKey(passphrase, Salt,
             new Argon2Params { Iterations = Iterations, MemoryKiB = MemoryKiB, Parallelism = Parallelism });
         try

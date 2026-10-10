@@ -18,8 +18,17 @@ namespace MedReminder.Infrastructure.Export;
 internal sealed class ArchiveReader : IArchiveReader
 {
     private const string CorruptMessage = "The export file is damaged and cannot be imported.";
+    private const string TooLargeMessage = "The export file is larger than any MedReminder export and cannot be imported.";
     private const string NewerVersionMessage =
         "This export was produced by a newer version of MedReminder. Update the app and try again.";
+
+    // Size limits against a crafted archive (a ZIP bomb, an oversized
+    // file): an export holds text records only, a few MB even after years
+    // of use, so these leave ample room. The ciphertext is about the size
+    // of the payload JSON; the archive adds the manifest and ZIP headers.
+    internal const int MaxManifestBytes = 64 * 1024;
+    internal const int MaxPayloadBytes = 64 * 1024 * 1024;
+    internal const int MaxArchiveBytes = MaxPayloadBytes + 1024 * 1024;
 
     private readonly IArchiveCipher _cipher;
 
@@ -31,7 +40,8 @@ internal sealed class ArchiveReader : IArchiveReader
     public ExportManifest ReadManifest(Stream archive)
     {
         ArgumentNullException.ThrowIfNull(archive);
-        return Open(archive).Manifest;
+        // The payload is not needed for a preview: it is not decompressed.
+        return Open(archive, readPayload: false).Manifest;
     }
 
     public DecryptedArchive Decrypt(Stream archive, char[] passphrase)
@@ -40,7 +50,7 @@ internal sealed class ArchiveReader : IArchiveReader
         ArgumentNullException.ThrowIfNull(passphrase);
 
         // Steps 1-2: open the ZIP, parse and version-check the manifest.
-        var (manifest, ciphertext) = Open(archive);
+        var (manifest, ciphertext) = Open(archive, readPayload: true);
 
         byte[]? key = null;
         try
@@ -52,13 +62,22 @@ internal sealed class ArchiveReader : IArchiveReader
                 MemoryKiB = manifest.Kdf.MemoryKiB,
                 Parallelism = manifest.Kdf.Parallelism,
             };
-            var salt = DecodeBase64(manifest.Kdf.SaltBase64);
-            key = _cipher.DeriveKey(passphrase, salt, kdfParams);
+            var salt = DecodeBase64(manifest.Kdf.SaltBase64, ExportFormat.SaltSizeBytes);
+            try
+            {
+                // The cipher refuses a cost outside Argon2Params' limits
+                // before deriving: a crafted manifest is a damaged file.
+                key = _cipher.DeriveKey(passphrase, salt, kdfParams);
+            }
+            catch (InvalidDataException ex)
+            {
+                throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage, ex);
+            }
 
             // Step 4: decrypt. A tag mismatch is the wrong-passphrase
             // surface (§4.4).
-            var nonce = DecodeBase64(manifest.Cipher.NonceBase64);
-            var tag = DecodeBase64(manifest.Cipher.TagBase64);
+            var nonce = DecodeBase64(manifest.Cipher.NonceBase64, ExportFormat.AesGcmNonceSizeBytes);
+            var tag = DecodeBase64(manifest.Cipher.TagBase64, ExportFormat.AesGcmTagSizeBytes);
             byte[] plaintext;
             try
             {
@@ -112,13 +131,26 @@ internal sealed class ArchiveReader : IArchiveReader
         }
     }
 
-    // Opens the archive, reads manifest.json and the payload.enc bytes,
-    // and enforces the format identifier and version guards (§4.3).
-    private static (ExportManifest Manifest, byte[] Ciphertext) Open(Stream archiveStream)
+    // Opens the archive, reads manifest.json and, when asked, the
+    // payload.enc bytes, and enforces the format identifier and version
+    // guards (§4.3).
+    private static (ExportManifest Manifest, byte[] Ciphertext) Open(Stream archiveStream, bool readPayload)
     {
         ZipArchive archive;
         try
         {
+            // ZipArchive buffers a non-seekable stream (the mobile picker)
+            // whole: read it here, within the limit, instead.
+            if (archiveStream.CanSeek)
+            {
+                if (archiveStream.Length - archiveStream.Position > MaxArchiveBytes)
+                    throw new ImportFailedException(ImportFailureReason.Corrupt, TooLargeMessage);
+            }
+            else
+            {
+                var bytes = ReadBounded(archiveStream, MaxArchiveBytes, sizeHint: 0, out var length);
+                archiveStream = new MemoryStream(bytes, 0, length, writable: false);
+            }
             archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or ArgumentException)
@@ -137,9 +169,10 @@ internal sealed class ArchiveReader : IArchiveReader
             try
             {
                 using var manifestStream = manifestEntry.Open();
-                manifest = JsonSerializer.Deserialize<ExportManifest>(manifestStream, ExportJson.Options);
+                manifest = JsonSerializer.Deserialize<ExportManifest>(
+                    ReadExact(manifestStream, MaxManifestBytes, manifestEntry.Length), ExportJson.Options);
             }
-            catch (Exception ex) when (ex is JsonException or InvalidDataException)
+            catch (Exception ex) when (ex is JsonException or InvalidDataException or IOException)
             {
                 throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage, ex);
             }
@@ -148,18 +181,23 @@ internal sealed class ArchiveReader : IArchiveReader
                 || !string.Equals(manifest.Format, ExportFormat.FormatIdentifier, StringComparison.Ordinal))
                 throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage);
 
+            // JSON null replaces the default sections: refuse it here
+            // rather than fail later on a null reference.
+            if (manifest.Kdf is null || manifest.Cipher is null || manifest.Payload is null)
+                throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage);
+
             if (manifest.FormatVersion > ExportFormat.CurrentFormatVersion)
                 throw new ImportFailedException(ImportFailureReason.UnsupportedVersion, NewerVersionMessage);
+
+            if (!readPayload) return (manifest, []);
 
             byte[] ciphertext;
             try
             {
                 using var payloadStream = payloadEntry.Open();
-                using var buffer = new MemoryStream();
-                payloadStream.CopyTo(buffer);
-                ciphertext = buffer.ToArray();
+                ciphertext = ReadExact(payloadStream, MaxPayloadBytes, payloadEntry.Length);
             }
-            catch (InvalidDataException ex)
+            catch (Exception ex) when (ex is InvalidDataException or IOException)
             {
                 throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage, ex);
             }
@@ -168,15 +206,56 @@ internal sealed class ArchiveReader : IArchiveReader
         }
     }
 
-    private static byte[] DecodeBase64(string value)
+    // Reads at most `limit` bytes into one buffer; the first `length`
+    // bytes hold the data. The declared sizes of a ZIP are not trusted, the
+    // bytes read are counted; sizeHint (a declared size) only sizes the
+    // buffer, so an honest entry is read with one allocation and no copy.
+    private static byte[] ReadBounded(Stream source, int limit, long sizeHint, out int length)
     {
+        var buffer = new byte[(int)Math.Clamp(sizeHint, 0, limit)];
+        length = 0;
+        while (true)
+        {
+            if (length == buffer.Length)
+            {
+                // Full: grow only if the source has more.
+                var next = source.ReadByte();
+                if (next < 0) return buffer;
+                if (length == limit)
+                    throw new ImportFailedException(ImportFailureReason.Corrupt, TooLargeMessage);
+                Array.Resize(ref buffer, (int)Math.Min(limit, Math.Max(81920L, buffer.Length * 2L)));
+                buffer[length++] = (byte)next;
+            }
+            var read = source.Read(buffer, length, buffer.Length - length);
+            if (read == 0) return buffer;
+            length += read;
+        }
+    }
+
+    private static byte[] ReadExact(Stream source, int limit, long sizeHint)
+    {
+        var buffer = ReadBounded(source, limit, sizeHint, out var length);
+        if (length != buffer.Length) Array.Resize(ref buffer, length);
+        return buffer;
+    }
+
+    // expectedLength: the size the format fixes (salt, nonce, tag); a
+    // field of another size is damage, not a wrong passphrase, and AES-GCM
+    // would refuse it with an unmapped ArgumentException.
+    private static byte[] DecodeBase64(string? value, int? expectedLength = null)
+    {
+        if (value is null) throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage);
+        byte[] bytes;
         try
         {
-            return Convert.FromBase64String(value);
+            bytes = Convert.FromBase64String(value);
         }
         catch (FormatException ex)
         {
             throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage, ex);
         }
+        if (expectedLength is { } length && bytes.Length != length)
+            throw new ImportFailedException(ImportFailureReason.Corrupt, CorruptMessage);
+        return bytes;
     }
 }
