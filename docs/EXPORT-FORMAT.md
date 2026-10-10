@@ -480,7 +480,10 @@ time.
 
 Size limits on import, counted on the decompressed bytes:
 `manifest.json` at most 64 KiB, `payload.enc` at most 64 MiB, the whole
-`.mrz` at most 65 MiB. A larger file is refused as damaged.
+`.mrz` at most 65 MiB. A larger file is refused as damaged. The ZIP may
+declare at most 16 entries (an export has two; other entries are
+ignored): a file declaring more, or a Zip64 entry count, is refused as
+damaged before its entries are indexed.
 
 ### 4.2 Payload cipher (AES-256-GCM)
 
