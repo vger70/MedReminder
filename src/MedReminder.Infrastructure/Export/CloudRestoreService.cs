@@ -69,25 +69,9 @@ internal sealed class CloudRestoreService : ICloudRestoreService
         return results;
     }
 
-    public async Task<IReadOnlyList<CloudSnapshotInfo>> ListStoredSnapshotsAsync(
+    public Task<IReadOnlyList<CloudSnapshotInfo>> ListStoredSnapshotsAsync(
         IArchiveStorage storage, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(storage);
-        var results = new List<CloudSnapshotInfo>();
-        foreach (var archive in await storage.ListAsync(cancellationToken))
-        {
-            var named = CloudSnapshotName.TryParse(archive.Name, out var profileId, out var created);
-            results.Add(new CloudSnapshotInfo
-            {
-                ArchivePath = archive.Id,
-                FileName = archive.Name,
-                CreatedAtUtc = named ? created : archive.CreatedAtUtc,
-                ProfileId = profileId,
-            });
-        }
-        results.Sort((a, b) => b.CreatedAtUtc.CompareTo(a.CreatedAtUtc));
-        return results;
-    }
+        => CloudSnapshots.ListAsync(storage, cancellationToken);
 
     public async Task<bool> RestoreStoredAsync(
         IArchiveStorage storage,

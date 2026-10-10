@@ -30,6 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #231 — Shared cloud backup run for the Android app (M2, B2-03)
+
+Link: [vger70/MedReminder#231](https://github.com/vger70/MedReminder/pull/231)
+Branch: `claude/m2-implementation-stepwise-8sv8t8`
+
+### Added
+
+- `CloudBackupRun` (`Infrastructure.Portable/Backup`): one scheduled cloud backup for a host that writes archives with `ProfileArchive`, the Android app first (backlog B2-03). Each profile becomes an automatic snapshot named by `CloudSnapshotName` and is uploaded to the `IArchiveStorage`; a failed profile does not stop the others; a needed sign-in or a missing storage stops the run. Retention prunes only the profiles backed up in that run, so a profile whose backup keeps failing keeps its older snapshots.
+- `ProtectedCloudBackupPassphraseStore`: the cloud backup passphrase behind the host's `ICredentialProtector` (the Android Keystore adapter on the phone).
+- `ProfileArchive.ExportAsync` can mark an archive as an automatic snapshot (source and hashed device name, C.3+ §3.6), as the desktop's `ExportService` does.
+
+### Changed
+
+- Snapshot listing and retention by name moved to `CloudSnapshots` (`Application/Export`); the desktop's `BackupService.PruneCloudFolderAsync` and `CloudRestoreService.ListStoredSnapshotsAsync` delegate to it, with unchanged behavior. The hashed device marker moved to `AutomaticArchiveSource`, used by `ExportService`.
+
+### Docs
+
+- Android backlog B2-03: shared-core side recorded; Google sign-in, scheduling and screens remain in the private repository.
+
+---
+
 ## PR #230 — Record the D13 API 26 check on the emulator
 
 Link: [vger70/MedReminder#230](https://github.com/vger70/MedReminder/pull/230)
