@@ -68,6 +68,49 @@ public sealed class ProfileSettingsStoreTests : IDisposable
         read[ProfileSetting.CaregiverAddress].Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("{ not json")]
+    [InlineData("[]")]
+    [InlineData("null")]
+    public void Read_treats_a_damaged_notifications_file_as_empty(string content)
+    {
+        var profile = _registry.Create("Anna", ProfileRole.Admin);
+        var current = new CurrentProfile(profile, _profilesRoot);
+        File.WriteAllText(current.NotificationSettingsPath, content);
+        var store = new ProfileSettingsStore(current, _registry);
+
+        var settings = store.Read();
+
+        settings[ProfileSetting.DisplayName].Should().Be("Anna");
+        settings[ProfileSetting.ToAddress].Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Read_treats_an_unreadable_notifications_file_as_empty()
+    {
+        var profile = _registry.Create("Anna", ProfileRole.Admin);
+        var current = new CurrentProfile(profile, _profilesRoot);
+        File.WriteAllText(current.NotificationSettingsPath, """{ "Notifications": { "ToAddress": "anna@example.org" } }""");
+        var store = new ProfileSettingsStore(current, _registry);
+        // An exclusive handle makes the read fail with an IOException.
+        using var locked = new FileStream(current.NotificationSettingsPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        store.Read()[ProfileSetting.ToAddress].Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Write_replaces_a_damaged_notifications_file()
+    {
+        var profile = _registry.Create("Anna", ProfileRole.Admin);
+        var current = new CurrentProfile(profile, _profilesRoot);
+        File.WriteAllText(current.NotificationSettingsPath, "{ not json");
+        var store = new ProfileSettingsStore(current, _registry);
+
+        store.Write(new Dictionary<string, string?> { [ProfileSetting.ToAddress] = "anna@example.org" });
+
+        store.Read()[ProfileSetting.ToAddress].Should().Be("anna@example.org");
+    }
+
     [Fact]
     public void Write_rejects_an_unknown_setting()
     {
