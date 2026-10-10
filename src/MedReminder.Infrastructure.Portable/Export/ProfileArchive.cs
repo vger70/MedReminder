@@ -53,14 +53,17 @@ public sealed class ProfileArchive
     // read into the payload, encrypted and zipped. The snapshot is
     // deleted afterwards. A passphrase shorter than
     // ExportFormat.MinPassphraseLength is rejected before anything is
-    // read or written.
+    // read or written. automaticDeviceName marks a scheduled cloud
+    // snapshot (C.3+ §3.6): source "automatic" and the hashed device
+    // name in the manifest; null for an export the user started.
     public async Task ExportAsync(
         ProfileArchiveProfile profile,
         string appVersion,
         Stream destination,
         char[] passphrase,
         string scratchDirectory,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? automaticDeviceName = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(destination);
@@ -99,6 +102,8 @@ public sealed class ProfileArchive
                 ProfileId = profile.Id,
                 AppVersion = appVersion,
                 CreatedAtUtc = _clock.GetUtcNow(),
+                Source = automaticDeviceName is null ? null : AutomaticArchiveSource.Source,
+                Device = automaticDeviceName is null ? null : AutomaticArchiveSource.Device(automaticDeviceName, profile.Id),
             };
             await Task.Run(() => ArchiveWriter.Write(destination, content, passphrase, _cipher), cancellationToken);
         }

@@ -149,13 +149,9 @@ internal sealed class ExportService : IExportService
                 CreatedAtUtc = _clock.GetUtcNow(),
                 Includes = includes,
                 SmtpPassword = smtpPassword,
-                Source = options.AutomaticSource ? "automatic" : null,
+                Source = options.AutomaticSource ? AutomaticArchiveSource.Source : null,
                 Device = options.AutomaticSource
-                    ? new ManifestDevice
-                    {
-                        HostNameSha256 = HashHostName(Environment.MachineName),
-                        ProfileId = target.Id,
-                    }
+                    ? AutomaticArchiveSource.Device(Environment.MachineName, target.Id)
                     : null,
             };
 
@@ -301,13 +297,6 @@ internal sealed class ExportService : IExportService
         using var stream = new FileStream(
             destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
         ArchiveWriter.Write(stream, content, passphrase, _cipher);
-    }
-
-    private static string HashHostName(string hostName)
-    {
-        var normalized = (hostName ?? string.Empty).Trim();
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
     private static string ResolveAppVersion()

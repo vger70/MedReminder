@@ -162,41 +162,12 @@ internal sealed class BackupService : IBackupService
         return Task.FromResult(deleted);
     }
 
-    public async Task<int> PruneCloudFolderAsync(
+    // Shared with the Android cloud backup (CloudSnapshots).
+    public Task<int> PruneCloudFolderAsync(
         IArchiveStorage storage, int retentionDays, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(storage);
-        if (retentionDays <= 0) return 0;
-
-        var cutoff = _clock.GetUtcNow().AddDays(-retentionDays);
-        var archives = await storage.ListAsync(cancellationToken);
-
-        var deleted = 0;
-        foreach (var archive in archives)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Only the C.3+ .mrz naming (§3.3) is eligible: a user's
-            // hand-copied archive with a different name is left alone.
-            if (!CloudSnapshotName.IsMatch(archive.Name)) continue;
-            if (archive.CreatedAtUtc >= cutoff) continue;
-
-            try
-            {
-                await storage.DeleteAsync(archive.Id, cancellationToken);
-                deleted++;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch
-            {
-                // A locked file must not stop pruning the others.
-            }
-        }
-
-        return deleted;
+        return CloudSnapshots.PruneAsync(storage, retentionDays, _clock.GetUtcNow(), profileIds: null, cancellationToken);
     }
 
     public Task ImportProfileAsync(
