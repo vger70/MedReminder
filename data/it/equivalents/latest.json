@@ -1,0 +1,15 @@
+{
+  "country": "IT",
+  "version": "20260915",
+  "file": "equivalents-20260915.json",
+  "generated": "2026-10-04T04:45:03.606931+00:00",
+  "sha256": "a292816f4d1e4ef507a4b98ebed128d783b06636d8299284223207793d4f021b",
+  "size": 1881270,
+  "rows": {
+    "groups": 1010,
+    "packages": 8560
+  },
+  "source": {
+    "lastModified": "Tue, 15 Sep 2026 13:46:24 GMT"
+  }
+}

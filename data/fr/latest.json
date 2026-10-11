@@ -1,0 +1,14 @@
+{
+  "country": "FR",
+  "version": "202610",
+  "file": "bdpm-202610.zip",
+  "generated": "2026-10-05T10:52:32.546368+00:00",
+  "file_count": 3,
+  "sha256": "4814c0ac2757631c8ac36123b022d2d369edd3dd07840caa9434ecbf0fdc9ecc",
+  "size": 1651964,
+  "rows": {
+    "CIS_bdpm.txt": 15883,
+    "CIS_CIP_bdpm.txt": 20923,
+    "CIS_COMPO_bdpm.txt": 32439
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "country": "EU",
+  "version": "202610",
+  "file": "ema-epar-202610.zip",
+  "generated": "2026-10-05T11:22:09.434283+00:00",
+  "file_count": 1,
+  "sha256": "cbf3fdbe91884cafe3caa5acd0c591e6335aa64aee4c33e5af9a7f894aa9dcfd",
+  "size": 501151,
+  "rows": {
+    "ema-epar.csv": 2746,
+    "ema-epar.csv (Human)": 2351
+  }
+}
