@@ -1,7 +1,7 @@
-# Development status — 2026-10-05
+# Development status — 2026-10-12
 
 Snapshot of what has shipped and what remains open, taken at
-`main` = v2.16.0 plus PR #161 (commit `c6f1f58`), with only draft PR #106 open. Sources: `CHANGE_LOG.md`,
+`main` = v2.17.0 plus #236–#241 and shared core `core-v0.6.0` (commit `34d704d`), with only draft PR #106 open. Sources: `CHANGE_LOG.md`,
 `docs/EVOLUTION.md`, `docs/EVOLUTION-DONE.md`,
 `docs/notes/EVOLUTION-PROPOSALS.md`,
 `docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md`, the GitHub tracker.
@@ -49,6 +49,12 @@ apps are entirely free, like the desktop; the free core and premium
 tier of 2026-10-07 are dropped (`ANALYSIS-B1-ANDROID-PLAN.md` A6,
 §4.8).
 
+Updated on 2026-10-12 at `34d704d` (v2.17.0 plus #236–#241), after
+#201–#241 (release v2.17.0, guided setup, US catalogue, privacy policy,
+hardening of archive import and settings files, Android M0 and the
+first M2 shared-core steps, shared core up to `core-v0.6.0`): header,
+§1, §2.13, §3.3, §3.5, §4. The counts in §1 were taken at `34d704d`.
+
 Tags: **[INFERRED]** for deductions, **[UNCERTAIN]** for claims not
 verified against the tree or the tracker.
 
@@ -58,11 +64,11 @@ verified against the tree or the tracker.
 
 | Item | Value |
 |---|---|
-| Latest release | v2.16.0 (2026-10-04); v2.14.1, v2.14.2 and v2.15.0 on 2026-10-03; v2.14.0 on 2026-10-03 |
+| Latest release | v2.17.0 (2026-10-11); v2.16.0 on 2026-10-04. Shared core: `core-v0.6.0` (2026-10-11, `docs/SHARED-CORE.md`) |
 | Projects | Domain, Application, Infrastructure.Portable (`net10.0`); Infrastructure (`net10.0-windows`); UI (WinForms, `net10.0-windows10.0.19041.0`); DataImporter |
-| Source files | 542 `.cs` under `src/` |
-| Test projects | 6 (one per project, plus UI and DataImporter); 252 `.cs` files, 1537 `[Fact]`/`[Theory]` attributes |
-| Open pull requests | #106 — Android spikes S1–S4 (draft, not to be merged) |
+| Source files | 566 `.cs` under `src/` |
+| Test projects | 6 (one per project, plus UI and DataImporter); 271 `.cs` files, 1676 `[Fact]`/`[Theory]` attributes |
+| Open pull requests | #106 — Android spike app S1–S5, S8, S10 (draft, not to be merged) |
 | Open issues | #11 — Simplified Chinese localization (catalogue search disabled) |
 | UI languages | en, it, fr, es, de |
 
@@ -271,10 +277,31 @@ Sources: the `CHANGE_LOG.md` entries of each PR.
 | #192, #193 | Review fixes of the daily catalogue check; dated-list feeds hardened, feed workflows publish concurrently | v2.16.0 |
 | #195, #196, #198, #200 | Implementation prompts: repeatable prescriptions, regional prescription services, guided setup (corrected by #200) | v2.16.0 |
 | #197, #199 | Repeatable prescriptions with several dispensations (`DispensationChanged`, operation schema 12 for repeatable prescriptions only, image schema 9, export `schemaVersion` 3 when present); regional prescription service link and "Paste NRE" (#199, stacked on #197) | v2.16.0 |
-| #161 | Self-contained MSI for the Microsoft Store (`dotnet-desktop.yml`, `release.ps1`, `publish-signed-release.ps1`, `store` branch on GitHub Pages); MSIX scaffolding removed | not released |
+| #161 | Self-contained MSI for the Microsoft Store (`dotnet-desktop.yml`, `release.ps1`, `publish-signed-release.ps1`, `store` branch on GitHub Pages); MSIX scaffolding removed | v2.17.0 |
 
 Every device of a sync group must run v2.16.0 before anyone records a
 repeatable prescription (operation schema 12).
+
+### 2.13 Changes v2.17.0 and after
+
+Sources: the `CHANGE_LOG.md` entries of each PR (#212 has none by its
+author's choice).
+
+| PR | Content | Release |
+|---|---|---|
+| #202, #203 | US reference catalogue (FDA NDC) and US/UK sources analysis; US feed floor test | v2.17.0 |
+| #204 | Privacy policy | v2.17.0 |
+| #205, #207 | Unsaved settings prompt on closing Settings; guided setup after the first start (`PROMPT-GUIDED-SETUP.md`) | v2.17.0 |
+| #208 | Notification recipient address no longer logged | v2.17.0 |
+| #215, #221 | Webcam barcode decoding: more resilient, inverted frames decoded explicitly | v2.17.0 |
+| #217 | Desktop country and catalogue defaults (DA3) | v2.17.0 |
+| #219 | No dose reminders outside the therapy window | v2.17.0 |
+| #227–#229, #232–#235 | Hardening: damaged settings files skipped, archive import, database swap and medicine edit, ZIP entry limit, sync folder transport and help viewer, SQLite online backup retried while locked, embedded guides and dictionaries kept in the main assembly, stale tooltip and duplicate key | v2.17.0 |
+| #206, #209, #211–#214, #216, #224, #225, #230 | B.1 Android documents: spike results, standalone plan, Expert Review and GDPR assessment, D.1 vital-tracking design and DPIA, UI requirements, open decisions, overnight S8 run, apps entirely free, D13 API 26 emulator check | v2.17.0 (docs) |
+| #218, #220, #222, #223, #226, #231 | Android M0 (portable profile stores, notification planner, portable composition, shared-core CI and `core-v` tags) and M2 B2-03 (shared cloud backup run); `.mrz` export and import shared with the mobile host | v2.17.0 |
+| #236, #238, #239, #241 | Android OneDrive token storage described; sync group keys portable for the phone's household join; portable profile rebuild (B2-06) and rekey after a key rotation (B2-07) | not released (`core-v0.4.0`–`core-v0.6.0`) |
+| #237 | Help viewer cancels `data:` URI navigation | not released |
+| #240 | Newest local backup of each profile kept | not released |
 
 ---
 
@@ -334,17 +361,16 @@ for Android; M1b is separate and not estimated) plus 15–25 for iOS
 
 ### 3.3 Proposals with an implementation prompt ready
 
-- Guided setup after the first start (item M2 of the evolution plan of
-  2026-10-04, kept outside this repository):
-  `docs/prompt/PROMPT-GUIDED-SETUP.md` (#198, corrected by #200). Not
-  implemented.
+None for the application. The guided setup
+(`docs/prompt/PROMPT-GUIDED-SETUP.md`) shipped with #207 in v2.17.0 but
+is still in `docs/prompt/`, not yet moved to `Completed/`;
+`PROMPT-REPEATABLE-PRESCRIPTION.md` and
+`PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md` were moved there on
+2026-10-11.
 
 Every proposal of `EVOLUTION-PROPOSALS-2.md` §3 has shipped (§2.9); its
 §4 and §5 (re-assessed backlog items, proposals not recommended) remain
-notes. `PROMPT-REPEATABLE-PRESCRIPTION.md` and
-`PROMPT-REGIONAL-PRESCRIPTION-SERVICES.md` are implemented (#197, #199)
-but still in `docs/prompt/`, not yet moved to `Completed/`. The two
-website prompts are covered in §3.5. The others are in `docs/prompt/Completed/`, including
+notes. The two website prompts are covered in §3.5. The others are in `docs/prompt/Completed/`, including
 the multi-user roles prompt (item G shipped with household step H2a;
 item I was not built) and the two remote-feed prompts.
 
@@ -375,9 +401,9 @@ tracking.
   publishes unsigned packages that the script replaces with the signed
   ones (`docs/PACKAGING.md` §25); signing in CI is open. `README.md` and
   the user guides now describe signed binaries (#178).
-- **Microsoft Store**: the self-contained MSI (#161) is on `main`, not yet
-  released; the Partner Center submission is a product-owner action
-  (`docs/PACKAGING.md` §26).
+- **Microsoft Store**: the self-contained MSI (#161) shipped in v2.17.0;
+  whether it has been submitted in Partner Center cannot be verified
+  from this repository `[UNCERTAIN]` (`docs/PACKAGING.md` §26).
 - **UI, known limitations** (`ANALYSIS-UI-MODERNIZATION.md` §6b): in
   dark mode the date and time pickers keep a white field (a dark picker
   needs a replacement control); the Windows MessageBox remains on the
@@ -386,7 +412,7 @@ tracking.
 - **Issue #11**: Simplified Chinese localization.
 - **Website**: `PROMPT-WEBSITE-CONTENT-REFRESH.md` is live on the site;
   whether `PROMPT-WEBSITE-V2.6-REFRESH.md` has been applied cannot be
-  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.14
+  verified from this repository `[UNCERTAIN]`. Neither covers v2.7–v2.17
   (sync, cloud providers, therapy card PDF, text size, webcam scan,
   restock by scan, remote catalogue feeds, shared installation and
   master device, dark mode and the new main window, the
@@ -407,10 +433,10 @@ tracking.
 
 ## 4. Suggested next steps `[INFERRED]`
 
-0. Release #161 (Store MSI) and submit the MSI in Partner Center
-   (`docs/PACKAGING.md` §26). Move the two implemented prompts to
-   `docs/prompt/Completed/`. Implement the guided setup
-   (`PROMPT-GUIDED-SETUP.md`).
+0. Submit the v2.17.0 Store MSI in Partner Center if not done
+   (`docs/PACKAGING.md` §26). Move `PROMPT-GUIDED-SETUP.md` to
+   `docs/prompt/Completed/`. Release #237 and #240 with the next
+   desktop version.
 
 The household feature shipped after its manual tests (§2.7). Every
 device of a sync group or installation must run v2.12.0 or later
@@ -421,7 +447,7 @@ profile operation schemas 4 and 5).
    sufficient resolution (A2 checklist item 7).
 2. UI: replace the date and time pickers if a fully dark mode is
    wanted (§3.5).
-3. Website content refresh for v2.7–v2.16; the screenshots in
+3. Website content refresh for v2.7–v2.17; the screenshots in
    particular predate the new main window and dark mode.
 4. Mobile: the Android spikes S1–S5 and S8 are done. The Android plan
    and DA3/DA4 decisions were approved on 2026-10-08. Resolve D11, DA2

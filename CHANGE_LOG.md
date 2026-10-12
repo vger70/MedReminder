@@ -32,6 +32,8 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ## PR #241 — B2-07 shared core: portable profile rekey after a key rotation
 
+**Status:** merged (2026-10-11)
+
 Link: [vger70/MedReminder#241](https://github.com/vger70/MedReminder/pull/241)
 Branch: `claude/m2-implementation-stepwise-8sv8t8`
 
@@ -55,6 +57,8 @@ Branch: `claude/m2-implementation-stepwise-8sv8t8`
 
 ## PR #240 — Keep the newest local backup of each profile
 
+**Status:** merged (2026-10-11)
+
 Link: [vger70/MedReminder#240](https://github.com/vger70/MedReminder/pull/240)
 Branch: `claude/m2-implementation-stepwise-8sv8t8`
 
@@ -73,6 +77,8 @@ Branch: `claude/m2-implementation-stepwise-8sv8t8`
   recorded as fixed in the private repository.
 
 ## PR #239 — Share the profile rebuild from the sync group with the phone
+
+**Status:** merged (2026-10-11)
 
 Link: [vger70/MedReminder#239](https://github.com/vger70/MedReminder/pull/239)
 Branch: `claude/m2-implementation-stepwise-8sv8t8`
@@ -94,6 +100,8 @@ Branch: `claude/m2-implementation-stepwise-8sv8t8`
   repository; taking a new key on a phone moved to B2-07.
 
 ## PR #238 — Make the sync group keys portable for the phone's household join
+
+**Status:** merged (2026-10-11)
 
 Link: [vger70/MedReminder#238](https://github.com/vger70/MedReminder/pull/238)
 Branch: `claude/m2-implementation-stepwise-8sv8t8`
@@ -122,7 +130,22 @@ Branch: `claude/m2-implementation-stepwise-8sv8t8`
   export file name, written to logcat by the media scanner; tracked in
   B1-09) and findings 1 and 2 as fixed in the private repository.
 
+## PR #237 — Block data URI navigation in help viewer
+
+**Status:** merged (2026-10-11)
+
+Link: [vger70/MedReminder#237](https://github.com/vger70/MedReminder/pull/237)
+Branch: `feature/block-data-uri-navigation` → `main`
+
+### Security
+
+- `HelpViewerForm.OnNavigationStarting`: a `data:` URI is now cancelled like any other navigation that leaves the guide; only `about:` navigation stays in the viewer.
+
+---
+
 ## PR #236 — Describe where Android keeps the OneDrive tokens
+
+**Status:** merged (2026-10-11)
 
 Link: [vger70/MedReminder#236](https://github.com/vger70/MedReminder/pull/236)
 Branch: `claude/m2-implementation-stepwise-8sv8t8`
@@ -137,6 +160,8 @@ Branch: `claude/m2-implementation-stepwise-8sv8t8`
 
 ## PR #235 — Keep the embedded guides and dictionaries in the main assembly
 
+**Status:** merged (2026-10-11)
+
 Link: [vger70/MedReminder#235](https://github.com/vger70/MedReminder/pull/235)
 Branch: `claude/compassionate-euler-em6pvu`
 
@@ -147,6 +172,8 @@ Branch: `claude/compassionate-euler-em6pvu`
 ---
 
 ## PR #234 — Fix stale PIN tooltip, duplicate dictionary key and backup retention comments
+
+**Status:** merged (2026-10-11)
 
 Link: [vger70/MedReminder#234](https://github.com/vger70/MedReminder/pull/234)
 Branch: `claude/m2-implementation-stepwise-8sv8t8`
@@ -177,6 +204,8 @@ Branch: `claude/m2-implementation-stepwise-8sv8t8`
 
 ## PR #233 — Retry the SQLite online backup while the database is briefly locked
 
+**Status:** merged (2026-10-11)
+
 Link: [vger70/MedReminder#233](https://github.com/vger70/MedReminder/pull/233)
 Branch: `claude/m2-implementation-stepwise-8sv8t8`
 
@@ -187,6 +216,8 @@ Branch: `claude/m2-implementation-stepwise-8sv8t8`
 ---
 
 ## PR #232 — Harden the sync folder transport and the help viewer
+
+**Status:** merged (2026-10-11)
 
 Link: [vger70/MedReminder#232](https://github.com/vger70/MedReminder/pull/232)
 Branch: `claude/compassionate-euler-em6pvu`
@@ -203,6 +234,8 @@ Branch: `claude/compassionate-euler-em6pvu`
 ---
 
 ## PR #231 — Shared cloud backup run for the Android app (M2, B2-03)
+
+**Status:** merged (2026-10-10)
 
 Link: [vger70/MedReminder#231](https://github.com/vger70/MedReminder/pull/231)
 Branch: `claude/m2-implementation-stepwise-8sv8t8`
@@ -225,6 +258,8 @@ Branch: `claude/m2-implementation-stepwise-8sv8t8`
 
 ## PR #230 — Record the D13 API 26 check on the emulator
 
+**Status:** merged (2026-10-10)
+
 Link: [vger70/MedReminder#230](https://github.com/vger70/MedReminder/pull/230)
 Branch: `claude/d13-api26-spike`
 
@@ -236,6 +271,8 @@ Branch: `claude/d13-api26-spike`
 ---
 
 ## PR #229 — Refuse archives that declare more ZIP entries than an export has
+
+**Status:** merged (2026-10-10)
 
 Link: [vger70/MedReminder#229](https://github.com/vger70/MedReminder/pull/229)
 Branch: `claude/zip-entry-limit`
@@ -251,6 +288,8 @@ Branch: `claude/zip-entry-limit`
 ---
 
 ## PR #228 — Harden archive import, database swap and medicine edit
+
+**Status:** merged (2026-10-10)
 
 Link: [vger70/MedReminder#228](https://github.com/vger70/MedReminder/pull/228)
 Branch: `claude/harden-archive-import`
@@ -271,6 +310,8 @@ Branch: `claude/harden-archive-import`
 
 ## PR #227 — Skip damaged settings files instead of failing
 
+**Status:** merged (2026-10-10)
+
 Link: [vger70/MedReminder#227](https://github.com/vger70/MedReminder/pull/227)
 Branch: `claude/tolerate-damaged-settings-files`
 
@@ -282,6 +323,8 @@ Branch: `claude/tolerate-damaged-settings-files`
 ---
 
 ## PR #226 — Share the .mrz export and import with the mobile host (core-v0.2.0)
+
+**Status:** merged (2026-10-09)
 
 Link: [vger70/MedReminder#226](https://github.com/vger70/MedReminder/pull/226)
 Branch: `claude/portable-profile-archive`
@@ -298,6 +341,8 @@ Branch: `claude/portable-profile-archive`
 
 ## PR #225 — Docs: mobile apps entirely free (A6), premium tier dropped
 
+**Status:** merged (2026-10-09)
+
 Link: [vger70/MedReminder#225](https://github.com/vger70/MedReminder/pull/225)
 Branch: `claude/mobile-all-free`
 
@@ -311,6 +356,8 @@ Branch: `claude/mobile-all-free`
 
 ## PR #223 — Docs: the maintainer pushes core-v tags
 
+**Status:** merged (2026-10-09)
+
 Link: [vger70/MedReminder#223](https://github.com/vger70/MedReminder/pull/223)
 Branch: `claude/shared-core-tag-note`
 
@@ -318,6 +365,8 @@ Branch: `claude/shared-core-tag-note`
 
 - `docs/SHARED-CORE.md`: `core-v*` tags are created and pushed by the maintainer from a local clone; cloud sessions cannot push tags.
 ## PR #224 — Record the overnight S8 run in the B.1 spike results
+
+**Status:** merged (2026-10-09)
 
 Link: [vger70/MedReminder#224](https://github.com/vger70/MedReminder/pull/224)
 Branch: `claude/b1-s8-overnight-result`
@@ -330,6 +379,8 @@ Branch: `claude/b1-s8-overnight-result`
 ---
 
 ## PR #222 — Android M0 (B0-04): shared-core CI and core-v tag discipline
+
+**Status:** merged (2026-10-09)
 
 Link: [vger70/MedReminder#222](https://github.com/vger70/MedReminder/pull/222)
 Branch: `claude/b0-04-shared-core-ci`
@@ -346,6 +397,8 @@ Branch: `claude/b0-04-shared-core-ci`
 
 ## PR #220 — Android M0 (B0-03): portable composition of profile stores and planner
 
+**Status:** merged (2026-10-09)
+
 Link: [vger70/MedReminder#220](https://github.com/vger70/MedReminder/pull/220)
 Branch: `claude/b0-03-portable-composition`
 
@@ -359,6 +412,8 @@ Branch: `claude/b0-03-portable-composition`
 - Backlog B0-03: shared-core side done; private repository and APK build open.
 ## PR #221 — Decode inverted camera frames explicitly
 
+**Status:** merged (2026-10-09)
+
 Link: [vger70/MedReminder#221](https://github.com/vger70/MedReminder/pull/221)
 Branch: `claude/barcode-decoder-inverted-frame-5a858d`
 
@@ -370,6 +425,8 @@ Branch: `claude/barcode-decoder-inverted-frame-5a858d`
 
 ## PR #219 — Stop dose reminders outside the therapy window
 
+**Status:** merged (2026-10-09)
+
 Link: [vger70/MedReminder#219](https://github.com/vger70/MedReminder/pull/219)
 Branch: `claude/dose-reminder-therapy-window`
 
@@ -380,6 +437,8 @@ Branch: `claude/dose-reminder-therapy-window`
 ---
 
 ## PR #217 — Desktop country and catalogue defaults (DA3)
+
+**Status:** merged (2026-10-09)
 
 Link: [vger70/MedReminder#217](https://github.com/vger70/MedReminder/pull/217)
 Branch: `claude/desktop-country-catalogue-defaults`
@@ -395,6 +454,8 @@ Branch: `claude/desktop-country-catalogue-defaults`
 
 ---
 ## PR #218 — Android M0: portable profile stores and notification planner
+
+**Status:** merged (2026-10-09)
 
 Link: [vger70/MedReminder#218](https://github.com/vger70/MedReminder/pull/218)
 Branch: `claude/b0-01-portable-profile-stores`
@@ -431,6 +492,8 @@ Branch: `claude/b1-docs-review`
 
 ## PR #215 — Improve webcam barcode scanning
 
+**Status:** merged (2026-10-08)
+
 Link: [vger70/MedReminder#215](https://github.com/vger70/MedReminder/pull/215)
 Branch: `claude/webcam-barcode-scan`
 
@@ -444,6 +507,8 @@ Branch: `claude/webcam-barcode-scan`
 
 ---
 ## PR #214 — Fix the Android UI proposal and refine its requirements
+
+**Status:** merged (2026-10-08)
 
 Link: [vger70/MedReminder#214](https://github.com/vger70/MedReminder/pull/214)
 Branch: `ui-requirements`
@@ -486,6 +551,8 @@ Branch: `ui-requirements`
 
 ## PR #213 — Add D.1 vital-tracking design and DPIA
 
+**Status:** merged (2026-10-08)
+
 Link: [vger70/MedReminder#213](https://github.com/vger70/MedReminder/pull/213)
 Branch: `claude/legal-compliance-health-app-319bf5`
 
@@ -515,6 +582,8 @@ Branch: `claude/legal-compliance-health-app-319bf5`
 ---
 
 ## PR #211 — Add a free core and a premium tier to the Android plan
+
+**Status:** merged (2026-10-07)
 
 Link: [vger70/MedReminder#211](https://github.com/vger70/MedReminder/pull/211)
 Branch: `claude/b1-android-premium-model`
@@ -551,6 +620,8 @@ Branch: `claude/b1-android-premium-model`
 
 ## PR #209 — Revise the B.1 Android plan for a standalone app with every current feature
 
+**Status:** merged (2026-10-06)
+
 Link: [vger70/MedReminder#209](https://github.com/vger70/MedReminder/pull/209)
 
 Branch: `claude/b1-android-standalone-plan` (stacked on #206)
@@ -577,6 +648,8 @@ Branch: `claude/b1-android-standalone-plan` (stacked on #206)
 
 ## PR #206 — Record the Android spike results S1-S5 and S8 in the B.1 analysis
 
+**Status:** merged (2026-10-06)
+
 Link: [vger70/MedReminder#206](https://github.com/vger70/MedReminder/pull/206)
 Branch: `claude/b1-android-spike-results`
 
@@ -595,6 +668,8 @@ Branch: `claude/b1-android-spike-results`
 - `STATUS.md` §3.1, §4: spikes and Phase 5 inputs updated.
 ## PR #208 — Stop logging the notification recipient address
 
+**Status:** merged (2026-10-06)
+
 Link: [vger70/MedReminder#208](https://github.com/vger70/MedReminder/pull/208)
 Branch: `claude/upbeat-gates-jfe9sb` → `main`
 
@@ -602,6 +677,8 @@ Branch: `claude/upbeat-gates-jfe9sb` → `main`
 
 - Email: a successful notification send no longer logs the primary recipient address (`ToAddress`); the line now records only the email kind and the SMTP host and port. Recipient addresses are PII and logs are plain files under `%LOCALAPPDATA%\MedReminder\logs\` (CLAUDE.md §5, §7). The explicit-recipient path already omitted the address (`src/MedReminder.Infrastructure/Email/MailKitEmailNotificationService.cs`).
 ## PR #207 — Add the guided setup
+
+**Status:** merged (2026-10-06)
 
 Link: [vger70/MedReminder#207](https://github.com/vger70/MedReminder/pull/207)
 Branch: `claude/wizardly-goldberg-9atod5` → `main`
@@ -638,6 +715,8 @@ Branch: `claude/loving-keller-n3maee` → `main`
 
 ## PR #201 — Record last week's merges in CHANGE_LOG and STATUS
 
+**Status:** merged (2026-10-05)
+
 Link: [vger70/MedReminder#201](https://github.com/vger70/MedReminder/pull/201)
 Branch: `claude/project-thread-enzy0k` → `main`
 
@@ -649,6 +728,8 @@ Branch: `claude/project-thread-enzy0k` → `main`
 ---
 
 ## PR #204 — Add a privacy policy
+
+**Status:** merged (2026-10-05)
 
 Link: [vger70/MedReminder#204](https://github.com/vger70/MedReminder/pull/204)
 Branch: `claude/privacy-policy` → `main`
@@ -665,6 +746,8 @@ Branch: `claude/privacy-policy` → `main`
 - `CLAUDE.md` §2: the privacy policy translations join the exceptions
   to the English-only rule.
 ## PR #203 — Fix the US feed floor test after raising MIN_ROWS
+
+**Status:** merged (2026-10-05)
 
 Link: [vger70/MedReminder#203](https://github.com/vger70/MedReminder/pull/203)
 Branch: `claude/drug-data-sources-integration-eidpbg` → `main`
