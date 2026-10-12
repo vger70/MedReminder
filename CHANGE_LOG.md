@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #242 — Record the merges of 5-11 October in CHANGE_LOG and STATUS
+
+Link: [vger70/MedReminder#242](https://github.com/vger70/MedReminder/pull/242)
+Branch: `claude/project-thread-enzy0k` → `main`
+
+### Docs
+
+- `CHANGE_LOG.md`: status line for every PR merged into `main` from 2026-10-05 to 2026-10-11; new entry for #237.
+- `docs/STATUS.md`: snapshot at `34d704d` (v2.17.0 plus #236–#241, `core-v0.6.0`): open pull requests, new §2.13, prompts, Store MSI, next steps.
+
+---
+
 ## PR #241 — B2-07 shared core: portable profile rekey after a key rotation
 
 **Status:** merged (2026-10-11)
