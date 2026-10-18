@@ -1,0 +1,14 @@
+{
+  "country": "IT",
+  "version": "20261016",
+  "file": "shortages-20261016.json",
+  "generated": "2026-10-18T08:56:57.052898+00:00",
+  "sha256": "c629b8a7298f1260bb1e649ab23a2044f43de288dd80a56c186baf5b47651470",
+  "size": 251940,
+  "rows": {
+    "entries": 2498
+  },
+  "source": {
+    "lastModified": "Fri, 16 Oct 2026 12:11:41 GMT"
+  }
+}
