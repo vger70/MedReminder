@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #291 — Name the prescription code column NRE/NRBE for Italy
+
+**Status:** open
+
+Link: [vger70/MedReminder#291](https://github.com/vger70/MedReminder/pull/291)
+Branch: `claude/serene-pasteur-i1hovf`
+
+**Fixed**
+- The prescriptions list column now reads "NRE/NRBE" in Italian when
+  Italy is the reference country, matching the edit dialog (PR #288);
+  it still read "Codice" (`src/MedReminder.UI/Forms/PrescriptionsDialog.cs`,
+  new key `Ui.PrescriptionsDialog.Column.Code.Italy`).
+
 ## PR #289 — Allow force-deleting a medicine together with its history
 
 **Status:** open
