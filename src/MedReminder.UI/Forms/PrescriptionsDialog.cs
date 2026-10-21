@@ -24,7 +24,7 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
     private readonly Button _deleteButton;
 
     public PrescriptionsDialog(PrescriptionsDialogActions actions, ILocalizationService localization,
-        RegionalServiceActions? regional = null)
+        RegionalServiceActions? regional = null, bool nreCode = false)
     {
         _loc = localization;
         _actions = actions;
@@ -58,7 +58,9 @@ internal sealed class PrescriptionsDialog : MedReminderFormBase
         _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Issued"), 95);
         _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.ValidUntil"), 95);
         _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Packages"), 70);
-        _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Code"), 140);
+        // Italy (nreCode) names the code on the slip NRE (NRBE for the
+        // white prescription), as the edit dialog does.
+        _list.Columns.Add(_loc.Get(nreCode ? "Ui.PrescriptionsDialog.Column.Code.Italy" : "Ui.PrescriptionsDialog.Column.Code"), 140);
         _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Collected"), 95);
         _list.Columns.Add(_loc.Get("Ui.PrescriptionsDialog.Column.Dispensations"), 95);
         _list.SelectedIndexChanged += (_, _) => UpdateButtons();

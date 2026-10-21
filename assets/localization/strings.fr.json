@@ -451,6 +451,7 @@
   "Ui.PrescriptionsDialog.Column.ValidUntil": "Valable jusqu'au",
   "Ui.PrescriptionsDialog.Column.Packages": "Boîtes",
   "Ui.PrescriptionsDialog.Column.Code": "Code",
+  "Ui.PrescriptionsDialog.Column.Code.Italy": "Code",
   "Ui.PrescriptionsDialog.Column.Collected": "Retirée",
   "Ui.PrescriptionsDialog.Column.Dispensations": "Délivrances",
   "Ui.PrescriptionsDialog.New": "Nouvelle…",

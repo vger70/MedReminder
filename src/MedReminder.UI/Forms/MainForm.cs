@@ -1073,7 +1073,7 @@ internal sealed class MainForm : MedReminderFormBase
                         .ExecuteAsync(id, CancellationToken.None);
                 });
 
-            using var dialog = new PrescriptionsDialog(actions, _loc, BuildRegionalServiceActions());
+            using var dialog = new PrescriptionsDialog(actions, _loc, BuildRegionalServiceActions(), offerNrePaste);
             dialog.ShowDialog(this);
         }
         catch (Exception ex)
