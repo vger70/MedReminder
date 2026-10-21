@@ -74,8 +74,8 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
         _records = [.. _original];
 
         Text = _loc.Get(existing is null ? "Ui.PrescriptionEditDialog.Title.New" : "Ui.PrescriptionEditDialog.Title.Edit");
-        Width = 520;
-        Height = 680;
+        Width = 640;
+        Height = 720;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
@@ -128,25 +128,28 @@ internal sealed class PrescriptionEditDialog : MedReminderFormBase
             paste.Click += (_, _) => PasteNre();
             codeButtons.Add(paste);
         }
+        // The buttons sit under the field, so the code keeps the whole
+        // field column: an NRE (15 characters) or a longer code is not cut.
         if (codeButtons.Count > 0)
         {
-            var row = new TableLayoutPanel
+            var buttonRow = DialogLayout.Row([.. codeButtons]);
+            buttonRow.Margin = new Padding(0, UiTheme.Space.XS, 0, 0);
+            var stack = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 1 + codeButtons.Count,
+                ColumnCount = 1,
+                RowCount = 2,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Margin = Padding.Empty,
             };
-            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            stack.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _code.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            row.Controls.Add(_code, 0, 0);
-            for (var i = 0; i < codeButtons.Count; i++)
-            {
-                row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-                row.Controls.Add(codeButtons[i], i + 1, 0);
-            }
-            codeField = row;
+            stack.Controls.Add(_code, 0, 0);
+            stack.Controls.Add(buttonRow, 0, 1);
+            codeField = stack;
         }
         _code.TextChanged += (_, _) => DialogLayout.ShowError(_codeError, null);
 
