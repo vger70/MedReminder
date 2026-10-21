@@ -124,7 +124,7 @@ codice, quando chiudi la finestra di scansione o dopo 30 secondi. Su
 Android, l'accesso alla fotocamera è regolato dall'autorizzazione di
 Android e dal ciclo di vita dell'app. Su Android la fotocamera legge anche
 il codice QR mostrato da un altro dispositivo quando ti unisci a
-un'installazione; è usata solo mentre la pagina di scansione è aperta e il
+una cerchia; è usata solo mentre la pagina di scansione è aperta e il
 codice non viene salvato.
 
 ## 6. Link che aprono il browser

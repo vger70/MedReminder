@@ -42,7 +42,7 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
 9. [Più computer](#devices)
    - [Quale opzione mi serve?](#devices-choice) ·
      [Sincronizzare un profilo tra PC](#sync) ·
-     [Condividere l'installazione](#installation) ·
+     [Condividere la cerchia](#circle) ·
      [Il dispositivo master](#master) ·
      [Dispositivo perso o sostituito](#remove-device)
 10. [Impostazioni e uso quotidiano](#settings)
@@ -64,9 +64,9 @@ dentro l'app. L'architettura tecnica è descritta in `docs/ANALYSIS.md`.
      tuo nome e, se vuoi, un PIN. Questo primo profilo è
      l'**amministratore**: gestisce email, backup e gli altri profili
      (vedi [Più persone](#profiles)).
-   - **Unisciti a un'installazione esistente…** — solo se MedReminder
+   - **Unisciti a una cerchia esistente…** — solo se MedReminder
      è già usato su un altro tuo computer e vuoi che anche questo ne
-     faccia parte (vedi [Condividere l'installazione](#installation)).
+     faccia parte (vedi [Condividere la cerchia](#circle)).
 3. Si apre la finestra principale. L'icona di MedReminder nell'area di
    notifica di Windows (vicino all'orologio) resta visibile finché l'app
    è in esecuzione.
@@ -136,7 +136,7 @@ medicine né dosi.
   assunzione* e, a destra, una casella di ricerca (**Ctrl+F**) che
   filtra l'elenco per nome.
 - **Navigazione** a sinistra: *Medicine* (questo elenco), poi *Linea del
-  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Pianifica scorte*, *Ricette*, *Scadenze amministrative*, *Installazione*
+  tempo terapia*, *Scheda terapia*, *Richiedi ricetta*, *Pianifica scorte*, *Ricette*, *Scadenze amministrative*, *Cerchia*
   (amministratori) e *Impostazioni*, che si aprono in una finestra
   propria. Se la finestra è stretta mostra solo le icone.
 - **Riepilogo** sopra l'elenco: quante medicine sono *Esaurite*, *In
@@ -177,7 +177,7 @@ uscire, fai clic destro sull'icona e scegli **Esci**.
 | Controllare la scorta per un viaggio o fino al prossimo passaggio in farmacia | **Terapia → Pianifica scorte…** |
 | Configurare email, lingua, backup | **Strumenti → Impostazioni…** |
 | Aggiungere una persona | **Strumenti → Gestisci profili…** (amministratore) |
-| Usare MedReminder su un altro PC | **Strumenti → Sincronizzazione…** e **Strumenti → Installazione…** (amministratore) |
+| Usare MedReminder su un altro PC | **Strumenti → Sincronizzazione…** e **Strumenti → Cerchia…** (amministratore) |
 | Aprire il profilo di un'altra persona | **File → Cambia profilo…** |
 
 ---
@@ -335,7 +335,7 @@ Uniti** (FDA) viene scaricato quando lo scegli come Paese di riferimento.
   allo stesso modo, solo senza collegamento al catalogo.
 - **Quale Paese?** **Strumenti → Impostazioni… → Generale → Paese di
   riferimento** (predefinito: Italia). Solo un amministratore può
-  cambiarlo: vale per tutti i profili e, con un'installazione
+  cambiarlo: vale per tutti i profili e, con una cerchia
   condivisa, per tutti i dispositivi. Con IT, ES o FR l'elenco contiene
   anche i medicinali UE; con **EU** contiene solo quelli. Un medicinale
   può comparire due volte (nazionale e UE): scegli quello che
@@ -671,7 +671,7 @@ prima di inviare.
   posta abituale.
 - **Invia…** — la invia con l'account email di MedReminder, dopo una
   conferma. Disponibile quando l'email è configurata e l'**E-mail del
-  medico** è compilata (Impostazioni → Notifiche). Con un'installazione
+  medico** è compilata (Impostazioni → Notifiche). Con una cerchia
   condivisa invia solo il [dispositivo master](#master): sugli altri
   dispositivi usa **Apri nel programma di posta**.
 
@@ -700,7 +700,7 @@ ritirare. Per ciascuna puoi annotare, quando le conosci:
 Una ricetta emessa e non ritirata è *Da ritirare*; dopo l'ultimo giorno
 di validità è *Scaduta*. Da 3 giorni prima di quel giorno ricevi un
 promemoria, una volta, sui canali di notifica della medicina (l'email
-solo dal [dispositivo master](#master) se l'installazione è
+solo dal [dispositivo master](#master) se la cerchia è
 condivisa). Il promemoria non contiene il codice.
 
 Le ricette vengono copiate sugli altri PC di un profilo sincronizzato e
@@ -810,7 +810,7 @@ riportata sui tuoi documenti.
 
 Dal preavviso in poi ricevi un promemoria per ogni data, sui canali
 scelti (l'email solo dal [dispositivo master](#master) se
-l'installazione è condivisa); una scadenza superata è mostrata in
+la cerchia è condivisa); una scadenza superata è mostrata in
 rosso. **Fatta** chiude una scadenza singola; una ricorrente passa alla
 data successiva, contata dalla data precedente e non dal giorno in cui
 l'hai segnata.
@@ -1009,7 +1009,7 @@ i suoi destinatari.
 | Proprie medicine, scorte, destinatari | sì | sì |
 | Account email, backup, Paese di riferimento | sì | no |
 | Creare, rinominare, eliminare profili; PIN di tutti | sì | no |
-| Strumenti → Sincronizzazione… e Strumenti → Installazione… | sì | no |
+| Strumenti → Sincronizzazione… e Strumenti → Cerchia… | sì | no |
 
 C'è sempre almeno un amministratore.
 
@@ -1056,7 +1056,7 @@ Windows. Se un PIN è dimenticato, un amministratore lo toglie con
 | **Backup automatico giornaliero** | Una copia di tutti i profili, ogni giorno, in una tua cartella | Impostazioni → Backup / Ripristino |
 | **Esportazione cifrata** | Un unico file portabile, per passare a un nuovo PC o da conservare | Impostazioni → Backup / Ripristino → Esporta tutti i dati (crittografati)… |
 | **Backup cloud** | Una copia cifrata giornaliera su OneDrive, Google Drive o una cartella sincronizzata | Impostazioni → Backup / Ripristino → Backup su cartella sincronizzata |
-| **Sincronizzazione / Installazione** | Più PC che lavorano sugli stessi dati, di continuo | [Più computer](#devices) |
+| **Sincronizzazione / Cerchia** | Più PC che lavorano sugli stessi dati, di continuo | [Più computer](#devices) |
 
 Le impostazioni di backup sono gestite da un amministratore.
 
@@ -1150,7 +1150,7 @@ Da sapere:
 - Il tuo provider cloud può tenere i file eliminati nel suo cestino.
 - È un **backup, non una sincronizzazione**: per lavorare su più PC usa
   la [sincronizzazione](#sync).
-- Con un'installazione condivisa, il backup cloud lo fa solo il
+- Con una cerchia condivisa, il backup cloud lo fa solo il
   [dispositivo master](#master).
 
 ---
@@ -1166,7 +1166,7 @@ Da sapere:
 | Un solo PC | Niente da fare. Tieni un [backup](#backup). |
 | Passare una volta a un nuovo PC | [Esportazione cifrata](#backup) sul vecchio PC, importazione sul nuovo. |
 | Lo **stesso profilo** su due o più PC, sempre aggiornato | [Sincronizzazione](#sync) (Strumenti → Sincronizzazione…). |
-| **Tutta la configurazione di famiglia** (profili, ruoli, PIN, email, backup) su più PC, con **un solo** PC che invia le email | [Installazione](#installation) (Strumenti → Installazione…), in aggiunta alla sincronizzazione. |
+| **Tutta la configurazione di famiglia** (profili, ruoli, PIN, email, backup) su più PC, con **un solo** PC che invia le email | [Cerchia](#circle) (Strumenti → Cerchia…), in aggiunta alla sincronizzazione. |
 
 Entrambe le opzioni richiedono un archivio raggiungibile da tutti i PC:
 **OneDrive**, **Google Drive** o una **cartella condivisa** (una
@@ -1254,10 +1254,10 @@ su **Inserisci la nuova chiave…** e scrivi la nuova passphrase o un
 codice di abbinamento: le sue modifiche vengono conservate e
 MedReminder si riavvia.
 
-<a id="installation"></a>
-### Condividere l'installazione
+<a id="circle"></a>
+### Condividere la cerchia
 
-La sincronizzazione lavora profilo per profilo. L'**installazione**
+La sincronizzazione lavora profilo per profilo. La **cerchia**
 aggiunge tutto ciò che sta intorno ai profili, così ogni PC è
 configurato allo stesso modo:
 
@@ -1281,10 +1281,10 @@ il PC di famiglia li contiene tutti.
 
 **Passo 1 — Pubblicare (sul PC principale)**
 
-1. **Strumenti → Installazione… → Pubblica l'installazione…**.
+1. **Strumenti → Cerchia… → Pubblica la cerchia…**.
 2. Scegli lo **stesso archivio** che contiene i gruppi di
    sincronizzazione dei profili.
-3. Scegli una **passphrase dell'installazione**. Permette a un
+3. Scegli una **passphrase della cerchia**. Permette a un
    amministratore di aggiungere un dispositivo e di recuperare tutti i
    profili quando nessun altro dispositivo è a portata di mano.
    Riservala agli amministratori; non si può recuperare.
@@ -1293,48 +1293,48 @@ Questo PC diventa il [dispositivo master](#master).
 
 **Passo 2 — Aggiungere un dispositivo**
 
-1. Sul PC principale: **Strumenti → Installazione… → Dispositivi →
+1. Sul PC principale: **Strumenti → Cerchia… → Dispositivi →
    Aggiungi un dispositivo…**, spunta i profili per il nuovo
    dispositivo, poi **Mostra il codice**.
 2. Sul nuovo PC:
    - se MedReminder non è mai stato usato lì: nella finestra di
-     benvenuto scegli **Unisciti a un'installazione esistente…**;
-   - altrimenti: **Strumenti → Installazione… → Unisciti a
-     un'installazione esistente…**.
+     benvenuto scegli **Unisciti a una cerchia esistente…**;
+   - altrimenti: **Strumenti → Cerchia… → Unisciti a
+     una cerchia esistente…**.
 3. Scegli **Con un codice** e scrivi il codice. Il codice dura 10
    minuti, o finché la sua finestra resta aperta.
 4. La finestra elenca ogni profilo ("aggiunto a questo dispositivo",
    "già presente su questo dispositivo", …). MedReminder si riavvia con i
-   nuovi profili e le impostazioni dell'installazione. I profili già
-   presenti sul nuovo PC vengono aggiunti all'installazione.
+   nuovi profili e le impostazioni della cerchia. I profili già
+   presenti sul nuovo PC vengono aggiunti alla cerchia.
 
 *Nessun altro dispositivo a portata di mano?* Scegli **Con la passphrase
-dell'installazione**, seleziona l'archivio e scrivi la passphrase. Un
+della cerchia**, seleziona l'archivio e scrivi la passphrase. Un
 amministratore sceglie poi il suo profilo, ne scrive il PIN e seleziona
 i profili per questo dispositivo.
 
 **Uso quotidiano**
 
-- L'installazione si sincronizza da sola ogni 15 minuti.
+- La cerchia si sincronizza da sola ogni 15 minuti.
 - Un cambio di profilo, ruolo, PIN, account email, regole del backup
   cloud o Paese di riferimento fatto su un dispositivo raggiunge gli
   altri.
 - Un profilo creato dopo: attiva la sincronizzazione (Strumenti →
   Sincronizzazione…), poi assegnalo ad altri dispositivi con **Aggiungi
   un dispositivo…** da un dispositivo che lo contiene.
-- **Strumenti → Installazione… → Stato** mostra l'archivio, il master
+- **Strumenti → Cerchia… → Stato** mostra l'archivio, il master
   ed eventuali azioni da fare.
 
 <a id="master"></a>
 ### Il dispositivo master
 
-In un'installazione condivisa **un solo dispositivo, il master**, invia
+In una cerchia condivisa **un solo dispositivo, il master**, invia
 tutte le email (avvisi di scorte basse e promemoria delle dosi, di tutti
 i profili che contiene, anche quelli non aperti) e fa il backup cloud.
 Gli altri dispositivi mostrano i loro avvisi solo sullo schermo. Così
 ogni email arriva una volta sola.
 
-- Il dispositivo che pubblica l'installazione è il master. La sezione
+- Il dispositivo che pubblica la cerchia è il master. La sezione
   **Dispositivi** lo indica nella colonna **Ruolo**.
 - Scegli come master un dispositivo **acceso spesso** e con MedReminder
   in esecuzione.
@@ -1342,26 +1342,26 @@ ogni email arriva una volta sola.
   programma di posta, e **Prova connessione** funziona solo sul master.
   Le impostazioni email si possono modificare ovunque e raggiungono
   tutti i dispositivi.
-- Un master che non sincronizza l'installazione da **24 ore** smette di
+- Un master che non sincronizza la cerchia da **24 ore** smette di
   inviare email finché non si sincronizza di nuovo.
-- Le installazioni pubblicate prima di questa versione non hanno un
+- Le cerchie pubblicate prima di questa versione non hanno un
   master finché un amministratore non ne sceglie uno; fino ad allora
   ogni dispositivo invia.
 
 **Spostare il master su un altro dispositivo**
 
-1. **Strumenti → Installazione… → Dispositivi**, seleziona il nuovo
+1. **Strumenti → Cerchia… → Dispositivi**, seleziona il nuovo
    dispositivo, **Rendi master…**, conferma. Nessun dispositivo invia
    email finché il passaggio non è completato.
 2. Sul nuovo dispositivo, con un profilo amministratore aperto, la
    finestra **Passaggio del ruolo di master** si apre da sola (o più
-   tardi da **Strumenti → Installazione… → Completa il passaggio…**).
+   tardi da **Strumenti → Cerchia… → Completa il passaggio…**).
    Mostra le impostazioni e ti chiede di:
    - **Verificare la connessione email da questo dispositivo**;
    - **accedere** all'archivio del backup cloud con lo stesso account;
    - riscrivere la **passphrase del backup cloud** (non viene mai
      copiata tra dispositivi);
-   - facoltativamente scrivere la passphrase dell'installazione, per
+   - facoltativamente scrivere la passphrase della cerchia, per
      portare i profili che nessun dispositivo a portata di mano contiene.
 3. **Conferma**. Il nuovo dispositivo subentra quando il vecchio master
    cede il ruolo alla sua prossima sincronizzazione. I nuovi profili
@@ -1377,14 +1377,14 @@ il nuovo master subentra da solo quando il vecchio non si fa sentire da
 Quando un dispositivo viene perso, venduto o regalato:
 
 1. Sul **master** (contiene tutti i profili): **Strumenti →
-   Installazione… → Dispositivi**, seleziona il dispositivo, **Rimuovi
+   Cerchia… → Dispositivi**, seleziona il dispositivo, **Rimuovi
    dispositivo…**.
-2. Scegli una **nuova passphrase dell'installazione**. Il dispositivo
+2. Scegli una **nuova passphrase della cerchia**. Il dispositivo
    rimosso conserva quello che ha già ma non riceve nulla di nuovo; anche
    i profili che conteneva ricevono nuove chiavi.
 3. MedReminder propone di mostrare un codice. Gli altri dispositivi
    smettono di sincronizzarsi finché non ricevono la nuova chiave: su
-   ognuno un amministratore apre **Strumenti → Installazione… →
+   ognuno un amministratore apre **Strumenti → Cerchia… →
    Inserisci la nuova chiave…** e scrive la nuova passphrase o il codice.
    Le modifiche fatte lì nel frattempo vengono conservate.
 4. Le nuove chiavi dei profili arrivano da sole agli altri dispositivi;
@@ -1446,17 +1446,17 @@ MedReminder non vede mai i tuoi dati di pagamento.
 Controlla, nell'ordine: *Prova connessione* in Impostazioni → Email
 SMTP; il *Destinatario* in Impostazioni → Notifiche; il canale **Email**
 spuntato sulla medicina; MedReminder in esecuzione. Con
-un'installazione condivisa invia solo il master: controlla
-**Strumenti → Installazione… → Stato**.
+una cerchia condivisa invia solo il master: controlla
+**Strumenti → Cerchia… → Stato**.
 
-**"Questo dispositivo è il master ma non sincronizza l'installazione da
+**"Questo dispositivo è il master ma non sincronizza la cerchia da
 più di 24 ore".**
 Il master non raggiunge l'archivio. Controlla la connessione internet e
 l'accesso a OneDrive / Google Drive, poi **Sincronizza ora**.
 
-**"La chiave dell'installazione è stata cambiata su un altro
+**"La chiave della cerchia è stata cambiata su un altro
 dispositivo".**
-È stato rimosso un dispositivo. Apri **Strumenti → Installazione… →
+È stato rimosso un dispositivo. Apri **Strumenti → Cerchia… →
 Inserisci la nuova chiave…** e scrivi la nuova passphrase, o un codice
 mostrato da un dispositivo che la ha già.
 
@@ -1465,7 +1465,7 @@ Riavviare ora?"**
 Rispondi sì: il profilo prende la nuova chiave al riavvio di
 MedReminder.
 
-**"Questo dispositivo è stato rimosso dall'installazione".**
+**"Questo dispositivo è stato rimosso dalla cerchia".**
 Il dispositivo conserva i suoi dati ma non riceve più nulla. Per usarlo
 di nuovo, un amministratore lo aggiunge come nuovo dispositivo.
 
@@ -1475,9 +1475,9 @@ spento per sempre, il nuovo master subentra 25 ore dopo l'ultima volta
 che il vecchio si è visto.
 
 **"Il gruppo di sincronizzazione di questo profilo appartiene a
-un'altra installazione".**
-Il profilo è stato pubblicato da un'altra installazione. Unisciti a
-quell'installazione (**Unisciti a un'installazione esistente…**).
+un'altra cerchia".**
+Il profilo è stato pubblicato da un'altra cerchia. Unisciti a
+quella cerchia (**Unisciti a una cerchia esistente…**).
 
 **Ho dimenticato un PIN.**
 Un amministratore lo toglie con **Strumenti → Gestisci profili… →
@@ -1485,10 +1485,10 @@ Cambia PIN**. Se nessun altro può farlo: chiudi MedReminder, apri
 `%LOCALAPPDATA%\MedReminder\profiles.json` con Blocco note e, per quel
 profilo, cancella i valori di `PinHash` e `PinSalt` e imposta
 `PinIterations` a `0`. MedReminder registra la modifica al prossimo
-avvio; con un'installazione condivisa raggiunge gli altri dispositivi.
+avvio; con una cerchia condivisa raggiunge gli altri dispositivi.
 
 **Ho dimenticato una passphrase.**
-Le passphrase di esportazione, backup, sincronizzazione e installazione
+Le passphrase di esportazione, backup, sincronizzazione e cerchia
 non si possono recuperare. Puoi impostarne di nuove (nuova esportazione,
 nuova passphrase di backup cloud, *Cambia chiave e passphrase…*), ma i
 file cifrati con la vecchia restano illeggibili.
@@ -1519,7 +1519,7 @@ i file di backup ed esportazione che posizioni tu.
 ├── cloud-backup.protected     passphrase del backup cloud, cifrata da Windows
 ├── user.settings.json         lingua, Paese di riferimento, controllo aggiornamenti, registrazione query
 ├── backups\                   copia tenuta all'aggiornamento da una versione molto vecchia
-├── household\                 installazione condivisa (solo se usata)
+├── household\                 cerchia condivisa (solo se usata)
 ├── logs\medreminder-AAAAMMGG.log
 └── profiles\
     └── <profilo>\

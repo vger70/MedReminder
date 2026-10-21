@@ -41,7 +41,7 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
 9. [Several computers](#devices)
    - [Which option do I need?](#devices-choice) ·
      [Sync a profile between PCs](#sync) ·
-     [Share the installation](#installation) ·
+     [Share the circle](#circle) ·
      [The master device](#master) ·
      [Lost or replaced device](#remove-device)
 10. [Settings and everyday use](#settings)
@@ -63,9 +63,9 @@ app. The technical architecture is described in `docs/ANALYSIS.md`.
      your name and, if you want, a PIN. This first profile is the
      **administrator**: it manages email, backup and the other profiles
      (see [Several people](#profiles)).
-   - **Join an existing installation…** — only if MedReminder is
+   - **Join an existing circle…** — only if MedReminder is
      already used on another computer of yours and you want this one to
-     take part (see [Share the installation](#installation)).
+     take part (see [Share the circle](#circle)).
 3. The main window opens. The MedReminder icon in the Windows
    notification area (near the clock) stays visible while the app runs.
 4. While the profile has no medicine, the **Guided setup** opens by
@@ -132,7 +132,7 @@ and no dose.
 - **Toolbar** below the menus: *New medicine*, *Register intake* and a
   search box on the right (**Ctrl+F**) that filters the list by name.
 - **Navigation** on the left: *Medicines* (this list), then *Therapy
-  timeline*, *Therapy report*, *Request prescription*, *Plan supply*, *Prescriptions*, *Administrative deadlines*, *Installation*
+  timeline*, *Therapy report*, *Request prescription*, *Plan supply*, *Prescriptions*, *Administrative deadlines*, *Circle*
   (administrators) and *Settings*, which open their own windows. In a
   narrow window it shows icons only.
 - **Summary** above the list: how many medicines are *Empty*, *Running
@@ -172,7 +172,7 @@ right-click the icon and choose **Exit**.
 | Check the stock for a trip or until the next pharmacy visit | **Therapy → Plan supply…** |
 | Set up email, language, backup | **Tools → Settings…** |
 | Add a person | **Tools → Manage profiles…** (administrator) |
-| Use MedReminder on another PC | **Tools → Sync…** and **Tools → Installation…** (administrator) |
+| Use MedReminder on another PC | **Tools → Sync…** and **Tools → Circle…** (administrator) |
 | Open another person's profile | **File → Change profile…** |
 
 ---
@@ -325,7 +325,7 @@ the whole **European Union** (EMA). The list of the **United States**
   the same, only without the catalogue link.
 - **Which country?** **Tools → Settings… → General → Reference
   country** (default: Italy). Only an administrator can change it: it
-  applies to every profile and, with a shared installation, to every
+  applies to every profile and, with a shared circle, to every
   device. With IT, ES or FR the list also contains the EU medicines;
   with **EU** it contains only those. A medicine may appear twice
   (national and EU): pick the one that matches your box.
@@ -645,7 +645,7 @@ everything before sending.
 - **Open in mail client** — a new email in your usual mail program.
 - **Send…** — sends it with MedReminder's email account, after a
   confirmation. Available when email is set up and a **Doctor e-mail**
-  is filled in (Settings → Notifications). With a shared installation,
+  is filled in (Settings → Notifications). With a shared circle,
   only the [master device](#master) sends: on the other devices use
   **Open in mail client**.
 
@@ -674,7 +674,7 @@ A prescription that is issued and not collected is *To collect*; after
 its last valid day it is *Expired*. From 3 days before that day you
 get a reminder, once, through the medicine's notification channels
 (the email only from the [master device](#master) when the
-installation is shared). The reminder does not include the code.
+circle is shared). The reminder does not include the code.
 
 Prescriptions are copied to the other PCs of a synced profile and
 included in the encrypted export.
@@ -778,7 +778,7 @@ documents.
 
 From the notice period on, you get one reminder per date, through the
 channels you chose (the email only from the [master device](#master)
-when the installation is shared); an overdue deadline is shown in red.
+when the circle is shared); an overdue deadline is shown in red.
 **Done** closes a one-off deadline; a recurring one moves to its next
 date, counted from the previous date, not from the day you marked it.
 
@@ -974,7 +974,7 @@ its own recipients.
 | Own medicines, stock, recipients | yes | yes |
 | Email account, backup, reference country | yes | no |
 | Create, rename, delete profiles; PINs of all | yes | no |
-| Tools → Sync… and Tools → Installation… | yes | no |
+| Tools → Sync… and Tools → Circle… | yes | no |
 
 There is always at least one administrator.
 
@@ -1019,7 +1019,7 @@ account. If a PIN is forgotten, an administrator clears it with
 | **Automatic daily backup** | A copy of every profile, every day, in a folder of yours | Settings → Backup / Restore |
 | **Encrypted export** | One portable file to move to a new PC or keep safe | Settings → Backup / Restore → Export all data (encrypted)… |
 | **Cloud backup** | An encrypted daily copy in OneDrive, Google Drive or a synced folder | Settings → Backup / Restore → Backup to a cloud-synced folder |
-| **Sync / Installation** | Several PCs working on the same data, continuously | [Several computers](#devices) |
+| **Sync / Circle** | Several PCs working on the same data, continuously | [Several computers](#devices) |
 
 The backup settings are managed by an administrator.
 
@@ -1106,7 +1106,7 @@ Good to know:
 - Your cloud provider may keep deleted files in its recycle bin.
 - This is a **backup, not synchronisation**: to work on several PCs use
   [Sync](#sync).
-- With a shared installation, only the [master device](#master) makes
+- With a shared circle, only the [master device](#master) makes
   the cloud backup.
 
 ---
@@ -1122,7 +1122,7 @@ Good to know:
 | One PC only | Nothing to do. Keep a [backup](#backup). |
 | Move to a new PC once | [Encrypted export](#backup) on the old PC, import on the new one. |
 | The **same profile** on two or more PCs, always up to date | [Sync](#sync) (Tools → Sync…). |
-| The **whole family setup** (profiles, roles, PINs, email, backup) on several PCs, with **one** PC sending the emails | [Installation](#installation) (Tools → Installation…), on top of sync. |
+| The **whole family setup** (profiles, roles, PINs, email, backup) on several PCs, with **one** PC sending the emails | [Circle](#circle) (Tools → Circle…), on top of sync. |
 
 Both options need a storage that every PC can reach: **OneDrive**,
 **Google Drive**, or a **shared folder** (a folder synced by Dropbox or
@@ -1202,10 +1202,10 @@ or Google account security settings. On every other PC click **Enter
 the new key…** and type the new passphrase or a pairing code: its
 changes are kept, and MedReminder restarts.
 
-<a id="installation"></a>
-### Share the installation
+<a id="circle"></a>
+### Share the circle
 
-Sync works profile by profile. The **installation** adds everything
+Sync works profile by profile. The **circle** adds everything
 around the profiles, so that every PC is set up the same way:
 
 | Shared by all devices | Kept per device |
@@ -1228,9 +1228,9 @@ holds everyone's.
 
 **Step 1 — Publish (on the main PC)**
 
-1. **Tools → Installation… → Publish the installation…**.
+1. **Tools → Circle… → Publish the circle…**.
 2. Choose the **same storage** that holds the profiles' sync groups.
-3. Choose an **installation passphrase**. It lets an administrator add
+3. Choose a **circle passphrase**. It lets an administrator add
    a device and recover every profile when no other device is at hand.
    Keep it for administrators only; it cannot be recovered.
 
@@ -1238,68 +1238,68 @@ This PC becomes the [master device](#master).
 
 **Step 2 — Add a device**
 
-1. On the main PC: **Tools → Installation… → Devices → Add a device…**,
+1. On the main PC: **Tools → Circle… → Devices → Add a device…**,
    tick the profiles for the new device, then **Show the code**.
 2. On the new PC:
    - if MedReminder was never used there: in the welcome window choose
-     **Join an existing installation…**;
-   - otherwise: **Tools → Installation… → Join an existing
-     installation…**.
+     **Join an existing circle…**;
+   - otherwise: **Tools → Circle… → Join an existing
+     circle…**.
 3. Choose **With a code** and type the code. The code lasts 10 minutes,
    or until its window closes.
 4. The window lists each profile ("added to this device", "already on
    this device", …). MedReminder restarts with the new profiles and the
-   installation's settings. Profiles already on the new PC are added to
-   the installation.
+   circle's settings. Profiles already on the new PC are added to
+   the circle.
 
-*No other device at hand?* Choose **With the installation passphrase**,
+*No other device at hand?* Choose **With the circle passphrase**,
 select the storage and type the passphrase. An administrator then picks
 their profile, types its PIN and selects the profiles for this device.
 
 **Everyday use**
 
-- The installation syncs by itself every 15 minutes.
+- The circle syncs by itself every 15 minutes.
 - A change of profile, role, PIN, email account, cloud backup policy
   or reference country made on one device reaches the others.
 - A profile created later: enable sync for it (Tools → Sync…), then give
   it to other devices with **Add a device…** on a device that holds it.
-- **Tools → Installation… → Status** shows the storage, the master and
+- **Tools → Circle… → Status** shows the storage, the master and
   any action needed.
 
 <a id="master"></a>
 ### The master device
 
-In a shared installation **one device, the master**, sends every email
+In a shared circle **one device, the master**, sends every email
 (low-stock and dose reminders, of every profile it holds, also those
 not open) and makes the cloud backup. The other devices show their
 reminders on screen only. This way each email arrives once.
 
-- The device that publishes the installation is the master. The
+- The device that publishes the circle is the master. The
   **Devices** section shows it in the **Role** column.
 - Choose a master that is **often switched on** and has MedReminder
   running.
 - On other devices, prescription requests open in the mail client, and
   **Test connection** works only on the master. The email settings can
   be edited everywhere and reach every device.
-- A master that has not synced the installation for **24 hours** stops
+- A master that has not synced the circle for **24 hours** stops
   sending email until it syncs again.
-- Installations published before this version have no master until an
+- Circles published before this version have no master until an
   administrator chooses one; until then every device sends.
 
 **Move the master to another device**
 
-1. **Tools → Installation… → Devices**, select the new device, **Make
+1. **Tools → Circle… → Devices**, select the new device, **Make
    master…**, confirm. No device sends email until the handover is
    complete.
 2. On the new device, with an administrator profile open, the
    **Master handover** window opens by itself (or later from **Tools →
-   Installation… → Complete the handover…**). It shows the settings and
+   Circle… → Complete the handover…**). It shows the settings and
    asks you to:
    - **Test the email connection from this device**;
    - **Sign in** to the cloud backup storage with the same account;
    - type the **cloud backup passphrase** again (it is never copied
      between devices);
-   - optionally type the installation passphrase, to bring profiles no
+   - optionally type the circle passphrase, to bring profiles no
      device at hand holds.
 3. **Confirm**. The new device takes over when the old master hands over
    at its next sync. New profiles appear at the next start.
@@ -1313,14 +1313,14 @@ hours. Then remove the old one (below).
 
 When a device is lost, sold or given away:
 
-1. On the **master** (it holds every profile): **Tools → Installation…
+1. On the **master** (it holds every profile): **Tools → Circle…
    → Devices**, select the device, **Remove device…**.
-2. Choose a **new installation passphrase**. The removed device keeps
+2. Choose a **new circle passphrase**. The removed device keeps
    what it already has but receives nothing new; the profiles it held
    get new keys too.
 3. MedReminder offers to show a code. The other devices stop syncing
    until they get the new key: on each of them an administrator opens
-   **Tools → Installation… → Enter the new key…** and types the new
+   **Tools → Circle… → Enter the new key…** and types the new
    passphrase or the code. Changes made there meanwhile are kept.
 4. The new profile keys reach the other devices by themselves; a
    profile open at that moment asks to restart MedReminder.
@@ -1375,23 +1375,23 @@ MedReminder never sees your payment details.
 **I get no email.**
 Check, in order: *Test connection* in Settings → Email SMTP; the
 *Recipient* in Settings → Notifications; the **Email** channel ticked on
-the medicine; MedReminder running. With a shared installation, only the
-master sends: check **Tools → Installation… → Status**.
+the medicine; MedReminder running. With a shared circle, only the
+master sends: check **Tools → Circle… → Status**.
 
-**"This device is the master but has not synced the installation for
+**"This device is the master but has not synced the circle for
 more than 24 hours".**
 The master cannot reach the storage. Check the internet connection and
 the OneDrive / Google Drive sign-in, then **Sync now**.
 
-**"The installation key was changed on another device".**
-A device was removed. Open **Tools → Installation… → Enter the new
+**"The circle key was changed on another device".**
+A device was removed. Open **Tools → Circle… → Enter the new
 key…** and type the new passphrase, or a code shown by a device that
 already has it.
 
 **"A device was removed … this profile has a new key. Restart now?"**
 Answer yes: the profile takes its new key when MedReminder restarts.
 
-**"This device was removed from the installation".**
+**"This device was removed from the circle".**
 This device keeps its data but receives nothing more. To use it again,
 an administrator adds it as a new device.
 
@@ -1399,9 +1399,9 @@ an administrator adds it as a new device.
 The old master hands over at its next sync. If it is off for good, the
 new master takes over 25 hours after the old one was last seen.
 
-**"The sync group of this profile belongs to another installation".**
-The profile was published from another installation. Join that
-installation (**Join an existing installation…**).
+**"The sync group of this profile belongs to another circle".**
+The profile was published from another circle. Join that
+circle (**Join an existing circle…**).
 
 **I forgot a PIN.**
 An administrator clears it with **Tools → Manage profiles… → Change
@@ -1409,10 +1409,10 @@ PIN**. If nobody else can: close MedReminder, open
 `%LOCALAPPDATA%\MedReminder\profiles.json` with Notepad and, for that
 profile, delete the values of `PinHash` and `PinSalt` and set
 `PinIterations` to `0`. MedReminder records the change at the next
-start; with a shared installation it reaches the other devices.
+start; with a shared circle it reaches the other devices.
 
 **I forgot a passphrase.**
-Export, backup, sync and installation passphrases cannot be recovered.
+Export, backup, sync and circle passphrases cannot be recovered.
 You can still set new ones (new export, new cloud backup passphrase,
 *Change key and passphrase…*), but files encrypted with the old one
 stay unreadable.
@@ -1443,7 +1443,7 @@ backup and export files you place yourself.
 ├── cloud-backup.protected     cloud backup passphrase, encrypted by Windows
 ├── user.settings.json         language, reference country, update check, query logging
 ├── backups\                   copy kept when upgrading from a very old version
-├── household\                 shared installation (only when used)
+├── household\                 shared circle (only when used)
 ├── logs\medreminder-YYYYMMDD.log
 └── profiles\
     └── <profile>\

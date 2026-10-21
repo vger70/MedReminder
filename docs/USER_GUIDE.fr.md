@@ -43,7 +43,7 @@ dans l'application. L'architecture technique est décrite dans
 9. [Plusieurs ordinateurs](#devices)
    - [Quelle option me faut-il ?](#devices-choice) ·
      [Synchroniser un profil entre PC](#sync) ·
-     [Partager l'installation](#installation) ·
+     [Partager le cercle](#circle) ·
      [L'appareil maître](#master) ·
      [Appareil perdu ou remplacé](#remove-device)
 10. [Paramètres et usage quotidien](#settings)
@@ -65,10 +65,10 @@ dans l'application. L'architecture technique est décrite dans
      Saisis ton nom et, si tu veux, un code PIN. Ce premier profil est
      l'**administrateur** : il gère l'e-mail, la sauvegarde et les
      autres profils (voir [Plusieurs personnes](#profiles)).
-   - **Rejoindre une installation existante…** — seulement si
+   - **Rejoindre un cercle existant…** — seulement si
      MedReminder est déjà utilisé sur un autre de tes ordinateurs et que
      celui-ci doit en faire partie (voir
-     [Partager l'installation](#installation)).
+     [Partager le cercle](#circle)).
 3. La fenêtre principale s'ouvre. L'icône de MedReminder dans la zone de
    notification de Windows (près de l'horloge) reste visible tant que
    l'application tourne.
@@ -145,7 +145,7 @@ propose aucun médicament et aucune dose.
   qui filtre la liste par nom.
 - **Navigation** à gauche : *Médicaments* (cette liste), puis
   *Chronologie du traitement*, *Fiche de traitement*, *Demander une
-  ordonnance*, *Planifier le stock*, *Ordonnances*, *Échéances administratives*, *Installation* (administrateurs) et *Paramètres*, qui
+  ordonnance*, *Planifier le stock*, *Ordonnances*, *Échéances administratives*, *Cercle* (administrateurs) et *Paramètres*, qui
   s'ouvrent dans leur propre fenêtre. Dans une fenêtre étroite, elle
   n'affiche que les icônes.
 - **Résumé** au-dessus de la liste : combien de médicaments sont
@@ -187,7 +187,7 @@ quitter, fais un clic droit sur l'icône et choisis **Quitter**.
 | Vérifier le stock pour un voyage ou jusqu'au prochain passage à la pharmacie | **Traitement → Planifier le stock…** |
 | Configurer e-mail, langue, sauvegarde | **Outils → Paramètres…** |
 | Ajouter une personne | **Outils → Gérer les profils…** (administrateur) |
-| Utiliser MedReminder sur un autre PC | **Outils → Synchronisation…** et **Outils → Installation…** (administrateur) |
+| Utiliser MedReminder sur un autre PC | **Outils → Synchronisation…** et **Outils → Cercle…** (administrateur) |
 | Ouvrir le profil d'une autre personne | **Fichier → Changer de profil…** |
 
 ---
@@ -353,8 +353,8 @@ comme pays de référence.
   médicament fonctionne pareil, seulement sans lien avec le catalogue.
 - **Quel pays ?** **Outils → Paramètres… → Général → Pays de
   référence** (par défaut : Italie). Seul un administrateur peut le
-  changer : il s'applique à tous les profils et, avec une installation
-  partagée, à tous les appareils. Avec IT, ES ou FR, la liste contient
+  changer : il s'applique à tous les profils et, avec un cercle
+  partagé, à tous les appareils. Avec IT, ES ou FR, la liste contient
   aussi les médicaments UE ; avec **EU**, seulement ceux-ci. Un
   médicament peut apparaître deux fois (national et UE) : choisis celui
   qui correspond à ta boîte.
@@ -705,8 +705,8 @@ l'envoi.
   messagerie habituel.
 - **Envoyer…** — l'envoie avec le compte e-mail de MedReminder, après
   confirmation. Disponible quand l'e-mail est configuré et que l'**E-mail
-  du médecin** est renseigné (Paramètres → Notifications). Avec une
-  installation partagée, seul l'[appareil maître](#master) envoie : sur
+  du médecin** est renseigné (Paramètres → Notifications). Avec un
+  cercle partagé, seul l'[appareil maître](#master) envoie : sur
   les autres appareils, utilise **Ouvrir dans la messagerie**.
 
 MedReminder n'envoie jamais de demande tout seul.
@@ -735,7 +735,7 @@ Une ordonnance émise et non retirée est *À retirer* ; après son dernier
 jour de validité elle est *Expirée*. À partir de 3 jours avant ce jour,
 tu reçois un rappel, une fois, par les canaux de notification du
 médicament (l'e-mail seulement depuis l'[appareil maître](#master)
-si l'installation est partagée). Le rappel ne contient pas le code.
+si le cercle est partagé). Le rappel ne contient pas le code.
 
 Les ordonnances sont copiées sur les autres PC d'un profil synchronisé
 et incluses dans l'export chiffré.
@@ -846,7 +846,7 @@ indiquée sur vos documents.
 
 À partir du préavis, vous recevez un rappel par date, sur les canaux
 choisis (l'e-mail uniquement depuis l'[appareil maître](#master) quand
-l'installation est partagée) ; une échéance dépassée s'affiche en
+le cercle est partagé) ; une échéance dépassée s'affiche en
 rouge. **Faite** clôt une échéance unique ; une échéance récurrente
 passe à sa date suivante, comptée depuis la date précédente et non
 depuis le jour où vous l'avez marquée.
@@ -1054,7 +1054,7 @@ médicaments et ses destinataires.
 | Ses médicaments, stock, destinataires | oui | oui |
 | Compte e-mail, sauvegarde, pays de référence | oui | non |
 | Créer, renommer, supprimer des profils ; PIN de tous | oui | non |
-| Outils → Synchronisation… et Outils → Installation… | oui | non |
+| Outils → Synchronisation… et Outils → Cercle… | oui | non |
 
 Il y a toujours au moins un administrateur.
 
@@ -1101,7 +1101,7 @@ administrateur l'a oublié, voir [Problèmes et réponses](#faq).
 | **Sauvegarde automatique quotidienne** | Une copie de tous les profils, chaque jour, dans un dossier à toi | Paramètres → Sauvegarde / Restauration |
 | **Export chiffré** | Un seul fichier portable, pour passer à un nouveau PC ou le garder en lieu sûr | Paramètres → Sauvegarde / Restauration → Exporter toutes les données (chiffrées)… |
 | **Sauvegarde cloud** | Une copie chiffrée quotidienne dans OneDrive, Google Drive ou un dossier synchronisé | Paramètres → Sauvegarde / Restauration → Sauvegarde vers un dossier synchronisé |
-| **Synchronisation / Installation** | Plusieurs PC qui travaillent en continu sur les mêmes données | [Plusieurs ordinateurs](#devices) |
+| **Synchronisation / Cercle** | Plusieurs PC qui travaillent en continu sur les mêmes données | [Plusieurs ordinateurs](#devices) |
 
 Les paramètres de sauvegarde sont gérés par un administrateur.
 
@@ -1200,7 +1200,7 @@ Bon à savoir :
   corbeille.
 - C'est une **sauvegarde, pas une synchronisation** : pour travailler
   sur plusieurs PC, utilise la [synchronisation](#sync).
-- Avec une installation partagée, seul l'[appareil maître](#master) fait
+- Avec un cercle partagé, seul l'[appareil maître](#master) fait
   la sauvegarde cloud.
 
 ---
@@ -1216,7 +1216,7 @@ Bon à savoir :
 | Un seul PC | Rien à faire. Garde une [sauvegarde](#backup). |
 | Passer une fois à un nouveau PC | [Export chiffré](#backup) sur l'ancien PC, importation sur le nouveau. |
 | Le **même profil** sur deux PC ou plus, toujours à jour | [Synchronisation](#sync) (Outils → Synchronisation…). |
-| **Toute la configuration familiale** (profils, rôles, PIN, e-mail, sauvegarde) sur plusieurs PC, avec **un seul** PC qui envoie les e-mails | [Installation](#installation) (Outils → Installation…), en plus de la synchronisation. |
+| **Toute la configuration familiale** (profils, rôles, PIN, e-mail, sauvegarde) sur plusieurs PC, avec **un seul** PC qui envoie les e-mails | [Cercle](#circle) (Outils → Cercle…), en plus de la synchronisation. |
 
 Les deux options demandent un stockage accessible à tous les PC :
 **OneDrive**, **Google Drive** ou un **dossier partagé** (un dossier
@@ -1309,10 +1309,10 @@ autre PC, clique sur **Saisir la nouvelle clé…** et saisis la nouvelle
 phrase secrète ou un code d'association : ses modifications sont
 conservées, et MedReminder redémarre.
 
-<a id="installation"></a>
-### Partager l'installation
+<a id="circle"></a>
+### Partager le cercle
 
-La synchronisation fonctionne profil par profil. L'**installation**
+La synchronisation fonctionne profil par profil. Le **cercle**
 ajoute tout ce qui entoure les profils, pour que chaque PC soit
 configuré de la même façon :
 
@@ -1336,10 +1336,10 @@ alors que le PC familial les contient tous.
 
 **Étape 1 — Publier (sur le PC principal)**
 
-1. **Outils → Installation… → Publier l'installation…**.
+1. **Outils → Cercle… → Publier le cercle…**.
 2. Choisis le **même stockage** que celui des groupes de
    synchronisation des profils.
-3. Choisis une **phrase secrète de l'installation**. Elle permet à un
+3. Choisis une **phrase secrète du cercle**. Elle permet à un
    administrateur d'ajouter un appareil et de récupérer tous les profils
    quand aucun autre appareil n'est à portée de main. Réserve-la aux
    administrateurs ; elle ne peut pas être récupérée.
@@ -1348,48 +1348,48 @@ Ce PC devient l'[appareil maître](#master).
 
 **Étape 2 — Ajouter un appareil**
 
-1. Sur le PC principal : **Outils → Installation… → Appareils → Ajouter
+1. Sur le PC principal : **Outils → Cercle… → Appareils → Ajouter
    un appareil…**, coche les profils pour le nouvel appareil, puis
    **Afficher le code**.
 2. Sur le nouveau PC :
    - si MedReminder n'y a jamais été utilisé : dans la fenêtre de
-     bienvenue, choisis **Rejoindre une installation existante…** ;
-   - sinon : **Outils → Installation… → Rejoindre une installation
-     existante…**.
+     bienvenue, choisis **Rejoindre un cercle existant…** ;
+   - sinon : **Outils → Cercle… → Rejoindre un cercle
+     existant…**.
 3. Choisis **Avec un code** et saisis le code. Le code dure 10 minutes,
    ou jusqu'à la fermeture de sa fenêtre.
 4. La fenêtre liste chaque profil (« ajouté à cet appareil », « déjà sur
    cet appareil », …). MedReminder redémarre avec les nouveaux profils et
-   les paramètres de l'installation. Les profils déjà présents sur le
-   nouveau PC sont ajoutés à l'installation.
+   les paramètres du cercle. Les profils déjà présents sur le
+   nouveau PC sont ajoutés au cercle.
 
 *Aucun autre appareil à portée de main ?* Choisis **Avec la phrase
-secrète de l'installation**, sélectionne le stockage et saisis la phrase
+secrète du cercle**, sélectionne le stockage et saisis la phrase
 secrète. Un administrateur choisit ensuite son profil, saisit son PIN et
 sélectionne les profils pour cet appareil.
 
 **Au quotidien**
 
-- L'installation se synchronise toute seule toutes les 15 minutes.
+- Le cercle se synchronise tout seul toutes les 15 minutes.
 - Un changement de profil, rôle, PIN, compte e-mail, règles de
   sauvegarde cloud ou pays de référence fait sur un appareil atteint les
   autres.
 - Un profil créé plus tard : active sa synchronisation (Outils →
   Synchronisation…), puis attribue-le à d'autres appareils avec
   **Ajouter un appareil…** depuis un appareil qui le contient.
-- **Outils → Installation… → État** montre le stockage, le maître et
+- **Outils → Cercle… → État** montre le stockage, le maître et
   les actions éventuelles à faire.
 
 <a id="master"></a>
 ### L'appareil maître
 
-Dans une installation partagée, **un seul appareil, le maître**, envoie
+Dans un cercle partagé, **un seul appareil, le maître**, envoie
 tous les e-mails (alertes de stock bas et rappels de prise, de tous les
 profils qu'il contient, même ceux qui ne sont pas ouverts) et fait la
 sauvegarde cloud. Les autres appareils n'affichent leurs alertes qu'à
 l'écran. Ainsi chaque e-mail arrive une seule fois.
 
-- L'appareil qui publie l'installation est le maître. La section
+- L'appareil qui publie le cercle est le maître. La section
   **Appareils** l'indique dans la colonne **Rôle**.
 - Choisis comme maître un appareil **souvent allumé** et où MedReminder
   tourne.
@@ -1397,27 +1397,27 @@ l'écran. Ainsi chaque e-mail arrive une seule fois.
   messagerie, et **Tester la connexion** ne fonctionne que sur le
   maître. Les paramètres e-mail restent modifiables partout et
   atteignent tous les appareils.
-- Un maître qui n'a pas synchronisé l'installation depuis **24 heures**
+- Un maître qui n'a pas synchronisé le cercle depuis **24 heures**
   cesse d'envoyer des e-mails jusqu'à sa prochaine synchronisation.
-- Les installations publiées avant cette version n'ont pas de maître
+- Les cercles publiés avant cette version n'ont pas de maître
   tant qu'un administrateur n'en choisit pas un ; d'ici là, chaque
   appareil envoie.
 
 **Déplacer le maître vers un autre appareil**
 
-1. **Outils → Installation… → Appareils**, sélectionne le nouvel
+1. **Outils → Cercle… → Appareils**, sélectionne le nouvel
    appareil, **Définir comme maître…**, confirme. Aucun appareil
    n'envoie d'e-mail tant que le passage n'est pas terminé.
 2. Sur le nouvel appareil, avec un profil administrateur ouvert, la
    fenêtre **Passage du rôle de maître** s'ouvre toute seule (ou plus
-   tard depuis **Outils → Installation… → Terminer le passage de
+   tard depuis **Outils → Cercle… → Terminer le passage de
    relais…**). Elle montre les paramètres et te demande de :
    - **Tester la connexion e-mail depuis cet appareil** ;
    - te **connecter** au stockage de la sauvegarde cloud avec le même
      compte ;
    - saisir de nouveau la **phrase de passe de la sauvegarde cloud**
      (elle n'est jamais copiée entre appareils) ;
-   - saisir si besoin la phrase secrète de l'installation, pour apporter
+   - saisir si besoin la phrase secrète du cercle, pour apporter
      les profils qu'aucun appareil à portée de main ne contient.
 3. **Confirmer**. Le nouvel appareil prend le relais quand l'ancien
    maître cède le rôle à sa prochaine synchronisation. Les nouveaux
@@ -1434,14 +1434,14 @@ s'est pas manifesté depuis 25 heures. Retire ensuite l'ancien
 Quand un appareil est perdu, vendu ou donné :
 
 1. Sur le **maître** (il contient tous les profils) : **Outils →
-   Installation… → Appareils**, sélectionne l'appareil, **Retirer
+   Cercle… → Appareils**, sélectionne l'appareil, **Retirer
    l'appareil…**.
-2. Choisis une **nouvelle phrase secrète de l'installation**. L'appareil
+2. Choisis une **nouvelle phrase secrète du cercle**. L'appareil
    retiré garde ce qu'il a déjà mais ne reçoit rien de nouveau ; les
    profils qu'il contenait reçoivent aussi de nouvelles clés.
 3. MedReminder propose d'afficher un code. Les autres appareils cessent
    de se synchroniser jusqu'à ce qu'ils reçoivent la nouvelle clé : sur
-   chacun, un administrateur ouvre **Outils → Installation… → Saisir la
+   chacun, un administrateur ouvre **Outils → Cercle… → Saisir la
    nouvelle clé…** et saisit la nouvelle phrase secrète ou le code. Les
    modifications faites entre-temps sont conservées.
 4. Les nouvelles clés des profils arrivent toutes seules sur les autres
@@ -1507,16 +1507,16 @@ paiement.
 Vérifie dans l'ordre : *Tester la connexion* dans Paramètres → E-mail
 SMTP ; le *Destinataire* dans Paramètres → Notifications ; le canal
 **E-mail** coché sur le médicament ; MedReminder en cours d'exécution.
-Avec une installation partagée, seul le maître envoie : regarde
-**Outils → Installation… → État**.
+Avec un cercle partagé, seul le maître envoie : regarde
+**Outils → Cercle… → État**.
 
-**« Cet appareil est le maître mais n'a pas synchronisé l'installation
+**« Cet appareil est le maître mais n'a pas synchronisé le cercle
 depuis plus de 24 heures ».**
 Le maître n'atteint pas le stockage. Vérifie la connexion internet et la
 connexion à OneDrive / Google Drive, puis **Synchroniser maintenant**.
 
-**« La clé de l'installation a été changée sur un autre appareil ».**
-Un appareil a été retiré. Ouvre **Outils → Installation… → Saisir la
+**« La clé du cercle a été changée sur un autre appareil ».**
+Un appareil a été retiré. Ouvre **Outils → Cercle… → Saisir la
 nouvelle clé…** et saisis la nouvelle phrase secrète, ou un code
 affiché par un appareil qui l'a déjà.
 
@@ -1525,7 +1525,7 @@ maintenant ? »**
 Réponds oui : le profil prend sa nouvelle clé au redémarrage de
 MedReminder.
 
-**« Cet appareil a été retiré de l'installation ».**
+**« Cet appareil a été retiré du cercle ».**
 L'appareil garde ses données mais ne reçoit plus rien. Pour le
 réutiliser, un administrateur l'ajoute comme nouvel appareil.
 
@@ -1534,10 +1534,10 @@ L'ancien maître cède le rôle à sa prochaine synchronisation. S'il est
 éteint pour de bon, le nouveau maître prend le relais 25 heures après la
 dernière apparition de l'ancien.
 
-**« Le groupe de synchronisation de ce profil appartient à une autre
-installation ».**
-Le profil a été publié depuis une autre installation. Rejoins cette
-installation (**Rejoindre une installation existante…**).
+**« Le groupe de synchronisation de ce profil appartient à un
+autre cercle ».**
+Le profil a été publié depuis un autre cercle. Rejoins ce
+cercle (**Rejoindre un cercle existant…**).
 
 **J'ai oublié un PIN.**
 Un administrateur l'efface avec **Outils → Gérer les profils… → Changer
@@ -1545,12 +1545,12 @@ le PIN**. Si personne d'autre ne peut le faire : ferme MedReminder, ouvre
 `%LOCALAPPDATA%\MedReminder\profiles.json` avec le Bloc-notes et, pour ce
 profil, efface les valeurs de `PinHash` et `PinSalt` et mets
 `PinIterations` à `0`. MedReminder enregistre la modification au
-démarrage suivant ; avec une installation partagée, elle atteint les
+démarrage suivant ; avec un cercle partagé, elle atteint les
 autres appareils.
 
 **J'ai oublié une phrase de passe ou phrase secrète.**
-Celles de l'export, de la sauvegarde, de la synchronisation et de
-l'installation ne peuvent pas être récupérées. Tu peux en définir de
+Celles de l'export, de la sauvegarde, de la synchronisation et du
+cercle ne peuvent pas être récupérées. Tu peux en définir de
 nouvelles (nouvel export, nouvelle phrase de passe de sauvegarde cloud,
 *Changer la clé et la phrase secrète…*), mais les fichiers chiffrés avec
 l'ancienne restent illisibles.
@@ -1583,7 +1583,7 @@ toi-même.
 ├── cloud-backup.protected     phrase de passe de la sauvegarde cloud, chiffrée par Windows
 ├── user.settings.json         langue, pays de référence, vérification des mises à jour, journal des requêtes
 ├── backups\                   copie gardée lors de la mise à jour d'une très ancienne version
-├── household\                 installation partagée (seulement si utilisée)
+├── household\                 cercle partagé (seulement si utilisé)
 ├── logs\medreminder-AAAAMMJJ.log
 └── profiles\
     └── <profil>\

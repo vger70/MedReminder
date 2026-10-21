@@ -30,9 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #293 — Add leaving and dissolving a household to the shared core
+## PR #294 — Call the shared installation a circle in the interface and docs
 
 **Status:** open
+
+Link: [vger70/MedReminder#294](https://github.com/vger70/MedReminder/pull/294)
+Branch: `claude/rename-installation-circle`
+
+**Changed**
+- The shared set of devices is called a circle (Cerchia, Cercle,
+  Círculo, Kreis) in the UI dictionaries, the five user guides (anchor
+  `#circle`), the privacy policies (term only) and the README; texts
+  about installing the app and code names are unchanged.
+
+**Fixed**
+- Two household strings still in English in fr/es/de are translated.
+
+---
+
+## PR #293 — Add leaving and dissolving a household to the shared core
+
+**Status:** merged (2026-10-21)
 
 Link: [vger70/MedReminder#293](https://github.com/vger70/MedReminder/pull/293)
 Branch: `claude/household-leave`

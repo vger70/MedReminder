@@ -60,7 +60,7 @@ Sous Windows, la sauvegarde cloud et la synchronisation peuvent aussi utiliser l
 
 ## 5. Appareil photo
 
-Le lecteur de codes-barres peut utiliser la webcam Windows ou l'appareil photo Android lorsque vous choisissez de scanner. Les images sont traitées sur l'appareil et ne sont ni enregistrées ni envoyées par MedReminder. Sous Windows, la caméra s'éteint lorsqu'un code est lu, lorsque vous fermez la fenêtre de lecture ou après 30 secondes. Sous Android, son accès dépend de l'autorisation Android et du cycle de vie de l'application. Sous Android, l'appareil photo lit aussi le code QR affiché par un autre appareil lorsque vous rejoignez une installation ; il n'est utilisé que pendant que la page de lecture est ouverte, et le code n'est pas enregistré.
+Le lecteur de codes-barres peut utiliser la webcam Windows ou l'appareil photo Android lorsque vous choisissez de scanner. Les images sont traitées sur l'appareil et ne sont ni enregistrées ni envoyées par MedReminder. Sous Windows, la caméra s'éteint lorsqu'un code est lu, lorsque vous fermez la fenêtre de lecture ou après 30 secondes. Sous Android, son accès dépend de l'autorisation Android et du cycle de vie de l'application. Sous Android, l'appareil photo lit aussi le code QR affiché par un autre appareil lorsque vous rejoignez un cercle ; il n'est utilisé que pendant que la page de lecture est ouverte, et le code n'est pas enregistré.
 
 ## 6. Liens qui ouvrent le navigateur
 
