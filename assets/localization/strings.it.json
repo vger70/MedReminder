@@ -451,6 +451,7 @@
   "Ui.PrescriptionsDialog.Column.ValidUntil": "Valida fino al",
   "Ui.PrescriptionsDialog.Column.Packages": "Confezioni",
   "Ui.PrescriptionsDialog.Column.Code": "Codice",
+  "Ui.PrescriptionsDialog.Column.Code.Italy": "NRE/NRBE",
   "Ui.PrescriptionsDialog.Column.Collected": "Ritirata",
   "Ui.PrescriptionsDialog.Column.Dispensations": "Erogazioni",
   "Ui.PrescriptionsDialog.New": "Nuova…",
