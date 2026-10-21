@@ -976,6 +976,7 @@ public sealed class HouseholdSyncTests : IDisposable
         await c.ReconcileAsync();
         await c.Sync.RunAsync(CancellationToken.None);
         var group = GroupFile(CarlaGroup.GroupId);
+        var deviceC = await DeviceOf(c);
         // The first leave published ProfileRemoved, then stopped.
         await c.Log.AppendAsync([new ProfileRemoved("carla")], CancellationToken.None);
         await c.Sync.RunAsync(CancellationToken.None);
@@ -988,7 +989,7 @@ public sealed class HouseholdSyncTests : IDisposable
         File.Exists(group).Should().BeFalse();
         c.Leaving.Deleted.Should().Equal("carla");
         await a.Sync.RunAsync(CancellationToken.None);
-        (await a.Keyring.KeysAsync(CancellationToken.None)).HasLeft(await DeviceOf(c)).Should().BeTrue();
+        (await a.Keyring.KeysAsync(CancellationToken.None)).HasLeft(deviceC).Should().BeTrue();
     }
 
     [Fact]
