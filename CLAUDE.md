@@ -11,7 +11,7 @@
 ## 2. Language Policy
 - **EN-ONLY**: Code, comments, logs, exceptions, Markdown docs, commit messages, PRs, build scripts.
 - **EXCEPTIONS**: 
-  - Chat with user (Italian allowed).
+  - Chat with user: always Italian.
   - Shipped guides: `docs/USER_GUIDE.{it,fr,es,de}.md`.
   - Privacy policy translations: `PRIVACY.{it,fr,es,de}.md` (`PRIVACY.md` is the English reference).
   - UI dictionaries: `assets/localization/strings.<lang>.json` (en, it, fr, es, de).

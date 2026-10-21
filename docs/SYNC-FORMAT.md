@@ -433,6 +433,7 @@ of its own next to the profile groups, under the same sync root.
   ops/<generation>/<deviceId>/<seq>.mrs        household segments
   devices/<deviceId>.mrd                       device record (§5.2)
   pairing/<deviceId>.mrp                       pairing offer (§9.5), while a code is shown
+  dissolved.mrd                                tombstone of a dissolved household (§9.6)
 ```
 
 `household.json` is `{ "format": "MedReminder.Household",
@@ -481,6 +482,7 @@ published, with empty dependencies. Header `contentVersion` is 1.
 | `MasterActivated` | `electionId`, `deviceId` | last writer wins; counts only for the current election |
 | `MasterReleased` | `electionId` | last writer wins; the outgoing master stopped for that election |
 | `DeviceRemoved` | `deviceId` | the device's public key no longer counts; `profileId` is `device:<deviceId>` |
+| `DeviceLeft` | `deviceId` | the device left on its own: its public key no longer counts, its grants stay until a removal; `profileId` is `device:<deviceId>` |
 
 A removal changes the household key: `key.<v+1>.wrap` and
 `recovery.<v+1>.wrap` with the new household passphrase, then the
@@ -552,3 +554,22 @@ offer ends. A reader of `mrpair1` codes refuses an `mrpair2` code.
 A profile brought by an installation join is built from its profile
 group in the storage of the household: an installation keeps its
 profile groups and its household in one storage.
+
+### 9.6 Leaving and dissolving
+
+A device leaves with `DeviceLeft` in a segment of its own, after a
+segment with `ProfileRemoved` for each profile whose sync group no other
+device holds; those groups are deleted from the storage, then the
+device's record and pairing offer. A reader that does not know
+`DeviceLeft` stops reading that device's segments there, which loses
+nothing: the device writes no more. Leaving does not change the
+household key; an administrator removes the device (`DeviceRemoved`, a
+new key and passphrase) to do so.
+
+An administrator dissolves the household by writing `dissolved.mrd`
+first: an envelope (§4.2) sealed with the current household key, header
+`kind` `dissolved`, the household id as `groupId`, empty content. Every
+other file of the household and of its profile groups is then deleted;
+the tombstone stays. A device whose household key opens the tombstone
+publishes and applies nothing more and leaves the household; a
+tombstone that does not open is ignored.

@@ -25,7 +25,10 @@ public sealed record HouseholdSyncResult(
     // device publishes nothing until it has the new key (RekeyAsync).
     bool NewKeyRequired = false,
     // Step H5a: this device was removed from the household.
-    bool Removed = false);
+    bool Removed = false,
+    // Issue #88: an administrator dissolved the household; this device
+    // publishes and applies nothing more and leaves (LeaveHousehold).
+    bool Dissolved = false);
 
 // Step H5a: how a device that needs the new household key obtains it.
 public abstract record HouseholdKeySource
@@ -330,6 +333,12 @@ public sealed class HouseholdSync
         {
             var transport = _transports.Create(identity.Storage);
             var problems = new List<string>();
+            // Issue #88: nothing goes to a dissolved household, whose files
+            // are being deleted: a segment or record would bring them back.
+            if (await IsDissolvedAsync(transport, key, identity, cancellationToken))
+            {
+                return new HouseholdSyncResult(0, 0, 0, [], Dissolved: true);
+            }
             // Step H5a: after a removal the household runs on a new key and
             // generation; this device stops until it has them.
             if ((await SyncKeys.LatestUsableAsync(transport, identity.HouseholdId, cancellationToken))?.KeyVersion
@@ -440,7 +449,9 @@ public sealed class HouseholdSync
         var transport = _transports.Create(identity.Storage);
         var keys = await _household.KeysAsync(cancellationToken);
         if (keys.IsRemoved(deviceId)) throw new InvalidOperationException("The device is already removed.");
-        if (!keys.DevicePublicKeys.ContainsKey(deviceId)
+        // Issue #88: a device that left still knows the household key; its
+        // removal changes it.
+        if (!keys.DevicePublicKeys.ContainsKey(deviceId) && !keys.HasLeft(deviceId)
             && (await ListDevicesAsync(cancellationToken)).All(r => r.DeviceId != deviceId))
         {
             throw new InvalidOperationException("The device is not part of the household.");
@@ -678,6 +689,104 @@ public sealed class HouseholdSync
         }
         await _household.AppendAsync([new MasterActivated(election.ElectionId, me)], ct);
         return true;
+    }
+
+    // Issue #88: the tombstone of a dissolved household, sealed with its
+    // key so that only a device of the household can dissolve it. Written
+    // before any other file is deleted, it stays when the rest is gone.
+    public async Task MarkDissolvedAsync(CancellationToken cancellationToken)
+    {
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) throw new InvalidOperationException("The household is not published.");
+        var key = _keys.Load(identity.HouseholdId, identity.KeyVersion)
+            ?? throw new InvalidOperationException("The household key is not stored on this device.");
+        try
+        {
+            var header = Header(HouseholdFile.DissolvedKind, identity, identity.DeviceId, 0);
+            await _transports.Create(identity.Storage).WriteAsync(HouseholdFile.DissolvedPathOf(identity.HouseholdId),
+                SyncFileCodec.Seal(_cipher, key, header, []), cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    // Issue #88: true when the storage holds this household's tombstone
+    // and it opens with the key this device holds. A tombstone that does
+    // not open (another key version, an altered file) is not trusted.
+    private async Task<bool> IsDissolvedAsync(ISyncTransport transport, byte[] key, HouseholdIdentity identity,
+        CancellationToken ct)
+    {
+        if (await transport.ReadAsync(HouseholdFile.DissolvedPathOf(identity.HouseholdId), ct) is not { } file) return false;
+        try
+        {
+            var (header, _) = SyncFileCodec.Open(_cipher, key, file);
+            return header.Kind == HouseholdFile.DissolvedKind && header.GroupId == identity.HouseholdId;
+        }
+        catch (Exception ex) when (ex is CryptographicException or InvalidDataException or NotSupportedException
+                                       or System.Text.Json.JsonException)
+        {
+            return false;
+        }
+    }
+
+    // Issue #88: deletes every file under the given folders of the storage:
+    // profile groups (SyncLayout.Group) and, for a dissolution, the
+    // household's own folder except its tombstone. Idempotent, so an
+    // interrupted run is resumed by running it again. Returns the number
+    // of files deleted.
+    public async Task<int> DeleteRemoteAsync(IReadOnlyCollection<Guid> groupIds, bool household,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(groupIds);
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) throw new InvalidOperationException("The household is not published.");
+        var transport = _transports.Create(identity.Storage);
+        var folders = groupIds.Where(g => g != identity.HouseholdId).Distinct().ToList();
+        if (household) folders.Add(identity.HouseholdId);
+        var tombstone = HouseholdFile.DissolvedPathOf(identity.HouseholdId);
+        var deleted = 0;
+        foreach (var folder in folders)
+        {
+            foreach (var path in await transport.ListAsync(SyncLayout.Group(folder) + "/", cancellationToken))
+            {
+                if (path == tombstone) continue;
+                await transport.DeleteAsync(path, cancellationToken);
+                deleted++;
+            }
+        }
+        return deleted;
+    }
+
+    // Issue #88: removes this device's record and pairing offer from the
+    // household folder, the files only this device writes.
+    public async Task DeleteOwnFilesAsync(CancellationToken cancellationToken)
+    {
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) return;
+        var transport = _transports.Create(identity.Storage);
+        await transport.DeleteAsync(SyncLayout.Device(identity.HouseholdId, identity.DeviceId), cancellationToken);
+        await transport.DeleteAsync(SyncLayout.Pairing(identity.HouseholdId, identity.DeviceId), cancellationToken);
+    }
+
+    // Issue #88: this device is no longer in a household. The log and the
+    // household keys go; a new household of one starts under a new device
+    // id, since the household keeps DeviceLeft for the old one. The device
+    // key pair stays: it is published again only when a household is
+    // joined or published.
+    public async Task ResetLocalAsync(CancellationToken cancellationToken)
+    {
+        await HouseholdLog.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            await _store.ResetAsync(new HouseholdIdentity(Guid.NewGuid(), Guid.NewGuid(), 1), cancellationToken);
+        }
+        finally
+        {
+            HouseholdLog.Gate.Release();
+        }
+        _keys.Clear();
     }
 
     // Step H3d: the device records of the household, for the Devices list.

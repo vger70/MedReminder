@@ -54,6 +54,9 @@ public sealed class HouseholdKeyring
         var publicKey = HouseholdKeyWrap.PublicKeyOf(privateKey);
         var keys = await _household.KeysAsync(cancellationToken);
         if (keys.DevicePublicKeys.TryGetValue(identity.DeviceId, out var held) && held == publicKey) return false;
+        // Issue #88: a device that left publishes no key again while it
+        // finishes leaving.
+        if (keys.HasLeft(identity.DeviceId)) return false;
         await _household.AppendAsync([new DeviceKeyPublished(identity.DeviceId, publicKey)], cancellationToken);
         return true;
     }
