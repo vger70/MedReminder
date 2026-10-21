@@ -51,6 +51,24 @@ Branch: `claude/household-leave`
 **Changed**
 - `RemoveDeviceAsync` accepts a device that left, to change the
   household key after it.
+- Leaving requires an administrator profile and never deletes the open
+  profile. A device behind a new household key rekeys before leaving
+  (`HouseholdLeavePlan.NewKeyRequired`). With no current master, any
+  device may hand the role over or dissolve.
+- A household run lists the household folder once for the tombstone
+  and the key versions, and reads the tombstone only when present.
+
+**Fixed**
+- Removing a device that left with profiles only it held no longer
+  fails with `ProfilesNotHeldException`.
+- Removing a device or rekeying in a dissolved household is refused
+  (`HouseholdDissolvedException`) instead of reviving it.
+- A tombstone counts only when written by a current device, not one
+  that left or was removed.
+- A device that left writes no device record, grants or master
+  operations in later runs.
+- Dissolving deletes the sync groups of profiles removed earlier.
+- Leaving keeps the device name.
 
 **Docs**
 - `CLAUDE.md`: chat with the user always in Italian.

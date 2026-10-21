@@ -12,12 +12,13 @@ public enum HouseholdLeaveRole
     NotPublished,
     // Another device is or becomes the master: the device leaves.
     Member,
-    // The master, with other devices: it hands the role over or dissolves.
+    // The master, or any device while no current device is or becomes
+    // the master, with other devices: it hands the role over or dissolves.
     Master,
     // No other device: leaving dissolves the household.
     Alone,
-    // Dissolved or removed elsewhere, or behind a new key: only the local
-    // household and profiles are left; nothing is published.
+    // Dissolved or removed elsewhere: only the local household and
+    // profiles are left; nothing is published.
     Ended,
 }
 
@@ -41,12 +42,15 @@ public sealed record HouseholdLeaveProfile(string ProfileId, string DisplayName,
 
 public sealed record HouseholdLeaveDevice(Guid DeviceId, string Name);
 
-// Dissolved: the household was dissolved (Role is Ended).
+// Dissolved: the household was dissolved (Role is Ended). NewKeyRequired:
+// a device was removed and this device does not have the new household
+// key yet; it takes it (HouseholdSync.RekeyAsync) before it can leave.
 public sealed record HouseholdLeavePlan(
     HouseholdLeaveRole Role,
     IReadOnlyList<HouseholdLeaveDevice> OtherDevices,
     IReadOnlyList<HouseholdLeaveProfile> Profiles,
-    bool Dissolved = false);
+    bool Dissolved = false,
+    bool NewKeyRequired = false);
 
 // Profiles: the choice for each household profile on this device; a
 // profile left out is kept. NewMaster: the device that takes the master
@@ -56,7 +60,8 @@ public sealed record HouseholdLeaveRequest(
     IReadOnlyDictionary<string, HouseholdLeaveChoice> Profiles,
     Guid? NewMaster = null);
 
-// Leaving the household (issue #88 of vger70/medreminder-mobile):
+// Leaving the household (issue #88 of vger70/medreminder-mobile), from an
+// administrator profile, as for any change to the installation:
 //
 //   - a member records DeviceLeft. Its profiles that no other device holds
 //     are removed from the household (ProfileRemoved) and their sync
@@ -116,8 +121,9 @@ public sealed class LeaveHousehold
         return await PlanAfterAsync(identity.DeviceId, run, cancellationToken);
     }
 
-    // ProfileAdministrationException(NotAdmin) to hand over or dissolve
-    // from a user profile; InvalidOperationException when the kind does
+    // ProfileAdministrationException: NotAdmin from a user profile,
+    // ActiveProfile to delete the open profile. InvalidOperationException
+    // when this device needs the new household key first, the kind does
     // not fit the role (a master that just leaves, a member that
     // dissolves, a device alone that does not dissolve) or the new master
     // is not another device of the household.
@@ -164,7 +170,7 @@ public sealed class LeaveHousehold
             .Where(p => _registry.GetById(p.ProfileId) is not null)
             .Select(p => new HouseholdLeaveProfile(p.ProfileId, p.DisplayName, OnlyHere(keys, p.ProfileId, me)))
             .ToList();
-        if (run.Dissolved || run.Removed || run.NewKeyRequired)
+        if (run.Dissolved || run.Removed)
         {
             return new HouseholdLeavePlan(HouseholdLeaveRole.Ended, [], profiles, run.Dissolved);
         }
@@ -181,10 +187,11 @@ public sealed class LeaveHousehold
         var devices = others.Select(d => new HouseholdLeaveDevice(d, names.GetValueOrDefault(d, string.Empty)))
             .OrderBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
 
+        var master = await _household.MasterAsync(ct);
         var role = others.Count == 0 ? HouseholdLeaveRole.Alone
-            : IsMaster(await _household.MasterAsync(ct), me) ? HouseholdLeaveRole.Master
+            : IsMaster(master, keys, me) || !HasMaster(master, keys) ? HouseholdLeaveRole.Master
             : HouseholdLeaveRole.Member;
-        return new HouseholdLeavePlan(role, devices, profiles);
+        return new HouseholdLeavePlan(role, devices, profiles, NewKeyRequired: run.NewKeyRequired);
     }
 
     private bool OnlyHere(HouseholdKeys keys, string profileId, Guid me)
@@ -197,20 +204,31 @@ public sealed class LeaveHousehold
     }
 
     // The active master, or the device a pending election names with no
-    // master to fall back on. An outgoing master that already handed the
-    // role over leaves as a member.
-    private static bool IsMaster(HouseholdMaster master, Guid me)
+    // current master to fall back on (none, or it left or was removed). An
+    // outgoing master that already handed the role over leaves as a member.
+    private static bool IsMaster(HouseholdMaster master, HouseholdKeys keys, Guid me)
         => master.ActiveDevice == me
-           || (master.Pending && master.Election?.DeviceId == me && master.OutgoingDevice is null);
+           || (master.Pending && master.Election?.DeviceId == me
+               && (master.OutgoingDevice is not { } outgoing || !keys.DevicePublicKeys.ContainsKey(outgoing)));
+
+    // Whether a current device is the master, is still active under an
+    // older election, or is elected. Without one (no election, or its
+    // devices left), any device takes the master's choices, so that the
+    // household can still be handed over or dissolved.
+    private static bool HasMaster(HouseholdMaster master, HouseholdKeys keys)
+        => new[] { master.ActiveDevice, master.OutgoingDevice, master.Pending ? master.Election?.DeviceId : null }
+            .Any(d => d is { } device && keys.DevicePublicKeys.ContainsKey(device));
 
     private void Validate(HouseholdLeavePlan plan, HouseholdLeaveRequest request)
     {
+        // Nothing published now would reach the household (step H5a).
+        if (plan.NewKeyRequired) throw new InvalidOperationException("This device needs the new household key first.");
         switch (plan.Role)
         {
             case HouseholdLeaveRole.NotPublished:
                 throw new InvalidOperationException("The household is not published.");
             case HouseholdLeaveRole.Ended:
-                return;
+                break;
             case HouseholdLeaveRole.Alone when request.Kind != HouseholdLeaveKind.Dissolve:
                 throw new InvalidOperationException("A device alone in its household dissolves it.");
             case HouseholdLeaveRole.Master when request.Kind == HouseholdLeaveKind.Leave:
@@ -218,10 +236,16 @@ public sealed class LeaveHousehold
             case HouseholdLeaveRole.Member when request.Kind != HouseholdLeaveKind.Leave:
                 throw new InvalidOperationException("Only the master hands its role over or dissolves the household.");
         }
-        if (request.Kind is HouseholdLeaveKind.HandOver or HouseholdLeaveKind.Dissolve)
+        // Leaving can delete profiles and remove from the household those
+        // only this device holds: the guards of DeleteProfile. The open
+        // profile is an administrator and stays, so one always remains.
+        ProfileAdministration.RequireAdmin(_current);
+        if (request.Profiles.GetValueOrDefault(_current.Id) == HouseholdLeaveChoice.Delete
+            && plan.Profiles.Any(p => p.ProfileId == _current.Id))
         {
-            ProfileAdministration.RequireAdmin(_current);
+            throw new ProfileAdministrationException(ProfileAdministrationError.ActiveProfile);
         }
+        if (plan.Role == HouseholdLeaveRole.Ended) return;
         if (request.Kind == HouseholdLeaveKind.HandOver
             && (request.NewMaster is not { } next || plan.OtherDevices.All(d => d.DeviceId != next)))
         {
@@ -271,7 +295,12 @@ public sealed class LeaveHousehold
     {
         try
         {
-            var profiles = (await _household.ProfilesAsync(ct)).Select(p => p.ProfileId).ToList();
+            // Every group the household ever named, also of profiles
+            // removed before: they go with the household.
+            var keys = await _household.KeysAsync(ct);
+            var profiles = (await _household.ProfilesAsync(ct)).Select(p => p.ProfileId)
+                .Concat(keys.Escrows.Keys).Concat(keys.Grants.Keys.Select(g => g.ProfileId))
+                .Distinct(StringComparer.Ordinal).ToList();
             await _sync.DeleteRemoteAsync(await GroupsOfAsync(profiles, ct), household: true, ct);
         }
         catch (Exception ex) when (swallow && ex is not OperationCanceledException)

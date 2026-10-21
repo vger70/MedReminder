@@ -570,6 +570,9 @@ An administrator dissolves the household by writing `dissolved.mrd`
 first: an envelope (§4.2) sealed with the current household key, header
 `kind` `dissolved`, the household id as `groupId`, empty content. Every
 other file of the household and of its profile groups is then deleted;
-the tombstone stays. A device whose household key opens the tombstone
-publishes and applies nothing more and leaves the household; a
-tombstone that does not open is ignored.
+the tombstone stays. A device whose household key opens the tombstone,
+written by a device whose public key still counts (not one that left or
+was removed, which may still hold the key), publishes and applies
+nothing more and leaves the household; any other tombstone is ignored.
+The groups deleted are every group the household names in a grant or
+escrow, including those of profiles removed earlier.

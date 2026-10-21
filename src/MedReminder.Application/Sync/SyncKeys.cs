@@ -41,7 +41,11 @@ public static class SyncKeys
     // Versions of the key wraps present, highest first.
     public static async Task<IReadOnlyList<int>> KeyVersionsAsync(ISyncTransport transport, Guid groupId,
         CancellationToken cancellationToken)
-        => [.. (await transport.ListAsync(SyncLayout.Group(groupId) + "/", cancellationToken))
+        => KeyVersionsOf(await transport.ListAsync(SyncLayout.Group(groupId) + "/", cancellationToken));
+
+    // The same, from a listing of the group folder the caller already has.
+    public static IReadOnlyList<int> KeyVersionsOf(IEnumerable<string> listing)
+        => [.. listing
             .Select(p => SyncLayout.TryParseNumber(p, "key.", ".wrap", out var v) ? v : 0)
             .Where(v => v > 0)
             .Distinct()
@@ -52,9 +56,15 @@ public static class SyncKeys
     // writes must not strand devices on an unusable version.
     public static async Task<(int KeyVersion, int Generation)?> LatestUsableAsync(ISyncTransport transport,
         Guid groupId, CancellationToken cancellationToken)
+        => await LatestUsableAsync(transport, groupId,
+            await transport.ListAsync(SyncLayout.Group(groupId) + "/", cancellationToken), cancellationToken);
+
+    // The same, from a listing of the group folder the caller already has.
+    public static async Task<(int KeyVersion, int Generation)?> LatestUsableAsync(ISyncTransport transport,
+        Guid groupId, IReadOnlyList<string> listing, CancellationToken cancellationToken)
     {
         var cache = new Dictionary<int, int?>();
-        foreach (var version in await KeyVersionsAsync(transport, groupId, cancellationToken))
+        foreach (var version in KeyVersionsOf(listing))
         {
             var generation = await CurrentGenerationAsync(transport, groupId, version, cancellationToken, cache);
             if (generation > 0) return (version, generation);
