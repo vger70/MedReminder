@@ -52,6 +52,16 @@ Branch: `claude/household-leave`
 - `RemoveDeviceAsync` accepts a device that left, to change the
   household key after it.
 
+**Fixed**
+- A device that left can be removed even when it took profiles only it
+  held; removal and a new key refuse a dissolved household instead of
+  reviving it (`HouseholdDissolvedException`).
+- A device that left publishes nothing after `DeviceLeft`, and readers
+  stop at that segment; a tombstone counts only from a current device,
+  or when no usable key is left; dissolving deletes every group the
+  household names; leaving again finishes a leave that stopped part-way;
+  leaving keeps the device name and records the kept profiles again.
+
 **Docs**
 - `CLAUDE.md`: chat with the user always in Italian.
 
