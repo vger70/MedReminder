@@ -571,8 +571,14 @@ first: an envelope (§4.2) sealed with the current household key, header
 `kind` `dissolved`, the household id as `groupId`, empty content. Every
 other file of the household and of its profile groups is then deleted;
 the tombstone stays. A device whose household key opens the tombstone,
-written by a device whose public key still counts (not one that left or
-was removed, which may still hold the key), publishes and applies
-nothing more and leaves the household; any other tombstone is ignored.
-The groups deleted are every group the household names in a grant or
+with a header `deviceId` whose public key still counts (not one that
+left or was removed), publishes and applies nothing more and leaves the
+household. So does a device that cannot open it (an older key version)
+when no key version with a generation is left. Any other tombstone is
+ignored. The writer is not authenticated: a holder of the household key
+can name another device, as it can delete the household's files. The
+groups deleted are every group the household names in a grant or
 escrow, including those of profiles removed earlier.
+
+A reader stops reading a device's segments after the one holding its
+`DeviceLeft`; the device publishes nothing after it.

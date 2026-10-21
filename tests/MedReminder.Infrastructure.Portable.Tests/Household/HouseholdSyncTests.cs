@@ -749,7 +749,8 @@ public sealed class HouseholdSyncTests : IDisposable
         after.Storage.Should().BeNull();
         after.DeviceId.Should().NotBe(deviceB, "a device that left rejoins as a new device");
         after.DeviceName.Should().Be("PC B");
-        (await b.Log.ProfilesAsync(CancellationToken.None)).Should().BeEmpty();
+        (await b.Log.ProfilesAsync(CancellationToken.None)).Select(p => p.ProfileId).Should().Equal(["user"],
+            "the household of one holds the profile kept here");
         b.Leaving.Kept.Should().Equal("user");
         StorageFiles().Should().NotContain($"{householdId:N}/devices/{deviceB:N}.mrd");
 
@@ -932,20 +933,81 @@ public sealed class HouseholdSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task A_device_behind_a_new_key_takes_it_before_it_leaves()
+    public async Task A_removed_device_behind_the_new_key_leaves_here_and_takes_its_record_away()
     {
         var (a, b, c) = await ThreeDevicesAsync();
+        var deviceC = await DeviceOf(c);
+        var householdId = (await a.Store.EnsureCreatedAsync(CancellationToken.None)).HouseholdId;
+        await a.Sync.RemoveDeviceAsync(deviceC, NewPassphrase.ToCharArray(), "admin", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+
+        var plan = await c.Leave().PlanAsync(CancellationToken.None);
+        plan.Role.Should().Be(HouseholdLeaveRole.Ended);
+        plan.NewKeyRequired.Should().BeTrue("the device cannot tell it was removed without the new key");
+        StorageFiles().Should().Contain($"{householdId:N}/devices/{deviceC:N}.mrd");
+        await c.Leave().ExecuteAsync(new HouseholdLeaveRequest(HouseholdLeaveKind.Leave, KeepAll), CancellationToken.None);
+
+        (await c.Store.EnsureCreatedAsync(CancellationToken.None)).Storage.Should().BeNull();
+        StorageFiles().Should().NotContain($"{householdId:N}/devices/{deviceC:N}.mrd");
+        (await b.Leave().PlanAsync(CancellationToken.None)).NewKeyRequired.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Devices_on_an_older_key_find_a_household_dissolved_on_a_newer_one()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        var householdId = (await a.Store.EnsureCreatedAsync(CancellationToken.None)).HouseholdId;
         await a.Sync.RemoveDeviceAsync(await DeviceOf(c), NewPassphrase.ToCharArray(), "admin", CancellationToken.None,
             SyncFileFormatTests.FastKdf);
 
-        var plan = await b.Leave().PlanAsync(CancellationToken.None);
-        plan.NewKeyRequired.Should().BeTrue();
-        plan.Role.Should().Be(HouseholdLeaveRole.Member);
-        var leave = () => b.Leave().ExecuteAsync(new HouseholdLeaveRequest(HouseholdLeaveKind.Leave, KeepAll),
-            CancellationToken.None);
-        await leave.Should().ThrowAsync<InvalidOperationException>();
-        (await b.Store.EnsureCreatedAsync(CancellationToken.None)).Storage.Should().NotBeNull();
-        b.Leaving.Kept.Should().BeEmpty();
+        await a.Leave().ExecuteAsync(new HouseholdLeaveRequest(HouseholdLeaveKind.Dissolve, KeepAll), CancellationToken.None);
+
+        (await b.Sync.RunAsync(CancellationToken.None)).Dissolved.Should().BeTrue("B did not take the new key");
+        (await c.Sync.RunAsync(CancellationToken.None)).Dissolved.Should().BeTrue("C was removed");
+        StorageFiles().Should().Equal([$"{householdId:N}/dissolved.mrd"], "nothing goes to the dissolved household");
+    }
+
+    [Fact]
+    public async Task Leaving_again_finishes_a_leave_stopped_after_its_profiles_left_the_household()
+    {
+        var (a, _, c) = await ThreeDevicesAsync();
+        c.Registry.Add("carla", "Carla", ProfileRole.Admin);
+        c.GroupKeys.Keys["carla"] = CarlaGroup;
+        await c.ReconcileAsync();
+        await c.Sync.RunAsync(CancellationToken.None);
+        var group = GroupFile(CarlaGroup.GroupId);
+        // The first leave published ProfileRemoved, then stopped.
+        await c.Log.AppendAsync([new ProfileRemoved("carla")], CancellationToken.None);
+        await c.Sync.RunAsync(CancellationToken.None);
+
+        var plan = await c.Leave().PlanAsync(CancellationToken.None);
+        plan.Profiles.Should().Contain(new HouseholdLeaveProfile("carla", "Carla", OnlyHere: true));
+        await c.Leave().ExecuteAsync(new HouseholdLeaveRequest(HouseholdLeaveKind.Leave,
+            new Dictionary<string, HouseholdLeaveChoice> { ["carla"] = HouseholdLeaveChoice.Delete }), CancellationToken.None);
+
+        File.Exists(group).Should().BeFalse();
+        c.Leaving.Deleted.Should().Equal("carla");
+        await a.Sync.RunAsync(CancellationToken.None);
+        (await a.Keyring.KeysAsync(CancellationToken.None)).HasLeft(await DeviceOf(c)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Nothing_a_device_records_after_it_left_reaches_the_others()
+    {
+        var (a, b) = await PublishedAndJoinedAsync();
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        var deviceB = await DeviceOf(b);
+
+        await b.Log.AppendAsync([new DeviceLeft(deviceB)], CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+        await b.Log.AppendAsync([new ProfileRenamed("user", "Renamed after leaving")], CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        (await a.Keyring.KeysAsync(CancellationToken.None)).HasLeft(deviceB).Should().BeTrue();
+        (await a.Log.ProfilesAsync(CancellationToken.None)).Single(p => p.ProfileId == "user").DisplayName
+            .Should().Be("Bruno");
     }
 
     [Fact]
@@ -1069,7 +1131,7 @@ public sealed class HouseholdSyncTests : IDisposable
 
         public LeaveHousehold Leave(ICurrentProfile? current = null)
             => new(Store, Sync, Log, Elect(current), Registry, GroupKeys, Leaving, current ?? As("admin", ProfileRole.Admin),
-                NullLogger<LeaveHousehold>.Instance);
+                new ReconcileHousehold(Registry, Log, Settings, Credentials, Protector), NullLogger<LeaveHousehold>.Instance);
 
         public async Task ConfirmHandoverAsync()
         {
