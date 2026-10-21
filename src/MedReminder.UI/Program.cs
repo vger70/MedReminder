@@ -495,6 +495,8 @@ internal static class Program
         builder.Services.AddHostedService<MasterProfilesHostedService>();
         // Step H5b: the rotation of a profile's group after a device removal.
         builder.Services.AddScoped<IProfileGroupRotation, ProfileGroupRotation>();
+        // Issue #88 (medreminder-mobile): not offered on the desktop yet.
+        builder.Services.AddScoped<IHouseholdLeavingProfiles, HouseholdLeavingProfiles>();
 
         var catalogueEnabledRaw = builder.Configuration[
             MedReminder.Application.Catalogue.CatalogueFeatureOptions.SectionName + ":Enabled"];

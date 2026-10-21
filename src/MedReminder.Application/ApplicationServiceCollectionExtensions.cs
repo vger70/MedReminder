@@ -58,6 +58,9 @@ public static class ApplicationServiceCollectionExtensions
         // Step H5b: device removal with the rotation of its profile groups
         // (IProfileGroupRotation comes from the host).
         services.AddScoped<RemoveDevice>();
+        // Issue #88 (medreminder-mobile): leaving or dissolving the household
+        // (IHouseholdLeavingProfiles comes from the host).
+        services.AddScoped<LeaveHousehold>();
         services.AddScoped<SyncRegisters>();
         // B.1 Phase 3b: merge of operations from other devices.
         services.AddScoped<ApplyRemoteOperations>();

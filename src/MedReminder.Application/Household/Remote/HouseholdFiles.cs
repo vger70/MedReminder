@@ -17,6 +17,12 @@ public sealed record HouseholdFile(string Format, int FormatVersion, Guid Househ
 
     public static string PathOf(Guid householdId) => $"{householdId:N}/household.json";
 
+    // Issue #88: the tombstone of a dissolved household, an envelope (§4.2
+    // of docs/SYNC-FORMAT.md) with this header kind and empty content.
+    public const string DissolvedKind = "dissolved";
+
+    public static string DissolvedPathOf(Guid householdId) => $"{householdId:N}/dissolved.mrd";
+
     public static HouseholdFile Create(Guid householdId) => new(FormatName, SyncFileCodec.FormatVersion, householdId);
 
     public byte[] ToBytes() => JsonSerializer.SerializeToUtf8Bytes(this, SyncFileCodec.Json);

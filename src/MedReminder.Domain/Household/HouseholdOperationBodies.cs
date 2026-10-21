@@ -103,6 +103,15 @@ public sealed record ProfileKeyEscrowed(
 public sealed record DeviceRemoved(Guid DeviceId)
     : HouseholdOperationBody(HouseholdRegisters.DeviceEntity(DeviceId));
 
+// Issue #88 (vger70/medreminder-mobile): a device that left the household
+// on its own. Like a removal, its public key no longer counts and nothing
+// new is granted to it; unlike a removal, the household key is not
+// changed, so the device still knows it until an administrator removes it
+// (DeviceRemoved, a new key and passphrase). A device that left never comes
+// back under the same id: it rejoins as a new device.
+public sealed record DeviceLeft(Guid DeviceId)
+    : HouseholdOperationBody(HouseholdRegisters.DeviceEntity(DeviceId));
+
 // Step H4a: the master device (docs/analysis/
 // ANALYSIS-HOUSEHOLD-MASTER-DEVICE.md §7). An administrator elects a device;
 // the elected device activates the election when the outgoing master has
