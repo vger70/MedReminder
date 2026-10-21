@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #292 — Move prescription code buttons under the NRE field and widen the dialog
+
+**Status:** open
+
+Link: [vger70/MedReminder#292](https://github.com/vger70/MedReminder/pull/292)
+Branch: `claude/gracious-mccarthy-794m64`
+
+**Fixed**
+- The prescription edit dialog cut the NRE/NRBE code to a few
+  characters: Scan and Paste NRE now sit under the field, which spans
+  the whole field column, and the dialog opens wider (640 x 720) so the
+  dispensation buttons are no longer cut at the right edge
+  (`src/MedReminder.UI/Forms/PrescriptionEditDialog.cs`).
+
+---
+
 ## PR #291 — Name the prescription code column NRE/NRBE for Italy
 
 **Status:** open
