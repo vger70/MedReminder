@@ -88,6 +88,28 @@ public class HouseholdRegistersTests
         HouseholdRegisters.Settings(versions).Should().BeEmpty();
     }
 
+    // Issue #88: a device that left keeps its grants until a removal
+    // revokes them, but has no public key to grant to.
+    [Fact]
+    public void A_device_that_left_has_no_public_key_and_keeps_its_grants()
+    {
+        var group = Guid.Parse("0000000000000000000000000000000c");
+        var versions = Versions(
+            (new DeviceKeyPublished(DeviceA, "keyA"), new HybridTimestamp(1, 0, DeviceA)),
+            (new DeviceKeyPublished(DeviceB, "keyB"), new HybridTimestamp(1, 0, DeviceB)),
+            (new ProfileKeyGranted("p", DeviceB, group, 3, "1.w.b"), new HybridTimestamp(2, 0, DeviceA)),
+            (new DeviceLeft(DeviceB), new HybridTimestamp(3, 0, DeviceB)),
+            (new DeviceKeyPublished(DeviceB, "keyB"), new HybridTimestamp(4, 0, DeviceB))).ToList();
+
+        var keys = HouseholdRegisters.Keys(versions);
+
+        keys.DevicePublicKeys.Keys.Should().Equal(DeviceA);
+        keys.HasLeft(DeviceB).Should().BeTrue();
+        keys.HasLeft(DeviceA).Should().BeFalse();
+        keys.IsRemoved(DeviceB).Should().BeFalse();
+        keys.Grants.Keys.Should().Equal(("p", DeviceB));
+    }
+
     [Fact]
     public void A_pin_value_needs_hash_salt_and_iterations()
     {

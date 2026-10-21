@@ -31,6 +31,7 @@ public class HouseholdOperationCodecTests
         new MasterActivated(Guid.Parse("0e0e0e0e000000000000000000000001"), Guid.Parse("0a0a0a0a000000000000000000000002")),
         new MasterReleased(Guid.Parse("0e0e0e0e000000000000000000000001")),
         new DeviceRemoved(Guid.Parse("0a0a0a0a000000000000000000000002")),
+        new DeviceLeft(Guid.Parse("0a0a0a0a000000000000000000000002")),
     };
 
     [Theory]

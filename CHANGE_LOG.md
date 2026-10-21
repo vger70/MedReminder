@@ -48,6 +48,43 @@ Branch: `claude/rename-installation-circle`
 
 ---
 
+## PR #293 — Add leaving and dissolving a household to the shared core
+
+**Status:** merged (2026-10-21)
+
+Link: [vger70/MedReminder#293](https://github.com/vger70/MedReminder/pull/293)
+Branch: `claude/household-leave`
+
+**Added**
+- `LeaveHousehold` (`src/MedReminder.Application/Household/LeaveHousehold.cs`):
+  a member leaves with the new `DeviceLeft` operation, the master hands
+  its role over or dissolves, a device alone dissolves; profiles only
+  this device holds leave the household with their sync groups. Local
+  profiles are kept with sync off or deleted through the new host port
+  `IHouseholdLeavingProfiles` (medreminder-mobile issue #88).
+- Dissolution tombstone `<householdId>/dissolved.mrd`, sealed with the
+  household key; other devices see `HouseholdSyncResult.Dissolved` and
+  stop writing (`docs/SYNC-FORMAT.md` §9.6).
+
+**Changed**
+- `RemoveDeviceAsync` accepts a device that left, to change the
+  household key after it.
+
+**Fixed**
+- A device that left can be removed even when it took profiles only it
+  held; removal and a new key refuse a dissolved household instead of
+  reviving it (`HouseholdDissolvedException`).
+- A device that left publishes nothing after `DeviceLeft`, and readers
+  stop at that segment; a tombstone counts only from a current device,
+  or when no usable key is left; dissolving deletes every group the
+  household names; leaving again finishes a leave that stopped part-way;
+  leaving keeps the device name and records the kept profiles again.
+
+**Docs**
+- `CLAUDE.md`: chat with the user always in Italian.
+
+---
+
 ## PR #292 — Move prescription code buttons under the NRE field and widen the dialog
 
 **Status:** open

@@ -35,6 +35,7 @@ public static class HouseholdRegisters
     public const string Role = "Role";
     public const string Pin = "Pin";
     public const string Removed = "Removed";
+    public const string Left = "Left";
 
     public static IReadOnlyList<(string Register, string? Value)> WritesOf(HouseholdOperationBody body) => body switch
     {
@@ -57,6 +58,7 @@ public static class HouseholdRegisters
         ProfileKeyRevoked r => [(GrantRegister(r.DeviceId), null)],
         ProfileKeyEscrowed e => [(Escrow, Wrapped(e.KeyVersion, e.GroupId, e.WrappedKey))],
         DeviceRemoved => [(Removed, "true")],
+        DeviceLeft => [(Left, "true")],
         MasterElected m => [(Election, $"{m.ElectionId:N}:{m.DeviceId:N}:{m.Kind}")],
         MasterActivated a => [(Activation, $"{a.ElectionId:N}:{a.DeviceId:N}")],
         MasterReleased r => [(Release, r.ElectionId.ToString("N"))],
@@ -109,6 +111,7 @@ public static class HouseholdRegisters
             .ToDictionary(g => g.Key, g => g.MaxBy(v => v.Version).Value);
         var devices = new Dictionary<Guid, string>();
         var removed = new HashSet<Guid>();
+        var left = new HashSet<Guid>();
         var recoveryGrants = new Dictionary<Guid, HouseholdWrappedKey>();
         var householdKeyGrants = new Dictionary<Guid, HouseholdWrappedKey>();
         HouseholdWrappedKey? recovery = null;
@@ -126,6 +129,11 @@ public static class HouseholdRegisters
                      && Guid.TryParseExact(entity["device:".Length..], "N", out var gone))
             {
                 removed.Add(gone);
+            }
+            else if (entity.StartsWith("device:", StringComparison.Ordinal) && register == Left
+                     && Guid.TryParseExact(entity["device:".Length..], "N", out var departed))
+            {
+                left.Add(departed);
             }
             else if (entity == Recovery && register == PublicKey)
             {
@@ -154,15 +162,16 @@ public static class HouseholdRegisters
                 grants[(entity, grantee)] = grant;
             }
         }
-        // Step H5a: a removed device has no public key to grant to.
-        foreach (var gone in removed)
+        // Step H5a: a removed device has no public key to grant to; nor
+        // has a device that left (issue #88).
+        foreach (var gone in removed.Concat(left))
         {
             devices.Remove(gone);
             recoveryGrants.Remove(gone);
             householdKeyGrants.Remove(gone);
         }
         return new HouseholdKeys(devices, recovery, escrows, grants, removed)
-            { RecoveryGrants = recoveryGrants, HouseholdKeyGrants = householdKeyGrants };
+            { RecoveryGrants = recoveryGrants, HouseholdKeyGrants = householdKeyGrants, LeftDevices = left };
     }
 
     // Step H4a: the master registers.
@@ -260,5 +269,10 @@ public sealed record HouseholdKeys(
     public IReadOnlyDictionary<Guid, HouseholdWrappedKey> HouseholdKeyGrants { get; init; }
         = new Dictionary<Guid, HouseholdWrappedKey>();
 
+    // Issue #88: devices that left on their own (a later removal keeps them).
+    public IReadOnlySet<Guid> LeftDevices { get; init; } = new HashSet<Guid>();
+
     public bool IsRemoved(Guid deviceId) => RemovedDevices?.Contains(deviceId) == true;
+
+    public bool HasLeft(Guid deviceId) => LeftDevices.Contains(deviceId);
 }

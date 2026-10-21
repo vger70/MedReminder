@@ -29,6 +29,7 @@ public static class HouseholdOperationCodec
         ("MasterActivated", typeof(MasterActivated)),
         ("MasterReleased", typeof(MasterReleased)),
         ("DeviceRemoved", typeof(DeviceRemoved)),
+        ("DeviceLeft", typeof(DeviceLeft)),
     ];
 
     private static readonly Dictionary<Type, string> NameByType =
