@@ -42,7 +42,7 @@ de la aplicación. La arquitectura técnica se describe en
 9. [Varios ordenadores](#devices)
    - [¿Qué opción necesito?](#devices-choice) ·
      [Sincronizar un perfil entre PC](#sync) ·
-     [Compartir la instalación](#installation) ·
+     [Compartir el círculo](#circle) ·
      [El dispositivo principal](#master) ·
      [Dispositivo perdido o sustituido](#remove-device)
 10. [Configuración y uso diario](#settings)
@@ -64,9 +64,9 @@ de la aplicación. La arquitectura técnica se describe en
      tu nombre y, si quieres, un PIN. Este primer perfil es el
      **administrador**: gestiona el correo, la copia de seguridad y los
      demás perfiles (ver [Varias personas](#profiles)).
-   - **Unirse a una instalación existente…** — solo si MedReminder ya se
+   - **Unirse a un círculo existente…** — solo si MedReminder ya se
      usa en otro ordenador tuyo y quieres que este también forme parte
-     (ver [Compartir la instalación](#installation)).
+     (ver [Compartir el círculo](#circle)).
 3. Se abre la ventana principal. El icono de MedReminder en el área de
    notificación de Windows (junto al reloj) sigue visible mientras la
    aplicación está en marcha.
@@ -138,7 +138,7 @@ medicamentos ni dosis.
   que filtra la lista por nombre.
 - **Navegación** a la izquierda: *Medicamentos* (esta lista), luego
   *Cronología de la terapia*, *Ficha de terapia*, *Solicitar receta*, *Planificar stock*, *Recetas*, *Vencimientos administrativos*,
-  *Instalación* (administradores) y *Configuración*, que se abren en su
+  *Círculo* (administradores) y *Configuración*, que se abren en su
   propia ventana. Si la ventana es estrecha, solo muestra los iconos.
 - **Resumen** encima de la lista: cuántos medicamentos están
   *Agotados*, *Por agotarse*, *Suspendidos*, y el total. Haz clic en un
@@ -179,7 +179,7 @@ clic derecho en el icono y elige **Salir**.
 | Comprobar el stock para un viaje o hasta la próxima visita a la farmacia | **Terapia → Planificar stock…** |
 | Configurar correo, idioma, copia de seguridad | **Herramientas → Configuración…** |
 | Añadir una persona | **Herramientas → Gestionar perfiles…** (administrador) |
-| Usar MedReminder en otro PC | **Herramientas → Sincronización…** y **Herramientas → Instalación…** (administrador) |
+| Usar MedReminder en otro PC | **Herramientas → Sincronización…** y **Herramientas → Círculo…** (administrador) |
 | Abrir el perfil de otra persona | **Archivo → Cambiar perfil…** |
 
 ---
@@ -338,8 +338,8 @@ referencia.
   funciona igual, solo que sin vínculo con el catálogo.
 - **¿Qué país?** **Herramientas → Configuración… → General → País de
   referencia** (por defecto: Italia). Solo un administrador puede
-  cambiarlo: se aplica a todos los perfiles y, con una instalación
-  compartida, a todos los dispositivos. Con IT, ES o FR la lista
+  cambiarlo: se aplica a todos los perfiles y, con un círculo
+  compartido, a todos los dispositivos. Con IT, ES o FR la lista
   contiene también los medicamentos de la UE; con **EU**, solo esos. Un
   medicamento puede aparecer dos veces (nacional y UE): elige el que
   coincide con tu caja.
@@ -680,7 +680,7 @@ Puedes modificarlo todo antes de enviarlo.
 - **Enviar…** — lo envía con la cuenta de correo de MedReminder, tras
   una confirmación. Disponible cuando el correo está configurado y el
   **E-mail del médico** está rellenado (Configuración →
-  Notificaciones). Con una instalación compartida solo envía el
+  Notificaciones). Con un círculo compartido solo envía el
   [dispositivo principal](#master): en los demás dispositivos usa
   **Abrir en el programa de correo**.
 
@@ -708,8 +708,8 @@ están por retirar. Para cada una puedes anotar, cuando los conozcas:
 Una receta emitida y no retirada está *Por retirar*; tras su último día
 de validez está *Caducada*. Desde 3 días antes de ese día recibes un
 recordatorio, una vez, por los canales de notificación del medicamento
-(el correo solo desde el [dispositivo principal](#master) si la
-instalación es compartida). El recordatorio no incluye el código.
+(el correo solo desde el [dispositivo principal](#master) si el
+círculo es compartido). El recordatorio no incluye el código.
 
 Las recetas se copian a los otros PC de un perfil sincronizado y se
 incluyen en la exportación cifrada.
@@ -816,7 +816,7 @@ figura en tus documentos.
 
 Desde la antelación fijada recibes un recordatorio por fecha, por los
 canales elegidos (el correo solo desde el [dispositivo maestro](#master)
-cuando la instalación es compartida); un vencimiento pasado se muestra
+cuando el círculo es compartido); un vencimiento pasado se muestra
 en rojo. **Hecho** cierra un vencimiento único; uno recurrente pasa a
 su fecha siguiente, contada desde la fecha anterior y no desde el día
 en que lo marcaste.
@@ -1020,7 +1020,7 @@ sus medicamentos y sus destinatarios.
 | Sus medicamentos, stock, destinatarios | sí | sí |
 | Cuenta de correo, copia de seguridad, país de referencia | sí | no |
 | Crear, renombrar, eliminar perfiles; PIN de todos | sí | no |
-| Herramientas → Sincronización… y Herramientas → Instalación… | sí | no |
+| Herramientas → Sincronización… y Herramientas → Círculo… | sí | no |
 
 Siempre hay al menos un administrador.
 
@@ -1066,7 +1066,7 @@ administrador, ver [Problemas y respuestas](#faq).
 | **Copia de seguridad automática diaria** | Una copia de todos los perfiles, cada día, en una carpeta tuya | Configuración → Copia de seguridad / Restaurar |
 | **Exportación cifrada** | Un único archivo portátil, para pasar a un PC nuevo o guardarlo | Configuración → Copia de seguridad / Restaurar → Exportar todos los datos (cifrados)… |
 | **Copia en la nube** | Una copia cifrada diaria en OneDrive, Google Drive o una carpeta sincronizada | Configuración → Copia de seguridad / Restaurar → Copia de seguridad a carpeta sincronizada |
-| **Sincronización / Instalación** | Varios PC trabajando continuamente sobre los mismos datos | [Varios ordenadores](#devices) |
+| **Sincronización / Círculo** | Varios PC trabajando continuamente sobre los mismos datos | [Varios ordenadores](#devices) |
 
 La configuración de copia de seguridad la gestiona un administrador.
 
@@ -1163,7 +1163,7 @@ Conviene saber:
   papelera.
 - Es una **copia de seguridad, no una sincronización**: para trabajar en
   varios PC usa la [sincronización](#sync).
-- Con una instalación compartida, la copia en la nube la hace solo el
+- Con un círculo compartido, la copia en la nube la hace solo el
   [dispositivo principal](#master).
 
 ---
@@ -1179,7 +1179,7 @@ Conviene saber:
 | Un solo PC | Nada que hacer. Ten una [copia de seguridad](#backup). |
 | Pasar una vez a un PC nuevo | [Exportación cifrada](#backup) en el PC antiguo, importación en el nuevo. |
 | El **mismo perfil** en dos o más PC, siempre al día | [Sincronización](#sync) (Herramientas → Sincronización…). |
-| **Toda la configuración familiar** (perfiles, roles, PIN, correo, copias) en varios PC, con **un solo** PC que envía los correos | [Instalación](#installation) (Herramientas → Instalación…), además de la sincronización. |
+| **Toda la configuración familiar** (perfiles, roles, PIN, correo, copias) en varios PC, con **un solo** PC que envía los correos | [Círculo](#circle) (Herramientas → Círculo…), además de la sincronización. |
 
 Ambas opciones necesitan un almacenamiento al que lleguen todos los PC:
 **OneDrive**, **Google Drive** o una **carpeta compartida** (una carpeta
@@ -1266,10 +1266,10 @@ cada uno de los demás PC haz clic en **Introducir la nueva clave…** y
 escribe la nueva frase o un código de vinculación: sus cambios se
 conservan y MedReminder se reinicia.
 
-<a id="installation"></a>
-### Compartir la instalación
+<a id="circle"></a>
+### Compartir el círculo
 
-La sincronización funciona perfil por perfil. La **instalación** añade
+La sincronización funciona perfil por perfil. El **círculo** añade
 todo lo que rodea a los perfiles, para que cada PC esté configurado
 igual:
 
@@ -1293,10 +1293,10 @@ el PC familiar los contiene todos.
 
 **Paso 1 — Publicar (en el PC principal)**
 
-1. **Herramientas → Instalación… → Publicar la instalación…**.
+1. **Herramientas → Círculo… → Publicar el círculo…**.
 2. Elige el **mismo almacenamiento** que contiene los grupos de
    sincronización de los perfiles.
-3. Elige una **frase de contraseña de la instalación**. Permite a un
+3. Elige una **frase de contraseña del círculo**. Permite a un
    administrador añadir un dispositivo y recuperar todos los perfiles
    cuando no hay ningún otro dispositivo a mano. Resérvala para los
    administradores; no se puede recuperar.
@@ -1305,48 +1305,48 @@ Este PC pasa a ser el [dispositivo principal](#master).
 
 **Paso 2 — Añadir un dispositivo**
 
-1. En el PC principal: **Herramientas → Instalación… → Dispositivos →
+1. En el PC principal: **Herramientas → Círculo… → Dispositivos →
    Añadir un dispositivo…**, marca los perfiles para el nuevo
    dispositivo y luego **Mostrar el código**.
 2. En el PC nuevo:
    - si MedReminder nunca se ha usado ahí: en la ventana de bienvenida
-     elige **Unirse a una instalación existente…**;
-   - si no: **Herramientas → Instalación… → Unirse a una instalación
+     elige **Unirse a un círculo existente…**;
+   - si no: **Herramientas → Círculo… → Unirse a un círculo
      existente…**.
 3. Elige **Con un código** y escribe el código. El código dura 10
    minutos, o hasta que se cierra su ventana.
 4. La ventana lista cada perfil ("añadido a este dispositivo", "ya está
    en este dispositivo", …). MedReminder se reinicia con los perfiles
-   nuevos y la configuración de la instalación. Los perfiles que ya
-   había en el PC nuevo se añaden a la instalación.
+   nuevos y la configuración del círculo. Los perfiles que ya
+   había en el PC nuevo se añaden al círculo.
 
-*¿No hay otro dispositivo a mano?* Elige **Con la frase de contraseña de
-la instalación**, selecciona el almacenamiento y escribe la frase. Un
+*¿No hay otro dispositivo a mano?* Elige **Con la frase de contraseña del
+círculo**, selecciona el almacenamiento y escribe la frase. Un
 administrador elige luego su perfil, escribe su PIN y selecciona los
 perfiles para este dispositivo.
 
 **Uso diario**
 
-- La instalación se sincroniza sola cada 15 minutos.
+- El círculo se sincroniza solo cada 15 minutos.
 - Un cambio de perfil, rol, PIN, cuenta de correo, reglas de la copia en
   la nube o país de referencia hecho en un dispositivo llega a los
   demás.
 - Un perfil creado más tarde: activa su sincronización (Herramientas →
   Sincronización…) y luego asígnalo a otros dispositivos con **Añadir un
   dispositivo…** desde un dispositivo que lo contenga.
-- **Herramientas → Instalación… → Estado** muestra el almacenamiento, el
+- **Herramientas → Círculo… → Estado** muestra el almacenamiento, el
   dispositivo principal y las acciones pendientes.
 
 <a id="master"></a>
 ### El dispositivo principal
 
-En una instalación compartida **un solo dispositivo, el principal**,
+En un círculo compartido **un solo dispositivo, el principal**,
 envía todos los correos (avisos de stock bajo y recordatorios de dosis,
 de todos los perfiles que contiene, también los que no están abiertos)
 y hace la copia en la nube. Los demás dispositivos muestran sus avisos
 solo en pantalla. Así cada correo llega una sola vez.
 
-- El dispositivo que publica la instalación es el principal. La sección
+- El dispositivo que publica el círculo es el principal. La sección
   **Dispositivos** lo indica en la columna **Función**.
 - Elige como principal un dispositivo **que esté encendido a menudo** y
   con MedReminder en marcha.
@@ -1354,27 +1354,27 @@ solo en pantalla. Así cada correo llega una sola vez.
   programa de correo, y **Probar conexión** solo funciona en el
   principal. La configuración de correo se puede editar en todos y llega
   a todos los dispositivos.
-- Un principal que no sincroniza la instalación desde hace **24 horas**
+- Un principal que no sincroniza el círculo desde hace **24 horas**
   deja de enviar correos hasta que vuelva a sincronizar.
-- Las instalaciones publicadas antes de esta versión no tienen principal
+- Los círculos publicados antes de esta versión no tienen principal
   hasta que un administrador elige uno; mientras tanto, envía cada
   dispositivo.
 
 **Pasar el principal a otro dispositivo**
 
-1. **Herramientas → Instalación… → Dispositivos**, selecciona el nuevo
+1. **Herramientas → Círculo… → Dispositivos**, selecciona el nuevo
    dispositivo, **Hacer principal…**, confirma. Ningún dispositivo envía
    correo hasta que se completa el relevo.
 2. En el nuevo dispositivo, con un perfil administrador abierto, la
    ventana **Relevo del dispositivo principal** se abre sola (o más tarde
-   desde **Herramientas → Instalación… → Completar el relevo…**).
+   desde **Herramientas → Círculo… → Completar el relevo…**).
    Muestra la configuración y te pide:
    - **Probar la conexión de correo desde este dispositivo**;
    - **iniciar sesión** en el almacenamiento de la copia en la nube con
      la misma cuenta;
    - volver a escribir la **frase de contraseña de la copia en la nube**
      (nunca se copia entre dispositivos);
-   - opcionalmente escribir la frase de la instalación, para traer los
+   - opcionalmente escribir la frase del círculo, para traer los
      perfiles que ningún dispositivo a mano contiene.
 3. **Confirmar**. El nuevo dispositivo toma el relevo cuando el antiguo
    principal cede el rol en su siguiente sincronización. Los perfiles
@@ -1390,14 +1390,14 @@ lleva 25 horas sin aparecer. Después quita el antiguo (abajo).
 Cuando un dispositivo se pierde, se vende o se regala:
 
 1. En el **principal** (contiene todos los perfiles): **Herramientas →
-   Instalación… → Dispositivos**, selecciona el dispositivo, **Quitar
+   Círculo… → Dispositivos**, selecciona el dispositivo, **Quitar
    dispositivo…**.
-2. Elige una **nueva frase de contraseña de la instalación**. El
+2. Elige una **nueva frase de contraseña del círculo**. El
    dispositivo quitado conserva lo que ya tiene pero no recibe nada
    nuevo; los perfiles que contenía también reciben claves nuevas.
 3. MedReminder ofrece mostrar un código. Los demás dispositivos dejan de
    sincronizarse hasta recibir la nueva clave: en cada uno, un
-   administrador abre **Herramientas → Instalación… → Introducir la
+   administrador abre **Herramientas → Círculo… → Introducir la
    nueva clave…** y escribe la nueva frase o el código. Los cambios
    hechos ahí mientras tanto se conservan.
 4. Las nuevas claves de los perfiles llegan solas a los demás
@@ -1458,18 +1458,18 @@ voluntaria (Stripe o PayPal). MedReminder nunca ve tus datos de pago.
 **No recibo correos.**
 Comprueba, por orden: *Probar conexión* en Configuración → E-mail SMTP;
 el *Destinatario* en Configuración → Notificaciones; el canal
-**E-mail** marcado en el medicamento; MedReminder en marcha. Con una
-instalación compartida solo envía el principal: mira **Herramientas →
-Instalación… → Estado**.
+**E-mail** marcado en el medicamento; MedReminder en marcha. Con un
+círculo compartido solo envía el principal: mira **Herramientas →
+Círculo… → Estado**.
 
-**"Este dispositivo es el principal pero no sincroniza la instalación
+**"Este dispositivo es el principal pero no sincroniza el círculo
 desde hace más de 24 horas".**
 El principal no llega al almacenamiento. Comprueba la conexión a
 internet y la sesión de OneDrive / Google Drive, y luego **Sincronizar
 ahora**.
 
-**"La clave de la instalación se cambió en otro dispositivo".**
-Se quitó un dispositivo. Abre **Herramientas → Instalación… →
+**"La clave del círculo se cambió en otro dispositivo".**
+Se quitó un dispositivo. Abre **Herramientas → Círculo… →
 Introducir la nueva clave…** y escribe la nueva frase, o un código
 mostrado por un dispositivo que ya la tiene.
 
@@ -1477,7 +1477,7 @@ mostrado por un dispositivo que ya la tiene.
 ¿Reiniciar ahora?"**
 Responde sí: el perfil toma su nueva clave al reiniciar MedReminder.
 
-**"Este dispositivo se quitó de la instalación".**
+**"Este dispositivo se quitó del círculo".**
 El dispositivo conserva sus datos pero ya no recibe nada. Para volver a
 usarlo, un administrador lo añade como dispositivo nuevo.
 
@@ -1486,10 +1486,10 @@ El antiguo principal cede el rol en su siguiente sincronización. Si está
 apagado para siempre, el nuevo principal toma el relevo 25 horas después
 de la última vez que se vio al antiguo.
 
-**"El grupo de sincronización de este perfil pertenece a otra
-instalación".**
-El perfil se publicó desde otra instalación. Únete a esa instalación
-(**Unirse a una instalación existente…**).
+**"El grupo de sincronización de este perfil pertenece a otro
+círculo".**
+El perfil se publicó desde otro círculo. Únete a ese círculo
+(**Unirse a un círculo existente…**).
 
 **He olvidado un PIN.**
 Un administrador lo borra con **Herramientas → Gestionar perfiles… →
@@ -1497,10 +1497,10 @@ Cambiar PIN**. Si nadie más puede: cierra MedReminder, abre
 `%LOCALAPPDATA%\MedReminder\profiles.json` con el Bloc de notas y, para
 ese perfil, borra los valores de `PinHash` y `PinSalt` y pon
 `PinIterations` a `0`. MedReminder registra el cambio en el siguiente
-inicio; con una instalación compartida llega a los demás dispositivos.
+inicio; con un círculo compartido llega a los demás dispositivos.
 
 **He olvidado una frase de contraseña.**
-Las de exportación, copia de seguridad, sincronización e instalación no
+Las de exportación, copia de seguridad, sincronización y círculo no
 se pueden recuperar. Puedes establecer otras nuevas (nueva exportación,
 nueva frase de copia en la nube, *Cambiar clave y frase de
 contraseña…*), pero los archivos cifrados con la antigua siguen siendo
@@ -1533,7 +1533,7 @@ tú.
 ├── cloud-backup.protected     frase de la copia en la nube, cifrada por Windows
 ├── user.settings.json         idioma, país de referencia, búsqueda de actualizaciones, registro de consultas
 ├── backups\                   copia guardada al actualizar desde una versión muy antigua
-├── household\                 instalación compartida (solo si se usa)
+├── household\                 círculo compartido (solo si se usa)
 ├── logs\medreminder-AAAAMMDD.log
 └── profiles\
     └── <perfil>\

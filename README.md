@@ -100,14 +100,14 @@ scheduled dose time.
   group on OneDrive, Google Drive or a shared folder (no server):
   medicines, stock, intakes, profile name and recipients; conflicts
   listed, lost or stolen devices removed with a key change.
-- Shared installation: profiles, roles, PINs, email account, cloud
+- Shared circle: profiles, roles, PINs, email account, cloud
   backup policy and reference country replicated to every device;
   each device holds only the profiles an administrator gives it;
-  devices join with a short-lived code or the installation
+  devices join with a short-lived code or the circle
   passphrase.
 - One master device sends every email and runs the cloud backup;
   planned handover with a wizard, takeover of a lost master, device
-  removal with new installation and profile keys.
+  removal with new circle and profile keys.
 
 **Backup, export and restore**
 
@@ -128,7 +128,7 @@ scheduled dose time.
 - Main window with a summary of empty, running-low and suspended
   medicines (click to filter), a navigation pane and a search box
   (Ctrl+F).
-- Settings, Sync and Installation windows list their sections on
+- Settings, Sync and Circle windows list their sections on
   the left; dialogs share one layout, with errors shown under the
   fields.
 - Per-profile appearance (same as Windows, light, dark; Windows
@@ -207,7 +207,7 @@ docs/
   EVOLUTION-DONE.md             shipped evolutions
   EXPORT-FORMAT.md              public .mrz archive format
   CATALOGUE-DATA.md             reference-catalogue sources and refresh
-  SYNC-FORMAT.md                sync and installation storage format
+  SYNC-FORMAT.md                sync and circle storage format
   PACKAGING.md                  publishing and distribution
   USER_GUIDE.<lang>.md          user guide (en, it, fr, es, de)
   analysis/                     per-feature design documents
@@ -300,7 +300,7 @@ Shared, admin-managed:
 | `donations.settings.json` | Optional public Payment Link URLs for the Support Development dialog |
 | `user.settings.json` | UI language, reference-catalogue country, update-check preference, database-query logging (this device only) |
 | `onedrive.protected` / `googledrive.protected` | OneDrive / Google Drive sign-in tokens, DPAPI-encrypted |
-| `household\` | Shared installation: operation log, settings, installation and device keys (DPAPI) |
+| `household\` | Shared circle: operation log, settings, circle and device keys (DPAPI) |
 | `catalogue\staging\` | Remote catalogue archive while it is imported; emptied every run |
 | `logs/medreminder-YYYYMMDD.log` | Daily rolling log, 30-day retention |
 
@@ -352,7 +352,7 @@ cloud folder are available to every profile.
 - **Backup to a cloud-synced folder (encrypted)**: optional second
   target. Writes an encrypted `.mrz` snapshot of every profile into a
   folder the user's cloud client synchronizes, or into OneDrive or
-  Google Drive directly. With a shared installation only the master
+  Google Drive directly. With a shared circle only the master
   device writes it. Requires a
   backup passphrase; losing it means the snapshots cannot be
   restored.
@@ -400,7 +400,7 @@ retention, 10 MB max per file (with automatic alphabetic roll past
 that size).
 
 Default level: `Information`. Contains scheduler ticks, notification
-sends, sync and installation outcomes, errors with stack trace.
+sends, sync and circle outcomes, errors with stack trace.
 Executed SQL commands (text and duration, never parameter values) are
 written only while **Settings → General → Log database queries
 (diagnostics)** is on; administrators only, applied without a
@@ -426,9 +426,9 @@ dose/quantity values are never written to the logs.**
 - The cloud-folder backup is single-writer: restoring on a second PC
   replaces its data, and changes made on two PCs between restores are
   not merged. Use sync (Tools → Sync…) to work on several PCs.
-- Every device of a sync group or installation must run the same
+- Every device of a sync group or circle must run the same
   MedReminder version: newer operation schemas stop older apps.
-- Sync and the installation need a storage every device reaches
+- Sync and the circle need a storage every device reaches
   (OneDrive, Google Drive or a shared folder); MedReminder runs no
   server.
 

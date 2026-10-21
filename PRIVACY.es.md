@@ -60,7 +60,7 @@ En Windows, la copia de seguridad en la nube y la sincronización también puede
 
 ## 5. Cámara
 
-El lector de códigos de barras puede usar la cámara web de Windows o la cámara de Android cuando usted decide escanear. Las imágenes se procesan en el dispositivo y MedReminder no las guarda ni las envía. En Windows, la cámara se apaga cuando se lee un código, cuando cierra la ventana de lectura o después de 30 segundos. En Android, el acceso a la cámara depende del permiso de Android y del ciclo de vida de la aplicación. En Android, la cámara también lee el código QR que muestra otro dispositivo cuando usted se une a una instalación; solo se usa mientras la página de lectura está abierta y el código no se guarda.
+El lector de códigos de barras puede usar la cámara web de Windows o la cámara de Android cuando usted decide escanear. Las imágenes se procesan en el dispositivo y MedReminder no las guarda ni las envía. En Windows, la cámara se apaga cuando se lee un código, cuando cierra la ventana de lectura o después de 30 segundos. En Android, el acceso a la cámara depende del permiso de Android y del ciclo de vida de la aplicación. En Android, la cámara también lee el código QR que muestra otro dispositivo cuando usted se une a un círculo; solo se usa mientras la página de lectura está abierta y el código no se guarda.
 
 ## 6. Enlaces que abren el navegador
 

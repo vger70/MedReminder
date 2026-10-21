@@ -60,7 +60,7 @@ Unter Windows können Cloud-Sicherung und Synchronisierung auch von Ihnen ausgew
 
 ## 5. Kamera
 
-Der Barcode-Scanner kann die Windows-Webcam oder die Android-Kamera verwenden, wenn Sie einen Scan starten. Die Bilder werden auf Ihrem Gerät verarbeitet und von MedReminder weder gespeichert noch gesendet. Unter Windows schaltet sich die Kamera aus, wenn ein Code gelesen wird, wenn Sie das Scanfenster schließen oder nach 30 Sekunden. Unter Android richtet sich der Kamerazugriff nach der Android-Berechtigung und dem App-Lebenszyklus. Unter Android liest die Kamera außerdem den QR-Code, den ein anderes Gerät beim Beitritt zu einer Installation anzeigt; sie wird nur verwendet, solange die Scanseite geöffnet ist, und der Code wird nicht gespeichert.
+Der Barcode-Scanner kann die Windows-Webcam oder die Android-Kamera verwenden, wenn Sie einen Scan starten. Die Bilder werden auf Ihrem Gerät verarbeitet und von MedReminder weder gespeichert noch gesendet. Unter Windows schaltet sich die Kamera aus, wenn ein Code gelesen wird, wenn Sie das Scanfenster schließen oder nach 30 Sekunden. Unter Android richtet sich der Kamerazugriff nach der Android-Berechtigung und dem App-Lebenszyklus. Unter Android liest die Kamera außerdem den QR-Code, den ein anderes Gerät beim Beitritt zu einem Kreis anzeigt; sie wird nur verwendet, solange die Scanseite geöffnet ist, und der Code wird nicht gespeichert.
 
 ## 6. Links, die den Browser öffnen
 

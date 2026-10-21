@@ -43,7 +43,7 @@ in der App zu lesen. Die technische Architektur ist in
 9. [Mehrere Computer](#devices)
    - [Welche Option brauche ich?](#devices-choice) ·
      [Ein Profil zwischen PCs synchronisieren](#sync) ·
-     [Die Installation teilen](#installation) ·
+     [Den Kreis teilen](#circle) ·
      [Das Master-Gerät](#master) ·
      [Verlorenes oder ersetztes Gerät](#remove-device)
 10. [Einstellungen und Alltag](#settings)
@@ -65,10 +65,10 @@ in der App zu lesen. Die technische Architektur ist in
      Gib deinen Namen und, wenn du willst, eine PIN ein. Dieses erste
      Profil ist der **Administrator**: Es verwaltet E-Mail, Sicherung
      und die anderen Profile (siehe [Mehrere Personen](#profiles)).
-   - **Einer bestehenden Installation beitreten…** — nur wenn
+   - **Einem bestehenden Kreis beitreten…** — nur wenn
      MedReminder schon auf einem anderen deiner Computer läuft und
      dieser hier dazugehören soll (siehe
-     [Die Installation teilen](#installation)).
+     [Den Kreis teilen](#circle)).
 3. Das Hauptfenster öffnet sich. Das MedReminder-Symbol im
    Windows-Infobereich (neben der Uhr) bleibt sichtbar, solange die App
    läuft.
@@ -144,7 +144,7 @@ weder Medikamente noch Dosen vor.
   erfassen* und rechts ein Suchfeld (**Strg+F**), das die Liste nach
   Namen filtert.
 - **Navigation** links: *Medikamente* (diese Liste), dann
-  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Vorrat planen*, *Rezepte*, *Fristen*, *Installation*
+  *Therapieverlauf*, *Therapieplan*, *Rezept anfordern*, *Vorrat planen*, *Rezepte*, *Fristen*, *Kreis*
   (Administratoren) und *Einstellungen*, die ein eigenes Fenster öffnen.
   In einem schmalen Fenster zeigt sie nur die Symbole.
 - **Übersicht** über der Liste: wie viele Medikamente *Leer*, *Bald
@@ -186,7 +186,7 @@ Beenden klicke mit der rechten Maustaste auf das Symbol und wähle
 | Den Vorrat für eine Reise oder bis zum nächsten Apothekenbesuch prüfen | **Therapie → Vorrat planen…** |
 | E-Mail, Sprache, Sicherung einrichten | **Extras → Einstellungen…** |
 | Eine Person hinzufügen | **Extras → Profile verwalten…** (Administrator) |
-| MedReminder auf einem anderen PC nutzen | **Extras → Synchronisierung…** und **Extras → Installation…** (Administrator) |
+| MedReminder auf einem anderen PC nutzen | **Extras → Synchronisierung…** und **Extras → Kreis…** (Administrator) |
 | Das Profil einer anderen Person öffnen | **Datei → Profil wechseln…** |
 
 ---
@@ -353,8 +353,8 @@ Referenzland wählst.
   Medikament funktioniert genauso, nur ohne Katalogverknüpfung.
 - **Welches Land?** **Extras → Einstellungen… → Allgemein →
   Referenzland** (Standard: Italien). Nur ein Administrator kann es
-  ändern: Es gilt für alle Profile und, bei einer geteilten
-  Installation, für alle Geräte. Mit IT, ES oder FR enthält die Liste
+  ändern: Es gilt für alle Profile und, bei einem geteilten
+  Kreis, für alle Geräte. Mit IT, ES oder FR enthält die Liste
   auch die EU-Arzneimittel; mit **EU** nur diese. Ein Arzneimittel kann
   zweimal erscheinen (national und EU): Wähle das, das zu deiner
   Packung passt.
@@ -702,7 +702,7 @@ kannst vor dem Senden alles ändern.
 - **Senden…** — sendet sie nach einer Bestätigung über das E-Mail-Konto
   von MedReminder. Verfügbar, wenn E-Mail eingerichtet und die **E-Mail
   des Arztes** ausgefüllt ist (Einstellungen → Benachrichtigungen). Bei
-  einer geteilten Installation sendet nur das [Master-Gerät](#master):
+  einem geteilten Kreis sendet nur das [Master-Gerät](#master):
   Nutze auf den anderen Geräten **Im E-Mail-Programm öffnen**.
 
 MedReminder sendet nie von selbst eine Anforderung.
@@ -730,7 +730,7 @@ Ein ausgestelltes, nicht eingelöstes Rezept ist *Einzulösen*; nach
 seinem letzten gültigen Tag ist es *Abgelaufen*. Ab 3 Tagen vor diesem
 Tag bekommst du einmal eine Erinnerung über die
 Benachrichtigungskanäle des Medikaments (die E-Mail nur vom
-[Master-Gerät](#master), wenn die Installation geteilt ist). Die
+[Master-Gerät](#master), wenn der Kreis geteilt ist). Die
 Erinnerung enthält den Code nicht.
 
 Rezepte werden auf die anderen PCs eines synchronisierten Profils
@@ -838,8 +838,8 @@ Gültigkeit unterscheidet sich je nach Plan und Region, gib also das
 Datum aus deinen Unterlagen ein.
 
 Ab der Vorlaufzeit erhältst du eine Erinnerung pro Datum über die
-gewählten Kanäle (die E-Mail nur vom [Master-Gerät](#master), wenn die
-Installation geteilt ist); eine überfällige Frist wird rot angezeigt.
+gewählten Kanäle (die E-Mail nur vom [Master-Gerät](#master), wenn der
+Kreis geteilt ist); eine überfällige Frist wird rot angezeigt.
 **Erledigt** schließt eine einmalige Frist ab; eine wiederkehrende
 springt auf ihr nächstes Datum, gerechnet vom vorherigen Datum und
 nicht von dem Tag, an dem du sie markiert hast.
@@ -1048,7 +1048,7 @@ mit eigenen Medikamenten und eigenen Empfängern.
 | Eigene Medikamente, Bestand, Empfänger | ja | ja |
 | E-Mail-Konto, Sicherung, Referenzland | ja | nein |
 | Profile anlegen, umbenennen, löschen; PINs aller | ja | nein |
-| Extras → Synchronisierung… und Extras → Installation… | ja | nein |
+| Extras → Synchronisierung… und Extras → Kreis… | ja | nein |
 
 Es gibt immer mindestens einen Administrator.
 
@@ -1095,7 +1095,7 @@ vergessen, siehe [Probleme und Antworten](#faq).
 | **Tägliche automatische Sicherung** | Eine Kopie aller Profile, jeden Tag, in einem eigenen Ordner | Einstellungen → Sicherung / Wiederherstellung |
 | **Verschlüsselter Export** | Eine einzelne, übertragbare Datei, zum Umzug auf einen neuen PC oder zur Aufbewahrung | Einstellungen → Sicherung / Wiederherstellung → Alle Daten exportieren (verschlüsselt)… |
 | **Cloud-Sicherung** | Eine tägliche verschlüsselte Kopie in OneDrive, Google Drive oder einem synchronisierten Ordner | Einstellungen → Sicherung / Wiederherstellung → Sicherung in synchronisierten Ordner |
-| **Synchronisierung / Installation** | Mehrere PCs, die laufend mit denselben Daten arbeiten | [Mehrere Computer](#devices) |
+| **Synchronisierung / Kreis** | Mehrere PCs, die laufend mit denselben Daten arbeiten | [Mehrere Computer](#devices) |
 
 Die Sicherungseinstellungen verwaltet ein Administrator.
 
@@ -1194,7 +1194,7 @@ Gut zu wissen:
   Papierkorb.
 - Das ist eine **Sicherung, keine Synchronisierung**: Für die Arbeit auf
   mehreren PCs nutze die [Synchronisierung](#sync).
-- Bei einer geteilten Installation erstellt nur das
+- Bei einem geteilten Kreis erstellt nur das
   [Master-Gerät](#master) die Cloud-Sicherung.
 
 ---
@@ -1210,7 +1210,7 @@ Gut zu wissen:
 | Nur ein PC | Nichts zu tun. Halte eine [Sicherung](#backup) bereit. |
 | Einmal auf einen neuen PC umziehen | [Verschlüsselter Export](#backup) auf dem alten PC, Import auf dem neuen. |
 | **Dasselbe Profil** auf zwei oder mehr PCs, immer aktuell | [Synchronisierung](#sync) (Extras → Synchronisierung…). |
-| **Die ganze Familien-Einrichtung** (Profile, Rollen, PINs, E-Mail, Sicherung) auf mehreren PCs, mit **einem** PC, der die E-Mails sendet | [Installation](#installation) (Extras → Installation…), zusätzlich zur Synchronisierung. |
+| **Die ganze Familien-Einrichtung** (Profile, Rollen, PINs, E-Mail, Sicherung) auf mehreren PCs, mit **einem** PC, der die E-Mails sendet | [Kreis](#circle) (Extras → Kreis…), zusätzlich zur Synchronisierung. |
 
 Beide Optionen brauchen einen Speicherort, den alle PCs erreichen:
 **OneDrive**, **Google Drive** oder einen **freigegebenen Ordner**
@@ -1303,10 +1303,10 @@ deines Microsoft- oder Google-Kontos ab. Klicke auf jedem anderen PC auf
 Kopplungscode ein: Seine Änderungen bleiben erhalten, und MedReminder
 startet neu.
 
-<a id="installation"></a>
-### Die Installation teilen
+<a id="circle"></a>
+### Den Kreis teilen
 
-Die Synchronisierung arbeitet Profil für Profil. Die **Installation**
+Die Synchronisierung arbeitet Profil für Profil. Der **Kreis**
 ergänzt alles rund um die Profile, damit jeder PC gleich eingerichtet
 ist:
 
@@ -1330,10 +1330,10 @@ Familien-PC alle.
 
 **Schritt 1 — Veröffentlichen (auf dem Haupt-PC)**
 
-1. **Extras → Installation… → Installation veröffentlichen…**.
+1. **Extras → Kreis… → Kreis veröffentlichen…**.
 2. Wähle **denselben Speicherort**, der die Synchronisationsgruppen der
    Profile enthält.
-3. Wähle eine **Passphrase der Installation**. Damit kann ein
+3. Wähle eine **Passphrase des Kreises**. Damit kann ein
    Administrator ein Gerät hinzufügen und alle Profile wiederherstellen,
    wenn kein anderes Gerät zur Hand ist. Gib sie nur Administratoren;
    sie kann nicht wiederhergestellt werden.
@@ -1342,29 +1342,29 @@ Dieser PC wird das [Master-Gerät](#master).
 
 **Schritt 2 — Ein Gerät hinzufügen**
 
-1. Auf dem Haupt-PC: **Extras → Installation… → Geräte → Gerät
+1. Auf dem Haupt-PC: **Extras → Kreis… → Geräte → Gerät
    hinzufügen…**, hake die Profile für das neue Gerät an, dann **Code
    anzeigen**.
 2. Auf dem neuen PC:
    - wurde MedReminder dort noch nie genutzt: im Willkommensfenster
-     **Einer bestehenden Installation beitreten…** wählen;
-   - sonst: **Extras → Installation… → Einer bestehenden Installation
+     **Einem bestehenden Kreis beitreten…** wählen;
+   - sonst: **Extras → Kreis… → Einem bestehenden Kreis
      beitreten…**.
 3. Wähle **Mit einem Code** und gib den Code ein. Der Code gilt 10
    Minuten oder bis sein Fenster geschlossen wird.
 4. Das Fenster listet jedes Profil („diesem Gerät hinzugefügt“, „bereits
    auf diesem Gerät“, …). MedReminder startet mit den neuen Profilen und
-   den Einstellungen der Installation neu. Profile, die schon auf dem
-   neuen PC waren, werden der Installation hinzugefügt.
+   den Einstellungen des Kreises neu. Profile, die schon auf dem
+   neuen PC waren, werden dem Kreis hinzugefügt.
 
-*Kein anderes Gerät zur Hand?* Wähle **Mit der Passphrase der
-Installation**, wähle den Speicherort und gib die Passphrase ein. Ein
+*Kein anderes Gerät zur Hand?* Wähle **Mit der Passphrase des
+Kreises**, wähle den Speicherort und gib die Passphrase ein. Ein
 Administrator wählt dann sein Profil, gibt dessen PIN ein und wählt die
 Profile für dieses Gerät.
 
 **Im Alltag**
 
-- Die Installation synchronisiert sich alle 15 Minuten von selbst.
+- Der Kreis synchronisiert sich alle 15 Minuten von selbst.
 - Eine Änderung an Profil, Rolle, PIN, E-Mail-Konto, Regeln der
   Cloud-Sicherung oder Referenzland auf einem Gerät erreicht die
   anderen.
@@ -1372,19 +1372,19 @@ Profile für dieses Gerät.
   (Extras → Synchronisierung…) und weise es dann mit **Gerät
   hinzufügen…** von einem Gerät aus, das es enthält, weiteren Geräten
   zu.
-- **Extras → Installation… → Status** zeigt Speicherort, Master und
+- **Extras → Kreis… → Status** zeigt Speicherort, Master und
   eventuell nötige Schritte.
 
 <a id="master"></a>
 ### Das Master-Gerät
 
-In einer geteilten Installation sendet **nur ein Gerät, der Master**,
+In einem geteilten Kreis sendet **nur ein Gerät, der Master**,
 alle E-Mails (Warnungen zu niedrigem Bestand und Einnahmeerinnerungen,
 für alle Profile, die es enthält, auch nicht geöffnete) und erstellt die
 Cloud-Sicherung. Die anderen Geräte zeigen ihre Warnungen nur auf dem
 Bildschirm. So kommt jede E-Mail genau einmal.
 
-- Das Gerät, das die Installation veröffentlicht, ist der Master. Der
+- Das Gerät, das den Kreis veröffentlicht, ist der Master. Der
   Bereich **Geräte** zeigt es in der Spalte **Rolle**.
 - Wähle als Master ein Gerät, das **oft eingeschaltet** ist und auf dem
   MedReminder läuft.
@@ -1392,28 +1392,28 @@ Bildschirm. So kommt jede E-Mail genau einmal.
   E-Mail-Programm, und **Verbindung testen** funktioniert nur auf dem
   Master. Die E-Mail-Einstellungen lassen sich überall bearbeiten und
   erreichen alle Geräte.
-- Ein Master, der die Installation seit **24 Stunden** nicht
+- Ein Master, der den Kreis seit **24 Stunden** nicht
   synchronisiert hat, sendet keine E-Mails mehr, bis er wieder
   synchronisiert.
-- Installationen, die vor dieser Version veröffentlicht wurden, haben
+- Kreise, die vor dieser Version veröffentlicht wurden, haben
   keinen Master, bis ein Administrator einen wählt; bis dahin sendet
   jedes Gerät.
 
 **Den Master auf ein anderes Gerät verlegen**
 
-1. **Extras → Installation… → Geräte**, wähle das neue Gerät, **Zum
+1. **Extras → Kreis… → Geräte**, wähle das neue Gerät, **Zum
    Master machen…**, bestätigen. Bis die Übergabe abgeschlossen ist,
    sendet kein Gerät E-Mails.
 2. Auf dem neuen Gerät öffnet sich bei geöffnetem Administratorprofil
    das Fenster **Master-Übergabe** von selbst (oder später über **Extras
-   → Installation… → Übergabe abschließen…**). Es zeigt die
+   → Kreis… → Übergabe abschließen…**). Es zeigt die
    Einstellungen und bittet dich:
    - die **E-Mail-Verbindung von diesem Gerät zu testen**;
    - dich beim Speicherort der Cloud-Sicherung mit demselben Konto
      **anzumelden**;
    - die **Passphrase der Cloud-Sicherung** erneut einzugeben (sie wird
      nie zwischen Geräten kopiert);
-   - optional die Passphrase der Installation einzugeben, um Profile zu
+   - optional die Passphrase des Kreises einzugeben, um Profile zu
      holen, die kein erreichbares Gerät enthält.
 3. **Bestätigen**. Das neue Gerät übernimmt, sobald der alte Master bei
    seiner nächsten Synchronisierung abgibt. Neue Profile erscheinen beim
@@ -1429,13 +1429,13 @@ Gerät aus: Der neue Master übernimmt von selbst, wenn der alte sich seit
 Wenn ein Gerät verloren, verkauft oder verschenkt wird:
 
 1. Auf dem **Master** (er enthält alle Profile): **Extras →
-   Installation… → Geräte**, Gerät wählen, **Gerät entfernen…**.
-2. Wähle eine **neue Passphrase der Installation**. Das entfernte Gerät
+   Kreis… → Geräte**, Gerät wählen, **Gerät entfernen…**.
+2. Wähle eine **neue Passphrase des Kreises**. Das entfernte Gerät
    behält, was es schon hat, erhält aber nichts Neues; auch die Profile,
    die es enthielt, bekommen neue Schlüssel.
 3. MedReminder bietet an, einen Code anzuzeigen. Die anderen Geräte
    synchronisieren nicht mehr, bis sie den neuen Schlüssel haben: Auf
-   jedem öffnet ein Administrator **Extras → Installation… → Neuen
+   jedem öffnet ein Administrator **Extras → Kreis… → Neuen
    Schlüssel eingeben…** und gibt die neue Passphrase oder den Code ein.
    Dort inzwischen gemachte Änderungen bleiben erhalten.
 4. Die neuen Profilschlüssel kommen von selbst auf die anderen Geräte;
@@ -1496,27 +1496,27 @@ unterstützen…** im Browser eine Seite für einen freiwilligen Beitrag
 Prüfe der Reihe nach: *Verbindung testen* unter Einstellungen →
 E-Mail-SMTP; den *Empfänger* unter Einstellungen →
 Benachrichtigungen; den Kanal **E-Mail** beim Medikament; ob
-MedReminder läuft. Bei einer geteilten Installation sendet nur der
-Master: Sieh unter **Extras → Installation… → Status** nach.
+MedReminder läuft. Bei einem geteilten Kreis sendet nur der
+Master: Sieh unter **Extras → Kreis… → Status** nach.
 
-**„Dieses Gerät ist der Master, hat die Installation aber seit mehr als
+**„Dieses Gerät ist der Master, hat den Kreis aber seit mehr als
 24 Stunden nicht synchronisiert“.**
 Der Master erreicht den Speicherort nicht. Prüfe die
 Internetverbindung und die Anmeldung bei OneDrive / Google Drive, dann
 **Jetzt synchronisieren**.
 
-**„Der Schlüssel der Installation wurde auf einem anderen Gerät
+**„Der Schlüssel des Kreises wurde auf einem anderen Gerät
 geändert“.**
-Ein Gerät wurde entfernt. Öffne **Extras → Installation… → Neuen
+Ein Gerät wurde entfernt. Öffne **Extras → Kreis… → Neuen
 Schlüssel eingeben…** und gib die neue Passphrase ein oder einen Code,
 den ein Gerät mit dem neuen Schlüssel anzeigt.
 
-**„Ein Gerät wurde aus der Installation entfernt … dieses Profil hat
+**„Ein Gerät wurde aus dem Kreis entfernt … dieses Profil hat
 einen neuen Schlüssel. Jetzt neu starten?“**
 Antworte mit Ja: Das Profil übernimmt den neuen Schlüssel beim Neustart
 von MedReminder.
 
-**„Dieses Gerät wurde aus der Installation entfernt“.**
+**„Dieses Gerät wurde aus dem Kreis entfernt“.**
 Das Gerät behält seine Daten, erhält aber nichts mehr. Um es wieder zu
 nutzen, fügt ein Administrator es als neues Gerät hinzu.
 
@@ -1525,10 +1525,10 @@ Der alte Master gibt bei seiner nächsten Synchronisierung ab. Ist er
 dauerhaft aus, übernimmt der neue Master 25 Stunden nachdem der alte
 zuletzt gesehen wurde.
 
-**„Die Synchronisationsgruppe dieses Profils gehört zu einer anderen
-Installation“.**
-Das Profil wurde von einer anderen Installation veröffentlicht. Tritt
-dieser Installation bei (**Einer bestehenden Installation
+**„Die Synchronisationsgruppe dieses Profils gehört zu einem anderen
+Kreis“.**
+Das Profil wurde von einem anderen Kreis veröffentlicht. Tritt
+diesem Kreis bei (**Einem bestehenden Kreis
 beitreten…**).
 
 **Ich habe eine PIN vergessen.**
@@ -1537,12 +1537,12 @@ Ein Administrator löscht sie mit **Extras → Profile verwalten… → PIN
 `%LOCALAPPDATA%\MedReminder\profiles.json` mit dem Editor und lösche für
 dieses Profil die Werte von `PinHash` und `PinSalt` und setze
 `PinIterations` auf `0`. MedReminder erfasst die Änderung beim nächsten
-Start; bei einer geteilten Installation erreicht sie die anderen
+Start; bei einem geteilten Kreis erreicht sie die anderen
 Geräte.
 
 **Ich habe eine Passphrase vergessen.**
 Die Passphrasen für Export, Sicherung, Synchronisierung und
-Installation können nicht wiederhergestellt werden. Du kannst neue
+Kreis können nicht wiederhergestellt werden. Du kannst neue
 festlegen (neuer Export, neue Backup-Passphrase, *Schlüssel und
 Passphrase ändern…*), aber mit der alten verschlüsselte Dateien bleiben
 unlesbar.
@@ -1573,7 +1573,7 @@ außer den Sicherungs- und Exportdateien, die du selbst ablegst.
 ├── cloud-backup.protected     Passphrase der Cloud-Sicherung, von Windows verschlüsselt
 ├── user.settings.json         Sprache, Referenzland, Update-Prüfung, Abfrageprotokoll
 ├── backups\                   Kopie beim Update von einer sehr alten Version
-├── household\                 geteilte Installation (nur wenn genutzt)
+├── household\                 geteilter Kreis (nur wenn genutzt)
 ├── logs\medreminder-JJJJMMTT.log
 └── profiles\
     └── <Profil>\
