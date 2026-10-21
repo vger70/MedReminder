@@ -32,18 +32,16 @@ public sealed class RemoveDevice
 {
     private readonly HouseholdSync _sync;
     private readonly HouseholdKeyring _keyring;
-    private readonly HouseholdLog _household;
     private readonly IProfileGroupKeys _groupKeys;
     private readonly IProfileGroupRotation _rotation;
     private readonly ICurrentProfile _current;
     private readonly ILogger<RemoveDevice> _log;
 
-    public RemoveDevice(HouseholdSync sync, HouseholdKeyring keyring, HouseholdLog household, IProfileGroupKeys groupKeys,
+    public RemoveDevice(HouseholdSync sync, HouseholdKeyring keyring, IProfileGroupKeys groupKeys,
         IProfileGroupRotation rotation, ICurrentProfile current, ILogger<RemoveDevice> log)
     {
         _sync = sync;
         _keyring = keyring;
-        _household = household;
         _groupKeys = groupKeys;
         _rotation = rotation;
         _current = current;
@@ -58,12 +56,7 @@ public sealed class RemoveDevice
     {
         ProfileAdministration.RequireAdmin(_current);
         var keys = await _keyring.KeysAsync(cancellationToken);
-        // A removed profile keeps its grants, but its group is gone (issue
-        // #88: a device that leaves deletes the groups only it held).
-        var profiles = (await _household.ProfilesAsync(cancellationToken)).Select(p => p.ProfileId)
-            .ToHashSet(StringComparer.Ordinal);
-        var held = keys.Grants.Keys.Where(g => g.DeviceId == deviceId && profiles.Contains(g.ProfileId))
-            .Select(g => g.ProfileId).Distinct().ToList();
+        var held = keys.Grants.Keys.Where(g => g.DeviceId == deviceId).Select(g => g.ProfileId).Distinct().ToList();
         var missing = held.Where(p => !Holds(p)).ToList();
         if (missing.Count > 0) throw new ProfilesNotHeldException(missing);
         // Who else held each profile, before the removal changes the grants.

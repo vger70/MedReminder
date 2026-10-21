@@ -51,39 +51,6 @@ Branch: `claude/household-leave`
 **Changed**
 - `RemoveDeviceAsync` accepts a device that left, to change the
   household key after it.
-- Leaving requires an administrator profile and never deletes the open
-  profile. A device behind a new household key plans as `Ended` with
-  `HouseholdLeavePlan.NewKeyRequired`, so the host can offer to rekey
-  first; a removed device, which cannot rekey, still leaves. With no
-  current master, any device may hand the role over or dissolve.
-- After leaving, the household of one records the kept profiles and
-  settings again (`ReconcileHousehold`), so publishing it takes them.
-- The desktop registers a placeholder `IHouseholdLeavingProfiles`, so
-  `LeaveHousehold` resolves; leaving is not offered there yet.
-- A household run lists the household folder once for the tombstone
-  and the key versions, and reads the tombstone only when present.
-
-**Fixed**
-- Removing a device that left with profiles only it held no longer
-  fails with `ProfilesNotHeldException`.
-- Removing a device or rekeying in a dissolved household is refused
-  (`HouseholdDissolvedException`) instead of reviving it.
-- A tombstone counts only when it names a current device as writer
-  (not authenticated: any holder of the household key can forge it, as
-  it can delete the household's files).
-- A device that left writes no device record, grants or master
-  operations in later runs.
-- Dissolving deletes the sync groups of profiles removed earlier.
-- Leaving keeps the device name.
-- A device on an older key (removed, or not rekeyed) treats a tombstone
-  it cannot open as a dissolution once no usable key is left, instead
-  of writing into the deleted household.
-- Leaving again finishes a leave stopped after `ProfileRemoved`: those
-  profiles are listed again, their groups deleted, then kept or deleted.
-- A device publishes nothing after its `DeviceLeft`, and readers stop
-  reading a device's segments there.
-- A device that leaves after its removal deletes its record and pairing
-  offer.
 
 **Docs**
 - `CLAUDE.md`: chat with the user always in Italian.
