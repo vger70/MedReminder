@@ -30,6 +30,24 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #294 — Call the shared installation a circle in the interface and docs
+
+**Status:** open
+
+Link: [vger70/MedReminder#294](https://github.com/vger70/MedReminder/pull/294)
+Branch: `claude/rename-installation-circle`
+
+**Changed**
+- The shared set of devices is called a circle (Cerchia, Cercle,
+  Círculo, Kreis) in the UI dictionaries, the five user guides (anchor
+  `#circle`), the privacy policies (term only) and the README; texts
+  about installing the app and code names are unchanged.
+
+**Fixed**
+- Two household strings still in English in fr/es/de are translated.
+
+---
+
 ## PR #292 — Move prescription code buttons under the NRE field and widen the dialog
 
 **Status:** open
