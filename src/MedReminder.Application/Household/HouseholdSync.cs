@@ -712,6 +712,25 @@ public sealed class HouseholdSync
         }
     }
 
+    // Issue #88: whether the household was dissolved, for a host that
+    // runs other syncs of the storage before the household's (a profile
+    // group deleted with the household fails first). False while not
+    // published or when this device holds no household key.
+    public async Task<bool> IsDissolvedAsync(CancellationToken cancellationToken)
+    {
+        var identity = await _store.EnsureCreatedAsync(cancellationToken);
+        if (identity.Storage is null) return false;
+        if (_keys.Load(identity.HouseholdId, identity.KeyVersion) is not { } key) return false;
+        try
+        {
+            return await IsDissolvedAsync(_transports.Create(identity.Storage), key, identity, cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
     // Issue #88: true when the storage holds this household's tombstone
     // and it opens with the key this device holds. A tombstone that does
     // not open (another key version, an altered file) is not trusted.

@@ -859,6 +859,7 @@ public sealed class HouseholdSyncTests : IDisposable
         var result = await b.Sync.RunAsync(CancellationToken.None);
 
         result.Dissolved.Should().BeTrue();
+        (await b.Sync.IsDissolvedAsync(CancellationToken.None)).Should().BeTrue();
         StorageFiles().Should().Equal([$"{householdId:N}/dissolved.mrd"], "a dissolved household gets no new file");
         var plan = await b.Leave(b.As("user", ProfileRole.User)).PlanAsync(CancellationToken.None);
         plan.Role.Should().Be(HouseholdLeaveRole.Ended);
@@ -878,6 +879,7 @@ public sealed class HouseholdSyncTests : IDisposable
             CancellationToken.None);
 
         (await b.Sync.RunAsync(CancellationToken.None)).Dissolved.Should().BeFalse();
+        (await b.Sync.IsDissolvedAsync(CancellationToken.None)).Should().BeFalse();
     }
 
     [Fact]
