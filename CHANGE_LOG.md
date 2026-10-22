@@ -47,6 +47,13 @@ Branch: `claude/backup-per-target-days` (stacked on PR #296)
   it ran (a manual backup, the cleared sign-in):
   `IBackupStateStore.Update` reads, changes and saves the state in one
   step.
+- A cloud target that keeps failing (offline, storage error) is
+  retried at most once an hour instead of re-exporting every profile
+  on each 15-minute tick; a pending sign-in is still checked on every
+  tick.
+- Errors are kept per target, so a later run of one target no longer
+  hides the other's error; an old state file leaves the target that
+  had failed due on the upgrade day.
 
 **Changed**
 - Provider-specific dictionary keys come from
