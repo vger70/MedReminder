@@ -30,6 +30,31 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #297 — Retry the cloud backup the same day and stop the tick undoing Settings changes
+
+**Status:** open
+
+Link: [vger70/MedReminder#297](https://github.com/vger70/MedReminder/pull/297)
+Branch: `claude/backup-per-target-days` (stacked on PR #296)
+
+**Fixed**
+- The local and cloud backup targets keep separate days in
+  `backup.state.json`: when the cloud account was disconnected, the
+  cloud backup now runs again the same day once the user signs in,
+  without repeating the local one. A manual backup no longer skips the
+  day's automatic backup of every profile.
+- An automatic backup no longer overwrites what Settings saved while
+  it ran (a manual backup, the cleared sign-in):
+  `IBackupStateStore.Update` reads, changes and saves the state in one
+  step.
+
+**Changed**
+- Provider-specific dictionary keys come from
+  `src/MedReminder.UI/Services/ProviderKeys.cs`, no longer from the
+  storage target picker.
+
+---
+
 ## PR #296 — Clear the disconnected-account backup status once the user signs in again
 
 **Status:** open
