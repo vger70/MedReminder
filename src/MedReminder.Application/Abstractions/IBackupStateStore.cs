@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace MedReminder.Application.Abstractions;
 
 // Backup runtime state (kept separate from preferences).
@@ -23,9 +21,6 @@ public sealed record BackupState(
 {
     public static BackupState Empty { get; } =
         new(LastSuccessfulBackupAt: null, LastAttemptAt: null, LastError: null, LastBackupFile: null);
-
-    [JsonIgnore]
-    public bool HasFailure => LastError is not null || SignInRequired is not null;
 }
 
 public interface IBackupStateStore

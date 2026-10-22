@@ -421,6 +421,7 @@ internal sealed partial class SettingsDialog
                 string.IsNullOrEmpty(known) ? null : known, timeout.Token);
             _cloudAccountIds[provider] = account.Id;
             await RefreshCloudAccountAsync();
+            ClearSignInRequired(provider);
         }
         catch (Exception ex)
         {
@@ -434,6 +435,24 @@ internal sealed partial class SettingsDialog
             UseWaitCursor = false;
             _cloudSignInButton.Enabled = CloudTargetProvider is not null;
         }
+    }
+
+    // The session is back: the disconnected-account message recorded by
+    // the last automatic backup no longer applies.
+    private void ClearSignInRequired(CloudProvider provider)
+    {
+        var state = _backupState.Load();
+        if (state.SignInRequired != provider) return;
+        try
+        {
+            _backupState.Save(state with { SignInRequired = null });
+        }
+        catch (Exception)
+        {
+            // The next automatic backup rewrites the state.
+            return;
+        }
+        UpdateBackupStatusLabel();
     }
 
     private void BrowseCloudDirectory()
@@ -978,10 +997,13 @@ internal sealed partial class SettingsDialog
     }
 
     // The disconnected cloud account in the user's language, then the
-    // other errors of the last attempt as recorded.
+    // other errors of the last attempt as recorded. The account is shown
+    // only while it is still the saved cloud target.
     private string? BackupProblemText(BackupState state)
     {
+        var saved = _backupMonitor.CurrentValue;
         var signIn = state.SignInRequired is { } provider
+            && saved.CloudFolderEnabled && saved.CloudProvider == provider
             ? _loc.Get(StorageTargetPicker.ProviderKey("Ui.SettingsDialog.Backup.SignInRequired", provider))
             : null;
         string?[] parts = [signIn, state.LastError];
