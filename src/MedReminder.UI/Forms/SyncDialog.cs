@@ -720,7 +720,7 @@ internal sealed class SyncDialog : MedReminderFormBase
     }
 
     private static string ProviderKey(string key, CloudProvider provider)
-        => StorageTargetPicker.ProviderKey(key, provider);
+        => ProviderKeys.For(key, provider);
 
     private Button Action(string key, Func<Task> action)
     {

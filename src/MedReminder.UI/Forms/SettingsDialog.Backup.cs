@@ -7,6 +7,7 @@ using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Settings;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.UI.Controls;
+using MedReminder.UI.Services;
 using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -441,11 +442,11 @@ internal sealed partial class SettingsDialog
     // the last automatic backup no longer applies.
     private void ClearSignInRequired(CloudProvider provider)
     {
-        var state = _backupState.Load();
-        if (state.SignInRequired != provider) return;
         try
         {
-            _backupState.Save(state with { SignInRequired = null });
+            _backupState.Update(current => current.SignInRequired == provider
+                ? current with { SignInRequired = null }
+                : current);
         }
         catch (Exception)
         {
@@ -682,13 +683,16 @@ internal sealed partial class SettingsDialog
                 ? await _backup.PruneOldBackupsAsync(directory, retention, CancellationToken.None)
                 : 0;
 
-            // A manual local backup does not fix the cloud target: its
-            // pending sign-in and the notification day are kept.
-            _backupState.Save(_backupState.Load() with
+            // A manual backup covers only the current profile: the
+            // automatic local backup of the day (every profile) still
+            // runs, and the cloud target keeps its own day and sign-in. The
+            // errors of the automatic backup stay shown.
+            var now = DateTimeOffset.UtcNow;
+            _backupState.Update(current => current with
             {
-                LastSuccessfulBackupAt = DateTimeOffset.UtcNow,
-                LastAttemptAt = DateTimeOffset.UtcNow,
-                LastError = null,
+                LastSuccessfulBackupAt = now,
+                LastAttemptAt = now,
+                LastError = current.AutomaticErrors(),
                 LastBackupFile = file,
             });
             UpdateBackupStatusLabel();
@@ -701,10 +705,10 @@ internal sealed partial class SettingsDialog
         }
         catch (Exception ex)
         {
-            _backupState.Save(_backupState.Load() with
+            _backupState.Update(current => current with
             {
                 LastAttemptAt = DateTimeOffset.UtcNow,
-                LastError = ex.Message,
+                LastError = MedReminder.Application.Abstractions.BackupState.JoinErrors(ex.Message, current.AutomaticErrors()),
                 LastBackupFile = null,
             });
             UpdateBackupStatusLabel();
@@ -1004,7 +1008,7 @@ internal sealed partial class SettingsDialog
         var saved = _backupMonitor.CurrentValue;
         var signIn = state.SignInRequired is { } provider
             && saved.CloudFolderEnabled && saved.CloudProvider == provider
-            ? _loc.Get(StorageTargetPicker.ProviderKey("Ui.SettingsDialog.Backup.SignInRequired", provider))
+            ? _loc.Get(ProviderKeys.For("Ui.SettingsDialog.Backup.SignInRequired", provider))
             : null;
         string?[] parts = [signIn, state.LastError];
         var text = string.Join("; ", parts.Where(p => p is not null));

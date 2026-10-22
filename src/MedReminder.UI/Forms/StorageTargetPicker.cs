@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.UI.Services;
 
 namespace MedReminder.UI.Forms;
 
@@ -33,8 +34,8 @@ internal sealed class StorageTargetPicker
 
         // One option per cloud provider, then the folder; -1 is Cancel.
         var options = providers
-            .Select(p => (_loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true)),
-                _loc.Get(ProviderKey("Ui.SyncDialog.Target", p, suffixOnly: true) + "Note")))
+            .Select(p => (_loc.Get(ProviderKeys.For("Ui.SyncDialog.Target", p, suffixOnly: true)),
+                _loc.Get(ProviderKeys.For("Ui.SyncDialog.Target", p, suffixOnly: true) + "Note")))
             .Append((_loc.Get("Ui.SyncDialog.Target.Folder"), _loc.Get("Ui.SyncDialog.Target.FolderNote")))
             .ToList();
         var choice = ChoiceDialog.Show(_owner, _loc, _caption, _loc.Get("Ui.SyncDialog.Target.Heading"), null, options);
@@ -55,7 +56,7 @@ internal sealed class StorageTargetPicker
         }
         if (!_accounts.IsAvailable(cloud))
         {
-            Error(_loc.Get(ProviderKey("Ui.SyncDialog.PairingCode.ProviderUnavailable", cloud)));
+            Error(_loc.Get(ProviderKeys.For("Ui.SyncDialog.PairingCode.ProviderUnavailable", cloud)));
             return null;
         }
         var account = await SignInAsync(cloud, null);
@@ -71,7 +72,7 @@ internal sealed class StorageTargetPicker
         }
         catch (Exception ex)
         {
-            Error(_loc.Get(ProviderKey("Ui.SyncDialog.SignIn.Failed", provider), ex.Message));
+            Error(_loc.Get(ProviderKeys.For("Ui.SyncDialog.SignIn.Failed", provider), ex.Message));
             return null;
         }
     }
@@ -85,13 +86,6 @@ internal sealed class StorageTargetPicker
         };
         return browser.ShowDialog(_owner) == DialogResult.OK ? browser.SelectedPath : null;
     }
-
-    // The OneDrive keys of Phase 4a are the unsuffixed ones; Google Drive
-    // adds ".GoogleDrive". Target keys are named after the provider.
-    public static string ProviderKey(string key, CloudProvider provider, bool suffixOnly = false)
-        => suffixOnly
-            ? $"{key}.{provider}"
-            : provider == CloudProvider.GoogleDrive ? $"{key}.GoogleDrive" : key;
 
     private void Error(string message)
     {

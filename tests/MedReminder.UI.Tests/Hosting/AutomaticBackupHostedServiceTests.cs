@@ -16,6 +16,8 @@ namespace MedReminder.UI.Tests.Hosting;
 // the (Argon2id) export runs. Every registered profile is exported,
 // and a failure on one profile does not stop the others. A failed tick,
 // a disconnected account included, notifies the user at most once a day.
+// The local and cloud targets keep separate days, and the tick's result is
+// applied to the latest state, not to the copy read before the exports.
 public sealed class AutomaticBackupHostedServiceTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 25, 12, 0, 0, TimeSpan.Zero);
@@ -25,6 +27,8 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     private readonly CountingExportService _export = new();
     private readonly RecordingNotifications _notifications = new();
     private readonly MutableClock _clock = new(Now);
+    private readonly LocalBackupService _local = new();
+    private readonly FakeAccounts _accounts = new();
     private readonly string _cloudFolder;
 
     public AutomaticBackupHostedServiceTests()
@@ -265,32 +269,160 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         _state.Load().FailureNotifiedOn.Should().BeNull();
 
         _notifications.Failure = null;
-        _clock.Now = Now.AddMinutes(15);
+        _clock.Now = Now + AutomaticBackupHostedService.CloudRetryInterval;
         await host.TryRunAsync(CancellationToken.None);
 
         _notifications.Shown.Should().ContainSingle();
         _state.Load().LastError.Should().Be($"cloud {ProfileId}: disk full");
     }
 
+    [Fact]
+    public async Task Cloud_target_is_retried_the_same_day_after_a_new_sign_in()
+    {
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: false, localEnabled: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _local.Calls.Should().Be(1);
+        _storage.Uploads.Should().BeEmpty();
+        _state.Load().SignInRequired.Should().Be(CloudProvider.OneDrive);
+
+        _accounts.SignedIn = _accounts.HasSession = true;
+        _clock.Now = Now.AddMinutes(15);
+        await host.TryRunAsync(CancellationToken.None);
+
+        _local.Calls.Should().Be(1, "the local target is already done for the day");
+        _storage.Uploads.Should().ContainSingle();
+        var state = _state.Load();
+        state.LastLocalBackupAt.Should().Be(Now);
+        state.LastCloudBackupAt.Should().Be(Now.AddMinutes(15));
+        state.SignInRequired.Should().BeNull();
+        state.LastError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Both_targets_done_for_the_day_skip_the_tick()
+    {
+        var host = CreateHost(hasPassphrase: true, localEnabled: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _clock.Now = Now.AddMinutes(15);
+        await host.TryRunAsync(CancellationToken.None);
+
+        _local.Calls.Should().Be(1);
+        _storage.Uploads.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Manual_backup_does_not_close_the_automatic_local_day()
+    {
+        // What Settings saves after "Back up now" (current profile only).
+        _state.Update(s => s with { LastSuccessfulBackupAt = Now.AddHours(-1), LastBackupFile = "manual.db" });
+        var host = CreateHost(hasPassphrase: true, localEnabled: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _local.Calls.Should().Be(1, "the automatic backup covers every profile");
+    }
+
+    [Fact]
+    public async Task Tick_does_not_undo_state_saved_while_it_ran()
+    {
+        _storage.UploadFailure = new IOException("disk full");
+        var manualAt = Now.AddMinutes(5);
+        // Settings saves a manual backup while the export runs.
+        _export.OnExport = () => _state.Update(s => s with
+        {
+            LastSuccessfulBackupAt = manualAt,
+            LastBackupFile = "manual.db",
+        });
+        var host = CreateHost(hasPassphrase: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        var state = _state.Load();
+        state.LastSuccessfulBackupAt.Should().Be(manualAt);
+        state.LastBackupFile.Should().Be("manual.db");
+        state.LastError.Should().Be($"cloud {ProfileId}: disk full");
+    }
+
+    [Fact]
+    public async Task Failing_cloud_target_waits_the_retry_interval_before_exporting_again()
+    {
+        _storage.UploadFailure = new IOException("offline");
+        var host = CreateHost(hasPassphrase: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _clock.Now = Now.AddMinutes(15);
+        await host.TryRunAsync(CancellationToken.None);
+        _export.Calls.Should().Be(1, "each try costs an Argon2id export");
+
+        _clock.Now = Now + AutomaticBackupHostedService.CloudRetryInterval;
+        await host.TryRunAsync(CancellationToken.None);
+        _export.Calls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Successful_cloud_retry_clears_the_failure_time()
+    {
+        _storage.UploadFailure = new IOException("offline");
+        var host = CreateHost(hasPassphrase: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _state.Load().LastCloudFailureAt.Should().Be(Now);
+
+        _storage.UploadFailure = null;
+        _clock.Now = Now + AutomaticBackupHostedService.CloudRetryInterval;
+        await host.TryRunAsync(CancellationToken.None);
+
+        var state = _state.Load();
+        state.LastCloudFailureAt.Should().BeNull();
+        state.LastCloudBackupAt.Should().Be(_clock.Now);
+        state.LastError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Cloud_only_run_keeps_the_local_error_of_the_day()
+    {
+        _local.FailingProfileId = OtherProfileId;
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: false, localEnabled: true, profileIds: new[] { ProfileId, OtherProfileId });
+
+        await host.TryRunAsync(CancellationToken.None);
+        _accounts.SignedIn = _accounts.HasSession = true;
+        _clock.Now = Now.AddMinutes(15);
+        await host.TryRunAsync(CancellationToken.None);
+
+        _local.Calls.Should().Be(2, "the local target ran once, for both profiles");
+        _storage.Uploads.Should().HaveCount(2);
+        var state = _state.Load();
+        state.LocalError.Should().Be($"{OtherProfileId}: local failed");
+        state.CloudError.Should().BeNull();
+        state.LastError.Should().Be($"{OtherProfileId}: local failed");
+    }
+
     private AutomaticBackupHostedService CreateHost(
         bool hasPassphrase, string? cloudFolder = null, string[]? profileIds = null,
         string? oneDriveAccount = null, bool signedIn = false, bool? hasSession = null,
-        CloudProvider provider = CloudProvider.OneDrive)
+        CloudProvider provider = CloudProvider.OneDrive, bool localEnabled = false)
     {
+        _accounts.SignedIn = signedIn;
+        _accounts.HasSession = hasSession ?? signedIn;
         var services = new ServiceCollection();
-        services.AddSingleton<IBackupService, LocalTargetUnusedBackupService>();
+        services.AddSingleton<IBackupService>(_local);
         services.AddSingleton<IProfileRegistry>(new FixedProfileRegistry(profileIds ?? new[] { ProfileId }));
         services.AddSingleton<IArchiveStorage>(_storage);
         services.AddSingleton<ICloudBackupPassphraseStore>(new FakePassphraseStore(hasPassphrase));
         services.AddSingleton<IExportService>(_export);
         services.AddSingleton<ICurrentProfile, FakeCurrentProfile>();
-        services.AddSingleton<ICloudAccountService>(new FakeAccounts(signedIn, hasSession ?? signedIn));
+        services.AddSingleton<ICloudAccountService>(_accounts);
         services.AddSingleton<IWindowsNotificationService>(_notifications);
         services.AddSingleton<ILocalizationService, KeyLocalization>();
 
         var settings = new BackupSettings
         {
-            Enabled = false,
+            Enabled = localEnabled,
+            Directory = localEnabled ? _cloudFolder : string.Empty,
             CloudFolderEnabled = true,
             CloudFolderDirectory = cloudFolder ?? _cloudFolder,
             CloudFolderRetention = 30,
@@ -310,18 +442,21 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     private const string ProfileId = "0123456789abcdef0123456789abcdef";
     private const string OtherProfileId = "fedcba9876543210fedcba9876543210";
 
-    private sealed class FakeAccounts(bool signedIn, bool hasSession) : ICloudAccountService
+    private sealed class FakeAccounts : ICloudAccountService
     {
+        public bool SignedIn { get; set; }
+        public bool HasSession { get; set; }
+
         public bool IsAvailable(CloudProvider provider) => true;
 
         public Task<CloudAccount> SignInAsync(CloudProvider provider, string? accountId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         public Task<CloudAccount?> FindAsync(CloudProvider provider, string accountId, CancellationToken cancellationToken)
-            => Task.FromResult(signedIn ? new CloudAccount(provider, accountId, "user") : null);
+            => Task.FromResult(SignedIn ? new CloudAccount(provider, accountId, "user") : null);
 
         public Task<bool> HasSessionAsync(CloudProvider provider, string accountId, CancellationToken cancellationToken)
-            => Task.FromResult(signedIn && hasSession);
+            => Task.FromResult(SignedIn && HasSession);
     }
 
     private sealed class MutableClock(DateTimeOffset now) : TimeProvider
@@ -364,7 +499,7 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     {
         private BackupState _state = BackupState.Empty;
         public BackupState Load() => _state;
-        public void Save(BackupState state) => _state = state;
+        public BackupState Update(Func<BackupState, BackupState> change) => _state = change(_state);
     }
 
     private sealed class RecordingArchiveStorage : IArchiveStorage
@@ -406,12 +541,14 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         public int Calls { get; private set; }
         public List<string?> ProfileIds { get; } = new();
         public string? FailingProfileId { get; set; }
+        public Action? OnExport { get; set; }
 
         public async Task<string> ExportAsync(
             ExportOptions options, char[] passphrase, IProgress<int>? progress, CancellationToken cancellationToken)
         {
             Calls++;
             ProfileIds.Add(options.ProfileId);
+            OnExport?.Invoke();
             if (options.ProfileId == FailingProfileId)
             {
                 throw new InvalidOperationException("export failed");
@@ -454,18 +591,24 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         public void Register(string id, string displayName, ProfileRole role, ProfilePinHash? pin) => throw new NotSupportedException();
     }
 
-    // The local raw-DB target is disabled in every test here.
-    private sealed class LocalTargetUnusedBackupService : IBackupService
+    // The local raw-DB target, counted; off unless a test enables it.
+    private sealed class LocalBackupService : IBackupService
     {
         public string DatabasePath => string.Empty;
+        public int Calls { get; private set; }
+        public string? FailingProfileId { get; set; }
 
         public Task<string> ExportProfileAsync(
-            string profileId, string destinationDirectory, CancellationToken cancellationToken) =>
-            throw new InvalidOperationException("The local target must not run.");
+            string profileId, string destinationDirectory, CancellationToken cancellationToken)
+        {
+            Calls++;
+            if (profileId == FailingProfileId) throw new IOException("local failed");
+            return Task.FromResult(Path.Combine(destinationDirectory, profileId + ".db"));
+        }
 
         public Task<int> PruneOldBackupsAsync(
             string directory, int retentionDays, CancellationToken cancellationToken) =>
-            throw new InvalidOperationException("The local target must not run.");
+            Task.FromResult(0);
 
         public Task ImportProfileAsync(
             string profileId, string sourceFilePath, CancellationToken cancellationToken) =>
