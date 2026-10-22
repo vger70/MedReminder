@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #298 — Mark PRs #295, #296 and #297 as merged in the change log
+
+**Status:** open
+
+Link: [vger70/MedReminder#298](https://github.com/vger70/MedReminder/pull/298)
+Branch: `claude/changelog-backup-prs-merged`
+
+**Docs**
+- The entries of PRs #295, #296 and #297 record their merge on
+  2026-10-22.
+
+---
+
 ## PR #297 — Retry the cloud backup the same day and stop the tick undoing Settings changes
 
 **Status:** merged (2026-10-22)
