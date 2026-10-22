@@ -30,6 +30,24 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #296 — Clear the disconnected-account backup status once the user signs in again
+
+**Status:** open
+
+Link: [vger70/MedReminder#296](https://github.com/vger70/MedReminder/pull/296)
+Branch: `claude/backup-sign-in-status-fixes`
+
+**Fixed**
+- Settings > Backup / Restore no longer says the cloud account is
+  disconnected after a successful sign-in, nor after the cloud target
+  was switched to another provider or to a folder
+  (`src/MedReminder.UI/Forms/SettingsDialog.Backup.cs`).
+
+**Removed**
+- The unused `BackupState.HasFailure`.
+
+---
+
 ## PR #295 — Notify the user when the automatic backup fails or the cloud account is disconnected
 
 **Status:** open
