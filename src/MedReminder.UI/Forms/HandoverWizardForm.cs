@@ -2,6 +2,7 @@ using MedReminder.Application.Abstractions;
 using MedReminder.Application.Household;
 using MedReminder.Domain.Household;
 using MedReminder.UI.Hosting;
+using MedReminder.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MedReminder.UI.Forms;
@@ -189,7 +190,7 @@ internal sealed class HandoverWizardForm : MedReminderFormBase
         }
         catch (Exception ex)
         {
-            _cloudResult.Text = _loc.Get(StorageTargetPicker.ProviderKey("Ui.SyncDialog.SignIn.Failed", provider), ex.Message);
+            _cloudResult.Text = _loc.Get(ProviderKeys.For("Ui.SyncDialog.SignIn.Failed", provider), ex.Message);
         }
     }
 

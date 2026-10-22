@@ -1,7 +1,7 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
-using MedReminder.UI.Forms;
+using MedReminder.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -470,7 +470,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         if (windows is null || loc is null) return previous.FailureNotifiedOn;
 
         var body = signInRequired is { } provider
-            ? loc.Get(StorageTargetPicker.ProviderKey("Notifications.Backup.SignInRequired", provider))
+            ? loc.Get(ProviderKeys.For("Notifications.Backup.SignInRequired", provider))
             : loc.Get("Notifications.Backup.Failed");
         try
         {

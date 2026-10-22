@@ -7,6 +7,7 @@ using MedReminder.Infrastructure.Email;
 using MedReminder.Infrastructure.Settings;
 using MedReminder.Infrastructure.Storage;
 using MedReminder.UI.Controls;
+using MedReminder.UI.Services;
 using MedReminder.UI.UiExtensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -1006,7 +1007,7 @@ internal sealed partial class SettingsDialog
         var saved = _backupMonitor.CurrentValue;
         var signIn = state.SignInRequired is { } provider
             && saved.CloudFolderEnabled && saved.CloudProvider == provider
-            ? _loc.Get(StorageTargetPicker.ProviderKey("Ui.SettingsDialog.Backup.SignInRequired", provider))
+            ? _loc.Get(ProviderKeys.For("Ui.SettingsDialog.Backup.SignInRequired", provider))
             : null;
         string?[] parts = [signIn, state.LastError];
         var text = string.Join("; ", parts.Where(p => p is not null));
