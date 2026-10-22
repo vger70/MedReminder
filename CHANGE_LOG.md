@@ -30,12 +30,25 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #297 — Retry the cloud backup the same day and stop the tick undoing Settings changes
+## PR #298 — Mark PRs #295, #296 and #297 as merged in the change log
 
 **Status:** open
 
+Link: [vger70/MedReminder#298](https://github.com/vger70/MedReminder/pull/298)
+Branch: `claude/changelog-backup-prs-merged`
+
+**Docs**
+- The entries of PRs #295, #296 and #297 record their merge on
+  2026-10-22.
+
+---
+
+## PR #297 — Retry the cloud backup the same day and stop the tick undoing Settings changes
+
+**Status:** merged (2026-10-22)
+
 Link: [vger70/MedReminder#297](https://github.com/vger70/MedReminder/pull/297)
-Branch: `claude/backup-per-target-days` (stacked on PR #296)
+Branch: `claude/backup-per-target-days`
 
 **Fixed**
 - The local and cloud backup targets keep separate days in
@@ -64,7 +77,7 @@ Branch: `claude/backup-per-target-days` (stacked on PR #296)
 
 ## PR #296 — Clear the disconnected-account backup status once the user signs in again
 
-**Status:** open
+**Status:** merged (2026-10-22)
 
 Link: [vger70/MedReminder#296](https://github.com/vger70/MedReminder/pull/296)
 Branch: `claude/backup-sign-in-status-fixes`
@@ -82,7 +95,7 @@ Branch: `claude/backup-sign-in-status-fixes`
 
 ## PR #295 — Notify the user when the automatic backup fails or the cloud account is disconnected
 
-**Status:** open
+**Status:** merged (2026-10-22)
 
 Link: [vger70/MedReminder#295](https://github.com/vger70/MedReminder/pull/295)
 Branch: `claude/backup-disconnected-account-notification-2496eb`
