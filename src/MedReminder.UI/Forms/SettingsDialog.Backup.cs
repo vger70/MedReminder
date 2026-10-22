@@ -441,11 +441,11 @@ internal sealed partial class SettingsDialog
     // the last automatic backup no longer applies.
     private void ClearSignInRequired(CloudProvider provider)
     {
-        var state = _backupState.Load();
-        if (state.SignInRequired != provider) return;
         try
         {
-            _backupState.Save(state with { SignInRequired = null });
+            _backupState.Update(current => current.SignInRequired == provider
+                ? current with { SignInRequired = null }
+                : current);
         }
         catch (Exception)
         {
@@ -682,12 +682,14 @@ internal sealed partial class SettingsDialog
                 ? await _backup.PruneOldBackupsAsync(directory, retention, CancellationToken.None)
                 : 0;
 
-            // A manual local backup does not fix the cloud target: its
-            // pending sign-in and the notification day are kept.
-            _backupState.Save(_backupState.Load() with
+            // A manual backup covers only the current profile: the
+            // automatic local backup of the day (every profile) still
+            // runs, and the cloud target keeps its own day and sign-in.
+            var now = DateTimeOffset.UtcNow;
+            _backupState.Update(current => current with
             {
-                LastSuccessfulBackupAt = DateTimeOffset.UtcNow,
-                LastAttemptAt = DateTimeOffset.UtcNow,
+                LastSuccessfulBackupAt = now,
+                LastAttemptAt = now,
                 LastError = null,
                 LastBackupFile = file,
             });
@@ -701,7 +703,7 @@ internal sealed partial class SettingsDialog
         }
         catch (Exception ex)
         {
-            _backupState.Save(_backupState.Load() with
+            _backupState.Update(current => current with
             {
                 LastAttemptAt = DateTimeOffset.UtcNow,
                 LastError = ex.Message,

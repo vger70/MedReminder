@@ -9,6 +9,12 @@ namespace MedReminder.Infrastructure.Backup;
 // Tolerant to I/O failures: a corrupted or missing file returns
 // BackupState.Empty (the automatic service starts from scratch
 // without blocking the app).
+//
+// A file written before the per-target days (LastLocalBackupAt,
+// LastCloudBackupAt) has neither key: both take LastSuccessfulBackupAt,
+// so the upgrade does not run a second backup on a day already covered.
+// A newer file writes the keys even when null, so a manual backup saved
+// before any automatic one does not close the day.
 internal sealed class BackupStateStore : IBackupStateStore
 {
     private const string StateFileName = "backup.state.json";
@@ -19,8 +25,19 @@ internal sealed class BackupStateStore : IBackupStateStore
 
     // Serialize every access to the file: BackupStateStore is a
     // singleton and is read / written by both the hosted service and
-    // the UI.
+    // the UI. One process owns the file (single-instance mutex), so a
+    // process-wide lock makes Update atomic.
     private readonly object _sync = new();
+    private readonly string? _path;
+
+    public BackupStateStore()
+    {
+    }
+
+    internal BackupStateStore(string path)
+    {
+        _path = path;
+    }
 
     public BackupState Load()
     {
@@ -33,7 +50,14 @@ internal sealed class BackupStateStore : IBackupStateStore
                 var json = File.ReadAllText(path);
                 if (string.IsNullOrWhiteSpace(json)) return BackupState.Empty;
                 var state = JsonSerializer.Deserialize<BackupState>(json, JsonOptions);
-                return state ?? BackupState.Empty;
+                if (state is null) return BackupState.Empty;
+                return HasTargetDays(json)
+                    ? state
+                    : state with
+                    {
+                        LastLocalBackupAt = state.LastSuccessfulBackupAt,
+                        LastCloudBackupAt = state.LastSuccessfulBackupAt,
+                    };
             }
             catch
             {
@@ -43,22 +67,36 @@ internal sealed class BackupStateStore : IBackupStateStore
         }
     }
 
-    public void Save(BackupState state)
+    public BackupState Update(Func<BackupState, BackupState> change)
     {
-        ArgumentNullException.ThrowIfNull(state);
-        var path = GetStatePath();
+        ArgumentNullException.ThrowIfNull(change);
         lock (_sync)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var json = JsonSerializer.Serialize(state, JsonOptions);
-            var tmp = path + ".tmp";
-            File.WriteAllText(tmp, json);
-            // Atomic move: no one sees a half-written file if the
-            // process crashes.
-            File.Move(tmp, path, overwrite: true);
+            var current = Load();
+            var updated = change(current) ?? throw new InvalidOperationException("The change returned no state.");
+            if (!ReferenceEquals(updated, current)) Write(updated);
+            return updated;
         }
     }
 
-    private static string GetStatePath() =>
-        Path.Combine(AppDataPaths.GetAppDataDirectory(), StateFileName);
+    private static bool HasTargetDays(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.TryGetProperty(nameof(BackupState.LastLocalBackupAt), out _);
+    }
+
+    private void Write(BackupState state)
+    {
+        var path = GetStatePath();
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var json = JsonSerializer.Serialize(state, JsonOptions);
+        var tmp = path + ".tmp";
+        File.WriteAllText(tmp, json);
+        // Atomic move: no one sees a half-written file if the
+        // process crashes.
+        File.Move(tmp, path, overwrite: true);
+    }
+
+    private string GetStatePath() =>
+        _path ?? Path.Combine(AppDataPaths.GetAppDataDirectory(), StateFileName);
 }

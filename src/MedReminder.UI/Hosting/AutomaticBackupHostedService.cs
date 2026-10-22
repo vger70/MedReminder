@@ -13,8 +13,10 @@ namespace MedReminder.UI.Hosting;
 //
 // "At-least-once-a-day with a preferred time" policy:
 //   - Tick every 15 minutes.
-//   - Backup if: Enabled && LastSuccessfulBackupAt.Date < today
-//     (local) && currentLocalTime >= PreferredTime.
+//   - Back up a target if: it is enabled && its last backup day
+//     (LastLocalBackupAt / LastCloudBackupAt) < today (local) &&
+//     currentLocalTime >= PreferredTime. The two targets keep separate
+//     days, so one that failed is retried while the other is done.
 //   - ⇒ If the app starts late relative to the preferred time (e.g.
 //     PC on at 09:00 but time set to 03:00), immediate catch-up on
 //     the first tick.
@@ -130,14 +132,14 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             var todayLocal = DateOnly.FromDateTime(nowLocal.DateTime);
             var timeOfDay = TimeOnly.FromDateTime(nowLocal.DateTime);
 
-            if (state.LastSuccessfulBackupAt is { } last)
+            // Each target keeps its own day: a cloud target that failed
+            // (a disconnected account) is retried while the local one is
+            // already done.
+            var localDue = localEnabled && !IsToday(state.LastLocalBackupAt, todayLocal);
+            var cloudDue = cloudEnabled && !IsToday(state.LastCloudBackupAt, todayLocal);
+            if (!localDue && !cloudDue)
             {
-                var lastLocalDay = DateOnly.FromDateTime(
-                    ConvertToLocal(last).DateTime);
-                if (lastLocalDay >= todayLocal)
-                {
-                    return;
-                }
+                return;
             }
 
             if (timeOfDay < preferred)
@@ -146,8 +148,8 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             }
 
             _log.LogInformation(
-                "Starting automatic daily backup (local={LocalEnabled}, cloud={CloudEnabled}).",
-                localEnabled, cloudEnabled);
+                "Starting automatic daily backup (local={LocalDue}, cloud={CloudDue}).",
+                localDue, cloudDue);
 
             await using var scope = _services.CreateAsyncScope();
             var backup = scope.ServiceProvider.GetRequiredService<IBackupService>();
@@ -162,16 +164,15 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 return;
             }
 
-            // Every backup written this tick, by either target. The day
-            // counts as backed up as soon as one exists, so a cloud-only
-            // configuration does not re-export on every tick.
-            var exportedFiles = new List<string>();
+            // A target's day counts as backed up as soon as one of its
+            // backups exists, so a target does not re-export on every tick.
+            var localFiles = new List<string>();
+            var cloudArchives = new List<string>();
             var perProfileErrors = new List<string>();
             CloudProvider? signInRequired = null;
 
-            // Local raw-DB target: unchanged behaviour, per-profile
-            // isolation, best-effort.
-            if (localEnabled)
+            // Local raw-DB target: per-profile isolation, best-effort.
+            if (localDue)
             {
                 foreach (var profile in profiles)
                 {
@@ -180,7 +181,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                     {
                         var file = await backup.ExportProfileAsync(
                             profile.Id, settings.Directory, cancellationToken);
-                        exportedFiles.Add(file);
+                        localFiles.Add(file);
                         _log.LogInformation(
                             "Automatic backup exported profile {Profile} to {File}.",
                             profile.Id, file);
@@ -202,7 +203,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             // C.3+ cloud target: every profile, with an independent
             // try/catch per profile so a failure on the cloud path does
             // not skip the local one and vice versa (§4.1).
-            if (cloudEnabled)
+            if (cloudDue)
             {
                 try
                 {
@@ -213,7 +214,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                         profiles,
                         perProfileErrors,
                         cancellationToken);
-                    exportedFiles.AddRange(cloud.ArchiveIds);
+                    cloudArchives.AddRange(cloud.ArchiveIds);
                     signInRequired = cloud.SignInRequired;
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -228,7 +229,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             }
 
             var pruned = 0;
-            if (localEnabled && settings.RetentionDays > 0)
+            if (localDue && settings.RetentionDays > 0)
             {
                 try
                 {
@@ -241,7 +242,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 }
             }
 
-            if (cloudEnabled && settings.CloudFolderRetention > 0)
+            if (cloudDue && settings.CloudFolderRetention > 0)
             {
                 try
                 {
@@ -263,30 +264,38 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 state, errorSummary is not null || signInRequired is not null, signInRequired, todayLocal,
                 cancellationToken);
 
-            if (exportedFiles.Count > 0)
+            // Applied to the latest state, not to the copy read before the
+            // exports: Settings may have saved a manual backup or cleared
+            // the sign-in meanwhile.
+            var now = _clock.GetUtcNow();
+            var lastFile = cloudArchives.Count > 0 ? cloudArchives[^1]
+                : localFiles.Count > 0 ? localFiles[^1]
+                : null;
+            _stateStore.Update(current => current with
             {
-                _stateStore.Save(new BackupState(
-                    LastSuccessfulBackupAt: _clock.GetUtcNow(),
-                    LastAttemptAt: _clock.GetUtcNow(),
-                    LastError: errorSummary,
-                    LastBackupFile: exportedFiles[^1],
-                    SignInRequired: signInRequired,
-                    FailureNotifiedOn: notifiedOn));
+                LastSuccessfulBackupAt = lastFile is null
+                    ? current.LastSuccessfulBackupAt
+                    : Latest(current.LastSuccessfulBackupAt, now),
+                LastLocalBackupAt = localFiles.Count > 0
+                    ? Latest(current.LastLocalBackupAt, now)
+                    : current.LastLocalBackupAt,
+                LastCloudBackupAt = cloudArchives.Count > 0
+                    ? Latest(current.LastCloudBackupAt, now)
+                    : current.LastCloudBackupAt,
+                LastAttemptAt = now,
+                LastError = errorSummary,
+                LastBackupFile = lastFile ?? current.LastBackupFile,
+                // A cloud target not run this tick keeps its last outcome;
+                // one that is no longer configured has nothing to sign in to.
+                SignInRequired = cloudDue ? signInRequired
+                    : cloudEnabled ? current.SignInRequired
+                    : null,
+                FailureNotifiedOn = notifiedOn,
+            });
 
-                _log.LogInformation(
-                    "Automatic backup tick completed: {ExportedCount} backup file(s) written, {Pruned} old file(s) pruned.",
-                    exportedFiles.Count, pruned);
-            }
-            else
-            {
-                _stateStore.Save(new BackupState(
-                    LastSuccessfulBackupAt: state.LastSuccessfulBackupAt,
-                    LastAttemptAt: _clock.GetUtcNow(),
-                    LastError: errorSummary,
-                    LastBackupFile: state.LastBackupFile,
-                    SignInRequired: signInRequired,
-                    FailureNotifiedOn: notifiedOn));
-            }
+            _log.LogInformation(
+                "Automatic backup tick completed: {ExportedCount} backup file(s) written, {Pruned} old file(s) pruned.",
+                localFiles.Count + cloudArchives.Count, pruned);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -301,12 +310,12 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 var today = DateOnly.FromDateTime(ConvertToLocal(_clock.GetUtcNow()).DateTime);
                 var notifiedOn = await NotifyFailureAsync(
                     existing, failed: true, signInRequired: null, today, cancellationToken);
-                _stateStore.Save(new BackupState(
-                    LastSuccessfulBackupAt: existing.LastSuccessfulBackupAt,
-                    LastAttemptAt: _clock.GetUtcNow(),
-                    LastError: ex.Message,
-                    LastBackupFile: existing.LastBackupFile,
-                    FailureNotifiedOn: notifiedOn));
+                _stateStore.Update(current => current with
+                {
+                    LastAttemptAt = _clock.GetUtcNow(),
+                    LastError = ex.Message,
+                    FailureNotifiedOn = notifiedOn,
+                });
             }
             catch
             {
@@ -315,6 +324,12 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             }
         }
     }
+
+    private bool IsToday(DateTimeOffset? at, DateOnly todayLocal)
+        => at is { } value && DateOnly.FromDateTime(ConvertToLocal(value).DateTime) >= todayLocal;
+
+    private static DateTimeOffset Latest(DateTimeOffset? saved, DateTimeOffset now)
+        => saved is { } value && value > now ? value : now;
 
     // C.3+ (docs/analysis/ANALYSIS-C3PLUS-CLOUD-BACKUP.md §4.1):
     // export every registered profile to a fresh .mrz in a temp folder,
