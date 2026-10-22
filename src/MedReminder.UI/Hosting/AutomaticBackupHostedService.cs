@@ -1,6 +1,7 @@
 using System.Globalization;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.UI.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -166,6 +167,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             // configuration does not re-export on every tick.
             var exportedFiles = new List<string>();
             var perProfileErrors = new List<string>();
+            CloudProvider? signInRequired = null;
 
             // Local raw-DB target: unchanged behaviour, per-profile
             // isolation, best-effort.
@@ -204,13 +206,15 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             {
                 try
                 {
-                    exportedFiles.AddRange(await RunCloudTargetAsync(
+                    var cloud = await RunCloudTargetAsync(
                         scope.ServiceProvider,
                         archiveStorage,
                         settings,
                         profiles,
                         perProfileErrors,
-                        cancellationToken));
+                        cancellationToken);
+                    exportedFiles.AddRange(cloud.ArchiveIds);
+                    signInRequired = cloud.SignInRequired;
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -255,6 +259,9 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             var errorSummary = perProfileErrors.Count == 0
                 ? null
                 : string.Join("; ", perProfileErrors);
+            var notifiedOn = await NotifyFailureAsync(
+                state, errorSummary is not null || signInRequired is not null, signInRequired, todayLocal,
+                cancellationToken);
 
             if (exportedFiles.Count > 0)
             {
@@ -262,7 +269,9 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                     LastSuccessfulBackupAt: _clock.GetUtcNow(),
                     LastAttemptAt: _clock.GetUtcNow(),
                     LastError: errorSummary,
-                    LastBackupFile: exportedFiles[^1]));
+                    LastBackupFile: exportedFiles[^1],
+                    SignInRequired: signInRequired,
+                    FailureNotifiedOn: notifiedOn));
 
                 _log.LogInformation(
                     "Automatic backup tick completed: {ExportedCount} backup file(s) written, {Pruned} old file(s) pruned.",
@@ -274,7 +283,9 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                     LastSuccessfulBackupAt: state.LastSuccessfulBackupAt,
                     LastAttemptAt: _clock.GetUtcNow(),
                     LastError: errorSummary,
-                    LastBackupFile: state.LastBackupFile));
+                    LastBackupFile: state.LastBackupFile,
+                    SignInRequired: signInRequired,
+                    FailureNotifiedOn: notifiedOn));
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -287,11 +298,15 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             try
             {
                 var existing = _stateStore.Load();
+                var today = DateOnly.FromDateTime(ConvertToLocal(_clock.GetUtcNow()).DateTime);
+                var notifiedOn = await NotifyFailureAsync(
+                    existing, failed: true, signInRequired: null, today, cancellationToken);
                 _stateStore.Save(new BackupState(
                     LastSuccessfulBackupAt: existing.LastSuccessfulBackupAt,
                     LastAttemptAt: _clock.GetUtcNow(),
                     LastError: ex.Message,
-                    LastBackupFile: existing.LastBackupFile));
+                    LastBackupFile: existing.LastBackupFile,
+                    FailureNotifiedOn: notifiedOn));
             }
             catch
             {
@@ -310,8 +325,9 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
     // DPAPI-cached backup passphrase. A missing passphrase or folder
     // logs a warning and skips (§4.6), it is not a failure of the tick.
     // A failure on one profile is recorded in errors and does not stop
-    // the others. Returns the stored archive ids.
-    private async Task<IReadOnlyList<string>> RunCloudTargetAsync(
+    // the others. Returns the stored archive ids, and the provider whose
+    // session ended (disconnected or revoked account), if any.
+    private async Task<(IReadOnlyList<string> ArchiveIds, CloudProvider? SignInRequired)> RunCloudTargetAsync(
         IServiceProvider scopedServices,
         IArchiveStorage archiveStorage,
         BackupSettings settings,
@@ -333,7 +349,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             _log.LogWarning(
                 "Cloud-folder backup skipped: folder {Directory} does not exist.",
                 cloudFolderDirectory);
-            return archiveIds;
+            return (archiveIds, null);
         }
         if (settings.CloudProvider is { } provider)
         {
@@ -341,14 +357,14 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             if (accounts is null)
             {
                 _log.LogWarning("Cloud backup skipped: no {Provider} account service is registered.", provider);
-                return archiveIds;
+                return (archiveIds, null);
             }
             if (!await accounts.HasSessionAsync(provider, settings.CloudAccountId, cancellationToken))
             {
-                // Recorded as the tick's error, so Settings shows that a
-                // new sign-in is needed instead of a silent skip.
-                RecordSignInRequired(new CloudSignInRequiredException(provider), errors);
-                return archiveIds;
+                // Recorded as the tick's failure, so the user is told that
+                // a new sign-in is needed instead of a silent skip.
+                LogSignInRequired(provider);
+                return (archiveIds, provider);
             }
         }
 
@@ -357,7 +373,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         {
             _log.LogWarning(
                 "Cloud-folder backup skipped: no backup passphrase configured on this machine.");
-            return archiveIds;
+            return (archiveIds, null);
         }
 
         var passphrase = passStore.GetPassphrase();
@@ -365,10 +381,11 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
         {
             _log.LogWarning(
                 "Cloud-folder backup skipped: the stored backup passphrase could not be read.");
-            return archiveIds;
+            return (archiveIds, null);
         }
 
         var exportService = scopedServices.GetRequiredService<IExportService>();
+        CloudProvider? signInRequired = null;
         try
         {
             foreach (var profile in profiles)
@@ -387,7 +404,8 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 {
                     // The session ended while the export ran: the other
                     // profiles would fail the same way.
-                    RecordSignInRequired(ex, errors);
+                    signInRequired = ex.Provider;
+                    LogSignInRequired(ex.Provider);
                     break;
                 }
                 catch (DirectoryNotFoundException)
@@ -412,13 +430,47 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             Array.Clear(passphrase, 0, passphrase.Length);
         }
 
-        return archiveIds;
+        return (archiveIds, signInRequired);
     }
 
-    private void RecordSignInRequired(CloudSignInRequiredException ex, List<string> errors)
+    private void LogSignInRequired(CloudProvider provider)
+        => _log.LogWarning("Cloud backup skipped: {Provider} needs a new sign-in.", provider);
+
+    // Tells the user, at most once a local day, that the automatic backup
+    // did not complete: without it a disconnected account or a failing
+    // target is visible only in Settings, where the details stay. Returns
+    // the day to record as notified; a notification that could not be
+    // shown is retried on the next tick.
+    private async Task<DateOnly?> NotifyFailureAsync(
+        BackupState previous,
+        bool failed,
+        CloudProvider? signInRequired,
+        DateOnly today,
+        CancellationToken cancellationToken)
     {
-        errors.Add($"cloud: {ex.Message}");
-        _log.LogWarning("Cloud backup skipped: {Provider} needs a new sign-in.", ex.Provider);
+        if (!failed || previous.FailureNotifiedOn == today) return previous.FailureNotifiedOn;
+
+        var windows = _services.GetService<IWindowsNotificationService>();
+        var loc = _services.GetService<ILocalizationService>();
+        if (windows is null || loc is null) return previous.FailureNotifiedOn;
+
+        var body = signInRequired is { } provider
+            ? loc.Get(StorageTargetPicker.ProviderKey("Notifications.Backup.SignInRequired", provider))
+            : loc.Get("Notifications.Backup.Failed");
+        try
+        {
+            await windows.ShowAsync(loc.Get("Notifications.Backup.Title"), body, cancellationToken);
+            return today;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Backup failure notification could not be shown.");
+            return previous.FailureNotifiedOn;
+        }
     }
 
     private async Task<string> ExportProfileToCloudAsync(
