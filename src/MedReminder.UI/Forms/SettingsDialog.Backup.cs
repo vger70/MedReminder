@@ -685,13 +685,14 @@ internal sealed partial class SettingsDialog
 
             // A manual backup covers only the current profile: the
             // automatic local backup of the day (every profile) still
-            // runs, and the cloud target keeps its own day and sign-in.
+            // runs, and the cloud target keeps its own day and sign-in. The
+            // errors of the automatic backup stay shown.
             var now = DateTimeOffset.UtcNow;
             _backupState.Update(current => current with
             {
                 LastSuccessfulBackupAt = now,
                 LastAttemptAt = now,
-                LastError = null,
+                LastError = current.AutomaticErrors(),
                 LastBackupFile = file,
             });
             UpdateBackupStatusLabel();
@@ -707,7 +708,7 @@ internal sealed partial class SettingsDialog
             _backupState.Update(current => current with
             {
                 LastAttemptAt = DateTimeOffset.UtcNow,
-                LastError = ex.Message,
+                LastError = MedReminder.Application.Abstractions.BackupState.JoinErrors(ex.Message, current.AutomaticErrors()),
                 LastBackupFile = null,
             });
             UpdateBackupStatusLabel();

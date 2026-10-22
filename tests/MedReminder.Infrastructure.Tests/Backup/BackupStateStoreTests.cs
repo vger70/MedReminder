@@ -6,10 +6,12 @@ using Xunit;
 namespace MedReminder.Infrastructure.Tests.Backup;
 
 // backup.state.json: a file written before the per-target days fills them
-// from LastSuccessfulBackupAt, so the upgrade does not back up a day that
-// is already covered; a newer file keeps them null, so a manual backup
-// does not close the automatic day. Update reads, changes and saves in one
-// step and writes nothing when the change returns the same state.
+// from LastSuccessfulBackupAt, except for a target with an error in the
+// old LastError, so the upgrade neither backs up a covered day twice nor
+// skips a target that failed; a newer file keeps them null, so a manual
+// backup does not close the automatic day. Update reads, changes and
+// saves in one step and writes nothing when the change returns the same
+// state.
 public sealed class BackupStateStoreTests : IDisposable
 {
     private readonly string _folder;
@@ -44,6 +46,30 @@ public sealed class BackupStateStoreTests : IDisposable
         var expected = new DateTimeOffset(2026, 10, 20, 3, 0, 0, TimeSpan.Zero);
         state.LastLocalBackupAt.Should().Be(expected);
         state.LastCloudBackupAt.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("cloud: Sign in to OneDrive again to continue.", true, false)]
+    [InlineData("cloud 0123: disk full", true, false)]
+    [InlineData("0123: database locked", false, true)]
+    [InlineData("0123: database locked; cloud 0123: disk full", false, false)]
+    public void Old_file_leaves_the_target_with_an_error_due(string lastError, bool localDone, bool cloudDone)
+    {
+        File.WriteAllText(_path, $$"""
+            {
+              "LastSuccessfulBackupAt": "2026-10-20T03:00:00+00:00",
+              "LastAttemptAt": "2026-10-20T03:00:00+00:00",
+              "LastError": "{{lastError}}",
+              "LastBackupFile": "backup.db"
+            }
+            """);
+
+        var state = new BackupStateStore(_path).Load();
+
+        var day = new DateTimeOffset(2026, 10, 20, 3, 0, 0, TimeSpan.Zero);
+        state.LastLocalBackupAt.Should().Be(localDone ? day : null);
+        state.LastCloudBackupAt.Should().Be(cloudDone ? day : null);
+        state.AutomaticErrors().Should().Be(lastError);
     }
 
     [Fact]

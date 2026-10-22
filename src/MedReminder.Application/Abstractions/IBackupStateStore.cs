@@ -8,9 +8,16 @@ namespace MedReminder.Application.Abstractions;
 // LastSuccessfulBackupAt: the last backup on any target, for the status
 // shown in Settings. LastLocalBackupAt / LastCloudBackupAt: the last
 // automatic backup on each target, so a target that failed is retried
-// the same day while the other one is already done. The store fills both
-// from LastSuccessfulBackupAt when it reads a file written before these
-// two keys existed.
+// the same day while the other one is already done. The store fills them
+// when it reads a file written before these keys existed.
+//
+// LocalError / CloudError: the errors of the last automatic run of each
+// target, so a run of one target does not erase the other's. LastError is
+// what Settings shows: the automatic errors (AutomaticErrors), or the
+// outcome of a manual backup in front of them. LastCloudFailureAt: when
+// the cloud target last ran without storing a snapshot for a reason other
+// than a sign-in, so a failing target (offline, storage error) is retried
+// at most once per CloudRetryInterval instead of on every tick.
 //
 // SignInRequired: the cloud account whose session ended on the last
 // attempt (disconnected, revoked, expired), kept apart from LastError so
@@ -26,10 +33,22 @@ public sealed record BackupState(
     CloudProvider? SignInRequired = null,
     DateOnly? FailureNotifiedOn = null,
     DateTimeOffset? LastLocalBackupAt = null,
-    DateTimeOffset? LastCloudBackupAt = null)
+    DateTimeOffset? LastCloudBackupAt = null,
+    string? LocalError = null,
+    string? CloudError = null,
+    DateTimeOffset? LastCloudFailureAt = null)
 {
     public static BackupState Empty { get; } =
         new(LastSuccessfulBackupAt: null, LastAttemptAt: null, LastError: null, LastBackupFile: null);
+
+    // Joins the non-empty parts with "; ", or null when there is none.
+    public static string? JoinErrors(params string?[] errors)
+    {
+        var text = string.Join("; ", errors.Where(e => !string.IsNullOrEmpty(e)));
+        return text.Length == 0 ? null : text;
+    }
+
+    public string? AutomaticErrors() => JoinErrors(LocalError, CloudError);
 }
 
 public interface IBackupStateStore

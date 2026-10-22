@@ -36,6 +36,11 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
     private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(30);
     private static readonly TimeOnly FallbackPreferredTime = new(3, 0);
+    // A cloud target that ran without storing a snapshot (offline, storage
+    // error, missing folder) waits this long before the next try: each try
+    // costs an Argon2id export per profile. A pending sign-in is checked
+    // on every tick, before any export.
+    internal static readonly TimeSpan CloudRetryInterval = TimeSpan.FromHours(1);
 
     private readonly IServiceProvider _services;
     private readonly IOptionsMonitor<BackupSettings> _settings;
@@ -136,7 +141,9 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             // (a disconnected account) is retried while the local one is
             // already done.
             var localDue = localEnabled && !IsToday(state.LastLocalBackupAt, todayLocal);
-            var cloudDue = cloudEnabled && !IsToday(state.LastCloudBackupAt, todayLocal);
+            var cloudDue = cloudEnabled && !IsToday(state.LastCloudBackupAt, todayLocal)
+                && !(state.LastCloudFailureAt is { } failedAt
+                     && _clock.GetUtcNow() - failedAt < CloudRetryInterval);
             if (!localDue && !cloudDue)
             {
                 return;
@@ -168,7 +175,8 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             // backups exists, so a target does not re-export on every tick.
             var localFiles = new List<string>();
             var cloudArchives = new List<string>();
-            var perProfileErrors = new List<string>();
+            var localErrors = new List<string>();
+            var cloudErrors = new List<string>();
             CloudProvider? signInRequired = null;
 
             // Local raw-DB target: per-profile isolation, best-effort.
@@ -192,8 +200,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                     }
                     catch (Exception ex)
                     {
-                        var message = $"{profile.Id}: {ex.Message}";
-                        perProfileErrors.Add(message);
+                        localErrors.Add($"{profile.Id}: {ex.Message}");
                         _log.LogError(ex,
                             "Automatic backup failed for profile {Profile}.", profile.Id);
                     }
@@ -212,7 +219,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                         archiveStorage,
                         settings,
                         profiles,
-                        perProfileErrors,
+                        cloudErrors,
                         cancellationToken);
                     cloudArchives.AddRange(cloud.ArchiveIds);
                     signInRequired = cloud.SignInRequired;
@@ -223,7 +230,7 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    perProfileErrors.Add($"cloud: {ex.Message}");
+                    cloudErrors.Add($"cloud: {ex.Message}");
                     _log.LogError(ex, "Automatic cloud-folder backup failed.");
                 }
             }
@@ -257,12 +264,11 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
                 }
             }
 
-            var errorSummary = perProfileErrors.Count == 0
-                ? null
-                : string.Join("; ", perProfileErrors);
+            var localError = BackupState.JoinErrors([.. localErrors]);
+            var cloudError = BackupState.JoinErrors([.. cloudErrors]);
             var notifiedOn = await NotifyFailureAsync(
-                state, errorSummary is not null || signInRequired is not null, signInRequired, todayLocal,
-                cancellationToken);
+                state, localError is not null || cloudError is not null || signInRequired is not null,
+                signInRequired, todayLocal, cancellationToken);
 
             // Applied to the latest state, not to the copy read before the
             // exports: Settings may have saved a manual backup or cleared
@@ -271,26 +277,38 @@ internal sealed class AutomaticBackupHostedService : BackgroundService
             var lastFile = cloudArchives.Count > 0 ? cloudArchives[^1]
                 : localFiles.Count > 0 ? localFiles[^1]
                 : null;
-            _stateStore.Update(current => current with
+            _stateStore.Update(current =>
             {
-                LastSuccessfulBackupAt = lastFile is null
-                    ? current.LastSuccessfulBackupAt
-                    : Latest(current.LastSuccessfulBackupAt, now),
-                LastLocalBackupAt = localFiles.Count > 0
-                    ? Latest(current.LastLocalBackupAt, now)
-                    : current.LastLocalBackupAt,
-                LastCloudBackupAt = cloudArchives.Count > 0
-                    ? Latest(current.LastCloudBackupAt, now)
-                    : current.LastCloudBackupAt,
-                LastAttemptAt = now,
-                LastError = errorSummary,
-                LastBackupFile = lastFile ?? current.LastBackupFile,
-                // A cloud target not run this tick keeps its last outcome;
-                // one that is no longer configured has nothing to sign in to.
-                SignInRequired = cloudDue ? signInRequired
-                    : cloudEnabled ? current.SignInRequired
-                    : null,
-                FailureNotifiedOn = notifiedOn,
+                var next = current with
+                {
+                    LastSuccessfulBackupAt = lastFile is null
+                        ? current.LastSuccessfulBackupAt
+                        : Latest(current.LastSuccessfulBackupAt, now),
+                    LastLocalBackupAt = localFiles.Count > 0
+                        ? Latest(current.LastLocalBackupAt, now)
+                        : current.LastLocalBackupAt,
+                    LastCloudBackupAt = cloudArchives.Count > 0
+                        ? Latest(current.LastCloudBackupAt, now)
+                        : current.LastCloudBackupAt,
+                    LastAttemptAt = now,
+                    LastBackupFile = lastFile ?? current.LastBackupFile,
+                    // A target not run this tick keeps its last outcome; one
+                    // that is no longer enabled has nothing left to report.
+                    LocalError = localDue ? localError
+                        : localEnabled ? current.LocalError
+                        : null,
+                    CloudError = cloudDue ? cloudError
+                        : cloudEnabled ? current.CloudError
+                        : null,
+                    SignInRequired = cloudDue ? signInRequired
+                        : cloudEnabled ? current.SignInRequired
+                        : null,
+                    LastCloudFailureAt = cloudDue
+                        ? cloudArchives.Count == 0 && signInRequired is null ? now : null
+                        : current.LastCloudFailureAt,
+                    FailureNotifiedOn = notifiedOn,
+                };
+                return next with { LastError = next.AutomaticErrors() };
             });
 
             _log.LogInformation(

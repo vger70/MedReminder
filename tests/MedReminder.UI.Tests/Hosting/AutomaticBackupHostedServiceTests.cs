@@ -269,7 +269,7 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         _state.Load().FailureNotifiedOn.Should().BeNull();
 
         _notifications.Failure = null;
-        _clock.Now = Now.AddMinutes(15);
+        _clock.Now = Now + AutomaticBackupHostedService.CloudRetryInterval;
         await host.TryRunAsync(CancellationToken.None);
 
         _notifications.Shown.Should().ContainSingle();
@@ -344,6 +344,61 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         state.LastSuccessfulBackupAt.Should().Be(manualAt);
         state.LastBackupFile.Should().Be("manual.db");
         state.LastError.Should().Be($"cloud {ProfileId}: disk full");
+    }
+
+    [Fact]
+    public async Task Failing_cloud_target_waits_the_retry_interval_before_exporting_again()
+    {
+        _storage.UploadFailure = new IOException("offline");
+        var host = CreateHost(hasPassphrase: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _clock.Now = Now.AddMinutes(15);
+        await host.TryRunAsync(CancellationToken.None);
+        _export.Calls.Should().Be(1, "each try costs an Argon2id export");
+
+        _clock.Now = Now + AutomaticBackupHostedService.CloudRetryInterval;
+        await host.TryRunAsync(CancellationToken.None);
+        _export.Calls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Successful_cloud_retry_clears_the_failure_time()
+    {
+        _storage.UploadFailure = new IOException("offline");
+        var host = CreateHost(hasPassphrase: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _state.Load().LastCloudFailureAt.Should().Be(Now);
+
+        _storage.UploadFailure = null;
+        _clock.Now = Now + AutomaticBackupHostedService.CloudRetryInterval;
+        await host.TryRunAsync(CancellationToken.None);
+
+        var state = _state.Load();
+        state.LastCloudFailureAt.Should().BeNull();
+        state.LastCloudBackupAt.Should().Be(_clock.Now);
+        state.LastError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Cloud_only_run_keeps_the_local_error_of_the_day()
+    {
+        _local.FailingProfileId = OtherProfileId;
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: false, localEnabled: true, profileIds: new[] { ProfileId, OtherProfileId });
+
+        await host.TryRunAsync(CancellationToken.None);
+        _accounts.SignedIn = _accounts.HasSession = true;
+        _clock.Now = Now.AddMinutes(15);
+        await host.TryRunAsync(CancellationToken.None);
+
+        _local.Calls.Should().Be(2, "the local target ran once, for both profiles");
+        _storage.Uploads.Should().HaveCount(2);
+        var state = _state.Load();
+        state.LocalError.Should().Be($"{OtherProfileId}: local failed");
+        state.CloudError.Should().BeNull();
+        state.LastError.Should().Be($"{OtherProfileId}: local failed");
     }
 
     private AutomaticBackupHostedService CreateHost(
@@ -541,11 +596,13 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     {
         public string DatabasePath => string.Empty;
         public int Calls { get; private set; }
+        public string? FailingProfileId { get; set; }
 
         public Task<string> ExportProfileAsync(
             string profileId, string destinationDirectory, CancellationToken cancellationToken)
         {
             Calls++;
+            if (profileId == FailingProfileId) throw new IOException("local failed");
             return Task.FromResult(Path.Combine(destinationDirectory, profileId + ".db"));
         }
 

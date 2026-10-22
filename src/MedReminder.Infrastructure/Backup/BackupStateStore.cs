@@ -11,10 +11,12 @@ namespace MedReminder.Infrastructure.Backup;
 // without blocking the app).
 //
 // A file written before the per-target days (LastLocalBackupAt,
-// LastCloudBackupAt) has neither key: both take LastSuccessfulBackupAt,
-// so the upgrade does not run a second backup on a day already covered.
-// A newer file writes the keys even when null, so a manual backup saved
-// before any automatic one does not close the day.
+// LastCloudBackupAt) has neither key. Its LastError joined the errors of
+// both targets, the cloud ones prefixed with "cloud": a target with an
+// error there is left due, the other takes LastSuccessfulBackupAt, so the
+// upgrade neither backs up a covered day twice nor skips a target that
+// failed. A newer file writes the keys even when null, so a manual backup
+// saved before any automatic one does not close the day.
 internal sealed class BackupStateStore : IBackupStateStore
 {
     private const string StateFileName = "backup.state.json";
@@ -49,15 +51,12 @@ internal sealed class BackupStateStore : IBackupStateStore
                 if (!File.Exists(path)) return BackupState.Empty;
                 var json = File.ReadAllText(path);
                 if (string.IsNullOrWhiteSpace(json)) return BackupState.Empty;
-                var state = JsonSerializer.Deserialize<BackupState>(json, JsonOptions);
+                using var document = JsonDocument.Parse(json);
+                var state = document.Deserialize<BackupState>(JsonOptions);
                 if (state is null) return BackupState.Empty;
-                return HasTargetDays(json)
+                return document.RootElement.TryGetProperty(nameof(BackupState.LastLocalBackupAt), out _)
                     ? state
-                    : state with
-                    {
-                        LastLocalBackupAt = state.LastSuccessfulBackupAt,
-                        LastCloudBackupAt = state.LastSuccessfulBackupAt,
-                    };
+                    : FromOldFormat(state);
             }
             catch
             {
@@ -79,10 +78,22 @@ internal sealed class BackupStateStore : IBackupStateStore
         }
     }
 
-    private static bool HasTargetDays(string json)
+    private static BackupState FromOldFormat(BackupState state)
     {
-        using var document = JsonDocument.Parse(json);
-        return document.RootElement.TryGetProperty(nameof(BackupState.LastLocalBackupAt), out _);
+        var parts = (state.LastError ?? string.Empty).Split("; ", StringSplitOptions.RemoveEmptyEntries);
+        var cloudError = BackupState.JoinErrors(
+            [.. parts.Where(p => p.StartsWith("cloud", StringComparison.Ordinal))]);
+        var localError = BackupState.JoinErrors(
+            [.. parts.Where(p => !p.StartsWith("cloud", StringComparison.Ordinal))]);
+        return state with
+        {
+            LastLocalBackupAt = localError is null ? state.LastSuccessfulBackupAt : null,
+            LastCloudBackupAt = cloudError is null && state.SignInRequired is null
+                ? state.LastSuccessfulBackupAt
+                : null,
+            LocalError = localError,
+            CloudError = cloudError,
+        };
     }
 
     private void Write(BackupState state)
