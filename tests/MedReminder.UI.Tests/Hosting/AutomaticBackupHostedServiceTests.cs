@@ -14,7 +14,8 @@ namespace MedReminder.UI.Tests.Hosting;
 // the preferred time would re-export. Skips must leave the day open so
 // a later tick retries, and a missing folder must be detected before
 // the (Argon2id) export runs. Every registered profile is exported,
-// and a failure on one profile does not stop the others.
+// and a failure on one profile does not stop the others. A failed tick,
+// a disconnected account included, notifies the user at most once a day.
 public sealed class AutomaticBackupHostedServiceTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 25, 12, 0, 0, TimeSpan.Zero);
@@ -22,6 +23,8 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
     private readonly InMemoryBackupStateStore _state = new();
     private readonly RecordingArchiveStorage _storage = new();
     private readonly CountingExportService _export = new();
+    private readonly RecordingNotifications _notifications = new();
+    private readonly MutableClock _clock = new(Now);
     private readonly string _cloudFolder;
 
     public AutomaticBackupHostedServiceTests()
@@ -160,7 +163,8 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         _storage.Uploads.Should().BeEmpty();
         var state = _state.Load();
         state.LastSuccessfulBackupAt.Should().BeNull();
-        state.LastError.Should().Contain("Sign in to OneDrive again");
+        state.SignInRequired.Should().Be(CloudProvider.OneDrive);
+        state.LastError.Should().BeNull();
     }
 
     [Fact]
@@ -176,7 +180,8 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         _export.Calls.Should().Be(0, "an ended session must not cost an Argon2id export");
         var state = _state.Load();
         state.LastSuccessfulBackupAt.Should().BeNull();
-        state.LastError.Should().Be("cloud: Sign in to OneDrive again to continue.");
+        state.SignInRequired.Should().Be(CloudProvider.OneDrive);
+        state.LastError.Should().BeNull();
     }
 
     [Fact]
@@ -191,12 +196,86 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         _export.Calls.Should().Be(1, "the other profiles would fail the same way");
         var state = _state.Load();
         state.LastSuccessfulBackupAt.Should().BeNull();
-        state.LastError.Should().Be("cloud: Sign in to OneDrive again to continue.");
+        state.SignInRequired.Should().Be(CloudProvider.OneDrive);
+        state.LastError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Disconnected_account_is_notified_once_a_day_with_the_sign_in_message()
+    {
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: false);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _clock.Now = Now.AddMinutes(15);
+        await host.TryRunAsync(CancellationToken.None);
+
+        _notifications.Shown.Should().ContainSingle("the 15-minute ticks must not repeat the notification")
+            .Which.Should().Be(("Notifications.Backup.Title", "Notifications.Backup.SignInRequired"));
+        _state.Load().FailureNotifiedOn.Should().Be(DateOnly.FromDateTime(Now.UtcDateTime));
+    }
+
+    [Fact]
+    public async Task Disconnected_Google_Drive_account_uses_its_own_message()
+    {
+        var host = CreateHost(hasPassphrase: true, cloudFolder: string.Empty, oneDriveAccount: "account-1",
+            signedIn: false, provider: CloudProvider.GoogleDrive);
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _notifications.Shown.Should().ContainSingle()
+            .Which.Body.Should().Be("Notifications.Backup.SignInRequired.GoogleDrive");
+        _state.Load().SignInRequired.Should().Be(CloudProvider.GoogleDrive);
+    }
+
+    [Fact]
+    public async Task Failure_that_persists_is_notified_again_the_next_day()
+    {
+        _storage.UploadFailure = new IOException("disk full");
+        var host = CreateHost(hasPassphrase: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _clock.Now = Now.AddDays(1);
+        await host.TryRunAsync(CancellationToken.None);
+
+        _notifications.Shown.Should().HaveCount(2);
+        _notifications.Shown.Should().AllSatisfy(n => n.Body.Should().Be("Notifications.Backup.Failed"));
+        _state.Load().FailureNotifiedOn.Should().Be(DateOnly.FromDateTime(Now.AddDays(1).UtcDateTime));
+    }
+
+    [Fact]
+    public async Task Successful_tick_does_not_notify()
+    {
+        var host = CreateHost(hasPassphrase: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+
+        _notifications.Shown.Should().BeEmpty();
+        _state.Load().FailureNotifiedOn.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Notification_that_cannot_be_shown_is_retried_on_the_next_tick()
+    {
+        _storage.UploadFailure = new IOException("disk full");
+        _notifications.Failure = new InvalidOperationException("no tray");
+        var host = CreateHost(hasPassphrase: true);
+
+        await host.TryRunAsync(CancellationToken.None);
+        _state.Load().FailureNotifiedOn.Should().BeNull();
+
+        _notifications.Failure = null;
+        _clock.Now = Now.AddMinutes(15);
+        await host.TryRunAsync(CancellationToken.None);
+
+        _notifications.Shown.Should().ContainSingle();
+        _state.Load().LastError.Should().Be($"cloud {ProfileId}: disk full");
     }
 
     private AutomaticBackupHostedService CreateHost(
         bool hasPassphrase, string? cloudFolder = null, string[]? profileIds = null,
-        string? oneDriveAccount = null, bool signedIn = false, bool? hasSession = null)
+        string? oneDriveAccount = null, bool signedIn = false, bool? hasSession = null,
+        CloudProvider provider = CloudProvider.OneDrive)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IBackupService, LocalTargetUnusedBackupService>();
@@ -206,6 +285,8 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
         services.AddSingleton<IExportService>(_export);
         services.AddSingleton<ICurrentProfile, FakeCurrentProfile>();
         services.AddSingleton<ICloudAccountService>(new FakeAccounts(signedIn, hasSession ?? signedIn));
+        services.AddSingleton<IWindowsNotificationService>(_notifications);
+        services.AddSingleton<ILocalizationService, KeyLocalization>();
 
         var settings = new BackupSettings
         {
@@ -214,7 +295,7 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
             CloudFolderDirectory = cloudFolder ?? _cloudFolder,
             CloudFolderRetention = 30,
             PreferredTime = "03:00",
-            CloudProvider = oneDriveAccount is null ? null : CloudProvider.OneDrive,
+            CloudProvider = oneDriveAccount is null ? null : provider,
             CloudAccountId = oneDriveAccount ?? string.Empty,
         };
 
@@ -222,7 +303,7 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
             services.BuildServiceProvider(),
             new StaticOptionsMonitor(settings),
             _state,
-            new FixedClock(Now),
+            _clock,
             NullLogger<AutomaticBackupHostedService>.Instance);
     }
 
@@ -243,10 +324,33 @@ public sealed class AutomaticBackupHostedServiceTests : IDisposable
             => Task.FromResult(signedIn && hasSession);
     }
 
-    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    private sealed class MutableClock(DateTimeOffset now) : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => now;
+        public DateTimeOffset Now { get; set; } = now;
+        public override DateTimeOffset GetUtcNow() => Now;
         public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+    }
+
+    private sealed class RecordingNotifications : IWindowsNotificationService
+    {
+        public List<(string Title, string Body)> Shown { get; } = new();
+        public Exception? Failure { get; set; }
+
+        public Task ShowAsync(string title, string body, CancellationToken cancellationToken)
+        {
+            if (Failure is not null) throw Failure;
+            Shown.Add((title, body));
+            return Task.CompletedTask;
+        }
+    }
+
+    // Returns the key, so the tests check which message was chosen.
+    private sealed class KeyLocalization : ILocalizationService
+    {
+        public string CurrentLanguage => "en";
+        public string Get(string key, params object?[] args) => key;
+        public string GetIn(string languageCode, string key, params object?[] args) => key;
+        public System.Globalization.CultureInfo CurrentCulture => System.Globalization.CultureInfo.InvariantCulture;
     }
 
     private sealed class StaticOptionsMonitor(BackupSettings value) : IOptionsMonitor<BackupSettings>

@@ -30,6 +30,28 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #295 — Notify the user when the automatic backup fails or the cloud account is disconnected
+
+**Status:** open
+
+Link: [vger70/MedReminder#295](https://github.com/vger70/MedReminder/pull/295)
+Branch: `claude/backup-disconnected-account-notification-2496eb`
+
+**Fixed**
+- A disconnected OneDrive or Google Drive account no longer makes the
+  cloud backup fail silently: the user gets a Windows notification
+  (tray balloon as fallback) at most once a day for a failed automatic
+  backup, with a dedicated message for a disconnected account
+  (`src/MedReminder.UI/Hosting/AutomaticBackupHostedService.cs`).
+- Settings > Backup / Restore shows the disconnected account in the
+  user's language instead of the English exception text.
+
+**Changed**
+- `backup.state.json` records the provider that needs a new sign-in
+  and the day of the last failure notification; older files still load.
+
+---
+
 ## PR #294 — Call the shared installation a circle in the interface and docs
 
 **Status:** open

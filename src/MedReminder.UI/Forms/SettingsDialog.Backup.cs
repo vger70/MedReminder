@@ -663,11 +663,15 @@ internal sealed partial class SettingsDialog
                 ? await _backup.PruneOldBackupsAsync(directory, retention, CancellationToken.None)
                 : 0;
 
-            _backupState.Save(new BackupState(
-                LastSuccessfulBackupAt: DateTimeOffset.UtcNow,
-                LastAttemptAt: DateTimeOffset.UtcNow,
-                LastError: null,
-                LastBackupFile: file));
+            // A manual local backup does not fix the cloud target: its
+            // pending sign-in and the notification day are kept.
+            _backupState.Save(_backupState.Load() with
+            {
+                LastSuccessfulBackupAt = DateTimeOffset.UtcNow,
+                LastAttemptAt = DateTimeOffset.UtcNow,
+                LastError = null,
+                LastBackupFile = file,
+            });
             UpdateBackupStatusLabel();
 
             var suffix = pruned > 0 ? _loc.Get("Ui.SettingsDialog.Backup.RunPruned", pruned) : string.Empty;
@@ -678,11 +682,12 @@ internal sealed partial class SettingsDialog
         }
         catch (Exception ex)
         {
-            _backupState.Save(new BackupState(
-                LastSuccessfulBackupAt: _backupState.Load().LastSuccessfulBackupAt,
-                LastAttemptAt: DateTimeOffset.UtcNow,
-                LastError: ex.Message,
-                LastBackupFile: null));
+            _backupState.Save(_backupState.Load() with
+            {
+                LastAttemptAt = DateTimeOffset.UtcNow,
+                LastError = ex.Message,
+                LastBackupFile = null,
+            });
             UpdateBackupStatusLabel();
             UiMessageBox.Show(this, ex.Message,
                 _loc.Get("Ui.SettingsDialog.Backup.RunError"),
@@ -950,14 +955,15 @@ internal sealed partial class SettingsDialog
             return;
         }
 
+        var problem = BackupProblemText(state);
         if (state.LastSuccessfulBackupAt is { } ok)
         {
             var okLocal = ok.ToLocalTime();
             var timestamp = okLocal.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
-            var errorSuffix = state.LastError is not null
-                ? _loc.Get("Ui.SettingsDialog.Backup.LastError", state.LastError)
+            var errorSuffix = problem is not null
+                ? _loc.Get("Ui.SettingsDialog.Backup.LastError", problem)
                 : string.Empty;
-            _backupStatusLabel.ForeColor = state.LastError is null
+            _backupStatusLabel.ForeColor = problem is null
                 ? UiColors.Success
                 : UiColors.Warning;
             _backupStatusLabel.Text =
@@ -966,9 +972,21 @@ internal sealed partial class SettingsDialog
         }
 
         _backupStatusLabel.ForeColor = UiColors.Error;
-        _backupStatusLabel.Text = state.LastError is not null
-            ? _loc.Get("Ui.SettingsDialog.Backup.LastFailedWithMessage", state.LastError)
+        _backupStatusLabel.Text = problem is not null
+            ? _loc.Get("Ui.SettingsDialog.Backup.LastFailedWithMessage", problem)
             : _loc.Get("Ui.SettingsDialog.Backup.LastFailedGeneric");
+    }
+
+    // The disconnected cloud account in the user's language, then the
+    // other errors of the last attempt as recorded.
+    private string? BackupProblemText(BackupState state)
+    {
+        var signIn = state.SignInRequired is { } provider
+            ? _loc.Get(StorageTargetPicker.ProviderKey("Ui.SettingsDialog.Backup.SignInRequired", provider))
+            : null;
+        string?[] parts = [signIn, state.LastError];
+        var text = string.Join("; ", parts.Where(p => p is not null));
+        return text.Length == 0 ? null : text;
     }
 
     private void UpdateCloudWarning()
