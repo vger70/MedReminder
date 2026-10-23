@@ -39,6 +39,7 @@
  * Install the SDK to run dornet build/test only if necessary and if the environment allows it.
  * Add new UI string keys to ALL assets/localization/strings.<lang>.json files.
  * Keep tone sober, factual, concise, no emojis in documentation.
+ * Delegate heavy read-only work (whole folders, logs, long lists, bulk file scans) to the `garzone` subagent (`.claude/agents/garzone.md`, Haiku) to save tokens; it reads the files in full and returns only a short result.
 
 ---
 
