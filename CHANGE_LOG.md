@@ -43,7 +43,8 @@ Branch: `claude/farmaco-confezione-scorte-6f3w6s`
   new-package load can carry a past opening day, needed by the mobile
   single "New package" form. A future day refuses the load. The desktop
   stock dialog passes today when "Opened today" is ticked, unchanged for
-  the user.
+  the user; `MainForm` reads that day when the load is saved, not when the
+  dialog opened.
 
 ---
 
