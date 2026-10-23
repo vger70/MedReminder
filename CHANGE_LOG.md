@@ -30,6 +30,28 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #299 — Add garzone read-only subagent and document it in CLAUDE.md
+
+**Status:** open
+
+Link: [vger70/MedReminder#299](https://github.com/vger70/MedReminder/pull/299)
+Branch: `claude/quizzical-grothendieck-39cb45`
+
+**Added**
+- `.claude/agents/garzone.md`: a Haiku-backed read-only subagent for
+  heavy file-reading jobs (whole folders, logs, long lists) that returns
+  only a short result, to save tokens.
+
+**Changed**
+- CLAUDE.md §5 now points sessions to the `garzone` subagent for
+  heavy read-only work.
+
+**Removed**
+- The stray `garzone.md` from the repo root (it was not loaded as an
+  agent there and was in Italian; replaced by the English agent file).
+
+---
+
 ## PR #298 — Mark PRs #295, #296 and #297 as merged in the change log
 
 **Status:** open
