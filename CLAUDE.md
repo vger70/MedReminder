@@ -6,6 +6,14 @@
 - **Architecture**: Clean Architecture (`UI` → `App` → `Domain`, `Infra` and `Infra.Portable` implement `App` ports). Domain no depend Infra/App or Windows APIs; `Infra.Portable` no depend Windows APIs.
 - **Docs**: `docs/ANALYSIS.md` (architecture), `docs/PACKAGING.md` (release).
 
+### Build & Test
+```bash
+dotnet build MedReminder.sln
+dotnet test MedReminder.sln
+# Shared-core-only subset (Domain/App/Infra.Portable, no Windows TFMs):
+dotnet build MedReminder.SharedCore.slnf
+```
+
 ---
 
 ## 2. Language Policy
@@ -36,7 +44,7 @@
 
 ## 5. DOs (Always Follow)
  * Name branches correctly (claude/ or feature/) and open PR after 1st commit.
- * Install the SDK to run dornet build/test only if necessary and if the environment allows it.
+ * Install the SDK to run `dotnet build`/`dotnet test` only if necessary and if the environment allows it.
  * Add new UI string keys to ALL assets/localization/strings.<lang>.json files.
  * Keep tone sober, factual, concise, no emojis in documentation.
  * Delegate heavy read-only work (whole folders, logs, long lists, bulk file scans) to the `garzone` subagent (`.claude/agents/garzone.md`, Haiku) to save tokens; it reads the files in full and returns only a short result.

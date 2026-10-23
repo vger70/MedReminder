@@ -30,9 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #299 — Add garzone read-only subagent and document it in CLAUDE.md
+## PR #300 — Fix dotnet typo and document build/test commands in CLAUDE.md
 
 **Status:** open
+
+Link: [vger70/MedReminder#300](https://github.com/vger70/MedReminder/pull/300)
+Branch: `claude/claude-md-build-commands`
+
+**Docs**
+- Fix the `dornet` typo in CLAUDE.md §5 and add a Build & Test block
+  under §1 documenting the canonical `dotnet build`/`dotnet test`
+  commands and the shared-core solution filter.
+
+---
+
+## PR #299 — Add garzone read-only subagent and document it in CLAUDE.md
+
+**Status:** merged (2026-10-23)
 
 Link: [vger70/MedReminder#299](https://github.com/vger70/MedReminder/pull/299)
 Branch: `claude/quizzical-grothendieck-39cb45`
