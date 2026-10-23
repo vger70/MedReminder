@@ -154,7 +154,8 @@ internal sealed class StockAdjustmentDialog : MedReminderFormBase
         var useWithin = PackageInputs.ReadUseWithin(_useWithinBox!);
         var batch = NullIfBlank(_batchBox!.Text);
         if (expiresOn is null && useWithin is null && batch is null && !_openedToday!.Checked) return null;
-        return new NewPackagesInput((int)_countBox!.Value, expiresOn, useWithin, _openedToday!.Checked, batch);
+        return new NewPackagesInput((int)_countBox!.Value, expiresOn, useWithin,
+            _openedToday!.Checked ? (DateOnly?)_packageDefaults.Today : null, batch);
     }
 
     private static string? NullIfBlank(string? s) =>
