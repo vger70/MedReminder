@@ -72,7 +72,7 @@ public sealed class PrescriptionReminders
             if (channels == NotificationChannels.None) continue;
 
             var any = false;
-            var (title, body) = BuildTexts(medicine, prescription, until, count);
+            var (title, body) = BuildTexts(medicine, prescription, until, count, _localization);
             if ((channels & NotificationChannels.Windows) != 0)
             {
                 try
@@ -113,30 +113,36 @@ public sealed class PrescriptionReminders
         return sent;
     }
 
-    private (string Title, string Body) BuildTexts(
-        Medicine medicine, Prescription prescription, DateOnly until, int dispensationsCollected)
+    // The device notification of a "valid until" reminder; public for hosts
+    // that hand it to the platform ahead of time
+    // (NotificationPlanLoader.PlanWithTextsAsync).
+    public static (string Title, string Body) BuildTexts(
+        Medicine medicine, Prescription prescription, DateOnly until, int dispensationsCollected,
+        ILocalizationService? localization)
     {
-        var c = _localization?.CurrentCulture ?? CultureInfo.CurrentCulture;
+        ArgumentNullException.ThrowIfNull(medicine);
+        ArgumentNullException.ThrowIfNull(prescription);
+        var c = localization?.CurrentCulture ?? CultureInfo.CurrentCulture;
         var date = until.ToString("d", c);
         if (prescription.IsRepeatable)
         {
             var left = PrescriptionRules.DispensationsLeft(prescription, dispensationsCollected);
-            if (_localization is null)
+            if (localization is null)
             {
                 return ($"Collect the prescription for {medicine.Name}",
                     $"The repeatable prescription for {medicine.Name} is valid until {date}. "
                     + $"Dispensations not collected by then are lost: {left}.");
             }
-            return (_localization.Get("Notifications.Prescription.Title", medicine.Name),
-                _localization.Get("Notifications.Prescription.BodyRepeatable", medicine.Name, date, left));
+            return (localization.Get("Notifications.Prescription.Title", medicine.Name),
+                localization.Get("Notifications.Prescription.BodyRepeatable", medicine.Name, date, left));
         }
-        if (_localization is null)
+        if (localization is null)
         {
             return ($"Collect the prescription for {medicine.Name}",
                 $"The prescription for {medicine.Name} is valid until {date}. Collect it at the pharmacy.");
         }
-        return (_localization.Get("Notifications.Prescription.Title", medicine.Name),
-            _localization.Get("Notifications.Prescription.Body", medicine.Name, date));
+        return (localization.Get("Notifications.Prescription.Title", medicine.Name),
+            localization.Get("Notifications.Prescription.Body", medicine.Name, date));
     }
 
     private string BuildEmailBody(string body)

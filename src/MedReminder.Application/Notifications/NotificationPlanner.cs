@@ -30,7 +30,9 @@ public enum PlannedNotificationKind
 // for (PrescriptionReminderEvent). DeadlineId and DueOn (deadline
 // reminder only): the deadline and the date it is reminded for
 // (DeadlineReminderEvent); MedicineId is Guid.Empty for a deadline of the
-// profile.
+// profile. DaysRemaining (low stock only): the days of stock the notice
+// states. ExpiresOn (package expiry only): the earliest expiry of the
+// packages noticed. Both feed the texts (PlannedNotificationTexts).
 public sealed record PlannedNotification(
     PlannedNotificationKind Kind,
     Guid MedicineId,
@@ -44,7 +46,9 @@ public sealed record PlannedNotification(
     Guid? PrescriptionId = null,
     DateOnly? ValidUntil = null,
     Guid? DeadlineId = null,
-    DateOnly? DueOn = null)
+    DateOnly? DueOn = null,
+    int? DaysRemaining = null,
+    DateOnly? ExpiresOn = null)
 {
     // What the notification is about, for its actions
     // (NotificationActionArguments.ForBody and ButtonsFor), as the desktop
@@ -252,7 +256,8 @@ public static class NotificationPlanner
                     state.DispensationsCollected ?? NoDispensations, day)
                 : null;
             result.Add(new PlannedNotification(PlannedNotificationKind.LowStock, medicine.Id, day,
-                DailyFireAt(day, i, localNow, zone, options), stage, RepeatablePrescription: repeatable));
+                DailyFireAt(day, i, localNow, zone, options), stage, RepeatablePrescription: repeatable,
+                DaysRemaining: runOut.DaysRemaining!.Value));
             // The event the desktop records after a shown toast.
             latest = new NotificationEvent
             {
@@ -333,7 +338,7 @@ public static class NotificationPlanner
             shown.UnionWith(pending);
             result.Add(new PlannedNotification(PlannedNotificationKind.PackageExpiry, state.Medicine.Id, day,
                 DailyFireAt(day, i, localNow, zone, options), pending[0].Stage,
-                PackageIds: [.. pending.Select(k => k.PackageId)]));
+                PackageIds: [.. pending.Select(k => k.PackageId)], ExpiresOn: pending.Min(k => k.EffectiveExpiry)));
         }
     }
 

@@ -20,7 +20,8 @@ namespace MedReminder.Application.Tests.Notifications;
 // day; the same low-stock stage; a dose reminder at its planned instant
 // (the first pass after it). A daily notice is compared by day only: the
 // desktop shows it at the first pass of the day, the plan at
-// DailyNoticeTime.
+// DailyNoticeTime. The texts planned ahead (PlanWithTextsAsync) must be
+// the ones the passes show.
 public sealed class NotificationPlannerParityTests
 {
     private static readonly TimeSpan Tick = TimeSpan.FromMinutes(15);
@@ -28,7 +29,7 @@ public sealed class NotificationPlannerParityTests
     private static readonly DateTimeOffset StartInstant = new(2026, 9, 13, 7, 0, 0, TimeSpan.Zero);
 
     private sealed record Shown(PlannedNotificationKind Kind, Guid MedicineId, DateOnly Day, int Stage,
-        TimeOnly? SlotTime, DateTimeOffset At, NotificationTarget Target);
+        TimeOnly? SlotTime, DateTimeOffset At, NotificationTarget Target, string Title, string Body);
 
     [Fact]
     public async Task Low_stock_stages_and_dose_reminders_until_the_stock_runs_out()
@@ -157,6 +158,23 @@ public sealed class NotificationPlannerParityTests
         reminders.Select(p => p.Key).Should().OnlyHaveUniqueItems();
         NotificationActionArguments.Parse(NotificationActionArguments.ForBody(reminders[0].Target, "p"))!.Kind
             .Should().Be(NotificationActionKind.OpenDeadlines);
+    }
+
+    [Fact]
+    public async Task A_deadline_of_a_medicine_without_the_device_channel_names_it()
+    {
+        // The plan reads only the medicines with the device channel; the
+        // deadline's own channel decides, and its text still names the
+        // medicine, as the pass does.
+        var scope = new ApplicationTestScope(StartInstant);
+        var id = await AddAsync(scope, quantity: 100m, dose: 1m, perDay: 1, remindOnDose: false,
+            channels: NotificationChannels.Email);
+        await SaveDeadlineAsync(scope, id, Start.AddDays(3));
+
+        var (planned, shown) = await RunAsync(scope, days: 5);
+
+        AssertParity(planned, shown);
+        shown.Single(s => s.Kind == PlannedNotificationKind.Deadline).Title.Should().Contain("Enalapril");
     }
 
     [Fact]
@@ -327,6 +345,7 @@ public sealed class NotificationPlannerParityTests
             DoseWindow = end - startLocal - TimeSpan.FromTicks(1),
         };
         var planned = await scope.BuildPlanLoader().PlanAsync(options, default);
+        var texts = await scope.BuildPlanLoader().PlanWithTextsAsync(options, localization: null, default);
         var dose = scope.BuildDoseReminder();
         var shown = new List<Shown>();
         var seenEvents = scope.Notifications.All.Count;
@@ -334,6 +353,7 @@ public sealed class NotificationPlannerParityTests
         {
             await scope.ConsumptionCatchUp.RunAsync(default);
             var before = scope.Windows.Targets.Count;
+            var beforeSent = scope.Windows.Sent.Count;
             await scope.Monitor.RunAsync(default);
             await dose.RunAsync(default);
 
@@ -341,7 +361,7 @@ public sealed class NotificationPlannerParityTests
             var day = DateOnly.FromDateTime(at.DateTime);
             var events = scope.Notifications.All.Skip(seenEvents).ToList();
             seenEvents += events.Count;
-            foreach (var target in scope.Windows.Targets.Skip(before))
+            foreach (var (target, sent) in scope.Windows.Targets.Skip(before).Zip(scope.Windows.Sent.Skip(beforeSent)))
             {
                 var kind = target.Kind switch
                 {
@@ -355,9 +375,19 @@ public sealed class NotificationPlannerParityTests
                 var stage = kind == PlannedNotificationKind.LowStock
                     ? events.Single(e => e.MedicineId == target.MedicineId).Stage
                     : 0;
-                shown.Add(new Shown(kind, target.MedicineId, day, stage, target.SlotTime, at, target));
+                shown.Add(new Shown(kind, target.MedicineId, day, stage, target.SlotTime, at, target, sent.Title,
+                    sent.Body));
             }
             scope.Clock.AdvanceBy(Tick);
+        }
+
+        texts.Select(t => t.Notice).Should().BeEquivalentTo(planned, o => o.WithStrictOrdering());
+        foreach (var text in texts)
+        {
+            var notice = text.Notice;
+            var match = shown.Single(s => s.Kind == notice.Kind && s.MedicineId == notice.MedicineId
+                && s.Day == notice.Day && s.Target == notice.Target);
+            (text.Title, text.Body).Should().Be((match.Title, match.Body), $"the pass shows {notice.Kind} so");
         }
         return (planned, shown);
     }

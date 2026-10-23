@@ -170,29 +170,36 @@ public sealed class PackageExpiryNotices
     // One text for the packages of one stage (PendingAsync never mixes
     // them): their number and the earliest date.
     private (string Title, string Body) BuildTexts(Medicine medicine, IReadOnlyList<Due> due)
+        => BuildTexts(medicine, due[0].Stage == PackageExpiryNoticeEvent.ExpiredStage, due.Count,
+            due.Min(d => d.Item.EffectiveExpiry!.Value), _localization);
+
+    // The device notification for `count` packages of one stage, the first
+    // expiring on `earliest`; public for hosts that hand it to the platform
+    // ahead of time (NotificationPlanLoader.PlanWithTextsAsync).
+    public static (string Title, string Body) BuildTexts(Medicine medicine, bool expired, int count, DateOnly earliest,
+        ILocalizationService? localization)
     {
-        var expired = due[0].Stage == PackageExpiryNoticeEvent.ExpiredStage;
-        var date = due.Min(d => d.Item.EffectiveExpiry!.Value);
-        var c = _localization?.CurrentCulture ?? System.Globalization.CultureInfo.CurrentCulture;
-        var dateText = date.ToString("d", c);
-        var many = due.Count > 1;
-        if (_localization is null)
+        ArgumentNullException.ThrowIfNull(medicine);
+        var c = localization?.CurrentCulture ?? System.Globalization.CultureInfo.CurrentCulture;
+        var dateText = earliest.ToString("d", c);
+        var many = count > 1;
+        if (localization is null)
         {
             return expired
                 ? ($"{medicine.Name}: a package has expired",
                     many
-                        ? $"{due.Count} packages of {medicine.Name} have expired, the first on {dateText}. Check them and mark them in MedReminder."
+                        ? $"{count} packages of {medicine.Name} have expired, the first on {dateText}. Check them and mark them in MedReminder."
                         : $"A package of {medicine.Name} expired on {dateText}. Check it and mark it in MedReminder.")
                 : ($"{medicine.Name}: a package expires soon",
                     many
-                        ? $"{due.Count} packages of {medicine.Name} expire soon, the first on {dateText}. Use them first or check them."
+                        ? $"{count} packages of {medicine.Name} expire soon, the first on {dateText}. Use them first or check them."
                         : $"A package of {medicine.Name} expires on {dateText}. Use it first or check it.");
         }
         var stage = expired ? "Expired" : "Soon";
-        return (_localization.Get($"Notifications.PackageExpiry.{stage}.Title", medicine.Name),
+        return (localization.Get($"Notifications.PackageExpiry.{stage}.Title", medicine.Name),
             many
-                ? _localization.Get($"Notifications.PackageExpiry.{stage}.Body.Many", medicine.Name, due.Count, dateText)
-                : _localization.Get($"Notifications.PackageExpiry.{stage}.Body", medicine.Name, dateText));
+                ? localization.Get($"Notifications.PackageExpiry.{stage}.Body.Many", medicine.Name, count, dateText)
+                : localization.Get($"Notifications.PackageExpiry.{stage}.Body", medicine.Name, dateText));
     }
 
     private EmailMessage BuildEmail(IReadOnlyList<MedicineNotice> notices)
