@@ -30,6 +30,24 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #302 — Let a new-package load carry a past opening day
+
+**Status:** open
+
+Link: [vger70/MedReminder#302](https://github.com/vger70/MedReminder/pull/302)
+Branch: `claude/farmaco-confezione-scorte-6f3w6s`
+
+**Changed**
+- `NewPackagesInput.OpenedToday` (bool) becomes `OpenedOn` (`DateOnly?`)
+  (`src/MedReminder.Application/UseCases/AddStock.cs`): the first box of a
+  new-package load can carry a past opening day, needed by the mobile
+  single "New package" form. A future day refuses the load. The desktop
+  stock dialog passes today when "Opened today" is ticked, unchanged for
+  the user; `MainForm` reads that day when the load is saved, not when the
+  dialog opened.
+
+---
+
 ## PR #301 — Build the device texts of planned notifications
 
 **Status:** open

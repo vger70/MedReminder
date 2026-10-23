@@ -38,7 +38,7 @@ public class PackageEntryTests
         _scope.EnableSync();
 
         await _scope.AddStock.ExecuteAsync(new AddStockCommand(_medicine, 10m, StockMovementKind.NewPackage,
-            Packages: new NewPackagesInput(2, new DateOnly(2027, 3, 31), 28, OpenedToday: true, " L77 ")), default);
+            Packages: new NewPackagesInput(2, new DateOnly(2027, 3, 31), 28, OpenedOn: Today, " L77 ")), default);
 
         (await StockAsync()).Should().Be(40m);
         var movement = _scope.Stock.All.Single(m => m.Kind == StockMovementKind.NewPackage);
@@ -58,6 +58,30 @@ public class PackageEntryTests
     }
 
     [Fact]
+    public async Task A_new_package_load_keeps_a_past_opening_day_on_the_first_package()
+    {
+        var openedOn = Today.AddDays(-5);
+
+        await _scope.AddStock.ExecuteAsync(new AddStockCommand(_medicine, 10m, StockMovementKind.NewPackage,
+            Packages: new NewPackagesInput(2, null, null, openedOn, null)), default);
+
+        var packages = _scope.Packages.All.OrderBy(p => p.RecordedAt).ToList();
+        packages[0].OpenedOn.Should().Be(openedOn);
+        packages[1].OpenedOn.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task A_future_opening_day_refuses_the_whole_load()
+    {
+        var act = () => _scope.AddStock.ExecuteAsync(new AddStockCommand(_medicine, 10m, StockMovementKind.NewPackage,
+            Packages: new NewPackagesInput(1, null, null, Today.AddDays(1), null)), default);
+
+        (await act.Should().ThrowAsync<InvalidStockPackageException>()).Which.Error.Should().Be(PackageError.FutureDate);
+        _scope.Packages.All.Should().BeEmpty();
+        (await StockAsync()).Should().Be(30m);
+    }
+
+    [Fact]
     public async Task A_load_without_packages_records_none()
     {
         await _scope.AddStock.ExecuteAsync(new AddStockCommand(_medicine, 10m, StockMovementKind.NewPackage), default);
@@ -70,7 +94,7 @@ public class PackageEntryTests
     public async Task An_invalid_package_refuses_the_whole_load()
     {
         var act = () => _scope.AddStock.ExecuteAsync(new AddStockCommand(_medicine, 10m, StockMovementKind.NewPackage,
-            Packages: new NewPackagesInput(1, null, 400, false, null)), default);
+            Packages: new NewPackagesInput(1, null, 400, null, null)), default);
 
         (await act.Should().ThrowAsync<InvalidStockPackageException>()).Which.Error.Should().Be(PackageError.UseWithinDays);
         _scope.Packages.All.Should().BeEmpty();
@@ -81,7 +105,7 @@ public class PackageEntryTests
     public async Task Packages_come_only_with_a_new_package_load()
     {
         var act = () => _scope.AddStock.ExecuteAsync(new AddStockCommand(_medicine, 10m, StockMovementKind.ManualAdd,
-            Packages: new NewPackagesInput(1, new DateOnly(2027, 3, 31), null, false, null)), default);
+            Packages: new NewPackagesInput(1, new DateOnly(2027, 3, 31), null, null, null)), default);
 
         await act.Should().ThrowAsync<ArgumentException>();
     }

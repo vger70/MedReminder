@@ -164,7 +164,7 @@ public class PackageExpiryNoticeTests
         var medicine = await AddMedicineAsync();
 
         await _scope.AddStock.ExecuteAsync(new AddStockCommand(medicine, 0.01m, StockMovementKind.NewPackage,
-            Packages: new NewPackagesInput(2, new DateOnly(2027, 3, 31), null, false, null)), default);
+            Packages: new NewPackagesInput(2, new DateOnly(2027, 3, 31), null, null, null)), default);
 
         _scope.Packages.All.Should().HaveCount(2).And.OnlyContain(p => p.Quantity == 0.005m);
     }

@@ -2755,9 +2755,14 @@ internal sealed class MainForm : MedReminderFormBase
             if (dialog.Result.IsPositive)
             {
                 var addStock = scope.ServiceProvider.GetRequiredService<AddStock>();
+                // "Opened today" means the day of saving, which may follow
+                // the day the dialog opened.
+                var packages = dialog.Result.Packages is { OpenedOn: not null } opened
+                    ? opened with { OpenedOn = scope.ServiceProvider.GetRequiredService<PackageListQuery>().LocalToday() }
+                    : dialog.Result.Packages;
                 await addStock.ExecuteAsync(
                     new AddStockCommand(row.Id, dialog.Result.Quantity, dialog.Result.ToMovementKind(), dialog.Result.Notes,
-                        dialog.Result.Packages),
+                        packages),
                     CancellationToken.None);
                 newPackage = dialog.Result.ToMovementKind() == StockMovementKind.NewPackage;
             }

@@ -20,12 +20,13 @@ public sealed record AddStockCommand(
     NewPackagesInput? Packages = null);
 
 // Count boxes sharing expiry, in-use period and batch; the quantity of
-// the load is split evenly between them. OpenedToday opens the first.
+// the load is split evenly between them. OpenedOn, when given, is the
+// opening day of the first; a future day is refused as for any package.
 public sealed record NewPackagesInput(
     int Count,
     DateOnly? ExpiresOn,
     int? UseWithinDays,
-    bool OpenedToday,
+    DateOnly? OpenedOn,
     string? Batch)
 {
     public const int MaxCount = 99;
@@ -133,7 +134,7 @@ public sealed class AddStock
                 Quantity = each,
                 ExpiresOn = input.ExpiresOn,
                 UseWithinDays = input.UseWithinDays,
-                OpenedOn = i == 0 && input.OpenedToday ? today : null,
+                OpenedOn = i == 0 ? input.OpenedOn : null,
                 Batch = batch,
                 // Distinct instants keep the order the boxes were entered in.
                 RecordedAt = now.AddTicks(i),

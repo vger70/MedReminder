@@ -227,14 +227,14 @@ public sealed class NotificationPlannerParityTests
         var scope = new ApplicationTestScope(StartInstant);
         var active = await AddAsync(scope, quantity: 0m, dose: 1m, perDay: 1, remindOnDose: false, threshold: 0);
         await scope.AddStock.ExecuteAsync(new AddStockCommand(active, 60m, StockMovementKind.NewPackage,
-            Packages: new NewPackagesInput(1, Start.AddDays(40), null, false, null)), default);
+            Packages: new NewPackagesInput(1, Start.AddDays(40), null, null, null)), default);
         // Inactive: it consumes nothing, so the second package, which 3 a
         // day would use up by day 10, still expires in the cabinet.
         var inactive = await AddAsync(scope, quantity: 0m, dose: 3m, perDay: 1, remindOnDose: false, threshold: 0);
         await scope.AddStock.ExecuteAsync(new AddStockCommand(inactive, 15m, StockMovementKind.NewPackage,
-            Packages: new NewPackagesInput(1, Start.AddDays(3), null, false, null)), default);
+            Packages: new NewPackagesInput(1, Start.AddDays(3), null, null, null)), default);
         await scope.AddStock.ExecuteAsync(new AddStockCommand(inactive, 15m, StockMovementKind.NewPackage,
-            Packages: new NewPackagesInput(1, Start.AddDays(10), null, false, null)), default);
+            Packages: new NewPackagesInput(1, Start.AddDays(10), null, null, null)), default);
         await scope.DeactivateMedicine.ExecuteAsync(new DeactivateMedicineCommand(inactive), default);
 
         var (planned, shown) = await RunAsync(scope, days: 14);
