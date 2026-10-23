@@ -66,7 +66,7 @@ public sealed class DeadlineReminders
             }
 
             var any = false;
-            var (title, body) = BuildTexts(deadline, medicineName, today);
+            var (title, body) = BuildTexts(deadline, medicineName, today, _localization);
             if ((channels & NotificationChannels.Windows) != 0)
             {
                 try
@@ -107,21 +107,26 @@ public sealed class DeadlineReminders
         return sent;
     }
 
-    private (string Title, string Body) BuildTexts(Deadline deadline, string? medicineName, DateOnly today)
+    // The device notification of a deadline reminder shown on `today`;
+    // public for hosts that hand it to the platform ahead of time
+    // (NotificationPlanLoader.PlanWithTextsAsync).
+    public static (string Title, string Body) BuildTexts(Deadline deadline, string? medicineName, DateOnly today,
+        ILocalizationService? localization)
     {
-        var c = _localization?.CurrentCulture ?? CultureInfo.CurrentCulture;
-        var subject = DeadlineTexts.Subject(deadline, medicineName, _localization);
+        ArgumentNullException.ThrowIfNull(deadline);
+        var c = localization?.CurrentCulture ?? CultureInfo.CurrentCulture;
+        var subject = DeadlineTexts.Subject(deadline, medicineName, localization);
         var date = deadline.DueOn.ToString("d", c);
         var overdue = today > deadline.DueOn;
-        if (_localization is null)
+        if (localization is null)
         {
             return ($"Deadline: {subject}",
                 overdue
                     ? $"{subject} was due on {date}. Mark it done in MedReminder once it is renewed."
                     : $"{subject} is due on {date}.");
         }
-        return (_localization.Get("Notifications.Deadline.Title", subject),
-            _localization.Get(overdue ? "Notifications.Deadline.Body.Overdue" : "Notifications.Deadline.Body", subject, date));
+        return (localization.Get("Notifications.Deadline.Title", subject),
+            localization.Get(overdue ? "Notifications.Deadline.Body.Overdue" : "Notifications.Deadline.Body", subject, date));
     }
 
     private string BuildEmailBody(string body)

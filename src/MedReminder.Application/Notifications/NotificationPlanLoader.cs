@@ -78,16 +78,55 @@ public sealed class NotificationPlanLoader
     public async Task<IReadOnlyList<PlannedNotification>> PlanAsync(
         NotificationPlanOptions? options, CancellationToken cancellationToken)
     {
-        options ??= NotificationPlanOptions.Default;
-        if (_settings is not null)
-        {
-            options = options with { PackageLeadDays = PackageSettings.LeadDays(_settings) };
-        }
+        options = Resolve(options);
         var now = _clock.GetUtcNow();
         var zone = _clock.LocalTimeZone;
         var states = await LoadAsync(DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime),
             cancellationToken);
         return NotificationPlanner.Plan(states, now, zone, options, await LoadDeadlinesAsync(cancellationToken));
+    }
+
+    // The plan with the device text of each notice
+    // (PlannedNotificationTexts), for hosts that hand the notifications to
+    // the platform ahead of time. A notice whose text cannot be built is
+    // left out.
+    public async Task<IReadOnlyList<PlannedNotificationText>> PlanWithTextsAsync(
+        NotificationPlanOptions? options, ILocalizationService? localization, CancellationToken cancellationToken)
+    {
+        options = Resolve(options);
+        var now = _clock.GetUtcNow();
+        var zone = _clock.LocalTimeZone;
+        var states = await LoadAsync(DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime),
+            cancellationToken);
+        var deadlines = await LoadDeadlinesAsync(cancellationToken);
+        var plan = NotificationPlanner.Plan(states, now, zone, options, deadlines);
+
+        var byId = states.ToDictionary(s => s.Medicine.Id);
+        var names = new Dictionary<Guid, string>();
+        foreach (var id in plan.Where(n => n.Kind == PlannedNotificationKind.Deadline)
+                     .Select(n => deadlines?.Deadlines.FirstOrDefault(d => d.Id == n.DeadlineId)?.MedicineId)
+                     .OfType<Guid>().Distinct())
+        {
+            if (byId.TryGetValue(id, out var state)) names[id] = state.Medicine.Name;
+            else if (await _medicines.GetAsync(id, cancellationToken) is { } medicine) names[id] = medicine.Name;
+        }
+
+        var result = new List<PlannedNotificationText>();
+        foreach (var notice in plan)
+        {
+            if (PlannedNotificationTexts.Build(notice, byId, deadlines, names, localization) is { } text)
+            {
+                result.Add(new PlannedNotificationText(notice, text.Title, text.Body));
+            }
+        }
+        return result;
+    }
+
+    // The package lead days of the profile settings, when there are any.
+    private NotificationPlanOptions Resolve(NotificationPlanOptions? options)
+    {
+        options ??= NotificationPlanOptions.Default;
+        return _settings is null ? options : options with { PackageLeadDays = PackageSettings.LeadDays(_settings) };
     }
 
     // Null without the deadline repositories: no deadline is planned.

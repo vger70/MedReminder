@@ -30,9 +30,32 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #300 — Fix dotnet typo and document build/test commands in CLAUDE.md
+## PR #301 — Build the device texts of planned notifications
 
 **Status:** open
+
+Link: [vger70/MedReminder#301](https://github.com/vger70/MedReminder/pull/301)
+Branch: `claude/inspiring-cannon-e3yzmp`
+
+**Added**
+- `NotificationPlanLoader.PlanWithTextsAsync` and `PlannedNotificationTexts`
+  (`src/MedReminder.Application/Notifications/`): the plan with the device
+  text of each notice, for hosts that hand notifications to the platform
+  ahead of time (iOS cannot wake the app at an instant).
+- `PlannedNotification.DaysRemaining` (low stock) and `ExpiresOn` (package
+  expiry), the values those texts state.
+
+**Changed**
+- The package expiry, "valid until" and deadline text builders are public
+  static methods; the passes call them unchanged.
+- The planner parity tests also require the planned texts to match the
+  ones the passes show.
+
+---
+
+## PR #300 — Fix dotnet typo and document build/test commands in CLAUDE.md
+
+**Status:** merged (2026-10-23)
 
 Link: [vger70/MedReminder#300](https://github.com/vger70/MedReminder/pull/300)
 Branch: `claude/claude-md-build-commands`
