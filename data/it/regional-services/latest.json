@@ -1,0 +1,11 @@
+{
+  "country": "IT",
+  "version": "20261004",
+  "file": "regional-services-20261004.json",
+  "generated": "2026-10-04T09:36:30.466893+00:00",
+  "sha256": "720c0c1bf29868ad5a69bb3a44c1fe0595de7fbfdc9f9aede6114b2ec5852c8d",
+  "size": 5944,
+  "rows": {
+    "services": 19
+  }
+}

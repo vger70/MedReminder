@@ -1,0 +1,5 @@
+# Feed files published under data/ are checked by size and SHA-256
+# against their latest.json manifest (docs/CATALOGUE-DATA.md): they must
+# reach every checkout byte for byte, so no line-ending conversion.
+data/**/*.json -text
+data/**/*.zip binary
