@@ -30,6 +30,23 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #303 — Validate SMTP certificates without the revocation check
+
+**Status:** open
+
+Link: [vger70/MedReminder#303](https://github.com/vger70/MedReminder/pull/303)
+Branch: `claude/smtp-revocation-check-off`
+
+**Fixed**
+- SMTP clients no longer check certificate revocation
+  (`src/MedReminder.Infrastructure.Portable/Email/SmtpSecurity.cs`,
+  `SmtpSecurity.NewClient`): MailKit's default failed the TLS handshake when
+  the OCSP or CRL answer could not be fetched, which refused smtp.gmail.com on
+  587 and 465 on phones. The chain, host name and dates are still validated;
+  the encryption rule is unchanged. Used by the sender and the connection test.
+
+---
+
 ## PR #302 — Let a new-package load carry a past opening day
 
 **Status:** open

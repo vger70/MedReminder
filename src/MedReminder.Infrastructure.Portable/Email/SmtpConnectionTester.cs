@@ -83,7 +83,7 @@ public sealed class SmtpConnectionTester
         var timeout = TimeSpan.FromSeconds(Math.Max(1, transport.TimeoutSeconds));
         using var bound = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         bound.CancelAfter(timeout * OuterBoundFactor);
-        using var client = new SmtpClient { Timeout = (int)timeout.TotalMilliseconds };
+        using var client = SmtpSecurity.NewClient((int)timeout.TotalMilliseconds);
         if (ServerCertificateValidation is { } validation) client.ServerCertificateValidationCallback = validation;
         try
         {
