@@ -32,7 +32,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ## PR #303 — Validate SMTP certificates without the revocation check
 
-**Status:** open
+**Status:** merged (2026-10-25)
 
 Link: [vger70/MedReminder#303](https://github.com/vger70/MedReminder/pull/303)
 Branch: `claude/smtp-revocation-check-off`
