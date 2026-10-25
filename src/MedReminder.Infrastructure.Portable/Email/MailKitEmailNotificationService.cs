@@ -79,10 +79,7 @@ public sealed class MailKitEmailNotificationService : IEmailNotificationService
         }
 
         var mime = BuildMimeMessage(settings, notifications, message);
-        using var client = new SmtpClient
-        {
-            Timeout = settings.TimeoutSeconds * 1000,
-        };
+        using var client = SmtpSecurity.NewClient(settings.TimeoutSeconds * 1000);
 
         await client.ConnectAsync(settings.Host, settings.Port,
             SmtpSecurity.SecureOption(settings.UseStartTls, settings.Port), cancellationToken);

@@ -187,6 +187,17 @@ public class SmtpConnectionTesterTests
     }
 
     [Fact]
+    public void Clients_validate_the_certificate_without_the_revocation_check()
+    {
+        // An OCSP or CRL answer that cannot be fetched must not fail the
+        // handshake (smtp.gmail.com refused on phones).
+        using var client = SmtpSecurity.NewClient(5000);
+
+        client.CheckCertificateRevocation.Should().BeFalse();
+        client.Timeout.Should().Be(5000);
+    }
+
+    [Fact]
     public void The_security_option_is_the_senders()
     {
         SmtpSecurity.SecureOption(useStartTls: true, 587).Should().Be(SecureSocketOptions.StartTlsWhenAvailable);

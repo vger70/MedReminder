@@ -16,9 +16,18 @@ namespace MedReminder.Infrastructure.Email;
 //     STARTTLS setting, since STARTTLS cannot work there.
 // The check runs after ConnectAsync, when MailKit has done the implicit
 // TLS or the STARTTLS upgrade, and before anything else is sent.
+//   - the server certificate is validated (trusted chain, host name, dates)
+//     but its revocation is not checked: MailKit's default fails the TLS
+//     handshake whenever the OCSP or CRL answer cannot be fetched
+//     ("an incomplete certificate revocation check occurred"), which on
+//     phones and some networks refused smtp.gmail.com on 587 and 465.
 internal static class SmtpSecurity
 {
     public const int ImplicitTlsPort = 465;
+
+    // Every SMTP client of the sender and of the connection test.
+    internal static SmtpClient NewClient(int timeoutMilliseconds)
+        => new() { Timeout = timeoutMilliseconds, CheckCertificateRevocation = false };
 
     // Implicit TLS on 465; otherwise STARTTLS when the server offers it, or
     // what MailKit's Auto implies. RequireEncrypted then refuses a plain
