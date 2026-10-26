@@ -641,13 +641,16 @@ public sealed class HouseholdSyncTests : IDisposable
             .Which.Reason.Should().Be(HouseholdPairingMismatch.Replaced);
 
         var text = second.Code.Text;
-        var at = text.LastIndexOf('.') + 10;
+        // The secret is the last part of the code; Position is 1-based within it.
+        var start = text.LastIndexOf('.') + 1;
+        var at = start + 9;
+        var inSecret = at - start + 1;
         var mistyped = text[..at] + (text[at] == 'A' ? 'B' : 'A') + text[(at + 1)..];
         HouseholdPairingCode.TryParse(mistyped, out var code).Should().BeTrue();
         var join = () => Create("D").Sync.JoinAsync(SyncTarget.ForFolder(Folder), code!, "PC D", CancellationToken.None);
         var mismatch = (await join.Should().ThrowAsync<HouseholdPairingMismatchException>()).Which;
         mismatch.Reason.Should().Be(HouseholdPairingMismatch.Mistyped);
-        mismatch.Position.Should().Be(at + 1);
+        mismatch.Position.Should().Be(inSecret);
 
         var swapAt = Enumerable.Range(at, 20).First(i => text[i] != text[i + 1]);
         var swapped = text[..swapAt] + text[swapAt + 1] + text[swapAt] + text[(swapAt + 2)..];
@@ -655,7 +658,7 @@ public sealed class HouseholdSyncTests : IDisposable
         var swap = () => Create("E").Sync.JoinAsync(SyncTarget.ForFolder(Folder), swappedCode!, "PC E", CancellationToken.None);
         var swapMismatch = (await swap.Should().ThrowAsync<HouseholdPairingMismatchException>()).Which;
         swapMismatch.Reason.Should().Be(HouseholdPairingMismatch.Mistyped);
-        swapMismatch.Position.Should().Be(swapAt + 1);
+        swapMismatch.Position.Should().Be(swapAt - start + 1);
     }
 
     [Fact]
@@ -814,6 +817,72 @@ public sealed class HouseholdSyncTests : IDisposable
             local.Keys.Load(replaced.GroupId, replaced.KeyVersion)!);
         var again = () => local.RunAsync(sp => Replace(sp).ExecuteAsync("PC C", CancellationToken.None));
         await again.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    // Step H3d: the swap that replaces the kept profile fails after the join
+    // published this device in the group. The failed replace removes that
+    // record (a device that would never sync) and leaves no temp database.
+    [Fact]
+    public async Task A_failed_replace_removes_the_device_it_published_and_leaves_no_temp()
+    {
+        Directory.CreateDirectory(Folder);
+        using var group = new SyncDevice("P", Path.Combine(_root, "P.db"), DateTimeOffset.UtcNow, settings: null);
+        await group.InitializeAsync();
+        await group.RunAsync(sp => sp.GetRequiredService<MedReminder.Application.Sync.CreateSyncGroup>().ExecuteAsync(
+            new LocalFolderSyncTransport(Folder), "group words".ToCharArray(), SyncTarget.ForFolder(Folder),
+            CancellationToken.None, SyncFileFormatTests.FastKdf));
+        var settings = group.Settings.Load()!;
+        var a = Create("A");
+        a.Registry.Add("admin", "Anna", ProfileRole.Admin);
+        a.Registry.Add("user", "Bruno", ProfileRole.User);
+        a.GroupKeys.Keys["user"] = new ProfileGroupKey(settings.GroupId, settings.KeyVersion,
+            group.Keys.Load(settings.GroupId, settings.KeyVersion)!);
+        await a.ReconcileAsync();
+        await a.Sync.PublishAsync(SyncTarget.ForFolder(Folder), Passphrase.ToCharArray(), "PC A", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+        var offer = await a.Offers().StartAsync(["user"], CancellationToken.None);
+        var c = Create("C");
+        c.Registry.Add("user", "Bruno", ProfileRole.User);
+        await group.RunAsync(sp => c.Join(sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>())
+            .JoinWithCodeAsync(SyncTarget.ForFolder(Folder), offer.Code, "PC C", CancellationToken.None));
+
+        var kept = Path.Combine(c.ProfilesRoot, "user");
+        Directory.CreateDirectory(kept);
+        using var local = new SyncDevice("C", Path.Combine(kept, "medreminder.db"), DateTimeOffset.UtcNow, settings: null);
+        await local.InitializeAsync();
+        // The swap goes through IDatabaseExclusiveAccess: fail there, after the
+        // join has already published this device in the group.
+        var failingSwap = new ThrowingExclusiveAccess();
+        HouseholdProfileReplace Replace(IServiceProvider sp) => new(local.DatabasePath, "user",
+            sp.GetRequiredService<MedReminder.Infrastructure.Persistence.MedReminderDbContext>(), c.Keyring, c.Log, c.Store,
+            c.GroupKeys, sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(), local.Settings, local.Keys,
+            sp.GetRequiredService<ISyncTransportFactory>(), failingSwap, TimeProvider.System);
+
+        var devices = Path.Combine(Folder, settings.GroupId.ToString("N"), "devices");
+        var before = Directory.Exists(devices) ? Directory.EnumerateFiles(devices, "*.mrd").Count() : 0;
+
+        var replace = () => local.RunAsync(sp => Replace(sp).ExecuteAsync("PC C", CancellationToken.None));
+        await replace.Should().ThrowAsync<IOException>("the swap failed");
+
+        // The replace never wrote the key or the settings.
+        local.Settings.Load().Should().BeNull();
+        // The device record the join published was removed again: the group
+        // holds the same devices it did before the failed replace.
+        Directory.EnumerateFiles(devices, "*.mrd").Should().HaveCount(before,
+            "the device published by the join was removed after the swap failed");
+        // No temp join database is left behind.
+        Directory.EnumerateFiles(kept, "medreminder.join-*").Should().BeEmpty();
+    }
+
+    // Fails inside the exclusive gate, standing for a swap that cannot move
+    // the database file.
+    private sealed class ThrowingExclusiveAccess : IDatabaseExclusiveAccess
+    {
+        public Task RunExclusiveAsync(Func<CancellationToken, Task> action, CancellationToken cancellationToken)
+            => throw new IOException("the database file is in use");
+
+        public Task<T> RunExclusiveAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken cancellationToken)
+            => throw new IOException("the database file is in use");
     }
 
     // Issue #88 (medreminder-mobile): leaving and dissolving.

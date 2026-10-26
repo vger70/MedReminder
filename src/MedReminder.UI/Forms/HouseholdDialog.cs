@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Household;
+using MedReminder.Application.Household.Remote;
 using MedReminder.Application.Sync.Remote;
 using MedReminder.Domain.Household;
 using MedReminder.UI.Controls;
@@ -649,7 +650,48 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             _restarter.RestartAndExit();
             return;
         }
+        // A profile kept here from before this device left the installation
+        // can be replaced with the group it was granted (step H3d). Each
+        // replace swaps a database and needs a restart.
+        if (await ResolveConflictsAsync(joined, names)) return;
         await RefreshAllAsync();
+    }
+
+    // Offers to replace each profile the join reported in conflict with the
+    // group granted to this device. Returns true when a replace happened and
+    // a restart was started (the caller stops).
+    private async Task<bool> ResolveConflictsAsync(IReadOnlyList<JoinedProfile> joined,
+        IReadOnlyDictionary<string, string> names)
+    {
+        foreach (var profile in joined.Where(p => p.Status == JoinedProfileStatus.Conflict))
+        {
+            var name = names.GetValueOrDefault(profile.ProfileId, profile.ProfileId);
+            if (ConfirmDialog.Show(_loc, this, _loc.Get("Ui.HouseholdDialog.Conflict.Replace.Confirm", name),
+                    _loc.Get("Ui.HouseholdDialog.Conflict.Replace"), MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+            {
+                continue;
+            }
+            try
+            {
+                await _household.WhileIdleAsync(async () =>
+                {
+                    await using var scope = _scopes.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<IProfileReplaceWithGroup>()
+                        .ReplaceAsync(profile.ProfileId, Environment.MachineName, CancellationToken.None);
+                    return true;
+                });
+            }
+            catch (Exception ex)
+            {
+                Error(_loc.Get("Ui.HouseholdDialog.Conflict.Replace.Failed", ex.Message));
+                continue;
+            }
+            Info(_loc.Get("Ui.SyncDialog.Restart"));
+            _restarter.RestartAndExit(["--profile", profile.ProfileId]);
+            return true;
+        }
+        return false;
     }
 
     // Null when cancelled or failed (the error is shown).
@@ -674,6 +716,8 @@ internal sealed class HouseholdDialog : MedReminderFormBase
             Error(ex switch
             {
                 SyncPairingExpiredException => _loc.Get("Ui.SyncDialog.PairingCode.Expired"),
+                HouseholdPairingMismatchException { Reason: HouseholdPairingMismatch.Mistyped, Position: { } pos }
+                    => _loc.Get("Ui.SyncDialog.PairingCode.Mistyped", pos),
                 CryptographicException => _loc.Get("Ui.SyncDialog.PairingCode.Rejected"),
                 _ => ex.Message,
             });

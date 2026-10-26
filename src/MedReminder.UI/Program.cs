@@ -495,6 +495,9 @@ internal static class Program
         builder.Services.AddHostedService<MasterProfilesHostedService>();
         // Step H5b: the rotation of a profile's group after a device removal.
         builder.Services.AddScoped<IProfileGroupRotation, ProfileGroupRotation>();
+        // Step H3d: a profile kept from before a device left, replaced with
+        // the group granted on a later join (JoinedProfileStatus.Conflict).
+        builder.Services.AddScoped<IProfileReplaceWithGroup, ProfileReplaceWithGroup>();
         // Issue #88 (medreminder-mobile): not offered on the desktop yet.
         builder.Services.AddScoped<IHouseholdLeavingProfiles, HouseholdLeavingProfiles>();
 
