@@ -12,18 +12,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.14" />
     <!-- MailKit comes with MedReminder.Infrastructure.Portable (the SMTP
          sender is portable since Android backlog B5-01). -->
     <!-- OneDrive sign-in (B.1 Phase 4a, docs/analysis/
          ANALYSIS-B1-MOBILE-SYNC.md §5.8): public client, system browser,
          token cache protected with DPAPI. MIT. -->
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.91.0" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.91.1" />
     <!-- Windows-1252 is a code page and requires the CodePages
          provider at runtime (registered by AnsmBdpmParser via
          Encoding.RegisterProvider). Only the FR / BDPM parser needs
