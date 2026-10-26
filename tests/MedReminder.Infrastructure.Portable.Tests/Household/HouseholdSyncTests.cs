@@ -630,6 +630,51 @@ public sealed class HouseholdSyncTests : IDisposable
     }
 
     [Fact]
+    public async Task A_replaced_offer_is_told_from_a_mistyped_code()
+    {
+        var (a, _) = await PublishedWithASyncedProfileAsync();
+        var first = await a.Offers().StartAsync(["user"], CancellationToken.None);
+        var second = await a.Offers().StartAsync(["user"], CancellationToken.None);
+
+        var replaced = () => Create("C").Sync.JoinAsync(SyncTarget.ForFolder(Folder), first.Code, "PC C", CancellationToken.None);
+        (await replaced.Should().ThrowAsync<HouseholdPairingMismatchException>())
+            .Which.Reason.Should().Be(HouseholdPairingMismatch.Replaced);
+
+        var text = second.Code.Text;
+        var at = text.LastIndexOf('.') + 10;
+        var mistyped = text[..at] + (text[at] == 'A' ? 'B' : 'A') + text[(at + 1)..];
+        HouseholdPairingCode.TryParse(mistyped, out var code).Should().BeTrue();
+        var join = () => Create("D").Sync.JoinAsync(SyncTarget.ForFolder(Folder), code!, "PC D", CancellationToken.None);
+        var mismatch = (await join.Should().ThrowAsync<HouseholdPairingMismatchException>()).Which;
+        mismatch.Reason.Should().Be(HouseholdPairingMismatch.Mistyped);
+        mismatch.Position.Should().Be(at + 1);
+
+        var swapAt = Enumerable.Range(at, 20).First(i => text[i] != text[i + 1]);
+        var swapped = text[..swapAt] + text[swapAt + 1] + text[swapAt] + text[(swapAt + 2)..];
+        HouseholdPairingCode.TryParse(swapped, out var swappedCode).Should().BeTrue();
+        var swap = () => Create("E").Sync.JoinAsync(SyncTarget.ForFolder(Folder), swappedCode!, "PC E", CancellationToken.None);
+        var swapMismatch = (await swap.Should().ThrowAsync<HouseholdPairingMismatchException>()).Which;
+        swapMismatch.Reason.Should().Be(HouseholdPairingMismatch.Mistyped);
+        swapMismatch.Position.Should().Be(swapAt + 1);
+    }
+
+    [Fact]
+    public async Task An_offer_without_a_secret_check_reports_an_unknown_mismatch()
+    {
+        var (a, _) = await PublishedWithASyncedProfileAsync();
+        var first = await a.Offers().StartAsync(["user"], CancellationToken.None);
+        await a.Offers().StartAsync(["user"], CancellationToken.None);
+        var path = Directory.EnumerateFiles(Folder, "*.mrp", SearchOption.AllDirectories).Single();
+        var file = HouseholdPairingFile.Parse(File.ReadAllBytes(path));
+        file.SecretCheck.Should().NotBeNull();
+        File.WriteAllBytes(path, (file with { SecretCheck = null }).ToBytes());
+
+        var join = () => Create("C").Sync.JoinAsync(SyncTarget.ForFolder(Folder), first.Code, "PC C", CancellationToken.None);
+        (await join.Should().ThrowAsync<HouseholdPairingMismatchException>())
+            .Which.Reason.Should().Be(HouseholdPairingMismatch.Unknown);
+    }
+
+    [Fact]
     public async Task The_offer_file_holds_no_key_in_clear()
     {
         var (a, _) = await PublishedWithASyncedProfileAsync();
@@ -713,6 +758,62 @@ public sealed class HouseholdSyncTests : IDisposable
             .InstallGrantedAsync(["user", "admin"], "PC C", CancellationToken.None));
         again.Should().Equal(new JoinedProfile("user", JoinedProfileStatus.AlreadyHere),
             new JoinedProfile("admin", JoinedProfileStatus.NotGranted));
+    }
+
+    // Step H3d: a device that left keeping the profile joins again; its copy
+    // does not sync with the granted group until it is replaced.
+    [Fact]
+    public async Task A_profile_kept_from_before_is_a_conflict_until_replaced_with_its_group()
+    {
+        Directory.CreateDirectory(Folder);
+        using var group = new SyncDevice("P", Path.Combine(_root, "P.db"), DateTimeOffset.UtcNow, settings: null);
+        await group.InitializeAsync();
+        await group.RunAsync(sp => sp.GetRequiredService<MedReminder.Application.Sync.CreateSyncGroup>().ExecuteAsync(
+            new LocalFolderSyncTransport(Folder), "group words".ToCharArray(), SyncTarget.ForFolder(Folder),
+            CancellationToken.None, SyncFileFormatTests.FastKdf));
+        var settings = group.Settings.Load()!;
+        var a = Create("A");
+        a.Registry.Add("admin", "Anna", ProfileRole.Admin);
+        a.Registry.Add("user", "Bruno", ProfileRole.User);
+        a.GroupKeys.Keys["user"] = new ProfileGroupKey(settings.GroupId, settings.KeyVersion,
+            group.Keys.Load(settings.GroupId, settings.KeyVersion)!);
+        await a.ReconcileAsync();
+        await a.Sync.PublishAsync(SyncTarget.ForFolder(Folder), Passphrase.ToCharArray(), "PC A", CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+        var offer = await a.Offers().StartAsync(["user"], CancellationToken.None);
+        var c = Create("C");
+        c.Registry.Add("user", "Bruno", ProfileRole.User);
+
+        var result = await group.RunAsync(sp => c.Join(sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>())
+            .JoinWithCodeAsync(SyncTarget.ForFolder(Folder), offer.Code, "PC C", CancellationToken.None));
+        result.Profiles.Should().Equal(new JoinedProfile("user", JoinedProfileStatus.Conflict));
+
+        var kept = Path.Combine(c.ProfilesRoot, "user");
+        Directory.CreateDirectory(kept);
+        using var local = new SyncDevice("C", Path.Combine(kept, "medreminder.db"), DateTimeOffset.UtcNow, settings: null);
+        await local.InitializeAsync();
+        HouseholdProfileReplace Replace(IServiceProvider sp, string profileId = "user") => new(local.DatabasePath, profileId,
+            sp.GetRequiredService<MedReminder.Infrastructure.Persistence.MedReminderDbContext>(), c.Keyring, c.Log, c.Store,
+            c.GroupKeys, sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(), local.Settings, local.Keys,
+            sp.GetRequiredService<ISyncTransportFactory>(), sp.GetRequiredService<IDatabaseExclusiveAccess>(),
+            TimeProvider.System);
+
+        var outside = () => local.RunAsync(sp => Replace(sp, "admin").ExecuteAsync("PC C", CancellationToken.None));
+        await outside.Should().ThrowAsync<InvalidOperationException>("no grant to this device");
+        await local.RunAsync(sp => Replace(sp).ExecuteAsync("PC C", CancellationToken.None));
+
+        var replaced = local.Settings.Load()!;
+        replaced.GroupId.Should().Be(settings.GroupId);
+        replaced.DeviceId.Should().NotBe(settings.DeviceId);
+        local.Keys.Load(replaced.GroupId, replaced.KeyVersion).Should()
+            .Equal(group.Keys.Load(settings.GroupId, settings.KeyVersion));
+        Directory.EnumerateFiles(kept, "medreminder.db.bak-*").Should().ContainSingle("the copy kept here stays");
+        Directory.EnumerateFiles(kept, "medreminder.join-*").Should().BeEmpty();
+        // What ProfileGroupKeys reads from the profile folder in the apps.
+        c.GroupKeys.Keys["user"] = new ProfileGroupKey(replaced.GroupId, replaced.KeyVersion,
+            local.Keys.Load(replaced.GroupId, replaced.KeyVersion)!);
+        var again = () => local.RunAsync(sp => Replace(sp).ExecuteAsync("PC C", CancellationToken.None));
+        await again.Should().ThrowAsync<InvalidOperationException>();
     }
 
     // Issue #88 (medreminder-mobile): leaving and dissolving.
