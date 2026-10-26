@@ -568,6 +568,20 @@ public sealed class HouseholdSyncTests : IDisposable
         HouseholdPairingCode.TryParse(code.Text.Replace("mrpair2", "mrpair1"), out _).Should().BeFalse();
     }
 
+    // A code mistyped or damaged by a copy: rejected, never thrown.
+    [Theory]
+    [InlineData(":")]
+    [InlineData("*")]
+    [InlineData("===")]
+    public void A_code_with_a_damaged_secret_is_not_a_code(string damage)
+    {
+        var code = new HouseholdPairingCode(Guid.NewGuid(), Guid.NewGuid(), CloudProvider.OneDrive, RandomNumberGenerator.GetBytes(32));
+        var parts = code.Text.Split('.');
+        parts[4] = parts[4][..10] + damage + parts[4][10..];
+
+        HouseholdPairingCode.TryParse(string.Join('.', parts), out _).Should().BeFalse();
+    }
+
     [Fact]
     public async Task A_device_joining_with_a_code_is_granted_the_offered_profiles_only()
     {

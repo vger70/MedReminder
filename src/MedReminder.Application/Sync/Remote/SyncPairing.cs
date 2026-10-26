@@ -66,6 +66,9 @@ public sealed record SyncPairingCode(Guid GroupId, Guid DeviceId, CloudProvider?
             default: return false;
         }
 
+        // TryDecodeFromChars throws on a character outside base64url: a code
+        // mistyped or damaged by a copy is not a code.
+        if (!Base64Url.IsValid(parts[4], out var length) || length != SecretSize) return false;
         var decoded = new byte[SecretSize];
         if (!Base64Url.TryDecodeFromChars(parts[4], decoded, out var written) || written != SecretSize) return false;
         secret = decoded;
