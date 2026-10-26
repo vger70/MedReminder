@@ -17,7 +17,9 @@ public enum JoinedProfileStatus
     AlreadyHere,
 
     // A local profile with the same id is not synced with the granted
-    // group: left for the admin to decide (§6.4, step H3d).
+    // group (for example kept when this device left the installation):
+    // left for the user to decide, who may replace it with the group
+    // (HouseholdProfileReplace, §6.4, step H3d).
     Conflict,
 
     // No grant for this device, or the profile left the household.
@@ -97,7 +99,8 @@ public sealed class JoinInstallation
     }
 
     // SyncPairingExpiredException when the offer is over,
-    // CryptographicException when a newer offer replaced it.
+    // HouseholdPairingMismatchException (a CryptographicException) when the
+    // code does not open it: mistyped, or replaced by a newer offer.
     public async Task<JoinInstallationResult> JoinWithCodeAsync(SyncTarget target, HouseholdPairingCode code,
         string deviceName, CancellationToken cancellationToken)
     {

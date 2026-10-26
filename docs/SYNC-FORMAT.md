@@ -545,7 +545,14 @@ fields of a group pairing file (`formatVersion`, `householdId`,
 household key version and key, the profiles offered (`profileId`,
 `groupId`, `keyVersion`, `key`) and the expiry, encrypted with the
 secret of the code (AES-256-GCM, associated data
-`MedReminder.Household.Pairing|<householdId N>|<deviceId N>`). Only an
+`MedReminder.Household.Pairing|<householdId N>|<deviceId N>`). The
+cleartext also holds `secretCheck`, the SHA-256 of
+`MedReminder.Household.Pairing.Check|` followed by the secret: when the
+code does not open the offer, a reader that finds a secret one character
+away from the typed one with the same check reports a mistyped code
+(with its position), and any other secret a code that a newer offer
+replaced. Offers written before `secretCheck` lack it; readers ignore
+fields they do not know, so older readers still open newer offers. Only an
 admin writes an offer; it lasts 10 minutes and is deleted when the
 window closes. The joining device records `ProfileKeyGranted` for its
 own public key for each profile offered, so it keeps them after the

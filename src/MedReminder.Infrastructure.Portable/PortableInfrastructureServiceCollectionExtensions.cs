@@ -117,6 +117,15 @@ public static class PortableInfrastructureServiceCollectionExtensions
             sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(), sp.GetRequiredService<ISyncSettingsStore>(),
             sp.GetRequiredService<ISyncKeyStore>(), sp.GetRequiredService<ISyncTransportFactory>(),
             sp.GetRequiredService<IDatabaseExclusiveAccess>(), sp.GetRequiredService<TimeProvider>()));
+        // The open profile replaced with its group in the installation, after
+        // a join that found it kept here from before (step H3d).
+        services.TryAddScoped(sp => new HouseholdProfileReplace(databasePath,
+            sp.GetRequiredService<ICurrentProfile>().Id, sp.GetRequiredService<MedReminderDbContext>(),
+            sp.GetRequiredService<MedReminder.Application.Household.HouseholdKeyring>(),
+            sp.GetRequiredService<IHouseholdStore>(), sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(),
+            sp.GetRequiredService<ISyncSettingsStore>(), sp.GetRequiredService<ISyncKeyStore>(),
+            sp.GetRequiredService<ISyncTransportFactory>(), sp.GetRequiredService<IDatabaseExclusiveAccess>(),
+            sp.GetRequiredService<TimeProvider>()));
         // The new group key after a rotation elsewhere (Phase 4c, step H5b).
         services.TryAddScoped(sp => new ProfileSyncRekey(databasePath, sp.GetRequiredService<MedReminderDbContext>(),
             sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(), sp.GetRequiredService<ISyncSettingsStore>(),
