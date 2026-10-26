@@ -30,6 +30,22 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #304 — Reject a pairing code with a damaged secret instead of throwing
+
+**Status:** open
+
+Link: [vger70/MedReminder#304](https://github.com/vger70/MedReminder/pull/304)
+Branch: `claude/pairing-code-invalid-base64`
+
+**Fixed**
+- A pairing code whose secret holds a character outside base64url (mistyped,
+  or damaged by a copy) is rejected as not a code instead of throwing
+  `FormatException` (`src/MedReminder.Application/Sync/Remote/SyncPairing.cs`,
+  `SyncPairing.TryParse`): `Base64Url.TryDecodeFromChars` throws on such input,
+  which crashed the mobile app on the join page.
+
+---
+
 ## PR #303 — Validate SMTP certificates without the revocation check
 
 **Status:** merged (2026-10-25)
