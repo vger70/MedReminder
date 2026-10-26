@@ -30,9 +30,33 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #304 — Reject a pairing code with a damaged secret instead of throwing
+## PR #305 — Tell a mistyped pairing code from a replaced offer; replace a kept profile
 
 **Status:** open
+
+Link: [vger70/MedReminder#305](https://github.com/vger70/MedReminder/pull/305)
+Branch: `claude/pairing-typo-and-rejoin`
+
+**Added**
+- Household offers record `secretCheck`, a hash of the code's secret; a
+  code that does not open its offer is reported as mistyped, with the
+  position of the wrong character, or as replaced by a newer offer
+  (`src/MedReminder.Application/Household/Remote/HouseholdPairing.cs`,
+  `HouseholdPairingMismatchException`). Older readers ignore the field.
+- `HouseholdProfileReplace`: the open profile, kept on a device that left
+  the installation and joined again (`JoinedProfileStatus.Conflict`), is
+  rebuilt from its group in the installation; the local database stays as
+  a `.bak` copy
+  (`src/MedReminder.Infrastructure.Portable/Household/HouseholdProfileReplace.cs`).
+
+**Docs**
+- `docs/SYNC-FORMAT.md` §9.5: `secretCheck`.
+
+---
+
+## PR #304 — Reject a pairing code with a damaged secret instead of throwing
+
+**Status:** merged (2026-10-26)
 
 Link: [vger70/MedReminder#304](https://github.com/vger70/MedReminder/pull/304)
 Branch: `claude/pairing-code-invalid-base64`
