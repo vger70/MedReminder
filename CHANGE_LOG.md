@@ -30,6 +30,42 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR — Surface pairing typos and wire the kept-profile replace into the desktop
+
+**Status:** open
+
+Follow-up to the review of #305.
+
+**Added**
+- Joining an installation and finding a profile kept here from before
+  (`JoinedProfileStatus.Conflict`) now offers to replace it with the group
+  granted to this device; the replace builds the profile's services (open or
+  not), swaps the database and restarts
+  (`IProfileReplaceWithGroup`, `src/MedReminder.UI/Hosting/ProfileReplaceWithGroup.cs`,
+  `src/MedReminder.UI/Forms/HouseholdDialog.cs`). New dictionary keys
+  `Ui.HouseholdDialog.Conflict.Replace*` in all five languages.
+
+**Changed**
+- A pairing code that does not open its offer is now reported to the user as
+  mistyped, naming the character within the secret to check, instead of the
+  generic rejected message (`src/MedReminder.UI/Forms/SyncDialog.cs`,
+  `src/MedReminder.UI/Forms/HouseholdDialog.cs`, new key
+  `Ui.SyncDialog.PairingCode.Mistyped`).
+
+**Security**
+- The pairing-mismatch diagnosis no longer copies the code's secret into an
+  immutable string: it works on the decoded secret's base64url characters and
+  zeroes them, so the secret is never left on the managed heap. The reported
+  position is now relative to the secret
+  (`src/MedReminder.Application/Household/Remote/HouseholdPairing.cs`).
+
+**Tests**
+- A failed profile replace removes the device record the join published and
+  leaves no temporary database
+  (`tests/MedReminder.Infrastructure.Portable.Tests/Household/HouseholdSyncTests.cs`).
+
+---
+
 ## PR #305 — Tell a mistyped pairing code from a replaced offer; replace a kept profile
 
 **Status:** open

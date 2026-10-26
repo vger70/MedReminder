@@ -145,32 +145,35 @@ public sealed record HouseholdPairingFile(int FormatVersion, Guid HouseholdId, G
     // is a mistyped code: each other character of the base64url alphabet at
     // each position, and each swap of two neighbouring characters (about
     // 2,700 hashes). Any other secret is a code a newer offer replaced, or
-    // one with more than one mistake. Position counts the characters of the
-    // code without the spaces and line breaks TryParse removes.
+    // one with more than one mistake. Position is 1-based within the secret,
+    // the only part the user copies.
+    //
+    // Works on the secret's base64url characters alone, never on code.Text:
+    // that would copy the secret into an immutable string this method could
+    // not zero.
     private HouseholdPairingMismatchException Mismatch(HouseholdPairingCode code, CryptographicException inner)
     {
         if (SecretCheck is null) return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Unknown, null, inner);
-        var text = code.Text;
-        var start = text.LastIndexOf('.') + 1;
-        var typed = text.ToCharArray();
+        var typed = new char[Base64Url.GetEncodedLength(code.Secret.Length)];
+        Base64Url.EncodeToChars(code.Secret, typed);
         var candidate = new byte[code.Secret.Length];
         try
         {
-            for (var i = start; i < typed.Length; i++)
+            for (var i = 0; i < typed.Length; i++)
             {
                 var original = typed[i];
                 foreach (var c in Base64UrlAlphabet)
                 {
                     if (c == original) continue;
                     typed[i] = c;
-                    if (Matches(typed.AsSpan(start), code.Secret, candidate))
+                    if (Matches(typed, code.Secret, candidate))
                         return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Mistyped, i + 1, inner);
                 }
                 typed[i] = original;
                 if (i + 1 < typed.Length && typed[i + 1] != original)
                 {
                     (typed[i], typed[i + 1]) = (typed[i + 1], original);
-                    var swapped = Matches(typed.AsSpan(start), code.Secret, candidate);
+                    var swapped = Matches(typed, code.Secret, candidate);
                     (typed[i], typed[i + 1]) = (original, typed[i]);
                     if (swapped) return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Mistyped, i + 1, inner);
                 }
@@ -201,7 +204,7 @@ public enum HouseholdPairingMismatch
     Unknown,
 
     // One character of the code is wrong, or two neighbouring ones are
-    // swapped: Position names the (first) one, counted without spaces.
+    // swapped: Position names the (first) one within the secret.
     Mistyped,
 
     // A newer offer replaced the one the code was made for, or more than one
@@ -209,7 +212,7 @@ public enum HouseholdPairingMismatch
     Replaced,
 }
 
-// Position: 1-based, in the code text, for Mistyped; null otherwise. A
+// Position: 1-based, within the secret, for Mistyped; null otherwise. A
 // CryptographicException, as the hosts already catch for a code that does
 // not open the offer.
 public sealed class HouseholdPairingMismatchException(HouseholdPairingMismatch reason, int? position,

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Household.Remote;
 using MedReminder.Application.Sync;
 using MedReminder.Application.Sync.Remote;
 using MedReminder.Domain.Sync;
@@ -647,6 +648,8 @@ internal sealed class SyncDialog : MedReminderFormBase
     private string PairingError(Exception ex) => ex switch
     {
         SyncPairingExpiredException => _loc.Get("Ui.SyncDialog.PairingCode.Expired"),
+        HouseholdPairingMismatchException { Reason: HouseholdPairingMismatch.Mistyped, Position: { } pos }
+            => _loc.Get("Ui.SyncDialog.PairingCode.Mistyped", pos),
         CryptographicException => _loc.Get("Ui.SyncDialog.PairingCode.Rejected"),
         _ => ex.Message,
     };
