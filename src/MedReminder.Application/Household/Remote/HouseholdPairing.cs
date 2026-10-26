@@ -50,7 +50,10 @@ public sealed record HouseholdOffer(int KeyVersion, byte[] Key, IReadOnlyList<Ho
 // the device that shows the code, deleted when the offer ends, refused
 // after its expiry. The cleartext part holds ids and SecretCheck, a hash
 // of the secret that tells a mistyped code from one a newer offer replaced
-// (null in offers written before it).
+// (null in offers written before it). SecretCheck is not authenticated:
+// older readers could not open an offer whose associated data held it. It
+// only words the error for a code that does not open the offer; it never
+// opens one.
 public sealed record HouseholdPairingFile(int FormatVersion, Guid HouseholdId, Guid DeviceId, byte[] Nonce, byte[] Tag,
     byte[] Ciphertext, byte[]? SecretCheck = null)
 {
@@ -128,13 +131,22 @@ public sealed record HouseholdPairingFile(int FormatVersion, Guid HouseholdId, G
     private static readonly byte[] CheckPrefix = Encoding.UTF8.GetBytes("MedReminder.Household.Pairing.Check|");
 
     // The secret holds 256 random bits: its hash gives nothing a guess could
-    // not already test against the tag.
-    private static byte[] Check(byte[] secret) => SHA256.HashData([.. CheckPrefix, .. secret]);
+    // not already test against the tag. Hashed incrementally: no copy of the
+    // secret is left to zero.
+    private static byte[] Check(ReadOnlySpan<byte> secret)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        hash.AppendData(CheckPrefix);
+        hash.AppendData(secret);
+        return hash.GetHashAndReset();
+    }
 
-    // A secret one character away from the one the file was sealed with is a
-    // mistyped code: each other character of the base64url alphabet is tried
-    // at each position (about 2,700 hashes). Any other secret is a code a
-    // newer offer replaced, or one with more than one wrong character.
+    // A secret one typing mistake away from the one the file was sealed with
+    // is a mistyped code: each other character of the base64url alphabet at
+    // each position, and each swap of two neighbouring characters (about
+    // 2,700 hashes). Any other secret is a code a newer offer replaced, or
+    // one with more than one mistake. Position counts the characters of the
+    // code without the spaces and line breaks TryParse removes.
     private HouseholdPairingMismatchException Mismatch(HouseholdPairingCode code, CryptographicException inner)
     {
         if (SecretCheck is null) return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Unknown, null, inner);
@@ -151,16 +163,17 @@ public sealed record HouseholdPairingFile(int FormatVersion, Guid HouseholdId, G
                 {
                     if (c == original) continue;
                     typed[i] = c;
-                    if (Base64Url.IsValid(typed.AsSpan(start), out var length) && length == candidate.Length
-                        && Base64Url.TryDecodeFromChars(typed.AsSpan(start), candidate, out var written)
-                        && written == candidate.Length
-                        && !candidate.AsSpan().SequenceEqual(code.Secret)
-                        && CryptographicOperations.FixedTimeEquals(Check(candidate), SecretCheck))
-                    {
+                    if (Matches(typed.AsSpan(start), code.Secret, candidate))
                         return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Mistyped, i + 1, inner);
-                    }
                 }
                 typed[i] = original;
+                if (i + 1 < typed.Length && typed[i + 1] != original)
+                {
+                    (typed[i], typed[i + 1]) = (typed[i + 1], original);
+                    var swapped = Matches(typed.AsSpan(start), code.Secret, candidate);
+                    (typed[i], typed[i + 1]) = (original, typed[i]);
+                    if (swapped) return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Mistyped, i + 1, inner);
+                }
             }
             return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Replaced, null, inner);
         }
@@ -171,6 +184,13 @@ public sealed record HouseholdPairingFile(int FormatVersion, Guid HouseholdId, G
         }
     }
 
+    // candidate: a buffer of the secret's size, overwritten.
+    private bool Matches(ReadOnlySpan<char> secretText, byte[] typed, byte[] candidate)
+        => Base64Url.IsValid(secretText, out var length) && length == candidate.Length
+            && Base64Url.TryDecodeFromChars(secretText, candidate, out var written) && written == candidate.Length
+            && !candidate.AsSpan().SequenceEqual(typed)
+            && CryptographicOperations.FixedTimeEquals(Check(candidate), SecretCheck);
+
     private const string Base64UrlAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 }
 
@@ -180,7 +200,8 @@ public enum HouseholdPairingMismatch
     // The offer was written by a version that does not record SecretCheck.
     Unknown,
 
-    // One character of the code is wrong: Position names it.
+    // One character of the code is wrong, or two neighbouring ones are
+    // swapped: Position names the (first) one, counted without spaces.
     Mistyped,
 
     // A newer offer replaced the one the code was made for, or more than one

@@ -122,7 +122,8 @@ public static class PortableInfrastructureServiceCollectionExtensions
         services.TryAddScoped(sp => new HouseholdProfileReplace(databasePath,
             sp.GetRequiredService<ICurrentProfile>().Id, sp.GetRequiredService<MedReminderDbContext>(),
             sp.GetRequiredService<MedReminder.Application.Household.HouseholdKeyring>(),
-            sp.GetRequiredService<IHouseholdStore>(), sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(),
+            sp.GetRequiredService<MedReminder.Application.Household.HouseholdLog>(), sp.GetRequiredService<IHouseholdStore>(),
+            sp.GetRequiredService<IProfileGroupKeys>(), sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(),
             sp.GetRequiredService<ISyncSettingsStore>(), sp.GetRequiredService<ISyncKeyStore>(),
             sp.GetRequiredService<ISyncTransportFactory>(), sp.GetRequiredService<IDatabaseExclusiveAccess>(),
             sp.GetRequiredService<TimeProvider>()));

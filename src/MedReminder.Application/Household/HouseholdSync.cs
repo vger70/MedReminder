@@ -615,8 +615,10 @@ public sealed class HouseholdSync
     // a device that has it. The local household moves to the new
     // generation and this device's own operations the genesis lacks are
     // carried over. CryptographicException for a wrong passphrase;
-    // SyncPairingExpiredException or CryptographicException for a code no
-    // longer offered; HouseholdDeviceRemovedException for a removed device.
+    // SyncPairingExpiredException for a code no longer offered,
+    // HouseholdPairingMismatchException (a CryptographicException) for one
+    // that does not open the offer (mistyped, or replaced by a newer offer);
+    // HouseholdDeviceRemovedException for a removed device.
     public async Task<HouseholdSyncResult> RekeyAsync(HouseholdKeySource source, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(source);

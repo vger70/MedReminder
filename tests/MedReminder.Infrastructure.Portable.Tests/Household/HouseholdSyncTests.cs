@@ -648,6 +648,14 @@ public sealed class HouseholdSyncTests : IDisposable
         var mismatch = (await join.Should().ThrowAsync<HouseholdPairingMismatchException>()).Which;
         mismatch.Reason.Should().Be(HouseholdPairingMismatch.Mistyped);
         mismatch.Position.Should().Be(at + 1);
+
+        var swapAt = Enumerable.Range(at, 20).First(i => text[i] != text[i + 1]);
+        var swapped = text[..swapAt] + text[swapAt + 1] + text[swapAt] + text[(swapAt + 2)..];
+        HouseholdPairingCode.TryParse(swapped, out var swappedCode).Should().BeTrue();
+        var swap = () => Create("E").Sync.JoinAsync(SyncTarget.ForFolder(Folder), swappedCode!, "PC E", CancellationToken.None);
+        var swapMismatch = (await swap.Should().ThrowAsync<HouseholdPairingMismatchException>()).Which;
+        swapMismatch.Reason.Should().Be(HouseholdPairingMismatch.Mistyped);
+        swapMismatch.Position.Should().Be(swapAt + 1);
     }
 
     [Fact]
@@ -784,12 +792,14 @@ public sealed class HouseholdSyncTests : IDisposable
         Directory.CreateDirectory(kept);
         using var local = new SyncDevice("C", Path.Combine(kept, "medreminder.db"), DateTimeOffset.UtcNow, settings: null);
         await local.InitializeAsync();
-        HouseholdProfileReplace Replace(IServiceProvider sp) => new(local.DatabasePath, "user",
-            sp.GetRequiredService<MedReminder.Infrastructure.Persistence.MedReminderDbContext>(), c.Keyring, c.Store,
-            sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(), local.Settings, local.Keys,
+        HouseholdProfileReplace Replace(IServiceProvider sp, string profileId = "user") => new(local.DatabasePath, profileId,
+            sp.GetRequiredService<MedReminder.Infrastructure.Persistence.MedReminderDbContext>(), c.Keyring, c.Log, c.Store,
+            c.GroupKeys, sp.GetRequiredService<MedReminder.Application.Sync.JoinSyncGroup>(), local.Settings, local.Keys,
             sp.GetRequiredService<ISyncTransportFactory>(), sp.GetRequiredService<IDatabaseExclusiveAccess>(),
             TimeProvider.System);
 
+        var outside = () => local.RunAsync(sp => Replace(sp, "admin").ExecuteAsync("PC C", CancellationToken.None));
+        await outside.Should().ThrowAsync<InvalidOperationException>("no grant to this device");
         await local.RunAsync(sp => Replace(sp).ExecuteAsync("PC C", CancellationToken.None));
 
         var replaced = local.Settings.Load()!;
@@ -799,6 +809,9 @@ public sealed class HouseholdSyncTests : IDisposable
             .Equal(group.Keys.Load(settings.GroupId, settings.KeyVersion));
         Directory.EnumerateFiles(kept, "medreminder.db.bak-*").Should().ContainSingle("the copy kept here stays");
         Directory.EnumerateFiles(kept, "medreminder.join-*").Should().BeEmpty();
+        // What ProfileGroupKeys reads from the profile folder in the apps.
+        c.GroupKeys.Keys["user"] = new ProfileGroupKey(replaced.GroupId, replaced.KeyVersion,
+            local.Keys.Load(replaced.GroupId, replaced.KeyVersion)!);
         var again = () => local.RunAsync(sp => Replace(sp).ExecuteAsync("PC C", CancellationToken.None));
         await again.Should().ThrowAsync<InvalidOperationException>();
     }

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Household;
 using MedReminder.Application.Sync;
+using MedReminder.Application.Sync.Remote;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Storage;
 using Microsoft.Data.Sqlite;
@@ -24,7 +25,9 @@ public sealed class HouseholdProfileReplace
     private readonly string _profileId;
     private readonly MedReminderDbContext _db;
     private readonly HouseholdKeyring _keyring;
+    private readonly HouseholdLog _household;
     private readonly IHouseholdStore _store;
+    private readonly IProfileGroupKeys _groupKeys;
     private readonly JoinSyncGroup _join;
     private readonly ISyncSettingsStore _settings;
     private readonly ISyncKeyStore _keys;
@@ -33,7 +36,8 @@ public sealed class HouseholdProfileReplace
     private readonly TimeProvider _clock;
 
     internal HouseholdProfileReplace(string databasePath, string profileId, MedReminderDbContext db,
-        HouseholdKeyring keyring, IHouseholdStore store, JoinSyncGroup join, ISyncSettingsStore settings,
+        HouseholdKeyring keyring, HouseholdLog household, IHouseholdStore store, IProfileGroupKeys groupKeys,
+        JoinSyncGroup join, ISyncSettingsStore settings,
         ISyncKeyStore keys, ISyncTransportFactory transports, IDatabaseExclusiveAccess exclusiveAccess,
         TimeProvider clock)
     {
@@ -41,7 +45,9 @@ public sealed class HouseholdProfileReplace
         _profileId = profileId;
         _db = db;
         _keyring = keyring;
+        _household = household;
         _store = store;
+        _groupKeys = groupKeys;
         _join = join;
         _settings = settings;
         _keys = keys;
@@ -51,31 +57,57 @@ public sealed class HouseholdProfileReplace
     }
 
     // InvalidOperationException when this device is not in a published
-    // installation, holds no grant for the open profile, or the profile
-    // already syncs with the granted group.
+    // installation, the profile is not in it or not granted to this device,
+    // or the profile already syncs with the granted group. These are the
+    // tests JoinInstallation makes before it reports a Conflict.
     public async Task ExecuteAsync(string deviceName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deviceName);
         var identity = await _store.EnsureCreatedAsync(cancellationToken);
         if (identity.Storage is not { } storage)
             throw new InvalidOperationException("This device is not in a published installation.");
+        if (!(await _household.ProfilesAsync(cancellationToken)).Any(p => p.ProfileId == _profileId))
+            throw new InvalidOperationException("The profile is not in the installation.");
         var grant = await _keyring.OpenGrantAsync(_profileId, cancellationToken)
             ?? throw new InvalidOperationException("The installation granted this device no key for the profile.");
         var temp = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_databasePath))!,
             $"medreminder.join-{Guid.NewGuid():N}.db");
         try
         {
-            if (_settings.Load()?.GroupId == grant.GroupId)
+            var local = _groupKeys.Load(_profileId);
+            if (local is not null) CryptographicOperations.ZeroMemory(local.Key);
+            if (local?.GroupId == grant.GroupId)
                 throw new InvalidOperationException("The profile already syncs with the granted group.");
-            var joined = await _join.ExecuteAsync(_transports.Create(storage), grant.GroupId,
+            var transport = _transports.Create(storage);
+            var joined = await _join.ExecuteAsync(transport, grant.GroupId,
                 new SyncKeySource.Known(grant.KeyVersion, grant.Key), temp, storage, cancellationToken, deviceName);
             try
             {
-                await ProfileDatabaseSwap.ReplaceAsync(_exclusiveAccess, _db, _databasePath, temp, _clock,
-                    cancellationToken);
+                try
+                {
+                    await ProfileDatabaseSwap.ReplaceAsync(_exclusiveAccess, _db, _databasePath, temp, _clock,
+                        cancellationToken);
+                }
+                catch
+                {
+                    // The join published this device in the group: a record
+                    // that would never sync. Best effort; the stale rule
+                    // removes it otherwise.
+                    try
+                    {
+                        await transport.DeleteAsync(SyncLayout.Device(joined.Settings.GroupId, joined.Settings.DeviceId),
+                            CancellationToken.None);
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    throw;
+                }
                 _db.ChangeTracker.Clear();
                 // The key first: settings without it would turn sync on with
-                // nothing to open the group.
+                // nothing to open the group. Should either fail, the profile
+                // holds the group's database out of sync, and a new replace
+                // starts over.
                 _keys.Save(joined.Settings.GroupId, joined.Settings.KeyVersion, joined.Key);
                 _settings.Save(joined.Settings);
             }

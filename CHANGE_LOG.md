@@ -39,14 +39,15 @@ Branch: `claude/pairing-typo-and-rejoin`
 
 **Added**
 - Household offers record `secretCheck`, a hash of the code's secret; a
-  code that does not open its offer is reported as mistyped, with the
-  position of the wrong character, or as replaced by a newer offer
+  code that does not open its offer is reported as mistyped (one wrong
+  character or two neighbouring ones swapped), with the position, or as
+  replaced by a newer offer
   (`src/MedReminder.Application/Household/Remote/HouseholdPairing.cs`,
   `HouseholdPairingMismatchException`). Older readers ignore the field.
 - `HouseholdProfileReplace`: the open profile, kept on a device that left
   the installation and joined again (`JoinedProfileStatus.Conflict`), is
-  rebuilt from its group in the installation; the local database stays as
-  a `.bak` copy
+  rebuilt from its group in the installation, under the same checks the
+  join makes; the local database stays as a `.bak` copy
   (`src/MedReminder.Infrastructure.Portable/Household/HouseholdProfileReplace.cs`).
 
 **Docs**
