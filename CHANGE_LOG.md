@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR — Give each daily notice an identity across days
+## PR #308 — Give each daily notice an identity across days
 
 **Status:** open
 
