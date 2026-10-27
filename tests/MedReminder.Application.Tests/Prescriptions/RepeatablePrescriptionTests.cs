@@ -225,7 +225,8 @@ public class RepeatablePrescriptionTests
         await scope.Monitor.RunAsync(default);
 
         scope.Windows.Targets.Should().ContainSingle()
-            .Which.Should().Be(NotificationTarget.LowStock(medicine, hasRepeatablePrescription: true));
+            .Which.Should().Be(NotificationTarget.LowStock(medicine, hasRepeatablePrescription: true,
+                NoticeKeys.LowStock(medicine, stockEpoch: 1, stage: 2)));
         var (_, body) = scope.Windows.Sent.Should().ContainSingle().Subject;
         body.Should().Contain("repeatable prescription: 2").And.NotContain("new prescription");
         var email = scope.Email.Sent.Should().ContainSingle().Subject;
@@ -243,7 +244,8 @@ public class RepeatablePrescriptionTests
 
         await scope.Monitor.RunAsync(default);
 
-        scope.Windows.Targets.Should().ContainSingle().Which.Should().Be(NotificationTarget.LowStock(medicine));
+        scope.Windows.Targets.Should().ContainSingle().Which.Should()
+            .Be(NotificationTarget.LowStock(medicine, notice: NoticeKeys.LowStock(medicine, stockEpoch: 1, stage: 2)));
         scope.Windows.Sent.Single().Body.Should().Contain("new prescription");
         scope.Email.Sent.Single().Body.Should().Contain("new prescription");
     }

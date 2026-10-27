@@ -83,6 +83,20 @@ public class NotificationActionsTests
     }
 
     [Fact]
+    public void A_notice_key_names_one_notice_whatever_the_day()
+    {
+        var a = Guid.NewGuid();
+        var b = Guid.NewGuid();
+        NoticeKeys.PackageExpiry(1, [a, b]).Should().Be(NoticeKeys.PackageExpiry(1, [b, a]));
+        NoticeKeys.PackageExpiry(1, [a]).Should().NotBe(NoticeKeys.PackageExpiry(2, [a]));
+        // A new stock epoch (a refill) starts a new cycle: its stages are new notices.
+        NoticeKeys.LowStock(a, stockEpoch: 1, stage: 1).Should().NotBe(NoticeKeys.LowStock(a, stockEpoch: 2, stage: 1));
+        NoticeKeys.LowStock(a, stockEpoch: 1, stage: 1).Should().NotBe(NoticeKeys.LowStock(a, stockEpoch: 1, stage: 2));
+        NoticeKeys.Deadline(a, Today).Should().NotBe(NoticeKeys.Deadline(a, Today.AddDays(1)));
+        NotificationTarget.DoseReminder(a, new TimeOnly(8, 0)).Notice.Should().BeNull();
+    }
+
+    [Fact]
     public async Task The_low_stock_warning_and_the_prescription_reminder_carry_their_target()
     {
         var scope = new ApplicationTestScope(new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero));
@@ -96,7 +110,8 @@ public class NotificationActionsTests
 
         await scope.Monitor.RunAsync(default);
 
-        scope.Windows.Targets.Should().BeEquivalentTo(new[]
+        scope.Windows.Targets.Should().OnlyContain(t => t.Notice != null);
+        scope.Windows.Targets.Select(t => t with { Notice = null }).Should().BeEquivalentTo(new[]
         {
             NotificationTarget.LowStock(id),
             NotificationTarget.Prescription(id),
