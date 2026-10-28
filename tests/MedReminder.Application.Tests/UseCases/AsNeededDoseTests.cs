@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Migrations;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
@@ -72,6 +73,26 @@ public class AsNeededDoseTests
         await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
                 new RegisterIntakeCommand(id, Today, IntakeStatus.Skipped, 1m, IsExtra: true), CancellationToken.None))
             .Should().ThrowAsync<ArgumentException>();
+    }
+
+    // Mobile issue #126: an extra dose is on top of the plan, so it
+    // answers no dose slot; a scheduled intake keeps its slot time.
+    [Fact]
+    public async Task An_extra_intake_answers_no_slot()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedAsync(scope);
+        var slot = new DateTimeOffset(2026, 9, 13, 8, 0, 0, TimeSpan.Zero);
+
+        await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
+                new RegisterIntakeCommand(id, Today, IntakeStatus.Taken, 1m, IsExtra: true, ScheduledAt: slot),
+                CancellationToken.None))
+            .Should().ThrowAsync<ArgumentException>();
+
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, Today, IntakeStatus.Taken, 1m, ScheduledAt: slot), CancellationToken.None);
+        (await ((IMedicationIntakeRepository)scope.Intakes).ListForDayAsync(id, Today, CancellationToken.None))
+            .Should().ContainSingle().Which.ScheduledAt.Should().Be(slot);
     }
 
     [Fact]

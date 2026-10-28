@@ -146,6 +146,17 @@ public sealed class NotificationPlanLoader
         return new DeadlinePlanState(deadlines, reminded);
     }
 
+    // Slots an intake of today answers, read only for a medicine with a
+    // dose reminder and a timed slot.
+    private async Task<IReadOnlySet<Guid>?> RecordedSlotsAsync(Guid medicineId, DateOnly today,
+        IReadOnlyList<Domain.Medicines.MedicationAdministrationSlot> slots, CancellationToken cancellationToken)
+    {
+        if (DoseSlots.Timed(slots).Count == 0) return null;
+        var intakes = await _intakes.ListForDayAsync(medicineId, today, cancellationToken);
+        if (intakes.Count == 0) return null;
+        return DoseSlots.Records(today, slots, intakes, _clock.LocalTimeZone).Keys.ToHashSet();
+    }
+
     public async Task<IReadOnlyList<MedicinePlanState>> LoadAsync(DateOnly today, CancellationToken cancellationToken)
     {
         var booked = new HashSet<Guid>(await _intakes.ListMedicinesWithDayIntakeAsync(today, cancellationToken));
@@ -220,7 +231,8 @@ public sealed class NotificationPlanLoader
                 prescriptions is { Count: > 0 } && _dispensations is not null
                     ? await _dispensations.CountByPrescriptionAsync(medicine.Id, cancellationToken)
                     : null,
-                prescriptionsReminded));
+                prescriptionsReminded,
+                await RecordedSlotsAsync(medicine.Id, today, slots, cancellationToken)));
         }
         return result;
     }

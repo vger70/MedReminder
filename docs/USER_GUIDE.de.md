@@ -317,6 +317,10 @@ Einnahmezeit mit Uhrzeit und noch Bestand hat.
 - War der PC zu dieser Zeit im Ruhezustand, kommt die Erinnerung
   trotzdem innerhalb von **30 Minuten**; danach entfällt sie.
 - Bei **Bestand null** wird keine Erinnerung gesendet.
+- Eine bereits erfasste Dosis (eingenommen, ausgelassen oder
+  storniert) wird nicht erinnert. Bei einer einzigen Einnahmezeit zählt
+  jede Einnahme des Tages; bei mehreren nur eine Einnahme mit der
+  Uhrzeit der Dosis, wie die Handy-App sie unter Heute erfasst.
 - In der Nacht der Zeitumstellung auf Sommerzeit löst eine Einnahmezeit
   in der übersprungenen Stunde nicht aus.
 

@@ -31,6 +31,7 @@ public sealed class DoseReminderService
     private readonly ILogger<DoseReminderService> _log;
     private readonly ILocalizationService? _localization;
     private readonly IMasterRole? _master;
+    private readonly IMedicationIntakeRepository? _intakes;
 
     // Grace window (ANALYSIS-A5 §4.3): a slot older than this is
     // considered "missed" and silently dropped. Configurable via
@@ -58,9 +59,11 @@ public sealed class DoseReminderService
         ILogger<DoseReminderService> log,
         ILocalizationService? localization = null,
         TimeSpan? graceWindow = null,
-        IMasterRole? master = null)
+        IMasterRole? master = null,
+        IMedicationIntakeRepository? intakes = null)
     {
         _master = master;
+        _intakes = intakes;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -111,6 +114,14 @@ public sealed class DoseReminderService
             var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
             if (SuspensionState.IsSuspendedOn(today, suspensions)) continue;
 
+            // A slot an intake of today already answers gets no reminder
+            // (DoseSlots.Records); without the repository every slot is
+            // evaluated, as before.
+            var recorded = _intakes is null
+                ? null
+                : DoseSlots.Records(today, slots, await _intakes.ListForDayAsync(medicine.Id, today, cancellationToken),
+                    _clock.LocalTimeZone);
+
             // Evaluate each timed slot. As-needed slots are taken only
             // when needed: no reminder (ANALYSIS-INTRADAY-CONSUMPTION.md
             // §5.1).
@@ -123,6 +134,9 @@ public sealed class DoseReminderService
 
                 // Too early: slot hasn't arrived yet.
                 if (fireLocal > now) continue;
+
+                // Already recorded: nothing to remind.
+                if (recorded?.ContainsKey(slot.Id) == true) continue;
 
                 // Grace window: slot is in the past beyond the window —
                 // treat as missed, do NOT write a dedup row (ANALYSIS-A5 §4.3).

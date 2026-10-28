@@ -291,6 +291,10 @@ the medicine has at least one slot with a time and some stock left.
 - If the PC was asleep at that time, the reminder still arrives within
   **30 minutes**; later than that it is skipped.
 - With **zero stock** no dose reminder is sent.
+- A dose already recorded (taken, skipped or cancelled) is not
+  reminded. With a single timed slot any intake of that day counts; with
+  several slots, only an intake that names its dose time, as the phone
+  app records it from Today.
 - On the night the clock moves forward, a slot inside the skipped hour
   does not fire.
 

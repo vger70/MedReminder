@@ -317,6 +317,10 @@ un horaire avec heure et qu'il reste du stock.
 - Si le PC était en veille à cette heure, le rappel arrive quand même
   dans les **30 minutes** ; au-delà, il est sauté.
 - Avec un **stock à zéro**, aucun rappel n'est envoyé.
+- Une dose déjà enregistrée (prise, sautée ou annulée) n'est pas
+  rappelée. Avec un seul horaire, toute prise du jour compte ; avec
+  plusieurs horaires, seule une prise qui indique l'heure de la dose,
+  comme l'enregistre l'application mobile depuis Aujourd'hui.
 - La nuit du passage à l'heure d'été, un horaire situé dans l'heure
   sautée ne se déclenche pas.
 
