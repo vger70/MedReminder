@@ -30,9 +30,26 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #308 — Give each daily notice an identity across days
+## PR #316 — Tell a mistyped mrpair1 code apart and read a late pairing file again
 
 **Status:** open
+
+Closes #306; for medreminder-mobile #115.
+
+- **Fixed**: a mistyped group pairing code (`mrpair1`) was reported as
+  replaced by a newer offer. `SyncPairingFile` now records `SecretCheck`
+  and throws `SyncPairingMismatchException` with the reason and the
+  position, as the household code (`PairingSecretCheck`, shared).
+- **Fixed**: a pairing file not yet visible right after the code was
+  shown was reported as expired; a missing file is read again after 1 and
+  2 seconds (`PairingFileRead`).
+- **Docs**: `docs/SYNC-FORMAT.md` §4.4.
+
+---
+
+## PR #308 — Give each daily notice an identity across days
+
+**Status:** merged (2026-10-28)
 
 For the mobile host (medreminder-mobile #107): iOS delivers the daily
 notices handed to it ahead even when no pass runs that day, so the next
