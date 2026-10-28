@@ -275,6 +275,16 @@ la fenêtre du médicament, mets **Schéma** sur **Avancé** et choisis un
 Avec **Avancé**, les champs de dose en haut de la fenêtre ne sont pas
 utilisés. Reviens à **Simple** pour une dose quotidienne fixe.
 
+**Jours restants avec un schéma avancé.** Le stock est déduit jour
+après jour selon le schéma, mais les jours restants et la date de fin
+divisent le stock par la quantité du jour : pendant une décroissance,
+ils suivent la dose du jour, pas les paliers suivants. Un jour de pause
+d'un cycle, ou un jour de la semaine sans prise, aucune date de fin
+n'est affichée et aucune alerte de stock bas n'est donnée ; la
+vérification alerte le jour suivant avec une prise. Pour vérifier toute
+une période, utilise [Planifier le stock](#documents), qui suit le
+schéma jour après jour.
+
 **Les horaires de prise fonctionnent aussi avec Avancé.** Le schéma fixe
 la quantité de chaque jour ; les [horaires de prise](#slots) fixent le
 moment. La quantité du jour est répartie entre les horaires en
@@ -514,8 +524,10 @@ enregistres une prise, ce jour compte la quantité enregistrée.
    - **Correction positive** — tu avais compté trop peu.
 4. Saisis la quantité et confirme.
 
-Une nouvelle boîte relance le cycle d'alerte : quand le stock repasse
-sous le seuil, tu reçois une nouvelle alerte.
+Une nouvelle boîte, un ajout manuel ou une correction positive relance
+le cycle d'alerte : quand le stock repasse sous le seuil, tu reçois une
+nouvelle alerte. Les prises et les corrections négatives ne le relancent
+pas.
 
 Avec **Nouvelle boîte**, tu peux aussi enregistrer la péremption ; tous
 les champs sont facultatifs :
@@ -611,7 +623,9 @@ l'application corriger :
 
 L'application enregistre une correction pour que le stock soit égal à
 ce que tu as compté. L'écart n'est qu'un chiffre de stock : il n'est pas
-interprété comme des doses oubliées ou en trop.
+interprété comme des doses oubliées ou en trop. Si le comptage augmente
+le stock et laisse plus de jours que le seuil d'alerte, le cycle
+d'alerte recommence, comme après une nouvelle boîte.
 
 <a id="history"></a>
 ### Historique et saisies erronées
@@ -890,12 +904,15 @@ générique.
   La vérification utilise le stock enregistré, pas l'estimation de la
   liste : le jour où le seuil est franchi, la liste peut afficher
   l'état d'alerte quelques heures avant l'avertissement.
-- Si aucune nouvelle boîte n'a été ajoutée quand les jours restants
+- Si le stock n'a pas été augmenté quand les jours restants
   atteignent **la moitié du seuil**, un **deuxième rappel** suit par les
   mêmes canaux (avec un seuil de 10 jours : première alerte à 10 jours,
   deuxième à 5). Un médicament déjà sous la moitié lors de la première
   vérification reçoit seulement le deuxième rappel. Après une nouvelle
-  boîte, le cycle recommence.
+  boîte, le cycle recommence (aussi après les autres ajouts, voir
+  [Ajouter une boîte](#add-package)). Avec un schéma avancé, les jours
+  restants suivent la quantité du jour (voir [Schémas
+  complexes](#regimens)).
 - **Péremption des boîtes** : une boîte enregistrée avec une péremption
   donne une alerte *bientôt périmée* 30 jours avant la péremption
   imprimée (3 jours avant la fin de la période après ouverture) et une

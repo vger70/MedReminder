@@ -275,6 +275,16 @@ Medikamentenfenster **Schema** auf **Erweitert** und wähle einen
 Mit **Erweitert** werden die Dosisfelder oben im Fenster nicht
 verwendet. Wechsle zurück zu **Einfach** für eine feste Tagesdosis.
 
+**Verbleibende Tage bei einem erweiterten Schema.** Der Bestand wird
+Tag für Tag nach dem Schema abgezogen, aber die verbleibenden Tage und
+das Enddatum teilen den Bestand durch die heutige Menge: Beim
+Ausschleichen folgen sie der heutigen Dosis, nicht den nächsten Stufen.
+An einem Pausentag eines Zyklus oder an einem Wochentag ohne Dosis wird
+kein Enddatum angezeigt und keine Warnung bei niedrigem Bestand
+gegeben; die Prüfung warnt am nächsten Tag mit einer Dosis. Um einen
+ganzen Zeitraum zu prüfen, nutze [Vorrat planen](#documents), das dem
+Schema Tag für Tag folgt.
+
 **Einnahmezeiten gelten auch mit Erweitert.** Das Schema legt fest, wie
 viel du an jedem Tag nimmst; die [Einnahmezeiten](#slots) legen fest,
 wann. Die Tagesmenge wird im Verhältnis ihrer Dosen auf die Zeiten
@@ -510,8 +520,10 @@ Tag die erfasste Menge.
    - **Positive Korrektur** — du hattest zu wenig gezählt.
 4. Gib die Menge ein und bestätige.
 
-Eine neue Packung startet den Warnzyklus neu: Fällt der Bestand wieder
-unter die Schwelle, bekommst du eine neue Warnung.
+Eine neue Packung, eine manuelle Zugabe oder eine positive Korrektur
+startet den Warnzyklus neu: Fällt der Bestand wieder unter die
+Schwelle, bekommst du eine neue Warnung. Einnahmen und negative
+Korrekturen starten ihn nicht neu.
 
 Mit **Neue Packung** kannst du auch das Verfallsdatum erfassen; alle
 Felder sind optional:
@@ -609,7 +621,9 @@ die App korrigieren:
 
 Die App erfasst eine Korrektur, damit der Bestand dem Gezählten
 entspricht. Die Abweichung ist nur eine Bestandszahl: Sie wird nicht als
-vergessene oder zusätzliche Dosen gedeutet.
+vergessene oder zusätzliche Dosen gedeutet. Erhöht die Zählung den
+Bestand und bleiben danach mehr Tage als die Warnschwelle, beginnt der
+Warnzyklus von vorn, wie nach einer neuen Packung.
 
 <a id="history"></a>
 ### Verlauf und falsche Einträge
@@ -883,12 +897,16 @@ demselben allgemeinen Titel.
   Die Prüfung verwendet den erfassten Bestand, nicht die Schätzung der
   Liste: An dem Tag, an dem die Schwelle unterschritten wird, kann die
   Liste den Warnstatus einige Stunden vor der Warnung zeigen.
-- Wurde keine neue Packung hinzugefügt, wenn die verbleibenden Tage
+- Wurde der Bestand nicht erhöht, wenn die verbleibenden Tage
   **die Hälfte der Schwelle** erreichen, folgt eine **zweite
   Erinnerung** über dieselben Kanäle (bei einer Schwelle von 10 Tagen:
   erste Warnung bei 10 Tagen, zweite bei 5). Ein Medikament, das bei der
   ersten Prüfung schon unter der Hälfte liegt, bekommt nur die zweite
-  Erinnerung. Nach einer neuen Packung beginnt der Zyklus von vorn.
+  Erinnerung. Nach einer neuen Packung beginnt der Zyklus von vorn
+  (auch nach den anderen Zugängen, siehe [Packung
+  hinzufügen](#add-package)). Bei einem erweiterten Schema folgen die
+  verbleibenden Tage der heutigen Menge (siehe [Komplexe
+  Schemata](#regimens)).
 - **Verfall der Packungen**: Eine Packung mit Verfallsdatum löst 30
   Tage vor dem aufgedruckten Verfall (3 Tage vor dem Ende der Frist nach
   dem Öffnen) einen Hinweis *läuft bald ab* aus und am Tag danach einen

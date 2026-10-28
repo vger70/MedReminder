@@ -253,6 +253,15 @@ window, set **Schedule** to **Advanced** and choose a **Regime type**:
 With **Advanced**, the dose fields at the top of the window are not
 used. Switch back to **Simple** for a fixed daily dose.
 
+**Days left with an advanced regime.** The stock is deducted day by
+day as the regime says, but the days left and the run-out date divide
+the stock by today's quantity: during a taper they follow today's dose,
+not the next stages. On a cyclic pause day, or a weekly day with
+nothing due, no run-out date is shown and no low-stock warning is
+given; the check warns on the next day with a dose. To check a whole
+period, use [Plan supply](#documents), which follows the schedule day
+by day.
+
 **Administration times also work with Advanced.** The schedule sets how
 much to take each day; the [administration times](#slots) set when. The
 day's quantity is split among the times in proportion to their doses:
@@ -471,8 +480,9 @@ the quantity you registered.
    - **Positive correction** — you had counted too few.
 4. Enter the quantity and confirm.
 
-A new package restarts the warning cycle: when the stock falls below
-the threshold again, you get a new warning.
+A new package, a manual addition or a positive correction restarts the
+warning cycle: when the stock falls below the threshold again, you get
+a new warning. Intakes and negative corrections do not restart it.
 
 With **New package** you can also record the expiry; every field is
 optional:
@@ -563,7 +573,9 @@ the app fix it:
 
 The app records one correction so that the stock equals what you
 counted. The difference is only a stock figure: it is not interpreted
-as missed or extra doses.
+as missed or extra doses. If the count raises the stock and leaves more
+days than the warning threshold, the warning cycle starts again, as
+after a new package.
 
 <a id="history"></a>
 ### History and mistaken entries
@@ -818,11 +830,14 @@ Each low-stock email also carries the run-out date as a calendar file
   The check uses the recorded stock, not the list's estimate: on the
   day the threshold is crossed, the list can show *Running low* a few
   hours before the warning.
-- If no new package has been added when the days left reach **half of
-  the threshold**, a **second reminder** follows on the same channels
+- If the stock has not been increased when the days left reach **half
+  of the threshold**, a **second reminder** follows on the same channels
   (with a threshold of 10 days: first warning at 10 days, second at 5).
   A medicine that is already below half when it is first checked gets
-  only the second reminder. After a new package the cycle starts again.
+  only the second reminder. After a new package the cycle starts again
+  (also after the other additions, see [Add a package](#add-package)).
+  With an advanced regime the days left follow today's quantity (see
+  [Complex regimens](#regimens)).
 - **Package expiry**: a package recorded with an expiry gives an
   *expires soon* notice 30 days before the printed expiry (3 days
   before the end of the period after opening) and an *expired* notice

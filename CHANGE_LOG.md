@@ -56,6 +56,25 @@ again.
 - `NoticeKeys.Covers`: whether delivered notices cover a notice item by
   item, since the packages of one expiry notice may each have come due,
   and been delivered, on a different day.
+## PR — Document what restarts the warning cycle and how days left work on advanced regimes
+
+**Status:** open
+
+Refs #309 (raised in #290).
+
+**Docs**
+- README and user guides (en, it, fr, es, de): a manual addition, a
+  positive correction, or a stock count that raises the stock above the
+  warning threshold restarts the low-stock warning cycle, not only a new
+  package; intakes and negative corrections do not
+  (`LedgerDeriver.IsEpochAdvancingEntry`, count anchor rule).
+- README and user guides: the run-out estimate divides the stock by
+  today's quantity (`RunOutForecast`), so on a taper it follows today's
+  dose and on a cyclic pause or zero-dose weekly day there is no run-out
+  date and no low-stock warning that day. The README claim that the
+  estimate "follows the regimen day by day" is corrected; daily
+  deductions and Plan supply do follow it. Whether the forecast should
+  simulate the regime forward stays open in #309.
 
 ## PR — Surface pairing typos and wire the kept-profile replace into the desktop
 

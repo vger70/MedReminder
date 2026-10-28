@@ -263,6 +263,16 @@ finestra della medicina imposta **Schema** su **Avanzato** e scegli un
 Con **Avanzato** i campi della dose in alto nella finestra non vengono
 usati. Torna a **Semplice** per una dose giornaliera fissa.
 
+**Giorni residui con un regime avanzato.** Le scorte vengono scalate
+giorno per giorno secondo lo schema, ma i giorni residui e la data di
+esaurimento dividono le scorte per la quantità di oggi: durante uno
+scalare seguono la dose di oggi, non le fasi successive. In un giorno
+di pausa di un ciclo, o in un giorno settimanale senza dosi, la data di
+esaurimento non compare e non arriva l'avviso di scorte basse; il
+controllo avvisa il primo giorno successivo con una dose. Per
+verificare un intero periodo usa [Pianificare le scorte](#documents),
+che segue lo schema giorno per giorno.
+
 **Gli orari di somministrazione valgono anche con Avanzato.** Lo schema
 decide quanto prendere ogni giorno; gli [orari di somministrazione](#slots)
 decidono quando. La quantità del giorno è ripartita tra gli orari in
@@ -487,8 +497,10 @@ quel giorno conta la quantità registrata.
    - **Correzione in eccesso** — avevi contato meno del reale.
 4. Inserisci la quantità e conferma.
 
-Una nuova confezione fa ripartire il ciclo di avviso: quando le scorte
-scendono di nuovo sotto la soglia, ricevi un nuovo avviso.
+Una nuova confezione, un'aggiunta manuale o una correzione in eccesso
+fanno ripartire il ciclo di avviso: quando le scorte scendono di nuovo
+sotto la soglia, ricevi un nuovo avviso. Assunzioni e correzioni in
+difetto non lo fanno ripartire.
 
 Con **Nuova confezione** puoi anche registrare la scadenza, tutti campi
 facoltativi:
@@ -581,7 +593,9 @@ lascia che l'app corregga:
 
 L'app registra una correzione perché le scorte coincidano con quanto
 hai contato. La differenza è solo un dato di scorta: non viene
-interpretata come dosi saltate o in più.
+interpretata come dosi saltate o in più. Se il conteggio aumenta le
+scorte e lascia più giorni della soglia di avviso, il ciclo di avviso
+riparte, come dopo una nuova confezione.
 
 <a id="history"></a>
 ### Storico e registrazioni sbagliate
@@ -852,12 +866,14 @@ file di calendario (`medreminder.ics`), con lo stesso titolo generico.
   Il controllo usa la scorta registrata, non la stima dell'elenco: nel
   giorno in cui la soglia viene superata, l'elenco può mostrare *In
   esaurimento* qualche ora prima dell'avviso.
-- Se quando i giorni residui arrivano a **metà della soglia** non è stata
-  aggiunta una nuova confezione, segue un **secondo avviso** sugli
+- Se quando i giorni residui arrivano a **metà della soglia** le scorte
+  non sono state aumentate, segue un **secondo avviso** sugli
   stessi canali (con una soglia di 10 giorni: primo avviso a 10 giorni,
   secondo a 5). Una medicina che al primo controllo è già sotto la metà
   riceve solo il secondo avviso. Dopo una nuova confezione il ciclo
-  riparte.
+  riparte (anche dopo le altre aggiunte, vedi [Aggiungere una
+  confezione](#add-package)). Con un regime avanzato i giorni residui
+  seguono la quantità di oggi (vedi [Regimi complessi](#regimens)).
 - **Scadenza delle confezioni**: una confezione registrata con scadenza
   dà un avviso *in scadenza* 30 giorni prima della scadenza stampata (3
   giorni prima della fine del periodo dopo l'apertura) e un avviso

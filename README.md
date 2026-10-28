@@ -30,8 +30,9 @@ scheduled dose time.
 - Dose, frequency, start/end date, warning threshold, reference
   doctor, notes.
 - Complex regimens: fixed daily, weekly pattern, on/off cycles,
-  linear or stepped tapering, as needed (PRN). The run-out estimate
-  follows the regimen day by day.
+  linear or stepped tapering, as needed (PRN). Daily deductions follow
+  the regimen day by day; days left and the run-out date divide the
+  stock by today's quantity (no estimate on a day with nothing due).
 - Optional per-medicine administration slots (time + free-form label
   such as "before sleep", "on empty stomach").
 - Stock movements: initial load, new package, manual addition,
@@ -81,8 +82,10 @@ scheduled dose time.
   weekly stock summary without dose data.
 - Second warning at half of the warning threshold when the stock has
   not been replenished since the first one.
-- Structural notification de-duplication via `StockEpoch`: after a
-  refill the warning cycle restarts.
+- Structural notification de-duplication via `StockEpoch`: a new
+  package, a manual addition, a positive correction, or a stock count
+  that raises the stock above the warning threshold restarts the
+  warning cycle; intakes and negative corrections do not.
 - Actions in Windows notifications: open the app on the medicine,
   prepare the prescription request from a low-stock warning, snooze a
   dose reminder by 15 minutes (scheduled with Windows).
