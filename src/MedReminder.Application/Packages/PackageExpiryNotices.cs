@@ -84,7 +84,8 @@ public sealed class PackageExpiryNotices
                     try
                     {
                         await _windows.ShowAsync(title, body, NotificationTarget.PackageExpiry(medicine.Id,
-                                NoticeKeys.PackageExpiry(due[0].Stage, due.Select(d => d.Item.Package.Id))),
+                                NoticeKeys.PackageExpiry(due[0].Stage,
+                                    due.Select(d => (d.Item.Package.Id, d.Item.EffectiveExpiry!.Value)))),
                             cancellationToken);
                         count += await RecordAsync(medicine, due, NotificationChannels.Windows, cancellationToken);
                     }

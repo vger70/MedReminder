@@ -41,8 +41,9 @@ again.
 
 **Added**
 - `NotificationTarget.Notice` and `NoticeKeys`: the identity of a low-stock
-  stage (medicine, stock epoch, stage), a package expiry notice (stage and
-  packages), a "valid until" reminder (prescription and date) and a
+  stage (medicine, stock epoch with the fact that opened it, stage), a
+  package expiry notice (stage, and each package with its expiry), a
+  "valid until" reminder (prescription and date) and a
   deadline reminder (deadline and due date), the same on every day. Set by
   the passes and by `PlannedNotification.Target` alike; null for a dose
   reminder. A host can now tell that a notice it handed over was already
@@ -50,7 +51,11 @@ again.
   e-mail is still sent by the pass
   (`src/MedReminder.Application/Notifications/NotificationActions.cs`,
   `NotificationPlanner.cs`, the four passes).
-- `PlannedNotification.StockEpoch` (low stock only), for the key.
+- `PlannedNotification.StockEpoch`, `StockEpochFactId` (low stock) and
+  `PackageNotices` (package expiry), for the key.
+- `NoticeKeys.Covers`: whether delivered notices cover a notice item by
+  item, since the packages of one expiry notice may each have come due,
+  and been delivered, on a different day.
 
 ## PR — Surface pairing typos and wire the kept-profile replace into the desktop
 

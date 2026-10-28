@@ -261,7 +261,7 @@ public sealed class MedicationMonitor
             try
             {
                 await _windows.ShowAsync(title, body, NotificationTarget.LowStock(medicine.Id, repeatable is not null,
-                        NoticeKeys.LowStock(medicine.Id, medicine.StockEpoch, stage)),
+                        NoticeKeys.LowStock(medicine.Id, medicine.StockEpoch, medicine.StockEpochFactId, stage)),
                     cancellationToken);
                 windowsSucceeded = true;
             }

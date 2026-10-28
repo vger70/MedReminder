@@ -47,7 +47,7 @@ public class PackageExpiryNoticeTests
         _scope.Windows.Sent.Should().ContainSingle().Which.Title.Should().Contain("expires soon");
         _scope.Windows.Targets.Should().ContainSingle().Which
             .Should().Be(NotificationTarget.PackageExpiry(medicine,
-                NoticeKeys.PackageExpiry(PackageExpiryNoticeEvent.SoonStage, [package])));
+                NoticeKeys.PackageExpiry(PackageExpiryNoticeEvent.SoonStage, [(package, new DateOnly(2026, 9, 30))])));
         _scope.PackageNoticeEvents.All.Should().ContainSingle().Which.Stage
             .Should().Be(PackageExpiryNoticeEvent.SoonStage);
     }

@@ -87,13 +87,43 @@ public class NotificationActionsTests
     {
         var a = Guid.NewGuid();
         var b = Guid.NewGuid();
-        NoticeKeys.PackageExpiry(1, [a, b]).Should().Be(NoticeKeys.PackageExpiry(1, [b, a]));
-        NoticeKeys.PackageExpiry(1, [a]).Should().NotBe(NoticeKeys.PackageExpiry(2, [a]));
+        NoticeKeys.PackageExpiry(1, [(a, Today), (b, Today)]).Should().Be(NoticeKeys.PackageExpiry(1, [(b, Today), (a, Today)]));
+        NoticeKeys.PackageExpiry(1, [(a, Today)]).Should().NotBe(NoticeKeys.PackageExpiry(2, [(a, Today)]));
+        // A package whose expiry was corrected is a new notice.
+        NoticeKeys.PackageExpiry(1, [(a, Today)]).Should().NotBe(NoticeKeys.PackageExpiry(1, [(a, Today.AddDays(3))]));
         // A new stock epoch (a refill) starts a new cycle: its stages are new notices.
-        NoticeKeys.LowStock(a, stockEpoch: 1, stage: 1).Should().NotBe(NoticeKeys.LowStock(a, stockEpoch: 2, stage: 1));
-        NoticeKeys.LowStock(a, stockEpoch: 1, stage: 1).Should().NotBe(NoticeKeys.LowStock(a, stockEpoch: 1, stage: 2));
+        NoticeKeys.LowStock(a, stockEpoch: 1, epochFactId: null, stage: 1)
+            .Should().NotBe(NoticeKeys.LowStock(a, stockEpoch: 2, epochFactId: null, stage: 1));
+        NoticeKeys.LowStock(a, stockEpoch: 1, epochFactId: null, stage: 1)
+            .Should().NotBe(NoticeKeys.LowStock(a, stockEpoch: 1, epochFactId: null, stage: 2));
+        // The same number for another epoch (after a retraction).
+        NoticeKeys.LowStock(a, stockEpoch: 4, epochFactId: Guid.NewGuid(), stage: 1)
+            .Should().NotBe(NoticeKeys.LowStock(a, stockEpoch: 4, epochFactId: Guid.NewGuid(), stage: 1));
         NoticeKeys.Deadline(a, Today).Should().NotBe(NoticeKeys.Deadline(a, Today.AddDays(1)));
         NotificationTarget.DoseReminder(a, new TimeOnly(8, 0)).Notice.Should().BeNull();
+    }
+
+    // Review of #308: the packages of one expiry notice may have come due
+    // on different days, each delivered on its own.
+    [Fact]
+    public void Delivered_notices_cover_a_notice_item_by_item()
+    {
+        var a = Guid.NewGuid();
+        var b = Guid.NewGuid();
+        var c = Guid.NewGuid();
+        var ab = NoticeKeys.PackageExpiry(1, [(a, Today), (b, Today)]);
+        var cOnly = NoticeKeys.PackageExpiry(1, [(c, Today)]);
+        var abc = NoticeKeys.PackageExpiry(1, [(a, Today), (b, Today), (c, Today)]);
+
+        NoticeKeys.Covers([ab, cOnly], abc).Should().BeTrue();
+        NoticeKeys.Covers([ab], abc).Should().BeFalse();
+        // Another stage covers nothing.
+        NoticeKeys.Covers([NoticeKeys.PackageExpiry(2, [(a, Today), (b, Today), (c, Today)])], abc).Should().BeFalse();
+        // One item: the same key only.
+        var stock = NoticeKeys.LowStock(a, stockEpoch: 1, epochFactId: null, stage: 1);
+        NoticeKeys.Covers([stock], stock).Should().BeTrue();
+        NoticeKeys.Covers([NoticeKeys.LowStock(a, stockEpoch: 1, epochFactId: null, stage: 2)], stock).Should().BeFalse();
+        NoticeKeys.Covers([], stock).Should().BeFalse();
     }
 
     [Fact]
