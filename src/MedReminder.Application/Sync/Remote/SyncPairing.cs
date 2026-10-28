@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.Application.Household.Remote;
 
 namespace MedReminder.Application.Sync.Remote;
 
@@ -91,9 +92,16 @@ public sealed class SyncPairingExpiredException : Exception
 // offer, its key version and the expiry are encrypted (AES-256-GCM) with
 // the secret of the code; associated data
 // "MedReminder.Sync.Pairing|<groupId N>|<deviceId N>". Nothing in the
-// cleartext part is personal.
-public sealed record SyncPairingFile(int FormatVersion, Guid GroupId, Guid DeviceId, byte[] Nonce, byte[] Tag, byte[] Ciphertext)
+// cleartext part is personal. SecretCheck (issue #306), as in
+// HouseholdPairingFile: a hash of the secret that tells a mistyped code
+// from one a newer offer replaced (PairingSecretCheck); null in offers
+// written before it. Not authenticated: older readers could not open an
+// offer whose associated data held it.
+public sealed record SyncPairingFile(int FormatVersion, Guid GroupId, Guid DeviceId, byte[] Nonce, byte[] Tag, byte[] Ciphertext,
+    byte[]? SecretCheck = null)
 {
+    private static readonly byte[] CheckPrefix = Encoding.UTF8.GetBytes("MedReminder.Sync.Pairing.Check|");
+
     private sealed record Content(int KeyVersion, byte[] Key, DateTimeOffset ExpiresAt);
 
     public static SyncPairingFile Seal(IArchiveCipher cipher, SyncPairingCode code, int keyVersion, byte[] key,
@@ -105,7 +113,8 @@ public sealed record SyncPairingFile(int FormatVersion, Guid GroupId, Guid Devic
         try
         {
             var (nonce, tag, ciphertext) = cipher.Encrypt(code.Secret, plaintext, Aad(code.GroupId, code.DeviceId));
-            return new SyncPairingFile(SyncFileCodec.FormatVersion, code.GroupId, code.DeviceId, nonce, tag, ciphertext);
+            return new SyncPairingFile(SyncFileCodec.FormatVersion, code.GroupId, code.DeviceId, nonce, tag, ciphertext,
+                PairingSecretCheck.Compute(CheckPrefix, code.Secret));
         }
         finally
         {
@@ -113,9 +122,10 @@ public sealed record SyncPairingFile(int FormatVersion, Guid GroupId, Guid Devic
         }
     }
 
-    // The key version and the group key. Throws CryptographicException
-    // when the code does not open the file (another offer replaced it),
-    // SyncPairingExpiredException when the offer is over.
+    // The key version and the group key. Throws SyncPairingMismatchException
+    // (a CryptographicException) when the code does not open the file,
+    // mistyped or replaced by another offer, SyncPairingExpiredException
+    // when the offer is over.
     public (int KeyVersion, byte[] Key) Open(IArchiveCipher cipher, SyncPairingCode code, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(cipher);
@@ -125,7 +135,16 @@ public sealed record SyncPairingFile(int FormatVersion, Guid GroupId, Guid Devic
         if (GroupId != code.GroupId || DeviceId != code.DeviceId)
             throw new InvalidDataException("The pairing file does not match the code.");
 
-        var plaintext = cipher.Decrypt(code.Secret, Nonce, Tag, Ciphertext, Aad(GroupId, DeviceId));
+        byte[] plaintext;
+        try
+        {
+            plaintext = cipher.Decrypt(code.Secret, Nonce, Tag, Ciphertext, Aad(GroupId, DeviceId));
+        }
+        catch (CryptographicException ex)
+        {
+            var (reason, position) = PairingSecretCheck.Diagnose(CheckPrefix, code.Secret, SecretCheck);
+            throw new SyncPairingMismatchException(reason, position, ex);
+        }
         try
         {
             var content = JsonSerializer.Deserialize<Content>(plaintext, SyncFileCodec.Json)
@@ -151,4 +170,16 @@ public sealed record SyncPairingFile(int FormatVersion, Guid GroupId, Guid Devic
 
     private static byte[] Aad(Guid groupId, Guid deviceId)
         => Encoding.UTF8.GetBytes($"MedReminder.Sync.Pairing|{groupId:N}|{deviceId:N}");
+}
+
+// Why an mrpair1 code did not open its offer: the reasons of the household
+// code (HouseholdPairingMismatch). Position: 1-based, within the secret, for
+// Mistyped; null otherwise. A CryptographicException, as the hosts already
+// catch for a code that does not open the offer.
+public sealed class SyncPairingMismatchException(HouseholdPairingMismatch reason, int? position,
+    Exception? inner = null) : CryptographicException($"The pairing code does not open the offer: {reason}.", inner)
+{
+    public HouseholdPairingMismatch Reason { get; } = reason;
+
+    public int? Position { get; } = position;
 }

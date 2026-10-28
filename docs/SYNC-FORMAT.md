@@ -173,13 +173,23 @@ ends. UTF-8 JSON:
 | `formatVersion` | 1 |
 | `groupId`, `deviceId` | as in the path |
 | `nonce`, `tag`, `ciphertext` | AES-256-GCM, key: the `secret` of the code |
+| `secretCheck` | SHA-256 of `MedReminder.Sync.Pairing.Check|` followed by the secret; absent in offers written before it |
 
 Associated data: the UTF-8 string
 `MedReminder.Sync.Pairing|<groupId N format>|<deviceId N format>`. The
 plaintext is JSON `{ "keyVersion", "key" (base64), "expiresAt" }`. A
 reader refuses the file after `expiresAt`, and when it is absent. A
 code photographed during the offer opens nothing once the file is
-gone.
+gone. A reader that does not find the file reads it again after 1 and 2
+seconds before reporting the code as expired: a file just written may
+not yet be visible to another session of the cloud storage.
+
+`secretCheck` is not authenticated and opens nothing. When the code does
+not open the file, a reader that finds a secret one character away from
+the typed one (or with two neighbouring characters swapped) with the same
+check reports a mistyped code with its position in the secret; any other
+secret is a code that a newer offer replaced. Readers ignore fields they
+do not know, so older readers still open newer offers.
 
 ## 5. Content
 
