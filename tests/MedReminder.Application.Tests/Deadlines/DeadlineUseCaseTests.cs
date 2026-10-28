@@ -197,7 +197,7 @@ public class DeadlineUseCaseTests
 
         scope.DeadlineReminderEvents.All.Should().ContainSingle();
         scope.Windows.Targets.Should().ContainSingle()
-            .Which.Should().Be(NotificationTarget.Deadline(null, id));
+            .Which.Should().Be(NotificationTarget.Deadline(null, id, NoticeKeys.Deadline(id, Today.AddDays(1))));
     }
 
     [Fact]

@@ -30,6 +30,32 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #308 — Give each daily notice an identity across days
+
+**Status:** open
+
+For the mobile host (medreminder-mobile #107): iOS delivers the daily
+notices handed to it ahead even when no pass runs that day, so the next
+pass, on a later day, did not know the notice was delivered and showed it
+again.
+
+**Added**
+- `NotificationTarget.Notice` and `NoticeKeys`: the identity of a low-stock
+  stage (medicine, stock epoch with the fact that opened it, stage), a
+  package expiry notice (stage, and each package with its expiry), a
+  "valid until" reminder (prescription and date) and a
+  deadline reminder (deadline and due date), the same on every day. Set by
+  the passes and by `PlannedNotification.Target` alike; null for a dose
+  reminder. A host can now tell that a notice it handed over was already
+  delivered and let the pass record it without showing it again; the
+  e-mail is still sent by the pass
+  (`src/MedReminder.Application/Notifications/NotificationActions.cs`,
+  `NotificationPlanner.cs`, the four passes).
+- `PlannedNotification.StockEpoch`, `StockEpochFactId` (low stock) and
+  `PackageNotices` (package expiry), for the key.
+- `NoticeKeys.Covers`: whether delivered notices cover a notice item by
+  item, since the packages of one expiry notice may each have come due,
+  and been delivered, on a different day.
 ## PR — Document what restarts the warning cycle and how days left work on advanced regimes
 
 **Status:** open

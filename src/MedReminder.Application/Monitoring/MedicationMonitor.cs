@@ -260,7 +260,8 @@ public sealed class MedicationMonitor
                 medicine, daysRemaining, localization: _localization, stage: stage, repeatable: repeatable);
             try
             {
-                await _windows.ShowAsync(title, body, NotificationTarget.LowStock(medicine.Id, repeatable is not null),
+                await _windows.ShowAsync(title, body, NotificationTarget.LowStock(medicine.Id, repeatable is not null,
+                        NoticeKeys.LowStock(medicine.Id, medicine.StockEpoch, medicine.StockEpochFactId, stage)),
                     cancellationToken);
                 windowsSucceeded = true;
             }

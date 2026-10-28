@@ -33,6 +33,10 @@ public enum PlannedNotificationKind
 // profile. DaysRemaining (low stock only): the days of stock the notice
 // states. ExpiresOn (package expiry only): the earliest expiry of the
 // packages noticed. Both feed the texts (PlannedNotificationTexts).
+// StockEpoch and StockEpochFactId (low stock only): the medicine's stock
+// epoch and the fact that opened it, for the notice's identity
+// (NoticeKeys). PackageNotices (package expiry only): the packages
+// noticed with their expiry, for the same.
 public sealed record PlannedNotification(
     PlannedNotificationKind Kind,
     Guid MedicineId,
@@ -48,7 +52,10 @@ public sealed record PlannedNotification(
     Guid? DeadlineId = null,
     DateOnly? DueOn = null,
     int? DaysRemaining = null,
-    DateOnly? ExpiresOn = null)
+    DateOnly? ExpiresOn = null,
+    int? StockEpoch = null,
+    Guid? StockEpochFactId = null,
+    IReadOnlyList<PackageNoticeKey>? PackageNotices = null)
 {
     // What the notification is about, for its actions
     // (NotificationActionArguments.ForBody and ButtonsFor), as the desktop
@@ -61,11 +68,17 @@ public sealed record PlannedNotification(
     public NotificationTarget Target => Kind switch
     {
         PlannedNotificationKind.DoseReminder => NotificationTarget.DoseReminder(MedicineId, SlotTime!.Value),
-        PlannedNotificationKind.LowStock => NotificationTarget.LowStock(MedicineId, RepeatablePrescription is not null),
-        PlannedNotificationKind.PrescriptionValidity => NotificationTarget.Prescription(MedicineId),
+        PlannedNotificationKind.LowStock => NotificationTarget.LowStock(MedicineId, RepeatablePrescription is not null,
+            StockEpoch is { } epoch ? NoticeKeys.LowStock(MedicineId, epoch, StockEpochFactId, Stage) : null),
+        PlannedNotificationKind.PrescriptionValidity => NotificationTarget.Prescription(MedicineId,
+            PrescriptionId is { } prescription && ValidUntil is { } until ? NoticeKeys.Prescription(prescription, until) : null),
         PlannedNotificationKind.Deadline => NotificationTarget.Deadline(
-            MedicineId == Guid.Empty ? null : MedicineId, DeadlineId),
-        _ => NotificationTarget.PackageExpiry(MedicineId),
+            MedicineId == Guid.Empty ? null : MedicineId, DeadlineId,
+            DeadlineId is { } deadline && DueOn is { } due ? NoticeKeys.Deadline(deadline, due) : null),
+        _ => NotificationTarget.PackageExpiry(MedicineId,
+            PackageNotices is { Count: > 0 } packages
+                ? NoticeKeys.PackageExpiry(Stage, packages.Select(p => (p.PackageId, p.EffectiveExpiry)))
+                : null),
     };
 
     // Stable identity across re-plans, so the platform adapter can keep an
@@ -257,7 +270,8 @@ public static class NotificationPlanner
                 : null;
             result.Add(new PlannedNotification(PlannedNotificationKind.LowStock, medicine.Id, day,
                 DailyFireAt(day, i, localNow, zone, options), stage, RepeatablePrescription: repeatable,
-                DaysRemaining: runOut.DaysRemaining!.Value));
+                DaysRemaining: runOut.DaysRemaining!.Value, StockEpoch: medicine.StockEpoch,
+                StockEpochFactId: medicine.StockEpochFactId));
             // The event the desktop records after a shown toast.
             latest = new NotificationEvent
             {
@@ -338,7 +352,8 @@ public static class NotificationPlanner
             shown.UnionWith(pending);
             result.Add(new PlannedNotification(PlannedNotificationKind.PackageExpiry, state.Medicine.Id, day,
                 DailyFireAt(day, i, localNow, zone, options), pending[0].Stage,
-                PackageIds: [.. pending.Select(k => k.PackageId)], ExpiresOn: pending.Min(k => k.EffectiveExpiry)));
+                PackageIds: [.. pending.Select(k => k.PackageId)], ExpiresOn: pending.Min(k => k.EffectiveExpiry),
+                PackageNotices: pending));
         }
     }
 

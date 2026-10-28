@@ -12,25 +12,90 @@ namespace MedReminder.Application.Notifications;
 // DeadlineId (deadline reminder only): the deadline, so a device that
 // replaces a notification with the same identity keeps two deadlines of
 // the profile apart (MedicineId is Guid.Empty for both).
+// Notice (daily notices only): the notice itself, the same on every day it
+// is planned or shown (NoticeKeys), so a host that hands notices to the
+// platform ahead can tell that the device already delivered it on an
+// earlier day. Null for a dose reminder, a new notice every day.
 public sealed record NotificationTarget(
     NotificationKind Kind, Guid MedicineId, TimeOnly? SlotTime = null, bool HasRepeatablePrescription = false,
-    Guid? DeadlineId = null)
+    Guid? DeadlineId = null, string? Notice = null)
 {
     public static NotificationTarget DoseReminder(Guid medicineId, TimeOnly slotTime)
         => new(NotificationKind.DoseReminder, medicineId, slotTime);
 
-    public static NotificationTarget LowStock(Guid medicineId, bool hasRepeatablePrescription = false)
-        => new(NotificationKind.LowStock, medicineId, HasRepeatablePrescription: hasRepeatablePrescription);
+    public static NotificationTarget LowStock(Guid medicineId, bool hasRepeatablePrescription = false,
+        string? notice = null)
+        => new(NotificationKind.LowStock, medicineId, HasRepeatablePrescription: hasRepeatablePrescription,
+            Notice: notice);
 
-    public static NotificationTarget Prescription(Guid medicineId) => new(NotificationKind.Prescription, medicineId);
+    public static NotificationTarget Prescription(Guid medicineId, string? notice = null)
+        => new(NotificationKind.Prescription, medicineId, Notice: notice);
 
     public static NotificationTarget Shortage(Guid medicineId) => new(NotificationKind.Shortage, medicineId);
 
     // Guid.Empty for a deadline of the profile.
-    public static NotificationTarget Deadline(Guid? medicineId, Guid? deadlineId = null)
-        => new(NotificationKind.Deadline, medicineId ?? Guid.Empty, DeadlineId: deadlineId);
+    public static NotificationTarget Deadline(Guid? medicineId, Guid? deadlineId = null, string? notice = null)
+        => new(NotificationKind.Deadline, medicineId ?? Guid.Empty, DeadlineId: deadlineId, Notice: notice);
 
-    public static NotificationTarget PackageExpiry(Guid medicineId) => new(NotificationKind.PackageExpiry, medicineId);
+    public static NotificationTarget PackageExpiry(Guid medicineId, string? notice = null)
+        => new(NotificationKind.PackageExpiry, medicineId, Notice: notice);
+}
+
+// The identity of a daily notice across days (NotificationTarget.Notice):
+// what its event records, so two keys are equal only for the same notice.
+// Low stock: the medicine, its stock epoch (the number and, when known,
+// the fact that opened it: a number may come back after a retraction) and
+// the stage. Package expiry: the stage and each package noticed with its
+// expiry. "Valid until": the prescription and the date. Deadline: the
+// deadline and its due date.
+//
+// A key is a head and, after its last ':', one or more items separated by
+// ','. Only a package expiry notice has several: the packages of one
+// notice may have come due on different days, each with a notice of its
+// own (Covers).
+public static class NoticeKeys
+{
+    public static string LowStock(Guid medicineId, int stockEpoch, Guid? epochFactId, int stage)
+        => string.Create(CultureInfo.InvariantCulture,
+            $"stock:{medicineId:N}:{stockEpoch}:{(epochFactId is { } fact ? fact.ToString("N") : "-")}:{stage}");
+
+    public static string PackageExpiry(int stage, IEnumerable<(Guid PackageId, DateOnly Expiry)> packages)
+    {
+        ArgumentNullException.ThrowIfNull(packages);
+        var items = packages
+            .Select(p => string.Create(CultureInfo.InvariantCulture, $"{p.PackageId:N}@{p.Expiry:yyyy-MM-dd}"))
+            .Order(StringComparer.Ordinal);
+        return string.Create(CultureInfo.InvariantCulture, $"expiry:{stage}:{string.Join(",", items)}");
+    }
+
+    // Whether the notices `delivered` (their keys) together cover `notice`:
+    // every item of it is in a delivered notice with the same head. For a
+    // key of one item, whether that key was delivered.
+    public static bool Covers(IEnumerable<string> delivered, string notice)
+    {
+        ArgumentNullException.ThrowIfNull(delivered);
+        ArgumentNullException.ThrowIfNull(notice);
+        var (head, items) = Split(notice);
+        var covered = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var key in delivered)
+        {
+            var (otherHead, otherItems) = Split(key);
+            if (string.Equals(head, otherHead, StringComparison.Ordinal)) covered.UnionWith(otherItems);
+        }
+        return items.All(covered.Contains);
+    }
+
+    private static (string Head, string[] Items) Split(string key)
+    {
+        var at = key.LastIndexOf(':');
+        return at < 0 ? (key, [string.Empty]) : (key[..at], key[(at + 1)..].Split(','));
+    }
+
+    public static string Prescription(Guid prescriptionId, DateOnly validUntil)
+        => string.Create(CultureInfo.InvariantCulture, $"prescription:{prescriptionId:N}:{validUntil:yyyy-MM-dd}");
+
+    public static string Deadline(Guid deadlineId, DateOnly dueOn)
+        => string.Create(CultureInfo.InvariantCulture, $"deadline:{deadlineId:N}:{dueOn:yyyy-MM-dd}");
 }
 
 public enum NotificationKind

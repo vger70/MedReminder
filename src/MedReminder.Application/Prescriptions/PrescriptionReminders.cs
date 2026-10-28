@@ -77,7 +77,8 @@ public sealed class PrescriptionReminders
             {
                 try
                 {
-                    await _windows.ShowAsync(title, body, NotificationTarget.Prescription(medicine.Id),
+                    await _windows.ShowAsync(title, body, NotificationTarget.Prescription(medicine.Id,
+                            NoticeKeys.Prescription(prescription.Id, until)),
                         cancellationToken);
                     any = true;
                 }

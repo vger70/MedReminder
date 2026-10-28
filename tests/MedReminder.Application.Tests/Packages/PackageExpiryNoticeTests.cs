@@ -39,14 +39,15 @@ public class PackageExpiryNoticeTests
     public async Task A_package_expiring_soon_is_notified_once()
     {
         var medicine = await AddMedicineAsync();
-        await PackageAsync(medicine, new DateOnly(2026, 9, 30));
+        var package = await PackageAsync(medicine, new DateOnly(2026, 9, 30));
 
         (await RunAsync()).Should().Be(1);
         (await RunAsync()).Should().Be(0);
 
         _scope.Windows.Sent.Should().ContainSingle().Which.Title.Should().Contain("expires soon");
         _scope.Windows.Targets.Should().ContainSingle().Which
-            .Should().Be(NotificationTarget.PackageExpiry(medicine));
+            .Should().Be(NotificationTarget.PackageExpiry(medicine,
+                NoticeKeys.PackageExpiry(PackageExpiryNoticeEvent.SoonStage, [(package, new DateOnly(2026, 9, 30))])));
         _scope.PackageNoticeEvents.All.Should().ContainSingle().Which.Stage
             .Should().Be(PackageExpiryNoticeEvent.SoonStage);
     }
@@ -206,7 +207,7 @@ public class PackageExpiryNoticeTests
 
         await _scope.Monitor.RunAsync(default);
 
-        _scope.Windows.Targets.Should().Contain(NotificationTarget.PackageExpiry(medicine));
+        _scope.Windows.Targets.Should().Contain(t => t.Kind == NotificationKind.PackageExpiry && t.MedicineId == medicine);
     }
 
     [Theory]
