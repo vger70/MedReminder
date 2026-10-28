@@ -8,7 +8,9 @@ namespace MedReminder.Domain.Calculations;
 //  - its ScheduledAt is the slot's time on that day: first as the wall
 //    clock it was recorded with (the device that recorded it named that
 //    slot, whatever this device's zone), then read in this zone, then as
-//    the instant the slot fires (AtLocal); or
+//    the instant the slot fires (AtLocal). The database keeps ScheduledAt
+//    as UTC ticks and reads it back with a zero offset, so a zero offset
+//    names no recorded wall clock: that value is read in this zone only; or
 //  - the medicine has a single timed slot, the only one it can mean:
 //    without ScheduledAt (recorded from the medicine, not from a dose) or
 //    with one that no longer matches (the slot time changed since).
@@ -45,7 +47,7 @@ public static class DoseSlots
             if (intake.ScheduledAt is { } at)
             {
                 var inZone = TimeZoneInfo.ConvertTime(at, zone);
-                slot = timed.FirstOrDefault(s => SameMinute(at.DateTime, day, s.Time!.Value))
+                slot = (at.Offset == TimeSpan.Zero ? null : timed.FirstOrDefault(s => SameMinute(at.DateTime, day, s.Time!.Value)))
                     ?? timed.FirstOrDefault(s => SameMinute(inZone.DateTime, day, s.Time!.Value))
                     ?? timed.FirstOrDefault(s => at == AtLocal(day, s.Time!.Value, zone));
                 // Two slots can fire at the same instant (a time the clock
