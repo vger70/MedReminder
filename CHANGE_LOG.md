@@ -44,6 +44,8 @@ not fire.
   (`DoseSlots.AtLocal`).
 - **Docs**: user guides, the rule replaces "does not fire".
 
+---
+
 ## PR #314 — Skip the dose reminder of a slot an intake already answers
 
 **Status:** open
