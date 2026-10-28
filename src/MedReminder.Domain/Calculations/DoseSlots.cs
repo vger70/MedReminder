@@ -6,7 +6,8 @@ namespace MedReminder.Domain.Calculations;
 // for them (mobile issues #126, #127). An intake covers a slot when:
 //  - it is not an extra dose (an extra one is on top of the plan);
 //  - its ScheduledAt is the slot's time on that day, read in the zone
-//    or as the wall clock it was recorded with; or
+//    or as the wall clock it was recorded with, or the instant the slot
+//    fires (AtLocal, which moves a time the clock skips); or
 //  - it has no ScheduledAt (recorded from the medicine, not from a dose)
 //    and the medicine has a single timed slot, the only one it can mean.
 // Any status covers the slot: taken, skipped and cancelled all answer
@@ -44,7 +45,8 @@ public static class DoseSlots
                 foreach (var slot in timed)
                 {
                     var time = slot.Time!.Value;
-                    if (SameMinute(inZone.DateTime, day, time) || SameMinute(at.DateTime, day, time))
+                    if (SameMinute(inZone.DateTime, day, time) || SameMinute(at.DateTime, day, time)
+                        || at == AtLocal(day, time, zone))
                     {
                         result.TryAdd(slot.Id, intake);
                         break;
@@ -104,10 +106,25 @@ public static class DoseSlots
         return result;
     }
 
+    // The instant of a wall-clock time on `day` (issue #312). A time in the
+    // hour skipped when the clock moves forward fires at the first valid
+    // instant after it (02:30 → 03:00), so the dose is reminded and not
+    // late by an hour; a time that occurs twice when the clock moves back
+    // fires at its first occurrence.
     public static DateTimeOffset AtLocal(DateOnly day, TimeOnly time, TimeZoneInfo zone)
     {
         ArgumentNullException.ThrowIfNull(zone);
         var local = day.ToDateTime(time);
+        if (zone.IsInvalidTime(local))
+        {
+            local = new DateTime(local.Year, local.Month, local.Day, local.Hour, local.Minute, 0);
+            while (zone.IsInvalidTime(local)) local = local.AddMinutes(1);
+            return new DateTimeOffset(local, zone.GetUtcOffset(local));
+        }
+        if (zone.IsAmbiguousTime(local))
+        {
+            return new DateTimeOffset(local, zone.GetAmbiguousTimeOffsets(local).Max());
+        }
         return new DateTimeOffset(local, zone.GetUtcOffset(local));
     }
 

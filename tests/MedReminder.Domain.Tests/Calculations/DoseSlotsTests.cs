@@ -116,6 +116,32 @@ public class DoseSlotsTests
             [DomainFactory.Suspension(Day)], 10m, [], window).Should().BeEmpty();
     }
 
+    // Issue #312, Central European time.
+    [Fact]
+    public void A_skipped_time_fires_at_the_first_valid_instant_and_a_repeated_one_at_its_first_occurrence()
+    {
+        var rome = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+        var spring = new DateOnly(2027, 3, 28);
+        var autumn = new DateOnly(2027, 10, 31);
+
+        DoseSlots.AtLocal(spring, new TimeOnly(2, 30), rome)
+            .Should().Be(new DateTimeOffset(2027, 3, 28, 3, 0, 0, TimeSpan.FromHours(2)));
+        DoseSlots.AtLocal(autumn, new TimeOnly(2, 30), rome)
+            .Should().Be(new DateTimeOffset(2027, 10, 31, 2, 30, 0, TimeSpan.FromHours(2)));
+        DoseSlots.AtLocal(spring, new TimeOnly(9, 0), rome).Offset.Should().Be(TimeSpan.FromHours(2));
+    }
+
+    [Fact]
+    public void An_intake_scheduled_at_the_moved_instant_covers_the_skipped_slot()
+    {
+        var rome = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+        var spring = new DateOnly(2027, 3, 28);
+        var slot = Slot(new TimeOnly(2, 30));
+        var intake = Intake(DoseSlots.AtLocal(spring, new TimeOnly(2, 30), rome), day: spring);
+
+        DoseSlots.Records(spring, [slot], [intake], rome).Should().ContainKey(slot.Id);
+    }
+
     private static DateTimeOffset At(DateOnly day, int hour, int minute)
         => new(day.ToDateTime(new TimeOnly(hour, minute)), TimeSpan.Zero);
 

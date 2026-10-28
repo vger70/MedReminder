@@ -307,6 +307,9 @@ public sealed class NotificationPlannerParityTests
         AssertParity(planned, shown);
         var autumn = planned.Single(p => p.Day == new DateOnly(2026, 10, 25) && p.SlotTime == new TimeOnly(9, 0));
         autumn.FireAt.Offset.Should().Be(TimeSpan.FromHours(1));
+        // Issue #312: 02:30 occurs twice that day; the first one fires.
+        planned.Single(p => p.Day == new DateOnly(2026, 10, 25) && p.SlotTime == new TimeOnly(2, 30))
+            .FireAt.Should().Be(new DateTimeOffset(2026, 10, 25, 2, 30, 0, TimeSpan.FromHours(2)));
     }
 
     [Fact]
@@ -324,6 +327,10 @@ public sealed class NotificationPlannerParityTests
         AssertParity(planned, shown);
         planned.Single(p => p.Day == new DateOnly(2027, 3, 28) && p.SlotTime == new TimeOnly(9, 0))
             .FireAt.Offset.Should().Be(TimeSpan.FromHours(2));
+        // Issue #312: the skipped 02:30 fires at the first valid instant,
+        // 03:00 local (01:00 UTC), on the planner and the desktop alike.
+        planned.Single(p => p.Day == new DateOnly(2027, 3, 28) && p.SlotTime == new TimeOnly(2, 30))
+            .FireAt.Should().Be(new DateTimeOffset(2027, 3, 28, 3, 0, 0, TimeSpan.FromHours(2)));
     }
 
     // ---- harness ----
