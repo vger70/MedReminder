@@ -39,7 +39,8 @@ Closes #306; for medreminder-mobile #115.
 - **Fixed**: a mistyped group pairing code (`mrpair1`) was reported as
   replaced by a newer offer. `SyncPairingFile` now records `SecretCheck`
   and throws `SyncPairingMismatchException` with the reason and the
-  position, as the household code (`PairingSecretCheck`, shared).
+  position, as the household code (`PairingSecretCheck`, shared). Both
+  exceptions derive from `PairingMismatchException`.
 - **Fixed**: a pairing file not yet visible right after the code was
   shown was reported as expired; a missing file is read again after 1 and
   2 seconds (`PairingFileRead`).

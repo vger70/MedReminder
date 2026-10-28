@@ -154,13 +154,18 @@ public enum HouseholdPairingMismatch
     Replaced,
 }
 
+// A pairing code (household or group) that does not open its offer.
 // Position: 1-based, within the secret, for Mistyped; null otherwise. A
 // CryptographicException, as the hosts already catch for a code that does
-// not open the offer.
-public sealed class HouseholdPairingMismatchException(HouseholdPairingMismatch reason, int? position,
-    Exception? inner = null) : CryptographicException($"The pairing code does not open the offer: {reason}.", inner)
+// not open the offer; hosts that word the reason catch this base.
+public abstract class PairingMismatchException(HouseholdPairingMismatch reason, int? position, Exception? inner)
+    : CryptographicException($"The pairing code does not open the offer: {reason}.", inner)
 {
     public HouseholdPairingMismatch Reason { get; } = reason;
 
     public int? Position { get; } = position;
 }
+
+// A household code (mrpair2) that does not open its offer.
+public sealed class HouseholdPairingMismatchException(HouseholdPairingMismatch reason, int? position,
+    Exception? inner = null) : PairingMismatchException(reason, position, inner);

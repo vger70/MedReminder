@@ -172,14 +172,7 @@ public sealed record SyncPairingFile(int FormatVersion, Guid GroupId, Guid Devic
         => Encoding.UTF8.GetBytes($"MedReminder.Sync.Pairing|{groupId:N}|{deviceId:N}");
 }
 
-// Why an mrpair1 code did not open its offer: the reasons of the household
-// code (HouseholdPairingMismatch). Position: 1-based, within the secret, for
-// Mistyped; null otherwise. A CryptographicException, as the hosts already
-// catch for a code that does not open the offer.
+// A group code (mrpair1) that does not open its offer, with the reasons of
+// the household code (PairingMismatchException).
 public sealed class SyncPairingMismatchException(HouseholdPairingMismatch reason, int? position,
-    Exception? inner = null) : CryptographicException($"The pairing code does not open the offer: {reason}.", inner)
-{
-    public HouseholdPairingMismatch Reason { get; } = reason;
-
-    public int? Position { get; } = position;
-}
+    Exception? inner = null) : PairingMismatchException(reason, position, inner);

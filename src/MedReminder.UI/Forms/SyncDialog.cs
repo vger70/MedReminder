@@ -648,9 +648,7 @@ internal sealed class SyncDialog : MedReminderFormBase
     private string PairingError(Exception ex) => ex switch
     {
         SyncPairingExpiredException => _loc.Get("Ui.SyncDialog.PairingCode.Expired"),
-        HouseholdPairingMismatchException { Reason: HouseholdPairingMismatch.Mistyped, Position: { } pos }
-            => _loc.Get("Ui.SyncDialog.PairingCode.Mistyped", pos),
-        SyncPairingMismatchException { Reason: HouseholdPairingMismatch.Mistyped, Position: { } pos }
+        PairingMismatchException { Reason: HouseholdPairingMismatch.Mistyped, Position: { } pos }
             => _loc.Get("Ui.SyncDialog.PairingCode.Mistyped", pos),
         CryptographicException => _loc.Get("Ui.SyncDialog.PairingCode.Rejected"),
         _ => ex.Message,
