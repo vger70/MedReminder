@@ -48,6 +48,8 @@ and the plan still listed the slot.
 - **Added**: `IMedicationIntakeRepository.ListForDayAsync`.
 - **Docs**: user guides, the rule among the dose reminder rules.
 
+---
+
 ## PR #308 — Give each daily notice an identity across days
 
 **Status:** merged (2026-10-28)
