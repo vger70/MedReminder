@@ -173,7 +173,7 @@ ends. UTF-8 JSON:
 | `formatVersion` | 1 |
 | `groupId`, `deviceId` | as in the path |
 | `nonce`, `tag`, `ciphertext` | AES-256-GCM, key: the `secret` of the code |
-| `secretCheck` | SHA-256 of `MedReminder.Sync.Pairing.Check|` followed by the secret; absent in offers written before it |
+| `secretCheck` | SHA-256 of `MedReminder.Sync.Pairing.Check\|` followed by the secret; absent in offers written before it |
 
 Associated data: the UTF-8 string
 `MedReminder.Sync.Pairing|<groupId N format>|<deviceId N format>`. The
