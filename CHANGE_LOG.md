@@ -41,7 +41,8 @@ and the plan still listed the slot.
 - **Added**: `DoseSlots` (Domain): the slots the intakes of a day answer
   (`Records`) and the state of each slot of a day (`StatesOn`).
 - **Changed**: `RegisterIntakeCommand.ScheduledAt` stores the slot time
-  on the intake (field already stored, synced and exported).
+  on the intake (field already stored, synced and exported); a time not
+  on the intake day is refused.
 - **Changed**: `NotificationPlanner` and `DoseReminderService` skip a slot
   an intake of today answers, on the desktop too: with one timed slot any
   intake of the day counts.

@@ -77,6 +77,10 @@ public sealed class RegisterIntake
             throw new ArgumentException("Only a taken intake can be an extra dose.", nameof(cmd));
         if (cmd.IsExtra && cmd.ScheduledAt is not null)
             throw new ArgumentException("An extra dose answers no dose slot.", nameof(cmd));
+        // The slot time on Day, as the recording device reads it
+        // (DoseSlots.Records): one on another day would answer no slot.
+        if (cmd.ScheduledAt is { } at && DateOnly.FromDateTime(at.DateTime) != cmd.Day)
+            throw new ArgumentException("The dose slot time is not on the intake day.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");

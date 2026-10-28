@@ -9,11 +9,12 @@ namespace MedReminder.Domain.Calculations;
 //    clock it was recorded with (the device that recorded it named that
 //    slot, whatever this device's zone), then read in this zone, then as
 //    the instant the slot fires (AtLocal); or
-//  - it has no ScheduledAt (recorded from the medicine, not from a dose)
-//    and the medicine has a single timed slot, the only one it can mean.
+//  - the medicine has a single timed slot, the only one it can mean:
+//    without ScheduledAt (recorded from the medicine, not from a dose) or
+//    with one that no longer matches (the slot time changed since).
 // Any status covers the slot: taken, skipped and cancelled all answer
-// the reminder. With several slots an intake without ScheduledAt covers
-// none: which dose it was is not known.
+// the reminder. With several slots an intake without a matching
+// ScheduledAt covers none: which dose it was is not known.
 public static class DoseSlots
 {
     // Timed slots that get a reminder: as-needed slots are taken only
@@ -40,10 +41,11 @@ public static class DoseSlots
 
         foreach (var intake in intakes.Where(i => i.Day == day && !i.IsExtra).OrderBy(i => i.RecordedAt))
         {
+            MedicationAdministrationSlot? slot = null;
             if (intake.ScheduledAt is { } at)
             {
                 var inZone = TimeZoneInfo.ConvertTime(at, zone);
-                var slot = timed.FirstOrDefault(s => SameMinute(at.DateTime, day, s.Time!.Value))
+                slot = timed.FirstOrDefault(s => SameMinute(at.DateTime, day, s.Time!.Value))
                     ?? timed.FirstOrDefault(s => SameMinute(inZone.DateTime, day, s.Time!.Value))
                     ?? timed.FirstOrDefault(s => at == AtLocal(day, s.Time!.Value, zone));
                 // Two slots can fire at the same instant (a time the clock
@@ -54,12 +56,12 @@ public static class DoseSlots
                     slot = timed.FirstOrDefault(s => !result.ContainsKey(s.Id) && at == AtLocal(day, s.Time!.Value, zone))
                         ?? slot;
                 }
-                if (slot is not null) result.TryAdd(slot.Id, intake);
             }
-            else if (timed.Count == 1)
-            {
-                result.TryAdd(timed[0].Id, intake);
-            }
+            // A single timed slot is the only dose an intake of the day can
+            // mean, with or without a ScheduledAt that still matches it (the
+            // slot time may have changed after the intake was recorded).
+            slot ??= timed.Count == 1 ? timed[0] : null;
+            if (slot is not null) result.TryAdd(slot.Id, intake);
         }
         return result;
     }
