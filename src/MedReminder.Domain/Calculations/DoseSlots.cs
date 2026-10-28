@@ -5,9 +5,11 @@ namespace MedReminder.Domain.Calculations;
 // The timed dose slots of one medicine on one day and what was recorded
 // for them (mobile issues #126, #127). An intake covers a slot when:
 //  - it is not an extra dose (an extra one is on top of the plan);
-//  - its ScheduledAt is the slot's time on that day, read in the zone
-//    or as the wall clock it was recorded with, or the instant the slot
-//    fires (AtLocal, which moves a time the clock skips); or
+//  - its ScheduledAt is the slot's time on that day: first as the wall
+//    clock it was recorded with (the device that recorded it named that
+//    slot, whatever this device's zone), then read in this zone, then as
+//    the instant the slot fires (AtLocal, which moves a time the clock
+//    skips); or
 //  - it has no ScheduledAt (recorded from the medicine, not from a dose)
 //    and the medicine has a single timed slot, the only one it can mean.
 // Any status covers the slot: taken, skipped and cancelled all answer
@@ -42,16 +44,18 @@ public static class DoseSlots
             if (intake.ScheduledAt is { } at)
             {
                 var inZone = TimeZoneInfo.ConvertTime(at, zone);
-                foreach (var slot in timed)
+                var slot = timed.FirstOrDefault(s => SameMinute(at.DateTime, day, s.Time!.Value))
+                    ?? timed.FirstOrDefault(s => SameMinute(inZone.DateTime, day, s.Time!.Value))
+                    ?? timed.FirstOrDefault(s => at == AtLocal(day, s.Time!.Value, zone));
+                // Two slots can fire at the same instant (a time the clock
+                // skips moves to the next valid one): an intake whose slot is
+                // already covered takes the other slot of that instant.
+                if (slot is not null && result.ContainsKey(slot.Id))
                 {
-                    var time = slot.Time!.Value;
-                    if (SameMinute(inZone.DateTime, day, time) || SameMinute(at.DateTime, day, time)
-                        || at == AtLocal(day, time, zone))
-                    {
-                        result.TryAdd(slot.Id, intake);
-                        break;
-                    }
+                    slot = timed.FirstOrDefault(s => !result.ContainsKey(s.Id) && at == AtLocal(day, s.Time!.Value, zone))
+                        ?? slot;
                 }
+                if (slot is not null) result.TryAdd(slot.Id, intake);
             }
             else if (timed.Count == 1)
             {

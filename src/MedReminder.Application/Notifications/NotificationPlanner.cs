@@ -419,10 +419,9 @@ public static class NotificationPlanner
         => index == 0 ? localNow : AtLocal(day, options.DailyNoticeTime, zone);
 
     // The instant of a local wall-clock time, as DoseReminderService
-    // builds it: the zone's offset for that local time (a time skipped by
-    // a DST change takes the standard offset).
-    // DoseSlots.AtLocal: a time the clock skips moves to the first valid
-    // instant, a repeated time takes its first occurrence (issue #312).
+    // builds it (DoseSlots.AtLocal): a time the clock skips moves to the
+    // first valid instant, a repeated time takes its first occurrence
+    // (issue #312).
     private static DateTimeOffset AtLocal(DateOnly day, TimeOnly time, TimeZoneInfo zone)
         => DoseSlots.AtLocal(day, time, zone);
 
