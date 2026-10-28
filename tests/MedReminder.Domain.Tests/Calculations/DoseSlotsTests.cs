@@ -98,6 +98,20 @@ public class DoseSlotsTests
         DoseSlots.Records(Day, [Morning, Slot(new TimeOnly(8, 0)), nine], [intake], london).Keys.Should().Equal(nine.Id);
     }
 
+    // The database keeps ScheduledAt as UTC ticks and reads it back with a
+    // zero offset: the 09:00 dose recorded in Rome (UTC+1 in winter) reads
+    // 08:00+00:00, which must not answer the 08:00 slot.
+    [Fact]
+    public void A_slot_time_read_back_as_utc_is_read_in_the_zone()
+    {
+        var rome = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+        var winter = new DateOnly(2026, 12, 1);
+        var nine = Slot(new TimeOnly(9, 0));
+        var stored = new DateTimeOffset(2026, 12, 1, 9, 0, 0, TimeSpan.FromHours(1)).ToUniversalTime();
+
+        DoseSlots.Records(winter, [Morning, nine], [Intake(stored, day: winter)], rome).Keys.Should().Equal(nine.Id);
+    }
+
     [Fact]
     public void The_first_recorded_intake_answers_the_slot()
     {

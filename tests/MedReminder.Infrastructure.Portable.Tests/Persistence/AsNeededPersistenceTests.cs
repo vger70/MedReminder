@@ -196,7 +196,8 @@ public class IntradayRepositoryTests
     }
 
     // The intakes of one medicine on one day, with the dose slot time they
-    // answer (mobile issue #126).
+    // answer (mobile issue #126). The instant is kept, not the offset: it
+    // reads back as UTC, which DoseSlots.Records reads in the device zone.
     [Fact]
     public async Task The_intakes_of_a_day_keep_their_slot_time()
     {
@@ -204,7 +205,7 @@ public class IntradayRepositoryTests
         await using var ctx = fixture.CreateContext();
         var id = await SeedMedicineAsync(ctx);
         var other = await SeedMedicineAsync(ctx);
-        var slot = new DateTimeOffset(2026, 9, 13, 8, 0, 0, TimeSpan.Zero);
+        var slot = new DateTimeOffset(2026, 9, 13, 8, 0, 0, TimeSpan.FromHours(2));
         ctx.MedicationIntakes.Add(new MedicationIntake
             { MedicineId = id, Day = Today, Quantity = 1m, Status = IntakeStatus.Taken, ScheduledAt = slot });
         ctx.MedicationIntakes.Add(new MedicationIntake
@@ -213,7 +214,9 @@ public class IntradayRepositoryTests
             { MedicineId = other, Day = Today, Quantity = 1m, Status = IntakeStatus.Taken });
         await ctx.SaveChangesAsync();
 
-        (await new MedicationIntakeRepository(ctx).ListForDayAsync(id, Today, default))
-            .Should().ContainSingle().Which.ScheduledAt.Should().Be(slot);
+        var read = (await new MedicationIntakeRepository(ctx).ListForDayAsync(id, Today, default))
+            .Should().ContainSingle().Which.ScheduledAt;
+        read.Should().Be(slot);
+        read!.Value.Offset.Should().Be(TimeSpan.Zero);
     }
 }
