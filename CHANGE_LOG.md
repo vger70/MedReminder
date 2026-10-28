@@ -30,9 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #308 — Give each daily notice an identity across days
+## PR #314 — Skip the dose reminder of a slot an intake already answers
 
 **Status:** open
+
+For the mobile host (medreminder-mobile #126, #127): recording an intake
+before or after the dose time changed nothing; the reminder still fired
+and the plan still listed the slot.
+
+- **Added**: `DoseSlots` (Domain): the slots the intakes of a day answer
+  (`Records`) and the state of each slot of a day (`StatesOn`).
+- **Changed**: `RegisterIntakeCommand.ScheduledAt` stores the slot time
+  on the intake (field already stored, synced and exported).
+- **Changed**: `NotificationPlanner` and `DoseReminderService` skip a slot
+  an intake of today answers, on the desktop too: with one timed slot any
+  intake of the day counts.
+- **Added**: `IMedicationIntakeRepository.ListForDayAsync`.
+- **Docs**: user guides, the rule among the dose reminder rules.
+
+## PR #308 — Give each daily notice an identity across days
+
+**Status:** merged (2026-10-28)
 
 For the mobile host (medreminder-mobile #107): iOS delivers the daily
 notices handed to it ahead even when no pass runs that day, so the next
