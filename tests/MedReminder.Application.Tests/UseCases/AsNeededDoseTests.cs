@@ -88,6 +88,11 @@ public class AsNeededDoseTests
                 new RegisterIntakeCommand(id, Today, IntakeStatus.Taken, 1m, IsExtra: true, ScheduledAt: slot),
                 CancellationToken.None))
             .Should().ThrowAsync<ArgumentException>();
+        // A slot time on another day answers no slot either.
+        await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
+                new RegisterIntakeCommand(id, Today, IntakeStatus.Taken, 1m, ScheduledAt: slot.AddDays(-1)),
+                CancellationToken.None))
+            .Should().ThrowAsync<ArgumentException>();
 
         await scope.RegisterIntake.ExecuteAsync(
             new RegisterIntakeCommand(id, Today, IntakeStatus.Taken, 1m, ScheduledAt: slot), CancellationToken.None);

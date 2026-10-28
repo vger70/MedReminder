@@ -63,6 +63,16 @@ public class DoseSlotsTests
     public void A_scheduled_time_matching_no_slot_covers_none()
         => DoseSlots.Records(Day, [Morning, Evening], [Intake(At(Day, 9, 30))], Utc).Should().BeEmpty();
 
+    // The single slot moved from 08:00 to 08:30 after its intake: that
+    // intake is still the dose of the day.
+    [Fact]
+    public void A_scheduled_time_matching_no_slot_covers_the_single_timed_slot()
+    {
+        var moved = Slot(new TimeOnly(8, 30));
+
+        DoseSlots.Records(Day, [moved], [Intake(At(Day, 8, 0))], Utc).Keys.Should().Equal(moved.Id);
+    }
+
     [Fact]
     public void The_slot_is_read_in_the_zone_or_as_the_recorded_wall_clock()
     {

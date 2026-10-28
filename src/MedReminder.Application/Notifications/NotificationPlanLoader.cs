@@ -153,7 +153,6 @@ public sealed class NotificationPlanLoader
     {
         if (DoseSlots.Timed(slots).Count == 0) return null;
         var intakes = await _intakes.ListForDayAsync(medicineId, today, cancellationToken);
-        if (intakes.Count == 0) return null;
         return DoseSlots.Records(today, slots, intakes, _clock.LocalTimeZone).Keys.ToHashSet();
     }
 
