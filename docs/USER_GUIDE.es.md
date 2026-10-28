@@ -265,6 +265,15 @@ régimen**:
 Con **Avanzado**, los campos de dosis de la parte superior de la
 ventana no se usan. Vuelve a **Simple** para una dosis diaria fija.
 
+**Días restantes con un régimen avanzado.** El stock se descuenta día a
+día según el régimen, pero los días restantes y la fecha de agotamiento
+dividen el stock por la cantidad de hoy: durante una reducción
+progresiva siguen la dosis de hoy, no las etapas siguientes. En un día
+de pausa de un ciclo, o en un día semanal sin dosis, no se muestra
+fecha de agotamiento ni se da aviso de stock bajo; la revisión avisa el
+siguiente día con una dosis. Para comprobar un periodo entero usa
+[Planificar el stock](#documents), que sigue el régimen día a día.
+
 **Los horarios de administración también funcionan con Avanzado.** El
 esquema fija cuánto tomar cada día; los [horarios de administración](#slots)
 fijan cuándo. La cantidad del día se reparte entre los horarios en
@@ -495,8 +504,10 @@ cuenta la cantidad registrada.
    - **Corrección positiva** — habías contado de menos.
 4. Introduce la cantidad y confirma.
 
-Una caja nueva reinicia el ciclo de aviso: cuando el stock vuelve a
-bajar del umbral, recibes un aviso nuevo.
+Una caja nueva, un añadido manual o una corrección positiva reinicia
+el ciclo de aviso: cuando el stock vuelve a bajar del umbral, recibes
+un aviso nuevo. Las tomas y las correcciones negativas no lo
+reinician.
 
 Con **Nueva caja** también puedes registrar la caducidad; todos los
 campos son opcionales:
@@ -590,7 +601,9 @@ deja que la aplicación corrija:
 
 La aplicación registra una corrección para que el stock sea igual a lo
 que contaste. La diferencia es solo un dato de stock: no se interpreta
-como dosis olvidadas o de más.
+como dosis olvidadas o de más. Si el recuento aumenta el stock y deja
+más días que el umbral de aviso, el ciclo de aviso vuelve a empezar,
+como tras una caja nueva.
 
 <a id="history"></a>
 ### Historial y registros erróneos
@@ -859,12 +872,14 @@ genérico.
   La revisión usa el stock registrado, no la estimación de la lista: el
   día en que se cruza el umbral, la lista puede mostrar el estado de
   aviso unas horas antes del aviso.
-- Si cuando los días restantes llegan a **la mitad del umbral** no se ha
-  añadido una caja nueva, sigue un **segundo aviso** por los mismos
+- Si cuando los días restantes llegan a **la mitad del umbral** el stock
+  no ha aumentado, sigue un **segundo aviso** por los mismos
   canales (con un umbral de 10 días: primer aviso a los 10 días, segundo
   a los 5). Un medicamento que ya está por debajo de la mitad en la
   primera revisión recibe solo el segundo aviso. Tras una caja nueva, el
-  ciclo vuelve a empezar.
+  ciclo vuelve a empezar (también tras los otros añadidos, ver [Añadir
+  una caja](#add-package)). Con un régimen avanzado los días restantes
+  siguen la cantidad de hoy (ver [Regímenes complejos](#regimens)).
 - **Caducidad de las cajas**: una caja registrada con caducidad da un
   aviso *caduca pronto* 30 días antes de la caducidad impresa (3 días
   antes del fin del periodo tras la apertura) y un aviso *caducada* el
