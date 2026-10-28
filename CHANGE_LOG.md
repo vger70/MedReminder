@@ -30,6 +30,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #315 — Fire a dose slot the clock skips at the first valid instant
+
+**Status:** open
+
+Closes #312. A slot in the hour skipped when the clock moves forward
+fired an hour late (03:30 for 02:30), while the user guides said it did
+not fire.
+
+- **Fixed**: such a slot fires at the first valid instant (03:00); a time
+  that occurs twice when the clock moves back fires at its first
+  occurrence. Planner and `DoseReminderService` share the rule
+  (`DoseSlots.AtLocal`).
+- **Docs**: user guides, the rule replaces "does not fire".
+
 ## PR #314 — Skip the dose reminder of a slot an intake already answers
 
 **Status:** open
