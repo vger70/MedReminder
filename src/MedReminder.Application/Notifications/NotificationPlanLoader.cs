@@ -147,7 +147,7 @@ public sealed class NotificationPlanLoader
     }
 
     // Slots an intake of today answers, read only for a medicine with a
-    // dose reminder and a timed slot.
+    // dose reminder, a timed slot and an intake of today (LoadAsync).
     private async Task<IReadOnlySet<Guid>?> RecordedSlotsAsync(Guid medicineId, DateOnly today,
         IReadOnlyList<Domain.Medicines.MedicationAdministrationSlot> slots, CancellationToken cancellationToken)
     {
@@ -159,7 +159,8 @@ public sealed class NotificationPlanLoader
 
     public async Task<IReadOnlyList<MedicinePlanState>> LoadAsync(DateOnly today, CancellationToken cancellationToken)
     {
-        var booked = new HashSet<Guid>(await _intakes.ListMedicinesWithDayIntakeAsync(today, cancellationToken));
+        var withIntake = new HashSet<Guid>(await _intakes.ListMedicinesWithDayIntakeAsync(today, cancellationToken));
+        var booked = new HashSet<Guid>(withIntake);
         booked.UnionWith(await _counts.ListMedicinesWithMaterializedCountAsync(today, cancellationToken));
 
         var result = new List<MedicinePlanState>();
@@ -232,7 +233,9 @@ public sealed class NotificationPlanLoader
                     ? await _dispensations.CountByPrescriptionAsync(medicine.Id, cancellationToken)
                     : null,
                 prescriptionsReminded,
-                await RecordedSlotsAsync(medicine.Id, today, slots, cancellationToken)));
+                medicine.RemindOnDose && withIntake.Contains(medicine.Id)
+                    ? await RecordedSlotsAsync(medicine.Id, today, slots, cancellationToken)
+                    : null));
         }
         return result;
     }

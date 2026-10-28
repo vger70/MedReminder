@@ -75,6 +75,19 @@ public class DoseSlotsTests
         DoseSlots.Records(Day, [Morning], [Intake(withOffset.ToUniversalTime())], rome).Should().ContainKey(Morning.Id);
     }
 
+    // A device in another zone (Rome) recorded the 09:00 dose: the wall
+    // clock it recorded wins over this device's zone (London), where the
+    // same instant reads 08:00.
+    [Fact]
+    public void The_recorded_wall_clock_wins_over_this_zone()
+    {
+        var london = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
+        var nine = Slot(new TimeOnly(9, 0));
+        var intake = Intake(new DateTimeOffset(2026, 9, 15, 9, 0, 0, TimeSpan.FromHours(2)));
+
+        DoseSlots.Records(Day, [Morning, Slot(new TimeOnly(8, 0)), nine], [intake], london).Keys.Should().Equal(nine.Id);
+    }
+
     [Fact]
     public void The_first_recorded_intake_answers_the_slot()
     {

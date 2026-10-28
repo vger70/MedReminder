@@ -115,12 +115,9 @@ public sealed class DoseReminderService
             if (SuspensionState.IsSuspendedOn(today, suspensions)) continue;
 
             // A slot an intake of today already answers gets no reminder
-            // (DoseSlots.Records); without the repository every slot is
-            // evaluated, as before.
-            var recorded = _intakes is null
-                ? null
-                : DoseSlots.Records(today, slots, await _intakes.ListForDayAsync(medicine.Id, today, cancellationToken),
-                    _clock.LocalTimeZone);
+            // (DoseSlots.Records), read once a slot is due; without the
+            // repository every slot is evaluated, as before.
+            IReadOnlyDictionary<Guid, MedicationIntake>? recorded = null;
 
             // Evaluate each timed slot. As-needed slots are taken only
             // when needed: no reminder (ANALYSIS-INTRADAY-CONSUMPTION.md
@@ -135,12 +132,17 @@ public sealed class DoseReminderService
                 // Too early: slot hasn't arrived yet.
                 if (fireLocal > now) continue;
 
-                // Already recorded: nothing to remind.
-                if (recorded?.ContainsKey(slot.Id) == true) continue;
-
                 // Grace window: slot is in the past beyond the window —
                 // treat as missed, do NOT write a dedup row (ANALYSIS-A5 §4.3).
                 if (now - fireLocal > _graceWindow) continue;
+
+                // Already recorded: nothing to remind.
+                if (_intakes is not null)
+                {
+                    recorded ??= DoseSlots.Records(today, slots,
+                        await _intakes.ListForDayAsync(medicine.Id, today, cancellationToken), _clock.LocalTimeZone);
+                    if (recorded.ContainsKey(slot.Id)) continue;
+                }
 
                 var slotKey = slot.Id.ToString();
                 if (await _events.ExistsAsync(medicine.Id, slotKey, today, cancellationToken))
