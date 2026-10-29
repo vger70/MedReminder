@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
+using MedReminder.Application.Household.Remote;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Sync;
 using MedReminder.Application.Sync.Remote;
@@ -198,6 +199,44 @@ public sealed class KeyRotationSyncTests : IDisposable
             .Should().ThrowAsync<SyncPairingExpiredException>();
     }
 
+    // medreminder-mobile #115: a pairing file not yet visible to the joining
+    // session (cloud storage just written) is read again before the code is
+    // reported as expired.
+    [Fact]
+    public async Task A_pairing_file_seen_late_still_opens()
+    {
+        var a = await CreateGroupAsync();
+        var offer = await a.RunAsync(sp => sp.GetRequiredService<SyncPairingOffers>().StartAsync(Transport, CancellationToken.None));
+
+        var d = await JoinWithCodeAsync(a, "D", offer.Code, new LateTransport(Transport, "/pairing/", missedReads: 1));
+
+        d.Settings.Load()!.GroupId.Should().Be(offer.Code.GroupId);
+    }
+
+    // Issue #306: as the household code, an mrpair1 code tells a typing
+    // mistake (with its position in the secret) from a replaced offer.
+    [Fact]
+    public async Task A_replaced_pairing_offer_is_told_from_a_mistyped_code()
+    {
+        var a = await CreateGroupAsync();
+        var first = await a.RunAsync(sp => sp.GetRequiredService<SyncPairingOffers>().StartAsync(Transport, CancellationToken.None));
+        var second = await a.RunAsync(sp => sp.GetRequiredService<SyncPairingOffers>().StartAsync(Transport, CancellationToken.None));
+
+        (await FluentActions.Awaiting(() => JoinWithCodeAsync(a, "Old", first.Code))
+                .Should().ThrowAsync<SyncPairingMismatchException>())
+            .Which.Reason.Should().Be(HouseholdPairingMismatch.Replaced);
+
+        var text = second.Code.Text;
+        var start = text.LastIndexOf('.') + 1;
+        var at = start + 9;
+        var mistyped = text[..at] + (text[at] == 'A' ? 'B' : 'A') + text[(at + 1)..];
+        SyncPairingCode.TryParse(mistyped, out var code).Should().BeTrue();
+        var mismatch = (await FluentActions.Awaiting(() => JoinWithCodeAsync(a, "Typo", code!))
+            .Should().ThrowAsync<SyncPairingMismatchException>()).Which;
+        mismatch.Reason.Should().Be(HouseholdPairingMismatch.Mistyped);
+        mismatch.Position.Should().Be(at - start + 1);
+    }
+
     [Fact]
     public async Task A_device_left_behind_by_a_rotation_takes_the_new_key_from_a_pairing_code()
     {
@@ -316,11 +355,12 @@ public sealed class KeyRotationSyncTests : IDisposable
         return device;
     }
 
-    private async Task<SyncDevice> JoinWithCodeAsync(SyncDevice via, string name, SyncPairingCode code)
+    private async Task<SyncDevice> JoinWithCodeAsync(SyncDevice via, string name, SyncPairingCode code,
+        ISyncTransport? transport = null)
     {
         var path = Path.Combine(_root, $"{name}.db");
         var joined = await via.RunAsync(sp => sp.GetRequiredService<JoinSyncGroup>().ExecuteAsync(
-            Transport, code.GroupId, new SyncKeySource.Pairing(code), path, SyncTarget.ForFolder(Folder),
+            transport ?? Transport, code.GroupId, new SyncKeySource.Pairing(code), path, SyncTarget.ForFolder(Folder),
             CancellationToken.None));
         var device = Track(new SyncDevice(name, path, via.Clock.GetUtcNow(), joined.Settings, joined.Key));
         await device.InitializeAsync();
@@ -394,5 +434,25 @@ public sealed class KeyRotationSyncTests : IDisposable
             }
             state.Should().Be(states[0]);
         }
+    }
+
+    // Returns nothing for the first reads of a path holding the marker, as a
+    // cloud storage that does not show a file just written by another device.
+    private sealed class LateTransport(ISyncTransport inner, string marker, int missedReads) : ISyncTransport
+    {
+        private int _missed;
+
+        public Task<IReadOnlyList<string>> ListAsync(string prefix, CancellationToken ct) => inner.ListAsync(prefix, ct);
+
+        public Task<byte[]?> ReadAsync(string path, CancellationToken ct)
+            => path.Contains(marker, StringComparison.Ordinal) && _missed++ < missedReads
+                ? Task.FromResult<byte[]?>(null)
+                : inner.ReadAsync(path, ct);
+
+        public Task<bool> CreateAsync(string path, byte[] content, CancellationToken ct) => inner.CreateAsync(path, content, ct);
+
+        public Task WriteAsync(string path, byte[] content, CancellationToken ct) => inner.WriteAsync(path, content, ct);
+
+        public Task DeleteAsync(string path, CancellationToken ct) => inner.DeleteAsync(path, ct);
     }
 }

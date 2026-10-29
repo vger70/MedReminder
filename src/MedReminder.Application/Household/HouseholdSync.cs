@@ -214,8 +214,8 @@ public sealed class HouseholdSync
         var transport = _transports.Create(target);
         HouseholdFile.Parse(await transport.ReadAsync(HouseholdFile.PathOf(code.HouseholdId), cancellationToken)
             ?? throw new HouseholdNotFoundException());
-        var file = await transport.ReadAsync(SyncLayout.Pairing(code.HouseholdId, code.DeviceId), cancellationToken)
-            ?? throw new SyncPairingExpiredException();
+        var file = await PairingFileRead.ReadAsync(transport, SyncLayout.Pairing(code.HouseholdId, code.DeviceId),
+            _clock, cancellationToken);
         var offer = HouseholdPairingFile.Parse(file).Open(_cipher, code, _clock.GetUtcNow());
         try
         {
@@ -642,8 +642,8 @@ public sealed class HouseholdSync
                 case HouseholdKeySource.Code { Value: var code }:
                     if (code.HouseholdId != identity.HouseholdId)
                         throw new InvalidOperationException("The code belongs to another household.");
-                    var file = await transport.ReadAsync(SyncLayout.Pairing(code.HouseholdId, code.DeviceId), cancellationToken)
-                        ?? throw new SyncPairingExpiredException();
+                    var file = await PairingFileRead.ReadAsync(transport,
+                        SyncLayout.Pairing(code.HouseholdId, code.DeviceId), _clock, cancellationToken);
                     offer = HouseholdPairingFile.Parse(file).Open(_cipher, code, _clock.GetUtcNow());
                     obtained = await SyncKeys.ObtainAsync(transport, _cipher, identity.HouseholdId,
                         new SyncKeySource.Known(offer.KeyVersion, offer.Key), _clock, cancellationToken);

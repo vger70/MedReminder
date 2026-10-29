@@ -1,4 +1,3 @@
-using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -130,71 +129,14 @@ public sealed record HouseholdPairingFile(int FormatVersion, Guid HouseholdId, G
 
     private static readonly byte[] CheckPrefix = Encoding.UTF8.GetBytes("MedReminder.Household.Pairing.Check|");
 
-    // The secret holds 256 random bits: its hash gives nothing a guess could
-    // not already test against the tag. Hashed incrementally: no copy of the
-    // secret is left to zero.
-    private static byte[] Check(ReadOnlySpan<byte> secret)
-    {
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        hash.AppendData(CheckPrefix);
-        hash.AppendData(secret);
-        return hash.GetHashAndReset();
-    }
+    private static byte[] Check(ReadOnlySpan<byte> secret) => PairingSecretCheck.Compute(CheckPrefix, secret);
 
-    // A secret one typing mistake away from the one the file was sealed with
-    // is a mistyped code: each other character of the base64url alphabet at
-    // each position, and each swap of two neighbouring characters (about
-    // 2,700 hashes). Any other secret is a code a newer offer replaced, or
-    // one with more than one mistake. Position is 1-based within the secret,
-    // the only part the user copies.
-    //
-    // Works on the secret's base64url characters alone, never on code.Text:
-    // that would copy the secret into an immutable string this method could
-    // not zero.
+    // A mistyped code, or one a newer offer replaced (PairingSecretCheck).
     private HouseholdPairingMismatchException Mismatch(HouseholdPairingCode code, CryptographicException inner)
     {
-        if (SecretCheck is null) return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Unknown, null, inner);
-        var typed = new char[Base64Url.GetEncodedLength(code.Secret.Length)];
-        Base64Url.EncodeToChars(code.Secret, typed);
-        var candidate = new byte[code.Secret.Length];
-        try
-        {
-            for (var i = 0; i < typed.Length; i++)
-            {
-                var original = typed[i];
-                foreach (var c in Base64UrlAlphabet)
-                {
-                    if (c == original) continue;
-                    typed[i] = c;
-                    if (Matches(typed, code.Secret, candidate))
-                        return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Mistyped, i + 1, inner);
-                }
-                typed[i] = original;
-                if (i + 1 < typed.Length && typed[i + 1] != original)
-                {
-                    (typed[i], typed[i + 1]) = (typed[i + 1], original);
-                    var swapped = Matches(typed, code.Secret, candidate);
-                    (typed[i], typed[i + 1]) = (original, typed[i]);
-                    if (swapped) return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Mistyped, i + 1, inner);
-                }
-            }
-            return new HouseholdPairingMismatchException(HouseholdPairingMismatch.Replaced, null, inner);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(candidate);
-            Array.Clear(typed);
-        }
+        var (reason, position) = PairingSecretCheck.Diagnose(CheckPrefix, code.Secret, SecretCheck);
+        return new HouseholdPairingMismatchException(reason, position, inner);
     }
-
-    // candidate: a buffer of the secret's size, overwritten.
-    private bool Matches(ReadOnlySpan<char> secretText, byte[] typed, byte[] candidate)
-        => Base64Url.IsValid(secretText, out var length) && length == candidate.Length
-            && Base64Url.TryDecodeFromChars(secretText, candidate, out var written) && written == candidate.Length
-            && !candidate.AsSpan().SequenceEqual(typed)
-            && CryptographicOperations.FixedTimeEquals(Check(candidate), SecretCheck);
-
-    private const string Base64UrlAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 }
 
 // Why a household pairing code did not open its offer.
@@ -212,13 +154,18 @@ public enum HouseholdPairingMismatch
     Replaced,
 }
 
+// A pairing code (household or group) that does not open its offer.
 // Position: 1-based, within the secret, for Mistyped; null otherwise. A
 // CryptographicException, as the hosts already catch for a code that does
-// not open the offer.
-public sealed class HouseholdPairingMismatchException(HouseholdPairingMismatch reason, int? position,
-    Exception? inner = null) : CryptographicException($"The pairing code does not open the offer: {reason}.", inner)
+// not open the offer; hosts that word the reason catch this base.
+public abstract class PairingMismatchException(HouseholdPairingMismatch reason, int? position, Exception? inner)
+    : CryptographicException($"The pairing code does not open the offer: {reason}.", inner)
 {
     public HouseholdPairingMismatch Reason { get; } = reason;
 
     public int? Position { get; } = position;
 }
+
+// A household code (mrpair2) that does not open its offer.
+public sealed class HouseholdPairingMismatchException(HouseholdPairingMismatch reason, int? position,
+    Exception? inner = null) : PairingMismatchException(reason, position, inner);

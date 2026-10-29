@@ -157,8 +157,8 @@ public static class SyncKeys
             {
                 if (pairing.Code.GroupId != groupId)
                     throw new ArgumentException("The pairing code belongs to another sync group.", nameof(source));
-                var file = await transport.ReadAsync(SyncLayout.Pairing(groupId, pairing.Code.DeviceId), cancellationToken)
-                    ?? throw new SyncPairingExpiredException();
+                var file = await PairingFileRead.ReadAsync(transport, SyncLayout.Pairing(groupId, pairing.Code.DeviceId),
+                    clock, cancellationToken);
                 var (version, key) = SyncPairingFile.Parse(file).Open(cipher, pairing.Code, clock.GetUtcNow());
                 var generation = await CurrentGenerationAsync(transport, groupId, version, cancellationToken, cache);
                 if (generation == 0)
