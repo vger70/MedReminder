@@ -2,6 +2,7 @@ using FluentAssertions;
 using MedReminder.Application.Notifications;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using Xunit;
 
@@ -265,5 +266,61 @@ public class DoseReminderServiceTests
         var insideWindow = startOffset <= 0 && (endOffset is null || endOffset >= 0);
         result.FiredCount.Should().Be(insideWindow ? 1 : 0);
         scope.Windows.Sent.Should().HaveCount(insideWindow ? 1 : 0);
+    }
+
+    // Mobile issue #126: an intake recorded for the slot answers it, before
+    // or after its time; the reminder is neither shown nor planned.
+    [Theory]
+    [InlineData(IntakeStatus.Taken)]
+    [InlineData(IntakeStatus.Skipped)]
+    public async Task A_slot_already_recorded_is_not_reminded(IntakeStatus status)
+    {
+        var scope = new ApplicationTestScope(new DateTimeOffset(2026, 9, 13, 8, 50, 0, TimeSpan.Zero));
+        var id = await SeedAsync(scope);
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, Today, status, 1m,
+            ScheduledAt: new DateTimeOffset(Today.ToDateTime(SlotTime), TimeSpan.Zero)), CancellationToken.None);
+
+        scope.Clock.SetUtcNow(JustAfterSlot);
+        var plan = await scope.BuildPlanLoader().PlanAsync(options: null, CancellationToken.None);
+        var result = await scope.BuildDoseReminder().RunAsync(CancellationToken.None);
+
+        result.FiredCount.Should().Be(0);
+        scope.Windows.Sent.Should().BeEmpty();
+        scope.DoseEvents.All.Should().BeEmpty();
+        plan.Where(p => p.Kind == PlannedNotificationKind.DoseReminder && p.Day == Today).Should().BeEmpty();
+        // Tomorrow's slot is still planned.
+        plan.Should().Contain(p => p.Kind == PlannedNotificationKind.DoseReminder && p.Day == Today.AddDays(1));
+    }
+
+    [Fact]
+    public async Task An_intake_for_another_slot_leaves_the_reminder()
+    {
+        var scope = new ApplicationTestScope(JustAfterSlot);
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            Name: "Enalapril", Unit: "compresse", DosePerAdministration: 1m, AdministrationsPerDay: 2,
+            StartDate: Today, ThresholdDays: 7, NotificationChannels: NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots: [new AdministrationSlotInput(1m, SlotTime, null), new AdministrationSlotInput(1m, new TimeOnly(20, 0), null)],
+            RemindOnDose: true), CancellationToken.None);
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, Today, IntakeStatus.Taken, 1m,
+            ScheduledAt: new DateTimeOffset(Today.ToDateTime(new TimeOnly(20, 0)), TimeSpan.Zero)), CancellationToken.None);
+
+        var result = await scope.BuildDoseReminder().RunAsync(CancellationToken.None);
+
+        result.FiredCount.Should().Be(1);
+        scope.Windows.Targets.Should().Equal(NotificationTarget.DoseReminder(id, SlotTime));
+    }
+
+    [Fact]
+    public async Task An_extra_dose_does_not_answer_the_slot()
+    {
+        var scope = new ApplicationTestScope(JustAfterSlot);
+        var id = await SeedAsync(scope);
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, Today, IntakeStatus.Taken, 1m, IsExtra: true),
+            CancellationToken.None);
+
+        var result = await scope.BuildDoseReminder().RunAsync(CancellationToken.None);
+
+        result.FiredCount.Should().Be(1);
     }
 }

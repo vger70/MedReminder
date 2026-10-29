@@ -130,6 +130,8 @@ public sealed record NotificationPlanOptions
 //    .CountByPrescriptionAsync for the medicine; null for none.
 //  - PrescriptionsReminded: "valid until" reminders already shown on this
 //    device (IPrescriptionReminderEventRepository); null for none.
+//  - SlotsRecordedToday: slots an intake of today answers
+//    (DoseSlots.Records); their reminder is not planned. Null for none.
 public sealed record MedicinePlanState(
     Medicine Medicine,
     decimal CurrentStock,
@@ -143,7 +145,8 @@ public sealed record MedicinePlanState(
     IReadOnlySet<PackageNoticeKey> PackageNoticesShown,
     IReadOnlyList<Prescription>? Prescriptions = null,
     IReadOnlyDictionary<Guid, int>? DispensationsCollected = null,
-    IReadOnlySet<PrescriptionReminderKey>? PrescriptionsReminded = null);
+    IReadOnlySet<PrescriptionReminderKey>? PrescriptionsReminded = null,
+    IReadOnlySet<Guid>? SlotsRecordedToday = null);
 
 public readonly record struct PackageNoticeKey(Guid PackageId, DateOnly EffectiveExpiry, int Stage);
 
@@ -314,9 +317,11 @@ public static class NotificationPlanner
                 if (fireAt > end) continue;
                 if (i == 0)
                 {
-                    // Missed beyond the grace window, or already reminded.
+                    // Missed beyond the grace window, already reminded, or
+                    // already recorded.
                     if (localNow - fireAt > options.DoseGraceWindow) continue;
                     if (state.SlotsRemindedToday.Contains(slot.Id)) continue;
+                    if (state.SlotsRecordedToday?.Contains(slot.Id) == true) continue;
                 }
                 result.Add(new PlannedNotification(PlannedNotificationKind.DoseReminder, state.Medicine.Id, day,
                     fireAt < localNow ? localNow : fireAt, SlotId: slot.Id, SlotTime: slotTime));
@@ -414,13 +419,11 @@ public static class NotificationPlanner
         => index == 0 ? localNow : AtLocal(day, options.DailyNoticeTime, zone);
 
     // The instant of a local wall-clock time, as DoseReminderService
-    // builds it: the zone's offset for that local time (a time skipped by
-    // a DST change takes the standard offset).
+    // builds it (DoseSlots.AtLocal): a time the clock skips moves to the
+    // first valid instant, a repeated time takes its first occurrence
+    // (issue #312).
     private static DateTimeOffset AtLocal(DateOnly day, TimeOnly time, TimeZoneInfo zone)
-    {
-        var local = day.ToDateTime(time);
-        return new DateTimeOffset(local, zone.GetUtcOffset(local));
-    }
+        => DoseSlots.AtLocal(day, time, zone);
 
     private static decimal Clamp(decimal value) => value < 0m ? 0m : value;
 }

@@ -303,8 +303,14 @@ hora y le queda stock.
 - Si el PC estaba en suspensión a esa hora, el aviso llega igualmente
   dentro de **30 minutos**; pasado ese tiempo se omite.
 - Con **stock cero** no se envía ningún aviso.
+- Una dosis ya registrada (tomada, omitida o anulada) no se recuerda.
+  Con un solo horario cuenta cualquier toma del día; con varios
+  horarios, solo una toma que indique la hora de la dosis, como la
+  registra la aplicación móvil desde Hoy.
 - La noche en que el reloj se adelanta, un horario dentro de la hora
-  saltada no suena.
+  saltada suena a la primera hora que existe (las 02:30 a las 03:00). La
+  noche en que se atrasa, un horario que se repite suena la primera
+  vez.
 
 El aviso no registra si tomaste la dosis ni cambia el stock.
 

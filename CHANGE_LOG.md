@@ -32,7 +32,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ## PR #316 — Tell a mistyped mrpair1 code apart and read a late pairing file again
 
-**Status:** open
+**Status:** merged
 
 Closes #306; for medreminder-mobile #115.
 
@@ -45,6 +45,43 @@ Closes #306; for medreminder-mobile #115.
   shown was reported as expired; a missing file is read again after 1 and
   2 seconds (`PairingFileRead`).
 - **Docs**: `docs/SYNC-FORMAT.md` §4.4.
+
+---
+
+## PR #315 — Fire a dose slot the clock skips at the first valid instant
+
+**Status:** merged
+
+Closes #312. A slot in the hour skipped when the clock moves forward
+fired an hour late (03:30 for 02:30), while the user guides said it did
+not fire.
+
+- **Fixed**: such a slot fires at the first valid instant (03:00); a time
+  that occurs twice when the clock moves back fires at its first
+  occurrence. Planner and `DoseReminderService` share the rule
+  (`DoseSlots.AtLocal`).
+- **Docs**: user guides, the rule replaces "does not fire".
+
+---
+
+## PR #314 — Skip the dose reminder of a slot an intake already answers
+
+**Status:** merged
+
+For the mobile host (medreminder-mobile #126, #127): recording an intake
+before or after the dose time changed nothing; the reminder still fired
+and the plan still listed the slot.
+
+- **Added**: `DoseSlots` (Domain): the slots the intakes of a day answer
+  (`Records`) and the state of each slot of a day (`StatesOn`).
+- **Changed**: `RegisterIntakeCommand.ScheduledAt` stores the slot time
+  on the intake (field already stored, synced and exported); a time not
+  on the intake day is refused.
+- **Changed**: `NotificationPlanner` and `DoseReminderService` skip a slot
+  an intake of today answers, on the desktop too: with one timed slot any
+  intake of the day counts.
+- **Added**: `IMedicationIntakeRepository.ListForDayAsync`.
+- **Docs**: user guides, the rule among the dose reminder rules.
 
 ---
 

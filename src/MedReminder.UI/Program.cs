@@ -455,7 +455,8 @@ internal static class Program
                 sp.GetRequiredService<ILogger<DoseReminderService>>(),
                 sp.GetService<ILocalizationService>(),
                 graceWindow,
-                sp.GetService<IMasterRole>());
+                sp.GetService<IMasterRole>(),
+                sp.GetRequiredService<IMedicationIntakeRepository>());
         });
 
         builder.Services.RemoveAll<IWindowsNotificationService>();

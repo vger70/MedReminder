@@ -22,6 +22,12 @@ public interface IMedicationIntakeRepository
     // whole list.
     Task<IReadOnlyList<Guid>> ListMedicinesWithDayIntakeAsync(DateOnly day, CancellationToken cancellationToken);
 
+    // The intakes of one medicine on `day`, for the dose slots they
+    // cover (DoseSlots.Records).
+    async Task<IReadOnlyList<MedicationIntake>> ListForDayAsync(
+        Guid medicineId, DateOnly day, CancellationToken cancellationToken)
+        => [.. (await ListForMedicineAsync(medicineId, cancellationToken)).Where(i => i.Day == day)];
+
     Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken);
 
     // Retraction of a mistaken intake (RetractFact, B.1 Phase 2d).

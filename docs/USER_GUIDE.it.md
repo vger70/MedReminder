@@ -302,8 +302,14 @@ e ha ancora scorte.
 - Se il PC era in sospensione a quell'ora, il promemoria arriva comunque
   entro **30 minuti**; oltre viene saltato.
 - Con **scorte a zero** non arriva nessun promemoria.
+- Una dose già registrata (presa, saltata o annullata) non viene
+  ricordata. Con un solo orario conta qualsiasi assunzione del giorno;
+  con più orari, solo un'assunzione che indica l'orario della dose, come
+  la registra l'app per telefono da Oggi.
 - Nella notte in cui l'orologio va avanti di un'ora, un orario che cade
-  nell'ora saltata non suona.
+  nell'ora saltata suona al primo orario che esiste (le 02:30 alle
+  03:00). Nella notte in cui torna indietro, un orario che si ripete
+  suona la prima volta.
 
 Il promemoria non registra se hai preso la dose e non cambia le scorte.
 
