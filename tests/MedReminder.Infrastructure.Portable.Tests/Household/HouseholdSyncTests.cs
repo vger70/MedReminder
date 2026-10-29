@@ -515,6 +515,63 @@ public sealed class HouseholdSyncTests : IDisposable
             .Key.Should().Equal(rotated.Key);
     }
 
+    // A device that still holds the old profile key runs the household
+    // before it takes the new one: its own grant must not replace the newer
+    // grant the removing device gave it, nor its escrow the newer escrow.
+    [Fact]
+    public async Task A_household_run_before_taking_the_rotated_profile_key_keeps_the_newer_grant()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        if (b.Registry.GetById("user") is null) b.Registry.Add("user", "Bruno", ProfileRole.User);
+        b.GroupKeys.Keys["user"] = UserGroup;
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Keyring.GrantAsync("user", await DeviceOf(c), CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+
+        await a.Remove().ExecuteAsync(await DeviceOf(c), NewPassphrase.ToCharArray(), CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+        await b.Sync.RekeyAsync(new HouseholdKeySource.Passphrase(NewPassphrase.ToCharArray()), CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+
+        var rotated = a.GroupKeys.Keys["user"];
+        (await b.Keyring.NewerGrantAsync("user", UserGroup.GroupId, UserGroup.KeyVersion, CancellationToken.None))!
+            .Key.Should().Equal(rotated.Key);
+        (await a.Keyring.KeysAsync(CancellationToken.None)).Escrows["user"].KeyVersion.Should().Be(rotated.KeyVersion);
+    }
+
+    // A grant replaced by an older key (a device on an earlier version of
+    // AdoptProfileGroupsAsync) is given again by a device that holds the
+    // newer key of the same group.
+    [Fact]
+    public async Task A_grant_replaced_by_an_older_key_is_given_again_by_a_device_that_holds_the_newer_one()
+    {
+        var (a, b, c) = await ThreeDevicesAsync();
+        if (b.Registry.GetById("user") is null) b.Registry.Add("user", "Bruno", ProfileRole.User);
+        b.GroupKeys.Keys["user"] = UserGroup;
+        await b.Sync.RunAsync(CancellationToken.None);
+        await a.Keyring.GrantAsync("user", await DeviceOf(c), CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await a.Remove().ExecuteAsync(await DeviceOf(c), NewPassphrase.ToCharArray(), CancellationToken.None,
+            SyncFileFormatTests.FastKdf);
+        await b.Sync.RekeyAsync(new HouseholdKeySource.Passphrase(NewPassphrase.ToCharArray()), CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+        await b.Keyring.GrantKeyAsync("user", await DeviceOf(b), UserGroup with { Key = [.. UserGroup.Key] },
+            CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+        (await b.Keyring.NewerGrantAsync("user", UserGroup.GroupId, UserGroup.KeyVersion, CancellationToken.None))
+            .Should().BeNull("the older grant won");
+
+        // A's first run pulls the older grant, its next one grants again.
+        await a.Sync.RunAsync(CancellationToken.None);
+        await a.Sync.RunAsync(CancellationToken.None);
+        await b.Sync.RunAsync(CancellationToken.None);
+
+        (await b.Keyring.NewerGrantAsync("user", UserGroup.GroupId, UserGroup.KeyVersion, CancellationToken.None))!
+            .Key.Should().Equal(a.GroupKeys.Keys["user"].Key);
+    }
+
     [Fact]
     public async Task A_device_that_lacks_a_profile_of_the_removed_device_cannot_remove_it()
     {

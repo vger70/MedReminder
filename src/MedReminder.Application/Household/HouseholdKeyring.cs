@@ -72,7 +72,13 @@ public sealed class HouseholdKeyring
 
     // Records, for every synced profile of this installation, the grant
     // to this device and the escrow the household lacks for the current
-    // group key. Returns the number of operations recorded.
+    // group key. A grant or escrow of the same group with a newer key is
+    // kept: after a rotation elsewhere (step H5b) this device runs the
+    // household before it takes the new key, and its old key must not
+    // replace the grant it is waiting for. A device still holding the
+    // profile through a grant of an older key of the group (replaced
+    // before that rule) is granted the current key again. Returns the
+    // number of operations recorded.
     public async Task<int> AdoptProfileGroupsAsync(CancellationToken cancellationToken)
     {
         var identity = await _store.EnsureCreatedAsync(cancellationToken);
@@ -85,13 +91,25 @@ public sealed class HouseholdKeyring
             try
             {
                 if (ownPublicKey is not null
-                    && !Matches(keys.Grants.GetValueOrDefault((profile.Id, identity.DeviceId)), group))
+                    && !Covers(keys.Grants.GetValueOrDefault((profile.Id, identity.DeviceId)), group))
                 {
                     operations.Add(new ProfileKeyGranted(profile.Id, identity.DeviceId, group.GroupId, group.KeyVersion,
                         HouseholdKeyWrap.Wrap(_cipher, ownPublicKey, group.Key,
                             HouseholdKeyWrap.GrantPurpose(group.GroupId, group.KeyVersion, identity.DeviceId))));
                 }
-                if (keys.RecoveryPublicKey is { } recovery && !Matches(keys.Escrows.GetValueOrDefault(profile.Id), group))
+                foreach (var (device, publicKey) in keys.DevicePublicKeys)
+                {
+                    if (device == identity.DeviceId
+                        || keys.Grants.GetValueOrDefault((profile.Id, device)) is not { } other
+                        || other.GroupId != group.GroupId || other.KeyVersion >= group.KeyVersion)
+                    {
+                        continue;
+                    }
+                    operations.Add(new ProfileKeyGranted(profile.Id, device, group.GroupId, group.KeyVersion,
+                        HouseholdKeyWrap.Wrap(_cipher, publicKey, group.Key,
+                            HouseholdKeyWrap.GrantPurpose(group.GroupId, group.KeyVersion, device))));
+                }
+                if (keys.RecoveryPublicKey is { } recovery && !Covers(keys.Escrows.GetValueOrDefault(profile.Id), group))
                 {
                     operations.Add(new ProfileKeyEscrowed(profile.Id, group.GroupId, group.KeyVersion,
                         HouseholdKeyWrap.Wrap(_cipher, recovery.Wrapped, group.Key,
@@ -295,6 +313,7 @@ public sealed class HouseholdKeyring
 
     public Task<HouseholdKeys> KeysAsync(CancellationToken cancellationToken) => _household.KeysAsync(cancellationToken);
 
-    private static bool Matches(HouseholdWrappedKey? held, ProfileGroupKey group)
-        => held is not null && held.GroupId == group.GroupId && held.KeyVersion == group.KeyVersion;
+    // The same key, or a newer key of the same group.
+    private static bool Covers(HouseholdWrappedKey? held, ProfileGroupKey group)
+        => held is not null && held.GroupId == group.GroupId && held.KeyVersion >= group.KeyVersion;
 }
