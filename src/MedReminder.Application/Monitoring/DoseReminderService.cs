@@ -125,9 +125,9 @@ public sealed class DoseReminderService
             foreach (var slot in slots.Where(s => s.Time.HasValue && !s.IsAsNeeded))
             {
                 var slotTime = slot.Time!.Value;
-                var fireLocal = new DateTimeOffset(
-                    today.ToDateTime(slotTime),
-                    _clock.LocalTimeZone.GetUtcOffset(today.ToDateTime(slotTime)));
+                // A time the clock skips fires at the first valid instant,
+                // a repeated time at its first occurrence (issue #312).
+                var fireLocal = DoseSlots.AtLocal(today, slotTime, _clock.LocalTimeZone);
 
                 // Too early: slot hasn't arrived yet.
                 if (fireLocal > now) continue;

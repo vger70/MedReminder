@@ -153,6 +153,52 @@ public class DoseSlotsTests
             [DomainFactory.Suspension(Day)], 10m, [], window).Should().BeEmpty();
     }
 
+    // Issue #312, Central European time.
+    [Fact]
+    public void A_skipped_time_fires_at_the_first_valid_instant_and_a_repeated_one_at_its_first_occurrence()
+    {
+        var rome = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+        var spring = new DateOnly(2027, 3, 28);
+        var autumn = new DateOnly(2027, 10, 31);
+
+        DoseSlots.AtLocal(spring, new TimeOnly(2, 30), rome)
+            .Should().Be(new DateTimeOffset(2027, 3, 28, 3, 0, 0, TimeSpan.FromHours(2)));
+        DoseSlots.AtLocal(autumn, new TimeOnly(2, 30), rome)
+            .Should().Be(new DateTimeOffset(2027, 10, 31, 2, 30, 0, TimeSpan.FromHours(2)));
+        DoseSlots.AtLocal(spring, new TimeOnly(9, 0), rome).Offset.Should().Be(TimeSpan.FromHours(2));
+    }
+
+    [Fact]
+    public void An_intake_scheduled_at_the_moved_instant_covers_the_skipped_slot()
+    {
+        var rome = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+        var spring = new DateOnly(2027, 3, 28);
+        var slot = Slot(new TimeOnly(2, 30));
+        var intake = Intake(DoseSlots.AtLocal(spring, new TimeOnly(2, 30), rome), day: spring);
+
+        DoseSlots.Records(spring, [slot], [intake], rome).Should().ContainKey(slot.Id);
+    }
+
+    // 02:30 and 03:00 both fire at 03:00 on the night the clock skips: the
+    // two intakes recorded for them cover both slots, and one alone covers
+    // one slot only.
+    [Fact]
+    public void Two_intakes_of_slots_sharing_the_moved_instant_cover_both_slots()
+    {
+        var rome = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+        var spring = new DateOnly(2027, 3, 28);
+        var skipped = Slot(new TimeOnly(2, 30));
+        var next = Slot(new TimeOnly(3, 0));
+        var first = Intake(DoseSlots.AtLocal(spring, new TimeOnly(2, 30), rome), day: spring,
+            recordedAt: At(spring, 1, 0));
+        var second = Intake(DoseSlots.AtLocal(spring, new TimeOnly(3, 0), rome), day: spring,
+            recordedAt: At(spring, 1, 5));
+
+        DoseSlots.Records(spring, [skipped, next], [first, second], rome).Keys
+            .Should().BeEquivalentTo([skipped.Id, next.Id]);
+        DoseSlots.Records(spring, [skipped, next], [first], rome).Should().HaveCount(1);
+    }
+
     private static DateTimeOffset At(DateOnly day, int hour, int minute)
         => new(day.ToDateTime(new TimeOnly(hour, minute)), TimeSpan.Zero);
 

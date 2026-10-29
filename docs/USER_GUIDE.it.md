@@ -307,7 +307,9 @@ e ha ancora scorte.
   con più orari, solo un'assunzione che indica l'orario della dose, come
   la registra l'app per telefono da Oggi.
 - Nella notte in cui l'orologio va avanti di un'ora, un orario che cade
-  nell'ora saltata non suona.
+  nell'ora saltata suona al primo orario che esiste (le 02:30 alle
+  03:00). Nella notte in cui torna indietro, un orario che si ripete
+  suona la prima volta.
 
 Il promemoria non registra se hai preso la dose e non cambia le scorte.
 

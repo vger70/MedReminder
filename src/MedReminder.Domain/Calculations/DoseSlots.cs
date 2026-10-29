@@ -8,9 +8,10 @@ namespace MedReminder.Domain.Calculations;
 //  - its ScheduledAt is the slot's time on that day: first as the wall
 //    clock it was recorded with (the device that recorded it named that
 //    slot, whatever this device's zone), then read in this zone, then as
-//    the instant the slot fires (AtLocal). The database keeps ScheduledAt
-//    as UTC ticks and reads it back with a zero offset, so a zero offset
-//    names no recorded wall clock: that value is read in this zone only; or
+//    the instant the slot fires (AtLocal, which moves a time the clock
+//    skips). The database keeps ScheduledAt as UTC ticks and reads it back
+//    with a zero offset, so a zero offset names no recorded wall clock:
+//    that value is read in this zone only; or
 //  - the medicine has a single timed slot, the only one it can mean:
 //    without ScheduledAt (recorded from the medicine, not from a dose) or
 //    with one that no longer matches (the slot time changed since).
@@ -113,10 +114,25 @@ public static class DoseSlots
         return result;
     }
 
+    // The instant of a wall-clock time on `day` (issue #312). A time in the
+    // hour skipped when the clock moves forward fires at the first valid
+    // instant after it (02:30 → 03:00), so the dose is reminded and not
+    // late by an hour; a time that occurs twice when the clock moves back
+    // fires at its first occurrence.
     public static DateTimeOffset AtLocal(DateOnly day, TimeOnly time, TimeZoneInfo zone)
     {
         ArgumentNullException.ThrowIfNull(zone);
         var local = day.ToDateTime(time);
+        if (zone.IsInvalidTime(local))
+        {
+            local = new DateTime(local.Year, local.Month, local.Day, local.Hour, local.Minute, 0);
+            while (zone.IsInvalidTime(local)) local = local.AddMinutes(1);
+            return new DateTimeOffset(local, zone.GetUtcOffset(local));
+        }
+        if (zone.IsAmbiguousTime(local))
+        {
+            return new DateTimeOffset(local, zone.GetAmbiguousTimeOffsets(local).Max());
+        }
         return new DateTimeOffset(local, zone.GetUtcOffset(local));
     }
 

@@ -296,7 +296,8 @@ the medicine has at least one slot with a time and some stock left.
   several slots, only an intake that names its dose time, as the phone
   app records it from Today.
 - On the night the clock moves forward, a slot inside the skipped hour
-  does not fire.
+  fires at the first time that exists (02:30 at 03:00). On the night it
+  moves back, a time that occurs twice fires the first time.
 
 The reminder does not record whether you took the dose and does not
 change the stock.
