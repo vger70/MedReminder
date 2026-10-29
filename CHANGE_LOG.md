@@ -58,7 +58,8 @@ it was ignored, the slot was dropped after the grace window.
   `MedicinePlanState.Repetition`, `RepetitionsRemindedToday`);
   `DoseReminderService` shows the last one due once, keyed
   `<slot>#<k>` in `DoseReminderEvents` (no schema change). Any intake of
-  the slot stops them.
+  the slot stops them; as the service evaluates only the current day, no
+  repetition is planned past midnight.
 - **Changed**: nothing for the desktop, which registers no policy: one
   reminder per slot, as before.
 

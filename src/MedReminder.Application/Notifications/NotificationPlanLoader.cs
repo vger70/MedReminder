@@ -181,13 +181,18 @@ public sealed class NotificationPlanLoader
                 }
             }
             // The last repetition of each slot shown today (mobile issue #128).
+            // Only one already due can have been shown: a slot still ahead
+            // reads nothing.
             var repetition = medicine.RemindOnDose ? _repetitions?.For(medicine) : null;
             Dictionary<Guid, int>? repeated = null;
             if (repetition is not null)
             {
+                var zone = _clock.LocalTimeZone;
+                var localNow = TimeZoneInfo.ConvertTime(_clock.GetUtcNow(), zone);
                 foreach (var slot in DoseSlots.Timed(slots))
                 {
-                    for (var k = repetition.Count; k >= 1; k--)
+                    var due = repetition.LatestDue(DoseSlots.AtLocal(today, slot.Time!.Value, zone), localNow);
+                    for (var k = due; k >= 1; k--)
                     {
                         if (!await _doseEvents.ExistsAsync(medicine.Id, DoseRepetition.SlotKey(slot.Id, k), today,
                                 cancellationToken)) continue;

@@ -15,6 +15,7 @@ public class DoseRepetitionTests
         var repeat = DoseRepetition.Repeat(TimeSpan.FromMinutes(10), 6);
         var delayed = new DoseRepetition(TimeSpan.FromMinutes(60), TimeSpan.FromMinutes(10), 6);
 
+        repeat.At(Slot, 0).Should().Be(Slot);
         repeat.At(Slot, 1).Should().Be(Slot.AddMinutes(10));
         repeat.At(Slot, 6).Should().Be(Slot.AddMinutes(60));
         delayed.At(Slot, 1).Should().Be(Slot.AddMinutes(60));

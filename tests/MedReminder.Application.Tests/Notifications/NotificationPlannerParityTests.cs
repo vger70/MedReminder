@@ -389,6 +389,24 @@ public sealed class NotificationPlannerParityTests
             .Should().NotContain(p => p.Kind == PlannedNotificationKind.DoseReminder && p.Day == Start);
     }
 
+    // The service evaluates the current day's slots only: no repetition is
+    // planned or shown past midnight.
+    [Fact]
+    public async Task No_repetition_past_midnight()
+    {
+        var scope = new ApplicationTestScope(new DateTimeOffset(2026, 9, 13, 23, 0, 0, TimeSpan.Zero));
+        scope.Repetitions = new FixedRepetition(DoseRepetition.Repeat(TimeSpan.FromMinutes(10), 6));
+        await AddAsync(scope, quantity: 40m, perDay: 1, slots: [new(1m, new TimeOnly(23, 30), null)]);
+
+        var (planned, shown) = await RunAsync(scope, days: 1, TimeSpan.FromMinutes(5));
+
+        var at = new DateTimeOffset(2026, 9, 13, 23, 30, 0, TimeSpan.Zero);
+        var today = planned.Where(p => p.Kind == PlannedNotificationKind.DoseReminder && p.Day == Start).ToList();
+        today.Select(p => p.FireAt).Should().Equal(at, at.AddMinutes(10), at.AddMinutes(20));
+        shown.Where(s => s.Kind == PlannedNotificationKind.DoseReminder && s.Day == Start).Select(s => s.At)
+            .Should().Equal(at, at.AddMinutes(10), at.AddMinutes(20));
+    }
+
     private sealed class FixedRepetition(DoseRepetition repetition) : MedReminder.Application.Abstractions.IDoseRepetitionPolicy
     {
         public DoseRepetition? For(Medicine medicine) => repetition;

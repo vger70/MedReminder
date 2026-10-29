@@ -7,8 +7,8 @@ namespace MedReminder.Domain.Calculations;
 // slot (DoseSlots.Records) stops them; nothing else does.
 public sealed record DoseRepetition
 {
-    // The dedup key of a repetition (DoseReminderEvents.SlotKey, at most 40
-    // characters): the slot id and "#k".
+    // At most two digits, so the dedup key of a repetition (SlotKey: the
+    // slot id and "#k") fits DoseReminderEvents.SlotKey (40 characters).
     public const int MaxCount = 99;
 
     public DoseRepetition(TimeSpan delay, TimeSpan interval, int count)
@@ -30,11 +30,12 @@ public sealed record DoseRepetition
     // Every `interval`, starting one interval after the slot.
     public static DoseRepetition Repeat(TimeSpan interval, int count) => new(interval, interval, count);
 
-    // The instant of repetition k (1..Count) of a slot due at `slotAt`.
+    // The instant of reminder k of a slot due at `slotAt`: the slot itself
+    // for k = 0, repetition k for 1..Count.
     public DateTimeOffset At(DateTimeOffset slotAt, int k)
     {
-        if (k < 1 || k > Count) throw new ArgumentOutOfRangeException(nameof(k));
-        return slotAt + Delay + Interval * (k - 1);
+        if (k < 0 || k > Count) throw new ArgumentOutOfRangeException(nameof(k));
+        return k == 0 ? slotAt : slotAt + Delay + Interval * (k - 1);
     }
 
     // The last repetition due at `now` (0 when none is due yet: the slot's
@@ -42,8 +43,9 @@ public sealed record DoseRepetition
     public int LatestDue(DateTimeOffset slotAt, DateTimeOffset now)
     {
         if (now < slotAt + Delay) return 0;
-        var k = 1 + (int)((now - slotAt - Delay).Ticks / Interval.Ticks);
-        return Math.Min(k, Count);
+        // In long first: a short interval over a long span overflows int.
+        var k = 1 + (now - slotAt - Delay).Ticks / Interval.Ticks;
+        return (int)Math.Min(k, Count);
     }
 
     // The dedup key of the reminder k of a slot: the slot id alone for the

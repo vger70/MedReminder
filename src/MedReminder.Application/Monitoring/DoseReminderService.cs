@@ -141,7 +141,7 @@ public sealed class DoseReminderService
                 if (fireLocal > now) continue;
 
                 var k = repetition?.LatestDue(fireLocal, now) ?? 0;
-                var dueAt = k == 0 ? fireLocal : repetition!.At(fireLocal, k);
+                var dueAt = repetition?.At(fireLocal, k) ?? fireLocal;
 
                 // Grace window: slot is in the past beyond the window —
                 // treat as missed, do NOT write a dedup row (ANALYSIS-A5 §4.3).

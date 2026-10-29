@@ -313,6 +313,7 @@ public static class NotificationPlanner
         var end = localNow + options.DoseWindow;
         var slots = state.Slots.Where(s => s.Time.HasValue && !s.IsAsNeeded).ToList();
         if (slots.Count == 0) return;
+        var repetition = state.Repetition;
 
         for (var i = 0; ; i++)
         {
@@ -324,12 +325,14 @@ public static class NotificationPlanner
             if (DailyConsumption.RateOn(day, state.Schedule, state.Slots) == 0m) continue;
             if (SuspensionState.IsSuspendedOn(day, state.Suspensions)) continue;
 
+            // The service evaluates only the slots of the current day: a
+            // repetition past midnight is never shown, so none is planned.
+            var dayEnd = AtLocal(day.AddDays(1), TimeOnly.MinValue, zone);
             foreach (var slot in slots)
             {
                 var slotTime = slot.Time!.Value;
                 var slotAt = AtLocal(day, slotTime, zone);
                 if (i == 0 && state.SlotsRecordedToday?.Contains(slot.Id) == true) continue;
-                var repetition = state.Repetition;
                 // The last reminder of the slot shown today: -1 none, 0 the
                 // slot's own, k a repetition.
                 var shown = -1;
@@ -339,11 +342,11 @@ public static class NotificationPlanner
                     if (state.RepetitionsRemindedToday?.TryGetValue(slot.Id, out var k) == true) shown = Math.Max(shown, k);
                 }
                 // Today, the reminders before the last one due are past.
-                var first = i == 0 && repetition is not null ? repetition.LatestDue(slotAt, localNow) : 0;
+                var first = i == 0 ? repetition?.LatestDue(slotAt, localNow) ?? 0 : 0;
                 for (var k = first; k <= (repetition?.Count ?? 0); k++)
                 {
-                    var fireAt = k == 0 ? slotAt : repetition!.At(slotAt, k);
-                    if (fireAt > end) break;
+                    var fireAt = repetition?.At(slotAt, k) ?? slotAt;
+                    if (fireAt > end || fireAt >= dayEnd) break;
                     if (i == 0)
                     {
                         // Already shown, or missed beyond the grace window.
