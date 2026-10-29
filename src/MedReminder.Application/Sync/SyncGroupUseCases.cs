@@ -11,6 +11,9 @@ namespace MedReminder.Application.Sync;
 // versions, a random group key wrapped with the sync passphrase, and the
 // genesis image of the current database. From then on the use cases
 // record operations. The UI that calls it is Phase 3d.
+// No role check (issue #311): household creation runs it in the scope of
+// each profile, User ones included; the desktop caller is the
+// administrator-only Sync dialog.
 public sealed class CreateSyncGroup
 {
     private readonly SyncGenesis _genesis;
@@ -114,6 +117,8 @@ public sealed record SyncGroupDevice(string Name, DateTimeOffset LastSeen);
 // data it had: the caller replaces the local database with the built one
 // (after the same confirmation as an import), then saves the returned
 // settings and key.
+// No role check (issue #311): a device join installs every profile of the
+// circle, User ones included, in that profile's scope.
 public sealed class JoinSyncGroup
 {
     private readonly ISyncSnapshotStore _snapshots;
@@ -398,6 +403,7 @@ public sealed class JoinSyncGroup
 // image. The caller publishes the pending operations of the old
 // generation (SyncEngine.RunAsync) before replacing the database. The
 // other devices find the new genesis on their next run and rebuild.
+// No role check (issue #311): background sync runs it, with no person acting.
 public sealed class ResetSyncGeneration
 {
     private readonly SyncGenesis _genesis;

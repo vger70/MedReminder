@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Application.Sync.Remote;
+using MedReminder.Application.UseCases;
 using MedReminder.Domain.Sync;
 
 namespace MedReminder.Application.Sync;
@@ -24,6 +25,10 @@ namespace MedReminder.Application.Sync;
 //
 // The caller runs the engine first, so the genesis holds this device's
 // latest operations and the latest segments of the other devices.
+//
+// No role check (issue #311): the hosted rotation runs it for each profile
+// with no person acting; the interactive callers are administrator
+// screens (desktop Sync dialog, phone devices page).
 public sealed class RotateSyncKey
 {
     private readonly SyncGenesis _genesis;
@@ -126,9 +131,14 @@ public sealed class SyncPairingOffers
     private readonly ISyncKeyStore _keys;
     private readonly IArchiveCipher _cipher;
     private readonly TimeProvider _clock;
+    private readonly ICurrentProfile _current;
 
-    public SyncPairingOffers(ISyncSettingsStore settings, ISyncKeyStore keys, IArchiveCipher cipher, TimeProvider clock)
+    // current: the profile that shows the code (issue #311). An offer hands
+    // out the group key, which only an administrator does.
+    public SyncPairingOffers(ISyncSettingsStore settings, ISyncKeyStore keys, IArchiveCipher cipher, TimeProvider clock,
+        ICurrentProfile current)
     {
+        _current = current;
         _settings = settings;
         _keys = keys;
         _cipher = cipher;
@@ -138,6 +148,7 @@ public sealed class SyncPairingOffers
     public async Task<SyncPairingOffer> StartAsync(ISyncTransport transport, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(transport);
+        ProfileAdministration.RequireAdmin(_current);
         var settings = _settings.Load() ?? throw new InvalidOperationException("Sync is not enabled for this profile.");
         if (settings.ResetPending) throw new InvalidOperationException("A new sync generation must be started first.");
         // A device waiting for a new key would hand out the old one.

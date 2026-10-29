@@ -292,6 +292,20 @@ public sealed class KeyRotationSyncTests : IDisposable
             .Should().ThrowAsync<InvalidOperationException>();
     }
 
+    // Issue #311: a pairing code hands out the group key, which only an
+    // administrator does.
+    [Fact]
+    public async Task A_user_profile_cannot_show_a_pairing_code()
+    {
+        var a = await CreateGroupAsync();
+        a.Role = ProfileRole.User;
+
+        (await FluentActions.Awaiting(() => a.RunAsync(sp => sp.GetRequiredService<SyncPairingOffers>().StartAsync(
+                Transport, CancellationToken.None)))
+            .Should().ThrowAsync<ProfileAdministrationException>())
+            .Which.Error.Should().Be(ProfileAdministrationError.NotAdmin);
+    }
+
     [Fact]
     public async Task The_devices_list_skips_records_of_the_previous_generation()
     {
