@@ -178,6 +178,9 @@ public sealed class RenameProfile
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
         ArgumentException.ThrowIfNullOrWhiteSpace(newDisplayName);
+        // Issue #311: a User profile renames only itself; another profile
+        // is renamed by an administrator.
+        if (profileId != _current.Id) ProfileAdministration.RequireAdmin(_current);
         var before = _registry.GetById(profileId)?.DisplayName;
         if (profileId != _current.Id)
         {

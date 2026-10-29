@@ -35,6 +35,7 @@ public sealed class SyncConflictsQuery
 // "Restore": writes the losing value of a medicine field again, as a new
 // edit. It becomes the newest version on every device, and since its
 // writer has seen both versions the conflict is cleared everywhere.
+// No role check: any profile resolves its own conflicts (issue #311).
 public sealed class RestoreSyncConflict
 {
     private readonly ISyncConflictRepository _conflicts;
@@ -78,6 +79,7 @@ public sealed class RestoreSyncConflict
 
 // "Dismiss": removes the entry from this device's list. The same register
 // conflict comes back only if a later write makes it a conflict again.
+// No role check: any profile resolves its own conflicts (issue #311).
 public sealed class DismissSyncConflict
 {
     private readonly ISyncConflictRepository _conflicts;
@@ -102,6 +104,8 @@ public sealed class DismissSyncConflict
 // Turns sync off on this device (Phase 3d): the settings and the group
 // key are removed; the profile data stays as it is. The other devices
 // keep syncing; this device's record ages out after 90 days (§5.6).
+// No role check (issue #311): a circle leave runs it in the scope of each
+// profile, User ones included; LeaveHousehold checks the acting profile.
 public sealed class DisableSync
 {
     private readonly ISyncSettingsStore _settings;

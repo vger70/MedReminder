@@ -46,6 +46,21 @@ public class RenameProfileTests
         store.Operations.Should().ContainSingle().Which.Type.Should().Be("ProfileRenamed");
     }
 
+    // Issue #311: a User profile renames itself, not another profile.
+    [Fact]
+    public async Task A_user_profile_renames_only_itself()
+    {
+        var useCase = new RenameProfile(_registry, new FakeCurrent("me", admin: false), new FakeSyncStatus(_synced), _log, _uow);
+
+        await useCase.ExecuteAsync("me", "Lucia", CancellationToken.None);
+        var other = () => useCase.ExecuteAsync("other", "Paolo", CancellationToken.None);
+
+        _registry.Names["me"].Should().Be("Lucia");
+        (await other.Should().ThrowAsync<ProfileAdministrationException>())
+            .Which.Error.Should().Be(ProfileAdministrationError.NotAdmin);
+        _registry.Names["other"].Should().Be("Other");
+    }
+
     [Fact]
     public async Task Keeping_the_same_name_records_nothing()
     {
@@ -89,12 +104,12 @@ public class RenameProfileTests
         public bool IsSyncEnabled(string profileId) => synced.Contains(profileId);
     }
 
-    private sealed class FakeCurrent(string id) : ICurrentProfile
+    private sealed class FakeCurrent(string id, bool admin = true) : ICurrentProfile
     {
         public string Id => id;
         public string DisplayName => "Me";
-        public ProfileRole Role => ProfileRole.Admin;
-        public bool IsAdmin => true;
+        public ProfileRole Role => admin ? ProfileRole.Admin : ProfileRole.User;
+        public bool IsAdmin => admin;
         public string DataDirectory => string.Empty;
         public string DatabasePath => string.Empty;
         public string NotificationSettingsPath => string.Empty;

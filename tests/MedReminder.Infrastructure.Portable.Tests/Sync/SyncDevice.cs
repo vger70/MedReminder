@@ -38,6 +38,8 @@ internal sealed class SyncDevice : IDisposable
         services.AddSingleton<IProfileSettingsStore>(ProfileSettings);
         services.AddSingleton<IEmailNotificationService>(Emails);
         services.AddSingleton<IWindowsNotificationService>(Toasts);
+        // The open profile, administrator unless a test sets Role (#311).
+        services.AddScoped<ICurrentProfile>(_ => new OpenProfile(Name, Role));
         // Household step H4a: the master role reads the installation's
         // household, a household of one here (every device sends).
         services.AddSingleton<IAppDataLocation>(new DataLocation(
@@ -81,6 +83,8 @@ internal sealed class SyncDevice : IDisposable
     // What MedicationMonitor sent from this device.
     public RecordingEmail Emails { get; } = new();
 
+    public ProfileRole Role { get; set; } = ProfileRole.Admin;
+
     public RecordingToasts Toasts { get; } = new();
 
     // What happens while a join run on this device waits between two
@@ -110,6 +114,17 @@ internal sealed class SyncDevice : IDisposable
     {
         _provider.Dispose();
         SqliteConnection.ClearAllPools();
+    }
+
+    private sealed class OpenProfile(string id, ProfileRole role) : ICurrentProfile
+    {
+        public string Id => id;
+        public string DisplayName => id;
+        public ProfileRole Role => role;
+        public bool IsAdmin => role == ProfileRole.Admin;
+        public string DataDirectory => string.Empty;
+        public string DatabasePath => string.Empty;
+        public string NotificationSettingsPath => string.Empty;
     }
 
     private sealed class DataLocation(string directory) : IAppDataLocation

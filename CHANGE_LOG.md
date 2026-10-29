@@ -30,6 +30,27 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## PR #318 — Check the administrator role in the use cases a User profile must not run
+
+**Status:** open
+
+Closes #311. Some administrator-only operations were enforced only by the
+desktop UI hiding the entry.
+
+- **Changed**: `RenameProfile` refuses a User profile renaming another
+  profile (`ProfileAdministrationError.NotAdmin`); a User profile still
+  renames itself, as on the phone. Same rule as `SetProfilePin`.
+- **Changed**: `SyncPairingOffers.StartAsync` refuses a User profile: a
+  pairing code hands out the group key. New constructor parameter
+  `ICurrentProfile` (resolved from DI by both hosts).
+- **Docs**: the use cases left without a check say why: conflict
+  resolution is open to every profile (product decision); `DisableSync`,
+  `CreateSyncGroup`, `JoinSyncGroup` run per profile inside orchestrations
+  that include User profiles; `ResetSyncGeneration` and `RotateSyncKey`
+  run in the background with no person acting.
+
+---
+
 ## PR #316 — Tell a mistyped mrpair1 code apart and read a late pairing file again
 
 **Status:** merged
