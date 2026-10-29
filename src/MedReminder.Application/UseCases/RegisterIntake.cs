@@ -13,7 +13,8 @@ public sealed record RegisterIntakeCommand(
     IntakeStatus Status,
     decimal Quantity,
     string? Notes = null,
-    bool IsExtra = false);
+    bool IsExtra = false,
+    DateTimeOffset? ScheduledAt = null);
 
 // Records a single intake (spec §6) as a fact (B.1 Phase 2c-2): the
 // MedicationIntake row, recorded now. The stock rows follow from the
@@ -30,6 +31,9 @@ public sealed record RegisterIntakeCommand(
 //    an as-needed one. It books its quantity and leaves the day's
 //    automatic consumption in place (docs/analysis/
 //    ANALYSIS-INTRADAY-CONSUMPTION.md §5.3).
+//  - ScheduledAt: the dose slot the intake answers (its time on Day), so
+//    the reminder of that slot is not shown (DoseSlots.Records). Not for
+//    an extra dose, which is on top of the plan.
 // StockEpoch is not incremented: this is not a refill.
 public sealed class RegisterIntake
 {
@@ -71,6 +75,12 @@ public sealed class RegisterIntake
             throw new ArgumentException("Intake quantity must be positive.", nameof(cmd));
         if (cmd.IsExtra && cmd.Status != IntakeStatus.Taken)
             throw new ArgumentException("Only a taken intake can be an extra dose.", nameof(cmd));
+        if (cmd.IsExtra && cmd.ScheduledAt is not null)
+            throw new ArgumentException("An extra dose answers no dose slot.", nameof(cmd));
+        // The slot time on Day, as the recording device reads it
+        // (DoseSlots.Records): one on another day would answer no slot.
+        if (cmd.ScheduledAt is { } at && DateOnly.FromDateTime(at.DateTime) != cmd.Day)
+            throw new ArgumentException("The dose slot time is not on the intake day.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
@@ -80,6 +90,7 @@ public sealed class RegisterIntake
         {
             MedicineId = medicine.Id,
             Day = cmd.Day,
+            ScheduledAt = cmd.ScheduledAt,
             Status = cmd.Status,
             Quantity = cmd.Quantity,
             ActualAt = cmd.Status == IntakeStatus.Taken ? now : null,

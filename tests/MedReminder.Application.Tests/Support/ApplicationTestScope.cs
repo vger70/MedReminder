@@ -243,5 +243,6 @@ internal sealed class ApplicationTestScope
             Email, Windows, Uow, Clock,
             NullLogger<DoseReminderService>.Instance,
             localization: null,
-            graceWindow: graceWindow);
+            graceWindow: graceWindow,
+            intakes: Intakes);
 }

@@ -48,6 +48,13 @@ internal sealed class MedicationIntakeRepository : IMedicationIntakeRepository
             .Distinct()
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<MedicationIntake>> ListForDayAsync(
+        Guid medicineId, DateOnly day, CancellationToken cancellationToken)
+        => await _db.MedicationIntakes
+            .AsNoTracking()
+            .Where(i => i.MedicineId == medicineId && i.Day == day)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken)
     {
         await _db.MedicationIntakes.AddAsync(intake, cancellationToken);
