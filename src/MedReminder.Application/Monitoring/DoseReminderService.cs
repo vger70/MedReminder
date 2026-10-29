@@ -32,6 +32,7 @@ public sealed class DoseReminderService
     private readonly ILocalizationService? _localization;
     private readonly IMasterRole? _master;
     private readonly IMedicationIntakeRepository? _intakes;
+    private readonly IDoseRepetitionPolicy? _repetitions;
 
     // Grace window (ANALYSIS-A5 §4.3): a slot older than this is
     // considered "missed" and silently dropped. Configurable via
@@ -60,8 +61,10 @@ public sealed class DoseReminderService
         ILocalizationService? localization = null,
         TimeSpan? graceWindow = null,
         IMasterRole? master = null,
-        IMedicationIntakeRepository? intakes = null)
+        IMedicationIntakeRepository? intakes = null,
+        IDoseRepetitionPolicy? repetitions = null)
     {
+        _repetitions = repetitions;
         _master = master;
         _intakes = intakes;
         _medicines = medicines;
@@ -119,6 +122,11 @@ public sealed class DoseReminderService
             // repository every slot is evaluated, as before.
             IReadOnlyDictionary<Guid, MedicationIntake>? recorded = null;
 
+            // Repetitions until the slot is recorded (mobile issue #128):
+            // the last one due is shown, once, within the grace window of
+            // its own instant; without a policy only the slot's own.
+            var repetition = _repetitions?.For(medicine);
+
             // Evaluate each timed slot. As-needed slots are taken only
             // when needed: no reminder (ANALYSIS-INTRADAY-CONSUMPTION.md
             // §5.1).
@@ -132,9 +140,12 @@ public sealed class DoseReminderService
                 // Too early: slot hasn't arrived yet.
                 if (fireLocal > now) continue;
 
+                var k = repetition?.LatestDue(fireLocal, now) ?? 0;
+                var dueAt = k == 0 ? fireLocal : repetition!.At(fireLocal, k);
+
                 // Grace window: slot is in the past beyond the window —
                 // treat as missed, do NOT write a dedup row (ANALYSIS-A5 §4.3).
-                if (now - fireLocal > _graceWindow) continue;
+                if (now - dueAt > _graceWindow) continue;
 
                 // Already recorded: nothing to remind.
                 if (_intakes is not null)
@@ -144,7 +155,7 @@ public sealed class DoseReminderService
                     if (recorded.ContainsKey(slot.Id)) continue;
                 }
 
-                var slotKey = slot.Id.ToString();
+                var slotKey = DoseRepetition.SlotKey(slot.Id, k);
                 if (await _events.ExistsAsync(medicine.Id, slotKey, today, cancellationToken))
                 {
                     continue;

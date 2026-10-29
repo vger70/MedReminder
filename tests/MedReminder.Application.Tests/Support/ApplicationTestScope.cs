@@ -229,10 +229,13 @@ internal sealed class ApplicationTestScope
 
     // Builds the NotificationPlanner loader (backlog B0-02) over the same
     // in-memory dependencies.
+    // How dose reminders repeat (mobile issue #128); null: one per slot.
+    public IDoseRepetitionPolicy? Repetitions { get; set; }
+
     public NotificationPlanLoader BuildPlanLoader()
         => new(Medicines, Stock, Schedules, Suspensions, Slots, Notifications, DoseEvents, Intakes, Counts,
             Packages, PackageNoticeEvents, Clock, ProfileSettings, Prescriptions, Dispensations,
-            PrescriptionReminderEvents, Deadlines, DeadlineReminderEvents);
+            PrescriptionReminderEvents, Deadlines, DeadlineReminderEvents, Repetitions);
 
     // Builds a DoseReminderService (A5) wired to the same in-memory
     // dependencies. graceWindow is optional so tests can exercise the
@@ -244,5 +247,6 @@ internal sealed class ApplicationTestScope
             NullLogger<DoseReminderService>.Instance,
             localization: null,
             graceWindow: graceWindow,
-            intakes: Intakes);
+            intakes: Intakes,
+            repetitions: Repetitions);
 }

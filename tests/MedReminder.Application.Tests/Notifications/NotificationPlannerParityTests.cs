@@ -4,6 +4,7 @@ using MedReminder.Application.Notifications;
 using MedReminder.Application.Prescriptions;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
+using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
@@ -333,10 +334,70 @@ public sealed class NotificationPlannerParityTests
             .FireAt.Should().Be(new DateTimeOffset(2027, 3, 28, 3, 0, 0, TimeSpan.FromHours(2)));
     }
 
+    // Mobile issue #128: with a repetition policy, each repetition is planned
+    // at the instant the passes show it (passes every 5 minutes, within the
+    // 10-minute interval), and the dedup keys tell them apart.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Repeated_dose_reminders_match_the_passes(bool delayed)
+    {
+        var scope = new ApplicationTestScope(StartInstant);
+        var repetition = delayed
+            ? new DoseRepetition(TimeSpan.FromMinutes(60), TimeSpan.FromMinutes(10), 2)
+            : DoseRepetition.Repeat(TimeSpan.FromMinutes(10), 3);
+        scope.Repetitions = new FixedRepetition(repetition);
+        var id = await AddAsync(scope, quantity: 40m, perDay: 1, slots: [new(1m, new TimeOnly(8, 0), null)]);
+        var tick = TimeSpan.FromMinutes(5);
+
+        var (planned, shown) = await RunAsync(scope, days: 1, tick);
+
+        var at = new DateTimeOffset(2026, 9, 13, 8, 0, 0, TimeSpan.Zero);
+        var expected = delayed
+            ? new[] { at, at.AddMinutes(60), at.AddMinutes(70) }
+            : new[] { at, at.AddMinutes(10), at.AddMinutes(20), at.AddMinutes(30) };
+        var doses = planned.Where(p => p.Kind == PlannedNotificationKind.DoseReminder).ToList();
+        doses.Select(p => p.FireAt).Should().Equal(expected);
+        doses.Select(p => p.Repetition).Should().Equal(Enumerable.Range(0, expected.Length));
+        shown.Where(s => s.Kind == PlannedNotificationKind.DoseReminder).Select(s => s.At).Should().Equal(expected);
+        scope.DoseEvents.All.Select(e => e.SlotKey).Should().Equal(Enumerable.Range(0, expected.Length)
+            .Select(k => DoseRepetition.SlotKey(scope.Slots.All.Single(s => s.MedicineId == id).Id, k)));
+    }
+
+    // An intake of the slot stops the repetitions, on the passes and in the
+    // plan made after it; a plan made late starts from the last one due.
+    [Fact]
+    public async Task An_intake_stops_the_repetitions_and_a_late_plan_starts_from_the_last_due()
+    {
+        var scope = new ApplicationTestScope(new DateTimeOffset(2026, 9, 13, 8, 25, 0, TimeSpan.Zero));
+        scope.Repetitions = new FixedRepetition(DoseRepetition.Repeat(TimeSpan.FromMinutes(10), 6));
+        var id = await AddAsync(scope, quantity: 40m, perDay: 1, slots: [new(1m, new TimeOnly(8, 0), null)]);
+
+        var late = (await scope.BuildPlanLoader().PlanAsync(null, default))
+            .Where(p => p.Kind == PlannedNotificationKind.DoseReminder && p.Day == Start).ToList();
+        late.Select(p => p.Repetition).Should().Equal(2, 3, 4, 5, 6);
+        late[0].FireAt.Should().Be(scope.Clock.GetUtcNow());
+
+        await scope.BuildDoseReminder().RunAsync(default);
+        scope.DoseEvents.All.Select(e => e.SlotKey).Should().ContainSingle().Which.Should().EndWith("#2");
+
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, Start, IntakeStatus.Taken, 1m,
+            ScheduledAt: new DateTimeOffset(2026, 9, 13, 8, 0, 0, TimeSpan.Zero)), default);
+        scope.Clock.AdvanceBy(TimeSpan.FromMinutes(10));
+        (await scope.BuildDoseReminder().RunAsync(default)).FiredCount.Should().Be(0);
+        (await scope.BuildPlanLoader().PlanAsync(null, default))
+            .Should().NotContain(p => p.Kind == PlannedNotificationKind.DoseReminder && p.Day == Start);
+    }
+
+    private sealed class FixedRepetition(DoseRepetition repetition) : MedReminder.Application.Abstractions.IDoseRepetitionPolicy
+    {
+        public DoseRepetition? For(Medicine medicine) => repetition;
+    }
+
     // ---- harness ----
 
     private static async Task<(IReadOnlyList<PlannedNotification> Planned, IReadOnlyList<Shown> Shown)> RunAsync(
-        ApplicationTestScope scope, int days)
+        ApplicationTestScope scope, int days, TimeSpan? tick = null)
     {
         await scope.ConsumptionCatchUp.RunAsync(default);
         var zone = scope.Clock.LocalTimeZone;
@@ -385,14 +446,14 @@ public sealed class NotificationPlannerParityTests
                 shown.Add(new Shown(kind, target.MedicineId, day, stage, target.SlotTime, at, target, sent.Title,
                     sent.Body));
             }
-            scope.Clock.AdvanceBy(Tick);
+            scope.Clock.AdvanceBy(tick ?? Tick);
         }
 
         texts.Select(t => t.Notice).Should().BeEquivalentTo(planned, o => o.WithStrictOrdering());
         foreach (var text in texts)
         {
             var notice = text.Notice;
-            var match = shown.Single(s => s.Kind == notice.Kind && s.MedicineId == notice.MedicineId
+            var match = shown.First(s => s.Kind == notice.Kind && s.MedicineId == notice.MedicineId
                 && s.Day == notice.Day && s.Target == notice.Target);
             (text.Title, text.Body).Should().Be((match.Title, match.Body), $"the pass shows {notice.Kind} so");
         }

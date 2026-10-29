@@ -34,6 +34,7 @@ public sealed class NotificationPlanLoader
     private readonly IPrescriptionReminderEventRepository? _prescriptionEvents;
     private readonly IDeadlineRepository? _deadlines;
     private readonly IDeadlineReminderEventRepository? _deadlineEvents;
+    private readonly IDoseRepetitionPolicy? _repetitions;
 
     public NotificationPlanLoader(
         IMedicineRepository medicines,
@@ -53,8 +54,10 @@ public sealed class NotificationPlanLoader
         IPrescriptionDispensationRepository? dispensations = null,
         IPrescriptionReminderEventRepository? prescriptionEvents = null,
         IDeadlineRepository? deadlines = null,
-        IDeadlineReminderEventRepository? deadlineEvents = null)
+        IDeadlineReminderEventRepository? deadlineEvents = null,
+        IDoseRepetitionPolicy? repetitions = null)
     {
+        _repetitions = repetitions;
         _deadlines = deadlines;
         _deadlineEvents = deadlineEvents;
         _prescriptionEvents = prescriptionEvents;
@@ -177,6 +180,22 @@ public sealed class NotificationPlanLoader
                     reminded.Add(slot.Id);
                 }
             }
+            // The last repetition of each slot shown today (mobile issue #128).
+            var repetition = medicine.RemindOnDose ? _repetitions?.For(medicine) : null;
+            Dictionary<Guid, int>? repeated = null;
+            if (repetition is not null)
+            {
+                foreach (var slot in DoseSlots.Timed(slots))
+                {
+                    for (var k = repetition.Count; k >= 1; k--)
+                    {
+                        if (!await _doseEvents.ExistsAsync(medicine.Id, DoseRepetition.SlotKey(slot.Id, k), today,
+                                cancellationToken)) continue;
+                        (repeated ??= [])[slot.Id] = k;
+                        break;
+                    }
+                }
+            }
 
             // A repeatable prescription changes a low-stock notice; with the
             // reminder events, any prescription may be reminded before it
@@ -234,7 +253,9 @@ public sealed class NotificationPlanLoader
                 prescriptionsReminded,
                 medicine.RemindOnDose && withIntake.Contains(medicine.Id)
                     ? await RecordedSlotsAsync(medicine.Id, today, slots, cancellationToken)
-                    : null));
+                    : null,
+                repetition,
+                repeated));
         }
         return result;
     }

@@ -36,7 +36,9 @@ public enum PlannedNotificationKind
 // StockEpoch and StockEpochFactId (low stock only): the medicine's stock
 // epoch and the fact that opened it, for the notice's identity
 // (NoticeKeys). PackageNotices (package expiry only): the packages
-// noticed with their expiry, for the same.
+// noticed with their expiry, for the same. Repetition (dose reminder
+// only): 0 for the slot's own reminder, k for its repetition k
+// (DoseRepetition, mobile issue #128).
 public sealed record PlannedNotification(
     PlannedNotificationKind Kind,
     Guid MedicineId,
@@ -55,7 +57,8 @@ public sealed record PlannedNotification(
     DateOnly? ExpiresOn = null,
     int? StockEpoch = null,
     Guid? StockEpochFactId = null,
-    IReadOnlyList<PackageNoticeKey>? PackageNotices = null)
+    IReadOnlyList<PackageNoticeKey>? PackageNotices = null,
+    int Repetition = 0)
 {
     // What the notification is about, for its actions
     // (NotificationActionArguments.ForBody and ButtonsFor), as the desktop
@@ -85,7 +88,9 @@ public sealed record PlannedNotification(
     // alarm that is planned again and cancel the ones no longer planned.
     public string Key => Kind switch
     {
-        PlannedNotificationKind.DoseReminder => $"dose:{MedicineId:N}:{SlotId:N}:{Day:yyyy-MM-dd}",
+        PlannedNotificationKind.DoseReminder => Repetition == 0
+            ? $"dose:{MedicineId:N}:{SlotId:N}:{Day:yyyy-MM-dd}"
+            : $"dose:{MedicineId:N}:{SlotId:N}:{Day:yyyy-MM-dd}:{Repetition}",
         PlannedNotificationKind.LowStock => $"stock:{MedicineId:N}:{Stage}:{Day:yyyy-MM-dd}",
         PlannedNotificationKind.PrescriptionValidity => $"prescription:{PrescriptionId:N}:{ValidUntil:yyyy-MM-dd}",
         PlannedNotificationKind.Deadline => $"deadline:{DeadlineId:N}:{DueOn:yyyy-MM-dd}",
@@ -132,6 +137,10 @@ public sealed record NotificationPlanOptions
 //    device (IPrescriptionReminderEventRepository); null for none.
 //  - SlotsRecordedToday: slots an intake of today answers
 //    (DoseSlots.Records); their reminder is not planned. Null for none.
+//  - Repetition: how the dose reminders repeat until the slot is recorded
+//    (IDoseRepetitionPolicy); null for one reminder per slot.
+//  - RepetitionsRemindedToday: per slot, the last repetition shown today
+//    (a DoseReminderEvent keyed DoseRepetition.SlotKey); null for none.
 public sealed record MedicinePlanState(
     Medicine Medicine,
     decimal CurrentStock,
@@ -146,7 +155,9 @@ public sealed record MedicinePlanState(
     IReadOnlyList<Prescription>? Prescriptions = null,
     IReadOnlyDictionary<Guid, int>? DispensationsCollected = null,
     IReadOnlySet<PrescriptionReminderKey>? PrescriptionsReminded = null,
-    IReadOnlySet<Guid>? SlotsRecordedToday = null);
+    IReadOnlySet<Guid>? SlotsRecordedToday = null,
+    DoseRepetition? Repetition = null,
+    IReadOnlyDictionary<Guid, int>? RepetitionsRemindedToday = null);
 
 public readonly record struct PackageNoticeKey(Guid PackageId, DateOnly EffectiveExpiry, int Stage);
 
@@ -292,7 +303,10 @@ public static class NotificationPlanner
 
     // DoseReminderService gates, per day: stock above zero, inside the
     // therapy window, a positive rate, not suspended; then each timed slot
-    // that is not as-needed.
+    // that is not as-needed, with its repetitions (mobile issue #128). Today,
+    // as the service does: only the last reminder of a slot already due is
+    // planned (now), each within the grace window of its own instant, and
+    // none already shown or for a recorded slot.
     private static void PlanDoses(MedicinePlanState state, decimal[] stock, DateOnly today,
         DateTimeOffset localNow, TimeZoneInfo zone, NotificationPlanOptions options, List<PlannedNotification> result)
     {
@@ -313,18 +327,32 @@ public static class NotificationPlanner
             foreach (var slot in slots)
             {
                 var slotTime = slot.Time!.Value;
-                var fireAt = AtLocal(day, slotTime, zone);
-                if (fireAt > end) continue;
+                var slotAt = AtLocal(day, slotTime, zone);
+                if (i == 0 && state.SlotsRecordedToday?.Contains(slot.Id) == true) continue;
+                var repetition = state.Repetition;
+                // The last reminder of the slot shown today: -1 none, 0 the
+                // slot's own, k a repetition.
+                var shown = -1;
                 if (i == 0)
                 {
-                    // Missed beyond the grace window, already reminded, or
-                    // already recorded.
-                    if (localNow - fireAt > options.DoseGraceWindow) continue;
-                    if (state.SlotsRemindedToday.Contains(slot.Id)) continue;
-                    if (state.SlotsRecordedToday?.Contains(slot.Id) == true) continue;
+                    if (state.SlotsRemindedToday.Contains(slot.Id)) shown = 0;
+                    if (state.RepetitionsRemindedToday?.TryGetValue(slot.Id, out var k) == true) shown = Math.Max(shown, k);
                 }
-                result.Add(new PlannedNotification(PlannedNotificationKind.DoseReminder, state.Medicine.Id, day,
-                    fireAt < localNow ? localNow : fireAt, SlotId: slot.Id, SlotTime: slotTime));
+                // Today, the reminders before the last one due are past.
+                var first = i == 0 && repetition is not null ? repetition.LatestDue(slotAt, localNow) : 0;
+                for (var k = first; k <= (repetition?.Count ?? 0); k++)
+                {
+                    var fireAt = k == 0 ? slotAt : repetition!.At(slotAt, k);
+                    if (fireAt > end) break;
+                    if (i == 0)
+                    {
+                        // Already shown, or missed beyond the grace window.
+                        if (k <= shown) continue;
+                        if (localNow - fireAt > options.DoseGraceWindow) continue;
+                    }
+                    result.Add(new PlannedNotification(PlannedNotificationKind.DoseReminder, state.Medicine.Id, day,
+                        fireAt < localNow ? localNow : fireAt, SlotId: slot.Id, SlotTime: slotTime, Repetition: k));
+                }
             }
         }
     }
