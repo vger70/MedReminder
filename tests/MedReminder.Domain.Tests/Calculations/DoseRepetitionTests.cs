@@ -48,5 +48,7 @@ public class DoseRepetitionTests
         act.Should().Throw<ArgumentOutOfRangeException>();
         ((Action)(() => DoseRepetition.Repeat(TimeSpan.FromMinutes(10), 0))).Should().Throw<ArgumentOutOfRangeException>();
         ((Action)(() => DoseRepetition.Repeat(TimeSpan.FromMinutes(10), 100))).Should().Throw<ArgumentOutOfRangeException>();
+        ((Action)(() => DoseRepetition.Repeat(TimeSpan.FromHours(1), 25))).Should().Throw<ArgumentOutOfRangeException>();
+        ((Action)(() => DoseRepetition.Repeat(TimeSpan.MaxValue, 1))).Should().Throw<ArgumentOutOfRangeException>();
     }
 }

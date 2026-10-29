@@ -204,6 +204,31 @@ public class DoseReminderServiceTests
         scope.DoseEvents.All.Single().Channel.Should().Be(NotificationChannels.Email);
     }
 
+    // Mobile issue #128: a repetition is a device notification only.
+    [Fact]
+    public async Task A_repetition_sends_no_email()
+    {
+        var scope = new ApplicationTestScope(JustAfterSlot);
+        scope.Repetitions = new FixedRepetition(MedReminder.Domain.Calculations.DoseRepetition.Repeat(TimeSpan.FromMinutes(10), 3));
+        _ = await SeedAsync(scope, channels: NotificationChannels.Windows | NotificationChannels.Email);
+        var service = scope.BuildDoseReminder();
+
+        await service.RunAsync(CancellationToken.None);
+        scope.Clock.AdvanceBy(TimeSpan.FromMinutes(10));
+        var repeated = await service.RunAsync(CancellationToken.None);
+
+        repeated.FiredCount.Should().Be(1);
+        scope.Windows.Sent.Should().HaveCount(2);
+        scope.Email.Sent.Should().ContainSingle();
+        scope.DoseEvents.All[1].Channel.Should().Be(NotificationChannels.Windows);
+    }
+
+    private sealed class FixedRepetition(MedReminder.Domain.Calculations.DoseRepetition repetition)
+        : MedReminder.Application.Abstractions.IDoseRepetitionPolicy
+    {
+        public MedReminder.Domain.Calculations.DoseRepetition? For(Medicine medicine) => repetition;
+    }
+
     [Fact]
     public async Task Both_channels_dispatch_both()
     {

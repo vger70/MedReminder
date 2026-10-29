@@ -165,6 +165,8 @@ public sealed class NotificationPlanLoader
         var booked = new HashSet<Guid>(withIntake);
         booked.UnionWith(await _counts.ListMedicinesWithMaterializedCountAsync(today, cancellationToken));
 
+        var zone = _clock.LocalTimeZone;
+        var localNow = _clock.GetLocalNow();
         var result = new List<MedicinePlanState>();
         foreach (var medicine in await _medicines.ListAllAsync(cancellationToken))
         {
@@ -187,8 +189,6 @@ public sealed class NotificationPlanLoader
             Dictionary<Guid, int>? repeated = null;
             if (repetition is not null)
             {
-                var zone = _clock.LocalTimeZone;
-                var localNow = TimeZoneInfo.ConvertTime(_clock.GetUtcNow(), zone);
                 foreach (var slot in DoseSlots.Timed(slots))
                 {
                     var due = repetition.LatestDue(DoseSlots.AtLocal(today, slot.Time!.Value, zone), localNow);

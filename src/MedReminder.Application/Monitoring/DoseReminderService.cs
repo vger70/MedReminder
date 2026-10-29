@@ -162,7 +162,9 @@ public sealed class DoseReminderService
                 }
 
                 // Dispatch notification.
-                var channels = await DispatchAsync(medicine, slotTime, cancellationToken);
+                // A repetition is a device notification only: no e-mail
+                // for each one.
+                var channels = await DispatchAsync(medicine, slotTime, cancellationToken, deviceOnly: k > 0);
                 if (channels == NotificationChannels.None) continue;
 
                 await _events.AddAsync(new DoseReminderEvent
@@ -197,9 +199,11 @@ public sealed class DoseReminderService
     private async Task<NotificationChannels> DispatchAsync(
         Medicine medicine,
         TimeOnly slotTime,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool deviceOnly = false)
     {
         var channels = medicine.NotificationChannels;
+        if (deviceOnly) channels &= NotificationChannels.Windows;
         var dispatched = NotificationChannels.None;
         // Household step H4a: only the master sends email.
         if ((channels & NotificationChannels.Email) != 0 && _master is not null

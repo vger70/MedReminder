@@ -468,12 +468,19 @@ public sealed class NotificationPlannerParityTests
         }
 
         texts.Select(t => t.Notice).Should().BeEquivalentTo(planned, o => o.WithStrictOrdering());
-        foreach (var text in texts)
+        // The repetitions of a slot share its target: the n-th notice of a
+        // target matches the n-th one the passes show, and each is shown
+        // exactly as often as it is planned.
+        for (var i = 0; i < texts.Count; i++)
         {
-            var notice = text.Notice;
-            var match = shown.First(s => s.Kind == notice.Kind && s.MedicineId == notice.MedicineId
-                && s.Day == notice.Day && s.Target == notice.Target);
-            (text.Title, text.Body).Should().Be((match.Title, match.Body), $"the pass shows {notice.Kind} so");
+            var notice = texts[i].Notice;
+            bool Same(PlannedNotification n) => n.Kind == notice.Kind && n.MedicineId == notice.MedicineId
+                && n.Day == notice.Day && n.Target == notice.Target;
+            var matches = shown.Where(s => s.Kind == notice.Kind && s.MedicineId == notice.MedicineId
+                && s.Day == notice.Day && s.Target == notice.Target).ToList();
+            matches.Should().HaveCount(texts.Count(t => Same(t.Notice)));
+            var match = matches[texts.Take(i).Count(t => Same(t.Notice))];
+            (texts[i].Title, texts[i].Body).Should().Be((match.Title, match.Body), $"the pass shows {notice.Kind} so");
         }
         return (planned, shown);
     }

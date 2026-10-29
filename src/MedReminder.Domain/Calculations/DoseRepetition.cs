@@ -11,11 +11,18 @@ public sealed record DoseRepetition
     // slot id and "#k") fits DoseReminderEvents.SlotKey (40 characters).
     public const int MaxCount = 99;
 
+    // The repetitions of a slot end within this after it: the passes
+    // evaluate the current day only, and the instants stay far from the
+    // limits of DateTimeOffset.
+    public static readonly TimeSpan MaxSpan = TimeSpan.FromDays(1);
+
     public DoseRepetition(TimeSpan delay, TimeSpan interval, int count)
     {
         if (delay <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(delay));
         if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
         if (count is < 1 or > MaxCount) throw new ArgumentOutOfRangeException(nameof(count));
+        if (delay > MaxSpan || interval > MaxSpan || delay + interval * (count - 1) > MaxSpan)
+            throw new ArgumentOutOfRangeException(nameof(interval), "The repetitions must end within a day.");
         Delay = delay;
         Interval = interval;
         Count = count;

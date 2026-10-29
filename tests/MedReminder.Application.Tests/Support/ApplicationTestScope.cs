@@ -227,11 +227,11 @@ internal sealed class ApplicationTestScope
         Cutoff.Cutoff = new LedgerCutoff { CutoffDay = cutoffDay, FrozenAt = now };
     }
 
-    // Builds the NotificationPlanner loader (backlog B0-02) over the same
-    // in-memory dependencies.
     // How dose reminders repeat (mobile issue #128); null: one per slot.
     public IDoseRepetitionPolicy? Repetitions { get; set; }
 
+    // Builds the NotificationPlanner loader (backlog B0-02) over the same
+    // in-memory dependencies.
     public NotificationPlanLoader BuildPlanLoader()
         => new(Medicines, Stock, Schedules, Suspensions, Slots, Notifications, DoseEvents, Intakes, Counts,
             Packages, PackageNoticeEvents, Clock, ProfileSettings, Prescriptions, Dispensations,
