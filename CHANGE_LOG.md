@@ -42,7 +42,7 @@ with the classification adapted to per-PR granularity: **Added**,
 - **Fixed**: a device holding the newer key of a group grants it again
   to active devices whose grant was already replaced by an older key.
 
-## PR #TBD — Repeat a dose reminder until its slot is recorded
+## PR #320 — Repeat a dose reminder until its slot is recorded
 
 **Status:** open
 
