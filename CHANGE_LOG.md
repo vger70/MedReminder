@@ -30,6 +30,18 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## [PR #319](https://github.com/vger70/MedReminder/pull/319) — Keep a newer profile grant when a device adopts its old key
+
+**Status:** open
+
+- **Fixed**: after a device removal rotated a profile group, a remaining
+  device's household run replaced its newer profile grant (and the
+  escrow) with the old key it still held, so taking the new key found
+  nothing and sync stayed stopped. `HouseholdKeyring.AdoptProfileGroupsAsync`
+  now keeps a grant or escrow of the same group with a newer key.
+- **Fixed**: a device holding the newer key of a group grants it again
+  to active devices whose grant was already replaced by an older key.
+
 ## PR #318 — Check the administrator role in the use cases a User profile must not run
 
 **Status:** merged
