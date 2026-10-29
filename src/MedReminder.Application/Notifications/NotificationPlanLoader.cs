@@ -34,6 +34,7 @@ public sealed class NotificationPlanLoader
     private readonly IPrescriptionReminderEventRepository? _prescriptionEvents;
     private readonly IDeadlineRepository? _deadlines;
     private readonly IDeadlineReminderEventRepository? _deadlineEvents;
+    private readonly IDoseRepetitionPolicy? _repetitions;
 
     public NotificationPlanLoader(
         IMedicineRepository medicines,
@@ -53,8 +54,10 @@ public sealed class NotificationPlanLoader
         IPrescriptionDispensationRepository? dispensations = null,
         IPrescriptionReminderEventRepository? prescriptionEvents = null,
         IDeadlineRepository? deadlines = null,
-        IDeadlineReminderEventRepository? deadlineEvents = null)
+        IDeadlineReminderEventRepository? deadlineEvents = null,
+        IDoseRepetitionPolicy? repetitions = null)
     {
+        _repetitions = repetitions;
         _deadlines = deadlines;
         _deadlineEvents = deadlineEvents;
         _prescriptionEvents = prescriptionEvents;
@@ -162,6 +165,8 @@ public sealed class NotificationPlanLoader
         var booked = new HashSet<Guid>(withIntake);
         booked.UnionWith(await _counts.ListMedicinesWithMaterializedCountAsync(today, cancellationToken));
 
+        var zone = _clock.LocalTimeZone;
+        var localNow = _clock.GetLocalNow();
         var result = new List<MedicinePlanState>();
         foreach (var medicine in await _medicines.ListAllAsync(cancellationToken))
         {
@@ -175,6 +180,25 @@ public sealed class NotificationPlanLoader
                 if (await _doseEvents.ExistsAsync(medicine.Id, slot.Id.ToString(), today, cancellationToken))
                 {
                     reminded.Add(slot.Id);
+                }
+            }
+            // The last repetition of each slot shown today (mobile issue #128).
+            // Only one already due can have been shown: a slot still ahead
+            // reads nothing.
+            var repetition = medicine.RemindOnDose ? _repetitions?.For(medicine) : null;
+            Dictionary<Guid, int>? repeated = null;
+            if (repetition is not null)
+            {
+                foreach (var slot in DoseSlots.Timed(slots))
+                {
+                    var due = repetition.LatestDue(DoseSlots.AtLocal(today, slot.Time!.Value, zone), localNow);
+                    for (var k = due; k >= 1; k--)
+                    {
+                        if (!await _doseEvents.ExistsAsync(medicine.Id, DoseRepetition.SlotKey(slot.Id, k), today,
+                                cancellationToken)) continue;
+                        (repeated ??= [])[slot.Id] = k;
+                        break;
+                    }
                 }
             }
 
@@ -234,7 +258,9 @@ public sealed class NotificationPlanLoader
                 prescriptionsReminded,
                 medicine.RemindOnDose && withIntake.Contains(medicine.Id)
                     ? await RecordedSlotsAsync(medicine.Id, today, slots, cancellationToken)
-                    : null));
+                    : null,
+                repetition,
+                repeated));
         }
         return result;
     }
