@@ -32,7 +32,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ## PR #318 — Check the administrator role in the use cases a User profile must not run
 
-**Status:** open
+**Status:** merged
 
 Closes #311. Some administrator-only operations were enforced only by the
 desktop UI hiding the entry.
