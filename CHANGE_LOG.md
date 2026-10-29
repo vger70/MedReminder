@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## PR #TBD — Check the administrator role in the use cases a User profile must not run
+## PR #318 — Check the administrator role in the use cases a User profile must not run
 
 **Status:** open
 
