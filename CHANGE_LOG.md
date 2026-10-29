@@ -42,6 +42,28 @@ with the classification adapted to per-PR granularity: **Added**,
 - **Fixed**: a device holding the newer key of a group grants it again
   to active devices whose grant was already replaced by an older key.
 
+## PR #TBD — Repeat a dose reminder until its slot is recorded
+
+**Status:** open
+
+For medreminder-mobile #128 (phase 1). A dose reminder was shown once; if
+it was ignored, the slot was dropped after the grace window.
+
+- **Added**: `DoseRepetition` (Domain): delay, interval and count of the
+  repetitions of a dose reminder; repetition k fires at slot + delay +
+  (k - 1) interval.
+- **Added**: `IDoseRepetitionPolicy` (Application, optional): the
+  repetition of each medicine. `NotificationPlanner` plans the
+  repetitions of an unrecorded slot (`PlannedNotification.Repetition`,
+  `MedicinePlanState.Repetition`, `RepetitionsRemindedToday`);
+  `DoseReminderService` shows the last one due once, keyed
+  `<slot>#<k>` in `DoseReminderEvents` (no schema change). Any intake of
+  the slot stops them.
+- **Changed**: nothing for the desktop, which registers no policy: one
+  reminder per slot, as before.
+
+---
+
 ## PR #318 — Check the administrator role in the use cases a User profile must not run
 
 **Status:** merged
