@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## [PR #322](https://github.com/vger70/MedReminder/pull/322) — Let RegisterIntake refuse a dose slot already recorded
+
+**Status:** open
+
+- **Fixed**: a dose slot could be recorded twice when a caller that
+  checks it first (the mobile notification actions) raced another
+  caller (the intake form): the check ran outside `WriteGate`.
+  `RegisterIntakeCommand.RequireSlotOpen` moves it inside the gate and
+  throws `DoseSlotAlreadyRecordedException`, writing nothing. Without
+  the flag nothing changes; the desktop app does not set it (#321).
+- **Changed**: `RegisterIntake` takes
+  `IMedicationAdministrationSlotRepository`.
+
 ## [PR #319](https://github.com/vger70/MedReminder/pull/319) — Keep a newer profile grant when a device adopts its old key
 
 **Status:** open
