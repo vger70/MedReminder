@@ -188,6 +188,7 @@ public class EndToEndUseCaseTests
             await new RegisterIntake(
                 new MedicineRepository(ctx),
                 new MedicationIntakeRepository(ctx),
+                new MedicationAdministrationSlotRepository(ctx),
                 LedgerFor(ctx, clock),
                 TestOperationLog.For(ctx), new UnitOfWork(ctx),
                 clock).ExecuteAsync(

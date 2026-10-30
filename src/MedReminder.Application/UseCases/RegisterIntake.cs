@@ -14,7 +14,18 @@ public sealed record RegisterIntakeCommand(
     decimal Quantity,
     string? Notes = null,
     bool IsExtra = false,
-    DateTimeOffset? ScheduledAt = null);
+    DateTimeOffset? ScheduledAt = null,
+    bool RequireSlotOpen = false);
+
+// RequireSlotOpen (issue #321): the dose slot named by ScheduledAt is
+// already answered by an intake of the day (DoseSlots.Records). Nothing
+// was written.
+public sealed class DoseSlotAlreadyRecordedException(Guid intakeId)
+    : InvalidOperationException("The dose slot is already recorded.")
+{
+    // The intake that answers the slot.
+    public Guid IntakeId { get; } = intakeId;
+}
 
 // Records a single intake (spec §6) as a fact (B.1 Phase 2c-2): the
 // MedicationIntake row, recorded now. The stock rows follow from the
@@ -34,11 +45,17 @@ public sealed record RegisterIntakeCommand(
 //  - ScheduledAt: the dose slot the intake answers (its time on Day), so
 //    the reminder of that slot is not shown (DoseSlots.Records). Not for
 //    an extra dose, which is on top of the plan.
+//  - RequireSlotOpen (issue #321): refuse when the slot ScheduledAt
+//    names is already answered, checked inside the gate, so two callers
+//    (a notification action and the form) cannot both read the slot as
+//    open and both record it. Without it a second intake for a covered
+//    slot is recorded, as before.
 // StockEpoch is not incremented: this is not a refill.
 public sealed class RegisterIntake
 {
     private readonly IMedicineRepository _medicines;
     private readonly IMedicationIntakeRepository _intakes;
+    private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly LedgerSynchronizer _ledger;
     private readonly IOperationLog _operations;
     private readonly IUnitOfWork _uow;
@@ -47,6 +64,7 @@ public sealed class RegisterIntake
     public RegisterIntake(
         IMedicineRepository medicines,
         IMedicationIntakeRepository intakes,
+        IMedicationAdministrationSlotRepository slots,
         LedgerSynchronizer ledger,
         IOperationLog operations,
         IUnitOfWork uow,
@@ -54,6 +72,7 @@ public sealed class RegisterIntake
     {
         _medicines = medicines;
         _intakes = intakes;
+        _slots = slots;
         _ledger = ledger;
         _operations = operations;
         _uow = uow;
@@ -81,6 +100,8 @@ public sealed class RegisterIntake
         // (DoseSlots.Records): one on another day would answer no slot.
         if (cmd.ScheduledAt is { } at && DateOnly.FromDateTime(at.DateTime) != cmd.Day)
             throw new ArgumentException("The dose slot time is not on the intake day.", nameof(cmd));
+        if (cmd.RequireSlotOpen && cmd.ScheduledAt is null)
+            throw new ArgumentException("Only an intake for a dose slot can require it open.", nameof(cmd));
 
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
@@ -98,6 +119,8 @@ public sealed class RegisterIntake
             RecordedAt = now,
             IsExtra = cmd.IsExtra,
         };
+
+        if (cmd.RequireSlotOpen) await EnsureSlotOpenAsync(intake, cancellationToken);
 
         var before = await _ledger.LoadFactsAsync(medicine, cancellationToken);
         var after = before with
@@ -131,5 +154,39 @@ public sealed class RegisterIntake
         await _operations.AppendAsync([Operations.Intake(intake)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
         return intake.Id;
+    }
+
+    // The slot the new intake names, read as DoseSlots.Records reads it
+    // among the day's intakes: read last, it answers a slot only when no
+    // other intake does. With several timed slots a ScheduledAt that
+    // names none (changed since) is not refused; with a single timed slot
+    // it names that slot (DoseSlots.Records) and is checked.
+    private async Task EnsureSlotOpenAsync(MedicationIntake intake, CancellationToken cancellationToken)
+    {
+        var slots = await _slots.ListForMedicineAsync(intake.MedicineId, cancellationToken);
+        var zone = _ledger.Zone;
+        var named = DoseSlots.Records(intake.Day, slots, [intake], zone);
+        if (named.Count == 0) return;
+        var day = await _intakes.ListForDayAsync(intake.MedicineId, intake.Day, cancellationToken);
+        // Records orders by RecordedAt, and an intake synced from another
+        // device carries that device's clock, which can be ahead of this
+        // one: the new intake is read last whatever the clocks say, so an
+        // intake already stored always answers the slot first.
+        var last = day.Count == 0 ? intake.RecordedAt : day.Max(i => i.RecordedAt);
+        var probe = last <= intake.RecordedAt ? intake : new MedicationIntake
+        {
+            Id = intake.Id,
+            MedicineId = intake.MedicineId,
+            Day = intake.Day,
+            ScheduledAt = intake.ScheduledAt,
+            Status = intake.Status,
+            Quantity = intake.Quantity,
+            IsExtra = intake.IsExtra,
+            RecordedAt = last,
+        };
+        var records = DoseSlots.Records(intake.Day, slots, [.. day, probe], zone);
+        if (records.Values.Any(i => i.Id == intake.Id)) return;
+        var slotId = named.Keys.Single();
+        throw new DoseSlotAlreadyRecordedException(records[slotId].Id);
     }
 }

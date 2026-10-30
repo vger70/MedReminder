@@ -190,4 +190,208 @@ public class RegisterIntakeTests
         var movements = await scope.Stock.ListForMedicineAsync(id, CancellationToken.None);
         movements.Should().NotContain(m => m.Kind == StockMovementKind.PositiveCorrection);
     }
+
+    // Issue #321: RequireSlotOpen refuses, inside the write gate, a dose
+    // slot an intake of the day already answers.
+    private static Task<Guid> SeedTwoSlotsAsync(ApplicationTestScope scope)
+        => scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Enalapril", "compresse", 1m, 2, new DateOnly(2026, 9, 1), 7, NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots:
+            [
+                new AdministrationSlotInput(1m, new TimeOnly(8, 0), null),
+                new AdministrationSlotInput(1m, new TimeOnly(20, 0), null),
+            ]), CancellationToken.None);
+
+    private static readonly DateOnly SlotDay = new(2026, 9, 13);
+    private static readonly DateTimeOffset Morning = new(2026, 9, 13, 8, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task A_slot_required_open_is_refused_once_recorded()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        var first = await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning), CancellationToken.None);
+        var stock = (await scope.Stock.ListForMedicineAsync(id, CancellationToken.None)).Sum(m => m.QuantityDelta);
+
+        var refused = await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
+                new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning, RequireSlotOpen: true),
+                CancellationToken.None))
+            .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
+
+        refused.Which.IntakeId.Should().Be(first);
+        scope.Intakes.All.Should().ContainSingle();
+        (await scope.Stock.ListForMedicineAsync(id, CancellationToken.None)).Sum(m => m.QuantityDelta).Should().Be(stock);
+    }
+
+    [Fact]
+    public async Task A_slot_required_open_is_recorded_while_open()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning), CancellationToken.None);
+
+        // The other slot of the day is still open.
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Skipped, 1m, ScheduledAt: Morning.AddHours(12),
+                RequireSlotOpen: true), CancellationToken.None);
+
+        scope.Intakes.All.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Without_the_flag_a_covered_slot_is_recorded_again()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning), CancellationToken.None);
+
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning), CancellationToken.None);
+
+        scope.Intakes.All.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task A_slot_time_that_names_no_slot_is_not_refused()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning), CancellationToken.None);
+
+        // 09:00 is no slot time (changed since): which dose is not known.
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning.AddHours(1),
+                RequireSlotOpen: true), CancellationToken.None);
+
+        scope.Intakes.All.Should().HaveCount(2);
+    }
+
+    // An intake synced from a device whose clock is ahead carries a later
+    // RecordedAt than the new one: the slot is still already recorded.
+    [Fact]
+    public async Task A_slot_recorded_with_a_later_clock_is_refused()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        var synced = new MedicationIntake
+        {
+            MedicineId = id,
+            Day = SlotDay,
+            ScheduledAt = Morning,
+            Status = IntakeStatus.Taken,
+            Quantity = 1m,
+            RecordedAt = scope.Clock.GetUtcNow().AddMinutes(5),
+        };
+        await scope.Intakes.AddAsync(synced, CancellationToken.None);
+        var first = synced.Id;
+
+        var refused = await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
+                new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning, RequireSlotOpen: true),
+                CancellationToken.None))
+            .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
+
+        refused.Which.IntakeId.Should().Be(first);
+        scope.Intakes.All.Should().ContainSingle();
+    }
+
+    // A single timed slot is the only dose an intake of the day can mean
+    // (DoseSlots.Records): an intake from the medicine, without a slot
+    // time, answers it, and a slot time that no longer matches names it.
+    [Fact]
+    public async Task A_single_slot_answered_without_a_slot_time_is_refused()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Eutirox", "compresse", 1m, 1, new DateOnly(2026, 9, 1), 7, NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots: [new AdministrationSlotInput(1m, new TimeOnly(8, 0), null)]), CancellationToken.None);
+        var first = await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m), CancellationToken.None);
+
+        var refused = await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
+                new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning.AddHours(1),
+                    RequireSlotOpen: true),
+                CancellationToken.None))
+            .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
+
+        refused.Which.IntakeId.Should().Be(first);
+        scope.Intakes.All.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Requiring_a_slot_open_needs_a_slot_time()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+
+        await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
+                new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, RequireSlotOpen: true),
+                CancellationToken.None))
+            .Should().ThrowAsync<ArgumentException>();
+    }
+
+    // Two callers that both read the slot as open before either commits:
+    // the gate lets one record it.
+    [Fact]
+    public async Task Two_concurrent_callers_record_a_slot_once()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        var command = new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning,
+            RequireSlotOpen: true);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 2).Select(_ => Task.Run(async () =>
+        {
+            try
+            {
+                await scope.RegisterIntake.ExecuteAsync(command, CancellationToken.None);
+                return true;
+            }
+            catch (DoseSlotAlreadyRecordedException)
+            {
+                return false;
+            }
+        })));
+
+        results.Count(r => r).Should().Be(1);
+        scope.Intakes.All.Should().ContainSingle();
+    }
+
+    // Issue #312: on the day the clock skips 02:00-03:00, 02:30 and 03:00
+    // fire at the same instant. The second intake for it takes the other
+    // slot, as DoseSlots.Records does; only a third is refused.
+    [Fact]
+    public async Task Two_slots_at_the_same_instant_are_recorded_once_each()
+    {
+        var rule = TimeZoneInfo.AdjustmentRule.CreateAdjustmentRule(
+            DateTime.MinValue.Date, DateTime.MaxValue.Date, TimeSpan.FromHours(1),
+            TimeZoneInfo.TransitionTime.CreateFloatingDateRule(new DateTime(1, 1, 1, 2, 0, 0), 3, 5, DayOfWeek.Sunday),
+            TimeZoneInfo.TransitionTime.CreateFloatingDateRule(new DateTime(1, 1, 1, 3, 0, 0), 10, 5, DayOfWeek.Sunday));
+        var zone = TimeZoneInfo.CreateCustomTimeZone("Test/CentralEurope", TimeSpan.FromHours(1), "Test CET", "Test CET",
+            "Test CEST", [rule]);
+        var scope = new ApplicationTestScope(new DateTimeOffset(2027, 3, 28, 6, 0, 0, TimeSpan.Zero), zone);
+        var day = new DateOnly(2027, 3, 28);
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Enalapril", "compresse", 1m, 2, day, 7, NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots:
+            [
+                new AdministrationSlotInput(1m, new TimeOnly(2, 30), null),
+                new AdministrationSlotInput(1m, new TimeOnly(3, 0), null),
+            ]), CancellationToken.None);
+        var at = new DateTimeOffset(2027, 3, 28, 3, 0, 0, TimeSpan.FromHours(2));
+        var command = new RegisterIntakeCommand(id, day, IntakeStatus.Taken, 1m, ScheduledAt: at, RequireSlotOpen: true);
+
+        await scope.RegisterIntake.ExecuteAsync(command, CancellationToken.None);
+        await scope.RegisterIntake.ExecuteAsync(command, CancellationToken.None);
+        await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(command, CancellationToken.None))
+            .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
+
+        scope.Intakes.All.Should().HaveCount(2);
+    }
 }
