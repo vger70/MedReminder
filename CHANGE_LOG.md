@@ -30,6 +30,19 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## [PR #326](https://github.com/vger70/MedReminder/pull/326) — Add a period read of a medicine's intakes
+
+**Status:** open
+
+- **Added**: `IMedicationIntakeRepository.ListForMedicineBetweenAsync`,
+  a range read of one medicine's intakes on the existing
+  `(MedicineId, Day)` index, with a default over `ListForMedicineAsync`.
+  The mobile intake log (mobile #153) read the whole history of every
+  medicine; the range read cuts that from about 300 ms to 16–44 ms on a
+  two-year test database.
+- **Fixed**: a database created before the intake `Day` column lacked
+  the `(MedicineId, Day)` index; a boot patch now creates it.
+
 ## [PR #324](https://github.com/vger70/MedReminder/pull/324) — Resolve an intake's slot time from its day's set, then the latest set
 
 **Status:** open

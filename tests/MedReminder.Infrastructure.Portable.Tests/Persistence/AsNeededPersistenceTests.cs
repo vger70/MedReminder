@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Application.Migrations;
 using MedReminder.Application.UseCases;
@@ -254,5 +255,87 @@ public class IntradayRepositoryTests
             .Should().ContainSingle().Which.ScheduledAt;
         read.Should().Be(slot);
         read!.Value.Offset.Should().Be(TimeSpan.Zero);
+    }
+
+    // The intakes of one medicine over a period (mobile issue #153): both
+    // ends included, other days and other medicines left out, by day.
+    [Fact]
+    public async Task The_intakes_of_a_period_are_read_by_day()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var id = await SeedMedicineAsync(ctx);
+        var other = await SeedMedicineAsync(ctx);
+        // Written out of day order, so the read has to sort them.
+        foreach (var offset in new[] { 0, -1, -3, -4 })
+        {
+            ctx.MedicationIntakes.Add(new MedicationIntake
+                { MedicineId = id, Day = Today.AddDays(offset), Quantity = 1m, Status = IntakeStatus.Taken });
+        }
+        ctx.MedicationIntakes.Add(new MedicationIntake
+            { MedicineId = other, Day = Today.AddDays(-1), Quantity = 1m, Status = IntakeStatus.Taken });
+        await ctx.SaveChangesAsync();
+        var repository = new MedicationIntakeRepository(ctx);
+
+        var read = await repository.ListForMedicineBetweenAsync(id, Today.AddDays(-3), Today.AddDays(-1), default);
+
+        read.Select(i => i.Day).Should().Equal(Today.AddDays(-3), Today.AddDays(-1));
+        read.Should().OnlyContain(i => i.MedicineId == id);
+        // The interface default, over the whole history, reads the same.
+        IMedicationIntakeRepository historyOnly = new HistoryOnly(repository);
+        var fallback = await historyOnly.ListForMedicineBetweenAsync(id, Today.AddDays(-3), Today.AddDays(-1), default);
+        fallback.Select(i => i.Day).Should().Equal(Today.AddDays(-3), Today.AddDays(-1));
+        // The day read defaults to the period read over that one day.
+        (await historyOnly.ListForDayAsync(id, Today.AddDays(-1), default))
+            .Should().ContainSingle().Which.Day.Should().Be(Today.AddDays(-1));
+    }
+
+    // A database created before the Day column lacks the (MedicineId, Day)
+    // index; the boot patch creates it, and a second boot leaves it alone.
+    [Fact]
+    public async Task The_patch_creates_the_day_index_once()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync(@"DROP INDEX ""IX_MedicationIntakes_MedicineId_Day"";");
+        }
+
+        for (var run = 0; run < 2; run++)
+        {
+            await using var ctx = fixture.CreateContext();
+            await new DatabaseInitializer(ctx, NullLogger<DatabaseInitializer>.Instance)
+                .InitializeAsync(CancellationToken.None);
+        }
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            var indexes = await ctx.Database
+                .SqlQueryRaw<string>(@"SELECT name AS ""Value"" FROM sqlite_master WHERE type = 'index' AND tbl_name = 'MedicationIntakes'")
+                .ToListAsync();
+            indexes.Should().Contain("IX_MedicationIntakes_MedicineId_Day");
+        }
+    }
+
+    // A repository that implements only the members without a default. Its
+    // history comes newest first, so the default has to sort it by day.
+    private sealed class HistoryOnly(MedicationIntakeRepository inner) : IMedicationIntakeRepository
+    {
+        public async Task<IReadOnlyList<MedicationIntake>> ListForMedicineAsync(Guid medicineId,
+            CancellationToken cancellationToken)
+            => [.. (await inner.ListForMedicineAsync(medicineId, cancellationToken)).Reverse()];
+
+        public Task<IReadOnlyList<DateOnly>> ListManualIntakeDaysAsync(Guid medicineId, DateOnly fromInclusive,
+            DateOnly toInclusive, CancellationToken cancellationToken)
+            => inner.ListManualIntakeDaysAsync(medicineId, fromInclusive, toInclusive, cancellationToken);
+
+        public Task<IReadOnlyList<Guid>> ListMedicinesWithDayIntakeAsync(DateOnly day, CancellationToken cancellationToken)
+            => inner.ListMedicinesWithDayIntakeAsync(day, cancellationToken);
+
+        public Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken)
+            => inner.AddAsync(intake, cancellationToken);
+
+        public Task RemoveAsync(MedicationIntake intake, CancellationToken cancellationToken)
+            => inner.RemoveAsync(intake, cancellationToken);
     }
 }

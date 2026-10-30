@@ -24,9 +24,18 @@ public interface IMedicationIntakeRepository
 
     // The intakes of one medicine on `day`, for the dose slots they
     // cover (DoseSlots.Records).
-    async Task<IReadOnlyList<MedicationIntake>> ListForDayAsync(
+    Task<IReadOnlyList<MedicationIntake>> ListForDayAsync(
         Guid medicineId, DateOnly day, CancellationToken cancellationToken)
-        => [.. (await ListForMedicineAsync(medicineId, cancellationToken)).Where(i => i.Day == day)];
+        => ListForMedicineBetweenAsync(medicineId, day, day, cancellationToken);
+
+    // The intakes of one medicine from `fromInclusive` to `toInclusive`
+    // (days in the local zone), ordered by day: a log over a period reads
+    // only that period, not the whole history (mobile issue #153).
+    async Task<IReadOnlyList<MedicationIntake>> ListForMedicineBetweenAsync(
+        Guid medicineId, DateOnly fromInclusive, DateOnly toInclusive, CancellationToken cancellationToken)
+        => [.. (await ListForMedicineAsync(medicineId, cancellationToken))
+            .Where(i => i.Day >= fromInclusive && i.Day <= toInclusive)
+            .OrderBy(i => i.Day)];
 
     Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken);
 

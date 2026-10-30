@@ -29,11 +29,7 @@ internal sealed class MedicationIntakeRepository : IMedicationIntakeRepository
         DateOnly toInclusive,
         CancellationToken cancellationToken)
     {
-        return await _db.MedicationIntakes
-            .AsNoTracking()
-            .Where(i => i.MedicineId == medicineId
-                        && i.Day >= fromInclusive
-                        && i.Day <= toInclusive)
+        return await Between(medicineId, fromInclusive, toInclusive)
             .Select(i => i.Day)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -50,10 +46,21 @@ internal sealed class MedicationIntakeRepository : IMedicationIntakeRepository
 
     public async Task<IReadOnlyList<MedicationIntake>> ListForDayAsync(
         Guid medicineId, DateOnly day, CancellationToken cancellationToken)
-        => await _db.MedicationIntakes
-            .AsNoTracking()
-            .Where(i => i.MedicineId == medicineId && i.Day == day)
+        => await Between(medicineId, day, day).ToListAsync(cancellationToken);
+
+    // One range read on the (MedicineId, Day) index.
+    public async Task<IReadOnlyList<MedicationIntake>> ListForMedicineBetweenAsync(
+        Guid medicineId, DateOnly fromInclusive, DateOnly toInclusive, CancellationToken cancellationToken)
+        => await Between(medicineId, fromInclusive, toInclusive)
+            .OrderBy(i => i.Day)
             .ToListAsync(cancellationToken);
+
+    // The intakes of one medicine from `fromInclusive` to `toInclusive`,
+    // both included: a range on the (MedicineId, Day) index.
+    private IQueryable<MedicationIntake> Between(Guid medicineId, DateOnly fromInclusive, DateOnly toInclusive)
+        => _db.MedicationIntakes
+            .AsNoTracking()
+            .Where(i => i.MedicineId == medicineId && i.Day >= fromInclusive && i.Day <= toInclusive);
 
     public async Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken)
     {
