@@ -30,6 +30,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## [PR #323](https://github.com/vger70/MedReminder/pull/323) — Keep the slot time with an intake so every zone reads the same dose slot
+
+**Status:** open
+
+- **Fixed**: an intake recorded in one time zone could answer another
+  dose slot on a device of the circle in another zone, since the
+  database keeps `ScheduledAt` as UTC ticks (#317).
+  `MedicationIntake.SlotTime`, resolved by `RegisterIntake` on the
+  recording device, is matched first by `DoseSlots.Records`.
+- **Changed**: `IntakeRecorded.SlotTime` (optional, no new schema
+  version), `ExportedIntake.SlotTime` (additive), and a boot patch
+  adding `MedicationIntakes.SlotTime`. Older intakes match by
+  `ScheduledAt` as before.
+
 ## [PR #322](https://github.com/vger70/MedReminder/pull/322) — Let RegisterIntake refuse a dose slot already recorded
 
 **Status:** open
