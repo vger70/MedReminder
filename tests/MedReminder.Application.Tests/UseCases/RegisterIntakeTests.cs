@@ -455,4 +455,29 @@ public class RegisterIntakeTests
 
         scope.Intakes.All.Single().SlotTime.Should().BeNull();
     }
+
+    // An intake recorded for a past day (the mobile intake log) keeps the
+    // slot time of the set in force that day, which the log reads it with,
+    // though the latest set no longer has that time.
+    [Fact]
+    public async Task A_past_day_keeps_the_slot_time_of_its_own_set()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        var today = new DateOnly(2026, 9, 13);
+        var set = new MedicationAdministrationSlotSet
+        {
+            MedicineId = id, EffectiveFrom = today, RecordedAt = scope.Clock.GetUtcNow(),
+        };
+        await scope.Slots.AddSetAsync(set,
+        [
+            new MedicationAdministrationSlot { MedicineId = id, SetId = set.Id, Dose = 1m, Time = new TimeOnly(9, 0) },
+            new MedicationAdministrationSlot { MedicineId = id, SetId = set.Id, Dose = 1m, Time = new TimeOnly(20, 0), Order = 1 },
+        ], CancellationToken.None);
+
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, today.AddDays(-1), IntakeStatus.Taken, 1m,
+            ScheduledAt: new DateTimeOffset(2026, 9, 12, 8, 0, 0, TimeSpan.Zero)), CancellationToken.None);
+
+        scope.Intakes.All.Single().SlotTime.Should().Be(new TimeOnly(8, 0));
+    }
 }
