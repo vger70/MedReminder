@@ -20,16 +20,11 @@ public sealed record RegisterIntakeCommand(
 // RequireSlotOpen (issue #321): the dose slot named by ScheduledAt is
 // already answered by an intake of the day (DoseSlots.Records). Nothing
 // was written.
-public sealed class DoseSlotAlreadyRecordedException : InvalidOperationException
+public sealed class DoseSlotAlreadyRecordedException(Guid intakeId)
+    : InvalidOperationException("The dose slot is already recorded.")
 {
-    public DoseSlotAlreadyRecordedException(Guid intakeId)
-        : base("The dose slot is already recorded.")
-    {
-        IntakeId = intakeId;
-    }
-
     // The intake that answers the slot.
-    public Guid IntakeId { get; }
+    public Guid IntakeId { get; } = intakeId;
 }
 
 // Records a single intake (spec §6) as a fact (B.1 Phase 2c-2): the

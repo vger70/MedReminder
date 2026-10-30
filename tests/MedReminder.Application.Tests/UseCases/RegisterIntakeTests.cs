@@ -299,6 +299,30 @@ public class RegisterIntakeTests
         scope.Intakes.All.Should().ContainSingle();
     }
 
+    // A single timed slot is the only dose an intake of the day can mean
+    // (DoseSlots.Records): an intake from the medicine, without a slot
+    // time, answers it, and a slot time that no longer matches names it.
+    [Fact]
+    public async Task A_single_slot_answered_without_a_slot_time_is_refused()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Eutirox", "compresse", 1m, 1, new DateOnly(2026, 9, 1), 7, NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots: [new AdministrationSlotInput(1m, new TimeOnly(8, 0), null)]), CancellationToken.None);
+        var first = await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m), CancellationToken.None);
+
+        var refused = await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
+                new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning.AddHours(1),
+                    RequireSlotOpen: true),
+                CancellationToken.None))
+            .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
+
+        refused.Which.IntakeId.Should().Be(first);
+        scope.Intakes.All.Should().ContainSingle();
+    }
+
     [Fact]
     public async Task Requiring_a_slot_open_needs_a_slot_time()
     {
@@ -336,5 +360,38 @@ public class RegisterIntakeTests
 
         results.Count(r => r).Should().Be(1);
         scope.Intakes.All.Should().ContainSingle();
+    }
+
+    // Issue #312: on the day the clock skips 02:00-03:00, 02:30 and 03:00
+    // fire at the same instant. The second intake for it takes the other
+    // slot, as DoseSlots.Records does; only a third is refused.
+    [Fact]
+    public async Task Two_slots_at_the_same_instant_are_recorded_once_each()
+    {
+        var rule = TimeZoneInfo.AdjustmentRule.CreateAdjustmentRule(
+            DateTime.MinValue.Date, DateTime.MaxValue.Date, TimeSpan.FromHours(1),
+            TimeZoneInfo.TransitionTime.CreateFloatingDateRule(new DateTime(1, 1, 1, 2, 0, 0), 3, 5, DayOfWeek.Sunday),
+            TimeZoneInfo.TransitionTime.CreateFloatingDateRule(new DateTime(1, 1, 1, 3, 0, 0), 10, 5, DayOfWeek.Sunday));
+        var zone = TimeZoneInfo.CreateCustomTimeZone("Test/CentralEurope", TimeSpan.FromHours(1), "Test CET", "Test CET",
+            "Test CEST", [rule]);
+        var scope = new ApplicationTestScope(new DateTimeOffset(2027, 3, 28, 6, 0, 0, TimeSpan.Zero), zone);
+        var day = new DateOnly(2027, 3, 28);
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Enalapril", "compresse", 1m, 2, day, 7, NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots:
+            [
+                new AdministrationSlotInput(1m, new TimeOnly(2, 30), null),
+                new AdministrationSlotInput(1m, new TimeOnly(3, 0), null),
+            ]), CancellationToken.None);
+        var at = new DateTimeOffset(2027, 3, 28, 3, 0, 0, TimeSpan.FromHours(2));
+        var command = new RegisterIntakeCommand(id, day, IntakeStatus.Taken, 1m, ScheduledAt: at, RequireSlotOpen: true);
+
+        await scope.RegisterIntake.ExecuteAsync(command, CancellationToken.None);
+        await scope.RegisterIntake.ExecuteAsync(command, CancellationToken.None);
+        await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(command, CancellationToken.None))
+            .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
+
+        scope.Intakes.All.Should().HaveCount(2);
     }
 }
