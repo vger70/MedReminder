@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
+using MedReminder.Application.Abstractions;
 using MedReminder.Application.Export;
 using MedReminder.Application.Migrations;
 using MedReminder.Application.UseCases;
@@ -281,14 +282,44 @@ public class IntradayRepositoryTests
         read.Select(i => i.Day).Should().Equal(Today.AddDays(-3), Today.AddDays(-1));
         read.Should().OnlyContain(i => i.MedicineId == id);
         // The interface default, over the whole history, reads the same.
-        MedReminder.Application.Abstractions.IMedicationIntakeRepository historyOnly = new HistoryOnly(repository);
+        IMedicationIntakeRepository historyOnly = new HistoryOnly(repository);
         var fallback = await historyOnly.ListForMedicineBetweenAsync(id, Today.AddDays(-3), Today.AddDays(-1), default);
         fallback.Select(i => i.Day).Should().Equal(Today.AddDays(-3), Today.AddDays(-1));
+        // The day read defaults to the period read over that one day.
+        (await historyOnly.ListForDayAsync(id, Today.AddDays(-1), default))
+            .Should().ContainSingle().Which.Day.Should().Be(Today.AddDays(-1));
+    }
+
+    // A database created before the Day column lacks the (MedicineId, Day)
+    // index; the boot patch creates it, and a second boot leaves it alone.
+    [Fact]
+    public async Task The_patch_creates_the_day_index_once()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync(@"DROP INDEX ""IX_MedicationIntakes_MedicineId_Day"";");
+        }
+
+        for (var run = 0; run < 2; run++)
+        {
+            await using var ctx = fixture.CreateContext();
+            await new DatabaseInitializer(ctx, NullLogger<DatabaseInitializer>.Instance)
+                .InitializeAsync(CancellationToken.None);
+        }
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            var indexes = await ctx.Database
+                .SqlQueryRaw<string>(@"SELECT name AS ""Value"" FROM sqlite_master WHERE type = 'index' AND tbl_name = 'MedicationIntakes'")
+                .ToListAsync();
+            indexes.Should().Contain("IX_MedicationIntakes_MedicineId_Day");
+        }
     }
 
     // A repository that implements only the members without a default. Its
     // history comes newest first, so the default has to sort it by day.
-    private sealed class HistoryOnly(MedicationIntakeRepository inner) : MedReminder.Application.Abstractions.IMedicationIntakeRepository
+    private sealed class HistoryOnly(MedicationIntakeRepository inner) : IMedicationIntakeRepository
     {
         public async Task<IReadOnlyList<MedicationIntake>> ListForMedicineAsync(Guid medicineId,
             CancellationToken cancellationToken)
