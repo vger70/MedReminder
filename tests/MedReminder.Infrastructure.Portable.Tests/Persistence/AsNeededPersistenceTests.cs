@@ -141,6 +141,42 @@ public class AsNeededPersistenceTests
                 ]), CancellationToken.None);
     }
 
+    // Issue #317: the slot time of an intake persists, the boot patch adds
+    // its column to an older database, and the archive carries it.
+    [Fact]
+    public async Task The_intake_slot_time_persists_and_is_added_to_an_older_database()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        var id = await SeedAsync(fixture);
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""MedicationIntakes"" DROP COLUMN ""SlotTime"";");
+        }
+        for (var run = 0; run < 2; run++)
+        {
+            await using var ctx = fixture.CreateContext();
+            await new DatabaseInitializer(ctx, NullLogger<DatabaseInitializer>.Instance, Clock)
+                .InitializeAsync(CancellationToken.None);
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await ctx.MedicationIntakes.ToListAsync()).Should().OnlyContain(i => i.SlotTime == null);
+            ctx.MedicationIntakes.Add(new MedicationIntake
+            {
+                MedicineId = id, Day = new DateOnly(2026, 9, 13), Quantity = 1m, Status = IntakeStatus.Taken,
+                ScheduledAt = new DateTimeOffset(2026, 9, 13, 9, 0, 0, TimeSpan.FromHours(2)),
+                SlotTime = new TimeOnly(9, 0), RecordedAt = Clock.GetUtcNow(),
+            });
+            await ctx.SaveChangesAsync();
+        }
+        await using (var ctx = fixture.CreateContext())
+        {
+            var stored = await ctx.MedicationIntakes.SingleAsync(i => i.SlotTime != null);
+            stored.SlotTime.Should().Be(new TimeOnly(9, 0));
+            ExportMapper.ToEntity(ExportMapper.ToDto(stored)).SlotTime.Should().Be(new TimeOnly(9, 0));
+        }
+    }
+
     private sealed class TestTime : TimeProvider
     {
         private readonly DateTimeOffset _now;

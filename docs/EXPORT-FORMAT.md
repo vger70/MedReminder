@@ -252,6 +252,7 @@ numbers.
 | `status` | string | `Taken` / `Skipped` / `Cancelled` / `ManualCorrection` |
 | `notes` | string? | |
 | `isExtra` | bool | extra dose on top of the plan (`Taken` only); it does not replace the day's automatic consumption. Added after `schemaVersion` 2 shipped, as an additive field (§5): archives without it import with `false` |
+| `slotTime` | string (`HH:mm:ss`) or null | time of the dose slot the intake answers, as the recording device resolved it in its own zone, so another zone reads the same slot. Additive field (§5): archives without it import with `null` |
 
 ### 3.7 `notificationEvents[]`
 

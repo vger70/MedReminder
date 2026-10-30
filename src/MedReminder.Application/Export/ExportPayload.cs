@@ -212,6 +212,9 @@ public sealed class ExportedIntake
     // Additive field (docs/EXPORT-FORMAT.md §5): archives without it
     // import with false.
     public bool IsExtra { get; set; }
+
+    // Additive field (issue #317): archives without it import with null.
+    public TimeOnly? SlotTime { get; set; }
 }
 
 public sealed class ExportedNotificationEvent

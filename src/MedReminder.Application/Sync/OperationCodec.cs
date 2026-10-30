@@ -24,6 +24,8 @@ namespace MedReminder.Application.Sync;
 // adds MedicineStartChanged; 11 adds PackageChanged; 12 adds
 // PrescriptionChanged.Dispensations, written only for a repeatable
 // prescription (a single one keeps 7), and DispensationChanged.
+// IntakeRecorded.SlotTime is optional: an older app ignores it and
+// matches the intake by ScheduledAt, as before, so it adds no version.
 // Each operation is written with the lowest version that can carry it,
 // so the operations an older app understands keep version 1 and only the
 // new type stops it (R7).

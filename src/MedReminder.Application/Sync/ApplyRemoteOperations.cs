@@ -697,6 +697,7 @@ public sealed class ApplyRemoteOperations
             Status = intake.Status,
             Quantity = intake.Quantity,
             ScheduledAt = intake.ScheduledAt,
+            SlotTime = intake.SlotTime,
             ActualAt = intake.ActualAt,
             Notes = intake.Notes,
             RecordedAt = intake.RecordedAt,

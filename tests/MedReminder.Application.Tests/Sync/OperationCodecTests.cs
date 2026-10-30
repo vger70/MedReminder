@@ -32,6 +32,8 @@ public class OperationCodecTests
                     IsAsNeeded: true)]),
         new IntakeRecorded(M, F, new DateOnly(2026, 9, 26), IntakeStatus.Skipped, 1m, null, null, null, At),
         new IntakeRecorded(M, F, new DateOnly(2026, 9, 26), IntakeStatus.Taken, 1m, null, At, null, At, IsExtra: true),
+        new IntakeRecorded(M, F, new DateOnly(2026, 9, 26), IntakeStatus.Taken, 1m, At, At, null, At,
+            SlotTime: new TimeOnly(9, 0)),
         new StockCountRecorded(M, F, new DateOnly(2026, 9, 27), 40m, 1m, 7, At, "counted",
             42m, 2m, -1m, false, true),
         new SuspensionRecorded(M, F, new DateOnly(2026, 9, 28), null, "trip", At),
@@ -84,6 +86,23 @@ public class OperationCodecTests
         OperationCodec.TypeNames.Should().BeEquivalentTo(concrete);
         ((IEnumerable<object[]>)Samples()).Select(row => row[0].GetType().Name).Distinct()
             .Should().BeEquivalentTo(concrete);
+    }
+
+    // Issue #317: the slot time is optional. An intake that carries it
+    // keeps schema version 1, since an older app ignores it, and a payload
+    // written before the field reads it as null.
+    [Fact]
+    public void The_intake_slot_time_needs_no_schema_version_of_its_own()
+    {
+        var body = new IntakeRecorded(M, F, new DateOnly(2026, 9, 26), IntakeStatus.Taken, 1m, At, At, null, At,
+            SlotTime: new TimeOnly(9, 0));
+        OperationCodec.SchemaVersionOf(body).Should().Be(1);
+        OperationCodec.Serialize(body).Payload.Should().Contain("\"slotTime\":\"09:00:00\"");
+
+        var (type, payload) = OperationCodec.Serialize(body with { SlotTime = null });
+        var older = payload.Replace(",\"slotTime\":null", "", StringComparison.Ordinal);
+        older.Should().NotContain("slotTime");
+        ((IntakeRecorded)OperationCodec.Deserialize(type, 1, older)).SlotTime.Should().BeNull();
     }
 
     // Pins the wire format: property names, enum names, date and decimal

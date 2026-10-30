@@ -350,6 +350,9 @@ public sealed class DatabaseInitializer
         }
         await AddColumnIfMissingAsync(
             "MedicationIntakes", "IsExtra", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
+        // The slot time an intake answers (issue #317). Rows written
+        // before read null and are matched by ScheduledAt, as before.
+        await AddColumnIfMissingAsync("MedicationIntakes", "SlotTime", "TEXT NULL", cancellationToken);
 
         // Time-of-day presets (ANALYSIS-INTRADAY-CONSUMPTION.md §6),
         // device-local. Existing slots get their preset from their

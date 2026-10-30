@@ -199,6 +199,48 @@ public class DoseSlotsTests
         DoseSlots.Records(spring, [skipped, next], [first], rome).Should().HaveCount(1);
     }
 
+    // Issue #317: an intake recorded at 09:00 in Rome is stored as 08:00Z.
+    // Read in London, ScheduledAt alone names 08:00; the slot time kept
+    // with it names 09:00 in every zone.
+    [Fact]
+    public void The_slot_time_of_an_intake_names_its_slot_in_any_zone()
+    {
+        var nine = Slot(new TimeOnly(9, 0));
+        var intake = new MedicationIntake
+        {
+            MedicineId = DomainFactory.MedicineId,
+            Day = Day,
+            ScheduledAt = At(Day, 8, 0),
+            SlotTime = new TimeOnly(9, 0),
+            Quantity = 1m,
+            Status = IntakeStatus.Taken,
+        };
+
+        DoseSlots.Records(Day, [Morning, nine], [intake], Utc).Keys.Should().Equal(nine.Id);
+        // Without it, as before: the instant read in this zone.
+        DoseSlots.Records(Day, [Morning, nine], [Intake(At(Day, 8, 0))], Utc).Keys.Should().Equal(Morning.Id);
+    }
+
+    // The same time twice: a second intake with that slot time takes the
+    // other slot.
+    [Fact]
+    public void A_second_intake_with_the_same_slot_time_takes_the_twin_slot()
+    {
+        var twin = Slot(new TimeOnly(8, 0));
+        MedicationIntake At8(int minute) => new()
+        {
+            MedicineId = DomainFactory.MedicineId,
+            Day = Day,
+            SlotTime = new TimeOnly(8, 0),
+            Quantity = 1m,
+            Status = IntakeStatus.Taken,
+            RecordedAt = At(Day, 8, minute),
+        };
+
+        DoseSlots.Records(Day, [Morning, twin, Evening], [At8(1), At8(2)], Utc).Keys
+            .Should().BeEquivalentTo([Morning.Id, twin.Id]);
+    }
+
     private static DateTimeOffset At(DateOnly day, int hour, int minute)
         => new(day.ToDateTime(new TimeOnly(hour, minute)), TimeSpan.Zero);
 
