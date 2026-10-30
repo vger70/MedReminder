@@ -88,8 +88,6 @@ public class OperationCodecTests
             .Should().BeEquivalentTo(concrete);
     }
 
-    // Pins the wire format: property names, enum names, date and decimal
-    // forms. A change here is a sync format change (schema version).
     // Issue #317: the slot time is optional. An intake that carries it
     // keeps schema version 1, since an older app ignores it, and a payload
     // written before the field reads it as null.
@@ -107,6 +105,8 @@ public class OperationCodecTests
         ((IntakeRecorded)OperationCodec.Deserialize(type, 1, older)).SlotTime.Should().BeNull();
     }
 
+    // Pins the wire format: property names, enum names, date and decimal
+    // forms. A change here is a sync format change (schema version).
     [Fact]
     public void Payload_format_is_stable()
     {

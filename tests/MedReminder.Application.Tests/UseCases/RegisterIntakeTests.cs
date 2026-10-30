@@ -430,4 +430,23 @@ public class RegisterIntakeTests
         DoseSlots.Records(day, slots, [stored], TimeZoneInfo.Utc).Keys
             .Should().Equal(slots.Single(s => s.Time == new TimeOnly(9, 0)).Id);
     }
+
+    // A ScheduledAt that names no slot (the time changed since) keeps no
+    // slot time, even with a single timed slot: the reader's single-slot
+    // fallback is not frozen into the intake.
+    [Fact]
+    public async Task A_scheduled_time_that_names_no_slot_keeps_no_slot_time()
+    {
+        var scope = new ApplicationTestScope(new DateTimeOffset(2026, 11, 13, 21, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+        var day = new DateOnly(2026, 11, 13);
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Enalapril", "compresse", 1m, 1, day, 7, NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots: [new AdministrationSlotInput(1m, new TimeOnly(8, 0), null)]), CancellationToken.None);
+
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, day, IntakeStatus.Taken, 1m,
+            ScheduledAt: new DateTimeOffset(2026, 11, 13, 20, 0, 0, TimeSpan.Zero)), CancellationToken.None);
+
+        scope.Intakes.All.Single().SlotTime.Should().BeNull();
+    }
 }

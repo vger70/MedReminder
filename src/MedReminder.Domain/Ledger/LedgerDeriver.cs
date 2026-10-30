@@ -324,7 +324,18 @@ public static class LedgerDeriver
             return latest?.Active ?? true;
         }
 
-        public IReadOnlyList<MedicationAdministrationSlot> SlotsOn(DateOnly day) => Facts.SlotsOn(day);
+        // Among the sets in force on `day`, the most recently recorded
+        // one (§4.2).
+        public IReadOnlyList<MedicationAdministrationSlot> SlotsOn(DateOnly day)
+        {
+            LedgerSlotSet? best = null;
+            foreach (var set in Facts.SlotSets)
+            {
+                if (set.EffectiveFrom > day) continue;
+                if (best is null || set.RecordedAt >= best.RecordedAt) best = set;
+            }
+            return best?.Slots ?? [];
+        }
 
         public decimal PlannedQuantity(DateOnly day)
             => ConsumptionMaterializer

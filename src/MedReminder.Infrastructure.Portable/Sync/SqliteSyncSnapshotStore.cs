@@ -50,6 +50,8 @@ internal sealed class SqliteSyncSnapshotStore : ISyncSnapshotStore
     //      (repeatable prescriptions), replicated: an older app would read
     //      a repeatable prescription as a single one and drop its
     //      dispensations.
+    // Not bumped for MedicationIntakes.SlotTime (issue #317): an older app
+    // ignores it and matches the intake by ScheduledAt, as before.
     public const int CurrentSchemaVersion = 9;
 
     private static readonly string[] NotReplicated =

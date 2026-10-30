@@ -54,10 +54,7 @@ public static class DoseSlots
             }
             else if (intake.ScheduledAt is { } at)
             {
-                var inZone = TimeZoneInfo.ConvertTime(at, zone);
-                slot = (at.Offset == TimeSpan.Zero ? null : timed.FirstOrDefault(s => SameMinute(at.DateTime, day, s.Time!.Value)))
-                    ?? timed.FirstOrDefault(s => SameMinute(inZone.DateTime, day, s.Time!.Value))
-                    ?? timed.FirstOrDefault(s => at == AtLocal(day, s.Time!.Value, zone));
+                slot = Named(day, timed, at, zone);
             }
             // Two slots can fire at the same instant (the same time twice,
             // or a time the clock skips moved onto another): an intake whose
@@ -142,6 +139,29 @@ public static class DoseSlots
             return new DateTimeOffset(local, zone.GetAmbiguousTimeOffsets(local).Max());
         }
         return new DateTimeOffset(local, zone.GetUtcOffset(local));
+    }
+
+    // The timed slot a ScheduledAt names on `day`, read as Records reads
+    // it; null when it names none. Without the single-slot fallback of
+    // Records: the slot time kept with an intake (issue #317) is the one
+    // the dose named, never a guess.
+    public static MedicationAdministrationSlot? NamedBy(
+        DateOnly day,
+        IEnumerable<MedicationAdministrationSlot> slots,
+        DateTimeOffset scheduledAt,
+        TimeZoneInfo zone)
+    {
+        ArgumentNullException.ThrowIfNull(zone);
+        return Named(day, Timed(slots), scheduledAt, zone);
+    }
+
+    private static MedicationAdministrationSlot? Named(
+        DateOnly day, IReadOnlyList<MedicationAdministrationSlot> timed, DateTimeOffset at, TimeZoneInfo zone)
+    {
+        var inZone = TimeZoneInfo.ConvertTime(at, zone);
+        return (at.Offset == TimeSpan.Zero ? null : timed.FirstOrDefault(s => SameMinute(at.DateTime, day, s.Time!.Value)))
+            ?? timed.FirstOrDefault(s => SameMinute(inZone.DateTime, day, s.Time!.Value))
+            ?? timed.FirstOrDefault(s => at == AtLocal(day, s.Time!.Value, zone));
     }
 
     private static bool SameMinute(DateTime value, DateOnly day, TimeOnly time)
