@@ -353,6 +353,12 @@ public sealed class DatabaseInitializer
         // The slot time an intake answers (issue #317). Rows written
         // before read null and are matched by ScheduledAt, as before.
         await AddColumnIfMissingAsync("MedicationIntakes", "SlotTime", "TEXT NULL", cancellationToken);
+        // The (MedicineId, Day) index the day and period reads use: a
+        // database created before the Day column (patch 1) has none, as
+        // EnsureCreated never upgrades an existing table.
+        await ExecuteRawSqlAsync(@"
+            CREATE INDEX IF NOT EXISTS ""IX_MedicationIntakes_MedicineId_Day""
+                ON ""MedicationIntakes"" (""MedicineId"", ""Day"");", cancellationToken);
 
         // Time-of-day presets (ANALYSIS-INTRADAY-CONSUMPTION.md §6),
         // device-local. Existing slots get their preset from their

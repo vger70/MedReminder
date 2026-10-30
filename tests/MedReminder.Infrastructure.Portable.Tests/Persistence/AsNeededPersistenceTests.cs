@@ -255,6 +255,7 @@ public class IntradayRepositoryTests
         read.Should().Be(slot);
         read!.Value.Offset.Should().Be(TimeSpan.Zero);
     }
+
     // The intakes of one medicine over a period (mobile issue #153): both
     // ends included, other days and other medicines left out, by day.
     [Fact]
@@ -264,7 +265,8 @@ public class IntradayRepositoryTests
         await using var ctx = fixture.CreateContext();
         var id = await SeedMedicineAsync(ctx);
         var other = await SeedMedicineAsync(ctx);
-        foreach (var offset in new[] { 0, -3, -1, -4 })
+        // Written out of day order, so the read has to sort them.
+        foreach (var offset in new[] { 0, -1, -3, -4 })
         {
             ctx.MedicationIntakes.Add(new MedicationIntake
                 { MedicineId = id, Day = Today.AddDays(offset), Quantity = 1m, Status = IntakeStatus.Taken });
@@ -284,11 +286,13 @@ public class IntradayRepositoryTests
         fallback.Select(i => i.Day).Should().Equal(Today.AddDays(-3), Today.AddDays(-1));
     }
 
-    // A repository that implements only the members without a default.
+    // A repository that implements only the members without a default. Its
+    // history comes newest first, so the default has to sort it by day.
     private sealed class HistoryOnly(MedicationIntakeRepository inner) : MedReminder.Application.Abstractions.IMedicationIntakeRepository
     {
-        public Task<IReadOnlyList<MedicationIntake>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken)
-            => inner.ListForMedicineAsync(medicineId, cancellationToken);
+        public async Task<IReadOnlyList<MedicationIntake>> ListForMedicineAsync(Guid medicineId,
+            CancellationToken cancellationToken)
+            => [.. (await inner.ListForMedicineAsync(medicineId, cancellationToken)).Reverse()];
 
         public Task<IReadOnlyList<DateOnly>> ListManualIntakeDaysAsync(Guid medicineId, DateOnly fromInclusive,
             DateOnly toInclusive, CancellationToken cancellationToken)

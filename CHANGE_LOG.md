@@ -40,6 +40,8 @@ with the classification adapted to per-PR granularity: **Added**,
   The mobile intake log (mobile #153) read the whole history of every
   medicine; the range read cuts that from about 300 ms to 16–44 ms on a
   two-year test database.
+- **Fixed**: a database created before the intake `Day` column lacked
+  the `(MedicineId, Day)` index; a boot patch now creates it.
 
 ## [PR #324](https://github.com/vger70/MedReminder/pull/324) — Resolve an intake's slot time from its day's set, then the latest set
 
