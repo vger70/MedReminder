@@ -162,9 +162,10 @@ public sealed class RegisterIntake
     }
 
     // The slot the new intake names, read as DoseSlots.Records reads it
-    // among the day's intakes: recorded last, it answers a slot only when
-    // no earlier intake does. A ScheduledAt that names no slot (changed
-    // since) is not refused.
+    // among the day's intakes: read last, it answers a slot only when no
+    // other intake does. With several timed slots a ScheduledAt that
+    // names none (changed since) is not refused; with a single timed slot
+    // it names that slot (DoseSlots.Records) and is checked.
     private async Task EnsureSlotOpenAsync(MedicationIntake intake, CancellationToken cancellationToken)
     {
         var slots = await _slots.ListForMedicineAsync(intake.MedicineId, cancellationToken);
@@ -172,7 +173,23 @@ public sealed class RegisterIntake
         var named = DoseSlots.Records(intake.Day, slots, [intake], zone);
         if (named.Count == 0) return;
         var day = await _intakes.ListForDayAsync(intake.MedicineId, intake.Day, cancellationToken);
-        var records = DoseSlots.Records(intake.Day, slots, [.. day, intake], zone);
+        // Records orders by RecordedAt, and an intake synced from another
+        // device carries that device's clock, which can be ahead of this
+        // one: the new intake is read last whatever the clocks say, so an
+        // intake already stored always answers the slot first.
+        var last = day.Count == 0 ? intake.RecordedAt : day.Max(i => i.RecordedAt);
+        var probe = last <= intake.RecordedAt ? intake : new MedicationIntake
+        {
+            Id = intake.Id,
+            MedicineId = intake.MedicineId,
+            Day = intake.Day,
+            ScheduledAt = intake.ScheduledAt,
+            Status = intake.Status,
+            Quantity = intake.Quantity,
+            IsExtra = intake.IsExtra,
+            RecordedAt = last,
+        };
+        var records = DoseSlots.Records(intake.Day, slots, [.. day, probe], zone);
         if (records.Values.Any(i => i.Id == intake.Id)) return;
         var slotId = named.Keys.Single();
         throw new DoseSlotAlreadyRecordedException(records[slotId].Id);

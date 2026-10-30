@@ -271,6 +271,34 @@ public class RegisterIntakeTests
         scope.Intakes.All.Should().HaveCount(2);
     }
 
+    // An intake synced from a device whose clock is ahead carries a later
+    // RecordedAt than the new one: the slot is still already recorded.
+    [Fact]
+    public async Task A_slot_recorded_with_a_later_clock_is_refused()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        var synced = new MedicationIntake
+        {
+            MedicineId = id,
+            Day = SlotDay,
+            ScheduledAt = Morning,
+            Status = IntakeStatus.Taken,
+            Quantity = 1m,
+            RecordedAt = scope.Clock.GetUtcNow().AddMinutes(5),
+        };
+        await scope.Intakes.AddAsync(synced, CancellationToken.None);
+        var first = synced.Id;
+
+        var refused = await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(
+                new RegisterIntakeCommand(id, SlotDay, IntakeStatus.Taken, 1m, ScheduledAt: Morning, RequireSlotOpen: true),
+                CancellationToken.None))
+            .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
+
+        refused.Which.IntakeId.Should().Be(first);
+        scope.Intakes.All.Should().ContainSingle();
+    }
+
     [Fact]
     public async Task Requiring_a_slot_open_needs_a_slot_time()
     {
