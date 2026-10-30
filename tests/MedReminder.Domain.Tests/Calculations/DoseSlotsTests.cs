@@ -241,10 +241,11 @@ public class DoseSlotsTests
             .Should().BeEquivalentTo([Morning.Id, twin.Id]);
     }
 
-    // A slot time that names none of the slots read (the set of another
-    // day, or a time changed since) falls back to ScheduledAt.
+    // A slot time that names none of the slots (a time changed since) is
+    // not read again from ScheduledAt: in this zone 08:00Z would name the
+    // 08:00 slot, which the intake did not answer.
     [Fact]
-    public void A_slot_time_that_names_no_slot_falls_back_to_the_scheduled_time()
+    public void A_slot_time_that_names_no_slot_is_not_read_from_the_scheduled_time()
     {
         var intake = new MedicationIntake
         {
@@ -256,7 +257,7 @@ public class DoseSlotsTests
             Status = IntakeStatus.Taken,
         };
 
-        DoseSlots.Records(Day, [Morning, Evening], [intake], Utc).Keys.Should().Equal(Morning.Id);
+        DoseSlots.Records(Day, [Morning, Evening], [intake], Utc).Should().BeEmpty();
     }
 
     private static DateTimeOffset At(DateOnly day, int hour, int minute)

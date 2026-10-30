@@ -37,9 +37,8 @@ with the classification adapted to per-PR granularity: **Added**,
 - **Fixed**: an intake recorded for a past day after the slot times
   changed (the mobile intake log) got no slot time, or one its day's
   set could not match. `RegisterIntake` now resolves it from the set in
-  force on the intake day first, then the latest set, and
-  `DoseSlots.Records` falls back to `ScheduledAt` when a slot time names
-  none of the slots read (#317, follow-up to #323).
+  force on the intake day first, then the latest set (#317, follow-up
+  to #323).
 
 ## [PR #323](https://github.com/vger70/MedReminder/pull/323) — Keep the slot time with an intake so every zone reads the same dose slot
 

@@ -467,7 +467,9 @@ public class RegisterIntakeTests
         var today = new DateOnly(2026, 9, 13);
         var set = new MedicationAdministrationSlotSet
         {
-            MedicineId = id, EffectiveFrom = today, RecordedAt = scope.Clock.GetUtcNow(),
+            // Recorded after the seeded set, so it is the latest one whatever
+            // the ids: the fake clock does not move on its own.
+            MedicineId = id, EffectiveFrom = today, RecordedAt = scope.Clock.GetUtcNow().AddTicks(1),
         };
         await scope.Slots.AddSetAsync(set,
         [

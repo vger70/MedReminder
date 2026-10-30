@@ -171,12 +171,15 @@ public sealed class RegisterIntake
     }
 
     // Among the slot sets in force on `day`, the most recently recorded
-    // one, as the ledger reads a day (LedgerDeriver).
+    // one, as the ledger reads a day (LedgerDeriver). Read in the order
+    // LedgerFactsLoader gives the ledger, with the id as tie-break: the
+    // store orders by RecordedAt alone, so two sets recorded at one
+    // instant would otherwise resolve differently across devices.
     private static IReadOnlyList<MedicationAdministrationSlot> InForce(
         IReadOnlyList<AdministrationSlotSetEntry> sets, DateOnly day)
     {
         AdministrationSlotSetEntry? best = null;
-        foreach (var entry in sets)
+        foreach (var entry in sets.OrderBy(e => e.Set.RecordedAt).ThenBy(e => e.Set.Id))
         {
             if (entry.Set.EffectiveFrom > day) continue;
             if (best is null || entry.Set.RecordedAt >= best.Set.RecordedAt) best = entry;

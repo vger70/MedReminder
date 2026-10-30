@@ -6,10 +6,11 @@ namespace MedReminder.Domain.Calculations;
 // for them (mobile issues #126, #127). An intake covers a slot when:
 //  - it is not an extra dose (an extra one is on top of the plan);
 //  - its SlotTime is the slot's time (issue #317): the recording device
-//    resolved it in its own zone, so every zone reads the same slot;
-//  - without a SlotTime that names one of these slots (rows written
-//    before it, a device that does not write it, or a set of another
-//    day), its ScheduledAt is the slot's time on that day: first as the wall
+//    resolved it in its own zone, so every zone reads the same slot. A
+//    slot time that names none of the slots (a time changed since) is not
+//    read again from ScheduledAt, which another zone would misread;
+//  - without SlotTime (rows written before it, or a device that does not
+//    write it), its ScheduledAt is the slot's time on that day: first as the wall
 //    clock it was recorded with (the device that recorded it named that
 //    slot, whatever this device's zone), then read in this zone, then as
 //    the instant the slot fires (AtLocal, which moves a time the clock
@@ -54,9 +55,7 @@ public static class DoseSlots
                 // To the minute, as a ScheduledAt is matched (SameMinute).
                 slot = timed.FirstOrDefault(s => s.Time is { } t && t.Hour == time.Hour && t.Minute == time.Minute);
             }
-            // A slot time that names no slot of these (a set of another day,
-            // or a time changed since): ScheduledAt, as before it existed.
-            if (slot is null && intake.ScheduledAt is { } at)
+            else if (intake.ScheduledAt is { } at)
             {
                 slot = Named(day, timed, at, zone);
             }
