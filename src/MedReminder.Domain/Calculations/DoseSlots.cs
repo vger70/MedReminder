@@ -6,7 +6,9 @@ namespace MedReminder.Domain.Calculations;
 // for them (mobile issues #126, #127). An intake covers a slot when:
 //  - it is not an extra dose (an extra one is on top of the plan);
 //  - its SlotTime is the slot's time (issue #317): the recording device
-//    resolved it in its own zone, so every zone reads the same slot;
+//    resolved it in its own zone, so every zone reads the same slot. A
+//    slot time that names none of the slots (a time changed since) is not
+//    read again from ScheduledAt, which another zone would misread;
 //  - without SlotTime (rows written before it, or a device that does not
 //    write it), its ScheduledAt is the slot's time on that day: first as the wall
 //    clock it was recorded with (the device that recorded it named that
