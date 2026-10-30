@@ -107,11 +107,13 @@ public sealed class RegisterIntake
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         var now = _clock.GetUtcNow();
+        var before = await _ledger.LoadFactsAsync(medicine, cancellationToken);
         var intake = new MedicationIntake
         {
             MedicineId = medicine.Id,
             Day = cmd.Day,
             ScheduledAt = cmd.ScheduledAt,
+            SlotTime = SlotTimeOf(cmd, before.SlotsOn(cmd.Day)),
             Status = cmd.Status,
             Quantity = cmd.Quantity,
             ActualAt = cmd.Status == IntakeStatus.Taken ? now : null,
@@ -122,7 +124,6 @@ public sealed class RegisterIntake
 
         if (cmd.RequireSlotOpen) await EnsureSlotOpenAsync(intake, cancellationToken);
 
-        var before = await _ledger.LoadFactsAsync(medicine, cancellationToken);
         var after = before with
         {
             Intakes = [.. before.Intakes, new LedgerIntake(
@@ -156,6 +157,25 @@ public sealed class RegisterIntake
         return intake.Id;
     }
 
+    // The time of the slot ScheduledAt names among the slots in force on
+    // the intake day, read in this device's zone as DoseSlots.Records
+    // reads it (issue #317): kept with the intake, so a device in another
+    // zone matches the same slot.
+    private TimeOnly? SlotTimeOf(RegisterIntakeCommand cmd, IReadOnlyList<MedicationAdministrationSlot> slots)
+    {
+        if (cmd.ScheduledAt is null) return null;
+        var probe = new MedicationIntake
+        {
+            MedicineId = cmd.MedicineId,
+            Day = cmd.Day,
+            ScheduledAt = cmd.ScheduledAt,
+            Status = cmd.Status,
+            Quantity = cmd.Quantity,
+        };
+        var named = DoseSlots.Records(cmd.Day, slots, [probe], _ledger.Zone);
+        return named.Count == 0 ? null : slots.Single(s => s.Id == named.Keys.Single()).Time;
+    }
+
     // The slot the new intake names, read as DoseSlots.Records reads it
     // among the day's intakes: read last, it answers a slot only when no
     // other intake does. With several timed slots a ScheduledAt that
@@ -179,6 +199,7 @@ public sealed class RegisterIntake
             MedicineId = intake.MedicineId,
             Day = intake.Day,
             ScheduledAt = intake.ScheduledAt,
+            SlotTime = intake.SlotTime,
             Status = intake.Status,
             Quantity = intake.Quantity,
             IsExtra = intake.IsExtra,

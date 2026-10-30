@@ -5,7 +5,10 @@ namespace MedReminder.Domain.Calculations;
 // The timed dose slots of one medicine on one day and what was recorded
 // for them (mobile issues #126, #127). An intake covers a slot when:
 //  - it is not an extra dose (an extra one is on top of the plan);
-//  - its ScheduledAt is the slot's time on that day: first as the wall
+//  - its SlotTime is the slot's time (issue #317): the recording device
+//    resolved it in its own zone, so every zone reads the same slot;
+//  - without SlotTime (rows written before it, or a device that does not
+//    write it), its ScheduledAt is the slot's time on that day: first as the wall
 //    clock it was recorded with (the device that recorded it named that
 //    slot, whatever this device's zone), then read in this zone, then as
 //    the instant the slot fires (AtLocal, which moves a time the clock
@@ -45,20 +48,25 @@ public static class DoseSlots
         foreach (var intake in intakes.Where(i => i.Day == day && !i.IsExtra).OrderBy(i => i.RecordedAt))
         {
             MedicationAdministrationSlot? slot = null;
-            if (intake.ScheduledAt is { } at)
+            if (intake.SlotTime is { } time)
+            {
+                slot = timed.FirstOrDefault(s => s.Time == time);
+            }
+            else if (intake.ScheduledAt is { } at)
             {
                 var inZone = TimeZoneInfo.ConvertTime(at, zone);
                 slot = (at.Offset == TimeSpan.Zero ? null : timed.FirstOrDefault(s => SameMinute(at.DateTime, day, s.Time!.Value)))
                     ?? timed.FirstOrDefault(s => SameMinute(inZone.DateTime, day, s.Time!.Value))
                     ?? timed.FirstOrDefault(s => at == AtLocal(day, s.Time!.Value, zone));
-                // Two slots can fire at the same instant (a time the clock
-                // skips moves to the next valid one): an intake whose slot is
-                // already covered takes the other slot of that instant.
-                if (slot is not null && result.ContainsKey(slot.Id))
-                {
-                    slot = timed.FirstOrDefault(s => !result.ContainsKey(s.Id) && at == AtLocal(day, s.Time!.Value, zone))
-                        ?? slot;
-                }
+            }
+            // Two slots can fire at the same instant (the same time twice,
+            // or a time the clock skips moved onto another): an intake whose
+            // slot is already covered takes the other slot of that instant.
+            if (slot is not null && result.ContainsKey(slot.Id))
+            {
+                var instant = AtLocal(day, slot.Time!.Value, zone);
+                slot = timed.FirstOrDefault(s => !result.ContainsKey(s.Id) && AtLocal(day, s.Time!.Value, zone) == instant)
+                    ?? slot;
             }
             // A single timed slot is the only dose an intake of the day can
             // mean, with or without a ScheduledAt that still matches it (the

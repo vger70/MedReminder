@@ -225,6 +225,7 @@ internal static class ExportMapper
         Status = i.Status.ToString(),
         Notes = i.Notes,
         IsExtra = i.IsExtra,
+        SlotTime = i.SlotTime,
     };
 
     public static MedicationIntake ToEntity(ExportedIntake d) => new()
@@ -238,6 +239,7 @@ internal static class ExportMapper
         Status = ParseEnum<IntakeStatus>(d.Status),
         Notes = d.Notes,
         IsExtra = d.IsExtra,
+        SlotTime = d.SlotTime,
     };
 
     public static ExportedNotificationEvent ToDto(NotificationEvent e) => new()

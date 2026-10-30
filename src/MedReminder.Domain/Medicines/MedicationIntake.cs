@@ -18,6 +18,13 @@ public sealed class MedicationIntake
 
     public DateTimeOffset? ScheduledAt { get; init; }
 
+    // The time of the dose slot ScheduledAt names, as the recording device
+    // resolved it in its own zone (issue #317). The database keeps
+    // ScheduledAt as UTC ticks, which another zone reads as another slot
+    // time; this value does not depend on the zone. Null for an intake
+    // that names no slot, and for rows written before it.
+    public TimeOnly? SlotTime { get; init; }
+
     public DateTimeOffset? ActualAt { get; set; }
 
     public required decimal Quantity { get; init; }

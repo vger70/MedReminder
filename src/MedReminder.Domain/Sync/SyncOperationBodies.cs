@@ -115,7 +115,11 @@ public sealed record IntakeRecorded(
     // Operation schema version 9 (ANALYSIS-INTRADAY-CONSUMPTION.md
     // §5.3): an extra intake is written with version 9, so an older
     // device stops at it instead of reading it as a scheduled intake.
-    bool IsExtra = false) : SyncOperationBody(MedicineId);
+    bool IsExtra = false,
+    // The slot time the intake answers (issue #317). Optional: an older
+    // device ignores it and matches by ScheduledAt, as before, so it
+    // needs no schema version of its own.
+    TimeOnly? SlotTime = null) : SyncOperationBody(MedicineId);
 
 // The count inputs and the outcome evaluated on the recording device.
 // Phase 3b decides how the outcome is re-evaluated when facts from other

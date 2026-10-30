@@ -54,6 +54,19 @@ public sealed record LedgerFacts
     // Stock counts in recording order, each with the outcome evaluated
     // when it was recorded (LedgerDeriver.EvaluateCount).
     public IReadOnlyList<StockCountAnchor> Counts { get; init; } = [];
+
+    // Among the slot sets in force on `day`, the most recently recorded
+    // one (§4.2).
+    public IReadOnlyList<MedicationAdministrationSlot> SlotsOn(DateOnly day)
+    {
+        LedgerSlotSet? best = null;
+        foreach (var set in SlotSets)
+        {
+            if (set.EffectiveFrom > day) continue;
+            if (best is null || set.RecordedAt >= best.RecordedAt) best = set;
+        }
+        return best?.Slots ?? [];
+    }
 }
 
 public sealed record LedgerIntake(

@@ -394,4 +394,40 @@ public class RegisterIntakeTests
 
         scope.Intakes.All.Should().HaveCount(2);
     }
+
+    // Issue #317: the slot time is resolved where the intake is recorded
+    // and kept with it, so a device in another zone reads the same slot.
+    [Fact]
+    public async Task The_slot_time_is_kept_and_read_the_same_in_another_zone()
+    {
+        var rome = TimeZoneInfo.CreateCustomTimeZone("Test/Rome", TimeSpan.FromHours(1), "Test Rome", "Test Rome");
+        var scope = new ApplicationTestScope(new DateTimeOffset(2026, 11, 13, 9, 30, 0, TimeSpan.Zero), rome);
+        var day = new DateOnly(2026, 11, 13);
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Enalapril", "compresse", 1m, 2, day, 7, NotificationChannels.Windows,
+            InitialQuantity: 30m,
+            AdministrationSlots:
+            [
+                new AdministrationSlotInput(1m, new TimeOnly(8, 0), null),
+                new AdministrationSlotInput(1m, new TimeOnly(9, 0), null),
+            ]), CancellationToken.None);
+
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, day, IntakeStatus.Taken, 1m,
+            ScheduledAt: new DateTimeOffset(2026, 11, 13, 9, 0, 0, TimeSpan.FromHours(1))), CancellationToken.None);
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, day, IntakeStatus.Taken, 1m),
+            CancellationToken.None);
+
+        var intakes = scope.Intakes.All.OrderBy(i => i.ScheduledAt is null).ToList();
+        intakes[0].SlotTime.Should().Be(new TimeOnly(9, 0));
+        intakes[1].SlotTime.Should().BeNull();
+        // As the database reads it back: UTC ticks, read in London.
+        var stored = new MedicationIntake
+        {
+            MedicineId = id, Day = day, Quantity = 1m, Status = IntakeStatus.Taken,
+            ScheduledAt = intakes[0].ScheduledAt!.Value.ToUniversalTime(), SlotTime = intakes[0].SlotTime,
+        };
+        var slots = await scope.Slots.ListForMedicineAsync(id, CancellationToken.None);
+        DoseSlots.Records(day, slots, [stored], TimeZoneInfo.Utc).Keys
+            .Should().Equal(slots.Single(s => s.Time == new TimeOnly(9, 0)).Id);
+    }
 }

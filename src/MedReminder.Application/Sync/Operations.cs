@@ -62,7 +62,7 @@ internal static class Operations
 
     public static IntakeRecorded Intake(MedicationIntake intake)
         => new(intake.MedicineId, intake.Id, intake.Day, intake.Status, intake.Quantity,
-            intake.ScheduledAt, intake.ActualAt, intake.Notes, intake.RecordedAt, intake.IsExtra);
+            intake.ScheduledAt, intake.ActualAt, intake.Notes, intake.RecordedAt, intake.IsExtra, intake.SlotTime);
 
     public static StockCountRecorded Count(StockCount count)
         => new(count.MedicineId, count.Id, count.CountDay, count.CountedQuantity, count.TakenToday,
