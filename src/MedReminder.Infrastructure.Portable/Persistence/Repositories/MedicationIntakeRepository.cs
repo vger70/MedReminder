@@ -55,6 +55,15 @@ internal sealed class MedicationIntakeRepository : IMedicationIntakeRepository
             .Where(i => i.MedicineId == medicineId && i.Day == day)
             .ToListAsync(cancellationToken);
 
+    // One range read on the (MedicineId, Day) index.
+    public async Task<IReadOnlyList<MedicationIntake>> ListForMedicineBetweenAsync(
+        Guid medicineId, DateOnly fromInclusive, DateOnly toInclusive, CancellationToken cancellationToken)
+        => await _db.MedicationIntakes
+            .AsNoTracking()
+            .Where(i => i.MedicineId == medicineId && i.Day >= fromInclusive && i.Day <= toInclusive)
+            .OrderBy(i => i.Day)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken)
     {
         await _db.MedicationIntakes.AddAsync(intake, cancellationToken);

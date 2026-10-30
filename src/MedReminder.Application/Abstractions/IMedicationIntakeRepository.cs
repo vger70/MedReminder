@@ -28,6 +28,15 @@ public interface IMedicationIntakeRepository
         Guid medicineId, DateOnly day, CancellationToken cancellationToken)
         => [.. (await ListForMedicineAsync(medicineId, cancellationToken)).Where(i => i.Day == day)];
 
+    // The intakes of one medicine from `fromInclusive` to `toInclusive`
+    // (days in the local zone), ordered by day: a log over a period reads
+    // only that period, not the whole history (mobile issue #153).
+    async Task<IReadOnlyList<MedicationIntake>> ListForMedicineBetweenAsync(
+        Guid medicineId, DateOnly fromInclusive, DateOnly toInclusive, CancellationToken cancellationToken)
+        => [.. (await ListForMedicineAsync(medicineId, cancellationToken))
+            .Where(i => i.Day >= fromInclusive && i.Day <= toInclusive)
+            .OrderBy(i => i.Day)];
+
     Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken);
 
     // Retraction of a mistaken intake (RetractFact, B.1 Phase 2d).

@@ -255,4 +255,52 @@ public class IntradayRepositoryTests
         read.Should().Be(slot);
         read!.Value.Offset.Should().Be(TimeSpan.Zero);
     }
+    // The intakes of one medicine over a period (mobile issue #153): both
+    // ends included, other days and other medicines left out, by day.
+    [Fact]
+    public async Task The_intakes_of_a_period_are_read_by_day()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var id = await SeedMedicineAsync(ctx);
+        var other = await SeedMedicineAsync(ctx);
+        foreach (var offset in new[] { 0, -3, -1, -4 })
+        {
+            ctx.MedicationIntakes.Add(new MedicationIntake
+                { MedicineId = id, Day = Today.AddDays(offset), Quantity = 1m, Status = IntakeStatus.Taken });
+        }
+        ctx.MedicationIntakes.Add(new MedicationIntake
+            { MedicineId = other, Day = Today.AddDays(-1), Quantity = 1m, Status = IntakeStatus.Taken });
+        await ctx.SaveChangesAsync();
+        var repository = new MedicationIntakeRepository(ctx);
+
+        var read = await repository.ListForMedicineBetweenAsync(id, Today.AddDays(-3), Today.AddDays(-1), default);
+
+        read.Select(i => i.Day).Should().Equal(Today.AddDays(-3), Today.AddDays(-1));
+        read.Should().OnlyContain(i => i.MedicineId == id);
+        // The interface default, over the whole history, reads the same.
+        MedReminder.Application.Abstractions.IMedicationIntakeRepository historyOnly = new HistoryOnly(repository);
+        var fallback = await historyOnly.ListForMedicineBetweenAsync(id, Today.AddDays(-3), Today.AddDays(-1), default);
+        fallback.Select(i => i.Day).Should().Equal(Today.AddDays(-3), Today.AddDays(-1));
+    }
+
+    // A repository that implements only the members without a default.
+    private sealed class HistoryOnly(MedicationIntakeRepository inner) : MedReminder.Application.Abstractions.IMedicationIntakeRepository
+    {
+        public Task<IReadOnlyList<MedicationIntake>> ListForMedicineAsync(Guid medicineId, CancellationToken cancellationToken)
+            => inner.ListForMedicineAsync(medicineId, cancellationToken);
+
+        public Task<IReadOnlyList<DateOnly>> ListManualIntakeDaysAsync(Guid medicineId, DateOnly fromInclusive,
+            DateOnly toInclusive, CancellationToken cancellationToken)
+            => inner.ListManualIntakeDaysAsync(medicineId, fromInclusive, toInclusive, cancellationToken);
+
+        public Task<IReadOnlyList<Guid>> ListMedicinesWithDayIntakeAsync(DateOnly day, CancellationToken cancellationToken)
+            => inner.ListMedicinesWithDayIntakeAsync(day, cancellationToken);
+
+        public Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken)
+            => inner.AddAsync(intake, cancellationToken);
+
+        public Task RemoveAsync(MedicationIntake intake, CancellationToken cancellationToken)
+            => inner.RemoveAsync(intake, cancellationToken);
+    }
 }
