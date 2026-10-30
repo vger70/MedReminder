@@ -107,25 +107,37 @@ public sealed class RegisterIntake
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
         var now = _clock.GetUtcNow();
-        // The latest recorded set, which Today and the reminders match
-        // against, the set in force on the intake day, which the intake log
-        // reads that day with, and the day's intakes: read once for the slot
-        // time and the check.
+        // The set in force on the intake day, which the intake log reads
+        // that day with, then the latest recorded set, which Today and the
+        // reminders match against; and the day's intakes: read once for the
+        // slot time and the check. The sets are read in the order
+        // LedgerFactsLoader gives the ledger, with the id as tie-break (as
+        // LedgerDeriver picks a day's set): the store orders by RecordedAt
+        // alone, so two sets recorded at one instant would otherwise resolve
+        // differently across devices.
         IReadOnlyList<MedicationAdministrationSlot> slots = [];
-        IReadOnlyList<MedicationAdministrationSlot> daySlots = [];
         IReadOnlyList<MedicationIntake> day = [];
+        TimeOnly? slotTime = null;
         if (cmd.ScheduledAt is not null)
         {
-            slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
-            daySlots = InForce(await _slots.ListSetsForMedicineAsync(medicine.Id, cancellationToken), cmd.Day);
+            var sets = (await _slots.ListSetsForMedicineAsync(medicine.Id, cancellationToken))
+                .OrderBy(e => e.Set.RecordedAt)
+                .ThenBy(e => e.Set.Id)
+                .ToList();
+            var daySlots = sets.LastOrDefault(e => e.Set.EffectiveFrom <= cmd.Day)?.Slots ?? [];
+            var latest = sets.LastOrDefault()?.Slots ?? [];
             day = await _intakes.ListForDayAsync(medicine.Id, cmd.Day, cancellationToken);
+            // The check reads the same set the slot time was resolved from.
+            slotTime = SlotTimeOf(cmd, daySlots, day);
+            slots = slotTime is null ? latest : daySlots;
+            if (slotTime is null && !ReferenceEquals(latest, daySlots)) slotTime = SlotTimeOf(cmd, latest, day);
         }
         var intake = new MedicationIntake
         {
             MedicineId = medicine.Id,
             Day = cmd.Day,
             ScheduledAt = cmd.ScheduledAt,
-            SlotTime = SlotTimeOf(cmd, daySlots, day) ?? SlotTimeOf(cmd, slots, day),
+            SlotTime = slotTime,
             Status = cmd.Status,
             Quantity = cmd.Quantity,
             ActualAt = cmd.Status == IntakeStatus.Taken ? now : null,
@@ -168,23 +180,6 @@ public sealed class RegisterIntake
         await _operations.AppendAsync([Operations.Intake(intake)], cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
         return intake.Id;
-    }
-
-    // Among the slot sets in force on `day`, the most recently recorded
-    // one, as the ledger reads a day (LedgerDeriver). Read in the order
-    // LedgerFactsLoader gives the ledger, with the id as tie-break: the
-    // store orders by RecordedAt alone, so two sets recorded at one
-    // instant would otherwise resolve differently across devices.
-    private static IReadOnlyList<MedicationAdministrationSlot> InForce(
-        IReadOnlyList<AdministrationSlotSetEntry> sets, DateOnly day)
-    {
-        AdministrationSlotSetEntry? best = null;
-        foreach (var entry in sets.OrderBy(e => e.Set.RecordedAt).ThenBy(e => e.Set.Id))
-        {
-            if (entry.Set.EffectiveFrom > day) continue;
-            if (best is null || entry.Set.RecordedAt >= best.Set.RecordedAt) best = entry;
-        }
-        return best?.Slots ?? [];
     }
 
     // The time of the slot ScheduledAt names, read in this device's zone

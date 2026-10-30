@@ -482,4 +482,32 @@ public class RegisterIntakeTests
 
         scope.Intakes.All.Single().SlotTime.Should().Be(new TimeOnly(8, 0));
     }
+
+    // The check reads the set the slot time was resolved from: on a past
+    // day, the two slots of that day's set are each recorded once, though
+    // the latest set has a single slot both would otherwise fall back to.
+    [Fact]
+    public async Task A_past_day_checks_the_slot_against_its_own_set()
+    {
+        var scope = new ApplicationTestScope();
+        var id = await SeedTwoSlotsAsync(scope);
+        var today = new DateOnly(2026, 9, 13);
+        var set = new MedicationAdministrationSlotSet
+        {
+            MedicineId = id, EffectiveFrom = today, RecordedAt = scope.Clock.GetUtcNow().AddTicks(1),
+        };
+        await scope.Slots.AddSetAsync(set,
+            [new MedicationAdministrationSlot { MedicineId = id, SetId = set.Id, Dose = 1m, Time = new TimeOnly(9, 0) }],
+            CancellationToken.None);
+        RegisterIntakeCommand At(int hour) => new(id, today.AddDays(-1), IntakeStatus.Taken, 1m,
+            ScheduledAt: new DateTimeOffset(2026, 9, 12, hour, 0, 0, TimeSpan.Zero), RequireSlotOpen: true);
+
+        await scope.RegisterIntake.ExecuteAsync(At(8), CancellationToken.None);
+        await scope.RegisterIntake.ExecuteAsync(At(20), CancellationToken.None);
+        await FluentActions.Awaiting(() => scope.RegisterIntake.ExecuteAsync(At(8), CancellationToken.None))
+            .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
+
+        scope.Intakes.All.Select(i => i.SlotTime).Should()
+            .BeEquivalentTo([new TimeOnly(8, 0), new TimeOnly(20, 0)]);
+    }
 }

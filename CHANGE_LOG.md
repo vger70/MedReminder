@@ -30,7 +30,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
-## [PR #324](https://github.com/vger70/MedReminder/pull/324) — Resolve an intake's slot time from its day's set, and fall back to ScheduledAt
+## [PR #324](https://github.com/vger70/MedReminder/pull/324) — Resolve an intake's slot time from its day's set, then the latest set
 
 **Status:** open
 
