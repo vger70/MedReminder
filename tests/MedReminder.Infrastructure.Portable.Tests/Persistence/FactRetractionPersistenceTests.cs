@@ -35,7 +35,8 @@ public class FactRetractionPersistenceTests
         }
         await using (var ctx = fixture.CreateContext())
         {
-            await new RegisterIntake(new MedicineRepository(ctx), new MedicationIntakeRepository(ctx), LedgerFor(ctx),
+            await new RegisterIntake(new MedicineRepository(ctx), new MedicationIntakeRepository(ctx),
+                    new MedicationAdministrationSlotRepository(ctx), LedgerFor(ctx),
                     TestOperationLog.For(ctx), new UnitOfWork(ctx), Clock)
                 .ExecuteAsync(new RegisterIntakeCommand(id, new DateOnly(2026, 9, 10), IntakeStatus.Taken, 3m),
                     CancellationToken.None);

@@ -123,7 +123,7 @@ internal sealed class ApplicationTestScope
         SuspendMedication = new SuspendMedication(Medicines, Suspensions, Operations, Uow, Clock);
         ResumeMedication = new ResumeMedication(Medicines, Suspensions, Operations, Uow, Clock);
         ChangeMedicationSchedule = new ChangeMedicationSchedule(Medicines, Schedules, Operations, Uow, Clock);
-        RegisterIntake = new RegisterIntake(Medicines, Intakes, Ledger, Operations, Uow, Clock);
+        RegisterIntake = new RegisterIntake(Medicines, Intakes, Slots, Ledger, Operations, Uow, Clock);
 
         var dictionaries = new JsonDictionaryLocalizationService("en");
         AsNeededBackfill = new AsNeededSlotBackfill(
