@@ -32,7 +32,7 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ## [PR #326](https://github.com/vger70/MedReminder/pull/326) — Add a period read of a medicine's intakes
 
-**Status:** open
+**Status:** merged (2026-10-30), tagged core-v0.32.0
 
 - **Added**: `IMedicationIntakeRepository.ListForMedicineBetweenAsync`,
   a range read of one medicine's intakes on the existing
