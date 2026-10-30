@@ -108,16 +108,21 @@ public sealed class RegisterIntake
 
         var now = _clock.GetUtcNow();
         // The slots every reader of DoseSlots.Records matches against (the
-        // latest recorded set), read once for the slot time and the check.
-        IReadOnlyList<MedicationAdministrationSlot> slots = cmd.ScheduledAt is null
-            ? []
-            : await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
+        // latest recorded set) and the day's intakes, read once for the
+        // slot time and the check.
+        IReadOnlyList<MedicationAdministrationSlot> slots = [];
+        IReadOnlyList<MedicationIntake> day = [];
+        if (cmd.ScheduledAt is not null)
+        {
+            slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
+            day = await _intakes.ListForDayAsync(medicine.Id, cmd.Day, cancellationToken);
+        }
         var intake = new MedicationIntake
         {
             MedicineId = medicine.Id,
             Day = cmd.Day,
             ScheduledAt = cmd.ScheduledAt,
-            SlotTime = SlotTimeOf(cmd, slots),
+            SlotTime = SlotTimeOf(cmd, slots, day),
             Status = cmd.Status,
             Quantity = cmd.Quantity,
             ActualAt = cmd.Status == IntakeStatus.Taken ? now : null,
@@ -126,7 +131,7 @@ public sealed class RegisterIntake
             IsExtra = cmd.IsExtra,
         };
 
-        if (cmd.RequireSlotOpen) await EnsureSlotOpenAsync(intake, slots, cancellationToken);
+        if (cmd.RequireSlotOpen) EnsureSlotOpen(intake, slots, day);
 
         var before = await _ledger.LoadFactsAsync(medicine, cancellationToken);
         var after = before with
@@ -165,24 +170,42 @@ public sealed class RegisterIntake
     // The time of the slot ScheduledAt names, read in this device's zone
     // as DoseSlots.Records reads it (issue #317): kept with the intake, so
     // a device in another zone matches the same slot. Null when it names
-    // no slot (a time changed since), even with a single timed slot.
-    private TimeOnly? SlotTimeOf(RegisterIntakeCommand cmd, IReadOnlyList<MedicationAdministrationSlot> slots)
-        => cmd.ScheduledAt is { } scheduledAt
-            ? DoseSlots.NamedBy(cmd.Day, slots, scheduledAt, _ledger.Zone)?.Time
-            : null;
+    // no slot (a time changed since), even with a single timed slot. Of two
+    // slots at one instant (a time the clock skips moved onto another),
+    // the one the intake takes after the day's intakes, as Records reads
+    // it here: another zone, where the two instants differ, then reads
+    // both slots as recorded too.
+    private TimeOnly? SlotTimeOf(RegisterIntakeCommand cmd, IReadOnlyList<MedicationAdministrationSlot> slots,
+        IReadOnlyList<MedicationIntake> day)
+    {
+        if (cmd.ScheduledAt is not { } scheduledAt) return null;
+        var named = DoseSlots.NamedBy(cmd.Day, slots, scheduledAt, _ledger.Zone);
+        if (named is null) return null;
+        var probe = new MedicationIntake
+        {
+            MedicineId = cmd.MedicineId,
+            Day = cmd.Day,
+            ScheduledAt = scheduledAt,
+            Status = cmd.Status,
+            Quantity = cmd.Quantity,
+            RecordedAt = DateTimeOffset.MaxValue,
+        };
+        var taken = DoseSlots.Records(cmd.Day, slots, [.. day, probe], _ledger.Zone)
+            .FirstOrDefault(r => r.Value == probe).Key;
+        return slots.FirstOrDefault(s => s.Id == taken)?.Time ?? named.Time;
+    }
 
     // The slot the new intake names, read as DoseSlots.Records reads it
     // among the day's intakes: read last, it answers a slot only when no
     // other intake does. With several timed slots a ScheduledAt that
     // names none (changed since) is not refused; with a single timed slot
     // it names that slot (DoseSlots.Records) and is checked.
-    private async Task EnsureSlotOpenAsync(
-        MedicationIntake intake, IReadOnlyList<MedicationAdministrationSlot> slots, CancellationToken cancellationToken)
+    private void EnsureSlotOpen(
+        MedicationIntake intake, IReadOnlyList<MedicationAdministrationSlot> slots, IReadOnlyList<MedicationIntake> day)
     {
         var zone = _ledger.Zone;
         var named = DoseSlots.Records(intake.Day, slots, [intake], zone);
         if (named.Count == 0) return;
-        var day = await _intakes.ListForDayAsync(intake.MedicineId, intake.Day, cancellationToken);
         // Records orders by RecordedAt, and an intake synced from another
         // device carries that device's clock, which can be ahead of this
         // one: the new intake is read last whatever the clocks say, so an

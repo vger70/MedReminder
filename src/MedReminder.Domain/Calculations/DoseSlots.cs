@@ -50,7 +50,8 @@ public static class DoseSlots
             MedicationAdministrationSlot? slot = null;
             if (intake.SlotTime is { } time)
             {
-                slot = timed.FirstOrDefault(s => s.Time == time);
+                // To the minute, as a ScheduledAt is matched (SameMinute).
+                slot = timed.FirstOrDefault(s => s.Time is { } t && t.Hour == time.Hour && t.Minute == time.Minute);
             }
             else if (intake.ScheduledAt is { } at)
             {

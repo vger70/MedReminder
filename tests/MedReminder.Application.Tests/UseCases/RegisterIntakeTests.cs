@@ -393,6 +393,12 @@ public class RegisterIntakeTests
             .Should().ThrowAsync<DoseSlotAlreadyRecordedException>();
 
         scope.Intakes.All.Should().HaveCount(2);
+        // Issue #317: each keeps its own slot time, so a zone where the two
+        // instants differ reads both slots as recorded too.
+        scope.Intakes.All.Select(i => i.SlotTime).Should()
+            .BeEquivalentTo([new TimeOnly(2, 30), new TimeOnly(3, 0)]);
+        var slots = await scope.Slots.ListForMedicineAsync(id, CancellationToken.None);
+        DoseSlots.Records(day, slots, scope.Intakes.All, TimeZoneInfo.Utc).Should().HaveCount(2);
     }
 
     // Issue #317: the slot time is resolved where the intake is recorded
