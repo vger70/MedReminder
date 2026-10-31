@@ -82,8 +82,8 @@ public sealed class RetractFact
                 facts = facts with { UserEntries = facts.UserEntries.Where(e => e.Id != cmd.FactId).ToList() };
                 break;
             case FactKind.Intake:
-                var intake = (await _intakes.ListForMedicineAsync(medicine.Id, cancellationToken))
-                    .Single(i => i.Id == cmd.FactId);
+                var intake = await _intakes.GetAsync(medicine.Id, cmd.FactId, cancellationToken)
+                    ?? throw new InvalidOperationException($"Intake {cmd.FactId} not found.");
                 await _intakes.RemoveAsync(intake, cancellationToken);
                 facts = facts with { Intakes = facts.Intakes.Where(i => i.Id != cmd.FactId).ToList() };
                 break;

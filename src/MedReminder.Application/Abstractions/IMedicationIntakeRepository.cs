@@ -37,6 +37,12 @@ public interface IMedicationIntakeRepository
             .Where(i => i.Day >= fromInclusive && i.Day <= toInclusive)
             .OrderBy(i => i.Day)];
 
+    // One intake of a medicine by id, null when there is none: a
+    // primary-key read where the sync apply and the retraction looked
+    // through the whole history (issue #328).
+    async Task<MedicationIntake?> GetAsync(Guid medicineId, Guid intakeId, CancellationToken cancellationToken)
+        => (await ListForMedicineAsync(medicineId, cancellationToken)).FirstOrDefault(i => i.Id == intakeId);
+
     Task AddAsync(MedicationIntake intake, CancellationToken cancellationToken);
 
     // Retraction of a mistaken intake (RetractFact, B.1 Phase 2d).

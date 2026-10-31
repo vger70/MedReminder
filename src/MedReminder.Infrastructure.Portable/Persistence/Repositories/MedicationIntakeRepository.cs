@@ -55,6 +55,12 @@ internal sealed class MedicationIntakeRepository : IMedicationIntakeRepository
             .OrderBy(i => i.Day)
             .ToListAsync(cancellationToken);
 
+    // On the primary key.
+    public Task<MedicationIntake?> GetAsync(Guid medicineId, Guid intakeId, CancellationToken cancellationToken)
+        => _db.MedicationIntakes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == intakeId && i.MedicineId == medicineId, cancellationToken);
+
     // The intakes of one medicine from `fromInclusive` to `toInclusive`,
     // both included: a range on the (MedicineId, Day) index.
     private IQueryable<MedicationIntake> Between(Guid medicineId, DateOnly fromInclusive, DateOnly toInclusive)

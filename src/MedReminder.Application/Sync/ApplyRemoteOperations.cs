@@ -686,8 +686,7 @@ public sealed class ApplyRemoteOperations
     {
         var medicine = await GetMedicineAsync(intake.MedicineId, ct);
         if (!await IsNewFactAsync(intake.MedicineId, intake.IntakeId, ct)) return;
-        var existing = await _intakes.ListForMedicineAsync(intake.MedicineId, ct);
-        if (existing.Any(i => i.Id == intake.IntakeId)) return;
+        if (await _intakes.GetAsync(intake.MedicineId, intake.IntakeId, ct) is not null) return;
 
         var added = new MedicationIntake
         {
@@ -709,10 +708,11 @@ public sealed class ApplyRemoteOperations
         // §4.5 hint: intakes of one day from different devices that
         // together exceed the day's scheduled quantity.
         // Extra intakes are on top of the plan by definition.
-        var sameDay = existing
-            .Where(i => i.Day == intake.Day && i.Status == IntakeStatus.Taken && !i.IsExtra)
+        if (intake.Status != IntakeStatus.Taken || intake.IsExtra) return;
+        var sameDay = (await _intakes.ListForDayAsync(intake.MedicineId, intake.Day, ct))
+            .Where(i => i.Status == IntakeStatus.Taken && !i.IsExtra)
             .ToList();
-        if (intake.Status != IntakeStatus.Taken || intake.IsExtra || sameDay.Count == 0) return;
+        if (sameDay.Count == 0) return;
         var planned = await PlannedQuantityAsync(medicine, intake.Day, ct);
         var total = sameDay.Sum(i => i.Quantity) + intake.Quantity;
         if (total <= planned) return;
@@ -836,8 +836,7 @@ public sealed class ApplyRemoteOperations
                 break;
             case FactKind.Intake:
                 var intake = _trackedFacts.GetValueOrDefault(retraction.FactId) as MedicationIntake
-                    ?? (await _intakes.ListForMedicineAsync(retraction.MedicineId, ct))
-                        .FirstOrDefault(i => i.Id == retraction.FactId);
+                    ?? await _intakes.GetAsync(retraction.MedicineId, retraction.FactId, ct);
                 if (intake is not null) await _intakes.RemoveAsync(intake, ct);
                 break;
             case FactKind.StockCount:

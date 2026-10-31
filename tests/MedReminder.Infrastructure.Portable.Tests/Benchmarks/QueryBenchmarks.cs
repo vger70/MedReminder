@@ -110,6 +110,18 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
             }
         });
 
+        yield return ($"sync apply: {SyncSample} intakes looked up by id", async sp =>
+        {
+            var retractions = sp.GetRequiredService<IFactRetractionRepository>();
+            var intakes = sp.GetRequiredService<IMedicationIntakeRepository>();
+            foreach (var id in sample)
+            {
+                var medicineId = medicineOf[id];
+                _ = (await retractions.ListForMedicineAsync(medicineId, ct)).All(r => r.FactId != id);
+                _ = await intakes.GetAsync(medicineId, id, ct) is not null;
+            }
+        });
+
         // Startup: the boot patches run on every launch of an existing
         // database.
         yield return ("boot: DatabaseInitializer.InitializeAsync",
