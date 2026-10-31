@@ -110,6 +110,11 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
             }
         });
 
+        // Startup: the boot patches run on every launch of an existing
+        // database.
+        yield return ("boot: DatabaseInitializer.InitializeAsync",
+            sp => sp.GetRequiredService<DatabaseInitializer>().InitializeAsync(ct));
+
         // Hot loaders, end to end.
         yield return ("loader: NotificationPlanLoader.LoadAsync",
             sp => sp.GetRequiredService<NotificationPlanLoader>().LoadAsync(p.Today, ct));

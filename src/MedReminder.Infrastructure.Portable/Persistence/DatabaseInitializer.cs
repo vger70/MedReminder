@@ -162,10 +162,17 @@ public sealed class DatabaseInitializer
                 ""FiredAt""    INTEGER NOT NULL,
                 ""Channel""    INTEGER NOT NULL
             );", cancellationToken);
+        // The dedup index under the name EF gives it (issue #328). The
+        // first version of this patch named it IX_DoseReminderEvents_Dedup,
+        // which left new databases with two identical unique indexes from
+        // their second boot. The new index is built before the old one is
+        // dropped, so the key stays unique throughout; the rows already
+        // satisfy it, as the old index enforced the same key.
         await ExecuteRawSqlAsync(@"
-            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DoseReminderEvents_Dedup""
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DoseReminderEvents_MedicineId_SlotKey_LocalDate""
                 ON ""DoseReminderEvents"" (""MedicineId"", ""SlotKey"", ""LocalDate"");",
             cancellationToken);
+        await ExecuteRawSqlAsync(@"DROP INDEX IF EXISTS ""IX_DoseReminderEvents_Dedup"";", cancellationToken);
 
         await ApplyLedgerFactsPatchAsync(cancellationToken);
         await ApplyLedgerDerivationPatchAsync(cancellationToken);
@@ -446,6 +453,21 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_PrescriptionDispensations_MedicineId""
                 ON ""PrescriptionDispensations"" (""MedicineId"");", cancellationToken);
+
+        // Last: every non-unique index of the EF model, once the patches
+        // above have added the tables and columns it covers (issue #328).
+        await ModelIndexes.EnsureAsync(
+            _db.Model, await OpenConnectionAsync(cancellationToken), unique: false, _log, cancellationToken);
+    }
+
+    private async Task<DbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+        return connection;
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the
