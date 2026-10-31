@@ -152,6 +152,63 @@ public class ModelIndexPatchTests
         }
     }
 
+    // A unique index whose key is shared by two rows is not created (the
+    // CREATE would fail and stop the database from opening): it is
+    // reported, no row is touched, and it is created on the first boot
+    // after the duplicate is gone.
+    [Fact]
+    public async Task A_unique_index_is_skipped_while_rows_share_its_key()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        const string Index = "IX_PrescriptionReminderEvents_PrescriptionId_ValidUntil";
+        var prescription = Guid.NewGuid().ToString().ToUpperInvariant();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync($"DROP INDEX \"{Index}\";");
+            for (var i = 0; i < 2; i++)
+            {
+                await ctx.Database.ExecuteSqlRawAsync(@"
+                    INSERT INTO ""PrescriptionReminderEvents"" (""Id"", ""PrescriptionId"", ""MedicineId"", ""ValidUntil"", ""FiredAt"")
+                    VALUES ({0}, {1}, {2}, '2026-10-31', 0);",
+                    Guid.NewGuid().ToString().ToUpperInvariant(), prescription, Guid.NewGuid().ToString().ToUpperInvariant());
+            }
+        }
+
+        var log = new RecordingLogger();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.OpenConnectionAsync();
+            await ModelIndexes.EnsureAsync(ctx.Model, ctx.Database.GetDbConnection(), unique: true, log, default);
+            (await NamesAsync(ctx, "index")).Should().NotContain(Index);
+            (await ctx.PrescriptionReminderEvents.CountAsync()).Should().Be(2);
+        }
+        log.Warnings.Should().ContainSingle().Which.Should().Contain(Index);
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            ctx.PrescriptionReminderEvents.Remove(await ctx.PrescriptionReminderEvents.FirstAsync());
+            await ctx.SaveChangesAsync();
+            await ctx.Database.OpenConnectionAsync();
+            await ModelIndexes.EnsureAsync(ctx.Model, ctx.Database.GetDbConnection(), unique: true, log, default);
+            (await NamesAsync(ctx, "index")).Should().Contain(Index);
+        }
+    }
+
+    private sealed class RecordingLogger : Microsoft.Extensions.Logging.ILogger
+    {
+        public List<string> Warnings { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId,
+            TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == Microsoft.Extensions.Logging.LogLevel.Warning) Warnings.Add(formatter(state, exception));
+        }
+    }
+
     private static async Task InitializeAsync(SqliteInMemoryFixture fixture, int runs)
     {
         for (var run = 0; run < runs; run++)

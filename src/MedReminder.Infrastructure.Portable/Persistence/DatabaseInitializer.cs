@@ -458,10 +458,12 @@ public sealed class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS ""IX_PrescriptionDispensations_MedicineId""
                 ON ""PrescriptionDispensations"" (""MedicineId"");", cancellationToken);
 
-        // Last: every non-unique index of the EF model, once the patches
-        // above have added the tables and columns it covers (issue #328).
-        await ModelIndexes.EnsureAsync(
-            _db.Model, await OpenConnectionAsync(cancellationToken), unique: false, _log, cancellationToken);
+        // Last: every index of the EF model, once the patches above have
+        // added the tables and columns it covers (issue #328). A unique
+        // index is skipped and reported while rows share its key.
+        var connection = await OpenConnectionAsync(cancellationToken);
+        await ModelIndexes.EnsureAsync(_db.Model, connection, unique: false, _log, cancellationToken);
+        await ModelIndexes.EnsureAsync(_db.Model, connection, unique: true, _log, cancellationToken);
     }
 
     private async Task<DbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
