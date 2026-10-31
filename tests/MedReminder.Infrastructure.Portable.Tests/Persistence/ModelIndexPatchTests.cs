@@ -102,26 +102,29 @@ public class ModelIndexPatchTests
         actual.Indexes.Should().BeEquivalentTo(expected.Indexes);
     }
 
-    // (MedicineId, Day) covers the reads and the foreign key, so EF adds no
-    // (MedicineId) index of its own and the boot patch drops the old one.
-    [Fact]
-    public async Task The_redundant_intake_medicine_index_is_dropped()
+    // A composite index starting with MedicineId covers the reads and the
+    // foreign key, so EF adds no (MedicineId) index of its own and the
+    // boot patch drops the old ones.
+    [Theory]
+    [InlineData("MedicationIntakes", "IX_MedicationIntakes_MedicineId", "IX_MedicationIntakes_MedicineId_Day")]
+    [InlineData("StockMovements", "IX_StockMovements_MedicineId", "IX_StockMovements_MedicineId_Kind_OccurredAt")]
+    [InlineData("MedicationAdministrationSlots", "IX_MedicationAdministrationSlots_MedicineId",
+        "IX_MedicationAdministrationSlots_MedicineId_Order")]
+    public async Task A_redundant_medicine_index_is_dropped(string table, string redundant, string covering)
     {
         using var fixture = new SqliteInMemoryFixture();
         await using (var ctx = fixture.CreateContext())
         {
-            ModelIndexes.Of(ctx.Model).Where(i => i.Table == "MedicationIntakes").Select(i => i.Name)
-                .Should().BeEquivalentTo("IX_MedicationIntakes_MedicineId_Day", "IX_MedicationIntakes_MedicineId_ScheduledAt");
-            await ctx.Database.ExecuteSqlRawAsync(
-                @"CREATE INDEX ""IX_MedicationIntakes_MedicineId"" ON ""MedicationIntakes"" (""MedicineId"");");
+            ModelIndexes.Of(ctx.Model).Where(i => i.Table == table).Select(i => i.Name)
+                .Should().Contain(covering).And.NotContain(redundant);
+            await ctx.Database.ExecuteSqlRawAsync($"CREATE INDEX \"{redundant}\" ON \"{table}\" (\"MedicineId\");");
         }
 
         await InitializeAsync(fixture, runs: 2);
 
         await using (var ctx = fixture.CreateContext())
         {
-            (await NamesAsync(ctx, "index")).Should().NotContain("IX_MedicationIntakes_MedicineId")
-                .And.Contain("IX_MedicationIntakes_MedicineId_Day");
+            (await NamesAsync(ctx, "index")).Should().NotContain(redundant).And.Contain(covering);
         }
     }
 

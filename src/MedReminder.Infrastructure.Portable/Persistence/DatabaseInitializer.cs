@@ -454,6 +454,14 @@ public sealed class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS ""IX_PrescriptionDispensations_MedicineId""
                 ON ""PrescriptionDispensations"" (""MedicineId"");", cancellationToken);
 
+        // The (MedicineId) prefix indexes of StockMovements and
+        // MedicationAdministrationSlots are redundant too (issue #328):
+        // (MedicineId, Kind, OccurredAt) and (MedicineId, Order) serve the
+        // same reads. Both composite indexes date from the first schema
+        // and Increment 10, so they exist before these drops.
+        await ExecuteRawSqlAsync(@"DROP INDEX IF EXISTS ""IX_StockMovements_MedicineId"";", cancellationToken);
+        await ExecuteRawSqlAsync(@"DROP INDEX IF EXISTS ""IX_MedicationAdministrationSlots_MedicineId"";", cancellationToken);
+
         // Last: every index of the EF model, once the patches above have
         // added the tables and columns it covers (issue #328). A unique
         // index is skipped and reported while rows share its key.

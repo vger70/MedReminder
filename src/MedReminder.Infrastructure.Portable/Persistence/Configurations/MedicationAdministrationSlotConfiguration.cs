@@ -20,7 +20,8 @@ internal sealed class MedicationAdministrationSlotConfiguration
         builder.Property(s => s.IsAsNeeded);
         builder.Property(s => s.PresetId);
 
-        builder.HasIndex(s => s.MedicineId);
+        // (MedicineId, Order) also serves the MedicineId-only reads and the
+        // foreign key: a separate (MedicineId) index was dropped (#328).
         builder.HasIndex(s => new { s.MedicineId, s.Order });
         // No FK towards the set: the B.1 boot patch adds SetId with
         // ALTER TABLE, which cannot add a constraint, and fresh and

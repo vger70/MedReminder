@@ -148,6 +148,26 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
             await transaction.RollbackAsync(ct);
         });
 
+        // Write cost of the movement indexes: 1,000 derived consumptions,
+        // rolled back.
+        yield return ("write: 1000 movements (rolled back)", async sp =>
+        {
+            var db = sp.GetRequiredService<MedReminderDbContext>();
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            for (var i = 0; i < 1000; i++)
+            {
+                db.StockMovements.Add(new Domain.Stock.StockMovement
+                {
+                    MedicineId = ids[i % ids.Count],
+                    OccurredAt = new DateTimeOffset(p.Today.AddDays(1 + i / ids.Count).ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero),
+                    Kind = Domain.Stock.StockMovementKind.Consumption, QuantityDelta = -2m, StockEpoch = 1,
+                    Origin = Domain.Stock.StockMovementOrigin.Derived,
+                });
+            }
+            await db.SaveChangesAsync(ct);
+            await transaction.RollbackAsync(ct);
+        });
+
         // Startup: the boot patches run on every launch of an existing
         // database.
         yield return ("boot: DatabaseInitializer.InitializeAsync",
