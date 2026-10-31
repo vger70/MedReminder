@@ -30,6 +30,33 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## [PR #329](https://github.com/vger70/MedReminder/pull/329) — Bound the hot database reads and create every model index on upgraded databases
+
+- **Added**: opt-in benchmark harness (`tests/MedReminder.Infrastructure.Portable.Tests/Benchmarks/`,
+  `MEDREMINDER_BENCHMARKS=1`): seeded 5/15/30-medicine profiles over
+  1/2/5 years, timings and SQLite query plans of every hot read.
+- **Added**: repository reads with interface defaults, so other
+  implementations keep compiling: `GetAsync` by id for intakes, stock
+  movements, counts and suspensions; `IFactRetractionRepository.GetForFactAsync`;
+  `IStockMovementRepository.GetCurrentStockAsync` and
+  `GetLastNewPackageQuantityAsync`; `ISyncOperationRepository.ExistsForMedicineAsync`
+  and `ListStampsForMedicineAsync` (no payload); batched
+  `ListRemindedAsync` / `ListShownAsync` for prescription reminders and
+  package notices.
+- **Changed**: the sync apply, retraction, monitor, notification plan,
+  overview, coverage, timeline and other loaders use them instead of
+  reading whole histories. At 30 medicines over five years: plan 211 ->
+  45 ms, monitor 120 -> 48 ms, 50 sync fact look-ups 231 -> 1.4 ms.
+- **Added**: `ModelIndexes` boot patch creates every index of the EF model
+  missing on an upgraded database; a unique one only when no rows share
+  its key (otherwise skipped and reported, no row changed).
+- **Fixed**: new databases got a second, identical unique index on
+  `DoseReminderEvents` (`IX_DoseReminderEvents_Dedup`) from their second
+  boot; the patch now uses the EF name and drops the old one.
+- **Removed**: the redundant `IX_MedicationIntakes_MedicineId` index.
+- **Docs**: `docs/analysis/DATABASE-QUERIES.md`, the inventory and the
+  numbers.
+
 ## [PR #326](https://github.com/vger70/MedReminder/pull/326) — Add a period read of a medicine's intakes
 
 **Status:** merged (2026-10-30), tagged core-v0.32.0
