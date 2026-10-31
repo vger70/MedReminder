@@ -44,6 +44,7 @@ internal sealed class BenchmarkProfile : IAsyncDisposable
     public IReadOnlyList<Guid> IntakeIds { get; private set; } = [];
     public QueryPlanRecorder Recorder { get; } = new();
     public IReadOnlyDictionary<string, long> RowCounts { get; private set; } = new Dictionary<string, long>();
+    public long SizeBytes { get; private set; }
 
     private BenchmarkProfile(int medicines, int years)
     {
@@ -246,6 +247,11 @@ internal sealed class BenchmarkProfile : IAsyncDisposable
             await using var command = connection.CreateCommand();
             command.CommandText = $"SELECT COUNT(*) FROM \"{table}\";";
             counts[table] = (long)(await command.ExecuteScalarAsync())!;
+        }
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size();";
+            SizeBytes = (long)(await command.ExecuteScalarAsync())!;
         }
         RowCounts = counts;
     }

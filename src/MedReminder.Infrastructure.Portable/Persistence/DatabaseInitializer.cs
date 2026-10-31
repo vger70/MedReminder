@@ -366,6 +366,10 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_MedicationIntakes_MedicineId_Day""
                 ON ""MedicationIntakes"" (""MedicineId"", ""Day"");", cancellationToken);
+        // Its (MedicineId) prefix index is redundant (issue #328): the
+        // query planner already chose (MedicineId, Day) for MedicineId-only
+        // reads. Dropped after the composite index exists.
+        await ExecuteRawSqlAsync(@"DROP INDEX IF EXISTS ""IX_MedicationIntakes_MedicineId"";", cancellationToken);
 
         // Time-of-day presets (ANALYSIS-INTRADAY-CONSUMPTION.md §6),
         // device-local. Existing slots get their preset from their

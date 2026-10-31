@@ -101,6 +101,29 @@ public class ModelIndexPatchTests
         actual.Indexes.Should().BeEquivalentTo(expected.Indexes);
     }
 
+    // (MedicineId, Day) covers the reads and the foreign key, so EF adds no
+    // (MedicineId) index of its own and the boot patch drops the old one.
+    [Fact]
+    public async Task The_redundant_intake_medicine_index_is_dropped()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using (var ctx = fixture.CreateContext())
+        {
+            ModelIndexes.Of(ctx.Model).Where(i => i.Table == "MedicationIntakes").Select(i => i.Name)
+                .Should().BeEquivalentTo("IX_MedicationIntakes_MedicineId_Day", "IX_MedicationIntakes_MedicineId_ScheduledAt");
+            await ctx.Database.ExecuteSqlRawAsync(
+                @"CREATE INDEX ""IX_MedicationIntakes_MedicineId"" ON ""MedicationIntakes"" (""MedicineId"");");
+        }
+
+        await InitializeAsync(fixture, runs: 2);
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await NamesAsync(ctx, "index")).Should().NotContain("IX_MedicationIntakes_MedicineId")
+                .And.Contain("IX_MedicationIntakes_MedicineId_Day");
+        }
+    }
+
     [Fact]
     public async Task Every_model_index_is_created_once_when_missing()
     {

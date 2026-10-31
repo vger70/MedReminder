@@ -122,6 +122,23 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
             }
         });
 
+        // Write cost of the intake indexes: 1,000 intakes, rolled back.
+        yield return ("write: 1000 intakes (rolled back)", async sp =>
+        {
+            var db = sp.GetRequiredService<MedReminderDbContext>();
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            for (var i = 0; i < 1000; i++)
+            {
+                db.MedicationIntakes.Add(new Domain.Medicines.MedicationIntake
+                {
+                    MedicineId = ids[i % ids.Count], Day = p.Today.AddDays(1 + i / ids.Count), Quantity = 1m,
+                    Status = Domain.Medicines.IntakeStatus.Taken,
+                });
+            }
+            await db.SaveChangesAsync(ct);
+            await transaction.RollbackAsync(ct);
+        });
+
         // Startup: the boot patches run on every launch of an existing
         // database.
         yield return ("boot: DatabaseInitializer.InitializeAsync",
@@ -188,7 +205,7 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
         text.AppendLine(inv, $"### {profile.Medicines} medicines, {profile.Years} years");
         text.AppendLine();
         text.AppendLine(inv, $"Rows: {string.Join(", ", profile.RowCounts.Select(c => $"{c.Key} {c.Value}"))}. " +
-            $"Runs: {BenchmarkSwitch.Runs}. Machine: {Environment.OSVersion}, {Environment.ProcessorCount} cores, " +
+            $"Database: {profile.SizeBytes / 1024.0 / 1024.0:F1} MB. Runs: {BenchmarkSwitch.Runs}. Machine: {Environment.OSVersion}, {Environment.ProcessorCount} cores, " +
             $".NET {Environment.Version}.");
         text.AppendLine();
         text.AppendLine("| Operation | Median ms | Min | Max | Query plan |");
