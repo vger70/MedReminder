@@ -131,20 +131,18 @@ public sealed class PackageExpiryNotices
             }))
             .Where(d => d.Stage != 0)];
 
+    private static PackageNoticeKey Key(Due due)
+        => new(due.Item.Package.Id, due.Item.EffectiveExpiry!.Value, due.Stage);
+
     // The candidates this channel has not notified yet: the expired ones
     // when there are any, otherwise those expiring soon.
     private async Task<IReadOnlyList<Due>> PendingAsync(IReadOnlyList<Due> candidates, NotificationChannels channel,
         CancellationToken cancellationToken)
     {
-        var pending = new List<Due>();
-        foreach (var due in candidates)
-        {
-            if (!await _events.ExistsAsync(due.Item.Package.Id, due.Item.EffectiveExpiry!.Value, due.Stage, channel,
-                    cancellationToken))
-            {
-                pending.Add(due);
-            }
-        }
+        // One read for every candidate (issue #328).
+        var shown = await _events.ListShownAsync(
+            [.. candidates.Select(Key)], channel, cancellationToken);
+        var pending = candidates.Where(due => !shown.Contains(Key(due))).ToList();
         return pending.Any(d => d.Stage == PackageExpiryNoticeEvent.ExpiredStage)
             ? [.. pending.Where(d => d.Stage == PackageExpiryNoticeEvent.ExpiredStage)]
             : pending;

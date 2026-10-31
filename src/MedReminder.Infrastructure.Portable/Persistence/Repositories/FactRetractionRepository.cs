@@ -21,6 +21,12 @@ internal sealed class FactRetractionRepository : IFactRetractionRepository
             .OrderBy(r => r.RecordedAt)
             .ToListAsync(cancellationToken);
 
+    // On the unique (FactId) index.
+    public Task<FactRetraction?> GetForFactAsync(Guid medicineId, Guid factId, CancellationToken cancellationToken)
+        => _db.FactRetractions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.FactId == factId && r.MedicineId == medicineId, cancellationToken);
+
     public async Task AddAsync(FactRetraction retraction, CancellationToken cancellationToken)
         => await _db.FactRetractions.AddAsync(retraction, cancellationToken);
 

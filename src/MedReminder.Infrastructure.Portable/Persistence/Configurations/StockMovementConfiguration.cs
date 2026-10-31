@@ -16,7 +16,9 @@ internal sealed class StockMovementConfiguration : IEntityTypeConfiguration<Stoc
         builder.Property(m => m.Notes).HasMaxLength(500);
         builder.Property(m => m.Origin).HasConversion<int>();
 
-        builder.HasIndex(m => m.MedicineId);
+        // (MedicineId, Kind, OccurredAt) also serves the MedicineId-only
+        // reads and the foreign key: a separate (MedicineId) index was
+        // dropped (#328).
         builder.HasIndex(m => new { m.MedicineId, m.Kind, m.OccurredAt });
 
         // Referential constraint towards Medicine: cascade delete not

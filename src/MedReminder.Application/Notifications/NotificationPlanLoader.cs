@@ -137,15 +137,9 @@ public sealed class NotificationPlanLoader
     {
         if (_deadlines is null || _deadlineEvents is null) return null;
         var deadlines = await _deadlines.ListAllAsync(cancellationToken);
-        var reminded = new HashSet<DeadlineReminderKey>();
-        foreach (var deadline in deadlines)
-        {
-            if (deadline.DoneOn is null
-                && await _deadlineEvents.ExistsAsync(deadline.Id, deadline.DueOn, cancellationToken))
-            {
-                reminded.Add(new DeadlineReminderKey(deadline.Id, deadline.DueOn));
-            }
-        }
+        var reminded = await _deadlineEvents.ListRemindedAsync(
+            [.. deadlines.Where(d => d.DoneOn is null).Select(d => new DeadlineReminderKey(d.Id, d.DueOn))],
+            cancellationToken);
         return new DeadlinePlanState(deadlines, reminded);
     }
 
@@ -172,31 +166,37 @@ public sealed class NotificationPlanLoader
         {
             if ((medicine.NotificationChannels & NotificationChannels.Windows) == 0) continue;
 
-            var stock = MedicineStock.Current(await _stock.ListForMedicineAsync(medicine.Id, cancellationToken));
+            var stock = await _stock.GetCurrentStockAsync(medicine.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var reminded = new HashSet<Guid>();
-            foreach (var slot in slots)
-            {
-                if (await _doseEvents.ExistsAsync(medicine.Id, slot.Id.ToString(), today, cancellationToken))
-                {
-                    reminded.Add(slot.Id);
-                }
-            }
             // The last repetition of each slot shown today (mobile issue #128).
             // Only one already due can have been shown: a slot still ahead
             // reads nothing.
             var repetition = medicine.RemindOnDose ? _repetitions?.For(medicine) : null;
-            Dictionary<Guid, int>? repeated = null;
+            var dueRepetitions = new Dictionary<Guid, int>();
             if (repetition is not null)
             {
                 foreach (var slot in DoseSlots.Timed(slots))
                 {
-                    var due = repetition.LatestDue(DoseSlots.AtLocal(today, slot.Time!.Value, zone), localNow);
+                    dueRepetitions[slot.Id] =
+                        repetition.LatestDue(DoseSlots.AtLocal(today, slot.Time!.Value, zone), localNow);
+                }
+            }
+            // Every slot's first reminder and every due repetition, one read.
+            var fired = await _doseEvents.ListFiredAsync(medicine.Id, today,
+                [.. slots.Select(s => s.Id.ToString()),
+                 .. dueRepetitions.SelectMany(d => Enumerable.Range(1, Math.Max(0, d.Value))
+                     .Select(k => DoseRepetition.SlotKey(d.Key, k)))],
+                cancellationToken);
+            var reminded = slots.Where(s => fired.Contains(s.Id.ToString())).Select(s => s.Id).ToHashSet();
+            Dictionary<Guid, int>? repeated = null;
+            if (repetition is not null)
+            {
+                foreach (var (slotId, due) in dueRepetitions)
+                {
                     for (var k = due; k >= 1; k--)
                     {
-                        if (!await _doseEvents.ExistsAsync(medicine.Id, DoseRepetition.SlotKey(slot.Id, k), today,
-                                cancellationToken)) continue;
-                        (repeated ??= [])[slot.Id] = k;
+                        if (!fired.Contains(DoseRepetition.SlotKey(slotId, k))) continue;
+                        (repeated ??= [])[slotId] = k;
                         break;
                     }
                 }
@@ -206,39 +206,31 @@ public sealed class NotificationPlanLoader
             // reminder events, any prescription may be reminded before it
             // lapses.
             IReadOnlyList<Domain.Prescriptions.Prescription>? prescriptions = null;
-            HashSet<PrescriptionReminderKey>? prescriptionsReminded = null;
+            IReadOnlySet<PrescriptionReminderKey>? prescriptionsReminded = null;
             if (_prescriptions is not null && _dispensations is not null)
             {
                 var all = await _prescriptions.ListForMedicineAsync(medicine.Id, cancellationToken);
                 prescriptions = _prescriptionEvents is null ? [.. all.Where(p => p.IsRepeatable)] : all;
                 if (_prescriptionEvents is not null)
                 {
-                    prescriptionsReminded = [];
-                    foreach (var p in all)
-                    {
-                        if (p.ValidUntil is { } until
-                            && await _prescriptionEvents.ExistsAsync(p.Id, until, cancellationToken))
-                        {
-                            prescriptionsReminded.Add(new PrescriptionReminderKey(p.Id, until));
-                        }
-                    }
+                    prescriptionsReminded = await _prescriptionEvents.ListRemindedAsync(
+                        [.. all.Where(p => p.ValidUntil is not null)
+                            .Select(p => new PrescriptionReminderKey(p.Id, p.ValidUntil!.Value))],
+                        cancellationToken);
                 }
             }
 
             var packages = await _packages.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var shown = new HashSet<PackageNoticeKey>();
+            var candidates = new List<PackageNoticeKey>();
             foreach (var package in packages)
             {
                 if (PackageExpiryRules.EffectiveExpiry(package) is not { } expiry) continue;
                 foreach (var stage in (int[])[PackageExpiryNoticeEvent.SoonStage, PackageExpiryNoticeEvent.ExpiredStage])
                 {
-                    if (await _packageNotices.ExistsAsync(package.Id, expiry, stage, NotificationChannels.Windows,
-                            cancellationToken))
-                    {
-                        shown.Add(new PackageNoticeKey(package.Id, expiry, stage));
-                    }
+                    candidates.Add(new PackageNoticeKey(package.Id, expiry, stage));
                 }
             }
+            var shown = await _packageNotices.ListShownAsync(candidates, NotificationChannels.Windows, cancellationToken);
 
             result.Add(new MedicinePlanState(
                 medicine,

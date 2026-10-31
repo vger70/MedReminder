@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Notifications;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +55,21 @@ internal sealed class PackageExpiryNoticeEventRepository : IPackageExpiryNoticeE
         => _db.PackageExpiryNoticeEvents.AnyAsync(
             e => e.PackageId == packageId && e.EffectiveExpiry == effectiveExpiry && e.Stage == stage
                 && e.Channel == channel, cancellationToken);
+
+    // One read on the (PackageId, ...) index for every package id, the
+    // exact keys matched in memory.
+    public async Task<IReadOnlySet<PackageNoticeKey>> ListShownAsync(
+        IReadOnlyCollection<PackageNoticeKey> keys, NotificationChannels channel, CancellationToken cancellationToken)
+    {
+        if (keys.Count == 0) return new HashSet<PackageNoticeKey>();
+        var ids = keys.Select(k => k.PackageId).Distinct().ToList();
+        var rows = await _db.PackageExpiryNoticeEvents.AsNoTracking()
+            .Where(e => ids.Contains(e.PackageId) && e.Channel == channel)
+            .Select(e => new { e.PackageId, e.EffectiveExpiry, e.Stage })
+            .ToListAsync(cancellationToken);
+        var wanted = keys.ToHashSet();
+        return rows.Select(r => new PackageNoticeKey(r.PackageId, r.EffectiveExpiry, r.Stage)).Where(wanted.Contains).ToHashSet();
+    }
 
     public async Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken cancellationToken)
         => await _db.PackageExpiryNoticeEvents.AddAsync(notice, cancellationToken);

@@ -44,7 +44,7 @@ public sealed class PackageListQuery
     public async Task<IReadOnlyList<PackageListItem>> LoadAsync(Guid medicineId, CancellationToken cancellationToken)
     {
         var packages = await _packages.ListForMedicineAsync(medicineId, cancellationToken);
-        var stock = MedicineStock.Current(await _stock.ListForMedicineAsync(medicineId, cancellationToken));
+        var stock = await _stock.GetCurrentStockAsync(medicineId, cancellationToken);
         return Build(packages, stock, LocalToday(), PackageSettings.LeadDays(_settings));
     }
 

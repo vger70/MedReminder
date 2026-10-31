@@ -65,12 +65,12 @@ public sealed class CalendarExportQuery
 
         foreach (var m in all.Where(m => m.IsActive))
         {
-            var movements = await _stock.ListForMedicineAsync(m.Id, cancellationToken);
+            var stock = await _stock.GetCurrentStockAsync(m.Id, cancellationToken);
             var schedule = await _schedules.ListForMedicineAsync(m.Id, cancellationToken);
             var suspensions = await _suspensions.ListForMedicineAsync(m.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);
             // Same forecast as the medicine list.
-            var forecast = MedicineForecast.Compute(today, MedicineStock.Current(movements), schedule, slots, suspensions);
+            var forecast = MedicineForecast.Compute(today, stock, schedule, slots, suspensions);
             if (forecast.RunOut.EstimatedRunOutDate is not { } runOut || runOut < today) continue;
             var name = includeNames ? m.Name : null;
             var reorder = runOut.AddDays(-m.ThresholdDays);

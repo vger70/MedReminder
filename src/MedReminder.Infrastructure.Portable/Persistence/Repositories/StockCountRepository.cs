@@ -30,6 +30,12 @@ internal sealed class StockCountRepository : IStockCountRepository
             .Distinct()
             .ToListAsync(cancellationToken);
 
+    // On the primary key.
+    public Task<StockCount?> GetAsync(Guid medicineId, Guid countId, CancellationToken cancellationToken)
+        => _db.StockCounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == countId && c.MedicineId == medicineId, cancellationToken);
+
     public async Task AddAsync(StockCount count, CancellationToken cancellationToken)
         => await _db.StockCounts.AddAsync(count, cancellationToken);
 

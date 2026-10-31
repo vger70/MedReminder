@@ -1,3 +1,4 @@
+using MedReminder.Application.Notifications;
 using MedReminder.Domain.Deadlines;
 
 namespace MedReminder.Application.Abstractions;
@@ -22,6 +23,19 @@ public interface IDeadlineRepository
 public interface IDeadlineReminderEventRepository
 {
     Task<bool> ExistsAsync(Guid deadlineId, DateOnly dueOn, CancellationToken cancellationToken);
+
+    // The keys among `keys` already reminded: one read for every deadline
+    // instead of one per deadline (issue #328).
+    async Task<IReadOnlySet<DeadlineReminderKey>> ListRemindedAsync(
+        IReadOnlyCollection<DeadlineReminderKey> keys, CancellationToken cancellationToken)
+    {
+        var reminded = new HashSet<DeadlineReminderKey>();
+        foreach (var key in keys)
+        {
+            if (await ExistsAsync(key.DeadlineId, key.DueOn, cancellationToken)) reminded.Add(key);
+        }
+        return reminded;
+    }
 
     Task AddAsync(DeadlineReminderEvent reminder, CancellationToken cancellationToken);
 }

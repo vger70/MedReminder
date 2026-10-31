@@ -21,7 +21,8 @@ internal sealed class MedicationIntakeConfiguration : IEntityTypeConfiguration<M
         // before any freeze).
         builder.Property(i => i.RecordedAt).HasDefaultValue(DateTimeOffset.MinValue);
 
-        builder.HasIndex(i => i.MedicineId);
+        // (MedicineId, Day) also serves the MedicineId-only reads and the
+        // foreign key: a separate (MedicineId) index was dropped (#328).
         builder.HasIndex(i => new { i.MedicineId, i.Day });
         builder.HasIndex(i => new { i.MedicineId, i.ScheduledAt });
 

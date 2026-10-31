@@ -60,11 +60,7 @@ public sealed class DatabaseInitializer
 
     private async Task ApplyCatalogueSchemaAsync(CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
         await CatalogueSchema.ApplyAsync(connection, cancellationToken);
     }
 
@@ -162,10 +158,17 @@ public sealed class DatabaseInitializer
                 ""FiredAt""    INTEGER NOT NULL,
                 ""Channel""    INTEGER NOT NULL
             );", cancellationToken);
+        // The dedup index under the name EF gives it (issue #328). The
+        // first version of this patch named it IX_DoseReminderEvents_Dedup,
+        // which left new databases with two identical unique indexes from
+        // their second boot. The new index is built before the old one is
+        // dropped, so the key stays unique throughout; the rows already
+        // satisfy it, as the old index enforced the same key.
         await ExecuteRawSqlAsync(@"
-            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DoseReminderEvents_Dedup""
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DoseReminderEvents_MedicineId_SlotKey_LocalDate""
                 ON ""DoseReminderEvents"" (""MedicineId"", ""SlotKey"", ""LocalDate"");",
             cancellationToken);
+        await ExecuteRawSqlAsync(@"DROP INDEX IF EXISTS ""IX_DoseReminderEvents_Dedup"";", cancellationToken);
 
         await ApplyLedgerFactsPatchAsync(cancellationToken);
         await ApplyLedgerDerivationPatchAsync(cancellationToken);
@@ -359,6 +362,10 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_MedicationIntakes_MedicineId_Day""
                 ON ""MedicationIntakes"" (""MedicineId"", ""Day"");", cancellationToken);
+        // Its (MedicineId) prefix index is redundant (issue #328): the
+        // query planner already chose (MedicineId, Day) for MedicineId-only
+        // reads. Dropped after the composite index exists.
+        await ExecuteRawSqlAsync(@"DROP INDEX IF EXISTS ""IX_MedicationIntakes_MedicineId"";", cancellationToken);
 
         // Time-of-day presets (ANALYSIS-INTRADAY-CONSUMPTION.md §6),
         // device-local. Existing slots get their preset from their
@@ -446,6 +453,30 @@ public sealed class DatabaseInitializer
         await ExecuteRawSqlAsync(@"
             CREATE INDEX IF NOT EXISTS ""IX_PrescriptionDispensations_MedicineId""
                 ON ""PrescriptionDispensations"" (""MedicineId"");", cancellationToken);
+
+        // The (MedicineId) prefix indexes of StockMovements and
+        // MedicationAdministrationSlots are redundant too (issue #328):
+        // (MedicineId, Kind, OccurredAt) and (MedicineId, Order) serve the
+        // same reads. Both composite indexes date from the first schema
+        // and Increment 10, so they exist before these drops.
+        await ExecuteRawSqlAsync(@"DROP INDEX IF EXISTS ""IX_StockMovements_MedicineId"";", cancellationToken);
+        await ExecuteRawSqlAsync(@"DROP INDEX IF EXISTS ""IX_MedicationAdministrationSlots_MedicineId"";", cancellationToken);
+
+        // Last: every index of the EF model, once the patches above have
+        // added the tables and columns it covers (issue #328). A unique
+        // index is skipped and reported while rows share its key.
+        var connection = await OpenConnectionAsync(cancellationToken);
+        await ModelIndexes.EnsureAsync(_db.Model, connection, unique: null, _log, cancellationToken);
+    }
+
+    private async Task<DbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+        return connection;
     }
 
     // B.1 Phase 3a (docs/analysis/ANALYSIS-B1-MOBILE-SYNC.md §7.3): the
@@ -478,11 +509,7 @@ public sealed class DatabaseInitializer
     //     by the first derivation after the upgrade (LedgerSynchronizer).
     private async Task ApplyFactRetractionPatchAsync(CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
@@ -533,11 +560,7 @@ public sealed class DatabaseInitializer
     //     past number.
     private async Task ApplyLedgerDerivationPatchAsync(CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
@@ -612,11 +635,7 @@ public sealed class DatabaseInitializer
     //     keeps the backfill in SQL and the Guid text format identical.
     private async Task ApplyLedgerFactsPatchAsync(CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
 
         var now = _clock.GetUtcNow();
         var localToday = DateOnly.FromDateTime(
@@ -717,11 +736,7 @@ public sealed class DatabaseInitializer
     private async Task<bool> AddColumnIfMissingAsync(
         string table, string column, string typeSpec, CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
 
         if (await ColumnExistsAsync(connection, table, column, cancellationToken))
         {

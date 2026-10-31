@@ -665,7 +665,7 @@ public sealed class ApplyRemoteOperations
     {
         var medicine = await GetMedicineAsync(entry.MedicineId, ct);
         if (!await IsNewFactAsync(entry.MedicineId, entry.MovementId, ct)) return;
-        if ((await _stock.ListForMedicineAsync(entry.MedicineId, ct)).Any(m => m.Id == entry.MovementId)) return;
+        if (await _stock.GetAsync(entry.MedicineId, entry.MovementId, ct) is not null) return;
         var movement = new StockMovement
         {
             Id = entry.MovementId,
@@ -686,8 +686,7 @@ public sealed class ApplyRemoteOperations
     {
         var medicine = await GetMedicineAsync(intake.MedicineId, ct);
         if (!await IsNewFactAsync(intake.MedicineId, intake.IntakeId, ct)) return;
-        var existing = await _intakes.ListForMedicineAsync(intake.MedicineId, ct);
-        if (existing.Any(i => i.Id == intake.IntakeId)) return;
+        if (await _intakes.GetAsync(intake.MedicineId, intake.IntakeId, ct) is not null) return;
 
         var added = new MedicationIntake
         {
@@ -709,10 +708,13 @@ public sealed class ApplyRemoteOperations
         // §4.5 hint: intakes of one day from different devices that
         // together exceed the day's scheduled quantity.
         // Extra intakes are on top of the plan by definition.
-        var sameDay = existing
-            .Where(i => i.Day == intake.Day && i.Status == IntakeStatus.Taken && !i.IsExtra)
+        // The day is read after AddAsync: the intake just added is left out
+        // by id, as a repository may already return pending writes.
+        if (intake.Status != IntakeStatus.Taken || intake.IsExtra) return;
+        var sameDay = (await _intakes.ListForDayAsync(intake.MedicineId, intake.Day, ct))
+            .Where(i => i.Id != intake.IntakeId && i.Status == IntakeStatus.Taken && !i.IsExtra)
             .ToList();
-        if (intake.Status != IntakeStatus.Taken || intake.IsExtra || sameDay.Count == 0) return;
+        if (sameDay.Count == 0) return;
         var planned = await PlannedQuantityAsync(medicine, intake.Day, ct);
         var total = sameDay.Sum(i => i.Quantity) + intake.Quantity;
         if (total <= planned) return;
@@ -734,7 +736,7 @@ public sealed class ApplyRemoteOperations
     {
         await GetMedicineAsync(count.MedicineId, ct);
         if (!await IsNewFactAsync(count.MedicineId, count.CountId, ct)) return;
-        if ((await _counts.ListForMedicineAsync(count.MedicineId, ct)).Any(c => c.Id == count.CountId)) return;
+        if (await _counts.GetAsync(count.MedicineId, count.CountId, ct) is not null) return;
         var stored = new StockCount
         {
             Id = count.CountId,
@@ -799,8 +801,7 @@ public sealed class ApplyRemoteOperations
         await GetMedicineAsync(end.MedicineId, ct);
         await RecordRegistersAsync(end, timestamp, ct);
         var suspension = _trackedFacts.GetValueOrDefault(end.SuspensionId) as MedicationSuspension
-            ?? (await _suspensions.ListForMedicineAsync(end.MedicineId, ct))
-                .FirstOrDefault(s => s.Id == end.SuspensionId);
+            ?? await _suspensions.GetAsync(end.MedicineId, end.SuspensionId, ct);
         // Retracted or not arrived yet: the version is kept for later.
         if (suspension is null) return;
         var winner = await _registers.WinnerAsync(end.SuspensionId, SyncRegisters.EndDate, ct);
@@ -813,8 +814,7 @@ public sealed class ApplyRemoteOperations
     {
         await GetMedicineAsync(retraction.MedicineId, ct);
         var existing = _tombstones.GetValueOrDefault(retraction.FactId)
-            ?? (await _retractions.ListForMedicineAsync(retraction.MedicineId, ct))
-                .FirstOrDefault(r => r.FactId == retraction.FactId);
+            ?? await _retractions.GetForFactAsync(retraction.MedicineId, retraction.FactId, ct);
         if (existing is not null)
         {
             // Retracted on two devices: one tombstone per fact, the
@@ -830,26 +830,23 @@ public sealed class ApplyRemoteOperations
         {
             case FactKind.StockEntry:
                 var entry = _trackedFacts.GetValueOrDefault(retraction.FactId) as StockMovement
-                    ?? (await _stock.ListForMedicineAsync(retraction.MedicineId, ct))
-                        .FirstOrDefault(m => m.Id == retraction.FactId && m.Origin == StockMovementOrigin.User);
+                    ?? (await _stock.GetAsync(retraction.MedicineId, retraction.FactId, ct)
+                        is { Origin: StockMovementOrigin.User } stored ? stored : null);
                 if (entry is not null) await _stock.RemoveRangeAsync([entry], ct);
                 break;
             case FactKind.Intake:
                 var intake = _trackedFacts.GetValueOrDefault(retraction.FactId) as MedicationIntake
-                    ?? (await _intakes.ListForMedicineAsync(retraction.MedicineId, ct))
-                        .FirstOrDefault(i => i.Id == retraction.FactId);
+                    ?? await _intakes.GetAsync(retraction.MedicineId, retraction.FactId, ct);
                 if (intake is not null) await _intakes.RemoveAsync(intake, ct);
                 break;
             case FactKind.StockCount:
                 var count = _trackedFacts.GetValueOrDefault(retraction.FactId) as StockCount
-                    ?? (await _counts.ListForMedicineAsync(retraction.MedicineId, ct))
-                        .FirstOrDefault(c => c.Id == retraction.FactId);
+                    ?? await _counts.GetAsync(retraction.MedicineId, retraction.FactId, ct);
                 if (count is not null) await _counts.RemoveAsync(count, ct);
                 break;
             case FactKind.Suspension:
                 var suspension = _trackedFacts.GetValueOrDefault(retraction.FactId) as MedicationSuspension
-                    ?? (await _suspensions.ListForMedicineAsync(retraction.MedicineId, ct))
-                        .FirstOrDefault(s => s.Id == retraction.FactId);
+                    ?? await _suspensions.GetAsync(retraction.MedicineId, retraction.FactId, ct);
                 if (suspension is not null) await _suspensions.RemoveAsync(suspension, ct);
 
                 // §4.5: the retraction wins; an end date set on another
@@ -877,8 +874,7 @@ public sealed class ApplyRemoteOperations
     private async Task<bool> IsDeletedAsync(Guid medicineId, CancellationToken ct)
     {
         if (_deleted.TryGetValue(medicineId, out var deleted)) return deleted;
-        deleted = (await _operations.ListForMedicineAsync(medicineId, ct))
-            .Any(o => o.Type == nameof(MedicineDeleted));
+        deleted = await _operations.ExistsForMedicineAsync(medicineId, nameof(MedicineDeleted), ct);
         _deleted[medicineId] = deleted;
         return deleted;
     }
@@ -919,7 +915,7 @@ public sealed class ApplyRemoteOperations
     // of arrival (§4.2).
     private async Task<bool> IsNewFactAsync(Guid medicineId, Guid factId, CancellationToken ct)
         => !_tombstones.ContainsKey(factId)
-            && (await _retractions.ListForMedicineAsync(medicineId, ct)).All(r => r.FactId != factId);
+            && await _retractions.GetForFactAsync(medicineId, factId, ct) is null;
 
     private async Task<Medicine> GetMedicineAsync(Guid medicineId, CancellationToken ct)
     {

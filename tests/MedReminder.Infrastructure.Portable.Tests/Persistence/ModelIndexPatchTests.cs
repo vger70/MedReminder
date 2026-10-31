@@ -1,0 +1,287 @@
+#pragma warning disable EF1002 // Table and index names read from sqlite_master, not user input.
+using FluentAssertions;
+using MedReminder.Infrastructure.Persistence;
+using MedReminder.Infrastructure.Tests.Support;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
+
+namespace MedReminder.Infrastructure.Tests.Persistence;
+
+// Issue #328: a database upgraded through DatabaseInitializer has the
+// same tables, columns and indexes as one EnsureCreated builds now.
+public class ModelIndexPatchTests
+{
+    // The first schema (Increment 3, commit 5a9b1a9): six tables, their
+    // columns before any patch, and the indexes EnsureCreated gave them.
+    private static readonly string[] OldestTables =
+    [
+        "Medicines", "StockMovements", "MedicationScheduleHistories", "MedicationSuspensions",
+        "MedicationIntakes", "NotificationEvents",
+    ];
+
+    private static readonly string[] OldestIndexes =
+    [
+        "IX_Medicines_IsActive", "IX_Medicines_Name",
+        "IX_StockMovements_MedicineId", "IX_StockMovements_MedicineId_Kind_OccurredAt",
+        "IX_MedicationScheduleHistories_MedicineId_EffectiveFrom",
+        "IX_MedicationSuspensions_MedicineId", "IX_MedicationSuspensions_MedicineId_EndDate",
+        "IX_MedicationIntakes_MedicineId", "IX_MedicationIntakes_MedicineId_ScheduledAt",
+        "IX_NotificationEvents_MedicineId", "IX_NotificationEvents_MedicineId_TriggeredAt",
+    ];
+
+    // The columns the patches added to the first six tables.
+    private static readonly (string Table, string Column)[] AddedColumns =
+    [
+        ("Medicines", "NationalCode"), ("Medicines", "AtcCode"), ("Medicines", "LinkedReferenceMedicineId"),
+        ("Medicines", "RemindOnDose"), ("Medicines", "StockEpochFactId"), ("Medicines", "LedgerBaselineEpoch"),
+        ("StockMovements", "Origin"),
+        ("MedicationScheduleHistories", "ScheduleKind"), ("MedicationScheduleHistories", "SchedulePayload"),
+        ("MedicationScheduleHistories", "RecordedAt"),
+        ("MedicationSuspensions", "RecordedAt"),
+        ("MedicationIntakes", "Day"), ("MedicationIntakes", "IsExtra"), ("MedicationIntakes", "SlotTime"),
+        ("MedicationIntakes", "RecordedAt"),
+        ("NotificationEvents", "Stage"), ("NotificationEvents", "EpochFactId"),
+    ];
+
+    // The patches run from the second boot of a new database: they must
+    // add nothing to what EnsureCreated built (the first dedup patch added
+    // a second unique index on DoseReminderEvents).
+    [Fact]
+    public async Task A_second_boot_adds_no_index_to_a_new_database()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        List<string> created;
+        await using (var ctx = fixture.CreateContext())
+        {
+            created = await NamesAsync(ctx, "index");
+        }
+
+        await InitializeAsync(fixture, runs: 2);
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await NamesAsync(ctx, "index")).Where(n => created.Contains(n) || IsModelTable(ctx, n))
+                .Should().BeEquivalentTo(created);
+        }
+    }
+
+    private static bool IsModelTable(MedReminderDbContext ctx, string index)
+        => ModelIndexes.Of(ctx.Model).Any(i => index.StartsWith("IX_" + i.Table + "_", StringComparison.Ordinal));
+
+    [Fact]
+    public async Task A_database_upgraded_from_the_oldest_schema_matches_a_new_one()
+    {
+        using var fresh = new SqliteInMemoryFixture();
+        await InitializeAsync(fresh, runs: 1);
+        var expected = await SchemaAsync(fresh);
+
+        using var upgraded = new SqliteInMemoryFixture();
+        await using (var ctx = upgraded.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF;");
+            foreach (var index in await NamesAsync(ctx, "index"))
+            {
+                if (!OldestIndexes.Contains(index)) await ctx.Database.ExecuteSqlRawAsync($"DROP INDEX \"{index}\";");
+            }
+            foreach (var table in await NamesAsync(ctx, "table"))
+            {
+                if (!OldestTables.Contains(table)) await ctx.Database.ExecuteSqlRawAsync($"DROP TABLE \"{table}\";");
+            }
+            foreach (var (table, column) in AddedColumns)
+            {
+                await ctx.Database.ExecuteSqlRawAsync($"ALTER TABLE \"{table}\" DROP COLUMN \"{column}\";");
+            }
+        }
+        (await SchemaAsync(upgraded)).Tables.Keys.Should().BeEquivalentTo(OldestTables);
+
+        await InitializeAsync(upgraded, runs: 2);
+
+        var actual = await SchemaAsync(upgraded);
+        actual.Tables.Should().BeEquivalentTo(expected.Tables);
+        actual.Indexes.Should().BeEquivalentTo(expected.Indexes);
+    }
+
+    // A composite index starting with MedicineId covers the reads and the
+    // foreign key, so EF adds no (MedicineId) index of its own and the
+    // boot patch drops the old ones.
+    [Theory]
+    [InlineData("MedicationIntakes", "IX_MedicationIntakes_MedicineId", "IX_MedicationIntakes_MedicineId_Day")]
+    [InlineData("StockMovements", "IX_StockMovements_MedicineId", "IX_StockMovements_MedicineId_Kind_OccurredAt")]
+    [InlineData("MedicationAdministrationSlots", "IX_MedicationAdministrationSlots_MedicineId",
+        "IX_MedicationAdministrationSlots_MedicineId_Order")]
+    public async Task A_redundant_medicine_index_is_dropped(string table, string redundant, string covering)
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using (var ctx = fixture.CreateContext())
+        {
+            ModelIndexes.Of(ctx.Model).Where(i => i.Table == table).Select(i => i.Name)
+                .Should().Contain(covering).And.NotContain(redundant);
+            await ctx.Database.ExecuteSqlRawAsync($"CREATE INDEX \"{redundant}\" ON \"{table}\" (\"MedicineId\");");
+        }
+
+        await InitializeAsync(fixture, runs: 2);
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            (await NamesAsync(ctx, "index")).Should().NotContain(redundant).And.Contain(covering);
+        }
+    }
+
+    [Fact]
+    public async Task Every_model_index_is_created_once_when_missing()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await InitializeAsync(fixture, runs: 1);
+        var expected = await SchemaAsync(fixture);
+        await using (var ctx = fixture.CreateContext())
+        {
+            foreach (var index in await NamesAsync(ctx, "index"))
+            {
+                await ctx.Database.ExecuteSqlRawAsync($"DROP INDEX \"{index}\";");
+            }
+        }
+
+        await InitializeAsync(fixture, runs: 2);
+
+        (await SchemaAsync(fixture)).Indexes.Should().BeEquivalentTo(expected.Indexes);
+        await using (var ctx = fixture.CreateContext())
+        {
+            var names = await NamesAsync(ctx, "index");
+            foreach (var index in ModelIndexes.Of(ctx.Model))
+            {
+                names.Should().Contain(index.Name);
+            }
+        }
+    }
+
+    // A unique index whose key is shared by two rows is not created (the
+    // CREATE would fail and stop the database from opening): it is
+    // reported, no row is touched, and it is created on the first boot
+    // after the duplicate is gone.
+    [Fact]
+    public async Task A_unique_index_is_skipped_while_rows_share_its_key()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        const string Index = "IX_PrescriptionReminderEvents_PrescriptionId_ValidUntil";
+        var prescription = Guid.NewGuid().ToString().ToUpperInvariant();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync($"DROP INDEX \"{Index}\";");
+            for (var i = 0; i < 2; i++)
+            {
+                await ctx.Database.ExecuteSqlRawAsync(@"
+                    INSERT INTO ""PrescriptionReminderEvents"" (""Id"", ""PrescriptionId"", ""MedicineId"", ""ValidUntil"", ""FiredAt"")
+                    VALUES ({0}, {1}, {2}, '2026-10-31', 0);",
+                    Guid.NewGuid().ToString().ToUpperInvariant(), prescription, Guid.NewGuid().ToString().ToUpperInvariant());
+            }
+        }
+
+        var log = new RecordingLogger();
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.OpenConnectionAsync();
+            await ModelIndexes.EnsureAsync(ctx.Model, ctx.Database.GetDbConnection(), unique: true, log, default);
+            (await NamesAsync(ctx, "index")).Should().NotContain(Index);
+            (await ctx.PrescriptionReminderEvents.CountAsync()).Should().Be(2);
+        }
+        log.Warnings.Should().ContainSingle().Which.Should().Contain(Index);
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            ctx.PrescriptionReminderEvents.Remove(await ctx.PrescriptionReminderEvents.FirstAsync());
+            await ctx.SaveChangesAsync();
+            await ctx.Database.OpenConnectionAsync();
+            await ModelIndexes.EnsureAsync(ctx.Model, ctx.Database.GetDbConnection(), unique: true, log, default);
+            (await NamesAsync(ctx, "index")).Should().Contain(Index);
+        }
+    }
+
+    // An index under the model's name with another shape (here not unique
+    // and on one column) is rebuilt as the model declares it.
+    [Fact]
+    public async Task An_index_under_the_model_name_with_another_shape_is_rebuilt()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        const string Index = "IX_PrescriptionReminderEvents_PrescriptionId_ValidUntil";
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync($"DROP INDEX \"{Index}\";");
+            await ctx.Database.ExecuteSqlRawAsync(
+                $"CREATE INDEX \"{Index}\" ON \"PrescriptionReminderEvents\" (\"PrescriptionId\");");
+        }
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.OpenConnectionAsync();
+            var connection = ctx.Database.GetDbConnection();
+            await ModelIndexes.EnsureAsync(ctx.Model, connection, unique: true, new RecordingLogger(), default);
+
+            (await ModelIndexes.ListAsync(connection, "PrescriptionReminderEvents", default))
+                .Where(i => i.Name == Index)
+                .Should().ContainSingle()
+                .Which.Should().BeEquivalentTo(new ModelIndexes.Existing(Index, ["PrescriptionId", "ValidUntil"], IsUnique: true));
+        }
+    }
+
+    private sealed class RecordingLogger : Microsoft.Extensions.Logging.ILogger
+    {
+        public List<string> Warnings { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId,
+            TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == Microsoft.Extensions.Logging.LogLevel.Warning) Warnings.Add(formatter(state, exception));
+        }
+    }
+
+    private static async Task InitializeAsync(SqliteInMemoryFixture fixture, int runs)
+    {
+        for (var run = 0; run < runs; run++)
+        {
+            await using var ctx = fixture.CreateContext();
+            await new DatabaseInitializer(ctx, NullLogger<DatabaseInitializer>.Instance)
+                .InitializeAsync(CancellationToken.None);
+        }
+    }
+
+    // The explicit indexes and the tables of the database (SQLite's own
+    // autoindexes and tables left out).
+    private static async Task<List<string>> NamesAsync(MedReminderDbContext ctx, string type)
+        => await ctx.Database
+            .SqlQueryRaw<string>(
+                $"SELECT name AS \"Value\" FROM sqlite_master WHERE type = '{type}' AND name NOT LIKE 'sqlite_%' AND sql IS NOT NULL")
+            .ToListAsync();
+
+    private sealed record Schema(
+        Dictionary<string, List<string>> Tables,
+        // "table: [UNIQUE] (columns) name" per index, so two equivalent
+        // indexes count twice.
+        List<string> Indexes);
+
+    private static async Task<Schema> SchemaAsync(SqliteInMemoryFixture fixture)
+    {
+        await using var ctx = fixture.CreateContext();
+        await ctx.Database.OpenConnectionAsync();
+        var connection = ctx.Database.GetDbConnection();
+        var tables = new Dictionary<string, List<string>>();
+        var indexes = new List<string>();
+        foreach (var table in await NamesAsync(ctx, "table"))
+        {
+            tables[table] = [.. (await ctx.Database
+                    .SqlQueryRaw<string>($"SELECT name AS \"Value\" FROM pragma_table_info('{table}')")
+                    .ToListAsync()).Order()];
+            foreach (var index in await ModelIndexes.ListAsync(connection, table, CancellationToken.None))
+            {
+                if (index.Name.StartsWith("sqlite_", StringComparison.Ordinal)) continue;
+                indexes.Add($"{table}: {(index.IsUnique ? "UNIQUE " : "")}({string.Join(", ", index.Columns)}) " +
+                            index.Name);
+            }
+        }
+        return new Schema(tables, indexes);
+    }
+}

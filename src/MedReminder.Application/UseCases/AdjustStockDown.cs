@@ -57,8 +57,7 @@ public sealed class AdjustStockDown
         var medicine = await _medicines.GetAsync(cmd.MedicineId, cancellationToken)
             ?? throw new InvalidOperationException($"Medicine {cmd.MedicineId} not found.");
 
-        var movements = await _stock.ListForMedicineAsync(cmd.MedicineId, cancellationToken);
-        var current = MedicineStock.Current(movements);
+        var current = await _stock.GetCurrentStockAsync(cmd.MedicineId, cancellationToken);
         if (MedicineStock.WouldGoNegative(current, -cmd.Quantity))
         {
             throw new InvalidOperationException(

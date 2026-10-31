@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Notifications;
 using MedReminder.Domain.Deadlines;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,6 +48,21 @@ internal sealed class DeadlineReminderEventRepository : IDeadlineReminderEventRe
 
     public Task<bool> ExistsAsync(Guid deadlineId, DateOnly dueOn, CancellationToken cancellationToken)
         => _db.DeadlineReminderEvents.AnyAsync(e => e.DeadlineId == deadlineId && e.DueOn == dueOn, cancellationToken);
+
+    // One read on the unique (DeadlineId, DueOn) index for every deadline
+    // id, the exact keys matched in memory.
+    public async Task<IReadOnlySet<DeadlineReminderKey>> ListRemindedAsync(
+        IReadOnlyCollection<DeadlineReminderKey> keys, CancellationToken cancellationToken)
+    {
+        if (keys.Count == 0) return new HashSet<DeadlineReminderKey>();
+        var ids = keys.Select(k => k.DeadlineId).Distinct().ToList();
+        var rows = await _db.DeadlineReminderEvents.AsNoTracking()
+            .Where(e => ids.Contains(e.DeadlineId))
+            .Select(e => new { e.DeadlineId, e.DueOn })
+            .ToListAsync(cancellationToken);
+        var wanted = keys.ToHashSet();
+        return rows.Select(r => new DeadlineReminderKey(r.DeadlineId, r.DueOn)).Where(wanted.Contains).ToHashSet();
+    }
 
     public async Task AddAsync(DeadlineReminderEvent reminder, CancellationToken cancellationToken)
         => await _db.DeadlineReminderEvents.AddAsync(reminder, cancellationToken);

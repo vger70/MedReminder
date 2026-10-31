@@ -8,6 +8,11 @@ public interface IFactRetractionRepository
     Task<IReadOnlyList<FactRetraction>> ListForMedicineAsync(
         Guid medicineId, CancellationToken cancellationToken);
 
+    // The tombstone of one fact, null when it was not retracted (one per
+    // fact): the sync apply asks it for every incoming fact (issue #328).
+    async Task<FactRetraction?> GetForFactAsync(Guid medicineId, Guid factId, CancellationToken cancellationToken)
+        => (await ListForMedicineAsync(medicineId, cancellationToken)).FirstOrDefault(r => r.FactId == factId);
+
     Task AddAsync(FactRetraction retraction, CancellationToken cancellationToken);
 
     // Phase 3b: when two devices retracted the same fact, one tombstone
