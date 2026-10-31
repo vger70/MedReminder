@@ -94,8 +94,8 @@ public sealed class RetractFact
                 facts = facts with { Counts = facts.Counts.Where(c => c.Id != cmd.FactId).ToList() };
                 break;
             case FactKind.Suspension:
-                var suspension = await _suspensions.GetAsync(medicine.Id, cmd.FactId, cancellationToken)
-                    ?? throw new InvalidOperationException($"Suspension {cmd.FactId} not found.");
+                // The facts already hold the row, as for a stock entry.
+                var suspension = facts.Suspensions.Single(s => s.Id == cmd.FactId);
                 await _suspensions.RemoveAsync(suspension, cancellationToken);
                 facts = facts with { Suspensions = facts.Suspensions.Where(s => s.Id != cmd.FactId).ToList() };
                 break;

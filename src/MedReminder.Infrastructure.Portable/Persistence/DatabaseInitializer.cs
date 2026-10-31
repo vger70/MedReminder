@@ -458,8 +458,7 @@ public sealed class DatabaseInitializer
         // added the tables and columns it covers (issue #328). A unique
         // index is skipped and reported while rows share its key.
         var connection = await OpenConnectionAsync(cancellationToken);
-        await ModelIndexes.EnsureAsync(_db.Model, connection, unique: false, _log, cancellationToken);
-        await ModelIndexes.EnsureAsync(_db.Model, connection, unique: true, _log, cancellationToken);
+        await ModelIndexes.EnsureAsync(_db.Model, connection, unique: null, _log, cancellationToken);
     }
 
     private async Task<DbConnection> OpenConnectionAsync(CancellationToken cancellationToken)

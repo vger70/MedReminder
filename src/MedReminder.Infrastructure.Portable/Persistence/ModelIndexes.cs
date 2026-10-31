@@ -34,16 +34,18 @@ internal static class ModelIndexes
                 index.Name, table.Name, [.. index.Columns.Select(c => c.Name)], index.IsUnique, index.Filter)))
             .DistinctBy(d => d.Name)];
 
-    // Creates the missing indexes of the model with the given uniqueness.
-    // A unique index is created only when no two rows share its key: a
-    // failing CREATE UNIQUE INDEX would stop the database from opening.
-    // On duplicates the index is skipped, reported, and tried again on
-    // the next boot; no row is changed.
+    // Creates the missing indexes of the model with the given uniqueness,
+    // or every missing index when `unique` is null (non-unique ones first
+    // in each table). A unique index is created only when no two rows
+    // share its key: a failing CREATE UNIQUE INDEX would stop the database
+    // from opening. On duplicates the index is skipped, reported, and
+    // tried again on the next boot; no row is changed.
     public static async Task EnsureAsync(
-        IModel model, DbConnection connection, bool unique, ILogger log, CancellationToken cancellationToken)
+        IModel model, DbConnection connection, bool? unique, ILogger log, CancellationToken cancellationToken)
     {
         // The columns and indexes of each table are read once per table.
-        foreach (var table in Of(model).Where(i => i.IsUnique == unique).GroupBy(i => i.Table))
+        var wanted = Of(model).Where(i => unique is null || i.IsUnique == unique).OrderBy(i => i.IsUnique);
+        foreach (var table in wanted.GroupBy(i => i.Table))
         {
             var columns = await ColumnsAsync(connection, table.Key, cancellationToken);
             if (columns.Count == 0) continue;
