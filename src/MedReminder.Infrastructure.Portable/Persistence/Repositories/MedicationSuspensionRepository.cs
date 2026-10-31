@@ -33,6 +33,12 @@ internal sealed class MedicationSuspensionRepository
                 cancellationToken);
     }
 
+    // On the primary key; untracked, as the history read.
+    public Task<MedicationSuspension?> GetAsync(Guid medicineId, Guid suspensionId, CancellationToken cancellationToken)
+        => _db.MedicationSuspensions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == suspensionId && s.MedicineId == medicineId, cancellationToken);
+
     public async Task AddAsync(MedicationSuspension suspension, CancellationToken cancellationToken)
     {
         await _db.MedicationSuspensions.AddAsync(suspension, cancellationToken);

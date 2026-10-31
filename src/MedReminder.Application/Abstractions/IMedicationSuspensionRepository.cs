@@ -14,6 +14,10 @@ public interface IMedicationSuspensionRepository
         Guid medicineId,
         CancellationToken cancellationToken);
 
+    // One suspension of a medicine by id, null when there is none.
+    async Task<MedicationSuspension?> GetAsync(Guid medicineId, Guid suspensionId, CancellationToken cancellationToken)
+        => (await ListForMedicineAsync(medicineId, cancellationToken)).FirstOrDefault(s => s.Id == suspensionId);
+
     Task AddAsync(MedicationSuspension suspension, CancellationToken cancellationToken);
     Task UpdateAsync(MedicationSuspension suspension, CancellationToken cancellationToken);
 

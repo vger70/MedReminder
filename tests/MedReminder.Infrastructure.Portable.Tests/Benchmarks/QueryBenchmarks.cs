@@ -87,6 +87,10 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
             PerMedicine<IFactRetractionRepository>((r, id) => r.ListForMedicineAsync(id, ct)));
         yield return ("operations: ListForMedicineAsync",
             PerMedicine<ISyncOperationRepository>((r, id) => r.ListForMedicineAsync(id, ct)));
+        yield return ("operations: ExistsForMedicineAsync (MedicineDeleted)",
+            PerMedicine<ISyncOperationRepository>((r, id) => r.ExistsForMedicineAsync(id, "MedicineDeleted", ct)));
+        yield return ("operations: ListStampsForMedicineAsync",
+            PerMedicine<ISyncOperationRepository>((r, id) => r.ListStampsForMedicineAsync(id, ct)));
         yield return ("prescriptions: ListForMedicineAsync",
             PerMedicine<IPrescriptionRepository>((r, id) => r.ListForMedicineAsync(id, ct)));
         yield return ("packages: ListForMedicineAsync",
@@ -122,7 +126,7 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
             foreach (var id in sample)
             {
                 var medicineId = medicineOf[id];
-                _ = (await retractions.ListForMedicineAsync(medicineId, ct)).All(r => r.FactId != id);
+                _ = await retractions.GetForFactAsync(medicineId, id, ct) is null;
                 _ = await intakes.GetAsync(medicineId, id, ct) is not null;
             }
         });

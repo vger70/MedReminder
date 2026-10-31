@@ -13,6 +13,10 @@ public interface IStockCountRepository
     // consumption. One query for the whole list.
     Task<IReadOnlyList<Guid>> ListMedicinesWithMaterializedCountAsync(DateOnly day, CancellationToken cancellationToken);
 
+    // One count of a medicine by id, null when there is none.
+    async Task<StockCount?> GetAsync(Guid medicineId, Guid countId, CancellationToken cancellationToken)
+        => (await ListForMedicineAsync(medicineId, cancellationToken)).FirstOrDefault(c => c.Id == countId);
+
     Task AddAsync(StockCount count, CancellationToken cancellationToken);
 
     // Retraction of a mistaken count (RetractFact, B.1 Phase 2d).

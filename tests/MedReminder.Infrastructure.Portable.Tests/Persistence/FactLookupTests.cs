@@ -1,7 +1,9 @@
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Stock;
+using MedReminder.Domain.Sync;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Persistence.Repositories;
 using MedReminder.Infrastructure.Tests.Support;
@@ -128,6 +130,73 @@ public class FactLookupTests
             (await reader.GetAsync(id, Guid.NewGuid(), default)).Should().BeNull();
         }
         ctx.ChangeTracker.Entries().Should().BeEmpty();
+    }
+
+    // The sync apply's look-ups: a tombstone by fact, a count and a
+    // suspension by id, all within their medicine and untracked.
+    [Fact]
+    public async Task Sync_facts_are_read_by_id_within_their_medicine()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var id = await SeedMedicineAsync(ctx);
+        var other = await SeedMedicineAsync(ctx);
+        var at = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
+        var tombstone = new FactRetraction { MedicineId = id, FactId = Guid.NewGuid(), Kind = FactKind.Intake, RecordedAt = at };
+        var foreignTombstone = new FactRetraction
+            { MedicineId = other, FactId = Guid.NewGuid(), Kind = FactKind.Intake, RecordedAt = at };
+        var count = new StockCount
+            { MedicineId = id, CountDay = Today, CountedQuantity = 5m, TakenToday = 0m, ThresholdAtCount = 7, RecordedAt = at };
+        var foreignCount = new StockCount
+            { MedicineId = other, CountDay = Today, CountedQuantity = 5m, TakenToday = 0m, ThresholdAtCount = 7, RecordedAt = at };
+        var suspension = new MedicationSuspension { MedicineId = id, StartDate = Today, RecordedAt = at };
+        var foreignSuspension = new MedicationSuspension { MedicineId = other, StartDate = Today, RecordedAt = at };
+        ctx.AddRange(tombstone, foreignTombstone, count, foreignCount, suspension, foreignSuspension);
+        await ctx.SaveChangesAsync();
+        ctx.ChangeTracker.Clear();
+        var retractions = new FactRetractionRepository(ctx);
+        var counts = new StockCountRepository(ctx);
+        var suspensions = new MedicationSuspensionRepository(ctx);
+
+        (await retractions.GetForFactAsync(id, tombstone.FactId, default))!.Id.Should().Be(tombstone.Id);
+        (await retractions.GetForFactAsync(id, foreignTombstone.FactId, default)).Should().BeNull();
+        (await retractions.GetForFactAsync(id, Guid.NewGuid(), default)).Should().BeNull();
+        (await counts.GetAsync(id, count.Id, default))!.CountedQuantity.Should().Be(5m);
+        (await counts.GetAsync(id, foreignCount.Id, default)).Should().BeNull();
+        (await suspensions.GetAsync(id, suspension.Id, default))!.StartDate.Should().Be(Today);
+        (await suspensions.GetAsync(id, foreignSuspension.Id, default)).Should().BeNull();
+        ctx.ChangeTracker.Entries().Should().BeEmpty();
+    }
+
+    // The operation stamps: in HLC order (device id breaks the tie), other
+    // medicines left out, the same as the full operations without payload.
+    [Fact]
+    public async Task Operation_stamps_and_types_are_read_without_the_payload()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var id = Guid.NewGuid();
+        var other = Guid.NewGuid();
+        var (a, b) = (new Guid("00000000-0000-0000-0000-00000000000a"), new Guid("00000000-0000-0000-0000-00000000000b"));
+        SyncOperation Op(Guid medicine, long ms, int counter, Guid device, string type) => new()
+        {
+            HlcPhysicalMs = ms, HlcCounter = counter, DeviceId = device, Generation = 1, Type = type,
+            SchemaVersion = 1, MedicineId = medicine, EntityId = Guid.NewGuid(), Payload = "{}",
+        };
+        ctx.SyncOperations.AddRange(
+            Op(id, 20, 0, a, "IntakeRecorded"), Op(id, 10, 1, b, "StockCountRecorded"),
+            Op(id, 10, 1, a, "IntakeRecorded"), Op(other, 5, 0, a, "MedicineDeleted"));
+        await ctx.SaveChangesAsync();
+        var repository = new SyncOperationRepository(ctx);
+
+        var stamps = await repository.ListStampsForMedicineAsync(id, default);
+
+        var full = await repository.ListForMedicineAsync(id, default);
+        stamps.Should().Equal(full.Select(o => new SyncOperationStamp(o.Type, o.EntityId, o.Timestamp)));
+        stamps.Select(s => s.Timestamp).Should().Equal(
+            new HybridTimestamp(10, 1, a), new HybridTimestamp(10, 1, b), new HybridTimestamp(20, 0, a));
+        (await repository.ExistsForMedicineAsync(other, "MedicineDeleted", default)).Should().BeTrue();
+        (await repository.ExistsForMedicineAsync(id, "MedicineDeleted", default)).Should().BeFalse();
     }
 
     private static StockMovement Movement(Guid medicineId, DateTimeOffset at, StockMovementKind kind, decimal delta)

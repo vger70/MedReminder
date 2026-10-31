@@ -50,7 +50,7 @@ public sealed class CountReevaluation
         if (facts.Counts.Count == 0 || _settings.Load() is null) return facts;
 
         var recordedAt = new Dictionary<Guid, HybridTimestamp>();
-        foreach (var op in await _operations.ListForMedicineAsync(facts.MedicineId, cancellationToken))
+        foreach (var op in await _operations.ListStampsForMedicineAsync(facts.MedicineId, cancellationToken))
         {
             if (op.EntityId is not { } id || op.Type is "SuspensionEndChanged" or "FactRetracted") continue;
             if (!recordedAt.TryGetValue(id, out var known) || op.Timestamp < known) recordedAt[id] = op.Timestamp;

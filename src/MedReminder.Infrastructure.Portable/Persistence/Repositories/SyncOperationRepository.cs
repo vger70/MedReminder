@@ -43,6 +43,23 @@ internal sealed class SyncOperationRepository : ISyncOperationRepository
         return [.. rows.OrderBy(o => o.Timestamp)];
     }
 
+    // On the (MedicineId) index.
+    public Task<bool> ExistsForMedicineAsync(Guid medicineId, string type, CancellationToken cancellationToken)
+        => _db.SyncOperations.AnyAsync(o => o.MedicineId == medicineId && o.Type == type, cancellationToken);
+
+    // The columns of the stamp only: the payload is most of the row.
+    public async Task<IReadOnlyList<SyncOperationStamp>> ListStampsForMedicineAsync(
+        Guid medicineId, CancellationToken cancellationToken)
+    {
+        var rows = await _db.SyncOperations.AsNoTracking()
+            .Where(o => o.MedicineId == medicineId)
+            .Select(o => new { o.Type, o.EntityId, o.HlcPhysicalMs, o.HlcCounter, o.DeviceId })
+            .ToListAsync(cancellationToken);
+        return [.. rows
+            .Select(o => new SyncOperationStamp(o.Type, o.EntityId, new HybridTimestamp(o.HlcPhysicalMs, o.HlcCounter, o.DeviceId)))
+            .OrderBy(o => o.Timestamp)];
+    }
+
     public async Task<IReadOnlyList<SyncOperation>> ListForMedicineAsync(
         Guid medicineId, CancellationToken cancellationToken)
     {

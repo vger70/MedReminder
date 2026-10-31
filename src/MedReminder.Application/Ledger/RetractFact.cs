@@ -88,14 +88,14 @@ public sealed class RetractFact
                 facts = facts with { Intakes = facts.Intakes.Where(i => i.Id != cmd.FactId).ToList() };
                 break;
             case FactKind.StockCount:
-                var count = (await _counts.ListForMedicineAsync(medicine.Id, cancellationToken))
-                    .Single(c => c.Id == cmd.FactId);
+                var count = await _counts.GetAsync(medicine.Id, cmd.FactId, cancellationToken)
+                    ?? throw new InvalidOperationException($"Count {cmd.FactId} not found.");
                 await _counts.RemoveAsync(count, cancellationToken);
                 facts = facts with { Counts = facts.Counts.Where(c => c.Id != cmd.FactId).ToList() };
                 break;
             case FactKind.Suspension:
-                var suspension = (await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken))
-                    .Single(s => s.Id == cmd.FactId);
+                var suspension = await _suspensions.GetAsync(medicine.Id, cmd.FactId, cancellationToken)
+                    ?? throw new InvalidOperationException($"Suspension {cmd.FactId} not found.");
                 await _suspensions.RemoveAsync(suspension, cancellationToken);
                 facts = facts with { Suspensions = facts.Suspensions.Where(s => s.Id != cmd.FactId).ToList() };
                 break;
