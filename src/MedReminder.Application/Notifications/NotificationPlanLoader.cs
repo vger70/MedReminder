@@ -137,15 +137,9 @@ public sealed class NotificationPlanLoader
     {
         if (_deadlines is null || _deadlineEvents is null) return null;
         var deadlines = await _deadlines.ListAllAsync(cancellationToken);
-        var reminded = new HashSet<DeadlineReminderKey>();
-        foreach (var deadline in deadlines)
-        {
-            if (deadline.DoneOn is null
-                && await _deadlineEvents.ExistsAsync(deadline.Id, deadline.DueOn, cancellationToken))
-            {
-                reminded.Add(new DeadlineReminderKey(deadline.Id, deadline.DueOn));
-            }
-        }
+        var reminded = await _deadlineEvents.ListRemindedAsync(
+            [.. deadlines.Where(d => d.DoneOn is null).Select(d => new DeadlineReminderKey(d.Id, d.DueOn))],
+            cancellationToken);
         return new DeadlinePlanState(deadlines, reminded);
     }
 
@@ -174,29 +168,35 @@ public sealed class NotificationPlanLoader
 
             var stock = await _stock.GetCurrentStockAsync(medicine.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var reminded = new HashSet<Guid>();
-            foreach (var slot in slots)
-            {
-                if (await _doseEvents.ExistsAsync(medicine.Id, slot.Id.ToString(), today, cancellationToken))
-                {
-                    reminded.Add(slot.Id);
-                }
-            }
             // The last repetition of each slot shown today (mobile issue #128).
             // Only one already due can have been shown: a slot still ahead
             // reads nothing.
             var repetition = medicine.RemindOnDose ? _repetitions?.For(medicine) : null;
-            Dictionary<Guid, int>? repeated = null;
+            var dueRepetitions = new Dictionary<Guid, int>();
             if (repetition is not null)
             {
                 foreach (var slot in DoseSlots.Timed(slots))
                 {
-                    var due = repetition.LatestDue(DoseSlots.AtLocal(today, slot.Time!.Value, zone), localNow);
+                    dueRepetitions[slot.Id] =
+                        repetition.LatestDue(DoseSlots.AtLocal(today, slot.Time!.Value, zone), localNow);
+                }
+            }
+            // Every slot's first reminder and every due repetition, one read.
+            var fired = await _doseEvents.ListFiredAsync(medicine.Id, today,
+                [.. slots.Select(s => s.Id.ToString()),
+                 .. dueRepetitions.SelectMany(d => Enumerable.Range(1, Math.Max(0, d.Value))
+                     .Select(k => DoseRepetition.SlotKey(d.Key, k)))],
+                cancellationToken);
+            var reminded = slots.Where(s => fired.Contains(s.Id.ToString())).Select(s => s.Id).ToHashSet();
+            Dictionary<Guid, int>? repeated = null;
+            if (repetition is not null)
+            {
+                foreach (var (slotId, due) in dueRepetitions)
+                {
                     for (var k = due; k >= 1; k--)
                     {
-                        if (!await _doseEvents.ExistsAsync(medicine.Id, DoseRepetition.SlotKey(slot.Id, k), today,
-                                cancellationToken)) continue;
-                        (repeated ??= [])[slot.Id] = k;
+                        if (!fired.Contains(DoseRepetition.SlotKey(slotId, k))) continue;
+                        (repeated ??= [])[slotId] = k;
                         break;
                     }
                 }

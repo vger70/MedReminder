@@ -1,6 +1,7 @@
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Notifications;
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
@@ -259,6 +260,75 @@ public class FactLookupTests
                 .Should().BeEquivalentTo([new PackageNoticeKey(k1, Today, PackageExpiryNoticeEvent.SoonStage)]);
             (await reader.ListShownAsync([], NotificationChannels.Windows, default)).Should().BeEmpty();
         }
+    }
+
+    // The fired dose keys of one medicine and day in one read: other days
+    // and other medicines left out, keys not asked for ignored, and the
+    // default (one ExistsAsync per key) answers the same.
+    [Fact]
+    public async Task Fired_dose_reminders_are_read_for_many_keys_at_once()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var id = await SeedMedicineAsync(ctx);
+        var other = await SeedMedicineAsync(ctx);
+        var slot = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 10, 31, 8, 0, 0, TimeSpan.Zero);
+        DoseReminderEvent Fired(Guid medicine, string key, DateOnly day) => new()
+            { MedicineId = medicine, SlotKey = key, LocalDate = day, FiredAt = at, Channel = NotificationChannels.Windows };
+        ctx.DoseReminderEvents.AddRange(
+            Fired(id, slot.ToString(), Today), Fired(id, $"{slot}#2", Today), Fired(id, $"{slot}#3", Today),
+            Fired(id, $"{slot}#1", Today.AddDays(-1)), Fired(other, $"{slot}#1", Today));
+        await ctx.SaveChangesAsync();
+        var repository = new DoseReminderEventRepository(ctx);
+        IDoseReminderEventRepository fallback = new DoseExistsOnly(repository);
+        string[] keys = [slot.ToString(), $"{slot}#1", $"{slot}#2"];
+
+        foreach (var reader in new[] { repository, fallback })
+        {
+            (await reader.ListFiredAsync(id, Today, keys, default)).Should().BeEquivalentTo(slot.ToString(), $"{slot}#2");
+            (await reader.ListFiredAsync(id, Today, [], default)).Should().BeEmpty();
+        }
+    }
+
+    [Fact]
+    public async Task Deadline_reminders_are_read_for_many_keys_at_once()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var (d1, d2, d3) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var at = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
+        ctx.DeadlineReminderEvents.AddRange(
+            new DeadlineReminderEvent { DeadlineId = d1, DueOn = Today, FiredAt = at },
+            new DeadlineReminderEvent { DeadlineId = d2, DueOn = Today.AddMonths(-12), FiredAt = at });
+        await ctx.SaveChangesAsync();
+        var repository = new DeadlineReminderEventRepository(ctx);
+        IDeadlineReminderEventRepository fallback = new DeadlineExistsOnly(repository);
+        DeadlineReminderKey[] keys = [new(d1, Today), new(d2, Today), new(d3, Today)];
+
+        foreach (var reader in new[] { repository, fallback })
+        {
+            (await reader.ListRemindedAsync(keys, default)).Should().BeEquivalentTo([new DeadlineReminderKey(d1, Today)]);
+            (await reader.ListRemindedAsync([], default)).Should().BeEmpty();
+        }
+    }
+
+    private sealed class DoseExistsOnly(DoseReminderEventRepository inner) : IDoseReminderEventRepository
+    {
+        public Task<bool> ExistsAsync(Guid medicineId, string slotKey, DateOnly localDate, CancellationToken ct)
+            => inner.ExistsAsync(medicineId, slotKey, localDate, ct);
+
+        public Task AddAsync(DoseReminderEvent evt, CancellationToken ct) => inner.AddAsync(evt, ct);
+
+        public Task PruneOlderThanAsync(DateOnly cutoff, CancellationToken ct) => inner.PruneOlderThanAsync(cutoff, ct);
+    }
+
+    private sealed class DeadlineExistsOnly(DeadlineReminderEventRepository inner) : IDeadlineReminderEventRepository
+    {
+        public Task<bool> ExistsAsync(Guid deadlineId, DateOnly dueOn, CancellationToken ct)
+            => inner.ExistsAsync(deadlineId, dueOn, ct);
+
+        public Task AddAsync(DeadlineReminderEvent reminder, CancellationToken ct) => inner.AddAsync(reminder, ct);
     }
 
     private sealed class ReminderExistsOnly(PrescriptionReminderEventRepository inner) : IPrescriptionReminderEventRepository

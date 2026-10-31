@@ -2,6 +2,8 @@ using System.Data.Common;
 using MedReminder.Application;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Notifications;
+using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
@@ -29,7 +31,9 @@ namespace MedReminder.Infrastructure.Tests.Benchmarks;
 //     fifteen days (with its package row);
 //   - one stock count and one prescription a month, with its reminder,
 //     and an expiry notice every fourth package;
-//   - a schedule change a year, a few retractions and suspensions.
+//   - a schedule change a year, a few retractions and suspensions;
+//   - dose reminders with repetitions on, today's already fired for the
+//     morning dose; a check-up a year and an open plan renewal.
 //
 // The stock stays well above the threshold, so the monitor reads every
 // medicine and sends nothing.
@@ -74,6 +78,9 @@ internal sealed class BenchmarkProfile : IAsyncDisposable
         services.AddMedReminderPortableProfileSettings(profilesRoot);
         services.AddSingleton<IEmailNotificationService, SilentNotifications>();
         services.AddSingleton<IWindowsNotificationService, SilentNotifications>();
+        // Repetitions every 10 minutes, six times, as the mobile app allows.
+        services.AddSingleton<IDoseRepetitionPolicy>(
+            new FixedRepetition(DoseRepetition.Repeat(TimeSpan.FromMinutes(10), 6)));
         services.ConfigureDbContext<MedReminderDbContext>(o => o.AddInterceptors(Recorder));
         _provider = services.BuildServiceProvider();
     }
@@ -116,6 +123,7 @@ internal sealed class BenchmarkProfile : IAsyncDisposable
                 StartDate = start,
                 ThresholdDays = 7,
                 NotificationChannels = NotificationChannels.Windows,
+                RemindOnDose = true,
                 CreatedAt = at(start, 7),
                 UpdatedAt = at(start, 7),
             };
@@ -139,12 +147,40 @@ internal sealed class BenchmarkProfile : IAsyncDisposable
             db.MedicationAdministrationSlotSets.Add(set);
             for (var order = 0; order < 2; order++)
             {
-                db.MedicationAdministrationSlots.Add(new MedicationAdministrationSlot
+                var slot = new MedicationAdministrationSlot
                 {
                     MedicineId = medicine.Id, SetId = set.Id, Dose = 1m,
                     Time = new TimeOnly(order == 0 ? 8 : 20, 0), Order = order,
+                };
+                db.MedicationAdministrationSlots.Add(slot);
+                // Today's first reminder and three repetitions of the morning dose.
+                for (var k = 0; k <= (order == 0 ? 3 : 0); k++)
+                {
+                    db.DoseReminderEvents.Add(new DoseReminderEvent
+                    {
+                        MedicineId = medicine.Id, SlotKey = DoseRepetition.SlotKey(slot.Id, k), LocalDate = Today,
+                        FiredAt = at(Today, 8), Channel = NotificationChannels.Windows,
+                    });
+                }
+            }
+
+            // A check-up a year, done, and an open plan renewal already reminded.
+            for (var year = 0; year < Years; year++)
+            {
+                db.Deadlines.Add(new Deadline
+                {
+                    MedicineId = medicine.Id, Kind = DeadlineKind.CheckUp, DueOn = start.AddYears(year),
+                    DoneOn = start.AddYears(year), RecordedAt = at(start, 7), UpdatedAt = at(start, 7),
                 });
             }
+            var renewal = new Deadline
+            {
+                MedicineId = medicine.Id, Kind = DeadlineKind.TherapeuticPlan, DueOn = Today.AddDays(10),
+                RecordedAt = at(start, 7), UpdatedAt = at(start, 7),
+            };
+            db.Deadlines.Add(renewal);
+            db.DeadlineReminderEvents.Add(new DeadlineReminderEvent
+                { DeadlineId = renewal.Id, MedicineId = medicine.Id, DueOn = renewal.DueOn, FiredAt = at(Today, 8) });
 
             db.StockMovements.Add(new StockMovement
             {
@@ -283,6 +319,11 @@ internal sealed class BenchmarkProfile : IAsyncDisposable
     private sealed class Location(string directory) : IAppDataLocation
     {
         public string DataDirectory => directory;
+    }
+
+    private sealed class FixedRepetition(DoseRepetition repetition) : IDoseRepetitionPolicy
+    {
+        public DoseRepetition? For(Medicine medicine) => repetition;
     }
 
     private sealed class SilentNotifications : IEmailNotificationService, IWindowsNotificationService

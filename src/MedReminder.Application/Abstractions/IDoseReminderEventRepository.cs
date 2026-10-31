@@ -16,6 +16,20 @@ public interface IDoseReminderEventRepository
         DateOnly localDate,
         CancellationToken cancellationToken);
 
+    // The keys among `slotKeys` already fired for the medicine on
+    // `localDate`: one read for every slot and repetition of a medicine
+    // instead of one per key (issue #328).
+    async Task<IReadOnlySet<string>> ListFiredAsync(
+        Guid medicineId, DateOnly localDate, IReadOnlyCollection<string> slotKeys, CancellationToken cancellationToken)
+    {
+        var fired = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var key in slotKeys)
+        {
+            if (await ExistsAsync(medicineId, key, localDate, cancellationToken)) fired.Add(key);
+        }
+        return fired;
+    }
+
     Task AddAsync(DoseReminderEvent evt, CancellationToken cancellationToken);
 
     // Deletes rows whose LocalDate is older than the given cutoff

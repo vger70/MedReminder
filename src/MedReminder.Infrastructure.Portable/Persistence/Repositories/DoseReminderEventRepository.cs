@@ -29,6 +29,20 @@ internal sealed class DoseReminderEventRepository
                 cancellationToken);
     }
 
+    // On the unique (MedicineId, SlotKey, LocalDate) index.
+    public async Task<IReadOnlySet<string>> ListFiredAsync(
+        Guid medicineId, DateOnly localDate, IReadOnlyCollection<string> slotKeys, CancellationToken cancellationToken)
+    {
+        if (slotKeys.Count == 0) return new HashSet<string>(StringComparer.Ordinal);
+        var keys = slotKeys.Distinct(StringComparer.Ordinal).ToList();
+        var fired = await _db.DoseReminderEvents
+            .AsNoTracking()
+            .Where(e => e.MedicineId == medicineId && e.LocalDate == localDate && keys.Contains(e.SlotKey))
+            .Select(e => e.SlotKey)
+            .ToListAsync(cancellationToken);
+        return fired.ToHashSet(StringComparer.Ordinal);
+    }
+
     public async Task AddAsync(DoseReminderEvent evt, CancellationToken cancellationToken)
     {
         await _db.DoseReminderEvents.AddAsync(evt, cancellationToken);

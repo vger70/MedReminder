@@ -156,6 +156,8 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
         // Hot loaders, end to end.
         yield return ("loader: NotificationPlanLoader.LoadAsync",
             sp => sp.GetRequiredService<NotificationPlanLoader>().LoadAsync(p.Today, ct));
+        yield return ("loader: NotificationPlanLoader.LoadDeadlinesAsync",
+            sp => sp.GetRequiredService<NotificationPlanLoader>().LoadDeadlinesAsync(ct));
         yield return ("loader: MedicationMonitor.RunAsync",
             sp => sp.GetRequiredService<MedicationMonitor>().RunAsync(ct));
         yield return ("loader: DoseReminderService.RunAsync",
