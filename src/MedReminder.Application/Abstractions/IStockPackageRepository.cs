@@ -1,3 +1,4 @@
+using MedReminder.Application.Notifications;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 
@@ -24,6 +25,22 @@ public interface IPackageExpiryNoticeEventRepository
 {
     Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, NotificationChannels channel,
         CancellationToken cancellationToken);
+
+    // The keys among `keys` already shown on `channel`: one read for the
+    // packages of a medicine instead of two per package (issue #328).
+    async Task<IReadOnlySet<PackageNoticeKey>> ListShownAsync(
+        IReadOnlyCollection<PackageNoticeKey> keys, NotificationChannels channel, CancellationToken cancellationToken)
+    {
+        var shown = new HashSet<PackageNoticeKey>();
+        foreach (var key in keys)
+        {
+            if (await ExistsAsync(key.PackageId, key.EffectiveExpiry, key.Stage, channel, cancellationToken))
+            {
+                shown.Add(key);
+            }
+        }
+        return shown;
+    }
 
     Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken cancellationToken);
 }

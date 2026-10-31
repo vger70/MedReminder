@@ -1,7 +1,10 @@
 using FluentAssertions;
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Notifications;
 using MedReminder.Domain.Ledger;
 using MedReminder.Domain.Medicines;
+using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Prescriptions;
 using MedReminder.Domain.Stock;
 using MedReminder.Domain.Sync;
 using MedReminder.Infrastructure.Persistence;
@@ -197,6 +200,82 @@ public class FactLookupTests
             new HybridTimestamp(10, 1, a), new HybridTimestamp(10, 1, b), new HybridTimestamp(20, 0, a));
         (await repository.ExistsForMedicineAsync(other, "MedicineDeleted", default)).Should().BeTrue();
         (await repository.ExistsForMedicineAsync(id, "MedicineDeleted", default)).Should().BeFalse();
+    }
+
+    // One read for the reminder keys of many prescriptions: a key matches
+    // on both id and date, an empty request reads nothing, and the
+    // default (one ExistsAsync per key) answers the same.
+    [Fact]
+    public async Task Prescription_reminders_are_read_for_many_keys_at_once()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var id = await SeedMedicineAsync(ctx);
+        var (p1, p2, p3) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var at = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
+        ctx.PrescriptionReminderEvents.AddRange(
+            new PrescriptionReminderEvent { PrescriptionId = p1, MedicineId = id, ValidUntil = Today, FiredAt = at },
+            new PrescriptionReminderEvent { PrescriptionId = p2, MedicineId = id, ValidUntil = Today.AddDays(-30), FiredAt = at });
+        await ctx.SaveChangesAsync();
+        var repository = new PrescriptionReminderEventRepository(ctx);
+        IPrescriptionReminderEventRepository fallback = new ReminderExistsOnly(repository);
+        PrescriptionReminderKey[] keys = [new(p1, Today), new(p2, Today), new(p3, Today)];
+
+        foreach (var reader in new[] { repository, fallback })
+        {
+            (await reader.ListRemindedAsync(keys, default)).Should().BeEquivalentTo([new PrescriptionReminderKey(p1, Today)]);
+            (await reader.ListRemindedAsync([], default)).Should().BeEmpty();
+        }
+    }
+
+    // The same for package notices, on one channel.
+    [Fact]
+    public async Task Package_notices_are_read_for_many_keys_at_once()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        await using var ctx = fixture.CreateContext();
+        var id = await SeedMedicineAsync(ctx);
+        var (k1, k2) = (Guid.NewGuid(), Guid.NewGuid());
+        var at = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
+        PackageExpiryNoticeEvent Notice(Guid package, int stage, NotificationChannels channel) => new()
+        {
+            PackageId = package, MedicineId = id, EffectiveExpiry = Today, Stage = stage, Channel = channel, FiredAt = at,
+        };
+        ctx.PackageExpiryNoticeEvents.AddRange(
+            Notice(k1, PackageExpiryNoticeEvent.SoonStage, NotificationChannels.Windows),
+            Notice(k2, PackageExpiryNoticeEvent.SoonStage, NotificationChannels.Email));
+        await ctx.SaveChangesAsync();
+        var repository = new PackageExpiryNoticeEventRepository(ctx);
+        IPackageExpiryNoticeEventRepository fallback = new NoticeExistsOnly(repository);
+        PackageNoticeKey[] keys =
+        [
+            new(k1, Today, PackageExpiryNoticeEvent.SoonStage), new(k1, Today, PackageExpiryNoticeEvent.ExpiredStage),
+            new(k1, Today.AddDays(1), PackageExpiryNoticeEvent.SoonStage), new(k2, Today, PackageExpiryNoticeEvent.SoonStage),
+        ];
+
+        foreach (var reader in new[] { repository, fallback })
+        {
+            (await reader.ListShownAsync(keys, NotificationChannels.Windows, default))
+                .Should().BeEquivalentTo([new PackageNoticeKey(k1, Today, PackageExpiryNoticeEvent.SoonStage)]);
+            (await reader.ListShownAsync([], NotificationChannels.Windows, default)).Should().BeEmpty();
+        }
+    }
+
+    private sealed class ReminderExistsOnly(PrescriptionReminderEventRepository inner) : IPrescriptionReminderEventRepository
+    {
+        public Task<bool> ExistsAsync(Guid prescriptionId, DateOnly validUntil, CancellationToken ct)
+            => inner.ExistsAsync(prescriptionId, validUntil, ct);
+
+        public Task AddAsync(PrescriptionReminderEvent reminder, CancellationToken ct) => inner.AddAsync(reminder, ct);
+    }
+
+    private sealed class NoticeExistsOnly(PackageExpiryNoticeEventRepository inner) : IPackageExpiryNoticeEventRepository
+    {
+        public Task<bool> ExistsAsync(Guid packageId, DateOnly effectiveExpiry, int stage, NotificationChannels channel,
+            CancellationToken ct)
+            => inner.ExistsAsync(packageId, effectiveExpiry, stage, channel, ct);
+
+        public Task AddAsync(PackageExpiryNoticeEvent notice, CancellationToken ct) => inner.AddAsync(notice, ct);
     }
 
     private static StockMovement Movement(Guid medicineId, DateTimeOffset at, StockMovementKind kind, decimal delta)

@@ -213,32 +213,25 @@ public sealed class NotificationPlanLoader
                 prescriptions = _prescriptionEvents is null ? [.. all.Where(p => p.IsRepeatable)] : all;
                 if (_prescriptionEvents is not null)
                 {
-                    prescriptionsReminded = [];
-                    foreach (var p in all)
-                    {
-                        if (p.ValidUntil is { } until
-                            && await _prescriptionEvents.ExistsAsync(p.Id, until, cancellationToken))
-                        {
-                            prescriptionsReminded.Add(new PrescriptionReminderKey(p.Id, until));
-                        }
-                    }
+                    prescriptionsReminded = [.. await _prescriptionEvents.ListRemindedAsync(
+                        [.. all.Where(p => p.ValidUntil is not null)
+                            .Select(p => new PrescriptionReminderKey(p.Id, p.ValidUntil!.Value))],
+                        cancellationToken)];
                 }
             }
 
             var packages = await _packages.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var shown = new HashSet<PackageNoticeKey>();
+            var candidates = new List<PackageNoticeKey>();
             foreach (var package in packages)
             {
                 if (PackageExpiryRules.EffectiveExpiry(package) is not { } expiry) continue;
                 foreach (var stage in (int[])[PackageExpiryNoticeEvent.SoonStage, PackageExpiryNoticeEvent.ExpiredStage])
                 {
-                    if (await _packageNotices.ExistsAsync(package.Id, expiry, stage, NotificationChannels.Windows,
-                            cancellationToken))
-                    {
-                        shown.Add(new PackageNoticeKey(package.Id, expiry, stage));
-                    }
+                    candidates.Add(new PackageNoticeKey(package.Id, expiry, stage));
                 }
             }
+            var shown = new HashSet<PackageNoticeKey>(
+                await _packageNotices.ListShownAsync(candidates, NotificationChannels.Windows, cancellationToken));
 
             result.Add(new MedicinePlanState(
                 medicine,

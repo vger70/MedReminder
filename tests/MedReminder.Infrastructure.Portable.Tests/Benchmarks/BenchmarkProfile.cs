@@ -27,7 +27,8 @@ namespace MedReminder.Infrastructure.Tests.Benchmarks;
 //   - two intakes a day (with their sync operations);
 //   - one derived consumption movement a day and a new package every
 //     fifteen days (with its package row);
-//   - one stock count and one prescription a month;
+//   - one stock count and one prescription a month, with its reminder,
+//     and an expiry notice every fourth package;
 //   - a schedule change a year, a few retractions and suspensions.
 //
 // The stock stays well above the threshold, so the monitor reads every
@@ -195,14 +196,24 @@ internal sealed class BenchmarkProfile : IAsyncDisposable
                         QuantityDelta = 30m, StockEpoch = 1, Origin = StockMovementOrigin.User,
                     };
                     db.StockMovements.Add(entry);
-                    db.StockPackages.Add(new StockPackage
+                    var package = new StockPackage
                     {
                         MedicineId = medicine.Id, MovementId = entry.Id, Quantity = 30m,
                         ExpiresOn = day.AddYears(2), OpenedOn = day,
                         ClosedOn = day.AddDays(15) <= Today ? day.AddDays(15) : null,
                         Closure = day.AddDays(15) <= Today ? PackageClosure.Finished : null,
                         RecordedAt = at(day, 9), UpdatedAt = at(day, 9),
-                    });
+                    };
+                    db.StockPackages.Add(package);
+                    if (index % 60 == 0)
+                    {
+                        db.PackageExpiryNoticeEvents.Add(new PackageExpiryNoticeEvent
+                        {
+                            PackageId = package.Id, MedicineId = medicine.Id, EffectiveExpiry = day.AddYears(2),
+                            Stage = PackageExpiryNoticeEvent.SoonStage, Channel = NotificationChannels.Windows,
+                            FiredAt = at(day, 9),
+                        });
+                    }
                 }
 
                 if (day.Day == 1)
@@ -212,10 +223,16 @@ internal sealed class BenchmarkProfile : IAsyncDisposable
                         MedicineId = medicine.Id, CountDay = day, CountedQuantity = 200m, TakenToday = 0m,
                         ThresholdAtCount = 7, RecordedAt = at(day, 22),
                     });
-                    db.Prescriptions.Add(new Prescription
+                    var prescription = new Prescription
                     {
                         MedicineId = medicine.Id, IssuedOn = day, Packages = 2, ValidUntil = day.AddDays(30),
                         CollectedOn = day.AddDays(2), RecordedAt = at(day, 10), UpdatedAt = at(day, 10),
+                    };
+                    db.Prescriptions.Add(prescription);
+                    db.PrescriptionReminderEvents.Add(new PrescriptionReminderEvent
+                    {
+                        PrescriptionId = prescription.Id, MedicineId = medicine.Id,
+                        ValidUntil = prescription.ValidUntil.Value, FiredAt = at(day, 11),
                     });
                 }
 

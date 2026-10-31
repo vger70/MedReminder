@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.Notifications;
 using MedReminder.Domain.Prescriptions;
 using Microsoft.EntityFrameworkCore;
 
@@ -101,6 +102,21 @@ internal sealed class PrescriptionReminderEventRepository : IPrescriptionReminde
     public Task<bool> ExistsAsync(Guid prescriptionId, DateOnly validUntil, CancellationToken cancellationToken)
         => _db.PrescriptionReminderEvents.AnyAsync(
             e => e.PrescriptionId == prescriptionId && e.ValidUntil == validUntil, cancellationToken);
+
+    // One read on the (PrescriptionId, ValidUntil) index for every
+    // prescription id, the exact keys matched in memory.
+    public async Task<IReadOnlySet<PrescriptionReminderKey>> ListRemindedAsync(
+        IReadOnlyCollection<PrescriptionReminderKey> keys, CancellationToken cancellationToken)
+    {
+        if (keys.Count == 0) return new HashSet<PrescriptionReminderKey>();
+        var ids = keys.Select(k => k.PrescriptionId).Distinct().ToList();
+        var rows = await _db.PrescriptionReminderEvents.AsNoTracking()
+            .Where(e => ids.Contains(e.PrescriptionId))
+            .Select(e => new { e.PrescriptionId, e.ValidUntil })
+            .ToListAsync(cancellationToken);
+        var wanted = keys.ToHashSet();
+        return rows.Select(r => new PrescriptionReminderKey(r.PrescriptionId, r.ValidUntil)).Where(wanted.Contains).ToHashSet();
+    }
 
     public async Task AddAsync(PrescriptionReminderEvent reminder, CancellationToken cancellationToken)
         => await _db.PrescriptionReminderEvents.AddAsync(reminder, cancellationToken);

@@ -1,3 +1,4 @@
+using MedReminder.Application.Notifications;
 using MedReminder.Domain.Prescriptions;
 
 namespace MedReminder.Application.Abstractions;
@@ -23,6 +24,20 @@ public interface IPrescriptionRepository
 public interface IPrescriptionReminderEventRepository
 {
     Task<bool> ExistsAsync(Guid prescriptionId, DateOnly validUntil, CancellationToken cancellationToken);
+
+    // The keys among `keys` already reminded: one read for the
+    // prescriptions of a medicine instead of one per prescription
+    // (issue #328).
+    async Task<IReadOnlySet<PrescriptionReminderKey>> ListRemindedAsync(
+        IReadOnlyCollection<PrescriptionReminderKey> keys, CancellationToken cancellationToken)
+    {
+        var reminded = new HashSet<PrescriptionReminderKey>();
+        foreach (var key in keys)
+        {
+            if (await ExistsAsync(key.PrescriptionId, key.ValidUntil, cancellationToken)) reminded.Add(key);
+        }
+        return reminded;
+    }
 
     Task AddAsync(PrescriptionReminderEvent reminder, CancellationToken cancellationToken);
 }
