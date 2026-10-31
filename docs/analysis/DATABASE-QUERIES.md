@@ -44,6 +44,7 @@ long-lived profiles.
 | Every table added later has its indexes in the patch that creates it, unique ones included. | None. |
 | The dedup patch named its index `IX_DoseReminderEvents_Dedup`; EnsureCreated names it `IX_DoseReminderEvents_MedicineId_SlotKey_LocalDate`. Every database created after A5 got a second identical unique index on its second boot. | The patch creates the EF name, then drops the old one. |
 | `IX_MedicationIntakes_MedicineId` is a prefix of `(MedicineId, Day)`; SQLite already chose the composite index for MedicineId-only reads. | Dropped from the model and by a boot patch. |
+| `IX_StockMovements_MedicineId` and `IX_MedicationAdministrationSlots_MedicineId` are prefixes of `(MedicineId, Kind, OccurredAt)` and `(MedicineId, Order)`. Unlike the intake one, SQLite used the stock index for the full-history read. | Dropped as well. Measured at 30 x 5 (median of 11, two runs each): 1,000 movements written 15.5 -> 13.9 ms, database 111.5 -> 108.7 MB, full movement history 53.7 -> 57.2 ms, `LedgerFactsLoader` 206 -> 209 ms. A trade, not a clear gain; the commit can be reverted alone. |
 
 `ModelIndexes` (last boot patch) reads the relational model and creates
 any missing index under its EF name; an equivalent index (same columns
@@ -65,8 +66,8 @@ Index: the plan SQLite chose on the 30 x 5 profile. All reads are
 | | `ListForMedicineBetweenAsync`, `ListForDayAsync`, `ListManualIntakeDaysAsync` | MedicineId, Day range | `(MedicineId, Day)` range |
 | | `GetAsync` (new) | Id, MedicineId | PK |
 | | `ListMedicinesWithDayIntakeAsync` | Day, not extra | full walk of `(MedicineId, Day)`, 2.8 ms |
-| StockMovement | `ListForMedicineAsync` | MedicineId, by OccurredAt | `(MedicineId)` + sort |
-| | `GetCurrentStockAsync` (new) | MedicineId, delta column only | `(MedicineId)` |
+| StockMovement | `ListForMedicineAsync` | MedicineId, by OccurredAt | `(MedicineId, Kind, OccurredAt)` prefix + sort |
+| | `GetCurrentStockAsync` (new) | MedicineId, delta column only | `(MedicineId, Kind, OccurredAt)` prefix |
 | | `GetLastNewPackageQuantityAsync` (new) | MedicineId, Kind = NewPackage, newest first | `(MedicineId, Kind, OccurredAt)` |
 | | `GetLastConsumptionDayAsync` | MedicineId, Kind, newest | covering `(MedicineId, Kind, OccurredAt)` |
 | | `GetAsync` (new) | Id, MedicineId | PK |
@@ -84,6 +85,7 @@ Index: the plan SQLite chose on the 30 x 5 profile. All reads are
 | | `AssignEpochFactIdsAsync` (tracked) | MedicineId, EpochFactId null | `(MedicineId)` |
 | SentEmailNotification | `GetLatestForMedicineAsync` | MedicineId, newest | `(MedicineId, SentAt)` |
 | DoseReminderEvent | `ExistsAsync` | key | unique dedup index |
+| | `ListFiredAsync` (new) | MedicineId, LocalDate, SlotKey in list | same index |
 | | `PruneOlderThanAsync` | LocalDate | scan (cold, once a day) |
 | Prescription | `ListForMedicineAsync`, `ListAllAsync`, `GetAsync` | MedicineId / all / Id | `(MedicineId)` / scan / PK |
 | PrescriptionDispensation | `CountByPrescriptionAsync` and lists | MedicineId / PrescriptionId | `(MedicineId)`, `(PrescriptionId)` |
@@ -93,6 +95,7 @@ Index: the plan SQLite chose on the 30 x 5 profile. All reads are
 | PackageExpiryNoticeEvent | `ExistsAsync` | key | unique 4-column index |
 | | `ListShownAsync` (new) | PackageId in list, channel | same index |
 | Deadline, DeadlineReminderEvent, ShortageNoticeEvent | `ListAllAsync`, `ExistsAsync` | all / key | scan (few rows) / unique index |
+| DeadlineReminderEvent | `ListRemindedAsync` (new) | DeadlineId in list | unique `(DeadlineId, DueOn)` |
 | SyncOperation | `ExistsAsync` | Id | PK |
 | | `ListForMedicineAsync` | MedicineId, payload included | `(MedicineId)` |
 | | `ExistsForMedicineAsync`, `ListStampsForMedicineAsync` (new) | MedicineId (+ Type), no payload | `(MedicineId)` |
@@ -116,6 +119,7 @@ deletion.
 | `CalendarExportQuery`, `PackageListQuery`, `ExpiringPackagesQuery`, `EquivalentsQuery`, `AdjustStockDown` | warm | every movement, summed | `GetCurrentStockAsync` |
 | `RestockByScanQuery`, `CoveragePlanQuery` | warm | every movement, last new package | `GetLastNewPackageQuantityAsync` |
 | `NotificationPlanLoader` prescription reminders and package notices | hot | one `ExistsAsync` per prescription, two per package | `ListRemindedAsync`, `ListShownAsync` |
+| `NotificationPlanLoader` dose reminders and deadlines | hot | one `ExistsAsync` per slot, per due repetition step and per open deadline | `ListFiredAsync`, `ListRemindedAsync` |
 | `PackageExpiryNotices.PendingAsync` | hot | one `ExistsAsync` per due package | `ListShownAsync` |
 | `RetractFact` (intake, count, suspension) | warm | whole list, `.Single` | by-id reads |
 | `LedgerFactsLoader`, `LedgerSynchronizer`, `FactHistoryQuery` | warm (one medicine per write) | full history | unchanged: the derivation replays and rewrites every fact. 7 ms per medicine at 5 years. |

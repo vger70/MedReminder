@@ -41,8 +41,8 @@ with the classification adapted to per-PR granularity: **Added**,
   `IStockMovementRepository.GetCurrentStockAsync` and
   `GetLastNewPackageQuantityAsync`; `ISyncOperationRepository.ExistsForMedicineAsync`
   and `ListStampsForMedicineAsync` (no payload); batched
-  `ListRemindedAsync` / `ListShownAsync` for prescription reminders and
-  package notices.
+  `ListRemindedAsync` / `ListShownAsync` / `ListFiredAsync` for
+  prescription, deadline and dose reminders and package notices.
 - **Changed**: the sync apply, retraction, monitor, notification plan,
   overview, coverage, timeline and other loaders use them instead of
   reading whole histories. At 30 medicines over five years: plan 211 ->
@@ -54,7 +54,9 @@ with the classification adapted to per-PR granularity: **Added**,
 - **Fixed**: new databases got a second, identical unique index on
   `DoseReminderEvents` (`IX_DoseReminderEvents_Dedup`) from their second
   boot; the patch now uses the EF name and drops the old one.
-- **Removed**: the redundant `IX_MedicationIntakes_MedicineId` index.
+- **Removed**: the `(MedicineId)` prefix indexes of `MedicationIntakes`,
+  `StockMovements` and `MedicationAdministrationSlots`, covered by their
+  composite indexes.
 - **Docs**: `docs/analysis/DATABASE-QUERIES.md`, the inventory and the
   numbers.
 
