@@ -200,6 +200,23 @@ public class ApplyRemoteOperationsTests
         (await _a.Intakes.ListForMedicineAsync(id, default)).Should().HaveCount(2);
     }
 
+    // The day is read after the incoming intake is added: a repository
+    // that returns pending writes (the in-memory one here) must not count
+    // it twice. 1 + 1 is the day's plan of 2, so no hint.
+    [Fact]
+    public async Task Intakes_of_one_day_within_the_schedule_are_not_hinted()
+    {
+        var id = await SeedOnAAsync();
+        var day = new DateOnly(2026, 9, 12);
+        await _a.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, day, IntakeStatus.Taken, 1m), default);
+        await _b.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, day, IntakeStatus.Taken, 1m), default);
+
+        await PullAsync(_b, _a);
+
+        _a.SyncConflicts.All.Should().NotContain(c => c.Kind == SyncConflictKind.IntakesOverSchedule);
+        (await _a.Intakes.ListForMedicineAsync(id, default)).Should().HaveCount(2);
+    }
+
     [Fact]
     public async Task Concurrent_slot_sets_and_same_date_schedules_are_listed_and_converge()
     {

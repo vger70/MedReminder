@@ -708,9 +708,11 @@ public sealed class ApplyRemoteOperations
         // §4.5 hint: intakes of one day from different devices that
         // together exceed the day's scheduled quantity.
         // Extra intakes are on top of the plan by definition.
+        // The day is read after AddAsync: the intake just added is left out
+        // by id, as a repository may already return pending writes.
         if (intake.Status != IntakeStatus.Taken || intake.IsExtra) return;
         var sameDay = (await _intakes.ListForDayAsync(intake.MedicineId, intake.Day, ct))
-            .Where(i => i.Status == IntakeStatus.Taken && !i.IsExtra)
+            .Where(i => i.Id != intake.IntakeId && i.Status == IntakeStatus.Taken && !i.IsExtra)
             .ToList();
         if (sameDay.Count == 0) return;
         var planned = await PlannedQuantityAsync(medicine, intake.Day, ct);

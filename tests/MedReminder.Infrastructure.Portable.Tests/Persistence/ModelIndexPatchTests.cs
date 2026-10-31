@@ -194,6 +194,33 @@ public class ModelIndexPatchTests
         }
     }
 
+    // An index under the model's name with another shape (here not unique
+    // and on one column) is rebuilt as the model declares it.
+    [Fact]
+    public async Task An_index_under_the_model_name_with_another_shape_is_rebuilt()
+    {
+        using var fixture = new SqliteInMemoryFixture();
+        const string Index = "IX_PrescriptionReminderEvents_PrescriptionId_ValidUntil";
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.ExecuteSqlRawAsync($"DROP INDEX \"{Index}\";");
+            await ctx.Database.ExecuteSqlRawAsync(
+                $"CREATE INDEX \"{Index}\" ON \"PrescriptionReminderEvents\" (\"PrescriptionId\");");
+        }
+
+        await using (var ctx = fixture.CreateContext())
+        {
+            await ctx.Database.OpenConnectionAsync();
+            var connection = ctx.Database.GetDbConnection();
+            await ModelIndexes.EnsureAsync(ctx.Model, connection, unique: true, new RecordingLogger(), default);
+
+            (await ModelIndexes.ListAsync(connection, "PrescriptionReminderEvents", default))
+                .Where(i => i.Name == Index)
+                .Should().ContainSingle()
+                .Which.Should().BeEquivalentTo(new ModelIndexes.Existing(Index, ["PrescriptionId", "ValidUntil"], IsUnique: true));
+        }
+    }
+
     private sealed class RecordingLogger : Microsoft.Extensions.Logging.ILogger
     {
         public List<string> Warnings { get; } = [];

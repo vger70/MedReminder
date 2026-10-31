@@ -23,7 +23,8 @@ public static class MedicineStock
     }
 
     // The current quantity from the sum of the deltas, computed elsewhere
-    // (in SQL by the repository, issue #328): clamped as above.
+    // (by the repository over the delta column only, issue #328): clamped
+    // as above.
     public static decimal FromTotal(decimal sum) => sum < 0m ? 0m : sum;
 
     // Sub-total for a specific stock epoch. Useful for diagnostics.

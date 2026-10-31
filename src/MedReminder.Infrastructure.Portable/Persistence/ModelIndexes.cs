@@ -14,15 +14,17 @@ namespace MedReminder.Infrastructure.Persistence;
 // CREATE INDEX IF NOT EXISTS, under the name EF generates, so new and
 // upgraded databases converge.
 //
-// An existing index on the same columns with the same uniqueness counts
-// as present whatever its name, so no second copy is built. An index
-// whose table or columns are missing is left to the patch that adds them.
+// An existing index on the same columns with the same uniqueness (and
+// both partial or both not) counts as present whatever its name, so no
+// second copy is built. An index under the model's name that differs is
+// rebuilt as the model declares it. An index whose table or columns are
+// missing is left to the patch that adds them.
 internal static class ModelIndexes
 {
     internal sealed record Definition(
         string Name, string Table, IReadOnlyList<string> Columns, bool IsUnique, string? Filter);
 
-    internal sealed record Existing(string Name, IReadOnlyList<string> Columns, bool IsUnique);
+    internal sealed record Existing(string Name, IReadOnlyList<string> Columns, bool IsUnique, bool IsPartial = false);
 
     // From the relational model: the runtime model does not keep every
     // index facet, the table mapping does.
@@ -40,29 +42,45 @@ internal static class ModelIndexes
     public static async Task EnsureAsync(
         IModel model, DbConnection connection, bool unique, ILogger log, CancellationToken cancellationToken)
     {
-        foreach (var index in Of(model).Where(i => i.IsUnique == unique))
+        // The columns and indexes of each table are read once per table.
+        foreach (var table in Of(model).Where(i => i.IsUnique == unique).GroupBy(i => i.Table))
         {
-            var columns = await ColumnsAsync(connection, index.Table, cancellationToken);
-            if (columns.Count == 0 || !index.Columns.All(c => columns.Contains(c))) continue;
+            var columns = await ColumnsAsync(connection, table.Key, cancellationToken);
+            if (columns.Count == 0) continue;
+            var existing = await ListAsync(connection, table.Key, cancellationToken);
 
-            var existing = await ListAsync(connection, index.Table, cancellationToken);
-            if (existing.Any(e => e.Name == index.Name
-                    || (e.IsUnique == index.IsUnique && e.Columns.SequenceEqual(index.Columns, StringComparer.OrdinalIgnoreCase))))
+            foreach (var index in table)
             {
-                continue;
-            }
+                if (!index.Columns.All(columns.Contains)) continue;
+                if (existing.Any(e => Matches(e, index))) continue;
 
-            if (index.IsUnique && await HasDuplicatesAsync(connection, index, cancellationToken))
-            {
-                log.LogWarning(
-                    "Unique index {Index} not created: {Table} has rows with the same key.", index.Name, index.Table);
-                continue;
-            }
+                if (index.IsUnique && await HasDuplicatesAsync(connection, index, cancellationToken))
+                {
+                    log.LogWarning(
+                        "Unique index {Index} not created: {Table} has rows with the same key.", index.Name, index.Table);
+                    continue;
+                }
 
-            await ExecuteAsync(connection, CreateSql(index), cancellationToken);
-            log.LogInformation("Created missing index {Index}.", index.Name);
+                // SQLite index names are case-insensitive. A stale index
+                // under the model's name would make CREATE INDEX IF NOT
+                // EXISTS a no-op: it is dropped first.
+                if (existing.FirstOrDefault(e => string.Equals(e.Name, index.Name, StringComparison.OrdinalIgnoreCase))
+                    is { } stale)
+                {
+                    await ExecuteAsync(connection, $"DROP INDEX IF EXISTS {Quote(stale.Name)};", cancellationToken);
+                    log.LogInformation("Rebuilding index {Index} as the model declares it.", index.Name);
+                }
+
+                await ExecuteAsync(connection, CreateSql(index), cancellationToken);
+                log.LogInformation("Created missing index {Index}.", index.Name);
+            }
         }
     }
+
+    private static bool Matches(Existing existing, Definition index)
+        => existing.IsUnique == index.IsUnique
+            && existing.IsPartial == (index.Filter is not null)
+            && existing.Columns.SequenceEqual(index.Columns, StringComparer.OrdinalIgnoreCase);
 
     internal static string CreateSql(Definition index)
     {
@@ -89,7 +107,7 @@ internal static class ModelIndexes
     public static async Task<IReadOnlyList<Existing>> ListAsync(
         DbConnection connection, string table, CancellationToken cancellationToken)
     {
-        var indexes = new List<(string Name, bool Unique)>();
+        var indexes = new List<(string Name, bool Unique, bool Partial)>();
         await using (var command = connection.CreateCommand())
         {
             command.CommandText = $"PRAGMA index_list({Quote(table)});";
@@ -97,12 +115,12 @@ internal static class ModelIndexes
             while (await reader.ReadAsync(cancellationToken))
             {
                 // seq, name, unique, origin, partial
-                indexes.Add((reader.GetString(1), reader.GetInt64(2) == 1));
+                indexes.Add((reader.GetString(1), reader.GetInt64(2) == 1, reader.GetInt64(4) == 1));
             }
         }
 
         var result = new List<Existing>();
-        foreach (var (name, isUnique) in indexes)
+        foreach (var (name, isUnique, isPartial) in indexes)
         {
             var columns = new List<string>();
             await using var command = connection.CreateCommand();
@@ -113,7 +131,7 @@ internal static class ModelIndexes
                 // seqno, cid, name
                 columns.Add(reader.IsDBNull(2) ? "" : reader.GetString(2));
             }
-            result.Add(new Existing(name, columns, isUnique));
+            result.Add(new Existing(name, columns, isUnique, isPartial));
         }
         return result;
     }

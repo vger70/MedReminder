@@ -10,7 +10,8 @@ public interface IStockMovementRepository
         CancellationToken cancellationToken);
 
     // The current stock of the medicine, MedicineStock.Current over every
-    // movement, without reading the movements (issue #328).
+    // movement, reading only their deltas rather than the whole rows
+    // (issue #328).
     async Task<decimal> GetCurrentStockAsync(Guid medicineId, CancellationToken cancellationToken)
         => MedicineStock.Current(await ListForMedicineAsync(medicineId, cancellationToken));
 

@@ -49,7 +49,8 @@ with the classification adapted to per-PR granularity: **Added**,
   45 ms, monitor 120 -> 48 ms, 50 sync fact look-ups 231 -> 1.4 ms.
 - **Added**: `ModelIndexes` boot patch creates every index of the EF model
   missing on an upgraded database; a unique one only when no rows share
-  its key (otherwise skipped and reported, no row changed).
+  its key (otherwise skipped and reported, no row changed). An index
+  under the model's name with another shape is rebuilt as declared.
 - **Fixed**: new databases got a second, identical unique index on
   `DoseReminderEvents` (`IX_DoseReminderEvents_Dedup`) from their second
   boot; the patch now uses the EF name and drops the old one.

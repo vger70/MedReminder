@@ -206,17 +206,17 @@ public sealed class NotificationPlanLoader
             // reminder events, any prescription may be reminded before it
             // lapses.
             IReadOnlyList<Domain.Prescriptions.Prescription>? prescriptions = null;
-            HashSet<PrescriptionReminderKey>? prescriptionsReminded = null;
+            IReadOnlySet<PrescriptionReminderKey>? prescriptionsReminded = null;
             if (_prescriptions is not null && _dispensations is not null)
             {
                 var all = await _prescriptions.ListForMedicineAsync(medicine.Id, cancellationToken);
                 prescriptions = _prescriptionEvents is null ? [.. all.Where(p => p.IsRepeatable)] : all;
                 if (_prescriptionEvents is not null)
                 {
-                    prescriptionsReminded = [.. await _prescriptionEvents.ListRemindedAsync(
+                    prescriptionsReminded = await _prescriptionEvents.ListRemindedAsync(
                         [.. all.Where(p => p.ValidUntil is not null)
                             .Select(p => new PrescriptionReminderKey(p.Id, p.ValidUntil!.Value))],
-                        cancellationToken)];
+                        cancellationToken);
                 }
             }
 
@@ -230,8 +230,7 @@ public sealed class NotificationPlanLoader
                     candidates.Add(new PackageNoticeKey(package.Id, expiry, stage));
                 }
             }
-            var shown = new HashSet<PackageNoticeKey>(
-                await _packageNotices.ListShownAsync(candidates, NotificationChannels.Windows, cancellationToken));
+            var shown = await _packageNotices.ListShownAsync(candidates, NotificationChannels.Windows, cancellationToken);
 
             result.Add(new MedicinePlanState(
                 medicine,

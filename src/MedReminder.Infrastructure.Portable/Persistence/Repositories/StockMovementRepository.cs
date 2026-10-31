@@ -40,16 +40,22 @@ internal sealed class StockMovementRepository : IStockMovementRepository
 
     // The new packages only, newest first, on the (MedicineId, Kind,
     // OccurredAt) index. The sign is tested in memory: the TEXT column
-    // does not compare as a number in SQL.
+    // does not compare as a number in SQL. The rows are streamed and the
+    // read stops at the first positive one (almost always the newest).
     public async Task<decimal?> GetLastNewPackageQuantityAsync(Guid medicineId, CancellationToken cancellationToken)
     {
-        var quantities = await _db.StockMovements
+        var quantities = _db.StockMovements
             .AsNoTracking()
             .Where(m => m.MedicineId == medicineId && m.Kind == StockMovementKind.NewPackage)
             .OrderByDescending(m => m.OccurredAt)
             .Select(m => m.QuantityDelta)
-            .ToListAsync(cancellationToken);
-        return quantities.Where(q => q > 0m).Select(q => (decimal?)q).FirstOrDefault();
+            .AsAsyncEnumerable()
+            .WithCancellation(cancellationToken);
+        await foreach (var quantity in quantities)
+        {
+            if (quantity > 0m) return quantity;
+        }
+        return null;
     }
 
     // On the primary key.

@@ -60,11 +60,7 @@ public sealed class DatabaseInitializer
 
     private async Task ApplyCatalogueSchemaAsync(CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
         await CatalogueSchema.ApplyAsync(connection, cancellationToken);
     }
 
@@ -506,11 +502,7 @@ public sealed class DatabaseInitializer
     //     by the first derivation after the upgrade (LedgerSynchronizer).
     private async Task ApplyFactRetractionPatchAsync(CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
@@ -561,11 +553,7 @@ public sealed class DatabaseInitializer
     //     past number.
     private async Task ApplyLedgerDerivationPatchAsync(CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
@@ -640,11 +628,7 @@ public sealed class DatabaseInitializer
     //     keeps the backfill in SQL and the Guid text format identical.
     private async Task ApplyLedgerFactsPatchAsync(CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
 
         var now = _clock.GetUtcNow();
         var localToday = DateOnly.FromDateTime(
@@ -745,11 +729,7 @@ public sealed class DatabaseInitializer
     private async Task<bool> AddColumnIfMissingAsync(
         string table, string column, string typeSpec, CancellationToken cancellationToken)
     {
-        var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
+        var connection = await OpenConnectionAsync(cancellationToken);
 
         if (await ColumnExistsAsync(connection, table, column, cancellationToken))
         {
