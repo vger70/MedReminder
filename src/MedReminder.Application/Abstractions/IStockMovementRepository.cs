@@ -1,3 +1,4 @@
+using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Stock;
 
 namespace MedReminder.Application.Abstractions;
@@ -7,6 +8,24 @@ public interface IStockMovementRepository
     Task<IReadOnlyList<StockMovement>> ListForMedicineAsync(
         Guid medicineId,
         CancellationToken cancellationToken);
+
+    // The current stock of the medicine, MedicineStock.Current over every
+    // movement, without reading the movements (issue #328).
+    async Task<decimal> GetCurrentStockAsync(Guid medicineId, CancellationToken cancellationToken)
+        => MedicineStock.Current(await ListForMedicineAsync(medicineId, cancellationToken));
+
+    // The quantity of the most recent new package with a positive
+    // quantity, null when there is none (the restock and coverage hint).
+    async Task<decimal?> GetLastNewPackageQuantityAsync(Guid medicineId, CancellationToken cancellationToken)
+        => (await ListForMedicineAsync(medicineId, cancellationToken))
+            .Where(m => m.Kind == StockMovementKind.NewPackage && m.QuantityDelta > 0m)
+            .OrderByDescending(m => m.OccurredAt)
+            .Select(m => (decimal?)m.QuantityDelta)
+            .FirstOrDefault();
+
+    // One movement of a medicine by id, null when there is none.
+    async Task<StockMovement?> GetAsync(Guid medicineId, Guid movementId, CancellationToken cancellationToken)
+        => (await ListForMedicineAsync(medicineId, cancellationToken)).FirstOrDefault(m => m.Id == movementId);
 
     Task AddAsync(StockMovement movement, CancellationToken cancellationToken);
 

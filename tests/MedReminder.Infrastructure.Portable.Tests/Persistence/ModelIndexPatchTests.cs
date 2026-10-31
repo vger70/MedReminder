@@ -1,3 +1,4 @@
+#pragma warning disable EF1002 // Table and index names read from sqlite_master, not user input.
 using FluentAssertions;
 using MedReminder.Infrastructure.Persistence;
 using MedReminder.Infrastructure.Tests.Support;

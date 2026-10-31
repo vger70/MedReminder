@@ -94,8 +94,7 @@ public sealed class DoseReminderService
 
         foreach (var medicine in medicines)
         {
-            var movements = await _stock.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var currentStock = MedicineStock.Current(movements);
+            var currentStock = await _stock.GetCurrentStockAsync(medicine.Id, cancellationToken);
 
             // Gate: stock zero — hard off for the rest of the day
             // (ANALYSIS-A5 §4.4).

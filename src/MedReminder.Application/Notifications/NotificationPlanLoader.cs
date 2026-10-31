@@ -172,7 +172,7 @@ public sealed class NotificationPlanLoader
         {
             if ((medicine.NotificationChannels & NotificationChannels.Windows) == 0) continue;
 
-            var stock = MedicineStock.Current(await _stock.ListForMedicineAsync(medicine.Id, cancellationToken));
+            var stock = await _stock.GetCurrentStockAsync(medicine.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
             var reminded = new HashSet<Guid>();
             foreach (var slot in slots)

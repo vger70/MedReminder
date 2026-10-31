@@ -50,12 +50,12 @@ public sealed class TherapyTimelineQuery
         var inputs = new List<TherapyTimelineInput>(medicines.Count);
         foreach (var m in medicines)
         {
-            var movements = await _stock.ListForMedicineAsync(m.Id, cancellationToken);
+            var stock = await _stock.GetCurrentStockAsync(m.Id, cancellationToken);
             var schedule = await _schedules.ListForMedicineAsync(m.Id, cancellationToken);
             var suspensions = await _suspensions.ListForMedicineAsync(m.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);
             inputs.Add(new TherapyTimelineInput(
-                m, schedule, suspensions, slots, MedicineStock.Current(movements)));
+                m, schedule, suspensions, slots, stock));
         }
 
         return TherapyTimelineBuilder.Build(inputs, today, effectiveWindow);

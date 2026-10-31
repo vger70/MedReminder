@@ -126,8 +126,7 @@ public sealed class MedicationMonitor
 
         foreach (var medicine in medicines)
         {
-            var movements = await _stock.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var currentStock = MedicineStock.Current(movements);
+            var currentStock = await _stock.GetCurrentStockAsync(medicine.Id, cancellationToken);
 
             var schedule = await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);

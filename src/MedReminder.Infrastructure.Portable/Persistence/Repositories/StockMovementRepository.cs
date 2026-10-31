@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Stock;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,6 +28,35 @@ internal sealed class StockMovementRepository : IStockMovementRepository
             .OrderBy(m => m.OccurredAt)
             .ToListAsync(cancellationToken);
     }
+
+    // Only the delta column, summed as decimal in memory. QuantityDelta is
+    // decimal TEXT: a SUM in SQL goes through REAL and loses precision
+    // (0.05 read back as 0.050000000000000155).
+    public async Task<decimal> GetCurrentStockAsync(Guid medicineId, CancellationToken cancellationToken)
+        => MedicineStock.FromTotal((await _db.StockMovements
+            .Where(m => m.MedicineId == medicineId)
+            .Select(m => m.QuantityDelta)
+            .ToListAsync(cancellationToken)).Sum());
+
+    // The new packages only, newest first, on the (MedicineId, Kind,
+    // OccurredAt) index. The sign is tested in memory: the TEXT column
+    // does not compare as a number in SQL.
+    public async Task<decimal?> GetLastNewPackageQuantityAsync(Guid medicineId, CancellationToken cancellationToken)
+    {
+        var quantities = await _db.StockMovements
+            .AsNoTracking()
+            .Where(m => m.MedicineId == medicineId && m.Kind == StockMovementKind.NewPackage)
+            .OrderByDescending(m => m.OccurredAt)
+            .Select(m => m.QuantityDelta)
+            .ToListAsync(cancellationToken);
+        return quantities.Where(q => q > 0m).Select(q => (decimal?)q).FirstOrDefault();
+    }
+
+    // On the primary key.
+    public Task<StockMovement?> GetAsync(Guid medicineId, Guid movementId, CancellationToken cancellationToken)
+        => _db.StockMovements
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == movementId && m.MedicineId == medicineId, cancellationToken);
 
     public async Task AddAsync(StockMovement movement, CancellationToken cancellationToken)
     {

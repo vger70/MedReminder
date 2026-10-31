@@ -19,8 +19,12 @@ public static class MedicineStock
         {
             sum += m.QuantityDelta;
         }
-        return sum < 0m ? 0m : sum;
+        return FromTotal(sum);
     }
+
+    // The current quantity from the sum of the deltas, computed elsewhere
+    // (in SQL by the repository, issue #328): clamped as above.
+    public static decimal FromTotal(decimal sum) => sum < 0m ? 0m : sum;
 
     // Sub-total for a specific stock epoch. Useful for diagnostics.
     public static decimal CurrentForEpoch(IEnumerable<StockMovement> movements, int epoch)

@@ -73,8 +73,7 @@ public sealed class MedicineOverviewLoader
 
         foreach (var m in medicines)
         {
-            var movements = await _stock.ListForMedicineAsync(m.Id, cancellationToken);
-            var ledgerStock = MedicineStock.Current(movements);
+            var ledgerStock = await _stock.GetCurrentStockAsync(m.Id, cancellationToken);
 
             var schedule = await _schedules.ListForMedicineAsync(m.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);

@@ -65,7 +65,7 @@ public sealed class ExpiringPackagesQuery
             var packages = await _packages.ListForMedicineAsync(medicine.Id, cancellationToken);
             if (packages.Count == 0) continue;
             leadDays ??= PackageSettings.LeadDays(_settings);
-            var stock = MedicineStock.Current(await _stock.ListForMedicineAsync(medicine.Id, cancellationToken));
+            var stock = await _stock.GetCurrentStockAsync(medicine.Id, cancellationToken);
             var items = PackageListQuery.Build(packages, stock, today, leadDays).Where(i => i.NeedsAttention).ToList();
             if (items.Count > 0) result.Add((medicine, items));
         }

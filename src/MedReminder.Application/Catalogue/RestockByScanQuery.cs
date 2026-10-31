@@ -59,19 +59,11 @@ public sealed class RestockByScanQuery
         var candidates = new List<RestockCandidate>(ordered.Count);
         foreach (var medicine in ordered)
         {
-            var movements = await _stock.ListForMedicineAsync(medicine.Id, cancellationToken);
-            candidates.Add(new RestockCandidate(
-                medicine.Id, medicine.Name, medicine.IsActive, LastNewPackageQuantity(movements)));
+            candidates.Add(new RestockCandidate(medicine.Id, medicine.Name, medicine.IsActive,
+                await _stock.GetLastNewPackageQuantityAsync(medicine.Id, cancellationToken)));
         }
         return candidates;
     }
-
-    internal static decimal? LastNewPackageQuantity(IEnumerable<StockMovement> movements) =>
-        movements
-            .Where(m => m.Kind == StockMovementKind.NewPackage && m.QuantityDelta > 0m)
-            .OrderByDescending(m => m.OccurredAt)
-            .Select(m => (decimal?)m.QuantityDelta)
-            .FirstOrDefault();
 }
 
 public sealed record RestockCandidate(

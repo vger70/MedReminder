@@ -6,6 +6,7 @@ using MedReminder.Application.Coverage;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Monitoring;
 using MedReminder.Application.Notifications;
+using MedReminder.Application.Overview;
 using MedReminder.Application.Timeline;
 using MedReminder.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +75,10 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
             sp => sp.GetRequiredService<IMedicationIntakeRepository>().ListMedicinesWithDayIntakeAsync(p.Today, ct));
         yield return ("stock: ListForMedicineAsync (history)",
             PerMedicine<IStockMovementRepository>((r, id) => r.ListForMedicineAsync(id, ct)));
+        yield return ("stock: GetCurrentStockAsync",
+            PerMedicine<IStockMovementRepository>((r, id) => r.GetCurrentStockAsync(id, ct)));
+        yield return ("stock: GetLastNewPackageQuantityAsync",
+            PerMedicine<IStockMovementRepository>((r, id) => r.GetLastNewPackageQuantityAsync(id, ct)));
         yield return ("stock: GetLastConsumptionDayAsync",
             PerMedicine<IStockMovementRepository>((r, id) => r.GetLastConsumptionDayAsync(id, ct)));
         yield return ("counts: ListForMedicineAsync (history)",
@@ -155,6 +160,8 @@ public sealed class QueryBenchmarks(ITestOutputHelper output)
             sp => sp.GetRequiredService<CoveragePlanQuery>().LoadAsync(p.Today, p.Today.AddDays(30), ct));
         yield return ("loader: TherapyTimelineQuery.LoadAsync",
             sp => sp.GetRequiredService<TherapyTimelineQuery>().LoadAsync(null, ct));
+        yield return ("loader: MedicineOverviewLoader.LoadAsync",
+            sp => ActivatorUtilities.CreateInstance<MedicineOverviewLoader>(sp).LoadAsync(ct));
         yield return ("loader: LedgerFactsLoader.LoadAsync (every medicine)", async sp =>
         {
             var loader = sp.GetRequiredService<LedgerFactsLoader>();

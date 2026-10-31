@@ -111,8 +111,7 @@ public sealed class EquivalentsQuery
         {
             if (medicine.Id == excluded) continue;
             if (ItalianPharmacode.NormalizeAic(medicine.NationalCode) is not { } code || !group.Contains(code)) continue;
-            var movements = await _stock.ListForMedicineAsync(medicine.Id, cancellationToken);
-            if (MedicineStock.Current(movements) <= 0m) continue;
+            if (await _stock.GetCurrentStockAsync(medicine.Id, cancellationToken) <= 0m) continue;
             if (!found.TryGetValue(code, out var names))
             {
                 names = new List<string>();

@@ -45,12 +45,13 @@ public sealed class CoveragePlanQuery
         var inputs = new List<CoverageInput>(medicines.Count);
         foreach (var m in medicines)
         {
-            var movements = await _stock.ListForMedicineAsync(m.Id, cancellationToken);
+            var stock = await _stock.GetCurrentStockAsync(m.Id, cancellationToken);
+            var lastPackage = await _stock.GetLastNewPackageQuantityAsync(m.Id, cancellationToken);
             var schedule = await _schedules.ListForMedicineAsync(m.Id, cancellationToken);
             var suspensions = await _suspensions.ListForMedicineAsync(m.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);
             inputs.Add(new CoverageInput(m, schedule, suspensions, slots,
-                MedicineStock.Current(movements), RestockByScanQuery.LastNewPackageQuantity(movements)));
+                stock, lastPackage));
         }
         return CoveragePlanner.Build(inputs, today, from, to);
     }
