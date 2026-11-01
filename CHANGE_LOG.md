@@ -122,6 +122,20 @@ with the classification adapted to per-PR granularity: **Added**,
 - **Fixed**: a device holding the newer key of a group grants it again
   to active devices whose grant was already replaced by an older key.
 
+## PR #331 — Name the iPhone camera in the privacy policy scanner text
+
+**Status:** open
+
+Link: [vger70/MedReminder#331](https://github.com/vger70/MedReminder/pull/331)
+
+Section 5 listed only the Windows webcam and the Android camera in its
+opening sentence; the iPhone appeared only at the end.
+
+- **Docs**: `PRIVACY.md` and its translations (it, fr, es, de), section
+  5: the scanner sentence names the Android or iPhone camera; permission,
+  purpose and non-retention are stated once for both phones, with the
+  Windows, Android and iPhone limits kept separate.
+
 ## PR #330 — Cover iOS in the privacy policy
 
 **Status:** open
