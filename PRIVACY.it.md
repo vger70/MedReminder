@@ -155,18 +155,18 @@ app"). Non includono i dati conservati in MedReminder.
 ## 5. Fotocamera e blocco dell'app
 
 La scansione dei codici a barre può usare la webcam di Windows o la
-fotocamera Android, quando scegli di effettuare una scansione. Le
-immagini vengono elaborate sul dispositivo e MedReminder non le salva né
-le invia. Su Windows, la fotocamera si spegne quando viene letto un
-codice, quando chiudi la finestra di scansione o dopo 30 secondi. Su
-Android, l'accesso alla fotocamera è regolato dall'autorizzazione di
-Android e dal ciclo di vita dell'app. Su Android la fotocamera legge
-anche il codice QR mostrato da un altro dispositivo quando ti unisci a
-una cerchia; è usata solo mentre la pagina di scansione è aperta e il
-codice non viene salvato. Su iPhone la fotocamera è usata, con la tua
-autorizzazione, solo mentre una pagina di scansione è aperta, per
-leggere i codici a barre dei farmaci o il codice QR di una cerchia; le
-immagini e il codice non vengono salvati.
+fotocamera di Android o iPhone, quando scegli di effettuare una
+scansione. Le immagini vengono elaborate sul dispositivo e MedReminder
+non le salva né le invia. Su Windows, la fotocamera si spegne quando
+viene letto un codice, quando chiudi la finestra di scansione o dopo 30
+secondi. Su Android e iPhone la fotocamera è usata solo con
+l'autorizzazione che concedi nel sistema operativo, per leggere i codici
+a barre dei farmaci o il codice QR mostrato da un altro dispositivo
+quando ti unisci a una cerchia; il codice non viene salvato. Su Android
+l'accesso alla fotocamera segue anche il ciclo di vita dell'app, e il
+codice QR della cerchia è letto solo mentre la pagina di scansione è
+aperta. Su iPhone la fotocamera è usata solo mentre una pagina di
+scansione è aperta.
 
 Su Android e iPhone, il blocco facoltativo dell'app usa lo sblocco del
 telefono: dati biometrici, come l'impronta o Face ID, oppure il PIN, la
