@@ -1,17 +1,18 @@
 # MedReminder — Privacy Policy
 
-Last updated: 11 October 2026
+Last updated: 1 November 2026
 
 Translations: [Italiano](PRIVACY.it.md) · [Français](PRIVACY.fr.md) ·
 [Español](PRIVACY.es.md) · [Deutsch](PRIVACY.de.md). The English
 version prevails.
 
 This policy describes how MedReminder handles personal data on Windows
-desktop and Android. It applies to the versions and features made
-available for each platform; a feature may not yet be available in every
-release. The Windows desktop app is distributed as ZIP packages, MSI
-installers and through the Microsoft Store. Android is distributed
-through Google Play, including its testing tracks.
+desktop, Android and iOS (iPhone). It applies to the versions and
+features made available for each platform; a feature may not yet be
+available in every release. The Windows desktop app is distributed as
+ZIP packages, MSI installers and through the Microsoft Store. Android is
+distributed through Google Play, including its testing tracks. iOS is
+distributed through the Apple App Store, including TestFlight.
 
 ## 1. Summary
 
@@ -22,8 +23,8 @@ through Google Play, including its testing tracks.
 - Data leaves your device only through features you use or turn on, such
   as email, export or sharing, cloud backup, sync and catalogue
   downloads. Each feature sends data only to the service or destination
-  described below. Platform-specific services, such as Google Play
-  updates, are described separately.
+  described below. Platform-specific services, such as Google Play and
+  App Store updates, are described separately.
 
 ## 2. Who is responsible
 
@@ -78,6 +79,32 @@ Clearing MedReminder's app data or uninstalling it removes its local
 copy. Before doing so, use the app's export or cloud-backup features if
 you want to keep a copy.
 
+### iOS (iPhone)
+
+MedReminder stores its databases and settings in the app's private
+storage on the iPhone, which other apps cannot read. This storage is
+excluded from iCloud and computer backups, so iOS does not copy this
+health data to an iCloud backup or to a computer, and a backup restored
+to another iPhone does not contain it. Local secrets, such as the backup
+passphrase, the email password and the OneDrive and Google Drive sign-in
+tokens, are encrypted with a key kept in the iOS Keychain. Only
+MedReminder on that iPhone can read this key, once the iPhone has been
+unlocked after it was turned on; the key is never synced to iCloud
+Keychain. You sign in to OneDrive or Google Drive on the provider's own
+page, opened by iOS; MedReminder never sees your Microsoft or Google
+password. The iOS app writes no log files.
+
+Deleting MedReminder from the iPhone removes its local copy. iOS may
+keep the app's Keychain key after the app is deleted; only MedReminder
+can read it, and without the deleted data it opens nothing. Before
+deleting the app, use its export or cloud-backup features if you want to
+keep a copy.
+
+Reminders are local notifications scheduled on the iPhone; no push
+notification service is used. Depending on your iOS notification
+settings, their text, such as a medicine name, may appear on the lock
+screen and on a paired Apple Watch.
+
 ## 4. Data that leaves your device
 
 Only these features send or share data, and only when available and
@@ -88,10 +115,10 @@ used or enabled:
 | Email reminders and prescription requests (when available and configured) | The email shown in the app: medicine names, stock and dates; a prescription request also includes the product code and your name. No dosage or notes | The SMTP server configured by you, then the recipients you enter |
 | Cloud backup (optional) | A daily copy of your profiles, encrypted on your device with your backup passphrase. The passphrase is not sent to the cloud provider | Your OneDrive or Google Drive account; on Windows, also a folder of your choice |
 | Sync (optional) | Medicines, stock, intakes, profile name and recipients, end-to-end encrypted | Your OneDrive or Google Drive account; on Windows, also a shared folder |
-| Export, calendar export and sharing | An encrypted `.mrz` profile archive, an `.ics` calendar file, or the content you choose to share. Calendar titles are generic unless you choose to include medicine names | The file location or app/recipient you select using Windows or Android file and sharing controls |
+| Export, calendar export and sharing | An encrypted `.mrz` profile archive, an `.ics` calendar file, or the content you choose to share. Calendar titles are generic unless you choose to include medicine names | The file location or app/recipient you select using Windows, Android or iOS file and sharing controls |
 | Catalogue and public data updates | Requests for public medicine lists and related public data; no personal health data | GitHub (`raw.githubusercontent.com`). GitHub receives your IP address and request details |
 | Windows app update check | A request for the latest desktop version; no personal health data. GitHub receives your IP address and app version | GitHub (`api.github.com`) |
-| Android app updates | Google Play delivers app updates and may process account, device or diagnostic information under its privacy policy and your settings | Google Play |
+| Android and iOS app updates | Google Play and the App Store deliver app updates and may process account, device or diagnostic information under their own privacy policies and your settings | Google Play; Apple App Store |
 
 When you connect OneDrive or Google Drive, MedReminder requests access
 for its app data and backup files, not general access to your other
@@ -106,9 +133,18 @@ folders may be synchronized by a cloud provider or shared with other
 people; their access and processing are governed by that provider and
 your folder settings. Android cloud backup and sync use the connected
 OneDrive or Google Drive account. Scheduled work on Android may be
-delayed by Android or device battery-management settings.
+delayed by Android or device battery-management settings. On iPhone,
+cloud backup and sync use the connected OneDrive or Google Drive
+account, and iOS decides when background work runs: it may delay it or,
+for an app you rarely open, not run it.
 
-## 5. Camera
+The Microsoft Store, Google Play and the App Store may give the
+developer aggregate statistics, such as downloads, and crash reports,
+depending on your device's diagnostic and sharing settings (on iPhone,
+"Share with App Developers"). These do not include the data stored in
+MedReminder.
+
+## 5. Camera and app lock
 
 The barcode scanner can use the Windows webcam or Android camera when
 you choose to scan. Images are processed on your device and are not
@@ -116,8 +152,16 @@ saved or sent by MedReminder. On Windows, the camera turns off when a
 code is read, when you close the scan window, or after 30 seconds. On
 Android, camera access is controlled by the Android permission and app
 lifecycle. On Android, the camera also reads the QR code another device
-shows when you join a circle; it is used only while the scan page
-is open, and the code is not saved.
+shows when you join a circle; it is used only while the scan page is
+open, and the code is not saved. On iPhone, the camera is used, with
+your permission, only while a scan page is open, to read medicine
+barcodes or the QR code of a circle; the images and the code are not
+saved.
+
+On Android and iPhone, the optional app lock uses the phone's own
+unlock: biometrics, such as a fingerprint or Face ID, or the screen lock
+PIN, pattern or passcode. The operating system performs the check;
+MedReminder receives only whether it succeeded, never biometric data.
 
 ## 6. Links that open your browser
 
@@ -135,11 +179,12 @@ personal data from children through the app.
 ## 8. Your rights
 
 You can view, correct, export and delete data in MedReminder. On
-Windows, use Settings → Backup / Restore → Export all data; on Android,
-use the app's export and data-management controls. You can also remove
-local Android app data in Android settings. Copies in email, exported or
-shared files, OneDrive or Google Drive must be managed with the relevant
-recipients, apps or providers.
+Windows, use Settings → Backup / Restore → Export all data; on Android
+and iPhone, use the app's export and data-management controls. You can
+also remove local Android app data in Android settings, or delete the
+app from the iPhone. Copies in email, exported or shared files, OneDrive
+or Google Drive must be managed with the relevant recipients, apps or
+providers.
 
 ## 9. Changes
 

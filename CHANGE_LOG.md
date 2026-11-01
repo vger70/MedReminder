@@ -122,6 +122,33 @@ with the classification adapted to per-PR granularity: **Added**,
 - **Fixed**: a device holding the newer key of a group grants it again
   to active devices whose grant was already replaced by an older key.
 
+## PR #330 — Cover iOS in the privacy policy
+
+**Status:** open
+
+Link: [vger70/MedReminder#330](https://github.com/vger70/MedReminder/pull/330)
+
+The privacy policy described Windows and Android only; the App Store
+needs a policy that covers the iPhone app. One policy stays valid for the
+Microsoft Store, Google Play and the App Store.
+
+- **Docs**: `PRIVACY.md` and its translations (it, fr, es, de), last
+  updated 1 November 2026:
+  - iOS (iPhone) among the platforms, distributed through the App Store
+    and TestFlight;
+  - a new "iOS (iPhone)" part of section 3: private app storage
+    excluded from iCloud and computer backups, local secrets encrypted
+    with a Keychain key that stays on the device, sign-in on the
+    provider's page, no log files, what deleting the app leaves, local
+    notifications on the lock screen and a paired Apple Watch;
+  - section 4: iOS file and sharing controls, App Store updates, iOS
+    background scheduling, and the aggregate statistics and crash
+    reports the three stores may give the developer;
+  - section 5, "Camera and app lock": the iPhone camera, and the app
+    lock on Android and iPhone (the system checks; no biometric data
+    reaches the app);
+  - section 8: deleting the app from the iPhone.
+
 ## PR #320 — Repeat a dose reminder until its slot is recorded
 
 **Status:** open
