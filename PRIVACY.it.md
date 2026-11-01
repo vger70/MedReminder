@@ -1,17 +1,18 @@
 # MedReminder — Informativa sulla privacy
 
-Ultimo aggiornamento: 11 ottobre 2026
+Ultimo aggiornamento: 1 novembre 2026
 
 Traduzione di [PRIVACY.md](PRIVACY.md). In caso di differenze prevale
 la versione inglese.
 
 Questa informativa descrive come MedReminder tratta i dati personali su
-Windows desktop e Android. Si applica alle versioni e alle funzioni
-disponibili per ciascuna piattaforma; non tutte le funzioni sono
-necessariamente presenti in ogni versione. L'app desktop per Windows è
-distribuita come pacchetto ZIP, installer MSI e tramite Microsoft Store.
-Android è distribuito tramite Google Play, inclusi i relativi canali di
-test.
+Windows desktop, Android e iOS (iPhone). Si applica alle versioni e alle
+funzioni disponibili per ciascuna piattaforma; non tutte le funzioni
+sono necessariamente presenti in ogni versione. L'app desktop per
+Windows è distribuita come pacchetto ZIP, installer MSI e tramite
+Microsoft Store. Android è distribuito tramite Google Play, inclusi i
+relativi canali di test. iOS è distribuito tramite l'App Store di Apple,
+incluso TestFlight.
 
 ## 1. In sintesi
 
@@ -20,11 +21,11 @@ test.
 - Non esistono account presso lo sviluppatore, telemetria, statistiche
   d'uso, pubblicità o tracciamento.
 - I dati lasciano il dispositivo solo tramite funzioni che usi o attivi,
-  come email, esportazione o condivisione, backup cloud, sincronizzazione
-  e download dei cataloghi. Ogni funzione invia dati solo al servizio o
-  alla destinazione descritti qui sotto. I servizi specifici della
-  piattaforma, come gli aggiornamenti tramite Google Play, sono indicati
-  separatamente.
+  come email, esportazione o condivisione, backup cloud,
+  sincronizzazione e download dei cataloghi. Ogni funzione invia dati
+  solo al servizio o alla destinazione descritti qui sotto. I servizi
+  specifici della piattaforma, come gli aggiornamenti tramite Google
+  Play e App Store, sono indicati separatamente.
 
 ## 2. Chi è responsabile
 
@@ -82,6 +83,33 @@ Cancellare i dati dell'app MedReminder o disinstallarla rimuove la copia
 locale. Prima di farlo, usa le funzioni di esportazione o backup cloud
 se vuoi conservarne una copia.
 
+### iOS (iPhone)
+
+MedReminder conserva database e impostazioni nello spazio privato
+dell'app sull'iPhone, che le altre app non possono leggere. Questo
+spazio è escluso dai backup di iCloud e del computer, quindi iOS non
+copia questi dati relativi alla salute in un backup iCloud o sul
+computer, e un backup ripristinato su un altro iPhone non li contiene. I
+segreti locali, come la passphrase di backup, la password dell'email e i
+token di accesso a OneDrive e Google Drive, sono cifrati con una chiave
+conservata nel Portachiavi di iOS. Solo MedReminder su quell'iPhone può
+leggere questa chiave, dopo che l'iPhone è stato sbloccato una prima
+volta dall'accensione; la chiave non viene mai sincronizzata con il
+Portachiavi iCloud. L'accesso a OneDrive o Google Drive avviene sulla
+pagina del fornitore, aperta da iOS; MedReminder non vede mai la
+password Microsoft o Google. L'app iOS non scrive file di log.
+
+Eliminare MedReminder dall'iPhone rimuove la copia locale. iOS può
+conservare la chiave del Portachiavi dell'app anche dopo l'eliminazione;
+solo MedReminder può leggerla e, senza i dati eliminati, non apre nulla.
+Prima di eliminare l'app, usa le funzioni di esportazione o backup cloud
+se vuoi conservarne una copia.
+
+I promemoria sono notifiche locali pianificate sull'iPhone; non viene
+usato alcun servizio di notifiche push. A seconda delle impostazioni
+delle notifiche di iOS, il loro testo, ad esempio il nome di un farmaco,
+può comparire sulla schermata di blocco e su un Apple Watch abbinato.
+
 ## 4. Dati che escono dal dispositivo
 
 Queste funzioni inviano o condividono dati solo quando sono disponibili
@@ -92,10 +120,10 @@ e vengono usate o attivate:
 | Promemoria email e richieste di ricetta (se disponibili e configurati) | L'email mostrata nell'app: nomi dei farmaci, scorte e date; una richiesta di ricetta include anche il codice del prodotto e il tuo nome. Nessuna posologia né nota | Il server SMTP configurato da te, poi i destinatari inseriti |
 | Backup cloud (facoltativo) | Una copia giornaliera dei profili, cifrata sul dispositivo con la passphrase di backup. La passphrase non viene inviata al fornitore cloud | Il tuo account OneDrive o Google Drive; su Windows anche una cartella a tua scelta |
 | Sincronizzazione (facoltativa) | Farmaci, scorte, assunzioni, nome del profilo e destinatari, cifrati end-to-end | Il tuo account OneDrive o Google Drive; su Windows anche una cartella condivisa |
-| Esportazione, esportazione calendario e condivisione | Un archivio profilo `.mrz` cifrato, un file calendario `.ics` o i contenuti che scegli di condividere. I titoli del calendario sono generici, salvo tua scelta di includere i nomi dei farmaci | Il percorso del file o l'app/il destinatario scelto tramite le funzioni di file e condivisione di Windows o Android |
+| Esportazione, esportazione calendario e condivisione | Un archivio profilo `.mrz` cifrato, un file calendario `.ics` o i contenuti che scegli di condividere. I titoli del calendario sono generici, salvo tua scelta di includere i nomi dei farmaci | Il percorso del file o l'app/il destinatario scelto tramite le funzioni di file e condivisione di Windows, Android o iOS |
 | Aggiornamenti dei cataloghi e di dati pubblici | Richieste di elenchi pubblici di farmaci e altri dati pubblici correlati; nessun dato personale sulla salute | GitHub (`raw.githubusercontent.com`). GitHub riceve il tuo indirizzo IP e i dettagli della richiesta |
 | Controllo aggiornamenti dell'app Windows | Una richiesta dell'ultima versione desktop; nessun dato personale sulla salute. GitHub riceve il tuo indirizzo IP e la versione dell'app | GitHub (`api.github.com`) |
-| Aggiornamenti dell'app Android | Google Play distribuisce gli aggiornamenti e può trattare informazioni sull'account, sul dispositivo o dati diagnostici secondo la propria informativa e le tue impostazioni | Google Play |
+| Aggiornamenti delle app Android e iOS | Google Play e l'App Store distribuiscono gli aggiornamenti e possono trattare informazioni sull'account, sul dispositivo o dati diagnostici secondo le proprie informative e le tue impostazioni | Google Play; App Store di Apple |
 
 Quando colleghi OneDrive o Google Drive, MedReminder richiede l'accesso
 ai dati dell'app e ai file di backup, non l'accesso generale agli altri
@@ -112,20 +140,38 @@ fornitore cloud o condivise con altre persone; accesso e trattamento
 dipendono dal fornitore e dalle impostazioni della cartella. Su Android,
 backup cloud e sincronizzazione usano l'account OneDrive o Google Drive
 collegato. Android o le impostazioni di risparmio energetico del
-dispositivo possono ritardare le operazioni pianificate.
+dispositivo possono ritardare le operazioni pianificate. Su iPhone,
+backup cloud e sincronizzazione usano l'account OneDrive o Google Drive
+collegato, ed è iOS a decidere quando eseguire le attività in
+background: può ritardarle o, per un'app che apri di rado, non
+eseguirle.
 
-## 5. Fotocamera
+Microsoft Store, Google Play e App Store possono fornire allo
+sviluppatore statistiche aggregate, come i download, e rapporti sugli
+arresti anomali, a seconda delle impostazioni di diagnostica e
+condivisione del dispositivo (su iPhone, "Condividi con sviluppatori
+app"). Non includono i dati conservati in MedReminder.
+
+## 5. Fotocamera e blocco dell'app
 
 La scansione dei codici a barre può usare la webcam di Windows o la
 fotocamera Android, quando scegli di effettuare una scansione. Le
-immagini vengono elaborate sul dispositivo e MedReminder non le salva
-né le invia. Su Windows, la fotocamera si spegne quando viene letto un
+immagini vengono elaborate sul dispositivo e MedReminder non le salva né
+le invia. Su Windows, la fotocamera si spegne quando viene letto un
 codice, quando chiudi la finestra di scansione o dopo 30 secondi. Su
 Android, l'accesso alla fotocamera è regolato dall'autorizzazione di
-Android e dal ciclo di vita dell'app. Su Android la fotocamera legge anche
-il codice QR mostrato da un altro dispositivo quando ti unisci a
+Android e dal ciclo di vita dell'app. Su Android la fotocamera legge
+anche il codice QR mostrato da un altro dispositivo quando ti unisci a
 una cerchia; è usata solo mentre la pagina di scansione è aperta e il
-codice non viene salvato.
+codice non viene salvato. Su iPhone la fotocamera è usata, con la tua
+autorizzazione, solo mentre una pagina di scansione è aperta, per
+leggere i codici a barre dei farmaci o il codice QR di una cerchia; le
+immagini e il codice non vengono salvati.
+
+Su Android e iPhone, il blocco facoltativo dell'app usa lo sblocco del
+telefono: dati biometrici, come l'impronta o Face ID, oppure il PIN, la
+sequenza o il codice del blocco schermo. Il controllo è eseguito dal
+sistema operativo; MedReminder riceve solo l'esito, mai dati biometrici.
 
 ## 6. Link che aprono il browser
 
@@ -144,12 +190,13 @@ tramite l'app dati personali di minori.
 ## 8. I tuoi diritti
 
 Puoi consultare, correggere, esportare e cancellare i dati in
-MedReminder. Su Windows, usa Impostazioni → Backup / Ripristino → Esporta
-tutti i dati; su Android, usa le funzioni di esportazione e gestione dei
-dati dell'app. Puoi anche rimuovere i dati locali dell'app Android dalle
-impostazioni di Android. Le copie nelle email, nei file esportati o
-condivisi e negli account OneDrive o Google Drive vanno gestite con i
-relativi destinatari, app o fornitori.
+MedReminder. Su Windows, usa Impostazioni → Backup / Ripristino →
+Esporta tutti i dati; su Android e iPhone, usa le funzioni di
+esportazione e gestione dei dati dell'app. Puoi anche rimuovere i dati
+locali dell'app Android dalle impostazioni di Android, oppure eliminare
+l'app dall'iPhone. Le copie nelle email, nei file esportati o condivisi
+e negli account OneDrive o Google Drive vanno gestite con i relativi
+destinatari, app o fornitori.
 
 ## 9. Modifiche
 
