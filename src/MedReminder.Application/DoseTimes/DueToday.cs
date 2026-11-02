@@ -45,12 +45,16 @@ public sealed class DueToday
         var today = DateOnly.FromDateTime(now);
         var settings = _settings is null ? DoseTimeSettings.BuiltIn : await _settings.LoadAsync(cancellationToken);
 
-        // The ledger already booked today: an intake that handles the
-        // day, or a count that materialized it.
-        var booked = new HashSet<Guid>(await _intakes.ListMedicinesWithDayIntakeAsync(today, cancellationToken));
-        booked.UnionWith(await _counts.ListMedicinesWithMaterializedCountAsync(today, cancellationToken));
+        return new DueTodayContext(now, settings, await LoadBookedAsync(today, cancellationToken));
+    }
 
-        return new DueTodayContext(now, settings, booked);
+    // The medicines whose `day` the ledger already booked: an intake that
+    // handles the day, or a count that materialized it.
+    public async Task<IReadOnlySet<Guid>> LoadBookedAsync(DateOnly day, CancellationToken cancellationToken)
+    {
+        var booked = new HashSet<Guid>(await _intakes.ListMedicinesWithDayIntakeAsync(day, cancellationToken));
+        booked.UnionWith(await _counts.ListMedicinesWithMaterializedCountAsync(day, cancellationToken));
+        return booked;
     }
 
     public static decimal Compute(

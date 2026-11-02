@@ -2,6 +2,7 @@ using FluentAssertions;
 using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Overview;
 using MedReminder.Application.Tests.Support;
+using MedReminder.Application.Timeline;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
@@ -76,6 +77,85 @@ public class IntradayStockTests
         after.CurrentStock.Should().Be(100m);
         after.DaysRemaining.Should().Be(100, "the days fully covered after today's dose");
         after.EstimatedRunOutDate.Should().Be(before.EstimatedRunOutDate);
+    }
+
+    private static Task<Guid> AddRegimenAsync(ApplicationTestScope scope, Schedule schedule, decimal quantity)
+        => scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Prednisone", "compresse", 1m, 1, new DateOnly(2026, 9, 13), 7, NotificationChannels.Windows,
+            InitialQuantity: quantity, InitialSchedule: schedule,
+            AdministrationSlots: [new AdministrationSlotInput(1m, new TimeOnly(8, 0), null)]), default);
+
+    private static readonly SteppedTaperingSchedule Taper =
+        new([new TaperStage(4m, 7), new TaperStage(2m, 7), new TaperStage(1m, 7)], maintainLastDose: true);
+
+    [Fact]
+    public async Task The_days_left_follow_the_regimen_once_today_is_due()
+    {
+        // Sunday, Tuesday, Thursday; six tablets. After Sunday's dose the
+        // five left cover from Monday to the Saturday of the next week.
+        var scope = new ApplicationTestScope(At(13, 7));
+        var id = await AddRegimenAsync(scope, new WeeklySchedule([0m, 1m, 0m, 1m, 0m, 0m, 1m]), 6m);
+        scope.Clock.SetUtcNow(At(13, 10));
+
+        var row = await RowAsync(scope, id);
+
+        row.CurrentStock.Should().Be(5m);
+        row.EstimatedRunOutDate.Should().Be(new DateOnly(2026, 9, 27));
+        row.DaysRemaining.Should().Be(13);
+    }
+
+    [Theory]
+    [InlineData("fixed", 30, 1, 2026, 10, 13)]
+    [InlineData("stepped down", 60, 4, 2026, 10, 15)]
+    [InlineData("weekly", 6, 1, 2026, 9, 27)]
+    public async Task An_intake_of_today_leaves_the_date_where_it_was(
+        string regimen, int quantity, int dose, int year, int month, int day)
+    {
+        Schedule schedule = regimen switch
+        {
+            "fixed" => new FixedDailySchedule(1m, 1),
+            "stepped down" => Taper,
+            _ => new WeeklySchedule([0m, 1m, 0m, 1m, 0m, 0m, 1m]),
+        };
+        var scope = new ApplicationTestScope(At(13, 7));
+        var id = await AddRegimenAsync(scope, schedule, quantity);
+        var date = new DateOnly(year, month, day);
+        var before = await RowAsync(scope, id);
+        before.EstimatedRunOutDate.Should().Be(date);
+
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, new DateOnly(2026, 9, 13), IntakeStatus.Taken, dose), default);
+
+        var after = await RowAsync(scope, id);
+        after.EstimatedRunOutDate.Should().Be(date);
+        after.DaysRemaining.Should().Be(before.DaysRemaining - 1);
+    }
+
+    [Fact]
+    public async Task List_timeline_and_count_dialog_show_the_same_date()
+    {
+        var scope = new ApplicationTestScope(At(13, 7));
+        var id = await AddRegimenAsync(scope, Taper, 60m);
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, new DateOnly(2026, 9, 13), IntakeStatus.Taken, 4m), default);
+
+        var list = await RowAsync(scope, id);
+        var timeline = await new TherapyTimelineQuery(scope.Medicines, scope.Stock, scope.Schedules,
+            scope.Suspensions, scope.Slots, scope.Clock, Due(scope)).LoadAsync(null, default);
+        var dialog = (await scope.ReconcileStock.LoadAsync(id, default)).Evaluate(list.LedgerStock, 0m);
+
+        list.EstimatedRunOutDate.Should().Be(new DateOnly(2026, 10, 15));
+        timeline.Rows.Single().Forecast.RunOut.EstimatedRunOutDate.Should().Be(list.EstimatedRunOutDate);
+        dialog.ForecastBefore.EstimatedRunOutDate.Should().Be(list.EstimatedRunOutDate);
+    }
+
+    [Fact]
+    public async Task A_stock_past_any_date_does_not_stop_the_list()
+    {
+        var scope = new ApplicationTestScope(At(13, 7));
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Sciroppo", "ml", .01m, 1, new DateOnly(2026, 9, 13), 7, NotificationChannels.Windows,
+            InitialQuantity: 100000m), default);
+
+        (await RowAsync(scope, id)).EstimatedRunOutDate.Should().Be(DateOnly.MaxValue);
     }
 
     [Fact]

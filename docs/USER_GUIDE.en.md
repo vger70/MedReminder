@@ -253,14 +253,15 @@ window, set **Schedule** to **Advanced** and choose a **Regime type**:
 With **Advanced**, the dose fields at the top of the window are not
 used. Switch back to **Simple** for a fixed daily dose.
 
-**Days left with an advanced regime.** The stock is deducted day by
-day as the regime says, but the days left and the run-out date divide
-the stock by today's quantity: during a taper they follow today's dose,
-not the next stages. On a cyclic pause day, or a weekly day with
-nothing due, no run-out date is shown and no low-stock warning is
-given; the check warns on the next day with a dose. To check a whole
-period, use [Plan supply](#documents), which follows the schedule day
-by day.
+**Days left with an advanced regime.** The days left and the run-out
+date follow the regime day by day: the next stages of a taper, the
+pauses of a cycle, the days with nothing due and a suspension with its
+end date already set. They also show on a day with nothing due, and the
+low-stock warning can come on that day. No run-out date is shown and no
+warning is given while the medicine is suspended, or when the regime
+ends before the stock runs out. Beyond a year the estimate uses the
+regime's average. To check a whole period, use [Plan supply](#documents),
+which follows the schedule day by day.
 
 **Administration times also work with Advanced.** The schedule sets how
 much to take each day; the [administration times](#slots) set when. The
@@ -841,7 +842,7 @@ Each low-stock email also carries the run-out date as a calendar file
   A medicine that is already below half when it is first checked gets
   only the second reminder. After a new package the cycle starts again
   (also after the other additions, see [Add a package](#add-package)).
-  With an advanced regime the days left follow today's quantity (see
+  With an advanced regime the days left follow it day by day (see
   [Complex regimens](#regimens)).
 - **Package expiry**: a package recorded with an expiry gives an
   *expires soon* notice 30 days before the printed expiry (3 days

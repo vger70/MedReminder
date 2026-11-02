@@ -178,6 +178,87 @@ public sealed class NotificationPlannerParityTests
         shown.Single(s => s.Kind == PlannedNotificationKind.Deadline).Title.Should().Contain("Enalapril");
     }
 
+    private static Task<Guid> AddRegimenAsync(ApplicationTestScope scope, Schedule schedule, decimal quantity)
+        => scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            Name: "Enalapril", Unit: "tablets", DosePerAdministration: 1m, AdministrationsPerDay: 1,
+            StartDate: Start, ThresholdDays: 7, NotificationChannels: NotificationChannels.Windows,
+            InitialQuantity: quantity, InitialSchedule: schedule), default);
+
+    private static string Stages(IReadOnlyList<PlannedNotification> planned)
+        => string.Join(" ", planned.Where(p => p.Kind == PlannedNotificationKind.LowStock)
+            .Select(p => $"{p.Day.DayNumber - Start.DayNumber}/{p.Stage}"));
+
+    private static readonly SteppedTaperingSchedule Taper =
+        new([new TaperStage(4m, 7), new TaperStage(2m, 7), new TaperStage(1m, 7)], maintainLastDose: true);
+
+    // Issue #313: the plan and the pass warn on the same days on every
+    // regimen, and the bounded course that does not run out warns on none.
+    public static TheoryData<string, decimal, string> Regimens() => new()
+    {
+        { "stepped up", 20m, "8/1 12/2" },
+        { "stepped down", 60m, "25/1 29/2" },
+        { "cycle", 6m, "7/1 11/2" },
+        { "weekly", 6m, "8/1 12/2" },
+        { "alternate days", 10m, "3/1 7/2" },
+        { "bounded course", 44m, "" },
+    };
+
+    [Theory]
+    [MemberData(nameof(Regimens))]
+    public async Task Every_regimen_warns_on_the_same_days(string regimen, decimal quantity, string stages)
+    {
+        Schedule schedule = regimen switch
+        {
+            "stepped up" => new SteppedTaperingSchedule([new TaperStage(1m, 14), new TaperStage(5m, 7)], maintainLastDose: true),
+            "stepped down" => Taper,
+            "cycle" => new CyclicSchedule(3, 4, 1m),
+            "weekly" => new WeeklySchedule([1m, 0m, 1m, 0m, 1m, 0m, 0m]),
+            "alternate days" => new CyclicSchedule(1, 1, 2m),
+            _ => new SteppedTaperingSchedule([new TaperStage(4m, 7), new TaperStage(2m, 7)]),
+        };
+        var scope = new ApplicationTestScope(StartInstant);
+        await AddRegimenAsync(scope, schedule, quantity);
+
+        var (planned, shown) = await RunAsync(scope, days: 40, tick: TimeSpan.FromHours(2));
+
+        AssertParity(planned, shown);
+        Stages(planned).Should().Be(stages);
+    }
+
+    [Theory]
+    [InlineData("fixed", 8, "0/1 5/2")]
+    [InlineData("stepped down", 32, "2/1 6/2")]
+    public async Task A_booked_day_warns_on_the_same_days(string regimen, int quantity, string stages)
+    {
+        Schedule schedule = regimen == "fixed" ? new FixedDailySchedule(1m, 1) : Taper;
+        var scope = new ApplicationTestScope(StartInstant);
+        var id = await AddRegimenAsync(scope, schedule, quantity);
+        await scope.RegisterIntake.ExecuteAsync(
+            new RegisterIntakeCommand(id, Start, IntakeStatus.Taken, regimen == "fixed" ? 1m : 4m), default);
+
+        var (planned, shown) = await RunAsync(scope, days: 30, tick: TimeSpan.FromHours(2));
+
+        AssertParity(planned, shown);
+        Stages(planned).Should().Be(stages);
+    }
+
+    [Fact]
+    public async Task No_low_stock_warning_during_a_suspension()
+    {
+        // Suspended for three days with four days of stock: from the first
+        // day the walk would give 7, inside the threshold.
+        var scope = new ApplicationTestScope(StartInstant);
+        var id = await AddAsync(scope, quantity: 4m, dose: 1m, perDay: 1, remindOnDose: false);
+        await scope.SuspendMedication.ExecuteAsync(new SuspendMedicationCommand(id, Start), default);
+        await scope.ResumeMedication.ExecuteAsync(new ResumeMedicationCommand(id, Start.AddDays(3)), default);
+
+        var (planned, shown) = await RunAsync(scope, days: 8, tick: TimeSpan.FromHours(2));
+
+        AssertParity(planned, shown);
+        planned.Where(p => p.Kind == PlannedNotificationKind.LowStock).Should().NotBeEmpty()
+            .And.OnlyContain(p => p.Day >= Start.AddDays(3));
+    }
+
     [Fact]
     public async Task A_suspension_and_a_schedule_change_move_the_low_stock_days()
     {

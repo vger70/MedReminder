@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Domain.Calculations;
 
 namespace MedReminder.Application.Timeline;
@@ -15,6 +16,7 @@ public sealed class TherapyTimelineQuery
     private readonly IMedicationSuspensionRepository _suspensions;
     private readonly IMedicationAdministrationSlotRepository _slots;
     private readonly TimeProvider _clock;
+    private readonly DueToday _dueToday;
 
     public TherapyTimelineQuery(
         IMedicineRepository medicines,
@@ -22,8 +24,10 @@ public sealed class TherapyTimelineQuery
         IMedicationScheduleHistoryRepository schedules,
         IMedicationSuspensionRepository suspensions,
         IMedicationAdministrationSlotRepository slots,
-        TimeProvider clock)
+        TimeProvider clock,
+        DueToday dueToday)
     {
+        _dueToday = dueToday;
         _medicines = medicines;
         _stock = stock;
         _schedules = schedules;
@@ -48,6 +52,7 @@ public sealed class TherapyTimelineQuery
 
         var medicines = await _medicines.ListAllAsync(cancellationToken);
         var inputs = new List<TherapyTimelineInput>(medicines.Count);
+        var booked = await _dueToday.LoadBookedAsync(today, cancellationToken);
         foreach (var m in medicines)
         {
             var stock = await _stock.GetCurrentStockAsync(m.Id, cancellationToken);
@@ -55,7 +60,7 @@ public sealed class TherapyTimelineQuery
             var suspensions = await _suspensions.ListForMedicineAsync(m.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);
             inputs.Add(new TherapyTimelineInput(
-                m, schedule, suspensions, slots, stock));
+                m, schedule, suspensions, slots, stock, booked.Contains(m.Id)));
         }
 
         return TherapyTimelineBuilder.Build(inputs, today, effectiveWindow);

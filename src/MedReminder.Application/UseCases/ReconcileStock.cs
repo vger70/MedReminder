@@ -41,7 +41,10 @@ namespace MedReminder.Application.UseCases;
 // forecast after it is still inside the warning window: this reopens
 // the low-stock warning cycle when the count lifts the stock above the
 // threshold, without re-sending a warning straight away when it does
-// not. A negative correction never changes the epoch.
+// not. A negative correction never changes the epoch. That forecast is
+// today's rate (RunOutForecast), not the day-by-day estimate the dialog
+// shows: recorded counts are evaluated again after a merge, so the rule
+// must stay the same on every device and version (issue #313).
 //
 // The gap is a stock discrepancy. It is not interpreted as missed or
 // extra doses (EVOLUTION.md §9.2).
@@ -68,7 +71,8 @@ public sealed record StockCountSnapshot(
     decimal TodayScheduledQuantity, // automatic consumption still due today
     decimal DefaultTakenToday,      // slot doses whose time has passed
     decimal DailyRate,
-    bool IsSuspendedToday)
+    bool IsSuspendedToday,
+    RunOutInputs? RunOut = null)
 {
     public StockCountPreview Evaluate(decimal countedQuantity, decimal takenToday)
     {
@@ -92,11 +96,31 @@ public sealed record StockCountSnapshot(
             correction - (countedQuantity - expected),
             materializesToday,
             ledgerAfter,
-            RunOutForecast.Compute(Today, Clamp(LedgerAtStartOfToday), DailyRate, IsSuspendedToday),
-            RunOutForecast.Compute(Today, ledgerAfter, DailyRate, IsSuspendedToday));
+            Estimate(Clamp(LedgerAtStartOfToday), materializesToday: false),
+            Estimate(ledgerAfter, materializesToday));
     }
 
+    // BuildSnapshotAsync always passes RunOut; without it (a snapshot built
+    // by hand) the estimate is today's rate.
+    private RunOutForecastResult Estimate(decimal stock, bool materializesToday)
+        => RunOut is { } inputs
+            ? inputs.Estimate(Today, stock, inputs.TodayBooked || materializesToday)
+            : RunOutForecast.Compute(Today, stock, DailyRate, IsSuspendedToday);
+
     private static decimal Clamp(decimal value) => value < 0m ? 0m : value;
+}
+
+// What the dialog needs to show the run-out date of the main list. It is
+// display only: the epoch decision stays with LedgerDeriver.EvaluateCount.
+public sealed record RunOutInputs(
+    Medicine Medicine,
+    bool TodayBooked,
+    IReadOnlyList<MedicationScheduleHistory> Schedule,
+    IReadOnlyList<MedicationAdministrationSlot> Slots,
+    IReadOnlyList<MedicationSuspension> Suspensions)
+{
+    public RunOutForecastResult Estimate(DateOnly today, decimal stock, bool todayBooked)
+        => RunOutSimulation.Compute(Medicine, today, stock, todayBooked, Schedule, Slots, Suspensions);
 }
 
 // ForecastBefore / ForecastAfter are computed on the stock the main
@@ -253,7 +277,10 @@ public sealed class ReconcileStock
             todayScheduled,
             defaultTaken,
             DailyConsumption.RateOn(today, schedule, slots),
-            SuspensionState.IsSuspendedOn(today, suspensions));
+            SuspensionState.IsSuspendedOn(today, suspensions),
+            // Nothing left to book on a day with a plan: an intake or a
+            // count already booked it.
+            new RunOutInputs(medicine, medicine.IsActive && todayScheduled <= 0m, schedule, slots, suspensions));
     }
 
     // Sum of the doses of timed slots whose time has already passed,

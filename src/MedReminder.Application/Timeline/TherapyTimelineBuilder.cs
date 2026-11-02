@@ -46,7 +46,7 @@ public static class TherapyTimelineBuilder
         var medicine = input.Medicine;
 
         var forecast = MedicineForecast.Compute(
-            today, input.CurrentStock, input.ScheduleHistory,
+            medicine, today, input.CurrentStock, input.TodayBooked, input.ScheduleHistory,
             input.AdministrationSlots, input.Suspensions);
 
         var history = input.ScheduleHistory

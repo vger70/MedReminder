@@ -265,14 +265,16 @@ régimen**:
 Con **Avanzado**, los campos de dosis de la parte superior de la
 ventana no se usan. Vuelve a **Simple** para una dosis diaria fija.
 
-**Días restantes con un régimen avanzado.** El stock se descuenta día a
-día según el régimen, pero los días restantes y la fecha de agotamiento
-dividen el stock por la cantidad de hoy: durante una reducción
-progresiva siguen la dosis de hoy, no las etapas siguientes. En un día
-de pausa de un ciclo, o en un día semanal sin dosis, no se muestra
-fecha de agotamiento ni se da aviso de stock bajo; la revisión avisa el
-siguiente día con una dosis. Para comprobar un periodo entero usa
-[Planificar el stock](#documents), que sigue el régimen día a día.
+**Días restantes con un régimen avanzado.** Los días restantes y la
+fecha de agotamiento siguen el régimen día a día: las etapas siguientes
+de una reducción progresiva, las pausas de un ciclo, los días sin dosis
+y una suspensión con la fecha de fin ya fijada. También se muestran en
+un día sin dosis, y el aviso de stock bajo puede llegar ese día. No se
+muestra ninguna fecha ni se da ningún aviso mientras el medicamento está
+suspendido, o cuando el régimen termina antes de que se agote el stock.
+Más allá de un año, la estimación usa la media del régimen. Para
+comprobar un periodo entero usa [Planificar el stock](#documents), que
+sigue el régimen día a día.
 
 **Los horarios de administración también funcionan con Avanzado.** El
 esquema fija cuánto tomar cada día; los [horarios de administración](#slots)
@@ -885,7 +887,7 @@ genérico.
   primera revisión recibe solo el segundo aviso. Tras una caja nueva, el
   ciclo vuelve a empezar (también tras los otros añadidos, ver [Añadir
   una caja](#add-package)). Con un régimen avanzado los días restantes
-  siguen la cantidad de hoy (ver [Regímenes complejos](#regimens)).
+  lo siguen día a día (ver [Regímenes complejos](#regimens)).
 - **Caducidad de las cajas**: una caja registrada con caducidad da un
   aviso *caduca pronto* 30 días antes de la caducidad impresa (3 días
   antes del fin del periodo tras la apertura) y un aviso *caducada* el

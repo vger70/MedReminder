@@ -6,6 +6,7 @@ using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Deadlines;
 using MedReminder.Domain.Notifications;
+using MedReminder.Domain.Medicines;
 using Xunit;
 
 namespace MedReminder.Application.Tests.Calendar;
@@ -19,7 +20,7 @@ public class CalendarExportTests
 
     private static CalendarExportQuery Query(ApplicationTestScope scope, JsonDictionaryLocalizationService? loc = null)
         => new(scope.Medicines, scope.Stock, scope.Schedules, scope.Suspensions, scope.Slots, scope.Prescriptions,
-            scope.Deadlines, scope.Clock, loc, scope.Dispensations);
+            scope.Deadlines, scope.Clock, new MedReminder.Application.DoseTimes.DueToday(scope.Intakes, scope.Counts, scope.Clock), loc, scope.Dispensations);
 
     private static Task<Guid> AddMedicineAsync(ApplicationTestScope scope, string name, decimal stock,
         NotificationChannels channels = NotificationChannels.Windows)
@@ -49,6 +50,30 @@ public class CalendarExportTests
             null, null, DeadlineKind.CheckUp, null, Today.AddDays(40), 14, null, NotificationChannels.Windows, null), default);
         await scope.CompleteDeadline.ExecuteAsync(done, Today, default);
         return scope;
+    }
+
+    [Fact]
+    public async Task The_run_out_follows_the_regimen_and_stays_after_an_intake_of_today()
+    {
+        // Issue #313. Four a day for 7 days, then two, then one: 60 tablets
+        // run out on day 32, as in the medicine list.
+        var scope = new ApplicationTestScope(Now);
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            Name: "Prednisone", Unit: "tablets", DosePerAdministration: 1m, AdministrationsPerDay: 1,
+            StartDate: Today, ThresholdDays: 7, NotificationChannels: NotificationChannels.Windows, EndDate: null,
+            InitialQuantity: 60m,
+            InitialSchedule: new SteppedTaperingSchedule(
+                [new TaperStage(4m, 7), new TaperStage(2m, 7), new TaperStage(1m, 7)], maintainLastDose: true)), default);
+
+        async Task<DateOnly> RunOutAsync()
+            => (await Query(scope).LoadAsync(includeNames: false, default))
+                .Single(e => e.Uid.StartsWith("runout-", StringComparison.Ordinal)).Date;
+
+        (await RunOutAsync()).Should().Be(Today.AddDays(32));
+
+        await scope.RegisterIntake.ExecuteAsync(new RegisterIntakeCommand(id, Today, IntakeStatus.Taken, 4m), default);
+
+        (await RunOutAsync()).Should().Be(Today.AddDays(32));
     }
 
     [Fact]

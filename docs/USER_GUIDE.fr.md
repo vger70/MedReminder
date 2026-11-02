@@ -275,14 +275,15 @@ la fenêtre du médicament, mets **Schéma** sur **Avancé** et choisis un
 Avec **Avancé**, les champs de dose en haut de la fenêtre ne sont pas
 utilisés. Reviens à **Simple** pour une dose quotidienne fixe.
 
-**Jours restants avec un schéma avancé.** Le stock est déduit jour
-après jour selon le schéma, mais les jours restants et la date de fin
-divisent le stock par la quantité du jour : pendant une décroissance,
-ils suivent la dose du jour, pas les paliers suivants. Un jour de pause
-d'un cycle, ou un jour de la semaine sans prise, aucune date de fin
-n'est affichée et aucune alerte de stock bas n'est donnée ; la
-vérification alerte le jour suivant avec une prise. Pour vérifier toute
-une période, utilise [Planifier le stock](#documents), qui suit le
+**Jours restants avec un schéma avancé.** Les jours restants et la date
+de fin suivent le schéma jour après jour : les paliers suivants d'une
+décroissance, les pauses d'un cycle, les jours sans prise et une
+suspension dont la date de fin est déjà fixée. Ils s'affichent aussi un
+jour sans prise, et l'alerte de stock bas peut arriver ce jour-là. Aucune
+date n'est affichée et aucune alerte n'est donnée tant que le médicament
+est suspendu, ou lorsque le schéma se termine avant la fin du stock.
+Au-delà d'un an, l'estimation utilise la moyenne du schéma. Pour vérifier
+toute une période, utilise [Planifier le stock](#documents), qui suit le
 schéma jour après jour.
 
 **Les horaires de prise fonctionnent aussi avec Avancé.** Le schéma fixe
@@ -917,7 +918,7 @@ générique.
   vérification reçoit seulement le deuxième rappel. Après une nouvelle
   boîte, le cycle recommence (aussi après les autres ajouts, voir
   [Ajouter une boîte](#add-package)). Avec un schéma avancé, les jours
-  restants suivent la quantité du jour (voir [Schémas
+  restants le suivent jour après jour (voir [Schémas
   complexes](#regimens)).
 - **Péremption des boîtes** : une boîte enregistrée avec une péremption
   donne une alerte *bientôt périmée* 30 jours avant la péremption

@@ -7,6 +7,11 @@ public sealed record RunOutForecastResult(
     int? DaysRemaining,
     DateOnly? EstimatedRunOutDate);
 
+// The estimate from one daily rate. The stock count decides with it
+// whether a correction restarts the warning cycle (LedgerDeriver
+// .EvaluateCount): recorded counts are evaluated again after a merge, so
+// this formula must not change. Everything the user sees or is warned
+// about uses RunOutSimulation.
 public static class RunOutForecast
 {
     // Computes days remaining and run-out ETA from:
@@ -24,7 +29,8 @@ public static class RunOutForecast
     //  - dailyRate <= 0            → (null, null).
     //  - currentStock <= 0         → (0, today) (already depleted).
     //  - otherwise                 → floor(stock / rate) days; ETA in
-    //                                the future.
+    //                                the future, at most the last date
+    //                                DateOnly can hold.
     public static RunOutForecastResult Compute(
         DateOnly today,
         decimal currentStock,
@@ -36,7 +42,8 @@ public static class RunOutForecast
         if (currentStock <= 0m) return new RunOutForecastResult(0, today);
 
         var daysDecimal = currentStock / dailyRate;
-        var days = (int)decimal.Floor(daysDecimal);
+        var maxDays = DateOnly.MaxValue.DayNumber - today.DayNumber;
+        var days = daysDecimal >= maxDays ? maxDays : (int)decimal.Floor(daysDecimal);
         var eta = today.AddDays(days);
         return new RunOutForecastResult(days, eta);
     }

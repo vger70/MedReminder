@@ -10,6 +10,14 @@ public class MedicineForecastTests
     private static readonly DateOnly Today = new(2026, 9, 13);
     private static readonly Guid MedicineId = Guid.NewGuid();
 
+    private static readonly Medicine Medicine = new()
+    {
+        Id = MedicineId,
+        Name = "x",
+        Unit = "tablets",
+        StartDate = new DateOnly(2026, 9, 1),
+    };
+
     private static MedicationScheduleHistory Entry(DateOnly from, decimal dose, int admin)
         => new()
         {
@@ -24,7 +32,7 @@ public class MedicineForecastTests
     {
         var history = new[] { Entry(new DateOnly(2026, 9, 1), 1m, 2) };
 
-        var result = MedicineForecast.Compute(Today, 30m, history, null, []);
+        var result = MedicineForecast.Compute(Medicine, Today, 30m, false, history, null, []);
 
         result.DailyRate.Should().Be(2m);
         result.IsSuspendedToday.Should().BeFalse();
@@ -40,7 +48,7 @@ public class MedicineForecastTests
             new MedicationAdministrationSlot { MedicineId = MedicineId, Dose = 3m },
         };
 
-        var result = MedicineForecast.Compute(Today, 30m, history, slots, []);
+        var result = MedicineForecast.Compute(Medicine, Today, 30m, false, history, slots, []);
 
         result.DailyRate.Should().Be(3m);
         result.RunOut.DaysRemaining.Should().Be(10);
@@ -55,7 +63,7 @@ public class MedicineForecastTests
             new MedicationSuspension { MedicineId = MedicineId, StartDate = new DateOnly(2026, 9, 10) },
         };
 
-        var result = MedicineForecast.Compute(Today, 30m, history, null, suspensions);
+        var result = MedicineForecast.Compute(Medicine, Today, 30m, false, history, null, suspensions);
 
         result.IsSuspendedToday.Should().BeTrue();
         result.RunOut.EstimatedRunOutDate.Should().BeNull();

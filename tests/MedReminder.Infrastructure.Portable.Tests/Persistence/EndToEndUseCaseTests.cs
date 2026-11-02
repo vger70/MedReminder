@@ -134,7 +134,9 @@ public class EndToEndUseCaseTests
                 recordWindows,
                 new UnitOfWork(ctx),
                 FixedClock,
-                NullLogger<MedicationMonitor>.Instance);
+                NullLogger<MedicationMonitor>.Instance,
+                new MedReminder.Application.DoseTimes.DueToday(
+                    new MedicationIntakeRepository(ctx), new StockCountRepository(ctx), FixedClock));
 
             var result = await monitor.RunAsync(CancellationToken.None);
             // 14 compresse, 2/giorno = 7 giorni residui = soglia -> notify.

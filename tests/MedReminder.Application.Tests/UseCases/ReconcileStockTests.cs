@@ -2,6 +2,7 @@ using FluentAssertions;
 using MedReminder.Application.Tests.Support;
 using MedReminder.Application.UseCases;
 using MedReminder.Domain.Calculations;
+using MedReminder.Domain.Medicines;
 using MedReminder.Domain.Notifications;
 using MedReminder.Domain.Stock;
 using Xunit;
@@ -428,5 +429,28 @@ public class ReconcileStockTests
         result.CorrectionKind.Should().Be(StockMovementKind.PositiveCorrection);
         result.StockEpochAdvanced.Should().BeFalse();
         (await LedgerTotalAsync(scope, id)).Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task The_cycle_decision_keeps_todays_rate_and_the_dialog_shows_the_day_by_day_date()
+    {
+        // One a day for 14 days, then five. On day 12 a count of 10: today's
+        // rate gives 10 days, above the threshold of 7, so the cycle restarts
+        // (issue #313: recorded counts are evaluated again after a merge, so
+        // this rule stays). The stock really covers three days.
+        var start = new DateOnly(2026, 9, 1);
+        var scope = new ApplicationTestScope(new DateTimeOffset(2026, 9, 1, 7, 0, 0, TimeSpan.Zero));
+        var id = await scope.AddMedicine.ExecuteAsync(new AddMedicineCommand(
+            "Prednisone", "tablets", 1m, 1, start, 7, NotificationChannels.Windows,
+            InitialQuantity: 20m,
+            InitialSchedule: new SteppedTaperingSchedule([new TaperStage(1m, 14), new TaperStage(5m, 7)], maintainLastDose: true)), default);
+        scope.Clock.SetUtcNow(new DateTimeOffset(2026, 9, 13, 7, 0, 0, TimeSpan.Zero));
+
+        var preview = (await scope.ReconcileStock.LoadAsync(id, default)).Evaluate(10m, 0m);
+        var result = await scope.ReconcileStock.ExecuteAsync(new ReconcileStockCommand(id, 10m, TakenToday: 0m), default);
+
+        preview.ForecastAfter.EstimatedRunOutDate.Should().Be(new DateOnly(2026, 9, 16));
+        result.Correction.Should().BePositive();
+        result.StockEpochAdvanced.Should().BeTrue();
     }
 }
