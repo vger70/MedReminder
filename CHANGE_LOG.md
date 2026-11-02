@@ -30,6 +30,28 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## [PR #332](https://github.com/vger70/MedReminder/pull/332) — Forecast the run-out by walking the regimen day by day
+
+- **Changed**: days left, the run-out date and the low-stock warnings follow
+  the regimen day by day instead of dividing the stock by today's quantity
+  (`RunOutSimulation`, issue #313): taper stages, cyclic pauses, weekly gaps,
+  later schedule changes and suspensions ahead. The list, the timeline, the
+  calendar, the count dialog, `NotificationPlanner` and `MedicationMonitor`
+  use it. Fixed regimens keep the same days left.
+- **Changed**: after an intake or a count that books today, the date no longer
+  moves one day earlier on any regimen, and the days left count those covered
+  after today. `MedicationMonitor`, `TherapyTimelineQuery` and
+  `CalendarExportQuery` now require `DueToday`.
+- **Fixed**: a bounded course with stock left no longer warns; a day with
+  nothing due now has an estimate and can warn, also with no stock left.
+- **Fixed**: `RunOutForecast.Compute` threw when the date passed year 9999
+  (stock 100000, dose 0.03), and the whole medicine list failed to load.
+- **Unchanged on purpose**: `AdvancesEpoch` keeps today's rate, since recorded
+  counts are evaluated again after a merge. A suspension in progress gives no
+  estimate and no warning. The therapy end date stays with `NotificationCycle`
+  and the timeline flag.
+- **Docs**: README and the user guides in every language.
+
 ## [PR #329](https://github.com/vger70/MedReminder/pull/329) — Bound the hot database reads and create every model index on upgraded databases
 
 - **Added**: opt-in benchmark harness (`tests/MedReminder.Infrastructure.Portable.Tests/Benchmarks/`,

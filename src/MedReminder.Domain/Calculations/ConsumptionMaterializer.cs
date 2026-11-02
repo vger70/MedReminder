@@ -38,6 +38,29 @@ public static class ConsumptionMaterializer
         IEnumerable<MedicationAdministrationSlot>? administrationSlots)
     {
         ArgumentNullException.ThrowIfNull(medicine);
+
+        // Do not go past the therapy end date.
+        var upperBound = rangeEndInclusive;
+        if (medicine.EndDate is { } endDate && endDate < upperBound)
+        {
+            upperBound = endDate;
+        }
+
+        return PlanPastTherapyEnd(medicine, rangeStartInclusive, upperBound,
+            scheduleHistory, suspensions, administrationSlots);
+    }
+
+    // The same plan without the therapy end date, for the run-out estimate
+    // (RunOutSimulation), which may fall after it.
+    internal static IReadOnlyList<MaterializedConsumption> PlanPastTherapyEnd(
+        Medicine medicine,
+        DateOnly rangeStartInclusive,
+        DateOnly rangeEndInclusive,
+        IEnumerable<MedicationScheduleHistory> scheduleHistory,
+        IEnumerable<MedicationSuspension> suspensions,
+        IEnumerable<MedicationAdministrationSlot>? administrationSlots)
+    {
+        ArgumentNullException.ThrowIfNull(medicine);
         ArgumentNullException.ThrowIfNull(scheduleHistory);
         ArgumentNullException.ThrowIfNull(suspensions);
 
@@ -52,13 +75,6 @@ public static class ConsumptionMaterializer
         var suspensionList = suspensions.ToList();
         var slotsList = administrationSlots?.ToList();
 
-        // Do not go past the therapy end date.
-        var upperBound = rangeEndInclusive;
-        if (medicine.EndDate is { } endDate && endDate < upperBound)
-        {
-            upperBound = endDate;
-        }
-
         var lowerBound = rangeStartInclusive;
         if (medicine.StartDate > lowerBound)
         {
@@ -66,7 +82,7 @@ public static class ConsumptionMaterializer
         }
 
         var result = new List<MaterializedConsumption>();
-        for (var day = lowerBound; day <= upperBound; day = day.AddDays(1))
+        for (var day = lowerBound; day <= rangeEndInclusive; day = day.AddDays(1))
         {
             if (SuspensionState.IsSuspendedOn(day, suspensionList)) continue;
 

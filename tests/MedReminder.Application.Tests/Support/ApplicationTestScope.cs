@@ -1,3 +1,4 @@
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Ledger;
 using MedReminder.Application.Abstractions;
 using MedReminder.Application.Catalogue;
@@ -171,6 +172,7 @@ internal sealed class ApplicationTestScope
             Medicines, Stock, Schedules, Suspensions, Slots, Notifications,
             Email, Windows, Uow, Clock,
             NullLogger<MedicationMonitor>.Instance,
+            new DueToday(Intakes, Counts, Clock),
             sentEmails: SentEmails, operationLog: Operations, master: Master,
             prescriptionReminders: PrescriptionReminders, shortageNotices: ShortageNotices,
             deadlineReminders: DeadlineReminders, packageExpiryNotices: PackageExpiryNotices,

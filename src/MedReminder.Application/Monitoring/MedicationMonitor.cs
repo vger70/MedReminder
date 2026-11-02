@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Calendar;
 using MedReminder.Application.Catalogue;
 using MedReminder.Application.Deadlines;
@@ -15,7 +16,7 @@ namespace MedReminder.Application.Monitoring;
 
 // Orchestrator of the periodic check (spec §18):
 //  1. run the daily-consumption catch-up;
-//  2. for each active medicine, compute stock, rate, forecast;
+//  2. for each active medicine, compute stock and forecast;
 //  3. evaluate NotificationCycle.StageToNotify (first warning at the
 //     threshold, second at half of it while the stock is not
 //     replenished);
@@ -49,6 +50,7 @@ public sealed class MedicationMonitor
     private readonly IUnitOfWork _uow;
     private readonly TimeProvider _clock;
     private readonly ILogger<MedicationMonitor> _log;
+    private readonly DueToday _dueToday;
     private readonly ILocalizationService? _localization;
     private readonly ISentEmailNotificationRepository? _sentEmails;
     private readonly IOperationLog? _operationLog;
@@ -73,6 +75,7 @@ public sealed class MedicationMonitor
         IUnitOfWork uow,
         TimeProvider clock,
         ILogger<MedicationMonitor> log,
+        DueToday dueToday,
         ILocalizationService? localization = null,
         ISentEmailNotificationRepository? sentEmails = null,
         IOperationLog? operationLog = null,
@@ -85,6 +88,7 @@ public sealed class MedicationMonitor
         IPrescriptionRepository? prescriptions = null,
         IPrescriptionDispensationRepository? dispensations = null)
     {
+        _dueToday = dueToday;
         _prescriptions = prescriptions;
         _dispensations = dispensations;
         _caregiverDigest = caregiverDigest;
@@ -121,6 +125,7 @@ public sealed class MedicationMonitor
         var today = LocalToday();
         var medicines = await _medicines.ListActiveAsync(cancellationToken);
         var sent = 0;
+        var booked = await _dueToday.LoadBookedAsync(today, cancellationToken);
         // Household step H4a: only the master sends email.
         var sendsEmail = _master is null || await _master.SendsEmailAsync(cancellationToken);
 
@@ -130,12 +135,10 @@ public sealed class MedicationMonitor
 
             var schedule = await _schedules.ListForMedicineAsync(medicine.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var rate = DailyConsumption.RateOn(today, schedule, slots);
-
             var suspensions = await _suspensions.ListForMedicineAsync(medicine.Id, cancellationToken);
-            var isSuspended = SuspensionState.IsSuspendedOn(today, suspensions);
 
-            var forecast = RunOutForecast.Compute(today, currentStock, rate, isSuspended);
+            var forecast = MedicineForecast.Compute(
+                medicine, today, currentStock, booked.Contains(medicine.Id), schedule, slots, suspensions).RunOut;
             var latest = await _notifications.GetLatestForMedicineAsync(medicine.Id, cancellationToken);
 
             if (NotificationCycle.StageToNotify(medicine, forecast.DaysRemaining, forecast.EstimatedRunOutDate, latest)

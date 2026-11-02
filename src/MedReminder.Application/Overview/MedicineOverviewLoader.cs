@@ -88,7 +88,8 @@ public sealed class MedicineOverviewLoader
 
             // Shared with the therapy timeline so both views show the
             // same run-out date.
-            var result = MedicineForecast.Compute(today, ledgerStock, schedule, slots, suspensions);
+            var result = MedicineForecast.Compute(
+                m, today, ledgerStock, dueContext?.BookedToday.Contains(m.Id) == true, schedule, slots, suspensions);
             var rate = result.DailyRate;
             var isSuspended = result.IsSuspendedToday;
             var forecast = result.RunOut;
@@ -99,7 +100,8 @@ public sealed class MedicineOverviewLoader
             // (101 tablets, 1 a day, after the 07:30 dose: 100 days, run
             // out on day 101 as before).
             var daysRemaining = forecast.DaysRemaining is not null && due > 0m && rate > 0m
-                ? (int)decimal.Floor(currentStock / rate)
+                ? RunOutSimulation.DaysCoveredFrom(m, today.AddDays(1), currentStock, schedule, slots, suspensions)
+                    ?? forecast.DaysRemaining
                 : forecast.DaysRemaining;
             var status = ComputeStatus(m.IsActive, isSuspended, currentStock, daysRemaining, m.ThresholdDays);
 

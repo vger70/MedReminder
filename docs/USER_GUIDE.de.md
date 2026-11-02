@@ -275,15 +275,16 @@ Medikamentenfenster **Schema** auf **Erweitert** und wähle einen
 Mit **Erweitert** werden die Dosisfelder oben im Fenster nicht
 verwendet. Wechsle zurück zu **Einfach** für eine feste Tagesdosis.
 
-**Verbleibende Tage bei einem erweiterten Schema.** Der Bestand wird
-Tag für Tag nach dem Schema abgezogen, aber die verbleibenden Tage und
-das Enddatum teilen den Bestand durch die heutige Menge: Beim
-Ausschleichen folgen sie der heutigen Dosis, nicht den nächsten Stufen.
-An einem Pausentag eines Zyklus oder an einem Wochentag ohne Dosis wird
-kein Enddatum angezeigt und keine Warnung bei niedrigem Bestand
-gegeben; die Prüfung warnt am nächsten Tag mit einer Dosis. Um einen
-ganzen Zeitraum zu prüfen, nutze [Vorrat planen](#documents), das dem
-Schema Tag für Tag folgt.
+**Verbleibende Tage bei einem erweiterten Schema.** Die verbleibenden
+Tage und das Enddatum folgen dem Schema Tag für Tag: den nächsten Stufen
+beim Ausschleichen, den Pausen eines Zyklus, den Tagen ohne Dosis und
+einer Aussetzung mit bereits festgelegtem Ende. Sie erscheinen auch an
+einem Tag ohne Dosis, und die Warnung bei niedrigem Bestand kann an diesem
+Tag kommen. Es wird kein Datum angezeigt und keine Warnung gegeben,
+solange das Medikament ausgesetzt ist oder wenn das Schema endet, bevor
+der Bestand aufgebraucht ist. Über ein Jahr hinaus nutzt die Schätzung den
+Durchschnitt des Schemas. Um einen ganzen Zeitraum zu prüfen, nutze
+[Vorrat planen](#documents), das dem Schema Tag für Tag folgt.
 
 **Einnahmezeiten gelten auch mit Erweitert.** Das Schema legt fest, wie
 viel du an jedem Tag nimmst; die [Einnahmezeiten](#slots) legen fest,
@@ -910,8 +911,8 @@ demselben allgemeinen Titel.
   ersten Prüfung schon unter der Hälfte liegt, bekommt nur die zweite
   Erinnerung. Nach einer neuen Packung beginnt der Zyklus von vorn
   (auch nach den anderen Zugängen, siehe [Packung
-  hinzufügen](#add-package)). Bei einem erweiterten Schema folgen die
-  verbleibenden Tage der heutigen Menge (siehe [Komplexe
+  hinzufügen](#add-package)). Bei einem erweiterten Schema folgen ihm die
+  verbleibenden Tage Tag für Tag (siehe [Komplexe
   Schemata](#regimens)).
 - **Verfall der Packungen**: Eine Packung mit Verfallsdatum löst 30
   Tage vor dem aufgedruckten Verfall (3 Tage vor dem Ende der Frist nach

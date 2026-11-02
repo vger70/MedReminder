@@ -112,10 +112,12 @@ public sealed record TherapyTimeline(
     IReadOnlyList<TherapyTimelineRow> Rows);
 
 // Everything the builder needs about one medicine. CurrentStock is the
-// value computed by MedicineStock.Current.
+// value computed by MedicineStock.Current; TodayBooked says the ledger
+// already holds today's consumption (DueToday).
 public sealed record TherapyTimelineInput(
     Medicine Medicine,
     IReadOnlyList<MedicationScheduleHistory> ScheduleHistory,
     IReadOnlyList<MedicationSuspension> Suspensions,
     IReadOnlyList<MedicationAdministrationSlot> AdministrationSlots,
-    decimal CurrentStock);
+    decimal CurrentStock,
+    bool TodayBooked = false);

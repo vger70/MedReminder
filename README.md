@@ -30,9 +30,8 @@ scheduled dose time.
 - Dose, frequency, start/end date, warning threshold, reference
   doctor, notes.
 - Complex regimens: fixed daily, weekly pattern, on/off cycles,
-  linear or stepped tapering, as needed (PRN). Daily deductions follow
-  the regimen day by day; days left and the run-out date divide the
-  stock by today's quantity (no estimate on a day with nothing due).
+  linear or stepped tapering, as needed (PRN). Daily deductions, days
+  left and the run-out date follow the regimen day by day.
 - Optional per-medicine administration slots (time + free-form label
   such as "before sleep", "on empty stomach").
 - Stock movements: initial load, new package, manual addition,

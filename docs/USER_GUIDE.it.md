@@ -263,13 +263,14 @@ finestra della medicina imposta **Schema** su **Avanzato** e scegli un
 Con **Avanzato** i campi della dose in alto nella finestra non vengono
 usati. Torna a **Semplice** per una dose giornaliera fissa.
 
-**Giorni residui con un regime avanzato.** Le scorte vengono scalate
-giorno per giorno secondo lo schema, ma i giorni residui e la data di
-esaurimento dividono le scorte per la quantità di oggi: durante uno
-scalare seguono la dose di oggi, non le fasi successive. In un giorno
-di pausa di un ciclo, o in un giorno settimanale senza dosi, la data di
-esaurimento non compare e non arriva l'avviso di scorte basse; il
-controllo avvisa il primo giorno successivo con una dose. Per
+**Giorni residui con un regime avanzato.** I giorni residui e la data
+di esaurimento seguono lo schema giorno per giorno: le fasi successive
+di uno scalare, le pause di un ciclo, i giorni senza dosi e una
+sospensione con la data di fine già impostata. Compaiono anche in un
+giorno senza dosi, e l'avviso di scorte basse può arrivare in quel
+giorno. La data non compare e l'avviso non arriva mentre il medicinale
+è sospeso, oppure quando lo schema finisce prima che le scorte si
+esauriscano. Oltre un anno la stima usa la media dello schema. Per
 verificare un intero periodo usa [Pianificare le scorte](#documents),
 che segue lo schema giorno per giorno.
 
@@ -879,7 +880,7 @@ file di calendario (`medreminder.ics`), con lo stesso titolo generico.
   riceve solo il secondo avviso. Dopo una nuova confezione il ciclo
   riparte (anche dopo le altre aggiunte, vedi [Aggiungere una
   confezione](#add-package)). Con un regime avanzato i giorni residui
-  seguono la quantità di oggi (vedi [Regimi complessi](#regimens)).
+  lo seguono giorno per giorno (vedi [Regimi complessi](#regimens)).
 - **Scadenza delle confezioni**: una confezione registrata con scadenza
   dà un avviso *in scadenza* 30 giorni prima della scadenza stampata (3
   giorni prima della fine del periodo dopo l'apertura) e un avviso

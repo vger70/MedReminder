@@ -1,4 +1,5 @@
 using MedReminder.Application.Abstractions;
+using MedReminder.Application.DoseTimes;
 using MedReminder.Application.Deadlines;
 using MedReminder.Domain.Calculations;
 using MedReminder.Domain.Prescriptions;
@@ -23,6 +24,7 @@ public sealed class CalendarExportQuery
     private readonly IDeadlineRepository _deadlines;
     private readonly TimeProvider _clock;
     private readonly ILocalizationService? _localization;
+    private readonly DueToday _dueToday;
 
     public CalendarExportQuery(
         IMedicineRepository medicines,
@@ -33,9 +35,11 @@ public sealed class CalendarExportQuery
         IPrescriptionRepository prescriptions,
         IDeadlineRepository deadlines,
         TimeProvider clock,
+        DueToday dueToday,
         ILocalizationService? localization = null,
         IPrescriptionDispensationRepository? dispensations = null)
     {
+        _dueToday = dueToday;
         _dispensations = dispensations;
         _medicines = medicines;
         _stock = stock;
@@ -62,6 +66,7 @@ public sealed class CalendarExportQuery
         var events = new List<CalendarEvent>();
         var all = await _medicines.ListAllAsync(cancellationToken);
         var names = all.ToDictionary(m => m.Id, m => m.Name);
+        var booked = await _dueToday.LoadBookedAsync(today, cancellationToken);
 
         foreach (var m in all.Where(m => m.IsActive))
         {
@@ -70,7 +75,7 @@ public sealed class CalendarExportQuery
             var suspensions = await _suspensions.ListForMedicineAsync(m.Id, cancellationToken);
             var slots = await _slots.ListForMedicineAsync(m.Id, cancellationToken);
             // Same forecast as the medicine list.
-            var forecast = MedicineForecast.Compute(today, stock, schedule, slots, suspensions);
+            var forecast = MedicineForecast.Compute(m, today, stock, booked.Contains(m.Id), schedule, slots, suspensions);
             if (forecast.RunOut.EstimatedRunOutDate is not { } runOut || runOut < today) continue;
             var name = includeNames ? m.Name : null;
             var reorder = runOut.AddDays(-m.ThresholdDays);

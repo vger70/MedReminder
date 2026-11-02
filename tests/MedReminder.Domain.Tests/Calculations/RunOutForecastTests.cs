@@ -103,4 +103,14 @@ public class RunOutForecastTests
         var result = RunOutForecast.Compute(Today, 10m, 1.5m, false);
         result.DaysRemaining.Should().Be(6);
     }
+
+    [Fact]
+    public void A_date_past_the_last_one_stops_there()
+    {
+        var today = new DateOnly(2026, 9, 13);
+
+        // The first fails on AddDays, the second on the cast to int.
+        RunOutForecast.Compute(today, 100000m, .01m, false).EstimatedRunOutDate.Should().Be(DateOnly.MaxValue);
+        RunOutForecast.Compute(today, 1000000000m, .01m, false).EstimatedRunOutDate.Should().Be(DateOnly.MaxValue);
+    }
 }

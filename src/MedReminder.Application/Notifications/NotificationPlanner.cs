@@ -268,7 +268,8 @@ public static class NotificationPlanner
         for (var i = 0; i < options.DailyHorizonDays && i < stock.Length; i++)
         {
             var day = today.AddDays(i);
-            var forecast = MedicineForecast.Compute(day, stock[i], state.Schedule, state.Slots, state.Suspensions);
+            var forecast = MedicineForecast.Compute(
+                medicine, day, stock[i], todayBooked: i == 0 && state.TodayBooked, state.Schedule, state.Slots, state.Suspensions);
             var runOut = forecast.RunOut;
             if (NotificationCycle.StageToNotify(medicine, runOut.DaysRemaining, runOut.EstimatedRunOutDate, latest)
                 is not { } stage)

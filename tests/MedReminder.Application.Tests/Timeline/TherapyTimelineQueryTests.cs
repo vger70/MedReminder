@@ -11,7 +11,8 @@ namespace MedReminder.Application.Tests.Timeline;
 public class TherapyTimelineQueryTests
 {
     private static TherapyTimelineQuery NewQuery(ApplicationTestScope scope)
-        => new(scope.Medicines, scope.Stock, scope.Schedules, scope.Suspensions, scope.Slots, scope.Clock);
+        => new(scope.Medicines, scope.Stock, scope.Schedules, scope.Suspensions, scope.Slots, scope.Clock,
+            new MedReminder.Application.DoseTimes.DueToday(scope.Intakes, scope.Counts, scope.Clock));
 
     private static Task<Guid> SeedAsync(ApplicationTestScope scope, string name = "Enalapril")
         => scope.AddMedicine.ExecuteAsync(
@@ -63,7 +64,7 @@ public class TherapyTimelineQueryTests
         var today = new DateOnly(2026, 9, 13);
         var stock = MedicineStock.Current(await scope.Stock.ListForMedicineAsync(id, CancellationToken.None));
         var expected = MedicineForecast.Compute(
-            today, stock,
+            (await scope.Medicines.GetAsync(id, CancellationToken.None))!, today, stock, false,
             await scope.Schedules.ListForMedicineAsync(id, CancellationToken.None),
             await scope.Slots.ListForMedicineAsync(id, CancellationToken.None),
             await scope.Suspensions.ListForMedicineAsync(id, CancellationToken.None));
