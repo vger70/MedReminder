@@ -1,13 +1,13 @@
 {
   "country": "IT",
-  "version": "202610",
-  "file": "aifa-202610.zip",
-  "generated": "2026-10-02T06:21:03.510679+00:00",
+  "version": "202611",
+  "file": "aifa-202611.zip",
+  "generated": "2026-11-02T09:19:08.757835+00:00",
   "file_count": 2,
-  "sha256": "9aba170b72e785f2e21c1c0b49e230d1c9360f4aeda350cf78f64e8cd57369ef",
-  "size": 4955031,
+  "sha256": "150d5f2a6e6e747bd5cc599a3d6952cbc183334859a9ed764f3e811a49b5fe70",
+  "size": 4963630,
   "rows": {
-    "confezioni_fornitura.csv": 160096,
-    "PA_confezioni.csv": 338828
+    "confezioni_fornitura.csv": 160314,
+    "PA_confezioni.csv": 339390
   }
 }
