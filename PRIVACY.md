@@ -1,6 +1,6 @@
 # MedReminder — Privacy Policy
 
-Last updated: 1 November 2026
+Last updated: 3 November 2026
 
 Translations: [Italiano](PRIVACY.it.md) · [Français](PRIVACY.fr.md) ·
 [Español](PRIVACY.es.md) · [Deutsch](PRIVACY.de.md). The English

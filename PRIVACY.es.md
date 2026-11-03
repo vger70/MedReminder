@@ -1,6 +1,6 @@
 # MedReminder — Política de privacidad
 
-Última actualización: 1 de noviembre de 2026
+Última actualización: 3 de noviembre de 2026
 
 Traducción de [PRIVACY.md](PRIVACY.md). En caso de discrepancia, prevalece la versión inglesa.
 

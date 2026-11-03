@@ -1,6 +1,6 @@
 # MedReminder — Informativa sulla privacy
 
-Ultimo aggiornamento: 1 novembre 2026
+Ultimo aggiornamento: 3 novembre 2026
 
 Traduzione di [PRIVACY.md](PRIVACY.md). In caso di differenze prevale
 la versione inglese.

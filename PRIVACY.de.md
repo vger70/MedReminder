@@ -1,6 +1,6 @@
 # MedReminder — Datenschutzerklärung
 
-Zuletzt aktualisiert: 1. November 2026
+Zuletzt aktualisiert: 3. November 2026
 
 Übersetzung von [PRIVACY.md](PRIVACY.md). Bei Abweichungen ist die englische Fassung maßgeblich.
 
