@@ -146,16 +146,18 @@ MedReminder.
 
 ## 5. Camera and app lock
 
-The barcode scanner can use the Windows webcam, or the Android or
-iPhone camera, when you choose to scan. Images are processed on your
-device and are not saved or sent by MedReminder. On Windows, the camera
+The scanner can use the Windows webcam, or the Android or iPhone
+camera, when you choose to scan. It reads the barcode on a medicine
+box, the prescription code on a prescription slip and, on Android and
+iPhone, the QR code another device shows for a circle. Images are
+processed on your device and are not saved or sent by MedReminder.
+From a prescription slip only the prescription code is kept, never the
+other data its barcode may contain; the circle QR code is not saved.
+Every code can also be typed instead of scanned. On Windows, the camera
 turns off when a code is read, when you close the scan window, or after
 30 seconds. On Android and iPhone, the camera is used only with the
-permission you grant in the operating system, to read medicine barcodes
-or the QR code another device shows when you join a circle; the code is
-not saved. On Android, camera access also follows the app lifecycle,
-and the circle QR code is read only while the scan page is open. On
-iPhone, the camera is used only while a scan page is open.
+permission you grant in the operating system, and only while a scan
+page is open.
 
 On Android and iPhone, the optional app lock uses the phone's own
 unlock: biometrics, such as a fingerprint or Face ID, or the screen lock

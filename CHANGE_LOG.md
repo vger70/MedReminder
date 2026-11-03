@@ -129,12 +129,17 @@ with the classification adapted to per-PR granularity: **Added**,
 Link: [vger70/MedReminder#331](https://github.com/vger70/MedReminder/pull/331)
 
 Section 5 listed only the Windows webcam and the Android camera in its
-opening sentence; the iPhone appeared only at the end.
+opening sentence, omitted the prescription code scan available on every
+platform, and described Android and iPhone camera use differently
+although both apps share the same scan pages (`medreminder-mobile`,
+`BarcodePages.cs`, `HouseholdPages.cs`, `DevicePages.cs`).
 
 - **Docs**: `PRIVACY.md` and its translations (it, fr, es, de), section
-  5: the scanner sentence names the Android or iPhone camera; permission,
-  purpose and non-retention are stated once for both phones, with the
-  Windows, Android and iPhone limits kept separate.
+  5: names the Android and iPhone cameras; lists what is scanned
+  (medicine box barcode, prescription code, circle QR code on phones);
+  states that only the prescription code is kept from a slip and that
+  every code can be typed; one rule for both phones: OS permission, and
+  camera used only while a scan page is open.
 
 ## PR #330 — Cover iOS in the privacy policy
 
