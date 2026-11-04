@@ -1,6 +1,6 @@
 # MedReminder — Politique de confidentialité
 
-Dernière mise à jour : 1er novembre 2026
+Dernière mise à jour : 4 novembre 2026
 
 Traduction de [PRIVACY.md](PRIVACY.md). En cas de divergence, la version anglaise prévaut.
 
@@ -68,6 +68,18 @@ Sous Windows, la sauvegarde cloud et la synchronisation peuvent aussi utiliser l
 
 Le Microsoft Store, Google Play et l'App Store peuvent fournir au développeur des statistiques agrégées, comme les téléchargements, et des rapports de plantage, selon les réglages de diagnostic et de partage de votre appareil (sur iPhone, « Partager avec les développeurs »). Ils ne contiennent pas les données conservées dans MedReminder.
 
+### Comment MedReminder utilise les données utilisateur Google
+
+Lorsque vous connectez Google Drive, MedReminder demande deux autorisations : `drive.file` (uniquement les fichiers et dossiers créés par l'application) et `drive.appdata` (un dossier caché réservé à l'application). Il ne peut voir, lire ni modifier aucun autre fichier de votre Google Drive. Il les utilise uniquement pour créer un dossier visible MedReminder › backups et y enregistrer des sauvegardes chiffrées, pour enregistrer des données de synchronisation chiffrées dans le dossier caché de l'application, et pour lister, télécharger et supprimer ces fichiers lorsque vous restaurez, synchronisez ou lorsque les anciennes sauvegardes dépassent le nombre que vous avez choisi de conserver. Il lit aussi l'adresse e-mail et l'identifiant Drive du compte connecté et, sur Android et iPhone, son nom d'affichage, uniquement pour vous montrer quel compte est connecté et pour distinguer les comptes. Avant l'envoi, les sauvegardes sont chiffrées sur votre appareil avec votre phrase secrète de sauvegarde et les données de synchronisation sont chiffrées de bout en bout : ni Google ni le développeur ne peuvent en lire le contenu.
+
+### Stockage, partage et utilisation limitée
+
+Les informations du compte connecté et les jetons de connexion sont conservés uniquement sur votre appareil ; la section 3 indique où pour chaque plateforme, et sous Windows ils sont chiffrés avec Windows DPAPI. Les données utilisateur Google ne sont envoyées ni au développeur ni à des tiers, ne sont pas vendues, ne sont pas utilisées à des fins publicitaires et ne servent pas à développer, améliorer ou entraîner des modèles d'intelligence artificielle ou d'apprentissage automatique. L'utilisation et le transfert par MedReminder des informations reçues des API Google respectent la [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), y compris les exigences d'utilisation limitée (Limited Use).
+
+### Retrait de l'accès et suppression des données
+
+Vous pouvez révoquer à tout moment l'accès de MedReminder dans votre compte Google, sous Sécurité › Vos connexions à des applications et services tiers (https://myaccount.google.com/connections) ; l'application ne peut alors plus accéder à votre Google Drive. Pour supprimer ce que l'application a enregistré dans Google Drive, supprimez le dossier MedReminder dans Mon Drive et, dans Paramètres de Google Drive › Gérer les applications › MedReminder, choisissez Supprimer les données d'application cachées. Pour OneDrive, supprimez le dossier Applications › MedReminder26 et retirez l'accès de l'application dans les paramètres de confidentialité de votre compte Microsoft.
+
 ## 5. Appareil photo et verrouillage de l'application
 
 Le lecteur de codes-barres peut utiliser la webcam Windows ou l'appareil photo Android ou iPhone lorsque vous choisissez de scanner. Les images sont traitées sur l'appareil et ne sont ni enregistrées ni envoyées par MedReminder. Sous Windows, la caméra s'éteint lorsqu'un code est lu, lorsque vous fermez la fenêtre de lecture ou après 30 secondes. Sous Android et sur iPhone, l'appareil photo n'est utilisé qu'avec l'autorisation que vous accordez dans le système d'exploitation, pour lire les codes-barres des médicaments ou le code QR affiché par un autre appareil lorsque vous rejoignez un cercle ; le code n'est pas enregistré. Sous Android, l'accès à l'appareil photo suit aussi le cycle de vie de l'application, et le code QR du cercle n'est lu que pendant que la page de lecture est ouverte. Sur iPhone, l'appareil photo n'est utilisé que pendant qu'une page de lecture est ouverte.
@@ -88,5 +100,5 @@ Vous pouvez consulter, corriger, exporter et supprimer les données dans MedRemi
 
 ## 9. Modifications
 
-Les modifications sont publiées dans ce fichier avec une nouvelle date de « Dernière mise à jour ». L'historique est visible dans le dépôt :
+Les modifications sont publiées ici avec une nouvelle date de « Dernière mise à jour ». L'historique est visible dans le dépôt :
 https://github.com/vger70/MedReminder/commits/main/PRIVACY.fr.md

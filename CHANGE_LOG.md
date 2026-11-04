@@ -30,6 +30,20 @@ with the classification adapted to per-PR granularity: **Added**,
 
 ---
 
+## [PR #335](https://github.com/vger70/MedReminder/pull/335) — Describe the use of Google user data in the privacy policy
+
+- **Docs**: `PRIVACY*.md` gain, in all five languages, how Google user data
+  is used, storage and Limited Use, and how to remove access and delete data.
+  These texts existed only on the website, for Windows alone; the policy is
+  becoming the single source for the website page.
+- **Docs**: compared with the website text, the policy also names the Drive
+  account identifier and the display name read on Android and iPhone, and
+  separates backups (backup passphrase) from sync data (end-to-end encrypted).
+- **Docs**: section 9 says "here" instead of "in this file", so it also reads
+  correctly on a web page.
+
+---
+
 ## [PR #332](https://github.com/vger70/MedReminder/pull/332) — Forecast the run-out by walking the regimen day by day
 
 - **Changed**: days left, the run-out date and the low-stock warnings follow

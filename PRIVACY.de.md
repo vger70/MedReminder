@@ -1,6 +1,6 @@
 # MedReminder — Datenschutzerklärung
 
-Zuletzt aktualisiert: 1. November 2026
+Zuletzt aktualisiert: 4. November 2026
 
 Übersetzung von [PRIVACY.md](PRIVACY.md). Bei Abweichungen ist die englische Fassung maßgeblich.
 
@@ -68,6 +68,18 @@ Unter Windows können Cloud-Sicherung und Synchronisierung auch von Ihnen ausgew
 
 Microsoft Store, Google Play und der App Store können dem Entwickler je nach den Diagnose- und Freigabeeinstellungen Ihres Geräts zusammengefasste Statistiken, etwa Downloads, und Absturzberichte bereitstellen (auf dem iPhone „Mit App-Entwicklern teilen“). Sie enthalten keine in MedReminder gespeicherten Daten.
 
+### Wie MedReminder Google-Nutzerdaten verwendet
+
+Wenn Sie Google Drive verbinden, fordert MedReminder zwei Berechtigungen an: `drive.file` (nur die Dateien und Ordner, die die App selbst anlegt) und `drive.appdata` (ein für die App reservierter, ausgeblendeter Ordner). Die App kann keine anderen Dateien in Ihrem Google Drive sehen, lesen oder ändern. Sie nutzt die Berechtigungen nur, um einen sichtbaren Ordner MedReminder › backups anzulegen und dort verschlüsselte Sicherungsdateien abzulegen, um verschlüsselte Synchronisierungsdaten im ausgeblendeten App-Ordner abzulegen, und um diese Dateien aufzulisten, herunterzuladen und zu löschen, wenn Sie wiederherstellen oder synchronisieren oder wenn ältere Sicherungen die von Ihnen gewählte Anzahl überschreiten. Außerdem liest sie die E-Mail-Adresse und die Drive-Kontokennung des verbundenen Kontos sowie unter Android und auf dem iPhone dessen Anzeigenamen, nur um Ihnen anzuzeigen, welches Konto verbunden ist, und um Konten zu unterscheiden. Vor dem Hochladen werden Sicherungsdateien auf Ihrem Gerät mit Ihrer Sicherungs-Passphrase verschlüsselt, und Synchronisierungsdaten sind Ende-zu-Ende-verschlüsselt: Weder Google noch der Entwickler können ihren Inhalt lesen.
+
+### Speicherung, Weitergabe und eingeschränkte Nutzung
+
+Die Angaben zum verbundenen Konto und die Anmelde-Token werden nur auf Ihrem Gerät gespeichert; Abschnitt 3 beschreibt, wo auf der jeweiligen Plattform, und unter Windows sind sie mit Windows DPAPI verschlüsselt. Google-Nutzerdaten werden weder an den Entwickler noch an Dritte übermittelt, nicht verkauft, nicht für Werbung verwendet und nicht zur Entwicklung, Verbesserung oder zum Training von Modellen der künstlichen Intelligenz oder des maschinellen Lernens genutzt. Die Nutzung und Übertragung von Informationen, die MedReminder von Google-APIs erhält, entspricht der [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), einschließlich der Anforderungen zur eingeschränkten Nutzung (Limited Use).
+
+### Zugriff entziehen und Daten löschen
+
+Sie können den Zugriff von MedReminder jederzeit in Ihrem Google-Konto unter Sicherheit › Ihre Verbindungen zu Drittanbieter-Apps und -Diensten widerrufen (https://myaccount.google.com/connections); danach kann die App nicht mehr auf Ihr Google Drive zugreifen. Um zu löschen, was die App in Google Drive abgelegt hat, löschen Sie den Ordner MedReminder in Meine Ablage und wählen Sie in den Google-Drive-Einstellungen › Apps verwalten › MedReminder die Option Ausgeblendete App-Daten löschen. Für OneDrive löschen Sie den Ordner Apps › MedReminder26 und entfernen den Zugriff der App in den Datenschutzeinstellungen Ihres Microsoft-Kontos.
+
 ## 5. Kamera und App-Sperre
 
 Der Barcode-Scanner kann die Windows-Webcam oder die Kamera von Android oder iPhone verwenden, wenn Sie einen Scan starten. Die Bilder werden auf Ihrem Gerät verarbeitet und von MedReminder weder gespeichert noch gesendet. Unter Windows schaltet sich die Kamera aus, wenn ein Code gelesen wird, wenn Sie das Scanfenster schließen oder nach 30 Sekunden. Unter Android und auf dem iPhone wird die Kamera nur mit der Berechtigung verwendet, die Sie im Betriebssystem erteilen, um Medikamenten-Barcodes oder den QR-Code zu lesen, den ein anderes Gerät beim Beitritt zu einem Kreis anzeigt; der Code wird nicht gespeichert. Unter Android richtet sich der Kamerazugriff außerdem nach dem App-Lebenszyklus, und der QR-Code des Kreises wird nur gelesen, solange die Scanseite geöffnet ist. Auf dem iPhone wird die Kamera nur verwendet, solange eine Scanseite geöffnet ist.
@@ -88,5 +100,5 @@ Sie können Daten in MedReminder einsehen, berichtigen, exportieren und löschen
 
 ## 9. Änderungen
 
-Änderungen dieser Erklärung werden in dieser Datei mit einem neuen Datum „Zuletzt aktualisiert“ veröffentlicht. Der Verlauf ist im Repository einsehbar:
+Änderungen dieser Erklärung werden hier mit einem neuen Datum „Zuletzt aktualisiert“ veröffentlicht. Der Verlauf ist im Repository einsehbar:
 https://github.com/vger70/MedReminder/commits/main/PRIVACY.de.md
