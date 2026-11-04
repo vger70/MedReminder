@@ -1,6 +1,6 @@
 # MedReminder — Informativa sulla privacy
 
-Ultimo aggiornamento: 1 novembre 2026
+Ultimo aggiornamento: 4 novembre 2026
 
 Traduzione di [PRIVACY.md](PRIVACY.md). In caso di differenze prevale
 la versione inglese.
@@ -152,6 +152,50 @@ arresti anomali, a seconda delle impostazioni di diagnostica e
 condivisione del dispositivo (su iPhone, "Condividi con sviluppatori
 app"). Non includono i dati conservati in MedReminder.
 
+### Come MedReminder usa i dati utente di Google
+
+Quando colleghi Google Drive, MedReminder richiede due autorizzazioni:
+`drive.file` (solo i file e le cartelle creati dall'app) e
+`drive.appdata` (una cartella nascosta riservata all'app). Non può
+vedere, leggere o modificare nessun altro file del tuo Google Drive. Le
+usa solo per creare una cartella visibile MedReminder › backups e
+salvarvi file di backup cifrati, per salvare dati di sincronizzazione
+cifrati nella cartella nascosta dell'app, e per elencare, scaricare ed
+eliminare quei file quando ripristini, sincronizzi o quando i backup
+vecchi superano il numero che hai scelto di conservare. Legge inoltre
+l'indirizzo email e l'identificativo Drive dell'account collegato e, su
+Android e iPhone, il suo nome visualizzato, solo per mostrarti quale
+account è collegato e per distinguere gli account. Prima del
+caricamento, i file di backup vengono cifrati sul dispositivo con la
+passphrase di backup e i dati di sincronizzazione sono cifrati
+end-to-end: né Google né lo sviluppatore possono leggerne il contenuto.
+
+### Conservazione, condivisione e uso limitato
+
+I dati dell'account collegato e i token di accesso sono conservati solo
+sul tuo dispositivo; la sezione 3 indica dove per ciascuna piattaforma,
+e su Windows sono cifrati con Windows DPAPI. I dati utente di Google non
+vengono inviati allo sviluppatore né a terzi, non vengono venduti, non
+vengono usati per pubblicità e non vengono usati per sviluppare,
+migliorare o addestrare modelli di intelligenza artificiale o di machine
+learning. L'uso e il trasferimento da parte di MedReminder delle
+informazioni ricevute dalle API di Google rispettano le [Google API
+Services User Data
+Policy](https://developers.google.com/terms/api-services-user-data-policy),
+inclusi i requisiti di uso limitato (Limited Use).
+
+### Revoca dell'accesso ed eliminazione dei dati
+
+Puoi revocare in qualsiasi momento l'accesso di MedReminder dal tuo
+Account Google, in Sicurezza › I tuoi collegamenti ad app e servizi di
+terze parti (https://myaccount.google.com/connections); da quel momento
+l'app non può più accedere al tuo Google Drive. Per eliminare ciò che
+l'app ha salvato su Google Drive, elimina la cartella MedReminder in Il
+mio Drive e, in Impostazioni di Google Drive › Gestisci app ›
+MedReminder, scegli Elimina dati app nascosti. Per OneDrive, elimina la
+cartella App › MedReminder26 e rimuovi l'accesso dell'app nelle
+impostazioni privacy del tuo account Microsoft.
+
 ## 5. Fotocamera e blocco dell'app
 
 La scansione dei codici a barre può usare la webcam di Windows o la
@@ -200,7 +244,7 @@ destinatari, app o fornitori.
 
 ## 9. Modifiche
 
-Le modifiche a questa informativa vengono pubblicate in questo file,
+Le modifiche a questa informativa vengono pubblicate qui,
 con una nuova data di "Ultimo aggiornamento". La cronologia è visibile
 nel repository:
 https://github.com/vger70/MedReminder/commits/main/PRIVACY.it.md

@@ -1,6 +1,6 @@
 # MedReminder — Privacy Policy
 
-Last updated: 1 November 2026
+Last updated: 4 November 2026
 
 Translations: [Italiano](PRIVACY.it.md) · [Français](PRIVACY.fr.md) ·
 [Español](PRIVACY.es.md) · [Deutsch](PRIVACY.de.md). The English
@@ -144,6 +144,47 @@ depending on your device's diagnostic and sharing settings (on iPhone,
 "Share with App Developers"). These do not include the data stored in
 MedReminder.
 
+### How MedReminder uses Google user data
+
+When you connect Google Drive, MedReminder requests two permissions:
+`drive.file` (only the files and folders the app creates) and
+`drive.appdata` (a hidden folder reserved for the app). It cannot see,
+read or change any other file in your Google Drive. It uses them only to
+create a visible MedReminder › backups folder and store encrypted backup
+files there, to store encrypted sync data in the hidden app folder, and
+to list, download and delete those files when you restore or sync, or
+when old backups exceed the number you chose to keep. It also reads the
+connected account's email address and Drive account identifier and, on
+Android and iPhone, its display name, only to show you which account is
+connected and to tell accounts apart. Backup files are encrypted on your
+device with your backup passphrase, and sync data is end-to-end
+encrypted, before upload: neither Google nor the developer can read
+their content.
+
+### Storage, sharing and Limited Use
+
+The details of the connected account and the sign-in tokens are kept
+only on your device; section 3 describes where on each platform, and on
+Windows they are encrypted with Windows DPAPI. Google user data is not
+sent to the developer or to any third party, is not sold, is not used
+for advertising, and is not used to develop, improve or train artificial
+intelligence or machine learning models. MedReminder's use and transfer
+of information received from Google APIs adheres to the [Google API
+Services User Data
+Policy](https://developers.google.com/terms/api-services-user-data-policy),
+including the Limited Use requirements.
+
+### Removing access and deleting data
+
+You can revoke MedReminder's access at any time in your Google Account,
+under Security › Your connections to third-party apps and services
+(https://myaccount.google.com/connections); the app can then no longer
+reach your Google Drive. To delete what the app stored in Google Drive,
+delete the MedReminder folder in My Drive and, in Google Drive Settings
+› Manage apps › MedReminder, choose Delete hidden app data. For
+OneDrive, delete the Apps › MedReminder26 folder and remove the app's
+access in your Microsoft account privacy settings.
+
 ## 5. Camera and app lock
 
 The barcode scanner can use the Windows webcam, or the Android or
@@ -187,6 +228,6 @@ providers.
 
 ## 9. Changes
 
-Changes to this policy are published in this file, with a new "Last
-updated" date. The history is visible in the repository:
+Changes to this policy are published here, with a new "Last updated"
+date. The history is visible in the repository:
 https://github.com/vger70/MedReminder/commits/main/PRIVACY.md

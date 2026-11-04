@@ -1,6 +1,6 @@
 # MedReminder — Política de privacidad
 
-Última actualización: 1 de noviembre de 2026
+Última actualización: 4 de noviembre de 2026
 
 Traducción de [PRIVACY.md](PRIVACY.md). En caso de discrepancia, prevalece la versión inglesa.
 
@@ -68,6 +68,18 @@ En Windows, la copia de seguridad en la nube y la sincronización también puede
 
 Microsoft Store, Google Play y la App Store pueden proporcionar al desarrollador estadísticas agregadas, como las descargas, e informes de fallos, según la configuración de diagnóstico y uso compartido de su dispositivo (en el iPhone, «Compartir con desarrolladores de apps»). No incluyen los datos guardados en MedReminder.
 
+### Cómo usa MedReminder los datos de usuario de Google
+
+Al conectar Google Drive, MedReminder solicita dos permisos: `drive.file` (solo los archivos y carpetas que crea la aplicación) y `drive.appdata` (una carpeta oculta reservada a la aplicación). No puede ver, leer ni modificar ningún otro archivo de su Google Drive. Los usa solo para crear una carpeta visible MedReminder › backups y guardar en ella copias de seguridad cifradas, para guardar datos de sincronización cifrados en la carpeta oculta de la aplicación, y para listar, descargar y eliminar esos archivos cuando usted restaura o sincroniza, o cuando las copias antiguas superan el número que eligió conservar. También lee la dirección de correo y el identificador de Drive de la cuenta conectada y, en Android y iPhone, su nombre visible, solo para mostrarle qué cuenta está conectada y para distinguir las cuentas. Antes de la subida, las copias de seguridad se cifran en su dispositivo con su frase de contraseña de copia de seguridad y los datos de sincronización se cifran de extremo a extremo: ni Google ni el desarrollador pueden leer su contenido.
+
+### Almacenamiento, uso compartido y uso limitado
+
+Los datos de la cuenta conectada y los tokens de inicio de sesión se guardan solo en su dispositivo; la sección 3 indica dónde en cada plataforma, y en Windows se cifran con Windows DPAPI. Los datos de usuario de Google no se envían al desarrollador ni a terceros, no se venden, no se usan para publicidad y no se usan para desarrollar, mejorar o entrenar modelos de inteligencia artificial o de aprendizaje automático. El uso y la transferencia por parte de MedReminder de la información recibida de las API de Google cumplen la [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), incluidos los requisitos de uso limitado (Limited Use).
+
+### Retirar el acceso y eliminar los datos
+
+Puede revocar el acceso de MedReminder en cualquier momento en su cuenta de Google, en Seguridad › Tus conexiones con aplicaciones y servicios de terceros (https://myaccount.google.com/connections); a partir de entonces la aplicación ya no puede acceder a su Google Drive. Para eliminar lo que la aplicación guardó en Google Drive, elimine la carpeta MedReminder en Mi unidad y, en Configuración de Google Drive › Gestionar aplicaciones › MedReminder, elija Eliminar datos ocultos de la aplicación. Para OneDrive, elimine la carpeta Aplicaciones › MedReminder26 y retire el acceso de la aplicación en la configuración de privacidad de su cuenta Microsoft.
+
 ## 5. Cámara y bloqueo de la aplicación
 
 El lector de códigos de barras puede usar la cámara web de Windows o la cámara de Android o del iPhone cuando usted decide escanear. Las imágenes se procesan en el dispositivo y MedReminder no las guarda ni las envía. En Windows, la cámara se apaga cuando se lee un código, cuando cierra la ventana de lectura o después de 30 segundos. En Android y en el iPhone, la cámara solo se usa con el permiso que usted concede en el sistema operativo, para leer los códigos de barras de los medicamentos o el código QR que muestra otro dispositivo cuando usted se une a un círculo; el código no se guarda. En Android, el acceso a la cámara también sigue el ciclo de vida de la aplicación, y el código QR del círculo solo se lee mientras la página de lectura está abierta. En el iPhone, la cámara solo se usa mientras una página de lectura está abierta.
@@ -88,5 +100,5 @@ Puede consultar, corregir, exportar y borrar los datos de MedReminder. En Window
 
 ## 9. Cambios
 
-Los cambios de esta política se publican en este archivo con una nueva fecha de «Última actualización». El historial está disponible en el repositorio:
+Los cambios de esta política se publican aquí con una nueva fecha de «Última actualización». El historial está disponible en el repositorio:
 https://github.com/vger70/MedReminder/commits/main/PRIVACY.es.md
