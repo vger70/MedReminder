@@ -1,14 +1,14 @@
 {
   "country": "IT",
-  "version": "20261105",
-  "file": "shortages-20261105.json",
-  "generated": "2026-11-09T09:45:12.208994+00:00",
-  "sha256": "0089d1e0ae6c5b5be4abdaf9c9f8716d518a6f2c7451523db904bf2112d0b5cd",
-  "size": 255281,
+  "version": "20261117",
+  "file": "shortages-20261117.json",
+  "generated": "2026-11-17T13:42:18.155316+00:00",
+  "sha256": "98777fe254819928953b294da2dc6677655f33cb7c70b1e5d116900643302ea0",
+  "size": 253656,
   "rows": {
-    "entries": 2531
+    "entries": 2513
   },
   "source": {
-    "lastModified": "Thu, 05 Nov 2026 11:54:51 GMT"
+    "lastModified": "Tue, 17 Nov 2026 13:10:54 GMT"
   }
 }
