@@ -1,0 +1,12 @@
+{
+  "country": "US",
+  "version": "202611",
+  "file": "fda-ndc-202611.zip",
+  "generated": "2026-11-01T11:23:34.395542+00:00",
+  "file_count": 1,
+  "sha256": "da2f502bb45d8f8c464fec224276e820e93626bdb89fc1c708f8f4ba0d456c26",
+  "size": 7857835,
+  "rows": {
+    "fda-ndc.tsv": 212275
+  }
+}
